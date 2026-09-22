@@ -43,11 +43,11 @@
 // a TRUST estate's; and before -22a it prints a Total Estimated FMV, an Items Awaiting
 // Valuation count and an FMV BY CATEGORY rollup on an estate CONTRACTED AT `contents` or
 // `none`, where the agreement says counsel does the valuing.
-var BACKEND_VERSION = '2026-09-22a';
+var BACKEND_VERSION = '2026-09-22b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
-  'stripeLink', 'stripeStatus'
+  'stripeLink', 'stripeStatus', 'agentIdentify'
 ];
 var BACKEND_TYPES = [
   'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
@@ -134,6 +134,7 @@ function doPost(e) {
     if (data.action === 'esignArchive')  { return jsonOut(esignArchiveEnvelope(data)); }
     if (data.action === 'stripeLink')    { return jsonOut(stripeCreatePaymentLink(data)); }
     if (data.action === 'stripeStatus')  { return jsonOut(stripePaymentsForLink(data)); }
+    if (data.action === 'agentIdentify') { return jsonOut(agentIdentifyShots(data)); }
 
     var type = data.type;
     var payload = data.payload;
@@ -2618,5 +2619,391 @@ function testStripeAuth() {
     if (caps.us_bank_account_ach_payments !== 'active') {
       Logger.log('  >> ACH IS NOT ACTIVE. Enable it: Dashboard > Settings > Payments > Payment methods.');
     }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// AGENT ONE — IDENTIFYING WHAT IS IN A PHOTOGRAPH
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Spec: AGENT_ONE_SPEC.md. Step 2 of the inventory pipeline Anthony scoped 2026-09-19.
+//
+// ⚠⚠ THIS RUNS HERE AND NOT IN THE APP BECAUSE THE KEY CANNOT LIVE IN `havellin.html`. One
+// public file, served from GitHub Pages. This project already records the same lesson twice —
+// a Google client secret pasted into a chat on 2026-09-08, and the DocuSign private key that
+// had to come here because a private key in a View-Source-able page is not a secret.
+//
+// ⚠ AND IT IS ON THE APP'S REQUEST PATH, so it moves in lockstep with BACKEND_VERSION and the
+// dispatch-parity test. A second Apps Script project somebody must remember to paste is the
+// failure this repo paid six weeks for.
+//
+// WHAT IT WRITES, VIA THE APP: objectName, category, qty. NOTHING ELSE. Values are Agent Two's
+// and the `contents` tier promises "no opinion of value" on a signed agreement; disposition
+// stays Undecided by design; flagNFA is a gate with no override. The app enforces that on the
+// way in — this end simply never asks for those fields.
+
+var AGENT_API          = 'https://api.anthropic.com/v1/messages';
+var AGENT_API_VERSION  = '2023-06-01';
+var AGENT_MODEL        = 'claude-opus-5';
+// ⚠ IDENTIFICATION IS PERCEPTION, NOT REASONING, so this is deliberately not `high`. It is also
+// what keeps a call inside UrlFetchApp's timeout. Sweep low/medium/high on one real room and
+// measure naming quality against cost before changing it — do not tune it by argument.
+var AGENT_EFFORT       = 'medium';
+var AGENT_MAX_TOKENS   = 4096;   // thinking counts against this; a naming answer needs ~400
+var AGENT_PARALLEL     = 8;      // fetchAll width — request bodies carry base64, so not 50
+var AGENT_MAX_SHOTS    = 80;     // hard cap on one invocation whatever the caller asks for
+var AGENT_TIME_BUDGET  = 240000; // 4 min of Apps Script's 6, leaving margin to answer
+var AGENT_MAX_IMG      = 4500000;// per-image byte ceiling before base64; ours run ~130KB
+
+function _agProp(name) {
+  return (PropertiesService.getScriptProperties().getProperty(name) || '').trim();
+}
+
+// Named individually, never "not configured" — the lesson this file records on the PDF
+// conversion (three rounds, because the error carried no cause) and on DocuSign's five.
+function _agMissingProps() {
+  return ['ANTHROPIC_API_KEY'].filter(function (k) { return !_agProp(k); });
+}
+
+// ⚠⚠ `getBlob()`, NEVER `getContentText()`. The latter decodes bytes as UTF-8 and is lossy with
+// no way back — the trap `_dsFetchBlob` was written to avoid on the signed-agreement PDF.
+// ⚠ AND NOT THE THUMBNAIL CHAIN. `_thumbBlobFor` deliberately returns something small; an object
+// cannot be named from a 240px crop. This wants the real image, which is already compressed to
+// 900px at capture, so "the full file" here is ~130KB rather than a camera original.
+function _agImageBlock(fileId) {
+  var blob = DriveApp.getFileById(String(fileId)).getBlob();
+  var type = blob.getContentType() || '';
+  if (type.indexOf('image/') !== 0) throw new Error('not an image (' + (type || 'unknown type') + ')');
+  var bytes = blob.getBytes();
+  if (bytes.length > AGENT_MAX_IMG) throw new Error('image is ' + Math.round(bytes.length / 1024) + 'KB, too large to send');
+  return {
+    type: 'image',
+    source: { type: 'base64', media_type: type, data: Utilities.base64Encode(bytes) }
+  };
+}
+
+// ─── THE TOOL THE MODEL FILLS IN ──────────────────────────────────────────────────
+// ⚠ `strict: true` WITH `tool_choice: auto` PLUS AN INSTRUCTION, never a forced tool_choice.
+// Forced tool use is removed on the newest models and interacts badly with thinking elsewhere;
+// this shape works on every model and still guarantees the arguments validate. `strict` needs
+// `additionalProperties:false` and every property in `required`, hence `basis` and `crop` being
+// mandatory rather than optional — the prompt says what to send when there is nothing to say.
+function _agTool(categories) {
+  return {
+    name: 'record_contents',
+    description: 'Record every distinct inventoriable object visible in the photograph, and any '
+               + 'notice a person needs to see. Call this exactly once.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['objects', 'notices'],
+      properties: {
+        objects: {
+          type: 'array',
+          description: 'One entry per inventory LINE. A lot is one entry with qty set. Empty if '
+                     + 'the frame holds nothing inventoriable.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['name', 'category', 'qty', 'confidence', 'basis', 'crop'],
+            properties: {
+              name:       { type: 'string',  description: 'Describe it as fully as the photograph supports.' },
+              category:   { type: 'string',  enum: categories },
+              qty:        { type: 'integer', description: 'Articles on this line. 1 for a single object; the count for a lot.' },
+              confidence: { type: 'string',  enum: ['high', 'medium', 'low'] },
+              basis:      { type: 'string',  description: 'Why you named it what you did, in a few words. Read by the desk, never printed for a client.' },
+              crop:       { type: 'array',   description: 'x0,y0,x1,y1 normalised 0-1. Use 0,0,1,1 when the object fills the frame or you cannot place it.',
+                            items: { type: 'number' } }
+            }
+          }
+        },
+        notices: {
+          type: 'array',
+          description: 'Things a person must look at. Never a substitute for an object entry.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'text'],
+            properties: {
+              kind: { type: 'string', enum: ['mustfind', 'firearm', 'nfa', 'other'] },
+              text: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  };
+}
+
+// ─── THE SYSTEM PROMPT ────────────────────────────────────────────────────────────
+// Stable for every photograph on one job, so it carries `cache_control` and is written to be
+// byte-identical across the run. Job-specific context (the must-find list, the matter type) is
+// in here too rather than in the user turn: it is constant within a job, which is the whole
+// span the cache has to cover.
+function _agSystem(ctx) {
+  var cats = (ctx.categories || []).join('\n  - ');
+  var must = (ctx.mustFind || []);
+  var s = ''
+    + 'You are identifying the contents of a home so that a concierge can build an estate '
+    + 'inventory. You are looking at photographs taken room by room. Your entire job is to say '
+    + 'WHAT each object is. You do not decide what happens to it and you do not say what it is '
+    + 'worth.\n\n'
+
+    + 'HOW MANY LINES\n'
+    + 'Group ordinary household goods into one line with a quantity: books, flatware, glassware, '
+    + 'linens, kitchenware, tools, garage consumables. "Flatware service, 30 pieces" is one entry '
+    + 'with qty 30, not thirty entries.\n'
+    + 'Give a line of its own to anything in these categories: Art & Decor, Antiques, Jewelry & '
+    + 'Watches, Silver & Precious Metal, Rugs & Carpets, Collectibles, Firearms, Wine & Spirits, '
+    + 'Musical Instruments. Also to anything carrying a readable maker\'s mark, signature or '
+    + 'hallmark, and to anything visibly individual or valuable.\n'
+    + 'Aim for the count a person would actually work through. A large house should come out in '
+    + 'the hundreds of lines, not the thousands.\n\n'
+
+    + 'HOW TO NAME IT\n'
+    + 'Be as specific as the photograph supports. Name the maker, model, period, material and '
+    + 'pattern whenever you can see them. A generic name is a wasted line, because the desk '
+    + 'cannot add detail it was never shown.\n'
+    + 'State flatly only what is READABLE in the frame. When you are inferring from form, style '
+    + 'or proportion, hedge in the words themselves: "appears to be", "likely", "in the style '
+    + 'of". Both are useful; only one of them is a claim.\n'
+    + '  Good: "Bang & Olufsen Beolab 8000 speakers, pair" when the badge is legible.\n'
+    + '  Good: "appears to be Bang & Olufsen, floor-standing column speakers, pair" when it is the shape.\n'
+    + '  Good: "Banksy print, likely a reproduction" when the image is recognisable but the edition is not.\n'
+    + '  Bad:  "Speakers." Bad: "Banksy original." Bad: "Tiffany lamp" on an unmarked leaded shade.\n'
+    + 'Some photographs are close-ups of a maker\'s mark, signature or hallmark belonging to an '
+    + 'object in the main frame. Read them and use them. They are why they were taken.\n\n'
+
+    + 'CATEGORY — pick exactly one from this list for every object:\n  - ' + cats + '\n'
+    + 'Use General/Household when nothing else fits. Do not invent a category.\n\n'
+
+    + 'WHAT YOU MUST NEVER DO\n'
+    + '- Never state or estimate a value, a price, a range or a worth. Not in the name, not in '
+    + 'the basis, not in a notice. Somebody else does that, and on some engagements we are '
+    + 'contractually barred from it.\n'
+    + '- Never say what should happen to an object: keep, sell, donate, junk, auction. That is '
+    + 'the family\'s decision and it is recorded elsewhere.\n'
+    + '- Never describe a person, and never read or transcribe private papers, correspondence, '
+    + 'financial statements or medical records. If a frame is mostly documents, record it as a '
+    + 'quantity of papers and say nothing about the contents.\n'
+    + '- Never guess at an object you cannot see. An empty room is an empty list.\n\n'
+
+    + 'CONFIDENCE\n'
+    + 'high = you can read it or it is unmistakable. medium = a confident reading of the form. '
+    + 'low = your best guess. Always give your best name even at low confidence; a person will '
+    + 'check it, and a blank is worse than a guess because nobody can tell it from a photograph '
+    + 'you never saw.\n\n'
+
+    + 'NOTICES\n'
+    + 'kind "firearm": anything that is or may be a firearm, a receiver, or a part of one. Say '
+    + 'so even if you are unsure.\n'
+    + 'kind "nfa": something that may be a suppressor, a short-barrelled rifle or shotgun, or a '
+    + 'machine gun. A suppressor looks like a plain metal tube and is easy to miss — that is '
+    + 'exactly why this matters. Describe what you see; do not state the law.\n';
+
+  if (must.length) {
+    s += 'kind "mustfind": the family asked us to find these specific things. Raise a notice the '
+       + 'moment a frame shows one, or shows where one would be kept — a safe, a strongbox, a '
+       + 'locked drawer, a filing cabinet:\n  - ' + must.join('\n  - ') + '\n';
+  }
+  s += 'kind "other": anything else a person needs to look at. Use sparingly.\n\n'
+    +  'Call record_contents exactly once with everything you found.';
+
+  if (ctx.fiduciary) {
+    s += '\n\nThis is a decedent\'s estate. The inventory may be read by an attorney, a personal '
+       + 'representative, a beneficiary or a court, so an overstated attribution is a real '
+       + 'problem for real people. That is the reason for the hedging rule above, not caution '
+       + 'for its own sake.';
+  }
+  return s;
+}
+
+function _agUserContent(shot) {
+  var content = [];
+  content.push(_agImageBlock(shot.fileId));
+  var details = shot.details || [];
+  for (var i = 0; i < details.length && i < 4; i++) {
+    content.push(_agImageBlock(details[i].fileId));
+  }
+  var txt = 'Room: ' + (shot.room || 'not recorded') + '.';
+  if (details.length) {
+    txt += ' The ' + (details.length === 1 ? 'photograph' : details.length + ' photographs')
+        +  ' after the first ' + (details.length === 1 ? 'is a close-up' : 'are close-ups')
+        +  ' of something in it — a maker\'s mark, a signature, a hallmark. Read '
+        +  (details.length === 1 ? 'it' : 'them') + ' and use '
+        +  (details.length === 1 ? 'it' : 'them') + ' to name the object, and do NOT record '
+        +  (details.length === 1 ? 'it' : 'them') + ' as objects of their own.';
+  }
+  if (shot.fieldNote) txt += '\nThe crew said: "' + String(shot.fieldNote).slice(0, 400) + '"';
+  if (shot.roomNote)  txt += '\nWalkthrough note for this room: "' + String(shot.roomNote).slice(0, 400) + '"';
+  content.push({ type: 'text', text: txt });
+  return content;
+}
+
+function _agRequestFor(shot, ctx, key) {
+  var body = {
+    model: AGENT_MODEL,
+    max_tokens: AGENT_MAX_TOKENS,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: AGENT_EFFORT },
+    system: [{ type: 'text', text: _agSystem(ctx), cache_control: { type: 'ephemeral' } }],
+    tools: [_agTool(ctx.categories || [])],
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: _agUserContent(shot) }]
+  };
+  return {
+    url: AGENT_API,
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION },
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  };
+}
+
+// Pull the tool call out of a response. Returns {ok, objects, notices, error}.
+function _agReadResult(res) {
+  var code = res.getResponseCode();
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')' }; }
+
+  if (code >= 300) {
+    var err = (body && body.error) || {};
+    return { ok: false, error: (err.message || err.type || 'HTTP ' + code) };
+  }
+  // ⚠ A REFUSAL IS AN HTTP 200 AND MUST BE CHECKED BEFORE READING content.
+  if (body.stop_reason === 'refusal') {
+    var d = body.stop_details || {};
+    return { ok: false, error: 'the model declined this image' + (d.category ? ' (' + d.category + ')' : '') };
+  }
+  if (body.stop_reason === 'max_tokens') {
+    return { ok: false, error: 'the answer was cut off before it finished' };
+  }
+  var blocks = body.content || [];
+  for (var i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'tool_use' && blocks[i].name === 'record_contents') {
+      var input = blocks[i].input || {};
+      return { ok: true, objects: input.objects || [], notices: input.notices || [] };
+    }
+  }
+  // ⚠ NOT A CRASH AND NOT AN EMPTY ROOM. tool_choice is `auto`, so the model CAN answer in
+  // prose; that is a failure to record, not a finding of nothing, and conflating the two would
+  // silently mark a full room as empty. It lands in `failed` and the app asks again.
+  return { ok: false, error: 'the model answered in prose instead of recording anything' };
+}
+
+// ─── THE ACTION ───────────────────────────────────────────────────────────────────
+// ⚠ BUDGET AND RESUME, never fail a batch whole. Exactly what getDriveThumbnails does: stop
+// before the clock runs out, hand back what is done and how many are left, and let the app ask
+// again for the remainder.
+function agentIdentifyShots(data) {
+  try {
+    var miss = _agMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'Agent One is not configured — missing Script Property: '
+                                 + miss.join(', ') + '. Add it in Project Settings > Script Properties.' };
+    }
+    var ctx   = (data && data.context) || {};
+    var shots = (data && data.shots) || [];
+    if (!shots.length) return { ok: true, results: {}, done: [], failed: {}, remaining: 0 };
+
+    // ⚠⚠ THE CATEGORY LIST RIDES THE PAYLOAD AND THIS FILE HOLDS NO COPY. saveInventory.gs once
+    // kept its own and it drifted to 6 against 13, silently dropping seven categories off the
+    // client's workbook. An absent list is a refusal, never a guess.
+    if (!ctx.categories || !ctx.categories.length) {
+      return { ok: false, error: 'The app sent no category list, so nothing could be filed. This is an app bug, not a setup problem.' };
+    }
+
+    var key     = _agProp('ANTHROPIC_API_KEY');
+    var started = new Date().getTime();
+    var todo    = shots.slice(0, AGENT_MAX_SHOTS);
+    var results = {}, done = [], failed = {}, i = 0;
+
+    while (i < todo.length) {
+      if (new Date().getTime() - started > AGENT_TIME_BUDGET) break;
+      var slice = todo.slice(i, i + AGENT_PARALLEL);
+      var reqs = [], keep = [];
+      for (var j = 0; j < slice.length; j++) {
+        try {
+          reqs.push(_agRequestFor(slice[j], ctx, key));
+          keep.push(slice[j]);
+        } catch (imgErr) {
+          // A file that has not landed in Drive yet is ordinary, not fatal.
+          failed[slice[j].stableId] = String(imgErr.message || imgErr);
+        }
+      }
+      if (reqs.length) {
+        var responses = UrlFetchApp.fetchAll(reqs);
+        for (var k = 0; k < responses.length; k++) {
+          var read = _agReadResult(responses[k]);
+          var id   = keep[k].stableId;
+          if (read.ok) {
+            results[id] = { objects: read.objects, notices: read.notices };
+            done.push(id);
+          } else {
+            failed[id] = read.error;
+          }
+        }
+      }
+      i += slice.length;
+    }
+
+    return {
+      ok: true, success: true,
+      results: results,
+      done: done,
+      failed: failed,
+      remaining: Math.max(0, shots.length - i),
+      model: AGENT_MODEL
+    };
+  } catch (error) {
+    Logger.log('agentIdentifyShots error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ RUN THIS FROM THE EDITOR FIRST, BEFORE TRUSTING THE BUTTON. Argument-free, because the Run
+// menu cannot pass any — the same reason testEsignAuth and testDriveThumbnails work the way they
+// do. It finds a real Havellin photograph, sends one, and prints what came back, so an auth
+// failure can never masquerade as a naming bug.
+function testAgentIdentify() {
+  var miss = _agMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+
+  var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  var found = null, stack = [root], guard = 0;
+  while (stack.length && !found && guard++ < 400) {
+    var f = stack.pop();
+    var files = f.getFilesByType('image/jpeg');
+    if (files.hasNext()) { found = files.next(); break; }
+    var subs = f.getFolders();
+    while (subs.hasNext()) stack.push(subs.next());
+  }
+  if (!found) { Logger.log('No JPEG under the root folder yet — take a photo on the Job Plan first.'); return; }
+
+  Logger.log('Photo: ' + found.getName());
+  var out = agentIdentifyShots({
+    context: {
+      categories: ['Art & Décor', 'Antiques', 'Collectibles', 'Electronics & Appliances',
+                   'Firearms', 'Furniture', 'General/Household', 'Jewelry & Watches',
+                   'Musical Instruments', 'Rugs & Carpets', 'Silver & Precious Metal',
+                   'Vehicles & Watercraft', 'Wine & Spirits'],
+      mustFind: ['a coin collection'], fiduciary: true
+    },
+    shots: [{ stableId: 'probe', fileId: found.getId(), room: 'probe' }]
+  });
+
+  if (!out.ok) { Logger.log('FAILED: ' + out.error); return; }
+  var r = out.results.probe;
+  if (!r) { Logger.log('FAILED: ' + (out.failed.probe || 'no result and no reason')); return; }
+  Logger.log('ALL GOOD — ' + out.model + ' answered.');
+  Logger.log('  objects: ' + r.objects.length);
+  for (var i = 0; i < r.objects.length; i++) {
+    var o = r.objects[i];
+    Logger.log('   - [' + o.confidence + '] ' + o.name + '  (' + o.category + ', qty ' + o.qty + ') — ' + o.basis);
+  }
+  for (var n = 0; n < (r.notices || []).length; n++) {
+    Logger.log('  NOTICE [' + r.notices[n].kind + '] ' + r.notices[n].text);
   }
 }

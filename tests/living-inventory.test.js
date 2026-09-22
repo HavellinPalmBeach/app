@@ -54,6 +54,7 @@ const ITEM = (id, over) => Object.assign({
 
 const PRINT_FNS = [ 'invDocContractBlock',
   'printContentsRecord', 'dispositionRecord', 'printApprovalRequest', 'printCourtInventory',
+  'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   'printDispositionLedger', '_renderInvWorkbar', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
   '_jobHasDestination', 'invFiduciaryMode', 'isDecedentJob', '_invJob', '_jobInvRefs',
@@ -72,6 +73,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   '_invPanelSection',
 ];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
+  '_agRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
   'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'INV_WORK_FLAGS', 'FIELD_DISPOSITIONS',
   'DECEDENT_SERVICES', 'MATTER_TYPES', 'CONTENTS_RECORD_GLOSS', 'INV_CAT_GLYPH', 'INV_TAXONOMY',

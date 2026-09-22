@@ -573,6 +573,8 @@ The rooms are a block of **cards, three across on a desk** (two on the iPad, one
 
 > **⚠** **Found the ring? Press *Found it* on its line, in the room.** Every must-find is its own line on the brief — on the Job Plan header, in every room's workspace and above Job Admin on the Job Admin & Inv tab — with a **Found it** button. The line goes green, drops under the ones still missing and reads *Found Sep 19, 2026 · Ashley Jerome*: the date, and the concierge assigned to the job. **Undo** if it was a false alarm. It saves to the job like everything else, so the desk sees it too. Do not leave it for the evening — a must-find nobody ticked reads as still missing to the next person in, and they go looking for it.
 
+> **⚠ You never type a name in the house, and now you never type one at the desk either unless you are correcting it.** Shoot the shelf once rather than each bottle on it — the agent splits the frame and names what is in it that evening (Step 10e). What is still worth your five seconds in the room: *Detail of last* on a maker's mark, a signature or a hallmark, because those close-ups are read and they turn a guess into a reading.
+
 ### b. Log hours — Job Plan tab, every single day
 
 The log is the **Hours & daily close** bar at the top of the plan, under *Vendors & partners* and above the job (moved there 2026-09-20 — it spent one evening folded under the rooms). The bar reads *today 3 hrs · 36 of 63 logged*; on an active job with nothing logged for today it reads **no hours logged today** in amber. Tap the bar and the same form, summary, projection and history open under it.
@@ -631,6 +633,18 @@ The manifest assembles from three places: the shots you took on the Items pass i
 > **The tab is called *Job Admin & Inv* now, and it follows the Job Plan (new 2026-09-20).** Same tab, same place on the bar — the name just says what was already on it. **You only pick the client once:** set the job on the Job Plan and this tab opens on the same client, and the other way round. It lasts the session; reload the page and you pick again.
 
 > **⚠⚠ You do this on every labour job now, not just estate work (new 2026-09-21).** Home Editing, Home Transition and Home Cleanout keep the same room-by-room record as an estate job — Anthony: *“what’s going to the new home, what’s going to be donated, what’s going to be sent to the kids … the inventory is not just for the jobs that we’re doing for dead people.”* Nothing about the price changes: no living-client estimate moved by a dollar, and you are **not valuing anything** on these jobs. What you are doing is recording where each thing went and who took it.
+
+> **⚠⚠ Start here: *Name N shots* (new 2026-09-22).** First button on the bar. It reads the day's photographs and fills in a name and a category on every unnamed line — that is the whole reason you shoot without typing in the house. A shelf of books comes back as one line with a quantity; a bar console holding four things comes back as four lines sharing the one photograph. It names things as fully as the picture allows, so expect *"Bang & Olufsen Beolab 8000 speakers, pair"* rather than *"speakers"*, and expect a hedge — *"appears to be"*, *"likely a reproduction"* — when it is reading the shape rather than a mark.
+
+> **⚠ It never values anything and never decides where anything goes.** No FMV, no disposition, no NFA flag, no bequest or dispute. It says *what each thing is* and stops. If a row comes back with a value on it, something is wrong — tell Anthony.
+
+> **⚠ Every row it names is marked unchecked, and checking them is your job.** A row reads **agent** in bronze, or **agent · unsure** where it was guessing; hover it for why it named what it named. Edit the name or the category and the badge clears. Client documents keep printing *IN PROGRESS — N of M items reviewed* until you have been through them, so nothing is hidden from the client and nothing is claimed either. **Work the unsure ones first** — that is what the badge is for.
+
+> **⚠ Photograph the maker's mark and it gets read.** Use *Detail of last* on the signature, the hallmark, the stamp on the back of the china — those close-ups go to the agent **with** the object they belong to, which is the whole reason to take them. It is the difference between *"appears to be"* and a flat reading. Takes five seconds in the room and saves an argument later.
+
+> **It also tells you two things that are not about naming.** Above the rows you may see **Must find** — it checks every photograph in the house against what the family asked you to find, and says when it spots the item or somewhere one would be kept, like a safe or a locked drawer. And **Firearm** or **Possible NFA item** — a suppressor looks like a plain metal tube and the real risk is nobody recognising it. **Go and look.** A notice is read off a photograph, not off the house, so it is a prompt and never an all-clear — and it never ticks *Found it* for you.
+
+> **A photograph with nothing in it comes back blank, on purpose.** A wall, an empty room, a shot that did not come out. It stays on the *Unnamed shots* count for you to deal with rather than having a line invented for it.
 
 **Where it went is two answers, and both go on the row.** The disposition says *what happened to it*; **Channel / Recipient** says *who has it*, and it now sits on the row itself instead of three sections deep in the item panel.
 
@@ -904,6 +918,14 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 ### If something won't let you proceed
 
 | Symptom | What's missing |
+| **The *Name N shots* button is not there** | Either every shot already has a name — it withdraws itself — or this device has no Apps Script URL set (Settings → Sync). If a red banner is up about the deployment, the naming service is part of what it is telling you. |
+| **You press it and it says the key is missing** | Setup, not a fault. `ANTHROPIC_API_KEY` goes in the Apps Script project's Script Properties. Anthony does this once. |
+| **Rows say *agent* or *agent · unsure* in bronze** | Working as intended — it named them and nobody has checked them yet. Read it, correct it if it is wrong, and the badge clears. Start with the *unsure* ones. |
+| **It named something wrongly — a maker it got wrong, a reproduction it called original** | Correct it on the row. That is the job, and it is why every row comes back unchecked. If it is getting a whole category wrong on one house, tell Anthony — that is worth knowing. |
+| **One photograph turned into four rows** | Correct, and not a duplicate. Four objects in one frame is four inventory lines sharing one picture — the row says *1 of 4 in this photo*. Do not delete three of them. |
+| **Thirty books came back as one line** | Correct. Ordinary household goods are recorded as a lot with a quantity; art, antiques, silver, jewellery, rugs, firearms and anything with a readable mark get their own line. Split it by hand if this particular lot warrants it. |
+| **A row came back with no name at all** | The agent looked and found nothing inventoriable — a wall, an empty room, a shot that did not come out. It deliberately does not invent a line. Name it or bin the photo. |
+| **A *Must find* notice appeared** | Go and look. It saw the item, or somewhere one would be kept, in a photograph. It has not ticked *Found it* and it is not telling you the thing is definitely there — you confirm. |
 | --- | --- |
 | **Your client is not in the Build Estimate dropdown** | They have accepted and the job is *Won*, so it comes off that picker. Open the client on the dashboard and press **Edit estimate** under the document tray — that un-approves the estimate and lands you on a form you can actually edit. Picking it from the dropdown only ever gave you a disabled screen. |
 | **You want to see the rooms you ticked, or what you wrote in them** | Client dashboard → **🔍 Walkthrough**, beside *Edit Client*. Private notes, every room with its scores and note, the collections, the vehicles. You do not need to go near Build Estimate. |

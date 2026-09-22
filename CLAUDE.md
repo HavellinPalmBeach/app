@@ -1,5 +1,149 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ AGENT ONE IS BUILT — THE DESK'S HALF OF "THE FIELD TYPES NOTHING" (2026-09-22)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `main-sync.gs`, `BACKEND_VERSION 2026-09-22b`, **and
+`ANTHROPIC_API_KEY` in Script Properties**. Anthony has deployed `-21b` and `-22a`; this is a third.
+Spec: `AGENT_ONE_SPEC.md`. Step 2 of the pipeline he scoped on 2026-09-19. Anthony: *"what do we need
+to do to get agent one built?"*, then *"go"*.
+
+- **⚠⚠ THE SCOPE IS NARROWER THAN "CREATE THE INVENTORY", AND I WROTE IT AMBIGUOUSLY AND HE CAUGHT
+  IT.** I wrote that a field shot *"lands as a manifest line with `objectName:''`"* — empty quotes —
+  and he read it as *lands with an object name*: *"how does every field shot land with an objectname?
+  the whole point is that we don't take the time to name objects in the field."* The code says
+  `ref.objectName = ''; // the desk names it`. **The field types nothing and this build changes
+  nothing about that** — a test pins `_captureShot` gaining no naming step and no agent call.
+  So Agent One does exactly two things: **split** a frame holding several objects
+  (`invSplitItemN`, which shipped 2026-09-20 and was written for this caller), and **name** —
+  `objectName`, `category`, and `qty` on a lot.
+- **⚠⚠ IT RUNS IN APPS SCRIPT BECAUSE THE KEY CANNOT LIVE IN `havellin.html`.** One public file on
+  GitHub Pages. This file already records the lesson twice — the Google client secret pasted into a
+  chat on 2026-09-08, and the DocuSign private key. `agentIdentify` is the action, `claude-opus-5`,
+  adaptive thinking at **effort `medium`** (identification is perception, not reasoning, and it is
+  what keeps a call inside UrlFetchApp's timeout).
+- **⚠⚠ ONE WRITER, THREE FIELDS, AND THE NET IS THE RULE RATHER THAN TODAY'S KEY LIST.** `_agWrite`
+  is pinned to `objectName` / `category` / `qty` plus provenance, and a test asserts its body never
+  mentions **eighteen** named fields. Each is a hard no for its own reason: **`fmv`** is Agent Two's
+  *and* `docTierProduces(job,'values')` is false at the `contents` tier, where the agreement says
+  Havellin *"states no opinion of value"* — an agent writing a value breaks a signed term;
+  **`disposition`** stays Undecided because silence-reads-as-Keep is the defect that default exists
+  to stop; **`flagNFA`** is a gate with no override and no person with standing to clear it;
+  **`needsAppr`** is already derived from the category, and choosing the category correctly IS how
+  the agent feeds it. Driven in both directions: a response carrying `fmv`, `disposition` and
+  `flagNFA` reaches the manifest with none of them.
+- **⚠⚠ ANTHONY OVERRULED MY NAMING RULE AND HE WAS RIGHT, AND HIS ANSWER FOUND A BUILD REQUIREMENT
+  I HAD MISSED.** I proposed *describe what is visible, never assert a maker*. He answered: *"i liked
+  that the first run you were able to guess that my speakers were B&O, because they are. and you
+  flagged the banksy as likely a reproduction, which it is … when we think there is something of
+  value we will go out of our way to photograph the artists signature, flip the china over to show
+  the makers mark, etc. we can always edit at desk, but more detail is helpful and we will confirm,
+  which is our job."*
+  - **⚠ THE DETAIL SHOT ALREADY EXISTS FOR EXACTLY THIS AND MY FIRST DRAFT WOULD HAVE READ THOSE
+    FRAMES AS LOOSE PHOTOGRAPHS.** `label:'detail'` + `groupId`, excluded from `_jobInvRefs` so it
+    never becomes a line. They now ride with their parent **in the same request**, as extra images,
+    or the one photograph in the house that proves the attribution is the one the model never sees.
+    The browser drives it end to end.
+  - **⚠ WHAT SURVIVES OF MY CONCERN IS ONE RULE, AND HIS OWN EXAMPLES ALREADY FOLLOW IT: HEDGE IN
+    THE WORDS.** Flat assertion only for what is **readable** in the frame; *"appears to be"*,
+    *"likely"*, *"in the style of"* when it is reading form. *"Banksy print, likely a reproduction"*
+    is what made that call useful rather than reckless. The response also carries `basis` (*"badge
+    legible in detail frame"*) for the desk, which is never printed for a client.
+- **⚠ LOT BY DEFAULT, 300–600 LINES RATHER THAN 3,000.** Books, flatware, glassware and linens come
+  back as one line with a quantity; the nine `intrinsic:true` categories, anything with a readable
+  mark and anything visibly individual get their own. **The agent is never told the
+  §20.2031-6(a) threshold** — `invLotSplitState` stays the one authority, gated on the 706 answer,
+  and it reads `qty` (the agent's) against `fmv` (Agent Two's), so it correctly answers *unvalued*
+  until then. Teaching the agent a floor is the second copy this project spent a build removing.
+- **⚠ WRITES DIRECTLY, `reviewed` STAYS FALSE, AND REVIEW STILL GATES NOTHING.** Not a proposal
+  queue — Anthony's call. The badge is bronze (*agent*, or *agent · unsure* at low confidence) and
+  **never red**: red on that strip means a held firearm, and a second red costs the first its
+  meaning. A desk edit to the name or the category sets `namedBy:'desk'` and drops `agentConf`.
+  **⚠ `namedBy` IS DELIBERATELY NOT ON `INV_STICKY_FIELDS`** — that list is for records of things
+  that HAPPENED; a name is a judgement somebody revises, and a desk correction must be able to beat
+  the agent's guess on the other device. Same reasoning as `fmv` not being sticky.
+- **⚠⚠ TWO READ-ONLY SWEEPS THAT PRODUCE NOTICES, NEVER WRITES, AND THE FIRST IS NEW CAPABILITY.**
+  **Must-find**: nothing in the app has ever read the intake answers against the photographs, and the
+  agent looks at every frame in the house — the as-found wides included, where a safe is visible. It
+  raises a notice; it never ticks `mustFound`, which carries a human name frozen at the tick.
+  **Firearms**: it sets the category and says *possible NFA item*; the protocol's own stated risk is
+  that a suppressor reads as a plain metal tube and is never categorised as a firearm at all. The
+  panel closes *"Read off the photographs, not off the house"* — a notice is a prompt, never a
+  clearance.
+- **⚠ "NOTHING IN FRAME" IS A REAL ANSWER AND IS NOT "NOT PROCESSED".** A wall or a misfire comes
+  back blank — naming it would be inventing an object — but stamped `agentConf:'none'`, so the desk
+  can tell it from a photograph the agent never reached. It stays on the *Unnamed shots* count.
+- **⚠ BUDGET AND RESUME, the `getDriveThumbnails` pattern.** Apps Script's six minutes against a
+  10–30s vision call: `UrlFetchApp.fetchAll` eight wide, stop on a four-minute budget, hand back
+  `remaining`, app re-asks. **A prose answer is a FAILURE, not an empty room** — `tool_choice` is
+  `auto`, so the model *can* answer in prose, and conflating the two would silently mark a full room
+  as empty. Reverting that one line fails 3.
+- **9,557 committed checks** (`tests/agent-inventory.test.js` new at **160**). **All 30 changes
+  revert-verified individually, ZERO GREEN** — the split fails 6, rows-marked-reviewed 4, and the
+  value / disposition / prose / category-list reverts 2–3 each. Baseline 0 before and after.
+  - **⚠ FOUR SUITES LIFT `_renderInvWorkbar` AND ALL FOUR NEEDED THE NEW FUNCTIONS** — found by
+    searching every suite at once, which this file records costing a round when it is not. **Lifted
+    rather than stubbed**: a stub of the nameable-shot rule is what would let the button's count and
+    the run itself come to disagree.
+  - **⚠⚠ THE FIRST SWEEP RAN FOR THIRTEEN MINUTES AND ITS OUTPUT WAS LOST, AND IT IS THE TRAP THIS
+    FILE ALREADY RECORDS.** `python3 … | tail -40` in a backgrounded command: Python buffers when
+    piped, so the file was **0 bytes** when it finished. The tree restored correctly, and I had no
+    evidence about a single revert. **A sweep whose results cannot be read did not happen** — re-run
+    with `python3 -u` writing straight to a file, no pipe. CLAUDE.md already records `| tail`
+    swallowing `run.sh`'s exit code; this is the same trap swallowing everything.
+  - **⚠ THE SECOND SWEEP RAN ON A FULL COPY OF THE TREE IN THE SCRATCHPAD**, so the browser could
+    drive the real `havellin.html` at the same time. Running a suite against a file a sweep is
+    mutating is a mistake this file records twice.
+- **Verified end to end in headless Chromium, 48 checks, 0 failed, 0 page errors**, driving the real
+  intake, the real tab, the real button and the real fetch:
+
+  | | |
+  |---|---|
+  | the button | **Name 2 shots** — it counts PHOTOGRAPHS, not rows: a named tray, a failed upload and a close-up are all correctly left out |
+  | the request | 13 categories and the must-find list ride the payload · the maker's-mark close-up is in the **same** call as its parent · the room, the walkthrough note and the crew's own note with it |
+  | one frame | **4 lines**, all sharing one photograph, three of them split off it |
+  | the names | *Walnut bar console* · *Banksy print, **likely a reproduction*** · ***appears to be** Bang & Olufsen, column speakers, pair* · *Assorted spirits bottles* |
+  | the quantities | 1 · 1 · **2** · **8** — a single article writes none |
+  | what none of them carries | **no value · no disposition · no NFA flag**, and all four unreviewed |
+  | on screen | *agent* on each, *unsure* on the low-confidence one, **Must find** naming the floor safe, **Possible NFA item** naming the tube |
+  | a desk correction | flips `namedBy` to **desk** and clears the badge |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  Steps 1–10 re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61**, 0 failed —
+  **482 checks across the eleven**, and `tests/browser/step11.js` is committed with `run.sh`'s
+  default list now 1–11. The first `<style>` block is **byte-identical to HEAD at 92,582 bytes /
+  1,169 lines / 635 rules** — no CSS, and the app diff is **319 insertions against 2 deletions**.
+- **⚠ COST IS NOT A CONSTRAINT AND MUST NOT DRIVE THE MODEL CHOICE.** Shots are compressed to 900px
+  before upload, so ~1,200 tokens a photograph; ~300 photographs on a large estate is ~$2 of input
+  and ~$4 of output including thinking. **~$6 an estate** against a $20k–$100k ticket. Thinking
+  tokens are the variable, which is the real argument for `medium` rather than a cost argument.
+- **⚠⚠ TWO DEFERRED ITEMS ARE NOW ON THE CRITICAL PATH, and this file deferred both *"until Agent
+  One is scoped"*.** Agent One is what makes them bite. **The repaint**: `invSplitItemClick` rebuilds
+  the tab through `innerHTML` — 123 / 327 / **1,420 ms** at 301 / 1,001 / 3,001 rows, and this is
+  what produces the rows. **The quota wall**: a fully named 3,290-line manifest measures **2.48MB**
+  against a ~5MB origin quota shared with the thumbnail cache, so it now arrives on the FIRST big
+  estate rather than the third. `_invReclaimSpace` means it degrades rather than fails. Neither
+  blocks the build; both want doing in the same stretch.
+- Manual **§10a** (a new subsection: the two-column writes/never-writes table and seven notes —
+  the unchecked gate, lot-by-default, the naming rule with Anthony's words, the maker's mark, the
+  two sweeps, the empty frame, and the redeploy) plus the *Unnamed shots* note corrected, since it
+  described only the by-hand route. Playbook **§e** (six notes and two `.stop`s in field language)
+  and **Step 10a** (shoot the shelf once; the five seconds still worth spending is the close-up),
+  plus **eight** symptom→cause rows — including the two that will actually happen: *one photograph
+  turned into four rows* and *thirty books came back as one line*, both of which are correct and
+  both of which look like bugs. Both `.md` copies hand-edited; **44 claims parity-checked, 0
+  mismatches**. Tag balance clean on both HTML files with the stylesheet stripped; rendered at
+  1440/390 with **0 overflow, 0 page errors**; under `print` **20/50 and 17/17** tables as wide as
+  their container with **0** taking the phone rule — the manual gained exactly one table and it sits
+  inside a `.note`.
+- **⚠ WHAT IS NOT PROVEN, AND IT IS THE DOCUSIGN SHAPE AGAIN: NO PHOTOGRAPH HAS BEEN SENT TO THE
+  LIVE API.** The egress proxy blocks `api.anthropic.com` from here, so the request shape, the tool
+  schema, the batching and the reading-back are verified in SHAPE and against stubs. **Run
+  `testAgentIdentify()` from the Apps Script editor first** — argument-free, one real Havellin
+  photograph, prints what came back. Three things only a real run settles: whether `medium` is the
+  right effort, whether the crop boxes are good enough to render from (**captured from day one
+  because re-running 300 photographs to add them later is the expensive mistake; deliberately NOT
+  rendered yet**), and whether an unconfirmed attribution wants marking on the printed Court
+  Inventory as well as on the desk.
+
 ## ⚠⚠ THE HOUSE READ 4,235px BELOW THE QUESTIONS ON A PHONE (2026-09-22)
 Anthony, off the intake form: *"there is still a drop down asking for the type of documentation. And I think
 that's now superfluous … you have the client name on the left side, but then the home details and everything

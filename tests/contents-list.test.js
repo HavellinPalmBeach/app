@@ -23,6 +23,7 @@ const FNS = ['matterDef', 'matterTypeOf', 'invProbateRows', '_invTrackDefault', 
   'resolveValBasis',
 ];
 const VARS = ['MATTER_TYPES',  'INV_CONTRACT_DOCS',
+  '_agRun', 'AGENT_NOTICE_KINDS', 
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
   'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_CATEGORIES', 'INV_TAXONOMY',
@@ -483,6 +484,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A build that renders the document perfectly and never puts a button on any screen
     // contains every string a source check would look for. This drives the real workbar.
     const BAR = FNS.concat([
+      'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
       '_renderInvWorkbar', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
       'printEstateInventoryReport', 'printContentsRecord', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',

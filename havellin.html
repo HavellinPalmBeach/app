@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:59am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 10:38am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5330,7 +5330,7 @@ var CONTRACTOR_TC_NAME = 'Contractor — TC';
 // NO banner, the folder was never created, and the first symptom was a crew in the
 // entryway watching every photograph fail. List what the app CALLS, not what was most
 // recently added.
-var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile'];  // actions this build calls
+var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile', 'agentIdentify'];  // actions this build calls
 var BACKEND_NEEDS_TYPES = ['saveMedia'];                  // and post types
 var _backendVersion = null;
 
@@ -5361,7 +5361,8 @@ var BACKEND_FEATURE_COST = {
   uploadHtml:    'estimates filed to Drive pile up instead of replacing',
   createFolder:  'new clients get no Google Drive folder at all',
   uploadFile:    'photographs taken on a job cannot be filed to Drive',
-  trashFile:     'a photo deleted in the field still stays in the client\u2019s Drive folder'
+  trashFile:     'a photo deleted in the field still stays in the client\u2019s Drive folder',
+  agentIdentify: 'the desk cannot name the day\u2019s shots automatically \u2014 every line has to be typed by hand'
 };
 
 function _showBackendStaleBanner(version, missing) {
@@ -18593,6 +18594,11 @@ function savePhotoRefs(jobId) {
                filename:r.filename, driveFileUrl:r.driveFileUrl, driveFileId:r.driveFileId,
                reviewed:r.reviewed, reviewedAt:r.reviewedAt, reviewedBy:r.reviewedBy, valNote:r.valNote,
                fieldNote:r.fieldNote, groupId:r.groupId, derivedFrom:r.derivedFrom,
+               // ⚠ AGENT ONE'S FIELDS. A new manifest key missing from this whitelist is
+               // dropped silently on every save — this file records that exact failure three
+               // separate times (fieldNote/groupId, serial, clearedAt).
+               namedBy:r.namedBy, agentAt:r.agentAt, agentConf:r.agentConf,
+               agentBasis:r.agentBasis, agentNotices:r.agentNotices, crop:r.crop,
                clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
@@ -20265,6 +20271,15 @@ function _invEdit(jobId, stableId, key, el) {
     ref[key] = (_raw === '') ? '' : moneyToNumber(el.value);
   } else {
     ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
+  }
+  // ⚠⚠ A PERSON TOUCHING THE NAME OR THE CATEGORY TAKES OWNERSHIP OF THE ROW. `namedBy` is
+  // deliberately NOT on INV_STICKY_FIELDS: that list is for records of things that HAPPENED (a
+  // signed release, a Drive id) which a merge must never lose, and a name is a judgement
+  // somebody revises. A desk correction has to be able to beat the agent's guess on the other
+  // device, which is the same reason `fmv` is not sticky either.
+  if (key === 'objectName' || key === 'category') {
+    ref.namedBy = 'desk';
+    delete ref.agentConf;   // the amber row is about an UNCHECKED guess; this one has been checked
   }
   // ⚠ A STICKY FIELD THAT HAS BEEN DELIBERATELY EMPTIED IS STAMPED, so the merge can tell it
   // apart from a device that simply never saw a value there. Without this the field could
@@ -23455,10 +23470,268 @@ function _invProgressBar(st, width) {
     + st.done + ' of ' + st.total + ' reviewed</span></div>';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// AGENT ONE — NAMING THE SHOTS
+// ═══════════════════════════════════════════════════════════════════════════════
+// Spec: AGENT_ONE_SPEC.md. The model call itself is `agentIdentify` in main-sync.gs — it
+// CANNOT be here, because this file is public and served from GitHub Pages.
+//
+// ⚠⚠ THE FIELD TYPES NOTHING AND THAT IS UNCHANGED. `_captureShot` has written
+// `objectName:''` with the comment "the desk names it" since the 2026-09-19 rebuild. This is
+// what does the desk's half of that, and it is the only thing about it that moves.
+//
+// ⚠ IT WRITES THREE FIELDS: objectName, category, qty. Values are Agent Two's and are barred
+// outright at the `contents` tier by the agreement; disposition stays Undecided by design;
+// flagNFA is a gate with no override. `_agWrite` is the ONE writer and a test pins its keys.
+
+var AGENT_BATCH = 20;            // photographs per backend call; the server caps and resumes
+var AGENT_MAX_DETAILS = 4;       // close-ups sent with one item
+var _agRun = {};                 // jobId -> live run state, session-only
+
+function _agState(jobId) {
+  if (!_agRun[jobId]) _agRun[jobId] = { running:false, total:0, done:0, named:0, split:0, empty:0, failed:0, error:'' };
+  return _agRun[jobId];
+}
+
+// A row wants naming when it is an inventory line, still blank, and its photograph has
+// actually reached Drive. A shot still uploading would come back with nothing to look at.
+function agentNameableRefs(jobId) {
+  return _jobInvRefs(jobId).filter(function(r) {
+    return !r.objectName && !r.deletedAt && _invFileId(r);
+  });
+}
+
+// ⚠⚠ ONE REQUEST PER PHOTOGRAPH, NOT PER ROW. A frame somebody has already split by hand has
+// several blank rows against one image; sending it once per row would analyse the same picture
+// four times and get four different opinions of how many objects are in it.
+function agentShotGroups(jobId) {
+  var byPhoto = {}, order = [];
+  agentNameableRefs(jobId).forEach(function(r) {
+    var srcId = r.derivedFrom || r.stableId;
+    if (!byPhoto[srcId]) { byPhoto[srcId] = { srcId: srcId, rows: [] }; order.push(srcId); }
+    byPhoto[srcId].rows.push(r.stableId);
+  });
+  return order.map(function(id) { return byPhoto[id]; });
+}
+
+// The close-ups of a maker's mark or a signature, which is the whole reason they were taken.
+// ⚠ THEY ARE NEVER SENT AS SHOTS OF THEIR OWN. `_jobInvRefs` excludes label:'detail' by design
+// and a detail frame must not mint a line; it rides with its parent as an extra image.
+function _agDetailRefs(jobId, srcId) {
+  return (_photoRefs[jobId] || []).filter(function(r) {
+    return r.label === 'detail' && !r.deletedAt && r.groupId === srcId && _invFileId(r);
+  }).slice(0, AGENT_MAX_DETAILS);
+}
+
+function _agShotPayload(jobId, group) {
+  var src = _getPhotoRef(jobId, group.srcId);
+  if (!src) return null;
+  var est = estimateStore[jobId];
+  var rooms = est && est.estimate && est.estimate.rooms ? est.estimate.rooms : [];
+  var room = rooms.find(function(x) { return x.idx === src.roomIdx; });
+  return {
+    stableId: group.srcId,
+    fileId: _invFileId(src),
+    room: _invRoomName(jobId, src.roomIdx),
+    roomNote: (room && room.note) || '',
+    fieldNote: src.fieldNote || '',
+    details: _agDetailRefs(jobId, group.srcId).map(function(d) { return { fileId: _invFileId(d) }; })
+  };
+}
+
+// ⚠ THE CATEGORY LIST AND THE MUST-FIND LIST ARE SENT, NEVER HELD SERVER-SIDE. saveInventory.gs
+// once kept its own copy of the categories and it drifted to 6 against 13, silently dropping
+// seven of them off the client's workbook. The backend refuses a payload with no list.
+function _agContext(job) {
+  return {
+    categories: INV_CATEGORIES,
+    mustFind: mustFindItems(job).filter(function(m) { return !m.found; }).map(function(m) { return m.text; }),
+    fiduciary: invFiduciaryMode(job),
+    matterType: matterTypeOf(job) || ''
+  };
+}
+
+// ─── WRITING WHAT CAME BACK ────────────────────────────────────────────────────
+// ⚠⚠ THE ONE WRITER, and the only three fields it is allowed to touch. A test asserts this
+// function never mentions fmv, disposition, flagNFA, needsAppr, authBy or assetTrack.
+function _agWrite(jobId, stableId, obj) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref) return false;
+  ref.objectName = String(obj.name || '').slice(0, 300);
+  // An unrecognised category is the app's bug, not a reason to lose the name. File it in the
+  // default and let the desk move it — the same rule `invCatMeta` already follows.
+  ref.category   = (INV_CATEGORIES.indexOf(obj.category) >= 0) ? obj.category : INV_DEFAULT_CATEGORY;
+  var q = parseInt(obj.qty, 10);
+  if (q > 1) ref.qty = q;          // a lot. qty 1 is the default and writing it says nothing
+  ref.namedBy    = 'agent';
+  ref.agentAt    = Date.now();
+  ref.agentConf  = (['high','medium','low'].indexOf(obj.confidence) >= 0) ? obj.confidence : 'low';
+  ref.agentBasis = String(obj.basis || '').slice(0, 200);
+  if (obj.crop && obj.crop.length === 4) ref.crop = obj.crop;
+  // ⚠ `reviewed` IS DELIBERATELY UNTOUCHED AND STAYS FALSE. That is the whole gate: the desk
+  // confirms, and every client document already carries "IN PROGRESS — N of M items reviewed".
+  _setPhotoRef(jobId, _invTouch(ref));
+  return true;
+}
+
+function agentApplyResult(jobId, group, result) {
+  var st = _agState(jobId);
+  var objects = (result && result.objects) || [];
+  var notices = (result && result.notices) || [];
+
+  // A notice lives on the row it came from, not in session state. A must-find sighting is far
+  // too important to be lost on a reload.
+  if (notices.length) {
+    var src = _getPhotoRef(jobId, group.srcId);
+    if (src) { src.agentNotices = notices; _setPhotoRef(jobId, _invTouch(src)); }
+  }
+
+  if (!objects.length) {
+    // ⚠ "NOTHING INVENTORIABLE HERE" IS A REAL ANSWER AND IS NOT THE SAME AS "NOT PROCESSED".
+    // The row stays blank, because naming it would be inventing an object — but it is stamped,
+    // so the desk can tell a wall from a photograph the agent never reached.
+    var only = _getPhotoRef(jobId, group.srcId);
+    if (only) { only.agentAt = Date.now(); only.agentConf = 'none'; _setPhotoRef(jobId, _invTouch(only)); }
+    st.empty++;
+    return;
+  }
+
+  var rows = group.rows.slice();
+  var n = Math.min(objects.length, rows.length);
+  for (var i = 0; i < n; i++) { if (_agWrite(jobId, rows[i], objects[i])) st.named++; }
+
+  // More objects than blank rows: split the photograph for the remainder. invSplitItemN mints
+  // them sharing this image, blank, and was written for exactly this caller.
+  if (objects.length > rows.length) {
+    var made = invSplitItemN(jobId, group.srcId, objects.length - rows.length);
+    if (typeof made !== 'string') {
+      made.forEach(function(ref, k) {
+        if (_agWrite(jobId, ref.stableId, objects[rows.length + k])) { st.named++; st.split++; }
+      });
+    }
+  }
+  // Fewer objects than blank rows is left alone rather than reconciled. Somebody split that
+  // frame by hand for a reason the photograph may not show.
+}
+
+// ─── THE RUN ───────────────────────────────────────────────────────────────────
+function agentNameShots(jobId) {
+  var job = jobs.find(function(j) { return j.id === jobId; });
+  if (!job) return;
+  if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the naming service. Settings > Sync.'); return; }
+  var st = _agState(jobId);
+  if (st.running) return;
+
+  var groups = agentShotGroups(jobId);
+  if (!groups.length) { alert('Every shot on this job already has a name.'); return; }
+
+  if (!confirm('Name ' + groups.length + ' photograph' + (groups.length === 1 ? '' : 's') + ' on this job?\n\n'
+             + 'Each one comes back named, categorised and marked unchecked for you to confirm. '
+             + 'Nothing is valued and no disposition is set.')) return;
+
+  st.running = true; st.total = groups.length; st.done = 0;
+  st.named = 0; st.split = 0; st.empty = 0; st.failed = 0; st.error = '';
+  _agRepaint(jobId);
+  _agSendNext(jobId, job, groups, 0);
+}
+
+function _agSendNext(jobId, job, groups, from) {
+  var st = _agState(jobId);
+  if (from >= groups.length) { _agFinish(jobId); return; }
+  var slice = groups.slice(from, from + AGENT_BATCH);
+  var byId = {}, shots = [];
+  slice.forEach(function(g) {
+    var payload = _agShotPayload(jobId, g);
+    if (payload) { shots.push(payload); byId[g.srcId] = g; }
+  });
+  if (!shots.length) { _agSendNext(jobId, job, groups, from + slice.length); return; }
+
+  fetch(SHEETS_SYNC_URL, {
+    method: 'POST', mode: 'cors', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'agentIdentify', jobId: jobId, context: _agContext(job), shots: shots })
+  })
+    .then(_readAppsScriptJson)
+    .then(function(d) {
+      if (!d || !d.ok) {
+        // Named, never silent. An old deployment answers "Unknown action" here and the symptom
+        // without this is a button that appears to do nothing.
+        st.error = (d && d.error) || 'the naming service did not answer';
+        _agFinish(jobId);
+        return;
+      }
+      Object.keys(d.results || {}).forEach(function(id) {
+        if (byId[id]) agentApplyResult(jobId, byId[id], d.results[id]);
+      });
+      st.failed += Object.keys(d.failed || {}).length;
+      // ⚠ COUNT WHAT THE SERVER ANSWERED FOR, NOT WHAT WE SENT. It stops on its own time budget
+      // and hands back `remaining`, so a slice can come back part-done and the rest re-sent.
+      var handled = Object.keys(d.results || {}).length + Object.keys(d.failed || {}).length;
+      st.done += handled;
+      savePhotoRefs(jobId);
+      _scheduleInventorySync(jobId);
+      _agRepaint(jobId);
+      _agSendNext(jobId, job, groups, from + (handled || slice.length));
+    })
+    .catch(function(e) {
+      st.error = (e && e.message) || 'the naming service could not be reached';
+      _agFinish(jobId);
+    });
+}
+
+function _agFinish(jobId) {
+  var st = _agState(jobId);
+  st.running = false;
+  savePhotoRefs(jobId);
+  _scheduleInventorySync(jobId);
+  renderInventoryTab();
+}
+
+function _agRepaint(jobId) {
+  var el = document.getElementById('inv-agent-state');
+  if (el) el.innerHTML = _agStateHtml(jobId);
+}
+
+function _agStateHtml(jobId) {
+  var st = _agState(jobId);
+  if (st.error) {
+    return '<span style="color:var(--err);">&#9888; ' + esc(st.error) + '</span>';
+  }
+  if (st.running) {
+    return '<span style="color:var(--bronze-dk);">Naming&hellip; ' + st.done + ' of ' + st.total + '</span>';
+  }
+  if (!st.total) return '';
+  var bits = [st.named + ' named'];
+  if (st.split)  bits.push(st.split + ' extra line' + (st.split === 1 ? '' : 's') + ' from split frames');
+  if (st.empty)  bits.push(st.empty + ' with nothing in frame');
+  if (st.failed) bits.push(st.failed + ' could not be read');
+  return '<span style="color:var(--gray);">' + esc(bits.join(' &middot; ').replace(/&middot;/g, '·')) + ' &middot; check them below</span>';
+}
+
+// Every notice the agent raised on this job, most important first. Persisted on the row, so a
+// must-find sighting survives a reload.
+var AGENT_NOTICE_KINDS = [
+  { kind:'mustfind', label:'Must find',        cls:'a-err'  },
+  { kind:'nfa',      label:'Possible NFA item', cls:'a-err'  },
+  { kind:'firearm',  label:'Firearm',           cls:'a-err'  },
+  { kind:'other',    label:'Look at this',      cls:'a-warn' }
+];
+function agentNotices(jobId, all) {
+  var out = [];
+  AGENT_NOTICE_KINDS.forEach(function(k) {
+    (all || []).forEach(function(r) {
+      (r.agentNotices || []).forEach(function(n) {
+        if (n.kind === k.kind) out.push({ kind:k.kind, label:k.label, cls:k.cls, text:n.text, ref:r });
+      });
+    });
+  });
+  return out;
+}
 function _renderInvWorkbar(job, all) {
   var st = _invReviewStats(all);
   var jid = job.id;
   var fid = invFiduciaryMode(job);
+  var _agNameables = agentShotGroups(jid).length;
   var btn = function(fn, label, title, primary) {
     return '<button class="btn-s" onclick="' + fn + '" title="' + esc(title) + '" style="'
       + (primary ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '') + '">' + label + '</button>';
@@ -23474,6 +23747,15 @@ function _renderInvWorkbar(job, all) {
       + _invProgressBar(st, 150)
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
+      // ⚠ AGENT ONE IS FIRST IN THE ROW BECAUSE IT COMES FIRST IN THE WORK. Every document
+      // beside it reads off names, so on a freshly shot job this is the only button that does
+      // anything useful. It withdraws itself once nothing is left unnamed.
+      + (_agNameables > 0
+          ? '<button class="btn-s" onclick="agentNameShots(' + jid + ')"'
+            + ' title="Read the photographs and fill in a name and a category on every unnamed line. Nothing is valued and no disposition is set — every row comes back marked unchecked for you to confirm."'
+            + ' style="background:var(--bronze-dk);color:#fff;border-color:var(--bronze-dk);">Name ' + _agNameables
+            + ' shot' + (_agNameables === 1 ? '' : 's') + '</button>'
+          : '')
       // ⚠⚠ THE ESTATE SET WAS ON SCREEN FOR EVERY SERVICE AND NOTHING GATED IT (2026-09-21).
       // Measured on a living Home Editing client: the Approval Request rendered "To Personal
       // Representative", "Fair Market Value as of date of death (—)" and "authorized fiduciary";
@@ -23540,6 +23822,31 @@ function _renderInvWorkbar(job, all) {
     + (st.total && !st.complete
         ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;">Client documents print with an <strong>IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.</div>'
         : '')
+    + '<div id="inv-agent-state" style="font-size:10.5px;margin-top:7px;">' + _agStateHtml(jid) + '</div>'
+    + _agNoticesHtml(jid, all)
+    + '</div>';
+}
+
+// ⚠ THE NOTICES ARE THE HALF THAT IS NOT ABOUT NAMING. A must-find sighting and a possible
+// suppressor are the two things on this tab a person must not scroll past, so they render
+// above the rows rather than inside them, in the order that matters.
+function _agNoticesHtml(jobId, all) {
+  var list = agentNotices(jobId, all);
+  if (!list.length) return '';
+  return '<div style="margin-top:9px;border-top:1px solid var(--border);padding-top:8px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);margin-bottom:5px;">'
+    + 'Agent One raised ' + list.length + ' thing' + (list.length === 1 ? '' : 's') + ' to look at</div>'
+    + list.map(function(n) {
+        var where = _invRoomName(jobId, n.ref.roomIdx);
+        return '<div class="' + n.cls + '" style="font-size:11px;margin-bottom:4px;">'
+          + '<strong>' + esc(n.label) + '</strong> &middot; ' + esc(where)
+          + (n.ref.itemNo ? ' &middot; #' + n.ref.itemNo : '')
+          + ' &mdash; ' + esc(n.text) + '</div>';
+      }).join('')
+    // ⚠ IT SAYS WHAT IT IS. A model reading a photograph is not a search of the house, and a
+    // notice that reads as a clearance is worse than none.
+    + '<div style="font-size:10px;color:var(--gray);margin-top:5px;">Read off the photographs, not off the house. '
+    + 'Nothing here is ticked, confirmed or acted on by the app.</div>'
     + '</div>';
 }
 
@@ -23614,6 +23921,16 @@ function _renderInvRow(job, ref) {
   if (invAwaitingAppraisal(ref, jid)) warn.push('<span title="Flagged for a specialist appraisal \u2014 no appraiser engaged yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
   if (ref.flagBequest) warn.push('<span title="Named in a specific bequest" style="color:var(--bronze);">bequest</span>');
   if (ref.flagDisputed) warn.push('<span title="Recorded dispute" style="color:#c0392b;">disputed</span>');
+  // ⚠ AN UNCHECKED AGENT GUESS SAYS SO ON THE ROW. Bronze, never red: red on this strip means
+  // "stop, do not touch" (a held firearm) and a second red would cost the first its meaning.
+  // The badge clears the moment a person edits the name or the category — `_invEdit` drops
+  // `agentConf` — which is what makes "we will confirm" visible rather than aspirational.
+  if (ref.namedBy === 'agent' && !ref.reviewed) {
+    var _acf = ref.agentConf || 'low';
+    warn.push('<span title="' + esc('Named by Agent One' + (ref.agentBasis ? ' \u2014 ' + ref.agentBasis : '')
+      + '. Confirm or correct it.') + '" style="color:var(--bronze);">'
+      + (_acf === 'low' ? 'agent &middot; unsure' : 'agent') + '</span>');
+  }
   var det = _invDetailRefs(jid, ref.stableId);
   // ⚠ A ROW THAT SHARES ITS PHOTOGRAPH SAYS SO, and it is not decoration. Once one shot can
   // carry several lines, two rows sitting under identical thumbnails is the ordinary case —
