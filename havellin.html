@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 10:09am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 10:38am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1466,7 +1466,7 @@ body.no-smf .smf-col{display:none;}
           <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-lname" placeholder="Last name"></div>
         </div>
         <div class="row">
-          <div><label>Role / Authority <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <div class="gate-cell"><label>Role / Authority <span style="color:#A32D2D;font-weight:700;">*</span></label>
             <select id="i-executor-role">
               <option value="">Select role</option>
               <option value="Estate Attorney">Estate Attorney</option>
@@ -1483,7 +1483,15 @@ body.no-smf .smf-col{display:none;}
               <option value="Other">Other</option>
             </select>
           </div>
-          <div></div>
+          <!-- Built from EXECUTOR_AUTH_OPTIONS by buildExecutorAuthOptions() at load, and
+               Edit Client builds its own from the same list. This <select> ships EMPTY on
+               purpose: a second hardcoded copy is how the two forms come to offer different
+               answers to one question. -->
+          <div class="gate-cell">
+            <label>Letters of Administration</label>
+            <select id="i-executor-auth"></select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Leave <em>Pending</em> unless a certified copy is already in hand. On probate the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.</div>
+          </div>
         </div>
         <div class="row">
           <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" oninput="formatPhone(this)" maxlength="14"></div>
@@ -8107,12 +8115,12 @@ function saveIntake() {
     executorPhone: document.getElementById('i-executor-phone') ? document.getElementById('i-executor-phone').value : '',
     executorEmail: document.getElementById('i-executor-email') ? document.getElementById('i-executor-email').value : '',
     probateSale: document.getElementById('i-probate-sale') ? document.getElementById('i-probate-sale').value : '',
-    // ⚠ THERE IS NO INTAKE CONTROL FOR THIS AND THERE NEVER HAS BEEN. The read this replaces
-    // was a ternary over an element the form does not render, so it always resolved to 'pending'
-    // while looking like a field somebody could fill in — and the Job Plan's derived line told
-    // the reader it was "recorded at intake". Letters of Administration are recorded under Edit
-    // Client (ec-exec-auth) when the certified copy arrives, and that is the only control there is.
-    executorAuth: 'pending',
+    // ⚠ ASKED HERE FROM 2026-09-22, AND RESOLVED RATHER THAN STORED RAW. Until then this was a
+    // ternary over an `i-executor-auth` the form has never rendered, so it always produced
+    // 'pending' while looking like a field somebody could fill in. It goes through
+    // resolveExecutorAuth because `jobActivationBlockers` blocks on `=== 'pending'` and would
+    // wave a blank straight through — a probate job activating with no Letters on file.
+    executorAuth: resolveExecutorAuth((document.getElementById('i-executor-auth')||{}).value),
     depositReceived: false,
     agrSigned: false,
     svc:svc, svcLabel:svcLabels[svc],
@@ -8447,6 +8455,43 @@ function buildDocTierOptions() {
   if (el) el.innerHTML = docTierOptionsHtml('');
 }
 
+// ⚠⚠ WHETHER THE REPRESENTATIVE CAN ACTUALLY ACT YET — one list, both forms.
+// Until 2026-09-22 this was asked on Edit Client and nowhere else: `saveIntake` read an
+// `i-executor-auth` the intake form has never rendered, so every estate job was born
+// `pending` off a ternary that could not do anything else, and the Job Plan told the reader
+// it had been "recorded at intake". Intake asks it now, and a second hardcoded option list is
+// exactly how the Edit Client modal kept its own service list through a rename.
+//
+// ⚠ THE THREE DISPLAY MAPS ELSEWHERE ARE DELIBERATELY NOT FOLDED IN HERE. The probate
+// document says *Attached*, which is a claim that the Letters are attached to THAT document
+// and not the same statement as "we hold a certified copy"; the dashboard's *N/A* is terseness
+// in a narrow field. This is the CONTROL's vocabulary, which is the thing that has to match.
+var EXECUTOR_AUTH_OPTIONS = [
+  { v: 'pending',   l: 'Pending' },
+  { v: 'received',  l: 'Received' },
+  { v: 'notneeded', l: 'Not Required' }
+];
+function executorAuthOptionsHtml(selected) {
+  var sel = resolveExecutorAuth(selected);
+  return EXECUTOR_AUTH_OPTIONS.map(function(o){
+    return '<option value="' + o.v + '"' + (o.v === sel ? ' selected' : '') + '>' + esc(o.l) + '</option>';
+  }).join('');
+}
+// ⚠⚠ AN UNRECOGNISED VALUE RESOLVES TO `pending`, AND A BLANK IS THE CASE THAT MATTERS.
+// `jobActivationBlockers` blocks on `=== 'pending'`, so an empty string does not block — a
+// probate job carrying one would activate with no Letters on file and nothing on any screen
+// saying so. There is no blank option and the save never stores one.
+function resolveExecutorAuth(v) {
+  for (var i = 0; i < EXECUTOR_AUTH_OPTIONS.length; i++) {
+    if (EXECUTOR_AUTH_OPTIONS[i].v === v) return v;
+  }
+  return 'pending';
+}
+function buildExecutorAuthOptions() {
+  var el = document.getElementById('i-executor-auth');
+  if (el) el.innerHTML = executorAuthOptionsHtml('pending');
+}
+
 // The standing job flags, rendered for the Job Plan header — what the crew has open in
 // the house. Also shown on the client dashboard, where the job is prepped.
 // ⚠ It used to reach PAPER too, because printJobPlan printed #job-plan-header along with
@@ -8605,11 +8650,12 @@ function firearmsWorkspaceLine(job) {
 // text. The Clear button's list was missing a different five.
 //
 // Add new intake fields HERE and both paths stay correct.
-var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-re': 'unknown', 'i-prem': 'no' };
+var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-re': 'unknown', 'i-prem': 'no', 'i-executor-auth': 'pending' };
 var INTAKE_FIELDS = [
   'i-svc', 'i-fname', 'i-lname', 'i-phone', 'i-email', 'i-addr', 'i-city', 'i-zip',
   'i-src', 'i-referredby', 'i-refpartner',
   'i-executor-fname', 'i-executor-lname', 'i-executor-role', 'i-executor-phone', 'i-executor-email',
+  'i-executor-auth',
   'i-probate-atty-fname', 'i-probate-atty-lname', 'i-probate-atty-firm',
   'i-probate-atty-phone', 'i-probate-atty-email',
   'i-date-of-death', 'i-letters-date', 'i-probate-case', 'i-probate-deadline', 'i-probate-sale',
@@ -34975,7 +35021,7 @@ function showEditClient(jobId) {
   html += fld('Role / Authority', '<select id="ec-exec-role" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select role'},{v:'Executor',l:'Executor'},{v:'Personal Representative',l:'Personal Representative'},{v:'Power of Attorney',l:'Power of Attorney'},{v:'Estate Attorney',l:'Estate Attorney'},{v:'Family Member',l:'Family Member'},{v:'Trustee',l:'Trustee'},{v:'Other',l:'Other'}], job.executorRole||'')+'</select>', true);
   html += fld('Phone', tel('exec-phone', job.executorPhone), true);
   html += fld('Email', txt('exec-email', job.executorEmail, 'rep@email.com', 'email'), true);
-  html += fld('Authorization Status', '<select id="ec-exec-auth" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'pending',l:'Pending'},{v:'received',l:'Received'},{v:'notneeded',l:'Not Required'}], job.executorAuth||'pending')+'</select>', false);
+  html += fld('Letters of Administration', '<select id="ec-exec-auth" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+executorAuthOptionsHtml(job.executorAuth)+'</select>', false);
   html += '</div>';
   html += '</div>'; // end estate block
 
@@ -35198,7 +35244,7 @@ function saveClientEdit(jobId) {
     job.executorRole     = document.getElementById('ec-exec-role').value;
     job.executorPhone    = document.getElementById('ec-exec-phone').value;
     job.executorEmail    = document.getElementById('ec-exec-email').value;
-    job.executorAuth     = document.getElementById('ec-exec-auth').value;
+    job.executorAuth     = resolveExecutorAuth(document.getElementById('ec-exec-auth').value);
   }
 
   saveJobs();
@@ -35599,6 +35645,7 @@ rebuildDropdowns();
 populateIntakeTCDropdown();
 buildHouseFlagInputs();
 buildDocTierOptions();
+buildExecutorAuthOptions();
 // Force Client Intake date fields to use the calendar picker only — block manual
 // keyboard entry so you can't type a malformed or impossible date.
 (function(){

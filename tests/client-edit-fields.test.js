@@ -39,6 +39,7 @@ const liveLines = (s) => String(s).split('\n')
   .join('\n');
 
 const EC_FNS = ['showEditClient', 'saveClientEdit', 'ecToggleProbate',
+                'executorAuthOptionsHtml', 'resolveExecutorAuth', 
                 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
                 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope',
                 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
@@ -47,7 +48,7 @@ const EC_FNS = ['showEditClient', 'saveClientEdit', 'ecToggleProbate',
                 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
                 'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef'];
-const EC_VARS = ['SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
+const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD',
                  'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES'];
 
@@ -298,17 +299,107 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠ LETTERS ARE RECORDED IN ONE PLACE, AND THE JOB PLAN NAMES THAT PLACE');
+  group('⚠⚠ LETTERS ARE ASKED ON BOTH FORMS, FROM ONE LIST');
   {
-    // `i-executor-auth` has never existed. saveIntake's ternary over it always resolved to
-    // 'pending', so every estate job was born pending — correctly — while the derived line
-    // told the reader it had been "recorded at intake", sending them to a control that is
-    // not on the form.
-    lacks(live, 'i-executor-auth', 'saveIntake no longer reads a control the intake form does not render');
-    has(fn('saveIntake'), "executorAuth: 'pending'", 'a new job is born pending, stated rather than derived from a missing element');
-    has(fn('showEditClient'), 'id="ec-exec-auth"', 'Edit Client is where it is recorded');
-    has(fn('saveClientEdit'), "job.executorAuth     = document.getElementById('ec-exec-auth').value",
-        'and Edit Client is what writes it');
+    // ⚠ THIS GROUP PINNED THE OPPOSITE UNTIL 2026-09-22 AND BROKE CORRECTLY. `i-executor-auth`
+    // had never existed, so saveIntake's ternary over it could only ever produce 'pending' while
+    // looking like a field somebody could fill in. Anthony asked for the control; the requirement
+    // is no longer "intake does not read it", it is that BOTH forms ask it from ONE catalogue and
+    // neither can store a value the readers do not understand.
+    has(src, 'id="i-executor-auth"', 'Client Intake asks it');
+    has(fn('showEditClient'), 'id="ec-exec-auth"', 'and so does Edit Client');
+    // The intake <select> ships EMPTY and is filled at load, the same way the engagement tier is.
+    // A second hardcoded option list is how the Edit Client modal kept its own service list
+    // through a rename.
+    has(src, '<select id="i-executor-auth"></select>', 'the intake control ships empty');
+    has(fn('buildExecutorAuthOptions'), 'executorAuthOptionsHtml', 'and is built from the catalogue at load');
+    has(fn('showEditClient'), 'executorAuthOptionsHtml(job.executorAuth)', 'Edit Client builds from the same one');
+    const ctrl = fn('showEditClient') + '\n' + fn('buildExecutorAuthOptions');
+    ['Not Required', "l: 'Pending'", "{v:'pending'"].forEach((n) => {
+      lacks(fn('showEditClient'), n, 'no second hardcoded option list survives in the modal (' + n + ')');
+    });
+    has(live, 'buildExecutorAuthOptions();', 'and the builder is actually called at load — an empty select is the whole risk of shipping one');
+
+    // ⚠⚠ THE RESET DEFAULT IS LOAD-BEARING, AND THE REASON IS THE ACTIVATION GATE.
+    // `jobActivationBlockers` blocks on `=== 'pending'`, so a BLANK does not block: a probate job
+    // carrying one would activate with no Letters on file and nothing on any screen saying so.
+    // And `.value = ''` on a <select> with no blank option leaves the PREVIOUS client's answer
+    // standing, which is the leak INTAKE_FIELDS exists to close.
+    has(src, "'i-executor-auth': 'pending'", 'the reset sweep puts it back to pending rather than blank');
+    has(fn('jobActivationBlockers'), "executorAuth === 'pending'", 'and the activation gate really does key on that exact value');
+
+    const c = sandbox({ fns: ['resolveExecutorAuth', 'executorAuthOptionsHtml', 'esc'],
+                        vars: ['EXECUTOR_AUTH_OPTIONS'] });
+    eq(c.EXECUTOR_AUTH_OPTIONS.map((o) => o.v), ['pending', 'received', 'notneeded'],
+       'three answers, and pending is first so it is what an unset control shows');
+    ['pending', 'received', 'notneeded'].forEach((v) => eq(c.resolveExecutorAuth(v), v, v + ' is kept'));
+    ['', undefined, null, 'bogus', 'Received'].forEach((v) => eq(c.resolveExecutorAuth(v), 'pending',
+      JSON.stringify(v) + ' resolves to pending rather than being stored as something no reader understands'));
+    lacks(c.executorAuthOptionsHtml(''), 'value=""', 'there is no blank option to pick');
+    has(c.executorAuthOptionsHtml(''), '<option value="pending" selected>', 'and an unknown value opens on pending');
+    has(c.executorAuthOptionsHtml('received'), '<option value="received" selected>', 'a recorded answer is prefilled');
+
+    // Both saves resolve on the way in, so neither can write a value the gate waves through.
+    has(fn('saveIntake'), 'resolveExecutorAuth(', 'Client Intake resolves it');
+    has(fn('saveClientEdit'), 'resolveExecutorAuth(document.getElementById(\'ec-exec-auth\').value)',
+        'and so does Edit Client');
+
+    // ⚠⚠ AND THE JOIN IS DRIVEN, BECAUSE A BUILD THAT READS THE CONTROL AND THEN THROWS THE
+    // ANSWER AWAY CONTAINS EVERY STRING THE CHECKS ABOVE LOOK FOR. The whole point of adding the
+    // field is that what somebody picks on the call reaches the record, and then the gate.
+    const INTAKE = {
+      'i-fname': 'Tripp', 'i-lname': 'Butler', 'i-svc': 'probate', 'i-tc': 'Ashley Jerome',
+      'i-addr': '69 Beach Blvd', 'i-city': 'Palm Beach', 'i-zip': '33480', 'i-sqft': '3500',
+      'i-ptype': 'Estate', 'i-src': 'Attorney', 'i-start': '2026-10-01',
+      'i-date-of-death': '2026-08-14', 'i-matter-type': 'probate',
+      'i-executor-fname': 'Jane', 'i-executor-lname': 'Doe',
+      'i-executor-role': 'Personal Representative',
+      'i-executor-phone': '(561) 555-0100', 'i-executor-email': 'jane@x.com',
+      'i-probate-case': '50-2026-CP-001234',
+      'i-probate-atty-fname': 'Richard', 'i-probate-atty-lname': 'Comiter',
+      'i-probate-atty-firm': 'Comiter Singer', 'i-probate-atty-phone': '(561) 626-2101',
+      'i-probate-atty-email': 'r@cs.com',
+    };
+    const intake = (auth) => {
+      const d = domStub(Object.assign({}, INTAKE, auth === undefined ? {} : { 'i-executor-auth': auth }));
+      const said = [];
+      const cc = sandbox({
+        fns: ['saveIntake', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef',
+              'jobActivationBlockers'],
+        vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
+        stubs: { document: d, jobs: [], showFB: (el, k, m) => said.push({ k, m }),
+                 saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
+                 clearIntakeForm() {}, populateAgrSelect: null, showPanel() {},
+                 generateHvlId: () => 'HVL-0007', readHouseFlagInputs: () => ({}),
+                 lookupReferralById: () => null, setTimeout() {} },
+      });
+      cc.saveIntake();
+      const j = cc.jobs[0];
+      return { said: said[0] || {}, auth: j && j.executorAuth,
+               // ⚠ THE OVERRIDES GO LAST. saveIntake writes agrSigned:false and
+               // depositReceived:false onto every new job, so spreading the job over them
+               // put those two back and every case read as blocked on the deposit instead.
+               // Caught by the assertion, not by reading.
+               blocked: j ? cc.jobActivationBlockers(Object.assign({}, j, { agrSigned: true, depositReceived: true }))
+                          : null };
+    };
+
+    const picked = intake('received');
+    eq(picked.said.k, 'ok', 'a probate intake with the Letters recorded saves');
+    eq(picked.auth, 'received', 'and the answer picked on the call reaches the record');
+    eq(picked.blocked, [], 'so a funded, signed job can be activated');
+
+    const def = intake(undefined);
+    eq(def.auth, 'pending', 'an untouched control still records pending, exactly as before the field existed');
+    eq(def.blocked, ['Executor authorization must be received'],
+       'and a probate job with it pending is still refused activation — nothing about the gate moved');
+
+    // ⚠ THE CASE THE RESOLVER IS FOR. A blank is not an answer, and `=== 'pending'` would wave it
+    // straight through: a probate job activating with no Letters on file and nothing saying so.
+    const blank = intake('');
+    eq(blank.auth, 'pending', 'a blank is stored as pending rather than as a blank');
+    eq(blank.blocked, ['Executor authorization must be received'], 'so it cannot slip past the activation gate');
+    eq(intake('notneeded').blocked, [], 'and a matter with no Letters is not held up by one');
 
     const d = sandbox({
       fns: ['planDerivedLines', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
@@ -330,8 +421,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pending = letters('pending');
     ok(!!pending, 'a probate job carries the Letters line');
     eq(pending.ok, false, 'pending reads open');
-    has(pending.detail, 'Edit Client', 'and names the one form that can record it');
-    lacks(pending.detail, 'at intake', 'never intake, which has no control for it');
+    // ⚠ IT STILL NAMES EDIT CLIENT ALONE, AND THAT IS NOW A CHOICE RATHER THAN A CORRECTION.
+    // Intake asks the question from 2026-09-22 — but this line is read MID-JOB, when the client
+    // already exists and Client Intake can no longer reach it. Naming a form the reader cannot
+    // use is what the old wording did; the route has to work from where they are standing.
+    has(pending.detail, 'Edit Client', 'and names the form that can record it from here');
+    lacks(pending.detail, 'at intake', 'never intake — by the time this is read, that form cannot reach the client');
     has(pending.detail, 'cannot activate', 'and says what it is holding up');
     eq(letters('received').ok, true, 'received reads green');
     eq(letters('notneeded').detail, 'not required on this matter', 'and a matter with no Letters says so');

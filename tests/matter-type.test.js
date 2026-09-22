@@ -120,7 +120,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'docTierScope', 'docTierScopeMirror', 'docTierDef'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS'],
+        fns: ['saveIntake', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef'], vars: ['EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS'],
         stubs: {
           document: d, jobs: [],
           showFB: (el, kind, msg) => said.push({ kind, msg }),
@@ -150,13 +150,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('Edit Client carries it, and discards an answer it does not recognise');
   {
-    const EC_FNS = ['showEditClient', 'saveClientEdit', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
+    const EC_FNS = ['showEditClient', 'saveClientEdit', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
                     'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf',
                     '_houseFlagRowClass', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706',
                     'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                     'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf',
                     'matterDef', 'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef'];
-    const EC_VARS = ['SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
+    const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                      'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
                      'DOC_SCOPES'];

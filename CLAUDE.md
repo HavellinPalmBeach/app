@@ -79,9 +79,76 @@ usable, 12 / 12 / 17 / 23 required); it also found three findings, and he took a
   exemption is gone — **and it was doubly redundant**, because the check already skips a ternary-guarded line,
   which is why **reverting it is green by construction**. Recorded as such rather than covered by a check that
   could not fail.
-- **⚠ ADDING AN INTAKE CONTROL WAS CONSIDERED AND NOT DONE.** Whether authorization is received is often
-  knowable on the call, and intake already asks the **Letters date**. But that is a new question on a form
-  Anthony has been tuning all week, and it is his call rather than a wording fix's to make.
+- ~~**⚠ ADDING AN INTAKE CONTROL WAS CONSIDERED AND NOT DONE.**~~ **DONE THE SAME DAY — Anthony: *"yes, add the
+  letters control to intake."*** *Kept rather than deleted, per the standing rule that a fixed flag left standing
+  reads as outstanding work.* The original note follows, and its reasoning held: whether authorization is
+  received is often knowable on the call, and intake already asks the **Letters date**. It was his call to make
+  rather than a wording fix's, and he made it.
+
+### ⚠⚠ AND THEN INTAKE GOT THE CONTROL — `i-executor-auth` IS REAL NOW (2026-09-22, same day)
+- **It sits in the Authorized Representative block**, so it renders on all three decedent services, the way
+  Edit Client's does. **`EXECUTOR_AUTH_OPTIONS` is the one list** and both forms build from it — the intake
+  `<select>` **ships EMPTY** and `buildExecutorAuthOptions()` fills it at load, exactly as the engagement tier
+  does, because a second hardcoded option list is how the Edit Client modal kept its own service list through
+  a rename. Reverting Edit Client to its own copy fails 3.
+  - **⚠ THE THREE *DISPLAY* MAPS ELSEWHERE ARE DELIBERATELY NOT FOLDED IN, and that is not an oversight.** The
+    probate document says **Attached** because it means the Letters are attached to *that document* — a
+    different claim from *we hold a certified copy* — and the dashboard's **N/A** is terseness in a narrow
+    field. What has to match is the CONTROL's vocabulary.
+- **⚠⚠ A BLANK IS NOT AN ANSWER, AND THAT IS THE WHOLE REASON FOR THE RESOLVER.**
+  `jobActivationBlockers` blocks on `executorAuth === 'pending'`, so an empty string does **not** block — a
+  probate job carrying one would activate **with no Letters on file and nothing on any screen saying so**.
+  `resolveExecutorAuth` maps anything unrecognised to `pending`, both saves go through it, and there is no
+  blank option to pick. Reverting the fallback fails **10**; reverting either save's call fails 5 and 1.
+  - **⚠ AND THE RESET DEFAULT IS LOAD-BEARING FOR THE SAME REASON.** `resetIntakeFields` does
+    `el.value = INTAKE_FIELD_DEFAULTS[id] || ''`, and **a `<select>` with no blank option ignores `.value = ''`**
+    — so without the entry the NEXT client created in the same session inherits the last one's answer, on the
+    field that gates activation. That is the leak `INTAKE_FIELDS`' own comment describes, on the worst possible
+    field. Reverting it fails 1, and the browser drives it: after a save recording *Received*, the control reads
+    **Pending**.
+- **⚠ THE JOB PLAN'S LETTERS LINE STILL NAMES EDIT CLIENT ALONE, AND THAT IS NOW A CHOICE RATHER THAN A
+  CORRECTION.** Intake asks the question — but that line is read **mid-job**, when the client exists and Client
+  Intake can no longer reach it. Naming a form the reader cannot use is the defect it was fixed for hours
+  earlier. The test's assertion is unchanged and its *reason* is restated.
+- **⚠ FOUND BY THE BROWSER, AND IT IS A REAL LAYOUT DEFECT THE NEW CONTROL CREATED.** The auth cell carries a
+  hint under its control, so it is the tallest in its row — and `.row>*>select{margin-top:auto}` then pushed the
+  **Role / Authority** select to the BOTTOM of that height while the new one sat at the top. **Measured 49px
+  apart at 1440.** `.gate-cell` is the exception that exists for exactly this and both cells take it now, as
+  the two documentation-gate rows already did. **The net is the general rule**, in `page-shell.test.js`: no
+  `.row` may mix a `.gate-cell` with a plain cell **that holds a control** — an empty spacer is exempt, because
+  there is nothing in it to misalign. Reverting the class fails 1.
+- **9503 committed checks** (+31 on the morning's 9472; `client-edit-fields` 77 → 106, `page-shell` +4).
+  **All ten changes revert-verified individually, ZERO green**; baseline 0 before and after.
+  - **⚠⚠ THE DRIVEN JOIN IS THE ONE THAT MATTERS, because a build that reads the control and throws the answer
+    away contains every string the source checks look for.** A probate intake is driven through the real
+    `saveIntake` and the answer handed to the real `jobActivationBlockers`: *Received* → activates, untouched →
+    *pending* and refused, **blank → pending and still refused**.
+  - **⚠ TWO OF MY OWN FIXTURES WERE WRONG AND THE CODE WAS RIGHT, both caught by the assertion rather than by
+    reading.** `Object.assign({agrSigned:true}, job)` puts the JOB last, so `saveIntake`'s own `agrSigned:false`
+    won and every case read as blocked on the deposit. And **`saveIntake` does `jobs.unshift(job)`** — newest
+    FIRST — so the browser probe's `jobs[jobs.length-1]` was reading the *previous* job back. Neither shows up
+    until there are two jobs, which is why the first probe passed.
+  - **⚠ SIX PINNED `fns:`/`vars:` LISTS ACROSS FOUR SUITES BROKE CORRECTLY** as `showEditClient` grew a call to
+    `executorAuthOptionsHtml` and `saveIntake` one to `resolveExecutorAuth` — **found by searching every list at
+    once**, which this file records costing a round when it is not.
+- **Verified end to end in headless Chromium, 22 checks, 0 failed, 0 page errors** — three options built at load
+  into a select that ships empty, shown on the three decedent services and hidden on the four living ones, the
+  answer reaching the record and then the gate, the form resetting to *Pending*, Edit Client offering the same
+  three from the same list and the correction landing, **and the two selects on that row sharing a top edge**.
+  The morning's 57-check probe re-run as a regression: **57 / 0**. Stylesheet byte-identical, 635 rules.
+- Manual **§4** (a note: the control, the one catalogue, and the blank-is-not-an-answer rule) and **§11** (the
+  Letters row corrected **a second time in one day** — it had just been made to say the control lives only on
+  Edit Client, which the same afternoon made false; it now carries both halves and why the chip still names
+  Edit Client). Playbook **Step 1** (a note in field language) and the **symptom row rewritten** — it said *"It
+  is not on Client Intake and never has been"*, which would send somebody hunting for a field that is now
+  there. Both `.md` copies hand-edited; **11 claims parity-checked, 0 mismatches**; a stale sweep for the four
+  retired wordings returns **0 across all five files**. Tag balance clean; rendered at 1440/390 with **0
+  overflow, 0 page errors**; under `print` **20/49 and 17/17** tables as wide as their container with **0**
+  taking the phone rule — as at HEAD.
+- **⚠ THE SHAPE TO COPY: when a form "asks" something, check the control exists before trusting the record.**
+  This field had a reader, a gate and three display maps, and the thing feeding all of them was a ternary over
+  an element that has never been on the page. It produced a plausible answer every time, which is exactly why
+  nobody noticed.
 
 - **9472 committed checks** (+77; `tests/client-edit-fields.test.js` new at 77). **All 18 changes
   revert-verified individually, ZERO green except the one above** — the Move Destination block fails **9**,
