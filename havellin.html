@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:59am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 10:09am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1431,15 +1431,15 @@ body.no-smf .smf-col{display:none;}
         <div class="sec" style="margin-bottom:6px;">Move Destination <span style="font-size:10px;font-weight:400;color:var(--gray);">(New home details — required for Home Transition)</span></div>
         <label>New home address</label>
         <input type="text" id="i-dest-addr" placeholder="123 New Address Blvd">
+        <!-- ⚠ ZIP, BEDROOMS AND BATHROOMS CAME OFF THIS BLOCK ON 2026-09-22 BECAUSE NOTHING
+             READ ONE OF THEM. The destination is printed as address + city (the Job Plan header
+             and the estimate both hardcode ", FL"), and the only destination figure that reaches
+             the engine is the square footage. Do not add a field back here without a reader. -->
         <div class="row">
           <div><label>City</label><input type="text" id="i-dest-city" placeholder="e.g. Boca Raton"></div>
-          <div><label>Zip</label><input type="text" id="i-dest-zip" placeholder="e.g. 33432" maxlength="5"></div>
-        </div>
-        <div class="row">
           <div><label>New home sq ft</label><input type="number" id="i-dest-sqft" placeholder="e.g. 1800" min="0"></div>
-          <div><label>Bedrooms</label><input type="number" id="i-dest-beds" placeholder="2" min="0" max="20"></div>
-          <div><label>Bathrooms</label><input type="number" id="i-dest-baths" placeholder="2" min="0" max="20"></div>
         </div>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Move day is priced off the NEW home, not the old one — a Home Transition estimate will not save without the sq ft. It is correctable later under Edit Client.</div>
       </div>
     </div>
     <div class="card">
@@ -8006,10 +8006,7 @@ function saveIntake() {
   // Downsizing destination
   var destAddr = (document.getElementById('i-dest-addr')||{}).value ? document.getElementById('i-dest-addr').value.trim() : '';
   var destCity = (document.getElementById('i-dest-city')||{}).value ? document.getElementById('i-dest-city').value.trim() : '';
-  var destZip  = (document.getElementById('i-dest-zip')||{}).value  ? document.getElementById('i-dest-zip').value.trim()  : '';
   var destSqft = (document.getElementById('i-dest-sqft')||{}).value ? document.getElementById('i-dest-sqft').value.trim() : '';
-  var destBeds = (document.getElementById('i-dest-beds')||{}).value ? document.getElementById('i-dest-beds').value.trim() : '';
-  var destBaths= (document.getElementById('i-dest-baths')||{}).value? document.getElementById('i-dest-baths').value.trim(): '';
 
   var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
   var missing = [];
@@ -8092,8 +8089,7 @@ function saveIntake() {
     mustFind:    (document.getElementById('i-mustfind')||{}).value||'',
     safetyNotes: (document.getElementById('i-safety')||{}).value||'',
     houseFlags:  readHouseFlagInputs('i'),
-    destAddr:destAddr, destCity:destCity, destZip:destZip,
-    destSqft:destSqft, destBeds:destBeds, destBaths:destBaths,
+    destAddr:destAddr, destCity:destCity, destSqft:destSqft,
     probateCase: document.getElementById('i-probate-case') ? document.getElementById('i-probate-case').value : '',
     probateDeadline: document.getElementById('i-probate-deadline') ? document.getElementById('i-probate-deadline').value : '',
     deathDate:  document.getElementById('i-date-of-death') ? document.getElementById('i-date-of-death').value : '',
@@ -8111,7 +8107,12 @@ function saveIntake() {
     executorPhone: document.getElementById('i-executor-phone') ? document.getElementById('i-executor-phone').value : '',
     executorEmail: document.getElementById('i-executor-email') ? document.getElementById('i-executor-email').value : '',
     probateSale: document.getElementById('i-probate-sale') ? document.getElementById('i-probate-sale').value : '',
-    executorAuth: document.getElementById('i-executor-auth') ? document.getElementById('i-executor-auth').value : 'pending',
+    // ⚠ THERE IS NO INTAKE CONTROL FOR THIS AND THERE NEVER HAS BEEN. The read this replaces
+    // was a ternary over an element the form does not render, so it always resolved to 'pending'
+    // while looking like a field somebody could fill in — and the Job Plan's derived line told
+    // the reader it was "recorded at intake". Letters of Administration are recorded under Edit
+    // Client (ec-exec-auth) when the certified copy arrives, and that is the only control there is.
+    executorAuth: 'pending',
     depositReceived: false,
     agrSigned: false,
     svc:svc, svcLabel:svcLabels[svc],
@@ -8617,7 +8618,7 @@ var INTAKE_FIELDS = [
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
   'i-pri', 'i-re', 'i-prem', 'i-doclevel',
   'i-gate-706', 'i-gate-dispute', 'i-doc-tier', 'i-matter-type',
-  'i-dest-addr', 'i-dest-city', 'i-dest-zip', 'i-dest-sqft', 'i-dest-beds', 'i-dest-baths'
+  'i-dest-addr', 'i-dest-city', 'i-dest-sqft'
 ];
 
 // Reset the intake form to its blank state.
@@ -9000,11 +9001,11 @@ function saveEstimateAndPreview() {
     if (unscoredRooms.length > 0) { showFB('e-fb','warn','Every included room needs a volume and complexity score (1–5): ' + unscoredRooms.join(', ')); return; }
     var propValEl = document.getElementById('e-propval');
     if (!propValEl || !propValEl.value || propValEl.value === '0') {
-      showFB('e-fb','warn','Property value is required — set the approximate home value in Client Intake for this client, then reopen the estimate.');
+      showFB('e-fb','warn','Property value is required — open this client on the Client Dashboard, press ✎ Edit Client and set the approximate home value. The walkthrough on this screen is kept.');
       return;
     }
     if (currentEstimate.svc === 'downsizing_move' && !(parseFloat(job.destSqft) > 0)) {
-      showFB('e-fb','warn','Enter the New home sq ft in Client Intake for this client — Home Transition pricing needs it.');
+      showFB('e-fb','warn','New home sq ft is required — open this client on the Client Dashboard, press ✎ Edit Client and set it under Move Destination. Home Transition prices move day off the NEW home. The walkthrough on this screen is kept.');
       return;
     }
   }
@@ -28343,7 +28344,7 @@ function planDerivedLines(jobId, job, est, phase) {
     if (ctx.isProbate) {
       var letters = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
       out.push({ key: 'letters', ok: letters, label: 'Letters of Administration on file',
-                 detail: job.executorAuth === 'notneeded' ? 'not required on this matter' : (letters ? 'received' : 'pending — recorded at intake or under Edit Client, and the job cannot activate without it') });
+                 detail: job.executorAuth === 'notneeded' ? 'not required on this matter' : (letters ? 'received' : 'pending — recorded under Edit Client when the certified copy arrives, and the job cannot activate without it') });
     }
     if (ctx.isDocJob) {
       var atty = !!(job.probateAttyName || job.probateAttyFirm);
@@ -34806,6 +34807,7 @@ function showEditClient(jobId) {
   if (!job) return;
   var isProbate = ecIsProbateSvc(job.svc);
   var isEstate = ecIsEstateSvc(job.svc);
+  var isMove = ecIsMoveSvc(job.svc);
   var svcLabels = SVC_LABELS;
 
   var m = document.getElementById('edit-client-modal');
@@ -34879,6 +34881,16 @@ function showEditClient(jobId) {
   html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano',l:'Anthony Graziano'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
   html += fld('Approx. Sqft', txt('sqft', job.sqft, 'e.g. 4500', 'number'), true);
   html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Apartment',l:'Apartment'},{v:'Town Home',l:'Town Home'},{v:'Patio Home',l:'Patio Home'},{v:'Single Family Home',l:'Single Family Home'},{v:'Estate',l:'Estate'}], job.ptype)+'</select>', true);
+  // ⚠⚠ CORRECTABLE HERE BECAUSE THE ESTIMATE REFUSES TO SAVE WITHOUT IT. Property value is
+  // optional at intake and a hard refusal on every estimate save, and until 2026-09-22 that
+  // refusal named Client Intake — which for an existing client is a create-only form. So a
+  // walkthrough on a job that missed it could not be saved at all and there was no control
+  // anywhere in the app to clear it.
+  // ⚠ NOT MARKED REQUIRED, because this save accepts it blank. Five asterisks over fields a
+  // save does not enforce is the defect the attorney block already had; the hint says what it
+  // costs instead. And the approval lock below deliberately does NOT hold it — propVal books
+  // no hours: it scales the reference BAND on Build Estimate and the RE-commission readout.
+  html += fld('Approx. Home Value <span style="font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the estimate will not save without it)</span>', '<input type="text" id="ec-home-value" value="'+(job.propVal ? '$' + (parseInt(job.propVal, 10) || 0).toLocaleString() : '')+'" placeholder="e.g. $3,200,000" inputmode="numeric" oninput="formatMoneyInput(this)" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   html += fld('Priority', '<select id="ec-priority" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'normal',l:'Normal'},{v:'high',l:'High — probate deadline'},{v:'urgent',l:'Urgent — health / emergency'}], job.priority)+'</select>', false);
   html += fld('RE Potential', '<select id="ec-re" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'unknown',l:'Unknown'},{v:'yes',l:'Yes — likely RE transaction'},{v:'no',l:'No RE component expected'}], job.re)+'</select>', false);
   html += fld('Premium Estate', '<select id="ec-premium" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'no',l:'No — standard rates'},{v:'yes',l:'Yes — art, antiques, wine'}], job.premium?'yes':'no')+'</select>', false);
@@ -34889,6 +34901,26 @@ function showEditClient(jobId) {
   html += fld('Target Start', '<input type="date" id="ec-start" value="'+(job.start||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
   html += fld('Hard Target', '<input type="date" id="ec-completion" value="'+(job.completion||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   html += '</div>';
+
+  // ⚠⚠ THE MOVE DESTINATION, FOR THE SAME REASON THE HOME VALUE IS HERE: the new home's square
+  // footage is optional at intake and a hard refusal on a Home Transition estimate save, and
+  // the refusal used to name a form that only creates new clients. The address and the city
+  // ride with it because they are the same block and equally uncorrectable — they print on the
+  // Job Plan header and on the estimate as the destination, and a client who moves to a
+  // different condo than the one recorded at intake is an ordinary Tuesday.
+  // ⚠ IT IS RENDERED ON EVERY SERVICE AND HIDDEN OFF ONE, exactly as the probate block is, so
+  // saveClientEdit can read it unconditionally — and ecToggleProbate shows it when the service
+  // changes mid-edit. A block the handler forgets is the defect this file records from
+  // 2026-09-10, where switching to Contested Probate hid four fields the save still read.
+  html += '<div id="ec-dest-fields" style="display:'+(isMove?'block':'none')+';">';
+  html += '<div class="sec" style="margin-top:14px;">Move Destination</div>';
+  html += '<div class="d-grid2" style="gap:8px 20px;">';
+  html += fld('New Home Address', txt('dest-addr', job.destAddr, '123 New Address Blvd'), false);
+  html += fld('City', txt('dest-city', job.destCity, 'e.g. Boca Raton'), false);
+  html += fld('New Home Sq Ft <span style="font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the estimate will not save without it)</span>', txt('dest-sqft', job.destSqft, 'e.g. 1800', 'number'), false);
+  html += '</div>';
+  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Move day is priced off the <strong>new</strong> home, not the old one — the sq ft sets the supervision day and the unpack crew\'s hours. Like the other three pricing inputs it is held once the estimate is approved; raise a change order instead.</div>';
+  html += '</div>'; // end move destination
 
   // ⚠⚠ THE ESTATE BLOCK COMES FIRST, AND EVERY FACT ABOUT THE DECEDENT IS IN IT — the same
   // split Client Intake makes. Date of death, who builds the inventory, the two documentation
@@ -34998,6 +35030,8 @@ function ecToggleProbate() {
   if (pf) pf.style.display = isP ? 'block' : 'none';
   var af = document.getElementById('ec-estate-auth-fields');
   if (af) af.style.display = ecIsEstateSvc(svcVal) ? 'block' : 'none';
+  var df = document.getElementById('ec-dest-fields');
+  if (df) df.style.display = ecIsMoveSvc(svcVal) ? 'block' : 'none';
   // The estate attorney is required on probate and merely offered on an Estate Settlement,
   // which frequently never opens probate at all. Matched by CLASS so a sixth attorney field
   // cannot be added and quietly left marked wrong — the same net Client Intake uses.
@@ -35017,6 +35051,11 @@ function ecToggleProbate() {
 // shows, versus who a document is written to), not because the sets differ.
 function ecIsProbateSvc(svc) { return svc === 'probate' || svc === 'contested_probate'; }
 function ecIsEstateSvc(svc)  { return ecIsProbateSvc(svc) || svc === 'cleanout'; }
+// The one service with somewhere of the client's own to move into, so the one service whose
+// destination block is worth showing. Stated once for the render AND the mid-edit handler,
+// because a block one of them knows about and the other does not is how four probate fields
+// came to be hidden from the person filling them in.
+function ecIsMoveSvc(svc)    { return svc === 'downsizing_move'; }
 
 function saveClientEdit(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -35041,6 +35080,12 @@ function saveClientEdit(jobId) {
     var _changed = [];
     if (svc !== job.svc) _changed.push('Service type');
     if (String(document.getElementById('ec-sqft').value) !== String(job.sqft)) _changed.push('Approx. sqft');
+    // ⚠ THE NEW HOME'S SQ FT IS A PRICING INPUT AND THE HOME VALUE IS NOT, and that is the whole
+    // reason only one of them is here. destSqft sizes move day directly (destTC = 8 + sqft*0.002,
+    // destPS = sqft*0.009 in computeEngineV3), so moving it after approval desynchronises the job
+    // from a number the client accepted — the same failure sqft is held for. propVal books no
+    // hours anywhere: propValMultiplier scales the internal reference band and nothing else.
+    if (String((document.getElementById('ec-dest-sqft')||{}).value || '') !== String(job.destSqft || '')) _changed.push('New home sq ft');
     if ((document.getElementById('ec-premium').value === 'yes') !== !!job.premium) _changed.push('Premium service');
     if (_changed.length) {
       alert(_changed.join(' and ') + ' cannot be changed on this job.\n\n'
@@ -35090,6 +35135,12 @@ function saveClientEdit(jobId) {
   job.priority = document.getElementById('ec-priority').value;
   job.re    = document.getElementById('ec-re').value;
   if (!_locked) job.premium = document.getElementById('ec-premium').value === 'yes';
+  // Digits only, the same normalisation Client Intake applies — the control is a money-formatted
+  // text field ($3,200,000) and every reader downstream does parseInt on it.
+  job.propVal   = ((document.getElementById('ec-home-value')||{}).value || '').replace(/[^0-9]/g, '');
+  job.destAddr  = (document.getElementById('ec-dest-addr')||{}).value || '';
+  job.destCity  = (document.getElementById('ec-dest-city')||{}).value || '';
+  if (!_locked) job.destSqft = (document.getElementById('ec-dest-sqft')||{}).value || '';
 
   var isEstateEdit = ecIsEstateSvc(svc);
   // ⚠ EVERY DECEDENT FACT IS READ HERE, ON ALL THREE ESTATE SERVICES — not in the probate
@@ -35151,6 +35202,12 @@ function saveClientEdit(jobId) {
   }
 
   saveJobs();
+  // ⚠ saveJobs() fills updatedAt only when it is MISSING, deliberately, so it never bumps a job
+  // this device did not touch — which means an Edit Client save on a job that already has one
+  // does not bump it either, and the correction can lose the newest-wins merge to another
+  // device's untouched copy. syncJobToSheets bumps it. This is the house pairing at every other
+  // job-edit site and Edit Client was the one missing it.
+  if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
   document.getElementById('edit-client-modal').style.display = 'none';
   // Was renderJobDetail(jobId) — a function that does not exist anywhere in the file, so
   // every client edit threw a ReferenceError here. The write and the modal close happen
@@ -35159,6 +35216,20 @@ function saveClientEdit(jobId) {
   // Edit Client button in the first place (see its render at the button's call site).
   if (typeof renderClientDashboard === 'function') renderClientDashboard(jobId);
   if (typeof renderJobs === 'function') renderJobs();   // client list may show a new name
+
+  // ⚠⚠ LAST, AND IT IS WHAT MAKES THE REFUSALS' PROMISE TRUE. Both estimate-save refusals now
+  // send somebody here and say the walkthrough on Build Estimate is kept. It is — but e-propval
+  // is seeded ONCE, by loadJobIntoEstimate, so without this push the only way to pick the
+  // corrected value up is to re-select the job on that tab, which runs neutralizeEstimateView
+  // and drops every room they have just scored. destSqft needs no push (calcAll reads it off the
+  // job record) and does need the recalc. Runs after the save, the sync and both redraws, so a
+  // throw in the pricing tree cannot leave the record half-written.
+  var _eJobEl = document.getElementById('e-job');
+  if (_eJobEl && parseInt(_eJobEl.value) === jobId) {
+    var _ePropEl = document.getElementById('e-propval');
+    if (_ePropEl) _ePropEl.value = job.propVal || '';
+    if (typeof calcAll === 'function') calcAll();
+  }
 }
 
 function formatPhone(input) {

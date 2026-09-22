@@ -1,5 +1,143 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ TWO REFUSALS POINTED AT A FORM THAT CANNOT REACH AN EXISTING CLIENT (FIXED 2026-09-22)
+Off the intake audit Anthony asked for — *"I just wanna make sure we're collecting what we need but not asking a
+ridiculous number of questions… why don't you just do one thorough check and confirm all that"*. The check
+confirmed the inventory/valuation chain flows and the question counts are modest (28 / 34 / 40 / 44 fields
+usable, 12 / 12 / 17 / 23 required); it also found three findings, and he took all three in one commit:
+*"do 3 and 4 in one commit… fix 5 also."* App-only, no redeploy.
+
+- **⚠⚠ THE DEAD ENDS, REPRODUCED END TO END BEFORE ANYTHING WAS BUILT.** `i-home-value` → `job.propVal` and
+  `i-dest-sqft` → `job.destSqft` are **optional at intake** and a **hard refusal on estimate save** —
+  *"Property value is required — set the approximate home value in Client Intake for this client"* and
+  *"Enter the New home sq ft in Client Intake for this client"*. **Client Intake only CREATES clients**: there
+  is no route back into it for a job that exists, Edit Client had neither field, and the estimate's own
+  `e-propval` is `type="hidden"` inside a `display:none` block. A visible-control sweep of the whole page
+  returned nothing. So a walkthrough on a client missing either was **unsaveable**, `estimateStore` stayed
+  empty with three rooms scored, and the only way out was to re-create the client.
+  - **Both refusals name Edit Client now and both say the walkthrough on screen is kept** — the same sentence
+    the estimate-contract gate already carries, for the same reason: leaving the tab is the fix, and a
+    concierge who believes forty minutes of scoring will be lost will guess instead.
+- **⚠⚠ AND THE PROMISE IS ONLY TRUE BECAUSE THE CORRECTION IS PUSHED BACK INTO THE OPEN ESTIMATE.**
+  `e-propval` is seeded **once**, by `loadJobIntoEstimate`, so without the push the only way to pick the new
+  value up is to re-select the job on Build Estimate — which runs `neutralizeEstimateView` and **drops every
+  room just scored**. `saveClientEdit` writes it in place and re-runs `calcAll` when `e-job` holds this job.
+  `destSqft` needs no push (`calcAll` reads it off the job record) and does need the recalc.
+  - **⚠ IT MUST NOT FIRE ON ANOTHER CLIENT'S ESTIMATE**, which would put this job's property value onto
+    whichever quote happened to be open — the wrong-job hazard this file records on every global the estimator
+    reads. Guarded on `parseInt(e-job.value) === jobId`, and both directions are driven.
+  - **⚠ IT RUNS LAST**, after the save, the sync and both redraws, so a throw in the pricing tree cannot leave
+    the record half-written. A test pins the ordering.
+- **⚠⚠ THE APPROVAL LOCK HOLDS THE SQ FT AND NOT THE HOME VALUE, AND THAT SPLIT IS THE DECISION.** `destSqft`
+  sizes move day directly (`destTC = 8 + sqft*0.002`, `destPS = sqft*0.009`), so moving it after approval
+  desynchronises the job from a number the client accepted — the same failure `sqft` is held for. **`propVal`
+  books no hours anywhere**: grepped every reader, and `propValMultiplier` scales the **reference BAND** on
+  Build Estimate and the RE-commission readout and nothing else. Holding it would put the one field the
+  estimate refuses on **behind an approval that cannot happen until the estimate saves**.
+- **⚠ THE DESTINATION BLOCK IS RENDERED ON EVERY SERVICE AND HIDDEN OFF ONE**, exactly as the probate block is,
+  so `saveClientEdit` reads it unconditionally and a non-move job writes back the value it rendered — nothing
+  is lost on a job re-typed away from Home Transition. **`ecToggleProbate` shows it when the service changes
+  mid-edit**: a block the render knows about and the handler does not is the 2026-09-10 defect wearing a new
+  name, where switching to Contested Probate hid four fields the save went on reading. `ecIsMoveSvc` is the one
+  predicate, read by both, and **a net asserts every `id="ec-*fields"` block the render emits is named by the
+  handler**, so the next one cannot be added and quietly left out.
+- **⚠ THE ADDRESS AND CITY RIDE WITH THE SQ FT.** Same block, same save, equally uncorrectable, and they print
+  on the Job Plan header and the client estimate as the destination — a client moving to a different condo
+  than the one recorded at intake is an ordinary Tuesday. Offering the sq ft alone would have been a
+  half-measure in a section I was creating anyway.
+- **⚠ NEITHER IS MARKED REQUIRED, because `saveClientEdit` accepts both blank.** Five asterisks over fields a
+  save does not enforce is the defect the attorney block already carried and had withdrawn; the label hint
+  says what a blank costs instead.
+- **⚠ AND EDIT CLIENT WAS THE ONE JOB-EDIT SITE MISSING `syncJobToSheets`.** `saveJobs()` fills `updatedAt`
+  **only when it is missing** — deliberately, so it never bumps a job this device did not touch — which means
+  an Edit Client save on a job that already has one does not bump it either, and the correction can lose the
+  newest-wins merge to another device's untouched copy. `saveJobs(); syncJobToSheets(job);` is the house
+  pairing at four other sites and this file already records why. One line; revert-verified.
+
+### ⚠ THREE FIELDS WERE COLLECTED, SAVED AND SYNCED WITH NO READER ANYWHERE
+- **`destZip`, `destBeds`, `destBaths`.** Zero live readers in the app or the `.gs` files — the destination
+  prints as **address + city** on both surfaces (each hardcodes `", FL"`) and the only destination figure that
+  reaches the engine is the square footage. Three extra questions on a call that is already long.
+- **⚠⚠ THE TEST IS THE RULE, NOT THE THREE NAMES: every `dest*` key `saveIntake` writes onto the job must have
+  a reader outside the two forms that write it.** That is the only thing that would have caught them, and it
+  catches the next one. The converse is pinned too, or the fix becomes a cull.
+- **⚠ AND A SECOND NET CAME OUT OF IT: `INTAKE_FIELDS` AND THE FORM NOW HAVE TO AGREE IN BOTH DIRECTIONS** —
+  52 controls, 52 ids, neither list carrying one the other lacks. That is the leak the list's own comment
+  describes (the whole `i-dest-*` block was once missing from the post-save clear, so the next client
+  inherited the previous one's destination property, which **prices move day**) plus its mirror image:
+  deleting a field from the markup and leaving it on the list makes the reset sweep name an element that does
+  not exist.
+- A job saved before today keeps the three dead keys on its record. Harmless — nothing read them then either.
+
+### ⚠ THE JOB PLAN NAMED A CONTROL CLIENT INTAKE DOES NOT HAVE
+- The derived Letters line read *"pending — recorded at intake or under Edit Client"*. **`i-executor-auth` has
+  never existed**, so `saveIntake`'s ternary over it always resolved to `'pending'` while looking like a field
+  somebody could fill in. The read is gone (stated as `executorAuth: 'pending'` with the reason), and the line
+  names **Edit Client alone**, where `ec-exec-auth` is and always has been.
+- **⚠ AND THE ORPHANED-DOM-ID TRIPWIRE CARRIED AN EXEMPTION WHOSE COMMENT WAS FALSE.** `doc-send.test.js`
+  allowed `/^i-executor-auth$/` and said both allowed ids were *"reachable and real"*. It was neither. The
+  exemption is gone — **and it was doubly redundant**, because the check already skips a ternary-guarded line,
+  which is why **reverting it is green by construction**. Recorded as such rather than covered by a check that
+  could not fail.
+- **⚠ ADDING AN INTAKE CONTROL WAS CONSIDERED AND NOT DONE.** Whether authorization is received is often
+  knowable on the call, and intake already asks the **Letters date**. But that is a new question on a form
+  Anthony has been tuning all week, and it is his call rather than a wording fix's to make.
+
+- **9472 committed checks** (+77; `tests/client-edit-fields.test.js` new at 77). **All 18 changes
+  revert-verified individually, ZERO green except the one above** — the Move Destination block fails **9**,
+  the job record's dest keys 8, `saveIntake`'s reads 7, the writes 7, `ecIsMoveSvc` 5, the intake markup 5,
+  and the rest 1–4. Baseline **0** before and after.
+  - **⚠ THE `NEEDLE xN` GUARD EARNED ITS KEEP AGAIN.** The `syncJobToSheets` revert matched **five** times —
+    it is the house pairing and occurs at every other job-edit site — so an unanchored needle would have
+    reverted the wrong one. Re-anchored on its neighbour, it fails 1.
+  - **⚠ THE SWEEP RAN ON A FULL COPY OF THE TREE IN THE SCRATCHPAD**, because the browser probe was measuring
+    the real file at the same time. This file records what running a suite against a file a sweep is mutating
+    costs. ⚠ Copying only `havellin.html` + `tests/` gives a non-zero baseline — suites read the `.gs` files
+    and the three HTML documents too.
+  - **⚠ FOUR PINNED `fns:` LISTS BROKE CORRECTLY** when `showEditClient` grew a call to `ecIsMoveSvc` —
+    `doc-tier`, `estate-intake`, `matter-type`, `service-change`. **Found by searching every list at once**,
+    which this file records costing a round when it is not.
+- **Verified end to end in headless Chromium, 57 checks, 0 failed, 0 page errors**, driving the real intake
+  form, the real room grid, the real Edit Client modal and the real Save — twice, identically:
+
+  | | |
+  |---|---|
+  | the intake destination block | address · city · sq ft · a hint saying the estimate will not save without it; **zip / beds / baths not in the DOM at all** |
+  | a saved Home Transition | **three** `dest*` keys on the record, not six · the form blank for the next client |
+  | three rooms scored, Save | refused · *Edit Client* · *the walkthrough on this screen is kept* · **0 written** |
+  | Edit Client | home value and the whole Move Destination block on screen, prefilled from the job |
+  | switching the service mid-edit | destination hides on an estate service and comes back on Home Transition |
+  | correcting the value, then Save | refused on the **sq ft** instead · **0 written** · rooms intact |
+  | correcting that, then Save | **SAVED**, three rooms on it, property value $4,200,000 |
+  | the walkthrough, after **both** trips | **every scored room still there** |
+  | an approved estimate | home value still correctable · **sq ft held** and the refusal names it |
+  | the Letters line | *pending — recorded under Edit Client when the certified copy arrives* |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  The first `<style>` block is **byte-identical to HEAD at 93,446 bytes / 1,168 lines / 635 rules** — no CSS —
+  and markup tag balance is unchanged from HEAD.
+- **⚠ FOUND IN PASSING, NOT FIXED: `showFB` CLEARS ITS STRIP ON A 4-SECOND TIMER, UNCONDITIONALLY.** So a
+  refusal fired less than four seconds after a previous one is wiped by the **old** timer a moment after it is
+  written — press Save twice in quick succession and the second message vanishes instantly. Pre-existing and
+  unrelated; it cost the browser probe two runs before the cause was measured rather than guessed at, and the
+  probe now blanks the strip before each press so it measures the gate and not the toast race.
+- Manual **§4** (two notes — the two optional-but-blocking answers with the whole dead end, and the destination
+  block losing three fields), **§5h** (the two refusals and why the walkthrough really is kept), **§11** (the
+  per-service table said both gate chips are *"read from intake"* — **the §733.604 deadline is, the
+  authorization status never was**). Playbook **Step 1** (a `.stop` and a note), **Step 2** (a `.stop` on the
+  two refusals, and the do-not-re-pick-the-job rule) and **three** symptom→cause rows — including the one that
+  will actually happen: *the Letters chip is red and you cannot find where to record it*. Both `.md` copies
+  hand-edited; **27 claims parity-checked, 0 mismatches** — ⚠ one apparent miss was my needle dropping an
+  `&rarr;`, **verified by dumping the surrounding bytes rather than assumed**. A stale sweep for the retired
+  wordings returns **0 in `havellin.html`** and one hit in each document, every one inside the sentence that
+  corrects it. Tag balance clean on both HTML files; rendered at 1440/390 with **0 overflow, 0 page errors**;
+  under `print` **20/49 and 17/17** tables as wide as their container with **0** taking the phone rule — as at
+  HEAD.
+- **⚠ THE SHAPE TO COPY: a refusal is only as good as the route it names.** Both of these were correct gates
+  catching real gaps, and both were unusable because the sentence pointed at a form that cannot reach an
+  existing client. **When a blocker names a fix, open that surface and check the control is on it** — and when
+  the fix means leaving the screen, check that coming back does not cost the work.
+
 ## ⚠⚠ THE HOUSE READ 4,235px BELOW THE QUESTIONS ON A PHONE (2026-09-22)
 Anthony, off the intake form: *"there is still a drop down asking for the type of documentation. And I think
 that's now superfluous … you have the client name on the left side, but then the home details and everything
