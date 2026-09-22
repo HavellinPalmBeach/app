@@ -1,5 +1,103 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A DELIVERED, FULLY PAID JOB COULD STILL BE MARKED LOST (FIXED 2026-09-22)
+Anthony, off the client list: *"after we won the client and have completed the job, the 'x' at the end of
+the client record in client dashboard should be deactivated b/c this is the lost button, which is rightly
+there during the course of the job b/c the client could cancel mid-job, but once the final invoice is paid,
+it should not be there."* App-only, no redeploy.
+
+- **⚠⚠ HE IS RIGHT AND THE BLAST RADIUS IS WORSE THAN A STRAY BUTTON. REPRODUCED ON THE OLD BUILD IN A
+  BROWSER FIRST, not argued.** Seeded a delivered job that had paid **$19,940 in full** — deposit, midpoint
+  and final all recorded — pressed the ✕ on its own row, picked a reason and confirmed:
+
+  | | old build |
+  |---|---|
+  | ✕ offered on | **every job**, delivered and final-paid included |
+  | after one press | status **`closed_retained`** · `lostReason: price` · `lostEst: 19,940` |
+  | its timeline | **16 rows → 1**, reading *"Closed — deposit retained · Price / estimate too high · $9,970 retained"* |
+
+  **A page asserting we kept the deposit and walked away from work we had delivered and been paid for in
+  full.** On a job with no deposit recorded it is worse: `confirmMarkLost` writes `lost` and clears `won`,
+  and **every filter predicate in `renderJobs` ends `j.status !== 'lost'`** — so the client drops off the
+  list entirely and out of the Win/Loss won count, with nothing on screen saying where it went.
+- **⚠⚠ `jobIsSettled(job)` ORs RATHER THAN ANDs, AND THAT IS THE DECISION.** `!!job.deliveredOn ||
+  stagePaidTotal(job,'final') > 0`. Either signal alone is proof the engagement was not lost. **Requiring
+  both would leave the delivered-but-unpaid job exposed — the one case where the wrong record is most
+  tempting ("they won't pay, mark it lost") and most false**: the work was done, so it is a collections
+  matter, and `closed_retained` would assert we kept the deposit and walked away. Reverting the `||` to
+  `&&` fails **14**.
+  - **⚠ THE FINAL CAN BE PAID WHILE THE JOB IS STILL `active`**, before anybody presses Close, which is
+    why `status === 'closed'` alone is not the test — and it is exactly the clause Anthony named.
+  - **⚠ `finPaid > 0` IS THE RAIL'S OWN DEFINITION** of its `final_paid` milestone, read rather than
+    re-derived. **`jobPaidTotal` would be wrong**: a deposit alone would settle a job on day one.
+    Reverting to the all-stages total fails 6.
+  - **⚠ `completionDate` IS THE INTAKE TARGET AND IS WRITTEN BY NOTHING.** Reading it would settle a job
+    on a date somebody typed on the first phone call; a test `lacks()` it.
+- **⚠ HIDDEN, NOT DISABLED.** On a finished job the absence explains itself, and a control that refuses the
+  same blocker back at you is worse than none — the rule this file already records on the activation
+  blocker. The row is otherwise untouched: the client is still listed and **Open →** is still there, so
+  nothing reads as missing. A test asserts no `disabled` survives on the row.
+- **⚠⚠ THE SAME GATE IS ON THE HANDLER, OR THE BUTTON IS REACHED AROUND.** `openCloseoutModal` had **no
+  gate at all** — the alert I first took for one is in `applyJobTransition`, a different function. The rail
+  carries its own `Mark lost` secondary (`client_accepted`, gated on `live`, so naturally closed on a
+  settled job) and anything added later would be a third door. `docAction`'s rule exactly. It refuses,
+  **binds nothing** so a stray Confirm cannot land on it, and names what an outstanding final actually is.
+  Reverting the handler gate fails 9, the button gate 4.
+  - **⚠ THE REFUSAL DOES NOT CLAIM A PAYMENT THAT IS NOT THERE** — the *"and the final payment is
+    recorded"* clause is conditional. Reverting it fails 1.
+- **⚠ A JOB ALREADY `lost` OR `closed_retained` KEEPS THE CONTROL, DELIBERATELY.** `openCloseoutModal`
+  prefills `lostReason` / `lostNote` precisely so a reason can be amended, and withdrawing the button would
+  remove the only route to that correction. Neither is `settled` — no delivery stamp, no final payment —
+  and a test pins that rather than leaving it to a later tidy-up.
+- **9814 committed checks** (`tests/closeout-gate.test.js` new at 49). **All six changes revert-verified
+  individually, ZERO green** — the OR **14**, the predicate itself 16, the handler gate 9, the all-stages
+  total 6, the button gate 4, the conditional clause 1. Baseline 0 before and after, on a **full tar copy
+  of the tree** so the browser could drive the real `havellin.html` at the same time.
+  - **⚠ ONE REVERT CRASHED THE SUITE RATHER THAN FAILING IT** (`jobPaidTotal` is not lifted in the new
+    suite, so it threw). Re-done as a hand-rolled all-stages sum over the lifted `jobPayments`, it fails 6.
+    A revert that reads as `passed < baseline` is a crash, not a clean number.
+  - **⚠ ONE OF MY OWN ASSERTIONS WAS WRONG AND THE CODE WAS RIGHT.** I asserted a `lost` job renders its
+    ✕ in the default list. It renders **no row at all** — every filter predicate excludes `lost`, so it
+    lives under the **Lost** filter. Pinned in both directions now, in the unit suite and the browser.
+  - **⚠ AND I RAN THE FIRST BROWSER PASS AGAINST THE FILE THE SWEEP WAS MUTATING** — the script reads
+    `process.env.APP` and I passed the bed path as argv, so it loaded the real file mid-revert and reported
+    twelve failures. The trap this file records. Useful by accident: it is a browser-level reproduction of
+    the defect with `jobIsSettled` forced false.
+- **Verified end to end in headless Chromium, 25 checks, 0 failed, 0 page errors**, driving the real client
+  list, the real button and the real handler across five seeded jobs:
+
+  | | |
+  |---|---|
+  | `jobIsSettled` across active · midway · delivered · final-paid · new | **false · false · true · true · false** |
+  | ✕ rendered on | **901, 902, 905 only** — the delivered and final-paid jobs have none |
+  | the rows themselves | **5 of 5 listed**, 5 of 5 still carry **Open →**, **0** disabled buttons |
+  | pressing ✕ on a live job | modal opens, binds **901** |
+  | calling the handler on the delivered job | **does not open · binds 0 · one refusal**, naming *cannot be marked lost* · *delivered* · *collections* |
+  | the delivered job afterwards | **`closed` · won true · no loss reason · no `lostAt`** |
+  | the final-paid job | refuses too, and its wording names the payment |
+  | a `lost` job | **absent from the default list**, present under the **Lost** filter, ✕ still on it |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  `tests/browser/step14.js` is committed and `run.sh`'s default list is now 1–14; steps 1–13 re-run as
+  regressions — **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15**, 0 failed, **527 checks
+  across the thirteen**. The first `<style>` block is **byte-identical to HEAD at 92,582 bytes / 1,169
+  lines / 635 rules** — no CSS, and the app diff is **34 insertions against 2 deletions**.
+- Manual **§9** (a note: the two signals, why either alone, the measurement, hidden-not-greyed, and that a
+  lost job keeps it) and playbook **§ If the job dies instead** (the same in field language, with *an
+  unpaid final is chasing money, not a lost job*) plus **two** symptom→cause rows — the two that will
+  actually happen: *the ✕ has gone off a client row* and *a client you marked Lost is not in the list*.
+  Both `.md` copies hand-edited; **23 claims parity-checked, 0 mismatches**. Tag balance clean on both HTML
+  files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under
+  `print` **20/52 and 17/18** tables as wide as their container with **0** taking the phone rule — as at
+  HEAD, since this pass added notes and table rows and no new table.
+- **⚠ FOUND IN PASSING, NOT FIXED: `confirmMarkLost` RE-STAMPS `lostAt` ON EVERY SAVE.** So the amend
+  route above — re-open the modal on a lost job to correct the reason — **moves the date we recorded the
+  loss** to today. Pre-existing, unrelated to this gate, and worth a look the next time that modal is open.
+- **⚠ THE SHAPE TO COPY: a control that is right for most of a lifecycle is not right for all of it.** This
+  one was correct from intake to delivery and became a way to write a false record the moment the work was
+  done. **When a button's meaning depends on where the job is, ask what it means at the END** — the
+  end state is the one nobody pictures while building it.
+
 ## ⚠⚠ A PRICED HOME PREP JOB HAD NO WAY FORWARD, AND NO BUTTON SAID WHY (FIXED 2026-09-22)
 Anthony, twenty minutes into the first dummy client of the five-client test run: *"it says next is
 walkthrough… I put the walkthrough date for September 25th and we built the estimate today… when I
