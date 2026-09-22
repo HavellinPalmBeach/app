@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 9:39pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 10:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9619,7 +9619,6 @@ function proposedPlanRow(e) {
 function clientJobPlanSection(e, job) {
   var _j = job || (typeof jobs !== 'undefined' ? jobs.find(function(j){ return j.id === e.jobId; }) : null) || {};
   var parts = proposedPlanRow(e);
-  var deep = (typeof isFormalDoc === 'function') ? isFormalDoc(_j) : false;
   var isPrep = e.svc === 'prep';
   var steps = (typeof JOB_STEPS !== 'undefined' && JOB_STEPS[e.svc]) ? JOB_STEPS[e.svc] : {};
 
@@ -31112,7 +31111,10 @@ function docLevelFloor(job) {
 function docLevelFloorReason(job) {
   if (!job) return '';
   if (job.svc === 'contested_probate') return 'Contested probate is always documented to court standard.';
-  if (gateDispute(job)) return 'A dispute or elective share is recorded, so this estate is documented to court standard and the specialist-appraisal threshold drops to $' + invAppraisalThreshold(job).toLocaleString() + ' per item.';
+  // ⚠ THE THRESHOLD IS NOT QUOTED HERE. `docStandardEffect` states it, in the same box, two
+  // sentences later — this arm used to name it as well, so one number appeared twice in one
+  // alert. Say it where it is attributed correctly and nowhere else.
+  if (gateDispute(job)) return 'A dispute or elective share is recorded, so this estate is documented to court standard.';
   if (_gate706(job) && isDecedentJob(job, job.svc)) {
     return String(job.gate706 || '') === 'yes'
       ? 'A federal estate tax return (Form 706) is being filed, so the §20.2031-6 documentation standard applies.'
@@ -31122,7 +31124,10 @@ function docLevelFloorReason(job) {
   // case, a recorded dispute, a federal return — and this one is a contractual choice. When
   // both apply, the reader wants the fact, because the fact is the one they cannot change.
   if (docTierOf(job) === 'appraisals') {
-    return 'This engagement is contracted at Inventory + appraisals, so every flagged item is held to the specialist standard until it is appraised or waived.';
+    // ⚠ The tail said "so every flagged item is held … until it is appraised or waived", which
+    // `docStandardEffect` now states in the same box. The reason says WHY the floor is set; the
+    // effect says what the floor does.
+    return 'This engagement is contracted at Inventory + appraisals, so it is documented to court standard.';
   }
   return '';
 }
@@ -31209,26 +31214,66 @@ function invAppraisalThreshold(job) {
   return gateDispute(job) ? INV_APPRAISAL_THRESHOLD_DISPUTED : INV_APPRAISAL_THRESHOLD;
 }
 
-// ── Individual-listing threshold ──────────────────────────────────────────────
-// Two modes, agreed 2026-08-24. Treas. Reg. 20.2031-6(a) caps a room-grouped lot at
-// $100 an article, but it governs what is filed WITH A 706 — on an estate that files
-// none, §733.604 asks for "reasonable detail" instead. So the reg's figure applies in
-// Strict Mode and $1,000 otherwise, and the Methodology Statement prints which was used.
-// Nothing consumes this yet; the tiering build does. It lives here so there is one
-// definition when it does.
-var INV_LISTING_THRESHOLD_STRICT = 100;
-var INV_LISTING_THRESHOLD_STANDARD = 1000;
-function invListingThreshold(job) {
-  return isFormalDoc(job) ? INV_LISTING_THRESHOLD_STRICT : INV_LISTING_THRESHOLD_STANDARD;
-}
+// ── RETIRED 2026-09-22: the individual-listing threshold ─────────────────────
+// ⚠⚠ `invListingThreshold` IS GONE, AND SO ARE `INV_LISTING_THRESHOLD_STRICT` (100) AND
+// `INV_LISTING_THRESHOLD_STANDARD` (1000). It had exactly ONE reader in 34,000 lines —
+// `docStandardEffect` below, a sentence builder — so the only thing the app ever did with an
+// itemisation floor was tell somebody it had one. Nothing itemised anything above it, and no
+// control anywhere let a person apply it by hand: `_invScheduleSection` groups on the row's own
+// `qty`, which is set at import time (itemise-or-lot), and a lot row carries ONE name, ONE value
+// and ONE quantity — so there is no per-article data inside it for a threshold to split. Any real
+// implementation is therefore a CAPTURE-TIME gate on the inventory desk, not a rendering rule, and
+// §8 of ESTATE_SCOPE_SPEC.md records that **Florida sets no statutory itemisation floor**: the
+// $100 / $1,000 were Havellin house rules and were being presented as a documentation standard.
+// Deleted rather than left returning a number — a retired rule that still compiles is how one
+// comes back, and this one had already been quoted into four documents.
+// ⚠ Treas. Reg. 20.2031-6(a)'s $100-an-article cap is real and is NOT what was removed: it
+// governs what is filed WITH a Form 706, and the MAIV aggregate (`invIsMAIV`, §20.2031-6(b))
+// is where that regulation is actually implemented. Do not reintroduce this as a second copy.
 
-// What the level actually DOES, in the only two numbers it moves. Said in every branch of
-// the readout, because "Strict Mode" asserted without its consequences is a label rather
-// than an explanation — which is how the first build read, and it drew "I'm confused".
+// What the level actually DOES, said in every branch of the readout — because "Strict Mode"
+// asserted without its consequences is a label rather than an explanation, which is how the
+// first build read and what drew "I'm confused".
+//
+// ⚠⚠ IT NAMED TWO NUMBERS AND THE LEVEL MOVED NEITHER. Driven on the real gate chain before
+// this was rewritten, on a probate estate:
+//
+//   level     listing   specialist   case
+//   formal    $100      $3,000       706 unanswered — THE DEFAULT ON EVERY NEW ESTATE
+//   standard  $1,000    $3,000       706 answered no
+//   formal    $100      $500         a recorded dispute
+//
+// The listing floor was the only figure that moved with the level and it was enforced by
+// nothing (see the retirement note above). The specialist figure IS real and enforced —
+// `invNeedsAppraisal`, the guardrail, the worklist, the row badge — and is moved by the
+// DISPUTE gate rather than by this level: $3,000 on BOTH rows of the commonest case. So the
+// amber box that exists to explain a forced level explained it with one fiction and one number
+// the level is not responsible for, on the intake form and in Edit Client.
+//
+// ⚠ IT NOW NAMES THE FOUR THINGS `isFormalDoc` GENUINELY GATES, each measured at its reader:
+// the Court Inventory and the Trust Schedule hold at DRAFT while any flagged item is pending
+// appraisal; `_renderAppraisalGuardrail` paints `a-err` rather than `a-warn`; `planTaskCtx.formal`
+// makes chain of custody mandatory on the desk card; and `_cePhases` adds the court-grade records
+// list to the client estimate. It does NOT claim the client Job Plan section deepens — that
+// function declared a `deep` local and never read it, and the dead line went with this change.
 function docStandardEffect(job) {
-  return 'Items are listed individually above $' + invListingThreshold(job).toLocaleString()
-    + ', and anything at $' + invAppraisalThreshold(job).toLocaleString()
-    + ' or above is routed to a specialist.';
+  // The threshold is a fact about the ESTATE, not about this level, and the sentence says so
+  // wherever the dispute has moved it. Stated here and nowhere else: `docLevelFloorReason`'s
+  // dispute arm used to quote it too, which put one number in one box twice.
+  var spec = 'Anything at $' + invAppraisalThreshold(job).toLocaleString() + ' or above is routed'
+    + ' to a specialist'
+    // ⚠ NAME THE RIGHT CAUSE. `gateDispute` is true on a recorded dispute AND on contested
+    // probate, where there may be no dispute answer at all — so a flat "the recorded dispute"
+    // is false on the contested arm, which is the one matter type where a reader is most
+    // likely to be counsel.
+    + (job && job.svc === 'contested_probate' ? ' — the contest is what lowers that, not this level.'
+       : gateDispute(job) ? ' — the recorded dispute is what lowers that, not this level.' : '.');
+  return (isFormalDoc(job)
+    ? 'Every flagged item must be appraised or waived before the Court Inventory or the Trust Schedule'
+      + ' comes off DRAFT, the appraisal guardrail blocks rather than prompts, chain of custody is'
+      + ' mandatory, and the client estimate carries the court-grade records list. '
+    : 'A flagged item is an amber prompt rather than a block, and no schedule is held for one. ')
+    + spec;
 }
 
 function renderJobPlan(jobId, job, est) {

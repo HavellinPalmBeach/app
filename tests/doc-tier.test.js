@@ -167,10 +167,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const x = sandbox({
         fns: ['onDocGateChange', 'docLevelFloor', 'docLevelFloorReason', 'resolveDocLevel',
               'gateDispute', '_gateYes', '_gate706', 'isDecedentJob', 'invAppraisalThreshold',
-              'invListingThreshold', 'isFormalDoc', 'docStandardEffect', 'docTierOf', 'docTierDef',
+              'isFormalDoc', 'docStandardEffect', 'docTierOf', 'docTierDef',
               'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-               'INV_LISTING_THRESHOLD_STRICT', 'INV_LISTING_THRESHOLD_STANDARD', 'DOC_TIERS',
+               'DOC_TIERS',
                'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
         stubs: { document: d },
       });
@@ -204,11 +204,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml',
       'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706',
       'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
-      'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
+      'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
       'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef'];
     const EC_VARS = ['SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
-      'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_LISTING_THRESHOLD_STANDARD',
-      'INV_LISTING_THRESHOLD_STRICT', 'INV_APPRAISAL_THRESHOLD',
+      'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD',
       'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES'];
     const JOB = { id: 7, hvlId: 'HVL-0007', name: 'Tripp Butler', fname: 'Tripp', lname: 'Butler',
                   svc: 'cleanout', deathDate: '2026-08-14', gate706: 'no', matterType: 'trust',

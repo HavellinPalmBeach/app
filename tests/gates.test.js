@@ -14,14 +14,13 @@ const { sandbox, domStub } = require('./harness');
 const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docLevelFloorReason',
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
-  'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'invListingThreshold',
-  'isDecedentJob', 'invFiduciaryMode', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
-  'docStandardEffect',
+  'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'isDecedentJob', 'invFiduciaryMode', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
+  'docStandardEffect'
 ];
 const VARS = [
   'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-  'INV_LISTING_THRESHOLD_STRICT', 'INV_LISTING_THRESHOLD_STANDARD', 'INV_TAXONOMY',
+  'INV_TAXONOMY'
 ];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
@@ -94,13 +93,29 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(bare, [], 'no invNeedsAppraisal call takes a single argument');
   }
 
-  group('listing threshold: two modes');
+  group('the listing threshold is RETIRED, and the claim must not come back');
   {
-    eq(ctx.invListingThreshold(est({ gate706: 'no' })), 1000,
-       '$1,000 on an estate filing no 706 — §733.604 asks for reasonable detail, not the reg');
-    eq(ctx.invListingThreshold(est({ gate706: 'yes' })), 100,
-       '$100 in Strict Mode — Treas. Reg. 20.2031-6(a) caps a grouped lot at $100 an article');
-    eq(ctx.invListingThreshold(est({ gate706: '' })), 100, 'and unknown is Strict, so $100');
+    // ⚠ THE REQUIREMENT IS THE CONVERSE NOW. `invListingThreshold` had exactly one reader in
+    // 34,000 lines — `docStandardEffect` — so the only thing the app ever did with an itemisation
+    // floor was tell somebody it had one. Nothing itemised anything above it and no control let a
+    // person apply it by hand: a lot row carries one name, one value and one quantity, so there is
+    // no per-article data inside it for a threshold to split. §8 of ESTATE_SCOPE_SPEC.md records
+    // that Florida sets no statutory itemisation floor — the $100 / $1,000 were house rules being
+    // presented as a documentation standard, in four documents.
+    eq(typeof ctx.invListingThreshold, 'undefined', 'the function is gone, not left returning a number');
+
+    // The net is the RULE rather than today's two names: no live line may quote an itemisation
+    // floor in any wording. Comment-stripped and LINE-BASED — a /\*[\s\S]*?\*/ stripper eats
+    // ~170KB of this file because of accept="image/*" — and the retirement note has to QUOTE the
+    // retired wording to be worth reading, so a raw needle would trip on the explanation.
+    const live = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8')
+      .split('\n').filter(l => !l.trim().startsWith('//')).join('\n');
+    ok(live.length > 400000, 'the stripper did not eat the file');
+    has(live, 'function docStandardEffect', 'and the function under test is still in it');
+    lacks(live, 'INV_LISTING_THRESHOLD', 'no constant survives');
+    lacks(live, 'invListingThreshold', 'and nothing calls the retired helper');
+    lacks(live, 'listed individually', 'no live line claims items are listed individually above a floor');
+    lacks(live, 'individual-listing', 'nor names an individual-listing threshold');
   }
 
   group('the reason is stated, not left to be reverse-engineered');
@@ -109,29 +124,72 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'a 706 floor says so');
     has(ctx.docLevelFloorReason(est({ gate706: '' })), 'unanswered',
         'an unanswered 706 says it is unanswered and how to lift it');
-    has(ctx.docLevelFloorReason(est({ gateDispute: 'yes' })), '$500',
-        'a dispute names the new threshold');
+    // ⚠ RESTATED. This asserted the reason names the $500, which it did — and so did
+    // `docStandardEffect` two sentences later in the SAME alert, so one number appeared in one
+    // box twice. The requirement is that the dispute is named as the cause; the number is stated
+    // once, in the effect, where it is attributed correctly.
+    has(ctx.docLevelFloorReason(est({ gateDispute: 'yes' })), 'dispute',
+        'a dispute says a dispute is why');
+    lacks(ctx.docLevelFloorReason(est({ gateDispute: 'yes' })), '$',
+        'and quotes no figure, because the effect carries it');
+
+    // ⚠ SAME RULE ON THE TIER ARM. Its tail read "so every flagged item is held to the
+    // specialist standard until it is appraised or waived" — which `docStandardEffect` now says
+    // in the same box. The reason says WHY the floor is set; the effect says what it does.
+    const tierReason = ctx.docLevelFloorReason(est({ gate706: 'no', docTier: 'appraisals' }));
+    has(tierReason, 'Inventory + appraisals', 'the tier arm names the tier');
+    lacks(tierReason, 'appraised or waived', 'and does not restate what the effect already says');
     eq(ctx.docLevelFloorReason(est({ gate706: 'no' })), '',
        'no floor, no reason');
   }
 
-  group('the readout says what the level COSTS, not just what it is called');
+  group('the readout says what the level really gates');
   {
-    // "Strict Mode" asserted on its own is a label. Both numbers it moves have to be on
-    // the screen, or the concierge cannot tell what changed — which is what "I'm
-    // confused" was about.
+    // ⚠⚠ IT USED TO NAME TWO NUMBERS AND THE LEVEL MOVED NEITHER. Driven on the real chain:
+    // formal/$100/$3,000 on an unanswered 706, standard/$1,000/$3,000 on a no, formal/$100/$500 on
+    // a dispute. The listing floor was the only figure that moved with the level and it was
+    // enforced by nothing; the specialist figure is real but is moved by the DISPUTE gate — the
+    // SAME $3,000 on both rows of the commonest case. So the box explaining a forced level
+    // explained it with one fiction and one number the level is not responsible for.
     const strict = ctx.docStandardEffect(est({ gate706: '' }));
-    has(strict, '$100',   'Strict Mode names the $100 individual-listing threshold');
-    has(strict, '$3,000', 'and the specialist threshold that still applies');
+    has(strict, 'DRAFT',            'Strict Mode names the schedules held at DRAFT');
+    has(strict, 'blocks rather than prompts', 'the guardrail blocking rather than nudging');
+    has(strict, 'chain of custody', 'chain of custody becoming mandatory');
+    has(strict, 'court-grade records', 'and the client estimate\'s court-grade records list');
+    has(strict, '$3,000',           'plus the specialist threshold, which is real and enforced');
+    lacks(strict, 'listed individually', 'and never the itemisation floor it used to claim');
+    lacks(strict, '$100',           'nor the $100 figure');
 
-    const disputed = ctx.docStandardEffect(est({ gate706: 'no', gateDispute: 'yes' }));
-    has(disputed, '$100', 'a dispute is Strict too, so listing is still $100');
-    has(disputed, '$500', 'and the specialist threshold drops');
+    // The four claims are each measured at a real reader: printCourtInventory / printTrustSchedule
+    // hold at DRAFT on `formal && guard.length`, _renderAppraisalGuardrail paints a-err over
+    // a-warn, planTaskCtx.formal drives custodyMandatory, and _cePhases' `deep` adds the records
+    // list. It deliberately does NOT claim the client Job Plan section deepens — that function
+    // declared a `deep` local and never read it.
+    const src = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8');
+    lacks(src, "var deep = (typeof isFormalDoc === 'function') ? isFormalDoc(_j) : false;",
+          'the dead reader is gone, so the sentence is not overstating the level\'s reach');
 
     const standard = ctx.docStandardEffect(est({ gate706: 'no' }));
-    has(standard, '$1,000', 'Standard lists individually above $1,000');
-    has(standard, '$3,000', 'and routes to a specialist at $3,000');
-    lacks(standard, '$100,', 'and never quotes the Strict figure');
+    has(standard, 'amber prompt rather than a block', 'Standard says a flag is a prompt');
+    has(standard, '$3,000', 'and still routes to a specialist at $3,000');
+    lacks(standard, '$1,000', 'and no longer quotes a listing floor');
+    lacks(standard, 'DRAFT',  'nor claims a schedule is held');
+
+    // ⚠ ONE NUMBER, ONE PLACE. The reason's dispute arm used to quote the threshold too, so it
+    // appeared twice in one alert. It is stated in the effect and nowhere else.
+    const disputed = ctx.docStandardEffect(est({ gate706: 'no', gateDispute: 'yes' }));
+    has(disputed, '$500', 'a dispute lowers the specialist threshold');
+    has(disputed, 'the recorded dispute is what lowers that, not this level',
+        'and the sentence attributes it to the dispute rather than to the level');
+    lacks(ctx.docLevelFloorReason(est({ gateDispute: 'yes' })), '$500',
+          'the reason no longer restates it');
+
+    // ⚠ CONTESTED PROBATE HAS NO RECORDED DISPUTE. `gateDispute` is true on the service key
+    // alone, so a flat "the recorded dispute" is false on the one matter type whose reader is
+    // most likely to be counsel.
+    const contested = ctx.docStandardEffect(est({ svc: 'contested_probate', gate706: 'no' }));
+    has(contested, 'the contest is what lowers that', 'contested names the contest');
+    lacks(contested, 'recorded dispute', 'and never a dispute nobody recorded');
   }
 
   group('a normal starting state is not painted as an error');
@@ -186,8 +244,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(run({ 'i-svc': 'cleanout' }), 'Strict Mode',
         'an Estate Settlement with the 706 unanswered reads as Strict — G2 really fired');
     has(run({ 'i-svc': 'cleanout' }), 'a-warn', 'and amber, because the question is still open');
-    has(run({ 'i-svc': 'cleanout', 'i-gate-706': 'no' }), '$1,000',
-        'answering it No lifts the floor and the readout states the Standard numbers');
+    // ⚠ RESTATED. This pinned '$1,000', the retired listing floor, as the proof that the floor
+    // had lifted — so it was asserting the fiction. The requirement is that the readout says what
+    // Standard means, which is that a flag prompts rather than blocks.
+    has(run({ 'i-svc': 'cleanout', 'i-gate-706': 'no' }), 'Standard documentation',
+        'answering it No lifts the floor and the readout says so');
+    has(run({ 'i-svc': 'cleanout', 'i-gate-706': 'no' }), 'amber prompt rather than a block',
+        'and states what Standard actually means for a flagged item');
     lacks(run({ 'i-svc': 'cleanout', 'i-gate-706': 'no' }), 'Strict Mode',
           'and stops claiming Strict');
     has(run({ 'i-svc': 'cleanout', 'i-gate-dispute': 'yes' }), 'a-info',

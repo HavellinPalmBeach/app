@@ -1,5 +1,112 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE BOX EXPLAINING STRICT MODE NAMED TWO NUMBERS AND THE LEVEL MOVED NEITHER (2026-09-22)
+Step 9 of `ESTATE_SCOPE_SPEC.md`, and it closes the build order. App-only, no redeploy. `invListingThreshold`
+and both its constants are **retired**; `docStandardEffect` now names what `isFormalDoc` genuinely gates.
+
+- **⚠⚠ DRIVEN ON THE REAL GATE CHAIN BEFORE ANYTHING WAS TOUCHED, AND THE SENTENCE WAS WRONG IN BOTH HALVES**
+  — not one, which is what the spec's own D8 had recorded:
+
+  | level | listing | specialist | case |
+  |---|---|---|---|
+  | **formal** | $100 | **$3,000** | 706 unanswered — **THE DEFAULT ON EVERY NEW ESTATE** |
+  | standard | $1,000 | **$3,000** | 706 answered no |
+  | formal | $100 | $500 | a recorded dispute |
+
+  The **listing floor** was the only figure that moved with the level and it was enforced by **nothing**. The
+  **specialist** figure is real and enforced (`invNeedsAppraisal`, the guardrail, the worklist, the row badge)
+  and is moved by the **DISPUTE gate** — **the same $3,000 on both rows of the commonest level change there
+  is**. So the amber box whose entire job is explaining a forced level explained it with one fiction and one
+  number the level is not responsible for, on the intake form and in Edit Client. Its own comment called them
+  *"the only two numbers it moves"*.
+- **⚠⚠ D8 SAID *"nothing enforces or displays an itemisation floor"* AND IT DID DISPLAY IT.** That one word is
+  why this read as housekeeping rather than a live defect: `docStandardEffect` renders into `#i-gate-readout`
+  and `#ec-gate-readout`, so the floor was in front of a concierge the whole time. The app was not carrying an
+  unused constant — it was telling somebody, in amber, that a rule applied which nothing applied.
+- **⚠⚠ IMPLEMENTING IT WAS NEVER A RENDERING CHANGE, WHICH IS WHY RETIRING IS THE ANSWER.**
+  `_invScheduleSection` groups on the row's own `qty`, set at import time (itemise-or-lot), and **a lot row
+  carries ONE name, ONE value and ONE quantity** — there is no per-article data inside it for a threshold to
+  split. Any real floor is a **capture-time gate on the inventory desk** (refuse or flag a lot line above it,
+  while somebody is still standing there to split it), which is a separate build and a separate decision. §8 of
+  the spec records that **Florida sets no statutory itemisation floor**: the $100 / $1,000 were house rules
+  presented as a documentation standard.
+  - **⚠ Treas. Reg. §20.2031-6(a)'s $100-an-article cap IS real and is NOT what was removed.** It governs what
+    is filed **with** a Form 706, and the place it is actually implemented is the **MAIV aggregate**
+    (§20.2031-6(b), `invIsMAIV`), untouched. Do not reintroduce the retired figures as a second copy of it.
+- **⚠ DELETED, NOT LEFT RETURNING A NUMBER**, and the net is a **rule rather than today's two names**: no live
+  line anywhere in the file may quote an itemisation floor in any wording (`INV_LISTING_THRESHOLD`,
+  `invListingThreshold`, *listed individually*, *individual-listing*). Comment-stripped and **line-based** — a
+  `/\*[\s\S]*?\*/` stripper eats ~170KB here because of `accept="image/*"` — with an assertion that the stripper
+  did not eat the file, because the retirement note has to **quote** the retired wording to be worth reading.
+- **⚠ FOUND ON THE WAY: `clientJobPlanSection` DECLARED A `deep` LOCAL AND NEVER READ IT.** So `isFormalDoc`
+  has **four** live readers, not five, and D8's own list counted the dead one. Deleted, and a test pins its
+  absence — the replacement sentence must not claim the client Job Plan section deepens when it does not.
+  The four that are real, each measured at its reader: `printCourtInventory` and `printTrustSchedule` hold at
+  DRAFT on `formal && guard.length`; `_renderAppraisalGuardrail` paints `a-err` over `a-warn`;
+  `planTaskCtx.formal` drives `custodyMandatory`; `_cePhases`' `deep` adds the court-grade records list.
+- **⚠ ONE NUMBER, ONE PLACE.** `docLevelFloorReason`'s dispute arm quoted the specialist threshold too, so it
+  appeared **twice in one alert**; its `appraisals` arm restated *"held … until it is appraised or waived"*,
+  which the effect now says. Both trimmed — the reason says WHY the floor is set, the effect says what it does.
+- **⚠ CONTESTED PROBATE HAS NO RECORDED DISPUTE, and my first draft said it did.** `gateDispute` is true on the
+  service key alone, so a flat *"the recorded dispute is what lowers that"* is **false on the one matter type
+  whose reader is most likely to be counsel**. It names the contest there instead. Found by reading the measured
+  output rather than by reasoning about the branch.
+- **9188 committed checks** (+2 net; `gates.test.js` 71). **All six changes revert-verified individually, ZERO
+  green** — the old sentence back fails **7**, the constants re-added **2** (the net), the dispute arm's
+  duplicate **2**, the flattened attribution **2**, the tier tail **1**, the dead local **1**. Baseline **0**
+  before and after.
+  - **⚠ RE-ADDING THE CONSTANTS ALONE IS NOT A NO-OP REVERT, AND THAT IS THE POINT OF THE NET.** Nothing would
+    call them, so on the old shape of this suite it would have come back green — the dead-code revert this file
+    records. It fails 2 because the requirement is that the **claim cannot be reintroduced**, not that nothing
+    calls it.
+  - **⚠ FOUR PRE-EXISTING ASSERTIONS PINNED THE RETIRED RULE AND BROKE CORRECTLY; ALL RESTATED, NONE DELETED.**
+    Three pinned the thresholds themselves. The fourth is the interesting one: a **driven** readout check used
+    `has(…, '$1,000')` as its proof that the floor had lifted — **so it was asserting the fiction**. It reads
+    *Standard documentation* and *amber prompt rather than a block* now.
+  - **⚠ AND ONE OF MY OWN CHANGES HAD NO ASSERTION BEHIND IT** — the tier arm's trimmed tail. Caught by the
+    sweep having nothing to report for it, not by reading. Asserted, and the revert fails 1.
+  - **⚠ FOUR SUITES LIFTED THE RETIRED NAMES** (`doc-tier`, `estate-intake`, `gates`, `matter-type`) — found by
+    searching every pinned list at once, which this file records costing a round when it is not.
+- **Verified end to end in headless Chromium on the real intake form**, all six gate cases, readout **visible**:
+
+  | | |
+  |---|---|
+  | probate, 706 unanswered (the default) | *Strict Mode* · names DRAFT, the blocking guardrail, mandatory custody, the records list · **$3,000** |
+  | probate, 706 = no | *Standard documentation* · *amber prompt rather than a block* · **$3,000** — the same figure, which is the truth |
+  | a recorded dispute | **$500** · *the recorded dispute is what lowers that, not this level* |
+  | contested probate | **$500** · *the **contest** is what lowers that* — never a dispute nobody recorded |
+  | tier = appraisals | Strict Mode, reason names the tier, no restatement of the effect |
+  | a living-client downsizing | Standard, and the estate block is correctly hidden |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  **⚠⚠ THREE OF MY OWN BROWSER PROBES WERE WRONG AND THE CODE WAS RIGHT, AND THE THIRD IS WORTH KEEPING.**
+  I never navigated to the intake panel, so every element read `offsetParent === null` and the readout looked
+  hidden. Then `i-doclevel` persisted `formal` between cases, so every case after the first read as *set by
+  hand*. Then resetting it **before** `toggleIntakeFields()` did not work either — **that function fires
+  `onDocGateChange()` itself, against the PREVIOUS gate values**, and when that forces Formal the code writes
+  `sel.value='formal'`, overwriting the reset. **Reset the level LAST, immediately before the measurement.**
+  I nearly reported the second of these as a defect. The step-1 to step-8 browser scripts were re-run as
+  regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25**, 0 failed — **340 checks across the eight**. None of
+  them pinned the retired figures (they assert on *Strict Mode*, which survives). The first `<style>` block is
+  **byte-identical to HEAD at 93,431 bytes / 1,168 lines / 635 rules** — no CSS.
+- Manual **§5c** (the readout paragraph rewritten, plus a note carrying the measurement) and **§10a** (the
+  retirement, the no-per-article-data reasoning, the §20.2031-6(a) do-not-reintroduce note, and that a real floor
+  is a capture-time gate); the **§4 tier note** and the spec's **§159** parenthetical both stopped quoting the
+  floor. Playbook the tier `.stop`, the Strict-Mode symptom row and **one new** symptom row. **⚠ THE PLAYBOOK'S
+  WAS THE WORST OF THE SIX SITES**: *"Strict Mode lists items individually above $100 instead of $1,000, so it
+  is a lot more manifest work — worth getting right before the walkthrough"* — telling a concierge to chase an
+  attorney over a workload that does not exist. Both `.md` copies hand-edited; **21 claims parity-checked, 0
+  mismatches**. ⚠ A stale sweep returns **2 hits and both are the sentence that corrects it** — the shape this
+  file records over and over — **verified by dumping the surrounding bytes rather than assumed**. Tag balance
+  clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page
+  errors**; under `print` **20/47 and 17/17** tables as wide as their container with **0** taking the phone
+  rule — as at HEAD.
+- **⚠ THE BUILD ORDER IN `ESTATE_SCOPE_SPEC.md` §7 IS NOW COMPLETE, steps 1–9.** What remains open there is
+  **§8, the legal flags, which are counsel's rather than a build**: Fla. Prob. R. 5.340 alongside §733.604,
+  §733.604(3) cited nowhere, and the §736.08135 carrying-value mechanics read through **secondary summaries**
+  because the egress proxy blocked flsenate.gov and law.justia.com. Those ride the review bundle already queued
+  with the agreement language.
+
 ## ⚠⚠ A BLANK TIER WAS THE MOST EXPENSIVE ANSWER, TAKEN SILENTLY (BUILT 2026-09-21)
 Step 8 of `ESTATE_SCOPE_SPEC.md`, *decision 3*. App-only, no redeploy. `estimateContractBlocker` is the one
 predicate; Save, Submit and the manager's PIN all read it and `calcAll` deliberately does not.
@@ -111,11 +218,12 @@ predicate; Save, Submit and the manager's PIN all read it and `calcAll` delibera
   rather than assumed**. Tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390
   with **0 overflow, 0 page errors**; under `print` **20/47 and 17/17** tables as wide as their container with
   **0** taking the phone rule — as at HEAD.
-- **⚠ NEXT: step 9, and it is a DECISION rather than a build.** `invListingThreshold` has exactly two references
-  — its own definition and the sentence builder `docStandardEffect` — nothing enforces or displays an itemisation
-  floor, and §8 of the spec records that **Florida sets no statutory itemisation floor**: the $100 / $1,000 are
-  Havellin house rules. Retiring it and correcting the sentence is the recommendation; **it is Anthony's call.**
-  *Closed D9's estimate half and decision 3.*
+- ~~**⚠ NEXT: step 9, and it is a DECISION rather than a build.**~~ **DONE 2026-09-22 — RETIRED; see the entry at
+  the top of this file.** *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as
+  outstanding work.* ⚠ Two things in the note below were wrong: it said *"nothing enforces **or displays**"* and the
+  app **did** display it, in the gate readout on the intake form; and the sentence was wrong in **both** halves, not
+  one — the level moved the listing floor (enforced by nothing) and did **not** move the specialist threshold, which
+  the dispute gate moves. *Closed D9's estimate half and decision 3.*
 
 ## ⚠⚠ A TRUST MATTER HAD TWO DEAD ENDS AND NO THIRD ANSWER (BUILT 2026-09-21)
 Step 7 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `printTrustSchedule` is the Chapter 736
@@ -300,11 +408,8 @@ neither is worth anything alone**, which is exactly why the second was held for 
   manufacturing an answer for them**, so the gate could not have fired on any job the app had ever
   created. *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as
   outstanding work.* Then
-  **step 9**, which is a decision rather than a build — `invListingThreshold` has exactly two
-  references (its own definition and the sentence builder `docStandardEffect`), nothing enforces
-  or displays an itemisation floor, and §8 of the spec records that **Florida sets no statutory
-  itemisation floor**: the $100 / $1,000 are Havellin house rules. Retiring it and correcting the
-  sentence is the recommendation; **it is Anthony's call.**
+  ~~**step 9**, which is a decision rather than a build.~~ **DONE 2026-09-22 — RETIRED**, and with it
+  the whole §7 build order, steps 1–9. See the entry at the top of this file.
 
 ## ⚠⚠ THE BROWSER REGRESSIONS ARE IN THE REPO NOW, AND THIS FILE SAYS WHY THAT MATTERS (2026-09-21)
 `tests/browser/step1.js` … `step6.js` plus `tests/browser/run.sh`. **270 checks across the six, 0 failed**,
@@ -841,7 +946,7 @@ per-key job merge and the Jobs sheet stores `JSON.stringify(job)`.
   **identically today**, because appraiser coordination already sits inside the `document` step's coordination
   column and nothing prices it separately. What they do not share is the documentation **STANDARD**: `appraisals`
   raises `docLevelFloor` to `formal`, which is exactly the machinery the tier is named after — the appraisal
-  guardrail becomes a red block rather than an amber nudge, the individual-listing threshold drops **$1,000 → $100**,
+  guardrail becomes a red block rather than an amber nudge, chain of custody becomes mandatory (⚠ the individual-listing threshold named here was **retired 2026-09-22** — it was enforced by nothing),
   and the Court Inventory holds at **DRAFT** until every flagged item is appraised or waived. **If appraisal
   coordination is ever priced on its own, that is where the split goes; do not collapse the two tiers meanwhile.**
 - **⚠⚠ THE MIGRATION IS A READ, AND `full` MAPS TO `values` RATHER THAN `appraisals`.** A write sweep needs a
@@ -2506,8 +2611,12 @@ field rides the per-item manifest merge and nothing in `apps-script/` changed.
   byte-for-byte the same widths as the previous tree — which is what *"all tables full-width under print"* has meant in
   every prior entry).
 - **⚠ NOT BUILT, DELIBERATELY: Agent One (Build Inventory) and Agent Two (Value).** Steps 2 and 3 of the spec wait on the
-  bake-off. **Open for Anthony:** the standalone-line floor — the spec's flat $100 against `invListingThreshold` ($100
-  formal / $1,000 standard), which already exists and already branches.
+  bake-off. ~~**Open for Anthony:** the standalone-line floor — the spec's flat $100 against `invListingThreshold`.~~
+  **CLOSED 2026-09-22 — `invListingThreshold` IS RETIRED**, so there is no longer an app-side figure for an agent spec
+  to align with. ⚠ *"already exists and already branches"* was true and beside the point: it branched, and **nothing
+  read the answer** except one sentence. If Agent One ever wants an itemisation floor it is a **capture-time** rule at
+  the moment a lot line is created, not a threshold applied afterwards — a lot row carries one name, one value and one
+  quantity, so there is nothing inside it to split.
 
 ## ⚠⚠ THE WALKTHROUGH WAS WRITE-ONLY ON SCREEN, AND `privateNote` IS THE PROOF (BUILT 2026-09-19)
 Ashley's report, via Anthony: *"after we build an estimate there's no real easy way to go back and look at that estimate,

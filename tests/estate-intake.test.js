@@ -21,11 +21,11 @@ const { sandbox, domStub, source } = require('./harness');
 const ESTATE_IDS = [
   'i-date-of-death', 'i-doc-tier', 'i-matter-type', 'i-gate-706', 'i-gate-dispute', 'i-gate-readout',
   'i-probate-atty-fname', 'i-probate-atty-lname', 'i-probate-atty-firm',
-  'i-probate-atty-phone', 'i-probate-atty-email',
+  'i-probate-atty-phone', 'i-probate-atty-email'
 ];
 // Facts about a COURT CASE — these stay probate-only.
 const PROBATE_IDS = [
-  'i-probate-case', 'i-letters-date', 'i-probate-deadline', 'i-deadline-fb', 'i-probate-sale',
+  'i-probate-case', 'i-letters-date', 'i-probate-deadline', 'i-deadline-fb', 'i-probate-sale'
 ];
 
 // A class-aware document. domStub returns [] from querySelectorAll, so the required-marks
@@ -72,10 +72,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['toggleIntakeFields', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
-              'invAppraisalThreshold', 'invListingThreshold', 'docStandardEffect', 'isFormalDoc'],
+              'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-               'INV_LISTING_THRESHOLD_STRICT', 'INV_LISTING_THRESHOLD_STANDARD'],
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS' ],
         stubs: { document: d },
       });
       c.toggleIntakeFields();
@@ -106,10 +105,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['toggleIntakeFields', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
-              'invAppraisalThreshold', 'invListingThreshold', 'docStandardEffect', 'isFormalDoc'],
+              'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-               'INV_LISTING_THRESHOLD_STRICT', 'INV_LISTING_THRESHOLD_STANDARD'],
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS' ],
         stubs: { document: d },
       });
       c.toggleIntakeFields();
@@ -251,11 +249,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                     'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass',
                     'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
-                    'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'ecToggleProbate',
+                    'isFormalDoc', 'invAppraisalThreshold', 'ecToggleProbate',
                     'matterTypeOf', 'invFiduciaryMode'];
     const EC_VARS = ['SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-                     'INV_LISTING_THRESHOLD_STANDARD', 'INV_LISTING_THRESHOLD_STRICT',
                      'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES'];
     // ⚠ THE THREE CONTROLS THE READOUT READS ARE SEEDED, BECAUSE domStub DOES NOT PARSE MARKUP.
     // showEditClient writes one innerHTML string; a real browser then has those selects in it,
