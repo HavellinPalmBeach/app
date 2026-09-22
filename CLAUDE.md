@@ -1,5 +1,114 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE WORKBOOK ASSERTED A VALUATION THE ENGAGEMENT CONTRACTED NOT TO PRODUCE (2026-09-22)
+**⚠️ REQUIRES AN APPS SCRIPT REDEPLOY** — `saveInventory.gs`, `BACKEND_VERSION 2026-09-22a`. **⚠ ANTHONY HAS
+DEPLOYED `-a` ONLY**, so `-21b` (the trust fix) and this one both ride the next deployment. Anthony: *"Go for
+it."* The one gap the concurrent session's step 4–9b work left open.
+
+- **⚠⚠ THE THIRD AXIS ON ONE SHEET, AND THE PATTERN IS NOW UNMISTAKABLE.** `docSet` asks *is there a
+  decedent* (-21a), `onProbate` asks *is there a court* (-21b), and this asks **what the client is
+  contracted to RECEIVE**. At the `contents` tier the agreement says counsel builds the inventory and
+  Havellin *"states no opinion of value"*; at `none` counsel does the whole thing. **Measured on a probate
+  estate with two unvalued items before anything was touched:**
+
+  | | screen | workbook |
+  |---|---|---|
+  | `contents` / `none` | Valuation Basis **dropdown** · Value as of + §2032 tick · **FMV $0** · **Awaiting 2** · FMV by Category, every row $0 | **FMV $0** · **Awaiting** · FMV BY CATEGORY |
+  | `values` / `appraisals` | correct | correct |
+
+  **⚠⚠ `Items Awaiting Valuation` IS THE ONE THAT CAN NEVER CORRECT ITSELF.** At this tier nobody enters a
+  value **by contract**, so the count equals the item count on every write and never falls — the same
+  never-falls counter this file records on a living job, arriving by contract rather than by habit.
+- **⚠⚠ IT WAS ON BOTH SURFACES, NOT JUST THE WORKBOOK, AND I TOLD ANTHONY OTHERWISE BEFORE MEASURING.**
+  `_renderInventorySummary` reads `docTierProduces` **nowhere** — 0 references before this build. My scoping
+  message said the screen already withheld it; that was the step-6 DOCUMENT gate, a different surface. Caught
+  by driving the real renderer across four tiers rather than by reading. **The fix had to be both or neither**
+  — the living-client build's whole finding was that the screen and the spreadsheet must not disagree.
+- **⚠ AND THE WORKBOOK CARRIED THREE OF THE ROWS, NOT FIVE.** `valBasis` rides the payload and the server
+  **reads it nowhere**; there is no MAIV server-side either. So my own "five valuation rows" was wrong in the
+  safe direction. **Grep the server before describing what it prints.**
+- **⚠⚠ MAIV STAYS, AND THAT IS THE JUDGEMENT CALL WORTH RECORDING.** Treas. Reg. §20.2031-6(b) puts an
+  expert appraisal **under oath with the Form 706** on the **ESTATE**, and that does not stop applying because
+  counsel rather than Havellin is valuing. With nothing valued the notice reads *"the $3,000 aggregate cannot
+  be tested yet … value them before the return is prepared"* — exactly what counsel needs. **Withholding it
+  would suppress a federal filing prompt on an estate that owes one.** The test that separates the two:
+  **is this a claim about HAVELLIN'S DELIVERABLE, or a fact about the MATTER?** Deliverable → gate (the basis,
+  the as-of date, the FMV total, the awaiting count, the money rollup). Matter → stays (the dates, Letters,
+  §733.604, §732.402, Specific Bequests, Disputed, Gross/Fees/Net, MAIV, the footer).
+- **⚠ THE SEVEN VALUATION COLUMNS ON THE ITEM SHEET STAY.** A blank column is not a claim; a headline total
+  is. Gating the columns would also make the tier un-upgradable without re-entering data.
+- **⚠ DERIVED, NEVER THE TIER KEY.** `statesValues: docTierProduces(job, 'values')`. Sending `docTier` makes
+  the server hold its own copy of `DOC_TIERS` to know that **`contents` and `none` BOTH** answer false — the
+  6-against-13 category drift, and two keys to forget rather than none. A test `lacks()` `docTier:` on the
+  payload.
+- **⚠ ABSENT MEANS TRUE, the same rule as the other two flags.** An unanswered tier already reads as `values`
+  through `DOC_TIER_FROM_SCOPE.full`, so **no estate priced before the tier existed moves an inch** — driven,
+  and the legacy workbook is byte-for-byte the valued one.
+- **⚠ IT CLOSED A SCREEN/WORKBOOK DISAGREEMENT THAT WAS ALREADY LIVE.** `_writeSummarySheet` has branched to
+  an `ITEMS BY CATEGORY` count block on a living job since -21a; the screen's `catTable` **always** rendered
+  `FMV by Category`. So a family's workbook counted while the screen beside it priced the same rows at $0.
+  One predicate (`_catMoney = _sv`) drives both now.
+- **⚠ GATING THE TWO CONTROLS STRANDS NOTHING — checked, not assumed.** The four readers of
+  `resolveValBasis` / `job.avd` outside the summary are `_invDocHead`, `printEstateInventoryReport`,
+  `printCourtInventory` and `printTrustSchedule`, and **all four are already withheld at `contents`** by step
+  6's contract gate. Nothing at that tier reads the basis or the §2032 election.
+- **9339 committed checks** (+74 in `living-inventory`). **All ten changes revert-verified individually, ZERO
+  green** — the screen gate fails **15**, the server's absent-flag rule and the two controls **8** each, the
+  join 4, the two server branches 4 each, the category table 3, the two totals 2 each, the version bump 1.
+  Baseline 0 before and after.
+  - **⚠⚠ THE CONTAINER RESTARTED MID-SWEEP AND LEFT A REVERT APPLIED.** The sweep restores in a `finally`
+    and a kill skips it, so `saveInventory.gs` was sitting at `if (fid)` when the session resumed — **the
+    exact hazard this file records from 2026-09-18**, where a crashed sweep's corrupted file became the next
+    sweep's baseline and masked two reverts as green. Caught by grepping all three files before doing anything
+    else. **After any interrupted sweep, verify the tree before trusting a single number.**
+  - **⚠ FOUR OF MY OWN BROWSER PROBES WERE WRONG AND THE CODE WAS RIGHT.** (1) **`_invShowRoll` STARTS
+    FALSE** — the whole Summary is collapsed behind a *Show summary & rollups* button, so a probe that never
+    presses it reads an empty panel and every assertion passes for the wrong reason. Press the real control.
+    (2) **`innerText` APPLIES `text-transform`**, so a case-sensitive match against the uppercased table
+    heading found nothing — the trap the runner's own header already warns about. `textContent`. (3)
+    **`buildInventoryPayload` STAMPS `lastUpdated` WITH `new Date()`**, so a byte-for-byte payload comparison
+    fails whenever two renders straddle a millisecond; pinned, the same failure this file records on this
+    same writer. (4) The 390px overflow read 29 and **HEAD reads 29 too** — pre-existing, and this change
+    makes it **better** (0 at the contents tier, one fewer column). Asserted as *no worse than HEAD*, because
+    claiming 0 would be false and pinning 29 would adopt somebody else's debt.
+  - **⚠ THREE SUITES LIFTED THE PAYLOAD BUILDER OR THE SUMMARY AND ALL THREE NEEDED THE TIER HELPERS** —
+    found by searching every pinned list at once. `docTierProduces` is **lifted rather than stubbed**, because
+    a stub is exactly what would let the app's idea of *are we contracted to state values* drift from the
+    workbook's.
+- **Verified end to end in headless Chromium, 61 checks, 0 failed, 0 page errors**, driving the real intake,
+  the real tab, the real rollups toggle, the real payload builder and the REAL `saveInventory.gs` writer:
+
+  | | |
+  |---|---|
+  | `values` · `appraisals` | sends **true** · basis, as-of, FMV total, awaiting, FMV by Category all present |
+  | `contents` · `none` | sends **false** · **none of the five** · *Items by Category* instead · **MAIV still there** |
+  | what stays at `contents` | Date of Death · Letters · §733.604 · Specific Bequests · Net · Total Items · Needs Specialist Appraisal |
+  | the workbook at `contents` | no FMV total · no awaiting · **no SUMIF anywhere** · header sequential, gap **2** not 4 · no `should equal B‹n›` |
+  | a legacy job, no tier | workbook **byte-for-byte** the valued one |
+  | screen vs workbook | **agree on all four questions, at both tiers** |
+  | overflow 1440 · 390 · page errors | **0 · ≤HEAD (0 at contents, 29 at values, both pre-existing) · 0** |
+
+  `tests/browser/step10.js` is committed and `run.sh`'s default list is now 1–10; steps 1–9 re-run as
+  regressions — **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33, 0 failed, 434 checks across the ten**. The
+  first `<style>` block is **byte-identical to HEAD at 93,438 bytes / 1,169 lines / 635 rules** — no CSS.
+- Manual **§2** (the third redeploy and what an older one prints) and **§10a** (three notes: the axis with the
+  measurement, what stays and why MAIV is the argument, and the unanswered-tier / both-surfaces rule), plus
+  **one standing claim CORRECTED** — the trust note said *"Total Estimated FMV, Items Awaiting Valuation and
+  the MAIV aggregate all stay"* full stop, which is now conditional on the tier for the first four. Playbook
+  **§e** (a note in field language) and **four** symptom→cause rows, including the two that will actually
+  happen: *the figures are gone and you expected them* and *the figures are still there and you expected them
+  gone*; plus the *"Only the court rows come off a trust matter"* row corrected the same way. Both `.md`
+  copies hand-edited; **22 claims parity-checked, 0 mismatches** — ⚠ one apparent miss was my needle dropping
+  the § prefix, **verified by dumping the surrounding bytes rather than assumed**. A stale sweep for the two
+  uncorrected wordings returns **0 across all four files**. Tag balance clean on both HTML files with the
+  stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **20/48 and
+  17/17** tables as wide as their container with **0** taking the phone rule — as at HEAD, since the new
+  playbook rows went into an existing table.
+- **⚠ THE SHAPE TO COPY: when a sheet has told two lies about the same client, look for the third.** Both
+  earlier fixes were *this record asserts something about the matter that is not true*. The axis nobody had
+  asked was the one about **our own contract** — and it was the only one where the app had the answer
+  (`docTierProduces`) and simply never asked it.
+
 ## ⚠⚠ THE COUNSEL BUNDLE IS ASSEMBLED — `COUNSEL_REVIEW_BUNDLE.md` (2026-09-22)
 Every legal text in this app shipped under Anthony's standing instruction — *"just come up with language and
 i'll get it reviewed. do your best."* **Twelve separate entries in this file end by deferring something to
