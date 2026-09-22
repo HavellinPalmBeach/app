@@ -1,19 +1,21 @@
-// CLOSE-OUT, THE BAND ON BOTH JOB TABS, AND A PREP JOB'S DESK (2026-09-22).
+// THE MARK-LOST ✕ SURVIVED THE JOB (2026-09-22). Anthony, off the client list:
 //
-// Anthony, off Job Admin & Inv on a Home Prep job: everything below the desk paperwork is
-// immaterial to prep; every vendor used should be rated, and mandatorily; close out with a
-// Google review request by email; the client header and "the brown band with actions and the
-// deposit & start timeline" on the Job Plan AND on Job Admin, so the midpoint invoice is
-// reminded where the work is done.
+//   "after we won the client and have completed the job, the 'x' at the end of the client
+//    record in client dashboard should be deactivated b/c this is the lost button, which is
+//    rightly there during the course of the job b/c the client could cancel mid-job, but
+//    once the final invoice is paid, it should not be there."
 //
-// ⚠ ONLY THE BROWSER PROVES THE WRONG-JOB HALF. A dashboard opened on one client keeps its
-//   inline display:block when you leave for another tab; the unit suite drives _jobBandHost
-//   against a stub, and this drives the real nav.
+// ⚠ ONLY THE BROWSER PROVES THIS. `jobIsSettled` returning true and a person not being able
+//   to press ✕ are two claims, and the gap between them is where this kind of defect lives —
+//   a source check cannot tell a rendered control from a withheld one.
+// ⚠ It drives the REAL renderJobs against seeded jobs and reads the real DOM back, then
+//   presses the real button and calls the real handler on a settled job.
 // ⚠ The viewport option is `viewport`, NOT `viewportSize`.
 const { chromium } = require('playwright');
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('  FAIL ' + m); } };
-const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want ' + JSON.stringify(b) + ')');
+const eq = (a, b, m) => ok(JSON.stringify(a) === JSON.stringify(b),
+  m + '  (got ' + JSON.stringify(a) + ', want ' + JSON.stringify(b) + ')');
 const APP = process.env.APP || 'file:///home/user/app/havellin.html';
 
 (async () => {
@@ -23,178 +25,123 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   const dlg = []; p.on('dialog', async d => { dlg.push(d.message()); await d.dismiss(); });
   await p.goto(APP); await p.waitForTimeout(1500);
 
-  // Two clients: a prep job worked through to the midpoint, and a second client whose dashboard
-  // is left open behind the job tabs — the wrong-job trap.
-  const ids = await p.evaluate(() => {
-    const today = new Date(); const iso = today.toISOString().slice(0, 10);
-    const mk = (id, name, svc) => ({ id, hvlId: 'HVL-2609-T' + id, name, fname: name.split(' ')[0], svc,
-      addr: '231 Seaspray Ave', city: 'Palm Beach', email: name.split(' ')[0].toLowerCase() + '@example.com',
-      phone: '(561) 555-0142', start: iso, walkthrough: iso, created: iso, status: 'active', won: true,
-      approved: true, estimateSentDate: iso, agrApproved: true, agrSent: true, agrSigned: true, depositReceived: true,
-      payments: [{ id: 1, uid: 'p' + id, stage: 'deposit', amount: 7125, date: iso, method: 'wire', clearedOn: iso }],
-      docState: { 'invoice:deposit': { sentAt: today.toISOString() } } });
-    const a = mk(901, 'Margaret Whitfield', 'prep');
-    a.prepSourcing = {
-      La: { vendorId: 'Ace Painting', vendorName: 'Ace Painting', status: 'Confirmed' },
-      Lb: { vendorId: 'Sparkle Cleaning', vendorName: 'Sparkle Cleaning', status: 'Confirmed' },
-      Lc: { vendorId: 'Green Thumb', vendorName: 'Green Thumb', status: 'Quote requested' },
-    };
-    const c = mk(902, 'Tripp Butler', 'home_cleanout');
-    jobs.unshift(c); jobs.unshift(a);
-    const est = { jobId: 901, svc: 'prep', rooms: [], prepEnabled: true, totTC: 0, totPS: 0,
-      prepItems: [{ type: 'Painting', cost: 18000, lid: 'a' }, { type: 'Cleaning', cost: 6000, lid: 'b' },
-                  { type: 'Landscaping', cost: 9000, lid: 'c' }],
-      havellinTotal: 14250, prepFee: 14250 };
-    estimateStore[901] = { estimate: est, approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: Date.now() };
-    estimateStore[902] = { estimate: { jobId: 902, svc: 'home_cleanout', rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3 }],
-      totTC: 20, totPS: 30, havellinTotal: 6000 }, approved: true, submitted: true, savedAt: Date.now() };
-    saveJobs();
-    return [901, 902];
-  });
-
-  // Leave Tripp Butler's dashboard open behind everything.
-  await p.evaluate(() => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(902); });
-  await p.waitForTimeout(300);
-
-  // ── THE JOB PLAN ─────────────────────────────────────────────────────────────
-  await p.click('.nb:has-text("Job Plan")'); await p.waitForTimeout(300);
-  await p.evaluate(() => { populateLogAndInvSelects(); const s = document.getElementById('plan-job'); s.value = '901'; loadJobPlanTab(); });
-  await p.waitForTimeout(500);
-  const plan = await p.evaluate(() => {
-    const slot = document.getElementById('jband-slot-plan');
-    const band = slot && slot.querySelector('.jt-next');
-    const track = slot && slot.querySelector('.jt-track');
-    const vis = (el) => !!(el && el.offsetParent !== null);
-    const co = document.getElementById('closeout-plan-901');
-    const hdr = document.getElementById('job-plan-header');
+  // Five jobs across the lifecycle, seeded into the live array and rendered by the real
+  // renderer. Two are settled; three are not.
+  const seeded = await p.evaluate(() => {
+    jobs.length = 0;
+    jobs.push(
+      { id: 901, name: 'A Live Estate',   svc: 'cleanout', status: 'active', won: true,
+        havellinEst: 19940, depositReceived: true,
+        payments: [{ stage: 'deposit', amount: 9970 }] },
+      { id: 902, name: 'B Midway',        svc: 'probate',  status: 'active', won: true,
+        havellinEst: 31000, depositReceived: true,
+        payments: [{ stage: 'deposit', amount: 15500 }, { stage: 'midpoint', amount: 7750 }] },
+      { id: 903, name: 'C Delivered',     svc: 'cleanout', status: 'closed', won: true,
+        havellinEst: 19940, depositReceived: true, deliveredOn: '2026-09-20',
+        payments: [{ stage: 'deposit', amount: 9970 }, { stage: 'midpoint', amount: 4985 }] },
+      { id: 904, name: 'D Final Paid',    svc: 'downsizing', status: 'active', won: true,
+        havellinEst: 12050, depositReceived: true,
+        payments: [{ stage: 'deposit', amount: 6025 }, { stage: 'final', amount: 3012 }] },
+      { id: 905, name: 'E Not Started',   svc: 'prep',     status: 'new', won: false,
+        havellinEst: 13500 }
+    );
+    currentFilter = 'all';
+    showPanel('jobs', document.querySelector('.nb'));
+    renderJobs();
+    const body = document.getElementById('jobs-body');
+    const ids = Array.from(body.querySelectorAll('button[onclick*="openCloseoutModal("]'))
+      .map(el => Number(/openCloseoutModal\((\d+)\)/.exec(el.getAttribute('onclick'))[1]))
+      .sort((x, y) => x - y);
+    const names = Array.from(body.querySelectorAll('tr'))
+      .map(r => r.textContent).filter(t => /A Live|B Midway|C Delivered|D Final|E Not Started/.test(t)).length;
     return {
-      bandStep: band ? band.querySelector('.jt-next-step').textContent : '',
-      prim: band && band.querySelector('.jt-btn-p') ? band.querySelector('.jt-btn-p').textContent : '',
-      nPrim: slot ? slot.querySelectorAll('.jt-btn-p').length : -1,
-      trackVis: vis(track),
-      groups: track ? Array.from(track.querySelectorAll('.jt-sgrp')).map(e => e.textContent).filter(Boolean) : [],
-      steps: track ? Array.from(track.querySelectorAll('.jt-slbl')).map(e => e.textContent) : [],
-      bandAboveContent: slot && document.getElementById('job-plan-content') ?
-        !!(slot.compareDocumentPosition(document.getElementById('job-plan-content')) & 4) : false,
-      bandBelowHeader: !!(hdr.compareDocumentPosition(slot) & 4),
-      co: co ? co.textContent : '',
-      reviewDisabled: co ? !!co.querySelector('button[disabled]') : null,
-      vendorsListed: co ? Array.from(co.querySelectorAll('.co-vendor strong')).map(e => e.textContent) : [],
+      ids,
+      listed: names,
+      opens: body.querySelectorAll('button[onclick*="openClientDashboard("]').length,
+      settled: [901, 902, 903, 904, 905].map(id => jobIsSettled(jobs.find(j => j.id === id))),
+      disabledMarks: body.querySelectorAll('button[disabled]').length,
     };
   });
-  eq(plan.bandStep, 'Midpoint invoice sent', 'the Job Plan band names the midpoint invoice as the next step');
-  ok(/Send midpoint invoice/.test(plan.prim), 'with Send midpoint invoice as its one filled button (' + plan.prim + ')');
-  eq(plan.nPrim, 1, 'exactly one filled button in the band');
-  ok(plan.trackVis, 'the timeline track shows at 1440');
-  ok(/^deposit & start$/i.test(plan.groups[0] || ''), 'the leg starts at DEPOSIT & START (' + plan.groups.join(' / ') + ')');
-  ok(plan.steps.indexOf('Intake') < 0 && plan.steps.length >= 6, 'and only the second leg is drawn (' + plan.steps.length + ' steps)');
-  ok(plan.bandBelowHeader && plan.bandAboveContent, 'the band sits under the client header, above the plan');
-  ok(/Satisfaction call/.test(plan.co) && /Google review/.test(plan.co) && /Referral ask/.test(plan.co) && /Vendor scorecard/.test(plan.co),
-    'the prep Job Plan carries the whole close-out card');
-  eq(plan.reviewDisabled, true, 'the review button is disabled before the satisfaction call');
-  eq(JSON.stringify(plan.vendorsListed), JSON.stringify(['Ace Painting', 'Sparkle Cleaning']), 'the scorecard lists the confirmed prep vendors, and not the unconfirmed one');
 
-  // The wrong-job trap: a band button on THIS tab resolves THIS client, not the dashboard left open.
-  const who = await p.evaluate(() => ({ host: _jobBandHost(), agr: (_agrJob() || {}).name, fb: _dashFbTarget('agr-fb') }));
-  eq(who.host.kind, 'plan', 'on the Job Plan, the band host is the Job Plan');
-  eq(who.agr, 'Margaret Whitfield', '⚠⚠ and the job a payment would be recorded against is this one — not Tripp Butler\'s dashboard left open');
-  eq(who.fb, 'jband-fb-plan', 'and messages land on this tab');
+  eq(seeded.settled, [false, false, true, true, false], 'jobIsSettled across the five jobs');
+  eq(seeded.ids, [901, 902, 905], '✕ renders on the three unsettled jobs and no others');
+  ok(seeded.ids.indexOf(903) < 0, 'the delivered job has NO close-out button');
+  ok(seeded.ids.indexOf(904) < 0, 'the final-paid job has NO close-out button');
+  eq(seeded.listed, 5, 'all five are still listed — the row is withheld, not the job');
+  eq(seeded.opens, 5, 'and every row still has Open → , so nothing else moved');
+  eq(seeded.disabledMarks, 0, 'hidden rather than disabled — no dead control on screen');
 
-  // Tick the call on the real checkbox — the review button unlocks.
-  await p.click('#closeout-plan-901 input[type=checkbox]'); await p.waitForTimeout(200);
-  const unlocked = await p.evaluate(() => {
-    const co = document.getElementById('closeout-plan-901');
-    const btn = Array.from(co.querySelectorAll('button')).find(b => /Draft review request/.test(b.textContent));
-    return { disabled: btn ? btn.disabled : null, onclick: btn ? btn.getAttribute('onclick') : '' };
+  // The live one really opens.
+  const opened = await p.evaluate(() => {
+    document.querySelector('#jobs-body button[onclick*="openCloseoutModal(901)"]').click();
+    return { shown: document.getElementById('closeout-modal').style.display, bound: closeoutJobId };
   });
-  eq(unlocked.disabled, false, 'ticking the satisfaction call unlocks the review request');
-  eq(unlocked.onclick, 'draftReviewRequest(901)', 'which drafts the review email for this job');
+  eq(opened.shown, 'flex', 'pressing ✕ on a live job opens the close-out modal');
+  eq(opened.bound, 901, 'and binds that job');
+  await p.evaluate(() => closeCloseoutModal());
 
-  // Close the job with the vendors unrated — refused, naming them.
+  // ⚠ THE HANDLER GATE. The button is withheld, so this is the only way in — which is why
+  // the refusal has to exist: the rail carries its own `Mark lost` secondary and anything
+  // added later would be a third door.
   dlg.length = 0;
-  await p.evaluate(() => activateOrCycle(901));
+  const refused = await p.evaluate(() => {
+    closeoutJobId = 0;
+    openCloseoutModal(903);
+    return { shown: document.getElementById('closeout-modal').style.display, bound: closeoutJobId };
+  });
   await p.waitForTimeout(200);
-  ok(dlg.length === 1 && /Cannot close the job yet/.test(dlg[0]) && /Ace Painting/.test(dlg[0]), 'closing with vendors unrated is refused, naming them');
-  eq(await p.evaluate(() => jobs.find(j => j.id === 901).status), 'active', 'and the job stays active');
+  ok(refused.shown !== 'flex', 'reaching the handler directly on a delivered job does not open it');
+  eq(refused.bound, 0, 'and binds nothing, so a stray Confirm cannot land on it');
+  eq(dlg.length, 1, 'it refuses out loud');
+  ok(/cannot be marked lost/.test(dlg[0] || ''), 'the refusal says what it will not do');
+  ok(/delivered/.test(dlg[0] || ''), 'and why');
+  ok(/collections/.test(dlg[0] || ''), 'and names what an outstanding final actually is');
+  ok(!/final payment is recorded/.test(dlg[0] || ''),
+    'a delivered job with no final payment is not told one was recorded');
 
-  // Rate them by clicking the real stars.
-  // Two real clicks on the rendered stars (querySelector, because the rows share a parent with the
-  // step's heading, so :nth-of-type counts the wrong divs).
-  await p.evaluate(() => document.querySelectorAll('#closeout-plan-901 .co-vendor')[0].querySelectorAll('.co-star')[4].click());
-  await p.waitForTimeout(150);
-  await p.evaluate(() => document.querySelectorAll('#closeout-plan-901 .co-vendor')[1].querySelectorAll('.co-star')[3].click());
-  await p.waitForTimeout(250);
-  const rated = await p.evaluate(() => ({ r: jobs.find(j => j.id === 901).vendorRatings, txt: document.getElementById('closeout-plan-901').textContent }));
-  eq(rated.r['Ace Painting'].rating, 5, 'a star click records the rating');
-  ok(/2 of 2 rated/.test(rated.txt), 'the scorecard reads 2 of 2 rated');
-  ok(/not yet saved to the directory|Saved to the Vendor Directory|Saving to the Vendor Directory/.test(rated.txt), 'each row says whether it reached the directory');
-
-  // ── JOB ADMIN & INV on the same prep job ─────────────────────────────────────
-  await p.click('.nb:has-text("Job Admin")'); await p.waitForTimeout(500);
-  const admin = await p.evaluate(() => {
-    const c = document.getElementById('inventory-content');
-    const t = c.textContent;
-    return {
-      job: document.getElementById('inv-job').value,
-      hdr: !!c.querySelector('.job-hdr') && /Margaret Whitfield/.test(c.querySelector('.job-hdr').textContent) && /Home Prep/.test(c.querySelector('.job-hdr').textContent),
-      band: c.querySelector('#jband-slot-admin .jt-next-step') ? c.querySelector('#jband-slot-admin .jt-next-step').textContent : '',
-      order: [c.querySelector('.job-hdr'), c.querySelector('#jband-slot-admin'), c.querySelector('.ja-card'), c.querySelector('.co-card')]
-        .every((el, i, a) => el && (i === 0 || (a[i - 1].compareDocumentPosition(el) & 4))),
-      contents: /Contents Record|Approval Request|Add line item|Appraisers|No items yet/i.test(t),
-      rooms: /All rooms cleared/.test(t), hours: /Hours logged/.test(t), donation: /Donation receipts/.test(t),
-      jaOpen: !!c.querySelector('.ja-body'),
-      host: _jobBandHost().kind, agr: (_agrJob() || {}).name,
-      closeoutSat: !!document.querySelector('#closeout-admin-901 input[type=checkbox]:checked'),
-    };
-  });
-  eq(admin.job, '901', 'Job Admin follows the job picked on the Job Plan');
-  ok(admin.hdr, 'Job Admin carries the client header — client, service, property');
-  eq(admin.band, 'Midpoint invoice sent', 'and the same band, reminding the midpoint invoice');
-  ok(admin.order, 'in order: header, band, desk paperwork, close-out');
-  eq(admin.contents, false, '⚠⚠ no inventory on a prep job — no Contents Record, Approval Request, line items or appraisers');
-  eq(admin.rooms, false, 'no "All rooms cleared — 0 of 0"');
-  eq(admin.hours, false, 'no hours line on a fee-only engagement');
-  eq(admin.donation, false, 'no donation receipts on a prep job');
-  eq(admin.jaOpen, true, 'the desk paperwork opens by default on a prep job');
-  eq(admin.host, 'admin', 'the band host is Job Admin');
-  eq(admin.agr, 'Margaret Whitfield', 'and the right client');
-  eq(admin.closeoutSat, true, 'the call ticked on the Job Plan reads ticked here — one record');
-
-  // Close now that every used vendor is rated.
   dlg.length = 0;
-  await p.evaluate(() => activateOrCycle(901)); await p.waitForTimeout(250);
-  eq(dlg.length, 0, 'with every used vendor rated, closing raises nothing');
-  eq(await p.evaluate(() => jobs.find(j => j.id === 901).status), 'closed', 'and the job closes');
+  await p.evaluate(() => { closeoutJobId = 0; openCloseoutModal(904); });
+  await p.waitForTimeout(200);
+  eq(dlg.length, 1, 'the final-paid job refuses too');
+  ok(/final payment is recorded/.test(dlg[0] || ''), 'and its wording names the payment');
 
-  // A labour job keeps its inventory on the tab, with the close-out beside it.
-  await p.evaluate(() => { const s = document.getElementById('inv-job'); s.value = '902'; onInventoryJobChange(); });
-  await p.waitForTimeout(400);
-  const lab = await p.evaluate(() => {
-    const c = document.getElementById('inventory-content');
-    return { inv: /Appraisers|Contents Record|No items yet/i.test(c.textContent), co: !!c.querySelector('#closeout-admin-902'),
-             band: !!c.querySelector('#jband-slot-admin .jt-next') };
+  // ⚠ THE JOB IS UNTOUCHED BY THE REFUSAL. A gate that half-wrote would be worse than none.
+  const intact = await p.evaluate(() => {
+    const j = jobs.find(x => x.id === 903);
+    return { status: j.status, won: j.won, lostReason: j.lostReason || '', lostAt: j.lostAt || '' };
   });
-  ok(lab.inv, 'a labour job still has its inventory');
-  ok(lab.co && lab.band, 'and gets the band and the close-out too');
+  eq(intact, { status: 'closed', won: true, lostReason: '', lostAt: '' },
+    'the delivered job is unchanged after the refusal');
 
-  // Overflow, both tabs, both widths.
-  for (const w of [1440, 390]) {
-    await p.setViewportSize({ width: w, height: 900 });
-    for (const tab of ['plan', 'admin']) {
-      await p.evaluate((t) => {
-        if (t === 'plan') { document.querySelector('.nb[onclick*="job-plan"]').click(); document.getElementById('plan-job').value = '901'; loadJobPlanTab(); }
-        else { document.querySelector('.nb[onclick*="\'inventory\'"]').click(); document.getElementById('inv-job').value = '901'; onInventoryJobChange(); }
-      }, tab);
-      await p.waitForTimeout(300);
-      const ov = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-      eq(ov, 0, tab + ' overflow at ' + w);
-    }
-  }
-  const railAt390 = await p.evaluate(() => { const r = document.querySelector('#jband-slot-admin .jt-rail'); return !!(r && r.offsetParent !== null); });
-  ok(railAt390, 'at 390 the leg renders as the vertical rail');
+  // ⚠ A LOST JOB KEEPS THE CONTROL, so its reason stays amendable — and it lives under the
+  // Lost filter, because every other filter predicate ends `j.status !== 'lost'`.
+  const lostView = await p.evaluate(() => {
+    jobs.push({ id: 906, name: 'F Lost', svc: 'prep', status: 'lost', won: false,
+      lostReason: 'price', lostReasonLabel: 'Price / estimate too high', lostEst: 8400,
+      lostAt: '2026-07-20T12:00:00Z' });
+    currentFilter = 'all'; renderJobs();
+    const inAll = /F Lost/.test(document.getElementById('jobs-body').textContent);
+    currentFilter = 'lost'; renderJobs();
+    const body = document.getElementById('jobs-body');
+    return { inAll, inLost: /F Lost/.test(body.textContent),
+      btn: !!body.querySelector('button[onclick*="openCloseoutModal(906)"]') };
+  });
+  eq(lostView.inAll, false, 'a lost job is not in the default client list');
+  eq(lostView.inLost, true, 'the Lost filter is where it lives');
+  eq(lostView.btn, true, 'and it keeps ✕ there, so the reason can be amended');
 
-  eq(errs.length, 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
-  console.log('step14: ' + pass + ' passed, ' + fail + ' failed');
+  // Layout, both widths.
+  await p.evaluate(() => { currentFilter = 'all'; renderJobs(); });
+  const w1440 = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.waitForTimeout(300);
+  const w390 = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  ok(w1440 <= 0, 'no horizontal overflow at 1440  (' + w1440 + ')');
+  ok(w390 <= 0, 'no horizontal overflow at 390  (' + w390 + ')');
+
+  eq(errs.length, 0, 'no page errors  ' + JSON.stringify(errs.slice(0, 3)));
+
   await b.close();
+  console.log('step14: ' + pass + ' passed, ' + fail + ' failed');
   process.exit(fail ? 1 : 0);
 })();

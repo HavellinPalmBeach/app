@@ -888,6 +888,12 @@ The **✕** on the job card opens closeout, and what it does depends on whether 
 
 > **⚠** Both of those are **terminal**. The status button will not move them. If a lost client comes back, start a new job.
 
+> **⚠ The ✕ disappears once the job is finished (new 2026-09-22).** It is there for the whole engagement, because a client really can cancel mid-job — and it goes the moment the work is **delivered** or a **final payment** is recorded. Either one on its own is enough. **Nothing else about the row changes:** the client is still listed and **Open →** still opens them.
+>
+> **If the final invoice has not been paid, that is chasing money — not a lost job.** The work was done. Record the payment when it arrives; never close a delivered client out as lost to tidy the list. One press used to turn a fully paid $19,940 job into *Closed — Deposit Retained* with *Price / estimate too high* against it.
+>
+> A job already marked *Lost* or *Closed — Deposit Retained* **keeps** the ✕, so you can still correct the reason. A lost job is not in the default list — press the **Lost** filter to find it.
+
 ## Where the job sits — the status list
 
 | Status | Means | What's unlocked |
@@ -1033,6 +1039,8 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | You are looking for **Activate Job** | It is a row on the timeline (*Job active*), and it only shows a button when the job can actually be activated. If there is no button there, the row says what is blocking it — usually the signed agreement, the deposit, or executor authorisation on a probate matter. The old top-of-screen button offered itself even when the job was blocked, which is why it went. |
 | A job will not activate, and you want to start the pre-job work | You already can. **Marking the client Won** is what opens staffing, the Job Plan and photo capture — none of that waits for money. Only **logging hours** waits for the deposit, and that gate has no override. *Active* is a status marker, not a permission. |
 | When does a client's Drive folder get created? | **At the moment you save Client Intake** — the folder and all six subfolders in one go. Not at approval, not at activation. **📁 Drive** is only ever a link to it; there is nothing to press to create one. |
+| **The ✕ has gone off a client row** | That job is finished — the work was delivered or the final payment is recorded — and the ✕ is the *mark lost* button. A delivered job cannot be lost, so it is withdrawn from 2026-09-22. The client is still listed and **Open →** still works. If the final invoice is outstanding, that is collections: record the payment when it arrives. |
+| **A client you marked Lost is not in the list** | Every other filter excludes a lost job. Press the **Lost** filter. The ✕ is still on the row there, so the reason and note can be corrected. |
 | You cannot find a button you are sure exists | Open the client and look at the **lit row**. Only one step is live at a time and its buttons are drawn in the band, once — not on every row. If nothing is lit, the job is finished or lost. |
 | The agreement is waiting for a manager PIN | It is not — that PIN was removed 2026-09-10. If **✉ Send signing packet** refuses, it is one of the two real conditions: the estimate is not approved, or the client is not marked **Won**. The row says which. |
 | *Who signed it?* — do you put your own name in | **No.** It is the **client** who signed the contract; it prefills the authorised representative. Who recorded it is captured separately, automatically. It will not accept a blank. |
