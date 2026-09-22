@@ -1,5 +1,43 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE COUNSEL BUNDLE IS ASSEMBLED — `COUNSEL_REVIEW_BUNDLE.md` (2026-09-22)
+Every legal text in this app shipped under Anthony's standing instruction — *"just come up with language and
+i'll get it reviewed. do your best."* **Twelve separate entries in this file end by deferring something to
+counsel, and none of them was ever collected.** They are now one document, ready to forward.
+
+- **⚠⚠ IT IS A DOCUMENT, NOT A SEND.** Nothing has gone to an attorney; that is outward-facing and
+  Anthony's to do. What is done is the assembly — **21 items across six sections**, each stating what the
+  document currently says, **why it was drafted that way**, and the specific question, so counsel confirms or
+  corrects rather than researching from nothing.
+- **⚠ PRIORITISED BY WHAT IT BLOCKS, not by section order.** (1) the first fixed-fee engagement signing
+  — the termination earn-out and the liquidated-damages question; (2) the first trust matter — the
+  §736.08135 carrying-value mechanics; (3) the first firearm — the non-NFA transport chain and the NFA
+  prohibition; (4) the first 706 estate — §20.2031-6(a)'s article-versus-lot-total reading, added the
+  same night; (5) everything else before launch.
+- **⚠ §E SAYS WHAT IS **NOT** BEING ASKED**, so an hour is not spent on settled ground: whether Havellin
+  states values at all (decided — it is the product; the question is attribution), pricing, the service
+  catalogue, and anything about how the software works.
+- **⚠ EVERY CITATION AND CLAUSE NUMBER WAS VERIFIED AGAINST THE SOURCE rather than written from memory** —
+  §8.1 *Termination by Client*, §12.3 *Termination for Cause*, §12.4 *Effect of Termination*, §5.2
+  *Florida Trust Administration Support*, §7.1 *Documentation Media and Project Records*, §10.2 *Marketing*,
+  `EXEMPT_CAP_732_402 = 20000`, *"earned on signature and is not refundable"* and *"seven (7) days"* all
+  confirmed in `havellin.html`; §790.25(5) and §922(a)(1)(A) confirmed in `firearms-protocol.html` and
+  correctly attributed there rather than to the app. **✓ `733.604(3)` returns ZERO across every file**, which
+  is precisely what item D2 claims — the app has the fields and cites the subsection nowhere.
+- **⚠ THE TWO BOUNDS ARE STATED ON ITS FACE**, because a reviewer needs them: the egress proxy blocked
+  `flsenate.gov`, `leg.state.fl.us`, `law.justia.com`, `law.cornell.edu`, `ecfr.gov` and `atf.gov` throughout,
+  so every citation was read through **secondary summaries** — believed correct, operative wording unchecked;
+  and **nothing has gone to a real client**, so there is no signed agreement to unwind. That is the whole reason
+  to do it now.
+- **⚠ D2 IS THE COMMERCIALLY INTERESTING ONE and is easy to miss among the risk items.**
+  `Fla. Stat. §733.604(3)` gives a beneficiary the right to a written explanation of how each inventory value
+  was determined. If that reading holds it is the statutory hook that makes a **stated valuation basis a
+  sellable deliverable rather than a nicety** — and the app already carries `valSource`, `valNote` and the
+  appraiser link for it.
+- **⚠ SEND THE SIGNING PACKET, NOT THE AGREEMENT ALONE.** §F lists what to attach and says so: both forms
+  incorporate the estimate as Exhibit A and the estate form states it is not valid without it, so an agreement
+  reviewed without its exhibit is not the document a client signs.
+
 ## ⚠⚠ THE ARBITRARY RULE WAS RETIRED IN THE MORNING AND THE REAL ONE BUILT IN ITS PLACE (2026-09-22)
 Step **9b** of `ESTATE_SCOPE_SPEC.md`, hours after step 9 closed the §7 build order. Anthony, reading the
 retirement: *"So what should we do with those rules. They were arbitrary. Figure this out and fix it."*

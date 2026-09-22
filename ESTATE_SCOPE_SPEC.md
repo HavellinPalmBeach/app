@@ -207,6 +207,8 @@ Forced order. Each is a separate commit, tested, revert-verified, with a manual 
 
 ## 8. Open items and legal flags
 
+✓ **COLLECTED 2026-09-22 into `COUNSEL_REVIEW_BUNDLE.md`**, with every other legal flag this project has deferred — the agreements, the firearms protocol and the filing rules — prioritised by what each one blocks. The items below are items **D1–D5** there. Nothing has been sent; the bundle is a document ready to forward.
+
 ⚠ **Primary sources were unreachable.** The egress proxy blocked leg.state.fl.us, flsenate.gov and law.justia.com during this pass; the Florida statements below were read through secondary summaries. The IRC §1014 step-up and date-of-death valuation are well settled. **Confirm with an estate attorney before any of this ships in client-facing wording:**
 
 - Fla. Prob. R. 5.340 and Fla. Stat. §733.604 are two live instruments covering the same inventory. The app cites only §733.604. Citing both is more complete.
