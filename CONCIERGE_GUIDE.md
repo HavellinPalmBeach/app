@@ -88,6 +88,8 @@ Fill in everything marked *. The Job ID (`HVL-YYMM-XXXX`) and the client's Drive
 
 New 2026-09-10. This replaced the old single *Notes* box as the main thing intake asks about the property. Two questions, in these words, then the checklist:
 
+> **On a Home Prep for Sale call, ask only question 2 (safety).** The app hides the must-find question, the checklist and the documentation level on prep — nothing leaves the house. Pets, the alarm code, a gate, anything a painter or stager needs to know still goes in.
+
 1. **"Is there anything in the house you need us to find? Something valuable, or something that matters to the family, that we absolutely cannot miss or accidentally dispose of?"**
 2. **"Is there anything in the house we need to be aware of for safety, or that needs special handling?"**
 
@@ -906,7 +908,7 @@ A sell-side, show-ready service, mostly through Douglas Elliman referral agents.
 
 4. **Client estimate** reads vendors-first: itemised vendor estimates at cost, then the 30% fee, then one total. Same 50 / 25 / 25 schedule on the Havellin fee. No completion date is projected — the schedule is confirmed once vendors are booked, and the estimate says so.
 5. Approve → send → Mark Won → agreement → deposit, exactly as above.
-6. **Job Plan** is stripped down to three things (four if you quoted declutter hours): *Budget & Fee* (estimated spend, quoted-to-date, the running 30% on actual quotes, with an over-budget flag), *Home Prep Vendors — Sourcing & Status* (assign the vendor, set status, log the actual quote against the scope note), and a *Coordination Checklist* — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices and fee billed.
+6. **Job Plan** is stripped down to three things (four if you quoted declutter hours): *Budget & Fee* (estimated spend, quoted-to-date, the running 30% on actual quotes, with an over-budget flag), *Home Prep Vendors — Sourcing & Status* (assign the vendor, set status, log the actual quote against the scope note), and a *Coordination Checklist* — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices and fee billed. Top to bottom it runs: hours log (if quoted), checklist, then *Budget & Fee* and *Sourcing*, which fold — tap the ▸ on the left to open or shut them.
 
    > **⚠ If you quoted declutter hours, the hours log is there — use it.** It opens only on a prep job that quoted hours, and it shows your concierge row alone (there is no crew on this engagement). **The final invoice bills what is in the log, not what you quoted**, so hours you worked and never recorded bill nothing at all. The app will refuse the final until something is logged, which is the right answer. The Budget & Fee card shows *quoted* against *logged to date* and turns red if you are more than 15% past — at that point ring the homeowner, because the estimate promised them that call.
 

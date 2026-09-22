@@ -149,8 +149,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '⚠ nor promises hours that are booked nowhere');
     has(body, 'on this and every engagement',
       'it states the rule as the unconditional rule it now is');
-    has(body, 'Prep books no concierge hours',
-      '…and says the hours are zero, which is the other half a concierge needs');
+    has(body, 'Coordinating these vendors books no concierge hours',
+      '…and says the coordination hours are zero, which is the other half a concierge needs');
+    has(body, 'declutter hours, where quoted, are logged separately',
+      '…without denying the declutter hours a prep job can quote (2026-09-14)');
     lacks(body, "(est.svc || job.svc) === 'prep')\n          ? 'Havellin",
       'the standalone/bundled ternary is gone, because the rule does not branch');
   }

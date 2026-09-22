@@ -350,13 +350,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // exists — the trap CLAUDE.md records costing the `&amp;amp;` defect a whole round.
     ok(typeof fn('standingFlagsBlock') === 'string', 'standingFlagsBlock is real (stubbed here only)');
     ok(typeof fn('renderVendorSourcing') === 'string', 'renderVendorSourcing is real (stubbed here only)');
-    const planFns = ['renderPrepJobPlan', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2',
+    const planFns = ['renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2',
       'chkGrid', 'planChk', '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan',
       '_planTouch',
       // The prep plan opens with the firearms banner since 2026-09-20 (the brief under it no
       // longer repeats the firearms row, so the banner has to be on both plan headers).
       'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf'];
-    const planVars = ['PREP_FEE_RATE', 'EST_TOLERANCE_PCT', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
+    const planVars = ['PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const mkPlan = (dcHrs, loggedTC) => {
       const logs = loggedTC > 0
         ? { 1: [{ date: '2026-10-06', activity: 'declutter',
@@ -381,6 +381,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(t, '5.0 hrs x $150', 'with the rate');
       has(t, 'Logged to date', 'and what has been logged against them');
       has(t, 'Pre-prep declutter complete', 'and the checklist gains a step for it');
+      // Layout (2026-09-22): checklist first, then Budget & Fee, then Sourcing — both folds on
+      // the shared left-caret bar, the checklist never inside one.
+      const h = a.html;
+      const iC = h.indexOf('Coordination Checklist'), iB = h.indexOf('id="phase-body-prep-budget"'),
+            iS = h.indexOf('id="phase-body-vendors"');
+      ok(iC >= 0 && iB > iC && iS > iB, 'checklist, then Budget & Fee, then Sourcing');
+      has(h, 'onclick="togglePhase(\'prep-budget\')"', 'Budget & Fee folds');
+      has(h, 'onclick="togglePhase(\'vendors\')"', 'Sourcing folds, on the key that auto-opens while quotes are outstanding');
+      ok(h.indexOf('class="sec-caret"') < h.indexOf('Budget &amp; Fee'), 'the caret sits on the LEFT of the title');
+      ok(h.indexOf('Coordination Checklist') < h.indexOf('class="plan-fold"'), 'the checklist is not inside a fold');
+      has(h, 'id="stage-meta-prep-budget"', 'a shut Budget & Fee still says how it stands');
       const n = text(mkPlan(0, 0).html);
       lacks(n, 'Declutter hours quoted', 'a pure vendor-management job shows none of it');
       lacks(n, 'Pre-prep declutter complete', 'nor the checklist step');

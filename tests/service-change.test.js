@@ -103,7 +103,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(opts.every((o) => ctx.svcFamily(o) === ctx.svcFamily(k)),
          k + ' is only ever offered its own family');
     });
-    eq(ctx.svcFamilyOptions('prep'), ['downsizing', 'downsizing_move', 'home_cleanout', 'prep'],
+    eq(ctx.svcFamilyOptions('prep'), ['prep', 'downsizing', 'downsizing_move', 'home_cleanout'],
        'the living four, in catalogue order');
     eq(ctx.svcFamilyOptions('nonsense'), [], 'an unplaceable key offers no move at all');
     ok(ctx.sameSvcFamily('prep', 'downsizing'), 'prep → Home Editing is allowed');

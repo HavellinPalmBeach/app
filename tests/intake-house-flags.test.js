@@ -203,7 +203,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const save = src.slice(src.indexOf('function saveIntake'), src.indexOf('function saveIntake') + 12000);
     has(save, "mustFind:", 'saveIntake stores the must-find answer');
     has(save, "safetyNotes:", 'saveIntake stores the safety answer');
-    has(save, "houseFlags:  readHouseFlagInputs('i')", 'and the checklist, read through the shared reader');
+    has(save, "readHouseFlagInputs('i')", 'and the checklist, read through the shared reader');
 
     // The reset leak. INTAKE_FIELDS does `.value = ''`, which does NOTHING to a checkbox,
     // so without this the next client created in the same session inherits the last

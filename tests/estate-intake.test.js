@@ -198,7 +198,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (svc) => {
       const d = classDom({ 'i-svc': svc }, {});
       const c = sandbox({
-        fns: ['toggleIntakeFields', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+        fns: ['toggleIntakeFields', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -306,7 +306,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (svc) => {
       const d = classDom({ 'i-svc': svc }, marks);
       const c = sandbox({
-        fns: ['toggleIntakeFields', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+        fns: ['toggleIntakeFields', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -340,7 +340,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef'],
+        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef'],
         vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
         stubs: {
           document: d,
