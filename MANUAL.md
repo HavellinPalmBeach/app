@@ -644,9 +644,11 @@ The client estimate reads vendors-first: the itemized prep vendor estimates (bil
 
 A Home Prep job opens a stripped-down Job Plan — no PS crew, no room stages, no end-of-job logistics. It shows only:
 
+- **Coordination Checklist** — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices + fee billed.
 - **Budget & Fee** — estimated vendor spend, quoted-to-date, and the running 30% fee on actual quotes (flags any over-budget).
 - **Home Prep Vendors — Sourcing & Status** — assign a partner from the Vendor Directory, set status, and log the actual quote per item (with the scope note shown for reference).
-- **Coordination Checklist** — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices + fee billed.
+
+> **Order and folds (2026-09-22).** Top to bottom: the hours log (when declutter hours were quoted), the Coordination Checklist, then Budget & Fee and Sourcing. The last two fold on the same left-caret bar as the rest of the app. Budget & Fee starts shut and its bar still shows *$ quoted of $ budget · fee*, plus a warning if it is over budget or over the quoted hours. Sourcing opens by itself while any vendor is still unconfirmed and before the job is active.
 
 > **⚠⚠ THE HOURS LOG OPENS IF — AND ONLY IF — THE ESTIMATE QUOTED DECLUTTER HOURS (2026-09-14).** A pure vendor-management prep job still has no log, because there is nothing it could honestly hold. A job that quoted hours gets the ordinary log, with the **concierge row alone** and no specialist rows. The Budget & Fee card gains two lines — *Declutter hours quoted* and *Logged to date* — and flags in red once the logged hours run more than 15% past the quote, because the estimate's own Terms promise the client notice at that point.
 >

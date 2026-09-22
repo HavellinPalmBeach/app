@@ -131,11 +131,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // not match its shape — so the card could go back to summing by position with the
     // whole suite passing. It is the concierge's own fee readout, in the field, on money.
     const plan = (est, job) => sandbox({
-      fns: ['renderPrepJobPlan', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
+      fns: ['renderPrepJobPlan', 'planPhaseWrap', 'secCaret', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
             'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt',
             // The prep plan carries the firearms banner since 2026-09-20.
             'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf'],
-      vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
+      vars: ['EST_TOLERANCE_PCT', '_planOpenPhases', 'PREP_FEE_RATE', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: { getElementById: () => null }, esc: (v) => String(v == null ? '' : v),
                standingFlagsBlock: () => '', _sfHost: () => '', planChk: () => '', renderVendorSourcing: () => '',
                vendorDirectory: [] },
