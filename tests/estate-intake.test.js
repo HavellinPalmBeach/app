@@ -48,21 +48,149 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the two blocks hold what their name says, and nothing else');
   {
-    const estateOpen  = src.indexOf('id="estate-fields"');
-    const probateOpen = src.indexOf('id="probate-fields"');
-    const houseFlags  = src.indexOf('What&rsquo;s In The House');
-    ok(estateOpen > 0, 'the estate block exists');
-    ok(probateOpen > estateOpen, 'and closes before the probate block opens');
-    ok(houseFlags > probateOpen, 'which in turn closes before the next intake section');
-
-    ESTATE_IDS.forEach((id) => {
+    // ⚠ THIS USED TO BE THREE SOURCE INDICES — estate-fields, then probate-fields, then
+    // "What&rsquo;s In The House" as the end marker — and it broke on 2026-09-22 when the
+    // intake columns were reflowed and the two questions moved ABOVE the estate block. The
+    // requirement was never the ORDER of the sections; it is that a decedent fact sits inside
+    // the decedent block and a court-case fact inside the court block. Stated as CONTAINMENT
+    // now, so the next layout change cannot fail an assertion about something else.
+    const blockOf = (id) => {
       const at = src.indexOf('id="' + id + '"');
-      ok(at > estateOpen && at < probateOpen, id + ' is a decedent fact and sits in the estate block');
+      if (at < 0) return 'MISSING';
+      let depth = 0, i = at;
+      while (i > 0) {                       // walk back to the enclosing block's own open tag
+        if (src.startsWith('</div>', i)) depth++;
+        else if (src.startsWith('<div', i)) {
+          if (depth === 0) {
+            const tag = src.slice(i, src.indexOf('>', i) + 1);
+            const m = /id="([a-z-]+)"/.exec(tag);
+            if (m && (m[1] === 'estate-fields' || m[1] === 'probate-fields' || m[1] === 'estate-auth-fields')) return m[1];
+          } else depth--;
+        }
+        i--;
+      }
+      return 'none';
+    };
+    ok(src.indexOf('id="estate-fields"') > 0,  'the estate block exists');
+    ok(src.indexOf('id="probate-fields"') > 0, 'the probate block exists');
+    ESTATE_IDS.forEach((id) => {
+      eq(blockOf(id), 'estate-fields', id + ' is a decedent fact and sits in the estate block');
     });
     PROBATE_IDS.forEach((id) => {
-      const at = src.indexOf('id="' + id + '"');
-      ok(at > probateOpen && at < houseFlags, id + ' is a court-case fact and stays probate-only');
+      eq(blockOf(id), 'probate-fields', id + ' is a court-case fact and stays probate-only');
     });
+    // The converse, and it is the half that matters: neither block may swallow the other, so
+    // a court fact can never be reached on an Estate Settlement and a decedent fact is never
+    // withheld from one. Measured off the same walk rather than asserted separately.
+    ok(ESTATE_IDS.every((id) => blockOf(id) !== 'probate-fields'), 'no decedent fact is trapped in the probate block');
+    ok(PROBATE_IDS.every((id) => blockOf(id) !== 'estate-fields'), 'no court fact has leaked into the estate block');
+  }
+
+  // ⚠⚠ THE TWO COLUMNS ARE A REQUIREMENT, NOT A LAYOUT PREFERENCE, and this is what keeps
+  // them. `.grid2` collapses to ONE column under 820px and renders card 1 whole before card 2,
+  // so the column a block sits in decides where it lands on the phone the intake call is taken
+  // on. Measured on the old arrangement, a probate intake at 390px: the property type was at
+  // y=4,235 and the square footage at y=4,388 — BELOW the two "what's in the house" questions
+  // at y=3,282 — so the concierge scrolled past the whole estate block, the attorney and the
+  // court record before reaching "how big is it". Reflowed 2026-09-22 on Anthony's reading:
+  // LEFT is the standing facts (who, where, what kind of house), RIGHT is the conversation
+  // (the two questions, then the parties on an estate). Property type now lands at y=1,020.
+  group('the intake columns: standing facts left, the conversation right');
+  {
+    const panel = src.slice(src.indexOf('id="panel-intake"'));
+    const grid  = panel.slice(panel.indexOf('<div class="grid2">'));
+    // Walk the grid's direct children, so this reads the real card boundaries rather than
+    // counting occurrences of a string that also appears inside them.
+    const cards = [];
+    let i = grid.indexOf('>') + 1, depth = 0, open = -1;
+    while (i < grid.length && cards.length < 4) {
+      if (grid.startsWith('<div', i)) { if (depth === 0) open = i; depth++; }
+      else if (grid.startsWith('</div>', i)) {
+        depth--;
+        if (depth === 0 && open >= 0) { cards.push(grid.slice(open, i)); open = -1; }
+        if (depth < 0) break;
+      }
+      i++;
+    }
+    eq(cards.length, 2, 'the intake grid is two cards');
+    const col = (id) => cards.findIndex((c) => c.indexOf('id="' + id + '"') >= 0) + 1;
+
+    // LEFT — who the client is, where the property is, and what kind of property it is.
+    [['i-svc', 'the service type'], ['i-fname', 'the client name'], ['i-addr', 'the property address'],
+     ['i-ptype', 'the property type'], ['i-sqft', 'the square footage'], ['i-beds', 'the bedroom count'],
+     ['i-home-value', 'the home value'], ['i-walkthrough', 'the walkthrough date'],
+     ['i-start', 'the target start'], ['i-prem', 'the premium flag'], ['i-dest-addr', 'the move destination']
+    ].forEach(([id, what]) => eq(col(id), 1, 'LEFT column carries ' + what));
+
+    // RIGHT — the two questions asked on every call, then the parties on an estate.
+    [['i-mustfind', 'the must-find question'], ['i-safety', 'the safety question'],
+     ['i-houseflags', 'the house-flag ticks'], ['i-notes', 'the notes'],
+     ['i-executor-fname', 'the authorized representative'], ['i-date-of-death', 'the date of death'],
+     ['i-matter-type', 'the matter type'], ['i-doc-tier', 'the engagement tier'],
+     ['i-probate-atty-fname', 'the estate attorney'], ['i-gate-706', 'the 706 gate'],
+     ['i-probate-case', 'the court case number'], ['i-doclevel', 'the documentation level']
+    ].forEach(([id, what]) => eq(col(id), 2, 'RIGHT column carries ' + what));
+
+    // ⚠ THE PROPERTY BLOCK MUST READ BEFORE THE QUESTIONS, which on a phone means being in
+    // the earlier card — the whole point of the move. Stated as the requirement rather than as
+    // a pixel, so it survives any amount of copy being added to either column.
+    ok(col('i-sqft') < col('i-mustfind'), 'the property block reads before the two questions');
+    // ⚠ AND THE DOCUMENTATION LEVEL SITS WITH THE OTHER DOCUMENTATION QUESTION, NOT IN JOB
+    // DETAILS. It is how strictly, beside what we hand over — and beside the gate readout that
+    // is the only thing on the form that explains why it is usually greyed out.
+    eq(col('i-doclevel'), col('i-doc-tier'), 'the documentation level sits with the engagement tier');
+    ok(cards[1].indexOf('id="i-gate-readout"') < cards[1].indexOf('id="i-doclevel"'),
+       'and directly under the readout that explains it');
+    // ⚠ OUTSIDE #estate-fields, or the four living services lose the only route to Formal —
+    // which is what makes chain of custody mandatory on the Job Plan.
+    // ⚠ THE WALK STARTS AT THE OPENING `<div`, NOT AT THE id INSIDE IT. Starting at the id
+    // leaves depth at 0 inside the block, so the FIRST inner </div> closed it and every later
+    // element read as outside — which came back GREEN on the revert that moved the control in.
+    const efOpen = cards[1].lastIndexOf('<div', cards[1].indexOf('id="estate-fields"'));
+    let efEnd = cards[1].length, d = 0;
+    for (let j = efOpen; j < cards[1].length; j++) {
+      if (cards[1].startsWith('<div', j)) d++;
+      else if (cards[1].startsWith('</div>', j)) { d--; if (d === 0) { efEnd = j; break; } }
+    }
+    ok(efEnd < cards[1].length, 'the estate block closes inside the card');
+    ok(cards[1].indexOf('id="i-doclevel"') > efEnd, 'but outside the estate block, so a living job still reaches it');
+    // ⚠ STATED AGAINST ALL THREE CONDITIONALLY-HIDDEN BLOCKS, not just the estate one. Those
+    // are the only things toggleIntakeFields hides, so a control outside all three is on screen
+    // on every service — which is the requirement, since the four living services have no other
+    // route to Formal. The browser run drives the converse and reads the control on all seven.
+    ['estate-fields', 'estate-auth-fields', 'probate-fields'].forEach((blk) => {
+      const open = cards[1].lastIndexOf('<div', cards[1].indexOf('id="' + blk + '"'));
+      let end = -1, k = 0;
+      for (let j = open; j < cards[1].length; j++) {
+        if (cards[1].startsWith('<div', j)) k++;
+        else if (cards[1].startsWith('</div>', j)) { k--; if (k === 0) { end = j; break; } }
+      }
+      const at = cards[1].indexOf('id="i-doclevel"');
+      ok(at < open || at > end, 'the documentation level is outside #' + blk + ', so every service reaches it');
+    });
+  }
+
+  group('the documentation level says what it is actually for');
+  {
+    // ⚠⚠ THE HINT WAS FALSE AND HAD BEEN SINCE 2026-08-24. It read "Choose Formal when the
+    // job needs court-grade records — a contested estate, a large estate that may owe estate
+    // tax, or when the attorney or trust officer asks for it" — and ALL THREE of those now set
+    // the floor automatically and DISABLE the control (docLevelFloor). So the one piece of
+    // guidance on the form told you to use the dropdown in exactly the cases where it is
+    // greyed out. Measured: on the three decedent services the floor is `formal` on a fresh
+    // intake, because the 706 question defaults to Unknown and unknown counts as yes.
+    const at  = src.indexOf('id="i-doclevel"');
+    ok(at > 0, 'the control is still on the form');
+    const hint = src.slice(at, at + 1600);
+    const end  = hint.indexOf('</div>', hint.indexOf('</select>'));
+    const copy = hint.slice(0, end < 0 ? hint.length : end);
+    ok(/answers above decide this|gates? (above )?(decide|set)/i.test(copy),
+       'it says the answers above decide this on an estate');
+    ok(/grey|disabl/i.test(copy), 'and that they grey it out');
+    lacks(copy, 'Choose <strong>Formal</strong> when the job needs court-grade records',
+       'the retired instruction naming the three cases that disable it is gone');
+    ok(/chain of custody/i.test(copy), 'it still names what Formal actually does');
+    ok(/lower/i.test(copy), 'and that it is escalate-only');
   }
 
   group('which blocks a service shows');
@@ -94,6 +222,81 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['downsizing', 'downsizing_move', 'home_cleanout', 'prep'].forEach((svc) => {
       eq(run(svc).estate, 'none', svc + ' is living-client work and is asked none of it');
       eq(run(svc).probate, 'none', svc + ' gets no court record either');
+    });
+  }
+
+  group('the level control is BORROWED by the gates, not overwritten');
+  {
+    // ⚠⚠ TWO DEFECTS ON ONE CONTROL, both found while measuring whether it is still worth
+    // having (2026-09-22). (1) It carried NO onchange, so hand-setting Formal left the readout
+    // directly beneath it still reading "Standard documentation" — the only line on the form
+    // that explains the level, contradicting the control it explains. (2) Forcing the level
+    // WRITES 'formal' into the control; answering the 706 "No" afterwards lifted the floor and
+    // left that value behind, so the readout then reported it as "set by hand" — attributing a
+    // choice to a person who never made one.
+    has(src, 'id="i-doclevel" onchange="onDocGateChange()"',
+        'the control repaints the readout when a person changes it');
+
+    const drive = (seed) => {
+      const d = classDom(seed, {});
+      const c = sandbox({
+        fns: ['onDocGateChange', '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor',
+              'docTierOf', 'docTierDef', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel',
+              'isDecedentJob', 'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
+        vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+               'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+        stubs: { document: d },
+      });
+      return { d, c, set: (id, v) => { d.getElementById(id).value = v; }, go: () => c.onDocGateChange(),
+               lvl: () => d.getElementById('i-doclevel'),
+               out: () => String(d.getElementById('i-gate-readout').innerHTML || '') };
+    };
+
+    // A fresh probate intake: the 706 defaults to Unknown, which IS the common case and is
+    // what makes this control disabled on nearly every estate.
+    {
+      const t = drive({ 'i-svc': 'probate', 'i-doclevel': '' });
+      t.go();
+      eq(t.lvl().value, 'formal', 'an unanswered 706 forces the control to Formal');
+      eq(t.lvl().disabled, true, 'and disables it');
+      ok(/Strict Mode/.test(t.out()), 'the readout says so');
+      // Now answer it honestly. The floor lifts — and the forced value must NOT be left behind.
+      t.set('i-gate-706', 'no'); t.go();
+      eq(t.lvl().disabled, false, 'answering No releases the control');
+      eq(t.lvl().value, '', 'and hands back the blank it borrowed, not the formal it wrote itself');
+      ok(/Standard documentation/.test(t.out()), 'so the readout reads Standard rather than "set by hand"');
+    }
+
+    // The converse, and it is the half a blanket clear would get wrong.
+    {
+      const t = drive({ 'i-svc': 'cleanout', 'i-gate-706': 'no', 'i-doclevel': 'formal' });
+      t.go();
+      eq(t.lvl().disabled, false, 'no gate fires, so a hand-set Formal is left alone');
+      ok(/set by hand/.test(t.out()), 'and is reported as hand-set');
+      // Take the control away and give it back: the person's own answer has to survive.
+      t.set('i-doc-tier', 'appraisals'); t.go();
+      eq(t.lvl().disabled, true, 'the appraisals tier takes the control');
+      t.set('i-doc-tier', 'values'); t.go();
+      eq(t.lvl().value, 'formal', 'and releasing it returns the Formal the person really chose');
+      eq(t.lvl().disabled, false, 'released');
+    }
+
+    // Repeated passes while already forced must not overwrite the capture — this handler runs
+    // on every gate change AND from toggleIntakeFields, so it sees the forced state often.
+    {
+      const t = drive({ 'i-svc': 'probate', 'i-doclevel': '' });
+      t.go(); t.go(); t.go();
+      t.set('i-gate-706', 'no'); t.go();
+      eq(t.lvl().value, '', 'three forced passes still hand back the original blank');
+    }
+
+    // On the four living services nothing ever takes it, which is the whole reason it still
+    // exists: Formal is what makes chain of custody mandatory on the Job Plan, and there is
+    // no other route to it there.
+    ['downsizing', 'downsizing_move', 'home_cleanout', 'prep'].forEach((svc) => {
+      const t = drive({ 'i-svc': svc, 'i-doclevel': '' });
+      t.go();
+      eq(t.lvl().disabled, false, svc + ' — the gates never fire, so the control stays usable');
     });
   }
 

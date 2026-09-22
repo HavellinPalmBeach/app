@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:07am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:59am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1281,7 +1281,7 @@ body.no-smf .smf-col{display:none;}
         <div><input type="text" id="i-fname" placeholder="First name"></div>
         <div><input type="text" id="i-lname" placeholder="Last name"></div>
       </div>
-      <div id="i-deceased-note" style="display:none;font-size:11px;color:var(--gray);margin:6px 0 8px;padding:6px 10px;background:var(--tan);border-radius:4px;">Client is deceased — phone and email are disabled. Collect the authorized representative's contact below; that is where client documents will be sent.</div>
+      <div id="i-deceased-note" style="display:none;font-size:11px;color:var(--gray);margin:6px 0 8px;padding:6px 10px;background:var(--tan);border-radius:4px;">Client is deceased — phone and email are disabled. Collect the authorized representative's contact in the <strong>Authorized Representative</strong> block; that is where client documents will be sent.</div>
       <div class="row">
         <div><label>Phone <span id="i-phone-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" oninput="formatPhone(this)" maxlength="14"></div>
         <div><label>Email <span id="i-email-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email"></div>
@@ -1335,6 +1335,129 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — lists only the partners matching the referral source selected above, so the specific referrer is tracked. Manage the list in the Referral Partners tab.</div>
       </div>
+      <div class="divider"></div>
+      <div class="sec">Job Details</div>
+      <div class="row">
+        <div>
+          <label>Property type <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <select id="i-ptype">
+            <option value="">Select type</option>
+            <option>Apartment</option>
+            <option>Town Home</option>
+            <option>Patio Home</option>
+            <option>Single Family Home</option>
+            <option>Estate</option>
+          </select>
+        </div>
+        <div>
+          <label>Assigned Transition Concierge <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— optional, can be staffed later on the Job Plan</span></label>
+          <select id="i-tc">
+            <option value="">Unassigned</option>
+            <option>Anthony Graziano</option><option>Ashley Jerome</option>
+            <option>Anthony Graziano Jr</option>
+            <option>Contractor — TC 1</option><option>Contractor — TC 2</option><option>Contractor — TC 3</option>
+          </select>
+        </div>
+      </div>
+      <div class="row row-tight">
+        <div><label>Approx. sqft <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="number" id="i-sqft" placeholder="e.g. 4500"></div>
+        <div><label>Years in home</label><input type="number" id="i-years-in-home" placeholder="e.g. 12" min="0" max="99"></div>
+      </div>
+      <div class="row row-tight">
+        <div><label>Bedrooms</label><input type="number" id="i-beds" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
+        <div><label>Full baths</label><input type="number" id="i-baths" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
+        <div><label>Half baths</label><input type="number" id="i-half-baths" placeholder="e.g. 2" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
+      </div>
+      <!-- These three are what the room-coverage badge on Build Estimate checks the
+           walkthrough against, and it counts MAIN-HOUSE rows only. Counting a guest house
+           or casita bedroom here makes the badge unclearable — the grid has no outbuilding
+           bedroom rows to score against it. Outbuildings are captured as whole buildings in
+           the Outbuildings & Guest Quarters section of the room grid instead. -->
+      <div style="font-size:11px;color:var(--gray);margin-top:-4px;margin-bottom:8px;">Main house only — guest houses, casitas and cottages are captured on the walkthrough, not here.</div>
+      <label>Approximate home value <span style="font-weight:400;color:var(--gray);">(market / Zillow estimate)</span></label>
+      <input type="text" id="i-home-value" placeholder="e.g. $3,200,000" inputmode="numeric" oninput="formatMoneyInput(this)">
+      <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ballpark $ value — informs the Premium Estate rate decision and the real-estate referral angle.</div>
+      <div class="row">
+        <div>
+          <label>Walkthrough / site visit date <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <input type="date" id="i-walkthrough" onchange="updateIntakeDateMins()" style="width:100%;">
+        </div>
+        <div>
+          <label>Site visit conducted by <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <select id="i-site-visit-by" style="width:100%;">
+            <option value="">Select TC</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Target start date <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <input type="date" id="i-start" onchange="updateIntakeDateMins()" style="width:100%;">
+        </div>
+        <div>
+          <label>Hard target date <span style="font-size:10px;font-weight:400;color:var(--gray);">(optional — closing date, court date, etc.)</span></label>
+          <input type="date" id="i-completion" onchange="updateIntakeDateMins()" style="width:100%;">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Priority</label>
+          <select id="i-pri">
+            <option value="normal">Normal</option>
+            <option value="high">High — probate deadline</option>
+            <option value="urgent">Urgent — health / emergency</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>RE transaction potential</label>
+          <select id="i-re">
+            <option value="unknown">Unknown</option>
+            <option value="yes">Yes — likely RE transaction</option>
+            <option value="no">No RE component expected</option>
+          </select>
+        </div>
+        <div>
+          <label>Premium estate?</label>
+          <select id="i-prem">
+            <option value="no">No — standard rates</option>
+            <option value="yes">Yes — art, antiques, wine</option>
+          </select>
+        </div>
+      </div>
+      <div id="downsizing-dest-fields" style="display:none;">
+        <div class="divider"></div>
+        <div class="sec" style="margin-bottom:6px;">Move Destination <span style="font-size:10px;font-weight:400;color:var(--gray);">(New home details — required for Home Transition)</span></div>
+        <label>New home address</label>
+        <input type="text" id="i-dest-addr" placeholder="123 New Address Blvd">
+        <div class="row">
+          <div><label>City</label><input type="text" id="i-dest-city" placeholder="e.g. Boca Raton"></div>
+          <div><label>Zip</label><input type="text" id="i-dest-zip" placeholder="e.g. 33432" maxlength="5"></div>
+        </div>
+        <div class="row">
+          <div><label>New home sq ft</label><input type="number" id="i-dest-sqft" placeholder="e.g. 1800" min="0"></div>
+          <div><label>Bedrooms</label><input type="number" id="i-dest-beds" placeholder="2" min="0" max="20"></div>
+          <div><label>Bathrooms</label><input type="number" id="i-dest-baths" placeholder="2" min="0" max="20"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec" style="margin-bottom:6px;">What&rsquo;s In The House <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(ask on every intake call)</span></div>
+      <div style="font-size:10.5px;color:var(--gray);margin-bottom:9px;line-height:1.5;">
+        Two questions, then tick what is in the house and write down what you are told. Everything
+        recorded here prints on the Job Plan as <strong>standing job flags</strong> &mdash; it is what
+        the crew is read before Day 1. A blank answer is a question nobody gets to ask twice.
+      </div>
+      <label>1. Is there anything in the house you need us to find?<span class="lbl-hint"> &mdash; something valuable, or something that matters to the family, that we absolutely cannot miss or accidentally dispose of</span></label>
+      <textarea id="i-mustfind" rows="2" placeholder="One line per item: what it is, and where they think it might be."></textarea>
+      <label style="margin-top:10px;">2. Is there anything we need to be aware of for safety, or that needs special handling?</label>
+      <textarea id="i-safety" rows="2" placeholder="Pets, mould, hoarding, stairs, medical sharps, chemicals, a family member who will be difficult on site &mdash; anything the crew should know before they walk in."></textarea>
+      <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:13px 0 5px;">What&rsquo;s in the house &mdash; tick if yes, then say what you know</div>
+      <div id="i-houseflags"></div>
+      <div class="divider"></div>
+      <label>Notes <span class="lbl-hint">&mdash; anything the two questions above did not cover</span></label>
+      <textarea id="i-notes" placeholder="Family situation, urgency, who actually makes the decisions, etc."></textarea>
       <div id="estate-auth-fields" style="display:none;">
         <div class="divider"></div>
         <div class="sec" style="margin-bottom:6px;">Authorized Representative <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(person authorized to direct the estate)</span></div>
@@ -1446,6 +1569,28 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div id="i-gate-readout" style="margin-bottom:6px;"></div>
       </div>
+      <!-- ⚠⚠ THE SECOND DOCUMENTATION QUESTION, AND IT IS NOT THE SAME ONE AS THE TIER.
+           "What are we contracted to produce?" is the DELIVERABLE — the thing the agreement
+           promises and the estimate prices. This is HOW STRICTLY the job is documented, and
+           since 2026-08-24 it is a floor the gates set rather than a judgment call: a 706, a
+           recorded dispute, a contest, or the `Inventory + appraisals` tier each force Formal
+           and disable this control (docLevelFloor). It sits here, under the readout that
+           explains it, rather than in Job Details where it read as a property fact.
+           ⚠ IT IS OUTSIDE #estate-fields DELIBERATELY. On the four living services the gates
+           never fire, so this is the ONLY way to reach Formal there — and Formal is what makes
+           chain of custody mandatory on the Job Plan (renderJobPlan: custodyMandatory) and
+           turns the appraisal guardrail from an amber prompt into a red block. Move it inside
+           and those two go with it. -->
+      <div class="divider"></div>
+      <div>
+        <label>Documentation level <span class="lbl-hint">&mdash; how strictly, not what we hand over</span></label>
+        <select id="i-doclevel" onchange="onDocGateChange()">
+          <option value="">Auto &mdash; set by the answers above</option>
+          <option value="standard">Standard</option>
+          <option value="formal">Formal &mdash; court &amp; attorney grade</option>
+        </select>
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">On an estate the answers above decide this and grey it out &mdash; a Form 706, a recorded dispute, a contest or the <em>Inventory + appraisals</em> tier each force <strong>Formal</strong>, with the reason printed beside them. What is left here is the case they do not cover: raising an otherwise-standard job by hand. Formal makes <strong>chain of custody mandatory</strong> and turns the item-appraisal guardrail from a prompt into a block. It can never be set <em>lower</em> than the answers above require.</div>
+      </div>
       <div id="probate-fields" style="display:none;">
         <div class="divider"></div>
         <div class="sec" style="margin-bottom:6px;">Probate Details <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the case, the Letters and the §733.604 clock)</span></div>
@@ -1464,140 +1609,6 @@ body.no-smf .smf-col{display:none;}
               <option value="maybe">Under discussion</option>
             </select>
           </div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div class="sec" style="margin-bottom:6px;">What&rsquo;s In The House <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(ask on every intake call)</span></div>
-      <div style="font-size:10.5px;color:var(--gray);margin-bottom:9px;line-height:1.5;">
-        Two questions, then tick what is in the house and write down what you are told. Everything
-        recorded here prints on the Job Plan as <strong>standing job flags</strong> &mdash; it is what
-        the crew is read before Day 1. A blank answer is a question nobody gets to ask twice.
-      </div>
-      <label>1. Is there anything in the house you need us to find?<span class="lbl-hint"> &mdash; something valuable, or something that matters to the family, that we absolutely cannot miss or accidentally dispose of</span></label>
-      <textarea id="i-mustfind" rows="2" placeholder="One line per item: what it is, and where they think it might be."></textarea>
-      <label style="margin-top:10px;">2. Is there anything we need to be aware of for safety, or that needs special handling?</label>
-      <textarea id="i-safety" rows="2" placeholder="Pets, mould, hoarding, stairs, medical sharps, chemicals, a family member who will be difficult on site &mdash; anything the crew should know before they walk in."></textarea>
-      <div style="font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:13px 0 5px;">What&rsquo;s in the house &mdash; tick if yes, then say what you know</div>
-      <div id="i-houseflags"></div>
-      <div class="divider"></div>
-      <label>Notes <span class="lbl-hint">&mdash; anything the two questions above did not cover</span></label>
-      <textarea id="i-notes" placeholder="Family situation, urgency, who actually makes the decisions, etc."></textarea>
-    </div>
-    <div class="card">
-      <div class="sec">Job Details</div>
-      <div class="row">
-        <div>
-          <label>Property type <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <select id="i-ptype">
-            <option value="">Select type</option>
-            <option>Apartment</option>
-            <option>Town Home</option>
-            <option>Patio Home</option>
-            <option>Single Family Home</option>
-            <option>Estate</option>
-          </select>
-        </div>
-        <div>
-          <label>Assigned Transition Concierge <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— optional, can be staffed later on the Job Plan</span></label>
-          <select id="i-tc">
-            <option value="">Unassigned</option>
-            <option>Anthony Graziano</option><option>Ashley Jerome</option>
-            <option>Anthony Graziano Jr</option>
-            <option>Contractor — TC 1</option><option>Contractor — TC 2</option><option>Contractor — TC 3</option>
-          </select>
-        </div>
-      </div>
-      <div class="row row-tight">
-        <div><label>Approx. sqft <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="number" id="i-sqft" placeholder="e.g. 4500"></div>
-        <div><label>Years in home</label><input type="number" id="i-years-in-home" placeholder="e.g. 12" min="0" max="99"></div>
-      </div>
-      <div class="row row-tight">
-        <div><label>Bedrooms</label><input type="number" id="i-beds" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
-        <div><label>Full baths</label><input type="number" id="i-baths" placeholder="e.g. 4" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
-        <div><label>Half baths</label><input type="number" id="i-half-baths" placeholder="e.g. 2" min="0" max="30" step="1" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="this.value=this.value===''?'':Math.min(30,Math.max(0,parseInt(this.value)||0))"></div>
-      </div>
-      <!-- These three are what the room-coverage badge on Build Estimate checks the
-           walkthrough against, and it counts MAIN-HOUSE rows only. Counting a guest house
-           or casita bedroom here makes the badge unclearable — the grid has no outbuilding
-           bedroom rows to score against it. Outbuildings are captured as whole buildings in
-           the Outbuildings & Guest Quarters section of the room grid instead. -->
-      <div style="font-size:11px;color:var(--gray);margin-top:-4px;margin-bottom:8px;">Main house only — guest houses, casitas and cottages are captured on the walkthrough, not here.</div>
-      <label>Approximate home value <span style="font-weight:400;color:var(--gray);">(market / Zillow estimate)</span></label>
-      <input type="text" id="i-home-value" placeholder="e.g. $3,200,000" inputmode="numeric" oninput="formatMoneyInput(this)">
-      <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ballpark $ value — informs the Premium Estate rate decision and the real-estate referral angle.</div>
-      <div class="row">
-        <div>
-          <label>Walkthrough / site visit date <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <input type="date" id="i-walkthrough" onchange="updateIntakeDateMins()" style="width:100%;">
-        </div>
-        <div>
-          <label>Site visit conducted by <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <select id="i-site-visit-by" style="width:100%;">
-            <option value="">Select TC</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label>Target start date <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <input type="date" id="i-start" onchange="updateIntakeDateMins()" style="width:100%;">
-        </div>
-        <div>
-          <label>Hard target date <span style="font-size:10px;font-weight:400;color:var(--gray);">(optional — closing date, court date, etc.)</span></label>
-          <input type="date" id="i-completion" onchange="updateIntakeDateMins()" style="width:100%;">
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label>Priority</label>
-          <select id="i-pri">
-            <option value="normal">Normal</option>
-            <option value="high">High — probate deadline</option>
-            <option value="urgent">Urgent — health / emergency</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label>RE transaction potential</label>
-          <select id="i-re">
-            <option value="unknown">Unknown</option>
-            <option value="yes">Yes — likely RE transaction</option>
-            <option value="no">No RE component expected</option>
-          </select>
-        </div>
-        <div>
-          <label>Premium estate?</label>
-          <select id="i-prem">
-            <option value="no">No — standard rates</option>
-            <option value="yes">Yes — art, antiques, wine</option>
-          </select>
-        </div>
-      </div>
-
-      <div>
-        <label>Documentation level</label>
-        <select id="i-doclevel">
-          <option value="">Auto — set by service type</option>
-          <option value="standard">Standard</option>
-          <option value="formal">Formal — court &amp; attorney grade</option>
-        </select>
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Choose <strong>Formal</strong> when the job needs court-grade records — a contested estate, a large estate that may owe estate tax, or when the attorney or trust officer asks for it. Formal turns on the item-appraisal guardrails and makes chain-of-custody tracking mandatory. (Contested probate is Formal automatically.)</div>
-      </div>
-
-      <div id="downsizing-dest-fields" style="display:none;">
-        <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Move Destination <span style="font-size:10px;font-weight:400;color:var(--gray);">(New home details — required for Home Transition)</span></div>
-        <label>New home address</label>
-        <input type="text" id="i-dest-addr" placeholder="123 New Address Blvd">
-        <div class="row">
-          <div><label>City</label><input type="text" id="i-dest-city" placeholder="e.g. Boca Raton"></div>
-          <div><label>Zip</label><input type="text" id="i-dest-zip" placeholder="e.g. 33432" maxlength="5"></div>
-        </div>
-        <div class="row">
-          <div><label>New home sq ft</label><input type="number" id="i-dest-sqft" placeholder="e.g. 1800" min="0"></div>
-          <div><label>Bedrooms</label><input type="number" id="i-dest-beds" placeholder="2" min="0" max="20"></div>
-          <div><label>Bathrooms</label><input type="number" id="i-dest-baths" placeholder="2" min="0" max="20"></div>
         </div>
       </div>
       <div class="divider"></div>
@@ -7963,7 +7974,7 @@ function toggleIntakeFields() {
   [phoneEl, emailEl].forEach(function(el){
     if (!el) return;
     el.disabled = isEstate;
-    if (isEstate) { el.value = ''; el.placeholder = 'N/A — deceased; use rep contact below'; el.style.opacity = '0.5'; }
+    if (isEstate) { el.value = ''; el.placeholder = 'N/A — deceased; use the representative’s contact'; el.style.opacity = '0.5'; }
     else { el.style.opacity = ''; }
   });
   if (phoneEl && !isEstate) phoneEl.placeholder = '(561) 555-0100';
@@ -31371,33 +31382,55 @@ function onDocGateChange(pfx, docLevelFallback) {
   pfx = pfx || 'i';
   var g = function(id){ var el = document.getElementById(pfx + '-' + id); return el ? el.value : ''; };
   var sel = document.getElementById(pfx + '-doclevel');
-  var draft = {
+  // ⚠⚠ THE FLOOR IS RESOLVED FROM THE GATES ALONE AND BEFORE THE CONTROL IS TOUCHED, and the
+  // order is the point. `docLevelFloor` and `docLevelFloorReason` read svc / gate706 /
+  // gateDispute / docTier and never docLevel, so this is the same answer — but it lets the
+  // control be put right FIRST, and the readout then describes the control as it now reads.
+  // Built the other way round, releasing a borrowed control left the draft still holding the
+  // 'formal' the gate had written into it, so the readout announced "Formal documentation,
+  // set by hand" on the very pass that handed the blank back.
+  var gates = {
     svc: g('svc'),
     gate706: g('gate-706'), gateDispute: g('gate-dispute'),
     // The engagement tier raises the floor too, so the readout has to see it or the dropdown
     // disables itself with no reason on screen — the defect this whole area was fixed for.
-    docTier: g('doc-tier'),
+    docTier: g('doc-tier')
+  };
+  var floor  = docLevelFloor(gates);
+  var reason = docLevelFloorReason(gates);
+
+  if (sel) {
+    // ⚠ THE CONTROL IS BORROWED, NOT OVERWRITTEN. Forcing it writes 'formal' in; without
+    // handing the previous answer back on release, answering the 706 "No" left the forced
+    // value behind and the readout then reported it as "Formal documentation, set by hand"
+    // — an attribution to a person who never touched it. Captured ONCE: this runs on every
+    // gate change and on toggleIntakeFields, so a second pass while already forced must not
+    // overwrite the capture with the 'formal' it wrote itself.
+    var _ds = sel.dataset || (sel.dataset = {});
+    if (floor === 'formal') {
+      // The gates have already forced it. Show that, and stop the control pretending
+      // it can be lowered — a dropdown that silently ignores you is worse than none.
+      if (_ds.preGate == null) _ds.preGate = sel.value || '';
+      sel.value = 'formal';
+      sel.disabled = true;
+      sel.title = reason;
+    } else {
+      // ⚠ A HAND-SET FORMAL SURVIVES THIS, which is the case a blanket clear would lose:
+      // the capture holds what the person had chosen, so restoring it returns 'formal' to
+      // somebody who really did pick it and '' to somebody who did not.
+      if (_ds.preGate != null) { sel.value = _ds.preGate; delete _ds.preGate; }
+      sel.disabled = false;
+      sel.title = '';
+    }
+  }
+  var draft = {
+    svc: gates.svc, gate706: gates.gate706, gateDispute: gates.gateDispute, docTier: gates.docTier,
     // The control wins when it says something; otherwise the saved level. At intake the two
     // are the same answer (a blank dropdown and no fallback both mean "not set by hand"), and
     // in Edit Client there is no control at all, so the job's own level is the only source.
     docLevel: (sel && sel.value) ? sel.value : (docLevelFallback || '')
   };
-  var floor  = docLevelFloor(draft);
-  var reason = docLevelFloorReason(draft);
   var out = document.getElementById(pfx + '-gate-readout');
-
-  if (sel) {
-    if (floor === 'formal') {
-      // The gates have already forced it. Show that, and stop the control pretending
-      // it can be lowered — a dropdown that silently ignores you is worse than none.
-      sel.value = 'formal';
-      sel.disabled = true;
-      sel.title = reason;
-    } else {
-      sel.disabled = false;
-      sel.title = '';
-    }
-  }
   if (!out) return;
   var lvl    = resolveDocLevel(draft);
   var effect = docStandardEffect(draft);
