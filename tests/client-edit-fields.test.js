@@ -299,6 +299,48 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ THE RAIL SENDS YOU HERE FOR THE WALKTHROUGH DATE, SO THE FIELD IS HERE');
+  {
+    // Found by Anthony on the first dummy client, 2026-09-22. The rail's `walkthrough`
+    // row's primary reads "Set the walkthrough date" and opens THIS modal — which had no
+    // such field. Byte-for-byte the home-value defect, one field over, and missed by the
+    // pass that fixed that one because the route was a BUTTON rather than a refusal.
+    //
+    // ⚠ THE GUARD WAS ALREADY WRITTEN FOR IT, and said so: "EVERY ELEMENT ACCESS IS
+    // GUARDED: `ec-walkthrough` does not exist". A helper defending against the absence
+    // of a control the app tells people to use is the tell that the control is missing.
+    const show = fn('showEditClient'), save = fn('saveClientEdit');
+    has(show, 'id="ec-walkthrough"', 'Edit Client renders the walkthrough date');
+    has(save, "getElementById('ec-walkthrough')", 'and the save reads it back');
+
+    // One rule for the date chain, shared with intake — never a second copy of
+    // "no weekends, and start cannot precede the walkthrough".
+    const wtLine = show.split('\n').filter((l) => l.indexOf('ec-walkthrough') >= 0).join('\n');
+    // The attribute is built inside a JS string, so its quotes are backslash-escaped
+    // in the source — match the call, not the spelling of its argument.
+    has(wtLine, 'onchange="dateChainGuard(', 'it runs the shared chain guard on change');
+    has(wtLine, "ec", 'for the ec prefix');
+    has(fn('dateChainGuard'), "prefix + '-walkthrough'", 'and the guard addresses it by prefix');
+
+    // ⚠ NOT HELD BY THE APPROVAL LOCK, unlike the destination sq ft. That one sizes move
+    // day (`destTC`/`destPS` read it), so moving it after approval desynchronises the job
+    // from a number the client accepted. The walkthrough date books no hours and sizes
+    // nothing — `jobSchedule` anchors on `job.start` — so holding it would strand the
+    // correction behind an approval, which is the dead end this whole group exists to close.
+    lacks(wtLine, '_locked', 'the field itself is not gated on the approval lock');
+    const saveLine = save.split('\n').filter((l) => l.indexOf('ec-walkthrough') >= 0).join('\n');
+    lacks(saveLine, '_locked', 'and neither is the write');
+
+    // ⚠ IT PRINTS, so it joins the stale-document warning: the client estimate states it
+    // as `Site Visit`, and moving it after that went out makes a copy in a client's hands
+    // wrong. The warning that fires must not name only the target start any more.
+    has(save, '_oldWalk', 'a change to it is detected');
+    has(save, 'job.walkthrough !== _oldWalk', 'and counts as a date move');
+    lacks(save, 'state the old target start', 'the warning no longer names only the start date');
+    has(src, "ce-meta-label\">Site Visit", 'because the client estimate really does print it');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ LETTERS ARE ASKED ON BOTH FORMS, FROM ONE LIST');
   {
     // ⚠ THIS GROUP PINNED THE OPPOSITE UNTIL 2026-09-22 AND BROKE CORRECTLY. `i-executor-auth`

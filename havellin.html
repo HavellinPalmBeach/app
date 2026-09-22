@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 11:42am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 4:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -13389,7 +13389,13 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   var split = paymentSplit(hav);
 
   // The carriers, read once each and never inferred from job.status.
-  var estBuilt = !!(est && (est.rooms || []).length > 0 && hav > 0);
+  // ⚠⚠ ROOMS ARE NOT THE ONLY WAY AN ESTIMATE GETS BUILT. Home Prep for Sale has no room
+  // grid at all — `applyEstimateServiceMode` hides it and the whole estimate is the prep vendor
+  // lines — so a rooms-only test read every priced prep job as unbuilt forever. That is not
+  // cosmetic: `walked` reads this, so the rail lit `walkthrough` as the earliest gap, and
+  // `Submit for approval` only renders while its own row is the live one. The job was
+  // unsubmittable with no button anywhere saying why. Read the substance, never the room count.
+  var estBuilt = !!(est && hav > 0 && ((est.rooms || []).length > 0 || (est.prepItems || []).length > 0));
   var estApproved = !!((estRec && estRec.approved) || job.approved);
   // `job.status==='pending'` syncs reliably per job, so it is trusted as the
   // submitted signal even when the estimate blob's own flag has drifted across
@@ -35422,6 +35428,14 @@ function showEditClient(jobId) {
   // thing on the card while leaving it uncorrectable is worse than not showing it: the target
   // start is set once at intake and the whole point of the strip is that the job is measured
   // against it. Both share `dateChainGuard` with intake rather than restating the rule.
+  // ⚠⚠ THE WALKTHROUGH DATE IS HERE BECAUSE THE RAIL SENDS YOU HERE FOR IT BY NAME. Its
+  // `walkthrough` row's primary reads "Set the walkthrough date" and opens this modal — which
+  // carried no such field, so the one route the app named was a dead end. It is an intake
+  // field, Client Intake only CREATES clients, and a rescheduled walkthrough is an ordinary
+  // Tuesday. Same defect as the home value and the destination sq ft, one field over.
+  // ⚠ NOT held by `_locked`: it books no hours and sizes nothing (`jobSchedule` anchors on
+  // `job.start`), so unlike the destination sq ft there is no approved figure to desynchronise.
+  html += fld('Walkthrough', '<input type="date" id="ec-walkthrough" value="'+(job.walkthrough||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   html += fld('Target Start', '<input type="date" id="ec-start" value="'+(job.start||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
   html += fld('Hard Target', '<input type="date" id="ec-completion" value="'+(job.completion||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   html += '</div>';
@@ -35637,16 +35651,20 @@ function saveClientEdit(jobId) {
   // states an Estimated Start Date, so moving this date after either went out makes a document
   // in somebody's hands wrong. The app cannot reissue them; it can say so at the moment of the
   // edit, which is the one moment somebody can still do something about it.
-  var _oldStart = job.start || '', _oldEnd = job.completion || '';
+  var _oldStart = job.start || '', _oldEnd = job.completion || '', _oldWalk = job.walkthrough || '';
+  // ⚠ THE WALKTHROUGH JOINS THE STALE CHECK because it PRINTS: the client estimate states it
+  // as `Site Visit`. Moving it after that document went out makes a copy in somebody's hands
+  // wrong, which is the whole reason this warning exists.
+  job.walkthrough = (document.getElementById('ec-walkthrough') || {}).value || '';
   job.start      = (document.getElementById('ec-start') || {}).value || '';
   job.completion = (document.getElementById('ec-completion') || {}).value || '';
-  if (job.start !== _oldStart || job.completion !== _oldEnd) {
+  if (job.start !== _oldStart || job.completion !== _oldEnd || job.walkthrough !== _oldWalk) {
     var _stale = [];
     if (docSentAt(job, 'estimate')) _stale.push('the client estimate');
     if (job.agrSigned) _stale.push('the signed agreement');
     else if (isAgreementSent(job)) _stale.push('the signing packet');
     if (_stale.length) alert('The dates on this job have changed.\n\n' + _stale.join(' and ')
-      + ' state the old target start. Agree the new dates with the client, and re-send the estimate if it has not been accepted yet.');
+      + ' state the old dates. Agree the new dates with the client, and re-send the estimate if it has not been accepted yet.');
   }
   job.mustFind    = (document.getElementById('ec-mustfind')||{}).value||'';
   job.safetyNotes = (document.getElementById('ec-safety')||{}).value||'';

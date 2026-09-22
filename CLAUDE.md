@@ -1,5 +1,88 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A PRICED HOME PREP JOB HAD NO WAY FORWARD, AND NO BUTTON SAID WHY (FIXED 2026-09-22)
+Anthony, twenty minutes into the first dummy client of the five-client test run: *"it says next is
+walkthrough… I put the walkthrough date for September 25th and we built the estimate today… when I
+click change the walkthrough date there's no option to change the walkthrough date, it just pulls
+some of the client information… and I don't know if this is now gating submit estimate for manager
+approval because that's not a button that's available to me so we're just kind of stuck here."*
+**He was right on every clause.** App-only, no redeploy.
+
+- **⚠⚠ THE ROOT CAUSE IS ONE PREDICATE, AND IT COUNTS THE WRONG THING.**
+  `var estBuilt = !!(est && (est.rooms || []).length > 0 && hav > 0);` — **Home Prep for Sale has no
+  room grid at all.** `applyEstimateServiceMode` hides it and the entire estimate is the prep vendor
+  lines, so `est.rooms` is `[]` on **every prep job that has ever been priced** and `estBuilt` was
+  false forever. It reads the estimate's SUBSTANCE now (`rooms.length || prepItems.length`), and a
+  test pins that it names no service key — `svc === 'prep'` would be a second copy of the fee-only
+  rule and would break on the next service that prices no rooms.
+- **⚠⚠ THE FOUR-STEP CHAIN IS WHY A ROOM COUNT BECAME A DEAD END, and every link is load-bearing:**
+  1. `walked` is `estBuilt || the walkthrough date has passed`. With the walkthrough booked Friday
+     and `estBuilt` false, the `walkthrough` row stayed open.
+  2. `jobTimelineNext` lights the **earliest** gap, so the band landed on `walkthrough`.
+  3. That row's primary reads *Set the walkthrough date* and opens **Edit Client**.
+  4. **`Submit for approval` renders ONLY while `estimate_approved` is `row.state === 'current'`.**
+     It was not, so there was no submit button **anywhere on the dashboard** — not in the band, not
+     in the quick strip. A priced, saved job with nothing to press and nothing saying why.
+- **⚠⚠ AND EDIT CLIENT HAD NO WALKTHROUGH FIELD — the home-value defect of the same morning, one
+  field over, missed because this route was a BUTTON rather than a refusal.** That pass fixed
+  `i-home-value` and `i-dest-sqft` because two **refusals** named a form that could not reach an
+  existing client; nobody checked the routes named by the rail's own **primary buttons**.
+  - **⚠ THE GUARD WAS ALREADY WRITTEN FOR IT AND SAID SO.** `dateChainGuard`'s own comment:
+    *"EVERY ELEMENT ACCESS IS GUARDED: `ec-walkthrough` does not exist — the walkthrough date is an
+    intake field, and Edit Client carries only the two targets."* **A helper defending against the
+    absence of a control the app tells people to use is the tell that the control is missing.**
+  - **⚠ IT IS NOT HELD BY THE APPROVAL LOCK, and that split is the same one `propVal`/`destSqft`
+    made.** `destSqft` sizes move day directly, so moving it after approval desynchronises the job
+    from a number the client accepted. The walkthrough date books no hours and sizes nothing —
+    `jobSchedule` anchors on `job.start` — so holding it would strand the correction behind an
+    approval, which is the dead end being closed.
+  - **⚠ IT JOINS THE STALE-DOCUMENT WARNING, BECAUSE IT PRINTS.** The client estimate states it as
+    **Site Visit**, so moving it after that went out makes a copy in a client's hands wrong. The
+    warning no longer names only the target start.
+- **9765 committed checks** (`tests/fee-only-timeline.test.js` new at 25; `client-edit-fields` 106 →
+  117). **All three changes revert-verified individually, ZERO green** — `estBuilt` back to
+  rooms-only fails **7**, the modal field **1**, the save's read **3**. Baseline 0 before and after.
+  - **⚠⚠ WHY 9729 CHECKS WERE GREEN THROUGH IT: every timeline fixture is a room-scored estate job,
+    and every prep fixture stops at the estimate. NOTHING HAD EVER DRIVEN A FEE-ONLY ESTIMATE
+    THROUGH THE RAIL.** Both halves were correct on their own. The new suite drives the join and
+    **lifts `jobTimelineActions` rather than stubbing it** — "the rail says estimate_approved" and
+    "a person can see a submit button" are two claims, and the defect lived between them.
+  - **⚠ ONE OF MY OWN ASSERTIONS FAILED ON CORRECT CODE**: `lacks(line, 'prep')` matched
+    **`prepItems`**, the field the fix legitimately reads. The needle is the QUOTED key now.
+- **Verified end to end in headless Chromium, driving the real intake, the real estimate save, the
+  real dashboard and the real modal — and the OLD build was driven first, so this is a reproduction
+  rather than an argument:**
+
+  | | old build | fixed |
+  |---|---|---|
+  | prep lines · Havellin total | 4 · **$13,500** | 4 · $13,500 |
+  | `estimate_built` done | **false** | **true** |
+  | `walkthrough` done | **false** | **true** |
+  | band NEXT | **`walkthrough`** | **`estimate_approved`** |
+  | the button you can press | **Change the walkthrough date** | **Submit for approval** |
+  | *Submit for approval* anywhere on the dashboard | **NO** | yes |
+  | `ec-walkthrough` in Edit Client | **absent** | present, visible, prefilled |
+  | correcting it | **impossible** | saves |
+  | page errors | 0 | 0 |
+
+  `tests/browser/step13.js` is committed and `run.sh`'s default list is now 1–13; steps 1–12 re-run
+  as regressions — **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30**, 0 failed, **512
+  checks across the twelve**. The first `<style>` block is **byte-identical to HEAD at 93,438 bytes
+  / 1,169 lines / 635 rules** — no CSS.
+- **⚠ TWO OF MY OWN BROWSER PROBES WERE WRONG AND THE CODE WAS RIGHT.** `saveClientEdit(jobId)`
+  **takes the id**; called bare it returns at `if (!job) return` and the edit silently does nothing —
+  I read that as the fix not working. And the intake fixture was short of four required fields, which
+  the form said plainly (*"Please complete: Phone, Email, Property type, Target start date"*) — the
+  refusal named its own cause and I had not read it.
+- **⚠ THE SHAPE TO COPY: a rule written for the common case is a dead end on the service that does
+  not have it.** Rooms are how five of the seven services are priced; on the sixth they do not exist.
+  Any predicate counting the artefacts of one service needs asking on the service that has none —
+  and the cheapest place to find out is the simplest client, which is exactly where it surfaced.
+- **⚠ NOT CHANGED, FLAGGED: the vendor cards on a prep job render 6 before `calcAll()` and 1 after.**
+  Measured in passing. Harmless today because nothing reads them in between, and chasing it was not
+  what a stuck test run needed; worth a look on the next estimate pass.
+
+
 ## ⚠⚠ THE CREDENZA SHOT TWICE CAME BACK AS TWO OF EVERYTHING (BUILT 2026-09-22)
 Anthony, reading the Agent One build: *"What will happen if we take multiple pictures of the same item?
 Do we have some logic in there to combine them? … or we take two pictures of that bar … it's not going
