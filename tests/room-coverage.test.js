@@ -226,8 +226,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'Save still refuses a genuinely unscored room');
     has(fnBody('estimateSubmitBlocker'), 'Cannot submit — every included room needs',
        'Submit still does too, and still says why');
-    has(fnBody('submitForApproval'), 'estimateSubmitBlocker(currentEstimate)',
+    // ⚠ THIS PINNED THE LITERAL `estimateSubmitBlocker(currentEstimate)` AND BROKE THE DAY
+    // that function grew a second parameter for the contract gate — a true change that says
+    // nothing about whether Submit re-tests the room scores itself. Twelfth time this repo has
+    // recorded a byte-sequence pin failing on a correct edit. The requirement is that Submit
+    // delegates rather than re-implementing, so: it calls the blocker, and it does not carry
+    // its own copy of the room test.
+    has(fnBody('submitForApproval'), 'estimateSubmitBlocker(',
        'and Submit reads that one blocker rather than re-testing');
+    // ⚠ LINE-BASED, NEVER /\/\*[\s\S]*?\*\//: `accept="image/*"` in this file reads as a
+    // comment opener to that regex and swallows ~170KB. Asserted non-empty so a stripper that
+    // eats the body cannot pass this vacuously.
+    const stripped = fnBody('submitForApproval').split('\n')
+      .filter((l) => !/^\s*\/\//.test(l)).join('\n');
+    ok(stripped.length > 100, 'the comment stripper did not eat the function');
+    lacks(stripped, 'unscoredRoomNames(', 'Submit never re-tests the rooms itself');
     has(src, 'Cannot approve — unscored rooms:',
        'and the manager PIN still does');
   }

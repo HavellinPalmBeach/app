@@ -216,7 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const COURT_FNS = INV_FNS.concat([
       '_invMoney', '_invDocName', 'printCourtInventory', '_invScheduleSection', 'isFormalDoc', 'resolveDocLevel',
-      'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
+      'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
       'matterDef', 'matterTypeOf', 'invFiduciaryMode',
@@ -402,7 +402,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
-            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', '_gate706', 'isDecedentJob'],
+            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', '_gate706', 'isDecedentJob'],
       vars: ['INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
              'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     });

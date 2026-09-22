@@ -12,7 +12,7 @@ const FNS = [
   'printTrustSchedule', 'printCourtInventory', 'printEstateInventoryReport', '_invScheduleSection',
   '_invTrack', '_invTrackDefault', '_invOnTrustSchedule', '_invOnProbateSchedule',
   '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue',
-  'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope',
+  'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror',
   'svcHasDocStep', 'matterDef', 'matterTypeOf', 'invProbateRows', 'invFiduciaryMode',
   'isDecedentJob', '_invAssignItemNos', '_jobInvRefs', '_invTouch', 'savePhotoRefs',
   '_warnPhotoStoreFull', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'gateDispute',

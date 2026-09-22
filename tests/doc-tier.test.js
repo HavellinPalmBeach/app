@@ -20,7 +20,7 @@ const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTUR
   'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
   'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS'];
 
-const T_FNS  = ['docTierDef', 'docTierOf', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob',
+const T_FNS  = ['docTierDef', 'docTierOf', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'seedDocScopeFromJob',
                 'docScopeDef', '_docScopeIntakeNote'];
 const T_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'];
 
@@ -99,7 +99,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('pricing is untouched — the whole point of deriving rather than replacing');
   {
     const e = sandbox({
-      fns: ENGINE_FNS.concat(['docTierScope', 'docTierDef']),
+      fns: ENGINE_FNS.concat(['docTierScope', 'docTierScopeMirror', 'docTierDef']),
       vars: ENGINE_VARS.concat(['DOC_TIERS']),
     });
     const rooms = [{ name: 'Kitchen', vol: 3, cplx: 3 }, { name: 'Primary Bedroom', vol: 3, cplx: 3 }];
@@ -129,7 +129,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const g = sandbox({
       fns: ['docLevelFloor', 'docLevelFloorReason', 'resolveDocLevel', 'gateDispute', '_gateYes',
             '_gate706', 'isDecedentJob', 'invAppraisalThreshold', 'docTierOf', 'docTierDef',
-            'docTierScope', 'svcHasDocStep'],
+            'docTierScope', 'docTierScopeMirror', 'svcHasDocStep'],
       vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     });
@@ -168,7 +168,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['onDocGateChange', 'docLevelFloor', 'docLevelFloorReason', 'resolveDocLevel',
               'gateDispute', '_gateYes', '_gate706', 'isDecedentJob', 'invAppraisalThreshold',
               'invListingThreshold', 'isFormalDoc', 'docStandardEffect', 'docTierOf', 'docTierDef',
-              'docTierScope', 'svcHasDocStep', 'esc'],
+              'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                'INV_LISTING_THRESHOLD_STRICT', 'INV_LISTING_THRESHOLD_STANDARD', 'DOC_TIERS',
                'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
@@ -201,7 +201,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // catalogue, the builder and the markup all still look right on their own.
     const EC_FNS = ['showEditClient', 'saveClientEdit', 'ecIsProbateSvc', 'ecIsEstateSvc',
       'ecDocGateChange', 'docTierOptionsHtml', 'buildDocTierOptions', 'docTierOf', 'docTierDef',
-      'docTierScope', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml',
+      'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml',
       'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706',
       'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
       'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
@@ -255,8 +255,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(write('appraisals'), 'appraisals/full', 'a real answer is saved and the scope mirrors it');
     eq(write('contents'), 'contents/capture', 'and follows the tier onto capture');
     eq(write('none'), 'none/none', 'and onto none');
-    eq(write(''), '/full', 'a blank clears the tier and the scope falls back to full, which is what an unanswered job always priced at');
-    eq(write('bogus'), '/full', 'and a value that is not one of the four is discarded, not stored');
+    // ⚠⚠ THE CONVERSE OF THE OLD ASSERTION, AND IT IS THE STEP-8 FIX. A blank used to store
+    // `docScope:'full'`, which `docTierOf` migrated straight back to `values` — so clearing the
+    // tier on Edit Client silently re-answered it. The MIRROR is blank; the PRICING fallback is
+    // untouched and still reads full (the group below drives that), which is what the estimate's
+    // notice warns about. Two different questions, and conflating them is what hid the defect.
+    eq(write(''), '/', 'a blank clears the tier AND the mirror — it never re-answers itself as full');
+    eq(write('bogus'), '/', 'and a value that is not one of the four is discarded, not stored');
+    eq(c.docTierScope(''), 'full', 'while PRICING an unanswered job still reads full, unchanged');
+    eq(c.estimateDocScope ? c.docTierScope('bogus') : 'full', 'full', 'as does an unrecognised one');
   }
 
   group('one catalogue, both menus');

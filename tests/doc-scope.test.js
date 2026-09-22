@@ -265,7 +265,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['seedDocScopeFromJob', '_docScopeIntakeNote', 'docScopeDef', 'docTierOf', 'docTierDef',
-            'docTierScope', 'svcHasDocStep'],
+            'docTierScope', 'docTierScopeMirror', 'svcHasDocStep'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     });
     // ⚠ THE FIXTURES CARRY A SERVICE NOW, AND THAT IS THE POINT RATHER THAN A CHORE. The tier is
@@ -306,7 +306,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(q > estateOpen && q < probateOpen, 'the intake question sits in the estate block, not the probate one');
     lacks(src, 'id="i-docscope"', 'and the old scope control is gone rather than left beside it — two controls answering one question is the drift');
     has(src, "docTier:            (document.getElementById('i-doc-tier')||{}).value||'',", 'intake saves the tier on the job');
-    has(src, "docScope:           docTierScope((document.getElementById('i-doc-tier')||{}).value||'')", 'and mirrors the scope it derives, so nothing downstream had to be repointed');
+    // ⚠ MIRRORED ONLY WHEN THERE IS SOMETHING TO MIRROR. `docTierScope('')` answers 'full' on
+    // purpose — an unanswered job PRICES at the top — but writing that onto the record made a
+    // brand-new blank job indistinguishable from a legacy one, because `docTierOf` migrates a
+    // missing tier back through `docScope`. Measured on the real form: every job saved with the
+    // tier blank came back reading `values`, so step 8's gate could never fire.
+    has(src, "docScope:           docTierScopeMirror((document.getElementById('i-doc-tier')||{}).value||'')", 'and mirrors the scope it derives, so nothing downstream had to be repointed');
     has(src, "'i-gate-706', 'i-gate-dispute', 'i-doc-tier',", 'and clears it with the other intake fields');
     // ⚠ THE CONVERSE OF THE OLD ASSERTION, AND DELIBERATE. The scope defaulted to `full`
     // because doing the most is a defensible assumption about how much work we do. The TIER is
@@ -325,8 +330,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(ecEst > 0 && ecPro > ecEst, 'the estate branch runs first, and the probate branch after it');
     ok(ecFn.indexOf('job.docTier') > ecEst && ecFn.indexOf('job.docTier') < ecPro,
        'the edit-client save writes the tier for Estate Settlement as well as probate');
-    ok(ecFn.indexOf('job.docScope = docTierScope(job.docTier)') > ecEst,
+    ok(ecFn.indexOf('job.docScope = docTierScopeMirror(job.docTier)') > ecEst,
        'and derives the scope from it rather than letting the two be set apart');
+    lacks(ecFn, 'job.docScope = docTierScope(job.docTier)',
+       'and never manufactures a `full` from a tier nobody answered — the two writers share one rule');
     has(src, 'id="ec-doc-tier"', 'the edit-client modal offers it');
     lacks(src, 'id="ec-docscope"', 'and the old scope control is gone from that form too');
     // The intake answer never restates a priced estimate: the restore path reads the

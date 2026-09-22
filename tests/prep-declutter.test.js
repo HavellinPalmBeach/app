@@ -31,7 +31,7 @@ const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'est
   'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices', '_agrProbateCompliance',
   '_agrMidpointTrigger', '_fixedFeeBlurb', 'docStandardEffect', 'isFormalDoc', 'gateDispute',
   '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason',
-  'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep',
+  'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
   'agrSection', 'approvedEstimateFor', 'materialsBasisNote', 'esignAnchor'];
 const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT',
   'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',

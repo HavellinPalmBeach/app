@@ -41,13 +41,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // row→document map, behind the ONE readiness gate, rather than five ungated concats.
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'agreementReady', 'isJobWon',
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
+      // ⚠ LIFTED, NOT STUBBED. estimateSubmitBlocker grew a contract arm on 2026-09-22 and a
+      // stub of it is exactly what would let the submit gate and the save gate drift apart.
+      'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
+      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef',
       'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
       'depositTargetFor', 'agreementReady',
       'docSentAt', 'docDraftedAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
       'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
     vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
-      'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
+      'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
+      'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
+      'DECEDENT_SERVICES', 'JOB_STEPS'],
     // ⚠ `SHEETS_SYNC_URL` IS A REAL TOP-LEVEL VAR, so the rail reads it bare rather than
     // behind a `typeof` guard that could never fire in a browser. It is stubbed here because
     // the sandbox lifts only what it is told to — and it is re-pointed at '' further down,
@@ -269,7 +275,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Notes are soft by default and hard only when Settings says so.
     const noNote = EST(); noNote.rooms[0].note = '';
     eq(ctx.estimateSubmitBlocker(noNote), null, 'a missing note is not a blocker by default');
-    const strict = sandbox({ fns: ['estimateSubmitBlocker', 'estimateNoteGaps', 'unscoredRoomNames'],
+    const strict = sandbox({ fns: ['estimateSubmitBlocker', 'estimateNoteGaps', 'unscoredRoomNames',
+      'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
+      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef'],
+      vars: ['ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
+             'DECEDENT_SERVICES', 'JOB_STEPS'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: true } });
     eq(strict.estimateSubmitBlocker(noNote).code, 'notes', 'and is one when the Settings requirement is on');
     eq(ctx.estimateNoteGaps(noNote), ['Kitchen'], 'the gap list names the room');
@@ -277,13 +287,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // submitForApproval reads it rather than re-testing, and hands it back so a caller
     // on another surface can print it where the person actually is.
     const sub = noComments(body('submitForApproval(opts)'));
-    has(sub, 'estimateSubmitBlocker(currentEstimate)', 'submitForApproval reads the one rule');
+    // ⚠ NAME AND OPENING PAREN, NOT THE WHOLE CALL: this pinned the argument list and broke
+    // the day the blocker grew a `job` parameter for the contract gate.
+    has(sub, 'estimateSubmitBlocker(', 'submitForApproval reads the one rule');
+    has(sub, 'currentEstimate.jobId', 'and hands it the job, which the contract arm needs');
     has(sub, 'return blk', 'and returns the blocker');
     has(sub, 'opts.silent', 'and can be told not to print it itself');
     has(sub, 'return null', 'returning null on success');
     // The soft confirm stays out of the blocker: a question is not a blocker, and the
     // blocker function has to be answerable with no user present.
-    lacks(noComments(body('estimateSubmitBlocker(est)')), 'confirm(', 'the blocker never asks a question');
+    lacks(noComments(body('estimateSubmitBlocker(est, job)')), 'confirm(', 'the blocker never asks a question');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

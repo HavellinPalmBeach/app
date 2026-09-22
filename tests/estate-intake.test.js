@@ -71,7 +71,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = classDom({ 'i-svc': svc }, {});
       const c = sandbox({
         fns: ['toggleIntakeFields', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
-              'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
+              'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'invListingThreshold', 'docStandardEffect', 'isFormalDoc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
@@ -105,7 +105,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = classDom({ 'i-svc': svc }, marks);
       const c = sandbox({
         fns: ['toggleIntakeFields', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
-              'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
+              'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'invListingThreshold', 'docStandardEffect', 'isFormalDoc'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
@@ -139,7 +139,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'docTierScope', 'docTierDef'],
+        fns: ['saveIntake', 'docTierScope', 'docTierScopeMirror', 'docTierDef'],
         vars: ['SVC_LABELS', 'DOC_TIERS'],
         stubs: {
           document: d,
@@ -169,7 +169,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ok1.said.kind, 'ok', 'with a date of death it saves — the attorney is NOT required here');
     eq(ok1.jobs.length, 1, 'and the job lands');
     eq(ok1.jobs[0].deathDate, '2026-08-14', 'carrying the date every value on it will be stated at');
-    eq(ok1.jobs[0].docScope, 'full', 'and the scope answer the form actually showed somebody');
+    // ⚠ BLANK, not 'full'. The form showed a blank tier, so the record carries a blank mirror —
+    // storing the pricing fallback here is what made every new job read as already answered.
+    eq(ok1.jobs[0].docTier, '', 'the tier the form actually showed somebody — blank');
+    eq(ok1.jobs[0].docScope, '', 'and a blank mirror beside it, so the estimate can still tell');
 
     const pr = run({ 'i-svc': 'probate', 'i-date-of-death': '2026-08-14', 'i-matter-type': 'probate' });
     eq(pr.said.kind, 'warn', 'a probate matter with no attorney and no case number is refused');
@@ -244,9 +247,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // Every one of them is something a person sees and no source needle noticed.
   group('driving the Edit Client modal');
   {
-    const EC_FNS = ['showEditClient', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'esc',
+    const EC_FNS = ['showEditClient', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
                     'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass',
-                    'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
+                    'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                     'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'ecToggleProbate',
                     'matterTypeOf', 'invFiduciaryMode'];

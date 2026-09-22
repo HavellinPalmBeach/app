@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 8:22pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 9:39pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1981,6 +1981,11 @@ body.no-smf .smf-col{display:none;}
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home Prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" id="s-grand-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
         </table>
+        <!-- The contract gate, immediately under the number it is about. A blank tier prices
+             at the top of the scale, so this is exactly the figure somebody would otherwise
+             read off the screen and quote on the phone. It is painted by calcAll and is empty
+             on every job whose questions are answered. -->
+        <div id="e-contract-gate"></div>
         <div id="fixed-price-panel" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
           <div style="font-size:10px;color:#A67C45;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Fixed-Price Project Fee Option</div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;">
@@ -4159,8 +4164,23 @@ function docTierOf(job) {
 }
 // The pricing projection. An unanswered tier prices at `full` exactly as an unanswered scope
 // always has — the estimate still shows a number — and refusing to PRICE an unanswered one is
-// a separate gate on Build Estimate, not something to bury in a lookup.
+// a separate gate on Build Estimate, not something to bury in a lookup. That gate exists now:
+// `estimateContractBlocker`, read by Save, Submit and the manager PIN, with
+// `estimateContractNotice` saying on screen that the number is not a quote yet. ⚠ DO NOT
+// "FIX" THIS FALLBACK TO RETURN SOMETHING ELSE — the top-tier reading is what makes the blank
+// costly, which is the whole argument for refusing it out loud rather than defaulting quietly.
 function docTierScope(tier) { var d = docTierDef(tier); return d ? d.scope : 'full'; }
+// ⚠⚠ THE MIRROR IS BLANK WHEN THE TIER IS. `docTierScope('')` answers 'full' deliberately — an
+// UNANSWERED job prices at the top, which is step 3's decision and what the estimate's notice
+// warns about. But writing that answer onto the RECORD is a different act: `docTierOf` migrates
+// a job with no tier through `DOC_TIER_FROM_SCOPE[docScope]`, so a stored 'full' reads back as
+// `values` and a brand-new job is indistinguishable from a legacy one. Measured on the real
+// intake form before this was added: every job saved with the tier left blank came back
+// carrying `docScope:'full'`, so `docTierOf` answered `values` and step 8's gate could never
+// fire on any job the app had ever created. The migration must only ever rescue a job recorded
+// BEFORE the tier existed — never manufacture an answer nobody gave, today, at the one moment
+// somebody declined to give one.
+function docTierScopeMirror(tier) { return docTierDef(tier) ? docTierScope(tier) : ''; }
 // ⚠⚠ WHAT THE CONTRACT SAYS WE HAND OVER, asked one way. `produces` is on the catalogue
 // entry rather than derived from `scope`, and that separation is the whole point of the tier:
 // `scope` is the PRICING projection and answers "how much of the work do we do", while this
@@ -4243,6 +4263,24 @@ function paintEstimateDocScope(svc, job) {
     var note = _docScopeIntakeNote(job, activeDocScope());
     hint.innerHTML = esc(d.hint) + (note ? ' <strong>' + esc(note) + '</strong>' : '');
   }
+}
+
+// ⚠ ITS OWN PAINTER RATHER THAN A LINE INSIDE `paintEstimateDocScope`, WHICH RETURNS EARLY ON
+// `!svcHasDocStep(svc)`. The matter-type half is keyed on `isDecedentJob`, and the two tests
+// are deliberately allowed to diverge (see ESTIMATE_CONTRACT_FIELDS) — so a matter-only gap on
+// a service that prices no documentation step would be painted nowhere.
+//
+// ⚠ AND IT CANNOT OVERLAP `_docScopeIntakeNote`, BY CONSTRUCTION RATHER THAN BY LUCK: that one
+// opens `if (!t) return ''` and so goes silent for exactly the blank tier this fills in. One
+// reports a DISAGREEMENT between intake and the estimate; this reports that intake was never
+// asked. Two different sentences about two different states, neither able to shadow the other.
+function paintEstimateContractGate(job) {
+  var el = document.getElementById('e-contract-gate');
+  if (!el) return;
+  var msg = estimateContractNotice(job);
+  el.innerHTML = msg
+    ? '<div class="alert a-warn" style="margin-top:10px;">' + esc(msg) + '</div>'
+    : '';
 }
 
 // Years-in-home tenure nudge — the longer someone has lived in a home, the more
@@ -6223,6 +6261,7 @@ function calcAll() {
   var yearsInHomeVal = _ejob ? _ejob.yearsInHome : '';
   var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal, activeDocScope());
   paintEstimateDocScope(svcKey, _ejob);
+  paintEstimateContractGate(_ejob);
   if (isPrep) eng = {totTC:0, totPS:0, roomTC:0, roomPS:0, load:0, days:0, perRoom:[], volFactor:1, cpxFactor:1};
   // Under the working-supervisor model these two are NOT the billed TC/PS figures.
   // baseTCHrs = off-site coordination; basePSHrs = the hands-on work pool (W).
@@ -8084,7 +8123,7 @@ function saveIntake() {
     // readers of the scope did not have to be repointed in one commit. docTierOf migrates a
     // stored scope on read, so a job recorded before the tier existed needs nothing run on it.
     docTier:            (document.getElementById('i-doc-tier')||{}).value||'',        // what the agreement promises
-    docScope:           docTierScope((document.getElementById('i-doc-tier')||{}).value||''),   // its pricing projection
+    docScope:           docTierScopeMirror((document.getElementById('i-doc-tier')||{}).value||''),   // its pricing projection, blank until the tier is answered
     matterType:         (document.getElementById('i-matter-type')||{}).value||'',    // probate | trust | both | neither — never defaulted, see MATTER_TYPES
     status:'new',
     havellinEst:null, totalEst:null, inRange:null, approved:false,
@@ -8921,6 +8960,12 @@ function saveEstimateAndPreview() {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) { showFB('e-fb','warn','Job not found.'); return; }
   if (!currentEstimate) { showFB('e-fb','warn','Nothing to save yet — build the estimate first.'); return; }
+  // ⚠ ASKED AS SOON AS THE JOB IS KNOWN, ABOVE THE PRICING REFUSALS, because this is a fact
+  // about the CLIENT rather than about the walkthrough — and because saving writes
+  // `job.havellinEst` onto the job record, which the clients list and the dashboard then read
+  // as the number for this engagement. A blank tier would put the top-tier figure there.
+  var _contractBlk = estimateContractBlocker(job);
+  if (_contractBlk) { showFB('e-fb','warn', _contractBlk.msg); return; }
   // Home Prep for Sale is a fee-only service: no rooms, no labor engine, no property
   // value. The estimate IS the 30% management fee on the prep vendors, so it validates
   // on "at least one prep vendor with a cost" instead of the room-scoring path below.
@@ -10520,6 +10565,104 @@ function estimateNoteGaps(est) {
     .concat(((est && est.collections) || []).filter(function(c){ return !(c.note && c.note.trim()); }).map(function(c){ return (c.name||'Collection') + ' (collection)'; }));
 }
 
+// ─── THE CONTRACT QUESTIONS, ASKED BEFORE A PRICE IS COMMITTED ────────────────
+// ⚠⚠ A BLANK TIER IS NOT A NEUTRAL STATE — IT IS THE MOST EXPENSIVE ANSWER, TAKEN SILENTLY.
+// `estimateDocScope` falls back to `full` on an estimate carrying no tier, so an unanswered
+// job prices IDENTICALLY TO THE TOP TIER. Driven on the real form before this gate was built,
+// a 3,500 sqft probate estate with the same six rooms scored:
+//
+//     tier (blank)   → scope full      $17,700    60 TC / 87 PS
+//     tier none      → scope none      $11,600    40 TC / 56 PS
+//     tier contents  → scope capture   $14,400    48 TC / 72 PS
+//     tier values    → scope full      $17,700    60 TC / 87 PS
+//
+// $6,100 and 51 hours of documentation work quoted on a question nobody asked — and the
+// agreement that follows promises it in writing, on a contract the personal representative
+// signs: "a documented asset inventory suitable for use in the court-required filing under
+// Florida Statute §733.604", and "coordinate professional appraisals for all required asset
+// categories within the 60-day inventory deadline". That is Decision 3 of
+// ESTATE_SCOPE_SPEC.md — refuse to price until answered — and the blank is worse than a gap
+// because the app fills it in with the reading that costs the client most.
+//
+// ⚠⚠ IT REFUSES TO COMMIT A PRICE, NOT TO COMPUTE ONE, and the split is deliberate rather
+// than a compromise. `calcAll` runs on every room tick, so refusing to calculate would blank
+// the screen under somebody mid-walkthrough — and the tier is answered BETTER with a number
+// in front of you, because "what do you want us to hand over" is a conversation the concierge
+// has with the attorney while looking at what each answer costs. `docTierScope`'s own comment
+// recorded this split the day the tier was built: the estimate still shows a number, and
+// refusing to price an unanswered one is a separate gate on Build Estimate. So the number
+// renders, `estimateContractNotice` says on screen that it is not a quote yet and why, and
+// Save, Submit and the manager PIN all refuse.
+//
+// ⚠⚠ TWO QUESTIONS, TWO TESTS, AND THEY STAY SEPARATE. The tier is keyed on `svcHasDocStep`
+// (does this engagement price a documentation step at all) and the matter type on
+// `isDecedentJob` (is there a decedent being administered). They select the same three
+// services today and a test pins that they must — but they are different questions, the
+// first catalogue change could split them, and that is the rule the tier was built on.
+// ⚠ The `isDecedentJob` arm is load-bearing rather than belt-and-braces: `matterTypeOf`
+// returns '' for every living-client job by design, so without it this would refuse to price
+// every downsizing in the book over a question that does not apply to one.
+//
+// ⚠ ONE CATALOGUE, TWO VOICES. The refusal is past tense and names an action that was just
+// declined; the notice is present tense and describes the number on screen. One sentence
+// serving both would serve neither — the same reason `vendorFeeNote` and
+// `_invVendorFeeSentence` are separate — so they are two renderers over one list, and which
+// fields are missing cannot drift between them.
+var ESTIMATE_CONTRACT_FIELDS = [
+  // Ordered as the intake form asks them.
+  { key: 'matter', label: 'How this estate is being administered',
+    asks: function (job) { return isDecedentJob(job); },
+    has:  function (job) { return !!matterTypeOf(job); } },
+  { key: 'tier', label: 'What we are contracted to produce',
+    asks: function (job) { return svcHasDocStep(job && (job.svc || job.serviceType)); },
+    has:  function (job) { return !!docTierOf(job); } }
+];
+
+// ⚠ IT READS `job.svc`, WHICH IS THE CURRENT SERVICE AND NOT THE ONE THE ESTIMATE WAS PRICED
+// AT. Re-typing a job on the walkthrough writes `job.svc` (the estimate keeps `est.svc` as the
+// record of what was quoted), so a Home Prep job re-typed to Estate Settlement mid-walkthrough
+// starts being asked these two questions from that moment — which is the whole point of the
+// re-type being allowed at the estimate stage.
+function estimateContractMissing(job) {
+  if (!job) return [];
+  return ESTIMATE_CONTRACT_FIELDS.filter(function (f) { return f.asks(job) && !f.has(job); });
+}
+
+// The refusal. Returns {code, missing, msg} or null. Read by Save, Submit and the manager PIN.
+// ⚠ ONE WORDING FOR ALL THREE DOORS, so it has to be true at each: a manager reading it in the
+// PIN modal is being told why the approval is refused and what has to happen, even though they
+// are not the person who will do it.
+function estimateContractBlocker(job) {
+  var miss = estimateContractMissing(job);
+  if (!miss.length) return null;
+  var names = miss.map(function (f) { return f.label; });
+  var many = names.length > 1;
+  return {
+    code: 'contract',
+    missing: miss.map(function (f) { return f.key; }),
+    msg: 'Not ready to quote — ' + (many ? 'two contract questions are' : 'a contract question is')
+       + ' unanswered on this client: ' + names.join(' · ') + '. Open the client on Clients, '
+       + 'press Edit Client and answer ' + (many ? 'them' : 'it')
+       + ' — the walkthrough on this screen is kept while you do.'
+  };
+}
+
+// The standing notice, present tense, painted beside the total while the answer is missing.
+// ⚠ THE CONSEQUENCE SENTENCE IS THE HALF THAT MATTERS. "A field is empty" is a thing nobody
+// acts on; "this is pricing at the top of the scale and the agreement would promise it" is.
+function estimateContractNotice(job) {
+  var miss = estimateContractMissing(job);
+  if (!miss.length) return '';
+  var names = miss.map(function (f) { return f.label.toLowerCase(); });
+  var tier = miss.some(function (f) { return f.key === 'tier'; });
+  return 'Not a quote yet — ' + names.join(', and ')
+       + (names.length > 1 ? ', are' : ', is') + ' still unanswered on this client.'
+       + (tier ? ' Until the tier is recorded this prices at the top of the scale — full '
+               + 'inventory with estimated values — which is what the agreement would then '
+               + 'promise in writing.' : '')
+       + ' Answer on Edit Client; the walkthrough here is kept.';
+}
+
 // The hard reasons an estimate cannot go to a manager, in ONE place and DOM-free.
 // Returns {code, msg} or null.
 //
@@ -10529,8 +10672,14 @@ function estimateNoteGaps(est) {
 // Dashboard, neither of which is showing that panel. The refusal landed somewhere
 // invisible and the button read as dead. The RULE stays in one place; what moved is
 // the decision about WHERE the message goes, which now belongs to the caller.
-function estimateSubmitBlocker(est) {
+// ⚠ `job` IS PASSED IN RATHER THAN RESOLVED OFF `est.jobId`, the rule `jobSchedule` already
+// follows: reaching for the `jobs` global inside would cost this function the DOM-free,
+// argument-only property every test of it depends on. A caller that omits it simply does not
+// get the contract arm, and a test pins that the one live caller passes it.
+function estimateSubmitBlocker(est, job) {
   if (!est || est.havellinTotal === 0) return { code:'noest', msg:'No estimate to submit.' };
+  var contract = estimateContractBlocker(job);
+  if (contract) return contract;
   var unscored = unscoredRoomNames(est);
   if (unscored.length > 0) {
     return { code:'unscored',
@@ -10550,7 +10699,12 @@ function estimateSubmitBlocker(est) {
 // the e-fb print for a caller that will show the message somewhere the user can see.
 function submitForApproval(opts) {
   opts = opts || {};
-  var blk = estimateSubmitBlocker(currentEstimate);
+  // ⚠ RESOLVED ONCE, AT THE TOP. This function looked the same job up TWICE, six lines apart —
+  // once for the contract gate and again to move the status to `pending` — and the second copy
+  // is what made a source assertion about the first one unfalsifiable (it matched the wrong
+  // line and passed with the job dropped from the blocker entirely). One lookup, one name.
+  var subJob = jobs.find(function(j){ return j.id === (currentEstimate && currentEstimate.jobId); });
+  var blk = estimateSubmitBlocker(currentEstimate, subJob);
   if (blk) { if (!opts.silent) showFB('e-fb','warn', blk.msg); return blk; }
 
   // The soft arm: with the Settings requirement off, a missing note is a one-click
@@ -10568,7 +10722,6 @@ function submitForApproval(opts) {
   if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
   saveEstimateState();
   // Now it's genuinely awaiting manager approval — reflect that on the job.
-  var subJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
   if (subJob) { subJob.status = 'pending'; subJob.approved = false; saveJobs(); syncJobToSheets(subJob); }
   updateApprovalUI();
 
@@ -10984,6 +11137,14 @@ function checkPin() {
   if (_approver) {
     var unscoredRooms = unscoredRoomNames(currentEstimate);
     if (unscoredRooms.length > 0) { document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Cannot approve — unscored rooms: ' + unscoredRooms.join(', ') + '</div>'; return; }
+    // ⚠ THE MANAGER IS THE LAST DOOR BEFORE THE AGREEMENT, which is the document that carries
+    // the §733.604 promise — and approving locks the price into `buildLockSnapshot` and flips
+    // the job to `approved`, which is what `agreementReady` reads. A manager cannot answer
+    // either question from this modal, exactly as they cannot score a room from it; the
+    // refusal names what is missing so they can say so to the concierge.
+    var _pinContract = estimateContractBlocker(
+      jobs.find(function(j){ return j.id === (currentEstimate && currentEstimate.jobId); }));
+    if (_pinContract) { document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Cannot approve — ' + esc(_pinContract.msg) + '</div>'; return; }
     estimateApproved = true;
     estimateSubmitted = false;
     discountRevision = false;
@@ -34639,7 +34800,7 @@ function saveClientEdit(jobId) {
     var _ecTier = document.getElementById('ec-doc-tier');
     if (_ecTier) {
       job.docTier  = docTierDef(_ecTier.value) ? _ecTier.value : '';
-      job.docScope = docTierScope(job.docTier);
+      job.docScope = docTierScopeMirror(job.docTier);
     }
     job.deathDate    = (document.getElementById('ec-date-of-death') || {}).value || '';
     // ⚠ AN UNRECOGNISED VALUE IS DISCARDED RATHER THAN STORED. matterTypeOf already refuses

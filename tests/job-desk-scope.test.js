@@ -19,7 +19,7 @@ const { sandbox, source, fn, decl } = require('./harness');
 
 const CTX_FNS = ['planTaskCtx', 'planTasksFor', 'invFiduciaryMode', 'isDecedentJob',
                  'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef',
-                 'docTierOf', 'docTierDef', 'docTierProduces', 'docTierScope', 'svcHasDocStep'];
+                 'docTierOf', 'docTierDef', 'docTierProduces', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep'];
 const CTX_VARS = ['PLAN_TASKS', 'JOB_ADMIN_TASKS', 'DECEDENT_SERVICES', 'MATTER_TYPES',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS',
                   'FIREARMS_PROTOCOL_DOC'];

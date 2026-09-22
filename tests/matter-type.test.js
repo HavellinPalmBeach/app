@@ -120,7 +120,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'docTierScope', 'docTierDef'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS'],
+        fns: ['saveIntake', 'docTierScope', 'docTierScopeMirror', 'docTierDef'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS'],
         stubs: {
           document: d, jobs: [],
           showFB: (el, kind, msg) => said.push({ kind, msg }),
@@ -151,8 +151,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('Edit Client carries it, and discards an answer it does not recognise');
   {
     const EC_FNS = ['showEditClient', 'saveClientEdit', 'ecIsProbateSvc', 'ecIsEstateSvc',
-                    'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf',
-                    '_houseFlagRowClass', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706',
+                    'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf',
+                    '_houseFlagRowClass', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706',
                     'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                     'invListingThreshold', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf',
                     'matterDef', 'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef'];
@@ -196,7 +196,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the Court Inventory stops being signed on a matter with no probate in it');
   {
     const FNS = ['_invScheduleSection', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
-                 'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'gateDispute',
+                 'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
                  'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invFiduciaryMode',
                  'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', '_invHasAppraisal',

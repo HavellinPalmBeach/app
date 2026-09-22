@@ -1,5 +1,122 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ A BLANK TIER WAS THE MOST EXPENSIVE ANSWER, TAKEN SILENTLY (BUILT 2026-09-21)
+Step 8 of `ESTATE_SCOPE_SPEC.md`, *decision 3*. App-only, no redeploy. `estimateContractBlocker` is the one
+predicate; Save, Submit and the manager's PIN all read it and `calcAll` deliberately does not.
+
+- **⚠⚠ MEASURED ON THE REAL ENGINE BEFORE ANYTHING WAS GATED, ON A 3,500 SQFT PROBATE ESTATE WITH SIX ROOMS
+  SCORED.** `estimateDocScope` falls back to `'full'`, so an unanswered tier is not a neutral state — it is the
+  **top of the scale**:
+
+  | the tier on the job | quoted |
+  |---|---|
+  | **blank** — i.e. nobody answered | **$17,700** |
+  | `none` — counsel does the whole inventory | $11,600 |
+
+  **$6,100 and 51 hours of documentation work on a job where nobody had said we were doing any** — and the
+  agreement then promises the §733.604 inventory and the 60-day appraisal coordination **in writing**, on a
+  contract the personal representative signs. The failure is silent in both directions: the client is
+  over-quoted, and if they accept it Havellin has papered a promise it was never scoped for.
+- **⚠⚠ IT REFUSES TO *COMMIT* A PRICE, NEVER TO COMPUTE ONE, AND THAT SPLIT IS THE WHOLE DESIGN.** `calcAll`
+  runs on every room tick, so gating it would blank the screen under somebody mid-walkthrough — and the tier is
+  answered **better with a number in front of you**, because *what do you want us to hand over* is a
+  conversation the concierge has with the attorney while looking at what each answer costs. `docTierScope`'s own
+  comment had already recorded that split; this is it enforced. A test asserts `calcAll` lacks the blocker and
+  has the painter. Reverting the painter call fails 2, the markup slot 1.
+- **⚠⚠ AND THE RECORD WAS ANSWERING THE QUESTION FOR YOU — FOUND IN THE BROWSER, NOT BY ANY TEST.** `saveIntake`
+  wrote `docScope: docTierScope('')` beside a **blank** tier, and `docTierScope('')` is `'full'` — so
+  `docTierOf` migrated it straight back to `values` and **a job saved this morning with the question
+  deliberately left blank was indistinguishable from a legacy one.** Measured on the real intake form: every job
+  the app had ever created came back answered, so **the gate could not have fired on anything**. The unit suite
+  was green over it; the step-8 browser script is what caught it, on its first run.
+  - **⚠ `docTierScopeMirror` IS THE FIX AND THE ASYMMETRY IS LOAD-BEARING.** The **pricing** fallback stays
+    `'full'` (that is step 3's decision and what the notice warns about); the **mirror** written onto the record
+    is blank. Two different questions, and conflating them is what hid this. Reverting the mirror fails 3;
+    lowering the pricing fallback with it — the over-correction — fails 4.
+  - **⚠ BOTH WRITERS SHARE IT**, because intake and Edit Client disagreeing about what a blank means is how the
+    same job reads two ways depending on which form last touched it. Reverting intake's fails 2, Edit Client's 4.
+  - **⚠ THE MIGRATION STILL RESCUES A GENUINELY OLD JOB.** One carrying `docScope` and no `docTier` still reads
+    `values`, so **nothing priced before today is blocked** — driven in the browser.
+- **⚠ TWO QUESTIONS, TWO TESTS, AND THEY STAY SEPARATE.** `isDecedentJob` asks the matter type; `svcHasDocStep`
+  asks the tier. They select the same three services today and a test pins that they must, but they are
+  different questions — and the `isDecedentJob` arm is **load-bearing rather than belt-and-braces**, because
+  `matterTypeOf` returns `''` for every living-client service, so without it a Home Editing job would be blocked
+  on a question it is never asked. Reverting it fails 6, the `svcHasDocStep` arm 7, dropping the `asks()` test
+  entirely 5.
+- **⚠ ONE CATALOGUE, TWO VOICES, AND COLLAPSING THEM COSTS THE MEASUREMENT.** The refusal is **past tense**
+  (*you pressed Save and here is why it stopped*) and names where to answer it; the notice is **present tense**
+  (*Not a quote yet*) and is the only one that names what a blank tier costs — because it is the only one read
+  while there is still a decision to make. Reverting to one renderer fails 7, dropping the consequence sentence 3.
+- **⚠ THE REFUSAL SAYS THE WALKTHROUGH IS KEPT, and that is not reassurance — it is what makes it safe to act
+  on.** Answering the question means leaving the tab for Edit Client, and a concierge who believes forty minutes
+  of scoring will be lost will guess the answer instead. Driven: three rooms scored, Save refused, the tier
+  answered, Save pressed again — **three rooms intact**.
+- **⚠ THE JOB IS AN ARGUMENT, and `submitForApproval` was resolving it TWICE.** `estimateSubmitBlocker(est, job)`
+  never reaches for the `jobs` global (the `jobSchedule` rule). Its caller looked the same job up twice, six
+  lines apart — once for the gate and again to move the status to `pending` — and **that second copy is what made
+  my own assertion about the first unfalsifiable**: `has(body, 'currentEstimate.jobId')` matched the wrong line
+  and passed with the job dropped from the blocker entirely. Hoisted to one lookup; the check is **driven**
+  now, and the revert fails 4.
+- **9170 committed checks** (`tests/estimate-contract-gate.test.js` new at 78). **All 18 changes revert-verified
+  individually, ZERO green after the two below were re-done**; baseline 0 before and after.
+  - **⚠ ONE GREEN AND IT WAS THE ASSERTION THAT COULD NOT FAIL** — the duplicate `jobId` lookup above. The
+    twenty-third time this file records that shape, and the tell was that the revert of the most consequential
+    line in the step came back cheapest.
+  - **⚠ ONE NEEDLE MATCHED NOTHING AND THE `NEEDLE x0` GUARD CAUGHT IT.** My revert of the notice's consequence
+    sentence quoted a `\u2014` escape where **the file carries real em dashes** — the sentence was written from
+    memory rather than from the file. Re-anchored, it fails 3.
+  - **⚠ FIVE PRE-EXISTING ASSERTIONS PINNED THE OLD `docScope` WRITE AND BROKE CORRECTLY; ALL RESTATED, NONE
+    DELETED.** Three in `doc-scope` / `doc-tier` pinned `write('') === '/full'` and the byte sequence
+    `docScope: docTierScope(…)`; `estate-intake` asserted a saved job carries `docScope: 'full'` — *"the scope
+    answer the form actually showed somebody"*, which is exactly the claim that was false. Each states the
+    converse now, and `doc-tier` asserts **both halves**: the mirror is blank AND pricing still reads full.
+  - **⚠ TWELVE SUITES LIFTED `docTierScope` AND ALL TWELVE NEEDED THE NEW HELPER** — found by searching every
+    sandbox at once, which this file records costing a round when it is not.
+  - **⚠ AND `dashboard-actions` / `room-coverage` BROKE ON `estimateSubmitBlocker` GROWING A PARAMETER.** The
+    new fns are **lifted rather than stubbed**, because a stub of the blocker is precisely what would let the
+    submit gate and the save gate drift apart.
+- **Verified end to end in headless Chromium on the real page, 25 checks, 0 failed, 0 page errors**, driving the
+  real intake form, the real room grid, the real `saveEstimateAndPreview` and the real `submitForApproval`:
+
+  | | |
+  |---|---|
+  | a probate estate saved with the tier blank | accepted at intake — still the right call |
+  | three rooms ticked, `calcAll` | **priced**, and the notice reads *Not a quote yet* · names the top-of-scale consequence · names the agreement |
+  | pressing **Save** | refused by name · *Edit Client* · *the walkthrough on this screen is kept* · **nothing written** |
+  | **Submit** | refused with `code: 'contract'` through the same definition · nothing submitted |
+  | answering the tier, then Save | notice clears · **writes** · **three scored rooms intact** |
+  | a Home Editing job | asked neither question, never gated |
+  | a legacy job (`docScope`, no tier) | reads `values` — **not blocked** |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  The step-1 to step-7 browser scripts were re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45**, 0 failed
+  — **340 checks across the eight**. `tests/browser/step8.js` is committed and `run.sh`'s default list is 1–8.
+  The first `<style>` block is **byte-identical to HEAD at 93,438 bytes / 1,168 lines / 635 rules** — no CSS —
+  and the diff is **14 hunks**, in `docTierScope`, `saveIntake`, `saveClientEdit`, `saveEstimateAndPreview`,
+  `estimateSubmitBlocker`, `submitForApproval`, `checkPin`, `calcAll`, the markup slot and one new block.
+- **⚠ TWO OF MY OWN BROWSER ASSERTIONS WERE WRONG AND THE CODE WAS RIGHT.** The room count filtered on `r.st`,
+  which the snapshot does not carry (`includedRooms` pushes only in-scope rooms, so `rooms.length` IS the
+  answer); and the converse case — *answer it and the same job saves* — failed on **Property value is
+  required**, a legitimate refusal my fixture never satisfied. Both measured by dumping the real state rather
+  than reasoned about. ⚠ The converse needs a job that passes every OTHER gate, or it proves nothing about this one.
+- Manual **§5c** — the *blank is allowed at intake* note **corrected** (it said the tier must be answered before
+  the agreement goes out; it must now be answered before the estimate can be **saved**) plus four notes: the gate
+  and the compute/commit split, the $17,700-against-$11,600 measurement, the record answering for you, and the
+  two-questions-two-tests rule. Playbook **Step 1** (the bullet now says a blank is fine on the call and the
+  estimate will not save until it is answered), **Step 2** (a `.stop` in field language — *score the house
+  anyway*, nothing is lost, and what a blank costs) and **three** symptom→cause rows, including the two that will
+  actually happen: *Save says "Not ready to quote"* and *a line says Not a quote yet but there is still a total*.
+  Both `.md` copies hand-edited; **35 claims parity-checked, 0 mismatches** — ⚠ three apparent misses were my
+  stripper leaving a space before a comma and one capitalisation, **verified by dumping the surrounding bytes
+  rather than assumed**. Tag balance clean on both HTML files with the stylesheet stripped; rendered at 1440/390
+  with **0 overflow, 0 page errors**; under `print` **20/47 and 17/17** tables as wide as their container with
+  **0** taking the phone rule — as at HEAD.
+- **⚠ NEXT: step 9, and it is a DECISION rather than a build.** `invListingThreshold` has exactly two references
+  — its own definition and the sentence builder `docStandardEffect` — nothing enforces or displays an itemisation
+  floor, and §8 of the spec records that **Florida sets no statutory itemisation floor**: the $100 / $1,000 are
+  Havellin house rules. Retiring it and correcting the sentence is the recommendation; **it is Anthony's call.**
+  *Closed D9's estimate half and decision 3.*
+
 ## ⚠⚠ A TRUST MATTER HAD TWO DEAD ENDS AND NO THIRD ANSWER (BUILT 2026-09-21)
 Step 7 of `ESTATE_SCOPE_SPEC.md`. App-only, no redeploy. `printTrustSchedule` is the Chapter 736
 instrument, and `_invTrack`'s default follows the matter type — **the two ship together because
@@ -176,8 +293,13 @@ neither is worth anything alone**, which is exactly why the second was held for 
   come up with language and i'll get it reviewed. do your best."*, and every legal text has
   shipped that way. What needs confirming before a real trust matter signs: the carrying-value
   mechanics, and whether naming §736.0813 alongside §736.08135 is the right pair.
-- **⚠ NEXT: step 8 — gate the estimate** so Build Estimate will not price until the tier and the
-  matter type are answered (*decision 3*). Small: one gate, two fields that already exist. Then
+- ~~**⚠ NEXT: step 8 — gate the estimate** so Build Estimate will not price until the tier and the
+  matter type are answered (*decision 3*). Small: one gate, two fields that already exist.~~ **DONE
+  2026-09-21 — see the entry at the top of this file.** ⚠ It was NOT small, and *"two fields that
+  already exist"* was wrong in the interesting direction: the fields existed and **the RECORD was
+  manufacturing an answer for them**, so the gate could not have fired on any job the app had ever
+  created. *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as
+  outstanding work.* Then
   **step 9**, which is a decision rather than a build — `invListingThreshold` has exactly two
   references (its own definition and the sentence builder `docStandardEffect`), nothing enforces
   or displays an itemisation floor, and §8 of the spec records that **Florida sets no statutory

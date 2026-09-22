@@ -13,7 +13,7 @@ const { sandbox, domStub } = require('./harness');
 
 const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docLevelFloorReason',
-  'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep',
+  'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
   'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'invListingThreshold',
   'isDecedentJob', 'invFiduciaryMode', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
   'docStandardEffect',
