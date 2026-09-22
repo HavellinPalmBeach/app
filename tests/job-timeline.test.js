@@ -265,7 +265,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         eq(r.atKind, 'date', k + ' declares its date so the renderer formats it');
       });
     lacks(jtBody, 'toLocaleDateString', 'and the derivation still does no formatting itself');
-    has(body('renderClientDashboard(jobId)'), "r.atKind === 'epoch'", 'the renderer knows how to print one');
+    has(body('_jtAtFmt(r)'), "r.atKind === 'epoch'", 'the renderer knows how to print one');
     lacks(jtBody, 'completionDate', 'jobTimeline never reads completionDate');
     // ⚠ The whole field is gone now, not just corrected: it said the same thing as the
     // rail's own `Work complete` row two inches below. Five of that grid's eight fields
@@ -534,13 +534,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // nothing about whether both layouts read one derivation. It counts the CALL now.
     eq((rc.match(/jobTimeline\(job, estRec, logs, cos/g) || []).length, 1,
       'the rail and the track are built from a single jobTimeline call');
-    has(rc, 'var _jtCls = function(r)', 'and share one state-to-class mapping');
-    has(rc, "h += '<div class=\"jt-track\" style=\"--jt-cols:'", 'the track renders');
+    // Since 2026-09-22 the track and the rail are shared renderers (the Job Plan and Job Admin draw
+    // them too), fed the dashboard's one row set.
+    has(rc, 'jtTrackHtml(_jtRows) + jtRailHtml(_jtRows)', 'both layouts are fed the same rows');
+    const trk = body('jtTrackHtml(rows, legs)'), rl = body('jtRailHtml(rows)');
+    ok(trk.indexOf('_jtStateCls(r)') >= 0 && rl.indexOf('_jtStateCls(r)') >= 0, 'and share one state-to-class mapping');
+    has(trk, "h += '<div class=\"jt-track\" style=\"--jt-cols:'", 'the track renders');
     // ⚠ Both legs are laid out on ONE column count. `flex:1` alone let leg one squeeze
     // to 134px while leg two stopped at its 200px cap, and two pitches read as two
     // unrelated rows rather than one track that wrapped.
-    has(rc, 'Math.max.apply(null, _legs.map', 'on the longest leg, so both share a pitch');
-    has(rc, "h += '<div class=\"jt-rail\">'", 'so does the rail');
+    has(trk, 'Math.max.apply(null, _legs.map', 'on the longest leg, so both share a pitch');
+    has(rl, "h += '<div class=\"jt-rail\">'", 'so does the rail');
 
     // The swap, and the reason it is not scoped to `screen`.
     const css = src.slice(src.indexOf('<style>'), src.indexOf('</style>'));
@@ -667,7 +671,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // pinned is gone while the requirement (the modifier rides the band's own class) holds.
     has(src, "'<div class=\"jt-next' + _band.cls + '\">'",
       'and the renderer puts the modifier on it');
-    eq((body('renderClientDashboard(jobId)')
+    eq((body('jtBandHtml(job, estRec, rows, next)')
           .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')
           .match(/'<div class="jt-next'/g) || []).length, 1,
       'from a single band render path');

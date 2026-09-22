@@ -507,9 +507,11 @@ The Job Plan runs in the order you work a job, and the stages are named, not num
 6. **In the house** — the room cards, and on an estate job the four in-house boxes under them. Step 10a.
 7. **Midpoint & pickups** — the midpoint invoice lines, release authority, receipts, pickups, shredding. Open.
 8. **Move day** — Home Transition only.
-9. **Close-out** — the final walk, the empty-house check, the handoff, the satisfaction call, the review and referral asks, the vendor scorecard. Open.
+9. **Close-out** — the final walk, the empty-house check, the handoff, then the **Close-out card**: satisfaction call, Google review email, referral ask, and the vendor scorecard, which is required (Step 13). Open.
 
 > **Nothing in the job folds, and the stage you are in says NOW.** Before Day 1 until the job is active; In the house while it is; Midpoint & pickups once every room is locked; Close-out once the midpoint is paid and the rooms are cleared. Move day is never marked NOW — it reads done once Close-out does. The only bar that opens by itself is *Vendors & partners*, while you are still lining them up; tap either bar to open or close it and it stays that way until you reload. The phase numbers are gone — Phase 3 was Move day, which most jobs never have, so the old plan counted 0, 1, 2, 4.
+
+> **The brown Next band is on the Job Plan now (2026-09-22)**, under the client line, with the *Deposit & Start* half of the timeline under it — exactly what the Client Dashboard shows, same buttons. It is how you get reminded to send the midpoint invoice without leaving the plan. Job Admin & Inv carries the same band.
 
 ### Before Day 1 — read the walkthrough back
 
@@ -864,6 +866,19 @@ Final invoice paid → close the job. The app stamps the delivery date, the time
 
 The status button on a closed job reads **Re-open** and returns it to *Active*, where it left off. It does not send the job back to the start.
 
+### Before you close it — the Close-out card (new 2026-09-22)
+
+On the Job Plan's Close-out stage and on Job Admin & Inv, on **every** job, Home Prep included. Four steps, in order:
+
+1. **Call the client.** A call, not a text. Tick *Satisfaction call* once they have told you they are happy.
+2. **Ask for the Google review.** Press *Draft review request*: a short thank-you with our review link lands in **your** Gmail drafts. Read it, send it, tap *I've sent it*. When the review shows up, tick *Review posted on Google*.
+3. **Ask for a referral.** Who else could use us? Tick it.
+4. **Rate every vendor.** One to five stars and a note on each vendor you used — prep trades and haulers included. The star saves itself to the Vendor Directory.
+
+> **⚠** **The review button stays grey until the call is ticked, on purpose.** Never send a review request to a client you have not spoken to first — if something went wrong, you want to hear it on the phone, not read it on Google.
+
+> **⚠** **You cannot close the job until every vendor you used is rated.** *Close job* will refuse and name who is left. It takes a minute, and it is the only way next month's concierge knows which painter to call.
+
 ### If the job dies instead
 
 The **✕** on the job card opens closeout, and what it does depends on whether money arrived:
@@ -905,6 +920,7 @@ A sell-side, show-ready service, mostly through Douglas Elliman referral agents.
 6. **Job Plan** is stripped down to three things (four if you quoted declutter hours): *Budget & Fee* (estimated spend, quoted-to-date, the running 30% on actual quotes, with an over-budget flag), *Home Prep Vendors — Sourcing & Status* (assign the vendor, set status, log the actual quote against the scope note), and a *Coordination Checklist* — scope confirmed → quotes collected → vendors booked → work underway → completed/inspected → final invoices and fee billed. Top to bottom it runs: hours log (if quoted), checklist, then *Budget & Fee* and *Sourcing*, which fold — tap the ▸ on the left to open or shut them.
 
    > **⚠ If you quoted declutter hours, the hours log is there — use it.** It opens only on a prep job that quoted hours, and it shows your concierge row alone (there is no crew on this engagement). **The final invoice bills what is in the log, not what you quoted**, so hours you worked and never recorded bill nothing at all. The app will refuse the final until something is logged, which is the right answer. The Budget & Fee card shows *quoted* against *logged to date* and turns red if you are more than 15% past — at that point ring the homeowner, because the estimate promised them that call.
+7. **Job Admin & Inv on a prep job** is short on purpose: the client line, the brown Next band, the desk paperwork (open), and the Close-out card. No inventory, no appraisers, no approval request — a prep job records nothing about the contents of the house. Close out exactly as any other job: call, review request, referral, rate every trade.
 
 ## Quick reference
 
@@ -945,6 +961,10 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 ### If something won't let you proceed
 
 | Symptom | What's missing |
+| **_Close job_ says it cannot close the job yet** | A vendor you used is not rated. The message names them. Open the Close-out card (Job Plan or Job Admin & Inv), give each a star rating, and close again. |
+| **_Draft review request_ is greyed out** | The satisfaction call is not ticked. Call the client first, tick it, and the button comes on. |
+| **A vendor is missing from the scorecard** | It is not marked *Confirmed* on the sourcing card. Only vendors you actually used are rated — set the status and it appears. |
+| **A prep job's Job Admin & Inv tab has no inventory** | Correct. A prep job records nothing about the house's contents; the tab is the paperwork and the close-out. |
 | **The *Name N shots* button is not there** | Either every shot already has a name — it withdraws itself — or this device has no Apps Script URL set (Settings → Sync). If a red banner is up about the deployment, the naming service is part of what it is telling you. |
 | **You press it and it says the key is missing** | Setup, not a fault. `ANTHROPIC_API_KEY` goes in the Apps Script project's Script Properties. Anthony does this once. |
 | **Rows say *agent* or *agent · unsure* in bronze** | Working as intended — it named them and nobody has checked them yet. Read it, correct it if it is wrong, and the badge clears. Start with the *unsure* ones. |

@@ -372,7 +372,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const calls = [];
     const d = sandbox({
       fns: ['planDerivedLines', 'planDerivedHtml', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
-            'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
+            'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs'],
       vars: ['DECEDENT_SERVICES', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'jobPlanStore',
              'estimateStore', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: {
@@ -438,7 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ CHECKBOXES ARE NAMED, NEVER prefix + array index');
   {
     const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
-                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'CLOSEOUT_TASK_KEYS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
                         stubs: { isFormalDoc: () => false } });
     const keys = t.PLAN_TASKS.map((x) => x.key);
     eq(new Set(keys).size, keys.length, 'every key is distinct');
@@ -457,7 +457,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const estate = on({ svc: 'cleanout', houseFlags: { firearms: { on: true, note: 'hall safe' } } }, { svc: 'cleanout' });
     ['precall', 'access_tested', 'crew_briefed', 'coi_provided', 'firearms_in_place', 'nfa_check',
      'docs_sequestered', 'cash_logged', 'coc_pickup_present', 'shred_done', 'broom_clean', 'home_empty',
-     'satisfaction_call', 'review_ask', 'referral_ask'].forEach((key) => ok(estate.indexOf(key) >= 0, 'estate settlement keeps ' + key));
+     ].forEach((key) => ok(estate.indexOf(key) >= 0, 'estate settlement keeps ' + key));
+    // ⚠ RESTATED 2026-09-22, NOT DELETED. The satisfaction call, the review ask and the referral ask
+    // were three boxes in a 'Client' section of the Close-out stage. They moved into the close-out
+    // card, which is on EVERY service (Home Prep had none of them) and on both job tabs; the two tick
+    // keys survive there unchanged and the review box became a drafted email.
+    ['satisfaction_call', 'referral_ask', 'review_ask'].forEach((key) => ok(estate.indexOf(key) < 0, key + ' is no longer a Close-out stage box'));
+    ok(!!t.CLOSEOUT_TASK_KEYS && t.CLOSEOUT_TASK_KEYS.satisfaction_call && t.CLOSEOUT_TASK_KEYS.referral_ask,
+       'the call and the referral keep their keys, in the close-out card');
     // ⚠⚠ RESTATED 2026-09-20, NOT DELETED. This list pinned `nda_signed` as a box every labour
     // job gets. Anthony: *"we do not require NDAs for staff on all jobs. confidentiality is baked
     // into our 1099 employment agreements."* So the box asked a person to attest to a signature
@@ -468,7 +475,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠⚠ and NOT a per-job NDA — confidentiality is standing, in the contractor agreement');
     ok(estate.indexOf('pr_authority') < 0, 'but not the probate gate — no Letters on an estate settlement');
     ok(estate.indexOf('mv_eta') < 0 && estate.indexOf('nh_floorplan') < 0, 'nor move day');
-    ok(estate.length >= 14 && estate.length <= 22, 'about fifteen to twenty (found ' + estate.length + ')');
+    ok(estate.length >= 11 && estate.length <= 20, 'about twelve to twenty (found ' + estate.length + ')');
 
     const probate = on({ svc: 'probate' }, { svc: 'probate' });
     ok(probate.indexOf('pr_authority') >= 0, 'probate keeps the PR-authority box on the field surface');
@@ -498,7 +505,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const a = sandbox({
       fns: ['renderJobAdmin', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', '_planTaskDone', 'planDerivedLines', 'planDerivedHtml',
             'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
-            'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
+            'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', '_jobAdminIsOpen'],
       vars: ['DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
              'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: { isFormalDoc: () => false, isJobWon: (j) => !!j.won, docSentAt: () => null, jobLogEntries: () => [],
@@ -546,7 +553,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // The stages (2026-09-19, evening): the gate chips, the fold counts, the current stage.
             'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
             // The open job body (2026-09-20): stage cards on a thread, marked off the stage the job is in.
-            'planStageCard', 'planStageState', 'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
+            'planStageCard', 'planStageState', 'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2'],
       vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: {
@@ -623,7 +630,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ["'fin_vendor_invoices'", "'ct_inventory'", "'rec_archived'"].forEach((k) => lacks(out, k, k + ' is desk work, not on the plan'));
     ["'pr_authority'", "'mv_eta'", "'nh_floorplan'", "'re_disclosed'"].forEach((k) => lacks(out, k, k + ' does not apply to this job'));
     const boxes = (out.match(/type="checkbox"/g) || []).length;
-    ok(boxes >= 14 && boxes <= 22, 'about fifteen to twenty boxes on an estate settlement (found ' + boxes + ')');
+    ok(boxes >= 11 && boxes <= 22, 'about twelve to twenty boxes on an estate settlement (found ' + boxes + ')');
     has(out, 'Job Admin', 'and the plan says where the desk work went');
     lacks(out, 'Daily projection checked and signed off', 'the per-day self-attestation is gone');
 

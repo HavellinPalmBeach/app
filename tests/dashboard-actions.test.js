@@ -137,12 +137,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // markAgreementSent, markAgreementSigned, openDepositModal, onDepStageChange,
     // saveDeposit and updateDepModalHints. With the drilldown open its job WINS, because
     // #agr-job can be holding whatever was last picked days ago.
+    // ⚠ Since 2026-09-22 the band also renders on the Job Plan and on Job Admin, so "is the
+    // drilldown open" became "which screen is showing a band" — one resolver, _jobBandHost.
     const b = noComments(body('_agrJob()'));
-    has(b, "getElementById('client-dashboard-view')", '_agrJob checks whether the drilldown is open');
-    has(b, '_dashboardJobId', 'and resolves through it');
-    const iDash = b.indexOf('_dashboardJobId');
+    const hb = noComments(body('_jobBandHost()'));
+    has(hb, "getElementById('client-dashboard-view')", '_jobBandHost checks whether the drilldown is open');
+    has(hb, '_dashboardJobId', 'and resolves through it');
+    has(b, '_jobBandHost()', '_agrJob asks the one resolver');
+    const iDash = b.indexOf('_jobBandHost()');
     const iSel = b.indexOf("getElementById('agr-job')");
-    ok(iDash >= 0 && iSel >= 0 && iDash < iSel, 'the drilldown wins over the Agreement tab select');
+    ok(iDash >= 0 && iSel >= 0 && iDash < iSel, 'the band on screen wins over the Agreement tab select');
+    // ⚠⚠ THE JOB PAGES ARE ASKED FIRST. client-dashboard-view keeps its inline display:block when
+    // you navigate to another tab, so a dashboard left open on Butler would otherwise answer for a
+    // button pressed on Ellsworth's Job Plan.
+    ok(hb.indexOf("'panel-job-plan'") < hb.indexOf("getElementById('client-dashboard-view')")
+       && hb.indexOf("'panel-inventory'") < hb.indexOf("getElementById('client-dashboard-view')"),
+       'the active job tab is asked before a possibly-stale drilldown');
 
     // The requirement is not a count of who mentions the select — populateAgrSelect,
     // docPdf and docEmail legitimately WRITE to it. It is that everything which RESOLVES
@@ -478,12 +488,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // same control on screen twice — and two identical buttons make you check which is
     // the real one. The rail stays a status read.
     const rc = body('renderClientDashboard(jobId)');
-    has(rc, 'jt-btn jt-btn-p', 'the band draws the primary');
+    // The band's markup is one shared renderer since 2026-09-22 — the dashboard, the Job Plan
+    // and Job Admin all call it — so the one-primary rule is asserted there.
+    const bandFn = body('jtBandHtml(job, estRec, rows, next)');
+    eq((noComments(rc).match(/jtBandHtml\(/g) || []).length, 1, 'the dashboard draws its band through the shared renderer, once');
+    has(bandFn, 'jt-btn jt-btn-p', 'the band draws the primary');
     // ⚠ TWO OCCURRENCES NOW, AND BOTH ARE THE SAME SITE: the emitted literal plus the comment
     // above it that says why there is only one. The requirement is ONE EMITTING SITE, so the
     // count is taken over the comment-stripped body — the trap this file records five times,
     // where a needle trips on the text explaining the fix.
-    eq((noComments(rc).match(/jt-btn-p/g) || []).length, 1, 'exactly one primary button site');
+    eq((noComments(bandFn).match(/jt-btn-p/g) || []).length, 1, 'exactly one primary button site');
+    eq((noComments(rc).match(/jt-btn-p/g) || []).length, 0, 'and the dashboard emits none of its own');
 
     // ⚠ The out-of-sequence actions used to hang off their own row, which the horizontal
     // track has no room for and which scattered them down the vertical rail. They are
@@ -506,8 +521,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // agr-fb, dep-fb and e-fb all live inside panels the drilldown hides.
     const t = noComments(body('_dashFbTarget(fallbackId)'));
-    has(t, "'dash-fb'", '_dashFbTarget redirects to the drilldown strip');
-    has(t, "getElementById('dash-fb')", 'but only when that strip actually exists');
+    has(noComments(body('_jobBandHost()')), "fb: 'dash-fb'", '_dashFbTarget redirects to the drilldown strip');
+    has(t, "getElementById(host.fb)", 'but only when that strip actually exists');
     has(t, 'return fallbackId', 'and falls back to the tab strip otherwise');
 
     ['markAgreementSent()', 'markAgreementSigned()', 'openDepositModal(stage)', 'saveDeposit()'].forEach((sig) => {

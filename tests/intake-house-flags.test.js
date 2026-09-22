@@ -223,8 +223,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // an alarm code and a loaded gun safe do not care which service was sold.
     // Since 2026-09-19 every surface renders the brief through a HOST carrying the job id, so a
     // Found tick can repaint it in place. The hosts are one map (SF_HOSTS); each is named below.
-    eq(src.split("_sfHost('sf-host-").length - 1, 5,
-       'five hosts — both Job Plan headers, the dashboard, the room workspace, the Inventory desk block — and nowhere unexpected');
+    eq(src.split("_sfHost('sf-host-").length - 1, 6,
+       'six call sites — both Job Plan headers, the dashboard, the room workspace, and the desk block on BOTH arms of Job Admin & Inv (a prep job renders its own short arm) — and nowhere unexpected');
     const plan = src.slice(src.indexOf('function renderJobPlan'), src.indexOf('function renderJobPlan') + 12000);
     has(plan, "_sfHost('sf-host-plan', job)", 'the main Job Plan header carries the brief');
     const prep = src.slice(src.indexOf('// Header (set into the shared job-plan-header slot)'));
