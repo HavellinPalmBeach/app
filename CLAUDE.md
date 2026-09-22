@@ -7062,7 +7062,10 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/festive-dijkstra-3uqyoh`
+- Active feature branch: `claude/practical-hypatia-qm2kft`
+  (`claude/festive-dijkstra-3uqyoh` is the previous name. ⚠ A second session ran concurrently on
+  2026-09-22 — the prep Job Plan / intake ordering work — and its two commits merged in here
+  cleanly; the only conflict was the build stamp. Both are on `main`.)
   (`claude/wizardly-franklin-8awd9o` shipped alongside it on 2026-09-21 — two sessions ran
   concurrently that day: the estate-intake split and the room-by-room-inventory-on-every-job-type
   build. Both are on `main`, and this branch merged theirs on the way through; the merge
