@@ -9,7 +9,7 @@ const { sandbox, source, domStub } = require('./harness.js');
 const FNS = ['_invScheduleSection', '_invTrackDefault', 
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   'printEstateInventoryReport', 'printCourtInventory', 'printContentsList', 'contentsList',
-  'printContentsRecord', 'printApprovalRequest', 'printAppraisalWorklist', 'printDispositionLedger',
+  'printContentsRecord', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
   '_clFlags', '_renderInvWorkbar', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms', '_invFileId',
   '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull', '_invDocHead', '_invDocName',

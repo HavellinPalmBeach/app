@@ -9,18 +9,24 @@
 // passing the first on every single item, and before this it produced an empty appraisal
 // worklist and the app said nothing at all.
 
-const { sandbox, fn } = require('./harness');
+const { sandbox, fn, domStub } = require('./harness');
 
 const FNS = [
   'invCatMeta', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'invAppraisalThreshold',
   '_gateYes', '_gate706', 'gateDispute', 'isDecedentJob',
   'invMAIVDefaultCat', 'invIsMAIV', 'invMAIVCategory', 'maivAggregate',
   'maivFilingApplies', 'maivStatement', 'maivStatement_', '_maivWorklistBlock',
+  // §20.2031-6(a) — built 2026-09-22, lifted rather than stubbed: the whole point is that
+  // (a) and (b) read ONE gate, and a stub of `maivFilingApplies` is exactly what would let them
+  // come apart on the one document that states both.
+  'invLotArticleValue', 'invLotSplitState', 'invLotSplitSentence', 'invLotsToSplit',
+  'invLotsUntestable', '_lotSplitWorklistBlock', '_invItemNo', 'esc',
   '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull', '_vehicleLineName',
 ];
 const VARS = [
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
   'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
+  'INV_LOT_ARTICLE_CAP',
   'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
 ];
 
@@ -248,5 +254,282 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['printCourtInventory', 'printTrustSchedule'].forEach(function (name) {
       has(fn(name), '_invScheduleSection', name + ' asks the shared renderer rather than keeping a copy');
     });
+  }
+
+  // ══ §20.2031-6(a) — THE GROUPING CAP, BUILT 2026-09-22 ═══════════════════════
+  //
+  // ⚠⚠ WHAT THESE TESTS ARE FOR. On 2026-09-22 a Havellin house PAIR — $100 strict /
+  // $1,000 standard, keyed on the DOCUMENTATION LEVEL — was retired: it was enforced by
+  // nothing, it had one reader (a sentence builder), and Florida sets no itemisation floor
+  // at all. What went back in is a different rule that happens to share one of the numbers,
+  // and the entire value of these tests is holding the two apart. The retired one was
+  // arbitrary; this one is 26 CFR §20.2031-6(a), it governs a Form 706 schedule, and it is
+  // gated on the 706 answer rather than on how strictly we happen to be documenting.
+  //
+  // ⚠ IF A LATER READER COLLAPSES THIS ONTO `isFormalDoc`, THE DEFECT IS BACK. A recorded
+  // dispute forces Strict Mode without making a federal return due, so an estate that files
+  // nothing would be told it owes a federal itemisation standard. There is a `lacks` on
+  // exactly that below, and it is the most important assertion in this file.
+  group('§20.2031-6(a) fires on the 706 gate, never on the documentation level');
+  {
+    const lot = (q, v) => ({ stableId: 'l', label: 'inventory', qty: String(q), fmv: v == null ? '' : String(v) });
+
+    // The gate is `maivFilingApplies` — decedent AND the 706 answer — which is the SAME gate
+    // the aggregate in (b) reads. One regulation, two subsections, one gate.
+    eq(ctx.invLotSplitState(lot(6, 5000), estate()), 'over',
+       'a 706 estate: six articles at $5,000 average $833 and are over the cap');
+    eq(ctx.invLotSplitState(lot(6, 5000), estate({ gate706: 'no' })), '',
+       'the same lot on an estate filing NO 706 is not flagged — Florida sets no floor');
+    eq(ctx.invLotSplitState(lot(6, 5000), { id: 2, svc: 'downsizing' }), '',
+       'and never on a living owner, who files no return at all');
+    eq(ctx.invLotSplitState(lot(6, 5000), null), '', 'no job, no claim');
+
+    // ⚠ UNANSWERED COUNTS AS YES, exactly as _gate706 has always read it, so the cap applies
+    // by default on every new estate. That is the conservative direction and it matches (b).
+    eq(ctx.invLotSplitState(lot(6, 5000), estate({ gate706: '' })), 'over',
+       'an unanswered 706 question still applies the cap — unknown counts as yes');
+
+    // ⚠ THE NET. `isFormalDoc` is the documentation level and it is NOT what moves this.
+    const lsBody = fn('invLotSplitState');
+    lacks(lsBody, 'isFormalDoc', 'the predicate does not read the documentation level');
+    lacks(lsBody, 'docLevelFloor', 'nor the floor that sets it');
+    has(lsBody, 'maivFilingApplies', 'it reads the 706 gate, the same one (b) reads');
+  }
+
+  group('a lot is what the cap is about — a single article never is');
+  {
+    const lot = (q, v) => ({ qty: String(q), fmv: v == null ? '' : String(v) });
+    eq(ctx.invLotSplitState(lot(1, 50000), estate()), '',
+       'a $50,000 single article is named specifically already — nothing is grouped');
+    eq(ctx.invLotSplitState(lot(0, 50000), estate()), '', 'a zero quantity is not a group');
+    eq(ctx.invLotSplitState({ fmv: '50000' }, estate()), '', 'nor a row with no quantity at all');
+
+    // ⚠ "none of which has a value in excess of $100" — so EXACTLY $100 is permitted.
+    eq(ctx.invLotSplitState(lot(10, 1000), estate()), '',
+       'exactly $100 an article is inside the cap — the reg says "in excess of"');
+    eq(ctx.invLotSplitState(lot(10, 1001), estate()), 'over', 'a dollar over is over');
+    eq(ctx.INV_LOT_ARTICLE_CAP, 100, 'and the figure is the regulation own');
+  }
+
+  group('an unvalued lot is NOT a lot inside the cap');
+  {
+    const lot = (q, v) => ({ qty: String(q), fmv: v == null ? '' : String(v) });
+    // ⚠⚠ THE FAILURE THIS WHOLE AREA EXISTS TO PREVENT, and the reason the aggregate in (b)
+    // keeps `settled`: reporting an untested lot as clear reads as a clearance and is not one.
+    eq(ctx.invLotSplitState(lot(30, null), estate()), 'unvalued',
+       'thirty articles with no value recorded cannot be tested');
+    eq(ctx.invLotSplitState(lot(30, 'x'), estate()), 'unvalued', 'nor can an unparseable one');
+    ok(ctx.invLotSplitState(lot(30, null), estate()) !== '',
+       'and it is never the empty string, which is what "inside the cap" means');
+    // A recorded zero IS an answer, the distinction moneyToNumber('') exists for.
+    eq(ctx.invLotSplitState(lot(30, 0), estate()), '', 'a recorded zero is a value, and is under the cap');
+  }
+
+  group('the per-article figure is the LINE TOTAL over the count, and says so');
+  {
+    // FMV is the line total everywhere in this app — that is how every accumulator reads it
+    // and what the court schedule prints. The article value a lot implies is therefore the
+    // total over the count, and it is an AVERAGE.
+    eq(ctx.invLotArticleValue({ qty: '4', fmv: '800' }), 200, '$800 over four articles is $200 each');
+    ok(isNaN(ctx.invLotArticleValue({ qty: '1', fmv: '800' })), 'a single article implies nothing');
+    ok(isNaN(ctx.invLotArticleValue({ qty: '4', fmv: '' })), 'and an unvalued lot implies nothing');
+
+    has(ctx.invLotSplitSentence({ qty: '6', fmv: '5000' }), '6 items at $5,000 averages $833 an article',
+        'the sentence states the arithmetic rather than asserting a verdict');
+    has(ctx.invLotSplitSentence({ qty: '6', fmv: '' }), 'no value recorded',
+        'and says so when there is nothing to divide');
+
+    // ⚠ ONE SENTENCE, THREE SURFACES. The import panel, the desk and the worklist must not
+    // state the arithmetic differently — that is how two readings of one lot appear on one job.
+    const srcA = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    eq((srcA.match(/function invLotSplitSentence/g) || []).length, 1, 'exactly one such sentence exists');
+    has(fn('_impLotHintHtml'), 'invLotSplitSentence',
+        'the capture readout asks the shared sentence rather than rebuilding the arithmetic');
+    // ⚠ ONE PREDICATE, THREE SURFACES — the capture readout, the desk chip and the
+    // worklist. THAT is the net that matters: a second opinion of "is this lot over the cap"
+    // is how the panel comes to wave through what the document then flags, on one job, on one
+    // evening. The worklist tabulates the same arithmetic in columns rather than in prose,
+    // which is why it reads the VALUE helper instead of the sentence.
+    has(fn('_lotSplitWorklistBlock'), 'invLotSplitState', 'the worklist asks the shared predicate');
+    has(fn('_lotSplitWorklistBlock'), 'invLotArticleValue', 'and the shared per-article figure');
+    has(fn('_impLotHintHtml'), 'invLotSplitState', 'the capture readout asks the shared predicate');
+
+  }
+
+  group('the worklist states (a) beside (b), under the same gate');
+  {
+    const mk = (o) => Object.assign({ stableId: 's', label: 'inventory', category: 'Silver & Precious Metal' }, o);
+    const over = mk({ stableId: 'a', objectName: 'Sterling flatware service', qty: '6', fmv: '5000', itemNo: 12 });
+    const fine = mk({ stableId: 'b', objectName: 'Kitchen sundries', qty: '40', fmv: '800' });
+    const blank = mk({ stableId: 'c', objectName: 'Boxed china', qty: '25', fmv: '' });
+
+    const b = ctx._lotSplitWorklistBlock(estate(), [over, fine]);
+    has(b, '20.2031-6(a)', 'it cites the subsection it is applying');
+    has(b, 'Sterling flatware service', 'and names the lot rather than giving a bare count');
+    has(b, '#12', 'by its permanent item number, which is what a reply cites');
+    has(b, 'Split', 'and names the fix');
+    lacks(b, 'Kitchen sundries', 'a lot inside the cap is not on the action list');
+
+    // ⚠ THE CLEARANCE IS A FINDING, NOT AN ABSENCE — withholding it leaves a reader unable
+    // to tell a checked estate from an unchecked one.
+    const clear = ctx._lotSplitWorklistBlock(estate(), [fine]);
+    has(clear, 'permits them to stand as groups', 'every lot inside the cap is stated, not left silent');
+
+    const untested = ctx._lotSplitWorklistBlock(estate(), [blank]);
+    has(untested, 'cannot be tested', 'an unvalued lot is disclosed as untestable');
+    has(untested, 'not a lot inside the cap', 'and explicitly not reported as clear');
+
+    // ⚠ IT RENDERS ONLY WHERE IT GOVERNS. On an estate filing no 706 there is no floor in
+    // Florida law, so a line saying so would be explaining an absence.
+    eq(ctx._lotSplitWorklistBlock(estate({ gate706: 'no' }), [over]), '',
+       'nothing on an estate that files no return');
+    eq(ctx._lotSplitWorklistBlock({ id: 9, svc: 'downsizing' }, [over]), '',
+       'nothing on a living owner');
+    eq(ctx._lotSplitWorklistBlock(estate(), [mk({ qty: '1', fmv: '9000' })]), '',
+       'and nothing when the manifest groups nothing');
+
+    // The two subsections are on ONE page, under ONE gate, because a reviewer reading one
+    // asks the other.
+    has(fn('printAppraisalWorklist'), '_lotSplitWorklistBlock', 'the worklist renders (a)');
+    has(fn('printAppraisalWorklist'), '_maivWorklistBlock', 'beside (b)');
+  }
+
+  group('the desk chip exists only where the rule does');
+  {
+    const ctx2 = sandbox({
+      fns: ['invWorkFlags', 'invFiduciaryMode', 'maivFilingApplies', '_gate706', 'isDecedentJob',
+            'invLotSplitState', '_invNeedsValue', 'invNeedsAppraisal', 'invIsFirearm',
+            'invReleaseBlocked', 'invCatMeta', 'invIsIntrinsic', 'invAppraisalThreshold',
+            'gateDispute', '_gateYes', '_invHasAppraisal', '_invJob', 'invIsMAIV', 'invMAIVDefaultCat',
+            'invFirearmAuthorized'],
+      vars: ['INV_WORK_FLAGS', 'INV_RELEASE_DISPOSITIONS', 'DECEDENT_SERVICES', 'INV_TAXONOMY',
+             'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_LOT_ARTICLE_CAP',
+             'MAIV_BY_CATEGORY', 'MAIV_OTHER'],
+    });
+    const flags = (job) => ctx2.invWorkFlags(job).map((f) => f.key);
+    ok(flags(estate()).indexOf('lotsplit') >= 0, 'a 706 estate gets the chip');
+    ok(flags(estate({ gate706: 'no' })).indexOf('lotsplit') < 0,
+       'an estate filing no 706 does NOT — a chip that is structurally always 0 teaches people to skip the strip');
+    ok(flags({ id: 3, svc: 'downsizing' }).indexOf('lotsplit') < 0, 'and a living job never');
+    // ⚠ DRIVEN, NOT GREPPED. A source needle on the chip's own body passed while the chip was
+    // deleted — it was matching the string in this file's own assertion rather than the app's.
+    // Ask the catalogue for the entry and then ask the entry the question.
+    const chipDef = ctx2.INV_WORK_FLAGS.filter((f) => f.key === 'lotsplit')[0];
+    ok(!!chipDef, 'the chip is an entry in the ONE worklist catalogue, not a second list');
+    ok(chipDef && chipDef.test({ qty: '6', fmv: '5000' }, estate()) === true,
+       'and its test IS the shared predicate — a lot over the cap counts');
+    ok(chipDef && chipDef.test({ qty: '6', fmv: '5000' }, estate({ gate706: 'no' })) === false,
+       'gated exactly as the predicate is, so the chip and the document cannot disagree');
+    ok(chipDef && chipDef.test({ qty: '1', fmv: '5000' }, estate()) === false,
+       'and a single article is never on it');
+    ['unnamed', 'undecided', 'appr', 'norecip', 'firearm', 'hold'].forEach((k) => {
+      ok(flags(estate()).indexOf(k) >= 0, k + ' still on the strip');
+    });
+  }
+
+  group('the capture-time readout — the one moment the estate can still be looked at');
+  {
+    // ⚠⚠ THIS IS THE HALF THAT MAKES THE RULE IMPLEMENTABLE AT ALL. A lot row carries ONE
+    // name, ONE value and ONE quantity, so nothing downstream can split it. The import panel
+    // is where the lot is born and where the mode selector sits one tap from the number.
+    const dctx = sandbox({
+      fns: ['_impLotHintHtml', 'invLotSplitState', 'invLotSplitSentence', 'invLotArticleValue',
+            'maivFilingApplies', '_gate706', 'isDecedentJob', '_numOrBlank', '_invMoney', 'esc'],
+      vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES'],
+      stubs: {
+        jobs: [{ id: 1, svc: 'cleanout' }],
+        estimateStore: { 1: { estimate: { collections: [{ id: 'c1', name: 'Sterling flatware', value: '5000' },
+                                                        { id: 'c2', name: 'Kitchen sundries', value: '800' },
+                                                        { id: 'c3', name: 'Boxed china', value: 'Unknown' }] } } },
+        document: domStub({}),
+      },
+    });
+    const over = dctx._impLotHintHtml(1, 'c1', 'lot', 6);
+    has(over, 'above the $100', 'six articles at $5,000 warns at the moment the lot is chosen');
+    has(over, 'averages $833 an article', 'with the arithmetic on screen');
+    has(over, 'Itemize it', 'and names the fix, which is the control immediately beside it');
+
+    // ⚠ IT READS OUT, IT NEVER REFUSES — the collection value here is a walkthrough estimate
+    // and the count is often a guess, so blocking would refuse on a figure nobody has stood
+    // behind. The house rule: flag, name the arithmetic, name the fix.
+    lacks(fn('materializeCollection'), 'invLotSplitState', 'the Add button is not gated on it');
+
+    // ⚠ THE INSIDE-THE-CAP CASE SPEAKS. A silent pass is indistinguishable from a check that
+    // never ran, on the one surface whose job is saying the grouping is safe before you commit.
+    const okHint = dctx._impLotHintHtml(1, 'c2', 'lot', 40);
+    has(okHint, 'inside the $100', 'a lot under the cap is confirmed rather than left silent');
+
+    const blank = dctx._impLotHintHtml(1, 'c3', 'lot', 25);
+    has(blank, 'cannot be tested', 'an unpriced collection says the cap cannot be tested');
+
+    eq(dctx._impLotHintHtml(1, 'c1', 'itemize', 6), '',
+       'itemizing IS the fix, so the panel says nothing about it');
+    eq(dctx._impLotHintHtml(1, 'c1', 'lot', 1), '', 'and a single article groups nothing');
+
+    // ⚠⚠ THE JOIN, AND THE REVERT SWEEP IS WHAT FOUND IT MISSING. Everything above drives the
+    // HELPER. Deleting the hint row from the panel that renders it — i.e. removing the entire
+    // capture-time surface this build exists for — left the whole suite green, because no check
+    // asked whether the two ends meet. CLAUDE.md records that exact shape more often than any
+    // other. This drives the REAL panel and reads its markup back.
+    const pctx = sandbox({
+      fns: ['_renderInventoryImportPanel', '_impLotHintHtml', '_impLotHint', 'invLotSplitState',
+            'invLotSplitSentence', 'invLotArticleValue', 'maivFilingApplies', '_gate706',
+            'isDecedentJob', '_numOrBlank', '_invMoney', 'esc', '_importableFromEstimate',
+            '_importedSourceSet', '_guessCategory', '_vehicleLineName', 'fmtColVal', '_jobInvRefs'],
+      vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES', 'INV_CATEGORIES', 'INV_TAXONOMY'],
+      stubs: {
+        jobs: [{ id: 1, svc: 'cleanout' }],
+        estimateStore: { 1: { estimate: { vehicles: [], collections: [
+          { id: 'c1', name: 'Sterling flatware', value: '5000', qty: 6, disp: 'sell' },
+          { id: 'c2', name: 'Kitchen sundries', value: '800', qty: 40, disp: 'donate' }] } } },
+        _photoRefs: { 1: [] },
+        document: domStub({}),
+      },
+    });
+    const panel = pctx._renderInventoryImportPanel(1);
+    has(panel, 'imp-hint-c1', 'the real panel emits a readout row for the collection');
+    has(panel, 'above the $100', 'carrying the warning, rendered rather than merely available');
+    has(panel, 'averages $833 an article', 'with the arithmetic already on the page');
+    has(panel, 'inside the $100', 'and the confirmation on the lot that is fine');
+    // ⚠ AND IT HAS TO RE-READ LIVE, or the number is right once and wrong the moment somebody
+    // changes the count — which is the one thing they are there to do.
+    has(panel, "onchange=\"_impLotHint(", 'the mode selector repaints it');
+    has(panel, "oninput=\"_impLotHint(", 'and so does the quantity box, on every keystroke');
+
+    // The same panel on an estate filing no return says nothing at all.
+    const qctx = sandbox({
+      fns: ['_renderInventoryImportPanel', '_impLotHintHtml', '_impLotHint', 'invLotSplitState',
+            'invLotSplitSentence', 'invLotArticleValue', 'maivFilingApplies', '_gate706',
+            'isDecedentJob', '_numOrBlank', '_invMoney', 'esc', '_importableFromEstimate',
+            '_importedSourceSet', '_guessCategory', '_vehicleLineName', 'fmtColVal', '_jobInvRefs'],
+      vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES', 'INV_CATEGORIES', 'INV_TAXONOMY'],
+      stubs: {
+        jobs: [{ id: 1, svc: 'cleanout', gate706: 'no' }],
+        estimateStore: { 1: { estimate: { vehicles: [], collections: [
+          { id: 'c1', name: 'Sterling flatware', value: '5000', qty: 6, disp: 'sell' }] } } },
+        _photoRefs: { 1: [] },
+        document: domStub({}),
+      },
+    });
+    const quiet = qctx._renderInventoryImportPanel(1);
+    has(quiet, 'imp-hint-c1', 'the row is still there on a no-706 estate');
+    lacks(quiet, '20.2031-6(a)', 'and it is empty — there is no federal floor to state');
+  }
+
+  group('the retired house rule has not come back wearing the new one clothes');
+  {
+    // ⚠⚠ THE WHOLE POINT. $100 is back; $1,000 is not, and must never be — it had no source
+    // anywhere, which is precisely what made the retired pair arbitrary.
+    const srcB = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+    const live = srcB.split('\n').filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+    ok(live.length > srcB.length * 0.5, 'the comment stripper did not eat the file');
+    has(live, 'function invLotSplitState', 'and the function under test survived it');
+
+    lacks(live, 'INV_LISTING_THRESHOLD', 'the retired constants are still gone');
+    lacks(live, 'invListingThreshold', 'and so is the retired accessor');
+    lacks(live, 'listed individually', 'and the retired wording');
+    eq((live.match(/INV_LOT_ARTICLE_CAP = /g) || []).length, 1, 'the cap is declared exactly once');
+    lacks(fn('docStandardEffect'), 'INV_LOT_ARTICLE_CAP',
+       'and the documentation-level readout does not quote it — the level is not what moves it');
   }
 };

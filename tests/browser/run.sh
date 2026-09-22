@@ -23,7 +23,7 @@ set -u
 cd "$(dirname "$0")/../.."
 APP_PATH="${APP_PATH:-$PWD/havellin.html}"
 export APP="file://$APP_PATH"
-steps=("$@"); [ ${#steps[@]} -eq 0 ] && steps=(1 2 3 4 5 6 7 8)
+steps=("$@"); [ ${#steps[@]} -eq 0 ] && steps=(1 2 3 4 5 6 7 8 9)
 rc=0
 for n in "${steps[@]}"; do
   f="tests/browser/step$n.js"

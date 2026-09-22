@@ -1,5 +1,136 @@
 # Havellin Palm Beach — App Notes
 
+## ⚠⚠ THE ARBITRARY RULE WAS RETIRED IN THE MORNING AND THE REAL ONE BUILT IN ITS PLACE (2026-09-22)
+Step **9b** of `ESTATE_SCOPE_SPEC.md`, hours after step 9 closed the §7 build order. Anthony, reading the
+retirement: *"So what should we do with those rules. They were arbitrary. Figure this out and fix it."*
+App-only, no redeploy. `INV_LOT_ARTICLE_CAP` / `invLotSplitState` are the rule; the import panel, the desk
+chip and the Appraisal Worklist are its three surfaces.
+
+- **⚠⚠ RETIRING A FICTION LEAVES A HOLE, AND THERE WAS A REAL RULE IN IT ALL ALONG.** The morning's entry
+  retired `invListingThreshold` ($100 strict / $1,000 standard) as a **Havellin house pair keyed on the
+  DOCUMENTATION LEVEL, enforced by nothing**. That was right. What it did not do was ask whether anything
+  genuine sat underneath, and something did: **Treas. Reg. §20.2031-6(a)** — on a Form 706 schedule every
+  article is named specifically, and a group of articles in one room may be listed together **only where no
+  article in it exceeds $100**.
+- **⚠⚠ IT SHARES ONE NUMBER WITH THE RETIRED PAIR AND NOTHING ELSE. That distinction is the whole build.**
+
+  | | the retired pair | §20.2031-6(a) |
+  |---|---|---|
+  | source | **none** — house rule | federal, citable, carries its own number |
+  | gated on | the documentation **level** | the **706 answer** (`maivFilingApplies`) |
+  | enforced by | **nothing** — one reader, a sentence builder | a capture readout, a desk chip, a printed block |
+  | the $1,000 | sourced from nowhere at all | **does not exist and must never return** |
+
+  **A recorded dispute forces Strict Mode without making a federal return due**, so reading the level here
+  would assert a federal itemisation standard on an estate that files nothing. A test `lacks()` `isFormalDoc`
+  and `docLevelFloor` in the predicate, and the browser drives the converse: Strict Mode + no 706 → **0 lots
+  flagged**. Reverting the gate fails 4.
+- **⚠⚠ THE SAME GATE AS (b), DELIBERATELY — one regulation, two subsections, one gate, both blocks on one
+  page.** `maivFilingApplies` already existed for the MAIV aggregate (§20.2031-6(b)); (a) reads it rather
+  than growing a second opinion. A reviewer reading one asks the other, and a worklist answering only one
+  invites the question it cannot answer. Reverting the worklist's own gate fails 2.
+  - **⚠ AND CLAUDE.md'S OWN NOTE WAS WRONG ABOUT THIS, WHICH IS WHY IT SURVIVED.** The morning's entry said
+    §20.2031-6(a) *"is actually implemented [as] the MAIV aggregate (§20.2031-6(b))"*. It is not — (b) is a
+    different subsection asking a different question ($3,000 aggregate → expert appraisal under oath), and
+    **(a) was implemented nowhere at all.** Corrected in the app comment, the manual and the spec.
+- **⚠⚠ TESTED AT CAPTURE, WHICH IS THE ONLY PLACE IT CAN BE — and this is what the morning's entry got right
+  and then deferred.** A lot row carries **ONE** name, **ONE** value and **ONE** quantity; there is no
+  per-article data inside it for any later rule to split. So the readout is a live line under each collection
+  in the import panel, where the **Keep as lot / Itemize** selector is one tap from the number and the
+  quantity box repaints it on every keystroke. Measured in the browser: raising the count from 6 to 80 moves
+  the same $5,000 from *above the cap* to *inside* it, live. Reverting the two handlers fails 1 each.
+  - **⚠ IT FLAGS AND NEVER REFUSES.** At import the value is a walkthrough estimate and the count is often a
+    guess, so blocking would refuse on a figure nobody has stood behind. The house rule: name the arithmetic,
+    name the fix. A test `lacks()` the predicate in `materializeCollection`, so the Add button cannot become
+    a gate.
+  - **⚠ THE INSIDE-THE-CAP CASE SPEAKS.** A silent pass is indistinguishable from a check that never ran, on
+    the one surface whose job is saying the grouping is safe *before* somebody commits to it.
+- **⚠ THREE ANSWERS, NOT TWO** — `'' | 'over' | 'unvalued'` — for the reason (b) keeps `settled`: an unvalued
+  lot has not passed the test, it has not been **given** one, and reporting it as clear reads as a clearance.
+  Reverting that arm fails **6**. **Exactly $100 an article is INSIDE the cap** (the reg says *in excess of*);
+  loosening `>` to `>=` fails 1.
+- **⚠ THE PER-ARTICLE FIGURE IS AN AVERAGE AND EVERY SURFACE SAYS SO.** FMV on a manifest line is the **line
+  total** — that is how every accumulator in the app reads it — so the implied article value is the total over
+  the count. Thirty forks and one candlestick can average under the cap with the candlestick over it. It is
+  the only figure a grouped line can support, and an average **above** the cap is a certainty that something
+  inside is above it, which is the direction that matters.
+- **⚠ THE CHIP IS CONDITIONAL, NOT MERELY `fid`.** `INV_WORK_FLAGS` grew a `when` predicate so the chip is
+  absent entirely on an estate filing no 706, rather than rendering a structural 0. This file records that
+  exact failure costing the workbook's *Items Awaiting Valuation* row its meaning. Ignoring `when` fails 1.
+  - **⚠ `when:` IS A DEFERRED FUNCTION, like every `test:` beside it.** A bare identifier in that object
+    literal resolves when the catalogue is **declared**, so any sandbox lifting the list alone would throw.
+- **9265 committed checks** (+77; `maiv.test.js` 47 → 142). **All 14 changes revert-verified individually,
+  ZERO green after the one below was re-done**; baseline 0 before and after.
+  - **⚠⚠ ONE GREEN, AND IT WAS THE WHOLE SURFACE THIS BUILD EXISTS FOR.** Deleting the hint row from the
+    import panel — i.e. removing the capture-time readout entirely — left the suite **green**, because every
+    check drove the HELPER (`_impLotHintHtml`) and nothing asked whether the panel rendered it. The gap this
+    file records more than any other. There is a group that drives the real `_renderInventoryImportPanel` and
+    reads its markup back; re-done, it fails **5**.
+  - **⚠⚠ AND WRITING THAT TEST FOUND A LIVE DEFECT IN MY OWN CODE.** `''` from the predicate is **overloaded**
+    — it means both *inside the cap* and *no cap applies* — and the confirmation branch took it at face value,
+    so an estate filing **no** federal return was told its lot sat *"inside the $100 §20.2031-6(a) grouping
+    cap"*. A federal claim on a matter with no federal return. The helper looked right in isolation and was
+    wrong on the join. Reverting the fix fails 1.
+  - **⚠ A SOURCE NEEDLE PASSED WHILE THE THING IT PINNED WAS DELETED.** `has(src, "return invLotSplitState(r,
+    job) === 'over'")` stayed green with the chip removed. Replaced by four **driven** assertions that ask the
+    catalogue for the entry and then ask the entry the question.
+  - **⚠ A BLANK QUANTITY BOX IS NOT A QUANTITY OF ONE** — found by the test, not by reading. On the first
+    paint the input does not exist yet and mid-edit it is empty for a keystroke; reading 1 there reports a
+    single article, which is never flagged. Reverting the fallback fails **5**.
+  - **⚠ FOUR SUITES LIFT `printAppraisalWorklist` AND ALL FOUR NEEDED THE NEW BLOCK** — found by searching
+    every suite at once, which this file records costing a round when it is not. **⚠ `appraisal-track` has
+    TWO sandboxes**, so a single-occurrence replace fixed one and left the other throwing — the same trap this
+    file already records. **⚠ And one insertion went into a list of PRINTERS rather than a sandbox's `fns:`**,
+    which its own *every document names itself* net caught immediately.
+- **Verified end to end in headless Chromium, 33 checks, 0 failed, 0 page errors**, driving the real intake,
+  the real import panel, the real desk and the real printer:
+
+  | | |
+  |---|---|
+  | 6 articles at $5,000, on import | **⚠ above the $100 cap** · *averages $833 an article* · *Itemize it* |
+  | switching to **Itemize** | the warning clears — itemising **is** the fix |
+  | raising the count to 80 | *inside the $100 cap*, live, with no re-render |
+  | 40 articles at $800 | confirmed **inside** rather than left silent |
+  | 25 articles, no value | *the cap cannot be tested until one is* |
+  | the desk | a **Lots to split** chip, filtering to exactly the one lot over |
+  | the worklist | §20.2031-6(a) **beside** (b) · names the lot · names the fix · the untestable one held apart |
+  | the same estate answering **No** to the 706 | **no chip · no readout · no block · 0 lots flagged** |
+  | Strict Mode forced by a dispute, no 706 | **still 0** — the level is not what moves this |
+  | overflow 1440 · 390 · page errors | **0 · 0 · 0** |
+
+  The step-1 to step-8 browser scripts were re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25**,
+  0 failed — **373 checks across the nine**, and `tests/browser/step9.js` is committed with `run.sh`'s default
+  list now 1–9. The first `<style>` block is **byte-identical to HEAD at 92,597 bytes / 1,169 lines / 635
+  rules** — no CSS.
+- **⚠ THREE OF MY OWN BROWSER PROBES WERE WRONG AND THE CODE WAS RIGHT, AND THE THIRD IS WORTH KEEPING.**
+  Collection ids are `Date.now()` — **numbers** — and my fixture used strings, so the panel's own
+  `onchange="_impLotHint(7,c1)"` evaluated a bare identifier; the pre-existing Add button has always
+  interpolated them the same way. Then the nav click needed asserting rather than assuming. Then the real
+  one: **`saveIntake` navigates to the Client Dashboard on an 800ms timer**, so a script that switches tabs
+  straight afterwards is yanked back off and every element reads `offsetParent === null` — which looks
+  exactly like the readout being hidden. Found by walking the ancestor chain and a MutationObserver, not by
+  reasoning. **Let the post-save navigation land before measuring anything.**
+- **⚠ THE WORDING IS NOT VERIFIED AGAINST A PRIMARY SOURCE, and it rides the counsel bundle.** ecfr.gov and
+  law.cornell.edu are both blocked by the egress proxy (`CONNECT tunnel failed, 403`) — the same block §8 of
+  the spec already records for the §736.08135 mechanics. The app implements **"no article in excess of
+  $100"**; the alternative reading is *"total value not exceeding $100"*, and the two differ on any lot of
+  many cheap articles. **Confirm before a real 706 estate relies on it.** Anthony's standing instruction
+  covers it: *"just come up with language and i'll get it reviewed. do your best."*
+- Manual **§5c** (a pointer — the $100 came back as something else entirely and this box does not mention it),
+  **§10a** (the two-threshold table gained a **Grouping** row, the retirement note's *what this is NOT*
+  paragraph rewritten around the build, and a new **The grouping cap** subsection with the four-case table and
+  five notes). Playbook a note under the two documentation questions and **three** symptom→cause rows —
+  including the two that will actually happen: *a collection says above the $100 grouping cap*, and *the cap
+  is not showing on an estate you expected it on*. Both `.md` copies hand-edited; **20 claims parity-checked,
+  0 mismatches**. A stale sweep for `invListingThreshold` returns hits only inside the notes that correct it —
+  **verified by dumping the surrounding bytes rather than assumed**. Tag balance clean on both HTML files with
+  the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **20/48 and
+  17/17** tables as wide as their container with **0** taking the phone rule — manual gained exactly one table,
+  the grouping-cap one.
+- **⚠ THE SHAPE TO COPY: retire the fiction, then go and look for what was underneath it.** The morning's pass
+  removed an arbitrary figure and stopped. It was right to remove it and wrong to stop — the hole it left was
+  where a real, citable, federal rule belonged, and nothing in the app would have asked the question.
+
 ## ⚠⚠ THE BOX EXPLAINING STRICT MODE NAMED TWO NUMBERS AND THE LEVEL MOVED NEITHER (2026-09-22)
 Step 9 of `ESTATE_SCOPE_SPEC.md`, and it closes the build order. App-only, no redeploy. `invListingThreshold`
 and both its constants are **retired**; `docStandardEffect` now names what `isFormalDoc` genuinely gates.
@@ -27,12 +158,16 @@ and both its constants are **retired**; `docStandardEffect` now names what `isFo
   `_invScheduleSection` groups on the row's own `qty`, set at import time (itemise-or-lot), and **a lot row
   carries ONE name, ONE value and ONE quantity** — there is no per-article data inside it for a threshold to
   split. Any real floor is a **capture-time gate on the inventory desk** (refuse or flag a lot line above it,
-  while somebody is still standing there to split it), which is a separate build and a separate decision. §8 of
+  while somebody is still standing there to split it). ✓ **BUILT THE SAME DAY as step 9b** — that reasoning
+  was right and the deferral was not; see the entry at the top of this file. §8 of
   the spec records that **Florida sets no statutory itemisation floor**: the $100 / $1,000 were house rules
   presented as a documentation standard.
-  - **⚠ Treas. Reg. §20.2031-6(a)'s $100-an-article cap IS real and is NOT what was removed.** It governs what
-    is filed **with** a Form 706, and the place it is actually implemented is the **MAIV aggregate**
-    (§20.2031-6(b), `invIsMAIV`), untouched. Do not reintroduce the retired figures as a second copy of it.
+  - **⚠⚠ Treas. Reg. §20.2031-6(a)'s $100-an-article cap IS real and is NOT what was removed — AND IT
+    IS NOW BUILT (step 9b, the same day; see the entry above).** It governs what is filed **with** a Form 706,
+    so it is gated on the 706 answer and never on the documentation level. ⚠ This bullet used to say the place
+    (a) *"is actually implemented"* is the MAIV aggregate; **that was wrong** — §20.2031-6(b) is a different
+    subsection asking a different question, and (a) was implemented **nowhere at all**. What must never come back
+    is the $1,000 standard tier, which had no source anywhere, or a floor keyed on `isFormalDoc`.
 - **⚠ DELETED, NOT LEFT RETURNING A NUMBER**, and the net is a **rule rather than today's two names**: no live
   line anywhere in the file may quote an itemisation floor in any wording (`INV_LISTING_THRESHOLD`,
   `invListingThreshold`, *listed individually*, *individual-listing*). Comment-stripped and **line-based** — a
@@ -101,7 +236,7 @@ and both its constants are **retired**; `docStandardEffect` now names what `isFo
   clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page
   errors**; under `print` **20/47 and 17/17** tables as wide as their container with **0** taking the phone
   rule — as at HEAD.
-- **⚠ THE BUILD ORDER IN `ESTATE_SCOPE_SPEC.md` §7 IS NOW COMPLETE, steps 1–9.** What remains open there is
+- **⚠ THE BUILD ORDER IN `ESTATE_SCOPE_SPEC.md` §7 IS NOW COMPLETE, steps 1–9** (plus **9b**, added the same day — see the entry at the top of this file)**.** What remains open there is
   **§8, the legal flags, which are counsel's rather than a build**: Fla. Prob. R. 5.340 alongside §733.604,
   §733.604(3) cited nowhere, and the §736.08135 carrying-value mechanics read through **secondary summaries**
   because the egress proxy blocked flsenate.gov and law.justia.com. Those ride the review bundle already queued
@@ -2616,7 +2751,9 @@ field rides the per-item manifest merge and nothing in `apps-script/` changed.
   to align with. ⚠ *"already exists and already branches"* was true and beside the point: it branched, and **nothing
   read the answer** except one sentence. If Agent One ever wants an itemisation floor it is a **capture-time** rule at
   the moment a lot line is created, not a threshold applied afterwards — a lot row carries one name, one value and one
-  quantity, so there is nothing inside it to split.
+  quantity, so there is nothing inside it to split. ✓ **BUILT 2026-09-22 as step 9b** (`invLotSplitState`), against
+  Treas. Reg. §20.2031-6(a) and gated on the 706 answer. **Agent One must read that predicate rather than inventing
+  a second floor**, and the spec's flat $100 now has an app-side figure to align with after all.
 
 ## ⚠⚠ THE WALKTHROUGH WAS WRITE-ONLY ON SCREEN, AND `privateNote` IS THE PROOF (BUILT 2026-09-19)
 Ashley's report, via Anthony: *"after we build an estimate there's no real easy way to go back and look at that estimate,

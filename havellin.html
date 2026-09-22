@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 10:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 11:12pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -19072,6 +19072,68 @@ function maivStatement_(a) {
   return arts + ' total ' + _invMoney(a.total) + ', ' + (a.over ? 'over' : 'under') + ' the ' + cap + '.';
 }
 
+// ── §20.2031-6(a) — THE ITEMISATION CAP, TESTED WHERE THE DATA STILL EXISTS ───
+// ⚠⚠ THIS IS THE REAL RULE AND IT IS NOT THE ONE RETIRED ON 2026-09-22. What came off
+// was a Havellin house PAIR — $100 strict / $1,000 standard — keyed on the DOCUMENTATION
+// LEVEL, enforced by nothing, and described in the gate readout as though the level moved
+// it. Florida sets no itemisation floor at all: §733.604 and Fla. Prob. R. 5.340 both ask
+// for "reasonable detail", so on an estate filing no 706 there is no figure to apply and
+// the app must not invent one. That is why the standard tier is gone for good.
+//
+// §20.2031-6(a) differs in every one of those respects. It is federal, it is citable, it
+// carries its own number, and it governs exactly one thing: what may be GROUPED on a
+// schedule filed WITH A FORM 706. So it is gated on `maivFilingApplies` — the SAME gate
+// the aggregate in (b) reads. One gate, two consequences, which is what stops the two
+// subsections of one regulation drifting apart on one document.
+//
+// ⚠ IT IS TESTED AT CAPTURE, NOT AFTER, AND THAT IS THE WHOLE REASON THE OLD ONE COULD
+// NOT BE IMPLEMENTED. A lot row carries ONE name, ONE value and ONE quantity; there is no
+// per-article data inside it for a threshold to split later. The only moment the estate
+// can still be looked at is while the lot is being created — hence the live readout on the
+// import panel, where the mode selector is one tap away — and the desk chip for anything
+// that got in another way or was edited afterwards.
+var INV_LOT_ARTICLE_CAP = 100;
+
+// FMV IS THE LINE TOTAL everywhere in this app, so the article value a lot implies is the
+// total over the count. ⚠ That is an AVERAGE and every surface says so: thirty forks and
+// one candlestick can average under the cap with the candlestick over it. It is the only
+// figure a lot row can support — and an average ABOVE the cap is a certainty that
+// something inside the lot is above it, which is the direction that matters.
+function invLotArticleValue(ref) {
+  var q = parseInt(ref && ref.qty, 10);
+  var v = parseFloat(ref && ref.fmv);
+  if (!(q > 1) || isNaN(v)) return NaN;
+  return v / q;
+}
+
+// '' | 'over' | 'unvalued'. THREE answers rather than two, for the reason the aggregate in
+// (b) keeps `settled`: an unvalued lot has not passed the test, it has not been GIVEN one,
+// and reporting it as clear is the failure this whole area exists to prevent.
+function invLotSplitState(ref, job) {
+  if (!maivFilingApplies(job)) return '';        // the one gate — do not duplicate it upstream
+  var q = parseInt(ref && ref.qty, 10);
+  if (!(q > 1)) return '';                       // a single article is never "grouped"
+  var v = parseFloat(ref && ref.fmv);
+  if (isNaN(v)) return 'unvalued';
+  return (v / q) > INV_LOT_ARTICLE_CAP ? 'over' : '';
+}
+
+// One sentence, read by the import panel, the desk and the worklist, so the three cannot
+// state the arithmetic differently.
+function invLotSplitSentence(ref) {
+  var q = parseInt(ref && ref.qty, 10) || 0;
+  var a = invLotArticleValue(ref);
+  if (isNaN(a)) return q.toLocaleString() + ' items, no value recorded';
+  return q.toLocaleString() + ' items at ' + _invMoney(ref.fmv) + ' averages ' + _invMoney(a) + ' an article';
+}
+
+function invLotsToSplit(items, job) {
+  return (items || []).filter(function(r){ return invLotSplitState(r, job) === 'over'; });
+}
+function invLotsUntestable(items, job) {
+  return (items || []).filter(function(r){ return invLotSplitState(r, job) === 'unvalued'; });
+}
+
 function _invRefs(jobId, roomIdx) {
   return (_photoRefs[jobId] || []).filter(function(r){
     return r.roomIdx === roomIdx && r.label === 'inventory' && !r.collId;
@@ -21768,6 +21830,72 @@ function printDispositionLedger(jobId) {
 // item made the per-item cut, because the two tests are independent and the case worth
 // catching — many modest articles, none individually flagged — is exactly the one where
 // the list above is empty.
+// ⚠⚠ (a) AND (b) ARE ONE REGULATION AND THEY BELONG ON ONE PAGE, UNDER ONE GATE. (b) asks
+// whether the estate's articles of marked value, added up, need an expert's appraisal filed
+// with the return; (a) asks what may be grouped on that same return's schedule. A reviewer
+// reading one will ask the other, and a document answering only one of them invites the
+// question it cannot answer.
+//
+// ⚠ IT RENDERS ONLY WHERE IT GOVERNS, AND ONLY WHEN SOMETHING IS ACTUALLY GROUPED. On an
+// estate filing no 706 there is no itemisation floor in Florida law at all, so a line saying
+// so would be explaining an absence — the standing client-copy rule. With no lot on the
+// manifest there is nothing to disclose either. The clearance sentence, though, is NOT an
+// absence: "every grouped lot is inside the cap" is a finding, and withholding it leaves a
+// reader unable to tell a checked estate from an unchecked one.
+function _lotSplitWorklistBlock(job, items) {
+  if (!maivFilingApplies(job)) return '';
+  var lots = (items || []).filter(function(r){ return parseInt(r.qty, 10) > 1; });
+  if (!lots.length) return '';
+  var over = invLotsToSplit(lots, job);
+  var untested = invLotsUntestable(lots, job);
+  var tone = (over.length || untested.length) ? '#8a6d3b' : '#999';
+
+  var rows = over.concat(untested).map(function(r){
+    var st = invLotSplitState(r, job);
+    return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(_invItemNo(r) ? '#' + _invItemNo(r) : '—') + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + (parseInt(r.qty, 10) || 0).toLocaleString() + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">'
+      + (st === 'unvalued' ? '<span style="color:#888;">not testable</span>' : '<strong>' + _invMoney(invLotArticleValue(r)) + '</strong>') + '</td></tr>';
+  }).join('');
+
+  var tail;
+  if (over.length) {
+    tail = '<strong>' + over.length + ' grouped lot' + (over.length > 1 ? 's average' : ' averages') + ' above $'
+      + INV_LOT_ARTICLE_CAP.toLocaleString() + ' an article.</strong> Treas. Reg. §20.2031-6(a) asks for a room-by-room '
+      + 'itemisation naming each article specifically, and permits a group only where no article in it exceeds $'
+      + INV_LOT_ARTICLE_CAP.toLocaleString() + '. Split '
+      + (over.length > 1 ? 'these lots' : 'this lot') + ' into named articles before the return is prepared, or record on the line why it is properly grouped.';
+  } else if (untested.length) {
+    tail = 'Every grouped lot on this estate carries a value except ' + untested.length + ', so the cap cannot be tested '
+      + 'on ' + (untested.length > 1 ? 'those' : 'that one') + ' yet. An untested lot is not a lot inside the cap.';
+  } else {
+    tail = 'Every grouped lot averages below $' + INV_LOT_ARTICLE_CAP.toLocaleString() + ' an article, so §20.2031-6(a) '
+      + 'permits them to stand as groups on the return schedule. Re-check this as values and quantities change.';
+  }
+  if (untested.length && over.length) {
+    tail += ' A further ' + untested.length + ' lot' + (untested.length > 1 ? 's carry' : ' carries') + ' no value, so the cap cannot be tested on '
+      + (untested.length > 1 ? 'them' : 'it') + ' at all.';
+  }
+
+  return '<div style="margin-top:14px;border:1px solid ' + tone + ';border-radius:3px;padding:10px 12px;">'
+    + '<div style="font-size:12px;font-weight:700;color:' + tone + ';margin-bottom:2px;">'
+    + 'Grouped lots &mdash; Treas. Reg. §20.2031-6(a)</div>'
+    + '<div style="font-size:11px;color:#3c3228;line-height:1.5;margin-bottom:6px;">'
+    + lots.length + ' line' + (lots.length > 1 ? 's on this manifest group' : ' on this manifest groups') + ' more than one article under a single value.</div>'
+    + (rows ? '<table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:6px;">'
+      + '<thead><tr style="text-align:left;color:#888;"><th style="padding:2px 6px;">Item #</th>'
+      + '<th style="padding:2px 6px;">Lot</th>'
+      + '<th style="padding:2px 6px;text-align:right;">Articles</th>'
+      + '<th style="padding:2px 6px;text-align:right;">FMV (total)</th>'
+      + '<th style="padding:2px 6px;text-align:right;">Per article</th></tr></thead>'
+      + '<tbody>' + rows + '</tbody></table>' : '')
+    + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">' + tail + '</div>'
+    + '<div style="font-size:10px;color:#888;font-style:italic;margin-top:5px;">Per-article figures are the lot total over its count. A lot averaging under the cap can still contain a single article above it &mdash; the average is the only figure a grouped line can support.</div>'
+    + '</div>';
+}
+
 function _maivWorklistBlock(job, items, maiv) {
   // ⚠ Treas. Reg. §20.2031-6(b) GOVERNS WHAT IS FILED WITH A FEDERAL ESTATE TAX RETURN, so on
   // a living owner every word of this block is false. Measured before the gate: a Home Editing
@@ -21892,6 +22020,7 @@ function printAppraisalWorklist(jobId) {
     });
   }
   html += _maivWorklistBlock(job, maivItems, maiv);
+  html += _lotSplitWorklistBlock(job, maivItems);
   var withheld = _apprWithheld(jobId);
   var nfa = _apprNFA(jobId);
   if (nfa.length) {
@@ -22446,6 +22575,63 @@ function materializeVehicle(jobId, vehId) {
   _scheduleInventorySync(jobId);
 }
 
+// ⚠⚠ THE CAPTURE-TIME GATE. This is the one moment the estate can still be looked at: the
+// collection is on the estimate, somebody is at the desk with the walkthrough in front of
+// them, and the mode selector is one tap from the number. Once "Keep as lot" is committed
+// the row carries ONE name, ONE value and ONE quantity and there is nothing left inside it
+// for any later rule to split — which is exactly why the retired threshold could never have
+// been implemented as a post-hoc test.
+//
+// ⚠ IT READS OUT, IT DOES NOT REFUSE. The collection's value at this point is a walkthrough
+// estimate and the count is often a guess, so blocking on either would be refusing on a
+// figure nobody has stood behind yet. The house rule holds: flag, name the arithmetic, name
+// the fix. The desk chip and the worklist catch whatever is committed anyway.
+//
+// ⚠ AND THE INSIDE-THE-CAP CASE SPEAKS TOO. A silent pass is indistinguishable from a check
+// that never ran, and this is the surface whose whole job is telling somebody the grouping
+// is safe before they commit to it.
+function _impLotHintHtml(jobId, collId, defMode, defQty) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var rec = estimateStore[jobId];
+  var est = rec && rec.estimate;
+  var coll = est && (est.collections || []).find(function(c){ return c.id === collId; });
+  if (!coll) return '';
+  var mEl = document.getElementById('imp-mode-' + collId);
+  var qEl = document.getElementById('imp-qty-'  + collId);
+  var mode = (mEl && mEl.value) || defMode || 'lot';
+  if (mode !== 'lot') return '';                 // itemising IS the fix; say nothing about it
+  // ⚠ A BLANK BOX IS NOT A QUANTITY OF ONE. On the first paint the input does not exist
+  // yet (this is called while the row is being built), and mid-edit it can legitimately be
+  // empty for a keystroke. Either way the panel's own default is the better answer than
+  // silently reading 1 and reporting a single article, which is never flagged.
+  var qRaw = (qEl && String(qEl.value || '').trim()) || String(defQty == null ? '' : defQty);
+  var qty = Math.max(1, parseInt(qRaw, 10) || 1);
+  var probe = { qty: String(qty), fmv: _numOrBlank(coll.value) };
+  var st = invLotSplitState(probe, job);
+  if (!st) {
+    // ⚠⚠ '' IS OVERLOADED AND THE CONFIRMATION MUST NOT TAKE IT AT FACE VALUE. The
+    // predicate answers '' both for "this lot is inside the cap" and for "no cap applies here",
+    // and only the first is worth confirming — the second would tell an estate filing no
+    // federal return that its lot sits inside a FEDERAL cap. Caught by the driven panel test,
+    // not by reading: the helper looked right in isolation and was wrong on the join.
+    if (!maivFilingApplies(job)) return '';
+    if (qty < 2 || isNaN(parseFloat(probe.fmv))) return '';
+    return '<span style="color:var(--gray);">&#10003; ' + esc(invLotSplitSentence(probe))
+      + ' &mdash; inside the $' + INV_LOT_ARTICLE_CAP.toLocaleString() + ' §20.2031-6(a) grouping cap.</span>';
+  }
+  if (st === 'unvalued') {
+    return '<span style="color:var(--gray);">' + esc(invLotSplitSentence(probe))
+      + ' &mdash; the $' + INV_LOT_ARTICLE_CAP.toLocaleString() + ' §20.2031-6(a) grouping cap cannot be tested until one is.</span>';
+  }
+  return '<span style="color:var(--bronze);font-weight:700;">&#9888; ' + esc(invLotSplitSentence(probe))
+    + ' &mdash; above the $' + INV_LOT_ARTICLE_CAP.toLocaleString() + ' §20.2031-6(a) grouping cap.</span>'
+    + '<span style="color:var(--gray);"> Itemize it, or record on the line why it is properly grouped.</span>';
+}
+function _impLotHint(jobId, collId) {
+  var el = document.getElementById('imp-hint-' + collId);
+  if (el) el.innerHTML = _impLotHintHtml(jobId, collId);
+}
+
 function _renderInventoryImportPanel(jobId) {
   var imp = _importableFromEstimate(jobId);
   var total = imp.collections.length + imp.vehicles.length;
@@ -22456,7 +22642,7 @@ function _renderInventoryImportPanel(jobId) {
     var catSel = '<select id="imp-cat-' + c.id + '" style="font-size:11px;padding:2px 4px;">'
       + INV_CATEGORIES.map(function(x){ return '<option' + (x === guess ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>';
     var defMode = (guess === 'Art & Décor' || guess === 'Jewelry & Watches') ? 'itemize' : 'lot';
-    var modeSel = '<select id="imp-mode-' + c.id + '" style="font-size:11px;padding:2px 4px;">'
+    var modeSel = '<select id="imp-mode-' + c.id + '" onchange="_impLotHint(' + jobId + ',' + c.id + ')" style="font-size:11px;padding:2px 4px;">'
       + '<option value="lot"' + (defMode === 'lot' ? ' selected' : '') + '>Keep as lot</option>'
       + '<option value="itemize"' + (defMode === 'itemize' ? ' selected' : '') + '>Itemize</option></select>';
     var qtyGuess = parseInt(c.qty, 10) || 1;
@@ -22464,9 +22650,11 @@ function _renderInventoryImportPanel(jobId) {
       + '<td style="font-size:11px;"><strong>' + esc(c.name) + '</strong>' + (c.value && c.value !== 'Unknown' ? ' <span style="color:var(--gray);">&middot; ' + esc(fmtColVal(c.value)) + '</span>' : '') + '</td>'
       + '<td>' + catSel + '</td>'
       + '<td>' + modeSel + '</td>'
-      + '<td><input type="number" id="imp-qty-' + c.id + '" value="' + qtyGuess + '" min="1" style="width:50px;font-size:11px;padding:2px 4px;text-align:center;"></td>'
+      + '<td><input type="number" id="imp-qty-' + c.id + '" value="' + qtyGuess + '" min="1" oninput="_impLotHint(' + jobId + ',' + c.id + ')" style="width:50px;font-size:11px;padding:2px 4px;text-align:center;"></td>'
       + '<td><button class="btn-s" onclick="materializeCollection(' + jobId + ',' + c.id + ')">Add &rarr;</button></td>'
-      + '</tr>';
+      + '</tr>'
+      + '<tr><td colspan="5" id="imp-hint-' + c.id + '" style="font-size:10.5px;line-height:1.45;padding:0 6px 6px;border-bottom:1px solid #eee;">'
+      + _impLotHintHtml(jobId, c.id, defMode, qtyGuess) + '</td></tr>';
   });
   imp.vehicles.forEach(function(v) {
     var name = _vehicleLineName(v);   // one rule, one place — this copy printed the year twice
@@ -23024,6 +23212,12 @@ var INV_WORK_FLAGS = [
   {key:'undecided', label:'Not yet decided', test:function(r){ return !r.disposition; }},
   // fid: a living job enters no values, so this would count every row on the job forever.
   {key:'noval',     label:'No value yet',    fid:true, test:function(r){ return _invNeedsValue(r); }},
+  // ⚠ CONDITIONAL, NOT MERELY `fid` — §20.2031-6(a) governs a Form 706 schedule, so on an
+  // estate filing none there is no floor and this chip must not render at all. A count that
+  // is structurally always 0 is how a reader learns to skip the whole strip; this file
+  // records that costing the workbook's "Items Awaiting Valuation" row its meaning.
+  {key:'lotsplit',  label:'Lots to split',   fid:true, when:function(job){ return maivFilingApplies(job); },
+   test:function(r, job){ return invLotSplitState(r, job) === 'over'; }},
   {key:'appr',      label:'Needs appraiser',  test:function(r, job){ return invNeedsAppraisal(r, job); },
    livingLabel:'To a specialist'},
   // ⚠ THE COUNT ANTHONY'S DECISION TURNS ON: what is leaving the property with nobody recorded
@@ -23038,7 +23232,7 @@ var INV_WORK_FLAGS = [
 // catalogue, which is how the app's and the backend's disposition lists drifted 5-against-7.
 function invWorkFlags(job) {
   var fid = invFiduciaryMode(job);
-  return INV_WORK_FLAGS.filter(function(f){ return fid || !f.fid; }).map(function(f){
+  return INV_WORK_FLAGS.filter(function(f){ return (fid || !f.fid) && (!f.when || f.when(job)); }).map(function(f){
     return (!fid && f.livingLabel) ? { key:f.key, label:f.livingLabel, test:f.test } : f;
   });
 }
@@ -31226,10 +31420,18 @@ function invAppraisalThreshold(job) {
 // §8 of ESTATE_SCOPE_SPEC.md records that **Florida sets no statutory itemisation floor**: the
 // $100 / $1,000 were Havellin house rules and were being presented as a documentation standard.
 // Deleted rather than left returning a number — a retired rule that still compiles is how one
-// comes back, and this one had already been quoted into four documents.
-// ⚠ Treas. Reg. 20.2031-6(a)'s $100-an-article cap is real and is NOT what was removed: it
-// governs what is filed WITH a Form 706, and the MAIV aggregate (`invIsMAIV`, §20.2031-6(b))
-// is where that regulation is actually implemented. Do not reintroduce this as a second copy.
+// comes back, and this one had already been quoted into four documents. The $1,000 standard tier
+// has no source anywhere and must never return in any form.
+// ⚠⚠ BUT Treas. Reg. §20.2031-6(a)'s $100-an-article grouping cap IS real, and as of
+// 2026-09-22 it IS BUILT — as `INV_LOT_ARTICLE_CAP` / `invLotSplitState`, tested at CAPTURE on a
+// 706 estate and gated on `maivFilingApplies`, beside the aggregate in (b). That is a different
+// rule from the one retired here in every respect that mattered: federal rather than house,
+// citable rather than invented, keyed on the 706 gate rather than on the documentation level, and
+// applied where the per-article data still exists rather than to a lot row that no longer carries
+// any. ⚠ An earlier version of this note said (a) was "actually implemented" by the MAIV
+// aggregate; that was wrong — §20.2031-6(b) is a different subsection asking a different
+// question, and (a) was implemented nowhere at all. What must not come back is a floor keyed on
+// `isFormalDoc`: the level is not what moves this, the 706 gate is.
 
 // What the level actually DOES, said in every branch of the readout — because "Strict Mode"
 // asserted without its consequences is a label rather than an explanation, which is how the
