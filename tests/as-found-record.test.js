@@ -76,11 +76,16 @@ function rig(over) {
           '_invDocHead', '_invPrintThumb', 'resolveValBasis', 'estateValueDate', '_avdDate',
           'buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
           'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf',
+          // ⚠ AXIS 3 (`statesValues`) RIDES THE SAME PAYLOAD. Lifted rather than stubbed for
+          // the same reason as Axis 2: a stub is exactly what would let the app's idea of
+          // "are we contracted to state values" drift from the workbook's.
+          'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
           '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs', '_warnPhotoStoreFull',
           'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat'],
     vars: ['jobPlanStore', 'estimateStore', 'AS_FOUND_COLUMNS', 'INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'MATTER_TYPES',
            'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'INV_VAL_BASES',
-           'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_CAT_GLYPH'],
+           'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_CAT_GLYPH',
+           'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     stubs: {
       jobs: [Object.assign({}, JOB, over.job || {})],
       _photoRefs: { 7: over.refs || [] },

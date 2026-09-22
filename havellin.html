@@ -1198,7 +1198,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.21 · 11:12pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:07am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -19994,14 +19994,24 @@ function _renderInventorySummary(job, items) {
   // probate administration; the valuation apparatus above them is NOT and stays, because
   // date-of-death FMV does the same three jobs for a successor trustee that it does for a PR.
   var _pr = _fid && invProbateRows(job);
+  // ⚠⚠ AND THE THIRD AXIS: WHAT THE CLIENT IS CONTRACTED TO RECEIVE. At the `contents`
+  // tier the agreement says counsel values the property and Havellin states no opinion of
+  // value — and this block opened with a Valuation Basis DROPDOWN, a §2032 alternate-valuation
+  // election, a "Total Estimated FMV" of $0 and an "Items Awaiting Valuation" count that can
+  // never fall, because by contract nobody enters a value. Same defect as the death claim and
+  // the court claim, one axis over.
+  // ⚠ IT READS THE PRODUCES FLAG, NEVER THE TIER KEY — `contents` and `none` both answer
+  // false, and a reader testing the key would have to remember both.
+  var _sv = _fid && docTierProduces(job, 'values');
   var header = '<div>'
     + hdrRow(_fid ? 'Client / Estate' : 'Client', esc(job.name || '—'))
     + hdrRow('Job ID', esc(job.hvlId || '—'))
     + hdrRow('Property Address', esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—'))
     + (!_fid ? '' : ''
     + hdrRow('Date of Death', dt(job.deathDate))
+    + (!_sv ? '' : ''
     + hdrRow('Valuation Basis', '<select onchange="setValBasis(' + job.id + ',this.value)" style="font-size:11px;padding:2px 4px;">' + INV_VAL_BASES.map(function(b){ return '<option' + (b === resolveValBasis(job) ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>')
-    + hdrRow('Value as of', '<label style="font-weight:400;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap;"><span>' + (job.avd && job.deathDate ? esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>' : dt(job.deathDate) + ' <span style="color:var(--gray);">(date of death)</span>') + '</span><input type="checkbox"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + job.id + ',this.checked)" title="Use the §2032 alternate valuation date — 6 months after death (taxable estates only)" style="accent-color:var(--bronze);"></label>')
+    + hdrRow('Value as of', '<label style="font-weight:400;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap;"><span>' + (job.avd && job.deathDate ? esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>' : dt(job.deathDate) + ' <span style="color:var(--gray);">(date of death)</span>') + '</span><input type="checkbox"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + job.id + ',this.checked)" title="Use the §2032 alternate valuation date — 6 months after death (taxable estates only)" style="accent-color:var(--bronze);"></label>'))
     + (!_pr ? '' : ''
     + hdrRow('Letters Issued', dt(job.lettersDate))
     + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline))))
@@ -20013,8 +20023,11 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Total Items', String(items.length))
     // ⚠ "Items Awaiting Valuation" reads every row on a living job forever, because nobody is
     // entering values — a count that cannot go down trains people to stop reading the block.
-    + (_fid ? hdrRow('Total Estimated FMV', _money(totalFMV) || '$0') : '')
-    + (_fid ? hdrRow('Items Awaiting Valuation', String(awaiting)) : '')
+    // ⚠⚠ AND THE SAME IS TRUE AT THE `contents` TIER, BY CONTRACT rather than by habit: the
+    // engagement says counsel does the valuing, so the count equals the item count on every
+    // write and the total is $0 on a house full of property.
+    + (_sv ? hdrRow('Total Estimated FMV', _money(totalFMV) || '$0') : '')
+    + (_sv ? hdrRow('Items Awaiting Valuation', String(awaiting)) : '')
     + hdrRow(_fid ? 'Needs Specialist Appraisal' : 'Going to a specialist', String(nAppr))
     + (_fid ? hdrRow('MAIV Articles (§20.2031-6(b))', maiv.count
         ? String(maiv.count) + ' &middot; ' + (maiv.settled ? '' : 'at least ') + _invMoney(maiv.total)
@@ -20026,12 +20039,20 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Fees', _money(fees) || '$0')
     + hdrRow(_fid ? 'Net to Estate' : 'Net received', _money(gross - fees) || '$0')
     + '</div>';
+  // ⚠⚠ COUNTS WHERE WE STATE NO VALUES, AND THIS CLOSED A SCREEN/WORKBOOK DISAGREEMENT THAT
+  // WAS ALREADY LIVE. `_writeSummarySheet` has branched to an ITEMS BY CATEGORY count block on a
+  // living job since 2026-09-21; this table did not, so the family's own workbook counted while
+  // the screen beside it priced the same rows at $0. One predicate now drives both.
+  var _catMoney = _sv;
   var catRows = INV_CATEGORIES.map(function(c){
-    return '<tr><td>' + esc(c) + '</td><td style="text-align:right;">' + (catAgg[c].count || 0) + '</td><td style="text-align:right;">' + (_money(catAgg[c].fmv) || '$0') + '</td></tr>';
+    return '<tr><td>' + esc(c) + '</td><td style="text-align:right;">' + (catAgg[c].count || 0) + '</td>'
+      + (_catMoney ? '<td style="text-align:right;">' + (_money(catAgg[c].fmv) || '$0') + '</td>' : '') + '</tr>';
   }).join('');
-  var catTable = '<table class="vtbl" style="font-size:11px;"><thead><tr><th>FMV by Category</th><th style="text-align:right;">Count</th><th style="text-align:right;">FMV</th></tr></thead><tbody>'
+  var catTable = '<table class="vtbl" style="font-size:11px;"><thead><tr><th>' + (_catMoney ? 'FMV by Category' : 'Items by Category') + '</th><th style="text-align:right;">Count</th>'
+    + (_catMoney ? '<th style="text-align:right;">FMV</th>' : '') + '</tr></thead><tbody>'
     + catRows
-    + '<tr style="font-weight:700;"><td>Total</td><td style="text-align:right;">' + items.length + '</td><td style="text-align:right;">' + (_money(totalFMV) || '$0') + '</td></tr></tbody></table>';
+    + '<tr style="font-weight:700;"><td>Total</td><td style="text-align:right;">' + items.length + '</td>'
+    + (_catMoney ? '<td style="text-align:right;">' + (_money(totalFMV) || '$0') + '</td>' : '') + '</tr></tbody></table>';
   var dispRows = INV_DISPOSITIONS.map(function(d){
     return '<tr><td>' + esc(d) + '</td><td style="text-align:right;">' + (dispAgg[d] || 0) + '</td></tr>';
   }).join('');
@@ -23941,6 +23962,16 @@ function buildInventoryPayload(jobId) {
     // is exactly one place that knows what `both` means.
     // ⚠ ABSENT MEANS TRUE server-side, so an app build older than today keeps the probate rows.
     onProbate: invProbateRows(job),
+    // ⚠⚠ AND AXIS 3 — WHAT THE ENGAGEMENT IS CONTRACTED TO PRODUCE. At the `contents` tier
+    // the agreement says counsel values the property; the workbook's Summary still opened with
+    // "Total Estimated FMV $0", an "Items Awaiting Valuation" count equal to the item count on
+    // every write, and an FMV BY CATEGORY rollup of empty columns — a valuation Havellin
+    // contracted NOT to produce, on the spreadsheet the client keeps.
+    // ⚠ DERIVED, NEVER THE TIER KEY. Sending `docTier` would make the server hold its own copy
+    // of DOC_TIERS to know that `contents` and `none` both state no values — the 6-against-13
+    // category drift again, and there are two keys to forget rather than one.
+    // ⚠ ABSENT MEANS TRUE server-side, so an app build older than today is unchanged.
+    statesValues: docTierProduces(job, 'values'),
     preparedBy: 'Havellin Palm Beach, LLC',
     valBasis: resolveValBasis(job),
     // Sent so the workbook's Summary rollups cannot drift from the app again. The

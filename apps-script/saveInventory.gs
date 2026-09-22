@@ -239,6 +239,16 @@ function _writeSummarySheet(ss, payload) {
   // bad failure. Only an explicit false withholds, and the app only sends false on `trust` or
   // `neither`. Compared as a STRING so a boolean and a stringified boolean read alike.
   var pr = fid && String(payload.onProbate) !== 'false';
+  // ⚠⚠ AXIS 3 — IS HAVELLIN CONTRACTED TO STATE VALUES AT ALL? At the `contents` and `none`
+  // tiers the agreement says counsel values the property, and this sheet still opened with a
+  // "Total Estimated FMV" of $0, an "Items Awaiting Valuation" count that equals the item count
+  // on every write because by contract nobody enters a value, and an FMV BY CATEGORY rollup over
+  // empty columns. The third statement this Summary made that the engagement did not support.
+  // ⚠ THE APP STATES IT DERIVED. The server cannot answer it from the rows, and deriving it from
+  // a tier key would need its own copy of DOC_TIERS — the category-list drift, again.
+  // ⚠ ABSENT MEANS TRUE, so a payload from an app build older than 2026-09-22 renders exactly
+  // what it rendered yesterday rather than stripping the valuation off a live estate.
+  var sv = fid && String(payload.statesValues) !== 'false';
 
   // ⚠ THE FILE NAME AND THE FOLDER STAY 'Estate Inventory' ON BOTH SIDES — Anthony's call,
   // and `saveInventory` looks the workbook up BY NAME, so a branched name would not rename
@@ -286,7 +296,7 @@ function _writeSummarySheet(ss, payload) {
   // them — so the count would equal the item count on every write and never fall, which is
   // how a reader learns to skip the whole block.
   var fmvRow = 0;
-  if (fid) {
+  if (sv) {
     fmvRow = t;
     put(t,1,'Total Estimated FMV');      sh.getRange(t,2).setFormula('=SUM(' + rng(C.fmv) + ')').setNumberFormat('$#,##0'); t++;
     put(t,1,'Items Awaiting Valuation'); sh.getRange(t,2).setFormula('=COUNTIFS(' + rng(C.item) + ',">0",' + rng(C.fmv) + ',"")'); t++;
@@ -328,7 +338,7 @@ function _writeSummarySheet(ss, payload) {
   // which was only safe while the category list was six long; at thirteen the category
   // rows would have run straight through the disposition heading.
   var r = 2, first;
-  if (fid) {
+  if (sv) {
     put(r,4,'FMV BY CATEGORY'); bold(r,4); put(r,5,'FMV'); put(r,6,'Count');
     r++; first = r;
     for (var i = 0; i < cats.length; i++, r++) {
@@ -344,6 +354,9 @@ function _writeSummarySheet(ss, payload) {
   } else {
     // Counts, not money. A column headed FMV over an engagement that prices nothing is an
     // invitation to read the blanks as zeroes and the total as a valuation of the house.
+    // ⚠ REACHED BY A LIVING JOB *AND* BY AN ESTATE CONTRACTED AT `contents` or `none`, which is
+    // why the branch reads `sv` rather than `fid`: the two arrive here for different reasons and
+    // want the same answer.
     put(r,4,'ITEMS BY CATEGORY'); bold(r,4); put(r,5,'Count');
     r++; first = r;
     for (var k = 0; k < cats.length; k++, r++) {

@@ -34,13 +34,16 @@
 // over-claims would be worse than no list at all.
 //
 // ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
-// ⚠ 2026-09-21a AND -b ARE BOTH `saveInventory.gs`, not this file — one project, one
+// ⚠ 2026-09-21a, -21b AND -22a ARE ALL `saveInventory.gs`, not this file — one project, one
 // deployment, and this constant is the ONLY thing the app can read to tell which vintage is
-// serving. The Summary sheet branches on `payload.docSet` from -a and on `payload.onProbate`
-// from -b. An older deployment ignores whichever flag it predates and keeps printing Date of
-// Death, Letters Issued and a §733.604 court deadline — on a LIVING client's own workbook
-// before -a, and on a TRUST estate's before -b.
-var BACKEND_VERSION = '2026-09-21b';
+// serving. The Summary sheet branches on `payload.docSet` from -21a, on `payload.onProbate`
+// from -21b and on `payload.statesValues` from -22a. An older deployment ignores whichever flag
+// it predates: before -21a it prints Date of Death, Letters Issued and a §733.604 court
+// deadline on a LIVING client's own workbook; before -21b it prints Letters and the deadline on
+// a TRUST estate's; and before -22a it prints a Total Estimated FMV, an Items Awaiting
+// Valuation count and an FMV BY CATEGORY rollup on an estate CONTRACTED AT `contents` or
+// `none`, where the agreement says counsel does the valuing.
+var BACKEND_VERSION = '2026-09-22a';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',

@@ -793,5 +793,161 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(Th, 'trust instrument', 'the footer says what is administered elsewhere');
     lacks(Th, 'court inventory', '⚠ and cites no court filing');
     has(Ph, 'court inventory', '…while the probate footer is untouched');
+
+    // ───────────────────────────────────────────────────────
+    group('⚠⚠ …AND A VALUATION THE ENGAGEMENT CONTRACTED NOT TO PRODUCE — the same sheet, axis 3');
+
+    // The `contents` tier's agreement says counsel builds the inventory and Havellin "states no
+    // opinion of value". Both surfaces still opened with the full valuation apparatus. Measured
+    // on the pre-change build, a probate estate with two unvalued items:
+    //
+    //   screen   Valuation Basis <select> · Value as of + §2032 tick · Total Estimated FMV $0
+    //            · Items Awaiting Valuation 2 · FMV by Category, every row $0
+    //   workbook Total Estimated FMV $0 · Items Awaiting Valuation · FMV BY CATEGORY
+    //
+    // "Items Awaiting Valuation" is the one that cannot correct itself: at this tier nobody
+    // enters a value BY CONTRACT, so the count equals the item count on every write and never
+    // falls — which is how a reader learns to skip the whole block. This file already records
+    // that exact failure on a living job; here it is the contract rather than the habit.
+    const V_TIER = (t) => Object.assign({}, ESTATE, { docTier: t });
+    const pv = sandbox({ fns: ['docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
+                         vars: ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
+
+    // ⚠ IT READS `produces.values`, NOT THE TIER KEY. `contents` and `none` both answer false for
+    // different reasons, and a reader testing keys has two to forget rather than none.
+    eq(pv.docTierProduces(V_TIER('contents'), 'values'), false, 'a capture engagement states no values');
+    eq(pv.docTierProduces(V_TIER('none'), 'values'), false, '…and neither does one where counsel inventories');
+    eq(pv.docTierProduces(V_TIER('values'), 'values'), true, 'the values tier does');
+    eq(pv.docTierProduces(V_TIER('appraisals'), 'values'), true, '…and so does the top tier');
+    eq(pv.docTierProduces(ESTATE, 'values'), true,
+       '⚠⚠ an UNANSWERED tier reads as `values` — every estate recorded before the tier existed');
+    eq(pv.docTierProduces(LIVING, 'values'), false, 'and a living service prices no document step at all');
+
+    // ── THE WORKBOOK, driven on the real writer.
+    const CAP = labels(render(Object.assign({ docSet: 'estate', onProbate: true, statesValues: false }, base)));
+    const VAL = labels(render(Object.assign({ docSet: 'estate', onProbate: true, statesValues: true  }, base)));
+
+    ['Total Estimated FMV', 'Items Awaiting Valuation', 'FMV BY CATEGORY'].forEach((row) => {
+      ok(CAP.indexOf(row) < 0, '⚠ "' + row + '" is off a capture engagement\'s workbook');
+      ok(VAL.indexOf(row) >= 0, '…and still on one we were paid to value');
+    });
+    ok(CAP.indexOf('ITEMS BY CATEGORY') >= 0,
+       '⚠⚠ the rollup COUNTS instead — a column headed FMV over columns we contracted to leave '
+       + 'empty reads as a valuation of the house, which is the claim this whole gate removes');
+    ok(VAL.indexOf('ITEMS BY CATEGORY') < 0, '…and the money rollup is untouched where it is ours to state');
+
+    // ⚠⚠ WHAT MUST NOT COME OFF, and every one of these is a fact about the MATTER rather than a
+    // claim about our deliverable. Gating them would be the opposite defect.
+    ['Date of Death', 'Letters Issued', '§733.604 Inventory Deadline', 'Exempt §732.402',
+     'Specific Bequests', 'Disputed / Hold', 'Gross', 'Fees', 'Net to Estate', 'Total Items',
+     'ESTATE TOTALS', 'Client / Estate', 'DISPOSITION'].forEach((row) => {
+      ok(CAP.indexOf(row) >= 0, '⚠⚠ "' + row + '" STAYS at the contents tier');
+    });
+    ok(CAP.some((v) => v.indexOf('§733.604 court inventory') >= 0),
+       '…and so does the footer — what counsel files is unaffected by who values it');
+
+    // The header block is sequential, so two rows disappearing must not leave a hole, and the
+    // FMV back-reference must not survive the row it names.
+    const Cc = render(Object.assign({ docSet: 'estate', onProbate: true, statesValues: false }, base));
+    eq(rowOf(Cc, 'Total Items') + 2, (Cc.find((x) => x.v === 'FLAGS' && x.c === 1) || {}).r,
+       '⚠ no gap where the two valuation rows were');
+    ok(!Cc.some((x) => x.c === 4 && /should equal B/.test(x.v)),
+       '⚠ and no "should equal B‹n›" back-reference to a row that was never written');
+    const Vc = render(Object.assign({ docSet: 'estate', onProbate: true, statesValues: true }, base));
+    ok(Vc.some((x) => x.c === 4 && x.v === 'Total (should equal B' + rowOf(Vc, 'Total Estimated FMV') + ')'),
+       '…while the valued sheet still points at the row the total landed on');
+    ok(!Cc.some((x) => x.formula && x.c === 5 && x.v.indexOf('SUMIF') >= 0),
+       '⚠⚠ and NOTHING sums the FMV column — the money is gone from the sheet, not merely unlabelled');
+
+    // ⚠⚠ ABSENT MEANS TRUE. An app build older than 2026-09-22a sends no flag and must render
+    // exactly what it rendered yesterday rather than stripping the valuation off a live estate.
+    eq(labels(render(Object.assign({ docSet: 'estate', onProbate: true }, base))).join('|'), VAL.join('|'),
+       '⚠⚠ no statesValues keeps the whole valuation block, byte for byte');
+    eq(labels(render(Object.assign({ docSet: 'estate', onProbate: true, statesValues: 'false' }, base))).join('|'),
+       CAP.join('|'), 'and a stringified false reads the same as a boolean one');
+
+    // ⚠ THE THREE AXES COMPOSE AND ARE INDEPENDENT. A trust matter at the contents tier withholds
+    // the court rows AND the valuation, and neither gate is doing the other's work.
+    const TC = labels(render(Object.assign({ docSet: 'estate', onProbate: false, statesValues: false }, base)));
+    ok(TC.indexOf('Letters Issued') < 0 && TC.indexOf('Total Estimated FMV') < 0,
+       '⚠ a trust matter at the contents tier withholds both');
+    ok(TC.indexOf('Date of Death') >= 0 && TC.indexOf('Specific Bequests') >= 0,
+       '…and still holds what neither gate is about');
+    eq(labels(render(Object.assign({ docSet: 'contents', statesValues: true }, base))).join('|'), L.join('|'),
+       '⚠ the flag says nothing about a living job — Axis 2 already withheld the lot');
+
+    // ── THE SCREEN. The two surfaces must not disagree; that was the whole finding of the
+    // living-client fix and fixing one without the other is how it comes back.
+    const scr = (tier) => {
+      const j = Object.assign({}, ESTATE, { docTier: tier });
+      const r = rig(j, [ITEM('v1', { fmv: '', disposition: 'Keep' }),
+                        ITEM('v2', { fmv: '', disposition: 'Donate' })]);
+      return r.ctx._renderInventorySummary(j, r.ctx._jobInvRefs(7));
+    };
+    const Hc = scr('contents'), Hv = scr('values'), Hn = scr('none');
+
+    // ⚠⚠ THE BASIS IS AN EDITABLE DROPDOWN AND THE §2032 TICK IS A TAX ELECTION. Leaving them on
+    // a capture engagement asks a concierge to choose the basis of, and the date for, a valuation
+    // Havellin is not producing — the "control for a proceeding that does not exist" defect one
+    // axis over. Nothing else reads either field at this tier: the four documents that state a
+    // basis are already withheld here by the contract gate.
+    ['Valuation Basis', 'setValBasis', 'Value as of', 'setEstateAVD',
+     'Total Estimated FMV', 'Items Awaiting Valuation', 'FMV by Category'].forEach((r) => {
+      lacks(Hc, r, '⚠ "' + r + '" is off a capture engagement\'s summary');
+      lacks(Hn, r, '…and off a counsel-inventories one');
+      has(Hv, r, '…and on one we were paid to value');
+    });
+    has(Hc, 'Items by Category',
+        '⚠⚠ the screen counts too — the writer has branched to a count block since 2026-09-21 and '
+        + 'this table did not, so the workbook counted while the screen beside it priced at $0');
+
+    // ⚠⚠ THE CONVERSE, and MAIV is the one worth arguing about. §20.2031-6(b) is a FEDERAL FILING
+    // requirement on the ESTATE — an expert appraisal under oath with the 706 — and it does not
+    // stop applying because Havellin is not the one valuing. At this tier every article is
+    // unvalued, so the notice reads "the $3,000 aggregate cannot be tested yet … value them
+    // before the return is prepared", which is exactly what counsel needs to see. Withholding it
+    // would suppress a filing prompt on an estate that owes one.
+    ['Date of Death', 'Letters Issued', '§733.604', 'Specific Bequests', 'Net to Estate',
+     'Gross Proceeds', 'Total Items', 'Going to a specialist', 'Needs Specialist Appraisal',
+     'MAIV Articles'].forEach((r) => {
+      if (Hv.indexOf(r) >= 0) ok(Hc.indexOf(r) >= 0, '⚠⚠ "' + r + '" STAYS on the screen at contents');
+    });
+
+    // ── AND THE APP ACTUALLY SENDS IT — the join a source check cannot see. A build that derives
+    // the flag and never puts it on the payload contains every string a grep would look for.
+    const pay = sandbox({
+      fns: ['buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
+            '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs', '_warnPhotoStoreFull',
+            'resolveValBasis', 'estateValueDate', '_avdDate', 'invIsFirearm', 'invIsMAIV',
+            'invMAIVCategory', 'invMAIVDefaultCat', 'invFiduciaryMode', 'isDecedentJob',
+            'invProbateRows', 'matterDef', 'matterTypeOf',
+            'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
+            '_asFoundRows', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest',
+            '_roomFoundDone', '_afTime', '_afDate'],
+      vars: ['INVENTORY_COLUMNS', 'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'INV_VAL_BASES',
+             'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'MATTER_TYPES',
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AS_FOUND_COLUMNS',
+             'estimateStore', 'jobPlanStore'],
+      stubs: { jobs: [V_TIER('contents'), Object.assign({}, ESTATE, { id: 71, docTier: 'values' }),
+                      Object.assign({}, ESTATE, { id: 72 })],
+               _photoRefs: { 7: [], 71: [], 72: [] }, fmtDate2: (d) => String(d || '') },
+    });
+    eq(pay.buildInventoryPayload(7).statesValues, false, '⚠ a contents estate tells the server to withhold');
+    eq(pay.buildInventoryPayload(71).statesValues, true, 'a values estate does not');
+    eq(pay.buildInventoryPayload(72).statesValues, true,
+       '⚠⚠ and an unanswered tier keeps the valuation — no job priced before today moves');
+    has(live, "statesValues: docTierProduces(job, 'values')",
+        '⚠ the payload carries the DERIVED answer rather than the tier key, so the server never '
+        + 'needs its own copy of DOC_TIERS to know that `contents` and `none` both state nothing');
+    const _bip = live.slice(live.indexOf('function buildInventoryPayload('));
+    lacks(_bip.slice(0, _bip.indexOf('\n}') + 2), 'docTier:',
+          '⚠⚠ and the raw key is NOT on the wire — two keys to forget rather than none');
+
+    // ⚠ A FLOOR, NOT TODAY'S LITERAL. What this states is the consequence: an older deployment
+    // ignores the flag and keeps printing a valuation on an engagement contracted without one.
+    ok((fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'main-sync.gs'), 'utf8')
+        .match(/BACKEND_VERSION = '([^']+)'/) || [])[1] >= '2026-09-22a',
+       '⚠⚠ the deployment must be at least 2026-09-22a or the workbook still states a value on a '
+       + 'capture engagement');
   }
 };

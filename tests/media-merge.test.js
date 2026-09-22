@@ -362,6 +362,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // asserting a death on a living client's own spreadsheet. Lifted, not
             // stubbed — a stub here would let the two sides of that flag drift.
             'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf',
+            // ⚠ AXIS 3 (`statesValues`) RIDES THE SAME PAYLOAD. Lifted rather than stubbed for
+            // the same reason as Axis 2: a stub is exactly what would let the app's idea of
+            // "are we contracted to state values" drift from the workbook's.
+            'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
             // The as-found index rides the same payload, so the real chain runs here rather
             // than a stub: this is the one place the manifest and the workbook meet, and a
             // throw anywhere in it would otherwise surface on a client's spreadsheet.
@@ -369,6 +373,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       vars: ['INVENTORY_COLUMNS', 'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS',
              'INV_VAL_BASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AS_FOUND_COLUMNS',
              'DECEDENT_SERVICES', 'MATTER_TYPES',
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
              'estimateStore', 'jobPlanStore'],
       stubs: { fmtDate2: (d) => String(d || '') },
     });
