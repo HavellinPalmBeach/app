@@ -93,6 +93,37 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(kinds.size >= 2, 'holding more than one kind of control (' + Array.from(kinds).join(', ') + ')');
     kinds.forEach((k) => ok(covered.indexOf(k) >= 0,
       'the gate-cell rule covers <' + k + '>, which the markup puts in one'));
+
+    // ⚠⚠ AND THE OTHER HALF, WHICH THE RULE ABOVE CANNOT SEE: A ROW MUST NOT MIX THEM.
+    // A gate-cell carries a hint under its control, so it is normally the TALLEST cell in its
+    // row — and every plain cell beside it then has `margin-top:auto` pushing its control to the
+    // bottom of that height while the gate-cell's sits at the top. Measured 49px apart on the
+    // Authorized Representative row when the Letters control was added on 2026-09-22: the rule
+    // was correct, the cell beside it was not. The fix is that both cells take the class, which
+    // is what the two documentation-gate rows already do.
+    // ⚠ AN EMPTY SPACER CELL IS EXEMPT, and that is not a loophole: there is no control in it
+    // to misalign, and the estate block uses one to hold a half-width row open.
+    const rows = [];
+    const rre = /<div class="row"[^>]*>/g;
+    let rm;
+    while ((rm = rre.exec(src)) !== null) {
+      let i = rm.index + rm[0].length, depth = 1, open = -1;
+      const kids = [];
+      while (i < src.length && depth > 0) {
+        if (src.startsWith('<div', i)) { if (depth === 1) open = i; depth++; }
+        else if (src.startsWith('</div>', i)) { depth--; if (depth === 1 && open >= 0) { kids.push(src.slice(open, i)); open = -1; } }
+        i++;
+      }
+      if (kids.length) rows.push({ at: rm.index, kids });
+    }
+    ok(rows.length > 10, 'the intake rows really were parsed (' + rows.length + ')');
+    const mixed = rows.filter((r) => {
+      const gate = r.kids.filter((k) => /^<div[^>]*class="[^"]*gate-cell/.test(k));
+      if (!gate.length || gate.length === r.kids.length) return false;
+      // only a cell that HOLDS a control can be misaligned
+      return r.kids.some((k) => !/gate-cell/.test(k) && /<(input|select|textarea)\b/.test(k));
+    }).map((r) => 'line ' + (src.slice(0, r.at).split('\n').length));
+    eq(mixed, [], 'no .row mixes a gate-cell with a plain cell that holds a control');
   }
 
   group('the build stamp is in the markup, not in the stylesheet');

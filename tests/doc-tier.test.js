@@ -199,14 +199,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The intake markup is an EMPTY <select> on purpose, so a build that stops filling it renders
     // the one question this whole step exists to ask as a blank box with nothing in it — and the
     // catalogue, the builder and the markup all still look right on their own.
-    const EC_FNS = ['showEditClient', 'saveClientEdit', 'ecIsProbateSvc', 'ecIsEstateSvc',
+    const EC_FNS = ['showEditClient', 'saveClientEdit', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
       'ecDocGateChange', 'docTierOptionsHtml', 'buildDocTierOptions', 'docTierOf', 'docTierDef',
       'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml',
       'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706',
       'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
       'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
       'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef'];
-    const EC_VARS = ['SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
+    const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD',
       'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES'];
     const JOB = { id: 7, hvlId: 'HVL-0007', name: 'Tripp Butler', fname: 'Tripp', lname: 'Butler',

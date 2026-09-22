@@ -31,7 +31,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     fns: ['svcLabelOf', 'isDecedentJob', 'svcFamily', 'svcFamilyOptions', 'sameSvcFamily',
           'fixedPriceBuffer', '_svcChangeConsequences', 'prepFeeRate', 'getVendorActuals', '_srcLineKey',
           'vendorFeeNote', '_invVendorFeeSentence',
-          '_agrHasPrepVendors', '_pctWords', 'ecIsProbateSvc', 'ecIsEstateSvc'],
+          '_agrHasPrepVendors', '_pctWords', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc'],
     vars: ['SVC_LABELS', 'DECEDENT_SERVICES', 'SVC_ORDER', 'PREP_FEE_RATE', 'SMF_PCT', '_PCT_WORDS'],
   });
 

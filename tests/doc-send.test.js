@@ -479,9 +479,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     for (const m of src.matchAll(/\bid=["']([A-Za-z][\w:-]*)["']/g)) domIds.add(m[1]);
     for (const m of src.matchAll(/\.id\s*=\s*'([^']+)'/g)) domIds.add(m[1]);   // built at runtime
     // The Edit Client modal is assembled by `showEditClient` through a prefixing helper, so
-    // its ids never appear literally anywhere; `i-executor-auth` is ternary-guarded on its
-    // own line. Both are reachable and real — everything else must be in the markup.
-    const ALLOW = [/^ec-/, /^i-executor-auth$/];
+    // its ids never appear literally anywhere. Everything else must be in the markup.
+    // ⚠ `i-executor-auth` WAS EXEMPTED HERE AND THE COMMENT CLAIMED IT WAS "reachable and real".
+    // It was neither — the intake form has never rendered that control, so the ternary behind
+    // the exemption always resolved to 'pending' while the Job Plan told the reader the field
+    // had been "recorded at intake". The read is gone (2026-09-22) and so is the exemption; an
+    // allow-list entry for a case that no longer exists reads as a standing permission.
+    const ALLOW = [/^ec-/];
     const orphanIds = new Set();
     for (const m of src.matchAll(/getElementById\(\s*'([^']+)'\s*\)\s*\./g)) {
       const id = m[1];
