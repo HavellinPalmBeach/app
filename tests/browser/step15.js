@@ -82,7 +82,9 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
       vendorsListed: co ? Array.from(co.querySelectorAll('.co-vendor strong')).map(e => e.textContent) : [],
     };
   });
-  eq(plan.bandStep, 'Midpoint invoice sent', 'the Job Plan band names the midpoint invoice as the next step');
+  // Restated 2026-09-23: the band names the STEP to take, never the milestone it finishes (JT_NEXT) —
+  // "Midpoint invoice sent" read as though it had already gone out.
+  eq(plan.bandStep, 'Send the midpoint invoice', 'the Job Plan band names the midpoint invoice as the step to take');
   ok(/Send midpoint invoice/.test(plan.prim), 'with Send midpoint invoice as its one filled button (' + plan.prim + ')');
   eq(plan.nPrim, 1, 'exactly one filled button in the band');
   ok(plan.trackVis, 'the timeline track shows at 1440');
@@ -149,7 +151,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   });
   eq(admin.job, '901', 'Job Admin follows the job picked on the Job Plan');
   ok(admin.hdr, 'Job Admin carries the client header — client, service, property');
-  eq(admin.band, 'Midpoint invoice sent', 'and the same band, reminding the midpoint invoice');
+  eq(admin.band, 'Send the midpoint invoice', 'and the same band, reminding the midpoint invoice');
   ok(admin.order, 'in order: header, band, desk paperwork, close-out');
   eq(admin.contents, false, '⚠⚠ no inventory on a prep job — no Contents Record, Approval Request, line items or appraisers');
   eq(admin.rooms, false, 'no "All rooms cleared — 0 of 0"');

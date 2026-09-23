@@ -162,15 +162,43 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const legacy = sched({ start: '2026-09-21', status: 'active', depositReceivedAt: '2026-09-28' }, '2026-09-30');
     eq(legacy.actualStartKind, 'deposit', 'a legacy active job falls back to the deposit date');
     eq(legacy.elapsed, 3, 'it may anchor the elapsed reading');
-    eq(legacy.startSlip, 0, '⚠⚠ and it may NEVER claim a start slip — it is a proxy, not a record');
-    eq(legacy.projectedEnd, '', 'nor move the projected end off it');
+    // ⚠⚠ …AND NOTHING ELSE. Since 2026-09-23 the plan follows a RECORDED start; a deposit date is
+    // not one, so a legacy job keeps its target as the anchor and its dates do not move off a proxy.
+    eq(legacy.anchor, '2026-09-21', '⚠⚠ a deposit date never ANCHORS the plan — it is a proxy, not a record');
+    eq(legacy.anchorKind, 'target', '…the plan still counts from the target start');
+    eq(legacy.planEnd, '2026-09-28', 'and its end is the target end');
 
-    // ⚠ THE PLAN STAYS ANCHORED ON job.start EVEN WHEN THE JOB ACTIVATED LATE. That is the date
-    // the client estimate's header and the agreement's Estimated Start Date both state.
+    // ⚠⚠ THE PLAN FOLLOWS THE RECORDED START (2026-09-23), AND THIS REVERSES A DECISION. It used to
+    // stay anchored on job.start and print a second, slipped end beside it; Anthony, off the Job
+    // Plan header reading "target was Oct 5 · Halfway Oct 7 · Target end Oct 12 · now ending Sep 30":
+    // "you need to do away with the old ones like the target start date and target midpoint
+    // because it's very confusing." One start, one halfway, one end — counted from the day it began.
     const late = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-28' }, '2026-09-29');
-    eq(late.planEnd, '2026-09-28', 'the plan does not move under the client');
-    eq(late.projectedEnd, '2026-10-05', 'the slipped end is a SECOND, separate figure');
-    eq(late.startSlip, 5, 'and the slip is counted in working days');
+    eq(late.anchor, '2026-09-28', '⚠⚠ a job that started late is counted from the day it STARTED');
+    eq(late.anchorKind, 'actual', '…and says so');
+    eq(late.planEnd, '2026-10-05', 'so its end moves with it — six working days from the 28th');
+    eq(late.halfway, '2026-09-30', 'and so does its halfway');
+    eq(late.elapsed, 2, 'while elapsed still counts from the recorded start');
+    // Anthony's own case: a job activated TWELVE days AHEAD of its target start.
+    const early = sched({ start: '2026-10-05', status: 'active', activatedOn: '2026-09-23' }, '2026-09-23');
+    eq(early.anchor, '2026-09-23', '⚠ an EARLY start moves the plan too — the direction that produced the report');
+    eq(early.halfway, '2026-09-25', '…the halfway is day 3 from the real start, not from the old target');
+    eq(early.planEnd, '2026-09-30', '…and the end is the one the strip already called "now ending"');
+    eq(early.remaining, 5, 'working day 1 of 6 has five to go');
+    ['projectedEnd', 'startSlip'].forEach((k) =>
+      ok(!(k in late), `⚠ \`${k}\` is GONE from the descriptor — two ends for one job is the thing removed`));
+    lacks(noComments(fn('jobSchedule')), 'projectedEnd', 'and no live line computes a second end');
+    // The hard target is still tested — against the end the job is REALLY heading for.
+    const lateFit = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-28', completion: '2026-10-01' }, '2026-09-29');
+    eq(lateFit.fit, 'late', '⚠ a late start that now misses the hard target is flagged — that comparison has a consequence');
+    eq(sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21', completion: '2026-10-01' }, '2026-09-22').fit, 'ok',
+       '…and the same job started on time still fits');
+    // ⚠ A job ACTIVATED before its target start has nothing "before the start" to be inverted against
+    // except the real start, and the wording says which start it means.
+    const inv = sched({ start: '2026-10-05', status: 'active', activatedOn: '2026-09-23', completion: '2026-09-01' }, '2026-09-23');
+    eq(inv.fit, 'inverted', 'a hard target before the recorded start is still named');
+    has(inv.fitTxt, 'before the start', '…as before the START, not the target start');
+    lacks(inv.fitTxt, 'target start', '…because the target start is no longer what the plan counts from');
 
     // ── fit is a SEPARATE slot from pace ──
     const tight = sched({ start: '2026-09-21', completion: '2026-09-24' }, '2026-09-14');
@@ -272,16 +300,25 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // September 21st, actual start date September 22nd, projected six days, today is the 24th, three
     // more days … that lets you know where you stand in the job." The strip is the one renderer of
     // that sentence, on the dashboard and on the plan header alike.
+    // ⚠⚠ AND SINCE 2026-09-23 THE STRIP PRINTS ONE START, ONE HALFWAY, ONE END. The descriptor below is
+    // what jobSchedule now returns for a job that started a day after its target: counted from the
+    // 22nd. Anthony: "do away with the old ones like the target start date and target midpoint".
     const slipped = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 3, remaining: 3, today: '2026-09-24',
-      actualStart: '2026-09-22', actualStartKind: 'activated', projectedEnd: '2026-09-29' }));
+      actualStart: '2026-09-22', actualStartKind: 'activated', anchor: '2026-09-22', anchorKind: 'actual',
+      halfway: '2026-09-24', planEnd: '2026-09-29' }));
     has(slipped, 'Started D:2026-09-22', 'the recorded start');
-    has(slipped, 'target was D:2026-09-21', '⚠ and the target it slipped from, beside it');
+    lacks(slipped, 'target was', '⚠⚠ and NOT the target it replaced — that is the line that confused the crew');
+    lacks(slipped, 'D:2026-09-21', '…no date counted from the old target survives anywhere on it');
     has(slipped, 'Today <span class="jt-sched-v">D:2026-09-24</span>', 'today, so the working day is anchored on a date');
     has(slipped, 'Working day 3 of 6', 'where the job is');
     has(slipped, '3 working days to go', 'and the working days after today');
-    has(slipped, 'now ending <span class="jt-sched-v">D:2026-09-29</span>', 'and the end the slip moved it to');
+    has(slipped, 'Halfway D:2026-09-24', 'the halfway counted from the real start');
+    has(slipped, 'Planned end <span class="jt-sched-v">D:2026-09-29</span>', '⚠ ONE end, named "Planned end" once the job runs on its real start');
+    lacks(slipped, 'now ending', '⚠⚠ and never a second end beside it');
+    lacks(slipped, 'Target end', '…nor a "Target end" counted from a start that did not happen');
+    lacks(slipped, 'Target start', '…nor the target start');
     const onTime = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 6, remaining: 0, today: '2026-09-28',
-      actualStart: '2026-09-21', actualStartKind: 'activated' }));
+      actualStart: '2026-09-21', actualStartKind: 'activated', anchorKind: 'actual' }));
     lacks(onTime, 'target was', 'a start on the target date names no slip');
     has(onTime, 'last planned day', 'day 6 of 6 is the last planned day, not "0 to go"');
     const over = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 8, remaining: 0, overBy: 2, today: '2026-09-30',
@@ -292,6 +329,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       actualStart: '2026-09-22', actualStartKind: 'deposit' }));
     has(dep, '(from the deposit)', 'a deposit-anchored start still says so');
     lacks(dep, 'target was', '⚠ and never claims a slip — a deposit date is a proxy, not a recorded start');
+    has(dep, 'Target end', '⚠ and its end is still the TARGET end — a deposit date never re-anchors the plan');
+    // The vocabulary, pinned at source: no second end, no "target was".
+    const vsrc = noComments(fn('jtScheduleHtml'));
+    lacks(vsrc, 'now ending', '⚠ the strip carries no "now ending" line any more');
+    lacks(vsrc, 'target was', '⚠ …nor a "target was" beside the start');
+    lacks(vsrc, 'projectedEnd', '…nor reads a second end off the descriptor');
     lacks(V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 2, today: '2026-09-23',
       actualStart: '2026-09-22', actualStartKind: 'activated' })), 'to go', 'a descriptor without `remaining` prints no count rather than a wrong one');
     has(paced, 'Re-plan.', 'and it carries the fix');
@@ -371,7 +414,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls'];
-    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
+    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
       'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES'];
@@ -704,7 +747,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
             'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent'],
-      vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
+      vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
     });
     const JOB = { id: 7, name: 'Butler', svc: 'cleanout', status: 'won', won: true, approved: true,

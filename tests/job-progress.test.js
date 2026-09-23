@@ -270,8 +270,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and a plan is at least one day, so the arm could not fire either way. Reverting that
     // clause alone is GREEN, and this note is here instead of a check that could not fail —
     // the eighteenth time this repo has had to record that distinction.
-    eq(sch(BEHIND, { activatedOn: '2026-09-28' }, '2026-09-24').pace, 'halfway_late',
-       'a job with no working day yet is never reported behind');
+    // ⚠ AND SINCE 2026-09-23 THE PLAN COUNTS FROM THE RECORDED START, so this job's halfway is day 3
+    // from the 28th — not yet reached on the 24th — and the calendar-halfway flag stays quiet too.
+    // Before the anchor moved it read 'halfway_late' off the target start, a date the job never ran on.
+    const noDay = sch(BEHIND, { activatedOn: '2026-09-28' }, '2026-09-24');
+    ok(noDay.pace !== 'behind', 'a job with no working day yet is never reported behind');
+    eq(noDay.pace, '', '…nor past a halfway counted from a start it did not have');
 
     // ── no "ahead" flag. Good news is not an instruction, and the chip already prints it. ──
     eq(sch({ has: true, aboveFloor: true, workPct: 0.67, hoursPct: 0.6, actHrs: 20 }).pace, 'halfway_late',
@@ -387,7 +391,7 @@ const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent',
       'roomStatusNormalize', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls'];
-    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
+    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY',
       'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'];
@@ -448,7 +452,10 @@ const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr',
     lacks(behind, '5% of the work done', '…and the old figure is gone');
     has(behind, 'jt-s-err', 'a job tracking past its plan is flagged red');
     has(behind, 'Tracking to', '…with a date it is tracking to');
-    has(behind, '2 working days past the target end', '…and the slip in working days');
+    // ⚠ "planned", not "target": the job runs on its recorded start (2026-09-23), so the end it is
+    // measured against is the planned end counted from that day.
+    has(behind, '2 working days past the planned end', '…and the slip in working days');
+    lacks(behind, 'past the target end', '…never against a "target end" once the job has started');
     has(behind, 'change order carries HOURS', '…carrying the fix on screen');
 
     // ── everything packed on working day 4 of a 6-day plan. Ahead, and silent.

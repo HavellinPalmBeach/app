@@ -124,8 +124,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const sp = fnBody('showPanel');
     has(sp, "adoptCurrentJob('plan-job')", 'opening the Job Plan adopts the current client');
     has(sp, "adoptCurrentJob('inv-job')", 'opening Job Admin & Inv adopts the current client');
-    // ⚠ The Job Plan does not re-render on tab open by itself, so an adopted change has to load it.
-    has(sp, "if (adoptCurrentJob('plan-job')) loadJobPlanTab();", 'and a moved Job Plan picker is loaded, not left stale');
+    // ⚠⚠ SINCE 2026-09-23 THE PLAN IS DRAWN ON EVERY ENTRY, not only when the picker moved — walking
+    // back onto the tab you left showed the plan as it was LAST drawn, so a target start moved in Edit
+    // Client or a job activated from its timeline still read the old dates. Anthony: "if it changes,
+    // the dates on the top of the job plan need to update". A moved picker is still loaded — every
+    // entry is — and an empty picker is still left alone (nothing to draw).
+    has(sp, "adoptCurrentJob('plan-job');", 'the Job Plan still adopts the current client');
+    lacks(sp, "if (adoptCurrentJob('plan-job')) loadJobPlanTab();", '⚠ and no longer redraws ONLY when the picker moved');
+    has(sp, "if (parseInt((document.getElementById('plan-job') || {}).value) || 0) loadJobPlanTab();",
+        '⚠⚠ it redraws on EVERY entry with a client selected — so a changed date is never stale on arrival');
   }
 
   group('⚠ the Job Plan records the client even when it withholds the plan');

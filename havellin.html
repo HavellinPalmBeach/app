@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.23 · 10:03am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.23 · 1:48pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -13003,6 +13003,10 @@ function printChangeOrder(coId) {
 function openClientDashboard(jobId) {
   _dashboardJobId = jobId;
   _dashNotice = null;   // a message about the last client must not open on the next one
+  // The client you just opened is the one the Job Plan and Job Admin & Inv open on (2026-09-23):
+  // opening Ellsworth and then tapping Job Plan used to land on "Select a job", or on whoever the
+  // picker held last. Session state only — see setCurrentJob.
+  setCurrentJob(jobId);
   document.getElementById('clients-list-view').style.display = 'none';
   document.getElementById('client-dashboard-view').style.display = 'block';
   renderClientDashboard(jobId);
@@ -13128,8 +13132,8 @@ function field(label, val, extraStyle) {
 // the engagement and every branch is drivable from a plain object in a test.
 //
 // ⚠ IT NEVER PRINTS A PROJECTION IN THE SHAPE OF A RECORD. "Target start", "Halfway",
-// "Target end" are all labelled as intentions; only "Started" and "Delivered" name something
-// that happened, and those two read the actuals.
+// "Target end" and "Planned end" are all labelled as intentions; only "Started" and "Delivered"
+// name something that happened, and those two read the actuals.
 function jtScheduleHtml(sched) {
   // ⚠ NO "no schedule yet" LINE. Explaining an absence is what draws attention to it, and on
   // a cold estimate-store cache this is also the correct behaviour: `_estStoreLanded` already
@@ -13164,12 +13168,11 @@ function jtScheduleHtml(sched) {
   }
 
   if (sched.state === 'running') {
-    // A start that slipped names the target beside it — "Started Sep 22 — target was Sep 21" —
-    // and only a RECORDED start may say so (a deposit date is a proxy, never a slip claim).
-    var slipped = sched.actualStartKind === 'activated' && !!sched.start && !!sched.actualStart && sched.actualStart !== sched.start;
+    // ⚠ NO "— target was …" (2026-09-23). Once the job has started, the plan is counted from the day
+    // it did (jobSchedule's `anchor`), and the target it replaced is history — Anthony: *"do away
+    // with the old ones like the target start date and target midpoint because it's very confusing."*
     h += I('Started ' + esc(fmtDate2(sched.actualStart))
-         + (sched.actualStartKind === 'deposit' ? ' (from the deposit)' : '')
-         + (slipped ? ' \u2014 target was ' + esc(fmtDate2(sched.start)) : ''));
+         + (sched.actualStartKind === 'deposit' ? ' (from the deposit)' : ''));
     // Today, in words, so "Working day 3 of 6" is anchored on the calendar it was measured against.
     // Anthony, 2026-09-20: *"target start date was September 21st, actual start date September
     // 22nd, projected six days, today is the 24th, three more days … lets you know where you stand."*
@@ -13210,8 +13213,10 @@ function jtScheduleHtml(sched) {
     // so the midpoint INVOICE has no date relationship to this. Two facts two inches apart on
     // one card must not share a word.
     if (sched.halfway) h += I('Halfway ' + esc(fmtDate2(sched.halfway)));
-    h += I('Target end ' + V(fmtDate2(sched.planEnd)));
-    if (sched.projectedEnd) h += I('now ending ' + V(fmtDate2(sched.projectedEnd)));
+    // ⚠ ONE END, NAMED FOR WHAT IT IS COUNTED FROM. "Target end" while the job runs on its target
+    // start; "Planned end" once it runs on the day it really started — still a plan, so still named
+    // as one, and never beside a second end ("now ending …") as it was until 2026-09-23.
+    h += I((sched.anchorKind === 'actual' ? 'Planned end ' : 'Target end ') + V(fmtDate2(sched.planEnd)));
   }
   if (sched.fit === 'late' || sched.fit === 'inverted') {
     h += '<span class="jt-sched-i jt-s-err">&#9888; ' + esc(sched.fitTxt) + '</span>';
@@ -13232,7 +13237,7 @@ function jtScheduleHtml(sched) {
     // for — so the sentence is assembled around `paceEnd` at the one place that owns format.
     var track = sched.paceEnd
       ? ' Tracking to ' + esc(fmtDate2(sched.paceEnd)) + ' at this rate, ' + sched.paceBy
-        + ' working day' + (sched.paceBy === 1 ? '' : 's') + ' past the target end.'
+        + ' working day' + (sched.paceBy === 1 ? '' : 's') + ' past the ' + (sched.anchorKind === 'actual' ? 'planned' : 'target') + ' end.'
       : '';
     h += '<div class="jt-sched-note' + cls + '">' + esc(sched.paceTxt) + track + (sched.paceFix ? ' ' + esc(sched.paceFix) : '') + '</div>';
   }
@@ -13381,6 +13386,34 @@ var JT_SHORT = {
   deposit_invoiced:'Invoiced', deposit_received:'Deposit', job_active:'Active',
   midpoint_invoiced:'Invoiced', midpoint_received:'Midpoint',
   work_complete:'Complete', final_invoiced:'Invoiced', final_paid:'Final'
+};
+
+// ⚠⚠ THE BAND SAYS WHAT TO DO NEXT, NOT WHAT THE MILESTONE WILL BE CALLED ONCE IT IS DONE
+// (2026-09-23). Anthony, off the Job Plan band: *"the next stage is midpoint invoice sent, and it
+// just feels a little misleading … it should be, you know, next is … to send the midpoint [invoice]
+// … midpoint [invoice] sent makes it seem like we've already done that."* He is right: a row's
+// LABEL is the name of a FINISHED milestone — the rail prints it beside a green node the day it is
+// done — and the band was printing that same past-tense name over an action nobody had taken yet.
+// The rail and the track keep the milestone names; the band says the step, in the imperative.
+// ⚠ ONE ENTRY PER ROW KEY, and a test walks every row `jobTimeline` builds against this map, so a
+// row added later cannot fall back to printing its milestone name under NEXT without failing it.
+var JT_NEXT = {
+  intake:            'Finish the client intake',
+  walkthrough:       'Do the walkthrough',
+  estimate_built:    'Build the estimate',
+  estimate_approved: 'Get the estimate approved',
+  estimate_sent:     'Send the estimate to the client',
+  client_accepted:   'Get the client’s decision',
+  agreement_sent:    'Send the signing packet',
+  agreement_signed:  'Get the agreement signed',
+  deposit_invoiced:  'Send the deposit invoice',
+  deposit_received:  'Collect the deposit',
+  job_active:        'Activate the job',
+  midpoint_invoiced: 'Send the midpoint invoice',
+  midpoint_received: 'Collect the midpoint payment',
+  work_complete:     'Finish the work and close the job',
+  final_invoiced:    'Send the final invoice',
+  final_paid:        'Collect the final payment'
 };
 
 // ⚠⚠ THE ONE MAP FROM A TIMELINE STEP TO THE DOCUMENT IN PLAY AT IT. The band's tray and the
@@ -13548,11 +13581,26 @@ function jobProgress(est, plan, logs) {
 // ⚠ IT RETURNS yyyy-mm-dd STRINGS AND INTEGERS AND NEVER FORMATS A DATE. The renderer owns
 // how a date looks — the rule `jobTimeline` already follows, and the reason `atKind` exists.
 //
-// ⚠⚠ THE PLAN IS ANCHORED ON `job.start`, ALWAYS, EVEN ONCE THE JOB IS RUNNING. That is the
-// date the client estimate's header and the agreement's Estimated Start Date both state, so
-// a plan re-derived from the real activation would print an end date the client was never
-// given. A job that activated late gets `projectedEnd` as a SECOND, clearly-labelled figure
-// — the date to renegotiate, never a quiet replacement for the one on the paperwork.
+// ⚠⚠ THE PLAN FOLLOWS THE RECORDED START ONCE THERE IS ONE (2026-09-23) — AND THIS REVERSES A
+// DECISION, SO READ WHY. Until today the plan stayed anchored on `job.start` even on a running job,
+// on the reasoning that the target is the date the paperwork states; a job that started on another
+// day got a SECOND end (`projectedEnd`) beside the first. Anthony, off the Job Plan header reading
+// *"Started Sep 23 — target was Oct 5 · … · Halfway Oct 7 · Target end Oct 12 · now ending Sep 30"*:
+// *"if it changes, the dates on the top of the job plan need to update and you need to do away with
+// the old ones like the target start date and target midpoint because it's very confusing."* He is
+// right, and the arithmetic says why: that strip printed three dates computed from a start that
+// never happened beside one computed from the start that did, and a crew reading it cannot tell
+// which halfway to work to. So once `activatedOn` exists it IS the start — `anchor` — and the
+// halfway and the end are counted from it; the target start is what a job that has not started
+// runs on. `projectedEnd` and `startSlip` are GONE, not left computed: two ends for one job is the
+// thing being removed.
+// ⚠ WHAT THE PAPERWORK SAID IS NOT LOST — the hard target and the court deadline are still tested
+// against the end the job is really heading for (FIT, below), which is the comparison that has a
+// consequence. And the stamp this now leans on is write-once, so `applyJobTransition` asks before
+// activating a job ahead of its target start: that press starts the schedule.
+// ⚠ A DEPOSIT DATE STILL NEVER ANCHORS THE PLAN. It may anchor `elapsed` on a job that went active
+// before the stamp existed — it is a proxy for when work COULD start, not a record that it did — so
+// that case keeps the target as its anchor and says "(from the deposit)" on screen.
 //
 // ⚠⚠ THE CALENDAR HALFWAY IS `halfway`, NEVER `mid`. `paymentSplit` is a flat 50/25/25 and
 // the midpoint INVOICE has no calendar relationship to it at all. Two facts two inches apart
@@ -13560,8 +13608,8 @@ function jobProgress(est, plan, logs) {
 // halfway date — which is a statement about money nobody made.
 function jobSchedule(job, est, todayStr, prog) {
   var S = { state:'none', why:'', today: todayStr || '', days:0, daysQuoted:false,
-            start:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
-            actualStart:'', actualStartKind:'', projectedEnd:'', startSlip:0,
+            start:'', anchor:'', anchorKind:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
+            actualStart:'', actualStartKind:'',
             elapsed:0, overBy:0, endVariance:0, remaining:0,
             progress:false, workPct:0, hoursPct:0, actHrs:0, estHrs:0,
             paceEnd:'', paceBy:0,
@@ -13590,20 +13638,27 @@ function jobSchedule(job, est, todayStr, prog) {
   S.hard = job.completion || '';
   if (job.svc === 'probate' || job.svc === 'contested_probate') S.courtDeadline = job.probateDeadline || '';
   S.delivered = job.deliveredOn || '';
-  S.start = job.start || '';
-  if (!S.start) { S.state = 'nostart'; return S; }
+  S.start = job.start || '';   // the TARGET start, as intake recorded it
+
+  // ⚠⚠ A DEPOSIT DATE MAY ANCHOR `elapsed` AND NOTHING ELSE. It is a proxy for when work COULD
+  // start, not when it did. Every job that went active before the `activatedOn` stamp shipped is
+  // in exactly that case, and the strip labels it on screen rather than passing it off as a
+  // recorded start.
+  if (job.activatedOn) { S.actualStart = job.activatedOn; S.actualStartKind = 'activated'; }
+  else if (job.status === 'active' && job.depositReceivedAt) { S.actualStart = job.depositReceivedAt; S.actualStartKind = 'deposit'; }
+
+  // THE ANCHOR — the day the plan is counted from. The recorded start once there is one, the
+  // target until then (see the header of this function). A job activated with no target start on
+  // it still has a schedule; one with neither has nothing to count from.
+  var _recorded = S.actualStartKind === 'activated';
+  S.anchor = _recorded ? S.actualStart : S.start;
+  S.anchorKind = _recorded ? 'actual' : 'target';
+  if (!S.anchor) { S.state = 'nostart'; return S; }
 
   // ⚠ ceil, not days/2. `addWorkingDays` counts the start as day 1 and `days` is inclusive,
   // so the middle working day of a 6-day job is day 3, not day 4.
-  S.planEnd = addWorkingDays(S.start, S.days);
-  S.halfway = (S.days >= 3) ? addWorkingDays(S.start, Math.ceil(S.days / 2)) : '';
-
-  // ⚠⚠ A DEPOSIT DATE MAY ANCHOR `elapsed` AND MAY NEVER SUPPORT A SLIP CLAIM. It is a proxy
-  // for when work COULD start, not when it did. Every job that went active before the
-  // `activatedOn` stamp shipped is in exactly that case, and the strip labels it on screen
-  // rather than passing it off as a recorded start.
-  if (job.activatedOn) { S.actualStart = job.activatedOn; S.actualStartKind = 'activated'; }
-  else if (job.status === 'active' && job.depositReceivedAt) { S.actualStart = job.depositReceivedAt; S.actualStartKind = 'deposit'; }
+  S.planEnd = addWorkingDays(S.anchor, S.days);
+  S.halfway = (S.days >= 3) ? addWorkingDays(S.anchor, Math.ceil(S.days / 2)) : '';
 
   if (job.deliveredOn) {
     S.state = 'done';
@@ -13611,10 +13666,6 @@ function jobSchedule(job, est, todayStr, prog) {
   } else if (job.status === 'active') {
     S.state = 'running';
     if (S.actualStart && S.today) S.elapsed = workingDaysInclusive(S.actualStart, S.today);
-    if (S.actualStartKind === 'activated') {
-      S.startSlip = Math.max(0, workingDaysInclusive(S.start, S.actualStart) - 1);
-      if (S.actualStart !== S.start) S.projectedEnd = addWorkingDays(S.actualStart, S.days);
-    }
     S.overBy = Math.max(0, S.elapsed - S.days);
     // The working days AFTER today: on day 3 of 6 there are three more. Clock-free like the rest —
     // it is arithmetic on `elapsed`, which the caller's `todayStr` already fixed.
@@ -13626,11 +13677,13 @@ function jobSchedule(job, est, todayStr, prog) {
   // FIT — does the plan reach the date we committed to. Plain yyyy-mm-dd string compare;
   // both are that format. ⚠ A COURT DEADLINE OUTRANKS THE HARD TARGET on probate, because it
   // is statutory and the hard target is a preference.
-  var _end = S.projectedEnd || S.planEnd;
+  // ⚠ Against the end the job is REALLY heading for — counted from the recorded start once there
+  // is one — because a closing date the plan now misses is the one fact here with a consequence.
+  var _end = S.planEnd;
   var _tgt = S.courtDeadline || S.hard;
   var _tgtWord = S.courtDeadline ? 'court deadline' : 'hard target';
   if (_tgt && _end) {
-    if (_tgt < S.start) { S.fit = 'inverted'; S.fitTxt = 'The ' + _tgtWord + ' is before the target start.'; }
+    if (_tgt < S.anchor) { S.fit = 'inverted'; S.fitTxt = 'The ' + _tgtWord + ' is before the ' + (S.anchorKind === 'actual' ? 'start' : 'target start') + '.'; }
     else if (_end > _tgt) { S.fit = 'late'; S.fitTxt = 'ends ' + Math.max(1, workingDaysInclusive(_tgt, _end) - 1) + ' working days past the ' + _tgtWord; }
     else { S.fit = 'ok'; }
   }
@@ -13766,6 +13819,9 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   function row(o) {
     return {
       key: o.key, group: o.group, label: o.label, short: JT_SHORT[o.key] || o.label,
+      // What the band says while this row is the live one — see JT_NEXT. The label stays the
+      // milestone's name for the rail and the track.
+      todo: JT_NEXT[o.key] || o.label,
       done: !!o.done,
       at: o.at || '', atKind: o.atKind || 'text', by: o.by || '',
       sub: o.sub || '', amount: (typeof o.amount === 'number') ? o.amount : null,
@@ -16498,8 +16554,10 @@ function jtBandHtml(job, estRec, rows, next) {
   var _jtA = null, _bandDoc = null, _band = null;
   if (next) {
     var _jtBlocked = next.state === 'blocked';
+    // ⚠ `todo`, NOT `label` — the step to take, never the name the milestone gets once it is
+    // taken ("Send the midpoint invoice", not "Midpoint invoice sent"). See JT_NEXT.
     _band = { cls: _jtBlocked ? ' jt-next-blk' : '', lbl: _jtBlocked ? '&#9888; Blocked' : 'Next',
-              step: esc(next.label), blocked: _jtBlocked };
+              step: esc(next.todo || next.label), blocked: _jtBlocked };
     _jtA = jobTimelineActions(next, job, estRec);
     _bandDoc = _jtA.doc;
   } else if (rows.length && rows[0].state !== 'terminal') {
@@ -17220,6 +17278,22 @@ function applyJobTransition(j) {
       alert('Cannot activate job — resolve first:\n\n' + blockers.map(function(b){ return '• ' + b; }).join('\n'));
       return false;
     }
+    // ⚠⚠ ACTIVATING AHEAD OF THE TARGET START STARTS THE SCHEDULE TODAY — AND THE STAMP IS WRITE-ONCE
+    // (2026-09-23). The schedule strip now counts the job from the day it was activated rather than
+    // from the target (jobSchedule's `anchor`), and `activatedOn` below is never moved once set. So
+    // the "Activate job" button — the band's NEXT step the moment the deposit lands, possibly a week
+    // before the crew arrives — would fix a start date nobody meant, with no way back. Asked once,
+    // only on a FIRST activation before the target date: late is simply late, and a re-open keeps
+    // its original stamp either way.
+    var _today = _todayStr();
+    if (!j.activatedOn && j.start && _today < j.start
+        && !confirm('Activate this job today?\n\n'
+          + 'Its target start is ' + fmtDate2(j.start) + '. Activating it now starts its schedule today, '
+          + fmtDate2(_today) + ' — the working days, the halfway point and the planned end are counted '
+          + 'from today, and that start date cannot be changed afterwards.\n\n'
+          + 'If work is not starting today, press Cancel and activate it on the day the crew begins.')) {
+      return false;
+    }
   }
   // ⚠ WRITE-ONCE, AND THE GUARD IS LOAD-BEARING. `JOB_TRANSITIONS.closed` is 'active', so
   // re-opening a closed job IS an `active` transition and would otherwise reset the date the
@@ -17248,27 +17322,51 @@ function activateOrCycle(jobId) {
   if (!j) return;
   if (!applyJobTransition(j)) return;
   saveJobs(); syncJobToSheets(j);
+  // ⚠⚠ AN ACTIVATION LANDS ON THE JOB PLAN (2026-09-23). Anthony: *"the activate job button on the
+  // client dashboard should take you to the job plan."* Activating is starting the job, and the Job
+  // Plan is where a started job is worked — so the press that starts it takes you there, on this
+  // client, rather than leaving you on a dashboard whose next step is weeks away. From any band
+  // (the dashboard, Job Admin & Inv, or the Job Plan itself, which it re-renders — the header strip
+  // there reads the start this press just stamped). Closing a job is the other half of this button
+  // and stays where it is.
+  // (`status === 'active'` AFTER a successful transition can only mean the job just became active —
+  // applyJobTransition always moves it — so no before/after comparison is needed.)
+  if (j.status === 'active' && openJobPlanFor(jobId)) return;
   // Fired from the Job Plan or Job Admin band as well as the dashboard now — repaint whichever
   // is showing, and fall back to the dashboard render it always did.
   if (!_dashRedraw(jobId)) renderClientDashboard(jobId);
 }
 
+// ⚠ THE ONE WAY ONTO A CLIENT'S JOB PLAN FROM ANOTHER SCREEN (2026-09-23). It records the client as
+// the current job and presses the real nav, so showPanel('job-plan') does what it does for a person
+// — adopts that client into the picker and loads the plan — rather than a second copy of that
+// sequence growing here. `fold` opens one of the plan's two tools on arrival ('hours' for "+ Log
+// Hours Today", which used to land on the plan with the hours log shut inside its fold).
+// ⚠ It refuses a job no longer on this device (another device dropped it) instead of landing on an
+// empty picker, and it returns false so the caller can fall back to what it did before.
+function openJobPlanFor(jobId, fold) {
+  var nb = document.querySelector('.nb[onclick*="showPanel(\'job-plan\'"]');
+  if (!nb || !jobs.some(function(x){ return x.id === jobId; })) return false;
+  if (document.getElementById('clients-list-view') && document.getElementById('client-dashboard-view')) closeClientDashboard();
+  setCurrentJob(jobId);
+  nb.click();
+  var sel = document.getElementById('plan-job');
+  if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
+  if (fold) {
+    var body = document.getElementById('phase-body-' + fold);
+    if (body && body.style.display === 'none') togglePhase(fold);
+    if (body && body.scrollIntoView) body.scrollIntoView({ block: 'start' });
+  } else {
+    window.scrollTo(0, 0);
+  }
+  return true;
+}
+
+// "+ Log Hours Today" on the dashboard's Hours Log card. It used to hand-roll the navigation — two
+// timers, a nav button found by its TEXT, the panels switched off by hand — and landed on the plan
+// with the hours log closed inside its fold.
 function goToJobLog(jobId) {
-  closeClientDashboard();
-  setTimeout(function(){
-    var tabs = document.querySelectorAll('.nb');
-    tabs.forEach(function(t){ t.classList.remove('active'); });
-    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-    var planTab = Array.from(tabs).find(function(t){ return t.textContent.trim()==='Job Plan'; });
-    if (planTab) planTab.click();
-    setTimeout(function(){
-      populateLogAndInvSelects();
-      buildLogTeamRows();
-      rebuildDropdowns();
-      var planSel = document.getElementById('plan-job');
-      if (planSel) { planSel.value = jobId; loadJobPlanTab(); }
-    }, 100);
-  }, 50);
+  openJobPlanFor(jobId, 'hours');
 }
 
 function cycleStatus(id) {
@@ -17867,7 +17965,17 @@ function showPanel(id, btn) {
   if (id==='job-plan') {
     populateLogAndInvSelects();
     // Adopt BEFORE maybeStartPlanWatch below — planWatchTick reads the selected job.
-    if (adoptCurrentJob('plan-job')) loadJobPlanTab();
+    adoptCurrentJob('plan-job');
+    // ⚠⚠ THE PLAN IS DRAWN FRESH ON EVERY ENTRY, NOT ONLY WHEN THE PICKER MOVED (2026-09-23). It used
+    // to re-render only when adoptCurrentJob changed the client, so walking back onto the tab you
+    // left — the common case — showed the plan as it was drawn LAST time: a target start moved in
+    // Edit Client, a payment recorded on the dashboard, a job activated from its timeline, all
+    // invisible on the header strip, the band and the chips until something else redrew the tab.
+    // Anthony: *"if it changes, the dates on the top of the job plan need to update."* Safe on
+    // entry, where it is not safe mid-tab: nobody is typing into a plan they were not on, the open
+    // folds are session state (_planOpenPhases) and survive, and the hours log is parked and
+    // re-placed rather than rebuilt (_parkHoursSection).
+    if (parseInt((document.getElementById('plan-job') || {}).value) || 0) loadJobPlanTab();
     buildLogTeamRows();
     rebuildDropdowns();
     var logDateEl = document.getElementById('log-date');
@@ -27156,7 +27264,13 @@ function getVendorActuals(job, est) {
 // crew member can be added later (and that slot locks on its own first save).
 function seedCrewFromEstimate(job, est) {
   var TIERS = { contractor_standard:1, contractor_senior:1, aj:1, none:1 };
-  var crew = { tc: { name: (est && est.preparedBy) || job.tc || '', locked: false },
+  // ⚠⚠ THE CONCIERGE ASSIGNED AT INTAKE FIRST, THE WALKTHROUGH PERSON ONLY WHEN NOBODY WAS
+  // (2026-09-23). Anthony: *"I was assigned to do the walkthrough, but Ashley was assigned as the
+  // transition concierge at client intake. But then on the job plan, I was listed as the default
+  // transition concierge."* `est.preparedBy` is WHO WALKED THE HOUSE — the estimate prints it as
+  // "Walkthrough by" — and `job.tc` is who RUNS THE JOB. They are often the same person and on his
+  // job they were not, so the seed read the wrong one of two fields that usually agree.
+  var crew = { tc: { name: job.tc || (est && est.preparedBy) || '', locked: false },
                tc2: { name: (est && est.preparedBy2) || '', locked: false }, ps: [] };
   var slots = (est && est.psSlots) ? est.psSlots : [];
   // A named person can only fill one slot. Estimate slots legitimately repeat — two
@@ -27205,26 +27319,118 @@ function getJobCrew(jobId) {
     var est2 = rec2 ? rec2.estimate : (currentEstimate && currentEstimate.jobId === jobId ? currentEstimate : null);
     job.crew.tc2 = { name: (est2 && est2.preparedBy2) || '', locked: false };
   }
+  // ⚠ AN UNTOUCHED DEFAULT FOLLOWS THE INTAKE ASSIGNMENT (2026-09-23). The crew is seeded ONCE,
+  // so a concierge reassigned in Edit Client after the plan was first opened would otherwise stay
+  // on the Job Plan under the old name — and a crew seeded before the seed read `job.tc` first
+  // still carries the walkthrough person. Until somebody picks a concierge on the Job Plan
+  // (`picked`) or the team has ever been confirmed (`confirmedAt`), the concierge is only a
+  // default, and a default should say what intake says. ⚠ A pick or a confirmation is a
+  // DECISION and is never overridden — that includes a team re-opened with Revise team, which is
+  // why this reads `confirmedAt` (set once, never cleared) and not `confirmed`. It also stands
+  // down if the intake concierge already holds another slot, or following would create exactly
+  // the duplicate the one-slot rule below refuses.
+  var _c = job.crew;
+  if (_c && _c.tc && job.tc && !_c.tc.locked && !_c.tc.picked && !_c.confirmedAt
+      && !samePerson(_c.tc.name, job.tc) && !crewSlotHolding(_c, job.tc, 'tc')) {
+    _c.tc.name = job.tc;
+  }
   return job.crew;
+}
+
+// ⚠⚠ ONE PERSON, ONE SLOT (2026-09-23). Anthony: *"we were able to lock in a team where both
+// property specialists were Anthony Jr … you can put in one person for two or three or all of the
+// jobs, which shouldn't be the case."* The rule was only ever enforced at RENDER TIME — each
+// select leaves out the names other slots hold (_logCrewTaken) — and a select's options are drawn
+// once. Pick Anthony Jr in slot 1 and slot 2's list, drawn a moment earlier, still offers him; pick
+// him there too and nothing between the select and the confirm button looked again. Measured in
+// the browser before this was built: both slots Anthony Jr, `confirmed: true`.
+// So the rule is enforced where the NAME IS WRITTEN (the three setters below refuse, and the other
+// selects are redrawn in place so the name leaves their lists the moment it is taken), and again
+// at the confirm, as the backstop for a crew that already carries a duplicate.
+// ⚠ PLACEHOLDERS MAY REPEAT — "Contractor TBD" and the unnamed outside concierge stand for "not
+// named yet", not for a person — and samePerson, not ===, because a name written before a rename
+// is still the same human.
+// Returns where `name` already sits on this team ('Property Specialist 2', …), or '' if nowhere
+// but `exceptKey` — 'tc' | 'tc2' | 'ps<index>'.
+function crewSlotHolding(crew, name, exceptKey) {
+  if (!crew || isCrewPlaceholder(name)) return '';
+  if (exceptKey !== 'tc' && crew.tc && crew.tc.name && samePerson(crew.tc.name, name)) return 'Transition Concierge';
+  if (exceptKey !== 'tc2' && crew.tc2 && crew.tc2.name && samePerson(crew.tc2.name, name)) return 'Transition Concierge 2';
+  var at = '';
+  (crew.ps || []).forEach(function(p, i) {
+    if (!at && exceptKey !== 'ps' + i && p && p.name && samePerson(p.name, name)) at = 'Property Specialist ' + (i + 1);
+  });
+  return at;
+}
+// Every real person the team carries more than once, with the slots they sit in. The confirm's
+// backstop and the Job team chip both read it.
+function crewDuplicates(crew) {
+  if (!crew) return [];
+  var slots = [];
+  if (crew.tc && crew.tc.name) slots.push({ name: crew.tc.name, at: 'Transition Concierge' });
+  if (crew.tc2 && crew.tc2.name) slots.push({ name: crew.tc2.name, at: 'Transition Concierge 2' });
+  (crew.ps || []).forEach(function(p, i) { if (p && p.name) slots.push({ name: p.name, at: 'Property Specialist ' + (i + 1) }); });
+  var out = [];
+  slots.forEach(function(s, i) {
+    if (isCrewPlaceholder(s.name)) return;
+    if (slots.slice(0, i).some(function(t) { return samePerson(t.name, s.name); })) return;   // counted at its first slot
+    var all = slots.filter(function(t) { return samePerson(t.name, s.name); });
+    if (all.length > 1) out.push({ name: s.name, slots: all.map(function(t) { return t.at; }) });
+  });
+  return out;
+}
+// Refuses a person already on the team, saying where they are, and puts the select back to what
+// the record holds — a select left showing the refused name reads as though it took. Returns true
+// when it refused.
+function _crewRefuseDup(crew, key, name) {
+  var at = crewSlotHolding(crew, name, key);
+  if (!at) return false;
+  showFB('log-fb', 'warn', '<strong>' + esc(name) + '</strong> is already on this team as ' + at
+    + '. One person fills one slot — pick someone else, or “Contractor TBD” for a specialist you have not named yet.');
+  // ⚠ THE SELECT GOES BACK FIRST. rebuildLogDropdowns keeps each select's DISPLAYED value, and
+  // `_logOptList` always offers a select its own current value — so rebuilding with the refused
+  // name still showing would redraw it, selected, on a slot whose record never took it.
+  var m = /^ps(\d+)$/.exec(key);
+  var selId = key === 'tc' ? 'log-m0-name' : key === 'tc2' ? 'log-tc2-name' : (m ? 'log-m' + (parseInt(m[1], 10) + 1) + '-name' : '');
+  var held = key === 'tc' ? (crew.tc && crew.tc.name) : key === 'tc2' ? (crew.tc2 && crew.tc2.name)
+           : (m && crew.ps[parseInt(m[1], 10)] ? crew.ps[parseInt(m[1], 10)].name : '');
+  var sel = selId ? document.getElementById(selId) : null;
+  if (sel) sel.value = held || '';
+  _crewRefreshSelects();
+  return true;
+}
+// The other selects' lists follow the record, in place — never by re-rendering the rows, which
+// would wipe hours somebody has typed into an open slot mid-job. rebuildLogDropdowns is the one
+// builder that does exactly that (see _logSelectOptionsHtml).
+function _crewRefreshSelects() {
+  if (typeof rebuildLogDropdowns === 'function') rebuildLogDropdowns(getAllActiveTC(), getAllActivePS());
 }
 
 function setCrewTC(jobId, name) {
   var crew = getJobCrew(jobId); if (!crew || crew.tc.locked) return;
-  crew.tc.name = name; saveJobs();
+  if (_crewRefuseDup(crew, 'tc', name)) return;
+  // `picked`: somebody chose this concierge on the Job Plan, so the intake default stops
+  // following Edit Client (see getJobCrew).
+  crew.tc.name = name; crew.tc.picked = true; saveJobs();
+  _crewRefreshSelects();
 }
 function setCrewTC2(jobId, name) {
   var crew = getJobCrew(jobId); if (!crew) return;
   if (!crew.tc2) crew.tc2 = { name:'', locked:false };
   if (crew.tc2.locked) return;
+  if (_crewRefuseDup(crew, 'tc2', name)) return;
   crew.tc2.name = name; saveJobs();
+  _crewRefreshSelects();
 }
 function setCrewPS(jobId, slot, name) {
   var crew = getJobCrew(jobId); if (!crew) return;
   while (crew.ps.length <= slot) crew.ps.push({ name:'', tier:'', costRate:0, locked:false });
   if (crew.ps[slot].locked) return;
+  if (_crewRefuseDup(crew, 'ps' + slot, name)) return;
   crew.ps[slot].name = name;
   crew.ps[slot].costRate = name ? getPSCostRate(name) : crew.ps[slot].costRate;
   saveJobs();
+  _crewRefreshSelects();
 }
 // ─── JOB TEAM SIGN-OFF ────────────────────────────────────────────────────────
 // The crew is named and confirmed BEFORE any hours are logged: while the agreement is
@@ -27284,6 +27490,17 @@ function confirmJobTeam(jobId) {
       + ' — name each one, or use “Contractor TBD” for a body you have not picked yet.');
     return;
   }
+  // ⚠ THE BACKSTOP FOR THE ONE-SLOT RULE (see crewSlotHolding). The setters refuse a duplicate as
+  // it is picked; this catches the crew that already carries one — confirmed before the rule was
+  // enforced, seeded from an old estimate, or written by another device — and names it, because a
+  // team with one specialist in two slots is costed for a person who is not coming.
+  var dups = crewDuplicates(crew);
+  if (dups.length) {
+    showFB('log-fb','err', dups.map(function(d) {
+      return '<strong>' + esc(d.name) + '</strong> is in ' + d.slots.length + ' slots (' + d.slots.join(', ') + ')';
+    }).join('; ') + '. One person fills one slot — change the extra one to somebody else or “Contractor TBD”, then confirm.');
+    return;
+  }
   // A TBD slot is a confirmed need with an unconfirmed person. Allowed — you may have
   // the headcount before the names — but it costs at a placeholder rate rather than a
   // real one, so it is called out rather than waved through.
@@ -27298,6 +27515,7 @@ function confirmJobTeam(jobId) {
   lockAssignedCrew(jobId);   // named slots fix; empty slots stay open for a mid-job add
   saveJobs();
   buildLogTeamRows();
+  _repaintPlanGates(jobId);   // the Job team chip at the top turns green now, not on the next redraw
   showFB('log-fb','ok','Job team confirmed. Hours can now be logged for this job.');
 }
 
@@ -27323,6 +27541,7 @@ function reviseJobTeam(jobId) {
   (crew.ps || []).forEach(function(p){ if (p && !crewMemberHasHours(jobId, p.name)) p.locked = false; });
   saveJobs();
   buildLogTeamRows();
+  _repaintPlanGates(jobId);
   showFB('log-fb','warn','Team reopened. Re-confirm it to resume logging hours.');
 }
 
@@ -29073,36 +29292,14 @@ function loadJobPlanTab() {
     logDateEl.value = new Date().toISOString().split('T')[0];
   }
 
-  // Auto-select TC from job assignment
-  var tcSel = document.getElementById('log-m0-name');
-  if (job.tc && tcSel) {
-    for (var i = 0; i < tcSel.options.length; i++) {
-      if (samePerson(tcSel.options[i].text, job.tc)) { tcSel.selectedIndex = i; break; }
-    }
-  }
-
-  // Auto-select the second TC (if the estimate named one)
-  var tc2Sel = document.getElementById('log-tc2-name');
-  var tc2Assigned = (job.crew && job.crew.tc2 && job.crew.tc2.name) || (est && est.preparedBy2) || '';
-  if (tc2Sel && tc2Assigned) {
-    for (var t2 = 0; t2 < tc2Sel.options.length; t2++) {
-      if (tc2Sel.options[t2].text === tc2Assigned) { tc2Sel.selectedIndex = t2; break; }
-    }
-  }
-
-  // Auto-select PS crew from estimate assignment (up to 6)
-  var psSlots = est.psSlots || [];
-  for (var psi = 0; psi < 6; psi++) {
-    var psSlot = psSlots[psi];
-    var psSel = document.getElementById('log-m' + (psi + 1) + '-name');
-    if (!psSel || !psSlot) continue;
-    var slotLabel = psSlot.label || '';
-    if (slotLabel && !slotLabel.startsWith('contractor_')) {
-      for (var opi = 0; opi < psSel.options.length; opi++) {
-        if (psSel.options[opi].text === slotLabel) { psSel.selectedIndex = opi; break; }
-      }
-    }
-  }
+  // ⚠⚠ THE THREE "AUTO-SELECT" LOOPS THAT STOOD HERE ARE GONE, AND THEY WERE A DEFECT RATHER THAN
+  // A CONVENIENCE (2026-09-23). They set each select's DISPLAYED value — the concierge from
+  // `job.tc`, the second concierge and the specialists off the estimate — and wrote nothing to the
+  // crew record, so the screen could say one thing while the team said another. Measured in the
+  // browser on Anthony's report: the concierge select READ "Ashley Jerome" while the record held
+  // "Anthony Graziano", and pressing Save & Confirm locked in Anthony — the name that was not on the
+  // screen. The record is the one truth now: getJobCrew seeds it (the intake concierge first) and
+  // buildLogTeamRows draws exactly what it holds.
 
   // Update log summary, history, and projection
   updateLogSummary(jobId);
@@ -29219,16 +29416,48 @@ function planStageState(id, cur) {
 // file records what renaming a key costs.
 
 // What "lined up" means, for the fold and for the gate chip: every service vendor on the estimate
-// at Confirmed, every collection partner assigned, every prep line Confirmed. The end-of-job
-// logistics slots are standing placeholders (LOGISTICS_CATEGORIES) and never count — a job with
-// no dumpster is not a job with a vendor missing.
+// at Confirmed, every collection partner assigned, every prep line Confirmed — and every end-of-job
+// line somebody ADDED to the job, at Confirmed. ⚠ The logistics categories nobody added never
+// count: a job with no dumpster is not a job with a vendor missing. They used to be standing
+// placeholders and were excluded wholesale for that reason; since 2026-09-23 a logistics line
+// exists only because somebody said the job needs it, so one that does is a vendor to line up.
 function vendorSourcingProgress(jobId, job, est) {
   var done = 0, total = 0;
   var vsrc = (job && job.vendorSourcing) || {}, csrc = (job && job.collSourcing) || {}, psrc = (job && job.prepSourcing) || {};
+  var lsrc = (job && job.logisticsSourcing) || {};
   ((est && est.vendors) || []).forEach(function(v, i) { total++; var rec = vsrc[_srcLineKey(v, i)]; if (rec && rec.status === 'Confirmed') done++; });
   ((est && est.collections) || []).forEach(function(c) { total++; var rec = csrc[c.id]; if (rec && rec.vendorId) done++; });
   ((est && est.prepItems) || []).forEach(function(p, i) { total++; var rec = psrc[_srcLineKey(p, i)]; if (rec && rec.status === 'Confirmed') done++; });
+  if (!(job && job.svc === 'prep')) {
+    logisticsLinesFor(job, (est && est.vendors) || []).forEach(function(cat) { total++; if (lsrc[cat.key].status === 'Confirmed') done++; });
+  }
   return { done: done, total: total };
+}
+
+// ⚠⚠ THE JOB TEAM, ON THE CHIP ROW (2026-09-23). Anthony, off the Job Plan: *"there's a red flag
+// for vendors lined up … we'd also like an indicator for … locking in the job team, because the
+// timeline really only reflects the sort of invoicing and financial stuff. And now that we're in the
+// job plan, we need notifications up there that are job specific."* The band above this row reads
+// the money; the team sign-off was the one job-side gate with no chip — it lived at the foot of the
+// Hours fold, which is CLOSED until somebody opens it, so an unconfirmed team said nothing anywhere
+// on the page. It is the gate hours logging waits on (saveLogEntry refuses without it).
+// ⚠ READ OFF THE JOB RECORD, NEVER SEEDED. getJobCrew mints a crew on first read; a chip row must
+// not write to the job as a side effect of being drawn. A job with no crew record yet has no
+// confirmed team, which is exactly what the chip says.
+// ⚠ A CONFIRMED TEAM THAT CARRIES ONE PERSON IN TWO SLOTS IS STILL RED — that is the team Anthony
+// locked in with both specialists named Anthony Jr, and "confirmed" over it would be a false green.
+function jobTeamGateLine(job) {
+  var crew = job && job.crew;
+  var dups = crewDuplicates(crew);
+  var line = { key: 'team_confirmed', label: 'Job team confirmed', ok: !!(crew && crew.confirmed) && !dups.length };
+  if (dups.length) {
+    line.detail = dups.map(function(d) { return esc(d.name) + ' is in ' + d.slots.length + ' slots (' + d.slots.join(', ') + ')'; }).join('; ')
+      + ' &mdash; press Revise team under Hours &amp; daily close, below, and give one of them to somebody else.';
+  } else if (!line.ok) {
+    line.detail = 'not yet &mdash; name the concierge and each specialist, then press Save &amp; Confirm Job Team under '
+      + 'Hours &amp; daily close, below. Hours cannot be logged until it is.';
+  }
+  return line;
 }
 
 // The gates as ONE row of chips at the top of the plan. They are the Before-Day-1 derived lines
@@ -29241,6 +29470,7 @@ function planGateChipsHtml(jobId, job, est) {
   var vp = vendorSourcingProgress(jobId, job, est);
   if (vp.total) lines.push({ key: 'vendors_lined_up', ok: vp.done === vp.total, label: 'Vendors lined up',
                              detail: vp.done + ' of ' + vp.total + ' confirmed &mdash; Vendors &amp; partners, below' });
+  lines.push(jobTeamGateLine(job));
   if (!lines.length) return '';
   var chips = lines.map(function(l) {
     return '<span class="gate-chip ' + (l.ok ? 'gate-ok' : 'gate-no') + '" data-gate="' + l.key + '">' + (l.ok ? '&#10003; ' : '&#9679; ') + l.label + '</span>';
@@ -29349,6 +29579,29 @@ function _repaintHoursReadouts(jobId) {
   if (meta) meta.innerHTML = planHoursMetaHtml(jobId, job, est);
   var strip = document.getElementById('plan-sched');
   if (strip) strip.innerHTML = _planScheduleStrip(jobId, job, est);
+}
+
+// The chip row and the vendors fold's count, IN PLACE, for the same reason and by the same rules as
+// _repaintHoursReadouts above (2026-09-23). Both are plan markup, and the two things that move them
+// happen below them without redrawing the plan: a vendor marked Confirmed repaints only the sourcing
+// list (refreshVendorSourcing), and confirming or revising the team repaints only the roster
+// (buildLogTeamRows). So "● Vendors lined up — 0 of 6 confirmed" stayed red over six confirmed
+// vendors until something else redrew the tab, and the Job team chip would have done the same.
+function planVendorsMeta(jobId, job, est) {
+  var vp = vendorSourcingProgress(jobId, job, est);
+  return vp.total ? vp.done + ' of ' + vp.total + ' confirmed' : 'nothing on the estimate';
+}
+function _repaintPlanGates(jobId) {
+  var sel = document.getElementById('plan-job');
+  if (!sel || parseInt(sel.value) !== jobId) return;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var estRec = estimateStore[jobId];
+  var est = estRec && estRec.estimate;
+  if (!job || !est || job.svc === 'prep') return;
+  var gates = document.getElementById('plan-gates-' + jobId);
+  if (gates) gates.outerHTML = planGateChipsHtml(jobId, job, est);
+  var vm = document.getElementById('stage-meta-vendors');
+  if (vm) vm.innerHTML = planVendorsMeta(jobId, job, est);
 }
 
 // ⚠ THE HOURS LOG IS STATIC MARKUP (#plan-log-section — the entry form, the summary, the
@@ -30131,9 +30384,16 @@ function _vendorRefLine(rec) {
     (v.notes ? '<br><span style="color:var(--gray);font-weight:400;font-style:italic;">' + esc(v.notes) + '</span>' : '') +
     '</div>';
 }
-// Standard end-of-job logistics vendor categories — always offered in the Job Plan
-// sourcing so the crew can assign a hauler/dumpster/cleaner/etc. once the actual
-// volume is known mid-job (self-haul needs no vendor). Keyed for stable storage.
+// Standard end-of-job logistics vendor categories, keyed for stable storage — the ones a job can
+// turn out to need once the actual volume is known mid-job (self-haul needs no vendor).
+// ⚠⚠ THEY ARE OFFERED, NEVER PLACED (2026-09-23). Until today every category the estimate did not
+// already cover rendered as a standing row on every labour job, so a job that never needed a
+// shredder carried a "Document Shredding" line waiting for a vendor. Anthony: *"document shredding
+// gets lumped into end of job logistics automatically, whether or not you want it. And that should
+// not be the case. It should just be the vendors that you choose when you create the estimate."*
+// So the sourcing list is the estimate's vendors, and a category appears here only when somebody
+// ADDS it on the job (logisticsLineOn) — the mid-job hauler this list exists for is still one pick
+// away, it is simply not pre-filled.
 // `est` lists the estimate vendor-type label(s) that cover this category — if one
 // was already added on the estimate it shows under Service Vendors instead, and the
 // logistics row is suppressed to avoid duplication / double-counting.
@@ -30157,6 +30417,23 @@ function logisticsCatsFor(svcLines) {
   return LOGISTICS_CATEGORIES.filter(function(cat){
     return !(cat.est || []).some(function(t){ return types.indexOf(t) >= 0; });
   });
+}
+
+// Is this end-of-job category ON the job? Added by hand on the Job Plan (`added`), or carrying
+// anything recorded against it — a vendor, a quote, a status, hours — which is how a line sourced
+// before 2026-09-23, when every category stood on the list by default, keeps showing (and keeps
+// billing) rather than vanishing with its quote. An untouched category is not on the job.
+function logisticsLineOn(rec) {
+  if (!rec) return false;
+  var has = function (v) { return v != null && v !== ''; };
+  return !!(rec.added || has(rec.vendorId) || has(rec.vendorName) || has(rec.quote) || has(rec.status) || has(rec.coordHrs));
+}
+// The end-of-job lines this job actually carries, in catalogue order: not covered by an estimate
+// vendor, and put on the job by somebody. One definition — the sourcing list, the "lined up" count
+// and the add menu all read it.
+function logisticsLinesFor(job, svcLines) {
+  var lsrc = (job && job.logisticsSourcing) || {};
+  return logisticsCatsFor(svcLines).filter(function(cat){ return logisticsLineOn(lsrc[cat.key]); });
 }
 
 function renderVendorSourcing(jobId, job, est) {
@@ -30203,19 +30480,22 @@ function renderVendorSourcing(jobId, job, est) {
     }).join('');
   }
 
-  // End-of-Job Logistics — standard categories, minus any already added on the
-  // estimate (those live under Service Vendors). Assign only what this job needs;
-  // quotes flow into the invoice's third-party actuals (15% SMF).
-  var logiCats = logisticsCatsFor(svcLines);
+  // End-of-Job Logistics — ONLY the categories somebody put on this job (logisticsLinesFor), never
+  // a standing row per category the estimate happened not to cover (2026-09-23 — see the note on
+  // LOGISTICS_CATEGORIES). Quotes flow into the invoice's third-party actuals.
   // Home Prep for Sale doesn't clear out a home — there's no haul-away / donation /
   // shredding stream — so the End-of-Job Logistics vendors don't apply.
+  var logiCats = logisticsLinesFor(job, svcLines);
   if (logiCats.length && job.svc !== 'prep') {
-  html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">End-of-Job Logistics <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— assign only what this job needs; self-haul (van to dump/donation) needs no vendor</span></div>';
+  html += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bronze);margin:10px 0 6px;">End-of-Job Logistics <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— added on the job; self-haul (van to dump/donation) needs no vendor</span></div>';
   html += logiCats.map(function(cat){
     var rec = lsrc[cat.key] || {};
     var quote = (rec.quote != null && rec.quote !== '') ? rec.quote : '';
     return '<div style="border:1px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:6px;background:var(--white);">' +
-      '<div style="font-size:12px;font-weight:600;">' + cat.label + '</div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;">' +
+        '<span style="font-size:12px;font-weight:600;">' + cat.label + '</span>' +
+        '<button class="btn-s" onclick="removeLogisticsLine(' + jobId + ',\'' + cat.key + '\')" style="font-size:10px;padding:2px 8px;">Remove</button>' +
+      '</div>' +
       '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center;">' +
         '<select onchange="setLogisticsVendor(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:2;min-width:150px;font-size:12px;' + _fldBg(rec.vendorId) + '">' + vendorPickerOptions(_selVendorId(rec), vendorCategoriesForSlot('logistics', cat.label)) + '</select>' +
         '<select onchange="setLogisticsStatus(' + jobId + ',\'' + cat.key + '\',this.value)" style="flex:1;min-width:110px;font-size:12px;' + _fldBg(rec.status) + '">' + vendorStatusOptions(rec.status) + '</select>' +
@@ -30225,6 +30505,21 @@ function renderVendorSourcing(jobId, job, est) {
       '</div>' + _vendorRefLine(rec) +
     '</div>';
   }).join('');
+  }
+  // The one way onto that list: a category the estimate did not cover and nobody has added yet. A
+  // select rather than a row per category, because a row per category is exactly the standing
+  // placeholder list this replaced.
+  if (job.svc !== 'prep') {
+    var logiAddable = logisticsCatsFor(svcLines).filter(function(cat){ return !logisticsLineOn(lsrc[cat.key]); });
+    if (logiAddable.length) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 10px;">' +
+        '<select onchange="addLogisticsLine(' + jobId + ',this.value)" style="flex:0 1 260px;min-width:0;font-size:12px;">' +
+          '<option value="">+ Add an end-of-job vendor&hellip;</option>' +
+          logiAddable.map(function(cat){ return '<option value="' + cat.key + '">' + cat.label + '</option>'; }).join('') +
+        '</select>' +
+        '<span style="font-size:10px;color:var(--gray);">only if the job turns out to need one the estimate did not carry</span>' +
+      '</div>';
+    }
   }
 
   if (hasPrep) {
@@ -30327,6 +30622,8 @@ function refreshVendorSourcing(jobId) {
   }
   var el = document.getElementById('vendor-sourcing-' + jobId);
   if (el) el.innerHTML = renderVendorSourcing(jobId, job, est);
+  // The chip row and the fold's "N of M confirmed" count what was just changed — see _repaintPlanGates.
+  _repaintPlanGates(jobId);
 }
 // The ONE place a sourcing slot is addressed for writing. Every setter below goes through
 // it, so none of them has to know whether the estimate line carries an id — and none of
@@ -30405,6 +30702,10 @@ function _logiJob(jobId, key) {
   if (!job) return null;
   if (!job.logisticsSourcing) job.logisticsSourcing = {};
   if (!job.logisticsSourcing[key]) job.logisticsSourcing[key] = {};
+  // A line being written to is a line ON the job (2026-09-23), so it stays on the list until Remove
+  // takes it off — without this, clearing the vendor on a line sourced before today (which carries
+  // no `added`) would drop it out from under the person editing it (see logisticsLineOn).
+  job.logisticsSourcing[key].added = true;
   return job;
 }
 function setLogisticsVendor(jobId, key, val) {
@@ -30421,6 +30722,30 @@ function setLogisticsQuote(jobId, key, val) {
 function setLogisticsStatus(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
   job.logisticsSourcing[key].status = val; saveJobs(); refreshVendorSourcing(jobId);
+}
+// Put an end-of-job category on this job (the add menu under the sourcing list). Refuses anything
+// that is not a catalogue key — the value arrives from a <select>, and a stray one must not mint a
+// logistics record the list cannot render.
+function addLogisticsLine(jobId, key) {
+  if (!key || !LOGISTICS_CATEGORIES.some(function(c){ return c.key === key; })) return;
+  var job = _logiJob(jobId, key); if (!job) return;
+  job.logisticsSourcing[key].added = true;
+  saveJobs(); refreshVendorSourcing(jobId);
+}
+// Take one off. ⚠ A line with a vendor or a quote on it is asked about first: its quote is billed
+// as a third-party actual (getVendorActuals), so removing it takes it off the invoice too.
+function removeLogisticsLine(jobId, key) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var rec = job && job.logisticsSourcing && job.logisticsSourcing[key];
+  if (!rec) return;
+  var cat = LOGISTICS_CATEGORIES.filter(function(c){ return c.key === key; })[0];
+  var label = cat ? cat.label : key;
+  var hasQuote = rec.quote != null && rec.quote !== '';
+  if ((rec.vendorName || hasQuote) && !confirm('Remove ' + label + ' from this job?\n\n'
+      + (rec.vendorName ? rec.vendorName + ' comes off it' : 'It comes off')
+      + (hasQuote ? ', and its $' + Number(rec.quote).toLocaleString() + ' quote is no longer billed' : '') + '.')) return;
+  delete job.logisticsSourcing[key];
+  saveJobs(); refreshVendorSourcing(jobId);
 }
 
 // ── ACTUAL COORDINATION HOURS (optional, observational) ──────────────────────
@@ -33139,9 +33464,8 @@ function renderJobPlan(jobId, job, est) {
   var gates = planGateChipsHtml(jobId, job, est);
 
   // ── Vendors & partners: the calls made before the job starts ────────────────────────
-  var vprog = vendorSourcingProgress(jobId, job, est);
   var vendorsBody = '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>';
-  var vendorsMeta = vprog.total ? vprog.done + ' of ' + vprog.total + ' confirmed' : 'nothing on the estimate';
+  var vendorsMeta = planVendorsMeta(jobId, job, est);   // one wording, shared with _repaintPlanGates
 
   // ── Before Day 1: the pre-job call, its notes, and the access & crew boxes ───────────
   var p0CallNote = getPlanNote(jobId, 'p0_call_notes');
@@ -36687,8 +37011,11 @@ function saveClientEdit(jobId) {
     if (docSentAt(job, 'estimate')) _stale.push('the client estimate');
     if (job.agrSigned) _stale.push('the signed agreement');
     else if (isAgreementSent(job)) _stale.push('the signing packet');
-    if (_stale.length) alert('The dates on this job have changed.\n\n' + _stale.join(' and ')
-      + ' state the old dates. Agree the new dates with the client, and re-send the estimate if it has not been accepted yet.');
+    // One document or two, and the sentence opens on a capital either way (it read "…\n\nthe signed
+    // agreement state the old dates" until 2026-09-23).
+    var _staleTxt = _stale.join(' and ');
+    if (_stale.length) alert('The dates on this job have changed.\n\n' + _staleTxt.charAt(0).toUpperCase() + _staleTxt.slice(1)
+      + (_stale.length > 1 ? ' state' : ' states') + ' the old dates. Agree the new dates with the client, and re-send the estimate if it has not been accepted yet.');
   }
   job.mustFind    = (document.getElementById('ec-mustfind')||{}).value||'';
   job.safetyNotes = (document.getElementById('ec-safety')||{}).value||'';

@@ -36,10 +36,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
-            'planGateChipsHtml', 'vendorSourcingProgress', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
+            'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
             'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2'],
       vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
-             'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+             'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES'],
       stubs: {
         document: dom, isFormalDoc: () => false, _sfHost: () => '', renderVendorSourcing: () => '<i>SOURCING</i>',
         renderVendorScorecard: () => '', _importableFromEstimate: () => ({ collections: [], vehicles: [] }), getPlanNote: () => '',
@@ -140,8 +140,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the gates are chips, and a red chip carries its fix');
   {
     const { out } = plan(JOB(), EST());
-    eq((out.match(/class="gate-chip /g) || []).length, 3, 'agreement · deposit · attorney on an estate settlement with no vendors');
-    eq((out.match(/gate-no/g) || []).length, 3, 'all three red on a job with nothing recorded');
+    // ⚠ FOUR since 2026-09-23: the Job team chip joined the row (see the group on it below). It is on
+    // every labour job — a plan with no team to confirm does not exist — so the count moved by one.
+    eq((out.match(/class="gate-chip /g) || []).length, 4, 'agreement · deposit · attorney · job team on an estate settlement with no vendors');
+    eq((out.match(/gate-no/g) || []).length, 4, 'all four red on a job with nothing recorded');
     has(out, '<strong>Deposit received:</strong> not yet', 'and the fix is under the row, not in a tooltip');
     lacks(out, 'id="plan-derived-p0-7"', 'the Before Day 1 card does not repeat them as lines');
     eq((out.match(/class="pl-derived"/g) || []).length, 2, 'derived-line blocks survive on Midpoint & pickups and Close-out only');
@@ -155,14 +157,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('vendorSourcingProgress — what "lined up" means');
   {
-    const v = sandbox({ fns: ['vendorSourcingProgress', '_srcLineKey'] });
+    const v = sandbox({ fns: ['vendorSourcingProgress', '_srcLineKey', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor'],
+                        vars: ['LOGISTICS_CATEGORIES'] });
     const est = { vendors: [{ lid: 'a', type: 'Mover' }, { lid: 'b', type: 'Auction House' }], collections: [{ id: 'c1' }], prepItems: [{ lid: 'p1' }] };
-    const job = { vendorSourcing: { La: { status: 'Confirmed' }, Lb: { status: 'Quote requested' } }, collSourcing: { c1: { vendorId: 3 } }, prepSourcing: {},
-                  logisticsSourcing: { junk: { vendorId: 9 } } };
+    const job = { vendorSourcing: { La: { status: 'Confirmed' }, Lb: { status: 'Quote requested' } }, collSourcing: { c1: { vendorId: 3 } }, prepSourcing: {} };
     eq(JSON.stringify(v.vendorSourcingProgress(7, job, est)), '{"done":2,"total":4}', 'one confirmed vendor + the assigned collection, of four lines');
     eq(v.vendorSourcingProgress(7, {}, { vendors: [], collections: [], prepItems: [] }).total, 0, 'nothing on the estimate, nothing to line up');
-    eq(v.vendorSourcingProgress(7, { logisticsSourcing: { junk: { vendorId: 9 } } }, {}).total, 0,
-       '⚠ the end-of-job logistics slots never count — a job with no dumpster is not a job with a vendor missing');
+    // ⚠⚠ THE END-OF-JOB CATEGORIES NOBODY PUT ON THE JOB NEVER COUNT — a job with no dumpster is not a
+    // job with a vendor missing. Untouched records (an empty object) are not lines either.
+    eq(v.vendorSourcingProgress(7, { logisticsSourcing: { junk: {}, shred: {} } }, {}).total, 0,
+       '⚠ untouched end-of-job categories never count');
+    // …but since 2026-09-23 a logistics line exists only because somebody said the job needs one, so a
+    // line that IS on the job is a vendor to line up, and counts like any other.
+    eq(JSON.stringify(v.vendorSourcingProgress(7, { logisticsSourcing: { junk: { added: true } } }, {})), '{"done":0,"total":1}',
+       '⚠ an end-of-job line somebody ADDED counts — unconfirmed, it holds the chip red');
+    eq(JSON.stringify(v.vendorSourcingProgress(7, { logisticsSourcing: { junk: { added: true, status: 'Confirmed' } } }, {})), '{"done":1,"total":1}',
+       '…and confirmed, it reads green');
+    eq(JSON.stringify(v.vendorSourcingProgress(7, Object.assign({}, job, { logisticsSourcing: { junk: { vendorId: 9 } } }), est)), '{"done":2,"total":5}',
+       'a legacy line carrying a vendor from before 2026-09-23 is ON the job, and counts until confirmed');
+    eq(v.vendorSourcingProgress(7, { logisticsSourcing: { junk: { added: true } } }, { vendors: [{ lid: 'j', type: 'Junk Removal / Hauling' }] }).total, 1,
+       '⚠ a category the estimate already covers is counted ONCE, as the estimate vendor, never again as a logistics line');
+    eq(v.vendorSourcingProgress(7, { svc: 'prep', logisticsSourcing: { junk: { added: true } } }, {}).total, 0,
+       'a prep job carries no end-of-job logistics at all');
   }
 
   group('the counts — on the fold bars and in the card headings');
@@ -184,8 +200,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('planCurrentStage marks; only Vendors ever opens by itself');
   {
     const c = sandbox({ fns: ['planCurrentStage', 'planVendorsOpenOnLoad', 'vendorSourcingProgress', '_srcLineKey', '_planRooms', '_planRoomStatus',
-                              'roomStatusNormalize', '_planOpenStageFor', 'planStageState'],
-      vars: ['jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', '_planOpenPhases', '_planLastJob', 'PLAN_FLOW'],
+                              'roomStatusNormalize', '_planOpenStageFor', 'planStageState', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor'],
+      vars: ['jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', '_planOpenPhases', '_planLastJob', 'PLAN_FLOW', 'LOGISTICS_CATEGORIES'],
       stubs: { stagePaidTotal: () => 0 } });
     c.estimateStore[7] = { estimate: EST({ vendors: [{ lid: 'a', type: 'Mover' }] }) };
     const est = c.estimateStore[7].estimate;
@@ -285,14 +301,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const running = s.planScheduleHtml(7, JOB({ status: 'active', activatedOn: '2026-09-22' }), est);
     has(running, 'Started', 'an active job says when it started');
     has(running, '2026-09-22', 'the recorded start');
-    has(running, 'target was', '⚠ and names the target it slipped from');
-    has(running, '2026-09-21', 'the target start');
     has(running, 'Today', 'today, in words');
     has(running, '2026-09-24', 'the date the working day was measured against');
     has(running, 'Working day 3 of 6', 'where the job is');
     has(running, '3 working days to go', '⚠ and how many are left — Anthony’s "three more days"');
-    has(running, 'Target end', 'the target end still reads');
-    has(running, 'now ending', 'and the end the slip moved it to');
+    // ⚠⚠ SINCE 2026-09-23 THE PLAN COUNTS FROM THE DAY THE JOB STARTED, and the old target leaves the
+    // strip. Anthony, off exactly this header: "you need to do away with the old ones like the target
+    // start date and target midpoint because it's very confusing." Started on the 22nd, six days:
+    // halfway the 24th, planned end the 29th — and no date counted from the 21st anywhere.
+    has(running, 'Halfway 2026-09-24', 'the halfway counted from the real start');
+    has(running, 'Planned end <span class="jt-sched-v">2026-09-29</span>', '⚠ ONE end, counted from the real start');
+    lacks(running, 'target was', '⚠⚠ the target it replaced is gone from the strip');
+    lacks(running, '2026-09-21', '…no date off the old target start survives');
+    lacks(running, 'Target end', '…nor a target end counted from it');
+    lacks(running, 'now ending', '…nor a second end beside the first');
+    lacks(running, '2026-09-28', '…the old target end, off the 21st, is not printed anywhere');
     eq(s.planScheduleHtml(7, JOB({ status: 'lost' }), est), '', 'a dead job renders nothing');
     // The measurement itself lives in _planScheduleStrip since 2026-09-20 (planScheduleHtml wraps it;
     // _repaintHoursReadouts reuses it after an hours save), so the store rule is pinned on both halves.

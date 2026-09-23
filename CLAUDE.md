@@ -1,3 +1,107 @@
+## ⚠⚠ SEVEN OFF ONE DUMMY JOB — THE JOB PLAN NOW KNOWS WHO, WHEN AND WHAT'S NEXT (FIXED 2026-09-23)
+Anthony, walking the Ellsworth dummy client (Home Transition) from the dashboard onto the Job Plan, in one message: Activate
+should land on the Job Plan; *"document shredding gets lumped into end of job logistics automatically, whether or not you want
+it … It should just be the vendors that you choose when you create the estimate"*; *"if it changes, the dates on the top of the
+job plan need to update and you need to do away with the old ones like the target start date and target midpoint because it's
+very confusing"*; *"I was assigned to do the walkthrough, but Ashley was assigned as the transition concierge at client intake.
+But then on the job plan, I was listed as the default"*; *"we were able to lock in a team where both property specialists were
+Anthony Jr"*; *"we'd also like an indicator for … locking in the job team … now that we're in the job plan, we need notifications
+up there that are job specific"*; and *"the next stage is midpoint invoice sent, and it just feels a little misleading … it makes
+it seem like we've already done that."* All seven fixed. App-only, no redeploy.
+
+- **⚠⚠ #7 — THE BAND PRINTED THE MILESTONE'S NAME, WHICH IS A PAST PARTICIPLE.** `jtBandHtml` read `next.label`, the rail's name
+  for a step once it is done. `JT_NEXT` gives each of the sixteen milestones its step in the imperative (*Send the midpoint
+  invoice*, *Collect the deposit*, *Get the agreement signed*, *Activate the job*), `jobTimeline` rows carry it as `todo`, and the
+  band prints `todo`. **The rail keeps the milestone names** — there they are the record. A net asserts every row has a `todo`
+  that is not its label and opens on a verb, so a seventeenth milestone cannot ship reading as done. Dropping `todo` fails **36**.
+- **⚠⚠ #3 — ONCE A JOB STARTS, EVERY DATE IS COUNTED FROM THE DAY IT STARTED, AND THE TARGET DATES GO. THIS REVERSES THE
+  2026-09-13 RULE** (*"the plan is anchored on `job.start`, always"*, plus `projectedEnd` / *now ending* as a second figure).
+  `jobSchedule` sets `anchor` / `anchorKind`: the target start until the job is activated, `activatedOn` after. `projectedEnd`
+  and `startSlip` are **deleted**; the strip prints **Planned end** once `anchorKind === 'actual'`, never *target was* and never
+  a second end. Measured on the real strip, six working days, target Oct 5, activated Sep 23: *Started Sep 23 — target was Oct 5
+  · Halfway Oct 7 · Target end Oct 12 · now ending Sep 30* → *Started Sep 23 · Working day 1 of 6 · 5 working days to go ·
+  Halfway Sep 25 · Planned end Sep 30*. Anchoring on the target always fails **20**.
+  - **⚠ A DEPOSIT DATE STILL NEVER ANCHORS.** A legacy job read off the deposit says *(from the deposit)* and is counted from its
+    target start, exactly as before. Fails 3.
+  - **⚠ FIT MOVED WITH IT.** The hard target / court deadline is tested against the planned end, so a late start that misses the
+    closing date turns red the day it starts; the inverted case reads *before the start*, not *before the target start*. Pace
+    reads *past the planned end*.
+  - **⚠ ACTIVATING IS NOW WHAT FIXES THE START, SO ACTIVATING EARLY ASKS.** `applyJobTransition` confirms *Activate this job
+    today?* naming both dates when today is before the target start; Cancel changes nothing. `activatedOn` is write-once, so this
+    is the one moment it can be got right. Fails 8.
+  - **⚠ AND THE JOB PLAN WAS STALE FOR A DIFFERENT REASON:** `showPanel('job-plan')` redrew only when the picker moved, so a start
+    moved in Edit Client never reached the plan header until you picked another client and back. It redraws on every entry now.
+- **⚠⚠ #1 — ACTIVATE LANDS ON THAT CLIENT'S JOB PLAN.** `openJobPlanFor(jobId, fold)` records the client (`setCurrentJob`) BEFORE
+  pressing the real nav, so `showPanel` adopts it; refuses a job no longer on this device. `activateOrCycle` calls it only when
+  the job just became active — **closing does not navigate** — and falls back to the repaint. `goToJobLog` (+ Log Hours Today) is
+  now `openJobPlanFor(jobId, 'hours')` in place of two hand-rolled timeouts, and opens the Hours fold. `openClientDashboard`
+  records the client too, so tapping Job Plan next opens it rather than *Select a job*.
+- **⚠⚠ #2 — END-OF-JOB LOGISTICS ARE OFFERED, NEVER PLACED.** `renderVendorSourcing` rendered every `LOGISTICS_CATEGORIES` entry
+  the estimate did not cover as a standing row on every labour job. Now `logisticsLineOn(rec)` / `logisticsLinesFor(job,
+  svcLines)` — the one definition read by the list, the lined-up count and the add menu — and **+ Add an end-of-job vendor…**
+  offers the rest one pick at a time. `_logiJob` stamps `added:true` on any write, or clearing the vendor on a pre-today line would
+  drop it out from under the person editing it. **Remove** confirms when the line has a vendor or a quote, because that quote is
+  billed as a third-party actual. **A line saved before today with a vendor, quote, status or coord hrs stays on** — nothing
+  sourced is lost. `vendorSourcingProgress` now counts the added lines (non-prep); they used to be excluded wholesale as
+  placeholders, and a line that exists because somebody said the job needs it is a vendor to line up.
+- **⚠⚠ #4 — THE CREW SEED READ THE WALKTHROUGH PERSON FIRST.** `seedCrewFromEstimate` took `est.preparedBy || job.tc`; it is
+  `job.tc || est.preparedBy` now — `preparedBy` prints as *Walkthrough by*; `job.tc` is who runs the job. **`getJobCrew`
+  follows intake while the concierge is an untouched default**: not locked, not `picked` (set by `setCrewTC`), and never
+  confirmed — it reads `confirmedAt`, set once and never cleared, so a team re-opened with Revise team is still a decision.
+  It stands down if following would create a duplicate. The old auto-select loops that painted the selects from `job.tc` and
+  the estimate without touching the record are deleted. Each arm revert-verified, 1–2 each.
+- **⚠⚠ #5 — ONE PERSON, ONE SLOT, AND THE RULE HAD ONLY EVER LIVED IN WHICH NAMES A SELECT OFFERED.** Options are drawn once, so
+  two quick picks put Anthony Jr in both slots and the team confirmed that way. `crewSlotHolding` / `crewDuplicates` are the
+  rule; `setCrewTC` / `setCrewTC2` / `setCrewPS` refuse through `_crewRefuseDup` (names the slot, offers *Contractor TBD*, **puts
+  the select back to the record** — left showing him it reads as though it took) and redraw the other selects in place;
+  `confirmJobTeam` refuses a duplicate as the backstop. Placeholders repeat. PS setter fails 6, confirm 4.
+- **⚠⚠ #6 — A *JOB TEAM CONFIRMED* CHIP.** `jobTeamGateLine(job)` reads `job.crew` **without seeding** (a chip must not write
+  the job by being drawn); red until confirmed and **red again on a duplicate**, with the fix naming the button. Pushed by
+  `planGateChipsHtml` (labour jobs only — prep has its own renderer). `_repaintPlanGates(jobId)` redraws the chip row and the
+  Vendors fold count in place (`planVendorsMeta` is that count's one definition), guarded on the picker, from `confirmJobTeam`,
+  `reviseJobTeam` and `refreshVendorSourcing`. No chip fails 6.
+- **⚠ FOUND IN THE BROWSER: EDIT CLIENT'S STALE-DATES ALERT READ *"…\n\nthe signed agreement state the old dates"*** — lower-case
+  and the wrong verb whenever one document was stale. Capitalised, *states* / *state* by count. Covered by `step20` only.
+- **⚠ ANTHONY'S OWN TEST JOB WILL NOT CORRECT ITSELF, AND THAT IS THE RULE WORKING.** Its team was confirmed, so the concierge and
+  the doubled Anthony Jr are decisions the app will not overrule — the chip goes red and says so. **Revise team**, pick Ashley,
+  change one slot, confirm.
+- **10,730 committed checks** (`tests/job-plan-team-dates.test.js` new at 227; eleven suites restated rather than deleted —
+  `dashboard-actions`, `dashboard-schedule`, `dashboard-utility-bar`, `esign-docusign`, `fee-only-timeline`, `field-capture`,
+  `job-plan-stages`, `job-progress`, `job-tab-sync`, `job-timeline`, `signature-record` — each pinned the old anchor, the old
+  band text, the old four chips or the old redraw rule). **Revert sweep: 46 changes on four parallel tar copies, ALL RED, ZERO
+  GREEN**, baseline 10,730 / 0 before and after on every copy, no needle mismatch.
+  - **⚠⚠ THE FIRST CUT OF THE SETTER GROUP PASSED WITH NOTHING REFUSED.** It lifted the real `getJobCrew` beside a stub of it —
+    a lifted fn overrides a same-named stub — found no job, returned null, and every "refusal" was the early return on a missing
+    crew. The stub stands alone now, with a comment saying why — one more assertion that could not fail, of the shape this file
+    records over and over, caught by reverting rather than by reading.
+  - **⚠ TWO REVERTS CRASHED THE FILE RATHER THAN FAILING IT** (the PS and TC setters taking a duplicate): `said[0].msg` threw
+    when nothing was said, so each read as a handful of failures with the rest of the file unrun (10,688 / 10,696 against
+    10,730). Every index read in the new suite is defensive now; re-done, they fail **6** and **3** with all 227 running.
+- **Verified in headless Chromium, `tests/browser/step20.js`, 68 checks, 0 failed, 0 page errors**, on a seeded Ellsworth-shaped
+  job (target Oct 5, intake TC Ashley, walkthrough Anthony, clock pinned to Sep 23): the band reads *Activate the job*; the Job
+  Plan from the nav lands on the client with *Target end Oct 12*, **Ashley** on the row and on the record, **no** logistics rows
+  and an add menu of three (the estimate covers junk and donation); the team chip red; Edit Client moving the start to Oct 12
+  shows on the plan walking back; Activate → Cancel changes nothing, → OK stamps Sep 23 and **lands on the Job Plan**, strip
+  *Started Sep 23 … Planned end Sep 30*, band *Send the midpoint invoice*; a second Anthony Jr refused, the confirm refused on a
+  seeded duplicate, the chip green on a real confirm; add then remove Document Shredding; *+ Log Hours Today* lands with the
+  Hours fold open; overflow 0 at 1440 and 390. `step15` restated (its band read *Midpoint invoice sent*); `run.sh`'s default
+  list is 1–20; steps 1–19 re-run — **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27
+  / 58**, 0 failed — **831 checks across the twenty**. The first `<style>` block is **byte-identical to HEAD at 98,753 bytes /
+  1,228 lines / 675 rules**; the app diff is 426 insertions against 99 deletions.
+- Manual **§9a** (the Activate row), **§9a-i** (the table's Target start / Halfway / Target end / **Planned end** / *Started …*
+  rows, the reversal note with the measured before/after table, the early-activation note, the pace and fit flags), **§9a-ii**
+  (NEXT is a step), **§10a** (the dashboard records the client), **§11** (the gates and vendors rows, the job-team chip note, the
+  one-slot and intake-concierge bullets, the logistics note rewritten), **§5d** and **§13a** (five end-of-job categories, not five
+  slots the plan asks for). Playbook **Step 2**, **Step 7** (one slot, the intake concierge, the chip), **Step 10** (activate on the
+  day, a `.stop`; the example strip; the late-start note rewritten), **10b** (+ Log Hours Today), **10c** (end-of-job vendors),
+  and **nine** symptom→cause rows plus one corrected. Both `.md` copies hand-edited; **63 claims parity-checked, 0 mismatches**; a
+  stale sweep for nine retired wordings returns **0** outside the notes that quote them; tag balance clean; rendered at 1440/390
+  with **0 overflow, 0 page errors**; under `print` **51/58 and 17/18** tables as wide as their container, 0 taking the phone rule —
+  the manual's one new table sits inside a note.
+- **⚠ THE SHAPE TO COPY: a rule enforced only in what a control OFFERS is not enforced.** The one-slot rule lived in which names
+  each select listed, and the logistics rule in which rows the list drew — both true on first paint and both reachable around by
+  the second click. Put the rule where the record is written, and let the control merely reflect it.
+
 ## ⚠ THE MANUAL'S BACK TWO-THIRDS RENDERED INSIDE ONE NOTE, AND THE HTML WAS VALID (FIXED 2026-09-23)
 Anthony: *"The manual has a formatting bug. A box in §7 is never closed, so everything after it renders inside that box …
 fix now"* — the flag the Win / Loss entry below left standing. Docs only: `manual.html` plus one new test. No app change,
@@ -3814,7 +3918,8 @@ six days, today is the 24th, three more days … that lets you know where you st
     planned day* on the sixth; **withheld once the job is over its length**, where the red pace line already says so, and withheld
     on a descriptor that carries no `remaining` rather than printing a wrong count. Driven: Anthony's own example renders
     *Started Sep 22, 2026 — target was Sep 21, 2026 · Today Sep 24, 2026 · **Working day 3 of 6** · 3 working days to go · Halfway
-    Sep 23 · Target end Sep 28 · now ending Sep 29*.
+    Sep 23 · Target end Sep 28 · now ending Sep 29*. ⚠ **The *target was* half and *now ending* were retired on 2026-09-23** —
+    the same job now reads *Started Sep 22, 2026 · … · Halfway Sep 24 · Planned end Sep 29*; see the entry at the top of this file.
 - **⚠ THE BOXES WERE SHOUTING BECAUSE OF THE FORM-LABEL RULE.** `planChk` rendered a `<label>` with inline styles and no
   `text-transform`, so the global `label{font-size:10px;text-transform:uppercase;letter-spacing:.05em}` reached every checkbox and a
   stage of thirteen boxes read as a wall of capitals — the thing under *"can we re-format this better?"*. `.plan-chk` (sentence
@@ -3900,6 +4005,9 @@ him and he took all seven: **"Go, build it. then update manual and playbook."** 
   labour job**, deduped against whatever the estimate already carries, never populated from it. `vendorSourcingProgress`
   counts service vendors at Confirmed, collection partners assigned and prep lines Confirmed, and nothing else — a job with no
   dumpster is not a job with a vendor missing. Counting them fails 2.
+  **⚠ SUPERSEDED 2026-09-23 — the placeholders are gone** (see the entry at the top of this file). A logistics line exists now
+  only because the estimate carried it or somebody added it on the plan, so an ADDED line is a vendor to line up and does
+  count; the categories nobody added still never count. *Kept, per the standing rule.*
 - **⚠ THE STAGE THE JOB IS IN OPENS BY ITSELF, ONCE PER JOB PER SESSION, AND NOTHING ABOUT IT IS PERSISTED.**
   `planCurrentStage`: every room cleared and the midpoint paid → Close-out; every room locked → Midpoint & pickups; the job
   active → nothing but the rooms (never folded); anything unconfirmed on the estimate → Vendors; else Before Day 1. **The
@@ -6304,10 +6412,14 @@ to allow us to know where we are versus the deliverable timeline we agreed to."*
   - **⚠ TODAY IS AN ARGUMENT.** Reading the clock inside it would make every pace assertion a time bomb that
     passes on the Tuesday it is written and fails on some later one, and would force five sandboxes to stub
     `Date`. `jobTimeline` takes the schedule as an optional fifth parameter for the same reason.
-  - **⚠⚠ THE PLAN IS ANCHORED ON `job.start`, ALWAYS, EVEN ONCE THE JOB IS RUNNING.** That is the date the
+  - ~~**⚠⚠ THE PLAN IS ANCHORED ON `job.start`, ALWAYS, EVEN ONCE THE JOB IS RUNNING.** That is the date the
     client estimate's header and the agreement's Estimated Start Date both state, so a plan re-derived from
     the real activation would print an end date the client was never given. A job that activated late gets
-    `projectedEnd` as a SECOND, clearly-labelled figure — the date to renegotiate, never a quiet replacement.
+    `projectedEnd` as a SECOND, clearly-labelled figure — the date to renegotiate, never a quiet replacement.~~
+    **REVERSED 2026-09-23 on Anthony's call — see the entry at the top of this file.** Once a job is activated every date
+    on the strip is counted from `activatedOn`, `projectedEnd` is deleted, and the target dates are no longer printed
+    beside the real ones. The paperwork still carries the dates the client signed against. *Kept rather than deleted,
+    per the standing rule that a superseded rule left standing reads as current.*
   - **⚠⚠ THE CALENDAR HALFWAY IS `halfway`, NEVER `mid`, AND THE STRIP NEVER PRINTS THE WORD "MIDPOINT".**
     `paymentSplit` is a flat 50/25/25 with **no calendar in it at all**, so the midpoint INVOICE has no date
     relationship to the halfway point. Two facts two inches apart on one card must not share a word, or the
@@ -7579,7 +7691,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/magical-fermi-riifo8`
+- Active feature branch: `claude/inspiring-ptolemy-xgngqv`
+  (`claude/magical-fermi-riifo8` is the previous name.)
   (`claude/admiring-gauss-1tdpzn` is the previous name. `claude/practical-dijkstra-d049ra` shipped alongside it on 2026-09-23 — two sessions ran concurrently: the
   final-invoice band fix and the Win / Loss fold. Both are on `main`, and this branch merged theirs on the way through;
   the merge conflicted on the build stamp, CLAUDE.md, and **both sessions' `tests/browser/step18.js`** — resolved as a
@@ -7621,7 +7734,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/magical-fermi-riifo8:main`
+  `git push origin claude/inspiring-ptolemy-xgngqv:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -12767,8 +12880,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-23** — both documents, against a finished job's final invoice living in the big
-  buttons rather than the strip (one note and one symptom row); see the entry at the top of this file.
+- Last reconciled against the app: **2026-09-23** — both documents, against the seven Job Plan fixes (the band names the step, the
+  schedule counts from the real start, Activate lands on the Job Plan, logistics are offered not placed, the intake concierge, one
+  person one slot, the job-team chip); see the entry at the top of this file.
+- Prior pass **2026-09-23** — both documents, against a finished job's final invoice living in the big
+  buttons rather than the strip (one note and one symptom row).
 - Prior pass **2026-09-23** — both documents, against Client Intake and Build Estimate leaving the nav
   for screens off the Client Dashboard, and the split nav.
 - Prior pass **2026-09-20 (thirty-third pass)** — both documents, against the hours decision and the two

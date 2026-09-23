@@ -49,7 +49,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStageDoc', 'docReadiness', 'docTitle', 'docDraftOnly', 'docWord',
       '_jtDocSecondaries', '_jtDraftLink', '_jtDocViews', '_jtDriveLink',
     ],
-    vars: ['JT_SHORT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+    vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
            'JT_ROW_DOC', 'DOC_ACTIONS', 'DOC_KIND_WORD'],
   });
   const { jobTimeline, jobTimelineNext, jobTimelineActions } = ctx;
