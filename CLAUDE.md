@@ -1,3 +1,43 @@
+## ⚠ THE MANUAL'S BACK TWO-THIRDS RENDERED INSIDE ONE NOTE, AND THE HTML WAS VALID (FIXED 2026-09-23)
+Anthony: *"The manual has a formatting bug. A box in §7 is never closed, so everything after it renders inside that box …
+fix now"* — the flag the Win / Loss entry below left standing. Docs only: `manual.html` plus one new test. No app change,
+no redeploy, and no build stamp (the stamp names the APP build; docs-only commits have never moved it).
+
+- **⚠⚠ ONE TAG IN THE WRONG PLACE, NOT ONE MISSING.** Line 630 ended its note with `</div></div>`, and the second close shut
+  the `.page` column. The note opening at line 632 (*"The stages branch on the JOB FAMILY…"*) had no close, so the file's
+  last `</div>`, written for `.page`, closed it instead. The close belongs at the end of line 635, which is exactly where
+  `MANUAL.md`'s blockquote for the same note has always ended: the markdown copy was right and needed no edit. The diff is
+  one `</div>` moved five lines. ⚠ The flag said *"one tag to add and one stray to find"*; they were the same tag, and the
+  stray sat two lines ABOVE the note, not "somewhere later".
+- **Measured in headless Chromium, before → after:**
+
+  | | before | after |
+  |---|---|---|
+  | `<h2>` inside the page column | **8 of 23**: §8 to §17 outside it | 23 of 23 |
+  | width of §8 onward at 1440px | **1,343px** against a 722px column | 722px |
+  | body text from §8 on | the note's brown `rgb(107,80,32)` | the body's `rgb(44,44,48)` |
+  | notes rendered inside another note | **255 of 387** (and 35 of 57 tables) | 0 |
+  | tables full column width under `print` | **20 of 57** | 51 of 57; the six left sit inside real notes |
+  | Letter pages | 118 | 115 |
+  | overflow 1440 · 390 · page errors | 0 · 0 · 0 | 0 · 0 · 0 |
+
+  The only console noise on either build is Google Fonts failing through this container's proxy.
+- **⚠⚠ WHY EVERY DOC PASS RECORDED "TAG BALANCE CLEAN" OVER IT: THE FILE WAS WELL-FORMED.** One close missing and one extra
+  balance the COUNTS, and a strict stack parse is clean too, because every `</div>` really does close the innermost open
+  `<div>`. A valid document with the wrong tree. **Measured, not argued: the stack parse reports 0 problems on the broken
+  file.** So `tests/doc-structure.test.js` (26 checks, all three HTML documents) asserts what the tree MEANS: the column
+  (`.page`, or `.wrap` on the firearms protocol) is the first `<div>` opened and the last closed, and no heading or box sits
+  outside it; no h1–h4 inside a `.note` / `.stop` / `.flow`; no box inside a box; every `<h2>` a direct child of `.page`.
+  The strict stack parse stays beside them for the other shape, a close missing with nothing to cancel it.
+- **Revert sweep on a tar copy of the tree: 8 breakages, all 8 red, baseline 0 before and after.** HEAD's own file fails **5**
+  and **not** the nesting check, which confirms the point above. Dropping the close alone fails 5 and the stray alone 4; an
+  `<h3>` in a note, a note in a note and an `<h2>` wrapped in a plain `<div>` fail 1 each; the same double close in the
+  playbook fails 4; a stray close in the firearms protocol fails 1 (nesting: its footer carries no heading).
+- **10,467 committed checks** (+26). The playbook and the firearms protocol were already clean under the new rules.
+- **⚠ THE SHAPE TO COPY: a structural check has to test what the structure MEANS.** A count and a stack both passed a file
+  whose back two-thirds had fallen out of its column. When a layout depends on nesting, assert the nesting that matters
+  (which box holds the headings), not merely that every tag closes.
+
 ## ⚠⚠ WIN / LOSS LEFT ITS TAB FOR A ROW ON THE CLIENT DASHBOARD, SIX FILTERS, AND EVERY COLUMN SORTS (BUILT 2026-09-23)
 Anthony asked what the Win / Loss tab actually showed beyond its four tiles, then: *"do we really need a standalone
 win-loss report or should we just fold that into the top of the client dashboard? … Why don't we have the win-loss stuff
@@ -115,13 +155,18 @@ the need for all of the big job type buttons. Make sense?"* App-only, no redeplo
   mismatches**; a stale sweep for seven retired wordings returns **0 across all four files**. Tag balance clean on both
   HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **0**
   tables take the phone rule.
-- **⚠ FOUND IN PASSING, NOT FIXED: `manual.html` HAS AN UNCLOSED NOTE IN §7, AND EVERYTHING AFTER IT RENDERS NESTED
+- ~~**⚠ FOUND IN PASSING, NOT FIXED: `manual.html` HAS AN UNCLOSED NOTE IN §7, AND EVERYTHING AFTER IT RENDERS NESTED
   INSIDE IT.** The note opening *"The stages branch on the JOB FAMILY…"* (~line 632) has no `</div>`; a stack-based parse
   puts every `<h2>` from ~line 676 to the end inside it, and headless Chromium counts **250 `.note .note` at HEAD**. The
   file's overall `<div>` counts balance, so a stray `</div>` somewhere later is hiding it from the tag-balance check this
   file relies on — which is why the print measure has read *"20 of N tables full width, every uncounted one inside a
   note"* for weeks: nearly all of them are inside THIS note. One tag to add and one stray to find; left for its own
-  change rather than folded into this one.
+  change rather than folded into this one.~~ **FIXED 2026-09-23 — see the entry at the top of this file.** ⚠ Three details above were
+  off: Chromium counts **255** `.note .note` at the fixed commit's parent, not 250 (250 was measured before the Win / Loss
+  docs pass added six notes, five of them inside the broken one); the stray
+  sat two lines ABOVE the note, at line 630, where it ended the `.page` column; and the tag to add and the stray to find
+  were one tag, moved. *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as
+  outstanding work.*
 - **⚠ THE SHAPE TO COPY: when a set of buttons is replaced, walk what each one used to find.** Eight buttons became zero
   and a sort became the answer — safe only because the walk proves every removed button's clients are one press on a
   heading away, and it is the walk that found the A→Z order would have split the two probate types.
@@ -7534,8 +7579,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/admiring-gauss-1tdpzn`
-  (`claude/practical-dijkstra-d049ra` shipped alongside it on 2026-09-23 — two sessions ran concurrently: the
+- Active feature branch: `claude/magical-fermi-riifo8`
+  (`claude/admiring-gauss-1tdpzn` is the previous name. `claude/practical-dijkstra-d049ra` shipped alongside it on 2026-09-23 — two sessions ran concurrently: the
   final-invoice band fix and the Win / Loss fold. Both are on `main`, and this branch merged theirs on the way through;
   the merge conflicted on the build stamp, CLAUDE.md, and **both sessions' `tests/browser/step18.js`** — resolved as a
   UNION, theirs keeping step 18 and this one renumbered to **step 19**.)
@@ -7576,7 +7621,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/admiring-gauss-1tdpzn:main`
+  `git push origin claude/magical-fermi-riifo8:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -12714,6 +12759,11 @@ teaching people to ignore it.
   column silently is the worst failure mode for a document someone follows step by step.
   Keep `break-inside:avoid` on `.note`, `.flow` and tables but NOT on lists — §5i and
   §11 have lists longer than a page and forcing those whole strands half a sheet.
+- **"Tag balance clean" is `tests/doc-structure.test.js` now, not a count (2026-09-23).** Every documentation pass
+  recorded a clean tag balance over a manual whose §8 to §17 had fallen out of the page column into one unclosed note:
+  a count passes a stray close that cancels a missing one, and so does a stack parse. The test asserts which box holds
+  the headings and names the line. Run `npm test` after any edit to `manual.html`, `concierge-guide.html` or
+  `firearms-protocol.html`; a note must never hold a heading or another note.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
