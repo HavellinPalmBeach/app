@@ -8,7 +8,7 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto(process.env.APP || 'file:///home/user/app/havellin.html'); await p.waitForTimeout(1500);
-  await p.click('.nb:has-text("Client Intake")'); await p.waitForTimeout(300);
+  await p.click('#btn-add-client');   // the real + Add New Client button — Intake left the nav 2026-09-23 await p.waitForTimeout(300);
 
   console.log('\n=== THE MENU IS FILLED FROM THE CATALOGUE, AT LOAD ===');
   const menu = await p.evaluate(() => {
@@ -197,6 +197,12 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   ok(price.psFull > price.psCap && price.psCap > price.psNone, 'the three really are three different prices');
 
   console.log('\n=== OVERFLOW ===');
+  // ⚠ REOPEN THE INTAKE SCREEN FIRST (2026-09-23). Save lands on the new client's dashboard now,
+  // immediately — and measured, this script only ever saw the intake form here because its whole
+  // remainder ran ~40ms after Save, beating the old 800ms redirect. A layout check that passes by
+  // winning a race is measuring the timer, not the layout.
+  await p.click('.nb:has-text("Client Dashboard")'); await p.waitForTimeout(150);
+  await p.click('#btn-add-client'); await p.waitForTimeout(150);
   for (const w of [1440, 390]) {
     await p.setViewportSize({ width: w, height: 900 });
     await p.evaluate(() => { document.getElementById('i-svc').value = 'probate'; toggleIntakeFields(); });

@@ -34,7 +34,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
     while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
     return d.toISOString().slice(0, 10); })();
 
-  await p.click('.nb:has-text("Client Intake")'); await p.waitForTimeout(300);
+  await p.click('#btn-add-client');   // the real + Add New Client button — Intake left the nav 2026-09-23 await p.waitForTimeout(300);
   const made = await p.evaluate((wt) => {
     const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
     const pick = (id) => { const e = document.getElementById(id);
@@ -54,7 +54,9 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   await p.waitForTimeout(1600);
   ok(!!made, 'the prep client was created');
 
-  await p.click('.nb:has-text("Build Estimate")'); await p.waitForTimeout(400);
+  // Build Estimate is a screen off the client's timeline now (2026-09-23), opened by the band's
+  // own button — the tab this script used to click is gone.
+  await p.evaluate((id) => dashGoEstimate(id), made); await p.waitForTimeout(600);
   const est = await p.evaluate((id) => {
     const js = document.getElementById('e-job'); js.value = String(id); if (js.onchange) js.onchange();
     calcAll();

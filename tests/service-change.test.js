@@ -144,6 +144,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const lock = fn('applyEstimateLock');
     has(lock, "querySelectorAll('input, select, textarea, button')", 'the lock sweeps selects');
     has(lock, "if (el.id === 'e-job') return;", 'the job selector is the only field exempted');
+    // ⚠ ONE ADDITION, AND IT IS NOT A FIELD (2026-09-23): the back button on the Build Estimate
+    // SCREEN. With no tab to click away to, a lock that caught it would leave a submitted
+    // estimate on a screen nobody can leave. Exactly three exemptions — the picker, the nav and
+    // the way out — and a fourth fails here.
+    has(lock, "el.classList.contains('screen-back')", 'the way back off the screen is exempt');
+    eq((lock.match(/\) return;/g) || []).length, 3, 'and the exemptions are exactly the picker, the nav and the way out');
     lacks(lock, "'e-svc'", 'the service picker is NOT exempted from the lock');
     // The hard lock beyond that is the signed agreement, and the picker enforces it itself.
     const chg = fn('changeEstimateService');
@@ -222,7 +228,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(job.svc, 'prep', 'a living job is not re-typed as an estate matter here');
     eq(r.sel.value, 'prep', 'the picker reverts');
     eq(r.fb[0].kind, 'err', 'and it is an error, not a warning');
-    has(r.fb[0].msg, 'Client Intake', 'pointing at the form that asks those questions');
+    // ⚠ IT NAMES EDIT CLIENT NOW (2026-09-23). It pointed at Client Intake, which only CREATES
+    // clients and is no longer even a tab — the refusal-names-a-form-that-cannot-reach-this-client
+    // defect CLAUDE.md records twice. Edit Client carries the decedent fields and the service type.
+    has(r.fb[0].msg, 'Edit Client', 'pointing at the form that asks those questions');
+    lacks(r.fb[0].msg, 'Client Intake', 'and not at a form that cannot reach an existing client');
 
     // The hard lock.
     job = { id: 1, svc: 'downsizing', agrSigned: true };

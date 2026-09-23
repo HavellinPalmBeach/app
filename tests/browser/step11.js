@@ -42,7 +42,7 @@ const ANSWER = {
   await p.goto(APP); await p.waitForTimeout(1500);
 
   // ── A probate estate with four unnamed shots and one already named ──────────
-  await p.click('.nb:has-text("Client Intake")'); await p.waitForTimeout(300);
+  await p.click('#btn-add-client');   // the real + Add New Client button — Intake left the nav 2026-09-23 await p.waitForTimeout(300);
   const jobId = await p.evaluate(() => {
     const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
     set('i-svc', 'probate'); toggleIntakeFields();

@@ -40,13 +40,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // ⚠ AND EVERY OTHER TAB IS STILL THERE. A slice that quietly took a fourth would be
     // indistinguishable from this one in a diff.
-    ['winloss', 'intake', 'estimate', 'job-plan', 'inventory', 'contractors', 'vendors', 'referrals']
+    // ⚠ RESTATED 2026-09-23: Client Intake and Build Estimate came off the nav as well — each is
+    // a full screen off the Client Dashboard now (tests/dashboard-screens.test.js carries the
+    // doors). The requirement this group states is unchanged: the seven tabs that REMAIN are all
+    // still there, and nothing else quietly went with them.
+    ['winloss', 'jobs', 'job-plan', 'inventory', 'contractors', 'vendors', 'referrals']
       .forEach((t) => has(src, "showPanel('" + t + "',this)", t + ' is still on the nav'));
+    ['intake', 'estimate'].forEach((t) =>
+      lacks(src, "showPanel('" + t + "',this)", t + ' has no nav button — it is a screen off the dashboard'));
     // ⚠ COUNT THE PREFIX, NOT THE EXACT ATTRIBUTE. Client Dashboard carries
     // `class="nb active"`, so `class="nb"` misses it — and a check that silently counts one
     // fewer tab than exist would have gone on passing if a ninth were removed. Verified in a
-    // browser: nine `.nb` elements render.
-    eq((src.match(/<button class="nb[" ]/g) || []).length, 9, 'nine tabs, down from twelve');
+    // browser: seven `.nb` elements render.
+    eq((src.match(/<button class="nb[" ]/g) || []).length, 7, 'seven tabs — twelve, then nine, then seven');
     // ⚠ THIS PINNED THE BUTTON'S EXACT MARKUP AND BROKE ON A TRUE CHANGE — adding
     // `data-field` to make the dashboard a field tab failed a check about which tab opens
     // by default. A byte sequence is not a requirement; this file has now paid for that
@@ -63,6 +69,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // all of that in one commit is how one gets missed.
     ['panel-client-estimate', 'panel-agreement', 'panel-invoice'].forEach((p) =>
       has(src, 'id="' + p + '"', p + ' is still in the DOM, because the priming renders into it'));
+    // And the two screens that left the nav on 2026-09-23 keep their panels too — every id the
+    // intake save and the pricing engine read lives inside them.
+    ['panel-intake', 'panel-estimate'].forEach((p) =>
+      has(src, 'id="' + p + '"', p + ' is still in the DOM — it is opened as a screen, not removed'));
     has(fn('_primeAgreementFor'), 'loadAgreement()', 'and the primer still runs the real loader');
   }
 
@@ -247,7 +257,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const navBlock = src.slice(src.indexOf('<div class="nav">'), src.indexOf('</div>', src.indexOf('<div class="nav">')));
     const fieldBtns = navBlock.match(/<button[^>]*data-field="1"[^>]*>/g) || [];
-    eq(fieldBtns.length, 5, 'five nav buttons carry data-field="1"');
+    // ⚠ THREE SINCE 2026-09-23: Intake and Estimate were field tabs, and they are screens off the
+    // dashboard now — reached in the field from + Add New Client and the timeline's Build estimate.
+    eq(fieldBtns.length, 3, 'three nav buttons carry data-field="1"');
 
     // ⚠ The dashboard's button is `class="nb active"` — the same shape that made my own
     // nav count wrong in Slice 7. Pin it by name rather than by counting around it.
@@ -255,16 +267,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '⚠ THE CLIENT DASHBOARD IS A FIELD TAB — the timeline is where a job is run now');
 
     const labels = [...navBlock.matchAll(/data-field-label="([^"]+)"/g)].map((m) => m[1]);
-    eq(labels.join(' · '), 'Clients · Intake · Estimate · Job Plan · Vendors',
+    eq(labels.join(' · '), 'Clients · Job Plan · Vendors',
       'and each has a short label, in nav order');
+    // ⚠ AND THE DASHBOARD IS THE FIELD-MODE DEFAULT NOW. It was Build Estimate — the landing for
+    // a phone entering field mode from a hidden tab — and that tab no longer exists; a default
+    // pointing at nothing would fall through to whichever field tab happened to be first.
+    const defBtns = navBlock.match(/<button[^>]*data-field-default="1"[^>]*>/g) || [];
+    eq(defBtns.length, 1, 'exactly one tab is the field-mode default');
+    ok(/showPanel\('jobs'/.test(defBtns[0] || ''), 'and it is the Client Dashboard, where the walkthrough now starts');
     ok(labels.every((l) => l.length <= 9),
       'every label is short enough for a fifth of a phone (measured: the longest renders 47px into 56px at 320px)');
 
     // ⚠ The counts a person actually READS. Both were stale.
     const body = fn('setFieldMode');
-    ok(/bring back all nine tabs/.test(body), '⚠ the exit tooltip counts the nine tabs that come back, not twelve');
+    ok(/bring back all seven tabs/.test(body), '⚠ the exit tooltip counts the seven tabs that come back');
     lacks(body, 'twelve tabs', 'the pre-Slice-7 count is gone');
-    ok(/five tabs/.test(body), 'and the enter tooltip counts five');
+    lacks(body, 'all nine tabs', 'and the pre-2026-09-23 count with it');
+    ok(/three tabs/.test(body), 'and the enter tooltip counts three');
+    lacks(body, 'five tabs', 'not the five it had while Intake and Estimate were field tabs');
     lacks(body, 'four tabs, bottom bar', 'the pre-dashboard count is gone');
 
     // ⚠ FIELD MODE IS A LAYOUT, NOT A PERMISSION LEVEL. There must be no second,

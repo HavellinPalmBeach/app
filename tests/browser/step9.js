@@ -25,7 +25,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   // ── A probate estate with the 706 question UNANSWERED, which is the default on every new
   //    estate and therefore the case that matters. Three collections on the estimate: one
   //    that groups badly, one that groups fine, one with no value at all.
-  await p.click('.nb:has-text("Client Intake")'); await p.waitForTimeout(300);
+  await p.click('#btn-add-client');   // the real + Add New Client button — Intake left the nav 2026-09-23 await p.waitForTimeout(300);
   const jobId = await p.evaluate(() => {
     const set = (id,v) => { const e=document.getElementById(id); if(e){e.value=v; if(e.onchange) e.onchange();} };
     set('i-svc','cleanout'); toggleIntakeFields();

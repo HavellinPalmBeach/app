@@ -43,6 +43,22 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 .nb{padding:12px 18px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;color:var(--gray);font-family:'Raleway',sans-serif;transition:all .15s;}
 .nb.active{color:var(--gray-dk);border-bottom-color:var(--bronze);}
 .nb:hover{color:var(--gray-dk);}
+/* The white space between the client tabs (left) and the contact directories (right). Grows to
+   fill the row on a desk; in the phone's scrolling strip it keeps a visible gap rather than
+   collapsing to nothing; field mode drops it (below) so the bottom bar stays in even thirds. */
+.nav-gap{flex:1 1 auto;min-width:28px;}
+/* The bar across the top of the two full screens that open OFF the Client Dashboard — Add New
+   Client and Build Estimate. They have no tab of their own, so this bar is the way back and the
+   statement of which client the screen is for; it is sticky so a long walkthrough never scrolls
+   the way out off the top. `top` follows the topbar, which setTopbarHeight publishes. */
+.screen-bar{position:sticky;top:var(--topbar-h,0px);z-index:60;display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--cream);padding:.55rem 0 .7rem;margin:-.4rem 0 .6rem;border-bottom:1px solid var(--border);}
+.screen-back{background:var(--white);border:1px solid var(--border-md);color:var(--gray-dk);border-radius:4px;padding:6px 12px;font-size:11px;font-weight:600;letter-spacing:.04em;cursor:pointer;font-family:'Raleway',sans-serif;white-space:nowrap;}
+.screen-back:hover{border-color:var(--bronze);color:var(--bronze-dk);}
+.screen-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;color:var(--gray-dk);line-height:1.2;min-width:0;}
+.screen-sub{font-size:11.5px;color:var(--gray);min-width:0;overflow-wrap:anywhere;}
+/* The client list's own heading row: the + Add New Client button is the first thing on the tab. */
+.cl-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:1rem;}
+.cl-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:var(--gray-dk);}
 .main{padding:1.5rem;max-width:1300px;margin:0 auto;}
 .panel{display:none;}.panel.active{display:block;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;}
@@ -1043,6 +1059,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
    Not inside a max-width query on purpose: field mode has to be testable in a desktop
    browser at any width. */
 body.field-mode .nb:not([data-field]){display:none;}
+body.field-mode .nav-gap{display:none;}
 body.field-mode .nav{
   position:fixed;bottom:0;left:0;right:0;z-index:200;
   padding:0;border-top:1px solid var(--border);border-bottom:none;
@@ -1215,7 +1232,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:34pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.23 · 8:31am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1230,27 +1247,43 @@ body.no-smf .smf-col{display:none;}
   </div>
 </div>
 
-<!-- data-field marks the five tabs that survive in field mode. The walkthrough needs
-     Build Estimate; a prospect calling while you're out needs Client Intake; the crew
-     needs Job Plan; and Vendors is how you call a hauler from the driveway. Everything
-     else is desk work and is hidden rather than removed, so calcAll still reads it.
+<!-- data-field marks the three tabs that survive in field mode: the Client Dashboard, Job
+     Plan, and Vendors, which is how you call a hauler from the driveway. Everything else is
+     desk work and is hidden rather than removed, so calcAll still reads it.
 
-     ⚠ CLIENT DASHBOARD JOINED THEM 2026-09-11, AND ITS BUTTONS ARE LIVE HERE — field
+     ⚠⚠ CLIENT INTAKE AND BUILD ESTIMATE ARE OFF THE NAV (2026-09-23), AND THEY ARE NOT GONE.
+     Anthony: *"doing away with client intake tab and build estimate tabs. client dashboard
+     needs a 'Add New Client' button at the top … same idea with 'Build Estimate' … a brown
+     button above the job timeline"*, then *"not as a popup, but as another full screen."*
+     Both are now FULL SCREENS reached from the Client Dashboard, the way a client opens from
+     the list: `openIntakeScreen` from the + Add New Client button, `dashGoEstimate` from the
+     timeline's own band. Their panels (#panel-intake, #panel-estimate) stay exactly where they
+     were, every id intact — calcAll reads 89 of them, and moving a form that size into an
+     overlay is the markup surgery this file records going wrong. What went is only the two
+     nav buttons, and with them the ability to land on the estimate without a client.
+     ⚠ While either screen is up, the CLIENT DASHBOARD tab stays lit: that is where you came
+     from and where the ← back bar returns you.
+
+     ⚠ CLIENT DASHBOARD JOINED THE FIELD TABS 2026-09-11, AND ITS BUTTONS ARE LIVE HERE — field
      mode is a LAYOUT, not a permission level. Since the tab consolidation the timeline is
-     where a job is run, and the three things most worth doing standing in somebody's house
-     are all on it: recording a cheque just handed to you (the normal payment path on these
-     jobs), recording a signature handed back, and marking the client won after the
-     walkthrough conversation. Withholding those would have taken the field out of field
-     mode.
+     where a job is run, and the things most worth doing standing in somebody's house are all
+     on it: building the estimate on the walkthrough, recording a cheque just handed to you
+     (the normal payment path on these jobs), recording a signature handed back, and marking
+     the client won after the walkthrough conversation. It is the field-mode DEFAULT now, since
+     it is where both the new-client screen and the walkthrough start.
      ⚠ And a second, field-only rule about which actions are allowed would be a SECOND copy
      of what the timeline's own gates already enforce — two copies of one rule drifting is
      the defect this file records more often than any other. There is one gate, on the
-     timeline, and field mode does not get an opinion about it. -->
+     timeline, and field mode does not get an opinion about it.
+
+     ⚠ TWO GROUPS, LEFT AND RIGHT (2026-09-23). Anthony: *"client facing tabs to the left,
+     contact tabs to the right."* The work on a client on the left; the three directories of
+     people we call on the right. `.nav-gap` is the white space between them — an element
+     rather than a margin on Contractors, so field mode can drop it outright and the bottom
+     bar's even thirds are not pushed apart by a gap nobody can see. -->
 <div class="nav">
   <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
-  <button class="nb active" data-field="1" data-field-label="Clients" onclick="showPanel('jobs',this)">Client Dashboard</button>
-  <button class="nb" data-field="1" data-field-label="Intake" onclick="showPanel('intake',this)">Client Intake</button>
-  <button class="nb" data-field="1" data-field-default="1" data-field-label="Estimate" onclick="showPanel('estimate',this)">Build Estimate</button>
+  <button class="nb active" data-field="1" data-field-default="1" data-field-label="Clients" onclick="showPanel('jobs',this)">Client Dashboard</button>
   <!-- ⚠⚠ CLIENT ESTIMATE, AGREEMENT AND INVOICES ARE RETIRED FROM THE NAV (Slice 7).
        Anthony: *"we are finding ourselves having to go to too many tabs in the app …
        all of the functionality that we currently have in client estimate agreement and
@@ -1267,6 +1300,7 @@ body.no-smf .smf-col{display:none;}
        the markup and repointing all of that in one commit is how one gets missed. -->
   <button class="nb" data-field="1" data-field-label="Job Plan" onclick="showPanel('job-plan',this)">Job Plan</button>
   <button class="nb" onclick="showPanel('inventory',this)">Job Admin &amp; Inv</button>
+  <span class="nav-gap" aria-hidden="true"></span>
   <button class="nb" onclick="showPanel('contractors',this)">Contractors</button>
   <button class="nb" data-field="1" data-field-label="Vendors" onclick="showPanel('vendors',this)">Vendors</button>
   <button class="nb" onclick="showPanel('referrals',this)">Referral Partners</button>
@@ -1277,6 +1311,13 @@ body.no-smf .smf-col{display:none;}
 
 <!-- ══════════════════════════════ INTAKE ══════════════════════════════ -->
 <div class="panel" id="panel-intake">
+  <!-- A full screen OFF the Client Dashboard, not a tab (2026-09-23) — reached from + Add New
+       Client. The bar is the way back; what is typed here stays put if you go back and return,
+       exactly as it did when this was a tab. Save lands on the new client's own dashboard. -->
+  <div class="screen-bar">
+    <button type="button" class="screen-back" onclick="closeIntakeScreen()">&larr; Clients</button>
+    <div class="screen-title">Add New Client</div>
+  </div>
   <div class="grid2">
     <div class="card">
       <div class="sec">Service Type</div>
@@ -1657,6 +1698,18 @@ body.no-smf .smf-col{display:none;}
 
 <!-- ══════════════════════════════ ESTIMATE ══════════════════════════════ -->
 <div class="panel" id="panel-estimate">
+  <!-- A full screen OFF the Client Dashboard, not a tab (2026-09-23) — reached from the Build
+       estimate button on a client's timeline, so it is always FOR one client and the bar says
+       which. The back button returns to that client's dashboard; unsaved scoring stays on this
+       device while the page is open, and reopening the same client picks it up where it was
+       (openEstimateScreen), exactly as tabbing back to Build Estimate used to.
+       ⚠ applyEstimateLock disables every control in this panel on a submitted or approved
+       estimate — it EXEMPTS .screen-back, because a locked form with a locked way out is a
+       screen nobody can leave. -->
+  <div class="screen-bar">
+    <button type="button" class="screen-back" id="est-back" onclick="closeEstimateScreen()">&larr; Back to client</button>
+    <div style="min-width:0;"><div class="screen-title">Build Estimate</div><div class="screen-sub" id="est-screen-client"></div></div>
+  </div>
   <!-- Top of the panel deliberately: it explains why two thirds of the tab is missing,
        which is no use once you have already scrolled past Adjustments looking for it. -->
   <div id="field-banner">
@@ -1675,10 +1728,17 @@ body.no-smf .smf-col{display:none;}
     <div class="grid2" style="align-items:start;gap:1.5rem;" id="est-job-grid">
       <div>
         <div class="sec">Job</div>
-        <label>Job Details</label>
+        <label>Client</label>
+        <!-- ⚠ THE PICKER IS HIDDEN, NOT DELETED. Fifteen reads of parseInt(e-job.value) — including
+             the one that stamps jobId onto the saved snapshot — still bind the form to its client
+             through it. What it no longer offers is a way to swap clients under a screen that was
+             opened FOR one, which would leave the back bar pointing at the wrong dashboard.
+             "Clear" became "Start over": clearing unbound the job as well, and on a screen with no
+             picker that left a form belonging to nobody. -->
         <div style="display:flex;gap:6px;align-items:center;">
-          <select id="e-job" onchange="loadJobIntoEstimate()" style="flex:1;"><option value="">Select job</option></select>
-          <button class="btn-s" onclick="clearEstimateTab()" title="Clear all rooms and reset estimate">Clear</button>
+          <select id="e-job" onchange="loadJobIntoEstimate()" style="display:none;"><option value="">Select job</option></select>
+          <div id="e-job-name" style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;">&mdash;</div>
+          <button class="btn-s" onclick="startEstimateOver()" title="Clear every room scored here and start again from the intake answers">Start over</button>
         </div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span>
@@ -1689,8 +1749,8 @@ body.no-smf .smf-col{display:none;}
              "Start date" here, which sounded like a commitment rather than the target the
              intake form actually captured. -->
         <label>Target start date</label>
-        <input type="date" id="e-start-date" disabled style="background:var(--cream);color:var(--gray);" title="Set in Client Intake">
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set in Client Intake</div>
+        <input type="date" id="e-start-date" disabled style="background:var(--cream);color:var(--gray);" title="Set on the client — Edit Client">
+        <div style="font-size:10px;color:var(--gray);margin-top:2px;">Set on the client &mdash; Edit Client</div>
         <label>Estimate prepared by <span style="color:#A32D2D;font-weight:700;">*</span></label>
         <select id="e-prepared-by">
           <option value="">Select TC</option>
@@ -2200,7 +2260,7 @@ body.no-smf .smf-col{display:none;}
 
   <div id="client-estimate-preview">
     <div class="ce-page" id="ce-page-content">
-      <div class="tab-empty">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>
+      <div class="tab-empty">Select a saved estimate from the dropdown above, or build one from the client’s timeline.</div>
     </div>
   </div>
 </div>
@@ -2209,6 +2269,14 @@ body.no-smf .smf-col{display:none;}
 <div class="panel active" id="panel-jobs">
   <!-- CLIENT LIST VIEW -->
   <div id="clients-list-view">
+    <!-- ⚠ THE ONLY WAY TO CREATE A CLIENT (2026-09-23). Client Intake is no longer a tab; this
+         button opens it as a full screen, and saving lands you on the new client's own
+         dashboard. It is the first thing on the tab and it is in field mode too — a prospect
+         calling while you are out is the reason intake was a field tab in the first place. -->
+    <div class="cl-head">
+      <div class="cl-title">Clients</div>
+      <button type="button" class="btn-bronze" id="btn-add-client" onclick="openIntakeScreen()">+ Add New Client</button>
+    </div>
     <div class="grid4" style="margin-bottom:1.25rem;">
       <div class="metric-card"><div class="metric-label">Total Jobs</div><div class="metric-val" id="m-tot">0</div></div>
       <div class="metric-card"><div class="metric-label">Active Jobs</div><div class="metric-val" id="m-act">0</div></div>
@@ -2242,7 +2310,7 @@ body.no-smf .smf-col{display:none;}
           <th>Status</th><th>RE</th><th>Actions</th>
         </tr></thead>
         <tbody id="jobs-body">
-          <tr><td colspan="9"><div class="empty-state">No jobs yet. Use Client Intake to add the first job.</div></td></tr>
+          <tr><td colspan="9"><div class="empty-state">No clients yet. Press + Add New Client to add the first.</div></td></tr>
         </tbody>
       </table>
     </div>
@@ -4558,7 +4626,7 @@ function renderTimelinePlanner() {
   var wantDate = targetEl ? targetEl.value : '';
   var out = '';
   if (wantDate && !start) {
-    out = '<div class="alert a-warn" style="margin-top:0;font-size:11px;">No target start date on this job \u2014 set one in Client Intake and the planner can work back from the date the client asked for.</div>';
+    out = '<div class="alert a-warn" style="margin-top:0;font-size:11px;">No target start date on this job \u2014 set one with Edit Client on the client\u2019s dashboard and the planner can work back from the date the client asked for.</div>';
   } else if (wantDate && start) {
     // Working days from the start date to the date the client named. Same working-day
     // arithmetic the timeline badge uses, so the two can never disagree.
@@ -5113,7 +5181,7 @@ function changeEstimateService() {
   // fields unasked, and it must not become possible by some later edit to the options.
   if (!sameSvcFamily(prev, next)) {
     revert();
-    showFB('e-fb', 'err', 'A living-client job and a decedent job ask different questions at intake — the representative, the date of death, the contact who is not the client. Change that on Client Intake, where those fields are.');
+    showFB('e-fb', 'err', 'A living-client job and a decedent job ask different questions at intake — the representative, the date of death, the contact who is not the client. Change that with Edit Client on the client\u2019s dashboard, where those fields are.');
     return;
   }
 
@@ -6372,8 +6440,8 @@ function calcAll() {
       var _mvDest = _mvJob && _mvJob.destSqft ? (parseFloat(_mvJob.destSqft) || 0) : 0;
       var _mvRo = document.getElementById('move-dest-readout');
       if (_mvRo) _mvRo.innerHTML = _mvDest > 0
-        ? 'New home: <strong>' + _mvDest.toLocaleString() + ' sq ft</strong> — move-in labor scales with this (set in Client Intake).'
-        : '<span style="color:#A32D2D;font-weight:600;">&#9888; New home sq ft not set — enter it in Client Intake so move-in labor can be priced.</span>';
+        ? 'New home: <strong>' + _mvDest.toLocaleString() + ' sq ft</strong> — move-in labor scales with this (set on the client \u2014 Edit Client).'
+        : '<span style="color:#A32D2D;font-weight:600;">&#9888; New home sq ft not set — enter it with Edit Client on the client’s dashboard so move-in labor can be priced.</span>';
     }
   }
 
@@ -8211,23 +8279,17 @@ function saveIntake() {
   // Clear intake form
   clearIntakeForm();
 
-  // Show success and navigate to Clients tab — except in field mode, which has no
-  // Clients tab, so pointing at one would be telling you to go somewhere that isn't
-  // there. showPanel redirects the hop below; this just makes the words match.
-  var _fieldNow = document.body.classList.contains('field-mode');
-  showFB('i-fb','ok','Client created: ' + name + '.'
-    + (_fieldNow ? ' Opening Build Estimate — pick them from the job list to start scoring rooms.'
-                 : ' Find them in the Clients tab.'));
-  setTimeout(function() {
-    // Go to Clients tab (last tab)
-    var tabs = document.querySelectorAll('.nb');
-    tabs.forEach(function(t){ t.classList.remove('active'); });
-    document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-    var clientsTab = Array.from(tabs).find(function(t){ return t.textContent.trim() === 'Client Dashboard'; });
-    if (clientsTab) clientsTab.click();
-    else tabs[tabs.length-1].click();
-    renderJobs();
-  }, 800);
+  // ⚠⚠ STRAIGHT ONTO THE NEW CLIENT'S OWN DASHBOARD (2026-09-23), not the list. Intake is a
+  // screen off the dashboard now rather than a tab, so the one place worth landing is the client
+  // just created — whose timeline carries the next step (set the walkthrough, Build estimate) as
+  // its brown button. It used to hop to the Client Dashboard LIST on an 800ms timer and tell you
+  // to go and find them there; in field mode the same line told you to pick them out of Build
+  // Estimate's job list, a picker that screen no longer has.
+  // ⚠ AND THE HOP IS IMMEDIATE NOW, which also retires a trap CLAUDE.md records: a script (or a
+  // person) that moved on within 800ms of Save was yanked back to the dashboard a moment later.
+  // (The notice is plain text — the dashboard escapes it when it paints, so escaping here
+  // would print `&amp;` on a client called Smith & Sons.)
+  goToClientDashboard(job.id, 'ok', 'Client created: ' + name + '.');
 }
 
 // ─── WHAT'S IN THE HOUSE — the two questions asked on every intake call ───────
@@ -8931,7 +8993,23 @@ function applyOpenedEstimate(jobId, job, status) {
 // only one of them was calling it. Reopening a SAVED estimate takes the
 // restoreEstimateToUI branch, which never populated this — so the strip simply vanished
 // on every job that already had an estimate, which is every job you go back to edit.
+// Which client the Build Estimate screen is for, said in the two places a reader looks: the
+// sticky bar (with the way back named after them) and the Job card where the picker used to be.
+// Painted from renderJobRefStrip because that is the one thing BOTH open paths call — a fresh
+// build and a reopened saved estimate — and cleared with it.
+function paintEstimateScreenHead(job) {
+  var name = job ? (job.name || 'Client') : '';
+  var bits = job ? [name, job.addr ? String(job.addr).split(',')[0] : '', svcLabelOf(job)].filter(Boolean) : [];
+  var sub = document.getElementById('est-screen-client');
+  if (sub) sub.textContent = bits.join(' \u00b7 ');
+  var nm = document.getElementById('e-job-name');
+  if (nm) nm.textContent = job ? bits.slice(0, 2).join(' \u00b7 ') : '\u2014';
+  var back = document.getElementById('est-back');
+  if (back) back.innerHTML = '&larr; ' + (job ? esc(name) : 'Clients');
+}
+
 function renderJobRefStrip(job) {
+  paintEstimateScreenHead(job);
   var refEl = document.getElementById('e-job-ref');
   if (!refEl) return;
   if (!job) { refEl.innerHTML = ''; refEl.style.display = 'none'; return; }
@@ -8954,6 +9032,7 @@ function clearEstimateTab() {
   document.getElementById('e-job').value = '';
   var refEl = document.getElementById('e-job-ref');
   if (refEl) { refEl.innerHTML = ''; refEl.style.display = 'none'; }
+  paintEstimateScreenHead(null);
   paintEstimateService('', null);
   var propValEl = document.getElementById('e-propval');
   if (propValEl) propValEl.value = '';
@@ -10427,7 +10506,7 @@ function renderClientEstimate() {
   var _ceJob = currentEstimate && (currentEstimate.job || jobs.find(function(j){ return j.id===currentEstimate.jobId; }));
   document.getElementById('ce-page-content').innerHTML = (currentEstimate && _ceJob)
     ? clientEstimateHtml(currentEstimate, _ceJob)
-    : '<div class="tab-empty">Select a saved estimate from the dropdown above, or build one in the Build Estimate tab.</div>';
+    : '<div class="tab-empty">Select a saved estimate from the dropdown above, or build one from the client’s timeline.</div>';
   updateApprovalUI();
 }
 
@@ -10591,6 +10670,10 @@ function applyEstimateLock() {
       panel.querySelectorAll('input, select, textarea, button').forEach(function(el) {
         if (el.id === 'e-job') return;                 // keep job switching
         if (el.classList && el.classList.contains('nb')) return; // never the nav
+        // ⚠ NOR THE WAY OUT (2026-09-23). Build Estimate is a screen off the Client Dashboard
+        // now, with no tab to click away to — lock its back button and a submitted estimate is
+        // a screen nobody can leave.
+        if (el.classList && el.classList.contains('screen-back')) return;
         if (!el.disabled) { el.setAttribute('data-lock-restore', '1'); el.disabled = true; }
       });
     } else {
@@ -11409,7 +11492,13 @@ function renderJobs() {
 
   var body = document.getElementById('jobs-body');
   if (filtered.length === 0) {
-    body.innerHTML = '<tr><td colspan="9"><div class="empty-state">No jobs match this filter.</div></td></tr>';
+    // An EMPTY list and an empty FILTER are different answers, and with Client Intake off the
+    // nav the first has to say where clients now come from. ⚠ And an unread list is neither:
+    // on a cold cache `jobs` is [] until the sheet answers (jobsUnread, the Win/Loss rule).
+    var _emptyMsg = jobs.length ? 'No jobs match this filter.'
+      : ((typeof jobsUnread === 'function' && jobsUnread()) ? 'Loading clients…'
+         : 'No clients yet. Press + Add New Client to add the first.');
+    body.innerHTML = '<tr><td colspan="9"><div class="empty-state">' + _emptyMsg + '</div></td></tr>';
     return;
   }
 
@@ -11534,14 +11623,10 @@ function renderJobs() {
 // ─── EDIT ESTIMATE & CHANGE ORDERS ───────────────────────────────────────────
 
 function editEstimateForJob(jobId) {
-  // Switch to estimate tab
-  var tabs = document.querySelectorAll('.nb');
-  tabs.forEach(function(t){ t.classList.remove('active'); });
-  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
-  var estTab = document.querySelector('.nb[onclick*="estimate"]');
-  if (estTab) estTab.classList.add('active');
-  var estPanel = document.getElementById('panel-estimate');
-  if (estPanel) estPanel.classList.add('active');
+  // The Build Estimate SCREEN, off the Client Dashboard (2026-09-23). This used to light a nav
+  // button found by `.nb[onclick*="estimate"]` — a selector that, with the tab retired, matches
+  // nothing and would have left no tab lit at all.
+  _showDashScreen('panel-estimate');
 
   // Populate job dropdown FIRST then select the job.
   // ⚠ THE ID IS PASSED, ALWAYS. A won job is filtered off this dropdown, and this is the
@@ -14101,7 +14186,7 @@ var _docBusy = null;   // {jobId, docKey} — one send at a time, app-wide
 function docSend(spec) {
   if (_docBusy) { _docNotice('warn', 'Another document is being prepared — give it a moment.', spec.job.id); return false; }
   var to = spec.to;
-  if (!to) { _docNotice('warn', 'No client email on this job — add one in Client Intake first.', spec.job.id); return false; }
+  if (!to) { _docNotice('warn', 'No client email on this job — add one with Edit Client first.', spec.job.id); return false; }
 
   var html = spec.cfg.html(spec);
   if (!html) { _docNotice('warn', 'There is nothing to send on this document yet.', spec.job.id); return false; }
@@ -15795,12 +15880,24 @@ function jobTimelineActions(row, job, estRec) {
       break;
 
     case 'walkthrough':
-      if (live) out.primary = { label: job.walkthrough ? 'Change the walkthrough date' : 'Set the walkthrough date',
-                                call: 'dashEditClient(' + id + ')' };
+      // ⚠⚠ BUILD ESTIMATE HAS TO BE REACHABLE FROM THIS ROW, because the tab is gone (2026-09-23).
+      // The estimate is built DURING the walkthrough, standing in the house — and this row stays
+      // lit until noon on the walkthrough date (`walked` tests `T12:00:00`), so a 10am walkthrough
+      // opens on a band whose only button used to be "Change the walkthrough date". With a Build
+      // Estimate tab that was an inconvenience; without one it is the door locked from outside.
+      // So: a booked walkthrough's next thing to press IS the estimate, and moving the date is the
+      // secondary; an unbooked one still asks for the date first, and offers the estimate beside it.
+      if (live && job.walkthrough) {
+        out.primary = { label: 'Build estimate', call: 'dashGoEstimate(' + id + ')' };
+        out.secondary.push({ label: 'Change the walkthrough date', call: 'dashEditClient(' + id + ')' });
+      } else if (live) {
+        out.primary = { label: 'Set the walkthrough date', call: 'dashEditClient(' + id + ')' };
+        out.secondary.push({ label: 'Build estimate', call: 'dashGoEstimate(' + id + ')' });
+      }
       break;
 
     case 'estimate_built':
-      if (live) out.primary = { label: 'Build the estimate', call: 'dashGoEstimate(' + id + ')' };
+      if (live) out.primary = { label: 'Build estimate', call: 'dashGoEstimate(' + id + ')' };
       // (Edit estimate moved to the document tray at the top of this function — it is an
       // action on the estimate, so it belongs under the estimate rather than in the strip at
       // the foot of the page.)
@@ -16045,12 +16142,12 @@ function _primeAgreementFor(jobId) {
 
 function dashEditClient(jobId) { showEditClient(jobId); }
 
-// Build Estimate is a data-entry tab, not a document — the one row that leaves the
-// dashboard by design. The drilldown has to close first or the estimate tab renders
-// behind it.
+// Build Estimate is a data-entry screen, not a document — the one button on the timeline
+// that leaves the dashboard by design, for a full screen of its own with a way back
+// (openEstimateScreen, 2026-09-23). `_showDashScreen` puts the drilldown away first, so the
+// 100ms hop that used to sit here to let it close is no longer needed.
 function dashGoEstimate(jobId) {
-  closeClientDashboard();
-  setTimeout(function(){ editEstimateForJob(jobId); }, 100);
+  openEstimateScreen(jobId);
 }
 
 // ⚠⚠ EDITING AN APPROVED ESTIMATE IS NOT NAVIGATION, AND THE RAIL USED TO TREAT IT AS IF IT
@@ -17436,12 +17533,110 @@ function adoptCurrentJob(selId) {
   return String(sel.value) === String(_currentJobId);
 }
 
+// ─── THE TWO FULL SCREENS OFF THE CLIENT DASHBOARD (2026-09-23) ──────────────────────────────
+// Anthony: *"doing away with client intake tab and build estimate tabs. client dashboard needs a
+// 'Add New Client' button at the top that launches the client intake … same idea with 'Build
+// Estimate'. it should be a brown button above the job timeline"* — and then, *"not as a popup,
+// but as another full screen."* So neither has a nav button any more; each is a whole page you
+// step INTO from the dashboard and back OUT of, the way a client opens from the list.
+//
+// ⚠ THE PANELS DID NOT MOVE. #panel-intake and #panel-estimate are where they always were, every
+// id intact — saveIntake, calcAll's 89 reads and every lock and prime still address them by id.
+// What changed is only who switches to them: these functions, rather than a tab.
+//
+// ⚠ THE CLIENT DASHBOARD TAB STAYS LIT while either screen is up. That is where you came from and
+// where the back bar returns you; a nav with nothing lit reads as "you are nowhere", and in field
+// mode it would leave the bottom bar with no tab marked at all.
+function _navJobsBtn() { return document.querySelector('.nb[onclick*="showPanel(\'jobs\'"]'); }
+
+function _showDashScreen(panelId) {
+  var panel = document.getElementById(panelId);
+  if (!panel) return false;
+  // The drilldown is put away properly first: `client-dashboard-view` keeps an inline display
+  // when its panel is hidden, and a dashboard left "open" behind another screen is what
+  // `_jobBandHost` would otherwise go on answering for.
+  if (document.getElementById('clients-list-view') && document.getElementById('client-dashboard-view')) closeClientDashboard();
+  document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nb').forEach(function(b){ b.classList.remove('active'); });
+  panel.classList.add('active');
+  var nb = _navJobsBtn();
+  if (nb) nb.classList.add('active');
+  if (typeof stopPlanWatch === 'function') stopPlanWatch();   // showPanel does this on every other exit
+  window.scrollTo(0, 0);
+  return true;
+}
+
+// Back to the Client Dashboard — onto one client's own dashboard when there is one, else the list.
+// ⚠ NAV FIRST, DRILLDOWN SECOND, and never showPanel('jobs') with one argument — the same two
+// rules saveEstimateAndPreview's redirect records: the nav click resets the drilldown to the list,
+// and a one-argument showPanel throws on its unguarded `btn.classList`.
+// ⚠ THE NOTICE COMES AFTER openClientDashboard, which nulls `_dashNotice` so a message about the
+// last client cannot open on the next one.
+function goToClientDashboard(jobId, noticeKind, noticeMsg) {
+  var nb = _navJobsBtn();
+  if (!nb) return false;
+  nb.click();
+  if (jobId && jobs.some(function(j){ return j.id === jobId; })) {
+    openClientDashboard(jobId);
+    if (noticeMsg) { dashNotice(noticeKind || 'ok', noticeMsg); _dashRedraw(jobId); }
+  }
+  window.scrollTo(0, 0);
+  return true;
+}
+
+// + Add New Client. What was typed stays on the form if you go back and return — the tab kept it
+// the same way — and Save is what clears it (clearIntakeForm), then lands on the new client.
+function openIntakeScreen() { return _showDashScreen('panel-intake'); }
+function closeIntakeScreen() { return goToClientDashboard(0); }
+
+// Build estimate, from a client's timeline. ⚠ REOPENING THE SAME CLIENT RESUMES, it does not
+// reload: the form is still bound to them (#e-job) and the working copy is theirs, so an unsaved
+// walkthrough survives a trip back to the dashboard — which is exactly what tabbing away from
+// Build Estimate and back used to do (the retired showPanel('estimate') branch, same test). Any
+// other case takes the cloud-authoritative open, editEstimateForJob, unchanged; so does a reopen
+// while that open is still in flight, since the form is not theirs yet.
+function openEstimateScreen(jobId) {
+  var sel = document.getElementById('e-job');
+  var bar = document.getElementById('est-loading-bar');
+  var loading = !!(bar && bar.style.display === 'block');
+  var bound = !!(sel && (parseInt(sel.value) || 0) === jobId);
+  if (bound && !loading && currentEstimate && currentEstimate.jobId === jobId) {
+    _showDashScreen('panel-estimate');
+    calcAll();
+    // The lock is re-read on arrival, as the tab did: a manager may have approved (or the rail
+    // un-approved) this estimate while the screen was put away.
+    applyEstimateLock();
+    return 'resumed';
+  }
+  editEstimateForJob(jobId);
+  return 'opened';
+}
+function closeEstimateScreen() {
+  var jid = parseInt((document.getElementById('e-job') || {}).value) || 0;
+  return goToClientDashboard(jid);
+}
+
+// "Clear" on this screen used to unbind the client as well as the rooms. With no picker on a screen
+// opened FOR a client, that left a form belonging to nobody — so it starts over ON the same client.
+function startEstimateOver() {
+  var jid = parseInt((document.getElementById('e-job') || {}).value) || 0;
+  if (!jid) { clearEstimateTab(); return; }
+  if (!confirm('Clear every room scored on this screen and start again from the intake answers?\n\nThe saved estimate is not changed unless you press Save.')) return;
+  window._suppressEstimateAutoSave = true;
+  clearEstimateTab();
+  window._suppressEstimateAutoSave = false;
+  populateJobSelect(jid);
+  var sel = document.getElementById('e-job');
+  if (sel) sel.value = String(jid);
+  loadJobIntoEstimate();
+}
+
 function showPanel(id, btn) {
-  // Field mode shows four tabs. Navigating to any other panel leaves you looking at a
+  // Field mode shows three tabs. Navigating to any other panel leaves you looking at a
   // screen with no matching tab in the bottom bar and nothing highlighted — no way back
-  // except guessing. saveIntake does exactly this: it hops to Client Dashboard on an
-  // 800ms timer after creating a client, which is the phone's headline use case.
-  // Guarding here rather than at each caller covers the call sites that don't exist yet.
+  // except guessing. Guarding here rather than at each caller covers the call sites that
+  // don't exist yet. (The two screens off the dashboard — Add New Client and Build Estimate —
+  // never come through here: _showDashScreen keeps the Clients tab lit instead.)
   if (btn && !btn.hasAttribute('data-field') && document.body.classList.contains('field-mode')) {
     var fieldTab = document.querySelector('.nb[data-field-default]') || document.querySelector('.nb[data-field]');
     if (fieldTab && fieldTab !== btn) { fieldTab.click(); return; }
@@ -17457,22 +17652,9 @@ function showPanel(id, btn) {
     if (dv) dv.style.display='none';
     renderJobs();
   }
-  if (id==='estimate') {
-    populateJobSelect();
-    // If no job selected, or current estimate doesn't match selected job — clear rooms
-    var eSel = document.getElementById('e-job');
-    var selectedJobId = eSel ? parseInt(eSel.value)||0 : 0;
-    if (!selectedJobId) {
-      clearEstimateTab();
-    } else if (!currentEstimate || currentEstimate.jobId !== selectedJobId) {
-      loadJobIntoEstimate();
-    } else {
-      calcAll();
-    }
-    // Enforce the approval/submission lock on the estimator itself — otherwise a
-    // submitted or approved estimate appears fully editable when reopened here.
-    applyEstimateLock();
-  }
+  // (The `estimate` branch that lived here went with the Build Estimate tab, 2026-09-23. Its
+  // resume-if-it-is-the-same-client rule is openEstimateScreen's now, where the screen is opened
+  // from; nothing calls showPanel('estimate') or showPanel('intake') any more.)
   if (id==='client-estimate') {
     populateClientEstimateSelect();
     // Cloud-authoritative: re-pull the loaded job so an approve/deny made on
@@ -28607,7 +28789,7 @@ function loadJobPlanTab() {
         + '&mdash; the estimate is safe in the sheet.</span>');
       return;
     }
-    empty('No estimate exists for this job yet. Build one on the Build Estimate tab.');
+    empty('No estimate exists for this job yet. Build one from the client\u2019s timeline \u2014 the Build estimate button on the Client Dashboard.');
     return;
   }
   if (!isApproved) {
@@ -36823,23 +37005,22 @@ function setFieldMode(on) {
   if (tog) {
     tog.innerHTML = on ? 'Field &middot; exit' : '&#128241; Field';
     tog.title = on
-      ? 'Leave field mode and bring back all nine tabs'
-      : 'Field mode — five tabs, bottom bar, built for a phone. Everything still saves in full.';
+      ? 'Leave field mode and bring back all seven tabs'
+      : 'Field mode — three tabs, bottom bar, built for a phone. Everything still saves in full.';
   }
 
   // Entering field mode from a tab field mode HIDES would strand you: an empty main area
-  // under a nav that does not include the tab marked active. Land on Build Estimate
-  // instead — not merely the first surviving tab, since the walkthrough is the common
-  // field job and starting anywhere else costs a tap on every visit.
+  // under a nav that does not include the tab marked active. Land on the Client Dashboard
+  // instead (data-field-default) — since 2026-09-23 it is where the walkthrough starts, from
+  // the Build estimate button on the client's timeline, and where a new client is added.
+  // Build Estimate was the fallback until it stopped being a tab.
   //
-  // ⚠ THE DASHBOARD NO LONGER TRIPS THIS, AND THAT IS AN IMPROVEMENT RATHER THAN A
-  // LOOPHOLE (2026-09-11). It used to be the worst case — it is the desk default, so the
-  // commonest way into field mode bounced you off the job you were looking at. Now that it
-  // carries data-field you stay on it, which is what somebody opening a client and then
-  // reaching for their phone actually wants. Build Estimate stays the fallback for the
-  // tabs that really are hidden.
+  // ⚠ THE DASHBOARD NEVER TRIPS THIS (2026-09-11): it carries data-field, so somebody who has
+  // a client open and reaches for their phone stays on that client. Nor do the two screens
+  // off it — Add New Client and Build Estimate keep the Clients tab lit, so field mode entered
+  // mid-walkthrough leaves you on the walkthrough.
   //
-  // Leaving field mode needs no equivalent: all nine tabs come back, so whatever you were
+  // Leaving field mode needs no equivalent: all seven tabs come back, so whatever you were
   // on is still there. Staying put is also the behaviour you want — capture on the phone,
   // then open the desk view on that same job to review it.
   var activeBtn = document.querySelector('.nb.active');

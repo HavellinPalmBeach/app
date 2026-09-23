@@ -8,7 +8,7 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
   await p.goto(process.env.APP || 'file:///home/user/app/havellin.html'); await p.waitForTimeout(1500);
-  await p.click('.nb:has-text("Client Intake")'); await p.waitForTimeout(300);
+  await p.click('#btn-add-client');   // the real + Add New Client button — Intake left the nav 2026-09-23 await p.waitForTimeout(300);
 
   console.log('\n=== INTAKE ===');
   const shown = await p.evaluate(() => {

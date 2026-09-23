@@ -1,3 +1,94 @@
+## ⚠⚠ CLIENT INTAKE AND BUILD ESTIMATE LEFT THE NAV — THEY ARE SCREENS OFF THE CLIENT DASHBOARD NOW (BUILT 2026-09-23)
+Anthony: *"doing away with client intake tab and build estimate tabs. client dashboard needs a 'Add New Client' button at
+the top that launches the client intake … same idea with 'Build Estimate'. it should be a brown button above the job timeline
+just the way the other job functions appear as you go along the timeline."* Plus the nav: *"win/loss, client dashboard, job
+plan and job admin tabs left justify, and the contractors, vendors, referral partners right justify … client facing tabs to the
+left, contact tabs to the right."* Then, mid-build: *"alternatively, the build estimate and client intake can launch the way a
+client does in the dashboard. not as a popup, but as another full screen. if that is easier."* App-only, no redeploy.
+
+- **⚠⚠ THE PANELS ARE STILL IN THE DOM AND MUST STAY THERE — ONLY THE TWO NAV BUTTONS WENT.** `saveIntake`, `calcAll`,
+  `loadJobIntoEstimate`, the priming that makes the rail safe and ~15 readers of `e-job` all address the two forms by **id**. A
+  pop-up would have meant moving ~700 lines of markup into an overlay and re-proving every one of those readers; a full screen
+  is the dashboard's own pattern (a client opens from the list the same way) and moved nothing. Same reasoning Slice 7 recorded
+  for the three document panels. **Full screen, not pop-up, was Anthony's alternative and it is the one built.**
+- **`_showDashScreen(panelId)` IS THE ONE WAY ONTO EITHER SCREEN, AND IT KEEPS *CLIENT DASHBOARD* LIT.** That is where you came
+  from and where the bar returns you; an unlit nav reads as having left the client. It also closes a drilldown left open behind
+  (a stale dashboard answering `_jobBandHost` is the defect 2026-09-22 fixed) and stops the plan watch. An unknown panel id
+  switches nothing and returns false.
+- **`goToClientDashboard(jobId, kind, msg)` IS THE ONE WAY BACK: NAV FIRST, DRILLDOWN SECOND, NOTICE LAST.** The order is the
+  2026-09-13 Save-Estimate rule — `showPanel('jobs', btn)` hides the drilldown, so opening it first lands you on the list, and
+  `openClientDashboard` nulls `_dashNotice`, so a notice set first is wiped. It refuses a job no longer in `jobs` (another device
+  dropped it) and **never calls the one-argument `showPanel`**, which throws.
+- **⚠⚠ SAVE CLIENT LANDS ON THE NEW CLIENT, AT ONCE — AND THE OLD 800ms TIMER WAS A RACE A TEST HAD BEEN BEATING FOR WEEKS.**
+  `saveIntake` used to print *"find them in the Clients tab"* and click the nav **800ms later**. Measured while repointing
+  step 3: the whole remainder of that browser script ran ~40ms after the save — **it finished its assertions on the intake panel
+  before the redirect fired**, so it was never measuring the screen it named. A person moving quickly gets the same yank. It is
+  `goToClientDashboard(job.id, 'ok', 'Client created: …')` now, synchronous; the notice names the client in **plain text**
+  because the dashboard escapes it when it paints (escaping here too prints `O&#39;Hara &amp;amp; Co`). A refusal does not
+  navigate — you stay on the fields it just named.
+- **⚠⚠ THE WALKTHROUGH ROW WAS A DEAD END THE MOMENT THE TAB WENT, AND ONLY ON THE ONE MORNING THAT MATTERS.** The *Walkthrough*
+  step stays lit until **noon** on the walkthrough date and its only button was *Change the walkthrough date* — so standing in the
+  house on the morning of the walkthrough there was **no way onto the estimate at all**. A **booked** walkthrough's primary is now
+  **Build estimate** (building the estimate IS the walkthrough) with *Change the walkthrough date* beside it; an **unbooked** one
+  still asks for the date first and offers Build estimate as the outline secondary. *Estimate built* reads **Build estimate** too.
+  Reverting the row fails **4**.
+- **⚠ RESUME, NOT RELOAD, ON THE SAME CLIENT — `openEstimateScreen(jobId)`.** The tab kept a half-scored walkthrough across a trip
+  to another tab; the screen must too, or going back to check the intake answers costs the rooms. It resumes only when all four
+  hold: `e-job` is bound to **this** job, the estimate is not mid-load, `currentEstimate.jobId` is this job, and then it
+  **re-runs `calcAll` and re-applies the lock** (a manager may have approved it meanwhile). A different client goes through
+  `editEstimateForJob` and opens their saved copy, as switching clients always did. Each arm is revert-verified.
+- **⚠ THE LOCKED ESTIMATE'S WAY OUT IS EXEMPT FROM THE LOCK.** `applyEstimateLock` disables every control in
+  `#panel-estimate` on a submitted or approved estimate; with no nav tab to click, a disabled back button is a screen nobody can
+  leave. `.screen-back` joins `e-job` and `.nb` on the exemption list. Reverting fails **3**.
+- **⚠ NO JOB PICKER, AND *CLEAR* BECAME *START OVER*.** `e-job` survives **hidden** — it is the screen's state and fifteen readers
+  take the job from it. `clearEstimateTab` **unbinds** the job, which on a screen with no picker would leave a form belonging to
+  nobody, so `startEstimateOver()` asks, clears, **repopulates the select before rebinding** (a `<select>` silently rejects a value
+  it has no option for — the 2026-09-19 `forceJobId` defect) and reloads from that client's intake answers. `paintEstimateScreenHead`
+  names the client in the bar, on the Job card and on the back button (escaped — it is a name), and clears on an unbound screen.
+- **THE NAV: `.nav-gap` IS A FLEX SPACER, 498px AT 1440, 28px ON A PHONE STRIP, ABSENT IN FIELD MODE.** Left: Win / Loss · Client
+  Dashboard · Job Plan · Job Admin & Inv. Right: Contractors · Vendors · Referral Partners. A spacer element rather than
+  `margin-left:auto` on Contractors, because field mode reorders and hides tabs and a rule keyed on one button's position would
+  have to know that. **Field mode is three tabs now** — Clients · Job Plan · Vendors, even thirds (130px each at 390) — and entering
+  it from a hidden tab lands on the **Client Dashboard** (it was Build Estimate). The toggle's tooltips say seven and three.
+- **⚠ SIX MESSAGES TOLD PEOPLE TO FIX SOMETHING "IN CLIENT INTAKE", WHICH ONLY EVER CREATED CLIENTS** — the missing-email refusal,
+  the cross-family service-type refusal, the target-start planner warning, both move-sq-ft hints and the start-date field's caption.
+  All name **Edit Client** now. That was already wrong before today (the 2026-09-22 refusal fix records the shape); with the tab
+  gone it would have named a screen reachable only by creating a *new* client. An empty client list says *Press + Add New Client*;
+  an empty **filter** still says *No jobs match this filter* — two different answers.
+- **10,170 committed checks** (+118; `tests/dashboard-screens.test.js` new at 108). Six suites restated rather than deleted —
+  `tabs-retired` (nav count, field tabs, labels, default, tooltips), `dashboard-actions`, `client-edit-fields`, `estate-intake`,
+  `matter-type`, `service-change` — the last four needed a `goToClientDashboard` stub that **records** the landing, so their success
+  assertions still mean something. **Revert sweep on a tar copy of the tree, 36 changes, baseline 0 — IN PROGRESS at this commit (18 run, 17 red), final counts recorded in the follow-up.** ⚠ **ONE CAME BACK GREEN AND THE TEST WAS THE PROBLEM:** escaping the name in the *Client created* notice passed, because the fixture's *Tripp Butler* has nothing to escape. A case with *Maeve O'Hara & Co* and the REAL `esc` lifted (the harness stub does not escape apostrophes) now fails it 3. The walkthrough row fails 4, the old 800ms timer 9, the lock exemption 3, the drilldown-before-nav order 3.
+- **Verified end to end in headless Chromium, `tests/browser/step17.js`, 51 checks, 0 failed, 0 page errors**, driving the real
+  nav, the real + Add New Client, the real Save, the real band and both back bars:
+
+  | | |
+  |---|---|
+  | the nav at 1440 | four left, three right, a **498px** gap exactly between Job Admin and Contractors, Referral Partners flush right |
+  | + Add New Client | on the client list, **above the metric tiles**, bronze; opens a full screen with a sticky **← Clients** bar |
+  | Save Client | the **new client's dashboard**, notice above the timeline, no 800ms hop |
+  | a booked walkthrough | brown primary **Build estimate** `rgb(122,90,46)`, *Change the walkthrough date* the outline beside it |
+  | Build estimate | the screen, **no picker**, the bar naming client · street · service, back button named after the client |
+  | ← and back again | the rooms scored are **still there** |
+  | a submitted estimate | Save disabled · **the back button live** |
+  | 390 | dashboard, intake and estimate **0 overflow**; the phone strip keeps a 28px gap |
+  | field mode | **Clients · Job Plan · Vendors**, even thirds, no gap |
+
+  Steps 1–16 were **repointed** (every one opened intake or estimate through a nav button that no longer exists) and re-run as
+  regressions: **all green** — `run.sh`'s default list is 1–17. The first `<style>` block gains **17 lines and loses 0**; the app
+  diff is 276 insertions against 95 deletions.
+- Manual **§1** (the split nav, a two-screens table, field mode three of seven), **§4** (how to open it; where Save lands),
+  **§5** (a screen, no dropdown, Start over), **§5h** (leaving without saving; the refusal route), **§9** / **§9a** (the button,
+  the walkthrough-row note and both rows). Playbook the opening, the field note, **Step 1** and **Step 2** headings and bodies, a
+  `.stop` on going back without saving, the refusal routes, the status table and **five** symptom→cause rows — including the two
+  that will actually happen: *where did the tab go?* and *I pressed ← and the rooms were gone*. Both `.md` copies hand-edited;
+  **44 claims parity-checked, 0 mismatches**. Tag balance clean on both HTML files with the stylesheet stripped; rendered at
+  1440/390 with **0 overflow, 0 page errors**; under `print` **20/54 and 17/18** tables as wide as their container with **0**
+  taking the phone rule — the manual's one new table sits inside a `.note`, as every uncounted one does.
+- **⚠ THE SHAPE TO COPY: when a control moves, walk every state in which it used to be reachable.** The tab was reachable at every
+  moment; the band only offers what the lit row offers. The walkthrough morning was the one state where the two differed, and it is
+  exactly the state the button exists for.
+
 ## ⚠⚠ TWO OFF THE FIVE-CLIENT TEST RUN — A BUTTON THAT RACED ITSELF, AND AN APPROVAL SENT FROM A PERSONAL iCLOUD (FIXED 2026-09-22)
 Anthony, flagging as he worked the test-run document. App-only, no redeploy.
 
@@ -7270,7 +7361,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/practical-hypatia-qm2kft`
+- Active feature branch: `claude/inspiring-brahmagupta-xfe2he`
+  (`claude/practical-hypatia-qm2kft` is the previous name.)
   (`claude/festive-dijkstra-3uqyoh` is the previous name. ⚠ A second session ran concurrently on
   2026-09-22 — the prep Job Plan / intake ordering work — and its two commits merged in here
   cleanly; the only conflict was the build stamp. Both are on `main`.)
@@ -7306,7 +7398,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/festive-dijkstra-3uqyoh:main`
+  `git push origin claude/inspiring-brahmagupta-xfe2he:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -12447,7 +12539,9 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-20 (thirty-third pass)** — both documents, against the hours decision and the two
+- Last reconciled against the app: **2026-09-23** — both documents, against Client Intake and Build Estimate leaving the nav
+  for screens off the Client Dashboard, and the split nav; see the entry at the top of this file.
+- Prior pass **2026-09-20 (thirty-third pass)** — both documents, against the hours decision and the two
   form leaks it surfaced: hours on every job, fixed price included; the fold and the strip move on the save; the specialist
   selects offer *Contractor TBD* from the first draw; see the entry at the top of this file.
 - Prior pass **2026-09-20 (thirty-second pass)** — both documents, against the three asks of the same

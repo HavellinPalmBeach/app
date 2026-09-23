@@ -413,7 +413,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
                  clearIntakeForm() {}, populateAgrSelect: null, showPanel() {},
                  generateHvlId: () => 'HVL-0007', readHouseFlagInputs: () => ({}),
-                 lookupReferralById: () => null, setTimeout() {} },
+                 lookupReferralById: () => null, setTimeout() {},
+                 // ⚠ A SAVED CLIENT LANDS ON ITS OWN DASHBOARD NOW (2026-09-23) and the success
+                 // line rides that landing as a dashboard notice, not a showFB on the intake
+                 // screen it has just left — so the landing is what reports it here.
+                 goToClientDashboard: (id, k, m) => said.push({ k, m, id }) },
       });
       cc.saveIntake();
       const j = cc.jobs[0];

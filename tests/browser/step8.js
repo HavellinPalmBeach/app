@@ -21,7 +21,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
 
   // ── A probate estate saved with BOTH contract questions blank. Intake accepts that
   //    deliberately (step 3's decision) — the attorney may genuinely not have decided yet.
-  await p.click('.nb:has-text("Client Intake")'); await p.waitForTimeout(300);
+  await p.click('#btn-add-client');   // the real + Add New Client button — Intake left the nav 2026-09-23 await p.waitForTimeout(300);
   const jobId = await p.evaluate(() => {
     const set = (id,v) => { const e=document.getElementById(id); if(e){e.value=v; if(e.onchange) e.onchange();} };
     set('i-svc','probate'); toggleIntakeFields();
@@ -49,7 +49,9 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   ok(!!jobId, 'a probate estate saved with the tier left blank');
 
   // ── Build Estimate: score three rooms through the REAL grid.
-  await p.click('.nb:has-text("Build Estimate")'); await p.waitForTimeout(400);
+  // Build Estimate is a screen off the client's timeline now (2026-09-23), opened by the band's
+  // own button — the tab this script used to click is gone.
+  await p.evaluate((id) => dashGoEstimate(id), jobId); await p.waitForTimeout(600);
   const scored = await p.evaluate((id) => {
     const sel = document.getElementById('e-job');
     sel.value = String(id); if (sel.onchange) sel.onchange();

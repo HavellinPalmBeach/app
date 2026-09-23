@@ -128,6 +128,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           clearIntakeForm() {}, populateAgrSelect: null, showPanel() {},
           generateHvlId: () => 'HVL-0007', readHouseFlagInputs: () => ({}),
           lookupReferralById: () => null, setTimeout() {},
+          // A saved client lands on its own dashboard (2026-09-23); the success line rides it.
+          goToClientDashboard: (id, kind, msg) => said.push({ kind, msg, id }),
         },
       });
       c.saveIntake();

@@ -313,7 +313,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('jobTimelineActions — one primary per live step, and it is the right one');
   {
     const cases = [
-      [{}, { estimate: null }, 'Build the estimate', 'dashGoEstimate(7)'],
+      // (Relabelled 'Build estimate' 2026-09-23 — Anthony's own name for the button, now that the
+      // band is the only way onto the screen.)
+      [{}, { estimate: null }, 'Build estimate', 'dashGoEstimate(7)'],
       [{}, { estimate: EST() }, 'Submit for approval', 'dashSubmitEstimate(7)'],
       [{ status: 'pending' }, { estimate: EST(), submitted: true }, 'Manager approval', 'dashApproveEstimate(7)'],
       // ⚠ SLICE 4: EVERY DOCUMENT ROW'S PRIMARY IS NOW SEND, and it is the same control

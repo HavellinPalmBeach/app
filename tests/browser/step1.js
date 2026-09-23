@@ -26,7 +26,7 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   }, id);
 
   console.log('\n=== CLIENT INTAKE ===');
-  await page.click('.nb:has-text("Client Intake")').catch(() => {});
+  await page.click('#btn-add-client');   // Client Intake is a screen off the dashboard now (2026-09-23)
   await page.waitForTimeout(200);
 
   await setSvc('cleanout');

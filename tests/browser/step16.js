@@ -33,7 +33,7 @@ async function intake(p, name) {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     const pick = (id) => { const el = document.getElementById(id);
       if (el && el.options) for (const o of el.options) if (o.value) { el.value = o.value; break; } };
-    document.querySelectorAll('.nb').forEach(b => { if (/Client Intake/i.test(b.textContent)) b.click(); });
+    openIntakeScreen();   // + Add New Client — Intake left the nav 2026-09-23
     set('i-fname', nm); set('i-lname', 'Probe');
     set('i-phone', '(561) 555-0100'); set('i-email', 'probe@example.com');
     set('i-addr', '1 Probe Way'); set('i-city', 'Palm Beach'); set('i-zip', '33480');
