@@ -16,7 +16,9 @@ Browser-based app used by all Havellin staff. No installation. Data syncs across
 >
 > The tagline on all four client documents is **"Havellin handles the work no family should face alone."** It replaced *Guiding Families Through Life's Transitions* on 2026-08-03.
 
-**Navigation tabs (in order):** on the **left**, the work on a client — Win / Loss · Client Dashboard · Job Plan · Job Admin & Inv; on the **right**, the people we call — Contractors · Vendors · Referral Partners. The white space between the two groups is deliberate (2026-09-23, Anthony: *"client facing tabs to the left, contact tabs to the right"*).
+**Navigation tabs (in order):** on the **left**, the work on a client — Client Dashboard · Job Plan · Job Admin & Inv; on the **right**, the people we call — Contractors · Vendors · Referral Partners. The white space between the two groups is deliberate (2026-09-23, Anthony: *"client facing tabs to the left, contact tabs to the right"*).
+
+> **⚠ Win / Loss left the navigation the same day, 2026-09-23. It is a row of four figures on the Client Dashboard now**, directly under Total Jobs, and pressing **Won** or **Lost** lists the clients behind the number (§9). Anthony: *"do we really need a standalone win-loss report or should we just fold that into the top of the client dashboard? … why don't we just have those with expandable carets?"* Nothing the tab showed was dropped — the four figures, the loss reasons and the lost prospects are all there, and the Won list is new.
 
 > **⚠⚠ Client Intake and Build Estimate left the navigation on 2026-09-23. They are not gone — they are screens you open FROM the Client Dashboard.** Anthony: *"doing away with client intake tab and build estimate tabs. client dashboard needs a 'Add New Client' button at the top … same idea with 'Build Estimate'. it should be a brown button above the job timeline."*
 >
@@ -35,9 +37,9 @@ Browser-based app used by all Havellin staff. No installation. Data syncs across
 
 > **Three tabs were retired from the navigation on 2026-09-11 — Client Estimate, Agreement and Invoices.** Everything they carried now lives on the **job timeline** inside the Client Dashboard (§9), on the row for the milestone it belongs to. Anthony's reason for the change: *"we are finding ourselves having to go to too many tabs … that way, as we're going through a job, we know what to do next."* **§7, §8 and §12 still describe those documents** — what is in them, what the gates are, what each one promises a client. Only the *route* to them moved. Where one of those sections says "the tab", read it as the matching row on the timeline.
 
-> **Field mode keeps THREE of those seven.** The **📱 Field** button in the header (or `?field=1`) drops the nav to a fixed bottom bar of **Clients · Job Plan · Vendors** and sizes everything for a thumb. The other four are desk work and are *hidden, never removed* — the estimate still computes and saves in full. **Intake and Estimate were field tabs until 2026-09-23**; in the field you now reach them the same way as at the desk — **+ Add New Client** for a prospect who calls while you are out, and **Build estimate** on the client's timeline for the walkthrough. **The Client Dashboard joined the list on 2026-09-11**, because since the tab consolidation the timeline is where a job is actually run. **Its buttons are live in field mode** — field mode is a layout, not a permission level. The three things most worth doing standing in somebody's house are all on that timeline: recording a cheque just handed to you (the normal payment path on these jobs), recording a signature handed back, and marking the client won after the walkthrough conversation. **⚠ There is deliberately no field-only rule about which actions are allowed.** The timeline's own gates already decide that — you cannot record a signature on an agreement that was never sent, on a phone or at a desk. A second field-mode opinion would be a second copy of that rule, and two copies drifting is the defect this app has hit most often. A test asserts the timeline's actions never consult field mode. Entering field mode from a hidden tab lands you on the **Client Dashboard** — it was Build Estimate until that stopped being a tab, and the dashboard is where both the walkthrough and a new client now start. Entering it *from the dashboard keeps you there*, and so does entering it from the intake or estimate screen: the Clients tab is lit on both, so you stay on what you were doing.
+> **Field mode keeps THREE of those six.** The **📱 Field** button in the header (or `?field=1`) drops the nav to a fixed bottom bar of **Clients · Job Plan · Vendors** and sizes everything for a thumb. The other three are desk work and are *hidden, never removed* — the estimate still computes and saves in full. **Intake and Estimate were field tabs until 2026-09-23**; in the field you now reach them the same way as at the desk — **+ Add New Client** for a prospect who calls while you are out, and **Build estimate** on the client's timeline for the walkthrough. **The Client Dashboard joined the list on 2026-09-11**, because since the tab consolidation the timeline is where a job is actually run. **Its buttons are live in field mode** — field mode is a layout, not a permission level. The three things most worth doing standing in somebody's house are all on that timeline: recording a cheque just handed to you (the normal payment path on these jobs), recording a signature handed back, and marking the client won after the walkthrough conversation. **⚠ There is deliberately no field-only rule about which actions are allowed.** The timeline's own gates already decide that — you cannot record a signature on an agreement that was never sent, on a phone or at a desk. A second field-mode opinion would be a second copy of that rule, and two copies drifting is the defect this app has hit most often. A test asserts the timeline's actions never consult field mode. Entering field mode from a hidden tab lands you on the **Client Dashboard** — it was Build Estimate until that stopped being a tab, and the dashboard is where both the walkthrough and a new client now start. Entering it *from the dashboard keeps you there*, and so does entering it from the intake or estimate screen: the Clients tab is lit on both, so you stay on what you were doing.
 
-> The app opens on the **Client Dashboard** even though Win / Loss is the first tab.
+> The app opens on the **Client Dashboard**, the first tab. (Until 2026-09-23 Win / Loss sat in front of it and the app skipped over it on load.)
 
 Interface notes: the header + navigation bar stay pinned to the top while you scroll; dialogs (e.g. Settings) scroll internally so their buttons are always reachable; and reference dropdowns (categories, dispositions, types, roles) are alphabetized — scale/pipeline lists (Condition, Priority, statuses, service tiers, Year) keep their meaningful order.
 
@@ -1082,6 +1084,53 @@ Five values must be set in the Apps Script project's **Script Properties**, wher
 
 > **It is deliberately NOT inside the tan *Next* card.** That card means *the one thing to do next*; hanging standing tools in it costs it exactly that meaning. It sits on the heading immediately above it instead.
 
+### The client list — the figures, Win / Loss, six filters and the sort
+
+The Client Dashboard opens on the list of clients. Top to bottom: **+ Add New Client**; the four pipeline figures (*Total Jobs · Active Jobs · Pipeline Value · RE Potential*); the **Win / Loss** row directly under them (*Won · Lost · Conversion Rate · Lost Revenue*); the six filters; and the table of clients, where pressing a row opens that client.
+
+> **⚠⚠ WIN / LOSS WAS ITS OWN TAB UNTIL 2026-09-23, AND NOTHING IT SHOWED WAS DROPPED.** The four figures moved here as a second row of tiles under Total Jobs, one tile gap below the first so the eight read as one block. **Won** and **Lost** carry a caret (▸): press either to open the list of clients behind the figure, under the row; press it again to shut it. Both can be open at once, Won above Lost.
+>
+> | Press | What opens |
+> |---|---|
+> | **Won** | Every client who said yes — client and street, service, concierge, **when and how they accepted** (the Won button's own options: email reply, phone call, text, in person), the Havellin value, and where the job is now. Newest acceptance first. *The Won list is new; the tab never had one.* |
+> | **Lost** | The **loss reasons** broken out (count, share, estimated revenue lost), then the **lost prospects** themselves with reason, note and date. Newest loss first. |
+>
+> Every row on either list opens that client. **The lists stay open while you are in a client and come back** — open Lost, press a prospect, press ← Clients, and Lost is still open. That lasts until you reload; which list is open is not saved and does not reach the other device.
+
+> **Closed — Deposit Retained counts as WON and is on the Won list, named as one.** The client accepted, paid the deposit and then walked, so it produced revenue — which is why that status exists apart from Lost. The list prints its status rather than folding it in among the jobs that ran to the end.
+
+> **Conversion Rate reads a dash until a client has been won or lost.** It used to print **0%** over nothing decided, which with one undecided client on the books reads as *we have converted nobody*. One won and none lost is 100%; one lost and none won really is 0%, and that zero is kept.
+>
+> **An unread list reads dashes, never zeros, across BOTH rows.** On a device with nothing cached, until the sheet answers, every figure is an em dash and the list says *Loading clients…*; if the sheet cannot be reached it says so and tells you to check the connection and the Sync URL, then **reload the page**. "0 won, 0 lost" is a claim, and the app has not read anything yet.
+
+**The six filters**, in this order (Anthony, 2026-09-23: *"it starts with all, and then goes active, pending approval, unassigned TC, closed and lost"*):
+
+| Filter | Shows |
+|---|---|
+| All | Every client except the lost ones |
+| Active | Jobs actually running |
+| Pending Approval | Estimates waiting on a manager PIN |
+| Unassigned TC | Every live client with no concierge assigned |
+| Closed | Finished jobs — **and Closed — Deposit Retained, which it used to leave out** (the old button tested *Closed* alone, so a retained deposit was only reachable through All) |
+| Lost | The lost prospects. Every other filter leaves them out. |
+
+**Every heading on the client table sorts.** Press a heading once for its natural direction, twice to reverse it, a third time to clear it and go back to the list's own order (newest client first). The heading shows a faint ↕ until it is the one sorting, then a bronze ↑ or ↓.
+
+| Heading | First press |
+|---|---|
+| Client / Property · TC | A→Z |
+| Service | In the order the service list uses — Home Prep, Home Editing, Home Transition, Home Cleanout, Estate Settlement, Probate, Contested Probate — **not** alphabetically, so each kind of job sits together and related kinds sit side by side |
+| Havellin Est. · Total Est. | Largest first |
+| Start Date | Soonest first |
+| Status | In lifecycle order — New, Pending Approval, Approved, Won, Active, Closed, Deposit Retained, Lost |
+| RE | The ★ clients first, then the unanswered, then the no's |
+
+> **⚠ Eight filter buttons went, and every one of them is a heading now.** *New* is the top of a **Status** sort; *RE Potential* is the top of an **RE** sort; the six service buttons (*Home Editing / Transition, Home Cleanout, Estate Settlement, Probate, Contested Probate, Home Prep*) are a **Service** sort, where each one's clients sit together. Anthony: *"be able to sort by the service column, which wipes out the need for all of the big job type buttons."* A sort and a filter combine — Active sorted by Service is the running jobs grouped by type.
+>
+> **A blank sorts LAST whichever way the column runs** — no concierge, no price, no start date. It is a gap, not the smallest value, and reversing a sort never brings the gaps to the top. The sort lasts until you reload, like the filter.
+
+> **Field mode leaves the Win / Loss row off.** The report was never a field tab and is desk reading; the pipeline figures, the filters and the list are all still there on the phone.
+
 ### 9a. The job timeline — where the whole job is run
 
 Opening a client draws a **timeline** of sixteen milestones, from intake to final payment. On a desk it runs left to right in two legs, breaking at *Agreement signed*; on a phone it runs top to bottom. They are two renderings of one thing and can never disagree about state.
@@ -2046,7 +2095,7 @@ If a concierge can't be resolved to a person at all, the margin panel costs them
 
 ## 16a. Win / Loss
 
-**Tab: Win / Loss.** Reads the *client's* decision, not ours. A job counts as won when it has been marked Won on the dashboard — or, for jobs that predate that step, when it reached Active or Closed under the old model, so the existing history isn't rewritten.
+**A row on the Client Dashboard, under Total Jobs — it was its own tab until 2026-09-23 (§9, *The client list*).** Reads the *client's* decision, not ours. A job counts as won when it has been marked Won on the dashboard — or, for jobs that predate that step, when it reached Active or Closed under the old model, so the existing history isn't rewritten.
 
 What that changes in practice: a job sitting at **Approved — Awaiting Client** is *not* in the won column. It used to be, which meant the win rate counted internal approvals. Expect the number to read lower and truer than it did.
 

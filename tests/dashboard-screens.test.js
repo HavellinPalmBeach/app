@@ -38,12 +38,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = (t) => nav.indexOf("showPanel('" + t + "',this)");
     const gap = nav.indexOf('class="nav-gap"');
     ok(gap > 0, 'there is a gap element in the nav');
-    ['winloss', 'jobs', 'job-plan', 'inventory'].forEach((t) =>
+    ['jobs', 'job-plan', 'inventory'].forEach((t) =>
       ok(at(t) > 0 && at(t) < gap, t + ' is LEFT of the gap — a client-facing tab'));
+    // ⚠ RESTATED 2026-09-23: Win / Loss left the nav for a row of tiles on the Client Dashboard
+    // (tests/win-loss.test.js carries the row). The left group is the three that remain.
+    eq(at('winloss'), -1, 'Win / Loss has no nav button — it is a row on the Client Dashboard');
     ['contractors', 'vendors', 'referrals'].forEach((t) =>
       ok(at(t) > gap, t + ' is RIGHT of the gap — a directory of people we call'));
-    ok(at('winloss') < at('jobs') && at('jobs') < at('job-plan') && at('job-plan') < at('inventory'),
-      'left group in Anthony\'s order: Win/Loss, Client Dashboard, Job Plan, Job Admin');
+    ok(at('jobs') < at('job-plan') && at('job-plan') < at('inventory'),
+      'left group in Anthony\'s order: Client Dashboard, Job Plan, Job Admin');
     ok(at('contractors') < at('vendors') && at('vendors') < at('referrals'),
       'right group: Contractors, Vendors, Referral Partners');
     eq((nav.match(/class="nav-gap"/g) || []).length, 1, 'exactly one gap — two groups, not three');
@@ -86,7 +89,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const _get = d.getElementById.bind(d);
     d.getElementById = (id) => (/^panel-/.test(String(id)) && panelIds.indexOf(id) === -1) ? null : _get(id);
     panels[0].classList.add('active');
-    const navCalls = ['winloss', 'jobs', 'job-plan', 'inventory', 'contractors', 'vendors', 'referrals'];
+    const navCalls = ['jobs', 'job-plan', 'inventory', 'contractors', 'vendors', 'referrals'];
     const clicks = [];
     const nbs = navCalls.map((t) => {
       const b = d.createElement('button');
@@ -94,7 +97,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       b.click = () => clicks.push(t);
       return b;
     });
-    if (!opts.noJobsTab) nbs[1].classList.add('active'); else nbs.splice(1, 1);
+    if (!opts.noJobsTab) nbs[0].classList.add('active'); else nbs.splice(0, 1);
     d.querySelectorAll = (sel) => sel === '.panel' ? panels : sel === '.nb' ? nbs : [];
     d.querySelector = (sel) => {
       const m = /^\.nb\[onclick\*="showPanel\('([a-z-]+)'"\]$/.exec(sel);
@@ -135,7 +138,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const order = [];
     const pg = page();
-    pg.nbs[1].click = () => order.push('tab');
+    pg.nbs[0].click = () => order.push('tab');
     const c = sandbox({
       fns: ['goToClientDashboard', '_navJobsBtn', 'closeIntakeScreen'],
       stubs: { document: pg.d, window: { scrollTo() {} }, jobs: [{ id: 7 }],

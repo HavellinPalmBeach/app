@@ -467,12 +467,38 @@ input:checked+.slider:before{transform:translateX(18px);}
 .avatar{width:26px;height:26px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--gray);border:1px solid var(--border-md);}
 .filter-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;}
 .fb{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:5px 12px;border:1px solid var(--border-md);border-radius:4px;background:none;cursor:pointer;color:var(--gray);font-family:'Raleway',sans-serif;}
-/* `.fb` is doing two unrelated jobs: it is the Win/Loss filter BUTTON (13 of them, all
-   with text) and it is also borrowed by #i-deadline-fb as a feedback line. The button
+/* `.fb` is doing two unrelated jobs: it is the client list's filter BUTTON (six of them
+   since 2026-09-23, all with text) and it is also borrowed by #i-deadline-fb as a feedback line. The button
    styling gives it a border and padding, so while there is no feedback to show it drew
    an empty bordered box under the §733.604 deadline field. Reported 2026-08-24. */
 .fb:empty{display:none;}
 .fb:hover{background:var(--tan);}.fb.active{background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);}
+/* ── The Client Dashboard's Win / Loss row, and the client list's sortable headings (2026-09-23) ──
+   Win / Loss left its own tab for a row of tiles under Total Jobs. Won and Lost are BUTTONS that
+   open the clients behind the figure, so they reset a button's own look back to the tile's; the
+   caret is secCaret's glyph in the tile's bronze, since .sec-caret is tan for the dark fold bar and
+   would vanish on a tan tile. `body.field-mode` drops the row: the report was never a field tab. */
+.mc-toggle{display:block;width:100%;text-align:left;border:0;font:inherit;color:inherit;cursor:pointer;}
+.mc-toggle:hover{background:var(--tan2);}
+.mc-toggle[aria-expanded="true"]{box-shadow:inset 0 0 0 1px var(--bronze);}
+.mc-caret{display:inline-block;width:9px;font-size:9px;color:var(--bronze);}
+.wl-row{margin-bottom:1.25rem;}
+.wl-row.wl-row-open{margin-bottom:10px;}
+.wl-lists{margin-bottom:1.25rem;}
+.wl-list{background:var(--white);border:1px solid var(--border);border-radius:6px;padding:.8rem 1rem;}
+.wl-list+.wl-list{margin-top:10px;}
+.wl-list-hd{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:500;margin-bottom:.45rem;}
+.wl-list-meta{font-family:'Raleway',sans-serif;font-size:11px;color:var(--gray);margin-left:8px;}
+.wl-sub{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--gray);margin:.7rem 0 .35rem;}
+.wl-sub:first-of-type{margin-top:.2rem;}
+.wl-empty{color:var(--gray);font-size:12px;padding:.2rem 0;line-height:1.55;}
+body.field-mode #wl-block{display:none;}
+/* A sortable heading is a button carrying the heading's own type, so it reads as the heading it
+   replaces. The arrow is faint until the column is the one sorting, then bronze. */
+.th-sort{background:none;border:0;padding:0;margin:0;font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+.th-sort:hover,.th-sort.on{color:var(--gray-dk);}
+.th-sort-ind{font-size:10px;letter-spacing:0;color:var(--bronze);}
+.th-sort:not(.on) .th-sort-ind{color:var(--gray);opacity:.45;}
 /* ── What's in the house: the intake checklist, and the crew brief it feeds ──
    The global `input,select,textarea{width:100%}` rule above paints a bare checkbox
    full-width with its label stranded beside it, so the tick needs a size scoped here
@@ -1232,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.23 · 8:45am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.23 · 9:50am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1282,7 +1308,9 @@ body.no-smf .smf-col{display:none;}
      rather than a margin on Contractors, so field mode can drop it outright and the bottom
      bar's even thirds are not pushed apart by a gap nobody can see. -->
 <div class="nav">
-  <button class="nb" onclick="showPanel('winloss',this)">Win / Loss</button>
+  <!-- ⚠ WIN / LOSS IS OFF THE NAV (2026-09-23) — it is a row of tiles on the Client Dashboard, under
+       Total Jobs, with a caret on Won and Lost that opens the list behind each figure. Its panel
+       is deleted rather than kept: nothing else ever rendered into it. -->
   <button class="nb active" data-field="1" data-field-default="1" data-field-label="Clients" onclick="showPanel('jobs',this)">Client Dashboard</button>
   <!-- ⚠⚠ CLIENT ESTIMATE, AGREEMENT AND INVOICES ARE RETIRED FROM THE NAV (Slice 7).
        Anthony: *"we are finding ourselves having to go to too many tabs in the app …
@@ -2277,40 +2305,46 @@ body.no-smf .smf-col{display:none;}
       <div class="cl-title">Clients</div>
       <button type="button" class="btn-bronze" id="btn-add-client" onclick="openIntakeScreen()">+ Add New Client</button>
     </div>
-    <div class="grid4" style="margin-bottom:1.25rem;">
+    <!-- ⚠ margin-bottom is the grid's own 10px gap, not 1.25rem: the Win / Loss row sits directly
+         under this one and the eight tiles read as one block of figures about the pipeline. -->
+    <div class="grid4" style="margin-bottom:10px;">
       <div class="metric-card"><div class="metric-label">Total Jobs</div><div class="metric-val" id="m-tot">0</div></div>
       <div class="metric-card"><div class="metric-label">Active Jobs</div><div class="metric-val" id="m-act">0</div></div>
       <div class="metric-card"><div class="metric-label">Pipeline Value</div><div class="metric-val" id="m-pip">—</div></div>
       <div class="metric-card"><div class="metric-label">RE Potential</div><div class="metric-val" id="m-re">0</div></div>
     </div>
+    <!-- ⚠⚠ WIN / LOSS LIVES HERE NOW — IT WAS ITS OWN TAB UNTIL 2026-09-23. Anthony: *"do we really
+         need a standalone win-loss report or should we just fold that into the top of the client
+         dashboard? … if we can expand like on lost jobs … or won jobs … to see the list of jobs that
+         fall into the win-loss categories … why don't we just have those with expandable carets?"*
+         renderWinLoss() paints this block from renderJobs(), so every path that repaints the list
+         repaints the report with it — the cold-cache defect of 2026-09-11 was a report nothing
+         repainted. Won and Lost carry a caret; the list each opens renders between this row and
+         the filters. Hidden in field mode, where the tab never was. -->
+    <div id="wl-block"></div>
+    <!-- ⚠ SIX FILTERS, IN ANTHONY'S ORDER (2026-09-23): *"it starts with all, and then goes active,
+         pending approval, unassigned TC, closed and lost, and then be able to sort by the service
+         column, which wipes out the need for all of the big job type buttons."* New, RE Potential
+         and the six service buttons went with it; each of them is a column you can sort on now
+         (Status, RE, Service), so nothing they found is unreachable. See JOB_SORTS. -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:8px;">
       <div style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="fb active" onclick="setFilter('all',this)">All</button>
-        <button class="fb" onclick="setFilter('new',this)">New</button>
-        <button class="fb" onclick="setFilter('pending',this)">Pending Approval</button>
         <button class="fb" onclick="setFilter('active',this)">Active</button>
+        <button class="fb" onclick="setFilter('pending',this)">Pending Approval</button>
+        <button class="fb" onclick="setFilter('unassigned',this)">Unassigned TC</button>
         <button class="fb" onclick="setFilter('closed',this)">Closed</button>
         <button class="fb" onclick="setFilter('lost',this)">Lost</button>
-        <button class="fb" onclick="setFilter('downsizing',this)">Home Editing / Transition</button>
-        <button class="fb" onclick="setFilter('home_cleanout',this)">Home Cleanout</button>
-        <button class="fb" onclick="setFilter('cleanout',this)">Estate Settlement</button>
-        <button class="fb" onclick="setFilter('probate',this)">Probate</button>
-        <button class="fb" onclick="setFilter('contested_probate',this)">Contested Probate</button>
-        <button class="fb" onclick="setFilter('prep',this)">Home Prep</button>
-        <button class="fb" onclick="setFilter('re',this)">RE Potential</button>
-        <button class="fb" onclick="setFilter('unassigned',this)">Unassigned TC</button>
       </div>
       <a id="drive-btn" href="#" target="_blank" class="btn-bronze" style="font-size:11px;padding:5px 12px;text-decoration:none;display:none;">&#128193; Havellin Drive</a>
     </div>
     <div style="overflow-x:auto;">
       <table class="jtbl">
-        <thead><tr>
-          <th>Client / Property</th><th>Service</th><th>TC</th>
-          <th>Havellin Est.</th><th>Total Est.</th><th>Start Date</th>
-          <th>Status</th><th>RE</th><th>Actions</th>
-        </tr></thead>
+        <!-- Painted by renderJobs from JOB_LIST_COLS (jobsHeadHtml), so the sortable headers and the
+             columns they sort cannot come to disagree. -->
+        <thead id="jobs-head"></thead>
         <tbody id="jobs-body">
-          <tr><td colspan="9"><div class="empty-state">No clients yet. Press + Add New Client to add the first.</div></td></tr>
+          <tr><td colspan="9"><div class="empty-state">Loading clients&hellip;</div></td></tr>
         </tbody>
       </table>
     </div>
@@ -3423,21 +3457,6 @@ body.no-smf .smf-col{display:none;}
   <div id="referrals-list"></div>
 </div>
 
-<div class="panel" id="panel-winloss">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:8px;">
-    <div>
-      <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Win / Loss Report</div>
-      <div style="font-size:12px;color:var(--gray);margin-top:2px;">All prospects, outcomes, and lost-business analysis.</div>
-    </div>
-    <button class="btn-s" onclick="renderWinLoss()">↺ Refresh</button>
-  </div>
-  <!-- Summary metrics row -->
-  <div class="grid4" style="margin-bottom:1.5rem;" id="wl-metrics"></div>
-  <!-- Loss-reason breakdown -->
-  <div style="margin-bottom:1.5rem;" id="wl-reason-wrap"></div>
-  <!-- Full lost-clients table -->
-  <div id="wl-table-wrap"></div>
-</div>
 </div><!-- /main -->
 
 <!-- ICD SCORING REFERENCE MODAL -->
@@ -11459,51 +11478,146 @@ function setFilter(f, btn) {
   renderJobs();
 }
 
+// ─── THE CLIENT LIST'S COLUMNS, AND WHICH OF THEM SORT ───────────────────────
+// ⚠⚠ THE SORT IS WHAT MADE IT SAFE TO DELETE EIGHT FILTER BUTTONS (2026-09-23). Anthony asked for
+// Service — *"be able to sort by the service column, which wipes out the need for all of the big
+// job type buttons"* — and the same holds for the two other buttons that went: New is a Status,
+// and RE Potential is the RE column. So every data column sorts, and the clients each removed
+// button found are one press away rather than gone.
+// `first` is the direction the first press sorts in: text A→Z, money largest first, dates soonest
+// first, status in lifecycle order, RE with the ★ clients first. The second press reverses it and
+// the third clears it — back to newest-created first, the list's own order, which a sort would
+// otherwise hide for the rest of the session.
+var JOB_STATUS_ORDER = ['new', 'pending', 'approved', 'won', 'active', 'closed', 'closed_retained', 'lost'];
+// ONE status vocabulary for every list on the dashboard — the client list and the Won list both
+// read it, so a status cannot be worded one way in one table and another way in the next.
+var JOB_STATUS_LABELS = { new: 'New', pending: 'Pending Approval', approved: 'Approved — Awaiting Client', won: 'Won',
+  active: 'Active', closed: 'Closed', closed_retained: 'Closed — Deposit Retained', lost: 'Lost' };
+var JOB_STATUS_DOT = { new: 's-new', pending: 's-pending', approved: 's-pending', won: 's-active', active: 's-active',
+  closed: 's-closed', closed_retained: 's-closed', lost: 's-lost' };
+var JOB_SORTS = {
+  client: { label: 'Client / Property', first: 'asc',  val: function(j){ return String(j.name || '').toLowerCase(); } },
+  // ⚠ Service sorts in CATALOGUE order (SVC_ORDER, the order every service picker uses — the four
+  // living services, then the three decedent ones), NOT A→Z by label. Alphabetical puts Contested
+  // Probate first and Probate last, the two probate types at opposite ends of the list, and wedges
+  // Home Prep between Home Editing and Home Transition — the opposite of what replacing the six
+  // job-type buttons with this column needs, which is each kind of job together and related kinds
+  // side by side.
+  svc:    { label: 'Service',           first: 'asc',  val: function(j){ if (!j.svc) return ''; var i = SVC_ORDER.indexOf(j.svc); return i < 0 ? SVC_ORDER.length : i; } },
+  tc:     { label: 'TC',                first: 'asc',  val: function(j){ return String(j.tc || '').toLowerCase(); } },
+  hav:    { label: 'Havellin Est.',     first: 'desc', val: function(j){ return j.havellinEst || null; } },
+  tot:    { label: 'Total Est.',        first: 'desc', val: function(j){ return j.totalEst || null; } },
+  start:  { label: 'Start Date',        first: 'asc',  val: function(j){ return j.start || ''; } },
+  status: { label: 'Status',            first: 'asc',  val: function(j){ var i = JOB_STATUS_ORDER.indexOf(j.status); return i < 0 ? JOB_STATUS_ORDER.length : i; } },
+  re:     { label: 'RE',                first: 'desc', val: function(j){ return j.re === 'yes' ? 2 : (j.re === 'no' ? 0 : 1); } }
+};
+// The columns, in table order. `null` is Actions, which does not sort. The header row is painted
+// from this and the row cells are written in the same order below — keep the two together.
+var JOB_LIST_COLS = ['client', 'svc', 'tc', 'hav', 'tot', 'start', 'status', 're', null];
+// SESSION state, like the filter beside it. '' is the list's own order, newest client first.
+var _jobSort = { key: '', dir: '' };
+
+function setJobSort(key) {
+  var col = JOB_SORTS[key];
+  if (!col) return;
+  var rev = col.first === 'asc' ? 'desc' : 'asc';
+  if (_jobSort.key !== key) _jobSort = { key: key, dir: col.first };
+  else if (_jobSort.dir === col.first) _jobSort = { key: key, dir: rev };
+  else _jobSort = { key: '', dir: '' };
+  renderJobs();
+}
+
+// DOM-free, so the tests sort real jobs through the real rule.
+// ⚠ A BLANK SORTS LAST WHICHEVER WAY THE COLUMN RUNS. An unassigned TC or an unpriced job is not
+// the "smallest" value — it is a gap — and reversing a sort must not bring every gap to the top.
+// Ties keep the list's own order, so a sort by Service still reads newest-first inside each one.
+function sortJobsForList(list, key, dir) {
+  var col = JOB_SORTS[key];
+  if (!col || (dir !== 'asc' && dir !== 'desc')) return list.slice();
+  var sign = dir === 'asc' ? 1 : -1;
+  return list.map(function(j, i){ return { j: j, i: i, v: col.val(j) }; })
+    .sort(function(a, b){
+      var ab = (a.v === null || a.v === ''), bb = (b.v === null || b.v === '');
+      if (ab !== bb) return ab ? 1 : -1;
+      if (!ab) {
+        var c = (typeof a.v === 'number' && typeof b.v === 'number') ? a.v - b.v : String(a.v).localeCompare(String(b.v));
+        if (c) return c * sign;
+      }
+      return a.i - b.i;
+    })
+    .map(function(x){ return x.j; });
+}
+
+// The header row. Each sortable heading is a BUTTON — a keyboard reaches it and aria-sort says
+// which way it runs. ↑ / ↓ rather than a triangle: the triangles are the fold caret (secCaret),
+// and one glyph meaning two things on one screen is how neither gets read.
+function jobsHeadHtml() {
+  return '<tr>' + JOB_LIST_COLS.map(function(k){
+    if (!k) return '<th>Actions</th>';
+    var col = JOB_SORTS[k];
+    var on = _jobSort.key === k;
+    var ind = on ? (_jobSort.dir === 'asc' ? '↑' : '↓') : '↕';
+    var tip = !on ? 'Sort by ' + col.label
+      : (_jobSort.dir === col.first ? 'Press again to reverse' : 'Press again to clear the sort');
+    return '<th aria-sort="' + (on ? (_jobSort.dir === 'asc' ? 'ascending' : 'descending') : 'none') + '">'
+      + '<button type="button" class="th-sort' + (on ? ' on' : '') + '" onclick="setJobSort(\'' + k + '\')" title="' + tip + '">'
+      + col.label + '<span class="th-sort-ind">' + ind + '</span></button></th>';
+  }).join('') + '</tr>';
+}
+
+// A job's status, the way every list on the dashboard prints it.
+function _jobStatusCell(j) {
+  if (j.status === 'pending') return '<span class="sdot s-pending"></span><strong style="color:#7a4f00;">Pending Approval</strong>';
+  return '<span class="sdot ' + (JOB_STATUS_DOT[j.status] || 's-new') + '"></span>' + esc(JOB_STATUS_LABELS[j.status] || j.status || '');
+}
+
 function renderJobs() {
   var filtered = jobs.filter(function(j) {
     switch(currentFilter) {
-      case 'new': return j.status==='new';
-      case 'pending': return j.status==='pending';
       case 'active': return j.status==='active';
-      case 'closed': return j.status==='closed';
-      case 'lost': return j.status==='lost';
-      case 'downsizing': return j.status!=='lost' && (j.svc==='downsizing'||j.svc==='downsizing_move');
-      case 'home_cleanout': return j.status!=='lost' && j.svc==='home_cleanout';
-      case 'cleanout': return j.status!=='lost' && j.svc==='cleanout';
-      case 'probate': return j.status!=='lost' && j.svc==='probate';
-      case 'contested_probate': return j.status!=='lost' && j.svc==='contested_probate';
-      case 'prep': return j.status!=='lost' && j.svc==='prep';
-      case 're': return j.status!=='lost' && j.re==='yes';
+      case 'pending': return j.status==='pending';
       case 'unassigned': return j.status!=='lost' && (!j.tc||j.tc==='');
+      // ⚠ Closed — Deposit Retained is closed, and its label says so. Under the old Closed button
+      // it was reachable only through All, where nothing marked it out.
+      case 'closed': return j.status==='closed' || j.status==='closed_retained';
+      case 'lost': return j.status==='lost';
       // 'all' = active ledger; Lost clients are archived out of the main view
       // (still in the data — see the dedicated "Lost" filter).
       default: return j.status!=='lost';
     }
   });
+  filtered = sortJobsForList(filtered, _jobSort.key, _jobSort.dir);
 
   var active = jobs.filter(function(j){ return j.status==='active'; }).length;
   var pending = jobs.filter(function(j){ return j.status==='pending'; }).length;
   var pipe = jobs.filter(function(j){ return j.havellinEst && j.status!=='lost'; }).reduce(function(a,j){ return a+j.havellinEst; },0);
   var reCount = jobs.filter(function(j){ return j.re==='yes' && j.status!=='lost'; }).length;
-  document.getElementById('m-tot').textContent = jobs.length;
-  document.getElementById('m-act').textContent = active + (pending > 0 ? ' (+'+pending+' pending)' : '');
+  // ⚠ The Win / Loss row sits directly under these four now, and it reads an unread list as an em
+  // dash. Four zeros above four dashes would be the two rows disagreeing about whether the list
+  // has been read at all — so these follow the same rule.
+  var unread = jobsUnread();
+  document.getElementById('m-tot').textContent = unread ? '—' : jobs.length;
+  document.getElementById('m-act').textContent = unread ? '—' : active + (pending > 0 ? ' (+'+pending+' pending)' : '');
   document.getElementById('m-pip').textContent = pipe > 0 ? '$' + Math.round(pipe).toLocaleString() : '—';
-  document.getElementById('m-re').textContent = reCount;
+  document.getElementById('m-re').textContent = unread ? '—' : reCount;
+  // Before the early return below: the report is about the whole pipeline, never the filter.
+  renderWinLoss();
+  var head = document.getElementById('jobs-head');
+  if (head) head.innerHTML = jobsHeadHtml();
 
   var body = document.getElementById('jobs-body');
   if (filtered.length === 0) {
     // An EMPTY list and an empty FILTER are different answers, and with Client Intake off the
     // nav the first has to say where clients now come from. ⚠ And an unread list is neither:
-    // on a cold cache `jobs` is [] until the sheet answers (jobsUnread, the Win/Loss rule).
+    // on a cold cache `jobs` is [] until the sheet answers (jobsUnread, the Win/Loss rule) —
+    // and the notice tells "still loading" from "could not be reached", as the report does.
     var _emptyMsg = jobs.length ? 'No jobs match this filter.'
-      : ((typeof jobsUnread === 'function' && jobsUnread()) ? 'Loading clients…'
+      : (unread ? jobsUnreadNotice()
          : 'No clients yet. Press + Add New Client to add the first.');
     body.innerHTML = '<tr><td colspan="9"><div class="empty-state">' + _emptyMsg + '</div></td></tr>';
     return;
   }
 
-  var sdot = {new:'s-new',pending:'s-pending',approved:'s-pending',won:'s-active',active:'s-active',closed:'s-closed',closed_retained:'s-closed',lost:'s-lost'};
-  var slabel = {new:'New',pending:'Pending Approval',approved:'Approved — Awaiting Client',won:'Won',active:'Active',closed:'Closed',closed_retained:'Closed — Deposit Retained',lost:'Lost'};
   var pbadge = {high:'<span class="badge b-warn" style="margin-left:4px">High</span>',urgent:'<span class="badge" style="background:var(--err-bg);color:var(--err-tx);margin-left:4px">Urgent</span>'};
 
   var html = '';
@@ -11515,8 +11629,7 @@ function renderJobs() {
     var reCell = j.re==='yes'?'<span class="badge b-bronze" title="RE Transaction Potential" style="font-size:13px;">★</span>':(j.re==='no'?'—':'<span style="color:var(--gray)">?</span>');
     var prio = j.priority&&j.priority!=='normal'&&pbadge[j.priority]?pbadge[j.priority]:'';
     var startFmt = j.start ? new Date(j.start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
-    var statusCell = '<span class="sdot '+(sdot[j.status]||'s-new')+'"></span>'+(slabel[j.status]||j.status);
-    if (j.status==='pending') statusCell = '<span class="sdot s-pending"></span><strong style="color:#7a4f00;">Pending Approval</strong>';
+    var statusCell = _jobStatusCell(j);
 
     // action buttons vary by status
     var actions = '<button class="icon-btn" onclick="cycleStatus('+j.id+')">Status</button>';
@@ -11602,9 +11715,10 @@ function renderJobs() {
     detailHtml += '</div></div></td></tr>';
 
     html += '<tr style="cursor:pointer;" onclick="openClientDashboard(' + j.id + ')">';
-    html += '<td><div style="font-weight:600;">' + j.name + prio + (j.premium?'<span class="badge b-bronze" style="margin-left:4px">Premium</span>':'') + '</div><div style="font-size:10px;color:var(--gray);margin-top:1px;">' + (j.addr?j.addr.split(',')[0]:(j.zip||'')) + '</div></td>';
-    html += '<td>' + svcLabelOf(j) + '</td>';
-    html += '<td><div style="display:flex;align-items:center;gap:6px;"><div class="avatar">' + init.toUpperCase() + '</div><div style="font-size:10px;color:var(--gray);">' + (j.tc?j.tc.split(' ')[0]:'<span style="color:var(--warn-tx)">None</span>') + '</div></div></td>';
+    // Name, street and concierge are typed free text — escaped, or a "<" in one takes the row apart.
+    html += '<td><div style="font-weight:600;">' + esc(j.name) + prio + (j.premium?'<span class="badge b-bronze" style="margin-left:4px">Premium</span>':'') + '</div><div style="font-size:10px;color:var(--gray);margin-top:1px;">' + esc(j.addr?j.addr.split(',')[0]:(j.zip||'')) + '</div></td>';
+    html += '<td>' + esc(svcLabelOf(j)) + '</td>';
+    html += '<td><div style="display:flex;align-items:center;gap:6px;"><div class="avatar">' + esc(init.toUpperCase()) + '</div><div style="font-size:10px;color:var(--gray);">' + (j.tc?esc(j.tc.split(' ')[0]):'<span style="color:var(--warn-tx)">None</span>') + '</div></div></td>';
     html += '<td>' + havCell + '</td>';
     html += '<td style="color:var(--bronze);font-weight:500;">' + totCell + '</td>';
     html += '<td style="font-size:11px;color:var(--gray);">' + startFmt + '</td>';
@@ -17148,130 +17262,195 @@ function cycleStatus(id) {
   saveJobs(); syncJobToSheets(j); renderJobs();
 }
 
-// ─── WIN / LOSS REPORT ───────────────────────────────────────────────────────
+// ─── WIN / LOSS — A ROW ON THE CLIENT DASHBOARD ──────────────────────────────
+// ⚠⚠ THIS WAS ITS OWN TAB UNTIL 2026-09-23 AND IS A ROW OF TILES UNDER TOTAL JOBS NOW. Anthony:
+// *"do we really need a standalone win-loss report or should we just fold that into the top of
+// the client dashboard? … if we can expand like on lost jobs … or won jobs … to see the list of
+// jobs that fall into the win-loss categories … why don't we just have those with expandable
+// carets?"* Four tiles — Won · Lost · Conversion Rate · Lost Revenue — and a caret on Won and
+// Lost that opens the clients behind the figure, between the row and the filters.
+//
+// ⚠ IT IS PAINTED BY renderJobs, SO IT CANNOT GO STALE THE WAY THE TAB DID. The 2026-09-11 defect
+// was a report NOTHING repainted when the jobs landed. Living inside the list's own render means
+// every path that redraws the list — _jobsLanded, a won or lost decision, a remote drop — redraws
+// the report with it, and there is no second panel for a hook to forget.
+//
 // Is this report looking at an empty client list it has not finished READING? An empty
 // `jobs` is the same array whether there are genuinely no clients or the sheet has not
 // answered — and "0 won, 0 lost, 0% conversion" is a CLAIM either way. Answered in one
-// place so the metrics, the loss breakdown and the table cannot disagree about which of
-// the two they are looking at. DOM-free so the tests can drive the real rule.
+// place so the tiles, the lists and the client table cannot disagree about which of the
+// two they are looking at. DOM-free so the tests can drive the real rule.
 function jobsUnread() { return _jobsState !== 'ready' && jobs.length === 0; }
 
 // What to say instead of a number, and the fix, when the outcomes have not been read.
+// ⚠ It used to end "then press ↺ Refresh" — a button on the Win/Loss tab, gone with the tab, and
+// one that only ever re-drew from memory: it never fetched anything. The jobs are fetched when
+// the page loads, so the fix that actually works is a reload.
 function jobsUnreadNotice() {
   if (_jobsState === 'offline') {
     return '<strong>Could not reach the client list.</strong><br><br>'
       + 'This device has no clients cached and the sync could not be reached to fetch them, '
       + 'so there is nothing to report on yet. Check the connection and the Google Sheets Sync '
-      + 'URL in Settings, then press \u21ba Refresh.'
+      + 'URL in Settings, then reload the page.'
       + '<br><span style="font-size:11px;color:var(--gray);">Nothing is lost — the clients are '
       + 'safe in the sheet.</span>';
   }
   return 'Loading clients&hellip;';
 }
 
-function renderWinLoss() {
-  var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
+// Which of the two lists is open. SESSION STATE, never a record — which list somebody has
+// expanded is nobody else's business, and syncing it would open it on the other device. The
+// rule _planOpenPhases follows. It survives a redraw and a trip into a client and back, which
+// is the point: open Lost, press a prospect, press ← Clients, and the list is still open.
+var _wlOpen = { won: false, lost: false };
+function toggleWinLossList(kind) {
+  if (!Object.prototype.hasOwnProperty.call(_wlOpen, kind)) return;
+  _wlOpen[kind] = !_wlOpen[kind];
+  renderWinLoss();
+}
+
+// The outcomes, computed ONCE so the tiles and the lists count the same jobs.
+// ⚠ "Closed — deposit retained" counts as WON and sits on the Won list, named: the client
+// accepted, paid the deposit and then walked, and confirmMarkLost keeps won=true on purpose.
+// It is shown with its own status rather than folded silently into the wins.
+function winLossFigures() {
   var won  = jobs.filter(isJobWon);
-  var lost = jobs.filter(function(j){ return j.status==='lost'; });
-  var total = won.length + lost.length;
-  var convRate = total > 0 ? Math.round(won.length / total * 100) : 0;
-  var lostRev = lost.reduce(function(a,j){ return a + (j.lostEst||j.havellinEst||0); }, 0);
-  // ⚠ MEASURED ON A COLD CACHE: this read 0 · 0 · 0% · $0 against a pipeline of three
-  // won and two lost worth $12,600, and printed "No lost prospects yet — that's a good
-  // sign" underneath it. A blank is survivable; a reassurance is not. Every figure below
-  // becomes an em dash until the outcomes are actually in hand.
+  var lost = jobs.filter(function(j){ return j.status === 'lost'; });
+  var decided = won.length + lost.length;
+  return {
+    won: won, lost: lost, decided: decided,
+    // ⚠ NO RATE OVER NOTHING. 0 won of 0 decided printed "0%", which with one undecided client
+    // on the books reads as "we have converted nobody". A dash until a client is won or lost.
+    convRate: decided > 0 ? Math.round(won.length / decided * 100) : null,
+    lostRev: lost.reduce(function(a, j){ return a + (j.lostEst || j.havellinEst || 0); }, 0),
+    wonRev:  won.reduce(function(a, j){ return a + (j.havellinEst || 0); }, 0),
+  };
+}
+
+// How the client said yes, as the Won modal's own options word it.
+var WON_METHOD_LABELS = { email: 'Email reply', call: 'Phone call', text: 'Text message', in_person: 'In person' };
+
+// The client's name over the street — the client list's own first cell, escaped: a name is
+// typed free text, and a "<" in one would take the row apart.
+function _wlClientCell(j) {
+  return '<td><div style="font-weight:600;">' + esc(j.name || '—') + '</div>'
+    + '<div style="font-size:10px;color:var(--gray);margin-top:1px;">' + esc(j.addr ? String(j.addr).split(',')[0] : (j.zip || '')) + '</div></td>';
+}
+
+// The block: four tiles, then whichever lists are open. DOM-free — the tests drive this.
+function winLossBlockHtml() {
+  var money = function(n){ return '$' + Math.round(n || 0).toLocaleString(); };
+  // ⚠ MEASURED ON A COLD CACHE (2026-09-11): the tab read 0 · 0 · 0% · $0 against a pipeline of
+  // three won and two lost worth $12,600, and printed "No lost prospects yet — that's a good
+  // sign" under it. A blank is survivable; a reassurance is not. Every figure is an em dash
+  // until the outcomes are actually in hand.
   var unread = jobsUnread();
-  var dash = function(v){ return unread ? '\u2014' : v; };
+  var dash = function(v){ return unread ? '—' : v; };
+  var f = winLossFigures();
+  var anyOpen = _wlOpen.won || _wlOpen.lost;
+  // The two tiles that open a list are BUTTONS — a keyboard reaches them and a screen reader
+  // hears expanded / collapsed — carrying the one caret the app draws everywhere (secCaret).
+  var tile = function(kind, label, val, color) {
+    var open = !!_wlOpen[kind];
+    return '<button type="button" class="metric-card mc-toggle" id="wl-tile-' + kind + '" aria-expanded="' + open + '"'
+      + ' onclick="toggleWinLossList(\'' + kind + '\')" title="' + (open ? 'Hide' : 'Show') + ' the ' + kind + ' clients">'
+      + '<div class="metric-label"><span class="mc-caret">' + secCaret(open) + '</span> ' + label + '</div>'
+      + '<div class="metric-val" style="color:' + color + ';">' + val + '</div></button>';
+  };
+  var h = '<div class="grid4 wl-row' + (anyOpen ? ' wl-row-open' : '') + '">'
+    + tile('won',  'Won',  dash(f.won.length),  'var(--sage-dk)')
+    + tile('lost', 'Lost', dash(f.lost.length), '#B0413E')
+    + '<div class="metric-card"><div class="metric-label">Conversion Rate</div><div class="metric-val">'
+    +   dash(f.convRate === null ? '—' : f.convRate + '%') + '</div></div>'
+    + '<div class="metric-card"><div class="metric-label">Lost Revenue</div><div class="metric-val" style="color:#B0413E;">'
+    +   dash(money(f.lostRev)) + '</div></div>'
+    + '</div>';
+  if (anyOpen) {
+    h += '<div class="wl-lists">';
+    if (_wlOpen.won)  h += winLossListHtml('won', f, unread);
+    if (_wlOpen.lost) h += winLossListHtml('lost', f, unread);
+    h += '</div>';
+  }
+  return h;
+}
 
-  // ── Metrics row ──
-  var mEl = document.getElementById('wl-metrics');
-  if (mEl) mEl.innerHTML =
-    '<div class="metric-card"><div class="metric-label">Won</div><div class="metric-val" style="color:var(--sage-dk);">' + dash(won.length) + '</div></div>' +
-    '<div class="metric-card"><div class="metric-label">Lost</div><div class="metric-val" style="color:#B0413E;">' + dash(lost.length) + '</div></div>' +
-    '<div class="metric-card"><div class="metric-label">Conversion Rate</div><div class="metric-val">' + dash(convRate + '%') + '</div></div>' +
-    '<div class="metric-card"><div class="metric-label">Lost Revenue</div><div class="metric-val" style="color:#B0413E;">' + dash(fmt(lostRev)) + '</div></div>';
+// One expanded list. Every row opens its client, the way every row of the client list does.
+function winLossListHtml(kind, f, unread) {
+  var money = function(n){ return '$' + Math.round(n || 0).toLocaleString(); };
+  var won = kind === 'won';
+  var list = won ? f.won : f.lost;
+  var h = '<div class="wl-list" id="wl-list-' + kind + '"><div class="wl-list-hd">' + (won ? 'Won' : 'Lost')
+    + (unread ? '' : '<span class="wl-list-meta">' + list.length + ' client' + (list.length === 1 ? '' : 's')
+      + ' · ' + money(won ? f.wonRev : f.lostRev) + (won ? '' : ' estimated') + '</span>')
+    + '</div>';
+  if (unread) return h + '<div class="wl-empty">' + jobsUnreadNotice() + '</div></div>';
+  // A pipeline that has genuinely been read and has nothing here keeps the plain answer —
+  // including the cheerful one, because there it is simply true.
+  if (!list.length) return h + '<div class="wl-empty">'
+    + (won ? 'No clients won yet.' : 'No lost prospects yet — that’s a good sign.') + '</div></div>';
 
-  // ── Loss-reason breakdown ──
-  var rEl = document.getElementById('wl-reason-wrap');
-  if (rEl) {
-    if (lost.length === 0) {
-      rEl.innerHTML = '';
-    } else {
-      var counts = {};
-      var revenue = {};
-      lost.forEach(function(j){
-        var r = j.lostReasonLabel || j.lostReason || 'Unknown';
-        counts[r] = (counts[r]||0) + 1;
-        revenue[r] = (revenue[r]||0) + (j.lostEst||j.havellinEst||0);
-      });
-      var rows = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
-      var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:17px;font-weight:500;margin-bottom:.6rem;">Loss Reasons</div>';
-      h += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-      h += '<thead><tr style="background:var(--tan);">';
-      h += '<th style="padding:7px 10px;text-align:left;">Reason</th>';
-      h += '<th style="padding:7px 10px;text-align:center;">Count</th>';
-      h += '<th style="padding:7px 10px;text-align:center;">% of Lost</th>';
-      h += '<th style="padding:7px 10px;text-align:right;">Est. Revenue Lost</th>';
-      h += '</tr></thead><tbody>';
-      rows.forEach(function(r, i){
-        var bg = i%2===0 ? 'var(--cream)' : 'var(--white)';
-        h += '<tr style="background:'+bg+';">';
-        h += '<td style="padding:7px 10px;">'+r+'</td>';
-        h += '<td style="padding:7px 10px;text-align:center;font-weight:700;">'+counts[r]+'</td>';
-        h += '<td style="padding:7px 10px;text-align:center;">' + Math.round(counts[r]/lost.length*100) + '%</td>';
-        h += '<td style="padding:7px 10px;text-align:right;color:#B0413E;">'+fmt(revenue[r])+'</td>';
-        h += '</tr>';
-      });
-      h += '</tbody></table>';
-      rEl.innerHTML = h;
-    }
+  if (won) {
+    // Newest acceptance first; a job won before the decision was recorded (no wonAt) falls to
+    // the end in creation order, newest first.
+    var wonRows = list.slice().sort(function(a, b){
+      return String(b.wonAt || '').localeCompare(String(a.wonAt || '')) || ((b.id || 0) - (a.id || 0));
+    });
+    h += '<div class="tbl-scroll"><table class="jtbl"><thead><tr><th>Client / Property</th><th>Service</th>'
+      + '<th>TC</th><th>Accepted</th><th>Value</th><th>Status</th></tr></thead><tbody>';
+    wonRows.forEach(function(j){
+      var how = WON_METHOD_LABELS[j.wonMethod] || j.wonMethod || '';
+      h += '<tr style="cursor:pointer;" onclick="openClientDashboard(' + j.id + ')">' + _wlClientCell(j)
+        + '<td>' + esc(svcLabelOf(j)) + '</td>'
+        + '<td>' + esc(j.tc || '—') + '</td>'
+        + '<td style="white-space:nowrap;">' + (j.wonAt ? esc(fmtDate2(j.wonAt))
+            + (how ? '<div style="font-size:10px;color:var(--gray);">' + esc(how) + '</div>' : '') : '—') + '</td>'
+        + '<td>' + (j.havellinEst ? money(j.havellinEst) : '—') + '</td>'
+        + '<td>' + _jobStatusCell(j) + '</td></tr>';
+    });
+    return h + '</tbody></table></div></div>';
   }
 
-  // ── Lost clients table ──
-  var tEl = document.getElementById('wl-table-wrap');
-  if (tEl) {
-    if (unread) {
-      tEl.innerHTML = '<div style="color:var(--gray);font-size:13px;padding:1rem 0;line-height:1.55;">' + jobsUnreadNotice() + '</div>';
-    } else if (lost.length === 0) {
-      tEl.innerHTML = '<div style="color:var(--gray);font-size:13px;padding:1rem 0;">No lost prospects yet — that\'s a good sign.</div>';
-    } else {
-      var sorted = lost.slice().sort(function(a,b){ return (b.lostAt||'').localeCompare(a.lostAt||''); });
-      var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:17px;font-weight:500;margin-bottom:.6rem;">Lost Prospects</div>';
-      // ⚠ EIGHT COLUMNS, TWO OF THEM FREE TEXT (the reason and the note), so there is no
-      // width this reflows to. Measured at 557px against a 390px phone: 178px of document
-      // overflow, which renders as the cut-off header with a blank gap beside it. The table
-      // scrolls inside its own container instead.
-      h += '<div class="tbl-scroll">';
-      h += '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
-      h += '<thead><tr style="background:var(--tan);">';
-      h += '<th style="padding:7px 10px;text-align:left;">Client</th>';
-      h += '<th style="padding:7px 10px;text-align:left;">Property</th>';
-      h += '<th style="padding:7px 10px;text-align:left;">Service</th>';
-      h += '<th style="padding:7px 10px;text-align:left;">TC</th>';
-      h += '<th style="padding:7px 10px;text-align:right;">Estimate</th>';
-      h += '<th style="padding:7px 10px;text-align:left;">Reason</th>';
-      h += '<th style="padding:7px 10px;text-align:left;">Note</th>';
-      h += '<th style="padding:7px 10px;text-align:left;">Date Lost</th>';
-      h += '</tr></thead><tbody>';
-      var svcLabel = SVC_LABELS;
-      sorted.forEach(function(j, i){
-        var bg = i%2===0 ? 'var(--cream)' : 'var(--white)';
-        var dateLost = j.lostAt ? new Date(j.lostAt).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
-        h += '<tr style="background:'+bg+';">';
-        h += '<td style="padding:7px 10px;font-weight:600;">'+(j.name||'—')+'</td>';
-        h += '<td style="padding:7px 10px;">'+(j.addr||'—')+'</td>';
-        h += '<td style="padding:7px 10px;">'+(svcLabel[j.svc]||j.svc||'—')+'</td>';
-        h += '<td style="padding:7px 10px;">'+(j.tc||'—')+'</td>';
-        h += '<td style="padding:7px 10px;text-align:right;color:#B0413E;">'+(j.lostEst||j.havellinEst ? fmt(j.lostEst||j.havellinEst) : '—')+'</td>';
-        h += '<td style="padding:7px 10px;">'+(j.lostReasonLabel||j.lostReason||'—')+'</td>';
-        h += '<td style="padding:7px 10px;color:var(--gray);">'+(j.lostNote||'—')+'</td>';
-        h += '<td style="padding:7px 10px;">' + dateLost + '</td>';
-        h += '</tr>';
-      });
-      h += '</tbody></table></div>';
-      tEl.innerHTML = h;
-    }
-  }
+  // Lost: the reasons first — the analysis — then the prospects behind them, newest loss first.
+  var counts = {}, revenue = {};
+  list.forEach(function(j){
+    var r = j.lostReasonLabel || j.lostReason || 'Unknown';
+    counts[r] = (counts[r] || 0) + 1;
+    revenue[r] = (revenue[r] || 0) + (j.lostEst || j.havellinEst || 0);
+  });
+  var reasons = Object.keys(counts).sort(function(a, b){ return counts[b] - counts[a]; });
+  h += '<div class="wl-sub">Loss reasons</div><div class="tbl-scroll"><table class="jtbl wl-reasons"><thead><tr>'
+    + '<th>Reason</th><th style="text-align:center;">Count</th><th style="text-align:center;">% of lost</th>'
+    + '<th style="text-align:right;">Est. revenue lost</th></tr></thead><tbody>';
+  reasons.forEach(function(r){
+    h += '<tr><td>' + esc(r) + '</td><td style="text-align:center;font-weight:700;">' + counts[r] + '</td>'
+      + '<td style="text-align:center;">' + Math.round(counts[r] / list.length * 100) + '%</td>'
+      + '<td style="text-align:right;color:#B0413E;">' + money(revenue[r]) + '</td></tr>';
+  });
+  h += '</tbody></table></div>';
+  // ⚠ SEVEN COLUMNS, TWO OF THEM FREE TEXT (the reason and the note), so there is no width it
+  // reflows to — it scrolls inside its own container rather than widening the page. Measured at
+  // 557px against a 390px phone on the old tab: 178px of document overflow.
+  var lostRows = list.slice().sort(function(a, b){ return String(b.lostAt || '').localeCompare(String(a.lostAt || '')); });
+  h += '<div class="wl-sub">Lost prospects</div><div class="tbl-scroll"><table class="jtbl"><thead><tr>'
+    + '<th>Client / Property</th><th>Service</th><th>TC</th><th>Estimate</th><th>Reason</th><th>Note</th>'
+    + '<th>Date lost</th></tr></thead><tbody>';
+  lostRows.forEach(function(j){
+    var est = j.lostEst || j.havellinEst;
+    h += '<tr style="cursor:pointer;" onclick="openClientDashboard(' + j.id + ')">' + _wlClientCell(j)
+      + '<td>' + esc(svcLabelOf(j)) + '</td>'
+      + '<td>' + esc(j.tc || '—') + '</td>'
+      + '<td style="color:#B0413E;">' + (est ? money(est) : '—') + '</td>'
+      + '<td>' + esc(j.lostReasonLabel || j.lostReason || '—') + '</td>'
+      + '<td style="color:var(--gray);">' + esc(j.lostNote || '—') + '</td>'
+      + '<td style="white-space:nowrap;">' + (j.lostAt ? esc(fmtDate2(j.lostAt)) : '—') + '</td></tr>';
+  });
+  return h + '</tbody></table></div></div>';
+}
+
+// The thin shim. renderJobs calls it on every paint; the Won / Lost carets call it on their own.
+function renderWinLoss() {
+  var el = document.getElementById('wl-block');
+  if (el) el.innerHTML = winLossBlockHtml();
 }
 
 // ─── CLOSE OUT / LOST / DELETE ──────────────────────────────────────────────
@@ -17476,8 +17655,8 @@ function _applyDroppedJobs(ids) {
   if (removed) {
     var ct = document.getElementById('jct'); if (ct) ct.textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
     if (typeof rebuildDropdowns === 'function') { try { rebuildDropdowns(); } catch(e) {} }
-    // A client deleted on the other device is still on this one's Win/Loss table until
-    // something redraws it — which for a lost prospect is the row saying we lost them.
+    // A client deleted on the other device is still on this one's Win / Loss lists until
+    // something redraws them — which for a lost prospect is the row saying we lost them.
     _jobsLanded();
     // Say so. A client vanishing from the list with no explanation reads as data loss;
     // this is the opposite — the list is catching up with a deletion made elsewhere.
@@ -17669,7 +17848,6 @@ function showPanel(id, btn) {
   if (id==='contractors') { renderContractors(); }
   if (id==='vendors') { initVendorsTab(); }
   if (id==='referrals') { initReferralsTab(); }
-  if (id==='winloss') renderWinLoss();
   if (id==='job-plan') {
     populateLogAndInvSelects();
     // Adopt BEFORE maybeStartPlanWatch below — planWatchTick reads the selected job.
@@ -17834,11 +18012,12 @@ function loadJobs() {
 // ⚠ renderJobs() is NOT gated on its panel being active, deliberately: it is what
 // loadJobs always did here, and the client list is cheap and must never be left stale
 // for a path into that panel that does not re-render on entry.
+// ⚠ AND IT CARRIES THE WIN / LOSS REPORT NOW (2026-09-23). The report left its own tab for a
+// row on the Client Dashboard that renderJobs paints, so there is no separate report to
+// remember here any more — which is the cold-cache defect closed by construction.
 function _jobsLanded() {
   if (typeof renderJobs === 'function') { try { renderJobs(); } catch(e) {} }
   if (typeof _dashRedraw === 'function') { try { _dashRedraw(); } catch(e) {} }
-  var wl = document.getElementById('panel-winloss');
-  if (wl && wl.classList.contains('active') && typeof renderWinLoss === 'function') renderWinLoss();
   // The referral leaderboard is built from jobs too — measured on a cold cache it
   // rendered ZERO BYTES, so the whole section was absent rather than merely wrong.
   if (typeof refreshReferralsTabIfActive === 'function') refreshReferralsTabIfActive();
@@ -36946,6 +37125,11 @@ setTopbarHeight();
 window.addEventListener('resize', setTopbarHeight);
 populateCollDispSelect();
 loadJobs();
+// ⚠ PAINT THE LIST FROM WHAT IS IN HAND, NOW. It used to wait for the fetch, so for the second or
+// three an Apps Script cold start takes, the list read "No clients yet" over a warm cache — and
+// since 2026-09-23 the header row and the Win / Loss tiles are painted here too, so waiting would
+// leave the table headless. On a cold cache this says "Loading clients…", which is the truth.
+renderJobs();
 loadEstimateState();
 loadLogData();
 loadJobPlanData();
@@ -37005,7 +37189,7 @@ function setFieldMode(on) {
   if (tog) {
     tog.innerHTML = on ? 'Field &middot; exit' : '&#128241; Field';
     tog.title = on
-      ? 'Leave field mode and bring back all seven tabs'
+      ? 'Leave field mode and bring back all six tabs'
       : 'Field mode — three tabs, bottom bar, built for a phone. Everything still saves in full.';
   }
 
@@ -37020,7 +37204,7 @@ function setFieldMode(on) {
   // off it — Add New Client and Build Estimate keep the Clients tab lit, so field mode entered
   // mid-walkthrough leaves you on the walkthrough.
   //
-  // Leaving field mode needs no equivalent: all seven tabs come back, so whatever you were
+  // Leaving field mode needs no equivalent: all six tabs come back, so whatever you were
   // on is still there. Staying put is also the behaviour you want — capture on the phone,
   // then open the desk view on that same job to review it.
   var activeBtn = document.querySelector('.nb.active');

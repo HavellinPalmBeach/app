@@ -27,10 +27,18 @@ const { sandbox, domStub, source, fn } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
 
+// ⚠ renderJobs grew the Win / Loss row, the sortable header and the shared status cell on
+// 2026-09-23. They are LIFTED, never stubbed: a stub of the sort or of the status vocabulary is
+// exactly what would let the list this suite reads drift from the one a person sees.
 const RENDER_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'jobPayments',
   'houseFlagSummary', 'activeHouseFlags', 'houseFlagsOf', 'svcLabelOf',
-  'maybeStartJobsWatch', 'stopJobsWatch'];
-const RENDER_VARS = ['currentFilter', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'SVC_LABELS', '_jobsWatch'];
+  'maybeStartJobsWatch', 'stopJobsWatch',
+  'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
+  'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'winLossListHtml', '_wlClientCell',
+  'isJobWon', 'secCaret', 'fmtDate2'];
+const RENDER_VARS = ['currentFilter', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'SVC_LABELS', '_jobsWatch',
+  '_jobsState', '_jobSort', '_wlOpen', 'JOB_SORTS', 'JOB_LIST_COLS', 'JOB_STATUS_ORDER',
+  'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS'];
 
 function job(over) {
   return Object.assign({

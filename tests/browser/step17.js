@@ -31,11 +31,13 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
     const navR = document.querySelector('.nav').getBoundingClientRect();
     return { bs, gapW: Math.round(gap.width), navR: Math.round(navR.right), navL: Math.round(navR.left) };
   });
-  eq(nav.bs.map((x) => x.t), ['Win / Loss', 'Client Dashboard', 'Job Plan', 'Job Admin & Inv', 'Contractors', 'Vendors', 'Referral Partners'],
-    'seven tabs, in order — no Client Intake, no Build Estimate');
+  // ⚠ RESTATED 2026-09-23 (step 18): Win / Loss left the nav the same day, for a row of tiles on the
+  // Client Dashboard. Six tabs, and the gap moves one index to the left with it.
+  eq(nav.bs.map((x) => x.t), ['Client Dashboard', 'Job Plan', 'Job Admin & Inv', 'Contractors', 'Vendors', 'Referral Partners'],
+    'six tabs, in order — no Win / Loss, no Client Intake, no Build Estimate');
   ok(nav.gapW > 300, 'at 1440 the white space between the groups is wide (' + nav.gapW + 'px)');
-  ok(Math.abs((nav.bs[4].l - nav.bs[3].r) - nav.gapW) <= 1, 'and it sits exactly between Job Admin and Contractors (' + (nav.bs[4].l - nav.bs[3].r) + ' vs ' + nav.gapW + ', sub-pixel rounding)');
-  ok(nav.navR - nav.bs[6].r <= 30, 'the contact tabs sit flush right (' + (nav.navR - nav.bs[6].r) + 'px from the edge, the nav padding)');
+  ok(Math.abs((nav.bs[3].l - nav.bs[2].r) - nav.gapW) <= 1, 'and it sits exactly between Job Admin and Contractors (' + (nav.bs[3].l - nav.bs[2].r) + ' vs ' + nav.gapW + ', sub-pixel rounding)');
+  ok(nav.navR - nav.bs[5].r <= 30, 'the contact tabs sit flush right (' + (nav.navR - nav.bs[5].r) + 'px from the edge, the nav padding)');
   ok(nav.bs[0].l - nav.navL <= 30, 'the client tabs sit flush left');
   eq(await overflow(), 0, 'no horizontal overflow at 1440');
 
@@ -183,7 +185,8 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
   eq(fm.tabs, ['Clients', 'Job Plan', 'Vendors'], 'three tabs in the bottom bar');
   eq(fm.gap, 0, 'and no gap among them');
   ok(Math.max.apply(null, fm.widths) - Math.min.apply(null, fm.widths) <= 1, 'in even thirds (' + fm.widths.join('/') + ')');
-  ok(/three tabs/.test(fm.title) || /seven tabs/.test(fm.title), 'the toggle counts the tabs it has (' + fm.title + ')');
+  ok(/six tabs/.test(fm.title), 'the toggle counts the tabs it gives back — six (' + fm.title + ')');
+  ok(!/seven tabs/.test(fm.title), '…not the seven there were before Win / Loss joined the dashboard');
   await p.click('#btn-add-client'); await p.waitForTimeout(200);
   st = await state();
   eq(st.active, ['panel-intake'], '+ Add New Client works in field mode — a prospect calling while you are out');

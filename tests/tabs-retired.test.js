@@ -44,15 +44,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // a full screen off the Client Dashboard now (tests/dashboard-screens.test.js carries the
     // doors). The requirement this group states is unchanged: the seven tabs that REMAIN are all
     // still there, and nothing else quietly went with them.
-    ['winloss', 'jobs', 'job-plan', 'inventory', 'contractors', 'vendors', 'referrals']
+    // ⚠ RESTATED AGAIN 2026-09-23 (later the same day): Win / Loss came off as well — a row of tiles
+    // on the Client Dashboard now, painted by renderJobs (tests/win-loss.test.js). Six remain.
+    ['jobs', 'job-plan', 'inventory', 'contractors', 'vendors', 'referrals']
       .forEach((t) => has(src, "showPanel('" + t + "',this)", t + ' is still on the nav'));
     ['intake', 'estimate'].forEach((t) =>
       lacks(src, "showPanel('" + t + "',this)", t + ' has no nav button — it is a screen off the dashboard'));
+    lacks(src, "showPanel('winloss',this)", 'winloss has no nav button — it is a row on the Client Dashboard');
     // ⚠ COUNT THE PREFIX, NOT THE EXACT ATTRIBUTE. Client Dashboard carries
     // `class="nb active"`, so `class="nb"` misses it — and a check that silently counts one
     // fewer tab than exist would have gone on passing if a ninth were removed. Verified in a
     // browser: seven `.nb` elements render.
-    eq((src.match(/<button class="nb[" ]/g) || []).length, 7, 'seven tabs — twelve, then nine, then seven');
+    eq((src.match(/<button class="nb[" ]/g) || []).length, 6, 'six tabs — twelve, then nine, then seven, then six');
     // ⚠ THIS PINNED THE BUTTON'S EXACT MARKUP AND BROKE ON A TRUE CHANGE — adding
     // `data-field` to make the dashboard a field tab failed a check about which tab opens
     // by default. A byte sequence is not a requirement; this file has now paid for that
@@ -73,6 +76,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // intake save and the pricing engine read lives inside them.
     ['panel-intake', 'panel-estimate'].forEach((p) =>
       has(src, 'id="' + p + '"', p + ' is still in the DOM — it is opened as a screen, not removed'));
+    // ⚠ And the one panel that DID go, and why that is not the rule above being broken: nothing but
+    // the report itself ever rendered into #panel-winloss, so no loader primes it and no id in it is
+    // read from anywhere else. A dead panel left in the DOM is how a retired tab comes back.
+    lacks(src, 'id="panel-winloss"', 'the Win / Loss panel is deleted — nothing else rendered into it');
+    ['wl-metrics', 'wl-reason-wrap', 'wl-table-wrap'].forEach((id) =>
+      eq((live.match(new RegExp(id, 'g')) || []).length, 0, id + ' is gone with it, and nothing still writes to it'));
     has(fn('_primeAgreementFor'), 'loadAgreement()', 'and the primer still runs the real loader');
   }
 
@@ -280,7 +289,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // ⚠ The counts a person actually READS. Both were stale.
     const body = fn('setFieldMode');
-    ok(/bring back all seven tabs/.test(body), '⚠ the exit tooltip counts the seven tabs that come back');
+    ok(/bring back all six tabs/.test(body), '⚠ the exit tooltip counts the six tabs that come back');
+    lacks(body, 'all seven tabs', 'and not the seven there were before Win / Loss left the nav');
     lacks(body, 'twelve tabs', 'the pre-Slice-7 count is gone');
     lacks(body, 'all nine tabs', 'and the pre-2026-09-23 count with it');
     ok(/three tabs/.test(body), 'and the enter tooltip counts three');

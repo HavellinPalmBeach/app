@@ -1,3 +1,112 @@
+## ⚠⚠ WIN / LOSS LEFT ITS TAB FOR A ROW ON THE CLIENT DASHBOARD, SIX FILTERS, AND EVERY COLUMN SORTS (BUILT 2026-09-23)
+Anthony asked what the Win / Loss tab actually showed beyond its four tiles, then: *"do we really need a standalone
+win-loss report or should we just fold that into the top of the client dashboard? … Why don't we have the win-loss stuff
+underneath that? And if we can expand like on lost jobs … or won jobs … to see the list of jobs … why don't we just have
+those with expandable carets? … on the client dashboard, there are far too many sort items … The sort should be … all …
+active, pending approval, unassigned TC, closed and lost, and then be able to sort by the service column, which wipes out
+the need for all of the big job type buttons. Make sense?"* App-only, no redeploy. **Nav 7 → 6.**
+
+- **⚠⚠ THE REPORT IS PAINTED BY `renderJobs`, AND THAT CLOSES THE 2026-09-11 DEFECT BY CONSTRUCTION.** The tab's
+  cold-cache bug was a report nothing repainted when the jobs landed — `_jobsLanded` had to remember a separate panel, and
+  a partial copy of that list is how Win / Loss became the surface nobody remembered. `#wl-block` sits between the four
+  pipeline tiles and the filters, and `renderWinLoss()` is called from inside `renderJobs` **BEFORE the empty-list early
+  return**, so a filter that matches nobody still paints the report of the whole pipeline (driven, not a source index).
+  `#panel-winloss`, the ↺ Refresh button, `showPanel`'s winloss branch and `_jobsLanded`'s panel lines are **DELETED**, not
+  left dead.
+  - **⚠ INIT NOW CALLS `renderJobs()` STRAIGHT AFTER `loadJobs()`.** The markup's `<thead>` is empty now (painted from
+    `JOB_LIST_COLS`), so waiting for the fetch would have left the table **headless** for the length of an Apps Script
+    cold start — and the list read *"No clients yet"* over a warm cache for that second or three anyway. The head is
+    painted before the early return too, or a cold list, an empty book and an empty filter would have no headings and the
+    sort would be unreachable until a client existed.
+- **WON AND LOST ARE BUTTONS WITH `secCaret`'S GLYPH** — a keyboard reaches them, `aria-expanded` says the state, and the
+  fold-consistency net still holds (the tile reads the one caret writer rather than carrying ▸/▾). Measured in Chromium:
+  the two button tiles are **306×88, identical to the four div tiles above them, on the same left edges**, and the row
+  sits exactly one tile gap (10px) under Total Jobs so the eight read as one block.
+  - **The Won list is NEW** — the tab never had one: client/street, service, concierge, **when and how they accepted**
+    (the Won modal's own words), value, status. Newest acceptance first; a job won before the decision was recorded falls
+    to the end. **Lost** carries the tab's loss-reason breakdown and prospects table, newest loss first. Every row opens
+    its client.
+  - **`_wlOpen` IS SESSION STATE, NEVER A RECORD** — the `_planOpenPhases` rule. It survives a trip into a client and back
+    (driven in the browser: open Won, press Butler, ← Clients, Won is still open) and is never written or synced.
+- **⚠ CLOSED — DEPOSIT RETAINED IS ON THE WON LIST, NAMED AS ONE.** `isJobWon` counts it (`confirmMarkLost` keeps
+  `won=true` on purpose) and the list prints its status through `_jobStatusCell` — **the ONE status vocabulary**, read by
+  the client list and the Won list both; `renderJobs`' private `sdot`/`slabel` maps are deleted. And **the Closed filter
+  now includes it** — the old button tested `status === 'closed'` alone, so a retained deposit was reachable only through All.
+- **⚠ THE TWO DEFECTS FLAGGED IN THE FIRST ANSWER ARE FIXED.** Conversion Rate printed **0% over nothing decided**, which
+  with one undecided client on the books reads as *we have converted nobody* — it is a dash until someone is won or lost
+  (one lost and none won is still a real 0%, and that zero is kept). And the tab printed **free text raw**; every cell
+  on both lists is escaped now and **each is driven with markup** — name, street, note, loss reason, stored service label,
+  concierge, acceptance method and both dates — because a case carrying markup in the name alone passes with every other
+  cell printed raw. The client list's own name, street, service, initials and concierge cells were raw too and are
+  escaped the same way.
+- **⚠ THE UNREAD RULE REACHES THE TOP ROW AND THE LIST.** Total Jobs · Active · RE Potential read em dashes on an unread
+  list (four zeros over four dashes would be the two rows disagreeing about whether anything was read), and the list's
+  empty state is `jobsUnreadNotice()` — *Loading clients…*, or *Could not reach the client list … reload the page* —
+  rather than *No clients yet*. **The old offline notice named the ↺ Refresh button**, which went with the tab and only
+  ever re-drew from memory anyway; a reload is the fix that actually refetches.
+- **SIX FILTERS, IN ANTHONY'S ORDER:** All · Active · Pending Approval · Unassigned TC · Closed · Lost. New, RE Potential
+  and the six service buttons went, **and their `case`s with them** — a retired case left in the switch is dead code that
+  still compiles, and a test `lacks()` each.
+- **⚠⚠ EVERY DATA COLUMN SORTS, AND THE SORT IS WHAT MADE IT SAFE TO DELETE EIGHT BUTTONS.** New is the top of a
+  **Status** sort, RE Potential the top of an **RE** sort, the six service buttons a **Service** sort — so nothing any
+  removed button found is unreachable. A test **walks each removed button's old predicate** against the replacement sort
+  and asserts its clients are the top of it or contiguous under it. `JOB_SORTS` (label · first direction · value),
+  `JOB_LIST_COLS` (the header and the row cells in one order — a test drives both), `setJobSort` (natural → reverse →
+  clear, back to newest-first), `sortJobsForList` (DOM-free; returns a copy), `jobsHeadHtml` (a button per heading,
+  `aria-sort`, ↑ ↓ ↕).
+  - **⚠⚠ SERVICE SORTS IN CATALOGUE ORDER (`SVC_ORDER`), NOT A→Z — FOUND BY WORKING THE TEST EXPECTATIONS OUT BY HAND
+    BEFORE RUNNING THEM.** A→Z by label put **Contested Probate first and Probate last**, the two probate types at
+    opposite ends of the list, and wedged Home Prep between Home Editing and Home Transition — the opposite of what
+    replacing six job-type buttons needs.
+  - **⚠ A BLANK SORTS LAST WHICHEVER WAY THE COLUMN RUNS.** No concierge, no price, no start date is a gap, not the
+    smallest value; reversing a sort must never bring the gaps to the top.
+  - **⚠ ↑ ↓ ↕, NEVER A TRIANGLE.** The triangles are the fold caret (`secCaret`) and the fold-consistency net forbids them
+    anywhere else; a triangle on a heading would read as something that expands.
+- **Field mode leaves the row off** (`body.field-mode #wl-block{display:none}`) — the report was never a field tab. The
+  toggle's tooltip says **six** tabs.
+- **10,402 committed checks** (+232) (`tests/client-list.test.js` new at 148; `win-loss.test.js` rewritten around the
+  row at 139; `tabs-retired`, `dashboard-screens`, `closeout-gate`, `deleted-jobs` restated rather than deleted).
+  **The revert sweep — 92 reverts, one change at a time, on four parallel tar copies of the tree — was still running when this was committed; its result is recorded in the next commit, the shape `cb98980` set.** Before it started, the checks it would need were written first: every Win / Loss cell driven with markup, the unread list heading carrying no count, the open/shut row and the shared list wrapper, one client reading *1 client*, and the spacing rule stated as a relation to the tile grid's own gap rather than as pixels.
+- **Verified end to end in headless Chromium, `tests/browser/step18.js`, 58 checks, 0 failed, 0 page errors**,
+  driving the real nav, real clicks on both tiles, real clicks on all six filters and the headings, a real row into a
+  client and back, and **a keyboard Enter on the focused Lost tile**:
+
+  | | |
+  |---|---|
+  | on load, before any client | header row painted (9 headings) · the Win / Loss row painted · the list says what is true |
+  | the nav | **six tabs**, no `#panel-winloss` · the gap still exactly between Job Admin and Contractors, now **601px** at 1440 |
+  | the row | *4 · 2 · 67% · $48,400* on a nine-client pipeline — the retained deposit counted as won · 10px under Total Jobs · tiles aligned and the same size |
+  | Won, pressed | ▾ · four rows, newest acceptance first · *Closed — Deposit Retained* named · *4 clients · $83,940* |
+  | a row, then ← Clients | opens Butler · **Won still open** on the way back |
+  | Lost, by Enter | opens under Won · two reasons · prospects newest first · both tables scroll inside their own boxes |
+  | the six filters | each shows what it says · **Closed = Ellery, Farrell** · the row still counts the whole pipeline |
+  | the headings | Service in catalogue order, bronze ↑, `aria-sort="ascending"` · reverse · clear back to the list's order · RE and Status put the removed buttons' clients on top |
+  | a cold device · unreachable | dashes across both rows, headings still there · *Could not reach … reload the page* |
+  | field mode | the row gone, three tabs, *six tabs* on the toggle |
+  | overflow 1440 · 390, both lists open | **0 · 0**, two tiles across at 390 |
+
+  `tests/browser/step17.js` restated for six tabs (the gap moves one index left, the toggle says six); `run.sh`'s default
+  list is 1–18; steps 1–17 re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52**, 0 failed — **736 checks across the eighteen**.
+- Manual **§1** (the nav, a note on where Win / Loss went, field mode *three of those six*, the opening note), **§9** (a
+  new *The client list* subsection: the figures, the row and its two lists, deposit-retained, the dash, the unread rule,
+  the six filters, the sort table, where the eight buttons went, blanks last, field mode) and **§16a** (a row now, not a
+  tab). Playbook the nav note, field mode, and **seven** symptom→cause rows — including the two that will actually
+  happen: *where did the Win / Loss tab go?* and *the Probate (or any service) filter button is gone*; the old *Win / Loss
+  reads all zeros … press ↺ Refresh* row is rewritten. Both `.md` copies hand-edited; **39 claims parity-checked, 0
+  mismatches**; a stale sweep for seven retired wordings returns **0 across all four files**. Tag balance clean on both
+  HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` **0**
+  tables take the phone rule.
+- **⚠ FOUND IN PASSING, NOT FIXED: `manual.html` HAS AN UNCLOSED NOTE IN §7, AND EVERYTHING AFTER IT RENDERS NESTED
+  INSIDE IT.** The note opening *"The stages branch on the JOB FAMILY…"* (~line 632) has no `</div>`; a stack-based parse
+  puts every `<h2>` from ~line 676 to the end inside it, and headless Chromium counts **250 `.note .note` at HEAD**. The
+  file's overall `<div>` counts balance, so a stray `</div>` somewhere later is hiding it from the tag-balance check this
+  file relies on — which is why the print measure has read *"20 of N tables full width, every uncounted one inside a
+  note"* for weeks: nearly all of them are inside THIS note. One tag to add and one stray to find; left for its own
+  change rather than folded into this one.
+- **⚠ THE SHAPE TO COPY: when a set of buttons is replaced, walk what each one used to find.** Eight buttons became zero
+  and a sort became the answer — safe only because the walk proves every removed button's clients are one press on a
+  heading away, and it is the walk that found the A→Z order would have split the two probate types.
+
 ## ⚠⚠ CLIENT INTAKE AND BUILD ESTIMATE LEFT THE NAV — THEY ARE SCREENS OFF THE CLIENT DASHBOARD NOW (BUILT 2026-09-23)
 Anthony: *"doing away with client intake tab and build estimate tabs. client dashboard needs a 'Add New Client' button at
 the top that launches the client intake … same idea with 'Build Estimate'. it should be a brown button above the job timeline
@@ -7361,8 +7470,9 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/inspiring-brahmagupta-xfe2he`
-  (`claude/practical-hypatia-qm2kft` is the previous name.)
+- Active feature branch: `claude/admiring-gauss-1tdpzn`
+  (`claude/inspiring-brahmagupta-xfe2he` is the previous name.)
+  (`claude/practical-hypatia-qm2kft` before that.)
   (`claude/festive-dijkstra-3uqyoh` is the previous name. ⚠ A second session ran concurrently on
   2026-09-22 — the prep Job Plan / intake ordering work — and its two commits merged in here
   cleanly; the only conflict was the build stamp. Both are on `main`.)
@@ -7398,7 +7508,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/inspiring-brahmagupta-xfe2he:main`
+  `git push origin claude/admiring-gauss-1tdpzn:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping

@@ -96,7 +96,8 @@
     <br><br><em>A third party's licence is a different thing and is correct where it appears</em> — <strong>Licensed FFL</strong> on the firearms disposition list (§5f), the vendor directory's <strong>License / cert</strong> field (§13), and &#8220;licensed firearms transfer&#8221; in the collections cost note. Those describe vendors, not us.
     <br><br>The tagline on all four client documents is <strong>&#8220;Havellin handles the work no family should face alone.&#8221;</strong> It replaced <em>Guiding Families Through Life's Transitions</em> on 2026-08-03.</div>
 
-  <p><strong>Navigation tabs (in order):</strong> on the <strong>left</strong>, the work on a client &mdash; Win / Loss · Client Dashboard · Job Plan · Job Admin &amp; Inv; on the <strong>right</strong>, the people we call &mdash; Contractors · Vendors · Referral Partners. The white space between the two groups is deliberate (2026-09-23, Anthony: <em>&ldquo;client facing tabs to the left, contact tabs to the right&rdquo;</em>).</p>
+  <p><strong>Navigation tabs (in order):</strong> on the <strong>left</strong>, the work on a client &mdash; Client Dashboard · Job Plan · Job Admin &amp; Inv; on the <strong>right</strong>, the people we call &mdash; Contractors · Vendors · Referral Partners. The white space between the two groups is deliberate (2026-09-23, Anthony: <em>&ldquo;client facing tabs to the left, contact tabs to the right&rdquo;</em>).</p>
+  <div class="note"><strong>&#9888; Win / Loss left the navigation the same day, 2026-09-23. It is a row of four figures on the Client Dashboard now</strong>, directly under Total Jobs, and pressing <strong>Won</strong> or <strong>Lost</strong> lists the clients behind the number (&sect;9). Anthony: <em>&ldquo;do we really need a standalone win-loss report or should we just fold that into the top of the client dashboard? &hellip; why don&rsquo;t we just have those with expandable carets?&rdquo;</em> Nothing the tab showed was dropped &mdash; the four figures, the loss reasons and the lost prospects are all there, and the Won list is new.</div>
   <div class="note"><strong>&#9888;&#9888; Client Intake and Build Estimate left the navigation on 2026-09-23. They are not gone &mdash; they are screens you open FROM the Client Dashboard.</strong>
     Anthony: <em>&ldquo;doing away with client intake tab and build estimate tabs. client dashboard needs a &lsquo;Add New Client&rsquo; button at the top &hellip; same idea with &lsquo;Build Estimate&rsquo;. it should be a brown button above the job timeline.&rdquo;</em>
     <table>
@@ -115,9 +116,9 @@
     <strong>§7, §8 and §12 still describe those documents</strong> — what is in them, what the gates are, what each one
     promises a client. Only the <em>route</em> to them moved. Where one of those sections says &ldquo;the tab&rdquo;, read it as
     the matching row on the timeline.</div>
-  <div class="note"><strong>Field mode keeps THREE of those seven.</strong> The <strong>&#128241; Field</strong> button in the header
+  <div class="note"><strong>Field mode keeps THREE of those six.</strong> The <strong>&#128241; Field</strong> button in the header
     (or <code>?field=1</code>) drops the nav to a fixed bottom bar of <strong>Clients · Job Plan · Vendors</strong> and sizes
-    everything for a thumb. The other four are desk work and are <em>hidden, never removed</em> — the estimate still computes and
+    everything for a thumb. The other three are desk work and are <em>hidden, never removed</em> — the estimate still computes and
     saves in full. <strong>Intake and Estimate were field tabs until 2026-09-23</strong>; in the field you now reach them the same
     way as at the desk &mdash; <strong>+ Add New Client</strong> for a prospect who calls while you are out, and <strong>Build
     estimate</strong> on the client&rsquo;s timeline for the walkthrough.
@@ -134,7 +135,7 @@
     until that stopped being a tab, and the dashboard is where both the walkthrough and a new client now start. Entering it
     <em>from the dashboard keeps you there</em>, and so does entering it from the intake or estimate screen: the Clients tab is lit on
     both, so you stay on what you were doing.</div>
-  <p class="note">The app opens on the <strong>Client Dashboard</strong> even though Win / Loss is the first tab.</p>
+  <p class="note">The app opens on the <strong>Client Dashboard</strong>, the first tab. (Until 2026-09-23 Win / Loss sat in front of it and the app skipped over it on load.)</p>
   <p style="font-size:12px;color:#6B6B72;">Interface notes: the header + navigation bar stay pinned to the top while you scroll; dialogs (e.g. Settings) scroll internally so their buttons are always reachable; and reference dropdowns (categories, dispositions, types, roles) are alphabetized — scale/pipeline lists (Condition, Priority, statuses, service tiers, Year) keep their meaningful order.</p>
   <p style="font-size:12px;color:#6B6B72;"><strong>Phone &amp; field use.</strong> Every tab works on a phone — the nav becomes a scrolling strip, dialogs open as bottom sheets, and grids stack. The three directories (Contractors, Vendors, Referral Partners) are built for standing in a driveway: search, tap-to-call/text/email, and a <strong>Quick edit</strong> for contact details. <strong>Build Estimate</strong> is the deliberate exception — its room tables are desk/iPad work, and they scroll sideways rather than reflow.</p>
   <div class="note"><strong>What Build Estimate hides on a phone, and the rule behind it.</strong> Field mode (<code>?field=1</code>) keeps everything you can only learn by <em>being in the house</em> — room scoring, difficult access, multiple heirs, <strong>premium estate</strong>, collections, vehicles, materials, prep. It hides the commercial decisions and the arithmetic: crew sizing, the timeline planner, discount, expedited delivery, fixed price, and every calculated total. Those wait for the desk.
@@ -1102,6 +1103,43 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
 
 <div class="note"><strong>It is deliberately NOT inside the tan <em>Next</em> card.</strong> That card means <em>the one thing to do next</em>; hanging standing tools in it costs it exactly that meaning. It sits on the heading immediately above it instead.</div>
 
+  <h3>The client list &mdash; the figures, Win / Loss, six filters and the sort</h3>
+  <p>The Client Dashboard opens on the list of clients. Top to bottom: <strong>+ Add New Client</strong>; the four pipeline figures (<em>Total Jobs &middot; Active Jobs &middot; Pipeline Value &middot; RE Potential</em>); the <strong>Win / Loss</strong> row directly under them (<em>Won &middot; Lost &middot; Conversion Rate &middot; Lost Revenue</em>); the six filters; and the table of clients, where pressing a row opens that client.</p>
+  <div class="note"><strong>&#9888;&#9888; WIN / LOSS WAS ITS OWN TAB UNTIL 2026-09-23, AND NOTHING IT SHOWED WAS DROPPED.</strong> The four figures moved here as a second row of tiles under Total Jobs, one tile gap below the first so the eight read as one block. <strong>Won</strong> and <strong>Lost</strong> carry a caret (&#9656;): press either to open the list of clients behind the figure, under the row; press it again to shut it. Both can be open at once, Won above Lost.
+    <table>
+      <tr><th>Press</th><th>What opens</th></tr>
+      <tr><td><strong>Won</strong></td><td>Every client who said yes &mdash; client and street, service, concierge, <strong>when and how they accepted</strong> (the Won button&rsquo;s own options: email reply, phone call, text, in person), the Havellin value, and where the job is now. Newest acceptance first. <em>The Won list is new; the tab never had one.</em></td></tr>
+      <tr><td><strong>Lost</strong></td><td>The <strong>loss reasons</strong> broken out (count, share, estimated revenue lost), then the <strong>lost prospects</strong> themselves with reason, note and date. Newest loss first.</td></tr>
+    </table>
+    Every row on either list opens that client. <strong>The lists stay open while you are in a client and come back</strong> &mdash; open Lost, press a prospect, press &larr; Clients, and Lost is still open. That lasts until you reload; which list is open is not saved and does not reach the other device.</div>
+  <div class="note"><strong>Closed &mdash; Deposit Retained counts as WON and is on the Won list, named as one.</strong> The client accepted, paid the deposit and then walked, so it produced revenue &mdash; which is why that status exists apart from Lost. The list prints its status rather than folding it in among the jobs that ran to the end.</div>
+  <div class="note"><strong>Conversion Rate reads a dash until a client has been won or lost.</strong> It used to print <strong>0%</strong> over nothing decided, which with one undecided client on the books reads as <em>we have converted nobody</em>. One won and none lost is 100%; one lost and none won really is 0%, and that zero is kept.
+    <br><br><strong>An unread list reads dashes, never zeros, across BOTH rows.</strong> On a device with nothing cached, until the sheet answers, every figure is an em dash and the list says <em>Loading clients&hellip;</em>; if the sheet cannot be reached it says so and tells you to check the connection and the Sync URL, then <strong>reload the page</strong>. &ldquo;0 won, 0 lost&rdquo; is a claim, and the app has not read anything yet.</div>
+  <p><strong>The six filters</strong>, in this order (Anthony, 2026-09-23: <em>&ldquo;it starts with all, and then goes active, pending approval, unassigned TC, closed and lost&rdquo;</em>):</p>
+  <table>
+    <tr><th>Filter</th><th>Shows</th></tr>
+    <tr><td>All</td><td>Every client except the lost ones</td></tr>
+    <tr><td>Active</td><td>Jobs actually running</td></tr>
+    <tr><td>Pending Approval</td><td>Estimates waiting on a manager PIN</td></tr>
+    <tr><td>Unassigned TC</td><td>Every live client with no concierge assigned</td></tr>
+    <tr><td>Closed</td><td>Finished jobs &mdash; <strong>and Closed &mdash; Deposit Retained, which it used to leave out</strong> (the old button tested <em>Closed</em> alone, so a retained deposit was only reachable through All)</td></tr>
+    <tr><td>Lost</td><td>The lost prospects. Every other filter leaves them out.</td></tr>
+  </table>
+  <p><strong>Every heading on the client table sorts.</strong> Press a heading once for its natural direction, twice to reverse it, a third time to clear it and go back to the list&rsquo;s own order (newest client first). The heading shows a faint &#8597; until it is the one sorting, then a bronze &#8593; or &#8595;.</p>
+  <table>
+    <tr><th>Heading</th><th>First press</th></tr>
+    <tr><td>Client / Property &middot; TC</td><td>A&rarr;Z</td></tr>
+    <tr><td>Service</td><td>In the order the service list uses &mdash; Home Prep, Home Editing, Home Transition, Home Cleanout, Estate Settlement, Probate, Contested Probate &mdash; <strong>not</strong> alphabetically, so each kind of job sits together and related kinds sit side by side</td></tr>
+    <tr><td>Havellin Est. &middot; Total Est.</td><td>Largest first</td></tr>
+    <tr><td>Start Date</td><td>Soonest first</td></tr>
+    <tr><td>Status</td><td>In lifecycle order &mdash; New, Pending Approval, Approved, Won, Active, Closed, Deposit Retained, Lost</td></tr>
+    <tr><td>RE</td><td>The &#9733; clients first, then the unanswered, then the no&rsquo;s</td></tr>
+  </table>
+  <div class="note"><strong>&#9888; Eight filter buttons went, and every one of them is a heading now.</strong> <em>New</em> is the top of a <strong>Status</strong> sort; <em>RE Potential</em> is the top of an <strong>RE</strong> sort; the six service buttons (<em>Home Editing / Transition, Home Cleanout, Estate Settlement, Probate, Contested Probate, Home Prep</em>) are a <strong>Service</strong> sort, where each one&rsquo;s clients sit together. Anthony: <em>&ldquo;be able to sort by the service column, which wipes out the need for all of the big job type buttons.&rdquo;</em> A sort and a filter combine &mdash; Active sorted by Service is the running jobs grouped by type.
+    <br><br><strong>A blank sorts LAST whichever way the column runs</strong> &mdash; no concierge, no price, no start date. It is a gap, not the smallest value, and reversing a sort never brings the gaps to the top. The sort lasts until you reload, like the filter.</div>
+  <div class="note"><strong>Field mode leaves the Win / Loss row off.</strong> The report was never a field tab and is desk reading; the pipeline figures, the filters and the list are all still there on the phone.</div>
+
+
 
   <h3>9a. The job timeline — where the whole job is run</h3>
   <p>Opening a client draws a <strong>timeline</strong> of sixteen milestones, from intake to final payment. On a desk it runs
@@ -1983,7 +2021,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   <p>If a concierge can't be resolved to a person at all, the margin panel costs them at the <strong>founder</strong> rate — deliberately the most expensive assumption, so margin is never overstated — and says on the panel that the figure is an assumption. Assign the concierge, or set their rate on the Contractors tab, to replace it with a real number.</p>
 
   <h2>16a. Win / Loss</h2>
-  <p><strong>Tab: Win / Loss.</strong> Reads the <em>client's</em> decision, not ours. A job counts as won when it has been
+  <p><strong>A row on the Client Dashboard, under Total Jobs &mdash; it was its own tab until 2026-09-23 (&sect;9, <em>The client list</em>).</strong> Reads the <em>client's</em> decision, not ours. A job counts as won when it has been
     marked Won on the dashboard — or, for jobs that predate that step, when it reached Active or Closed under the old model,
     so the existing history isn't rewritten.</p>
   <p>What that changes in practice: a job sitting at <strong>Approved — Awaiting Client</strong> is <em>not</em> in the won

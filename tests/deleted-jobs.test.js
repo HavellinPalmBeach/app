@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const { sandbox, matchBrace } = require('./harness');
+const { sandbox, matchBrace, fn } = require('./harness');
 
 const GS = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'main-sync.gs'), 'utf8');
 const GS_INV = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8');
@@ -310,16 +310,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('app: the device drops what the sheet refused, without saving it back');
   {
-    let saves = 0, badges = [], redraws = 0, wlRedraws = 0;
+    let saves = 0, badges = [], redraws = 0, listRedraws = 0;
     const ctx = sandbox({
       fns: ['_applyDroppedJobs', '_purgeLocalJobRecords', '_jobsLanded'],
       stubs: {
-        // The Win/Loss report lists lost prospects BY NAME. A client deleted on the other
-        // device stays on this one's table until something repaints it, so the drop has to
-        // reach that surface and not only the clients list.
-        document: { getElementById: (id) => id === 'panel-winloss'
-          ? { classList: { contains: (c) => c === 'active' } } : null },
-        renderWinLoss() { wlRedraws++; },
+        // The Win / Loss lists name lost prospects BY NAME. A client deleted on the other device
+        // stays on this one's list until something repaints it, so the drop has to reach that
+        // surface and not only the dropdowns. Since 2026-09-23 the report is a row on the Client
+        // Dashboard that renderJobs paints, so reaching renderJobs IS reaching the report.
+        document: { getElementById: () => null },
         jobs: [job(A, 'Alpha'), job(B, 'Bravo'), job(C, 'Charlie')],
         estimateStore: { [A]: { e: 1 }, [B]: { e: 2 } },
         jobLogs: { [A]: [{ id: 1 }], [C]: [{ id: 3 }] },
@@ -328,7 +327,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         saveJobs() { saves++; },
         postSyncBadge() { saves++; },
         showSyncBadge(m) { badges.push(m); },
-        renderJobs() { redraws++; },
+        renderJobs() { redraws++; listRedraws++; },
         rebuildDropdowns() { redraws++; },
       },
     });
@@ -350,9 +349,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(JSON.parse(ctx.localStorage.getItem('havellin_est_v4')), { [B]: { e: 2 } }, 'the estimate store was re-persisted');
     eq(saves, 0, 'NOTHING WAS PUSHED — saveJobs() here would post the deleted jobs straight back');
     ok(redraws >= 2, 'the list and the dropdowns were redrawn, through the real _jobsLanded');
-    eq(wlRedraws, 1,
-       '\u26a0 and so was the open Win/Loss report \u2014 a dropped prospect is still named on its '
-       + 'lost table until it is');
+    eq(listRedraws, 1,
+       '\u26a0 and so was the client list, which carries the Win / Loss lists \u2014 a dropped prospect '
+       + 'is still named on the Lost list until it is');
+    has(fn('renderJobs'), 'renderWinLoss()',
+       '\u2026because renderJobs paints the Win / Loss row, so there is no second surface to reach');
     eq(badges.length, 1, 'one message');
     has(badges[0], '2 clients deleted elsewhere', 'that says what happened, not "lost"');
     eq(ctx._applyDroppedJobs([]), 0, 'an empty list is a no-op');
