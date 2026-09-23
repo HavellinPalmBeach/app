@@ -1232,7 +1232,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.23 · 8:31am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.23 · 9:09am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -13680,8 +13680,10 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   }
 
   var rows = [
+    // `created` is stamped short form ("Sep 22, 2026"), so raw happened to read right — but a
+    // row carrying a date declares its kind whatever shape it arrives in; see estimate_approved.
     row({ key: 'intake', group: 'Set up', label: 'Client intake',
-      done: !!job.created, at: job.created }),
+      done: !!job.created, at: job.created, atKind: 'date' }),
 
     row({ key: 'walkthrough', group: 'Set up', label: 'Walkthrough',
       done: walked, at: job.walkthrough, atKind: 'date',
@@ -13695,9 +13697,13 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       done: estBuilt, at: (estRec && estRec.savedAt) || '', atKind: 'epoch',
       amount: estBuilt ? hav : null }),
 
+    // ⚠ `atKind:'date'` — `checkPin` stamps `approvedAt` LONG FORM ("September 22, 2026"), and
+    // with no kind it printed raw beside seven steps reading "Sep 22, 2026". Anthony's own
+    // screenshot of the track, 2026-09-23. The same defect `estimate_sent` was fixed for; this
+    // row was simply not on the list the test walked, which is why the test is the rule now.
     row({ key: 'estimate_approved', group: 'Estimate', label: 'Estimate approved',
       done: estApproved,
-      at: (estRec && estRec.approvedAt) || '', by: (estRec && estRec.approvedBy) || '',
+      at: (estRec && estRec.approvedAt) || '', atKind: 'date', by: (estRec && estRec.approvedBy) || '',
       sub: estApproved ? ''
         : estSubmitted ? 'Submitted — waiting on a manager PIN'
         : (est && est.denyReason) ? ('Denied by ' + (est.deniedBy || 'a manager') + ' — ' + est.denyReason)
@@ -16387,6 +16393,14 @@ function jtBandHtml(job, estRec, rows, next) {
               step: 'Every milestone on this job is recorded', blocked: false };
     // ⚠ ON A FINISHED JOB THE TRAY WALKS BACK to the last document that was actually SENT.
     // `done` is not `sent` — see `jobTimelineDoc`.
+    // ⚠⚠ AND THAT IS THE FINAL INVOICE, IN THE BIG BUTTONS — NOT IN THE STRIP BELOW. DECIDED,
+    // do not "complete" the strip (2026-09-23). Anthony, off a finished job, first: *"the links
+    // at the bottom go to all docs but the final invoice. that should be added too."* Then, told
+    // the fix would move the final out of this tray: *"actually, i like the big [buttons] with
+    // view final invoice, etc. dont' get rid of those … the big buttons are always the most
+    // current stage."* So: this tray is the most current document on every job, finished ones
+    // included, and the strip is the documents before it. The strip is seeded from this tray,
+    // so the final cannot be in both without rendering twice.
     _bandDoc = jobTimelineDoc(rows, job, estRec);
   }
   if (_band) {
@@ -16913,6 +16927,8 @@ function renderClientDashboard(jobId) {
   // THE STRIP IS KEPT, and that is a deliberate reversal of simply deleting it: it is the only
   // on-screen route to a document from an EARLIER stage — reopening the deposit invoice you
   // sent five weeks ago. The tray is the CURRENT document; the strip is the job's archive.
+  // ⚠ On a finished job the tray is the final invoice, so the strip lists the four before it.
+  // Decided with Anthony 2026-09-23 — see the Complete branch of `jtBandHtml`.
   var _qa = [], _qaSeen = {};
   if (_jtA) {
     if (_jtA.primary) _qaSeen[_jtA.primary.call] = 1;
