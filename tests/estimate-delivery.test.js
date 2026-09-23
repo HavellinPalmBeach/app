@@ -707,6 +707,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // email signatures bc our Gmail inserts one anyway."* Two signatures stacked — ours and
   // the sender's own — is worse than either alone, and Gmail's is the one that is actually
   // current for that person.
+  // ⚠ THE INVOICE EMAIL WAS THE ONE WITHOUT THE FOOTER BAND (fixed 2026-09-23), so it ended
+  // in bare padding directly above the attachment and read as cut off.
+  group('all three client emails close with the same footer band');
+  {
+    ['buildEstimateEmailHtml', 'buildAgreementEmailHtml', 'buildInvoiceEmailHtml'].forEach((f) => {
+      has(fn(f), 'White-Glove Estate Transition Services<br>', f + ' carries the firm line');
+      has(fn(f), '515 N Flagler Drive', f + ' carries the address');
+      has(fn(f), 'Insured &amp; Bonded', f + ' carries the insured-and-bonded line');
+    });
+  }
+
   group('the emails carry NO signature, because Gmail appends the sender\'s own');
   {
     ['buildEstimateEmailHtml', 'buildAgreementEmailHtml', 'buildInvoiceEmailHtml',

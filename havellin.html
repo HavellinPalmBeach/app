@@ -1215,7 +1215,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:34pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -13947,6 +13947,15 @@ function buildInvoiceEmailHtml(job, stage, amtDue) {
     // NOT in play — unconfigured client id, cancelled popup, failed draft — so there is
     // nothing there to append the signature that would replace ours.
     'Thank you for trusting Havellin Palm Beach with this transition.' +
+  '</td></tr>' +
+  // ⚠ THE SAME FOOTER BAND THE ESTIMATE AND AGREEMENT EMAILS CARRY. The invoice was the one
+  // of the three without it, so it ended in bare padding and read as cut off (2026-09-23).
+  '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
+    '<div style="font-size:10px;line-height:1.9;letter-spacing:.06em;text-transform:uppercase;color:' + B.gray + ';text-align:center;">' +
+      'Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>' +
+      '515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401<br>' +
+      'Insured &amp; Bonded' +
+    '</div>' +
   '</td></tr>' +
   '</table></td></tr></table></div>';
 }
