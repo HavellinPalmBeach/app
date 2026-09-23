@@ -47,6 +47,30 @@ function syncOk(value) {
     catch() { return this; },
   };
 }
+// ⚠ THE SYNCHRONOUS THENABLE ABOVE CANNOT SEE THE IN-FLIGHT WINDOW, AND THAT WINDOW IS THE
+// WHOLE DEFECT BELOW. It resolves inside the call, so `createDriveJobFolder` returns with the
+// answer already applied and "is a create in progress" is never true for an observable moment.
+// This one HOLDS its callback until `fire()` is called, which is what a real Apps Script cold
+// start does for several seconds.
+function deferred() {
+  const d = { _ok: null, _err: null, chain: [] };
+  const mk = (self) => ({
+    then(onOk) { self.chain.push(onOk); return mk(self); },
+    catch(onErr) { self._err = onErr; return mk(self); },
+  });
+  d.handle = mk(d);
+  d.fire = (value) => {
+    let v = value;
+    for (const fn of d.chain) {
+      const out = fn(v);
+      v = (out && typeof out.then === 'function') ? out : out;
+      // Unwrap a syncOk handed back by `r => r.json()`, exactly as a real promise does.
+      if (v && typeof v.then === 'function') { let inner; v.then((x) => { inner = x; }); v = inner; }
+    }
+  };
+  return d;
+}
+
 function syncErr(err) {
   return {
     then() { return this; },
@@ -62,8 +86,8 @@ function run(resp, opts) {
   const warns = [];
   const timers = [];
   const ctx = sandbox({
-    vars: ['PHOTO_UPLOAD_TIMEOUT_MS'],
-    fns: ['createDriveJobFolder', '_driveFolderFailed', 'createDriveFolderNow',
+    vars: ['_driveFolderInFlight', 'PHOTO_UPLOAD_TIMEOUT_MS'],
+    fns: ['createDriveJobFolder', '_driveFolderFailed', 'createDriveFolderNow', 'driveFolderPending',
           '_backendErrorKind', 'resolveSubfolderId', '_subfolderId', 'fetchSubfolderIds',
           '_normalizeSubfolders', 'uploadToDrive', '_doPhotoUpload', '_getPhotoRef', '_setPhotoRef'],
     stubs: {
@@ -173,6 +197,178 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     r.badges.length = 0;
     r.ctx.createDriveFolderNow(7);
     ok(r.badges.some((b) => /already exists/.test(b)), 'and refuses to ask twice for a job that has one');
+  });
+
+  // ⚠⚠ THE FOLDER TAKES SECONDS AND THE BUTTON WAS OFFERED THROUGHOUT (2026-09-22).
+  //
+  // Anthony, on the first dummy client of the five-client test run: *"the old, create google
+  // drive folder button is stil there. but the folder is created automatically. when i clicked
+  // it, it changed to a drive link"*.
+  //
+  // `saveIntake` fires the create and navigates to the Clients tab 800ms later, while Apps
+  // Script cold-starts in SECONDS. So the whole window between "client created" and "folder
+  // landed" rendered a control asserting the folder does not exist, on a job where it was
+  // being made right then — and pressing it sent a SECOND createFolder for the same job.
+  // Measured in a browser at 2 calls for one client.
+  //
+  // ⚠ THE GUARD ALREADY THERE CANNOT SEE THIS. It tests `job.driveFolder`, which is absent in
+  // BOTH calls; its own comment names the race it was written for ("auto-create and the manual
+  // button both fire") and this is a different one.
+  group('⚠⚠ a folder being created right now is neither absent nor present', () => {
+    const d = deferred();
+    let creates = 0;
+    const badges = [];
+    const ctx = sandbox({
+      fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar'],
+      vars: ['_driveFolderInFlight', '_estStoreState'],
+      stubs: {
+        SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
+        DRIVE_FOLDER_ID: '',
+        showSyncBadge: (m) => badges.push(String(m)),
+        openClientDashboard: () => {},
+        saveJobs: () => {}, syncJobToSheets: () => {},
+        estimateStore: {},
+        console: { warn() {}, log() {}, error() {} },
+        fetch: () => { creates++; return d.handle; },
+      },
+    });
+    const job = { id: 7, hvlId: 'HVL-2609-ABCD', name: 'Butler' };
+    ctx.jobs.push(job);
+
+    ctx.createDriveJobFolder(job);
+    eq(creates, 1, 'the automatic create at intake goes out once');
+    eq(ctx.driveFolderPending(7), true, 'and the job is marked as having one in flight');
+
+    // What a person actually sees while it is in the air.
+    const mid = ctx.dashUtilityBar(job);
+    const drive = mid.filter((a) => /Drive/.test(a.label));
+    eq(drive.length, 1, 'the bar carries exactly one Drive control');
+    ok(/Creating Drive folder/.test(drive[0].label),
+       '⚠ it READS as being created rather than offering to create it');
+    ok(!drive[0].call, '⚠⚠ and it is not pressable — this is the press that sent the second call');
+    ok(!drive[0].href, 'nor a link, because there is no url yet and one that 404s is worse than none');
+
+    // ⚠ THE HANDLER CARRIES THE SAME GATE, or the control is simply reached around.
+    badges.length = 0;
+    ctx.createDriveFolderNow(7);
+    eq(creates, 1, '⚠⚠ pressing the repair door mid-flight sends NO second createFolder');
+    ok(badges.some((b) => /being created right now/.test(b)), 'and says why rather than doing nothing');
+
+    // Now let the answer land.
+    d.fire({ json: () => syncOk(HAPPY) });
+    eq(ctx.driveFolderPending(7), false, 'the flag clears when the answer lands');
+    eq(job.driveFolder, 'https://drive.google.com/drive/folders/FOLDER1', 'the folder is recorded');
+    const done = ctx.dashUtilityBar(job).filter((a) => /Drive/.test(a.label));
+    ok(done[0].href, 'and the control is a link again');
+    ok(!done[0].idle, 'not still reading as pending');
+  });
+
+  // ⚠ THE FLAG MUST CLEAR ON A FAILURE TOO, AND THIS IS THE ARM THAT MATTERS. A marker that
+  // leaks on the failure path withholds the repair door on the ONE job that needs it — the
+  // state-with-no-exit this project calls worse than the failure itself.
+  group('⚠ a refused create clears the flag and gives the repair door back', () => {
+    const d = deferred();
+    const badges = [];
+    const ctx = sandbox({
+      fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar'],
+      vars: ['_driveFolderInFlight', '_estStoreState'],
+      stubs: {
+        SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
+        DRIVE_FOLDER_ID: '',
+        showSyncBadge: (m) => badges.push(String(m)),
+        openClientDashboard: () => {}, saveJobs: () => {}, syncJobToSheets: () => {},
+        estimateStore: {},
+        console: { warn() {}, log() {}, error() {} },
+        fetch: () => d.handle,
+      },
+    });
+    const job = { id: 7, name: 'Butler' };
+    ctx.jobs.push(job);
+    ctx.createDriveJobFolder(job);
+    eq(ctx.driveFolderPending(7), true, 'in flight');
+    d.fire({ json: () => syncOk({ ok: false, error: 'Exception: No item with the given ID could be found' }) });
+    eq(ctx.driveFolderPending(7), false, '⚠⚠ the flag clears on a refusal, not only on success');
+    ok(!!job.driveFolderError, 'the failure is recorded on the job');
+    const bar = ctx.dashUtilityBar(job).filter((a) => /Drive/.test(a.label));
+    ok(/Create Drive folder/.test(bar[0].label), 'and the repair door is offered again');
+    ok(!!bar[0].call, 'as a real button, because now there IS something to press');
+  });
+
+  // ⚠ SESSION STATE, NEVER A RECORD. Persisting "creating…" would sync it to the other device,
+  // and a tab closed mid-flight would leave the job reading pending forever with nothing able
+  // to clear it.
+  group('⚠ the in-flight marker is never written to the job or to storage', () => {
+    // ⚠ BOUNDED TO THE MARKER AND ITS READER. The first cut ran to createDriveFolderNow and
+    // swallowed the whole of createDriveJobFolder, which legitimately calls syncJobToSheets to
+    // stamp the folder URL — so this failed on correct code. The claim is about the MARKER,
+    // not about the function it happens to sit above.
+    const body = src.slice(src.indexOf('var _driveFolderInFlight'),
+                           src.indexOf('function createDriveJobFolder('));
+    lacks(body, 'localStorage', 'it is module state, not site data');
+    lacks(body, 'syncJobToSheets', 'and it never reaches the sheet');
+    lacks(body, 'job.driveFolderPending', 'nor is it parked on the job record');
+    const decl = src.indexOf('var _driveFolderInFlight');
+    const usedAt = src.indexOf('_driveFolderInFlight[job.id] = true');
+    ok(decl > -1 && decl < usedAt,
+       '⚠ declared ABOVE its first use — a `var` referenced before its declaration hoists as undefined');
+  });
+
+  // ⚠⚠ THE LEGACY GET FALLBACK CLEARS IT TOO, AND BOTH ITS ARMS CAME BACK GREEN ON THE FIRST
+  // REVERT SWEEP. When the POST rejects — an Apps Script too old to take one, or a dropped
+  // connection — the code falls through to a legacy GET, and NOTHING in this suite had ever
+  // driven that path. A marker that leaks there leaves the job reading "Creating Drive
+  // folder…" forever, with the repair door withheld on the one job that needs it.
+  //
+  // ⚠ The outer .catch must NOT clear it: that arm is not terminal, it hands off to the GET
+  // and the attempt is still in flight. Only the GET's own two arms end it.
+  function legacy(getAnswer) {
+    const badges = [];
+    let n = 0;
+    const ctx = sandbox({
+      fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar'],
+      vars: ['_driveFolderInFlight', '_estStoreState'],
+      stubs: {
+        SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
+        DRIVE_FOLDER_ID: '',
+        showSyncBadge: (m) => badges.push(String(m)),
+        openClientDashboard: () => {}, saveJobs: () => {}, syncJobToSheets: () => {},
+        estimateStore: {},
+        console: { warn() {}, log() {}, error() {} },
+        // First call is the POST and it REJECTS, exactly as an older deployment does.
+        // Second is the legacy GET.
+        fetch: () => (++n === 1 ? syncErr(new Error('network'))
+                                : (getAnswer ? syncOk({ json: () => syncOk(getAnswer) }) : syncErr(new Error('network')))),
+      },
+    });
+    const job = { id: 7, name: 'Butler' };
+    ctx.jobs.push(job);
+    ctx.createDriveJobFolder(job);
+    return { ctx, job, badges, calls: n };
+  }
+
+  group('⚠⚠ the legacy GET fallback ends the attempt — both of its arms', () => {
+    const won = legacy(HAPPY);
+    eq(won.calls, 2, 'the POST rejected and the legacy GET went out');
+    eq(won.ctx.driveFolderPending(7), false,
+       '⚠⚠ the marker clears when the LEGACY GET succeeds — it used to leak, leaving the job reading "Creating…" forever');
+    eq(won.job.driveFolder, 'https://drive.google.com/drive/folders/FOLDER1', 'and the folder is recorded');
+    const wb = won.ctx.dashUtilityBar(won.job).filter((a) => /Drive/.test(a.label));
+    ok(!!wb[0].href, 'the control is a link');
+
+    const lost = legacy(null);
+    eq(lost.calls, 2, 'both calls went out');
+    eq(lost.ctx.driveFolderPending(7), false,
+       '⚠⚠ and it clears when the legacy GET fails too — otherwise the repair door is withheld on exactly the job that needs it');
+    const lb = lost.ctx.dashUtilityBar(lost.job).filter((a) => /Drive/.test(a.label));
+    ok(/Create Drive folder/.test(lb[0].label), 'the repair door is offered');
+    ok(!!lb[0].call, 'as a real button');
+    lost.badges.length = 0;
+    lost.ctx.createDriveFolderNow(7);
+    ok(!lost.badges.some((b) => /being created right now/.test(b)),
+       '⚠ and pressing it is no longer refused — the attempt really is over');
   });
 
   group('⚠ the Drive root fallback must not come back', () => {

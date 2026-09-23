@@ -726,6 +726,12 @@ Each stage states three things: what Havellin does, **what we need from the clie
 
 Hit **Submit for Approval** → manager enters PIN → estimate is locked and marked *Approved for Release*. PDF is unlocked. Estimate cannot be edited after approval — use a Change Order instead.
 
+> **⚠⚠ THE APPROVAL REQUEST IS DRAFTED IN YOUR HAVELLIN GMAIL NOW, NOT HANDED TO YOUR COMPUTER (fixed 2026-09-22).** Submitting opens an email to `estimates@havellinpalmbeach.com` asking for the PIN. It used to be a `mailto:` link, which hands the message to **whatever the machine has set as its default mail program** — and on the first real test run that was iCloud Mail, so a pricing approval for a priced estimate went out **from a personal iCloud address**: no Havellin provenance on it, a reply-to nobody at the firm can see, and no copy in the Havellin account. Anthony: *"is there anyway to hardcode havelling gmail account for seeking manager approval. ashley had her icloud account open on her computer so the email was sent from her personal icloud, not havellin gmail."*
+>
+> There was, and it was already built — the same Gmail draft path the client estimate uses (§7). It creates the draft **in the Havellin mailbox signed in on that device** whatever the default mail program is, and it still cannot send: a person reads it and presses send. **⚠ Nothing in the link could have fixed this** — which program opens a `mailto:` is a setting on the computer, not something the link gets to choose.
+>
+> **⚠ The plain email survives as the fallback and may still appear** — if Gmail is not set up on that device, the sign-in is cancelled, or Gmail errors. When it does the badge now reads **"CHECK THE FROM ADDRESS before you send"** instead of going quiet, because a wrong *From* is invisible to the person pressing send. The same change covers the billing hand-off emails, which took the identical route.
+
 ### Sending to Client
 
 > **An unapproved estimate cannot be emailed.** The app refuses, and says so on the dashboard where you pressed it. Approve it first — the figure isn't final until someone has signed off on it.
@@ -1225,7 +1231,17 @@ The **✕** button on a job card opens closeout. What it does depends on whether
 
 > The retained-deposit position **needs agreement language before the money is treated as earned**. The app models the state; the clause is a question for counsel.
 
-The **📁 Drive** button on the Job Timeline heading opens the job's Google Drive folder directly. **It is only ever a link.** The folder and all six subfolders are created **once, automatically, when the client is created** — on the Client Intake save, not at approval and not at activation — so there is never anything here to press to make one. A job with no folder recorded falls back to opening the Drive root, which is findable; minting a second folder would not be.
+The **📁 Drive** control on the Job Timeline heading has **three states**, and which one you get says what is true of the folder right now. The folder and all its subfolders are created **once, automatically, when the client is created** — on the Client Intake save, not at approval and not at activation.
+
+| What you see | What it means | Can you press it? |
+| --- | --- | --- |
+| **📁 Drive** | The folder exists. Opens it. | Yes — a real link, so middle-click, ⌘-click and copy-link all work. |
+| **📁 Creating Drive folder…** | It is being made *right now*. Google normally answers within a few seconds. | No, deliberately. There is nothing to do but wait. |
+| **📁 Create Drive folder** | There is no folder and none is being made — the automatic attempt at intake failed, and the badge at the time said why. | Yes. This is the repair door, and the only thing in the app that makes a folder after intake. |
+
+> **⚠⚠ THE MIDDLE STATE IS NEW (2026-09-22), AND WITHOUT IT THE BUTTON RACED THE THING IT OFFERED TO DO.** Anthony, on the first dummy client of the test run: *"the old, create google drive folder button is stil there. but the folder is created automatically. when i clicked it, it changed to a drive link."* He was right that it should not have been there. The intake save fires the create and moves you to the Clients tab **800ms later**, while Apps Script cold-starts in *seconds* — so the whole gap between "client created" and "folder landed" showed a control asserting the folder did not exist, on a job where it was being made at that moment. **⚠ And pressing it sent a SECOND `createFolder` for the same job** — measured in a browser at two calls for one client. Harmless on the current backend, which reuses a folder of the same name; that reuse exists because an older one did not, and one client ended up with four folders. **Nothing done in that window caused any harm and there is nothing to clean up.**
+
+> **⚠ Two things this paragraph used to say had been false since 2026-09-11.** It said the control is *"only ever a link… there is never anything here to press to make one"*, and that a folderless job *"falls back to opening the Drive root"*. The repair door was added that day and the root fallback was **removed** in the same change — it opened a folder holding none of the client's files, which looks exactly like a working button, and is why a folderless client once got as far as a crew photographing the entryway before anybody noticed.
 
 ### Change Orders
 

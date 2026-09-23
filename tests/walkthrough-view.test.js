@@ -253,7 +253,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     function barFor(rec, storeState) {
       const stubs = { document: domStub({}), estimateStore: rec === null ? {} : { 7: rec } };
       if (storeState !== undefined) stubs._estStoreState = storeState;
-      const c = sandbox({ fns: ['dashUtilityBar'], vars: [], stubs });
+      const c = sandbox({ fns: ['dashUtilityBar', 'driveFolderPending'], vars: ['_driveFolderInFlight'], stubs });
       return c.dashUtilityBar({ id: 7, driveFolder: 'https://drive.google.com/x' });
     }
     const calls = (b) => b.map((x) => x.call || '').join(' ');

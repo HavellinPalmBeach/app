@@ -376,7 +376,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // alone) and nothing drove the join. That is the same gap this repo has recorded four
     // times; the fix is always to drive the real renderer and read the real output.
 const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions',
+      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', 'jobProgress',
@@ -387,7 +387,7 @@ const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent',
       'roomStatusNormalize'];
-    const DVARS = ['ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
+    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY',
       'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'];

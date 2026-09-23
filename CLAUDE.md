@@ -1,3 +1,128 @@
+## ⚠⚠ TWO OFF THE FIVE-CLIENT TEST RUN — A BUTTON THAT RACED ITSELF, AND AN APPROVAL SENT FROM A PERSONAL iCLOUD (FIXED 2026-09-22)
+Anthony, flagging as he worked the test-run document. App-only, no redeploy.
+
+### ⚠⚠ THE DRIVE BUTTON WAS OFFERED WHILE THE FOLDER WAS ALREADY BEING CREATED
+*"the old, create google drive folder button is stil there. but the folder is created automatically. when i
+clicked it, it changed to a drive link."*
+
+- **⚠⚠ HE IS RIGHT, AND IT IS NOT A STRAY BUTTON — PRESSING IT SENT A SECOND `createFolder` FOR THE SAME JOB.
+  REPRODUCED IN A BROWSER BEFORE ANYTHING WAS BUILT**, driving the real intake and the real bar against a
+  backend delayed like a cold start: **`createFolder calls sent: 2`**. `saveIntake` fires the create and
+  navigates to the Clients tab **800ms later** while Apps Script cold-starts in **seconds**, so the entire
+  window between *client created* and *folder landed* rendered a control asserting the folder did not exist,
+  on a job where it was being made right then.
+  - **⚠ THE GUARD ALREADY THERE CANNOT SEE IT, AND ITS OWN COMMENT NAMES THE RACE IT WAS WRITTEN FOR** —
+    *"skipping the call avoids the round-trip and the race that let auto-create and the manual button both
+    fire"*. It tests `job.driveFolder`, which is **absent in both calls**, so it never fires.
+  - **Harmless on the current backend, which reuses a folder of the same name — and that reuse exists
+    because an older one did not.** This file already records one client ending up with **four folders**.
+    So it fails silently in the direction that looks like it worked, which is why it read as vestigial UI.
+- **⚠ THE THIRD STATE IS THE FIX, AND IT IS A READOUT RATHER THAN A DISABLED BUTTON.** `driveFolderPending`
+  → *Creating Drive folder…*, rendered as a `<span>`, no `call`, no `href`. A `<a>` would 404 (there is no
+  url yet) and a disabled `<button>` would be a control refusing the same blocker back at you, which this
+  file's standing rule calls worse than none.
+- **⚠ MODULE STATE, NEVER ON THE JOB RECORD.** It is a fact about THIS DEVICE'S attempt in progress, not
+  about the job: persisting it would sync *"creating…"* to the other device, and **a tab closed mid-flight
+  would leave the job reading pending forever with nothing able to clear it** — the repair door withheld on
+  the one job that needs it, i.e. the state-with-no-exit. Same reasoning as `_planOpenPhases`.
+- **⚠⚠ IT CLEARS ON EVERY TERMINAL ARM, AND THE OUTER `.catch` IS DELIBERATELY NOT ONE** — that arm hands
+  off to the legacy GET and the attempt is still in flight. `_settled()` fires on success, on a well-formed
+  `{ok:false}`, and on **both** arms of the legacy GET.
+- **⚠ THE HANDLER CARRIES THE SAME GATE**, or the control is reached around — `docAction`'s rule, and the
+  closeout gate's from the same week. It refuses rather than queueing: the attempt already running is the
+  one that will land.
+
+### ⚠⚠ THE MANAGER-APPROVAL EMAIL WENT OUT FROM A PERSONAL iCLOUD ACCOUNT
+*"OK, is there anyway to hardcode havelling gmail account for seeking manager approval. ashley had her
+icloud account open on her computer so the email was sent from her personal icloud, not havellin gmail."*
+
+- **⚠⚠ THE CAUSE IS `mailto:`, AND NOTHING IN THE LINK COULD HAVE FIXED IT.** A `mailto:` hands the message
+  to whatever the **MACHINE** has set as its default mail program. Ashley's was iCloud Mail, so an internal
+  pricing approval for a priced estimate left from her personal address: no Havellin provenance, a reply-to
+  nobody at the firm can see, and no copy in the Havellin account. Which program opens it is a setting on
+  the computer.
+- **THE ANSWER WAS ALREADY BUILT AND UNUSED HERE — the `gmail.compose` draft path the client estimate uses.**
+  `sendInternalEmail` creates the draft **in the signed-in Havellin mailbox** whatever the default program
+  is, and still **cannot send**: a person reads it and presses send, which is the requirement every outbound
+  email in this app is built around. `notifyDept` and `notifyManagerForApproval` both route through it, so
+  the billing hand-off is covered by the same change.
+- **⚠ `mailto:` SURVIVES AS THE FALLBACK AND MUST NOT BE DELETED** — unconfigured client id, closed popup,
+  Gmail error. A compose window that opens beats a button that reports an error. **What changed is that it
+  NAMES THE RISK**: *"⚠ CHECK THE FROM ADDRESS before you send"*, because a wrong From is invisible to the
+  person pressing send. That sentence is the fix for the half `mailto:` cannot fix.
+- **⚠ THE SUBJECT IS NO LONGER PRE-ENCODED.** `sendInternalEmail` encodes for the mailto fallback and
+  RFC-2047s it for the Gmail header, so a subject arriving already percent-encoded lands **double-encoded**
+  — a manager's inbox reading `Havellin%20%E2%80%94%20Estimate…`. Reverting it fails 3.
+
+- **9911 committed checks** (`tests/internal-email.test.js` new at 35; `drive-folder` 28 → 67; the rendered
+  pending chip in `dashboard-utility-bar`). **All twelve changes revert-verified individually, ZERO green
+  after the three below were re-done** — the marker **6**, the success/refusal arm **6**, the fallback being
+  deleted **5**, the legacy GET catch 4, the handler gate 3, the approval email's route 3, the subject 3,
+  and the rest 1–2. Baseline 0 before and after, restored in a `finally`.
+  - **⚠⚠ THREE CAME BACK GREEN AND ALL THREE WERE UNCOVERED PATHS, NOT WEAK ASSERTIONS.** **Both arms of the
+    legacy GET fallback** had never been driven by anything — that path fires when the POST rejects (an old
+    deployment, a dropped connection), and a marker leaking there is exactly the forever-pending state the
+    fix exists to prevent. Re-done with a fetch stub that **rejects the POST and answers the GET**, they
+    fail 1 and 4. The third is the shape this file records more than any other: **deleting the line that
+    renders the idle chip as a `<span>` left the suite green** while the chip fell through to the button
+    branch and rendered `onclick="undefined"` — a thing that looks pressable, is pressable, and does
+    nothing. A check on the returned OBJECT cannot tell a readout from a control; it reads the **rendered
+    markup** now and fails 2.
+  - **⚠ SIX SANDBOXES ACROSS FIVE SUITES BROKE CORRECTLY** when `dashUtilityBar` grew a call to
+    `driveFolderPending` — `dashboard-schedule`, `dashboard-utility-bar` (three), `job-progress`,
+    `walkthrough-view`, `drive-folder`. **Found by searching every pinned list at once**, which this file
+    records costing a round when it is not. **`driveFolderPending` is LIFTED, never stubbed**: a stub of
+    *is a create in flight* is precisely what would let the bar's control and the handler's gate disagree
+    about which jobs are contested.
+  - **⚠ AND MY FIRST SWEEP OVER-APPLIED, adding the register to every `vars:` in four files** rather than
+    the sandboxes that read it. Reverted and redone against the shared `DFNS`/`DVARS`/`VARS` lists.
+  - **⚠ A POSITIONAL PIN BROKE ON A TRUE CHANGE — a FIXED 1400-CHARACTER WINDOW.**
+    `dashboard-utility-bar`'s subfolder net sliced `createDriveJobFolder` as *"the first 1400 characters
+    from the declaration"*, so a comment added at the top of the function pushed the `subfolders:` list out
+    of the window and the net failed over a change it has no opinion about. Re-anchored **on the function**.
+    The twenty-first time this file records that shape.
+  - **⚠ AND ONE OF MY OWN ASSERTIONS WAS WRONG AND THE CODE WAS RIGHT.** `lacks(body, 'syncJobToSheets')`
+    on the marker sliced through to `createDriveFolderNow` and swallowed the whole of `createDriveJobFolder`
+    — which legitimately syncs the folder URL. **The claim is about the MARKER, not the function it sits
+    above.** Bounded.
+- **Verified end to end in headless Chromium, `tests/browser/step15.js`, 32 checks, 0 failed, 0 page
+  errors**, driving the real intake form, the real bar, the real handler and the real email route:
+
+  | | old build | now |
+  |---|---|---|
+  | the bar 900ms after intake | **Create Drive folder**, pressable | **Creating Drive folder…**, no button, no `onclick="undefined"` |
+  | pressing it mid-flight | **2 `createFolder` calls** | refused · **1 call, ever** |
+  | when the answer lands | link | link, marker cleared |
+  | a **refused** create | — | marker cleared · error recorded · **repair door back as a real button** |
+  | the approval email | `mailto:` → the OS default client | Gmail draft in **ashley@havellinpalmbeach.com**, **0 mailto** |
+  | its subject | double-encoded | *Havellin — Estimate Ready for Approval: …* |
+  | with no Gmail configured | silent `mailto:` | `mailto:` **plus** *CHECK THE FROM ADDRESS before you send* |
+  | overflow 1440 · 390 · page errors | — | **0 · 0 · 0** |
+
+  Steps 1–14 re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25**,
+  0 failed — **584 checks across the fifteen**, and `run.sh`'s default list is now 1–15. The first `<style>`
+  block is **byte-identical to HEAD at 93,431 bytes / 1,168 lines / 635 rules** — no CSS — and the app diff
+  is **109 insertions against 6 deletions**.
+- **⚠⚠ THE MANUAL HAD BEEN DESCRIBING THE PRE-2026-09-11 BEHAVIOUR FOR ELEVEN DAYS, AND THE DOCUMENTATION
+  PASS IS MOSTLY THAT CORRECTION.** §9 said the Drive control is *"only ever a link… there is never anything
+  here to press to make one"* and that a folderless job *"falls back to opening the Drive root"*. **Both went
+  false on 2026-09-11**, when the repair door was added and the root fallback was deliberately **removed** —
+  and a reader following either sentence would have concluded the button was a bug. It carries the
+  three-state table now, with the correction stated as a correction. Manual **§5** (the approval email, why
+  the link could not have fixed it, and what the fallback warning means) and **§9**; playbook **Step 2**
+  (a `.stop` in field language) and **four** symptom→cause rows — including the two that will actually
+  happen: *a client shows Create Drive folder and you know the folder is automatic*, and *a badge says CHECK
+  THE FROM ADDRESS*. Both `.md` copies hand-edited; **25 claims parity-checked, 0 mismatches**. Tag balance
+  clean on both HTML files with the stylesheet stripped; rendered at 1440/390 with **0 overflow, 0 page
+  errors**; under `print` **20/53 and 17/18** tables as wide as their container with **0** taking the phone
+  rule — the manual gained exactly one table and it is **not clipped at either width** (1343px in 1376 at
+  1440, 325 in 358 at 390).
+- **⚠ THE SHAPE TO COPY: a control offering to do the thing that is already happening reads as vestigial,
+  and is worse than vestigial.** Both of Anthony's flags are the same mistake in different clothes — a
+  control whose state is derived from *is the answer here yet* rather than *what is actually going on*, and
+  an email route that asked the machine rather than the firm. **When a button looks like leftover UI, check
+  what pressing it sends before agreeing it is harmless.**
+
 # Havellin Palm Beach — App Notes
 
 ## ⚠⚠ A DELIVERED, FULLY PAID JOB COULD STILL BE MARKED LOST (FIXED 2026-09-22)

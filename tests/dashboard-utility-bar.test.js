@@ -40,7 +40,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // Resolved by driving the real renderer until it stopped throwing. Everything here is
   // lifted verbatim from havellin.html — nothing is stubbed that the page itself has.
   const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-    'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'depositPaidTotal', 'depositTargetFor',
+    'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
     'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
     'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
     'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
@@ -53,7 +53,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'workingDaysInclusive', 'approvedEstimateFor',
     'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
     'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent'];
-  const VARS = ['ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
+  const VARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',
@@ -90,7 +90,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // The bar for a job, without rendering anything — dashUtilityBar is DOM-free.
   function bar(jobOver, driveRoot) {
     if (driveRoot === undefined) return ctx.dashUtilityBar(Object.assign({ id: 7 }, jobOver || {}));
-    const c = sandbox({ fns: ['dashUtilityBar', '_dashUtilityBarHtml'],
+    const c = sandbox({ fns: ['dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending'], vars: ['_driveFolderInFlight'],
       stubs: { document: domStub({}), DRIVE_FOLDER_ID: driveRoot } });
     return c.dashUtilityBar(Object.assign({ id: 7 }, jobOver || {}));
   }
@@ -127,7 +127,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // "the one thing to do next" is the wrong home for it. Ashley's report is what asked for
   // it; `walkthrough-view.test.js` owns what the page itself says.
   const bWt = (function () {
-    const c = sandbox({ fns: ['dashUtilityBar'],
+    const c = sandbox({ fns: ['dashUtilityBar', 'driveFolderPending'], vars: ['_driveFolderInFlight'],
       stubs: { document: domStub({}), estimateStore: { 7: { estimate: EST(), approved: true } },
                _estStoreState: 'ready' } });
     return c.dashUtilityBar({ id: 7, driveFolder: 'https://drive.google.com/x' });
@@ -227,8 +227,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const intakeBody = src.slice(intakeFrom, src.indexOf('\nfunction ', intakeFrom + 10));
   ok(intakeBody.length > 500, 'saveIntake was found and bounded');
   has(intakeBody, 'createDriveJobFolder(job)', 'the intake save is what creates the Drive folder');
-  const mk = src.slice(src.indexOf('function createDriveJobFolder('),
-    src.indexOf('function createDriveJobFolder(') + 1400);
+  // ⚠ BOUNDED ON THE FUNCTION, NEVER ON A BYTE COUNT. This read the first 1400 characters
+  // from the declaration, so adding a comment at the top of the function pushed the
+  // `subfolders:` list out of the window and this net failed over a change it has no opinion
+  // about — CLAUDE.md records that shape more than twenty times. The requirement is about
+  // what the FUNCTION does, so the slice is the function.
+  const _mkFrom = src.indexOf('function createDriveJobFolder(');
+  const mk = src.slice(_mkFrom, src.indexOf('\nfunction ', _mkFrom + 10));
   // ⚠ STATED AS THE REQUIREMENT RATHER THAN AS THE LIST. This pinned the six names as one
   // byte sequence and broke on 2026-09-20 when a seventh ('As-Found Record') was genuinely
   // added — the thirteenth time CLAUDE.md records that shape. What has to hold is that
@@ -291,6 +296,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   eq(bar({}, '').length, 2, 'and it is offered with no root configured too');
   has(ctx._dashUtilityBarHtml({ id: 7 }), 'onclick="createDriveFolderNow(7)"',
     'the rendered folderless control is a real button');
+
+  // ⚠⚠ AND THE THIRD STATE, READ OFF THE RENDERED MARKUP — because a check on the OBJECT
+  // cannot tell a readout from a control. Deleting the line that renders `idle` as a <span>
+  // left this file green while the pending chip fell through to the button branch and
+  // rendered `onclick="undefined"`: a thing that looks pressable, is pressable, and does
+  // nothing. That is the same gap the anchor comment above records, one state over.
+  ctx._driveFolderInFlight[7] = true;
+  const pendingHtml = ctx._dashUtilityBarHtml({ id: 7 });
+  has(pendingHtml, 'Creating Drive folder', 'the bar says the folder is being made right now');
+  ok(!/<button[^>]*>[^<]*Creating Drive folder/.test(pendingHtml),
+     '⚠⚠ and it is NOT a button — there is nothing to press while the create is already in flight');
+  lacks(pendingHtml, 'onclick="undefined"',
+     '⚠ nor a button with no handler, which is what dropping the idle branch produced');
+  lacks(pendingHtml, 'createDriveFolderNow(7)',
+     '⚠ the repair door is withheld, so it cannot fire a second createFolder for the same job');
+  ok(!/Creating Drive folder[^<]*<\/a>/.test(pendingHtml),
+     'nor a link — there is no url yet, and one that 404s is worse than none');
+  delete ctx._driveFolderInFlight[7];
+  has(ctx._dashUtilityBarHtml({ id: 7 }), 'onclick="createDriveFolderNow(7)"',
+     'and the real button is back the moment the attempt ends');
 
   // ───────────────────────────────────────────────────────────────────────────
   group('dashUtilityBar is DOM-free, and guards a missing job');
