@@ -438,6 +438,9 @@ input:checked+.slider:before{transform:translateX(18px);}
   .jt{max-width:none;}
 }
 .jt-fb:empty{display:none;}
+/* On the Job Plan and Job Admin the band opens its own card, with no section heading above it for
+   the rail's top rule to sit under — so the rule and its gap come off there. */
+.jband .jt{border-top:none;padding-top:0;}
 .jt-fb{margin-bottom:10px;}
 .var-white{background:var(--white);}
 .jtbl th{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--gray);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--tan);}
@@ -630,6 +633,20 @@ input:checked+.slider:before{transform:translateX(18px);}
 .ja-card{border:1px solid var(--border-md);border-radius:6px;background:var(--white);margin-bottom:12px;}
 .ja-hd{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;font-size:12.5px;font-weight:700;}
 .ja-hd .ja-n{font-size:11px;color:var(--gray);font-weight:600;margin-left:auto;}
+/* Close-out card (2026-09-22) — four numbered steps in the order they are done: the call, the
+   review ask it unlocks, the referral ask, the required vendor scorecard. One renderer, drawn on
+   the Job Plan's Close-out stage and on Job Admin & Inv. */
+.co-hd{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;}
+.co-hd-t{font-size:13px;font-weight:700;color:var(--gray-dk);}
+.co-hd-m{font-size:11px;color:var(--gray);margin-left:auto;}
+.co-step{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--border);}
+.co-step:first-child{border-top:none;}
+.co-num{flex:0 0 22px;height:22px;border-radius:50%;border:1.5px solid var(--border-md);color:var(--gray);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.co-num-done{background:var(--ok-tx);border-color:var(--ok-tx);color:#fff;}
+.co-main{flex:1;min-width:0;}
+.co-ttl{font-size:12.5px;font-weight:700;color:var(--gray-dk);margin-bottom:4px;}
+.co-meta{font-size:11px;font-weight:400;color:var(--gray);margin-left:6px;}
+.co-sub{font-size:11.5px;color:var(--gray);margin:0 0 6px;line-height:1.45;}
 .ja-body{padding:4px 12px 12px;border-top:1px solid var(--border);}
 .divider{height:1px;background:var(--border);margin:1rem 0;}
 .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--gray);font-size:12px;}
@@ -1198,7 +1215,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:14pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.22 · 8:18pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2252,6 +2269,10 @@ body.no-smf .smf-col{display:none;}
 
   <!-- Client info header — rendered at the top of the Job Plan (above Log Hours) -->
   <div id="job-plan-header"></div>
+
+  <!-- The NEXT band and the Deposit & Start leg of the timeline — the same band as the Client
+       Dashboard (jobProgressBlockHtml). Painted by loadJobPlanTab once the job is won. -->
+  <div id="jband-slot-plan"></div>
 
   <!-- Hidden log-job input — synced to plan-job by loadJobPlanTab; read by saveLogEntry -->
   <input type="hidden" id="log-job">
@@ -12178,9 +12199,11 @@ function saveChangeOrder() {
 // safe one: if the drilldown is on screen, the job it is showing is the job the
 // person means — whereas #agr-job can be holding whatever was last picked days ago.
 function _agrJob() {
-  var dv = document.getElementById('client-dashboard-view');
-  if (dv && dv.style.display !== 'none' && _dashboardJobId) {
-    return jobs.find(function(j){ return j.id === _dashboardJobId; }) || null;
+  // The job whose band is on screen — the dashboard, or the Job Plan / Job Admin now that the
+  // band renders there too. See _jobBandHost for why the job pages are asked first.
+  var host = _jobBandHost();
+  if (host) {
+    return jobs.find(function(j){ return j.id === host.jobId; }) || null;
   }
   var el = document.getElementById('agr-job');
   var id = el ? parseInt(el.value) || 0 : 0;
@@ -15112,7 +15135,8 @@ function openDocFiled(jobId, docKey) {
 }
 
 function _dashSendState(docKey, label) {
-  var el = document.getElementById('dash-fb');
+  var _h = _jobBandHost();
+  var el = document.getElementById(_h ? _h.fb : 'dash-fb');
   if (el) el.innerHTML = '<div class="alert a-info">' + esc(label) + '</div>';
 }
 
@@ -15380,6 +15404,12 @@ function docAction(jobId, kind, verb, opt) {
 // Messages land on the drilldown when it is open and in an alert otherwise — the tab
 // strips belong to panels the drilldown hides.
 function _docNotice(type, msg, jobId) {
+  var _h = _jobBandHost();
+  if (_h && _h.kind !== 'dash' && typeof dashNotice === 'function') {
+    dashNotice(type, msg);
+    _dashRedraw(jobId);
+    return;
+  }
   if (typeof dashNotice === 'function' && document.getElementById('dash-fb')) {
     dashNotice(type, msg);
     if (typeof _dashRedraw === 'function') _dashRedraw(jobId);
@@ -15932,12 +15962,44 @@ function dashNotice(type, msg) { _dashNotice = { type: type, msg: msg }; }
 // one of them knew it existed. ONE redraw, one definition — three call sites had
 // started to grow their own copy.
 function _dashRedraw(jobId) {
+  // ⚠ THE BAND IS ALSO ON THE JOB PLAN AND JOB ADMIN (2026-09-22), and a handler fired from
+  // there has to repaint THAT band — a message set and never drawn is what makes a button read
+  // as dead. Only the band is repainted, never the tab around it: the Job Plan's innerHTML
+  // write destroys a half-typed note and the hours form (see _parkHoursSection).
+  var host = _jobBandHost();
+  if (host && host.kind !== 'dash') {
+    if (jobId && host.jobId !== jobId) return false;
+    _repaintJobBand(host.kind, host.jobId);
+    return true;
+  }
   var dv = document.getElementById('client-dashboard-view');
   if (!dv || dv.style.display === 'none' || !_dashboardJobId) return false;
   if (jobId && _dashboardJobId !== jobId) return false;
   if (typeof renderClientDashboard !== 'function') return false;
   renderClientDashboard(_dashboardJobId);
   return true;
+}
+
+// ⚠⚠ WHICH SCREEN IS SHOWING A JOB'S BAND RIGHT NOW. Until 2026-09-22 the band lived on the
+// Client Dashboard alone, so "is the drilldown up" was the whole question. It now renders on the
+// Job Plan and on Job Admin & Inv as well, and the same buttons fire from all three.
+// ⚠ THE JOB PAGES ARE ASKED FIRST, and that order is the safety half. `client-dashboard-view`
+// keeps its inline `display:block` when you navigate to another TAB — only showPanel('jobs')
+// resets it — so a dashboard opened on Butler and left behind still reads as "on screen" while
+// somebody presses a button on Ellsworth's Job Plan. Asked first, the tab that is actually
+// active wins; the dashboard answer is unchanged everywhere else.
+function _jobBandHost() {
+  var act = function(id){ var el = document.getElementById(id); return !!(el && el.classList && el.classList.contains('active')); };
+  var val = function(id){ var el = document.getElementById(id); return el ? parseInt(el.value) || 0 : 0; };
+  if (act('panel-job-plan') && val('plan-job') && document.getElementById('jband-slot-plan')) {
+    return { kind: 'plan', jobId: val('plan-job'), fb: 'jband-fb-plan' };
+  }
+  if (act('panel-inventory') && val('inv-job') && document.getElementById('jband-slot-admin')) {
+    return { kind: 'admin', jobId: val('inv-job'), fb: 'jband-fb-admin' };
+  }
+  var dv = document.getElementById('client-dashboard-view');
+  if (dv && dv.style.display !== 'none' && _dashboardJobId) return { kind: 'dash', jobId: _dashboardJobId, fb: 'dash-fb' };
+  return null;
 }
 
 // Load this job's estimate into the globals the estimate actions read. Returns the
@@ -16166,6 +16228,270 @@ function dashCheckEsign(jobId) {
 function dashRecordPayment(jobId, stage) {
   if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the payment recorder for this job.'); _dashRedraw(jobId); return; }
   openDepositModal(stage);
+}
+
+// ═══════════════ THE JOB TIMELINE, RENDERED — ONE COPY, THREE SCREENS ═══════════════
+// ⚠⚠ THE BAND, THE TRACK AND THE RAIL WERE INLINE IN `renderClientDashboard`, AND THAT WAS FINE
+// WHILE ONE SCREEN DREW THEM. Anthony, 2026-09-22, off a prep job whose midpoint invoice had
+// no reminder anywhere he was working: *"we need a place in job plan and admin to see job
+// progress and get a reminder for the mid point invoice. so have the brown band with actions
+// and the deposit & start timeline below."* Three screens drawing one state machine is exactly
+// where a second copy of the band starts disagreeing with the first — the drift this file
+// records more than any other — so the markup moved out here and all three call it.
+// ⚠ The ROWS are still `jobTimeline`'s and the lit step is still `jobTimelineNext`'s. These
+// render; they decide nothing.
+function _jtAtFmt(r) {
+  if (!r.at) return '';
+  if (r.atKind === 'date') return fmtDate2(r.at);
+  if (r.atKind === 'iso') {
+    // docState writes ISO stamps; every other date on the rail is yyyy-mm-dd.
+    return r.at ? fmtDate2(String(r.at).slice(0, 10)) : '';
+  }
+  if (r.atKind === 'epoch') {
+    var _ms = Number(r.at);
+    return _ms > 0 ? new Date(_ms).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+  }
+  return String(r.at);
+}
+function _jtStateCls(r) {
+  return {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}[r.state] || 'jt-wait';
+}
+
+// The rows AFTER the signature — the second leg of the track, headed DEPOSIT & START. That is
+// the half of the job the Job Plan and Job Admin are worked in: the first leg is winning and
+// papering it, which is over by the time either tab opens. Same break the desk track uses.
+function jtWorkRows(rows) {
+  var at = rows.map(function(r){ return r.key; }).indexOf(JT_LEG_BREAK);
+  return at >= 0 ? rows.slice(at + 1) : rows;
+}
+
+// Returns { html, a, doc } — the caller needs the actions and the document back to seed the
+// dashboard's quick strip, which is what keeps "no control twice" structural.
+function jtBandHtml(job, estRec, rows, next) {
+  var h = '';
+  var _jtA = null, _bandDoc = null, _band = null;
+  if (next) {
+    var _jtBlocked = next.state === 'blocked';
+    _band = { cls: _jtBlocked ? ' jt-next-blk' : '', lbl: _jtBlocked ? '&#9888; Blocked' : 'Next',
+              step: esc(next.label), blocked: _jtBlocked };
+    _jtA = jobTimelineActions(next, job, estRec);
+    _bandDoc = _jtA.doc;
+  } else if (rows.length && rows[0].state !== 'terminal') {
+    _band = { cls: ' jt-next-done', lbl: 'Complete',
+              step: 'Every milestone on this job is recorded', blocked: false };
+    // ⚠ ON A FINISHED JOB THE TRAY WALKS BACK to the last document that was actually SENT.
+    // `done` is not `sent` — see `jobTimelineDoc`.
+    _bandDoc = jobTimelineDoc(rows, job, estRec);
+  }
+  if (_band) {
+    h += '<div class="jt-next' + _band.cls + '">';
+    h += '<div class="jt-next-lbl">' + _band.lbl + '</div>';
+    h += '<div class="jt-next-step">' + _band.step + '</div>';
+    if (_band.blocked) {
+      h += '<div class="jt-next-sub">' + esc(next.blockedWhy) + '</div>';
+      // A panel reporting a blocker carries the fix. Standing rule, and the reason the old
+      // chips' how-to in a `title=` was unreachable on the iPad this is read on.
+      if (next.blockedFix) h += '<div class="jt-next-fix">' + esc(next.blockedFix) + '</div>';
+    } else if (next && next.sub) {
+      h += '<div class="jt-next-sub">' + esc(next.sub) + '</div>';
+    }
+    // ⚠⚠ THE DOCUMENT TRAY. Anthony: *"at the top of the timeline, you can see the document
+    // you just created … view estimate … edit the estimate, or submit it for approval. Once
+    // that's done, the next document you'd have up there would be the agreement."*
+    // ⚠ TRAY BEFORE THE PRIMARY, and that is the real reading order as well as his: you
+    // consult the document, then you act on it. The band still OPENS with NEXT / <step>, so
+    // the one thing to do next is still read first, and the call to action is the last thing
+    // before the eye leaves the band.
+    // ⚠⚠ ONE ACTION ROW, NOT TWO (2026-09-20). Anthony, off a band whose four buttons sat
+    // two over two: *"let's make the four ... move horizontally rather than stacked two over
+    // two to save a little vertical scrolling."* He is right that nothing was wrapping: the
+    // tray's buttons and the step's were two SIBLING flex rows, so the 2×2 was by construction
+    // and not by width. Measured on the rendered page at 1440: the four buttons run 599px in an
+    // 1182px content box — 50.7% of the row — and still stacked. The band goes 163px to 126px.
+    // They are one row now, in the order the two rows already read top to bottom — the
+    // document's buttons, then the primary, then the secondaries — so the tray still comes
+    // before the primary and the call to action is still the last thing before the eye leaves
+    // the band. The row wraps on a phone, which is what `flex-wrap` was always for.
+    // ⚠ THE STEP'S BUTTONS ARE BUILT ONCE, INTO A STRING, because they are now emitted at two
+    // SITES — inside the tray when a document is in play, alone when one is not — and a
+    // second `jt-btn-p` literal is exactly what `dashboard-actions` pins at one emitting site.
+    var _actsHtml = '';
+    if (_jtA) {
+      // ⚠ EXACTLY ONE FILLED BUTTON IN THE BAND. The tray's View/Print/Edit are bronze
+      // OUTLINE `.jt-btn`; this is the only `.jt-btn-p`. Two filled buttons side by side make
+      // the reader choose between two primaries, which costs the band its whole meaning — and
+      // sharing a row with the tray does not weaken that, it is what makes the primary the one
+      // thing in the row the eye lands on.
+      if (_jtA.primary) _actsHtml += '<button class="jt-btn jt-btn-p" onclick="' + _jtA.primary.call + '">' + _jtA.primary.label + '</button>';
+      _jtA.secondary.forEach(function (a) {
+        _actsHtml += '<button class="jt-btn' + (a.danger ? ' jt-btn-d' : '') + '" onclick="' + a.call + '">' + a.label + '</button>';
+      });
+    }
+    if (_bandDoc) {
+      h += '<div class="jt-doc">';
+      h += '<div class="jt-doc-hd">' + esc(_bandDoc.title) + '</div>';
+      h += '<div class="jt-doc-acts">';
+      // ⚠ Labels carry HTML entities and are app constants, never user input, so they go in
+      // RAW. Only the title is user-reachable and it goes through esc().
+      _bandDoc.acts.forEach(function (a) {
+        h += '<button class="jt-btn" onclick="' + a.call + '">' + a.label + '</button>';
+      });
+      h += _actsHtml + '</div></div>';
+    } else if (_actsHtml) {
+      // No document at this step — four rows map to none (intake, walkthrough, job active,
+      // work complete). The step's own row, exactly as before.
+      h += '<div class="jt-acts">' + _actsHtml + '</div>';
+    }
+    h += '</div>';
+  }
+  return { html: h, a: _jtA, doc: _bandDoc };
+}
+
+// `legs`: optional — the dashboard lets the track split at the signature; the job pages pass
+// the one leg they show.
+function jtTrackHtml(rows, legs) {
+  var h = '';
+  // ── THE TRACK — horizontal, on a desk. Anthony, on the vertical-only build: it
+  // "take[s] up a lot of real estate vertically and uses very little horizontal … there
+  // is a lot of vertical scrolling now and a lot of white space in the middle."
+  //
+  // ⚠ THE SAME `jobTimeline` ROWS FEED BOTH LAYOUTS. Two renderings of one derivation
+  // can disagree about presentation, which is what a media query is for, and can never
+  // disagree about STATE — which is the failure this file records again and again
+  // whenever a second renderer grows its own copy of a rule.
+  var _legAt = rows.map(function(r){ return r.key; }).indexOf(JT_LEG_BREAK);
+  var _legs = legs || ((_legAt >= 0 && rows.length > _legAt + 1)
+    ? [rows.slice(0, _legAt + 1), rows.slice(_legAt + 1)]
+    : [rows]);
+  // ⚠ ONE COLUMN COUNT FOR BOTH LEGS, published as a custom property rather than an
+  // inline width per step. `flex:1` alone let leg one squeeze to 134px while leg two
+  // stopped at its cap, and two different pitches read as two unrelated rows instead of
+  // one track that wrapped.
+  h += '<div class="jt-track" style="--jt-cols:' + Math.max.apply(null, _legs.map(function(l){ return l.length; })) + ';">';
+  _legs.forEach(function(leg){
+    h += '<div class="jt-leg">';
+    var _lg = '';
+    leg.forEach(function(r, i){
+      h += '<div class="jt-step ' + _jtStateCls(r) + (i === leg.length - 1 ? ' jt-last' : '') + '">';
+      // The band prints on the first step of its group and is an empty spacer on the
+      // rest, so every node in a leg sits on one baseline whatever the labels do.
+      h += '<div class="jt-sgrp">' + (r.group !== _lg ? esc(r.group) : '') + '</div>';
+      _lg = r.group;
+      h += '<div class="jt-node"></div>';
+      h += '<div class="jt-slbl">' + esc(r.short) + '</div>';
+      // One figure per step: the money where there is money, otherwise the date. Both
+      // plus a name is three lines under a 150px column and stops being scannable.
+      var _sm = (r.amount !== null) ? fmtMoney(r.amount) : _jtAtFmt(r);
+      if (_sm) h += '<div class="jt-smeta">' + esc(_sm) + '</div>';
+      var _ss = r.by || (r.state === 'blocked' ? '' : r.sub);
+      if (_ss) h += '<div class="jt-ssub">' + esc(_ss) + '</div>';
+      // ⚠ THE TRACK SHOWS A PLAN ONLY WHEN IT IS LATE, and the asymmetry is deliberate: a
+      // 150px column already carries three lines and a fourth stops it being scannable. The
+      // rail shows every plan because it has the room.
+      if (!r.done && r.plan && r.planLate) h += '<div class="jt-splan">Planned ' + esc(r.planLbl) + ' ' + esc(fmtDate2(r.plan)) + '</div>';
+      h += '</div>';
+    });
+    h += '</div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+function jtRailHtml(rows) {
+  var h = '';
+  // ── THE RAIL — vertical, on a phone, where a 150px column cannot exist.
+  h += '<div class="jt-rail">';
+  var _jtGrp = '';
+  rows.forEach(function(r){
+    if (r.group !== _jtGrp) { _jtGrp = r.group; h += '<div class="jt-grp">' + esc(_jtGrp) + '</div>'; }
+    h += '<div class="jt-row ' + _jtStateCls(r) + '">';
+    h += '<div class="jt-lbl">' + esc(r.label) + '</div>';
+    var _jtMeta = [];
+    if (r.amount !== null) _jtMeta.push('<strong>' + fmtMoney(r.amount) + '</strong>');
+    var _jtWhen = _jtAtFmt(r);
+    if (_jtWhen) _jtMeta.push(esc(_jtWhen));
+    if (r.by) _jtMeta.push(esc(r.by));
+    if (_jtMeta.length) h += '<div class="jt-meta">' + _jtMeta.join(' &middot; ') + '</div>';
+    // A blocked row says nothing extra: the band directly above carries the reason and
+    // the fix, and repeating them here is the duplication the client-copy rule cuts.
+    if (r.state !== 'blocked' && r.sub) h += '<div class="jt-sub">' + esc(r.sub) + '</div>';
+    // ⚠ A PLAN IS SUPPRESSED THE INSTANT ITS ACTUAL EXISTS: once it happened, the actual IS
+    // the fact and the projection is history. The word "Planned" is ALWAYS in front of it, so
+    // this line can never be read as something that was recorded.
+    if (!r.done && r.plan) h += '<div class="jt-plan' + (r.planLate ? ' jt-plan-late' : '') + '">Planned ' + esc(r.planLbl) + ' ' + esc(fmtDate2(r.plan)) + '</div>';
+    h += '</div>';
+  });
+  h += '</div>';   // close .jt-rail
+  return h;
+}
+
+// ═══════════════ THE BAND ON THE JOB PLAN AND JOB ADMIN & INV (2026-09-22) ═══════════════
+// Anthony, off a prep job sitting on "Midpoint invoice sent" with nothing on either tab he was
+// working in saying so: *"we need a place in job plan and admin to see job progress and get a
+// reminder for the mid point invoice. so have the brown band with actions and the deposit &
+// start timeline below."*
+// ⚠ THE SAME BAND AS THE DASHBOARD — same rows, same lit step, same buttons, same renderer. A
+// job page that grew its own "you should send the midpoint invoice" line would be a second
+// opinion of the timeline, which is the drift this file records over and over.
+// ⚠ ONLY THE SECOND LEG IS DRAWN. The first leg (intake → signature) is over by the time either
+// tab opens — both are withheld until the job is won — so it would be eight green nodes of
+// history above the work. The BAND still reads the whole timeline, so a job whose next step is
+// somehow in the first leg still says so.
+// ⚠ `jobPlanStore[jobId]` DIRECTLY, never getJobPlan — that accessor MINTS, and this paints on
+// every redraw of either tab.
+function jobProgressBlockHtml(jobId, host) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var estRec = estimateStore[jobId];
+  if (!job || !estRec || !estRec.estimate) return '';
+  var logs = jobLogEntries(jobId);
+  var cos = (typeof changeOrders !== 'undefined' ? changeOrders : []).filter(function(c){ return c && c.jobId === jobId; });
+  var est = approvedEstimateFor(jobId) || estRec.estimate;
+  var prog = jobProgress(est, jobPlanStore[jobId], logs);
+  var sched = jobSchedule(job, est, _todayStr(), prog);
+  var rows = jobTimeline(job, estRec, logs, cos, sched);
+  var band = jtBandHtml(job, estRec, rows, jobTimelineNext(rows));
+  var work = jtWorkRows(rows);
+  // A message a handler set for THIS band is shown once and cleared, exactly as the dashboard
+  // does — a stale one must not reappear on the next redraw or on the other tab.
+  var note = '';
+  var h = _jobBandHost();
+  if (_dashNotice && h && h.kind === host && h.jobId === jobId) {
+    note = '<div class="alert ' + ({ok:'a-ok',warn:'a-warn',err:'a-err'}[_dashNotice.type] || 'a-warn') + '">' + esc(_dashNotice.msg) + '</div>';
+    _dashNotice = null;
+  }
+  return '<div class="card jband" style="margin-bottom:1rem;"><div class="jt">'
+    + '<div class="jt-fb" id="jband-fb-' + host + '">' + note + '</div>'
+    + band.html
+    + (work.length ? jtTrackHtml(work, [work]) + jtRailHtml(work) : '')
+    + '</div></div>';
+}
+function _repaintJobBand(host, jobId) {
+  var el = document.getElementById('jband-slot-' + host);
+  if (el) el.innerHTML = jobProgressBlockHtml(jobId, host);
+}
+
+// Who the job is for, where, and when — the Job Plan's header line, on Job Admin & Inv too.
+// Anthony: *"add client info like on job plan image, to job admin tab."* The schedule strip
+// comes with it on a labour job; a prep job states its vendor-driven timeline instead, the same
+// sentence its Job Plan header carries.
+function jobInfoHeaderHtml(job) {
+  if (!job) return '';
+  var estRec = estimateStore[job.id];
+  var est = estRec && estRec.estimate;
+  var addr = esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—');
+  var bits = [['Client', esc(job.name || '—')], ['Service', esc(svcLabelOf(job))], ['Property', addr],
+              ['Target Start', esc(fmtDate2(job.start))]];
+  var sched = (job.svc === 'prep' || !est) ? ''
+    : planScheduleHtml(job.id, job, approvedEstimateFor(job.id) || est).replace('id="plan-sched"', 'id="admin-sched"');
+  return '<div class="job-hdr" style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">'
+    + '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">'
+    + bits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('')
+    + (job.driveFolder ? '<span><a href="' + esc(job.driveFolder) + '" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; Job folder in Drive</a></span>' : '')
+    + '</div>'
+    + (job.svc === 'prep'
+        ? '<div style="margin-top:7px;font-size:11px;color:var(--gray-dk);"><span style="color:var(--bronze);font-weight:700;">Timeline:</span> Vendor-driven — scheduled around each trade’s availability.</div>'
+        : sched)
+    + '</div>';
 }
 
 function renderClientDashboard(jobId) {
@@ -16433,19 +16759,7 @@ function renderClientDashboard(jobId) {
   var _jtSched = jobSchedule(job, _jtEst, _todayStr(), _jtProg);
   var _jtRows = jobTimeline(job, estRec, logs, cos, _jtSched);
   var _jtNext = jobTimelineNext(_jtRows);
-  var _jtAt = function(r){
-    if (!r.at) return '';
-    if (r.atKind === 'date') return fmtDate2(r.at);
-    if (r.atKind === 'iso') {
-      // docState writes ISO stamps; every other date on the rail is yyyy-mm-dd.
-      return r.at ? fmtDate2(String(r.at).slice(0, 10)) : '';
-    }
-    if (r.atKind === 'epoch') {
-      var _ms = Number(r.at);
-      return _ms > 0 ? new Date(_ms).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
-    }
-    return String(r.at);
-  };
+
 
   h += '<div class="jt">';
 
@@ -16469,151 +16783,16 @@ function renderClientDashboard(jobId) {
   // — a live-row branch and a separate Complete branch — so anything added to the band had to
   // be written twice or silently existed on only one of them. The state is resolved into a
   // {cls, lbl, step} triple BEFORE any markup, and there is exactly one opening tag.
-  var _jtA = null, _bandDoc = null, _band = null;
-  if (_jtNext) {
-    var _jtBlocked = _jtNext.state === 'blocked';
-    _band = { cls: _jtBlocked ? ' jt-next-blk' : '', lbl: _jtBlocked ? '&#9888; Blocked' : 'Next',
-              step: esc(_jtNext.label), blocked: _jtBlocked };
-    _jtA = jobTimelineActions(_jtNext, job, estRec);
-    _bandDoc = _jtA.doc;
-  } else if (_jtRows.length && _jtRows[0].state !== 'terminal') {
-    _band = { cls: ' jt-next-done', lbl: 'Complete',
-              step: 'Every milestone on this job is recorded', blocked: false };
-    // ⚠ ON A FINISHED JOB THE TRAY WALKS BACK to the last document that was actually SENT.
-    // `done` is not `sent` — see `jobTimelineDoc`.
-    _bandDoc = jobTimelineDoc(_jtRows, job, estRec);
-  }
-  if (_band) {
-    h += '<div class="jt-next' + _band.cls + '">';
-    h += '<div class="jt-next-lbl">' + _band.lbl + '</div>';
-    h += '<div class="jt-next-step">' + _band.step + '</div>';
-    if (_band.blocked) {
-      h += '<div class="jt-next-sub">' + esc(_jtNext.blockedWhy) + '</div>';
-      // A panel reporting a blocker carries the fix. Standing rule, and the reason the old
-      // chips' how-to in a `title=` was unreachable on the iPad this is read on.
-      if (_jtNext.blockedFix) h += '<div class="jt-next-fix">' + esc(_jtNext.blockedFix) + '</div>';
-    } else if (_jtNext && _jtNext.sub) {
-      h += '<div class="jt-next-sub">' + esc(_jtNext.sub) + '</div>';
-    }
-    // ⚠⚠ THE DOCUMENT TRAY. Anthony: *"at the top of the timeline, you can see the document
-    // you just created … view estimate … edit the estimate, or submit it for approval. Once
-    // that's done, the next document you'd have up there would be the agreement."*
-    // ⚠ TRAY BEFORE THE PRIMARY, and that is the real reading order as well as his: you
-    // consult the document, then you act on it. The band still OPENS with NEXT / <step>, so
-    // the one thing to do next is still read first, and the call to action is the last thing
-    // before the eye leaves the band.
-    // ⚠⚠ ONE ACTION ROW, NOT TWO (2026-09-20). Anthony, off a band whose four buttons sat
-    // two over two: *"let's make the four ... move horizontally rather than stacked two over
-    // two to save a little vertical scrolling."* He is right that nothing was wrapping: the
-    // tray's buttons and the step's were two SIBLING flex rows, so the 2×2 was by construction
-    // and not by width. Measured on the rendered page at 1440: the four buttons run 599px in an
-    // 1182px content box — 50.7% of the row — and still stacked. The band goes 163px to 126px.
-    // They are one row now, in the order the two rows already read top to bottom — the
-    // document's buttons, then the primary, then the secondaries — so the tray still comes
-    // before the primary and the call to action is still the last thing before the eye leaves
-    // the band. The row wraps on a phone, which is what `flex-wrap` was always for.
-    // ⚠ THE STEP'S BUTTONS ARE BUILT ONCE, INTO A STRING, because they are now emitted at two
-    // SITES — inside the tray when a document is in play, alone when one is not — and a
-    // second `jt-btn-p` literal is exactly what `dashboard-actions` pins at one emitting site.
-    var _actsHtml = '';
-    if (_jtA) {
-      // ⚠ EXACTLY ONE FILLED BUTTON IN THE BAND. The tray's View/Print/Edit are bronze
-      // OUTLINE `.jt-btn`; this is the only `.jt-btn-p`. Two filled buttons side by side make
-      // the reader choose between two primaries, which costs the band its whole meaning — and
-      // sharing a row with the tray does not weaken that, it is what makes the primary the one
-      // thing in the row the eye lands on.
-      if (_jtA.primary) _actsHtml += '<button class="jt-btn jt-btn-p" onclick="' + _jtA.primary.call + '">' + _jtA.primary.label + '</button>';
-      _jtA.secondary.forEach(function (a) {
-        _actsHtml += '<button class="jt-btn' + (a.danger ? ' jt-btn-d' : '') + '" onclick="' + a.call + '">' + a.label + '</button>';
-      });
-    }
-    if (_bandDoc) {
-      h += '<div class="jt-doc">';
-      h += '<div class="jt-doc-hd">' + esc(_bandDoc.title) + '</div>';
-      h += '<div class="jt-doc-acts">';
-      // ⚠ Labels carry HTML entities and are app constants, never user input, so they go in
-      // RAW. Only the title is user-reachable and it goes through esc().
-      _bandDoc.acts.forEach(function (a) {
-        h += '<button class="jt-btn" onclick="' + a.call + '">' + a.label + '</button>';
-      });
-      h += _actsHtml + '</div></div>';
-    } else if (_actsHtml) {
-      // No document at this step — four rows map to none (intake, walkthrough, job active,
-      // work complete). The step's own row, exactly as before.
-      h += '<div class="jt-acts">' + _actsHtml + '</div>';
-    }
-    h += '</div>';
-  }
+  // The band is built by `jtBandHtml` — ONE renderer, read by the dashboard, the Job Plan
+  // and Job Admin & Inv. See its comments.
+  var _jtBand = jtBandHtml(job, estRec, _jtRows, _jtNext);
+  var _jtA = _jtBand.a, _bandDoc = _jtBand.doc;
+  h += _jtBand.html;
 
-  var _jtCls = function(r){ return {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}[r.state] || 'jt-wait'; };
 
-  // ── THE TRACK — horizontal, on a desk. Anthony, on the vertical-only build: it
-  // "take[s] up a lot of real estate vertically and uses very little horizontal … there
-  // is a lot of vertical scrolling now and a lot of white space in the middle."
-  //
-  // ⚠ THE SAME `jobTimeline` ROWS FEED BOTH LAYOUTS. Two renderings of one derivation
-  // can disagree about presentation, which is what a media query is for, and can never
-  // disagree about STATE — which is the failure this file records again and again
-  // whenever a second renderer grows its own copy of a rule.
-  var _legAt = _jtRows.map(function(r){ return r.key; }).indexOf(JT_LEG_BREAK);
-  var _legs = (_legAt >= 0 && _jtRows.length > _legAt + 1)
-    ? [_jtRows.slice(0, _legAt + 1), _jtRows.slice(_legAt + 1)]
-    : [_jtRows];
-  // ⚠ ONE COLUMN COUNT FOR BOTH LEGS, published as a custom property rather than an
-  // inline width per step. `flex:1` alone let leg one squeeze to 134px while leg two
-  // stopped at its cap, and two different pitches read as two unrelated rows instead of
-  // one track that wrapped.
-  h += '<div class="jt-track" style="--jt-cols:' + Math.max.apply(null, _legs.map(function(l){ return l.length; })) + ';">';
-  _legs.forEach(function(leg){
-    h += '<div class="jt-leg">';
-    var _lg = '';
-    leg.forEach(function(r, i){
-      h += '<div class="jt-step ' + _jtCls(r) + (i === leg.length - 1 ? ' jt-last' : '') + '">';
-      // The band prints on the first step of its group and is an empty spacer on the
-      // rest, so every node in a leg sits on one baseline whatever the labels do.
-      h += '<div class="jt-sgrp">' + (r.group !== _lg ? esc(r.group) : '') + '</div>';
-      _lg = r.group;
-      h += '<div class="jt-node"></div>';
-      h += '<div class="jt-slbl">' + esc(r.short) + '</div>';
-      // One figure per step: the money where there is money, otherwise the date. Both
-      // plus a name is three lines under a 150px column and stops being scannable.
-      var _sm = (r.amount !== null) ? fmtMoney(r.amount) : _jtAt(r);
-      if (_sm) h += '<div class="jt-smeta">' + esc(_sm) + '</div>';
-      var _ss = r.by || (r.state === 'blocked' ? '' : r.sub);
-      if (_ss) h += '<div class="jt-ssub">' + esc(_ss) + '</div>';
-      // ⚠ THE TRACK SHOWS A PLAN ONLY WHEN IT IS LATE, and the asymmetry is deliberate: a
-      // 150px column already carries three lines and a fourth stops it being scannable. The
-      // rail shows every plan because it has the room.
-      if (!r.done && r.plan && r.planLate) h += '<div class="jt-splan">Planned ' + esc(r.planLbl) + ' ' + esc(fmtDate2(r.plan)) + '</div>';
-      h += '</div>';
-    });
-    h += '</div>';
-  });
-  h += '</div>';
-
-  // ── THE RAIL — vertical, on a phone, where a 150px column cannot exist.
-  h += '<div class="jt-rail">';
-  var _jtGrp = '';
-  _jtRows.forEach(function(r){
-    if (r.group !== _jtGrp) { _jtGrp = r.group; h += '<div class="jt-grp">' + esc(_jtGrp) + '</div>'; }
-    h += '<div class="jt-row ' + _jtCls(r) + '">';
-    h += '<div class="jt-lbl">' + esc(r.label) + '</div>';
-    var _jtMeta = [];
-    if (r.amount !== null) _jtMeta.push('<strong>' + fmtMoney(r.amount) + '</strong>');
-    var _jtWhen = _jtAt(r);
-    if (_jtWhen) _jtMeta.push(esc(_jtWhen));
-    if (r.by) _jtMeta.push(esc(r.by));
-    if (_jtMeta.length) h += '<div class="jt-meta">' + _jtMeta.join(' &middot; ') + '</div>';
-    // A blocked row says nothing extra: the band directly above carries the reason and
-    // the fix, and repeating them here is the duplication the client-copy rule cuts.
-    if (r.state !== 'blocked' && r.sub) h += '<div class="jt-sub">' + esc(r.sub) + '</div>';
-    // ⚠ A PLAN IS SUPPRESSED THE INSTANT ITS ACTUAL EXISTS: once it happened, the actual IS
-    // the fact and the projection is history. The word "Planned" is ALWAYS in front of it, so
-    // this line can never be read as something that was recorded.
-    if (!r.done && r.plan) h += '<div class="jt-plan' + (r.planLate ? ' jt-plan-late' : '') + '">Planned ' + esc(r.planLbl) + ' ' + esc(fmtDate2(r.plan)) + '</div>';
-    h += '</div>';
-  });
-  h += '</div>';   // close .jt-rail
+  // The track (desk) and the rail (phone) — both in `jtTrackHtml` / `jtRailHtml`, fed the
+  // SAME rows, so the two layouts can differ in presentation and never in state.
+  h += jtTrackHtml(_jtRows) + jtRailHtml(_jtRows);
 
   // ── OUT-OF-SEQUENCE ACTIONS, ONCE. They used to hang off their own row, which the
   // horizontal track has no room for and which scattered them down the rail. Gathered
@@ -16792,6 +16971,13 @@ function applyJobTransition(j) {
       + ' and cannot be re-opened from here. Start a new job if the client comes back.');
     return false;
   }
+  if (next === 'closed') {
+    var cb = jobCloseBlockers(j);
+    if (cb.length) {
+      alert('Cannot close the job yet:\n\n' + cb.map(function(b){ return '• ' + b; }).join('\n'));
+      return false;
+    }
+  }
   if (next === 'active') {
     var blockers = jobActivationBlockers(j);
     if (blockers.length > 0) {
@@ -16826,7 +17012,9 @@ function activateOrCycle(jobId) {
   if (!j) return;
   if (!applyJobTransition(j)) return;
   saveJobs(); syncJobToSheets(j);
-  renderClientDashboard(jobId);
+  // Fired from the Job Plan or Job Admin band as well as the dashboard now — repaint whichever
+  // is showing, and fall back to the dashboard render it always did.
+  if (!_dashRedraw(jobId)) renderClientDashboard(jobId);
 }
 
 function goToJobLog(jobId) {
@@ -17352,8 +17540,8 @@ function showFB(elId, type, msg) {
 // that live inside their own tab's panel; when the drilldown is what is on screen,
 // that panel is hidden and the message is lost. One redirect, at the point of use.
 function _dashFbTarget(fallbackId) {
-  var dv = document.getElementById('client-dashboard-view');
-  if (dv && dv.style.display !== 'none' && _dashboardJobId && document.getElementById('dash-fb')) return 'dash-fb';
+  var host = _jobBandHost();
+  if (host && document.getElementById(host.fb)) return host.fb;
   return fallbackId;
 }
 function generateHvlId() {
@@ -24545,10 +24733,30 @@ function renderInventoryTab() {
       + esc(_invThumbFailed[jobId]) + '. The records are all here; only the thumbnails are missing.</div>'
     : '';
 
+  // ⚠⚠ WHO, WHERE, AND WHAT NEXT, BEFORE ANYTHING ELSE (2026-09-22). Anthony: *"add client info
+  // like on job plan … to job admin tab. also, below that … the brown band with actions and the
+  // deposit & start timeline below."* The same header line the Job Plan carries, then the
+  // dashboard's own band — so the midpoint invoice is reminded here, where the day ends, and not
+  // only on a tab nobody opens mid-job.
+  var top = jobInfoHeaderHtml(job) + '<div id="jband-slot-admin">' + jobProgressBlockHtml(jobId, 'admin') + '</div>';
+  var closeout = (isJobWon(job) && estimateStore[jobId] && estimateStore[jobId].estimate) ? renderCloseoutCard(jobId, job, 'admin') : '';
+
+  // ⚠⚠ A HOME PREP JOB HAS NO INVENTORY, SO THIS TAB SHOWS NONE OF IT. Anthony, off the tab on a
+  // prep job: *"everything below job admin - desk paperwork is immaterial to a home prep job."*
+  // Measured before it was cut: the tab offered a Contents Record, a CSV, an Approval Request,
+  // + Add line item, an empty manifest and the whole appraiser roster — every one of them a
+  // document about property in a house whose contents are not ours to record. What a prep job
+  // does at the desk is the paperwork and the close, so that is all that renders.
+  if (job.svc === 'prep') {
+    cont.innerHTML = top + _sfHost('sf-host-desk', job) + renderJobAdmin(jobId, job) + closeout;
+    return;
+  }
+
   // The two intake questions above Job Admin: the desk names that evening's shots against
   // the must-find list, and can record a Found the crew phoned in.
-  cont.innerHTML = _sfHost('sf-host-desk', job)
+  cont.innerHTML = top + _sfHost('sf-host-desk', job)
     + renderJobAdmin(jobId, job)
+    + closeout
     + _renderInvWorkbar(job, all)
     + (all.length ? '<div id="inv-flagstrip">' + _renderInvFlagStrip(job, all) + '</div>' + _renderInvFilterRow(job, all) : '')
     + thumbNote
@@ -28356,6 +28564,7 @@ function loadJobPlanTab() {
   var empty = function(msg) {
     content.innerHTML = '<div class="tab-empty">' + msg + '</div>';
     var hdrEl = document.getElementById('job-plan-header'); if (hdrEl) hdrEl.innerHTML = '';
+    var bandEl = document.getElementById('jband-slot-plan'); if (bandEl) bandEl.innerHTML = '';
   };
   if (!jobId) {
     var ls = document.getElementById('plan-log-section');
@@ -28413,6 +28622,8 @@ function loadJobPlanTab() {
     return;
   }
   var est = estRec.estimate;
+  // Where the job stands and what to do next — the dashboard's own band, above the plan.
+  _repaintJobBand('plan', jobId);
 
   // Photo refs load BEFORE the plan is built, not after. The room cards render their
   // shot counts and their "not saved — Retry" flags out of _photoRefs, so loading it
@@ -28855,9 +29066,9 @@ var PLAN_TASKS = [
     label:'Home confirmed empty — every room, closet, attic, garage and outdoor space walked' },
   { key:'re_disclosed',       phase:'p4', sec:'Real estate handoff', when:function(c){ return c.re; }, label:'Real estate relationship disclosed in writing; client consents to the introduction' },
   { key:'re_handoff',         phase:'p4', sec:'Real estate handoff', when:function(c){ return c.re; }, label:'Warm handoff to Team Ashley &amp; Anthony made' },
-  { key:'satisfaction_call',  phase:'p4', sec:'Client', label:'Client satisfaction confirmed by phone — a call, not a text' },
-  { key:'review_ask',         phase:'p4', sec:'Client', label:'Google review requested, only after satisfaction is confirmed' },
-  { key:'referral_ask',       phase:'p4', sec:'Client', label:'Referral ask made' }
+  // (The 'Client' section — satisfaction call, Google review, referral ask — moved into the
+  // close-out card on 2026-09-22, which is on EVERY service and on both job tabs. The two tick
+  // keys survive there unchanged; the review box became a drafted email. See renderCloseoutBody.)
 ];
 
 // Desk paperwork. Rendered at the TOP of the Inventory tab, not on the Job Plan, because that
@@ -28871,7 +29082,8 @@ var JOB_ADMIN_TASKS = [
     label:'Sale, consignment and auction proceeds reconciled — amounts received confirmed and documented' },
   { key:'fin_settlement',        sec:'Financial close', when:function(c){ return c.isDisposal; },
     label:'Settlement timeline confirmed with any auction house or consignment vendor for proceeds not yet received' },
-  { key:'fin_donation_receipts', sec:'Financial close', label:'Donation receipts collected and filed for tax records' },
+  // A prep job sends nothing to donation — it is the realtor's house being made show-ready.
+  { key:'fin_donation_receipts', sec:'Financial close', when:function(c){ return c.svc !== 'prep'; }, label:'Donation receipts collected and filed for tax records' },
   // ⚠⚠ THE COMPLIANCE LIST IS KEYED ON WHICH INSTRUMENT THE ESTATE FEEDS AND ON WHAT WE ARE
   // CONTRACTED TO PRODUCE — never on the service type, which records what Havellin was HIRED to
   // do rather than what it promised. Keyed on `isProbate` it failed in both directions at once,
@@ -29061,13 +29273,20 @@ function planDerivedLines(jobId, job, est, phase) {
   // the same answers. What they do not share is the pair below, whose whole subject is the
   // §733.604 list that renders on the desk card alone.
   if (phase === 'p4' || phase === 'admin') {
+    // ⚠ A JOB WITH NO ROOMS ASKS NO ROOM QUESTION. Home Prep has no room grid at all, so this
+    // read "All rooms cleared — 0 of 0" as an open item on every prep job's desk card, forever:
+    // a line that can never go green is the one people learn to read past.
     var nC = roomsAt(PS_DONE_STATUSES);
-    out.push({ key: 'rooms_cleared', ok: rooms.length > 0 && nC === rooms.length, label: 'All rooms cleared', detail: nC + ' of ' + rooms.length });
+    if (rooms.length) out.push({ key: 'rooms_cleared', ok: nC === rooms.length, label: 'All rooms cleared', detail: nC + ' of ' + rooms.length });
+    // ⚠ AND A FEE-ONLY ENGAGEMENT LOGS NO HOURS. Prep with no declutter hours bills the fee alone
+    // and has no hours log on its plan, so "none yet — the final invoice cannot issue without
+    // them" was false twice over. estimateIsFeeOnly is the rule the invoice itself follows.
+    var feeOnly = estimateIsFeeOnly(est, job);
     var logs = jobLogEntries(jobId);
     var hrs = 0;
     logs.forEach(function(e){ ((e && e.members) || []).forEach(function(m){ hrs += Number(m && m.hours) || 0; }); });
     var estHrs = (Number(est.totTC) || 0) + (Number(est.totPS) || 0);
-    out.push({ key: 'hours_logged', ok: logs.length > 0, label: 'Hours logged',
+    if (!feeOnly) out.push({ key: 'hours_logged', ok: logs.length > 0, label: 'Hours logged',
                detail: logs.length ? (Math.round(hrs * 10) / 10) + ' hrs against ' + (Math.round(estHrs * 10) / 10) + ' estimated — the final invoice trues to the log' : 'none yet — the final invoice cannot issue without them' });
     var cos = (typeof changeOrders !== 'undefined' ? changeOrders : []).filter(function(c){ return c && c.jobId === jobId; });
     if (cos.length) {
@@ -29083,7 +29302,7 @@ function planDerivedLines(jobId, job, est, phase) {
     }
     var fin = !!docSentAt(job, 'invoice', 'final');
     out.push({ key: 'final_invoice_sent', ok: fin, label: 'Final invoice sent',
-               detail: fin ? 'sent' : 'from the Client Dashboard, once the hours are in' });
+               detail: fin ? 'sent' : 'the Next band at the top of this tab sends it' + (feeOnly ? '' : ', once the hours are in') });
     // ⚠⚠ THE TWO ANSWERS THAT DECIDE WHAT THE REST OF THIS CARD SAYS. Since 2026-09-21 the
     // Florida court list keys on the matter type and the engagement tier, so an EMPTY court
     // section is now ambiguous on its face: the desk cannot tell "this estate has no probate in
@@ -29123,8 +29342,14 @@ function planDerivedHtml(jobId, job, est, phase) {
 
 // ═══════════════════════ JOB ADMIN — the top of the Inventory tab ═══════════════════════
 var _jobAdminOpen = {};
+// Open by default on a prep job — there it is the tab's main business, not a fold above an
+// inventory — and shut by default everywhere else. A choice made by hand wins either way.
+function _jobAdminIsOpen(jobId, job) {
+  return (jobId in _jobAdminOpen) ? !!_jobAdminOpen[jobId] : !!(job && job.svc === 'prep');
+}
 function toggleJobAdmin(jobId) {
-  _jobAdminOpen[jobId] = !_jobAdminOpen[jobId];
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  _jobAdminOpen[jobId] = !_jobAdminIsOpen(jobId, job);
   renderInventoryTab();
 }
 function renderJobAdmin(jobId, job) {
@@ -29136,7 +29361,7 @@ function renderJobAdmin(jobId, job) {
   var done = tasks.filter(function(t){ return _planTaskDone(jobId, t.key); }).length;
   var derived = planDerivedLines(jobId, job, est, 'admin');
   var openLines = derived.filter(function(l){ return !l.ok; }).length;
-  var open = !!_jobAdminOpen[jobId];
+  var open = _jobAdminIsOpen(jobId, job);
   return '<div class="ja-card">'
     + '<div class="ja-hd" onclick="toggleJobAdmin(' + jobId + ')">'
       + '<span>' + (open ? '&#9662;' : '&#9656;') + '</span>'
@@ -29902,16 +30127,54 @@ function coordHrsRollup(job, est) {
 // which already holds every job's ratings.
 var VENDOR_RATING_WINDOW = 5;
 
+// ⚠⚠ EVERY VENDOR THE JOB ACTUALLY USED — ALL FOUR SOURCING BUCKETS. Until 2026-09-22 this read
+// `vendorSourcing` and `collSourcing` only, so a Home Prep job's painters, cleaners and stagers
+// (`prepSourcing`) and the end-of-job haulers (`logisticsSourcing`) could never be rated at all —
+// on a prep job the scorecard read "No vendors were assigned" over four confirmed trades.
+// Anthony: *"should we rate every vendor we use at the end of a job? shouldn't all the vendors
+// we used be here."*
+// ⚠ "USED" MEANS CONFIRMED. A line with a vendor picked and a quote requested that never went
+// ahead is a firm we did not use; making a rating of it mandatory would be asking for a score on
+// work nobody did. Collection partners carry no status, so an assigned one counts — the same
+// rule `vendorSourcingProgress` already applies to them.
+// ⚠ A VENDOR ON TWO LINES IS ONE ROW. A firm that painted AND pressure-washed is one relationship
+// and one score; the name comes off the record so a vendor that has left the directory still reads.
 function _assignedVendorsForJob(job) {
   var seen = {}, out = [];
-  function add(rec){
-    if (rec && rec.vendorId && !seen[rec.vendorId]) {
-      seen[rec.vendorId] = 1;
-      out.push({ vendorId: rec.vendorId, name: rec.vendorName || (lookupVendorById(rec.vendorId)||{}).vendor_name || 'Vendor' });
-    }
+  if (!job) return out;
+  function add(rec, needsConfirm) {
+    if (!rec || !rec.vendorId) return;
+    if (needsConfirm && rec.status !== 'Confirmed') return;
+    var id = String(rec.vendorId);
+    if (seen[id]) return;
+    seen[id] = 1;
+    out.push({ vendorId: rec.vendorId, name: rec.vendorName || (lookupVendorById(rec.vendorId)||{}).vendor_name || 'Vendor' });
   }
-  Object.keys(job.vendorSourcing||{}).forEach(function(k){ add(job.vendorSourcing[k]); });
-  Object.keys(job.collSourcing||{}).forEach(function(k){ add(job.collSourcing[k]); });
+  ['vendorSourcing', 'prepSourcing', 'logisticsSourcing'].forEach(function(b){
+    var src = job[b] || {};
+    Object.keys(src).forEach(function(k){ add(src[k], true); });
+  });
+  var cs = job.collSourcing || {};
+  Object.keys(cs).forEach(function(k){ add(cs[k], false); });
+  return out;
+}
+// The vendors on this job still without a score. The close gate and the card both ask this one
+// question, so they cannot disagree about who is outstanding.
+function unratedVendorsForJob(job) {
+  var r = (job && job.vendorRatings) || {};
+  return _assignedVendorsForJob(job).filter(function(v){ var x = r[v.vendorId]; return !(x && x.rating > 0); });
+}
+// ⚠⚠ RATINGS ARE MANDATORY — Anthony, 2026-09-22: *"ratings for vendors should be mandatory."*
+// Enforced where the job CLOSES, not where it renders: a scorecard nagging mid-job would be asking
+// for a verdict on work still in progress. It names who is outstanding and where to fix it,
+// because a refusal that names neither is the dead end this file records over and over.
+function jobCloseBlockers(j) {
+  var out = [];
+  var un = unratedVendorsForJob(j);
+  if (un.length) {
+    out.push('Rate every vendor used on this job — ' + un.length + ' not yet rated (' +
+      un.map(function(v){ return v.name; }).join(', ') + '). The scorecard is in the Close-out card on the Job Plan and on Job Admin & Inv.');
+  }
   return out;
 }
 function computeVendorAvg(vendorId) {
@@ -29929,32 +30192,35 @@ function computeVendorAvg(vendorId) {
 function renderVendorScorecard(jobId, job) {
   var vlist = _assignedVendorsForJob(job);
   if (!vlist.length) {
-    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No vendors were assigned under Vendors &amp; partners.</div>';
+    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No vendors were confirmed on this job, so there is nobody to rate.</div>';
   }
   var ratings = job.vendorRatings || {};
-  var rows = vlist.map(function(v){
+  return vlist.map(function(v){
     var rec = ratings[v.vendorId] || {};
     var cur = rec.rating || 0;
+    var vid = esc(String(v.vendorId));
     var stars = [1,2,3,4,5].map(function(n){
-      return '<span onclick="setVendorRating(' + jobId + ',\'' + esc(String(v.vendorId)) + '\',' + n + ')" ' +
+      return '<span class="co-star" onclick="setVendorRating(' + jobId + ',\'' + vid + '\',' + n + ')" ' +
         'style="cursor:pointer;font-size:20px;line-height:1;color:' + (n <= cur ? 'var(--bronze)' : 'var(--border-md)') + ';">★</span>';
     }).join('');
     var agg = computeVendorAvg(v.vendorId);
     var aggTxt = agg.count ? ('Rolling avg ' + agg.avg + ' (' + agg.count + ' job' + (agg.count!==1?'s':'') + ')') : 'No ratings yet';
-    return '<div style="border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:6px;">' +
+    var saved = !cur ? '<span style="color:var(--err-tx);font-weight:600;">Not rated — required to close the job</span>'
+      : rec.writtenAt ? '<span style="color:var(--ok-tx);">&#10003; Saved to the Vendor Directory</span>'
+      : rec.writeErr ? '<span style="color:var(--err-tx);">Rated here — not yet saved to the directory (' + esc(rec.writeErr) + ')</span>'
+      : '<span style="color:var(--gray);">Saving to the Vendor Directory…</span>';
+    return '<div class="co-vendor" style="border:1px solid ' + (cur ? 'var(--border)' : 'var(--err-tx)') + ';border-radius:5px;padding:10px 12px;margin-bottom:6px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
         '<strong style="font-size:12px;">' + esc(v.name) + '</strong>' +
         '<span style="font-size:11px;color:var(--gray);">' + aggTxt + '</span>' +
       '</div>' +
-      '<div style="margin-top:4px;">' + stars + '</div>' +
+      '<div style="margin-top:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">' + '<span>' + stars + '</span>' +
+        '<span style="font-size:11px;">' + saved + '</span></div>' +
       '<input type="text" value="' + esc(rec.note || '') + '" placeholder="Close-out note (on time? quality? issues?)" ' +
-        'onchange="setVendorRatingNote(' + jobId + ',\'' + esc(String(v.vendorId)) + '\',this.value)" ' +
+        'onchange="setVendorRatingNote(' + jobId + ',\'' + vid + '\',this.value)" ' +
         'style="width:100%;font-size:12px;margin-top:6px;box-sizing:border-box;">' +
     '</div>';
   }).join('');
-  return rows +
-    '<button class="btn-s" style="margin-top:8px;" onclick="writeVendorScores(' + jobId + ')">Write scores to vendor directory &rarr;</button>' +
-    '<span id="scorecard-status-' + jobId + '" style="font-size:11px;margin-left:8px;color:var(--gray);"></span>';
 }
 function _ratingJob(jobId, vendorId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -29963,44 +30229,232 @@ function _ratingJob(jobId, vendorId) {
   if (!job.vendorRatings[vendorId]) job.vendorRatings[vendorId] = {};
   return job;
 }
+// ⚠ A RATING SAVES ITSELF, TO THE JOB AND TO THE DIRECTORY. There used to be a separate "Write
+// scores to vendor directory" button after the stars, and a rating given and never pushed was a
+// score the Vendors tab never saw — the one place a concierge choosing a painter next month looks.
+// Now the star IS the save. `rateVendor` is idempotent (it writes the recomputed average), so it
+// rides the retry queue; a failure says so on the row rather than vanishing into a toast.
 function setVendorRating(jobId, vendorId, n) {
   var job = _ratingJob(jobId, vendorId); if (!job) return;
-  job.vendorRatings[vendorId].rating = n;
-  job.vendorRatings[vendorId].name = (lookupVendorById(vendorId)||{}).vendor_name || job.vendorRatings[vendorId].name || '';
-  saveJobs();
-  var el = document.getElementById('scorecard-' + jobId);
-  if (el) el.innerHTML = renderVendorScorecard(jobId, job);
+  var rec = job.vendorRatings[vendorId];
+  rec.rating = n;
+  rec.name = (lookupVendorById(vendorId)||{}).vendor_name || rec.name || '';
+  rec.ratedAt = _todayStr();
+  delete rec.writtenAt; delete rec.writeErr;
+  saveJobs(); syncJobToSheets(job);
+  _writeVendorScore(job, vendorId);
+  _repaintCloseout(jobId);
 }
 function setVendorRatingNote(jobId, vendorId, note) {
   var job = _ratingJob(jobId, vendorId); if (!job) return;
-  job.vendorRatings[vendorId].note = note; saveJobs();
+  job.vendorRatings[vendorId].note = note;
+  saveJobs(); syncJobToSheets(job);
+  if (job.vendorRatings[vendorId].rating > 0) _writeVendorScore(job, vendorId);
 }
-function writeVendorScores(jobId) {
-  var job = jobs.find(function(j){ return j.id===jobId; });
-  var status = document.getElementById('scorecard-status-' + jobId);
-  function say(msg, err){ if (status){ status.textContent = msg; status.style.color = err ? 'var(--err-tx)' : 'var(--ok-tx)'; } }
-  if (!job || !job.vendorRatings) { say('Rate a vendor first.', true); return; }
-  if (!VENDOR_SYNC_URL) { say('Set the Vendor Directory URL in Settings first.', true); return; }
-  var today = new Date().toISOString().slice(0,10);
-  var ids = Object.keys(job.vendorRatings).filter(function(id){ return job.vendorRatings[id].rating > 0; });
-  if (!ids.length) { say('Rate at least one vendor first.', true); return; }
-  if (status) { status.textContent = 'Writing…'; status.style.color = 'var(--gray)'; }
-  var done = 0, failed = 0, pending = ids.length;
-  ids.forEach(function(id){
-    var v = lookupVendorById(id) || {};
-    var rec = job.vendorRatings[id];
-    var agg = computeVendorAvg(id);
-    var payload = {
-      _row: v._row, vendor_name: v.vendor_name || rec.name || '',
-      performance_score: agg.avg, jobs_rated: agg.count, last_used: today,
-      note: (rec.note ? rec.note + ' ' : '') + (rec.rating ? '(★' + rec.rating + ')' : '')
-    };
-    fetch(VENDOR_SYNC_URL, { method:'POST', headers:{'Content-Type':'text/plain'}, body: JSON.stringify({ type:'rateVendor', payload: payload }) })
-      .then(function(r){ return r.json(); })
-      .then(function(d){ if (d && d.ok) done++; else failed++; })
-      .catch(function(){ failed++; })
-      .then(function(){ if (--pending === 0) say('Updated ' + done + ' in directory' + (failed?(' · ' + failed + ' failed'):'') + ' ✓', failed>0); });
+function _writeVendorScore(job, vendorId) {
+  var rec = job.vendorRatings && job.vendorRatings[vendorId];
+  if (!rec || !(rec.rating > 0)) return;
+  if (!VENDOR_SYNC_URL) { rec.writeErr = 'no Vendor Directory URL in Settings'; _repaintCloseout(job.id); return; }
+  var v = lookupVendorById(vendorId) || {};
+  var agg = computeVendorAvg(vendorId);
+  var payload = {
+    _row: v._row, vendor_name: v.vendor_name || rec.name || '',
+    performance_score: agg.avg, jobs_rated: agg.count, last_used: _todayStr(),
+    note: (rec.note ? rec.note + ' ' : '') + '(★' + rec.rating + ')'
+  };
+  queuedDirectoryWrite('vendor', { type: 'rateVendor', payload: payload }, function(ok, d, queued){
+    if (ok) { rec.writtenAt = new Date().toISOString(); delete rec.writeErr; }
+    else rec.writeErr = queued ? 'queued, retrying' : ((d && d.error) || 'failed');
+    saveJobs();
+    _repaintCloseout(job.id);
+  }, function(){ rec.writtenAt = new Date().toISOString(); delete rec.writeErr; saveJobs(); _repaintCloseout(job.id); });
+}
+
+// ═══════════════════════════ CLOSE-OUT (2026-09-22) ═══════════════════════════
+// Anthony: *"shouldn't we close out with asking for a client review on google or something? job
+// closeout needs work too."* The close-out was three checkboxes and a scorecard at the foot of the
+// Job Plan's last stage, and a Home Prep job had none of it at all — no call, no review ask, no
+// scorecard. It is one card now, on EVERY service, on the Job Plan and on Job Admin & Inv (his
+// answer to where: *"Job Plan. and Admin."*), in the order it is done:
+//   1. the satisfaction call — a call, not a text — which unlocks
+//   2. the Google review request, an email drafted in the sender's own Gmail like every other
+//      client email (*"lets' email like we do invoices"*), then
+//   3. the referral ask, and
+//   4. the vendor scorecard, which is required before the job can close.
+// ⚠ THE REVIEW ASK WAITS ON THE CALL, and that is the whole reason it is ordered. A review request
+// that lands before anybody has checked the client is happy is how a business collects its one-star
+// reviews; the box used to say "only after satisfaction is confirmed" and enforced nothing.
+var GOOGLE_REVIEW_URL = 'https://g.page/r/CcQOjVMdHUcnEBM/review';
+
+// ⚠ THE TICKS ARE PLAN TASKS, SO THEY RIDE THE PLAN'S PER-KEY MERGE. `satisfaction_call` and
+// `referral_ask` keep the keys the Job Plan's Close-out stage used, so a tick made there before
+// today still reads ticked here.
+var CLOSEOUT_TASK_KEYS = { satisfaction_call: 1, referral_ask: 1, review_posted: 1 };
+
+function closeoutState(jobId, job) {
+  var sat = _planTaskDone(jobId, 'satisfaction_call');
+  var ra = (job && job.reviewAsk) || {};
+  var vendors = _assignedVendorsForJob(job);
+  var unrated = unratedVendorsForJob(job);
+  return {
+    sat: sat,
+    reviewDrafted: !!ra.draftedAt, reviewSent: !!ra.sentAt,
+    reviewPosted: _planTaskDone(jobId, 'review_posted'),
+    referral: _planTaskDone(jobId, 'referral_ask'),
+    vendors: vendors.length, rated: vendors.length - unrated.length
+  };
+}
+function closeoutMeta(jobId, job) {
+  var c = closeoutState(jobId, job);
+  var steps = [c.sat, c.reviewSent, c.referral].filter(Boolean).length;
+  return steps + ' of 3 done' + (c.vendors ? ' &middot; ' + c.rated + ' of ' + c.vendors + ' vendors rated' : '');
+}
+
+function _coFmt(iso) { return iso ? fmtDate2(String(iso).slice(0, 10)) : ''; }
+
+function renderCloseoutBody(jobId, job) {
+  var c = closeoutState(jobId, job);
+  var ra = job.reviewAsk || {};
+  var num = function(n, done){ return '<span class="co-num' + (done ? ' co-num-done' : '') + '">' + (done ? '&#10003;' : n) + '</span>'; };
+  var review;
+  if (!c.sat) {
+    review = '<div class="co-sub">Unlocks once the satisfaction call is ticked — a review request goes only to a client we know is happy.</div>'
+      + '<button class="btn-s" disabled>&#9993; Draft review request</button>';
+  } else if (!c.reviewDrafted) {
+    review = '<div class="co-sub">Drafts a short thank-you with the Google review link in your own Gmail, to ' + esc(bestClientEmail(job) || 'the client (no email on file — Edit Client)') + '. You read it and send it.</div>'
+      + '<button class="btn-p" style="font-size:11px;padding:6px 12px;" onclick="draftReviewRequest(' + jobId + ')">&#9993; Draft review request</button>';
+  } else if (!c.reviewSent) {
+    review = '<div class="co-sub">Drafted ' + esc(_coFmt(ra.draftedAt)) + (ra.via === 'mailto' ? ' as a plain email' : ' in Gmail') + ' — read it, send it, then confirm.</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+      + '<button class="btn-p" style="font-size:11px;padding:6px 12px;" onclick="markReviewRequestSent(' + jobId + ')">&#10003; I&rsquo;ve sent it</button>'
+      + (ra.draftUrl ? '<button class="btn-s" onclick="window.open(\'' + esc(ra.draftUrl) + '\',\'_blank\')">Open draft</button>' : '')
+      + '<button class="btn-s" onclick="draftReviewRequest(' + jobId + ')">Draft again</button></div>';
+  } else {
+    review = '<div class="co-sub">Requested ' + esc(_coFmt(ra.sentAt)) + '. Tick it once the review appears on Google.</div>'
+      + chkGrid(planChk(jobId, 'review_posted', 'Review posted on Google'));
+  }
+  var scoreHd = c.vendors
+    ? '<span style="color:' + (c.rated === c.vendors ? 'var(--ok-tx)' : 'var(--err-tx)') + ';font-weight:600;">' + c.rated + ' of ' + c.vendors + ' rated</span> &middot; required before the job can close'
+    : 'nobody to rate';
+  return '<div class="co-step">' + num(1, c.sat) + '<div class="co-main"><div class="co-ttl">Satisfaction call</div>'
+      + chkGrid(planChk(jobId, 'satisfaction_call', 'Client satisfaction confirmed by phone — a call, not a text')) + '</div></div>'
+    + '<div class="co-step">' + num(2, c.reviewSent) + '<div class="co-main"><div class="co-ttl">Google review</div>' + review + '</div></div>'
+    + '<div class="co-step">' + num(3, c.referral) + '<div class="co-main"><div class="co-ttl">Referral ask</div>'
+      + chkGrid(planChk(jobId, 'referral_ask', 'Referral ask made — who else could use us?')) + '</div></div>'
+    + '<div class="co-step">' + num(4, c.vendors > 0 && c.rated === c.vendors) + '<div class="co-main"><div class="co-ttl">Vendor scorecard <span class="co-meta">' + scoreHd + '</span></div>'
+      + '<div class="co-sub">One to five stars on every vendor used. Each rating saves straight to the Vendor Directory&rsquo;s rolling score.</div>'
+      + renderVendorScorecard(jobId, job) + '</div></div>';
+}
+// `host`: 'plan' or 'admin' — two copies can be in the DOM at once (both tabs are panels), so each
+// carries its own id and a repaint reaches both.
+function renderCloseoutCard(jobId, job, host) {
+  return '<div class="card co-card" style="margin-bottom:1rem;">'
+    + '<div class="co-hd"><span class="co-hd-t">Close-out</span><span class="co-hd-m" id="closeout-meta-' + host + '-' + jobId + '">' + closeoutMeta(jobId, job) + '</span></div>'
+    + '<div id="closeout-' + host + '-' + jobId + '">' + renderCloseoutBody(jobId, job) + '</div></div>';
+}
+function _repaintCloseout(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  ['plan', 'admin'].forEach(function(host){
+    var el = document.getElementById('closeout-' + host + '-' + jobId);
+    if (el) el.innerHTML = renderCloseoutBody(jobId, job);
+    var m = document.getElementById('closeout-meta-' + host + '-' + jobId);
+    if (m) m.innerHTML = closeoutMeta(jobId, job);
   });
+}
+
+// ── The review request email. Same Gmail-draft route as every other client email: it lands in
+// the SENDER'S OWN mailbox, they read it and send it, and replies come back to them.
+function reviewEmailSubject(job) { return 'Thank you from Havellin Palm Beach'; }
+// ⚠ ON A DECEDENT JOB THE HOUSE IS NOT THE READER'S. The email goes to the representative (see
+// bestClientEmail), so it says "the property", never "your home" — the rule every estate document
+// in this file follows.
+function _reviewPlace(job) {
+  var street = String((job && job.addr) || '').split(',')[0].trim();
+  if (isDecedentJob(job)) return street ? 'the property at ' + street : 'the property';
+  return street ? 'your home at ' + street : 'your home';
+}
+function buildReviewEmailText(job) {
+  return ['Dear ' + bestClientGreetingName(job) + ',', '',
+    'Thank you for trusting Havellin Palm Beach with ' + _reviewPlace(job) + '. It was a privilege to help.', '',
+    'If you were pleased with our work, a short Google review would mean a great deal to us — it is how families find a firm they can trust with something this personal:',
+    GOOGLE_REVIEW_URL, '',
+    'Thank you again.'].join('\n');
+}
+function buildReviewEmailHtml(job) {
+  var B = EMAIL_BRAND;
+  return '' +
+  '<div style="margin:0;padding:0;background:#f4f1ea;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">' +
+  '<tr><td align="center" style="padding:24px 12px;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ' + B.line + ';">' +
+  '<tr><td style="background:' + B.ink + ';padding:26px 22px;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:23px;letter-spacing:.16em;color:#ffffff;text-transform:uppercase;">Havellin</div>' +
+    '<div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:' + B.bronzeLt + ';margin-top:5px;">Palm Beach</div>' +
+  '</td></tr>' +
+  '<tr><td style="padding:26px 22px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:' + B.ink + ';line-height:1.6;">' +
+    'Dear ' + _emHtml(bestClientGreetingName(job)) + ',<br><br>' +
+    'Thank you for trusting Havellin Palm Beach with ' + _emHtml(_reviewPlace(job)) + '. It was a privilege to help.<br><br>' +
+    'If you were pleased with our work, a short Google review would mean a great deal to us &mdash; it is how families find a firm they can trust with something this personal.' +
+  '</td></tr>' +
+  '<tr><td align="center" style="padding:22px 22px 4px;">' +
+    '<a href="' + _emHtml(GOOGLE_REVIEW_URL) + '" style="display:inline-block;background:' + B.bronzeDk + ';color:#ffffff;text-decoration:none;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:bold;letter-spacing:.04em;padding:12px 24px;border-radius:4px;">Leave a Google review</a>' +
+  '</td></tr>' +
+  '<tr><td style="padding:18px 22px 26px;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:' + B.ink + ';line-height:1.6;">' +
+    // No signature — Gmail appends the sender's own. See buildInvoiceEmailHtml.
+    'Thank you again.' +
+  '</td></tr>' +
+  '</table></td></tr></table></div>';
+}
+function _reviewMailtoUrl(job) {
+  var tc = assignedTCContact(job);
+  // ⚠ The mailto fallback keeps a signature, deliberately — it fires exactly when Gmail is NOT in
+  // play, so there is nothing to append one. The same rule as the other three emails.
+  var body = buildReviewEmailText(job) + '\n\n' + tc.name + '\nHavellin Palm Beach\n' + conciergePhonesText(tc, '\n');
+  return 'mailto:' + encodeURIComponent(bestClientEmail(job)) + '?subject=' + encodeURIComponent(reviewEmailSubject(job))
+    + '&body=' + encodeURIComponent(body);
+}
+function _coNotice(jobId, type, msg) {
+  // The close-out card is on the Job Plan and on Job Admin; the band's strip on whichever is
+  // showing is where the message lands.
+  if (typeof dashNotice === 'function') { dashNotice(type, msg); if (!_dashRedraw(jobId)) alert(msg); }
+  else alert(msg);
+}
+function draftReviewRequest(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return;
+  // ⚠ The button is disabled until the call is ticked; this refuses as well, so the rule cannot be
+  // reached around by a stale render.
+  if (!_planTaskDone(jobId, 'satisfaction_call')) { _coNotice(jobId, 'warn', 'Confirm the client is satisfied by phone first — tick the satisfaction call.'); return; }
+  var to = bestClientEmail(job);
+  if (!to) { _coNotice(jobId, 'warn', 'No client email on this job — add one under Edit Client first.'); return; }
+  function record(url, via) {
+    job.reviewAsk = { draftedAt: new Date().toISOString(), draftUrl: url || '', via: via, by: _actor(job) || '' };
+    saveJobs(); syncJobToSheets(job);
+    _repaintCloseout(jobId);
+  }
+  function viaMailto(why) {
+    try { window.location.href = _reviewMailtoUrl(job); } catch (e) {}
+    record('', 'mailto');
+    _coNotice(jobId, 'warn', (why ? why + ' — ' : '') + 'opened a plain email instead. Send it, then tap “I’ve sent it”.');
+  }
+  if (!gmailConfigured()) { viaMailto(''); return; }
+  var mime = buildMimeMessage({ to: to, subject: reviewEmailSubject(job), text: buildReviewEmailText(job), html: buildReviewEmailHtml(job) });
+  gmailCreateDraft(mime, function(ok, d) {
+    if (!ok) { viaMailto('Gmail draft failed (' + ((d && d.error) || 'unknown error') + ')'); return; }
+    var url = gmailDraftUrl(d.messageId);
+    record(url, 'gmail');
+    _coNotice(jobId, 'ok', 'Review request drafted in ' + (_gmailUserEmail || 'your Havellin mailbox') + '. Read it, send it, then tap “I’ve sent it”.');
+    try { window.open(url, '_blank'); } catch (e) {}
+  });
+}
+function markReviewRequestSent(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || !job.reviewAsk || !job.reviewAsk.draftedAt) return;
+  job.reviewAsk.sentAt = new Date().toISOString();
+  job.reviewAsk.sentBy = _actor(job) || '';
+  saveJobs(); syncJobToSheets(job);
+  _repaintCloseout(jobId);
 }
 
 // ─── VENDORS TAB (intake + vetting console) ───────────────────────────────────
@@ -31970,7 +32424,7 @@ function renderPrepJobPlan(jobId, job, est) {
   // Order (Anthony, 2026-09-22): the hours log (parked above this container by the loader),
   // then the checklist, then the two folds. The checklist is what gets worked; the folds are
   // reference.
-  return checklistCard + budgetCard + sourcingCard;
+  return checklistCard + budgetCard + sourcingCard + renderCloseoutCard(jobId, job, 'plan');
 }
 
 // Documentation rigor: 'standard' (reasonable estimates, dealer/auction assessments)
@@ -32334,8 +32788,10 @@ function renderJobPlan(jobId, job, est) {
   // ── Close-out ────────────────────────────────────────────────────────────────────────
   var p4 = planDerivedHtml(jobId, job, est, 'p4') +
     planTasksHtml(jobId, 'p4', ctx) +
-    planSubsec('Vendor Scorecard') +
-    '<div id="scorecard-' + jobId + '">' + renderVendorScorecard(jobId, job) + '</div>' +
+    // The client half of the close — the call, the review ask, the referral ask and the required
+    // vendor scorecard — is ONE renderer, shared with Job Admin & Inv. See renderCloseoutBody.
+    planSubsec('Client &amp; vendors') +
+    '<div id="closeout-plan-' + jobId + '">' + renderCloseoutBody(jobId, job) + '</div>' +
     '<div style="font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5;">Financial close' + (isProbate ? ', the §733.604 filing list' : '') +
       ' and records are desk work: they are under <strong>Job Admin</strong>, at the top of the <strong>Job Admin &amp; Inv</strong> tab.</div>';
 
@@ -32402,6 +32858,9 @@ function togglePlanTask(jobId, key, checked, el) {
   var label = el ? el.parentElement : null;
   while (label && label.tagName !== 'LABEL') label = label.parentElement;
   if (label && label.classList) label.classList.toggle('plan-chk-done', !!checked);
+  // The close-out card's steps gate on each other (the review ask waits on the call), so a tick
+  // there repaints the card rather than only restyling the box.
+  if (CLOSEOUT_TASK_KEYS[key]) _repaintCloseout(jobId);
 }
 
 // ⚠⚠ PRINT JOB PLAN IS RETIRED (2026-09-11). `printJobPlan` and `_jpExpandForPrint` are

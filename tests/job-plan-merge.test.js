@@ -197,7 +197,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['_planTouch', 'getJobPlan', 'saveJobPlan', 'savePlanNote', 'setRoomStatus',
             'setCollStatus', 'togglePlanTask', 'roomStatusNormalize'],
-      vars: ['jobPlanStore', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
+      vars: ['jobPlanStore', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'CLOSEOUT_TASK_KEYS'],
       stubs: { postSyncBadge() {}, renderProjection() {}, renderPlanTaskState() {},
                document: { getElementById() { return null; } } },
     });

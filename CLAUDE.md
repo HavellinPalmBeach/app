@@ -85,7 +85,7 @@ icloud account open on her computer so the email was sent from her personal iclo
     on the marker sliced through to `createDriveFolderNow` and swallowed the whole of `createDriveJobFolder`
     — which legitimately syncs the folder URL. **The claim is about the MARKER, not the function it sits
     above.** Bounded.
-- **Verified end to end in headless Chromium, `tests/browser/step15.js`, 32 checks, 0 failed, 0 page
+- **Verified end to end in headless Chromium, `tests/browser/step16.js`, 32 checks, 0 failed, 0 page
   errors**, driving the real intake form, the real bar, the real handler and the real email route:
 
   | | old build | now |
@@ -99,8 +99,11 @@ icloud account open on her computer so the email was sent from her personal iclo
   | with no Gmail configured | silent `mailto:` | `mailto:` **plus** *CHECK THE FROM ADDRESS before you send* |
   | overflow 1440 · 390 · page errors | — | **0 · 0 · 0** |
 
-  Steps 1–14 re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25**,
-  0 failed — **584 checks across the fifteen**, and `run.sh`'s default list is now 1–15. The first `<style>`
+  ⚠ **A CONCURRENT SESSION LANDED ITS OWN `step15.js` WHILE THIS WAS IN FLIGHT**, so this one is **step 16**;
+  the merge conflicted on the build stamp, that file, and three pinned `fns:`/`vars:` lists, and every one
+  resolved as a UNION rather than a choice (their `jt*` renderers plus this build's register). Steps 1–15
+  re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42**,
+  0 failed — **626 checks across the sixteen**, and `run.sh`'s default list is now 1–16. The first `<style>`
   block is **byte-identical to HEAD at 93,431 bytes / 1,168 lines / 635 rules** — no CSS — and the app diff
   is **109 insertions against 6 deletions**.
 - **⚠⚠ THE MANUAL HAD BEEN DESCRIBING THE PRE-2026-09-11 BEHAVIOUR FOR ELEVEN DAYS, AND THE DOCUMENTATION
@@ -124,6 +127,86 @@ icloud account open on her computer so the email was sent from her personal iclo
   what pressing it sends before agreeing it is harmless.**
 
 # Havellin Palm Beach — App Notes
+
+## ⚠⚠ CLOSE-OUT ON EVERY JOB, THE BAND ON BOTH JOB TABS, AND A PREP JOB'S DESK (BUILT 2026-09-22)
+Anthony, off Job Admin & Inv on a Home Prep job: *"this needs to be massively re-worked. everything below job
+admin - desk paperwork is immaterial to a home prep job. also, should we rate every vendor we use at the end of a
+job? shouldn't all the vendors we used be here … shouldn't we close out with asking for a client review on google
+or something? job closeout needs work too."* Asked four questions back, he answered: the review link
+(`https://g.page/r/CcQOjVMdHUcnEBM/review`), *"lets' email like we do invoices"*, *"ratings for vendors should be
+mandatory"*, close-out on *"Job Plan. and Admin."* — plus the client header on Job Admin and *"the brown band with
+actions and the deposit & start timeline below … a place in job plan and admin to see job progress and get a
+reminder for the mid point invoice."* App-only, no redeploy.
+
+- **⚠⚠ THE SCORECARD READ TWO OF THE FOUR SOURCING BUCKETS.** `_assignedVendorsForJob` walked `vendorSourcing`
+  and `collSourcing` only, so **prep trades (`prepSourcing`) and end-of-job haulers (`logisticsSourcing`) could
+  never be rated** — a prep job read *"No vendors were assigned"* over four confirmed trades. All four now.
+  **"Used" means `status === 'Confirmed'`** on the three statused buckets (a firm that only quoted did no work to
+  rate); a collection partner counts when assigned, the rule `vendorSourcingProgress` already uses. One row per
+  firm however many lines it is on. Reverting the buckets fails **20**, the confirmed-only rule 7.
+- **⚠⚠ RATINGS ARE MANDATORY AT THE CLOSE, NOWHERE ELSE.** `jobCloseBlockers` is read by `applyJobTransition` on
+  `next === 'closed'` and names who is unrated and where the card is. Mid-job nothing nags (a verdict on work in
+  progress is not a rating), activation is not gated, and **re-opening a closed job is not gated**. Reverting fails 5.
+- **⚠ A STAR SAVES ITSELF.** `writeVendorScores` and its button are DELETED — a rating given and never pushed was a
+  score the Vendors tab never saw. `setVendorRating` writes the job (`saveJobs(); syncJobToSheets`) and fires
+  `rateVendor` through **`queuedDirectoryWrite`** (it is on `IDEMPOTENT_DIR_WRITES`, so it retries); the row says
+  *Saved to the Vendor Directory* / *not yet saved (reason)* — never silent. Reverting the write fails 3.
+- **THE CLOSE-OUT CARD — `renderCloseoutBody` / `renderCloseoutCard(jobId, job, host)`, ONE RENDERER, TWO HOSTS.**
+  Satisfaction call → Google review email → referral ask → vendor scorecard, numbered, in the order done. On the
+  labour Job Plan it replaces the old `Client` section + scorecard inside the Close-out stage; on the prep plan it is
+  a card after the folds (prep had **none** of it before); on Job Admin & Inv it sits under Job Admin on every
+  service. Ids are `closeout-plan-<id>` / `closeout-admin-<id>` because both tab panels are in the DOM at once;
+  `_repaintCloseout` repaints both. The three `Client` PLAN_TASKS are **gone from the catalogue**; the
+  `satisfaction_call` / `referral_ask` keys survive on the card (`CLOSEOUT_TASK_KEYS`), so old ticks still read.
+  - **⚠⚠ THE REVIEW ASK WAITS ON THE CALL.** Disabled in the card AND refused in `draftReviewRequest` until
+    `satisfaction_call` is ticked — the old box said *"only after satisfaction is confirmed"* and enforced nothing.
+    `togglePlanTask` repaints the card on a close-out key, or the button would not unlock. Reverts fail 3 / 4 / 1.
+  - **THE EMAIL IS THE INVOICE ROUTE:** a Gmail DRAFT in the sender's own mailbox (`buildMimeMessage` +
+    `gmailCreateDraft`), recorded as `job.reviewAsk.draftedAt`; **a draft is not a send** — *I've sent it* writes
+    `sentAt`, then *Review posted on Google* is a tick (`review_posted`). mailto fallback when Gmail is not set up;
+    it keeps a signature (nothing appends one), the Gmail body does not. **On a decedent job it says "the property",
+    never "your home"** — it goes to the representative via `bestClientEmail`. Reverting that fails 1.
+- **⚠⚠ THE BAND AND TRACK ARE SHARED RENDERERS NOW — `jtBandHtml` / `jtTrackHtml` / `jtRailHtml` / `_jtAtFmt` /
+  `_jtStateCls` — extracted from `renderClientDashboard`, which calls them.** Three screens drawing one state
+  machine is where a second band starts disagreeing with the first. `jobProgressBlockHtml(jobId, host)` builds the
+  job-page block: the same `jobTimeline` rows, the full band, and **only `jtWorkRows(rows)`** — the leg after
+  `JT_LEG_BREAK`, headed *Deposit & Start* (the first leg is over once the job is won). Slots `#jband-slot-plan`
+  (Job Plan markup, painted in `loadJobPlanTab` past the won gate, cleared in `empty()`) and `#jband-slot-admin`
+  (inside `renderInventoryTab`). `.jband .jt` drops the rail's top rule — there is no section heading above it.
+- **⚠⚠ `_jobBandHost()` IS THE ONE ANSWER TO "WHICH SCREEN IS SHOWING A BAND", AND IT ASKS THE JOB TABS FIRST.**
+  `client-dashboard-view` keeps its inline `display:block` when you leave for another tab (only
+  `showPanel('jobs')` resets it), so a dashboard left open on Butler used to answer `_agrJob()` for a payment
+  recorded on Ellsworth's Job Plan. `_agrJob`, `_dashFbTarget`, `_dashRedraw`, `_docNotice` and `_dashSendState`
+  all read it; on a job tab `_dashRedraw` repaints **only the band**, never the tab (the Job Plan's innerHTML write
+  destroys the hours form). `activateOrCycle` repaints the host and falls back to the dashboard. Reverting the
+  order fails 4; the browser drives the real nav with a stale dashboard left open.
+- **⚠⚠ A HOME PREP JOB'S DESK HAS NO INVENTORY.** `renderInventoryTab`'s prep arm renders the client header
+  (`jobInfoHeaderHtml`), the band, Job Admin (**open by default on prep**, `_jobAdminIsOpen`; a hand toggle wins)
+  and the close-out, and returns. The desk card stopped asking prep impossible questions: `rooms_cleared` only
+  when there are rooms (it read *0 of 0* forever), `hours_logged` not on a fee-only engagement, and
+  `fin_donation_receipts` has `when: svc !== 'prep'`. The *Final invoice sent* line points at the Next band.
+  - **⚠ `jobInfoHeaderHtml` renames the schedule strip's id to `admin-sched`**: `_repaintHoursReadouts` finds
+    `#plan-sched` by id and `panel-inventory` precedes `panel-job-plan` in the DOM, so a duplicate id would repaint
+    the wrong one.
+- **9923 committed checks** (`tests/job-closeout.test.js` new at 132; ~20 pinned `fns:` lists and five byte-sequence
+  pins restated onto the shared renderers — `dashboard-actions`, `job-timeline`, `field-capture`,
+  `intake-house-flags` (six `_sfHost` call sites now: the prep arm is its own), `job-desk-scope`). **Revert sweep on a
+  tar copy of the tree, every change red** — see the counts above.
+- **Verified in headless Chromium, `tests/browser/step15.js (renumbered from step14 on the merge — the concurrent session took 14)`, 42 checks, 0 failed, 0 page errors**, with a
+  dashboard deliberately left open on another client: the Job Plan band reads *Midpoint invoice sent* with *Send
+  midpoint invoice* its one filled button, the track starts at DEPOSIT & START and draws no Intake, the review
+  button is disabled until the real checkbox is ticked, closing with two trades unrated is refused naming them,
+  two real star clicks rate them and the job closes, Job Admin on the prep job carries header → band → desk →
+  close-out and **no** Contents Record / Approval Request / line items / appraisers / 0-of-0 / hours / donations,
+  a labour job keeps its inventory, overflow **0** on both tabs at 1440 and 390, and the leg is the vertical rail
+  at 390. `run.sh`'s default list is 1–15.
+- Manual **§10a** (the top of the tab; prep has no inventory) and **§11** (the Close-out stage row; the Close-out
+  card note; the band on the Job Plan). Playbook **Step 10** (the band), **Step 13** (the four close-out steps and
+  two `.stop`s), the **Home Prep** short version (a seventh step) and **four** symptom rows. Both `.md` copies
+  hand-edited; tag balance clean with the stylesheet stripped; rendered at 1440/390 with 0 overflow, 0 page errors.
+- **⚠ NOT BUILT: a per-key merge for `job.vendorRatings` / `job.reviewAsk`.** They ride the job's newer-record-wins
+  scalar merge (a backend `JOB_KEYED_MAPS` entry would need a redeploy). Two people rating different vendors on the
+  same job on two devices within one sync can lose one rating; the close gate would then name it again.
 
 ## ⚠⚠ A DELIVERED, FULLY PAID JOB COULD STILL BE MARKED LOST (FIXED 2026-09-22)
 Anthony, off the client list: *"after we won the client and have completed the job, the 'x' at the end of

@@ -63,7 +63,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     has(noComments(fn('applyJobTransition')), 'j.deliveredOn = _todayStr();',
         'and the delivery stamp reads it rather than rolling its own UTC date');
-    lacks(noComments(fn('applyJobTransition')), "toISOString().split('T')[0]",
+    lacks(noComments(fn('applyJobTransition')), "toISOString().split('T')[0, 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf']",
           'the UTC form is gone from the transition');
   }
 
@@ -370,7 +370,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
-      'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent'];
+      'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls'];
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
@@ -580,7 +580,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const t = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', '_actor', 'isJobFunded',
                               'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'isAgreementSigned',
-                              'agreementSignature', '_todayStr'],
+                              'agreementSignature', '_todayStr', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf'],
                         vars: ['JOB_TRANSITIONS'],
                         stubs: { agrApprovedBy: '', approvedBy: 'Anthony Graziano' } });
     const j = { id: 7, status: 'won', won: true, agrSigned: true, depositReceived: true,

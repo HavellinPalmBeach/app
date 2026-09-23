@@ -243,7 +243,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
               '_planTaskDone', 'planDerivedLines', 'planDerivedHtml', 'planTaskSectionsHtml',
               'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
               'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
-              'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
+              'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', '_jobAdminIsOpen'],
         vars: ['DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore',
                'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
                'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
@@ -292,13 +292,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['planDerivedLines', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
             '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
-            'docTierProduces', 'svcHasDocStep'],
+            'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs'],
       vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
              'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
              'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: { isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [],
-               stagePaidTotal: () => 0, _photoRefs: { 7: [] } },
+               stagePaidTotal: () => 0, _photoRefs: { 7: [] },
+               // A room on the record — since 2026-09-22 a job with NO rooms (Home Prep) is asked no room question.
+               estimateStore: { 7: { estimate: { rooms: [{ idx: 0, name: 'Kitchen' }] } } } },
     });
     // ⚠ planTaskCtx takes the ESTIMATE's service over the job's, so the fixture has to move
     // both together or it measures a Home Editing job wearing an estate estimate.

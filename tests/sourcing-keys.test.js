@@ -134,8 +134,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['renderPrepJobPlan', 'planPhaseWrap', 'secCaret', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
             'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt',
             // The prep plan carries the firearms banner since 2026-09-20.
-            'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf'],
-      vars: ['EST_TOLERANCE_PCT', '_planOpenPhases', 'PREP_FEE_RATE', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
+            'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'planChk', '_planTaskDone', 'esc'],
+      vars: ['EST_TOLERANCE_PCT', '_planOpenPhases', 'PREP_FEE_RATE', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'jobPlanStore', 'VENDOR_RATING_WINDOW'],
       stubs: { document: { getElementById: () => null }, esc: (v) => String(v == null ? '' : v),
                standingFlagsBlock: () => '', _sfHost: () => '', planChk: () => '', renderVendorSourcing: () => '',
                vendorDirectory: [] },
