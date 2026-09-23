@@ -31,7 +31,7 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
     const navR = document.querySelector('.nav').getBoundingClientRect();
     return { bs, gapW: Math.round(gap.width), navR: Math.round(navR.right), navL: Math.round(navR.left) };
   });
-  // ⚠ RESTATED 2026-09-23 (step 18): Win / Loss left the nav the same day, for a row of tiles on the
+  // ⚠ RESTATED 2026-09-23 (step 19): Win / Loss left the nav the same day, for a row of tiles on the
   // Client Dashboard. Six tabs, and the gap moves one index to the left with it.
   eq(nav.bs.map((x) => x.t), ['Client Dashboard', 'Job Plan', 'Job Admin & Inv', 'Contractors', 'Vendors', 'Referral Partners'],
     'six tabs, in order — no Win / Loss, no Client Intake, no Build Estimate');

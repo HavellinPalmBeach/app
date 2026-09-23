@@ -64,10 +64,10 @@ the need for all of the big job type buttons. Make sense?"* App-only, no redeplo
     anywhere else; a triangle on a heading would read as something that expands.
 - **Field mode leaves the row off** (`body.field-mode #wl-block{display:none}`) — the report was never a field tab. The
   toggle's tooltip says **six** tabs.
-- **10,402 committed checks** (+232) (`tests/client-list.test.js` new at 148; `win-loss.test.js` rewritten around the
+- **10,440 committed checks after the merge** (+232 from this build; `tests/client-list.test.js` new at 148; `win-loss.test.js` rewritten around the
   row at 139; `tabs-retired`, `dashboard-screens`, `closeout-gate`, `deleted-jobs` restated rather than deleted).
   **The revert sweep — 92 reverts, one change at a time, on four parallel tar copies of the tree — was still running when this was committed; its result is recorded in the next commit, the shape `cb98980` set.** Before it started, the checks it would need were written first: every Win / Loss cell driven with markup, the unread list heading carrying no count, the open/shut row and the shared list wrapper, one client reading *1 client*, and the spacing rule stated as a relation to the tile grid's own gap rather than as pixels.
-- **Verified end to end in headless Chromium, `tests/browser/step18.js`, 58 checks, 0 failed, 0 page errors**,
+- **Verified end to end in headless Chromium, `tests/browser/step19.js` (numbered 19 on the merge — the concurrent session took 18), 58 checks, 0 failed, 0 page errors**,
   driving the real nav, real clicks on both tiles, real clicks on all six filters and the headings, a real row into a
   client and back, and **a keyboard Enter on the focused Lost tile**:
 
@@ -86,7 +86,8 @@ the need for all of the big job type buttons. Make sense?"* App-only, no redeplo
   | overflow 1440 · 390, both lists open | **0 · 0**, two tiles across at 390 |
 
   `tests/browser/step17.js` restated for six tabs (the gap moves one index left, the toggle says six); `run.sh`'s default
-  list is 1–18; steps 1–17 re-run as regressions: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52**, 0 failed — **736 checks across the eighteen**.
+  list is 1–19; steps 1–18 re-run as regressions **on the merged tree**: **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 /
+  48 / 30 / 15 / 25 / 42 / 32 / 52 / 27**, 0 failed — **763 checks across the nineteen**.
 - Manual **§1** (the nav, a note on where Win / Loss went, field mode *three of those six*, the opening note), **§9** (a
   new *The client list* subsection: the figures, the row and its two lists, deposit-retained, the dash, the unread rule,
   the six filters, the sort table, where the eight buttons went, blanks last, field mode) and **§16a** (a row now, not a
@@ -106,6 +107,51 @@ the need for all of the big job type buttons. Make sense?"* App-only, no redeplo
 - **⚠ THE SHAPE TO COPY: when a set of buttons is replaced, walk what each one used to find.** Eight buttons became zero
   and a sort became the answer — safe only because the walk proves every removed button's clients are one press on a
   heading away, and it is the walk that found the A→Z order would have split the two probate types.
+
+## ⚠ A FINISHED JOB'S FINAL INVOICE STAYS IN THE BIG BUTTONS — ASKED FOR, BUILT, REVERSED (2026-09-23)
+Anthony, off a finished Home Prep job's timeline: *"the links at the bottom go to all docs but the final invoice. that should
+be added too, like the other documents. view/print/filed"*. Then, told the fix meant taking the final out of the band:
+*"actually, i like the big [buttons] with view final invoice, etc. dont' get rid of those"* and *"i guess i wasnt looking at
+that. the big buttons are always the most current stage."* App-only, no redeploy.
+
+- **⚠⚠ NOTHING WAS MISSING, AND THE LAYOUT IS NOW DECIDED — DO NOT "COMPLETE" THE STRIP.** On a finished job the band reads
+  COMPLETE and its tray walks back to the last document SENT (`jobTimelineDoc`), which is always the final invoice; the strip is
+  SEEDED from that tray, so the final is in the big buttons and not in the strip. Both at once renders one control twice (the
+  no-duplicate rule and the unique-onclick net); strip-only means taking the big buttons away, which he declined. **The rule in
+  his words: the big buttons are always the most current stage, and the strip is everything before it.**
+  - The fix was built — a `jtBandHtml` `opts.archive` flag the dashboard passed, with the job pages keeping their tray because
+    they draw no strip — and revert-verified before he reversed it. **It is gone, not dormant.** The Complete branch of
+    `jtBandHtml` and the strip's comment both quote him, so the next reading of "the strip is missing the final" stops there.
+  - **Pinned in `dashboard-schedule`**: a finished job carries the final's View / Print / Filed copy in the tray, the four earlier
+    documents in the strip in lifecycle order (12 links), the final on screen exactly once and every onclick unique; the same
+    one step earlier, while the final payment is outstanding. Moving the final out of the band fails **9**; unseeding the strip
+    (the final twice) fails **12**.
+- **⚠ THE ONE REAL DEFECT IN HIS SCREENSHOT: THE APPROVED STEP READ "September 22, 2026" BESIDE SEVEN STEPS READING "Sep 22, 2026".**
+  `checkPin` stamps `approvedAt` long form and the `estimate_approved` row carried no `atKind`, so `_jtAtFmt` printed it raw — the
+  exact defect `estimate_sent` and `agreement_sent` were fixed for on 2026-09-11. `atKind:'date'` now, and on `intake` too (it
+  only read right because `created` happens to be stamped short form).
+  - **⚠⚠ THE TEST MISSED IT TWICE OVER, AND BOTH ARE SHAPES THIS FILE RECORDS.** The atKind check walked a LIST of four row
+    names and `estimate_approved` was not on it — a net woven from the rows somebody thought of. And the fixture stamped
+    `approvedAt: 'Sep 8, 2026'`, short form, a shape `checkPin` never writes — a fixture handing the code the answer — so the raw
+    print was invisible even had the row been listed. The check is the rule now (every row with an `at` on a fully-walked job
+    declares a kind other than `text`), the fixture is long form, and the real `_jtAtFmt` + `fmtDate2` render it. Reverting the
+    row fails 3; intake's fails 1.
+- **10,208 committed checks** (+38). **Revert sweep on a tar copy of the tree: 4 changes, 0 green**, baseline 0 before and after,
+  restored in a `finally`. **`tests/browser/step18.js`, 27 checks, 0 failed, 0 page errors**, driving the real dashboard on a
+  finished prep job at 1440 and 390: the COMPLETE band, *Last sent — Invoice — Final* with View · Print · Filed copy as the band's
+  own buttons, the strip 12 links in lifecycle order with no final, 0 duplicate onclicks, every date on the track one format, the
+  big View button opening the real final invoice in the viewer, 0 overflow at both widths. **Run against the pre-change build it
+  fails exactly the three date checks** — the layout checks pass on both, which is the point. Steps 1–17 re-run as regressions:
+  **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 51**, 0 failed — **704
+  checks across the eighteen**. `run.sh`'s default list is 1–18.
+- Manual §9a (the finished-job case added to the archive note) and playbook (the band note, plus a symptom→cause row: *the final
+  invoice is not in the links at the foot of a finished job* → it is in the big buttons). Both `.md` copies hand-edited; tag
+  balance clean with the stylesheet stripped; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 20/54 and 17/18
+  tables as wide as their container, 0 taking the phone rule — as at HEAD.
+- **⚠ NOTED, NOT BUILT, offered to Anthony:** (1) the *Filed copy* links do not name their document, though the View / Print
+  beside them do, for the reason `_jtDocViews` states — the strip has no row context, and when it wraps one *Filed copy* sits alone
+  on the second line (his screenshot); (2) *Active* is the only done step on the track with nothing under it, though
+  `job.activatedOn` has been stamped write-once since 2026-09-13.
 
 ## ⚠⚠ CLIENT INTAKE AND BUILD ESTIMATE LEFT THE NAV — THEY ARE SCREENS OFF THE CLIENT DASHBOARD NOW (BUILT 2026-09-23)
 Anthony: *"doing away with client intake tab and build estimate tabs. client dashboard needs a 'Add New Client' button at
@@ -7471,6 +7517,10 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 
 ## Branches
 - Active feature branch: `claude/admiring-gauss-1tdpzn`
+  (`claude/practical-dijkstra-d049ra` shipped alongside it on 2026-09-23 — two sessions ran concurrently: the
+  final-invoice band fix and the Win / Loss fold. Both are on `main`, and this branch merged theirs on the way through;
+  the merge conflicted on the build stamp, CLAUDE.md, and **both sessions' `tests/browser/step18.js`** — resolved as a
+  UNION, theirs keeping step 18 and this one renumbered to **step 19**.)
   (`claude/inspiring-brahmagupta-xfe2he` is the previous name.)
   (`claude/practical-hypatia-qm2kft` before that.)
   (`claude/festive-dijkstra-3uqyoh` is the previous name. ⚠ A second session ran concurrently on
@@ -12649,8 +12699,10 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-23** — both documents, against Client Intake and Build Estimate leaving the nav
-  for screens off the Client Dashboard, and the split nav; see the entry at the top of this file.
+- Last reconciled against the app: **2026-09-23** — both documents, against a finished job's final invoice living in the big
+  buttons rather than the strip (one note and one symptom row); see the entry at the top of this file.
+- Prior pass **2026-09-23** — both documents, against Client Intake and Build Estimate leaving the nav
+  for screens off the Client Dashboard, and the split nav.
 - Prior pass **2026-09-20 (thirty-third pass)** — both documents, against the hours decision and the two
   form leaks it surfaced: hours on every job, fixed price included; the fold and the strip move on the save; the specialist
   selects offer *Contractor TBD* from the first draw; see the entry at the top of this file.

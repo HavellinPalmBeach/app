@@ -103,7 +103,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     if (at('walkthrough')) job.walkthrough = PAST;
     if (at('built')) rec = { estimate: est, savedAt: 'Sep 8, 2026', approved: false, submitted: false };
-    if (at('approved')) { rec.approved = true; rec.approvedBy = 'Anthony'; rec.approvedAt = 'Sep 8, 2026'; job.approved = true; job.status = 'approved'; }
+    // ⚠ `approvedAt` is LONG FORM because that is what `checkPin` writes
+    // (`toLocaleDateString('en-US',{month:'long'…})`). This fixture used to hand the rail
+    // 'Sep 8, 2026', a shape production never produces, so the row printing it raw could not
+    // show up here — and it did show up on the live track, 2026-09-23.
+    if (at('approved')) { rec.approved = true; rec.approvedBy = 'Anthony'; rec.approvedAt = 'September 8, 2026'; job.approved = true; job.status = 'approved'; }
     if (at('sent')) job.estimateSentDate = 'September 8, 2026';
     if (at('won')) { job.won = true; job.wonAt = '2026-09-09'; job.wonBy = 'Anthony'; job.wonMethod = 'call'; job.status = 'won'; }
     if (at('agrApproved')) { job.agrApproved = true; job.agrApprovedBy = 'Anthony'; job.agrApprovedAt = 'Sep 9, 2026'; }
@@ -264,6 +268,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         if (!r || !r.at) return;
         eq(r.atKind, 'date', k + ' declares its date so the renderer formats it');
       });
+    // ⚠⚠ AND THE RULE ITSELF, NOT TODAY'S LIST (2026-09-23). The four names above were the rows
+    // somebody had thought of, and `estimate_approved` was not among them — so its long-form
+    // `approvedAt` printed raw as "September 22, 2026" on the track, beside seven steps reading
+    // "Sep 22, 2026", in Anthony's own screenshot. Every row that carries a date declares its
+    // kind, whichever row it is and whatever shape the date arrives in.
+    const every = run('finalPaid');
+    const dated = every.filter((r) => r.at);
+    ok(dated.length >= 10, 'the fully-walked fixture really does carry a date on most rows (' + dated.length + ')');
+    dated.forEach((r) => ok(r.atKind !== 'text', r.key + ' declares its date kind (' + r.atKind + ')'));
+    const F = sandbox({ fns: ['_jtAtFmt', 'fmtDate2'] });
+    eq(F._jtAtFmt(byKey(every, 'estimate_approved')), 'Sep 8, 2026',
+       '⚠⚠ the approval date renders in the rail\u2019s own format, not raw long form');
+    eq(F._jtAtFmt(byKey(every, 'intake')), 'Sep 8, 2026', 'and so does the intake date');
+    eq(F._jtAtFmt(byKey(every, 'estimate_sent')), F._jtAtFmt(byKey(every, 'estimate_approved')),
+       'the approval and the send on the same day read identically');
     lacks(jtBody, 'toLocaleDateString', 'and the derivation still does no formatting itself');
     has(body('_jtAtFmt(r)'), "r.atKind === 'epoch'", 'the renderer knows how to print one');
     lacks(jtBody, 'completionDate', 'jobTimeline never reads completionDate');

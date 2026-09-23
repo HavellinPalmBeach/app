@@ -476,6 +476,59 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(noDoc, 'jt-doc-acts', 'and no tray row, because there is no document to put in one');
     const nRow = rowOf(noDoc, 'jt-acts');
     has(nRow, 'jt-btn-p', 'carrying the primary exactly as before');
+
+    // ─── ⚠⚠ A FINISHED JOB: THE FINAL INVOICE IS IN THE BIG BUTTONS, AND THAT IS DECIDED ─────
+    // Anthony, off a closed job with every node green: *"the links at the bottom go to all docs
+    // but the final invoice. that should be added too."* The fix moved the final out of the band
+    // into the strip, and he reversed it before it shipped: *"actually, i like the big [buttons]
+    // with view final invoice, etc. dont' get rid of those … the big buttons are always the most
+    // current stage."* So the tray is the most current document on EVERY job, finished
+    // ones included, and the strip is the documents before it. These pin that, so the next
+    // session reading "the strip is missing the final" does not make the same change.
+    group('⚠⚠ a finished job — the final invoice in the big buttons, the four before it in the strip');
+    const FILED = (k) => ({ sentAt: '2026-09-22T14:00:00.000Z', filedAt: '2026-09-22T14:01:00.000Z', filedUrl: 'https://drive.example/' + k });
+    const finished = {
+      start: '2026-09-21', status: 'closed', estimateSentDate: 'September 22, 2026',
+      agrSent: true, agrSigned: true, deliveredOn: '2026-09-22', deliveredBy: 'Anthony Graziano',
+      docState: { estimate: FILED('e'), agreement: FILED('a'), 'invoice:deposit': FILED('d'),
+                  'invoice:midpoint': FILED('m'), 'invoice:final': FILED('f') },
+      payments: [{ uid: 'p1', stage: 'deposit', amount: 12050, date: '2026-09-22', method: 'wire', clearedOn: '2026-09-22' },
+                 { uid: 'p2', stage: 'midpoint', amount: 6025, date: '2026-09-22', method: 'wire', clearedOn: '2026-09-22' },
+                 { uid: 'p3', stage: 'final', amount: 6025, date: '2026-09-22', method: 'wire', clearedOn: '2026-09-22' }],
+    };
+    const fin = paint(finished);
+    has(fin, 'jt-next-done', 'the fixture really is a finished job — the band reads Complete');
+    const stripOf = (html) => {
+      const at = html.indexOf('<div class="jt-quick">');
+      return at < 0 ? '' : html.slice(at, html.indexOf('</div>', at));
+    };
+    const FINAL = ["'invoice','view',{stage:'final'}", "'invoice','print',{stage:'final'}", "openDocFiled(7,'invoice:final')"];
+    // The big buttons: View · Print · Filed copy for the final invoice, under its own heading.
+    const tray = rowOf(fin, 'jt-doc-acts');
+    has(fin, 'Last sent — Invoice — Final', '⚠⚠ the band names the final invoice as the most current document');
+    FINAL.forEach((c) => has(tray, c, 'the big buttons carry it: ' + c));
+    has(tray, 'View final invoice', 'labelled with the document, like every other link');
+    // The strip: the four documents BEFORE it, in the order they were created.
+    const strip = stripOf(fin);
+    const EARLIER = ["'estimate','view'", "'agreement','view'", "'invoice','view',{stage:'deposit'}", "'invoice','view',{stage:'midpoint'}"];
+    EARLIER.forEach((c) => has(strip, c, 'the strip keeps the earlier document: ' + c));
+    const pos = EARLIER.map((c) => strip.indexOf(c));
+    ok(pos.every((x, i) => i === 0 || x > pos[i - 1]), 'in lifecycle order — estimate, packet, deposit, midpoint');
+    eq((strip.match(/<button/g) || []).length, 12, 'four documents, three links each');
+    FINAL.forEach((c) => lacks(strip, c, '⚠⚠ and the strip does not repeat the final: ' + c));
+    eq((fin.match(/'invoice','view',\{stage:'final'\}/g) || []).length, 1, 'the final invoice is on screen exactly once');
+    const finClicks = (fin.match(/onclick="([^"]+)"/g) || []);
+    eq(finClicks.length, new Set(finClicks).size, '⚠⚠ and every onclick on the finished page is unique');
+
+    // The same rule one step earlier: while the final payment is outstanding the final invoice is
+    // the document in play, so it is in the big buttons then too — the band never changes its
+    // mind about where the current document lives.
+    const unpaid = paint(Object.assign({}, finished, { payments: finished.payments.slice(0, 2) }));
+    has(unpaid, 'Record payment', 'the fixture lands on the final payment');
+    has(rowOf(unpaid, 'jt-doc-acts'), "'invoice','view',{stage:'final'}", 'the big buttons hold the final invoice while it is in play');
+    lacks(stripOf(unpaid), "stage:'final'", '…and the strip does not repeat it');
+    const upClicks = (unpaid.match(/onclick="([^"]+)"/g) || []);
+    eq(upClicks.length, new Set(upClicks).size, 'and nothing on that page renders twice either');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
