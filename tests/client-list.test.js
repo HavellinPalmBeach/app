@@ -159,7 +159,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(st(), 'hav:desc', 'money starts largest first');
     L.s.setJobSort('svc');
     eq(st(), 'svc:asc', 'pressing another heading starts THAT column fresh');
-    L.s.setJobSort('nonsense');
+    // Called inside a try: without the guard `setJobSort` throws on `col.first`, and an unguarded
+    // call here crashed the whole file at check 57 in the revert sweep — every assertion below it
+    // then never ran, which reads as one failure rather than as what it is.
+    let threw = '';
+    try { L.s.setJobSort('nonsense'); } catch (err) { threw = String(err && err.message || err); }
+    eq(threw, '', 'an unknown heading does not throw');
     eq(st(), 'svc:asc', 'an unknown heading changes nothing');
     // Session state, like the filter: never written anywhere.
     const body = fn('setJobSort');

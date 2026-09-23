@@ -64,9 +64,27 @@ the need for all of the big job type buttons. Make sense?"* App-only, no redeplo
     anywhere else; a triangle on a heading would read as something that expands.
 - **Field mode leaves the row off** (`body.field-mode #wl-block{display:none}`) — the report was never a field tab. The
   toggle's tooltip says **six** tabs.
-- **10,440 committed checks after the merge** (+232 from this build; `tests/client-list.test.js` new at 148; `win-loss.test.js` rewritten around the
+- **10,441 committed checks after the merge** (+233 from this build; `tests/client-list.test.js` new at 149; `win-loss.test.js` rewritten around the
   row at 139; `tabs-retired`, `dashboard-screens`, `closeout-gate`, `deleted-jobs` restated rather than deleted).
-  **The revert sweep — 92 reverts, one change at a time, on four parallel tar copies of the tree — was still running when this was committed; its result is recorded in the next commit, the shape `cb98980` set.** Before it started, the checks it would need were written first: every Win / Loss cell driven with markup, the unread list heading carrying no count, the open/shut row and the shared list wrapper, one client reading *1 client*, and the spacing rule stated as a relation to the tile grid's own gap rather than as pixels.
+  **Revert sweep: 92 changes backed out one at a time on four parallel tar copies of the tree, baseline 10,402 before
+  and after, no needle matched the wrong number of times. All 89 expected red were red; the 3 green were the 3 predicted
+  green.** Biggest: Won counting `status === 'won'` alone (dropping active, closed and retained) **12**, the unread Won
+  list reading *No clients won yet* 9, `renderJobs` never applying the sort 8, plain-text headings · triangle arrows ·
+  Service A→Z 7 each, the row not painted 6, the header never painted 5; the other 78 fail 1–4. Before it started, the
+  checks it would need were written first: every Win / Loss cell driven with markup, the unread list heading carrying no
+  count, the open/shut row and the shared list wrapper, one client reading *1 client*, and the spacing rule stated as a
+  relation to the tile grid's own gap rather than as pixels.
+  - **⚠ THE THREE GREENS ARE BELT-AND-BRACES, RECORDED RATHER THAN COVERED BY CHECKS THAT CANNOT FAIL.** The sort's
+    tie-break on list position changes no order, because JavaScript's sort is stable; the two element guards
+    (`if (el)` in `renderWinLoss`, `if (head)` in `renderJobs`) cannot fire while the page carries both elements.
+  - **⚠ ONE REVERT CRASHED A FILE INSTEAD OF FAILING IT.** Removing `setJobSort`'s unknown-key guard threw on
+    `col.first`, and the test called it unguarded, so `client-list.test.js` stopped at check 57 and the 91 checks after it
+    never ran — it read as one failure. The call is inside a `try` now; re-done, it fails 1 cleanly with all 149 running.
+    Worth knowing when reading the log: the three filter reverts ran **one extra** check each (a loop over the buttons
+    grows when one is put back) and dropping deposit-retained from the status order ran **one fewer** (a loop over the
+    order), and neither is a crash.
+  - **The sweep ran on the tree as it stood before `main` was merged in**, because the merge arrived while it was
+    running. Every revert touches only this build's own code, which merged without a conflict, so the results carry.
 - **Verified end to end in headless Chromium, `tests/browser/step19.js` (numbered 19 on the merge — the concurrent session took 18), 58 checks, 0 failed, 0 page errors**,
   driving the real nav, real clicks on both tiles, real clicks on all six filters and the headings, a real row into a
   client and back, and **a keyboard Enter on the focused Lost tile**:
