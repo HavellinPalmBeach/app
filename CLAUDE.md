@@ -1,3 +1,73 @@
+## ⚠⚠ WHO ARRANGES THE APPRAISALS IS THE TIER'S ANSWER, AND THE CONTRACT WAS ASKING THE PRICE (FIXED 2026-09-24)
+Anthony asked whether the website's estate copy (*"as much or as little as your process requires: cleanout, inventory,
+appraisal coordination …"*) and the reference guide for counsel hold true against the app, then *"go on the defect."*
+Checking the phrase *appraisal coordination* against the documents is what found it — no test did. App-only, no redeploy.
+
+- **⚠⚠ THE DEFECT: `values` AND `appraisals` BOTH PRICE AT SCOPE `full`, AND THE CLIENT DOCUMENTS READ THE SCOPE.** So the
+  estate agreement and Exhibit A were **word for word identical at the two tiers**, and on *Inventory with values* — where the
+  tier says counsel engages the appraisers (`produces.appraisals:false`) — the signed contract promised §2 *"appraisal
+  coordination for all asset categories"*, §5.2 *"Havellin will coordinate professional appraisals … within the 60-day
+  inventory deadline from Letters of Administration issuance"*, §5.3 authority to *"Arrange professional appraisal"*, and the
+  estimate's close-out and records list *"independent appraisals attached"*. **The desk checklist (`planTaskCtx.weAppraise`) and
+  the Court Inventory's DRAFT fix (*"the estate attorney arranges the appraisal on this engagement"*) already read the tier and
+  said the opposite** — a signed contract and a court-facing schedule disagreeing about one duty. The collapse the note on
+  `docTierProduces` warns against, one clause at a time. **Measured on the pre-fix build in a browser: step 22 fails 16 of 33.**
+- **`weArrangeAppraisals(docScope, job)` IS THE ONE ANSWER** — `docScope === 'full' && docTierProduces(job, 'appraisals')` —
+  read by §2, all three §5.2 matter branches, the §5.3 row, and `_cePhases` (close-out and records). **⚠ It needs BOTH halves:**
+  the scope alone is the defect; the tier alone would let a job re-tiered to *Inventory + appraisals* after a capture-only price
+  promise appraisal coordination nobody priced. A test drives both.
+- **⚠ THE VALUES ARM STATES THE CARVE-OUT, IN BOLD, IN §2** — *"The coordination of professional appraisals is not within this
+  engagement and remains the responsibility of the Client and the estate attorney, who receive Havellin's list of the items it
+  believes warrant one."* The standing rule against explaining an absence yields where the absence **shifts a responsibility**,
+  which is why the capture and none arms already carry theirs. §5.2 names who arranges them by matter type (the estate attorney ·
+  the trustee or their counsel · the client), §5.3 reads *Admit an appraiser engaged by counsel*. **The appraisals tier is
+  byte-identical to before** — a test compares every clause.
+- **⚠ THE CATALOGUE HAD THE SAME HOLE.** `DOC_TIERS.values.they` read *"Counsel prepares the filing."* — silent on the one duty
+  separating it from the tier above, which prices the same. It reads *"Counsel arranges any appraisal and prepares the
+  filing."* now (printed today only on the schedule-blocked tiers, but it is the one menu both forms build from).
+- **⚠ AN ESTATE WITH NO TIER READS AS `values` HERE TOO** (`DOC_TIER_FROM_SCOPE.full`), as it already did on the desk and the
+  Court Inventory. Prelaunch, so no signed agreement carries the old wording; both documents say to regenerate anything
+  produced on a values job before today.
+- **⚠⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the values tier still PRICES the appraiser scheduling.** The `document` step's
+  coordination column is what the Estimate Summary labels *Appraiser & inventory scheduling*, and both top tiers carry it —
+  **measured on a 3,500 sqft estate with six rooms: ~5.1 concierge hours ≈ $765 on an Estate Settlement ($17,700), 5.0 ≈ $750
+  on a Probate ($20,500)**. Some of it is real on values too (inventory scheduling, the list of items that warrant an appraisal,
+  attending counsel's appraiser), and `contents` drops the whole column. The 4→3 note in manual §4 already said *"if appraisal
+  coordination is ever priced on its own that is where the split goes"*; this fix is what makes the question live.
+- **⚠ LEFT ALONE, DELIBERATELY: the sorting stage's *"The specialists valuing items on this engagement — …"* sentence.** It
+  renders only when the estimate carries a valuing VENDOR line — i.e. somebody put an appraiser on the estimate — so it
+  describes the estimate, not the tier.
+- **10,983 committed checks** (`tests/appraisal-tier.test.js` new at 95, driving the real `probateAgreementHtml` and `_cePhases`
+  across four matter types × four tiers). **Nine suites' sandbox lists gained the helper** (agreement-rates, esign-docusign,
+  estimate-walkthrough, fixed-price-all-services ×2, prep-declutter, prep-fee-billing ×2, prep-fee-rate, rush-discount,
+  trust-schedule) — found by the suite throwing `weArrangeAppraisals is not defined`, all at once. **`doc-scope` restated, not
+  deleted**: it pinned *"full scope promises Independent appraisals"* and called `_agrScopeServices('full')` with no job; the
+  requirement was never that the price decides — it is that the contract agrees with the tier, and it now drives both tiers.
+- **Revert sweep on four tar copies: 13 changes, ALL RED, baseline 0 before and after, no needle mismatched.** The defect itself
+  (the helper reading the scope alone) fails **41**; §2 reading the scope 13; §5.2 probate 11; §5.3 9; the §2 carve-out and
+  Exhibit A's `weAppraise` 6 each; the §2 listing, §5.2 trust and §5.2 neither 5 each; records 3; close-out and the catalogue 2
+  each. **⚠ The scope-guard revert fails 5 AND CRASHES three suites** (prep-fee-billing, prep-fee-rate, rush-discount): their
+  sandboxes lift the helper alone, because the guard short-circuits before `docTierProduces` on a scope that is never `full`
+  there. Reordering the `&&` would crash them loudly — the right direction — and rush-discount's list says why.
+- **Verified in headless Chromium, `tests/browser/step22.js`, 33 checks, 0 failed, 0 page errors**, through the real intake and
+  the real Build Estimate: Estate Settlement at values and at appraisals on a probate matter, the same at values on a trust
+  matter, and Probate at both tiers for the §733.604 close-out sentence; the desk and the helper agree on both; a pre-tier
+  record reads values; overflow 0 at 1440 and 390. **Against the pre-fix build it fails 16.** `run.sh`'s default list is 1–22;
+  steps 1–21 re-run as regressions — **59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27
+  / 58 / 68 / 75**, 0 failed — **939 checks across the twenty-two**. The first `<style>` block is untouched: no CSS.
+- Manual **§4** (the table row, the 4→3 note, and two notes: the defect and the fix; the unchanged price), **§5c** (the *Full*
+  note and the pin note), **§7** (the records), **§8** (a note on the three clauses); playbook the tier table, a `.stop` (*on
+  Inventory with values, counsel books the appraisers — do not offer to*) and **two** symptom rows. Both `.md` copies
+  hand-edited; **21 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page
+  errors; under `print` 51/58 and 17/18 tables full width, 0 on the phone rule — as at HEAD.
+- **⚠ FOUND IN PASSING, NOT FIXED, QUEUED AS ITS OWN TASK: the court record follows the SERVICE while the court checklist follows
+  the MATTER TYPE.** An Estate Settlement administering a probate estate gets the §733.604 list (*"Filed within the 60-day
+  deadline"*) but has nowhere to enter the case number or the Letters date — `#probate-fields` / `#ec-probate-fields` render on
+  probate and contested only, and the plan's Letters and deadline chips key on `ctx.isProbate` — so the deadline cannot be
+  computed and the workbook's *Letters Issued* row is always blank.
+- **⚠ THE SHAPE TO COPY: when two tiers price the same, every sentence that differs between them has to read the tier.** A price
+  is a projection of a promise, never the promise — collapse them and the cheaper promise inherits the dearer one's words.
+
 ## ⚠⚠ THE 30% PREP FEE NOW ADDS UP ON THE ESTIMATE, AND IT SITS ON TOP OF A FIXED FEE, NEVER INSIDE IT (FIXED 2026-09-23)
 Anthony, off a dummy Home Transition estimate carrying a painter, a pressure washer and a pool clean: *"it was my impression
 that we only add the thirty percent when home prep is a standalone job … that would basically be double charging the client …
@@ -7764,7 +7834,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/gifted-rubin-jjl1d0`
+- Active feature branch: `claude/fervent-mayer-xeo4ur`
+  (`claude/gifted-rubin-jjl1d0` is the previous name.)
   (`claude/inspiring-ptolemy-xgngqv` is the previous name.)
   (`claude/magical-fermi-riifo8` is the previous name.)
   (`claude/admiring-gauss-1tdpzn` is the previous name. `claude/practical-dijkstra-d049ra` shipped alongside it on 2026-09-23 — two sessions ran concurrently: the
@@ -7808,7 +7879,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/gifted-rubin-jjl1d0:main`
+  `git push origin claude/fervent-mayer-xeo4ur:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -12954,7 +13025,10 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-23 (evening)** — both documents, against the 30% prep fee moving into the services
+- Last reconciled against the app: **2026-09-24** — both documents, against who arranges the appraisals following the tier rather
+  than the price (manual §4 two notes and the tier table, §5c, §7, §8; playbook the tier table, a `.stop` and two symptom rows);
+  see the entry at the top of this file.
+- Prior pass **2026-09-23 (evening)** — both documents, against the 30% prep fee moving into the services
   table and on top of a fixed fee, the never-log-prep-trade-time rule, and the rush/discount order both had stated wrongly since
   2026-09-11; see the entry at the top of this file.
 - Prior pass **2026-09-23** — both documents, against the seven Job Plan fixes (the band names the step, the

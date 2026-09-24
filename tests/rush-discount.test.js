@@ -63,7 +63,10 @@ const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'fmt', 'esc', 'payme
                 'prepFeeRate',
                 // The client's stated job length is the shared definition now, not a second
                 // fallback of its own that disagreed with the Job Plan header's.
-                'estWorkingDays', 'estFixedFee', 'estPrepFeeOnTop'];
+                'estWorkingDays', 'estFixedFee', 'estPrepFeeOnTop',
+                // Who arranges the appraisals is the tier's answer (weArrangeAppraisals). This sandbox
+                // carries no JOB_STEPS, so the scope is never `full` here and the chain is never reached.
+                'weArrangeAppraisals'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };

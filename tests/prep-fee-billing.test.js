@@ -67,7 +67,7 @@ const LEGACY = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20000,
 const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases',
                 'materialsBasisNote', 'discountOnLabor', 'prepFeeRate', 'estWorkingDays', 'estFixedFee',
-                'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote'];
+                'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const JOB = { id: 1, svc: 'downsizing_move', name: 'Pat Transition', address: '1 A St' };
@@ -110,10 +110,11 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'estTolerancePctTxt', 'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
-                 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate'];
+                 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate',
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'agrApproved', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', '_PCT_WORDS',
-                  'PREP_FEE_RATE'];
+                  'PREP_FEE_RATE', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
 const agr = (job, e) => text(sandbox({ fns: AGR_FNS, vars: AGR_VARS,
   stubs: { estimateStore: {}, currentEstimate: null } }).agreementHtml(job, e));
 const LIVING = { id: 1, hvlId: 'HVL-0009', name: 'Pat Transition', svc: 'downsizing_move',

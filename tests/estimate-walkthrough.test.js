@@ -255,8 +255,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'THE CLAIM IS GONE FROM THE FILE — it was not true of how the work is actually run');
 
     const ctx = sandbox({
-      fns: ['_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob'],
-      vars: ['JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES'],
+      fns: ['_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
+            'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'],
+      vars: ['JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'],
       stubs: { isFormalDoc: () => true },
     });
     const withAppraiser = JSON.stringify(ctx._cePhases(

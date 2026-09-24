@@ -94,7 +94,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['estTolerancePctTxt', 'prepFeeRate', 'buildPrepEstimateBody', 'proposedPlanRow', 'fmt', 'esc',
               'paymentSplit', 'estimateIsFeeOnly', 'estDeclutterHrs', 'clientJobPlanSection', '_cePhases',
               'materialsBasisNote', 'vendorEstimateNote', 'vendorFeeNote', '_pctWords',
-              'conciergePhones', 'conciergePhonesText', 'prepLineTCHrs', 'coordHrsFor'],
+              'conciergePhones', 'conciergePhonesText', 'prepLineTCHrs', 'coordHrsFor', 'weArrangeAppraisals'],
         vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'COORD_TOUCHES',
                'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],

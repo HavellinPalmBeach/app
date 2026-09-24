@@ -25,6 +25,7 @@ const FNS = [
   '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', '_invProgressBar',
   '_agrProbateCompliance', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover',
   '_agrTrustDeliverable', '_agrScopeServices', '_invFileId', '_invNeedsValue', 'invWorkFlags', '_invMissingThumbIds',
+  'weArrangeAppraisals',
 ];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 

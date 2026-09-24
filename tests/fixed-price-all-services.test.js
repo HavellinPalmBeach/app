@@ -27,9 +27,10 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
-                 '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop'];
+                 '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved',
-                  'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS'];
+                  'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
 
 const EST = {
   jobId: 1, tcFee: 18500, psFee: 12500, pkgCost: 1500, pkgLabel: 'Estate Premium — $1,500',
@@ -214,8 +215,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const c = sandbox({
       fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef',
-            'svcHasDocStep', 'isDecedentJob'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES'],
+            'svcHasDocStep', 'isDecedentJob', 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'],
     });
     const phases = (over) => c._cePhases(
       Object.assign({ svc: 'probate', docScope: 'full', vendors: [], collections: [] }, over),

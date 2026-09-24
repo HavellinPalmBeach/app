@@ -126,8 +126,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the client estimate follows the scope it priced, once, in the stage');
   {
     const ctx = sandbox({
-      fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES'],
+      fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
+            'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'],
       stubs: { isFormalDoc: () => true },
     });
     const job = { id: 1, svc: 'probate', executor: 'PR' };
@@ -150,7 +152,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // What they are left holding.
     const recv = (P) => P.find((p) => p.receive).receive.join(' | ');
     has(recv(full), 'estimated value', 'full delivers the valued inventory');
-    has(recv(full), 'Independent appraisals', 'and the appraisals');
+    // ⚠ The appraisals are the TIER's to promise, not the scope's (2026-09-24): `values` and
+    // `appraisals` both price at `full`, and only the top tier puts the appraisers with us.
+    const recvAt = (tier) => recv(ctx._cePhases({ svc: 'probate', docScope: 'full', vendors: [], collections: [] },
+                                                Object.assign({}, job, { docTier: tier })));
+    has(recvAt('appraisals'), 'Independent appraisals', 'and, at the appraisals tier, the appraisals');
+    lacks(recvAt('values'), 'Independent appraisals', 'the values tier prices full and promises no appraisals it is not arranging');
     has(recv(cap), 'for counsel to value', 'capture delivers the list, for counsel to value');
     lacks(recv(cap), 'Independent appraisals', 'capture does not promise appraisals it is not coordinating');
     has(recv(cap), 'chain-of-custody', 'capture still keeps the custody log — we handled every listed item');
@@ -182,11 +189,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the estate agreement follows the same pin');
   {
-    const ctx = sandbox({ fns: ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger'],
-                          vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'AGR_NOT_AN_ACCOUNTING'] });
+    const ctx = sandbox({ fns: ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
+                                'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
+                          vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'AGR_NOT_AN_ACCOUNTING', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
+    // ⚠ WHO ARRANGES THE APPRAISALS IS THE TIER'S QUESTION, NOT THE SCOPE'S (2026-09-24). `values`
+    // and `appraisals` both price at `full`, so these two assertions used to be true of the scope
+    // alone — which is exactly how the `values` tier came to sign a contract promising Havellin
+    // coordinates the appraisals. They are restated against the tier; tests/appraisal-tier.test.js
+    // carries the full matrix.
+    const TOP = { svc: 'probate', docTier: 'appraisals' }, VALUED = { svc: 'probate', docTier: 'values' };
     has(ctx._agrScopeServices('full'), 'room-by-room asset documentation and inventory', 'full scope sells the inventory');
-    has(ctx._agrScopeServices('full'), 'appraisal coordination', 'and the appraisal coordination');
-    lacks(ctx._agrScopeServices('full'), 'not within this engagement', 'and carves nothing out');
+    has(ctx._agrScopeServices('full', TOP), 'appraisal coordination', 'and, at the appraisals tier, the appraisal coordination');
+    lacks(ctx._agrScopeServices('full', TOP), 'not within this engagement', 'and carves nothing out');
+    lacks(ctx._agrScopeServices('full', VALUED), 'appraisal coordination for all asset categories', 'the values tier prices full and does not sell appraisal coordination');
+    has(ctx._agrScopeServices('full', VALUED), 'coordination of professional appraisals is not within this engagement', 'and says whose it is instead');
     has(ctx._agrScopeServices('capture'), 'without valuation', 'capture lists without valuing');
     has(ctx._agrScopeServices('capture'), 'not within this engagement', 'and says valuation is counsel\'s');
     lacks(ctx._agrScopeServices('capture'), 'appraisal coordination for all asset categories', 'and does not sell appraisal coordination');
@@ -196,9 +212,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(ctx._agrScopeServices(sc), 'family distribution and documented handoff to beneficiaries', sc + ': the disposition services are unchanged');
     }
 
-    const comp = (sc) => ctx._agrProbateCompliance(sc).join(' | ');
+    const comp = (sc, job) => ctx._agrProbateCompliance(sc, job).join(' | ');
     has(comp('full'), 'Havellin will prepare a documented asset inventory', 'full: we prepare the §733.604 inventory');
-    has(comp('full'), 'Havellin will coordinate professional appraisals', 'full: we coordinate appraisals');
+    has(comp('full', TOP), 'Havellin will coordinate professional appraisals', 'full at the appraisals tier: we coordinate appraisals');
+    lacks(comp('full', VALUED), 'Havellin will coordinate professional appraisals', 'full at the values tier: we do not');
+    has(comp('full', VALUED), 'Professional appraisals are arranged by the estate attorney', 'full at the values tier: counsel arranges them');
     has(comp('capture'), 'Valuation and the court filing are the responsibility of the estate attorney', 'capture: counsel values and files');
     has(comp('capture'), 'Professional appraisals are arranged by the estate attorney', 'capture: counsel arranges appraisals');
     has(comp('none'), 'Havellin does not prepare, value or file it', 'none: the inventory is not ours');

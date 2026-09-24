@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.23 · 9:31pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.24 · 11:40am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4262,7 +4262,9 @@ var DOC_TIERS = [
    produces:{inventory:true,  values:true,  appraisals:false},
    label:'Inventory with values — estimated FMV, basis stated',
    we:'The contents list plus an estimated fair market value at the valuation date, with the basis of each value stated.',
-   they:'Counsel prepares the filing.'},
+   // ⚠ Counsel's half names the appraisals (2026-09-24). This tier prices like the one below it,
+   // and the half saying who engages the appraisers is the only thing telling them apart.
+   they:'Counsel arranges any appraisal and prepares the filing.'},
   {key:'appraisals', scope:'full',    floor:'formal',
    produces:{inventory:true,  values:true,  appraisals:true},
    label:'Inventory + appraisals — specialist reports coordinated and attached',
@@ -4331,6 +4333,23 @@ function docTierProduces(job, what) {
   if (!svcHasDocStep(job && (job.svc || job.serviceType))) return false;
   var d = docTierDef(docTierOf(job)) || docTierDef(DOC_TIER_FROM_SCOPE.full);
   return !!(d && d.produces && d.produces[what]);
+}
+// ⚠⚠ WHO ARRANGES THE APPRAISALS IS THE TIER'S QUESTION, AND THE CONTRACT WAS ASKING THE PRICING
+// SCOPE (FIXED 2026-09-24). `values` and `appraisals` both price at scope `full`, so the estate
+// agreement and Exhibit A — which read `estimateDocScope` — were byte-identical at the two tiers
+// and promised on the `values` tier that Havellin coordinates the appraisals: §2, §5.2 ("within
+// the 60-day inventory deadline"), §5.3, and the estimate's close-out and records list. The
+// tier says the opposite (`produces.appraisals:false`), and so do the desk checklist and the
+// Court Inventory's DRAFT fix ("the estate attorney arranges the appraisal on this
+// engagement") — a signed contract and a court-facing schedule disagreeing about one duty.
+// The exact collapse the note on docTierProduces warns against, one clause at a time.
+//
+// ⚠ It takes the PRICED scope as well as the job, and needs both. The tier alone would let a
+// job re-tiered to `appraisals` after a capture-only price promise appraisal coordination on
+// an estimate that never priced it; the scope alone is the defect. Every client document that
+// promises Havellin engages the appraisers asks this, and nothing else.
+function weArrangeAppraisals(docScope, job) {
+  return docScope === 'full' && docTierProduces(job, 'appraisals');
 }
 function svcHasDocStep(svc) { return !!(JOB_STEPS[svc] && JOB_STEPS[svc].document); }
 // The step set the engine actually prices: the catalogue entry with `document` scaled or
@@ -9587,6 +9606,10 @@ function _cePhases(e, job) {
   var docScope     = (typeof estimateDocScope === 'function') ? estimateDocScope(e) : (steps.document ? 'full' : 'none');
   var hasDoc       = docScope !== 'none';                    // documentation is PRICED (stage exists)
   var captureOnly  = docScope === 'capture';                 // we photograph and list; counsel values
+  // ⚠ Who arranges the appraisals is the TIER's answer, not the scope's: `values` and
+  // `appraisals` both price at `full`, and reading the scope here is what had Exhibit A promise
+  // "appraisals attached" on the tier where counsel arranges them. See weArrangeAppraisals.
+  var weAppraise   = weArrangeAppraisals(docScope, job);
   // VOICE, not pricing — see isDecedentJob. hasDoc is what the client is CHARGED for,
   // isDeceased is who we are WRITING to. They used to coincide exactly; the scope pin is
   // what separates them, and the `isDeceased && !hasDoc` arm below is reachable again.
@@ -9817,7 +9840,9 @@ function _cePhases(e, job) {
     closeBody += ' The market-preparation work itemised below runs from here — we source each trade, hold the schedule, and inspect the work against the scope you approved.';
   }
   if (hasLegal && docScope === 'full') {
-    closeBody += ' The verified inventory is prepared with date-of-death fair market value for every asset, appraisals attached as supporting documentation, non-probate assets excluded, and the whole package served on interested parties and filed within the statutory deadline.';
+    closeBody += ' The verified inventory is prepared with date-of-death fair market value for every asset, '
+      + (weAppraise ? 'appraisals attached as supporting documentation, ' : '')
+      + 'non-probate assets excluded, and the whole package served on interested parties and filed within the statutory deadline.';
   } else if (hasLegal && captureOnly) {
     closeBody += ' The photographed, room-by-room list is delivered to counsel in a form their office can value and file within the statutory deadline.';
   }
@@ -9849,7 +9874,7 @@ function _cePhases(e, job) {
   if (deep && docScope === 'full') {
     records.push('A verified inventory to the standard the court requires, carrying date-of-death fair market value for every asset');
     records.push('A chain-of-custody log for each documented item — who handled it, when, and where it went');
-    records.push('Independent appraisals attached as supporting documentation');
+    if (weAppraise) records.push('Independent appraisals attached as supporting documentation');
     records.push('The complete record retained for seven years');
   } else if (deep && captureOnly) {
     records.push('A chain-of-custody log for each listed item — who handled it, when, and where it went');
@@ -34759,7 +34784,15 @@ function _agrScopeServices(docScope, job) {
   if (docScope === 'capture') {
     return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room photography and listing of property contents (description, location and condition, without valuation); sorting and staging; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>Valuation of estate assets and the coordination of professional appraisals are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
   }
-  return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; appraisal coordination for all asset categories; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+  // ⚠ Both valued tiers land here. Only `appraisals` puts the appraisers with Havellin — see
+  // weArrangeAppraisals — and on `values` the absence is stated rather than left to inference,
+  // for the reason the two arms above state theirs: it shifts a responsibility to counsel.
+  var _weAppraise = weArrangeAppraisals(docScope, job);
+  return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; '
+    + (_weAppraise ? 'appraisal coordination for all asset categories; ' : '')
+    + 'sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. '
+    + (_weAppraise ? '' : '<strong>The coordination of professional appraisals is not within this engagement</strong> and remains the responsibility of the Client and the estate attorney, who receive Havellin\'s list of the items it believes warrant one. ')
+    + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
 }
 // ⚠ WHO APPROVES A DISPOSITION IS A FACT ABOUT THE MATTER, NOT ABOUT THE SERVICE SOLD. The
 // agreement named the Personal Representative in every clause that needed an approver, on every
@@ -34811,12 +34844,12 @@ function _agrProbateCompliance(docScope, job) {
       : docScope === 'capture'
       ? 'Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the estate attorney for use in preparing the inventory required under Florida Statute §733.604. Valuation and the court filing are the responsibility of the estate attorney.'
       : 'Havellin will prepare a documented asset inventory suitable for use in the court-required filing under Florida Statute §733.604. The estate attorney is responsible for the actual court filing.');
-    out.push(docScope === 'full'
+    out.push(weArrangeAppraisals(docScope, job)
       ? 'Havellin will coordinate professional appraisals for all required asset categories within the 60-day inventory deadline from Letters of Administration issuance.'
       : 'Professional appraisals are arranged by the estate attorney. Havellin will give the appraiser access to the property and be present for the visit on request.');
   } else if (trust) {
     out.push(_agrTrustDeliverable(docScope));
-    out.push(docScope === 'full'
+    out.push(weArrangeAppraisals(docScope, job)
       ? 'Havellin will coordinate professional appraisals for all required asset categories.'
       : 'Professional appraisals are arranged by the trustee or their counsel. Havellin will give the appraiser access to the property and be present for the visit on request.');
   } else {
@@ -34828,7 +34861,7 @@ function _agrProbateCompliance(docScope, job) {
       : docScope === 'capture'
       ? 'This estate is not being administered through a probate proceeding or a trust, and no statutory inventory is required of it. Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the Client. Valuation is the Client\'s responsibility.'
       : 'This estate is not being administered through a probate proceeding or a trust, and no statutory inventory is required of it. Havellin will prepare a documented inventory of the property contents, stated at fair market value as of the date of death, for the Client\'s own distribution record.');
-    out.push(docScope === 'full'
+    out.push(weArrangeAppraisals(docScope, job)
       ? 'Havellin will coordinate professional appraisals for all required asset categories.'
       : 'Professional appraisals are arranged by the Client. Havellin will give the appraiser access to the property and be present for the visit on request.');
   }
@@ -35194,7 +35227,7 @@ function probateAgreementHtml(job, est) {
     ['Donate to qualifying 501(c)(3) organizations',_appr,'All donations'],
     ['Arrange sale through third-party channel',_appr,'Any item over $500'],
     ['Dispose / remove to dumpster',_appr,'Any item over $500'],
-    docScope === 'full'
+    weArrangeAppraisals(docScope, job)
       ? ['Arrange professional appraisal',_appr,'Any item with uncertain FMV']
       : ['Admit an appraiser engaged by counsel','Counsel\'s instruction','As scheduled by ' + _apprWho],
     ['Move or deliver items to beneficiaries',_appr + ' + signed receipt from recipient','All items']
