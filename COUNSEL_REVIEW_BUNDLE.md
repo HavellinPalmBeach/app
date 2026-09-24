@@ -65,6 +65,17 @@ survive? **And on a probate matter specifically** — the representative pays fr
 and the fee is subject to review — could an over-reaching exit clause taint the
 reasonableness finding on the fee itself?
 
+**Added 2026-09-23 — the home prep fee on a fixed-fee engagement.** When the job carries
+home sale preparation vendors (painter, cleaner, landscaper and so on), Havellin's 30% fee on
+those vendors now sits **outside** the fixed price, charged in addition to it on what the
+vendors actually invoice; both forms state the two figures separately (standard §3.1, §3.3,
+§3.5; the estate form's fee table and Fixed Project Fee paragraph). On termination the prep fee
+is **earned on the preparation work completed or committed**, not in the flat fee's stages
+(standard §12.2, estate §8.1), and the deposit stays earned on signature. **The question:** is
+*committed* clear enough to collect on a vendor booked but not yet performed, and does a
+percentage-of-vendor-spend fee owed on termination raise any issue the flat fee's earn-out
+does not?
+
 ### A2. "For cause" — the definition, and an asymmetry between the two forms ⚠ PRIORITY 1
 
 **What it says.** Cause is a **material breach by Havellin, described in the client's written
