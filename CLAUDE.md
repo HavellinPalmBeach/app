@@ -1,3 +1,76 @@
+## ⚠⚠ THE 30% PREP FEE NOW ADDS UP ON THE ESTIMATE, AND IT SITS ON TOP OF A FIXED FEE, NEVER INSIDE IT (FIXED 2026-09-23)
+Anthony, off a dummy Home Transition estimate carrying a painter, a pressure washer and a pool clean: *"it was my impression
+that we only add the thirty percent when home prep is a standalone job … that would basically be double charging the client …
+i thought we decided this like two weeks ago"*. Checked against the code and the git history: the decision of 2026-09-10 was
+the other way — **bundled prep carries the 30% and books ZERO coordination hours** (see that entry) — and he kept it. Then
+*"so the agreements all read accurately for option 1?"* (hourly yes; fixed price no), then, off three screenshots, *"the $250
+in GC fees don't appear to be added to the Havellin Services total. where's the error?"*, and then **"yes, fix both."**
+App-only, no redeploy.
+
+- **⚠⚠ #1 — THE FEE WAS IN THE TOTAL AND PRINTED UNDER IT.** $225 on $750 of prep vendors sat as a subtotal *under the prep
+  vendors*, below the Havellin Services Total, so the services rows came to **$14,100 over a $14,325 total**. A table whose rows
+  do not reach its own total reads as a mistake whatever the arithmetic. `_prepFeeRowHtml` puts it inside the services table as
+  *Home Prep for Sale — Site Management*, above the subtotal it is part of; the prep section lists the vendors alone and
+  `vendorEstimateNote({feeTruesUp})` points up at the fee. `estimateHavellinLines` gives the three email builders the same lines.
+  Moving the row back fails **5**.
+- **⚠⚠ #2 — ON A FIXED FEE THE 30% WAS FOLDED INSIDE THE FLAT FEE, MARKED UP BY THE CONTINGENCY AND NEVER TRUED — while the
+  estimate, both agreements and every invoice said it was a separate 30% charged on the vendors' actual bills.** So the prep fee
+  carried 20–35% on top of itself and a painter billing $900 against a $500 quote changed nothing. The rule now, one rule on both
+  bases: **the 30% sits on top, as its own line, on actuals.** `_fpServices = havellinTotal - prepFee` (the suggestion excludes
+  it), the snapshot stores `havellinTotal = fixedAmount + prepFee` and stamps **`prepFeeOnTop: true`**, `grandTotal` follows.
+  - **`estFixedFee(est)` / `estPrepFeeOnTop(est)` ARE THE ONLY READERS OF "THE FLAT FEE" AND "IS THE FEE ON TOP".** A reader
+    taking `havellinTotal` as the flat fee now prints the fee twice; a test asserts no reader does. The invoice reading the flat
+    fee off the total fails **8**.
+  - **⚠ THE INVOICES:** the deposit bills 50% of flat + the fee on the **quotes** ($10,113 on $20,000 + $225); the midpoint
+    and final bill it on the **actual** quotes logged on the Job Plan (a $900 painter → $345), tagged *est.* while any prep line
+    is still on its quote; the final closes out exactly. `_invVendorFeeSentence(smf, prepFee, fx)` has three modes — hourly,
+    `fixed` (the line is on the page), `fixed-inside` (a record saved before the change: *"is included in the fixed project fee"*).
+  - **⚠ THE AGREEMENTS STATE TWO FIGURES.** Standard §3.1 / §3.2 / §3.3 / §3.5 and §12.2 / §12.4; the estate form's vendor row,
+    prep row, Fixed Project Fee paragraph, IMPORTANT sentence, payment labels (*50% of fixed price + est. prep fee*), final
+    trigger, schedule note and §8.1. **Termination earns the prep fee on the preparation work completed or committed, not in the
+    flat fee's stages — and the deposit stays earned on signature and non-refundable** (Anthony, 2026-09-20: *"we need to
+    protect that payment"*). **⚠ Drafted, not reviewed by counsel** — it rides the review bundle with the rest of the fixed-fee
+    language.
+  - **Two older faults came off with it:** on a fixed fee both forms said vendor coordination was *billed as Transition
+    Concierge time* / *at the TC rate* — a charge that does not exist on a flat fee — and the "fixed price" they printed was the
+    Havellin total, not the flat fee. `applyDiscountRevision` keeps the fee on top of a discounted flat fee.
+- **⚠⚠ A RECORD SAVED BEFORE THE CHANGE IS DETECTED BY THE MARKER, NEVER BY A DATE.** No `prepFeeOnTop` → the fee is inside its
+  flat fee, and every reader keeps the old arithmetic: no second line, nothing billed twice (the legacy deposit is 50% of the flat
+  fee alone). Ignoring the marker bills it twice and fails **4**.
+  - **⚠⚠ AND REOPENING ONE WOULD HAVE DOUBLE-CHARGED ON THE NEXT SAVE — found by asking what a reopen does, not by any test.**
+    The box held the old flat fee *with the prep fee inside*; the new snapshot adds the fee on top; the client's total jumps by
+    the fee. `restoreEstimateToUI` moves it out: `_fixedPrepMovedOut`, the field reads flat − fee, the old `fixedSuggested` is
+    NOT read back (it was taken with the fee inside, so the drift warning would report a move the rooms never made), and the
+    panel says so through `fixedPrepMovedNote`. Cleared at the three job-switch resets. **Driven on the real page: $20,000 with
+    $225 inside reopens at $19,775 + $225 = the same $20,000.** `Math.min(_restoredFlat, …)` is belt-and-braces — the old rule
+    cannot produce a flat fee smaller than its own prep fee — recorded rather than covered by a check that could not fail.
+- **⚠ THE PLAYBOOK LINE — NEVER LOG THE TIME SPENT ON THE PREP TRADES.** The estimate books no prep hours, but an hourly final
+  bills what is logged, so the afternoon with the painter logged bills the client twice. On a fixed fee it bills nothing extra
+  and tells the log the flat fee took longer than it did. Playbook Step 2 and a `.stop` in Step 10b; manual the bundled-prep note.
+- **⚠ FOUND IN PASSING AND CORRECTED: both documents still stated the pre-2026-09-11 rush/discount order** (*discount first,
+  then 20% on what's left*). The app has charged the premium on the full services total and taken the discount after, off labour
+  grossed up by the premium, since 2026-09-11 — manual §5c/§16 (the flow and two paragraphs) and playbook Step 2 plus the quick
+  reference, with Anthony's $120k / $12k example.
+- **⚠ THE DATE IS THE ET DAY, 2026-09-23** — the container runs UTC and read 09-24 for the last three hours of the build. The
+  on-screen reopen sentence carries no date at all (the marker decides).
+- **10,883 committed checks** (`tests/prep-fee-billing.test.js` new at 131; helpers lifted into ~16 sandboxes; restated
+  assertions in `estimate-walkthrough`, `fixed-price`, `fixed-price-all-services`, `prep-fee-rate`, `service-change`).
+  **Revert sweeps: 43 + 7 + 3 changes, one at a time, baseline 0 before and after, no needle mismatched.**
+  - **⚠ THREE CAME BACK GREEN AND ALL THREE WERE MY TESTS, NOT THE CODE.** The fixed final's prep row — the Services Total alone
+    cannot see the row go missing, which is **the exact screen Anthony reported**; the table is read now, and the ordering check
+    guards `indexOf` = −1 (a missing row read as "above the total"). The estate schedule note — unasserted. And the reopen note
+    **switched off beside its call** — a source check cannot tell; extracted into `fixedPrepMovedNote` and driven. Re-done: 2 / 2
+    / 2·1·1.
+- **Verified in headless Chromium, `tests/browser/step21.js`, 75 checks, 0 failed, 0 page errors** — bundled prep on T&M and
+  fixed, the estate form, a pre-change record, all three invoices, the emails, a reopen on the real Build Estimate, overflow 0 at
+  1440 / 390. `run.sh`'s default list is 1–21; steps 1–20 re-run as regressions, **0 failed — 906 checks across the
+  twenty-one**. The first `<style>` block is **byte-identical to HEAD at 97,897 bytes** — no CSS.
+- Manual §5c (the fixed-fee note and the rush bullet), §7 (the table note), §8 (the two-figure agreement), §12, §16, the
+  bundled-prep note; playbook Step 2 (the lever rows, the order, the don't-log pointer), Step 3, Step 6, Step 10b/c, Step 11–12,
+  the quick reference and **six** symptom rows. Both `.md` copies hand-edited; **42 + 23 claims parity-checked, 0 mismatches**;
+  `doc-structure` green; rendered at 1440 / 390 with 0 overflow, 0 page errors; under `print` 51/58 and 17/18 tables full width,
+  0 taking the phone rule — as at HEAD.
+
 ## ⚠⚠ SEVEN OFF ONE DUMMY JOB — THE JOB PLAN NOW KNOWS WHO, WHEN AND WHAT'S NEXT (FIXED 2026-09-23)
 Anthony, walking the Ellsworth dummy client (Home Transition) from the dashboard onto the Job Plan, in one message: Activate
 should land on the Job Plan; *"document shredding gets lumped into end of job logistics automatically, whether or not you want
@@ -7691,7 +7764,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/inspiring-ptolemy-xgngqv`
+- Active feature branch: `claude/gifted-rubin-jjl1d0`
+  (`claude/inspiring-ptolemy-xgngqv` is the previous name.)
   (`claude/magical-fermi-riifo8` is the previous name.)
   (`claude/admiring-gauss-1tdpzn` is the previous name. `claude/practical-dijkstra-d049ra` shipped alongside it on 2026-09-23 — two sessions ran concurrently: the
   final-invoice band fix and the Win / Loss fold. Both are on `main`, and this branch merged theirs on the way through;
@@ -7734,7 +7808,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/inspiring-ptolemy-xgngqv:main`
+  `git push origin claude/gifted-rubin-jjl1d0:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -12880,9 +12954,12 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-23** — both documents, against the seven Job Plan fixes (the band names the step, the
+- Last reconciled against the app: **2026-09-23 (evening)** — both documents, against the 30% prep fee moving into the services
+  table and on top of a fixed fee, the never-log-prep-trade-time rule, and the rush/discount order both had stated wrongly since
+  2026-09-11; see the entry at the top of this file.
+- Prior pass **2026-09-23** — both documents, against the seven Job Plan fixes (the band names the step, the
   schedule counts from the real start, Activate lands on the Job Plan, logistics are offered not placed, the intake concierge, one
-  person one slot, the job-team chip); see the entry at the top of this file.
+  person one slot, the job-team chip).
 - Prior pass **2026-09-23** — both documents, against a finished job's final invoice living in the big
   buttons rather than the strip (one note and one symptom row).
 - Prior pass **2026-09-23** — both documents, against Client Intake and Build Estimate leaving the nav

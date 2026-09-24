@@ -27,7 +27,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
-                 '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor'];
+                 '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved',
                   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS'];
 
@@ -120,7 +120,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ THE ESTATE AGREEMENT ON A FIXED-PRICE PROBATE — driven on the real builder');
   {
-    const fixed = probateDoc(PROBATE, est({ fixedPrice: true, fixedAmount: 50000 }));
+    // ⚠ A REAL SNAPSHOT CARRIES THE FLAT FEE IN BOTH FIELDS (plus the prep fee on the total, from
+    // 2026-09-24). This fixture used to leave havellinTotal at the hourly $40,000 beside a $50,000
+    // fixedAmount, and the contract printed the $40,000 — which only looked right because the
+    // builder read havellinTotal. It reads the flat fee through estFixedFee now.
+    const fixed = probateDoc(PROBATE, est({ fixedPrice: true, fixedAmount: 50000, havellinTotal: 50000, prepFeeOnTop: true }));
     const tm    = probateDoc(PROBATE, est({ fixedPrice: false }));
 
     has(fixed, 'Fee Structure', '§3.1 is headed Fee Structure on a firm fee');
@@ -132,7 +136,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // stripping them leaves a change-order mechanism with no rate to price it at.
     has(fixed, '$185 / hour', 'the rate card is still printed on a fixed-fee contract');
     has(fixed, 'apply only to Change-Order work', 'because the change-order clause prices off it');
-    has(fixed, 'fixed price of $40,000', 'and the fee itself is stated');
+    has(fixed, 'fixed price of $50,000', 'and the fee itself is stated — the flat fee, fixedAmount');
 
     // §4.1 — an hours trigger cannot fire on a fee that does not move with hours.
     lacks(fixed, 'Actual hours projected to exceed estimate',

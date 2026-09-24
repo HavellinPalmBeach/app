@@ -8,7 +8,7 @@ const { sandbox, fn, source } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
-  const ctx = sandbox({ fns: ['buildSigningPacketHtml', 'approvedEstimateFor'] });
+  const ctx = sandbox({ fns: ['buildSigningPacketHtml', 'approvedEstimateFor', 'estFixedFee', 'estPrepFeeOnTop'] });
   const src = source();
 
   group('approvedEstimateFor — the snapshot, and only while approved');
@@ -149,7 +149,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // halves of it are said better further down — the signature page states that no work begins
     // until both signatures are obtained, and §18 / the estate acknowledgment carry the
     // read-and-understood line. A box at the top shouting READ CAREFULLY says neither.
-    ['agreementHtml', 'probateAgreementHtml'].forEach(function (f) {
+    ['agreementHtml', 'probateAgreementHtml', 'estFixedFee', 'estPrepFeeOnTop'].forEach(function (f) {
       lacks(fn(f), 'IMPORTANT: Read carefully',
             '⚠ ' + f + ' no longer opens with the banner');
     });

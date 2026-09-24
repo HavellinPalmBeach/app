@@ -35,7 +35,7 @@ const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours'
                  'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
                  'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
                  'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-                 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor'];
+                 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop'];
 const INV_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
                   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
                   'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -198,9 +198,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(calc, 'fixedSuggested: isFixed ? (_fixedAmountUserSet ? (_fixedAmountBasis || _fpFee) : _fpFee) : 0,',
         'the snapshot carries the suggestion the figure was set against (the suggestion itself while tracking)');
     const rs = noComments(fn('restoreEstimateToUI'));
-    has(rs, '_fixedAmountBasis = est.fixedPrice ? Math.round(est.fixedSuggested || 0) : 0;', 'the restore reads it back');
+    // Restated 2026-09-24: a fixed fee saved before then carries the prep fee inside it, and the
+    // restore moves that out (tests/prep-fee-billing.test.js drives it). Its suggestion was taken
+    // with the fee inside, so it is not read back — the current one differs by construction.
+    has(rs, '_fixedAmountBasis = (est.fixedPrice && !_legacyPrepInside) ? Math.round(est.fixedSuggested || 0) : 0;',
+        'the restore reads it back');
     has(rs, '_fixedAmountUserSet = !!est.fixedPrice;', 'a saved fee is hand-set — it was agreed, not prefilled');
-    has(rs, '_fxAmtSet(est.fixedPrice ? (est.fixedAmount || est.havellinTotal || 0) : 0);', 'and written back formatted');
+    has(rs, 'Math.round(est.fixedAmount || est.havellinTotal || 0)', 'the flat fee reads fixedAmount first');
+    has(rs, '_fxAmtSet(_restoredFlat - _fixedPrepMovedOut);', 'and written back formatted');
     // A record saved before today has no fixedSuggested: the basis reads 0, and 0 never claims a move.
     eq(src.split('  _tc2UserSet = false;\n  _fixedAmountUserSet = false;\n  _fixedAmountBasis = 0;\n').length - 1, 3,
        'the three job-switch resets zero the basis with the flag — a basis leaking across jobs would warn about the wrong estimate');

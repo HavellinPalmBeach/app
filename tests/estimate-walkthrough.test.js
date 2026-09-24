@@ -298,9 +298,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // hardcodes the digits is how the agreements went on selling a 15% vendor fee for five
     // weeks after SMF_PCT went to zero.
     const withFee = ctx.vendorEstimateNote({ feeTruesUp: true });
-    has(withFee, "30% fee is charged on what the vendors", 'the prep arm says the fee follows the actuals');
-    has(withFee, 'not on the estimate above', 'and explicitly not this page\'s figure');
-    lacks(plain, 'fee is charged on what the vendors', 'a third-party-only job is not told about a prep fee');
+    has(withFee, 'charged on what these vendors actually bill', 'the prep arm says the fee follows the actuals');
+    has(withFee, 'rather than on these estimates', 'and explicitly not this page\'s figure');
+    // ⚠ SINCE 2026-09-24 THE FEE IS NOT UNDER THIS NOTE: it is a line inside the Havellin Services
+    // table, which is the total it counts in. A note that mentioned the fee without saying where it
+    // is would send the reader looking for a line that is not in this section.
+    has(withFee, "30% fee on this work is the site management line in Havellin Services above",
+        'and it says where the fee line is');
+    lacks(plain, 'site management line', 'a third-party-only job is not told about a prep fee');
     lacks(fn('vendorEstimateNote'), "'30%'", 'the rate is never a literal in the sentence');
     has(fn('vendorEstimateNote'), 'Math.round(prepFeeRate() * 100)', 'it reads prepFeeRate');
 
@@ -373,7 +378,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const table = src.indexOf("'<table class=\"ce-tbl\">'", band);
     ok(lead > band && lead < table, 'the third-party note sits between its band and its table');
 
-    has(src, "'<div class=\"ce-lead\">' + vendorEstimateNote({feeTruesUp: prepGcFee > 0}) + '</div>'",
+    // The fee arm follows the fee: on a fixed-price record saved before 2026-09-24 the 30% sits
+    // inside the flat fee, so there is no separate line to point the reader at.
+    has(src, "'<div class=\"ce-lead\">' + vendorEstimateNote({feeTruesUp: prepGcFee > 0 && (!e.fixedPrice || estPrepFeeOnTop(e))}) + '</div>'",
       'the bundled Home Prep band carries it with the fee arm — that document\'s Terms never state it');
   }
 };

@@ -373,11 +373,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(n, '30%', 'and names the fee that IS charged');
   }
 
-  group('the client estimate states the fee where the spend is, and reads the rate');
+  // ⚠ RESTATED 2026-09-24. The fee row used to sit under the prep vendors, BELOW the Havellin
+  // Services total that already counted it — so the services table's rows did not add up to its
+  // own total (Anthony: "the $250 in GC fees don't appear to be added to the Havellin Services
+  // total"). It is a row inside that table now, above the subtotal it is part of.
+  group('the client estimate states the fee inside the total that counts it, and reads the rate');
   {
     const ce = fn('clientEstimateHtml');
-    has(ce, "Havellin GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '% of prep vendors)",
-        'the fee row sits in the Home Prep section and reads the constant');
+    has(ce, "Math.round(prepFeeRate()*100) + '% of vendor cost", 'the fee row reads the constant');
+    const row = ce.indexOf('General contracting &amp; site management of the home prep vendors');
+    const tbody = ce.indexOf("_prepFeeRowHtml +");
+    ok(row > 0 && tbody > 0, 'the fee row exists and is placed into the services table');
     lacks(ce, 'Home Prep for Sale — GC / Site Management Fee (30%)',
           'the old hardcoded row under the Moving Materials heading is gone');
     has(ce, 'var hasMaterialsSection = e.pkgCost > 0 || vendorSMF > 0;',
@@ -483,7 +489,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(ctx._invVendorFeeSentence(0, 0), 'shown above', 'and does not reference a line that is not there');
 
     const inv = fn('invoiceHtml', 'jobLogEntries');
-    has(inv, '_invVendorFeeSentence(smf, prepFee)', 'the invoice note reads the function');
+    has(inv, '_invVendorFeeSentence(smf, prepFee, _fxFeeMode)', 'the invoice note reads the function, told the billing basis');
     lacks(inv, "Havellin\\'s coordination fee is the Service Management Fee shown above.</div>",
           'the old unconditional sentence is gone');
     has(inv, "GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)",
@@ -496,7 +502,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // contractor" — so it is a constant, not a per-job dial. What matters then is that no
     // document hardcodes the digits, or the day it ever moves they disagree.
     ['clientEstimateHtml', 'invoiceHtml', 'jobLogEntries', 'agreementHtml', 'probateAgreementHtml',
-     'buildPrepEstimateBody'].forEach((name) => {
+     'buildPrepEstimateBody', 'estFixedFee', 'estPrepFeeOnTop'].forEach((name) => {
       const body = fn(name);
       lacks(body, '(30%)', name + ' hardcodes no (30%) literal');
       lacks(body, '30% of prep', name + ' hardcodes no "30% of prep" literal');

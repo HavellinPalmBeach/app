@@ -63,7 +63,7 @@ const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'fmt', 'esc', 'payme
                 'prepFeeRate',
                 // The client's stated job length is the shared definition now, not a second
                 // fallback of its own that disagreed with the Job Plan header's.
-                'estWorkingDays'];
+                'estWorkingDays', 'estFixedFee', 'estPrepFeeOnTop'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };
@@ -83,7 +83,7 @@ function invCtx(e, logs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop'],
     vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -186,7 +186,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // revision added the premium on top of it again.
     const pct = { value: 10 };
     const a = sandbox({
-      fns: DISCOUNT_FNS.concat(['applyDiscountRevision']),
+      fns: DISCOUNT_FNS.concat(['applyDiscountRevision', 'estFixedFee', 'estPrepFeeOnTop']),
       vars: DISCOUNT_VARS,
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },

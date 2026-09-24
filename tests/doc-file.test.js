@@ -40,7 +40,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ The three renderers Slice 2 extracted are what make that possible. A caller that
     // has to render into a panel to obtain a document will always be one early return away
     // from leaving that panel on another client.
-    ['clientEstimateHtml', 'agreementHtml', 'invoiceHtml', 'jobLogEntries'].forEach((f) =>
+    ['clientEstimateHtml', 'agreementHtml', 'invoiceHtml', 'jobLogEntries', 'estFixedFee', 'estPrepFeeOnTop'].forEach((f) =>
       ok(fn(f).length > 0, f + ' exists as a pure builder for it to use'));
     // ⚠ `exportAgreementToDrive` is GONE (2026-09-11). It filed the BARE agreement beside
     // the packet, so the folder held the terms-without-Exhibit-A one click from the document

@@ -168,7 +168,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(body, 'and (b) 30% of contractor invoices', 'the typed one is gone');
     // The two live arms already used _pctWords and must keep doing so — a contract states a
     // percentage in words, and that is a different rendering of the same one rate.
-    eq((body.match(/_pctWords\(prepFeeRate\(\)\)/g) || []).length, 3,
-       'all three arms that state a prep rate in prose spell it in words from the one rate');
+    // Four since 2026-09-23: the three §3.5 arms plus §12.2, which earns the prep fee on the
+    // vendor work when a fixed-fee engagement ends early.
+    eq((body.match(/_pctWords\(prepFeeRate\(\)\)/g) || []).length, 4,
+       'every clause that states a prep rate in prose spells it in words from the one rate');
+    lacks(body, 'thirty percent (30%)', 'and none of them types the words');
   }
 };

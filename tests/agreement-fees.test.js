@@ -66,7 +66,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                    '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
                    'estimateDocScope', 'svcHasDocStep', 'fmt', 'esc', 'paymentSplit',
                    'conciergePhones', 'assignedTCContact', 'samePerson', 'canonPersonName',
-                   'svcLabelOf', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrSection', 'esignAnchor'];
+                   'svcLabelOf', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrSection', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop'];
   const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'PREP_FEE_RATE', 'SVC_LABELS', 'DECEDENT_SERVICES', '_PCT_WORDS',
                     'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
                     'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'JOB_STEPS', 'agrApproved', 'ESIGN_ANCHORS'];

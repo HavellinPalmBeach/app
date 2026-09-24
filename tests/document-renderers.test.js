@@ -23,7 +23,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
-  const BUILDERS = ['clientEstimateHtml', 'agreementHtml', 'probateAgreementHtml', 'invoiceHtml', 'jobLogEntries'];
+  const BUILDERS = ['clientEstimateHtml', 'agreementHtml', 'probateAgreementHtml', 'invoiceHtml', 'jobLogEntries', 'estFixedFee', 'estPrepFeeOnTop'];
 
   // ───────────────────────────────────────────────────────────────────────────
   group('the builders touch no DOM — that is the whole property');
