@@ -210,7 +210,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // exists proves the line is there; this proves the numbers agree.
     const saved = [];
     const C = sandbox({
-      fns: ['computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize'],
+      fns: ['computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize', 'coAcceptedHours', 'coHoursTotal', 'coHours'],
       vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'jobPlanStore',
              'estimateStore', 'currentEstimate', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT'],
       stubs: {
@@ -238,7 +238,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const S = sandbox({
       fns: ['jobSchedule', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive',
-            'docSentAt', 'docKeyFor'],
+            'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
       vars: ['PRODUCTIVE_HRS_PER_DAY'],
     });
     // A 6-day job that activated on its target start. `today` is the fourth working day.
@@ -390,7 +390,7 @@ const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr',
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent',
-      'roomStatusNormalize', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls'];
+      'roomStatusNormalize', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix'];
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY',

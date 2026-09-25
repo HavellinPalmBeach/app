@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 2:59pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 4:18pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2412,6 +2412,7 @@ body.no-smf .smf-col{display:none;}
             <tr><td class="muted">Actual Property Specialist hours logged</td><td class="num" id="ls-act-ps">0.0</td></tr>
             <tr><td class="muted" id="ls-ps-pct-label">Property Specialist variance</td><td class="num" id="ls-ps-pct">—</td></tr>
           </table>
+          <div id="ls-co-note" style="margin-top:6px;font-size:11px;color:var(--gray);"></div>
           <div id="log-overage-alert" style="margin-top:8px;"></div>
           <div style="margin-top:10px;font-size:11px;color:var(--gray);">
             Working days logged: <strong id="ls-days">0</strong> &nbsp;|&nbsp; Entries: <strong id="ls-entries">0</strong>
@@ -5381,6 +5382,29 @@ function estWorkingDays(est) {
   var per = PRODUCTIVE_HRS_PER_DAY;
   return Math.max(Math.ceil((est.totTC || 0) / per),
                   (est.psCount && est.psCount > 0) ? Math.ceil((est.totPS || 0) / est.psCount / per) : 0);
+}
+
+// The working days accepted change orders ADD to a job's plan (negative for a scope reduction),
+// read by `jobSchedule` on top of `estWorkingDays`. ⚠ IT IS THE MARGINAL DAYS, NEVER A SECOND
+// CEILING: the same derivation run on the estimate's hours with and without the change orders,
+// differenced. Rounding the change-order hours up on their own counts a part-day twice — 36 hours
+// is six days and 42 is six, so a +6-hour change order adds no day, where ceil(6/7) alone would
+// say one. And on an estimate whose length was QUOTED (`est.days`) the quoted figure stays the
+// base; only the change orders' share is derived.
+// ⚠ The client estimate and the agreement never read this — they state the length as quoted.
+// It moves the PLAN the crew and the dashboard measure against, which is what the client signed
+// the change order to change.
+function coWorkingDays(est, coTC, coPS) {
+  if (!est || est.svc === 'prep') return 0;
+  var ctc = Number(coTC) || 0, cps = Number(coPS) || 0;
+  if (!ctc && !cps) return 0;
+  var per = PRODUCTIVE_HRS_PER_DAY;
+  var n = (est.psCount && est.psCount > 0) ? est.psCount : 0;
+  function len(tc, ps) {
+    return Math.max(Math.ceil(Math.max(0, tc) / per), n ? Math.ceil(Math.max(0, ps) / n / per) : 0);
+  }
+  var tc0 = Number(est.totTC) || 0, ps0 = Number(est.totPS) || 0;
+  return len(tc0 + ctc, ps0 + cps) - len(tc0, ps0);
 }
 
 // ─── WORKING-SUPERVISOR STAFFING & HOURS ─────────────────────────────────────
@@ -12385,6 +12409,32 @@ function coHoursTotal(cos) {
   return { tc: tc, ps: ps, total: tc + ps };
 }
 
+// ⚠⚠ THE HOURS THE CLIENT HAS SIGNED FOR BEYOND THE ESTIMATE — every ACCEPTED change order on the
+// job, summed (2026-09-25). ONE definition, read by every screen that measures hours against the
+// estimate: the Client Dashboard's Hours Log bars, the Job Plan's hours summary, the Hours fold,
+// the desk card's hours line, the projection and the schedule strip. Until today every one of
+// them measured against `est.totTC` / `est.totPS` alone while the invoice's variance gate moved
+// with the change orders (`estHavellinTotal + coShift`), so a T&M job with an accepted +40-hour
+// change order read "STOP … No further scope work until a signed Change Order" over the very hours
+// the client had just signed for, and a fixed-price job read "margin at risk" on hours it was
+// paid for. Authorised scope is not an overrun, on any screen.
+// ⚠ `clientApproved` IS THE FILTER, as on the invoice: an unaccepted change order authorises
+// nothing, so a draft must not quietly raise the bar the crew is measured against.
+function coAcceptedHours(jobId) {
+  var all = (typeof changeOrders !== 'undefined' && changeOrders) || [];
+  var acc = all.filter(function(c){ return c && c.jobId === jobId && c.clientApproved; });
+  var h = coHoursTotal(acc);
+  h.n = acc.length;
+  return h;
+}
+// "incl. +40.0 hrs by change order" — how a baseline says it carries change-order hours, so the
+// bigger figure is never mistaken for the estimate the client first signed.
+function coInclTxt(h) {
+  var t = h ? (Number(h.tc) || 0) + (Number(h.ps) || 0) : 0;
+  if (!t) return '';
+  return 'incl. ' + (t > 0 ? '+' : '−') + Math.abs(t).toFixed(1) + ' hrs by change order';
+}
+
 // The dollar figure the ESTIMATE BASELINE moves by, at the job's own rates.
 //
 // ⚠ DERIVED, NEVER STORED, AND NEVER PRINTED ON THE CHANGE ORDER. The document the client
@@ -12442,6 +12492,29 @@ function coPriceTotal(cos, tcRate, psRate) {
   return (cos || []).reduce(function(s, co){ return s + coPrice(co, tcRate, psRate); }, 0);
 }
 
+// The change orders accepted BEFORE this one — the ONE definition of "earlier", read by the
+// fixed-price chain (prices) and the hours chain (hours) alike, so the two readings of one change
+// order cannot disagree about which others came first. Earlier means created earlier (`id` is
+// Date.now() at creation), so change order #1 never shows #2 above it; a draft with no id yet (the
+// modal's live preview) counts every accepted one.
+function _coPriorAccepted(jobId, co) {
+  var me = co && co.id;
+  var all = (typeof changeOrders !== 'undefined' && changeOrders) || [];
+  return all.filter(function(c){
+    return c && c.jobId === jobId && c.clientApproved && (!me || c.id < me);
+  });
+}
+// ⚠ THE HOURS CHAIN, the T&M twin of coFixedTerms (2026-09-25). The hours-only change order read
+// "Hours on the approved estimate 140.0 … Revised estimated hours 150.0" on the SECOND change order
+// of a job whose first had already added 40 — a revised total 40 hours short of what the client
+// had signed for, on the page they sign next. The same chain the fixed page prints in dollars.
+function coPriorHours(jobId, co) {
+  var acc = _coPriorAccepted(jobId, co);
+  var h = coHoursTotal(acc);
+  h.n = acc.length;
+  return h;
+}
+
 // The fixed-price reading of one change order: the flat fee in the agreement, what change
 // orders accepted EARLIER already added, this one's price, and the fee it leaves. NULL on a
 // T&M job and on a job with no saved estimate \u2014 and that null is how every surface branches, so
@@ -12451,10 +12524,7 @@ function coPriceTotal(cos, tcRate, psRate) {
 function coFixedTerms(jobId, co) {
   var b = _coJobBasis(jobId);
   if (!b.fixed) return null;
-  var me = co && co.id;
-  var prior = coPriceTotal((changeOrders || []).filter(function(c){
-    return c.jobId === jobId && c.clientApproved && (!me || c.id < me);
-  }), b.tcRate, b.psRate);
+  var prior = coPriceTotal(_coPriorAccepted(jobId, co), b.tcRate, b.psRate);
   var price = coPrice(co, b.tcRate, b.psRate);
   return { flat: b.flat, prior: prior, price: price, revised: b.flat + prior + price,
            tcRate: b.tcRate, psRate: b.psRate };
@@ -12580,6 +12650,23 @@ function coBasisNoteHtml(fixed) {
     : 'Estimate the extra hours the added scope will take. <strong>A change order carries no price and bills nothing on its own</strong> &mdash; the hours are logged as they are worked and reach the client on the final invoice with every other hour. What this does is authorise the scope and move the figure the &plusmn;' + estTolerancePctTxt() + ' check measures against.';
 }
 
+// What the change-order readout says when there is no hours figure to measure against. ⚠ THERE ARE
+// TWO REASONS AND IT REPORTED BOTH AS "this job has no approved estimate yet" (fixed 2026-09-25) —
+// false on a Home Prep job whose approved estimate simply prices no hours, where the fee is the
+// prep fee on the vendors' invoices. That engagement has no hours log on its Job Plan either, so
+// hours typed onto its change order are billed nowhere, and the readout says so before anyone saves
+// one: a change in the vendor work reaches the client through the vendors' own invoices.
+function coNoHoursBaseTxt(b, h) {
+  var lbl = coHoursLabel(h);
+  if (!b || !b.est) return lbl + ' \u2014 this job has no saved estimate yet, so there is nothing to measure it against.';
+  if (b.est.svc === 'prep' || (b.job && b.job.svc === 'prep')) {
+    return lbl + ' \u2014 this engagement bills no hours: its fee is ' + Math.round(prepFeeRate() * 100) +
+      '% of what the preparation vendors invoice, and its Job Plan has no hours log, so hours on a change order are not billed here. ' +
+      'A change in the vendor work reaches the fee through what those vendors invoice.';
+  }
+  return lbl + ' \u2014 the estimate for this job prices no concierge or specialist hours, so there is nothing to measure it against.';
+}
+
 // ⚠ THE 15% IS WHY THIS SCREEN EXISTS, so the readout states it rather than leaving the
 // concierge to work it out. Anthony: "the change order is supposed to trigger when we're
 // gonna run fifteen percent over a job, and that's on the transition concierge and property
@@ -12588,7 +12675,13 @@ function coBasisNoteHtml(fixed) {
 function updateCOHours() {
   var jobId = parseInt(document.getElementById('co-jobid').value);
   var b = _coJobBasis(jobId);
-  var baseHrs = b.tcHrs + b.psHrs;
+  var estHrs = b.tcHrs + b.psHrs;
+  // ⚠ THE BASE IS THE ESTIMATE PLUS THE CHANGE ORDERS ALREADY ACCEPTED (2026-09-25) — a draft has no
+  // id, so every accepted one counts. It read the estimate alone, so a second change order on a job
+  // whose first added 40 hours printed a "revised" total 40 hours short of what the client had
+  // already signed for, and measured its ±15% against a figure the job had left behind.
+  var prior = coPriorHours(jobId, null);
+  var baseHrs = estHrs ? Math.max(0, estHrs + prior.total) : 0;
   var tc = parseFloat(document.getElementById('co-tc-hrs').value) || 0;
   var ps = parseFloat(document.getElementById('co-ps-hrs').value) || 0;
   var addHrs = tc + ps;
@@ -12617,15 +12710,15 @@ function updateCOHours() {
     return;
   }
   if (!baseHrs) {
-    note.innerHTML = '<div class="alert a-info">' + coHoursLabel({tc:tc, ps:ps}) +
-      ' — this job has no approved estimate yet, so there is nothing to measure it against.</div>';
+    note.innerHTML = '<div class="alert a-info">' + coNoHoursBaseTxt(b, {tc:tc, ps:ps}) + '</div>';
     return;
   }
   var pct = addHrs / baseHrs;
   var pctTxt = (pct > 0 ? '+' : '\u2212') + Math.abs(Math.round(pct * 1000) / 10).toFixed(1) + '%';
   note.innerHTML = '<div class="alert ' + (Math.abs(pct) >= EST_TOLERANCE_PCT ? 'a-warn' : 'a-info') + '">' +
-    coHoursLabel({tc:tc, ps:ps}) + ' — ' + baseHrs.toFixed(1) + ' hrs on the estimate becomes ' +
-    newHrs.toFixed(1) + ' (' + pctTxt + ').' +
+    coHoursLabel({tc:tc, ps:ps}) + ' — ' + baseHrs.toFixed(1) + ' hrs on the estimate' +
+    (prior.total ? ' and ' + prior.n + ' accepted change order' + (prior.n === 1 ? '' : 's') : '') +
+    ' becomes ' + newHrs.toFixed(1) + ' (' + pctTxt + ').' +
     (Math.abs(pct) >= EST_TOLERANCE_PCT
       ? ' <strong>Past the ' + estTolerancePctTxt() + ' threshold</strong> — this is exactly the change the client has to agree to in writing before the hours are worked.'
       : ' Inside the ' + estTolerancePctTxt() + ' the client already agreed to, so this records the scope rather than changing what they owe.') +
@@ -13270,7 +13363,9 @@ function printChangeOrder(coId) {
   var jobName = job ? job.name : 'Client';
   var jobAddr = job ? (job.addr||'') : '';
   var _b = _coJobBasis(co.jobId);
-  var _coBasis = { baseHrs: _b.tcHrs + _b.psHrs, addHrs: coHours(co).total };
+  // The hours chain: the estimate, the change orders accepted before this one, this one, and the
+  // total they leave — the T&M twin of the fixed page's fee chain, sharing its rule for "before".
+  var _coBasis = { baseHrs: _b.tcHrs + _b.psHrs, priorHrs: coPriorHours(co.jobId, co).total, addHrs: coHours(co).total };
   var fx = coFixedTerms(co.jobId, co);
   var _tone = _coBasis.addHrs >= 0 ? '#A67C45' : '#3B6D11';
   var _td = 'padding:8px 12px;';
@@ -13296,8 +13391,9 @@ function printChangeOrder(coId) {
     : '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
       '<tr style="' + _dark + '"><th style="' + _td + 'text-align:left;">Item</th><th style="' + _td + 'text-align:right;">Estimated hours</th></tr>' +
       '<tr style="background:#FEF5E7;"><td style="' + _td + '">Hours on the approved estimate</td><td style="' + _td + 'text-align:right;">' + _coBasis.baseHrs.toFixed(1) + '</td></tr>' +
+      (_coBasis.priorHrs ? '<tr><td style="' + _td + '">Change orders already accepted</td><td style="' + _td + 'text-align:right;">' + (_coBasis.priorHrs > 0 ? '+' : '\u2212') + Math.abs(_coBasis.priorHrs).toFixed(1) + ' hrs</td></tr>' : '') +
       '<tr><td style="' + _td + '">' + _what + '</td><td style="' + _td + 'text-align:right;color:' + _tone + ';font-weight:600;">' + coHoursLabel(co) + '</td></tr>' +
-      '<tr style="' + _dark + '"><td style="' + _td + 'font-weight:700;">Revised estimated hours</td><td style="' + _td + 'text-align:right;font-weight:700;">' + (_coBasis.baseHrs + _coBasis.addHrs).toFixed(1) + '</td></tr>' +
+      '<tr style="' + _dark + '"><td style="' + _td + 'font-weight:700;">Revised estimated hours</td><td style="' + _td + 'text-align:right;font-weight:700;">' + Math.max(0, _coBasis.baseHrs + _coBasis.priorHrs + _coBasis.addHrs).toFixed(1) + '</td></tr>' +
       '</table>';
 
   // ⚠ THE SENTENCE THAT MAKES THE DOCUMENT HONEST, and it is a different sentence on each basis.
@@ -13505,11 +13601,17 @@ function jtScheduleHtml(sched) {
   // ⚠ "about", NOT a bare figure, when the length was DERIVED rather than quoted. A legacy
   // estimate carrying no `days` gives a number nobody ever told the client.
   var dayTxt = (sched.daysQuoted ? '' : 'about ') + sched.days + ' working day' + (sched.days === 1 ? '' : 's');
+  // ⚠ A LENGTH THAT MOVED WITH A CHANGE ORDER SAYS SO, beside the count it moved (2026-09-25). The
+  // estimate the client holds states the original length; without this the strip's "8 working
+  // days" against a quoted 6 reads as the app disagreeing with the estimate.
+  var _cd = sched.coDays || 0;
+  var coDayChip = _cd > 0 ? I('incl. ' + _cd + ' day' + (_cd === 1 ? '' : 's') + ' by change order')
+                : _cd < 0 ? I(Math.abs(_cd) + ' day' + (_cd === -1 ? '' : 's') + ' shorter by change order') : '';
 
   // The one absence that earns a line: it is fixable, it blanks four other figures, and a
   // panel reporting a blocker carries the fix on screen rather than in a title=.
   if (sched.state === 'nostart') {
-    return h + I(V(dayTxt)) + I('No target start on this job')
+    return h + I(V(dayTxt)) + coDayChip + I('No target start on this job')
          + '<div class="jt-sched-note jt-s-warn">Set one in Edit Client to get a target end.</div></div>';
   }
 
@@ -13538,6 +13640,7 @@ function jtScheduleHtml(sched) {
     h += (sched.elapsed >= 1)
       ? '<span class="jt-sched-i jt-sched-lead">' + V('Working day ' + sched.elapsed + ' of ' + sched.days) + '</span>'
       : I(V(dayTxt));
+    h += coDayChip;
     // "N to go" counts the working days AFTER today (jobSchedule's `remaining`), and is withheld
     // once the job is over its length — the pace line below says that in red, and "0 to go" beside
     // "2 days past" would be two readings of one fact.
@@ -13558,6 +13661,7 @@ function jtScheduleHtml(sched) {
   } else {
     h += I('Target start ' + V(fmtDate2(sched.start)));
     h += I(V(dayTxt));
+    h += coDayChip;
   }
   // On a one-day job `addWorkingDays(s,1)` is `s` and `ceil(1/2)` is 1, so halfway and end are
   // both the start — one clause, or the strip prints the same date three times.
@@ -13863,11 +13967,20 @@ function roomStatusNormalize(s) {
 var TC_DONE_STATUSES = { locked:1, cleared:1 };
 var PS_DONE_STATUSES = { cleared:1 };
 
-function jobProgress(est, plan, logs) {
+function jobProgress(est, plan, logs, coHrs) {
   var P = { has:false, estTC:0, estPS:0, estHrs:0, actTC:0, actPS:0, actHrs:0, hoursPct:0,
+            coTC:0, coPS:0, coHrs:0, authTC:0, authPS:0, authHrs:0,
             planTC:0, planPS:0, doneTC:0, donePS:0, doneHrs:0, planHrs:0,
             workPct:0, tcPct:0, psPct:0, wholePctTC:0, wholePctPS:0,
             aboveFloor:false, invalidRooms:[] };
+  // ⚠ ACCEPTED CHANGE-ORDER HOURS ARE PASSED IN (`coAcceptedHours(jobId)`), never read here — the
+  // same rule as the plan and the log, so the tests drive this with no globals. They are set BEFORE
+  // the early return because the schedule reads them to lengthen the plan, and a job whose estimate
+  // carries no rooms still has a plan length.
+  var _co = coHrs || {};
+  P.coTC = Number(_co.tc) || 0;
+  P.coPS = Number(_co.ps) || 0;
+  P.coHrs = P.coTC + P.coPS;
   if (!est || !est.rooms || !est.rooms.length) return P;
 
   (logs || []).forEach(function(e) {
@@ -13883,7 +13996,16 @@ function jobProgress(est, plan, logs) {
   P.estTC = Number(est.totTC) || 0;
   P.estPS = Number(est.totPS) || 0;
   P.estHrs = P.estTC + P.estPS;
-  P.hoursPct = P.estHrs > 0 ? P.actHrs / P.estHrs : 0;
+  // ⚠⚠ TWO BUDGETS, AND WHICH ONE A FIGURE READS IS THE WHOLE POINT (2026-09-25). HOURS are
+  // measured against what the client has AUTHORISED — the estimate plus every accepted change
+  // order — so "57% of the estimated hours logged" and the projection's ±15% line stop reporting
+  // signed-for scope as an overrun. WORK DONE below stays on the estimate's rooms, because that is
+  // all a room status can see: folding change-order hours into it would leave a finished job
+  // reading 84% done forever, since nothing ever marks a change order's hours complete.
+  P.authTC = Math.max(0, P.estTC + P.coTC);
+  P.authPS = Math.max(0, P.estPS + P.coPS);
+  P.authHrs = P.authTC + P.authPS;
+  P.hoursPct = P.authHrs > 0 ? P.actHrs / P.authHrs : 0;
 
   var rooms = (plan && plan.rooms) || {};
   est.rooms.filter(function(r){ return !r.excluded; })   // homeowner-handled rooms aren't tracked
@@ -13959,8 +14081,19 @@ function jobProgress(est, plan, logs) {
 // the midpoint INVOICE has no calendar relationship to it at all. Two facts two inches apart
 // on one card must not share a word, or the strip reads as though the invoice is due on the
 // halfway date — which is a statement about money nobody made.
+// What the schedule strip tells a concierge to do about a job running long. ⚠ It read "a change
+// order carries HOURS, not a dollar amount" on every job — false on a fixed price since
+// 2026-09-25, where the change order is the charge and prints its price. And both arms now say
+// what accepting one DOES here: it lengthens the plan by its hours (see coWorkingDays), which is
+// what clears the flag the advice is about.
+function _coPaceFix(est) {
+  return (est && est.fixedPrice)
+    ? 'Re-plan with the client, or raise a change order if the scope grew — on a fixed price it is priced at the job’s rates and added to the fee. Once the client accepts it, its hours lengthen the plan.'
+    : 'Re-plan with the client, or raise a change order if the scope grew — a change order carries HOURS, not a dollar amount. Once the client accepts it, its hours lengthen the plan.';
+}
+
 function jobSchedule(job, est, todayStr, prog) {
-  var S = { state:'none', why:'', today: todayStr || '', days:0, daysQuoted:false,
+  var S = { state:'none', why:'', today: todayStr || '', days:0, daysQuoted:false, coDays:0,
             start:'', anchor:'', anchorKind:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
             actualStart:'', actualStartKind:'',
             elapsed:0, overBy:0, endVariance:0, remaining:0,
@@ -13987,6 +14120,13 @@ function jobSchedule(job, est, todayStr, prog) {
   S.days = estWorkingDays(est);
   S.daysQuoted = !!(est.days && est.days > 0);
   if (S.days < 1) { S.why = 'no-days'; return S; }
+  // ⚠⚠ AN ACCEPTED CHANGE ORDER LENGTHENS THE PLAN BY ITS HOURS (2026-09-25). The pace and overrun
+  // flags below have always told the concierge to "raise a change order if the scope grew" — and
+  // accepting one moved nothing, so the flag it was meant to answer stayed red and the job went
+  // "past the proposed length" on the days the client had just signed for. Read off `prog`, where
+  // the caller passed `coAcceptedHours`; with no `prog` the length is exactly the estimate's.
+  S.coDays = coWorkingDays(est, prog ? prog.coTC : 0, prog ? prog.coPS : 0);
+  S.days = Math.max(1, S.days + S.coDays);
 
   S.hard = job.completion || '';
   if (job.svc === 'probate' || job.svc === 'contested_probate') S.courtDeadline = job.probateDeadline || '';
@@ -14055,7 +14195,7 @@ function jobSchedule(job, est, todayStr, prog) {
     S.workPct = prog.workPct;
     S.hoursPct = prog.hoursPct;
     S.actHrs = prog.actHrs;
-    S.estHrs = prog.estHrs;
+    S.estHrs = prog.authHrs;   // the authorised budget — the estimate plus accepted change orders
   }
 
   // PACE — ONE value, worst first. ⚠ PACE AND FIT ARE TWO SLOTS AND MUST NOT BE COLLAPSED: a
@@ -14076,7 +14216,7 @@ function jobSchedule(job, est, todayStr, prog) {
   if (S.state === 'running' && S.overBy > 0) {
     S.pace = 'overrun';
     S.paceTxt = 'Working day ' + S.elapsed + ' of ' + S.days + ' — ' + S.overBy + ' working day' + (S.overBy === 1 ? '' : 's') + ' past the proposed length.';
-    S.paceFix = 'Re-plan with the client, or raise a change order if the scope grew — a change order carries HOURS, not a dollar amount.';
+    S.paceFix = _coPaceFix(est);
   } else if (_rateOK && _trackDays > S.days) {
     // ⚠⚠ THE ONE FLAG ANTHONY ASKED FOR: *"where we are versus the deliverable timeline we
     // agreed to."* Not the calendar against itself — the WORK against the calendar. It
@@ -14092,7 +14232,7 @@ function jobSchedule(job, est, todayStr, prog) {
     S.paceEnd = addWorkingDays(S.actualStart, _trackDays);
     S.paceTxt = Math.round(prog.workPct * 100) + '% of the work is done on working day '
               + S.elapsed + ' of ' + S.days + '.';
-    S.paceFix = 'Re-plan with the client, or raise a change order if the scope grew — a change order carries HOURS, not a dollar amount.'
+    S.paceFix = _coPaceFix(est)
               + (midSent ? '' : ' The midpoint invoice has not gone out either.');
   } else if (S.state === 'running' && S.halfway && S.today && S.today > S.halfway && !midSent) {
     // ⚠ IT NAMES EXACTLY WHAT IT COMPARED, AND WHAT IT COMPARED IS A CALENDAR. This is a
@@ -17091,7 +17231,7 @@ function jobProgressBlockHtml(jobId, host) {
   var logs = jobLogEntries(jobId);
   var cos = (typeof changeOrders !== 'undefined' ? changeOrders : []).filter(function(c){ return c && c.jobId === jobId; });
   var est = approvedEstimateFor(jobId) || estRec.estimate;
-  var prog = jobProgress(est, jobPlanStore[jobId], logs);
+  var prog = jobProgress(est, jobPlanStore[jobId], logs, coAcceptedHours(jobId));
   var sched = jobSchedule(job, est, _todayStr(), prog);
   var rows = jobTimeline(job, estRec, logs, cos, sched);
   var band = jtBandHtml(job, estRec, rows, jobTimelineNext(rows));
@@ -17157,12 +17297,22 @@ function renderClientDashboard(jobId) {
   // copy of one number three inches away in one function.)
 
   // ── Hours pct for progress bars
-  var tcEst = est ? est.totTC : (job.estTC||0);
-  var psEst = est ? est.totPS : (job.estPS||0);
+  // ⚠⚠ AGAINST THE AUTHORISED HOURS — the estimate plus every change order the client accepted
+  // (2026-09-25). The bars measured the estimate alone, so an accepted +40-hour change order read
+  // as OVERAGE in red on the hours the client had just signed for. `_coH` rides to the bar's label
+  // so the bigger figure says where it came from.
+  var _coH = coAcceptedHours(jobId);
+  var tcEst = (est ? (Number(est.totTC) || 0) : (job.estTC||0)) + _coH.tc;
+  var psEst = (est ? (Number(est.totPS) || 0) : (job.estPS||0)) + _coH.ps;
   var tcPct = tcEst > 0 ? Math.min(120, Math.round((actuals.actTC/tcEst)*100)) : 0;
   var psPct = psEst > 0 ? Math.min(120, Math.round((actuals.actPS/psEst)*100)) : 0;
-  var tcBarColor = tcPct > 115 ? '#A32D2D' : tcPct > 90 ? '#BA7517' : '#1D9E75';
-  var psBarColor = psPct > 115 ? '#A32D2D' : psPct > 90 ? '#BA7517' : '#1D9E75';
+  // The OVERAGE label, the bars' red and the over-tolerance sentence in the Hours Log card all
+  // answer "past the ±15%", so they read one figure. The bar colours were the last two bare `115`s
+  // on this screen — the 2026-09-25 sweep moved the label and the sentence onto EST_TOLERANCE_PCT
+  // and left these, so the bars would have stayed amber past a moved line.
+  var _overPct = 100 + EST_TOLERANCE_PCT * 100;
+  var tcBarColor = tcPct > _overPct ? '#A32D2D' : tcPct > 90 ? '#BA7517' : '#1D9E75';
+  var psBarColor = psPct > _overPct ? '#A32D2D' : psPct > 90 ? '#BA7517' : '#1D9E75';
 
   // ── Initials
   var nameParts = job.name.split(' ');
@@ -17400,7 +17550,7 @@ function renderClientDashboard(jobId) {
   // 15-second remote tick — so it would quietly seed the plan store with an empty record for
   // every client the user merely looked at, and `saveAllJobPlans` posts the whole store.
   var _jtEst = approvedEstimateFor(jobId) || est;
-  var _jtProg = jobProgress(_jtEst, jobPlanStore[jobId], logs);
+  var _jtProg = jobProgress(_jtEst, jobPlanStore[jobId], logs, coAcceptedHours(jobId));
   var _jtSched = jobSchedule(job, _jtEst, _todayStr(), _jtProg);
   var _jtRows = jobTimeline(job, estRec, logs, cos, _jtSched);
   var _jtNext = jobTimelineNext(_jtRows);
@@ -17531,17 +17681,18 @@ function renderClientDashboard(jobId) {
   h += '<button class="btn-p" style="font-size:11px;padding:4px 12px;" onclick="goToJobLog('+jobId+')">+ Log Hours Today</button>';
   h += '</div>';
   // Progress bars. The OVERAGE label, the card's red and the over-tolerance sentence below all
-  // answer "past the ±15%", so they read one figure: the colour and the label were bare `115`s
-  // beside a sentence that read EST_TOLERANCE_PCT, and agreed only while the constant stayed put.
-  var _overPct = 100 + EST_TOLERANCE_PCT * 100;
+  // answer "past the ±15%", so they read one figure (`_overPct`, set with the bars above): the
+  // colour and the label were bare `115`s beside a sentence that read EST_TOLERANCE_PCT, and agreed
+  // only while the constant stayed put.
   h += '<div class="d-split2" style="gap:8px;margin-bottom:12px;">';
   [
-    {label:'Transition Concierge', act: actuals.actTC, est: tcEst, pct: tcPct, color: tcBarColor},
-    {label:'Property Specialists', act: actuals.actPS, est: psEst, pct: psPct, color: psBarColor}
+    {label:'Transition Concierge', act: actuals.actTC, est: tcEst, pct: tcPct, color: tcBarColor, co: _coH.tc},
+    {label:'Property Specialists', act: actuals.actPS, est: psEst, pct: psPct, color: psBarColor, co: _coH.ps}
   ].forEach(function(row){
     h += '<div style="background:var(--tan);border-radius:var(--br);padding:10px 12px;">';
     h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:4px;">'+row.label+'</div>';
     h += '<div style="font-size:15px;font-weight:600;color:var(--gray-dk);">'+row.act.toFixed(1)+' <span style="font-size:12px;font-weight:400;color:var(--gray);">of '+(row.est?row.est.toFixed(1):'—')+' hrs estimated</span></div>';
+    if (row.co) h += '<div style="font-size:10px;color:var(--gray);">' + coInclTxt({tc: row.co}) + '</div>';
     h += '<div style="height:5px;background:var(--border);border-radius:3px;margin:6px 0 4px;"><div style="height:5px;border-radius:3px;background:'+row.color+';width:'+Math.min(100,row.pct)+'%;"></div></div>';
     h += '<div style="display:flex;justify-content:space-between;font-size:11px;">';
     h += '<span style="color:'+row.color+';font-weight:'+(row.pct>85?'600':'400')+';">'+row.pct+'% used'+(row.pct>_overPct?' — OVERAGE':row.pct>90?' — approaching limit':'')+'</span>';
@@ -28353,6 +28504,20 @@ function updateLogSummary(jobId) {
   var estRec = estimateStore[jobId];
   var estTC = (estRec && estRec.estimate && estRec.estimate.totTC) || (job && job.estTC || null);
   var estPS = (estRec && estRec.estimate && estRec.estimate.totPS) || (job && job.estPS || null);
+  // ⚠⚠ THE HOURS THE CLIENT AUTHORISED, NOT THE ESTIMATE ALONE (2026-09-25): every accepted change
+  // order's hours are added, or a job holding a signed +40-hour change order reads red here and
+  // tells the concierge to stop over hours the client agreed to. Only onto a figure that exists — a
+  // job with no estimate still reads "No estimate". The note under the table says the figures are
+  // not the estimate's own.
+  var _coH = coAcceptedHours(jobId);
+  if (estTC) estTC = Math.max(0, estTC + _coH.tc);
+  if (estPS) estPS = Math.max(0, estPS + _coH.ps);
+  var _coNote = document.getElementById('ls-co-note');
+  if (_coNote) _coNote.textContent = (_coH.tc || _coH.ps)
+    ? 'Estimated hours include ' + coHoursLabel(_coH) + ' from ' + _coH.n + ' accepted change order' + (_coH.n === 1 ? '' : 's') + '.'
+    : '';
+  // The per-role red is the ±15%, the same figure as the alert below — both were bare `115`s.
+  var _overPct = 100 + EST_TOLERANCE_PCT * 100;
 
   document.getElementById('ls-act-tc').textContent = actTC.toFixed(1) + ' hrs';
   document.getElementById('ls-act-ps').textContent = actPS.toFixed(1) + ' hrs';
@@ -28365,7 +28530,7 @@ function updateLogSummary(jobId) {
   if (estTC) {
     document.getElementById('ls-est-tc').textContent = estTC.toFixed(1) + ' hrs';
     var tcPct = Math.round((actTC / estTC) * 100);
-    var tcOver = tcPct > 115;
+    var tcOver = tcPct > _overPct;
     document.getElementById('ls-tc-pct').textContent = tcPct + '%';
     document.getElementById('ls-tc-pct').style.color = tcOver ? 'var(--err-tx)' : (tcPct > 100 ? 'var(--warn-tx)' : 'var(--ok-tx)');
     document.getElementById('ls-tc-pct-label').textContent = 'TC utilization vs. estimate';
@@ -28376,7 +28541,7 @@ function updateLogSummary(jobId) {
   if (estPS) {
     document.getElementById('ls-est-ps').textContent = estPS.toFixed(1) + ' hrs';
     var psPct = Math.round((actPS / estPS) * 100);
-    var psOver = psPct > 115;
+    var psOver = psPct > _overPct;
     document.getElementById('ls-ps-pct').textContent = psPct + '%';
     document.getElementById('ls-ps-pct').style.color = psOver ? 'var(--err-tx)' : (psPct > 100 ? 'var(--warn-tx)' : 'var(--ok-tx)');
     document.getElementById('ls-ps-pct-label').textContent = 'PS utilization vs. estimate';
@@ -29420,10 +29585,15 @@ function computeProjection(jobId) {
   if (!est || !est.rooms || !est.rooms.length) return null;
 
   var plan = getJobPlan(jobId);
-  var P = jobProgress(est, plan, jobLogEntries(jobId));
+  var P = jobProgress(est, plan, jobLogEntries(jobId), coAcceptedHours(jobId));
 
   var actTC = P.actTC, actPS = P.actPS;
-  var estTC = P.estTC, estPS = P.estPS;
+  // ⚠⚠ THE AUTHORISED BUDGET — the estimate PLUS every accepted change order (2026-09-25). The
+  // projection used the estimate alone, so a job whose client had signed for +40 hours read red
+  // ("STOP … No further scope work until a signed Change Order") while holding exactly that signed
+  // change order. The projected hours are unchanged — the rate off the rooms done — only the line
+  // they are measured against moves, and the ±15% is taken off the authorised figure.
+  var estTC = P.authTC, estPS = P.authPS;
   var invalidRooms = P.invalidRooms;
   var tcPct = P.tcPct, psPct = P.psPct;
   var actTotal = P.actHrs;
@@ -29457,6 +29627,7 @@ function computeProjection(jobId) {
     headlineBand:headlineBand, tcBand:tcBand, psBand:psBand,
     projTC:projTC, projPS:projPS, triggerTC:triggerTC, triggerPS:triggerPS,
     estTC:estTC, estPS:estPS, tcPct:tcPct, psPct:psPct,
+    coTC:P.coTC, coPS:P.coPS,
     actTC:actTC, actPS:actPS, actTotal:actTotal, aboveFloor:aboveFloor,
     invalidRooms:invalidRooms, ts:Date.now()
   };
@@ -29540,7 +29711,10 @@ function renderProjection(jobId) {
     projBandHtml(snap.tcBand, 'TC', snap.projTC, snap.triggerTC, snap.estTC, snap.tcPct, _fx) +
     projBandHtml(snap.psBand, 'PS', snap.projPS, snap.triggerPS, snap.estPS, snap.psPct, _fx) +
     '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Actual: ' + snap.actTC.toFixed(1) + ' TC + ' + snap.actPS.toFixed(1) + ' PS = ' + snap.actTotal.toFixed(1) + ' total hrs' +
-    (snap.aboveFloor ? '' : ' — below ' + PROJ_CREW_DAY + '-hr noise floor') + '</div>';
+    (snap.aboveFloor ? '' : ' — below ' + PROJ_CREW_DAY + '-hr noise floor') + '</div>' +
+    // The estimated figures above are the estimate plus the change orders the client accepted; say so,
+    // or a reader checking them against the estimate finds a number that is not on it.
+    ((snap.coTC || snap.coPS) ? '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Estimated hours include ' + coHoursLabel({tc:snap.coTC, ps:snap.coPS}) + ' from accepted change orders.</div>' : '');
 }
 
 // THE AS-FOUND PASS IS ATTESTED, NOT COUNTED, and the distinction is the whole point. The
@@ -29952,7 +30126,10 @@ function planHoursMeta(jobId, job, est) {
   (jobLogEntries(jobId) || []).forEach(function(e) {
     (e.members || []).forEach(function(m) { var h = parseFloat(m.hours) || 0; all += h; if (e.date === today) t += h; });
   });
+  // Against the AUTHORISED hours — the estimate plus accepted change orders — like every other hours
+  // readout (coAcceptedHours); only when there is an estimate figure to add them to.
   var estH = (parseFloat(est && est.totTC) || 0) + (parseFloat(est && est.totPS) || 0);
+  if (estH > 0) estH = Math.max(0, estH + coAcceptedHours(jobId).total);
   return { today: t, logged: all, est: estH, warn: !!(job && job.status === 'active' && t === 0) };
 }
 function planHoursMetaHtml(jobId, job, est) {
@@ -30003,7 +30180,7 @@ function _planOpenStageFor(jobId, job, est) {
 // you stand in the job."* ⚠ `jobPlanStore[jobId]` directly, never getJobPlan, which MINTS a plan.
 function _planScheduleStrip(jobId, job, est) {
   var sEst = approvedEstimateFor(jobId) || est;
-  var prog = jobProgress(sEst, jobPlanStore[jobId], jobLogEntries(jobId));
+  var prog = jobProgress(sEst, jobPlanStore[jobId], jobLogEntries(jobId), coAcceptedHours(jobId));
   return jtScheduleHtml(jobSchedule(job, sEst, _todayStr(), prog));
 }
 function planScheduleHtml(jobId, job, est) {
@@ -30375,7 +30552,9 @@ function planDerivedLines(jobId, job, est, phase) {
     var logs = jobLogEntries(jobId);
     var hrs = 0;
     logs.forEach(function(e){ ((e && e.members) || []).forEach(function(m){ hrs += Number(m && m.hours) || 0; }); });
+    // The authorised hours — estimate plus accepted change orders — as on every other hours readout.
     var estHrs = (Number(est.totTC) || 0) + (Number(est.totPS) || 0);
+    if (estHrs > 0) estHrs = Math.max(0, estHrs + coAcceptedHours(jobId).total);
     if (!feeOnly) out.push({ key: 'hours_logged', ok: logs.length > 0, label: 'Hours logged',
                detail: logs.length ? (Math.round(hrs * 10) / 10) + ' hrs against ' + (Math.round(estHrs * 10) / 10) + ' estimated — the final invoice trues to the log' : 'none yet — the final invoice cannot issue without them' });
     var cos = (typeof changeOrders !== 'undefined' ? changeOrders : []).filter(function(c){ return c && c.jobId === jobId; });
@@ -35408,8 +35587,20 @@ function probateAgreementHtml(job, est) {
   content += dRow('Description of Change','&nbsp;<br>&nbsp;<br>&nbsp;');
   content += dRow('Additional TC Hours','&nbsp;');
   content += dRow('Additional PS Hours','&nbsp;');
-  content += dRow('Additional Cost Estimate','$&nbsp;');
-  content += dRow('Revised Total Estimate','$&nbsp;');
+  // ⚠⚠ THE FORM FOLLOWS THE BILLING BASIS, LIKE THE CHANGE ORDER THE APP PRINTS (2026-09-25). It
+  // carried "Additional Cost Estimate $" and "Revised Total Estimate $" on BOTH bases. On time and
+  // materials a change order carries no price — the timesheet bills its hours as they are worked,
+  // at the rates in §3.1, and a dollar figure on it would be the same work charged twice — so this
+  // blank form, inside a signed contract, invited exactly the figure the app refuses to print. On a
+  // fixed price the change order IS the charge: its hours at the §3.1 rates, added to the fixed
+  // project fee, which is what these two rows now name.
+  if (isFixedAgr) {
+    content += dRow('Price of This Change','$&nbsp; <span style="color:var(--gray);font-size:10px;">(the additional hours at the rates in Section 3.1)</span>');
+    content += dRow('Revised Fixed Project Fee','$&nbsp;');
+  } else {
+    content += dRow('Revised Estimated Hours','&nbsp;');
+    content += dRow('Billing','The additional hours are billed as worked, at the hourly rates in Section 3.1. This Change Order does not itself create a charge.');
+  }
   content += dRow('Client Approval','Signature: _________________________________ &nbsp;&nbsp; Date: _________________');
   content += dRow('Havellin Authorization','Signature: _________________________________ &nbsp;&nbsp; Date: _________________');
   content += '</table>';

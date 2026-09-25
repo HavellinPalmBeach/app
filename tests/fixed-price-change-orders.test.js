@@ -51,7 +51,7 @@ function accepted(tc, ps, id) { return co(tc, ps, id, { clientApproved: true, cl
 const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel', '_coMoney', 'fmt', 'esc',
                 'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonLabel', 'estFixedFee',
                 'estTolerancePctTxt', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'openCOAcceptModal',
-                'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder'];
+                'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'prepFeeRate'];
 
 function coCtx(est, cos, seed) {
   const dom = domStub(seed || {});
@@ -344,7 +344,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const logs = { 1: [{ date: '2026-09-20', members: [{ name: 'A', role: 'TC', hours: 100 }, { name: 'C', role: 'PS', hours: 70 }] }] };
     function summary(est) {
       const dom = domStub({});
-      const S = sandbox({ fns: ['updateLogSummary', 'jobLogEntries', 'hoursOverText', 'estTolerancePctTxt'],
+      const S = sandbox({ fns: ['updateLogSummary', 'jobLogEntries', 'hoursOverText', 'estTolerancePctTxt', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel'],
                           vars: ['EST_TOLERANCE_PCT'],
                           stubs: { document: dom, jobs: [Object.assign({}, JOB)], jobLogs: logs,
                                    estimateStore: { 1: { estimate: est } } } });
@@ -378,7 +378,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'workingDaysInclusive', 'approvedEstimateFor',
       'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
-      'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'dot'];
+      'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'dot', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coInclTxt'];
     const VARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT'];
@@ -447,7 +447,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     function proj(fixed) {
       const dom = domStub({});
       const C = sandbox({
-        fns: ['renderProjection', 'computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize', 'projBandHtml', 'estTolerancePctTxt'],
+        fns: ['renderProjection', 'computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize', 'projBandHtml', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'coAcceptedHours', 'coHoursTotal'],
         vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'jobPlanStore', 'estimateStore', 'currentEstimate',
                'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT'],
         stubs: { document: dom, saveJobPlan: () => {},

@@ -551,7 +551,7 @@ The line under the client card on the Job Plan (new 2026-09-20) and the line abo
 | What the line says | What to do |
 |---|---|
 | **red** — *N% of the work is done on working day X of Y. Tracking to &lt;date&gt;, Z working days past the planned end.* | At the rate you are actually going, this job finishes late. Ring the client and re-plan, or raise a change order if the scope grew. **Do not wait for the planned end to arrive to have that conversation.** |
-| **red** — *Working day X of Y — Z working days past the proposed length.* | You are already over the length that was quoted. Same conversation, more urgently. |
+| **red** — *Working day X of Y — Z working days past the proposed length.* | You are already over the length that was quoted. Same conversation, more urgently. If the scope grew and the client signs a change order for it, the plan lengthens by its hours the moment they accept, and the line says *incl. 2 days by change order* (2026-09-25). |
 | **amber** — *Past the halfway point and the midpoint invoice has not gone out.* | This one is about **money**, not about the work. Send it from the band above. |
 | **grey** — *N hours logged and no room marked done yet.* | Not a telling-off. Go and set the room statuses. |
 | **red** — *ends N working days past the hard target / court deadline* | The **plan itself** does not reach the date we committed to — separate from how the job is running. On probate that date is statutory. Raise it now. |
@@ -624,6 +624,8 @@ Log *your own* hours as well as the crew's. You are on site for every crew hour;
 
 > **Your hours are half of the schedule reading on the Client Dashboard.** The line above the timeline shows *hours logged* against *work done*, and the second half comes from the room statuses. Log daily and set the statuses as rooms finish, and anyone opening the client sees where the job really is. Skip either and the dashboard goes quiet rather than guessing. **This is true on a fixed-price job too** — a flat fee changes how the hours are billed, never whether they are recorded.
 
+> **Once the client accepts a change order, its hours join the estimate on every hours figure (2026-09-25).** The bars on the Client Dashboard, the hours table and the projection on the Job Plan, the Hours bar and the schedule line all measure against the estimate *plus* the accepted change orders, and each says so under the figure — *incl. +40.0 hrs by change order*. So a job the client has signed extra hours for no longer reads *OVERAGE* or *STOP* over them. Hours past that still raise the same alarms, and a change order nobody has accepted moves nothing.
+
 ### c. Source the vendors — Job Plan tab
 
 It is the **first bar on the plan** — *Vendors & partners*, a tool folded above the job — because these calls are made before the job starts. It opens by itself while the job is not yet active and anything on it is unconfirmed, and its fold counts the lines (*2 of 4 confirmed*); the *Vendors lined up* gate chip at the top of the plan goes green when they all are.
@@ -656,6 +658,10 @@ Then two buttons appear on it:
 2. **Get Acceptance** — the client types their name against *✓ I Accept This Change Order.* Hand them the iPad, or record it yourself off their email or call. On a fixed-price job the screen they sign under shows the price.
 
 > **⚠** **An unaccepted Change Order is never billed.** The final invoice counts accepted change orders and silently ignores the rest. A change order created, printed, agreed on the phone and never marked accepted is work you will do and not charge for. **Take the acceptance at the moment the client agrees.**
+
+> **The second change order starts from where the first left the job (2026-09-25).** Its screen reads *“180.0 hrs on the estimate and 1 accepted change order becomes 200.0”*, and its printed copy carries a *Change orders already accepted* line, so the revised total is the real one. It used to start from the estimate alone and print a total short by every hour the first change order had added.
+
+> **⚠** **On a Home Prep job, do not promise extra concierge hours once the agreement is signed.** That engagement bills no hours — the fee is 30% of what the vendors invoice — and the change-order screen says so: hours typed there are billed nowhere. There is no route in the app today to add hours to a signed prep job, so talk to Anthony before offering any. A change in the *vendor* work needs no change order for the fee: it follows what the vendors invoice.
 
 ### e. Job Admin & Inventory — the desk tab
 
@@ -1233,6 +1239,12 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | A change order on a fixed-price job shows a dollar amount | Correct, since 2026-09-25. On a flat fee nothing else charges the added scope — the change order’s price is exactly what the final invoice adds, so the client signs the price, not just the hours. On an ordinary hourly job there is still no price on it. |
 | A fixed-price job is over the hours and the screen says *margin at risk* instead of *STOP* | That is right. On a flat fee the overrun comes out of our margin, not the client’s bill, so there is nothing to stop for and nobody to notify. Raise a change order only if the extra time is work beyond the agreed scope. |
 | A printed change order reads *Reason: scope_add* | It was printed before 2026-09-25, when the reason printed as its internal key. Print it again; it reads *Scope addition — new rooms or services* now. |
+| A change order was accepted and the hours still read *OVERAGE* or *STOP* | Check it is really marked accepted (**Get Acceptance**) — an unaccepted change order moves nothing. If it is accepted and the hours are still red, the job is past even the hours the client authorised: that is a real overrun, and the same conversation as before. |
+| The estimated hours on the dashboard or the Job Plan are bigger than the estimate | Correct since 2026-09-25: they include the accepted change orders, and the line under the figure says so (*incl. … by change order*). |
+| The schedule line says 8 working days and the estimate says 6 | An accepted change order lengthened the plan, and the line says *incl. 2 days by change order*. The estimate still states the length the client first signed against. |
+| Change order #2 starts from a bigger number than the estimate | Correct — it starts from the estimate plus the change orders already accepted, so its revised total is the real one. |
+| A change order on a Home Prep job says the engagement bills no hours | Correct. Prep bills the fee on the vendors’ invoices, not hours, so hours on its change order are billed nowhere. Talk to Anthony before promising extra concierge hours on a signed prep job. |
+| The change-order form inside an estate agreement has no dollar lines | Correct on an hourly job since 2026-09-25: the hours are billed as they are worked. On a fixed price it asks for the price of the change and the revised fee. Regenerate any estate agreement made before that date before it is signed. |
 | A client asks for the *receipts* for the moving materials | There are none, and the documents no longer promise any. Materials are a **fixed package price** you picked on the estimate — not cost-plus, no handling fee. Four client surfaces said otherwise until 2026-09-11, two of them contracts. If they are holding one of those, re-send the current estimate and agreement; the price has not changed. |
 | A prep client’s agreement quotes $150/hour | It was generated before 2026-09-11. A Home Prep engagement bills **no hours at all** — the fee is 30% of vendor spend — and the contract said both things at once. Re-generate and re-send it; nothing about the price changed. |
 | A vendor’s quote is on the wrong trade’s line | Fixed 2026-09-11. Removing a line from an estimate used to shift every quote below it up one, so the cleaner’s row could come back carrying the landscaper’s name and price. If you are looking at a job where that already happened, re-enter the quotes on the Job Plan — they will stay put now. |

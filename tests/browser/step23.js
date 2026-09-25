@@ -107,12 +107,17 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     got.text = await T(got.html);
     return got;
   }
-  // Over the hours: every room cleared, and 30% more hours logged than the estimate carries.
+  // Over the hours: every room cleared, and 30% more hours logged than the job is AUTHORISED for —
+  // the estimate plus its accepted change orders. ⚠ Restated 2026-09-25 (step24): this fixture logged
+  // 30% over the ESTIMATE, and both jobs here hold accepted change orders by this point, which since
+  // that date raise the line the hours are measured against. 130% of the estimate is inside it now,
+  // correctly — so the fixture has to overrun what the client actually authorised.
   async function overrun(id, e) {
     await p.evaluate(([id, e]) => {
       const plan = getJobPlan(id);
       e.rooms.forEach(r => { plan.rooms[r.idx] = Object.assign(plan.rooms[r.idx] || {}, { status: 'cleared' }); });
-      const tc = Math.ceil((e.totTC || 0) * 1.3), ps = Math.ceil((e.totPS || 0) * 1.3);
+      const co = (typeof coAcceptedHours === 'function') ? coAcceptedHours(id) : { tc: 0, ps: 0 };
+      const tc = Math.ceil(((e.totTC || 0) + co.tc) * 1.3), ps = Math.ceil(((e.totPS || 0) + co.ps) * 1.3);
       jobLogs[id] = [{ id: Date.now(), date: '2026-09-24', activity: 'Rooms', members: [
         { name: 'Anthony Graziano', role: 'TC', hours: tc }, { name: 'Anthony Graziano Jr', role: 'PS', hours: ps }] }];
     }, [id, e]);

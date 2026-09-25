@@ -1,3 +1,95 @@
+## ⚠⚠ AN ACCEPTED CHANGE ORDER IS PART OF THE HOURS A JOB IS MEASURED AGAINST — ON EVERY SCREEN (FIXED 2026-09-25)
+Anthony, on the three things the fixed-price change-order build (below) had found and not fixed: *"Fix everything you
+highlighted."* All three are fixed. App-only, no redeploy. He also asked *"What is 'keep the price'?"* — the open question
+from that build (the fixed-price change order carrying its price, my call rather than his); answered in chat, and **it
+stands unless he says revert**.
+
+- **⚠⚠ #1 — EVERY HOURS READOUT MEASURED AGAINST THE ESTIMATE ALONE, WHILE THE INVOICE MOVED WITH THE CHANGE ORDERS.** The
+  Client Dashboard's Hours Log bars, the Job Plan's hours summary, the Hours fold, the desk card's hours line, the projection
+  and the schedule strip all read `est.totTC` / `est.totPS`; only the final invoice's variance gate read `estHavellinTotal +
+  coShift`. So a T&M job holding a signed +40-hour change order read *OVERAGE* and *⛔ STOP — Change Order Required* over the
+  very hours the client had signed for, and a fixed-price job read *margin at risk* on hours the change order had priced.
+  **Worse, the schedule strip's own advice — "raise a change order if the scope grew" — could never clear the overrun it was
+  attached to, because accepting one moved nothing.**
+  - **`coAcceptedHours(jobId)` IS THE ONE SUM** (every `clientApproved` change order on the job), read by all six. An
+    unaccepted change order moves nothing anywhere — a draft authorises nothing. `coInclTxt` prints *incl. +40.0 hrs by change
+    order* under a bar; the Job Plan table (`#ls-co-note`, in the markup) and the projection print *Estimated hours include …
+    from N accepted change order(s)*, so the bigger figure is never mistaken for the estimate's own.
+  - **⚠⚠ TWO BUDGETS IN `jobProgress`, AND WHICH ONE A FIGURE READS IS THE WHOLE DESIGN.** HOURS against the AUTHORISED budget
+    (`authTC/authPS/authHrs` = estimate + accepted change orders, floored at 0; `hoursPct` and the projection read them); WORK
+    DONE stays on the estimate's rooms (`adjTC/adjPS`, `workPct`), because nothing ever marks a change order's hours complete —
+    folding them in would leave a finished job reading short of 100% forever. The change-order hours arrive as a **fourth
+    argument**, never read inside (the plan-and-log rule), and are set **before** the early return because the schedule reads
+    them to lengthen a plan whose estimate carries no rooms. All four callers pass `coAcceptedHours(jobId)`; a net asserts it.
+  - **⚠⚠ THE PLAN LENGTHENS BY THE MARGINAL DAYS, NEVER A SECOND CEILING.** `coWorkingDays(est, coTC, coPS)` runs the
+    `estWorkingDays` derivation on the hours with and without the change orders and differences them — 36 hours is six days
+    and 42 is six, so a +6-hour change order adds none, where rounding it up alone would say one. **The longer leg decides in
+    both directions**: −14 concierge hours on a job whose specialist leg needs 5 days shortens it by one, not two. A quoted
+    `est.days` stays the base; `jobSchedule` sets `S.coDays` and `S.days = max(1, days + coDays)`. **`estWorkingDays` itself is
+    unchanged** — the client estimate and the agreement state the length as quoted. The strip prints *incl. N day(s) by change
+    order* (or *N day(s) shorter*) beside the count, on the running and planned strips and the no-start one.
+  - **`_coPaceFix(est)` — the overrun and behind advice on both bases now says what accepting one does** (*"Once the client
+    accepts it, its hours lengthen the plan"*), and on a fixed price no longer claims the change order *"carries HOURS, not a
+    dollar amount"*, which went false there the same day.
+  - **The last three bare `115`s went with it**: the dashboard bar colours (`_overPct` moved up to cover them) and the Job
+    Plan summary's per-role red. With the tolerance at 30%, a 125% bar is not red on either.
+- **⚠ A SECOND CHANGE ORDER IS MEASURED FROM WHERE THE FIRST LEFT THE JOB.** The modal's base and the printed T&M change
+  order read the estimate alone, so change order #2 on a job whose #1 added 40 hours printed a revised total 40 hours short
+  of what the client had already signed, on the page they sign next. `_coPriorAccepted(jobId, co)` is now the ONE definition
+  of *earlier* (created earlier; a draft counts every accepted one) — read by `coFixedTerms` (prices) and the new
+  `coPriorHours` (hours) alike, so the two chains cannot disagree; a test asserts `c.id < me` appears exactly once. The readout
+  says *"180.0 hrs on the estimate and 1 accepted change order becomes 200.0 (+11.1%)"*; the printed page carries a *Change
+  orders already accepted* row.
+- **⚠⚠ #2 — §4.2 OF THE ESTATE AGREEMENT FOLLOWS THE BILLING BASIS.** The blank change-order form inside the signed contract
+  printed *Additional Cost Estimate $* / *Revised Total Estimate $* on both bases — a price field on the T&M change order the
+  app refuses to price. T&M: *Revised Estimated Hours* and *Billing — billed as worked at the §3.1 rates; this Change Order
+  does not itself create a charge*. Fixed: *Price of This Change $ (the additional hours at the rates in Section 3.1)* and
+  *Revised Fixed Project Fee $*. **Drafted, not reviewed** — added to `COUNSEL_REVIEW_BUNDLE.md` as **A8**, with the question
+  of whether the standard form's fixed arm needs the rate card stated.
+- **#3 — A FEE-ONLY PREP JOB'S READOUT SAID "no approved estimate yet".** `coNoHoursBaseTxt(b, h)` has three arms: no saved
+  estimate; prep (*"this engagement bills no hours: its fee is 30% of what the preparation vendors invoice, and its Job Plan
+  has no hours log, so hours on a change order are not billed here…"*, the rate read from `prepFeeRate()`); a labour estimate
+  pricing no hours.
+- **⚠ FOUND BY FIXING #3, NOT FIXED, AND IT IS ANTHONY'S CALL: THERE IS NO ROUTE TO ADD HOURS TO A SIGNED PREP JOB.** Declutter
+  hours live on the estimate, the estimate locks at signature, and a change order's hours are billed nowhere on a prep job (no
+  hours log, not fixed-price). Both documents now tell the concierge not to promise them. The fix is a product decision: let a
+  prep change order carry declutter hours onto the hours log and the final, or re-quote.
+- **⚠ ALSO LEFT, OUTPUT CORRECT TODAY:** literal *"15%"* strings survive in the estate §3.2/§4.1 T&M arms, the standard §3.8 T&M
+  arm and the invoice PIN banner. Harmless while `EST_TOLERANCE_PCT` is 0.15; worth routing through `estTolerancePctTxt()` the
+  next time any of them is touched.
+- **11,305 committed checks** (`tests/change-order-hours.test.js` new at 167, driving the real `jobProgress`, projection,
+  `jobSchedule`, strip, dashboard, Job Plan summary, Hours fold, desk card, modal, printed change order and §4.2 on both
+  bases; eleven suites' pinned `fns:` lists gained the new helpers, lifted rather than stubbed). **Revert sweep on four tar
+  copies: 53 changes, ALL RED once the one below was re-done, baseline 11,304 / 0 before and after on every copy, no needle
+  mismatched, nothing threw.** Biggest: `coAcceptedHours` counting pending change orders 12, `authTC` ignoring them 10, the
+  projection dropping them 8; the rest 1–7.
+  - **⚠ ONE CAME BACK GREEN AND IT WAS MY TEST**: removing *"Once the client accepts it, its hours lengthen the plan"* from
+    the FIXED arm of `_coPaceFix` — only the T&M arm was asserted. Re-done, it fails 1 with all checks running.
+  - **⚠ AND MY WAITING WAS BROKEN, NOT THE SWEEP.** The wait loops tested `pgrep -f "sweep2/sweep.py"`, which matches the
+    loop's OWN command line, so they could never end — the sweep had finished half an hour earlier. **Never `pgrep -f` for a
+    string your own waiter contains**; wait on the result file, or on a pid captured at launch.
+- **Verified in headless Chromium, `tests/browser/step24.js`, 53 checks, 0 failed, 0 page errors**, through the real
+  modal, the real Create and Accept buttons, the real dashboard, Job Plan and print path: a T&M Home Editing job 30% over its
+  hours and one day past its length reads OVERAGE / notify / STOP / *past the proposed length*; a +50% change order accepted
+  through the real button clears every one of them, the bars read *of N hrs estimated* with *incl. +N hrs by change order*,
+  the strip reads *Working day X of the lengthened length* with *incl. N days by change order*; the second change order's
+  readout and printed page carry the first; a fixed-price job's margin warning clears the same way; §4.2 on both bases; the
+  prep readout; overflow 0 at 1440 and 390. **Against the pre-change build it fails 30 of 53.** `run.sh`'s default list is
+  1–24; steps 1–22 re-run as regressions, 0 failed.
+  - **⚠ `step23` WAS RESTATED, NOT WEAKENED**: its overrun fixture logged 30% over the ESTIMATE on jobs that by then held
+    accepted change orders, which is correctly no longer an overrun — it failed 8 until the fixture overran the AUTHORISED
+    hours. The requirement it tests (over the line reads margin-at-risk on fixed, STOP on T&M) is unchanged; 78 / 0 again.
+    **1,070 browser checks across the twenty-four.** The first `<style>` block is byte-identical — no CSS.
+- Manual **§8** (the §4.2 note), **§9** (the accepted-baseline sentence extended, and a new note with a what-moves table, the
+  second-change-order rule and the prep readout), **§9a-i** (the length row, the done/logged note, the overrun and behind
+  rows), **§11** (a note under Log Hours). Playbook **Step 10** (the schedule table's overrun row), **10b** (a note), **10d** (a
+  note and a `.stop` on prep) and **six** symptom rows. Both `.md` copies hand-edited; **37 claims parity-checked, 0
+  mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/60 and 17/18
+  tables full width, 0 on the phone rule — the one new table sits inside a note.
+- **⚠ THE SHAPE TO COPY: when an instruction tells people to do X to clear a flag, check that doing X clears the flag.** The
+  strip said *raise a change order*; the change order was billed correctly and moved nothing the strip read. Advice whose
+  remedy does not reach the reading it advises on is worse than none — it teaches people the advice is decoration.
+
 ## ⚠⚠ ON A FIXED PRICE THE CHANGE-ORDER TRIGGER IS SCOPE, AND THE CHANGE ORDER CARRIES ITS PRICE (FIXED 2026-09-25)
 Anthony, off the reference-guide update: *"Is a 15% over run change order necessary on a fixed price job, or should it be a
 'Change of Scope' or something that triggers and change order?"* Scope. Both agreements' fixed arms already said so (estate
@@ -67,14 +159,16 @@ the guide went out that morning saying it. **Seven screens still spoke the T&M r
   **10d** (a `.stop` each, and the two items) plus **three** symptom rows. Both `.md` copies hand-edited; **45 claims
   parity-checked, 0 mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print`
   51/59 and 17/18 tables full width, 0 on the phone rule — the one new table sits inside a note.
-- **⚠ FOUND IN PASSING, NOT FIXED:** (1) the estate agreement's **§4.2 Change Order Documentation** template prints
+- ~~**⚠ FOUND IN PASSING, NOT FIXED:** (1) the estate agreement's **§4.2 Change Order Documentation** template prints
   *Additional Cost Estimate $* and *Revised Total Estimate $* on both bases — right on fixed price now, wrong on T&M, where a
   change order carries no price; contract text, so Anthony's or counsel's. (2) **The hours baselines never include accepted
   change-order hours** — the dashboard bars, the Job Plan summary and the projection (`jobProgress`) measure against
   `est.totTC/totPS` only, while the invoice's variance gate does move (`estHavellinTotal + coShift`). So a T&M job with an
   accepted +40-hour change order reads STOP on hours the client signed for, and a fixed job reads *margin at risk* on hours
   it was paid for. The next thing to build. (3) On a pure fee-only prep job (no hours on the estimate) the change-order
-  readout says *"this job has no approved estimate yet"*, which reads as if there were none.
+  readout says *"this job has no approved estimate yet"*, which reads as if there were none.~~ **ALL THREE FIXED THE SAME
+  DAY** — Anthony: *"Fix everything you highlighted."* See the entry at the top of this file. *Kept rather than deleted, per
+  the standing rule that a fixed flag left standing reads as outstanding work.*
 - **⚠ THE SHAPE TO COPY: when a rule was right for a reason, check the reason on every basis before applying the rule.**
   "A change order carries no price" was true because the timesheet bills the hours. On a flat fee nothing does, and the
   same sentence became the one thing on the page that was false.
@@ -111,9 +205,10 @@ link to the website."* **Docs only, and the document is NOT in this repo.** No a
   **⚠ Never commit the `.docx` or the TTFs here: this repo is PUBLIC and the fonts are Monotype's, licensed to Google.**
 - **⚠ FOUND IN PASSING, NOT FIXED, RAISED WITH ANTHONY:** (1) **every new estimate still starts on hourly**, since
   `e-fixed` resets unticked at both reset sites, while the guide now promises a fixed fee on every estate and trust
-  engagement; (2) **`printChangeOrder` tells a fixed-price client the change order *"does not itself create a charge"* and
+  engagement; ~~(2) **`printChangeOrder` tells a fixed-price client the change order *"does not itself create a charge"* and
   is *"billed for the hours actually worked … the same way every other hour on this engagement is billed"***, false on a
-  flat fee, where the order's hours at the rate card ARE the charge (`coCharge`); the acceptance modal's note says the same;
+  flat fee, where the order's hours at the rate card ARE the charge (`coCharge`); the acceptance modal's note says the same;~~
+  **(2) FIXED THE SAME DAY** in the fixed-price change-order build (the entry above this one): both now branch on the basis;
   (3) guide §6 and §8 still say *no photography shared without written consent* against the opt-out marketing clause both
   agreement forms have carried since 2026-09-18, left alone as a positioning call.
 
@@ -13145,9 +13240,13 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-24** — both documents, against who arranges the appraisals following the tier rather
-  than the price (manual §4 two notes and the tier table, §5c, §7, §8; playbook the tier table, a `.stop` and two symptom rows);
-  see the entry at the top of this file.
+- Last reconciled against the app: **2026-09-25 (second pass)** — both documents, against accepted change orders joining every
+  hours baseline, the plan lengthening by them, the second change order's chain, the §4.2 form and the prep readout (manual §8,
+  §9, §9a-i, §11; playbook Step 10, 10b, 10d and six symptom rows); see the entry at the top of this file.
+- Prior pass **2026-09-25** — both documents, against the fixed-price change-order build (manual §9, §11, §12, §16; playbook
+  Step 10b/10d and three symptom rows).
+- Prior pass **2026-09-24** — both documents, against who arranges the appraisals following the tier rather
+  than the price (manual §4 two notes and the tier table, §5c, §7, §8; playbook the tier table, a `.stop` and two symptom rows).
 - Prior pass **2026-09-23 (evening)** — both documents, against the 30% prep fee moving into the services
   table and on top of a fixed fee, the never-log-prep-trade-time rule, and the rush/discount order both had stated wrongly since
   2026-09-11; see the entry at the top of this file.

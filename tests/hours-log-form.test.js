@@ -151,7 +151,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({ 'plan-job': { value: '21' }, 'stage-meta-hours': { innerHTML: 'STALE' }, 'plan-sched': { innerHTML: 'STALE' } });
     const est = { fixedPrice: true, fixedAmount: 23000, totTC: 20, totPS: 40 };
     const c = sandbox({
-      fns: ['_repaintHoursReadouts', 'planHoursMetaHtml', 'planHoursMeta', '_hrsTxt', '_planScheduleStrip'],
+      fns: ['_repaintHoursReadouts', 'planHoursMetaHtml', 'planHoursMeta', '_hrsTxt', '_planScheduleStrip', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coWorkingDays', '_coPaceFix'],
       stubs: {
         document: dom, jobs: [{ id: 21, status: 'active', start: '2026-09-20' }], estimateStore: { 21: { estimate: est, approved: true } },
         jobLogEntries: () => logs, _todayStr: () => '2026-09-20', approvedEstimateFor: () => est, jobPlanStore: {},

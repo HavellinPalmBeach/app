@@ -112,7 +112,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     process.env.TZ = 'America/New_York';
     try {
       const S = sandbox({ fns: ['jobSchedule', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive',
-                                'docSentAt', 'docKeyFor', 'fmtDate2'], vars: ['PRODUCTIVE_HRS_PER_DAY'] });
+                                'docSentAt', 'docKeyFor', 'fmtDate2', 'coWorkingDays', '_coPaceFix'], vars: ['PRODUCTIVE_HRS_PER_DAY'] });
       const est = { svc: 'downsizing_move', days: 6 };
       const job = { id: 7, svc: 'downsizing_move', status: 'active', start: '2026-10-05', activatedOn: '2026-09-23' };
       const d = S.jobSchedule(job, est, '2026-09-23');
@@ -152,7 +152,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#3 — the hard target is tested against the start the job really had');
   {
-    const S = sandbox({ fns: ['jobSchedule', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'docSentAt', 'docKeyFor'],
+    const S = sandbox({ fns: ['jobSchedule', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
                         vars: ['PRODUCTIVE_HRS_PER_DAY'] });
     const est = { svc: 'cleanout', days: 6 };
     // Target start the 21st, a hard target of the 25th — reachable on paper — but the job only

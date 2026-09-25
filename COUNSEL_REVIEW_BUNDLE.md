@@ -34,7 +34,7 @@ rather than researching from nothing.
 | **2** | the first **trust** matter signing | A5, A6 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, B1, B3, B4, D1, D2, D4, D5 |
+| **5** | general — before launch | A3, A4, A7, A8, B1, B3, B4, D1, D2, D4, D5 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -154,6 +154,33 @@ perform. Anthony confirmed: *"yes, everyone signs the 1099 before they work."*
 obligations adequate to this promise? **This is the one clause in either agreement that
 depends on a hiring practice rather than on anything the app does** — if the practice changes,
 the clause changes with it.
+
+### A8. §4.2 — the change-order form inside the agreement, and what a change order costs ⚠ NEW 2026-09-25
+
+**What it says now.** §4.2 *Change Order Documentation* is a blank form printed inside the
+estate agreement. Until 2026-09-25 it carried *Additional Cost Estimate $* and *Revised Total
+Estimate $* on every engagement. It now follows the billing basis:
+
+- **Time and materials** — *Additional TC Hours*, *Additional PS Hours*, *Revised Estimated
+  Hours*, and a *Billing* row: *"The additional hours are billed as worked, at the hourly rates
+  in Section 3.1. This Change Order does not itself create a charge."*
+- **Fixed price** — the same two hours rows, then *Price of This Change $ (the additional hours
+  at the rates in Section 3.1)* and *Revised Fixed Project Fee $*.
+
+**Why.** The two bases bill a change in scope differently, and the app's own change order has
+said so since 2026-09-11 (T&M) and 2026-09-25 (fixed). On T&M the timesheet bills every hour
+worked, so a price on the change order would charge the same work twice; the form inside the
+contract was still inviting that figure. On a fixed price nothing else charges the added scope,
+so the change order carries its price — the hours at the §3.1 rate card — and the final invoice
+adds exactly that figure. The standard (living-client) form's fixed arm states **no hourly rate
+anywhere**, which is why the app now prints the rates on the change order itself.
+
+**The question.** (1) Is a T&M change order that authorises scope in **hours** and states no
+price an adequate written agreement to the added charge, given that the price is only fixed when
+the hours are worked? (2) On a fixed-price engagement, is pricing the change at the rate card
+enough when the standard form's fixed arm never states those rates — or should the rate card be
+added to that form's fixed arm so the client has seen the rates before signing a change order
+priced from them?
 
 ---
 
