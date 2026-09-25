@@ -1,3 +1,41 @@
+## ⚠ THE COUNSEL REFERENCE GUIDE STILL SAID "WE BILL HOURLY" (UPDATED 2026-09-25)
+Anthony, off the website: *"I just checked out the website and downloaded the estate & trust settlement doc we created.
+It's out of date at least for the billing, which is now fixed price. Update that and paste it here so i can download and
+link to the website."* **Docs only, and the document is NOT in this repo.** No app change, no redeploy, no build stamp.
+
+- **⚠ WHERE IT LIVES.** Source: the Google Doc `Havellin_Estate_Trust_Settlement` in the Shared Drive under *Job Type
+  Execution Plans / Estate Cleanout*. The website PDF was exported from it on 2026-09-04 (a copy is in *My iMac /
+  Downloads*). **The Drive connector cannot edit a Google Doc's body** (`update_file` is title and folder only), so the
+  update went to Anthony as a PDF for the site plus an edited `.docx` to re-import; until he does, the Google Doc is the
+  Sept 4 text. Search Drive by that title; do not rebuild the guide from memory.
+- **What changed, 11 paragraphs edited and 3 added, every other paragraph byte-identical (checked by XML diff):** §3 the
+  estimate item is *Written estimate and fixed fee*, the intro ends *the fixed fee reflects the scope you choose*, and the
+  close package drops *the itemized hours log supporting the invoice* for *the final invoice ties back to the engagement
+  agreement and any signed change orders* (Anthony's 2026-09-20 call: a flat fee stands alone on the client's documents);
+  §5 *We work for a fixed fee*; §6 the estimate commitment and **the 15% variance change-order trigger, replaced by a
+  scope trigger billed at the agreement's hourly rates** (the fixed arm of estate §4.1 and §3.1 say exactly that); §7
+  rewritten: fixed fee for the agreed scope, overrun is ours to absorb, 50/25/25, and **vendors at cost with the 30% site
+  management fee on prep trades named** (*"I just wanna make sure we don't make claims of not putting a fee on top of other
+  vendors"*, 2026-09-10; the guide said *"we do not mark up their invoices"* and stopped); FAQ commission answer, a new
+  *What if the work takes longer than planned?*, and the close-package answer without the hours log.
+- **⚠ AND ONE CLAIM THAT WAS NEVER TRUE CAME OUT: referral fees disclosed *"here and in our engagement agreement"*.**
+  Neither agreement form has ever carried a referral-fee clause (`git log -S "referral fee"` is empty). The guide now says
+  *here*. Adding the clause to both forms is Anthony's call, and the guide line can go back if he makes it.
+- **How the PDF was made, so the next revision can repeat it:** Google's DOCX export embeds its Monotype Garamond
+  (fsType 8, editable embedding). The paragraphs are turned into HTML with those fonts via `@font-face` and printed in
+  Chromium. Google's layout is CSS-like: line-height 1.125 from the font's own metrics (hhea 1765/539, no gap), before/after
+  spacing collapsing to the larger, widows and orphans of 2; the three empty rule paragraphs are Times New Roman 10pt with an
+  11.5pt box and a 0.75pt #d8cfc0 bottom border. Result: identical line breaks, baselines within about 1pt, still 5 pages,
+  plus keep-with-next on headings and FAQ questions (Google had stranded §4's heading and one question at page feet).
+  **⚠ Never commit the `.docx` or the TTFs here: this repo is PUBLIC and the fonts are Monotype's, licensed to Google.**
+- **⚠ FOUND IN PASSING, NOT FIXED, RAISED WITH ANTHONY:** (1) **every new estimate still starts on hourly**, since
+  `e-fixed` resets unticked at both reset sites, while the guide now promises a fixed fee on every estate and trust
+  engagement; (2) **`printChangeOrder` tells a fixed-price client the change order *"does not itself create a charge"* and
+  is *"billed for the hours actually worked … the same way every other hour on this engagement is billed"***, false on a
+  flat fee, where the order's hours at the rate card ARE the charge (`coCharge`); the acceptance modal's note says the same;
+  (3) guide §6 and §8 still say *no photography shared without written consent* against the opt-out marketing clause both
+  agreement forms have carried since 2026-09-18, left alone as a positioning call.
+
 ## ⚠⚠ WHO ARRANGES THE APPRAISALS IS THE TIER'S ANSWER, AND THE CONTRACT WAS ASKING THE PRICE (FIXED 2026-09-24)
 Anthony asked whether the website's estate copy (*"as much or as little as your process requires: cleanout, inventory,
 appraisal coordination …"*) and the reference guide for counsel hold true against the app, then *"go on the defect."*
@@ -7834,7 +7872,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/fervent-mayer-xeo4ur`
+- Active feature branch: `claude/estate-trust-billing-update-7dqkbw`
+  (`claude/fervent-mayer-xeo4ur` is the previous name.)
   (`claude/gifted-rubin-jjl1d0` is the previous name.)
   (`claude/inspiring-ptolemy-xgngqv` is the previous name.)
   (`claude/magical-fermi-riifo8` is the previous name.)
@@ -7879,7 +7918,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/fervent-mayer-xeo4ur:main`
+  `git push origin claude/estate-trust-billing-update-7dqkbw:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
