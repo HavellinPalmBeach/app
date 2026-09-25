@@ -10,6 +10,12 @@
 //   2. The estate agreement's §4.2 change-order form printed "Additional Cost Estimate $" and
 //      "Revised Total Estimate $" on both bases, including T&M, where a change order carries no price.
 //   3. A fee-only Home Prep job's change-order readout said "no approved estimate yet".
+//      ⚠ RESTATED 2026-09-25 (step 25): the readout this build wrote — "this engagement bills no hours
+//      … hours on a change order are not billed here" — went false the same day, when an accepted
+//      change order became the route to add concierge hours to a signed prep job. Section D now
+//      asserts the readout that replaced it (the rate, billed on the final on top of the fee), and
+//      that the retired sentence is gone. The requirement — never "no approved estimate", and say
+//      what is true about how the hours are billed — is unchanged.
 //
 // Drives the REAL page: the real change-order modal typed into, the real Create and Accept buttons,
 // the real dashboard, the real Job Plan, the real print path and the real agreement builder — on a
@@ -227,12 +233,18 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     openChangeOrder(id);
     document.getElementById('co-tc-hrs').value = '6'; updateCOHours();
     const r = document.getElementById('co-hrs-note').textContent.replace(/\s+/g, ' ');
+    const rate = _coJobBasis(id).tcRate, fee = Math.round(prepFeeRate() * 100);
     closeChangeOrder();
-    return r;
+    return { r: r, rate: rate, fee: fee };
   });
-  lacks(prep, 'no approved estimate', '⚠⚠ a priced prep job is never told it has no estimate');
-  has(prep, 'this engagement bills no hours', 'it says the engagement bills no hours');
-  has(prep, 'hours on a change order are not billed here', 'and that hours typed here are billed nowhere');
+  lacks(prep.r, 'no approved estimate', '⚠⚠ a priced prep job is never told it has no estimate');
+  // Restated (see the header): the hours ARE billed now, at the concierge rate, on top of the fee.
+  has(prep.r, '+6.0 concierge hrs at $' + prep.rate + ' an hour', 'it names the hours and the rate they are billed at');
+  has(prep.r, 'billed as they are worked on the final invoice', 'and that they are billed on the final as worked');
+  has(prep.r, 'on top of the ' + prep.fee + '% site management fee', 'on top of the site management fee, read from the rate');
+  has(prep.r, 'priced no concierge hours, so the rate is printed on the change order', 'and why the rate is on the page the client signs');
+  lacks(prep.r, 'not billed here', '⚠ the retired "not billed here" sentence is gone — it is false now');
+  lacks(prep.r, 'bills no hours', 'and so is "bills no hours"');
 
   // ── E. Overflow ──────────────────────────────────────────────────────────
   for (const w of [1440, 390]) {

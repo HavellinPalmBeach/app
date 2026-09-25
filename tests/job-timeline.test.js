@@ -34,8 +34,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // body includes this function's own comments — which name `job.status` and
   // `completionDate` precisely because it explains why it does NOT read them. This
   // file has paid for that trap twice; strip them rather than weaken the assertion.
+  // ⚠⚠ ANCHORED ON THE NAME, NOT THE ARGUMENT LIST (2026-09-25). It searched for
+  // 'function jobTimeline(job, estRec, logs, cos)' — and when the schedule became a fifth argument
+  // on 2026-09-13 that string stopped matching, indexOf returned −1, the slice came back EMPTY, and
+  // every lacks() below passed on nothing for twelve days. The guard after it is what stops that
+  // happening silently again: a body this function could not fit in fails the file.
   const jtBody = (() => {
-    const from = src.indexOf('function jobTimeline(job, estRec, logs, cos)');
+    const from = src.indexOf('function jobTimeline(');
+    if (from < 0) return '';
     const body = src.slice(from, src.indexOf('\nfunction jobTimelineNext', from));
     return body.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
   })();
@@ -65,6 +71,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // be told about it — without it `row()` throws and every check in the file is lost.
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
   });
+
+  // ⚠ The slice is real: it starts at the function and runs thousands of characters.
+  ok(jtBody.startsWith('function jobTimeline(') && jtBody.length > 4000,
+     `the jobTimeline body under test is the real one (${jtBody.length} chars) — an empty slice made every lacks() below vacuous`);
 
   const PAST = '2020-01-01';
   const FUTURE = '2099-01-01';

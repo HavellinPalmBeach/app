@@ -266,7 +266,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'dot', 'coWorkingDays', '_coPaceFix', 'coInclTxt', 'esc',
-      'roomStatusNormalize'].concat(CO);
+      'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs'].concat(CO);
     const VARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
@@ -372,7 +372,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     }
     eq(meta([], EST_TM).est, 140, 'the fold measures against the estimate …');
     eq(meta([accepted(20, 20, 50)], EST_TM).est, 180, '⚠ … plus the accepted change orders');
-    eq(meta([accepted(20, 20, 50)], { totTC: 0, totPS: 0 }).est, 0, 'a job whose estimate prices no hours does not grow a budget from change orders');
+    // ⚠ RESTATED 2026-09-25, NOT DELETED. This pinned "a job whose estimate prices no hours does not grow a
+    // budget from change orders" — right while nothing could log hours on such a job, and the reason a
+    // vendors-only Home Prep job read "0 of 0" over the hours its change order added. The requirement was
+    // never "no estimate hours, no budget"; it is that a DRAFT moves nothing and a job with NO saved
+    // estimate grows nothing, and both still hold.
+    eq(meta([accepted(20, 20, 50)], { totTC: 0, totPS: 0 }).est, 40, '⚠ a saved estimate that priced no hours measures against the accepted change orders’ hours');
+    eq(meta([co(20, 20, 50)], { totTC: 0, totPS: 0 }).est, 0, 'a pending change order still moves nothing there');
+    eq(meta([accepted(20, 20, 50)], null).est, 0, 'and a job with no saved estimate grows no budget from change orders');
 
     // The desk card's hours line. Driven through the real planDerivedLines(jobId, job, est, phase) —
     // the same dependency list job-desk-scope lifts.
@@ -381,7 +388,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['planDerivedLines', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
               'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
               '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
-              'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs'].concat(CO),
+              'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly'].concat(CO),
         vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
                'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
                'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES',
@@ -411,7 +418,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['updateCOHours', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'estFixedFee', 'estTolerancePctTxt', 'coNoHoursBaseTxt',
-              'prepFeeRate'].concat(CO),
+              'prepFeeRate', 'coPrepReadoutHtml'].concat(CO),
         vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE'],
         stubs: { document: dom, jobs: [Object.assign({}, JOB, jobOver || {})], changeOrders: cos,
                  estimateStore: est ? { 7: { estimate: Object.assign({}, est), approved: true } } : {}, currentEstimate: null },
@@ -436,9 +443,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const PREP = { jobId: 7, svc: 'prep', totTC: 0, totPS: 0, prepItems: [{ cat: 'Painting', cost: 10000 }], rooms: [] };
     const prep = modal(PREP, [], 8, 0, { svc: 'prep' });
     lacks(prep.note, 'no approved estimate', '⚠⚠ a prep job with an approved estimate is never told it has none');
-    has(prep.note, 'this engagement bills no hours', 'it says what is true: the engagement bills no hours');
-    has(prep.note, 'its fee is 30% of what the preparation vendors invoice', 'the fee, with the rate read from prepFeeRate');
-    has(prep.note, 'hours on a change order are not billed here', '⚠ and that hours typed here reach no invoice');
+    // ⚠ RESTATED 2026-09-25, NOT DELETED: this read "this engagement bills no hours … hours on a change order
+    // are not billed here", which was true until a change order could open the prep hours log (Anthony: "yes"
+    // to the route). The requirement it guarded — the readout says what is TRUE on a prep job — survives; what
+    // is true changed. prep-co-hours.test.js carries the full set.
+    has(prep.note, '+8.0 concierge hrs at $150 an hour', 'it states the hours and the rate they bill at');
+    has(prep.note, 'on top of the 30% site management fee', 'on top of the fee, with the rate read from prepFeeRate');
+    has(prep.note, 'the rate is printed on the change order the client signs', '⚠ and that the rate reaches the page the client signs');
+    lacks(prep.note, 'not billed here', '⚠ the old sentence — hours on a change order are billed nowhere — is gone');
     const none = modal(null, [], 8, 0);
     has(none.note, 'this job has no saved estimate yet', 'a job with no estimate at all still says so');
     const zero = modal(Object.assign({}, EST_TM, { totTC: 0, totPS: 0 }), [], 8, 0);

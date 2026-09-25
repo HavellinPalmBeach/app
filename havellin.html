@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 4:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 5:42pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8119,6 +8119,24 @@ function estimateIsFeeOnly(e, job) {
   if (svc === 'prep') return estDeclutterHrs(e) === 0;
   return !!e && ((e.totTC || 0) + (e.totPS || 0)) === 0;
 }
+
+// ⚠⚠ WHAT WAS QUOTED AND WHAT IS BILLED ARE TWO QUESTIONS ON ONE JOB (2026-09-25). Anthony, on a
+// Home Prep job signed with vendors only: *"if we have a live job that only quoted vendors, there's
+// no way to then add transition concierge hours"* — correct, and he asked for the route. The estimate
+// locks at signature, so the ESTIMATE goes on answering what was QUOTED (the client estimate, the
+// agreement, the emails and the internal worksheet read estimateIsFeeOnly and must keep saying what
+// the client signed). This answers what the JOB BILLS NOW: a fee-only engagement stops being one the
+// moment a change order the client ACCEPTED adds hours, because from then on those hours are logged
+// on the Job Plan and billed on the final at the rate the change order states.
+// ⚠ ONLY AN ACCEPTED CHANGE ORDER COUNTS (`coAcceptedHours` filters on `clientApproved`): a draft
+// authorises nothing and must not open an hours log on a job the client has not agreed to pay hours on.
+// ⚠ THE ARGUMENTS ARE IN estimateIsFeeOnly'S ORDER ON PURPOSE, so a job-level call site swaps one name
+// rather than a name and two arguments.
+function jobIsFeeOnly(e, job) {
+  if (!estimateIsFeeOnly(e, job)) return false;
+  var h = job ? coAcceptedHours(job.id) : null;
+  return !(h && (h.tc > 0 || h.ps > 0));
+}
 function currentSvc() { var el = document.getElementById('e-svc'); return el ? el.value : 'cleanout'; }
 function getPrepFee()     { return Math.round(getPrepCost() * prepFeeRate()); }
 
@@ -12617,7 +12635,10 @@ function _coJobBasis(jobId) {
     // (`_fixedBasis`) off the same record. The flat fee alone, through estFixedFee: the prep
     // fee rides on top of it and a change order does not move that.
     fixed: !!(est && est.fixedPrice),
-    flat: estFixedFee(est)
+    flat: estFixedFee(est),
+    // ⚠ HOME PREP, where a change order is concierge hours at a STATED rate (2026-09-25) — see
+    // coPrepReadoutHtml. Read off the estimate first and the job second, like every prep test.
+    prep: ((est && est.svc) || (job && job.svc)) === 'prep'
   };
 }
 
@@ -12630,12 +12651,18 @@ function openChangeOrder(jobId) {
   document.getElementById('co-description').value = '';
   document.getElementById('co-tc-hrs').value = '';
   document.getElementById('co-ps-hrs').value = '';
+  // ⚠ NO SPECIALISTS ON HOME PREP, so the box is off there (and saveChangeOrder refuses it too, or
+  // the control is reached around). Set in BOTH directions on every open — this one modal serves every
+  // job, and a box left disabled by the last prep job would stop a labour job adding crew hours.
+  var _psBox = document.getElementById('co-ps-hrs');
+  _psBox.disabled = !!b.prep;
+  _psBox.placeholder = b.prep ? 'Not used on Home Prep' : 'e.g. 16 (negative to reduce)';
   // Options before the value: a <select> silently rejects a value it has no option for.
   document.getElementById('co-reason').innerHTML = CO_REASONS.map(function(r){
     return '<option value="' + r.v + '">' + r.l + '</option>';
   }).join('');
   document.getElementById('co-reason').value = 'scope_add';
-  document.getElementById('co-basis-note').innerHTML = coBasisNoteHtml(b.fixed);
+  document.getElementById('co-basis-note').innerHTML = coBasisNoteHtml(b.fixed, b.prep ? b : null);
   document.getElementById('co-fb').innerHTML = '';
   updateCOHours();
   document.getElementById('change-order-modal').style.display = 'flex';
@@ -12644,7 +12671,12 @@ function openChangeOrder(jobId) {
 // What a change order IS on this job, above the hours boxes. It used to be static markup
 // stating the T&M rule — "carries no price and bills nothing on its own … the ±15% check" — on
 // every job, so on a fixed-price one the screen for creating a charge said it created none.
-function coBasisNoteHtml(fixed) {
+// ⚠ ON HOME PREP IT IS A THIRD THING (2026-09-25): concierge hours for hands-on work, billed as worked
+// at a rate the change order itself states — `prep` is the job's basis (`_coJobBasis`), for the rate.
+function coBasisNoteHtml(fixed, prep) {
+  if (prep) return 'On Home Prep a change order adds <strong>concierge hours for hands-on work</strong> &mdash; decluttering, clearing a room the vendors need empty. ' +
+    'They are billed as they are worked, at $' + Number(prep.tcRate).toLocaleString() + ' an hour, on the final invoice on top of the ' + Math.round(prepFeeRate() * 100) + '% site management fee, and that rate is printed on the change order the client signs. ' +
+    '<strong>Coordinating the vendors is covered by the fee and is never billed as hours</strong>, and the engagement has no specialists, so this carries concierge hours only.';
   return fixed
     ? 'Estimate the extra hours the added scope will take. <strong>On a fixed price the change order is the charge:</strong> those hours are priced at the job&rsquo;s rates, the price is printed on the change order the client signs, and it is added to the fixed project fee on the final invoice &mdash; whatever the work actually takes. <strong>The trigger is a change in scope, never the hours.</strong> Work beyond the agreed scope needs one however small it is; hours running long on the agreed scope never do &mdash; the fixed fee covers them.'
     : 'Estimate the extra hours the added scope will take. <strong>A change order carries no price and bills nothing on its own</strong> &mdash; the hours are logged as they are worked and reach the client on the final invoice with every other hour. What this does is authorise the scope and move the figure the &plusmn;' + estTolerancePctTxt() + ' check measures against.';
@@ -12656,15 +12688,35 @@ function coBasisNoteHtml(fixed) {
 // prep fee on the vendors' invoices. That engagement has no hours log on its Job Plan either, so
 // hours typed onto its change order are billed nowhere, and the readout says so before anyone saves
 // one: a change in the vendor work reaches the client through the vendors' own invoices.
+// ⚠ HOME PREP LEFT THIS FUNCTION ON 2026-09-25. Its arm here said the engagement "bills no hours …
+// so hours on a change order are not billed here" — true until a change order could open the hours
+// log, and the sentence that made Anthony's question necessary. Prep reads coPrepReadoutHtml now.
 function coNoHoursBaseTxt(b, h) {
   var lbl = coHoursLabel(h);
   if (!b || !b.est) return lbl + ' \u2014 this job has no saved estimate yet, so there is nothing to measure it against.';
-  if (b.est.svc === 'prep' || (b.job && b.job.svc === 'prep')) {
-    return lbl + ' \u2014 this engagement bills no hours: its fee is ' + Math.round(prepFeeRate() * 100) +
-      '% of what the preparation vendors invoice, and its Job Plan has no hours log, so hours on a change order are not billed here. ' +
-      'A change in the vendor work reaches the fee through what those vendors invoice.';
-  }
   return lbl + ' \u2014 the estimate for this job prices no concierge or specialist hours, so there is nothing to measure it against.';
+}
+
+// ⚠⚠ ON HOME PREP A CHANGE ORDER IS CONCIERGE HOURS AT A STATED RATE (2026-09-25). Anthony: *"if we
+// have a live job that only quoted vendors, there's no way to then add transition concierge hours"* —
+// and "yes" to the route. A prep engagement signed with vendors only has no hourly rate anywhere in
+// its agreement (§3.3 prices the 30% fee alone), so the change order that adds hours has to STATE the
+// rate or the client is billed at one they never saw in writing — the reason the fixed-price change
+// order prints its price. On T&M the timesheet bills hours at rates already in the agreement; here
+// this readout, the acceptance panel and the printed page carry the rate, and the final bills the
+// hours as they are logged. The ±15% line is deliberately absent: on prep every addition is quoted in
+// writing before it proceeds (§3.8), however small, so a threshold would say nothing.
+function coPrepReadoutHtml(b, tc, prior) {
+  var rate = Number(b.tcRate) || 0;
+  var base = Math.max(0, (b.tcHrs || 0) + ((prior && prior.tc) || 0));
+  var amt = Math.round(Math.abs(tc) * rate);
+  return coHoursLabel({ tc: tc, ps: 0 }) + ' at $' + rate.toLocaleString() + ' an hour' +
+    (tc > 0
+      ? ' \u2014 about ' + fmt(amt) + ' at the estimated hours, billed as they are worked on the final invoice, on top of the ' + Math.round(prepFeeRate() * 100) + '% site management fee on the prep vendors\u2019 invoices.'
+      : ' \u2014 about ' + fmt(amt) + ' less at the estimated hours.') +
+    (base > 0
+      ? ' Concierge hours on this job go from ' + base.toFixed(1) + ' to ' + Math.max(0, base + tc).toFixed(1) + '.'
+      : ' This engagement priced no concierge hours, so the rate is printed on the change order the client signs.');
 }
 
 // ⚠ THE 15% IS WHY THIS SCREEN EXISTS, so the readout states it rather than leaving the
@@ -12681,7 +12733,11 @@ function updateCOHours() {
   // whose first added 40 hours printed a "revised" total 40 hours short of what the client had
   // already signed for, and measured its ±15% against a figure the job had left behind.
   var prior = coPriorHours(jobId, null);
-  var baseHrs = estHrs ? Math.max(0, estHrs + prior.total) : 0;
+  // ⚠ WHENEVER THERE IS A SAVED ESTIMATE, not only one with hours (2026-09-25) — the rule every hours
+  // readout now follows: an estimate that priced no hours still has a base once a change order the
+  // client ACCEPTED adds some, so the next one is measured from there rather than told there is
+  // "nothing to measure it against". (Home Prep reads coPrepReadoutHtml below, which takes the same base.)
+  var baseHrs = b.est ? Math.max(0, estHrs + prior.total) : 0;
   var tc = parseFloat(document.getElementById('co-tc-hrs').value) || 0;
   var ps = parseFloat(document.getElementById('co-ps-hrs').value) || 0;
   var addHrs = tc + ps;
@@ -12707,6 +12763,10 @@ function updateCOHours() {
       ' from ' + fmt(fx.flat + fx.prior) + ' to ' + fmt(fx.revised) + '.' +
       (fx.prior ? ' (' + fmt(fx.flat) + ' agreed, ' + (fx.prior > 0 ? 'plus ' : 'less ') + fmt(Math.abs(fx.prior)) + ' of change orders already accepted.)' : '') +
       ' This is the price printed on the change order and added to the final invoice, whatever the work actually takes.</div>';
+    return;
+  }
+  if (b.prep) {
+    note.innerHTML = '<div class="alert a-info">' + coPrepReadoutHtml(b, tc, prior) + '</div>';
     return;
   }
   if (!baseHrs) {
@@ -12735,6 +12795,19 @@ function saveChangeOrder() {
   var reason = document.getElementById('co-reason').value;
 
   if (!desc) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Describe what changed in the scope.</div>'; return; }
+  // ⚠ HOME PREP CARRIES CONCIERGE HOURS ONLY, and cannot go below zero (2026-09-25). The specialist box is
+  // off in the modal; this is the same rule where the record is written, so it cannot be reached around.
+  var _b = _coJobBasis(jobId);
+  if (_b.prep) {
+    if (ps) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Home Prep has no specialists &mdash; enter concierge hours only.</div>'; return; }
+    if (!tc) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the additional concierge hours this change is expected to take.</div>'; return; }
+    var _baseTC = Math.max(0, (_b.tcHrs || 0) + coPriorHours(jobId, null).tc);
+    if (tc < 0 && _baseTC + tc < 0) {
+      document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">That would take the concierge hours on this job below zero &mdash; there ' +
+        (_baseTC ? 'are ' + _baseTC.toFixed(1) : 'are none') + ' to reduce. A change in the vendor work reaches the fee through what those vendors invoice.</div>';
+      return;
+    }
+  }
   // ⚠ A change order with no hours on it authorises nothing and moves nothing. Writing one
   // anyway would put a row on the timeline and the invoice that reads as an agreed change
   // while carrying no agreement about anything — the state this rebuild exists to remove.
@@ -13291,13 +13364,24 @@ function openCOAcceptModal(coId) {
   // the price they are agreeing to — the same figure the printed change order carries and the
   // final invoice adds. It said "No charge is created by this change order" on every job.
   var fx = coFixedTerms(co.jobId, co);
+  // ⚠ ON HOME PREP THE CLIENT IS AGREEING TO A RATE, so the panel names it (2026-09-25). A prep job
+  // signed with vendors only has no hourly rate in its agreement; the change order is where the client
+  // first sees one, and this is the panel they type their name under.
+  var pb = _coJobBasis(co.jobId);
+  var _prepRate = pb.prep ? (Number(pb.tcRate) || 0) : 0;
+  var _prepTC = coHours(co).tc;
   var tone = coHours(co).total >= 0 ? 'var(--bronze)' : 'var(--ok-tx)';
   document.getElementById('coa-summary').innerHTML =
     '<div style="margin-bottom:4px;"><strong>' + esc(co.description) + '</strong></div>' +
     '<div style="color:var(--gray);">Reason: ' + esc(coReasonLabel(co.reason)) + '</div>' +
     '<div style="margin-top:8px;display:flex;justify-content:space-between;font-weight:700;color:' + tone + ';">' +
       '<span>Additional hours</span><span>' + coHoursLabel(co) + '</span></div>' +
-    (fx
+    (pb.prep && !fx
+      ? '<div style="display:flex;justify-content:space-between;"><span>Rate</span><span>$' + _prepRate.toLocaleString() + ' an hour, billed as worked</span></div>' +
+        '<div style="display:flex;justify-content:space-between;"><span>At the estimated hours</span><span>about ' + fmt(Math.round(Math.abs(_prepTC) * _prepRate)) + (_prepTC < 0 ? ' less' : '') + '</span></div>' +
+        '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
+          'Billed on the final invoice for the hours actually worked, at the rate above, on top of the ' + Math.round(prepFeeRate() * 100) + '% site management fee on the prep vendors&rsquo; invoices. Coordinating the vendors stays inside that fee.</div>'
+      : fx
       ? '<div style="display:flex;justify-content:space-between;font-weight:700;color:' + tone + ';">' +
           '<span>Change to the fixed project fee</span><span>' + _coMoney(fx.price) + '</span></div>' +
         '<div style="display:flex;justify-content:space-between;">' +
@@ -13306,7 +13390,9 @@ function openCOAcceptModal(coId) {
           'Priced at ' + esc(coRateBasisTxt(co, fx.tcRate, fx.psRate)) + '. The amount is added to the fixed project fee on the final invoice and does not change with the hours the work actually takes.</div>'
       : '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
           'No charge is created by this change order. These hours are billed on the final invoice as they are actually worked.</div>');
-  document.getElementById('coa-terms').innerHTML = fx
+  document.getElementById('coa-terms').innerHTML = (pb.prep && !fx)
+    ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope, the additional concierge hours it is expected to take, and the rate of $' + _prepRate.toLocaleString() + ' an hour at which those hours are billed on the final invoice as they are actually worked.'
+    : fx
     ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and to the change to the fixed project fee shown above, which is added on the final invoice.'
     : 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and the additional hours it is expected to take. Those hours are billed on the final invoice as they are actually worked.';
   document.getElementById('coa-client-name').value = '';
@@ -13353,6 +13439,8 @@ function acceptChangeOrder() {
   renderJobs();
   showFB('e-fb', 'ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + ').' + (b.fixed
     ? ' ' + _coMoney(coPrice(co, b.tcRate, b.psRate)) + ' on the fixed project fee, which is now ' + fmt(b.flat + shift) + ' — added on the final invoice.'
+    : b.prep
+    ? ' These concierge hours bill on the final invoice at $' + (Number(b.tcRate) || 0).toLocaleString() + ' an hour as they are worked, on top of the site management fee — log them on the Job Plan.'
     : ' These hours bill on the final invoice as they are worked.'));
 }
 
@@ -13407,6 +13495,36 @@ function printChangeOrder(coId) {
     : '<strong>This change order does not itself create a charge.</strong> The hours above are an estimate of the additional work. ' +
       'You are billed for the hours actually worked, at the rates already set out in your agreement, on the final invoice — the same way every other hour on this engagement is billed. ' +
       'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.';
+
+  // ⚠⚠ HOME PREP IS A THIRD DOCUMENT, AND THE T&M SENTENCE ABOVE IS FALSE THERE (2026-09-25). "At the
+  // rates already set out in your agreement … the same way every other hour on this engagement is
+  // billed": a prep engagement signed with vendors only has no hourly rate in its agreement and no
+  // other hours at all. So this page states the rate the added hours are billed at — the only place the
+  // client sees it in writing — and what that comes to at the estimated hours, the way the prep estimate
+  // itself prints its declutter hours (hours × rate), billed as worked. The fixed-price page's reasoning,
+  // on the one engagement whose contract names no rate.
+  if (_b.prep && !fx) {
+    var _pRate = Number(_b.tcRate) || 0;
+    var _pTC = coHours(co).tc;
+    var _pPrior = coPriorHours(co.jobId, co).tc;
+    var _pRev = Math.max(0, (_b.tcHrs || 0) + _pPrior + _pTC);
+    table = '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
+      '<tr style="' + _dark + '"><th style="' + _td + 'text-align:left;">Item</th><th style="' + _td + 'text-align:right;">Estimated concierge hours</th></tr>' +
+      '<tr style="background:#FEF5E7;"><td style="' + _td + '">Concierge hours on the approved estimate</td><td style="' + _td + 'text-align:right;">' + (_b.tcHrs || 0).toFixed(1) + '</td></tr>' +
+      (_pPrior ? '<tr><td style="' + _td + '">Change orders already accepted</td><td style="' + _td + 'text-align:right;">' + (_pPrior > 0 ? '+' : '\u2212') + Math.abs(_pPrior).toFixed(1) + ' hrs</td></tr>' : '') +
+      '<tr><td style="' + _td + '">' + _what + '</td><td style="' + _td + 'text-align:right;color:' + _tone + ';font-weight:600;">' + coHoursLabel(co) + '</td></tr>' +
+      '<tr style="' + _dark + '"><td style="' + _td + 'font-weight:700;">Revised estimated concierge hours</td><td style="' + _td + 'text-align:right;font-weight:700;">' + _pRev.toFixed(1) + '</td></tr>' +
+      '<tr><td style="' + _td + '">Rate for these hours</td><td style="' + _td + 'text-align:right;font-weight:600;">$' + _pRate.toLocaleString() + ' an hour, billed as worked</td></tr>' +
+      '</table>';
+    terms = (_pTC >= 0
+        ? '<strong>This change order adds concierge hours, billed at $' + _pRate.toLocaleString() + ' an hour.</strong> The hours above are an estimate of the additional hands-on work. '
+        : '<strong>This change order reduces the concierge hours on this engagement.</strong> ') +
+      'You are billed for the hours actually worked, at $' + _pRate.toLocaleString() + ' an hour, on the final invoice' +
+      (_pTC > 0 ? ' &mdash; at the estimated hours, about ' + fmt(Math.round(_pTC * _pRate)) + ' &mdash;' : '') +
+      ' in addition to the ' + Math.round(prepFeeRate() * 100) + '% site management fee on the preparation vendors&rsquo; invoices, which this change does not alter. ' +
+      'Coordinating the vendors remains covered by that fee. ' +
+      'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.';
+  }
 
   var content = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:1rem;">' +
     '<div style="text-align:center;margin-bottom:1.5rem;">' +
@@ -14290,6 +14408,19 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   var depTgt = depositTargetFor(job);
   var midPaid = stagePaidTotal(job, 'midpoint');
   var finPaid = stagePaidTotal(job, 'final');
+  // ⚠⚠ CHANGE-ORDER HOURS ON AN ENGAGEMENT THAT QUOTED NONE, AND NONE LOGGED (2026-09-25). A final whose
+  // ESTIMATE priced hours is refused with an empty log (invoiceHtml's _noHours); one whose hours came only
+  // from a change order is not — no change order can be withdrawn once accepted, so that refusal could
+  // never be lifted if the work turned out not to be needed. So the step where the final is sent says it
+  // instead: an unlogged change order there bills the management fee alone. Accepted change orders are
+  // tested first, so a job with none never asks the fee-only question at all.
+  var _accCOs = (cos || []).filter(function(c){ return c && c.clientApproved; });
+  var _coOnlyTC = 0, _loggedTC = 0;
+  if (_accCOs.length && est && estimateIsFeeOnly(est, job)) {
+    _accCOs.forEach(function(c){ _coOnlyTC += coHours(c).tc; });
+    (logs || []).forEach(function(e){ ((e && e.members) || []).forEach(function(m){ if (m && m.role === 'TC') _loggedTC += Number(m.hours) || 0; }); });
+  }
+  var _coHrsUnlogged = _coOnlyTC > 0 && _loggedTC === 0;
 
   // A walkthrough that produced a scored house happened, whatever the calendar
   // says — and a date in the past with no estimate behind it did too. Either is
@@ -14480,7 +14611,10 @@ function jobTimeline(job, estRec, logs, cos, sched) {
 
     row({ key: 'final_invoiced', group: 'Close-out', label: 'Final invoice sent',
       done: !!docSentAt(job, 'invoice', 'final'), at: docSentAt(job, 'invoice', 'final'), atKind: 'iso',
-      sub: (!docSentAt(job, 'invoice', 'final') && docDraftedAt(job, 'invoice', 'final'))
+      sub: (!docSentAt(job, 'invoice', 'final') && _coHrsUnlogged)
+        ? 'A change order added ' + _coOnlyTC.toFixed(1) + ' concierge hours and none are logged \u2014 log them on the Job Plan first, or this final bills the management fee alone'
+          + (docDraftedAt(job, 'invoice', 'final') ? '. Drafted \u2014 read it, send it, then confirm' : '')
+        : (!docSentAt(job, 'invoice', 'final') && docDraftedAt(job, 'invoice', 'final'))
         ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
 
     row({ key: 'final_paid', group: 'Close-out', label: 'Final payment',
@@ -28506,12 +28640,15 @@ function updateLogSummary(jobId) {
   var estPS = (estRec && estRec.estimate && estRec.estimate.totPS) || (job && job.estPS || null);
   // ⚠⚠ THE HOURS THE CLIENT AUTHORISED, NOT THE ESTIMATE ALONE (2026-09-25): every accepted change
   // order's hours are added, or a job holding a signed +40-hour change order reads red here and
-  // tells the concierge to stop over hours the client agreed to. Only onto a figure that exists — a
-  // job with no estimate still reads "No estimate". The note under the table says the figures are
-  // not the estimate's own.
+  // tells the concierge to stop over hours the client agreed to. A job with no estimate still reads
+  // "No estimate". The note under the table says the figures are not the estimate's own.
+  // ⚠ AND ONTO A ZERO WHEN THE ESTIMATE EXISTS: a prep job signed with vendors only has 0 concierge
+  // hours on its estimate, and its change orders' hours are the whole budget — they read "No estimate"
+  // here while the log above was open for exactly those hours.
   var _coH = coAcceptedHours(jobId);
-  if (estTC) estTC = Math.max(0, estTC + _coH.tc);
-  if (estPS) estPS = Math.max(0, estPS + _coH.ps);
+  var _hasEst = !!(estRec && estRec.estimate);
+  if (estTC || (_hasEst && _coH.tc)) estTC = Math.max(0, (estTC || 0) + _coH.tc);
+  if (estPS || (_hasEst && _coH.ps)) estPS = Math.max(0, (estPS || 0) + _coH.ps);
   var _coNote = document.getElementById('ls-co-note');
   if (_coNote) _coNote.textContent = (_coH.tc || _coH.ps)
     ? 'Estimated hours include ' + coHoursLabel(_coH) + ' from ' + _coH.n + ' accepted change order' + (_coH.n === 1 ? '' : 's') + '.'
@@ -29033,6 +29170,10 @@ function invoiceHtml(job, stage) {
   // say "charged at the rates in your agreement" — and the living-client agreement's fixed arm
   // states no hourly rate at all, so the one sentence explaining the charge pointed at nothing.
   // The basis is the change order the client accepted, which now prints its own price.
+  // ⚠ ON HOME PREP THE CHANGE ORDERS ARE THE ONLY HOURS THERE MAY BE (2026-09-25), so "like every other
+  // hour on this engagement" is false on a job signed with vendors only. The note names the rate the
+  // change order stated and where the hours sit on this page.
+  var _prepCoJob = ((est && est.svc) || job.svc) === 'prep';
   var coSection = (jobCOs.length > 0 ?
     '<div class="ce-section-hdr" style="margin-top:1rem;">Approved Change Orders</div>' +
     '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Change in scope</th><th style="text-align:right;">Additional hours</th>' +
@@ -29048,6 +29189,8 @@ function invoiceHtml(job, stage) {
     '</tbody></table>' +
     '<div class="ce-note">' + (_fixedBasis
       ? 'Each is charged at the price on the change order you accepted and added to the fixed project fee above, because a fixed fee does not otherwise move with the hours worked.'
+      : _prepCoJob
+      ? 'These concierge hours are billed as they were logged, at $' + tcRate + ' an hour &mdash; they are the concierge (TC) hours in the table above &mdash; in addition to the site management fee.'
       : 'These hours are not billed separately. They are worked and logged like every other hour on this engagement and are already included in the figures above.') +
     '</div>' : '');
 
@@ -29872,19 +30015,22 @@ function loadJobPlanTab() {
   // DECLUTTER BUILD THAT MAKES IT REAL. Quoting declutter hours the concierge then cannot log
   // is worse than not quoting them: the final invoice trues labour to the log, so an engagement
   // that priced 5 hours and can record none bills zero for work somebody actually did. It opens
-  // only when the estimate ACTUALLY PRICED hours — a prep job that is pure vendor management
-  // still gets no log, because there is nothing it could honestly hold.
+  // only when the job BILLS hours — a prep job that is pure vendor management still gets no log,
+  // because there is nothing it could honestly hold.
+  // ⚠⚠ "BILLS HOURS" IS THE JOB'S ANSWER, NOT THE ESTIMATE'S (2026-09-25): an ACCEPTED change order
+  // adding concierge hours to a vendors-only prep job opens the log too. Without it those hours had
+  // nowhere to be recorded, and a final that trues labour to the log billed them as zero — the
+  // "no route to add hours to a signed prep job" Anthony asked to close. See jobIsFeeOnly.
   // ⚠ AND IT FALLS THROUGH to the shared wiring below rather than repeating it. That block
   // sets log-job, resets the beyond-plan slots, builds the team rows and seeds the date; a prep
   // branch with its own copy is how the two forms come to disagree about which job they are
   // writing to — and writing hours to the wrong job is not a defect anything downstream notices.
   var _isPrepPlan = (job.svc === 'prep');
-  var _prepDcHrs  = _isPrepPlan ? estDeclutterHrs(est) : 0;
   // The stage the job is in opens by itself the first time this job loads in the session.
   _planOpenStageFor(jobId, job, est);
   if (_isPrepPlan) {
     content.innerHTML = renderPrepJobPlan(jobId, job, est);
-    if (_prepDcHrs === 0) {
+    if (jobIsFeeOnly(est, job)) {
       var logSectionP = document.getElementById('plan-log-section');
       if (logSectionP) logSectionP.style.display = 'none';
       return;
@@ -30127,9 +30273,10 @@ function planHoursMeta(jobId, job, est) {
     (e.members || []).forEach(function(m) { var h = parseFloat(m.hours) || 0; all += h; if (e.date === today) t += h; });
   });
   // Against the AUTHORISED hours — the estimate plus accepted change orders — like every other hours
-  // readout (coAcceptedHours); only when there is an estimate figure to add them to.
+  // readout (coAcceptedHours); whenever there is a saved estimate, including one that priced NO hours
+  // (2026-09-25): on a prep job signed with vendors only the change orders' hours are the whole budget.
   var estH = (parseFloat(est && est.totTC) || 0) + (parseFloat(est && est.totPS) || 0);
-  if (estH > 0) estH = Math.max(0, estH + coAcceptedHours(jobId).total);
+  if (est) estH = Math.max(0, estH + coAcceptedHours(jobId).total);
   return { today: t, logged: all, est: estH, warn: !!(job && job.status === 'active' && t === 0) };
 }
 function planHoursMetaHtml(jobId, job, est) {
@@ -30548,15 +30695,26 @@ function planDerivedLines(jobId, job, est, phase) {
     // ⚠ AND A FEE-ONLY ENGAGEMENT LOGS NO HOURS. Prep with no declutter hours bills the fee alone
     // and has no hours log on its plan, so "none yet — the final invoice cannot issue without
     // them" was false twice over. estimateIsFeeOnly is the rule the invoice itself follows.
-    var feeOnly = estimateIsFeeOnly(est, job);
+    // ⚠ THE JOB'S ANSWER, NOT THE ESTIMATE'S (2026-09-25): a prep job signed with vendors only logs
+    // hours once a change order the client accepted adds them. See jobIsFeeOnly.
+    var feeOnly = jobIsFeeOnly(est, job);
     var logs = jobLogEntries(jobId);
     var hrs = 0;
     logs.forEach(function(e){ ((e && e.members) || []).forEach(function(m){ hrs += Number(m && m.hours) || 0; }); });
     // The authorised hours — estimate plus accepted change orders — as on every other hours readout.
+    // ⚠ ADDED ONTO A ZERO TOO (2026-09-25): on a vendors-only prep job the change orders' hours are the
+    // whole budget, and adding them only "onto a figure that exists" read "0 estimated" over them.
     var estHrs = (Number(est.totTC) || 0) + (Number(est.totPS) || 0);
-    if (estHrs > 0) estHrs = Math.max(0, estHrs + coAcceptedHours(jobId).total);
+    estHrs = Math.max(0, estHrs + coAcceptedHours(jobId).total);
+    // ⚠ THE EMPTY-LOG WORDING SAYS WHICH RULE APPLIES. A final whose ESTIMATE priced hours is refused
+    // with an empty log (invoiceHtml's _noHours). One whose hours came only from a change order is not:
+    // no change order can be withdrawn once accepted, so a refusal there could never be lifted if the
+    // work turned out not to be needed. Its empty log bills the management fee alone, and says so here.
+    var coOnlyHrs = !feeOnly && estimateIsFeeOnly(est, job);
     if (!feeOnly) out.push({ key: 'hours_logged', ok: logs.length > 0, label: 'Hours logged',
-               detail: logs.length ? (Math.round(hrs * 10) / 10) + ' hrs against ' + (Math.round(estHrs * 10) / 10) + ' estimated — the final invoice trues to the log' : 'none yet — the final invoice cannot issue without them' });
+               detail: logs.length ? (Math.round(hrs * 10) / 10) + ' hrs against ' + (Math.round(estHrs * 10) / 10) + ' estimated — the final invoice trues to the log'
+                 : (coOnlyHrs ? 'none yet — a change order added hours; log them before the final goes out, or it bills the management fee alone'
+                              : 'none yet — the final invoice cannot issue without them') });
     var cos = (typeof changeOrders !== 'undefined' ? changeOrders : []).filter(function(c){ return c && c.jobId === jobId; });
     if (cos.length) {
       var nAcc = cos.filter(function(c){ return !!c.clientApproved; }).length;
@@ -33708,26 +33866,38 @@ function renderPrepJobPlan(jobId, job, est) {
   // them. The concierge doing the work is the person who needs to see the gap, and this card
   // is the only budget readout on a prep job.
   var _dcQuoted = estDeclutterHrs(est);
+  // ⚠ AND THE CONCIERGE HOURS ACCEPTED CHANGE ORDERS ADDED (2026-09-25). On a prep job signed with
+  // vendors only they are the WHOLE hours budget, and this card is the only one the concierge doing
+  // the work sees — leaving them off would show a job with hours to log and nothing to log them against.
+  var _dcCO = coAcceptedHours(jobId).tc;
+  var _dcAuth = Math.max(0, _dcQuoted + _dcCO);
   var _dcRate = est.tcRate || (job.premium ? 185 : 150);
   var _dcLogged = 0;
-  if (_dcQuoted > 0) {
+  if (_dcAuth > 0) {
     jobLogEntries(jobId).forEach(function(entry){
       (entry.members || []).forEach(function(m){ if (m.role === 'TC') _dcLogged += (m.hours || 0); });
     });
     _dcLogged = Math.round(_dcLogged * 10) / 10;
   }
-  var _dcOver = _dcQuoted > 0 && _dcLogged > _dcQuoted * (1 + EST_TOLERANCE_PCT);
+  var _dcOver = _dcAuth > 0 && _dcLogged > _dcAuth * (1 + EST_TOLERANCE_PCT);
 
   var budgetBody = '<table class="stbl">' +
     '<tr><td class="muted">Estimated vendor spend (budget)</td><td class="num">$' + totalBudget.toLocaleString() + '</td></tr>' +
     '<tr><td class="muted">Quoted to date (' + quotedCount + ' of ' + prepLines.length + ' vendors)</td><td class="num"' + (overBudget?' style="color:var(--err-tx);font-weight:600;"':'') + '>$' + totalQuoted.toLocaleString() + '</td></tr>' +
     '<tr><td class="muted">Havellin ' + Math.round(prepFeeRate()*100) + '% fee (on quoted actuals)</td><td class="num">$' + feeActual.toLocaleString() + '</td></tr>' +
     (_dcQuoted > 0
-      ? '<tr><td class="muted">Declutter hours quoted (' + _dcQuoted.toFixed(1) + ' hrs &times; $' + _dcRate + ')</td><td class="num">$' + Math.round(_dcQuoted * _dcRate).toLocaleString() + '</td></tr>' +
-        '<tr><td class="muted">Logged to date</td><td class="num"' + (_dcOver?' style="color:var(--err-tx);font-weight:600;"':'') + '>' + _dcLogged.toFixed(1) + ' hrs</td></tr>'
+      ? '<tr><td class="muted">Declutter hours quoted (' + _dcQuoted.toFixed(1) + ' hrs &times; $' + _dcRate + ')</td><td class="num">$' + Math.round(_dcQuoted * _dcRate).toLocaleString() + '</td></tr>'
+      : '') +
+    (_dcCO
+      ? '<tr><td class="muted">Added by change order (' + coHoursLabel({ tc: _dcCO, ps: 0 }) + ' &times; $' + _dcRate + ')</td><td class="num">' + _coMoney(Math.round(_dcCO * _dcRate)) + '</td></tr>'
+      : '') +
+    (_dcAuth > 0
+      ? '<tr><td class="muted">Logged to date</td><td class="num"' + (_dcOver?' style="color:var(--err-tx);font-weight:600;"':'') + '>' + _dcLogged.toFixed(1) + ' hrs</td></tr>'
       : '') +
     '</table>' +
-    (_dcOver ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">⚠ Logged declutter hours are more than ' + estTolerancePctTxt() + ' over the ' + _dcQuoted.toFixed(1) + ' quoted. Tell the homeowner before going further — the estimate’s terms promise notice at that threshold.</div>' : '') +
+    (_dcOver ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">⚠ Logged ' + (_dcCO ? 'concierge' : 'declutter') + ' hours are more than ' + estTolerancePctTxt() + ' over the ' +
+      (_dcCO ? _dcAuth.toFixed(1) + ' authorised (quoted and by change order). Tell the homeowner before going further — more hours need another change order they accept.'
+             : _dcQuoted.toFixed(1) + ' quoted. Tell the homeowner before going further — the estimate’s terms promise notice at that threshold.') + '</div>' : '') +
     (overBudget ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Quoted total is over the estimated budget. Confirm the change with the homeowner — the ' + Math.round(prepFeeRate()*100) + '% fee follows actual vendor spend.</div>' : '') +
     (allQuoted ? '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">All prep vendors have quotes — the fee shown is final at these quotes.</div>' : '') +
     '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s ' + Math.round(prepFeeRate()*100) + '% GC / Site Management Fee is billed on the actual vendor spend logged here.</div>';
@@ -33753,7 +33923,9 @@ function renderPrepJobPlan(jobId, job, est) {
     '<div class="sec">Coordination Checklist</div>' +
     chkGrid(
       planChk(jobId, 'prep_wt', 'Scope of prep work confirmed with homeowner') +
-      (_dcQuoted > 0 ? planChk(jobId, 'prep_declutter', 'Pre-prep declutter complete (' + _dcQuoted.toFixed(1) + ' hrs quoted) &mdash; log the hours below') : '') +
+      (_dcAuth > 0 ? planChk(jobId, 'prep_declutter', _dcCO
+        ? 'Declutter complete (' + _dcAuth.toFixed(1) + ' hrs authorised, ' + coHoursLabel({ tc: _dcCO, ps: 0 }) + ' by change order) &mdash; log the hours below'
+        : 'Pre-prep declutter complete (' + _dcQuoted.toFixed(1) + ' hrs quoted) &mdash; log the hours below') : '') +
       planChk(jobId, 'prep_quotes', 'Quotes collected from all prep vendors') +
       planChk(jobId, 'prep_booked', 'Vendors booked and scheduled') +
       planChk(jobId, 'prep_progress', 'Work underway — site checks &amp; quality control') +
@@ -36166,7 +36338,11 @@ function agreementHtml(job, est) {
         // same clause, running the other way. Both bases are stated here, and the specialist half
         // survives because it stays true: calcAll holds totPS at zero on prep unconditionally.
         ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the management fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(_agrDcHrs.toFixed(1)+' hours')+' ('+b('$'+_agrDcAmt.toLocaleString())+') on that basis. '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.')
-        : p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'))
+        // ⚠ THE CARVE-OUT (2026-09-25): a change order can now add concierge hours to a vendors-only prep
+        // job, and this clause said flatly that none are billed. It keeps saying so for the engagement as
+        // signed, and names the one route to hours — a signed Change Order stating the hours AND the rate,
+        // because this form prices none (the printed change order carries it). Draft; in the counsel bundle.
+        : p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Hands-on work Client asks for after signing, such as decluttering, is billed only if Client signs a Change Order under Section 3.8 that states the Transition Concierge hours and the hourly rate; those hours are then billed as worked at that rate, in addition to the management fee. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'))
       : isFixedAgr
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+_agrFlat.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.'
           + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in Section 3.5, which covers the coordination and site supervision of the home sale preparation vendors, is not part of the fixed project fee and is charged in addition to it.' : ''))
@@ -36203,8 +36379,11 @@ function agreementHtml(job, est) {
     // AND SPECIALIST HOURS (see coHours — it has carried no dollar amount since the rebuild),
     // and prep books none, so on that engagement this mechanism describes nothing. The
     // estimate's prep Terms already say a scope change is RE-QUOTED; this says the same.
+    // ⚠ AND IT NAMES THE CHANGE ORDER (2026-09-25), because §3.3's fee-only arm now routes added hands-on
+    // hours through one — "a Change Order under Section 3.8" was a cross-reference to a clause that never
+    // said the words. Vendor work stays outside it: added vendor work reaches the fee through the invoices.
     (isPrepAgr
-      ? p(b('3.8 Changes to Scope.')+'  Contractor\'s fee follows the third-party vendor costs actually incurred, so a change in the vendor work to be done changes that part of the fee only through those costs. Contractor will review each vendor\'s quote with Client before that vendor is booked, and any work added after that is quoted and agreed with Client in writing before it proceeds.'+(_agrDcHrs > 0 ? '  If the decluttering described in Section 3.3 is reasonably projected to exceed the hours stated in the Estimate by more than '+estTolerancePctTxt()+', Contractor will notify Client in writing before proceeding.' : '')+'')
+      ? p(b('3.8 Changes to Scope.')+'  Contractor\'s fee follows the third-party vendor costs actually incurred, so a change in the vendor work to be done changes that part of the fee only through those costs. Contractor will review each vendor\'s quote with Client before that vendor is booked, and any work added after that is quoted and agreed with Client in writing before it proceeds.  Hands-on work Contractor is asked to do after signing is documented in a written Change Order signed by both Parties.'+(_agrDcHrs > 0 ? '  If the decluttering described in Section 3.3 is reasonably projected to exceed the hours stated in the Estimate by more than '+estTolerancePctTxt()+', Contractor will notify Client in writing before proceeding.' : '')+'')
       : isFixedAgr
       ? p(b('3.8 Changes to Scope.')+'  The fixed price covers the scope of work described in the Estimate. If Client requests, or conditions require, work beyond that scope, Contractor will notify Client in writing before proceeding, and any resulting price adjustment will be documented in a written Change Order signed by both Parties.')
       : p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than 15%, Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.'))+

@@ -306,11 +306,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠⚠ the JOB PLAN opens the hours log exactly when the estimate quoted hours');
+  group('⚠⚠ the JOB PLAN opens the hours log exactly when the job bills hours');
   {
     const body = fn('loadJobPlanTab');
-    has(body, 'estDeclutterHrs(est)', 'the plan asks what the estimate priced');
-    has(body, '_prepDcHrs === 0', 'and hides the log only when it priced none');
+    // ⚠ RESTATED 2026-09-25, NOT DELETED. This pinned `estDeclutterHrs(est)` and `_prepDcHrs === 0` — what the
+    // ESTIMATE priced — which was the whole answer until an accepted change order could add concierge hours to a
+    // prep job signed with vendors only. The plan asks what the JOB bills now (jobIsFeeOnly): the same answer on
+    // every job with no accepted change order, and the only one that opens the log for the hours one added.
+    has(body, 'if (jobIsFeeOnly(est, job))', 'the plan asks what the job bills — the estimate and its accepted change orders');
+    lacks(body, '_prepDcHrs', 'and no longer hides the log on the estimate alone');
     // ⚠ IT FALLS THROUGH to the shared wiring rather than repeating it. A prep branch with its own
     // copy of the log setup is how the two forms come to disagree about which job they write to.
     has(body, 'content.innerHTML = renderPrepJobPlan(jobId, job, est);', 'it renders the prep plan');
@@ -357,7 +361,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_planTouch',
       // The prep plan opens with the firearms banner since 2026-09-20 (the brief under it no
       // longer repeats the firearms row, so the banner has to be on both plan headers).
-      'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg'];
+      'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt'];
     const planVars = ['PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const mkPlan = (dcHrs, loggedTC) => {
       const logs = loggedTC > 0

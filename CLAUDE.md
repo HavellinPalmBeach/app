@@ -1,8 +1,106 @@
+## ⚠⚠ A SIGNED HOME PREP JOB CAN TAKE CONCIERGE HOURS — BY A CHANGE ORDER THAT PRINTS THE RATE (BUILT 2026-09-25)
+Anthony, on the gap the entry below left for him: *"if we have a live job that only quoted vendors, there's no way to then
+add transition concierge hours. Is that correct?"* Correct. Then: *"Yes to 1."* (build the route), *"No revert"* (the
+fixed-price change order keeps printing its price — see the entry below) and *"ok"* (he sends counsel item A8 himself).
+App-only, no redeploy.
+
+- **⚠⚠ WHAT WAS QUOTED AND WHAT IS BILLED ARE TWO QUESTIONS ON ONE JOB, AND THE BUILD KEEPS THEM APART.**
+  `estimateIsFeeOnly(e, job)` still answers what was QUOTED, and every client document reads it — the client estimate, both
+  prep agreement arms, the emails, the internal worksheet, the invoice's `_feeOnly` — because the estimate locks at signature
+  and must go on saying what the client signed. New **`jobIsFeeOnly(e, job)`** answers what the JOB bills: a fee-only
+  engagement stops being one the moment a change order the client ACCEPTED adds hours. **It has exactly two readers** — the
+  `loadJobPlanTab` log gate and the `planDerivedLines` desk card — and a net asserts `jobIsFeeOnly(` appears exactly three
+  times in live source, so a client document cannot start asking the job-level question by accident. Its arguments are in
+  `estimateIsFeeOnly`'s order on purpose, so a call site swaps one name. Reverts: ignoring change orders fails 5, dropping the
+  quote test 9.
+  - **⚠ ONLY AN ACCEPTED CHANGE ORDER COUNTS** (`coAcceptedHours` filters on `clientApproved`): a draft must not open an hours
+    log on a job the client has not agreed to pay hours on.
+- **THE CHANGE ORDER ON PREP — `_coJobBasis(...).prep`, read off the estimate first and the job second.**
+  - **Concierge hours only.** The specialist box is disabled with *Not used on Home Prep* as its placeholder, **set in BOTH
+    directions on every open** — a box only ever disabled stays greyed on the next Home Editing job opened in the same modal
+    (1 each). `saveChangeOrder` refuses specialist hours, a change order with no concierge hours, and one taking the job's
+    concierge hours below zero — the rule where the record is written, so the modal cannot be reached around (2 / 1 / 3).
+  - **`coPrepReadoutHtml`** — *"+6.0 concierge hrs at $150 an hour — about $900 at the estimated hours, billed as they are
+    worked on the final invoice, on top of the 30% site management fee"*, the fee read from `prepFeeRate()`; on a job that quoted
+    no concierge hours it adds that the rate is printed on the change order the client signs. It replaces `coNoHoursBaseTxt`'s
+    prep arm (*"hours on a change order are not billed here"*), written that morning and false by evening; `coBasisNoteHtml`
+    gains a prep arm (6). No prep branch in the readout fails 12; the basis never reading prep **43**.
+  - **⚠⚠ THE RATE IS PRINTED ON THE CHANGE ORDER, AND THAT IS THE LOAD-BEARING DECISION.** A vendors-only prep agreement prices
+    no hours and states no rate card, so the change order is the only place that client sees an hourly rate in writing. The
+    printed page carries the concierge hours on the estimate, change orders already accepted, this change, the revised hours
+    and *Rate for these hours — $150 an hour, billed as worked* (the T&M page on prep fails 10); the acceptance panel names the
+    rate and its terms name it again (4); `acceptChangeOrder`'s confirmation says to log them. The fixed-price page's reasoning,
+    on the one form whose contract names no rate. Rate = `est.tcRate || (job.premium ? 185 : 150)`.
+- **THE JOB PLAN.** The log opens once a change order is accepted, concierge row only (`plannedPSCount` already knew prep;
+  gating on the estimate alone fails 3). Budget & Fee gains *Added by change order (+8.0 concierge hrs × $150)* beside the
+  quoted declutter line, and *Logged to date*, the red flag and the checklist step measure against the hours AUTHORISED
+  (`_dcAuth` = quoted + accepted), so hours the client signed for never read as an overrun; the flag names both and says more
+  hours need another change order (ignoring change orders fails 10). `planHoursMeta` and `updateLogSummary` measure against any
+  saved estimate plus the change orders — the entry below's rule, extended to an estimate that priced no hours.
+- **⚠⚠ THE FINAL BILLS THEM, AND AN UNLOGGED CHANGE ORDER WARNS RATHER THAN BLOCKS — deliberately.** `invoiceHtml` already bills
+  logged TC hours at `tcRate` whatever `_feeOnly` says, so a vendors-only final collects the fee plus the logged hours, with a
+  note under the change orders that they are the concierge (TC) hours in the table (it first pointed at a *"Transition
+  Concierge line"* the table does not have — the rows read `TC`). **`_noHours` still blocks only when the ESTIMATE priced
+  hours.** A final whose hours came only from a change order issues with the log empty, billing the fee alone: an accepted
+  change order cannot be withdrawn, so a refusal there could never be lifted if the work turned out not to be needed. Instead
+  the timeline's `final_invoiced` row carries a sub — *"A change order added 8.0 concierge hours and none are logged — log them
+  on the Job Plan first, or this final bills the management fee alone"* — and the desk card says the same. Accepted change
+  orders are tested first, so a job with none never asks the fee-only question. **The ±15% manager PIN still stops a final more
+  than 15% short of the estimate and the change orders together** — driven: +20 hours unlogged trips `requiresApproval`.
+- **THE AGREEMENT — drafted, not reviewed; counsel bundle B5.** The vendors-only §3.3 keeps its bold *"No Transition Concierge or
+  Property Specialist hours are billed on this engagement"* and goes on: hands-on work asked for after signing is billed only on
+  a Change Order under §3.8 stating the hours AND the rate, then as worked at that rate on top of the fee (2). **§3.8 gained the
+  sentence that makes the cross-reference true** — *"Hands-on work Contractor is asked to do after signing is documented in a
+  written Change Order signed by both Parties"* — because it spoke only of vendor work being re-quoted, and a clause pointing at
+  a Change Order its target never mentions is worse than none. **Found re-reading the draft, not by a test** (2). **Accepting a
+  change order does not touch the agreement** — driven byte-identical before and after. ⚠ An agreement generated before today
+  has no carve-out; whether the signed change order is enough there is B5's second question.
+- **"NO REVERT": the fixed-price change order keeps printing its price.** It was my call in the build below; Anthony has now
+  confirmed it, so it is decided, not open.
+- **⚠⚠ FOUND WRITING THE NEW SUITE: `job-timeline.test.js` HAD BEEN TESTING AN EMPTY STRING FOR TWELVE DAYS.** `jtBody` was
+  sliced from `src.indexOf('function jobTimeline(job, estRec, logs, cos)')`; when the schedule became a fifth argument on
+  2026-09-13 that string stopped matching, `indexOf` returned −1, **the slice came back empty**, and **eight** checks — the four
+  DOM-free needles, `toLocaleDateString`, `completionDate`, `midpointInvoiceSent` and the at-most-four `job.status` reads —
+  passed on nothing. Anchored on the name now, with a guard that the body starts at the function and runs past 4,000
+  characters; the real body passes all eight. Reverting the anchor fails the guard. **The 2026-09-13 entry records restating a
+  byte-sequence pin on that same argument list and missed this one, because this one failed silent rather than loud.** The
+  shape to look for after any signature change: a `slice(indexOf(...))` whose needle no longer matches does not throw.
+- **11,457 committed checks** (`tests/prep-co-hours.test.js` new at 148; the helpers lifted — never stubbed — into the pinned
+  `fns:` lists of change-order-hours, field-capture ×3, job-closeout, job-desk-scope ×2, job-plan-stages, prep-declutter,
+  sourcing-keys and fixed-price-change-orders; change-order-hours' prep readout restated to the new wording). **Revert sweep on
+  four tar copies: 37 changes, ALL RED, baseline 11,457 / 0 before and after on every copy, no needle mismatched.**
+  - **⚠ ONE REVERT CRASHED A SUITE INSTEAD OF FAILING IT** — the band counting DRAFT change orders: fixed-price-change-orders'
+    dashboard sandbox did not lift `estimateIsFeeOnly`, so the broadened path threw (11,425 passed against 11,457). Lifted with
+    `estDeclutterHrs`; re-done it fails 1 with all checks running.
+- **Verified in headless Chromium, `tests/browser/step25.js`, 69 checks, 0 failed, 0 page errors**, through the real intake,
+  the real Build Estimate, the real modal typed into, the real Create and Accept buttons, the real team confirm and the real
+  hours form: a vendors-only prep job has no log; the specialist box is disabled and a forced value refused; the readout names
+  the rate; a draft moves nothing; the acceptance panel names the rate, the quote is unchanged and the agreement byte-identical;
+  the log opens with Ashley's row alone; 8 hours logged through *Save* read on the card, the desk and the band; the printed page
+  carries *Rate for these hours $150 an hour*; the three invoices collect **$14,700** (the $13,500 fee plus 8 × $150); a Home
+  Editing modal opened straight afterwards has its specialist box back; overflow 0 at 1440 and 390. **Against the pre-change
+  build it fails 48.** `step24` restated, not weakened: its section D asserted *"this engagement bills no hours"* and *"not
+  billed here"*, which this build made false; it asserts the rate, the final, the fee, and that both retired sentences are gone
+  (57 / 0). `run.sh`'s default list is 1–25; steps 1–24 re-run as regressions, 0 failed — **1,143 browser checks across the
+  twenty-five**. The first `<style>` block is byte-identical at 98,760 bytes; the app diff is 213 insertions against 34 deletions.
+- Manual **§6c** (the log-opens note and a new note on the card), **§8** (the §3.3 carve-out and the §3.8 sentence), **§9** (the
+  prep paragraph corrected, and a new note with a what-happens table), **§11** (the per-service table's prep row; the *Coord hrs*
+  reason, which said prep *"bills no hours at all"*), **§12** (warned, not blocked). Playbook **Step 10d** (the prep `.stop`
+  rewritten — it said *do not promise extra concierge hours*), the **Home Prep short version** (steps 5 and 6) and the symptom
+  table (three rows replacing one, two corrected). Both `.md` copies; **104 claims parity-checked, 0 mismatches** (two apparent
+  misses were adjacent blocks glued together by the checker, verified present); `doc-structure` green; rendered at 1440/390 with
+  0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — the one new table sits
+  inside a note. **`COUNSEL_REVIEW_BUNDLE.md` gains B5** (priority 5), with a prep agreement and change order on the list to send.
+- **⚠ THE SHAPE TO COPY: a sentence telling somebody a thing cannot be done is only true until the app can do it.** The
+  morning's readout said hours on a prep change order are billed nowhere and both documents said not to promise them — each
+  correct about the app and each describing a gap rather than the business. When the gap closed, every one of them became an
+  instruction to turn down paid work. Both suites now pin the retired sentences absent, so they cannot come back.
+
 ## ⚠⚠ AN ACCEPTED CHANGE ORDER IS PART OF THE HOURS A JOB IS MEASURED AGAINST — ON EVERY SCREEN (FIXED 2026-09-25)
 Anthony, on the three things the fixed-price change-order build (below) had found and not fixed: *"Fix everything you
 highlighted."* All three are fixed. App-only, no redeploy. He also asked *"What is 'keep the price'?"* — the open question
 from that build (the fixed-price change order carrying its price, my call rather than his); answered in chat, and **it
-stands unless he says revert**.
+stands unless he says revert** — **he did not: *"No revert"* (2026-09-25), so it is decided.**
 
 - **⚠⚠ #1 — EVERY HOURS READOUT MEASURED AGAINST THE ESTIMATE ALONE, WHILE THE INVOICE MOVED WITH THE CHANGE ORDERS.** The
   Client Dashboard's Hours Log bars, the Job Plan's hours summary, the Hours fold, the desk card's hours line, the projection
@@ -49,11 +147,14 @@ stands unless he says revert**.
 - **#3 — A FEE-ONLY PREP JOB'S READOUT SAID "no approved estimate yet".** `coNoHoursBaseTxt(b, h)` has three arms: no saved
   estimate; prep (*"this engagement bills no hours: its fee is 30% of what the preparation vendors invoice, and its Job Plan
   has no hours log, so hours on a change order are not billed here…"*, the rate read from `prepFeeRate()`); a labour estimate
-  pricing no hours.
-- **⚠ FOUND BY FIXING #3, NOT FIXED, AND IT IS ANTHONY'S CALL: THERE IS NO ROUTE TO ADD HOURS TO A SIGNED PREP JOB.** Declutter
+  pricing no hours. **⚠ The prep arm went the same day** — the entry at the top of this file made it false, and
+  `coPrepReadoutHtml` replaced it.
+- ~~**⚠ FOUND BY FIXING #3, NOT FIXED, AND IT IS ANTHONY'S CALL: THERE IS NO ROUTE TO ADD HOURS TO A SIGNED PREP JOB.** Declutter
   hours live on the estimate, the estimate locks at signature, and a change order's hours are billed nowhere on a prep job (no
   hours log, not fixed-price). Both documents now tell the concierge not to promise them. The fix is a product decision: let a
-  prep change order carry declutter hours onto the hours log and the final, or re-quote.
+  prep change order carry declutter hours onto the hours log and the final, or re-quote.~~ **BUILT THE SAME DAY** — Anthony:
+  *"Yes to 1."* A change order carries the concierge hours and prints the rate; see the entry at the top of this file. *Kept
+  rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
 - **⚠ ALSO LEFT, OUTPUT CORRECT TODAY:** literal *"15%"* strings survive in the estate §3.2/§4.1 T&M arms, the standard §3.8 T&M
   arm and the invoice PIN banner. Harmless while `EST_TOLERANCE_PCT` is 0.15; worth routing through `estTolerancePctTxt()` the
   next time any of them is touched.
@@ -13243,9 +13344,12 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-25 (second pass)** — both documents, against accepted change orders joining every
+- Last reconciled against the app: **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
+  hours by a change order that prints the rate (manual §6c, §8, §9, §11, §12; playbook Step 10d, the Home Prep short version and
+  the symptom table); see the entry at the top of this file.
+- Prior pass **2026-09-25 (second pass)** — both documents, against accepted change orders joining every
   hours baseline, the plan lengthening by them, the second change order's chain, the §4.2 form and the prep readout (manual §8,
-  §9, §9a-i, §11; playbook Step 10, 10b, 10d and six symptom rows); see the entry at the top of this file.
+  §9, §9a-i, §11; playbook Step 10, 10b, 10d and six symptom rows).
 - Prior pass **2026-09-25** — both documents, against the fixed-price change-order build (manual §9, §11, §12, §16; playbook
   Step 10b/10d and three symptom rows).
 - Prior pass **2026-09-24** — both documents, against who arranges the appraisals following the tier rather
