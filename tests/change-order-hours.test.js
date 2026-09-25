@@ -418,7 +418,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['updateCOHours', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'estFixedFee', 'estTolerancePctTxt', 'coNoHoursBaseTxt',
-              'prepFeeRate', 'coPrepReadoutHtml'].concat(CO),
+              'prepFeeRate', 'coPrepReadoutHtml', 'agrBillingRates'].concat(CO),
         vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE'],
         stubs: { document: dom, jobs: [Object.assign({}, JOB, jobOver || {})], changeOrders: cos,
                  estimateStore: est ? { 7: { estimate: Object.assign({}, est), approved: true } } : {}, currentEstimate: null },
@@ -449,7 +449,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // is true changed. prep-co-hours.test.js carries the full set.
     has(prep.note, '+8.0 concierge hrs at $150 an hour', 'it states the hours and the rate they bill at');
     has(prep.note, 'on top of the 30% site management fee', 'on top of the fee, with the rate read from prepFeeRate');
-    has(prep.note, 'the rate is printed on the change order the client signs', '⚠ and that the rate reaches the page the client signs');
+    // ⚠ RESTATED AGAIN THE SAME DAY: "so the rate is printed on the change order" was the reason while the
+    // prep agreement stated no rate. Its §3.3 states the concierge rate now (Anthony: "mention the hourly rates
+    // in the home prep agreement"), so the readout says where the rate comes from and that the page restates it.
+    has(prep.note, 'the rate is the one its agreement states in Section 3.3, and the change order prints it again',
+        '⚠ and where the rate comes from — the agreement, restated on the page the client signs');
     lacks(prep.note, 'not billed here', '⚠ the old sentence — hours on a change order are billed nowhere — is gone');
     const none = modal(null, [], 8, 0);
     has(none.note, 'this job has no saved estimate yet', 'a job with no estimate at all still says so');
@@ -464,7 +468,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     function printed(cos, id) {
       const c = sandbox({
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
-              'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt'].concat(CO),
+              'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
+              'agrBillingRates'].concat(CO),
         vars: ['CO_REASONS'],
         stubs: { jobs: [Object.assign({}, JOB)], changeOrders: cos, currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, EST_TM), approved: true } },

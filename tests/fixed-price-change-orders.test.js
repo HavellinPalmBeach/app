@@ -51,7 +51,9 @@ function accepted(tc, ps, id) { return co(tc, ps, id, { clientApproved: true, cl
 const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel', '_coMoney', 'fmt', 'esc',
                 'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonLabel', 'estFixedFee',
                 'estTolerancePctTxt', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'openCOAcceptModal',
-                'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'prepFeeRate'];
+                'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'prepFeeRate',
+                // Lifted, never stubbed: _coJobBasis reads its rates through the agreements' one definition.
+                'agrBillingRates'];
 
 function coCtx(est, cos, seed) {
   const dom = domStub(seed || {});

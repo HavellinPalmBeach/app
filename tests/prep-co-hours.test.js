@@ -23,6 +23,11 @@
 //     so the readout, the acceptance panel and the printed page each carry it — the fixed-price change
 //     order's reasoning, on the one engagement whose contract prices no hours. Agreement §3.3 gains a
 //     carve-out naming this route and §3.8 names the Change Order (draft; in the counsel bundle).
+//   · ⚠⚠ AND THEN THE AGREEMENT STATES THE RATE TOO (same day). Anthony: *"I think we should mention the
+//     hourly rates in the home prep agreement."* §3.3's carve-out names the concierge rate, read from
+//     agrBillingRates — the definition _coJobBasis now reads as well — so the contract and the change
+//     order state one rate for one job, and the change order restates it rather than being the only
+//     place it appears. The concierge rate only: the form says no specialist hours are billed.
 //   · concierge hours only: the engagement has no specialists.
 //   · ⚠ NO BLOCK ON AN UNLOGGED FINAL. A final whose ESTIMATE priced hours is refused with an empty log;
 //     one whose hours came only from a change order is not, because no change order can be withdrawn
@@ -89,7 +94,10 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonLabel', 'estFixedFee',
                 'estTolerancePctTxt', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'openCOAcceptModal',
                 'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', 'saveChangeOrder', '_coPriorAccepted',
-                'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate'];
+                'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate',
+                // Lifted, never stubbed: _coJobBasis reads the rates through the definition the agreements
+                // use, and a stub is exactly what would let the change order and §3.3 state two rates.
+                'agrBillingRates'];
 function coCtx(est, cos, seed, jobOver) {
   const dom = domStub(seed || {});
   const said = [];
@@ -287,8 +295,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(r, '+8.0 concierge hrs at $150 an hour', 'the readout states the hours and the rate');
     has(r, 'about $1,200 at the estimated hours, billed as they are worked on the final invoice', 'what that comes to, and how it bills');
     has(r, 'on top of the 30% site management fee on the prep vendors’ invoices', 'on top of the fee');
-    has(r, 'This engagement priced no concierge hours, so the rate is printed on the change order the client signs',
-        '⚠ a vendors-only job is told the rate reaches the signed page');
+    has(r, 'This engagement priced no concierge hours; the rate is the one its agreement states in Section 3.3, and the change order prints it again',
+        '⚠ a vendors-only job is told where the rate comes from — the agreement, restated on the change order');
+    lacks(r, 'so the rate is printed on the change order', '⚠ never the old reason, which was true only while §3.3 stated no rate');
     lacks(r, 'not billed here', '⚠⚠ the sentence that made Anthony ask is gone');
     lacks(r, 'threshold', 'and there is no ±15% line — every addition on prep is agreed in writing first');
     has(read(prepEst(0), [accepted(8, { id: 50 })], 4), 'Concierge hours on this job go from 8.0 to 12.0',
@@ -364,7 +373,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ THE PRINTED CHANGE ORDER — the only place a vendors-only client sees the rate in writing');
+  group('⚠⚠ THE PRINTED CHANGE ORDER — the rate on the page the client signs, restating the agreement’s');
   {
     const p = coCtx(prepEst(0), [co(8)]);
     p.printChangeOrder(100);
@@ -378,7 +387,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'on top of the fee, which does not move');
     has(d, 'Coordinating the vendors remains covered by that fee.', 'vendor coordination is never billed as hours');
     lacks(d, 'does not itself create a charge', '⚠⚠ never the T&M sentence, which would tell this client the opposite');
-    lacks(d, 'at the rates already set out in your agreement', '⚠ nor the pointer to rates this agreement never states');
+    lacks(d, 'at the rates already set out in your agreement',
+          '⚠ nor the T&M pointer — this page states the rate itself, and a prep job has no other hours billed "the same way"');
 
     const two = coCtx(prepEst(0), [accepted(8, { id: 50 }), co(4)]);
     two.printChangeOrder(100);
@@ -491,9 +501,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const fee = text(A().agreementHtml(PREP_JOB, prepEst(0)));
     has(fee, 'No Transition Concierge or Property Specialist hours are billed on this engagement',
         'the fee-only §3.3 still says what the engagement is as signed');
-    has(fee, 'is billed only if Client signs a Change Order under Section 3.8 that states the Transition Concierge hours and the hourly rate',
-        '⚠⚠ and names the one route to hours — a signed change order stating the rate');
-    has(fee, 'billed as worked at that rate, in addition to the management fee', 'and how they bill');
+    has(fee, 'is billed only if Client signs a Change Order under Section 3.8 stating the Transition Concierge hours',
+        '⚠⚠ and names the one route to hours — a signed change order stating them');
+    // (Two needles, not one: the figure is bold, and text() leaves a space where the </strong> was.)
+    has(fee, "billed as worked at Contractor's Transition Concierge rate of $150/hour",
+        '⚠⚠ at a rate the contract itself states, before anyone signs');
+    has(fee, '/hour , in addition to the management fee', '…and on top of the fee, not inside it');
+    lacks(fee, 'that states the Transition Concierge hours and the hourly rate',
+          'the retired wording, which left the rate for the change order to set, is gone');
     has(fee, 'Hands-on work Contractor is asked to do after signing is documented in a written Change Order signed by both Parties',
         '⚠ §3.8 names the Change Order §3.3 points at — it never said the words');
     // ⚠ The quote does not move: an accepted change order leaves the signed agreement as it was.
@@ -509,6 +524,50 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(lab, '3.3 Hourly and Project Rates', 'the Home Editing agreement renders its T&M §3.3');
     lacks(lab, 'Hands-on work Contractor is asked to do after signing', 'a labour agreement is untouched');
     lacks(lab, 'is billed only if Client signs a Change Order', 'on both clauses');
+    has(lab, 'Property Specialist services are billed at $100/hour', 'and keeps its whole rate card');
+
+    // ═════════════════════════════════════════════════════════════════════════
+    group('⚠⚠ THE RATE — §3.3 states it before anyone signs, and it IS the change order’s rate');
+    // Anthony: *"I think we should mention the hourly rates in the home prep agreement."* The first cut
+    // left the rate to the change order, so the page a client signs mid-job was the first place they saw
+    // one. The rate reaches the contract from agrBillingRates, the definition _coJobBasis now reads too.
+    const rateOf = (t) => { const m = /Transition Concierge rate of \$(\d[\d,]*)\/hour/.exec(t);
+                            return m ? Number(m[1].replace(/,/g, '')) : null; };
+    eq(rateOf(fee), 150, 'a vendors-only prep agreement states the concierge rate: $150/hour');
+    eq(rateOf(text(A().agreementHtml(PREP_JOB, prepEst(0, { tcRate: 185 })))), 185, 'a premium estimate states its own $185');
+    eq(rateOf(text(A().agreementHtml(PREP_JOB, prepEst(0, { tcRate: 165 })))), 165,
+       '⚠ READ off the estimate, never assumed: an unusual rate comes through as it was priced');
+    eq(rateOf(text(A().agreementHtml(PREP_JOB, null))), 150, 'the blank template (no estimate yet) states the standard rate');
+    eq(rateOf(text(A().agreementHtml(Object.assign({}, PREP_JOB, { premium: true }), null))), 185,
+       'and a premium job’s blank template states the premium one');
+    has(dc, 'Transition Concierge services at $150/hour', 'the two-bases arm already stated it, and still does');
+    // ⚠ THE CONCIERGE RATE ONLY. The form says in bold that no specialist hours are billed, and a prep
+    // change order refuses them — a specialist rate on this contract would price work it rules out.
+    [prepEst(0), prepEst(5), prepEst(0, { tcRate: 185, psRate: 125 })].forEach((e, i) => {
+      const t = text(A().agreementHtml(PREP_JOB, e));
+      lacks(t, 'Property Specialist services are billed at', `⚠ no specialist rate on a prep form (case ${i})`);
+      lacks(t, '$' + e.psRate + '/hour', `nor the specialist figure itself (case ${i})`);
+    });
+
+    // ⚠⚠ THE JOIN — the contract, the readout and the printed change order state ONE rate for one job.
+    // Driven off the same estimate through each real renderer; a copy of the rule on either side fails.
+    [[150, {}], [185, {}], [165, {}], [185, { premium: true }]].forEach(([r, jobOver], i) => {
+      const e = jobOver.premium ? prepEst(0, { tcRate: 0 }) : prepEst(0, { tcRate: r });
+      const job = Object.assign({}, PREP_JOB, jobOver);
+      const agr = rateOf(text(A().agreementHtml(job, e)));
+      const rc = coCtx(e, [], { 'co-jobid': '1', 'co-tc-hrs': '8', 'co-ps-hrs': '' }, jobOver);
+      rc.updateCOHours();
+      const rd = /concierge hrs at \$(\d[\d,]*) an hour/.exec(text(rc.__dom.getElementById('co-hrs-note').innerHTML));
+      const pc = coCtx(e, [co(8)], {}, jobOver);
+      pc.printChangeOrder(100);
+      const pr = /Rate for these hours \$(\d[\d,]*) an hour/.exec(text(pc.__printed));
+      eq(agr, r, `the agreement states $${r}/hour (case ${i})`);
+      eq(rd ? Number(rd[1]) : null, agr, `⚠⚠ the modal readout states the agreement’s rate (case ${i})`);
+      eq(pr ? Number(pr[1]) : null, agr, `⚠⚠ and so does the page the client signs (case ${i})`);
+    });
+    const cjb = noComments(fn('_coJobBasis'));
+    has(cjb, 'agrBillingRates(job, est)', '_coJobBasis reads the one rate definition the agreements read');
+    lacks(cjb, '185 : 150', '⚠ and keeps no third copy of the fallback');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

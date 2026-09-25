@@ -242,7 +242,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   has(prep.r, '+6.0 concierge hrs at $' + prep.rate + ' an hour', 'it names the hours and the rate they are billed at');
   has(prep.r, 'billed as they are worked on the final invoice', 'and that they are billed on the final as worked');
   has(prep.r, 'on top of the ' + prep.fee + '% site management fee', 'on top of the site management fee, read from the rate');
-  has(prep.r, 'priced no concierge hours, so the rate is printed on the change order', 'and why the rate is on the page the client signs');
+  // Restated again the same day: the prep agreement's §3.3 states the concierge rate now (Anthony: "mention
+  // the hourly rates in the home prep agreement"), so the readout says where the rate comes from.
+  has(prep.r, 'priced no concierge hours; the rate is the one its agreement states in Section 3.3', 'and where the rate comes from — the agreement');
+  lacks(prep.r, 'so the rate is printed on the change order', 'never the old reason, true only while the agreement stated no rate');
   lacks(prep.r, 'not billed here', '⚠ the retired "not billed here" sentence is gone — it is false now');
   lacks(prep.r, 'bills no hours', 'and so is "bills no hours"');
 

@@ -92,8 +92,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const prep = agrDoc('prep');
     lacks(prep, '3.3 Hourly and Project Rates',
       '⚠⚠ the hourly rate card is not on a prep agreement');
-    lacks(prep, '$150/hour', '…nor the concierge rate');
-    lacks(prep, '$100/hour', '…nor the specialist rate');
+    // ⚠ RESTATED 2026-09-25, NOT DELETED. This pinned that no concierge rate appears on a prep agreement
+    // at all — right while the form billed no hours by any route. A change order can now add concierge
+    // hours after signing, and Anthony: "I think we should mention the hourly rates in the home prep
+    // agreement." What survives is what this group is named for: no RATE CARD — a price per hour stated
+    // as the basis of the fee — on a contract that bills no hours as signed. The one rate it carries is
+    // attached to the change-order route, appears exactly once, and is the concierge's alone.
+    lacks(prep, 'Transition Concierge services are billed at', '…nor the rate-card sentence that stated it as the fee basis');
+    eq((prep.match(/\$150\/hour/g) || []).length, 1,
+       '⚠ the concierge rate appears once — on the change-order route, never as a fee basis');
+    ok(/Change Order under Section 3\.8 stating the Transition Concierge hours; those hours are then billed as worked at Contractor's Transition Concierge rate of +\$150\/hour/.test(prep),
+       '…and that one is the rate for hours a signed change order adds');
+    lacks(prep, '$100/hour', '…nor the specialist rate, ever: the form says no specialist hours are billed');
     has(prep, '3.3 Basis of Fee.', 'it states the basis that is actually charged');
     has(prep, 'No Transition Concierge or Property Specialist hours are billed on this engagement',
       '…and says so in as many words');

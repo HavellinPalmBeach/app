@@ -1,3 +1,49 @@
+## ⚠⚠ THE HOME PREP AGREEMENT STATES THE CONCIERGE RATE — THE CHANGE ORDER RESTATES IT (BUILT 2026-09-25)
+Anthony, the same evening the prep change-order route shipped (the entry below): *"I think we should mention the hourly rates in
+the home prep agreement."* That answers counsel bundle B5's third question, which the build below had left open by printing the
+rate on the change order alone. App-only, no redeploy.
+
+- **§3.3's vendors-only arm now names the rate for change-order hours:** *"…is billed only if Client signs a Change Order under
+  Section 3.8 stating the Transition Concierge hours; those hours are then billed as worked at Contractor's Transition Concierge
+  rate of **$150/hour**, in addition to the management fee."* `tcRate` = `agrBillingRates(job, est).tc`, so a premium estimate
+  prints $185 and a blank template the job's flag. The bold *no hours are billed on this engagement* stays — true as signed.
+  - **⚠ IT IS STILL NOT A RATE CARD.** The 2026-09-11 fix took a $150/$100 rate card off this form because it stated a fee basis
+    for an engagement that bills no hours. `agreement-fees` pinned *no `$150/hour` at all* and was **restated, not deleted**: the
+    rate-card sentence stays absent, the concierge rate appears **exactly once**, attached to the change-order route.
+  - **⚠ THE CONCIERGE RATE ONLY, deliberately.** The same clause says in bold that no specialist hours are billed and a prep change
+    order refuses them, so a specialist rate would price work the contract rules out. Tested on both prep arms.
+- **⚠⚠ ONE RATE DEFINITION FOR THE CONTRACT AND THE CHANGE ORDER.** `_coJobBasis` carried a third copy of the rate fallback
+  (`agrBillingRates`' own comment exists because two copies drifted on the probate form); it reads `agrBillingRates` now. A
+  test drives the real `agreementHtml`, the real modal readout and the real printed change order off one estimate — $150, $185,
+  an unusual $165, and $185 off the premium FLAG with no rate on the estimate — and asserts all three state the same figure.
+- **The readout's reason changed with it:** *"This engagement priced no concierge hours, so the rate is printed on the change
+  order"* was true only while §3.3 stated no rate; it reads *"…the rate is the one its agreement states in Section 3.3, and the
+  change order prints it again."* Three code comments that called the change order *the only place* the client sees a rate were
+  corrected. The printed page and the acceptance panel are unchanged — they still state the rate.
+- **11,489 committed checks** (+32: `prep-co-hours` 178, `agreement-fees` 46; `agrBillingRates` lifted — never stubbed — into
+  the three suites that lift `_coJobBasis`; four older assertions restated to the new wording). **Revert sweep on three tar
+  copies: 6 changes, ALL RED, baseline 11,489 / 0 before and after on every copy, no needle mismatched, nothing crashed** — the
+  rate-less carve-out back fails 23, a hardcoded $150 12, a specialist rate added 6, the old readout reason 3, `_coJobBasis`
+  ignoring the premium flag 2, `_coJobBasis` keeping its own copy 1 (the source net: the copy is behaviourally identical today).
+- **Verified in headless Chromium:** `step25` **78 / 0** (was 69) — section H reads *rate of $150/hour* off the real agreement and
+  checks it against the printed page's *Rate for these hours*, and a new **H2** builds a Premium Estate prep job through the real
+  Build Estimate (`e-prem`) and finds *$185/hour* in its agreement and *$185 an hour* in the real modal. **Against the pre-change
+  build it fails 7.** `step24` restated (58 / 0). Steps 1–24 re-run as regressions, 0 failed — **1,153 browser checks across the twenty-five**.
+- Manual **§8** (the vendors-only note: the rate, not-a-rate-card, concierge only, one definition; the blank-template sentence) and
+  **§9** (three table rows). Playbook **Step 10d** (*Get the acceptance* no longer says their agreement has no rate) and the symptom
+  table (one row corrected, one new: *a prep client asks why their agreement names an hourly rate*). Both `.md` copies; 14 claims
+  parity-checked, 0 mismatches; `doc-structure` green; rendered 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and
+  17/18 as before. **`COUNSEL_REVIEW_BUNDLE.md` B5** retitled, the wording quoted, Q3 marked *answered by Anthony* — what is left
+  for counsel is whether a rate for contingent hours beside a bold *none are billed* reads as coherent.
+- **⚠ ASKED IN THE SAME BREATH, ANSWERED, NOT BUILT: a change order that adds a NEW VENDOR.** Anthony: *"Could be we need a painter
+  after all when at job start we thought we could get away without hiring one."* Measured: **there is no route today.** Prep and
+  service sourcing rows are keyed over the locked `est.prepItems` / `est.vendors`; the only mid-job add is *+ Add an end-of-job
+  vendor…* (the five logistics categories); `getVendorActuals` computes the 30% from `est.prepItems` alone, so a painter recorded
+  anywhere else would bill no fee. The prep §3.8 already says added work is *"quoted and agreed with Client in writing before it
+  proceeds"* and that the fee follows the vendor costs actually incurred. Recommended to him: a change order may carry a prep trade
+  line (category, scope, the vendor's quote as a good-faith figure), which on acceptance joins the Job Plan's prep sourcing and the
+  30% on actuals, the estimate untouched — the same quoted-vs-billed split as the hours. His call before building.
+
 ## ⚠⚠ A SIGNED HOME PREP JOB CAN TAKE CONCIERGE HOURS — BY A CHANGE ORDER THAT PRINTS THE RATE (BUILT 2026-09-25)
 Anthony, on the gap the entry below left for him: *"if we have a live job that only quoted vendors, there's no way to then
 add transition concierge hours. Is that correct?"* Correct. Then: *"Yes to 1."* (build the route), *"No revert"* (the
@@ -25,8 +71,9 @@ App-only, no redeploy.
     no concierge hours it adds that the rate is printed on the change order the client signs. It replaces `coNoHoursBaseTxt`'s
     prep arm (*"hours on a change order are not billed here"*), written that morning and false by evening; `coBasisNoteHtml`
     gains a prep arm (6). No prep branch in the readout fails 12; the basis never reading prep **43**.
-  - **⚠⚠ THE RATE IS PRINTED ON THE CHANGE ORDER, AND THAT IS THE LOAD-BEARING DECISION.** A vendors-only prep agreement prices
-    no hours and states no rate card, so the change order is the only place that client sees an hourly rate in writing. The
+  - **⚠⚠ THE RATE IS PRINTED ON THE CHANGE ORDER, AND THAT IS THE LOAD-BEARING DECISION.** ~~A vendors-only prep agreement prices
+    no hours and states no rate card, so the change order is the only place that client sees an hourly rate in writing.~~
+    **Superseded the same day — §3.3 states the concierge rate itself (entry above); the change order restates it.** The
     printed page carries the concierge hours on the estimate, change orders already accepted, this change, the revised hours
     and *Rate for these hours — $150 an hour, billed as worked* (the T&M page on prep fails 10); the acceptance panel names the
     rate and its terms name it again (4); `acceptChangeOrder`'s confirmation says to log them. The fixed-price page's reasoning,
@@ -13344,9 +13391,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
+- Last reconciled against the app: **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
+  concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows); see the entry at the top of this file.
+- Prior pass **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
   hours by a change order that prints the rate (manual §6c, §8, §9, §11, §12; playbook Step 10d, the Home Prep short version and
-  the symptom table); see the entry at the top of this file.
+  the symptom table).
 - Prior pass **2026-09-25 (second pass)** — both documents, against accepted change orders joining every
   hours baseline, the plan lengthening by them, the second change order's chain, the §4.2 form and the prep readout (manual §8,
   §9, §9a-i, §11; playbook Step 10, 10b, 10d and six symptom rows).

@@ -7,7 +7,9 @@
 // nowhere. The route: an ACCEPTED change order adding concierge hours opens the hours log, the Budget &
 // Fee card and the desk card measure against it, the final bills the logged hours at the concierge rate
 // on top of the fee — and the change order itself states that rate, because the fee-only agreement
-// names none.
+// named none. ⚠ Then the same day, Anthony: "I think we should mention the hourly rates in the home prep
+// agreement." §3.3 now states the concierge rate itself, so section H reads it off the real agreement and
+// checks it is the rate on the printed page, and a Premium Estate prep job shows both follow the estimate.
 //
 // Drives the REAL page: the real intake, the real Build Estimate on a prep job, the real change-order
 // modal typed into and its real Create button, the real acceptance panel and its Accept button, the real
@@ -59,10 +61,12 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   }
 
   // The real Build Estimate screen, then approved, won, signed and funded — the state a live job is in.
-  async function build(id, prep) {
+  async function build(id, prep, prem) {
     await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(700);
-    return p.evaluate(([id, prep]) => {
+    return p.evaluate(([id, prep, prem]) => {
       const js = document.getElementById('e-job'); js.value = String(id); if (js.onchange) js.onchange();
+      // A Premium Estate job, through the estimate's own checkbox — the value calcAll reads to price the rate.
+      if (prem) { document.getElementById('e-prem').checked = true; jobs.find(j => j.id === id).premium = true; }
       if (prep) {
         prepItems.length = 0;
         [['Painting', 20000], ['Landscaping', 9000], ['Cleaning', 6000], ['Staging', 10000]]
@@ -81,7 +85,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
                         date: _todayStr(), clearedOn: _todayStr() }];
       saveJobs();
       return e;
-    }, [id, prep]);
+    }, [id, prep, !!prem]);
   }
 
   // A press or a keystroke that cannot land is a FAILED CHECK, not a crash: against a build that
@@ -143,7 +147,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   const readout = await text('#co-hrs-note');
   has(readout, '+8.0 concierge hrs at $150 an hour', '⚠⚠ the readout states the hours and the rate');
   has(readout, 'about $1,200 at the estimated hours', 'and what they come to');
-  has(readout, 'the rate is printed on the change order the client signs', 'and that the rate reaches the signed page');
+  // Restated the same day: §3.3 of the prep agreement states the rate now, so the readout says where it comes from.
+  has(readout, 'the rate is the one its agreement states in Section 3.3, and the change order prints it again',
+      'and that the rate is the agreement’s, restated on the signed page');
+  lacks(readout, 'so the rate is printed on the change order', 'never the old reason');
   lacks(readout, 'not billed here', '⚠⚠ the old "billed nowhere" sentence is gone');
   // The specialist box cannot be reached around: a value forced into it is refused on save.
   await p.evaluate(() => { document.getElementById('co-ps-hrs').value = '4'; });
@@ -223,7 +230,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   ok((await finalSub(idP)) === '', 'and the final-invoice step says nothing once they are logged');
 
   // ── F. THE PRINTED CHANGE ORDER ─────────────────────────────────────────
-  console.log('\n## F. The printed change order — the only place this client sees the rate in writing');
+  console.log('\n## F. The printed change order — the rate on the page the client signs, restating the agreement');
   const pr = await print(coId);
   has(pr.title, 'Havellin Change Order', 'it prints through the real path, named for what it is');
   has(pr.text, 'Rate for these hours $150 an hour, billed as worked', '⚠⚠ the rate is on the page the client signs');
@@ -251,13 +258,34 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   has(inv.t, 'These concierge hours are billed as they were logged, at $150 an hour', 'the change-order note says how they bill');
 
   // ── H. THE AGREEMENT ────────────────────────────────────────────────────
-  console.log('\n## H. The agreement: §3.3 names the route and §3.8 names the Change Order');
+  console.log('\n## H. The agreement: §3.3 names the route AND the rate, §3.8 names the Change Order');
   const agr = await T(agrAfter);
   has(agr, 'No Transition Concierge or Property Specialist hours are billed on this engagement', '§3.3 still states the engagement as signed');
-  has(agr, 'is billed only if Client signs a Change Order under Section 3.8 that states the Transition Concierge hours and the hourly rate',
+  has(agr, 'is billed only if Client signs a Change Order under Section 3.8 stating the Transition Concierge hours',
       '⚠⚠ and the one route to hours');
+  has(agr, "billed as worked at Contractor's Transition Concierge rate of $150/hour, in addition to the management fee",
+      '⚠⚠ at the concierge rate, in the contract before anyone signs (2026-09-25)');
+  lacks(agr, 'Property Specialist services are billed at', 'the concierge rate only — the form bills no specialist hours');
+  const agrRate = (/Transition Concierge rate of \$(\d+)\/hour/.exec(agr) || [])[1];
+  const coRate = (/Rate for these hours \$(\d+) an hour/.exec(pr.text) || [])[1];
+  ok(!!agrRate && agrRate === coRate, '⚠⚠ the agreement and the printed change order state one rate ($' + agrRate + ' / $' + coRate + ')');
   has(agr, 'Hands-on work Contractor is asked to do after signing is documented in a written Change Order signed by both Parties',
       '§3.8 names the Change Order it points at');
+
+  // ── H2. A PREMIUM ESTATE PREP JOB ───────────────────────────────────────
+  console.log('\n## H2. A Premium Estate prep job — the agreement and the change order both follow the estimate');
+  const idQ = await make('prep', 'Premium');
+  const eQ = await build(idQ, true, true);
+  ok(eQ.tcRate === 185, 'the real Build Estimate pins the premium concierge rate (' + eQ.tcRate + ')');
+  const agrQ = await T(await p.evaluate((id) => agreementHtml(jobs.find(j => j.id === id), estimateStore[id].estimate), idQ));
+  has(agrQ, "Transition Concierge rate of $185/hour", '⚠⚠ its agreement states $185 an hour');
+  lacks(agrQ, '$150/hour', 'and not the standard rate anywhere');
+  await p.evaluate((id) => openChangeOrder(id), idQ); await p.waitForTimeout(200);
+  await fill('#co-tc-hrs', '4');
+  const rq = await text('#co-hrs-note');
+  has(rq, '+4.0 concierge hrs at $185 an hour', '⚠⚠ and the change-order readout names the same $185');
+  has(rq, 'the rate is the one its agreement states in Section 3.3', 'and says that is where the rate comes from');
+  await p.evaluate(() => closeChangeOrder());
 
   // ── I. A HOME EDITING JOB BESIDE IT ─────────────────────────────────────
   console.log('\n## I. The same modal on a Home Editing job straight afterwards — nothing leaks onto T&M');

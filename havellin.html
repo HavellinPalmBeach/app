@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 5:42pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 6:36pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12625,12 +12625,16 @@ function _coJobBasis(jobId) {
   var rec = estimateStore[jobId];
   var est = (rec && rec.estimate) ? rec.estimate
           : ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
+  // ⚠ THE RATES COME FROM agrBillingRates, THE DEFINITION BOTH AGREEMENT FORMS READ (2026-09-25). This
+  // was a third copy of that fallback, and the Home Prep agreement's §3.3 now prints the concierge rate
+  // beside the change order that prints it again — two copies is how those two pages come to disagree.
+  var _rates = agrBillingRates(job, est);
   return {
     job: job, est: est,
     tcHrs: est ? (est.totTC || 0) : 0,
     psHrs: est ? (est.totPS || 0) : 0,
-    tcRate: (est && est.tcRate) || (job && job.premium ? 185 : 150),
-    psRate: (est && est.psRate) || (job && job.premium ? 125 : 100),
+    tcRate: _rates.tc,
+    psRate: _rates.ps,
     // The billing basis the change order is priced on — the invoice reads the same flag
     // (`_fixedBasis`) off the same record. The flat fee alone, through estFixedFee: the prep
     // fee rides on top of it and a change order does not move that.
@@ -12699,10 +12703,13 @@ function coNoHoursBaseTxt(b, h) {
 
 // ⚠⚠ ON HOME PREP A CHANGE ORDER IS CONCIERGE HOURS AT A STATED RATE (2026-09-25). Anthony: *"if we
 // have a live job that only quoted vendors, there's no way to then add transition concierge hours"* —
-// and "yes" to the route. A prep engagement signed with vendors only has no hourly rate anywhere in
-// its agreement (§3.3 prices the 30% fee alone), so the change order that adds hours has to STATE the
+// and "yes" to the route. A prep engagement signed with vendors only had no hourly rate anywhere in
+// its agreement (§3.3 priced the 30% fee alone), so the change order that adds hours has to STATE the
 // rate or the client is billed at one they never saw in writing — the reason the fixed-price change
-// order prints its price. On T&M the timesheet bills hours at rates already in the agreement; here
+// order prints its price. ⚠ §3.3 states the concierge rate itself as of the same day (Anthony: "mention
+// the hourly rates in the home prep agreement"), so the change order now RESTATES a contracted rate —
+// read from the same agrBillingRates, so the two pages cannot disagree — rather than being the only
+// place it appears. On T&M the timesheet bills hours at rates already in the agreement; here
 // this readout, the acceptance panel and the printed page carry the rate, and the final bills the
 // hours as they are logged. The ±15% line is deliberately absent: on prep every addition is quoted in
 // writing before it proceeds (§3.8), however small, so a threshold would say nothing.
@@ -12716,7 +12723,9 @@ function coPrepReadoutHtml(b, tc, prior) {
       : ' \u2014 about ' + fmt(amt) + ' less at the estimated hours.') +
     (base > 0
       ? ' Concierge hours on this job go from ' + base.toFixed(1) + ' to ' + Math.max(0, base + tc).toFixed(1) + '.'
-      : ' This engagement priced no concierge hours, so the rate is printed on the change order the client signs.');
+      // ⚠ NOT "so the rate is printed on the change order" any more: that was why, while the agreement
+      // stated no rate. §3.3 states it now, so the change order restates the contract's rate (2026-09-25).
+      : ' This engagement priced no concierge hours; the rate is the one its agreement states in Section 3.3, and the change order prints it again.');
 }
 
 // ⚠ THE 15% IS WHY THIS SCREEN EXISTS, so the readout states it rather than leaving the
@@ -13365,8 +13374,8 @@ function openCOAcceptModal(coId) {
   // final invoice adds. It said "No charge is created by this change order" on every job.
   var fx = coFixedTerms(co.jobId, co);
   // ⚠ ON HOME PREP THE CLIENT IS AGREEING TO A RATE, so the panel names it (2026-09-25). A prep job
-  // signed with vendors only has no hourly rate in its agreement; the change order is where the client
-  // first sees one, and this is the panel they type their name under.
+  // signed with vendors only had no hourly rate in its agreement until §3.3 began stating it the same
+  // day; this is the panel they type their name under, so it names the rate again either way.
   var pb = _coJobBasis(co.jobId);
   var _prepRate = pb.prep ? (Number(pb.tcRate) || 0) : 0;
   var _prepTC = coHours(co).tc;
@@ -13498,11 +13507,11 @@ function printChangeOrder(coId) {
 
   // ⚠⚠ HOME PREP IS A THIRD DOCUMENT, AND THE T&M SENTENCE ABOVE IS FALSE THERE (2026-09-25). "At the
   // rates already set out in your agreement … the same way every other hour on this engagement is
-  // billed": a prep engagement signed with vendors only has no hourly rate in its agreement and no
-  // other hours at all. So this page states the rate the added hours are billed at — the only place the
-  // client sees it in writing — and what that comes to at the estimated hours, the way the prep estimate
-  // itself prints its declutter hours (hours × rate), billed as worked. The fixed-price page's reasoning,
-  // on the one engagement whose contract names no rate.
+  // billed": a prep engagement signed with vendors only has no other hours at all. So this page states
+  // the rate the added hours are billed at and what that comes to at the estimated hours, the way the
+  // prep estimate itself prints its declutter hours (hours × rate), billed as worked. It was the only
+  // place the client saw that rate in writing until §3.3 of the prep agreement began stating it the same
+  // day (2026-09-25); both read agrBillingRates, so the page restates the contract rather than setting it.
   if (_b.prep && !fx) {
     var _pRate = Number(_b.tcRate) || 0;
     var _pTC = coHours(co).tc;
@@ -36340,9 +36349,16 @@ function agreementHtml(job, est) {
         ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the management fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(_agrDcHrs.toFixed(1)+' hours')+' ('+b('$'+_agrDcAmt.toLocaleString())+') on that basis. '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.')
         // ⚠ THE CARVE-OUT (2026-09-25): a change order can now add concierge hours to a vendors-only prep
         // job, and this clause said flatly that none are billed. It keeps saying so for the engagement as
-        // signed, and names the one route to hours — a signed Change Order stating the hours AND the rate,
-        // because this form prices none (the printed change order carries it). Draft; in the counsel bundle.
-        : p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Hands-on work Client asks for after signing, such as decluttering, is billed only if Client signs a Change Order under Section 3.8 that states the Transition Concierge hours and the hourly rate; those hours are then billed as worked at that rate, in addition to the management fee. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'))
+        // signed, and names the one route to hours — a signed Change Order stating the hours.
+        // ⚠⚠ AND IT STATES THE RATE, SO THE CLIENT SEES IT BEFORE SIGNING (2026-09-25, same day). Anthony:
+        // *"I think we should mention the hourly rates in the home prep agreement."* The first cut left the
+        // rate to the change order, which made the page the client signs mid-job the first place they saw
+        // one; counsel bundle B5's third question, answered. It is `tcRate` — agrBillingRates, the one
+        // definition _coJobBasis reads too — so this clause and the printed change order cannot state two
+        // different rates for one job. ⚠ THE CONCIERGE RATE ONLY, deliberately: the bold sentence says no
+        // specialist hours are billed, and a prep change order refuses them, so a specialist rate here
+        // would price work this contract rules out. Draft; in the counsel bundle.
+        : p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Hands-on work Client asks for after signing, such as decluttering, is billed only if Client signs a Change Order under Section 3.8 stating the Transition Concierge hours; those hours are then billed as worked at Contractor\'s Transition Concierge rate of '+b('$'+tcRate+'/hour')+', in addition to the management fee. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'))
       : isFixedAgr
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+_agrFlat.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.'
           + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in Section 3.5, which covers the coordination and site supervision of the home sale preparation vendors, is not part of the fixed project fee and is charged in addition to it.' : ''))
