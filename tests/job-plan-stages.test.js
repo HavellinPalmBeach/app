@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
-            'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', '_hrsTxt', '_todayStr',
+            'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr',
             'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2'],
       vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES'],
@@ -345,7 +345,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fn('_placeHoursSection'), "getElementById('plan-hours-slot')", 'placed into the slot the Hours fold renders');
     lacks(noComments(src), 'function renderDailyCloseBlock', 'the duplicate projection block is gone, not left compiling');
     lacks(noComments(fn('renderJobPlan')), 'renderDailyCloseBlock', 'and nothing calls it');
-    has(fn('renderJobPlan'), 'Change Order before the next room', 'its one sentence survives under the hours');
+    // ⚠ Restated 2026-09-25: the sentence moved into planHoursRuleTxt, because on a FIXED-PRICE
+    // job "Over the line? Stop — Change Order before the next room" is false — the fee does not move
+    // with the hours. The T&M arm keeps it word for word; both arms are driven in
+    // fixed-price-change-orders.test.js.
+    has(fn('renderJobPlan'), 'planHoursRuleTxt(!!(est && est.fixedPrice))', 'its one sentence survives under the hours, read for the job’s billing basis');
+    has(fn('planHoursRuleTxt'), 'Change Order before the next room', 'and on T&M it is the same sentence');
   }
 
   group('the stylesheet: the thread and its nodes, the lone box, the sentence-case box, the strip in the card');

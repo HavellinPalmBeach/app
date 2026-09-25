@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.24 · 11:40am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 2:59pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3205,14 +3205,7 @@ body.no-smf .smf-col{display:none;}
       </div>
     </div>
     <label>Reason for change</label>
-    <select id="co-reason">
-      <option value="timeline">Accelerated timeline — rush adjustment</option>
-      <option value="crew">Crew upgrade — Senior Property Specialist required</option>
-      <option value="scope_add">Scope addition — new rooms or services</option>
-      <option value="scope_remove">Scope reduction — rooms removed</option>
-      <option value="vendor">Vendor cost change</option>
-      <option value="other">Other</option>
-    </select>
+    <select id="co-reason"><!-- filled from CO_REASONS by openChangeOrder --></select>
     <label>What changed in the scope</label>
     <textarea id="co-description" style="height:80px;" placeholder="e.g. Added the guest house and pool house to scope. Client asked for the garage to be cleared as well."></textarea>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -3221,7 +3214,7 @@ body.no-smf .smf-col{display:none;}
       <div><label>Additional specialist hours</label>
         <input type="number" step="0.5" id="co-ps-hrs" placeholder="e.g. 16 (negative to reduce)" oninput="updateCOHours()"></div>
     </div>
-    <div class="vform"><div class="fld-note" style="font-size:11px;color:var(--gray);margin-top:2px;line-height:1.5;">Estimate the extra hours the added scope will take. <strong>A change order carries no price and bills nothing on its own</strong> &mdash; the hours are logged as they are worked and reach the client on the final invoice with every other hour. What this does is authorise the scope and move the figure the &plusmn;15% check measures against.</div></div>
+    <div class="vform"><div class="fld-note" id="co-basis-note" style="font-size:11px;color:var(--gray);margin-top:2px;line-height:1.5;"><!-- written by openChangeOrder: the rule differs on a fixed price --></div></div>
     <div id="co-hrs-note" style="margin-top:6px;"></div>
     <div id="co-fb" style="margin-top:8px;"></div>
     <div style="display:flex;gap:8px;margin-top:1rem;justify-content:flex-end;">
@@ -3245,7 +3238,7 @@ body.no-smf .smf-col{display:none;}
     <div id="coa-summary" style="background:var(--cream);border-radius:6px;padding:12px;margin-bottom:1rem;font-size:12px;line-height:1.7;"></div>
     <label>Client full name <span style="color:#A32D2D;font-weight:700;">*</span></label>
     <input type="text" id="coa-client-name" placeholder="Type client's full name to accept" autocomplete="off" style="font-size:15px;">
-    <div style="font-size:11px;color:var(--gray);margin-top:6px;line-height:1.5;">By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and the additional hours it is expected to take. Those hours are billed on the final invoice as they are actually worked.</div>
+    <div id="coa-terms" style="font-size:11px;color:var(--gray);margin-top:6px;line-height:1.5;"><!-- written by openCOAcceptModal: what accepting agrees to differs on a fixed price --></div>
     <div id="coa-fb" style="margin-top:8px;"></div>
     <div style="display:flex;gap:8px;margin-top:1.2rem;justify-content:flex-end;">
       <button class="btn-s" onclick="closeCOAcceptModal()">Cancel</button>
@@ -9100,6 +9093,18 @@ function applyOpenedEstimate(jobId, job, status) {
   window._suppressEstimateAutoSave = false;
   document.getElementById('e-prem').checked = job.premium || false;
   var _rshO = document.getElementById('e-rush'); if (_rshO) _rshO.checked = false;
+  // ⚠⚠ AND THE BILLING BASIS (2026-09-25). The fixed-price box, its amount and its row were
+  // reset by Save (clearEstimateTab) and by Reset, and by nothing on a job switch — so an
+  // estimate taken to fixed price and left WITHOUT saving (the ← Clients bar keeps the work, by
+  // design) handed its tick to the next client's fresh build. Measured on the real page: client A
+  // at $24,000 fixed, back, client B's Build estimate → B opened fixed price with its own
+  // suggestion ($11,580) in the box, and saved that way it quotes B a flat fee nobody chose. The
+  // flags beside it (_fixedAmountUserSet, _fixedAmountBasis) were already reset below; the
+  // control they describe was not. A saved estimate never reaches this line — restoreEstimateToUI
+  // puts its own basis back above.
+  var _fxO = document.getElementById('e-fixed'); if (_fxO) _fxO.checked = false;
+  var _fxAO = document.getElementById('e-fixed-amount'); if (_fxAO) _fxAO.value = '';
+  var _fxRowO = document.getElementById('fixed-amount-row'); if (_fxRowO) _fxRowO.style.display = 'none';
   // Reset PS slots
   var _crewReset = document.getElementById('ps-crew-size');
   if (_crewReset) _crewReset.value = '2';
@@ -12401,6 +12406,101 @@ function coHoursLabel(co) {
   return parts.length ? parts.join(' / ') + ' hrs' : 'no hours change';
 }
 
+// \u26a0\u26a0 ON A FIXED PRICE THE CHANGE ORDER IS THE PRICE, AND FROM 2026-09-25 IT SAYS SO.
+// Anthony: *"Is a 15% over run change order necessary on a fixed price job, or should it be a
+// 'Change of Scope' or something that triggers a change order?"* \u2014 scope, and the agreements
+// already said so: the estate form's \u00a74.1 fixed arm lists *"work \u2026 beyond the scope of work
+// described in Exhibit A"* in place of the hours trigger, the standard form's \u00a73.8 fixed arm reads
+// *"Changes to Scope"*, and the fixed-price estimate's Terms promise *"any price adjustment agreed
+// in writing before the additional work proceeds."* Seven screens still spoke the T&M rule on a
+// fixed job \u2014 the change order modal's 15% readout, its acceptance sentence, the printed change
+// order (*"does not itself create a charge"*), the dashboard's Hours Log (*"Client must be
+// notified \u2026 per agreement terms"*), the Job Plan's hours summary and its projection card
+// (*"STOP \u2026 No further scope work until a signed Change Order"*, over hours the fixed fee exists
+// to absorb) and the line under the hours slot.
+//
+// \u26a0\u26a0 AND THE PRICE IS PRINTED ON THE FIXED-PRICE CHANGE ORDER, which partly reverses the
+// 2026-09-11 "a change order carries hours, not a price" rule \u2014 ON FIXED PRICE ONLY, for the
+// reason that rule was right in the first place. It exists because on T&M the timesheet already
+// bills the hours, so a price on the change order was the same work charged twice. On a fixed
+// price nothing else charges them: the invoice adds this figure (`coCharge`), and it is the ONLY
+// thing that adds it. Worse, the standard form's fixed arm states NO hourly rate anywhere, so a
+// living-client fixed-price client was signing a change order in hours and then being billed
+// those hours at rates they had never seen in writing. Printing the price is what gives that
+// charge a written basis, and it is what \u00a73.8 already promises ("any resulting price adjustment
+// will be documented in a written Change Order"). T&M change orders still carry no price.
+//
+// One change order's price: its estimated hours at the job's own rates, rounded to the dollar
+// ONCE, here. The invoice SUMS these rather than rounding a total, so the figure on each change
+// order a client signs is exactly what the final invoice adds for it \u2014 at premium rates half an
+// hour is $92.50, and two of those rounded as a total ($185) would disagree with two signed
+// change orders ($93 + $93) by a dollar.
+function coPrice(co, tcRate, psRate) {
+  return Math.round(coBaselineShift(coHours(co), tcRate, psRate));
+}
+function coPriceTotal(cos, tcRate, psRate) {
+  return (cos || []).reduce(function(s, co){ return s + coPrice(co, tcRate, psRate); }, 0);
+}
+
+// The fixed-price reading of one change order: the flat fee in the agreement, what change
+// orders accepted EARLIER already added, this one's price, and the fee it leaves. NULL on a
+// T&M job and on a job with no saved estimate \u2014 and that null is how every surface branches, so
+// "is this job fixed price" is asked here once rather than as `est.fixedPrice` at seven sites.
+// Earlier means created earlier (`id` is Date.now() at creation), so change order #1 never shows
+// #2 above it; a draft with no id yet (the modal's live preview) counts every accepted one.
+function coFixedTerms(jobId, co) {
+  var b = _coJobBasis(jobId);
+  if (!b.fixed) return null;
+  var me = co && co.id;
+  var prior = coPriceTotal((changeOrders || []).filter(function(c){
+    return c.jobId === jobId && c.clientApproved && (!me || c.id < me);
+  }), b.tcRate, b.psRate);
+  var price = coPrice(co, b.tcRate, b.psRate);
+  return { flat: b.flat, prior: prior, price: price, revised: b.flat + prior + price,
+           tcRate: b.tcRate, psRate: b.psRate };
+}
+
+// "+20.0 concierge hrs at $150/hr \u00b7 +20.0 specialist hrs at $100/hr" \u2014 the basis of a
+// fixed-price change order's price, printed beside it so the figure can be checked by hand.
+function coRateBasisTxt(co, tcRate, psRate) {
+  var h = coHours(co), parts = [];
+  function side(n, who, rate) {
+    return (n > 0 ? '+' : '\u2212') + Math.abs(n).toFixed(1) + ' ' + who + ' hrs at $' + Number(rate).toLocaleString() + '/hr';
+  }
+  if (h.tc) parts.push(side(h.tc, 'concierge', tcRate));
+  if (h.ps) parts.push(side(h.ps, 'specialist', psRate));
+  return parts.join(' \u00b7 ');
+}
+
+// ONE list of change-order reasons. The select in the modal ships EMPTY and is filled from
+// this, and every document prints the LABEL \u2014 the printed change order and the acceptance
+// modal used to print the raw key, so a client signed a page reading "Reason: scope_add".
+var CO_REASONS = [
+  { v: 'timeline',     l: 'Accelerated timeline \u2014 rush adjustment' },
+  { v: 'crew',         l: 'Crew upgrade \u2014 Senior Property Specialist required' },
+  { v: 'scope_add',    l: 'Scope addition \u2014 new rooms or services' },
+  { v: 'scope_remove', l: 'Scope reduction \u2014 rooms removed' },
+  { v: 'vendor',       l: 'Vendor cost change' },
+  { v: 'other',        l: 'Other' }
+];
+function coReasonLabel(v) {
+  var r = CO_REASONS.filter(function(x){ return x.v === v; })[0];
+  return r ? r.l : String(v || '');
+}
+
+// \u26a0 ONE SENTENCE FOR "THE HOURS HAVE RUN MORE THAN 15% OVER", read by the Client Dashboard's
+// Hours Log card and the Job Plan's hours summary. They are the same fact on two screens, both
+// said "Client must be notified" on every job, and on a fixed price that is false twice over:
+// the fixed arm of both agreements carries no hours trigger, and the fee does not move with the
+// hours \u2014 an overrun on the agreed scope is Havellin's to absorb, which is the promise the fixed
+// price is sold on. What survives on a fixed job is the internal alarm (the money is coming out
+// of the margin) and the one real question: is this work beyond the agreed scope?
+function hoursOverText(fixed) {
+  return fixed
+    ? 'Hours are more than ' + estTolerancePctTxt() + ' over the estimate. On a fixed price that is ours to absorb \u2014 the fee does not move with the hours, so the client is not billed for it and it comes out of the margin. If the extra time is work beyond the agreed scope, raise a change order before doing more of it.'
+    : 'Hours exceed the estimate by more than ' + estTolerancePctTxt() + '. The client must be notified in writing before work continues \u2014 per the agreement.';
+}
+
 function loadChangeOrders() {
   try {
     var s = localStorage.getItem('havellin_co_v1');
@@ -12442,7 +12542,12 @@ function _coJobBasis(jobId) {
     tcHrs: est ? (est.totTC || 0) : 0,
     psHrs: est ? (est.totPS || 0) : 0,
     tcRate: (est && est.tcRate) || (job && job.premium ? 185 : 150),
-    psRate: (est && est.psRate) || (job && job.premium ? 125 : 100)
+    psRate: (est && est.psRate) || (job && job.premium ? 125 : 100),
+    // The billing basis the change order is priced on — the invoice reads the same flag
+    // (`_fixedBasis`) off the same record. The flat fee alone, through estFixedFee: the prep
+    // fee rides on top of it and a change order does not move that.
+    fixed: !!(est && est.fixedPrice),
+    flat: estFixedFee(est)
   };
 }
 
@@ -12455,10 +12560,24 @@ function openChangeOrder(jobId) {
   document.getElementById('co-description').value = '';
   document.getElementById('co-tc-hrs').value = '';
   document.getElementById('co-ps-hrs').value = '';
+  // Options before the value: a <select> silently rejects a value it has no option for.
+  document.getElementById('co-reason').innerHTML = CO_REASONS.map(function(r){
+    return '<option value="' + r.v + '">' + r.l + '</option>';
+  }).join('');
   document.getElementById('co-reason').value = 'scope_add';
+  document.getElementById('co-basis-note').innerHTML = coBasisNoteHtml(b.fixed);
   document.getElementById('co-fb').innerHTML = '';
   updateCOHours();
   document.getElementById('change-order-modal').style.display = 'flex';
+}
+
+// What a change order IS on this job, above the hours boxes. It used to be static markup
+// stating the T&M rule — "carries no price and bills nothing on its own … the ±15% check" — on
+// every job, so on a fixed-price one the screen for creating a charge said it created none.
+function coBasisNoteHtml(fixed) {
+  return fixed
+    ? 'Estimate the extra hours the added scope will take. <strong>On a fixed price the change order is the charge:</strong> those hours are priced at the job&rsquo;s rates, the price is printed on the change order the client signs, and it is added to the fixed project fee on the final invoice &mdash; whatever the work actually takes. <strong>The trigger is a change in scope, never the hours.</strong> Work beyond the agreed scope needs one however small it is; hours running long on the agreed scope never do &mdash; the fixed fee covers them.'
+    : 'Estimate the extra hours the added scope will take. <strong>A change order carries no price and bills nothing on its own</strong> &mdash; the hours are logged as they are worked and reach the client on the final invoice with every other hour. What this does is authorise the scope and move the figure the &plusmn;' + estTolerancePctTxt() + ' check measures against.';
 }
 
 // ⚠ THE 15% IS WHY THIS SCREEN EXISTS, so the readout states it rather than leaving the
@@ -12482,6 +12601,21 @@ function updateCOHours() {
 
   var note = document.getElementById('co-hrs-note');
   if (!addHrs) { note.innerHTML = ''; return; }
+  // ⚠ ON A FIXED PRICE THE 15% IS NOT THE TRIGGER AND THE READOUT MUST NOT SAY IT IS. It told a
+  // concierge adding a small room to a flat-fee job that the change was "inside the 15% the
+  // client already agreed to, so this records the scope rather than changing what they owe" —
+  // and then the invoice added the hours to the flat fee at the rate card. What they need here is
+  // the figure the client is being asked to agree to, and the fee it leaves.
+  var fx = coFixedTerms(jobId, { tcHrs: tc, psHrs: ps });
+  if (fx) {
+    note.innerHTML = '<div class="alert a-info">' + coHoursLabel({tc:tc, ps:ps}) + ' at $' +
+      Number(fx.tcRate).toLocaleString() + ' / $' + Number(fx.psRate).toLocaleString() + ' an hour — <strong>' +
+      _coMoney(fx.price) + ' on the fixed project fee</strong>, which ' + (fx.price < 0 ? 'comes down' : 'goes') +
+      ' from ' + fmt(fx.flat + fx.prior) + ' to ' + fmt(fx.revised) + '.' +
+      (fx.prior ? ' (' + fmt(fx.flat) + ' agreed, ' + (fx.prior > 0 ? 'plus ' : 'less ') + fmt(Math.abs(fx.prior)) + ' of change orders already accepted.)' : '') +
+      ' This is the price printed on the change order and added to the final invoice, whatever the work actually takes.</div>';
+    return;
+  }
   if (!baseHrs) {
     note.innerHTML = '<div class="alert a-info">' + coHoursLabel({tc:tc, ps:ps}) +
       ' — this job has no approved estimate yet, so there is nothing to measure it against.</div>';
@@ -13060,13 +13194,28 @@ function openCOAcceptModal(coId) {
   var job = jobs.find(function(j){ return j.id===co.jobId; });
   document.getElementById('coa-co-id').value = coId;
   document.getElementById('coa-co-ref').textContent = 'CO-' + co.id.toString().slice(-6) + ' · ' + (job ? job.name : '');
+  // ⚠ THE CLIENT READS THIS PANEL AND TYPES THEIR NAME UNDER IT, so on a fixed price it states
+  // the price they are agreeing to — the same figure the printed change order carries and the
+  // final invoice adds. It said "No charge is created by this change order" on every job.
+  var fx = coFixedTerms(co.jobId, co);
+  var tone = coHours(co).total >= 0 ? 'var(--bronze)' : 'var(--ok-tx)';
   document.getElementById('coa-summary').innerHTML =
-    '<div style="margin-bottom:4px;"><strong>' + co.description + '</strong></div>' +
-    '<div style="color:var(--gray);">Reason: ' + co.reason + '</div>' +
-    '<div style="margin-top:8px;display:flex;justify-content:space-between;font-weight:700;color:' + (coHours(co).total>=0?'var(--bronze)':'var(--ok-tx)') + ';">' +
+    '<div style="margin-bottom:4px;"><strong>' + esc(co.description) + '</strong></div>' +
+    '<div style="color:var(--gray);">Reason: ' + esc(coReasonLabel(co.reason)) + '</div>' +
+    '<div style="margin-top:8px;display:flex;justify-content:space-between;font-weight:700;color:' + tone + ';">' +
       '<span>Additional hours</span><span>' + coHoursLabel(co) + '</span></div>' +
-    '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
-      'No charge is created by this change order. These hours are billed on the final invoice as they are actually worked.</div>';
+    (fx
+      ? '<div style="display:flex;justify-content:space-between;font-weight:700;color:' + tone + ';">' +
+          '<span>Change to the fixed project fee</span><span>' + _coMoney(fx.price) + '</span></div>' +
+        '<div style="display:flex;justify-content:space-between;">' +
+          '<span>Revised fixed project fee</span><span>' + fmt(fx.revised) + '</span></div>' +
+        '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
+          'Priced at ' + esc(coRateBasisTxt(co, fx.tcRate, fx.psRate)) + '. The amount is added to the fixed project fee on the final invoice and does not change with the hours the work actually takes.</div>'
+      : '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
+          'No charge is created by this change order. These hours are billed on the final invoice as they are actually worked.</div>');
+  document.getElementById('coa-terms').innerHTML = fx
+    ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and to the change to the fixed project fee shown above, which is added on the final invoice.'
+    : 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and the additional hours it is expected to take. Those hours are billed on the final invoice as they are actually worked.';
   document.getElementById('coa-client-name').value = '';
   document.getElementById('coa-fb').innerHTML = '';
   document.getElementById('co-accept-modal').style.display = 'flex';
@@ -13096,9 +13245,11 @@ function acceptChangeOrder() {
   // compounded off an already-revised figure. Deriving the whole thing each time is
   // idempotent and cannot drift, and a withdrawn acceptance simply drops back out of it.
   var b = _coJobBasis(co.jobId);
+  var accepted = (changeOrders || []).filter(function(c){ return c.jobId === co.jobId && c.clientApproved; });
+  // Summed per change order, the way the invoice sums them (see coPrice), so the job's figure
+  // and the final invoice cannot come to differ by a rounding dollar.
+  var shift = coPriceTotal(accepted, b.tcRate, b.psRate);
   if (b.job) {
-    var accepted = (changeOrders || []).filter(function(c){ return c.jobId === co.jobId && c.clientApproved; });
-    var shift = Math.round(coBaselineShift(coHoursTotal(accepted), b.tcRate, b.psRate));
     var baseTotal = b.est ? (b.est.havellinTotal || 0) : (b.job.havellinEst || 0);
     b.job.havellinEst = baseTotal + shift;
     b.job.totalEst = b.job.havellinEst;
@@ -13107,7 +13258,9 @@ function acceptChangeOrder() {
   }
   closeCOAcceptModal();
   renderJobs();
-  showFB('e-fb', 'ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + '). These hours bill on the final invoice as they are worked.');
+  showFB('e-fb', 'ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + ').' + (b.fixed
+    ? ' ' + _coMoney(coPrice(co, b.tcRate, b.psRate)) + ' on the fixed project fee, which is now ' + fmt(b.flat + shift) + ' — added on the final invoice.'
+    : ' These hours bill on the final invoice as they are worked.'));
 }
 
 function printChangeOrder(coId) {
@@ -13118,6 +13271,46 @@ function printChangeOrder(coId) {
   var jobAddr = job ? (job.addr||'') : '';
   var _b = _coJobBasis(co.jobId);
   var _coBasis = { baseHrs: _b.tcHrs + _b.psHrs, addHrs: coHours(co).total };
+  var fx = coFixedTerms(co.jobId, co);
+  var _tone = _coBasis.addHrs >= 0 ? '#A67C45' : '#3B6D11';
+  var _td = 'padding:8px 12px;';
+  var _dark = 'background:#2e2e33;color:#FEF5E7;';
+  var _what = '<strong>' + esc(co.description||'Scope change') + '</strong><br><span style="color:#6B6B72;font-size:11px;">Reason: ' + esc(coReasonLabel(co.reason)) + '</span>';
+
+  // ⚠⚠ TWO DOCUMENTS, ONE PER BILLING BASIS, AND THE SPLIT IS THE RULE AT THE TOP OF coPrice.
+  // T&M: the table foots in HOURS and the page says it creates no charge, because the timesheet
+  // bills those hours and a price here would charge them twice. FIXED PRICE: the table foots in
+  // DOLLARS, because nothing else charges the added scope — the invoice adds exactly this figure
+  // — and the living-client agreement's fixed arm states no hourly rate anywhere, so without it the
+  // client would sign hours and be billed at rates they never saw. The estimate's base hours are
+  // deliberately NOT on the fixed page: a fixed-price client document carries no hour count for
+  // the agreed scope, and printing one here would be the only place it ever appeared.
+  var table = fx
+    ? '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
+      '<tr style="' + _dark + '"><th style="' + _td + 'text-align:left;">Item</th><th style="' + _td + 'text-align:right;">Amount</th></tr>' +
+      '<tr style="background:#FEF5E7;"><td style="' + _td + '">Fixed project fee in your agreement</td><td style="' + _td + 'text-align:right;">' + fmt(fx.flat) + '</td></tr>' +
+      (fx.prior ? '<tr><td style="' + _td + '">Change orders already accepted</td><td style="' + _td + 'text-align:right;">' + _coMoney(fx.prior) + '</td></tr>' : '') +
+      '<tr><td style="' + _td + '">' + _what + '<br><span style="color:#6B6B72;font-size:11px;">' + esc(coRateBasisTxt(co, fx.tcRate, fx.psRate)) + '</span></td><td style="' + _td + 'text-align:right;color:' + _tone + ';font-weight:600;">' + _coMoney(fx.price) + '</td></tr>' +
+      '<tr style="' + _dark + '"><td style="' + _td + 'font-weight:700;">Revised fixed project fee</td><td style="' + _td + 'text-align:right;font-weight:700;">' + fmt(fx.revised) + '</td></tr>' +
+      '</table>'
+    : '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
+      '<tr style="' + _dark + '"><th style="' + _td + 'text-align:left;">Item</th><th style="' + _td + 'text-align:right;">Estimated hours</th></tr>' +
+      '<tr style="background:#FEF5E7;"><td style="' + _td + '">Hours on the approved estimate</td><td style="' + _td + 'text-align:right;">' + _coBasis.baseHrs.toFixed(1) + '</td></tr>' +
+      '<tr><td style="' + _td + '">' + _what + '</td><td style="' + _td + 'text-align:right;color:' + _tone + ';font-weight:600;">' + coHoursLabel(co) + '</td></tr>' +
+      '<tr style="' + _dark + '"><td style="' + _td + 'font-weight:700;">Revised estimated hours</td><td style="' + _td + 'text-align:right;font-weight:700;">' + (_coBasis.baseHrs + _coBasis.addHrs).toFixed(1) + '</td></tr>' +
+      '</table>';
+
+  // ⚠ THE SENTENCE THAT MAKES THE DOCUMENT HONEST, and it is a different sentence on each basis.
+  // On T&M a change order authorises scope and creates no charge: the client is billed for the
+  // hours actually worked, on the final invoice, at the rates in their agreement — do not add a
+  // price to that arm. On a fixed price it IS the charge, fixed at signing, and must say so; the
+  // T&M sentence printed there told a flat-fee client the opposite of what the invoice then did.
+  var terms = fx
+    ? '<strong>This change order adjusts your fixed project fee by the amount above.</strong> The additional work is priced at the hours and rates shown, and the amount is added to your fixed project fee on the final invoice. It does not change with the hours the work actually takes. ' +
+      'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.'
+    : '<strong>This change order does not itself create a charge.</strong> The hours above are an estimate of the additional work. ' +
+      'You are billed for the hours actually worked, at the rates already set out in your agreement, on the final invoice — the same way every other hour on this engagement is billed. ' +
+      'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.';
 
   var content = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:1rem;">' +
     '<div style="text-align:center;margin-bottom:1.5rem;">' +
@@ -13125,30 +13318,19 @@ function printChangeOrder(coId) {
     '<div style="font-size:13px;color:#6B6B72;text-transform:uppercase;letter-spacing:.1em;">Change Order</div>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.5rem;font-size:12px;">' +
-    '<div><span style="color:#6B6B72;">Client:</span> <strong>' + jobName + '</strong></div>' +
-    '<div><span style="color:#6B6B72;">Date:</span> ' + co.createdAt + '</div>' +
-    '<div><span style="color:#6B6B72;">Property:</span> ' + (jobAddr||'—') + '</div>' +
+    '<div><span style="color:#6B6B72;">Client:</span> <strong>' + esc(jobName) + '</strong></div>' +
+    '<div><span style="color:#6B6B72;">Date:</span> ' + esc(co.createdAt) + '</div>' +
+    '<div><span style="color:#6B6B72;">Property:</span> ' + (esc(jobAddr)||'—') + '</div>' +
     '<div><span style="color:#6B6B72;">Change Order #:</span> CO-' + co.id.toString().slice(-6) + '</div>' +
     '</div>' +
-    '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
-    '<tr style="background:#2e2e33;color:#FEF5E7;"><th style="padding:8px 12px;text-align:left;">Item</th><th style="padding:8px 12px;text-align:right;">Estimated hours</th></tr>' +
-    '<tr style="background:#FEF5E7;"><td style="padding:8px 12px;">Hours on the approved estimate</td><td style="padding:8px 12px;text-align:right;">' + _coBasis.baseHrs.toFixed(1) + '</td></tr>' +
-    '<tr><td style="padding:8px 12px;"><strong>' + esc(co.description||'Scope change') + '</strong><br><span style="color:#6B6B72;font-size:11px;">Reason: ' + esc(co.reason||'') + '</span></td><td style="padding:8px 12px;text-align:right;color:' + (_coBasis.addHrs>=0?'#A67C45':'#3B6D11') + ';font-weight:600;">' + coHoursLabel(co) + '</td></tr>' +
-    '<tr style="background:#2e2e33;color:#FEF5E7;"><td style="padding:8px 12px;font-weight:700;">Revised estimated hours</td><td style="padding:8px 12px;text-align:right;font-weight:700;">' + (_coBasis.baseHrs + _coBasis.addHrs).toFixed(1) + '</td></tr>' +
-    '</table>' +
-    // ⚠ THE SENTENCE THAT MAKES THIS DOCUMENT HONEST, and it is the whole point of the
-    // rebuild: a change order authorises scope, it does not create a charge. The hours
-    // above are an estimate; the client is billed for the hours actually worked, on the
-    // final invoice, at the rates already in their agreement. Do not add a price here.
+    table +
     '<div style="background:#FEF5E7;border-radius:6px;padding:12px 16px;margin-bottom:1.5rem;font-size:12px;line-height:1.6;color:#3a3a40;">' +
-    '<strong>This change order does not itself create a charge.</strong> The hours above are an estimate of the additional work. ' +
-    'You are billed for the hours actually worked, at the rates already set out in your agreement, on the final invoice \u2014 the same way every other hour on this engagement is billed. ' +
-    'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.' +
+    terms +
     '</div>' +
     (co.clientApproved
       ? '<div style="margin-top:2rem;background:#e8f5e9;border-radius:6px;padding:12px 16px;font-size:12px;">' +
         '<div style="font-weight:700;color:#2e6b10;margin-bottom:4px;">&#10003; Client Accepted</div>' +
-        '<div><strong>' + co.clientName + '</strong> accepted this change order on ' + co.clientAcceptedAt + '</div>' +
+        '<div><strong>' + esc(co.clientName) + '</strong> accepted this change order on ' + esc(co.clientAcceptedAt) + '</div>' +
         '</div>'
       : '<div style="margin-top:2rem;display:grid;grid-template-columns:1fr 1fr;gap:2rem;">' +
         '<div><div style="border-top:1px solid #ccc;margin-top:2rem;padding-top:6px;font-size:11px;color:#6B6B72;">Client Signature &amp; Date</div></div>' +
@@ -17325,8 +17507,8 @@ function renderClientDashboard(jobId) {
   cos.forEach(function(co){
     h += '<div class="doc-r">';
     h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">Change Order CO-'+String(co.id).slice(-6)+'</div>'
-       + '<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+co.description.slice(0,50)
-       + ' · '+coHoursLabel(co)+' · '+co.createdAt+'</div></div>';
+       + '<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+esc(String(co.description||'').slice(0,50))
+       + ' · '+coHoursLabel(co)+' · '+esc(co.createdAt)+'</div></div>';
     h += '<div style="display:flex;gap:6px;align-items:center;">';
     h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#3C348922;color:#3C3489;font-weight:500;">'
        + (co.clientApproved ? 'Accepted' : 'Awaiting acceptance') + '</span>';
@@ -17348,7 +17530,10 @@ function renderClientDashboard(jobId) {
   h += sectionHdr('Hours Log');
   h += '<button class="btn-p" style="font-size:11px;padding:4px 12px;" onclick="goToJobLog('+jobId+')">+ Log Hours Today</button>';
   h += '</div>';
-  // Progress bars
+  // Progress bars. The OVERAGE label, the card's red and the over-tolerance sentence below all
+  // answer "past the ±15%", so they read one figure: the colour and the label were bare `115`s
+  // beside a sentence that read EST_TOLERANCE_PCT, and agreed only while the constant stayed put.
+  var _overPct = 100 + EST_TOLERANCE_PCT * 100;
   h += '<div class="d-split2" style="gap:8px;margin-bottom:12px;">';
   [
     {label:'Transition Concierge', act: actuals.actTC, est: tcEst, pct: tcPct, color: tcBarColor},
@@ -17359,15 +17544,24 @@ function renderClientDashboard(jobId) {
     h += '<div style="font-size:15px;font-weight:600;color:var(--gray-dk);">'+row.act.toFixed(1)+' <span style="font-size:12px;font-weight:400;color:var(--gray);">of '+(row.est?row.est.toFixed(1):'—')+' hrs estimated</span></div>';
     h += '<div style="height:5px;background:var(--border);border-radius:3px;margin:6px 0 4px;"><div style="height:5px;border-radius:3px;background:'+row.color+';width:'+Math.min(100,row.pct)+'%;"></div></div>';
     h += '<div style="display:flex;justify-content:space-between;font-size:11px;">';
-    h += '<span style="color:'+row.color+';font-weight:'+(row.pct>85?'600':'400')+';">'+row.pct+'% used'+(row.pct>115?' — OVERAGE':row.pct>90?' — approaching limit':'')+'</span>';
+    h += '<span style="color:'+row.color+';font-weight:'+(row.pct>85?'600':'400')+';">'+row.pct+'% used'+(row.pct>_overPct?' — OVERAGE':row.pct>90?' — approaching limit':'')+'</span>';
     h += '<span style="color:var(--gray);">'+(row.est?Math.max(0,row.est-row.act).toFixed(1)+' hrs remaining':'—')+'</span>';
     h += '</div></div>';
   });
   h += '</div>';
   if (tcPct > 90 || psPct > 90) {
-    var overageColor = (tcPct>115||psPct>115) ? '#FCEBEB' : '#FAEEDA';
-    var overageTextColor = (tcPct>115||psPct>115) ? '#A32D2D' : '#854F0B';
-    var overageMsg = (tcPct > 100 + EST_TOLERANCE_PCT * 100 || psPct > 100 + EST_TOLERANCE_PCT * 100) ? 'Hours exceed estimate by more than ' + estTolerancePctTxt() + '. Client must be notified in writing before continuing work — per agreement terms.' : 'Approaching estimate limit. Review scope and consider a change order if additional hours are required.';
+    var overageColor = (tcPct>_overPct||psPct>_overPct) ? '#FCEBEB' : '#FAEEDA';
+    var overageTextColor = (tcPct>_overPct||psPct>_overPct) ? '#A32D2D' : '#854F0B';
+    // ⚠ THE OVER-TOLERANCE SENTENCE IS hoursOverText — one wording, shared with the Job Plan's
+    // hours summary — and it branches on the billing basis. It said "Client must be notified in
+    // writing … per agreement terms" on every job; the fixed arm of both agreements has no hours
+    // trigger, and on a flat fee the overrun is ours to absorb.
+    var _fxHrs = !!(est && est.fixedPrice);
+    var overageMsg = (tcPct > _overPct || psPct > _overPct)
+      ? hoursOverText(_fxHrs)
+      : (_fxHrs
+          ? 'Approaching the estimated hours. On a fixed price the fee does not move with the hours — raise a change order only if the scope has changed.'
+          : 'Approaching estimate limit. Review scope and consider a change order if additional hours are required.');
     h += '<div style="background:'+overageColor+';border-radius:var(--br);padding:8px 12px;font-size:12px;color:'+overageTextColor+';margin-bottom:12px;display:flex;align-items:flex-start;gap:6px;">'+dot(overageTextColor)+'<span>'+overageMsg+'</span></div>';
   }
   // Log entries
@@ -28190,12 +28384,16 @@ function updateLogSummary(jobId) {
     document.getElementById('ls-est-ps').textContent = 'No estimate';
   }
 
-  // Overage alert
+  // Overage alert. ⚠ The over-tolerance sentence is hoursOverText, shared with the Client
+  // Dashboard's Hours Log card: this one said "Client must be notified before continuing work"
+  // on every job, fixed price included, and read a bare 1.15 the 2026-09-11 sweep of the ±15%
+  // onto EST_TOLERANCE_PCT missed.
   var alertHTML = '';
   var estTotal = (estTC||0) + (estPS||0);
   var actTotal = actTC + actPS;
-  if (estTotal > 0 && actTotal > estTotal * 1.15) {
-    alertHTML = '<div class="alert a-err">⚠ Hours exceed estimate by more than 15%. Client must be notified before continuing work.</div>';
+  var _fxHrs = !!(estRec && estRec.estimate && estRec.estimate.fixedPrice);
+  if (estTotal > 0 && actTotal > estTotal * (1 + EST_TOLERANCE_PCT)) {
+    alertHTML = '<div class="alert a-err">⚠ ' + hoursOverText(_fxHrs) + '</div>';
   } else if (estTotal > 0 && actTotal > estTotal * 1.0) {
     alertHTML = '<div class="alert a-warn">Approaching estimate limit — ' + Math.round((actTotal/estTotal)*100) + '% utilized.</div>';
   }
@@ -28393,7 +28591,10 @@ function invoiceHtml(job, stage) {
   // `clientApproved` stays the filter — an unaccepted change order authorises nothing.
   var jobCOs = (changeOrders || []).filter(function(co){ return co.jobId === jobId && co.clientApproved; });
   var coHrs = coHoursTotal(jobCOs);
-  var coShift = Math.round(coBaselineShift(coHrs, tcRate, psRate));
+  // ⚠ SUMMED PER CHANGE ORDER, NOT ROUNDED AS A TOTAL (2026-09-25). A fixed-price change order
+  // now prints its own price and the client signs it, so the final must add exactly the sum of
+  // the prices signed — see coPrice for the half-dollar case where the two roundings disagree.
+  var coShift = coPriceTotal(jobCOs, tcRate, psRate);
   // What the client is actually charged for the change orders on THIS basis.
   var coCharge = _fixedBasis ? coShift : 0;
 
@@ -28663,18 +28864,25 @@ function invoiceHtml(job, stage) {
   // already inside the labour lines above — this is what says the client agreed to them, so
   // a bill above the original estimate has its authority on the same page. On fixed price
   // the flat fee could not absorb them, so there the section also carries the charge.
+  // ⚠ ON FIXED PRICE EACH ROW CARRIES THE PRICE ITS CHANGE ORDER WAS SIGNED AT. The note used to
+  // say "charged at the rates in your agreement" — and the living-client agreement's fixed arm
+  // states no hourly rate at all, so the one sentence explaining the charge pointed at nothing.
+  // The basis is the change order the client accepted, which now prints its own price.
   var coSection = (jobCOs.length > 0 ?
     '<div class="ce-section-hdr" style="margin-top:1rem;">Approved Change Orders</div>' +
-    '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Change in scope</th><th style="text-align:right;">Additional hours</th></tr></thead><tbody>' +
+    '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Change in scope</th><th style="text-align:right;">Additional hours</th>' +
+      (_fixedBasis ? '<th style="text-align:right;">Amount</th>' : '') + '</tr></thead><tbody>' +
     jobCOs.map(function(co) {
       return '<tr><td style="font-family:monospace;font-size:11px;color:var(--bronze);">CO-' + co.id.toString().slice(-6) + '</td><td style="font-size:11.5px;">' + esc(co.description||'Scope change') +
              (co.clientName ? '<br><span style="font-size:10.5px;color:var(--gray);">Accepted by ' + esc(co.clientName) + (co.clientAcceptedAt ? ' on ' + esc(co.clientAcceptedAt) : '') + '</span>' : '') +
-             '</td><td style="text-align:right;font-weight:600;">' + coHoursLabel(co) + '</td></tr>';
+             '</td><td style="text-align:right;font-weight:600;">' + coHoursLabel(co) + '</td>' +
+             (_fixedBasis ? '<td style="text-align:right;font-weight:600;">' + _coMoney(coPrice(co, tcRate, psRate)) + '</td>' : '') + '</tr>';
     }).join('') +
-    '<tr class="subtotal"><td colspan="2">Additional hours authorised</td><td style="text-align:right;">' + coHoursLabel(coHrs) + '</td></tr>' +
+    '<tr class="subtotal"><td colspan="2">Additional hours authorised</td><td style="text-align:right;">' + coHoursLabel(coHrs) + '</td>' +
+      (_fixedBasis ? '<td style="text-align:right;">' + _coMoney(coCharge) + '</td>' : '') + '</tr>' +
     '</tbody></table>' +
     '<div class="ce-note">' + (_fixedBasis
-      ? 'Charged at the rates in your agreement and added to the fixed project fee above, because a fixed fee does not otherwise move with the hours worked.'
+      ? 'Each is charged at the price on the change order you accepted and added to the fixed project fee above, because a fixed fee does not otherwise move with the hours worked.'
       : 'These hours are not billed separately. They are worked and logged like every other hour on this engagement and are already included in the figures above.') +
     '</div>' : '');
 
@@ -29223,8 +29431,10 @@ function computeProjection(jobId) {
 
   var projTC = tcPct > 0 ? Math.round((actTC / tcPct) * 10) / 10 : null;
   var projPS = psPct > 0 ? Math.round((actPS / psPct) * 10) / 10 : null;
-  var triggerTC = Math.round(estTC * 1.15 * 10) / 10;
-  var triggerPS = Math.round(estPS * 1.15 * 10) / 10;
+  // The change-order line is the ±15% — EST_TOLERANCE_PCT, not a bare 1.15, now that the band text
+  // names it through estTolerancePctTxt (a moved constant would otherwise leave the two disagreeing).
+  var triggerTC = Math.round(estTC * (1 + EST_TOLERANCE_PCT) * 10) / 10;
+  var triggerPS = Math.round(estPS * (1 + EST_TOLERANCE_PCT) * 10) / 10;
 
   var wholePctTC = P.wholePctTC, wholePctPS = P.wholePctPS;
 
@@ -29232,7 +29442,7 @@ function computeProjection(jobId) {
     if (!aboveFloor) return 'preliminary';
     if (pct === 0 || proj === null) return 'nodata';
     var tier1 = (pct >= 0.15 && proj >= estHrs * 1.40);
-    var tier2 = (pct >= 0.35 && proj >  estHrs * 1.15);
+    var tier2 = (pct >= 0.35 && proj >  estHrs * (1 + EST_TOLERANCE_PCT));
     if (tier1 || tier2) return 'red';
     if (proj > estHrs * 1.05) return 'amber';
     return 'green';
@@ -29255,7 +29465,13 @@ function computeProjection(jobId) {
   return snap;
 }
 
-function projBandHtml(band, label, proj, trigger, est, pct) {
+// ⚠⚠ ON A FIXED PRICE THE RED BAND IS A MARGIN WARNING, NEVER A STOP (2026-09-25). It read
+// "STOP … No further scope work until a signed Change Order" on every job — so a flat-fee job
+// running long on its AGREED scope was told to down tools and ask the client to sign for hours the
+// fixed fee exists to absorb. The projection is still worth having there (the overrun is coming
+// out of the margin), and the one real question is the same as everywhere on a fixed price: is
+// the extra time work beyond the agreed scope? `fixed` is the job's billing basis.
+function projBandHtml(band, label, proj, trigger, est, pct, fixed) {
   var pctStr = Math.round(pct * 100) + '%';
   var projStr = proj !== null ? proj.toFixed(1) : '—';
   var colors = { green:'var(--ok-tx)', amber:'var(--warn-tx)', red:'var(--err-tx)', preliminary:'var(--gray)', nodata:'var(--gray)' };
@@ -29268,12 +29484,24 @@ function projBandHtml(band, label, proj, trigger, est, pct) {
   } else if (band === 'green') {
     msg = 'On track. Projected ' + label + ': ' + projStr + ' hrs vs ' + est.toFixed(1) + ' estimated (' + pctStr + ' complete).';
   } else if (band === 'amber') {
-    msg = 'Trending over. Projected ' + label + ': ' + projStr + ' vs trigger ' + trigger.toFixed(1) + ' (' + pctStr + ' complete). Tighten scope or prepare the client. (Not yet a mandatory stop — monitoring.)';
+    msg = fixed
+      ? 'Trending over. Projected ' + label + ': ' + projStr + ' vs ' + trigger.toFixed(1) + ' at the ' + estTolerancePctTxt() + ' line (' + pctStr + ' complete). On a fixed price the fee does not move with the hours \u2014 tighten the plan; an overrun comes out of the margin.'
+      : 'Trending over. Projected ' + label + ': ' + projStr + ' vs trigger ' + trigger.toFixed(1) + ' (' + pctStr + ' complete). Tighten scope or prepare the client. (Not yet a mandatory stop — monitoring.)';
   } else {
-    msg = 'STOP. Projected ' + label + ' ' + projStr + ' hrs exceeds Change Order threshold ' + trigger.toFixed(1) + ' hrs (' + pctStr + ' complete). No further scope work until a signed Change Order.';
+    msg = fixed
+      ? 'Over. Projected ' + label + ' ' + projStr + ' hrs, past ' + trigger.toFixed(1) + ' \u2014 more than ' + estTolerancePctTxt() + ' over the estimate (' + pctStr + ' complete). On a fixed price that comes out of the margin, not the client\'s bill, and it is not a reason to stop. If the extra time is work beyond the agreed scope, raise a change order before doing more of it.'
+      : 'STOP. Projected ' + label + ' ' + projStr + ' hrs exceeds Change Order threshold ' + trigger.toFixed(1) + ' hrs (' + pctStr + ' complete). No further scope work until a signed Change Order.';
   }
   return '<div style="padding:7px 10px;border-radius:4px;font-size:12px;background:var(--tan);margin-bottom:6px;">' +
     '<span style="font-weight:700;color:' + color + ';">[' + band.toUpperCase() + '] </span>' + msg + '</div>';
+}
+
+// The one line under the Job Plan's hours fold. Its own function so both arms can be driven —
+// renderJobPlan is not, and a source check cannot tell which arm a fixed-price job renders.
+function planHoursRuleTxt(fixed) {
+  return fixed
+    ? 'Log today\'s hours, then read the projection. On a fixed price, over the line is a margin warning, not a stop &mdash; raise a change order only for work beyond the agreed scope.'
+    : 'Log today\'s hours, then read the projection. Over the line? Stop — Change Order before the next room.';
 }
 
 function renderProjection(jobId) {
@@ -29297,7 +29525,8 @@ function renderProjection(jobId) {
   if (!snap) { out.innerHTML = '<div style="font-size:12px;color:var(--gray);">No estimate data for projection.</div>'; return; }
 
   var headlineColor = { green:'var(--ok-tx)', amber:'var(--warn-tx)', red:'var(--err-tx)', preliminary:'var(--gray)', nodata:'var(--gray)' }[snap.headlineBand] || 'var(--gray)';
-  var headlineLabel = snap.headlineBand === 'red' ? '⛔ STOP — Change Order Required'
+  var _fx = !!est.fixedPrice;
+  var headlineLabel = snap.headlineBand === 'red' ? (_fx ? '⚠ Over the estimated hours — margin at risk' : '⛔ STOP — Change Order Required')
     : snap.headlineBand === 'amber' ? '⚠ Trending Over — Monitor Closely'
     : snap.headlineBand === 'green' ? '✓ On Track'
     : 'Preliminary';
@@ -29308,8 +29537,8 @@ function renderProjection(jobId) {
 
   out.innerHTML = warningNote +
     '<div style="font-weight:700;font-size:13px;color:' + headlineColor + ';margin-bottom:8px;">' + headlineLabel + '</div>' +
-    projBandHtml(snap.tcBand, 'TC', snap.projTC, snap.triggerTC, snap.estTC, snap.tcPct) +
-    projBandHtml(snap.psBand, 'PS', snap.projPS, snap.triggerPS, snap.estPS, snap.psPct) +
+    projBandHtml(snap.tcBand, 'TC', snap.projTC, snap.triggerTC, snap.estTC, snap.tcPct, _fx) +
+    projBandHtml(snap.psBand, 'PS', snap.projPS, snap.triggerPS, snap.estPS, snap.psPct, _fx) +
     '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Actual: ' + snap.actTC.toFixed(1) + ' TC + ' + snap.actPS.toFixed(1) + ' PS = ' + snap.actTotal.toFixed(1) + ' total hrs' +
     (snap.aboveFloor ? '' : ' — below ' + PROJ_CREW_DAY + '-hr noise floor') + '</div>';
 }
@@ -33708,8 +33937,9 @@ function renderJobPlan(jobId, job, est) {
   var roomsMeta = nLocked + ' of ' + rooms.length + ' locked &middot; ' + nCleared + ' cleared';
 
   // ── Hours & daily close: the loader moves #plan-log-section into this slot ──────────
+  // ⚠ On a fixed price "over the line" is a margin warning, not a stop — see projBandHtml.
   var hoursBody = '<div id="plan-hours-slot"></div>'
-    + '<div style="font-size:11px;color:var(--gray);margin-top:8px;line-height:1.5;">Log today\'s hours, then read the projection. Over the line? Stop — Change Order before the next room.</div>';
+    + '<div style="font-size:11px;color:var(--gray);margin-top:8px;line-height:1.5;">' + planHoursRuleTxt(!!(est && est.fixedPrice)) + '</div>';
 
   // ── Midpoint & pickups ───────────────────────────────────────────────────────────────
   var p2 = planDerivedHtml(jobId, job, est, 'p2') + planTasksHtml(jobId, 'p2', ctx);

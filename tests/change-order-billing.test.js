@@ -30,7 +30,7 @@ const { sandbox, source, fn } = require('./harness');
 
 function inv(stubs) {
   return sandbox({
-    fns: ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel',
+    fns: ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
@@ -185,11 +185,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         '⚠ and saying the hours are not billed a second time');
     lacks(html, 'Change Order Total', 'there is no change-order money subtotal on T&M');
 
-    // The printed change order itself. Its own table must carry no price at all.
+    // The printed change order itself. ⚠ RESTATED 2026-09-25, NOT LOOSENED: on T&M its table
+    // carries no price at all and that stands. On a FIXED PRICE it now carries one, because there
+    // the change order is the only thing that charges the added scope and the living-client
+    // agreement's fixed arm states no hourly rate — both arms are driven in
+    // fixed-price-change-orders.test.js, including a T&M page with no dollar figure anywhere.
     const pco = noComments(fn('printChangeOrder'));
     has(pco, 'This change order does not itself create a charge.',
-        '⚠ the sentence that makes the document honest');
-    has(pco, 'Revised estimated hours', 'the table foots in hours');
+        '⚠ the sentence that makes the T&M document honest');
+    has(pco, 'Revised estimated hours', 'the T&M table foots in hours');
     lacks(pco, 'Revised Total', 'and never in a revised project total');
     lacks(pco, 'co.amount', 'no dollar amount survives on the printed change order');
 

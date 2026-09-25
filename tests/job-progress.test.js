@@ -212,7 +212,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const C = sandbox({
       fns: ['computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize'],
       vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'jobPlanStore',
-             'estimateStore', 'currentEstimate', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
+             'estimateStore', 'currentEstimate', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT'],
       stubs: {
         jobLogEntries: () => LOG(6, 12),
         saveJobPlan: (id) => saved.push(id),
@@ -394,7 +394,9 @@ const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr',
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY',
-      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'];
+      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
+      // Read up front by the Hours Log card since 2026-09-25 — lifted, never stubbed.
+      'EST_TOLERANCE_PCT'];
 
     // A real 6-day job, activated on its target start, four working days in. 63 hours of room
     // work priced; the powder room (3 hrs) is packed and 36 hours are on the clock.

@@ -29,7 +29,7 @@ const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')
 // The invoice, driven the way payments-received drives it — this is the promise that matters
 // most to Anthony's plan ("go fixed price and avoid having to log hours"): a fixed-price final
 // bills with an EMPTY timesheet, and a time-and-materials one still refuses.
-const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel',
+const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
                  '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
                  '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
                  'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
@@ -211,6 +211,46 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'the three job-switch resets zero the basis with the flag — a basis leaking across jobs would warn about the wrong estimate');
     const tg = noComments(fn('toggleFixedPrice'));
     has(tg, '_fixedAmountBasis = 0;', 'the toggle prefill starts with no basis');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Found writing the 2026-09-25 browser check: an estimate taken to fixed price and left unsaved
+  // handed its tick to the next client's FRESH build — measured on the real page, client B opened
+  // fixed price with its own suggestion in the box. Save and Reset cleared the box; the job-switch
+  // path cleared the two flags that describe it and not the box itself. Driven through the real
+  // applyOpenedEstimate with the box left ticked by the previous client.
+  group('⚠ A FRESH BUILD NEVER INHERITS THE LAST CLIENT’S FIXED PRICE — driven through applyOpenedEstimate');
+  {
+    const open = (saved) => {
+      const dom = domStub({ 'e-job': { value: '2' }, 'e-fixed': true, 'e-fixed-amount': { value: '$24,000' },
+                            'fixed-amount-row': { style: { display: 'flex' } }, 'e-rush': true, 'e-prem': false,
+                            'ps-crew-size': { value: '4' }, 'e-tc-count': { value: '2' } });
+      const restored = [];
+      const c = sandbox({
+        fns: ['applyOpenedEstimate'],
+        vars: ['_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_crewUserSet', '_tc2UserSet',
+               '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'estimateApproved', 'approvedBy', 'approvedAt'],
+        stubs: { document: dom, currentEstimate: saved ? { jobId: 2, fixedPrice: true } : null,
+                 loadEstimateForJob: () => !!saved, estimateHasContent: () => !!saved,
+                 restoreEstimateToUI: (e) => restored.push(e), loadEstimateScratch: () => null,
+                 clearAllRooms: () => {}, resetEstimateExtras: () => {}, updateApprovalUI: () => {}, calcAll: () => {},
+                 seedDocScopeFromJob: () => 'full', showFB: () => {} },
+      });
+      c._fixedAmountUserSet = true; c._fixedAmountBasis = 21600;
+      c.applyOpenedEstimate(2, { id: 2, name: 'Bravo', premium: false }, 'ready');
+      return { dom, c, restored };
+    };
+    const fresh = open(false);
+    eq(fresh.dom.getElementById('e-fixed').checked, false, '⚠ the fixed-price box is cleared on a fresh build');
+    eq(fresh.dom.getElementById('e-fixed-amount').value, '', 'and the amount the last client carried');
+    eq(fresh.dom.getElementById('fixed-amount-row').style.display, 'none', 'and the amount row is hidden again');
+    eq(fresh.dom.getElementById('e-rush').checked, false, 'beside the rush toggle it already cleared');
+    eq(fresh.c._fixedAmountUserSet, false, 'the tracking flag is reset with it');
+    eq(fresh.c._fixedAmountBasis, 0, 'and the basis');
+    const saved = open(true);
+    eq(saved.restored.length, 1, 'a saved estimate takes the restore path');
+    eq(saved.dom.getElementById('e-fixed').checked, true, 'and is never reset here — its own record decides its basis');
+    eq(saved.dom.getElementById('e-fixed-amount').value, '$24,000', 'nor its amount');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

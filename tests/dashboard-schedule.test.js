@@ -417,7 +417,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
-      'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES'];
+      'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+      // The Hours Log card reads the ±15% up front since 2026-09-25 (one figure for its label, its
+      // red and its sentence) — lifted, never stubbed, so it is the app's tolerance being tested.
+      'EST_TOLERANCE_PCT'];
     const paint = (over, rec) => {
       const job = Object.assign({ id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout',
         status: 'won', won: true, approved: true, walkthrough: '2020-01-01',

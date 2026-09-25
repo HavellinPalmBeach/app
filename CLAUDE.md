@@ -1,3 +1,84 @@
+## ⚠⚠ ON A FIXED PRICE THE CHANGE-ORDER TRIGGER IS SCOPE, AND THE CHANGE ORDER CARRIES ITS PRICE (FIXED 2026-09-25)
+Anthony, off the reference-guide update: *"Is a 15% over run change order necessary on a fixed price job, or should it be a
+'Change of Scope' or something that triggers and change order?"* Scope. Both agreements' fixed arms already said so (estate
+§4.1 lists work beyond Exhibit A in place of the hours trigger; the standard form's §3.8 fixed arm is *Changes to Scope*), and
+the guide went out that morning saying it. **Seven screens still spoke the T&M rule on a flat-fee job.** App-only, no redeploy.
+
+- **THE SEVEN, and every one now branches on the basis:** the change-order readout (*"inside the 15% the client already agreed
+  to, so this records the scope rather than changing what they owe"* — and the invoice then added it to the fee), the note
+  above its hours boxes (*"carries no price and bills nothing on its own"*), the acceptance panel (*"No charge is created"*),
+  the printed change order (*"does not itself create a charge"*), the dashboard Hours Log and the Job Plan hours summary
+  (*"Client must be notified … per agreement terms"*), and the projection card plus the line under the hours fold
+  (*"⛔ STOP — Change Order Required … No further scope work until a signed Change Order"*, over hours a flat fee exists to
+  absorb). On a fixed price they now name **the price** (change orders) or **the margin** (hours): *"⚠ Over the estimated
+  hours — margin at risk"*, amber and red at the same lines, and a change order only for work beyond the agreed scope.
+  **T&M reads as before**, except that its two over-tolerance wordings (one said *in writing*, one did not) are now one
+  sentence, `hoursOverText(fixed)`, read by both surfaces.
+- **⚠⚠ A FIXED-PRICE CHANGE ORDER CARRIES ITS PRICE, WHICH PARTLY REVERSES 2026-09-11 — ON FIXED PRICE ONLY, AND FOR THAT
+  RULE'S OWN REASON.** It came off because on T&M the timesheet already bills the hours, so a price on the change order
+  charged the work twice. On a fixed price nothing else charges them: the invoice's `coCharge` is the only thing that adds
+  the scope, and **the standard form's fixed arm states no hourly rate anywhere** — so a flat-fee client signed a change
+  order in hours and was billed those hours at rates they had never seen in writing. The page now shows the agreed fee, the
+  change orders already accepted, this one's price with its hours and rates, and the revised fee; the acceptance panel
+  states the change and the revised fee; the readout gives it as you type (*"+ $5,000 on the fixed project fee, which goes
+  from $24,000 to $29,000"*). **T&M change orders still carry no price, and a test asserts no `$` on one.** ⚠ This was my
+  call, not Anthony's; it is flagged to him with the offer to revert (the standard form would then need the rates in it).
+- **`coFixedTerms(jobId, co)` IS THE ONE BRANCH** — null on T&M and on a job with no saved estimate, the fee chain on a fixed
+  price. Seven surfaces ask it (or `_coJobBasis(...).fixed`) rather than each reading `est.fixedPrice`. *Earlier* means
+  created earlier (`id` is `Date.now()`), so change order #1 never shows #2 above it; a draft with no id counts every
+  accepted one.
+- **⚠ EACH CHANGE ORDER IS PRICED ONCE AND THE INVOICE SUMS THOSE PRICES** (`coPrice` / `coPriceTotal`). At premium rates half
+  an hour is $92.50: two signed pages say $93 + $93, and the invoice used to round the pooled total to $185. The fixed
+  invoice's Approved Change Orders table gained an **Amount** column; `acceptChangeOrder` sums the same way.
+- **Found on the way and fixed:** the printed change order and the acceptance panel printed the reason's internal key, so a
+  client signed *"Reason: scope_add"* — `CO_REASONS` is the one list, the select ships empty and is filled from it, every
+  surface prints `coReasonLabel`. The description, names and dates on the acceptance panel, the printed change order and
+  **the dashboard's change-order list** were printed raw; escaped now. The Job Plan summary and the projection read bare
+  `1.15`s; they read `EST_TOLERANCE_PCT`. The dashboard Hours Log's *OVERAGE* label and red were bare `115`s beside a
+  sentence reading the constant; one figure (`_overPct`) now, and a test moves the tolerance to 30% and watches all three
+  stand down together.
+- **⚠⚠ FOUND BY THE BROWSER, NOT BY ANY TEST: FIXED PRICE LEAKED ONTO THE NEXT CLIENT'S FRESH ESTIMATE.** Save and Reset
+  cleared `e-fixed`; the job-switch path (`applyOpenedEstimate`'s fresh build) cleared the two flags describing it and not
+  the box, its amount or its row. Measured on the real page: client A taken to $24,000 fixed, **← Clients without saving**
+  (which keeps the work, by design), client B's Build estimate → **B opened fixed price with its own suggestion ($11,580)
+  in the box**. Saved that way it quotes B a flat fee nobody chose. Three lines in the fresh path; a saved estimate never
+  reaches them. Driven through the real `applyOpenedEstimate`; the revert fails 3.
+- **11,138 committed checks** (`tests/fixed-price-change-orders.test.js` new at 145 — the modal, the acceptance, the printed
+  page and the invoice driven on both bases, the dashboard and the projection driven, and THE JOIN: the price on the signed
+  page is the figure the final adds; 9 more in `fixed-price`). Seven invoice sandboxes gained `coPrice`/`coPriceTotal`, two
+  Job Plan ones `planHoursRuleTxt`, four `EST_TOLERANCE_PCT`; `job-plan-stages` and `change-order-billing` restated, not
+  deleted. **Revert sweep on four tar copies: 34 changes, ALL RED, baseline 11,120 / 0 before and after, no needle
+  mismatched** — the printed fixed table 15, the acceptance summary, the modal readout and `hoursOverText`'s fixed arm 8
+  each, the projection's red band 7, the prior-orders filter 4, the rest 1–3; the leak fix 3, the tolerance and escaping
+  fixes 2 each. **⚠ One revert CRASHED the new suite** (the basis flag off: `coFixedTerms` returned null and `fx.flat`
+  threw, reading as 1 failure with 122 checks unrun). Reads are defensive now; re-done it fails **43** with all 145 running.
+- **Verified in headless Chromium, `tests/browser/step23.js`, 78 checks, 0 failed, 0 page errors**, typing into the real
+  modal and pressing the real Create and Accept buttons on a $24,000 fixed job and a T&M job built straight after it: the
+  readout, the note, the six reasons, the acceptance panel, the printed page through the real print path (named
+  *Havellin Change Order CO-…*, one panel left afterwards), a second change order chaining off the first, the three invoices
+  (12,000 · 6,000 · **11,200** = the fee plus the two signed prices), the dashboard and the Job Plan 30% over on both bases,
+  and both modals inside the viewport at 1440 and 390. **Against the pre-change build it fails 45** (some of those are the
+  new element ids). `run.sh`'s default list is 1–23; steps 1–22 re-run as regressions — **59 / 33 / 56 / 47 / 47 / 28 / 45
+  / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33**, 0 failed — **1,017 checks across the
+  twenty-three**. The first `<style>` block is byte-identical to HEAD at 98,753 bytes.
+- Manual **§9** (the 2026-09-11 note qualified to T&M, a new note with the seven-screen table, why the price is printed,
+  the rounding and the reprint; the PDF and Get Acceptance items), **§11** (a margin-warning note under Log Hours), **§12**
+  (the fixed final adds each change order's printed price), **§16** (the billing-basis note). Playbook **Step 10b** and
+  **10d** (a `.stop` each, and the two items) plus **three** symptom rows. Both `.md` copies hand-edited; **45 claims
+  parity-checked, 0 mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print`
+  51/59 and 17/18 tables full width, 0 on the phone rule — the one new table sits inside a note.
+- **⚠ FOUND IN PASSING, NOT FIXED:** (1) the estate agreement's **§4.2 Change Order Documentation** template prints
+  *Additional Cost Estimate $* and *Revised Total Estimate $* on both bases — right on fixed price now, wrong on T&M, where a
+  change order carries no price; contract text, so Anthony's or counsel's. (2) **The hours baselines never include accepted
+  change-order hours** — the dashboard bars, the Job Plan summary and the projection (`jobProgress`) measure against
+  `est.totTC/totPS` only, while the invoice's variance gate does move (`estHavellinTotal + coShift`). So a T&M job with an
+  accepted +40-hour change order reads STOP on hours the client signed for, and a fixed job reads *margin at risk* on hours
+  it was paid for. The next thing to build. (3) On a pure fee-only prep job (no hours on the estimate) the change-order
+  readout says *"this job has no approved estimate yet"*, which reads as if there were none.
+- **⚠ THE SHAPE TO COPY: when a rule was right for a reason, check the reason on every basis before applying the rule.**
+  "A change order carries no price" was true because the timesheet bills the hours. On a flat fee nothing does, and the
+  same sentence became the one thing on the page that was false.
+
 ## ⚠ THE COUNSEL REFERENCE GUIDE STILL SAID "WE BILL HOURLY" (UPDATED 2026-09-25)
 Anthony, off the website: *"I just checked out the website and downloaded the estate & trust settlement doc we created.
 It's out of date at least for the billing, which is now fixed price. Update that and paste it here so i can download and

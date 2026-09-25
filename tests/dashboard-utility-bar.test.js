@@ -57,7 +57,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',
-      'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES'];
+      'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+      // Read up front by the Hours Log card since 2026-09-25 — lifted, never stubbed.
+      'EST_TOLERANCE_PCT'];
 
   const EST = () => ({ rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }], havellinTotal: 24100 });
   const BASE = { id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout', created: 'Sep 8, 2026',
