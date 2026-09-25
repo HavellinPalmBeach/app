@@ -8048,7 +8048,10 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/estate-trust-billing-update-7dqkbw`
+- Active feature branch: `claude/change-order-fixes-ew3m2i`
+  (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
+  commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
+  session, assigned this branch, starting at the same commit. Nothing is split between the two.)
   (`claude/fervent-mayer-xeo4ur` is the previous name.)
   (`claude/gifted-rubin-jjl1d0` is the previous name.)
   (`claude/inspiring-ptolemy-xgngqv` is the previous name.)
@@ -8094,7 +8097,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/estate-trust-billing-update-7dqkbw:main`
+  `git push origin claude/change-order-fixes-ew3m2i:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
