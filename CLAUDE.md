@@ -1,3 +1,34 @@
+## ⚠⚠ OPEN: THE 2026-09-28 WORKFLOW AUDIT — READ `WORKFLOW_AUDIT_2026-09-28.md` BEFORE BUILDING NEAR ANY OF IT
+Anthony: *"take a run through the code and do an audit from a business workflow perspective … I need both the high level
+TLDR on what's working and what's not working, and then specific prompts and questions to address any of the shortcomings
+or bugs you find."* **Docs only: nothing in the app changed, no redeploy, no build stamp.** He works from a private artifact
+page; the same content, prompts included, is `WORKFLOW_AUDIT_2026-09-28.md` in the repo root.
+
+- **2 Critical · 9 High · 16 Medium · 34 Low, in fourteen fix packs (P1–P14)**, each a self-contained prompt with its repro,
+  where, fix, tests and a *"Decision to apply"* line. Every Critical and High was checked against the source or reproduced in
+  headless Chromium before it was listed. **The arithmetic held everywhere** (79 pricing scenarios reconciled across estimate,
+  agreement, Exhibit A and all three invoices; three jobs ran intake to final paid through the real buttons). **What breaks is
+  state.**
+- **C1 — Build Estimate carries the previous client into a fresh estimate.** `applyOpenedEstimate`'s fresh branch,
+  `neutralizeEstimateView`, `resetEstimateExtras` and `clearEstimateTab` never reset `#e-discount`, the move-styling tick, the
+  private walkthrough note or *Walkthrough by*; only `restoreEstimateToUI` writes them. Unsaved collections, vehicles and the
+  target date ride along too. **The `_volPreset` leak of 2026-09-10, on four more fields.**
+- **C2 — the Job Plan's sourcing and crew setters call `saveJobs()` alone**, which fills `updatedAt` only when missing, so the
+  edit carries no newer stamp and `_mergeJobRecord`'s `incT >= curT` hands the tie to a second device's untouched copy. A
+  confirmed quote or team silently reverts. **The job-record merge of 2026-09-12 covered the keyed lists and maps, not these.**
+- **⚠ H2 IS THE SHAPE TO COPY: change orders cannot be accepted or printed by a person.** *Get acceptance* and *PDF* live only
+  in `renderJobs`' `detailHtml`, which has not been appended since the client-list detail row was suppressed. **Steps 23–25
+  reach acceptance through `page.evaluate`, which is why they pass.** A browser step that calls a handler proves the handler,
+  not that anybody can reach it — press the control, or it is the stub proving what a function returns all over again.
+- **Ten questions block packs (Q1–Q10)** and eleven more carry a stated default (Q11–Q21); nine items are Anthony's alone
+  (redeploy `2026-09-22b` with `ANTHROPIC_API_KEY`, the Quo redeploy, one DocuSign sandbox envelope, a Stripe test ACH, the Gmail
+  consent audience, `previewOrphanRecords()`, the counsel bundle, binding the insurance and bond, the two Drive documents).
+  **Do not build a pack whose question is unanswered** without saying which default you applied.
+- **When a pack lands:** tick it in the file (`- [x] **P1**`), mark its findings fixed rather than deleting them, and add the
+  pack's own entry here as usual. The audit's probes lived in a session scratchpad and are gone, deliberately — each pack's
+  prompt says what to reproduce first.
+- This session pushed to its own branch only and opened a draft PR; there was no app change for Pages to serve.
+
 ## ⚠⚠ THE HOME PREP AGREEMENT STATES THE CONCIERGE RATE — THE CHANGE ORDER RESTATES IT (BUILT 2026-09-25)
 Anthony, the same evening the prep change-order route shipped (the entry below): *"I think we should mention the hourly rates in
 the home prep agreement."* That answers counsel bundle B5's third question, which the build below had left open by printing the
@@ -8196,7 +8227,9 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/change-order-fixes-ew3m2i`
+- Active feature branch: `claude/business-workflow-audit-jnxev5`
+  (`claude/change-order-fixes-ew3m2i` is the previous name. The 2026-09-28 workflow audit was docs only and went to
+  this branch and a draft PR, not to `main`.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
@@ -8245,7 +8278,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/change-order-fixes-ew3m2i:main`
+  `git push origin claude/business-workflow-audit-jnxev5:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
