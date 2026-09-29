@@ -168,7 +168,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'estimateHasContent', 'loadEstimateScratch', 'clearEstimateScratch', 'clearAllRooms', 'setRoomState', 'roomState',
             'roomDefault', 'volPresetSeed', 'volPresetShift', 'paintVolPreset', 'seedDocScopeFromJob',
             'docScopeDef', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'estDeclutterHrs',
-            '_fxAmtSet'],
+            '_fxAmtSet',
+            // Reset's approved refusal asks the price-change rule (whether Edit estimate is still there):
+            // lifted, never stubbed, so this suite's refusal and the rule cannot come to disagree.
+            'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent',
+            'docSentAt', 'docKeyFor'],
       vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
              'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT',
              'TC_ONSITE_ALPHA_DEFAULT', '_activeRecognitions', ...STATE],

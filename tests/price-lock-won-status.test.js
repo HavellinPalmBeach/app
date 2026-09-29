@@ -307,6 +307,69 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  group('Reset’s refusal on an approved estimate names the route that exists (resetEstimate, driven)');
+  // Found merging the concurrent Reset build with this one: its refusal told the reader to press Edit
+  // estimate on the timeline — the button this build withdraws once the packet is out.
+  function resetRefusal(jobO, opts) {
+    opts = opts || {};
+    const said = [];
+    const d = domStub({ 'e-job': { value: '7' } });
+    const R = sandbox({
+      fns: ['resetEstimate'].concat(BLK_FNS),
+      vars: ['estimateApproved', 'estimateSubmitted'],
+      stubs: { document: d, showFB(id, kind, msg) { said.push(kind + ':' + msg); }, confirm() { said.push('ASKED'); return true; },
+        resetEstimateJobState() { said.push('CLEARED'); }, clearEstimateScratch() { said.push('SCRATCH'); } },
+    });
+    R.jobs = opts.noJob ? [] : [Object.assign({ id: 7, won: true, status: 'won', approved: true }, jobO || {})];
+    R.currentEstimate = null;   // the job is the screen's binding (e-job), as the reset itself reads it
+    R.estimateApproved = !opts.submitted;
+    R.estimateSubmitted = !!opts.submitted;
+    try { R.resetEstimate(); } catch (e) { said.push('THREW:' + e.message); }
+    return said;
+  }
+  {
+    const open = resetRefusal();
+    eq(open.length, 1, 'before the packet: one refusal, nothing asked, nothing cleared');
+    has(open[0] || '', 'Edit estimate on the client', 'and it still sends the reader to Edit estimate, which is there');
+    [['the packet emailed (the boolean)', { agrSent: true }], ['DocuSign’s record alone', { docState: { agreement: { sentAt: SENT_AT } } }]]
+      .forEach(([how, o]) => {
+        const s = resetRefusal(o);
+        eq(s.length, 1, '⚠⚠ ' + how + ': one refusal, nothing asked, nothing cleared');
+        lacks(s[0] || '', 'Edit estimate', how + ': it no longer names the button this build withdraws');
+        has(s[0] || '', 'signing packet has gone to the client', how + ': it says why');
+        has(s[0] || '', 'change order', how + ': and names the route that remains');
+      });
+    const signed = resetRefusal({ agrSent: true, agrSigned: true });
+    lacks(signed[0] || '', 'Edit estimate', 'a signed agreement names no Edit estimate either');
+    has(signed[0] || '', 'price is locked', 'it says the price is locked');
+    const missing = resetRefusal({}, { noJob: true });
+    eq(missing.length, 1, 'a job missing from this device: one refusal');
+    lacks(missing[0] || '', 'signing packet', '⚠ and it is never said to have a packet out');
+    has(missing[0] || '', 'could not be found', 'it says the job is not here');
+    lacks(missing[0] || '', 'timeline', 'and does not send the reader to a timeline this device does not have');
+    has(resetRefusal({ agrSent: true }, { submitted: true })[0] || '', 'out for manager approval',
+      'out for approval keeps its own sentence, whatever the packet');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('the net: any code that tells somebody to press Edit estimate asks the rule first');
+  {
+    // The shape this build keeps finding: a sentence naming a control is only true while the control is
+    // offered. So every top-level function whose LIVE code names Edit estimate must ask estimateEditBlocker.
+    const re = /\nfunction ([A-Za-z0-9_$]+)\(/g;
+    let m; const starts = [];
+    while ((m = re.exec(src))) starts.push({ name: m[1], at: m.index });
+    const naming = [];
+    starts.forEach((s, i) => {
+      const end = i + 1 < starts.length ? starts[i + 1].at : src.length;
+      const b = src.slice(s.at, end).split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+      if (/Edit estimate/i.test(b)) naming.push({ name: s.name, asks: b.indexOf('estimateEditBlocker(') >= 0 });
+    });
+    ok(naming.length >= 3, 'the net finds the functions that name Edit estimate (' + naming.map((n) => n.name).join(', ') + ')');
+    naming.forEach((n) => ok(n.asks, n.name + ' names Edit estimate and asks estimateEditBlocker'));
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   group('estimateEventStatus: the ONE rule for what an estimate event leaves the status at');
   {
     const S = sandbox({ fns: ['estimateEventStatus', 'isJobWon'] });

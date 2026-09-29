@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 2:11pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 2:48pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9616,8 +9616,18 @@ function populateJobSelect(forceJobId) {
 // an estimate a manager is reviewing, and checkPin approves the working copy.
 function resetEstimate() {
   if (estimateApproved || estimateSubmitted) {
+    // ⚠ THE ROUTE THIS NAMES HAS TO BE THERE (2026-09-29, found merging the Reset build with the price lock).
+    // Edit estimate is withdrawn once the signing packet is out or signed (estimateEditBlocker), so "press
+    // Edit estimate first" then sent the reader to a button that is not on the timeline. It asks the same
+    // rule and says the change order instead. The job is the one the screen is bound to (`e-job`), the
+    // same client the reset below would clear; one this device no longer holds gets the rule's own
+    // "could not be found", never a packet claim and never a timeline that is not here.
+    var _rsJid = parseInt((document.getElementById('e-job') || {}).value) || 0;
+    var _rsBlk = estimateApproved
+      ? estimateEditBlocker(_rsJid ? jobs.find(function(j){ return j.id === _rsJid; }) : null) : '';
     showFB('e-fb', 'warn', estimateApproved
-      ? 'This estimate is approved, so it is locked. To rebuild it, press \u270e Edit estimate on the client\u2019s timeline first; that takes it back to a draft.'
+      ? (_rsBlk ? 'This estimate is approved, so it is locked. ' + _rsBlk
+                : 'This estimate is approved, so it is locked. To rebuild it, press \u270e Edit estimate on the client\u2019s timeline first; that takes it back to a draft.')
       : 'This estimate is out for manager approval, so it is locked. Reset opens again once it is approved or denied.');
     return;
   }
