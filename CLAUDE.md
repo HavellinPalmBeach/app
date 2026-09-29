@@ -86,8 +86,9 @@ net under it.
   note button's colour and label; B's client estimate and Walkthrough view carry none of A; B's Save is **refused** on B's own missing
   home value; on fixed price B's flat fee **is** its suggestion with no discount line; A saved then B — clean again; A reopened —
   everything back; Start over asks the saved question on A (and restores the saved 10% over an unsaved 12%) and the intake question
-  on B. **Against the pre-change build it fails 39 of 90.** `run.sh`'s default list is 1–26; steps 1–25 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 /
-  15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 78 / 58 / 78, 0 failed — **1,243 browser checks across the twenty-six**.
+  on B. **Against the pre-change build it fails 39 of 90.** `run.sh`'s default list is 1–27; on the MERGED tree steps 1–26 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 /
+  33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 78 / 58 / 78 / 28 (the H4 session's step 26), 0 failed —
+  **1,271 browser checks across the twenty-seven**.
 - Manual **§1** (Start over's two outcomes) and **§5h** (a note: what leaked and the measurements, what a fresh estimate holds now,
   what has not changed, Start over and the older Reset, and the check for anything priced before today). Playbook **Step 2** (the
   `.stop` corrected — it said Start over always starts from the intake answers — and a note) and **four** symptom→cause rows. Both
