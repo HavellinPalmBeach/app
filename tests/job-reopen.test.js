@@ -30,14 +30,14 @@ const text = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&mdash;/g,
 const noComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
 // ── the invoice ─────────────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'docSentAt', 'docKeyFor', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
+const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentStageWord', 'finalAwaitsHours', 'docSentAt', 'docKeyFor', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
   'invFinalApproval', 'invFinalApprovalRecord', 'jobLogEntries', 'coHours', 'coHoursTotal',
   'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey',
   'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
   'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
   'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs',
   'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop'];
-const INV_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
   'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
 
@@ -66,17 +66,19 @@ function invoice(o) {
   return Object.assign({ t: text(r.html) }, r);
 }
 // The midpoint row, isolated: the label and the figure it carries.
+// ⚠ Home Prep names its middle payment its SECOND (paymentStageWord, 2026-09-29 audit P10), so the row reads
+// "25% second — …" there; `word` says which, and the fee-only group below asserts it.
 function midRow(t) {
-  const m = /25% midpoint — (fees trued to actuals|invoiced at project midpoint|billed on this invoice)[^$]*\$([\d,]+)/.exec(t);
-  return m ? { label: m[1], amount: Number(m[2].replace(/,/g, '')) } : null;
+  const m = /25% (midpoint|second) — (fees trued to actuals|invoiced at project midpoint|invoiced once the vendor schedule is booked|billed on this invoice)[^$]*\$([\d,]+)/.exec(t);
+  return m ? { word: m[1], label: m[2], amount: Number(m[3].replace(/,/g, '')) } : null;
 }
 
 // ── the rail, the transition and the band ───────────────────────────────────
-const TL_FNS = ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
+const TL_FNS = ['jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
   'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt',
   'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay',
   '_andJoin', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-  'isAgreementSent', 'jobSchedule', 'jobProgress', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive',
+  'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
   'coWorkingDays', '_coPaceFix', 'roomStatusNormalize',
   // The re-acceptance build (2026-09-29, merged here): the rail asks whether a raise reopens the send or the
   // acceptance, withholds Edit estimate while a manager has it, and reads a draft newer than the last send as
@@ -93,7 +95,7 @@ const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimeline
   'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch',
   // The two readers of the handover stamp outside the rail.
   'jobIsSettled', 'planCurrentStage', '_planRooms', '_planRoomStatus', 'docReadOnlyWord', 'docPreviewOnly', 'estimateEditBlocker', 'priceChangeBlocker', 'discountOfferBlocker']);
-const VARS = ['JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_READY_WHY',
+const VARS = ['DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_READY_WHY',
   'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
   'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'JOB_TRANSITIONS', 'jobPlanStore'];
 
@@ -217,6 +219,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(never.t, 'deposit and midpoint invoices', 'naming no midpoint invoice');
     const sent = invoice({ est: PREP, logs: [], payments: [pay('deposit', 6750)], docState: MID_SENT });
     eq((midRow(sent.t) || {}).label, 'fees trued to actuals', 'sent: the midpoint invoice is named');
+    eq((midRow(sent.t) || {}).word, 'second', '…by the name the prep estimate and agreement give it: the second payment');
     eq(Math.round(never.amtDue), Math.round(sent.amtDue), 'and the balance is identical either way');
   }
 
@@ -522,9 +525,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_dashNoticeHtml',
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney', 'getJobActuals',
       'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon', 'jobActivationBlockers', 'jobPayments',
-      'jobTimeline', 'jobTimelineActions', 'jobTimelineNext', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle',
-      'docWord', '_jtDocSecondaries', 'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jtScheduleHtml', 'estWorkingDays',
-      'addWorkingDays', 'jobProgress', 'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize',
+      'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'jobTimelineNext', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle',
+      'docWord', '_jtDocSecondaries', 'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays',
+      'addWorkingDays', '_ymdLocal', 'jobProgress', 'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize',
       'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt',
@@ -533,7 +536,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docPreviewOnly', 'coCardActions', 'estimateEditBlocker', 'priceChangeBlocker',
       // The re-acceptance build, merged here: the same five the rail sandbox above lifts.
       'estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending'];
-    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK',
+    const DVARS = ['DECEDENT_SERVICES', 'MATTER_TYPES', '_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK',
       'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY',
       'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT',

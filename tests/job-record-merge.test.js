@@ -557,7 +557,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // through the REAL toggle so the record the backend sees is the one the app writes.
     const tick = (job, text) => {
       const t = sandbox({
-        fns: ['toggleMustFound', '_repaintStandingFlags', '_invJob', '_jobTouch', '_todayStr', 'mustFindItems', 'mustFoundOf',
+        fns: ['toggleMustFound', '_repaintStandingFlags', '_invJob', '_jobTouch', '_todayStr', '_ymdLocal', 'mustFindItems', 'mustFoundOf',
               '_mustFindKey', '_mfHandle', '_mfUnhandle'],
         vars: ['SF_HOSTS'],
         stubs: { jobs: [job], saveJobs() {}, syncJobToSheets() {}, document: { getElementById: () => null } },

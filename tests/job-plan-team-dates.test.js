@@ -33,7 +33,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // #7 — THE BAND SAYS WHAT TO DO NEXT, NOT WHAT THE MILESTONE WILL BE CALLED ONCE IT IS DONE
   // ═══════════════════════════════════════════════════════════════════════════
-  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+  const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'];
@@ -51,7 +51,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠⚠ #7 — the band says the STEP ("Send the midpoint invoice"), never the finished milestone');
   {
-    const T = sandbox({ fns: TL_FNS, vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'] });
+    const T = sandbox({ fns: TL_FNS, vars: ['DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'] });
     const rec = { estimate: EST(), approved: true, savedAt: 1789067253747 };
     T.estimateStore = { 7: rec };
     const rows = T.jobTimeline(ELLSWORTH(), rec, [], []);
@@ -80,8 +80,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
       'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
-      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor', 'draftOutstanding', 'docDraftPending', 'draftIsStale']);
-    const B = sandbox({ fns: DFNS, vars: ['JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor', 'draftOutstanding', 'draftIsStale', 'docDraftPending']);
+    const B = sandbox({ fns: DFNS, vars: ['DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
       'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
       stubs: { _todayStr: () => '2026-09-23', Intl: global.Intl } });
     const rec = { estimate: EST(), approved: true, savedAt: 1789067253747 };
@@ -111,8 +111,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const prevTZ = process.env.TZ;
     process.env.TZ = 'America/New_York';
     try {
-      const S = sandbox({ fns: ['jobSchedule', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive',
-                                'docSentAt', 'docKeyFor', 'fmtDate2', 'coWorkingDays', '_coPaceFix'], vars: ['PRODUCTIVE_HRS_PER_DAY'] });
+      const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
+                                'docSentAt', 'docKeyFor', 'fmtDate2', 'coWorkingDays', '_coPaceFix'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
       const est = { svc: 'downsizing_move', days: 6 };
       const job = { id: 7, svc: 'downsizing_move', status: 'active', start: '2026-10-05', activatedOn: '2026-09-23' };
       const d = S.jobSchedule(job, est, '2026-09-23');
@@ -152,8 +152,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#3 — the hard target is tested against the start the job really had');
   {
-    const S = sandbox({ fns: ['jobSchedule', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
-                        vars: ['PRODUCTIVE_HRS_PER_DAY'] });
+    const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
+                        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
     const est = { svc: 'cleanout', days: 6 };
     // Target start the 21st, a hard target of the 25th — reachable on paper — but the job only
     // started on the 28th. The plan now counts from the 28th, so the hard target is BEFORE the start.
@@ -168,12 +168,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ #3 — activating AHEAD of the target start asks first, because the stamp is write-once');
   {
     const asked = [];
-    const T = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', '_actor', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+    const T = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
                               'depositPaidTotal', 'isAgreementSigned', 'agreementSignature', 'jobCloseBlockers', 'unratedVendorsForJob',
                               '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
                               // The Re-open is its own branch of the transition (2026-09-29).
                               'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
-                        vars: ['JOB_TRANSITIONS'],
+                        vars: ['JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
                         stubs: { _todayStr: () => '2026-09-23', fmtDate2: (d) => 'D:' + d, agrApprovedBy: '', approvedBy: 'Anthony Graziano',
                                  confirm: (m) => { asked.push(m); return T.__answer; } } });
     const READY = (over) => Object.assign({ id: 7, status: 'won', won: true, agrSigned: true, depositReceived: true,
@@ -493,7 +493,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and saves once itself, and a stub is what would let the lock and the save drift apart.
     // lockAssignedCrew is lifted too, although confirm no longer calls it — so a confirm that goes
     // back to locking through it (a second save) FAILS the one-save check here instead of throwing.
-    const K = sandbox({ fns: ['confirmJobTeam', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
+    const K = sandbox({ fns: ['confirmJobTeam', 'plannedTC2', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
                               '_lockCrewSlots', '_crewSave', '_saveJobEdit', '_jobTouch', 'lockAssignedCrew'], vars: CREW_VARS,
       stubs: { getJobCrew: () => crew, isJobWon: () => true, unfilledPlannedPS: () => [], plannedPSCount: () => 2,
                showFB: (id, kind, msg) => said.push({ kind, msg }), confirm: () => true,

@@ -36,11 +36,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
   const ctx = sandbox({
-    fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
       // The document tray: `jobTimelineActions` builds the step's document from the ONE
       // row→document map, behind the ONE readiness gate, rather than five ungated concats.
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', 'isJobWon',
-      'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
+      'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef',
       // ⚠ LIFTED, NOT STUBBED. estimateSubmitBlocker grew a contract arm on 2026-09-22 and a
       // stub of it is exactly what would let the submit gate and the save gate drift apart.
       'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
@@ -50,7 +50,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
       'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove'],
-    vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
+    vars: ['JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
       'DECEDENT_SERVICES', 'JOB_STEPS'],
@@ -382,6 +382,25 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!noUrl.secondary.some((x) => /dashStripeLink/.test(x.call)),
       '⚠ and withheld entirely on a device with no backend URL');
     ctx.SHEETS_SYNC_URL = prevUrl;
+
+    // ⚠⚠ AND IT STAYS BESIDE THE RECORDER UNTIL THE DEPOSIT IS IN (2026-09-29, Q12). The invoice row is done
+    // the moment the deposit invoice goes out, so a link offered there alone could never be asked for after a
+    // part cheque — the one case the balance rule in `stripePaymentLink` exists for. The fixture above lands
+    // on deposit_received, the recorder's row: driven as the band draws it.
+    const rcv = actFor(depSent, depRec);
+    eq(rcv.row.key, 'deposit_received', 'with the deposit invoice sent, the live row is the recorder\'s');
+    eq(rcv.a.primary && rcv.a.primary.call, "dashRecordPayment(7,'deposit')", '…whose primary is still the recorder');
+    ok(rcv.a.secondary.some((x) => x.call === "dashStripeLink(7,'deposit')"),
+      '⚠⚠ and the ACH link rides beside it, carrying the stage — it was unreachable once the invoice went out');
+    eq(rcv.a.secondary.filter((x) => /dashStripeLink/.test(x.call)).length, 1, '…once');
+    ctx.SHEETS_SYNC_URL = '';
+    ok(!actFor(depSent, depRec).a.secondary.some((x) => /dashStripeLink/.test(x.call)),
+      '⚠ withheld there too on a device with no backend URL');
+    ctx.SHEETS_SYNC_URL = prevUrl;
+    const rcvRow = rcv.r.rows.filter((x) => x.key === 'deposit_received')[0];
+    ok(!ctx.jobTimelineActions(Object.assign({}, rcvRow, { state: 'done' }), rcv.r.job, rcv.r.rec)
+      .secondary.some((x) => /dashStripeLink/.test(x.call)),
+      '⚠ and gone once the deposit is in — a done row offers nothing, so the strip under the rail never carries it');
 
     // ⚠ A blocked estimate points at where the fix is, rather than at nothing.
     const halfRec = { estimate: EST(), approved: false };

@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 5:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 7:48pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1621,7 +1621,7 @@ body.no-smf .smf-col{display:none;}
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Every value on this estate is a fair market value <em>at this date</em> — it is what the schedule, the 706 and a trustee’s opening carrying value all state. It is on the death certificate; ask for it on the call.</div>
           </div>
           <div class="gate-cell"><label>How is this estate being administered?</label>
-            <select id="i-matter-type">
+            <select id="i-matter-type" onchange="toggleIntakeFields()">
               <option value="">Select &mdash; ask the attorney</option>
               <option value="probate">Probate &mdash; administered through the court</option>
               <option value="trust">Trust &mdash; a successor trustee administers it</option>
@@ -1710,7 +1710,7 @@ body.no-smf .smf-col{display:none;}
         <div class="row">
           <div><label>Letters issued</label>
             <input type="date" id="i-letters-date" onchange="computeInventoryDeadline()"></div>
-          <div><label>Case number <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234"></div>
+          <div><label>Case number <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234"></div>
         </div>
         <div class="row">
           <div><label>§733.604 inventory deadline</label><input type="date" id="i-probate-deadline" oninput="this.dataset.userEdited='1'"><div id="i-deadline-fb" class="fb"></div></div>
@@ -2656,7 +2656,7 @@ body.no-smf .smf-col{display:none;}
 
     <div style="display:flex;gap:8px;margin-top:1rem;">
       <button class="btn-s" style="flex:1;" onclick="document.getElementById('deposit-modal').style.display='none'">Cancel</button>
-      <button class="btn-p" style="flex:1;" onclick="saveDeposit()">Record Deposit →</button>
+      <button class="btn-p" id="dep-save-btn" style="flex:1;" onclick="saveDeposit()">Record Deposit →</button>
     </div>
   </div>
 </div>
@@ -5337,10 +5337,28 @@ function propValMultiplier(propVal) {
 // schedule makes; everything downstream takes today as an ARGUMENT, which is also the seam
 // that makes every pace assertion falsifiable in a test instead of a time bomb that passes
 // today and fails on a future Tuesday.
-function _todayStr() {
-  var d = new Date();
+function _todayStr() { return _ymdLocal(new Date()); }
+
+// The local calendar date of a Date, as yyyy-mm-dd. ⚠ NEVER `d.toISOString().slice(0, 10)` — that is the
+// UTC date, and in Eastern it turns over at 8pm (or 7pm in winter), so an evening's hours, payment,
+// acceptance or signature were stamped with tomorrow's date by default (audit M7, 2026-09-29). A net in
+// tests/local-dates.test.js forbids the UTC slice anywhere in the file.
+function _ymdLocal(d) {
+  if (!(d instanceof Date) || isNaN(d.getTime())) return '';
   var m = d.getMonth() + 1, day = d.getDate();
   return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+}
+
+// The local calendar DATE of a stored stamp, whatever shape it was stored in. A bare yyyy-mm-dd is
+// already a calendar date and is returned untouched — parsing it would read it as UTC midnight and slip
+// it back a day in Eastern. A full ISO timestamp is converted through the local clock, because its
+// first ten characters are the UTC date: a document sent at 9:15pm on the 29th was stamped
+// `…-30T01:15:00Z` and the rail printed it as the 30th. Anything unparseable reads as no date.
+function _localDateOf(v) {
+  if (!v) return '';
+  var s = String(v);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  return _ymdLocal(new Date(s));
 }
 
 // ─── WORKING-DAYS HELPERS ────────────────────────────────────────────────────
@@ -5381,7 +5399,7 @@ function addWorkingDays(startDateStr, days) {
     d.setDate(d.getDate() + 1);
     if (d.getDay() !== 0 && d.getDay() !== 6) remaining--;
   }
-  return d.toISOString().slice(0, 10);
+  return _ymdLocal(d);
 }
 
 // ─── THE PROPOSED LENGTH OF A JOB ────────────────────────────────────────────
@@ -5934,6 +5952,31 @@ function matterTypeOf(job) {
   return MATTER_TYPES[v] ? v : '';
 }
 function matterDef(job) { var k = matterTypeOf(job); return k ? MATTER_TYPES[k] : null; }
+
+// ⚠⚠ ONE DEFINITION OF "THIS ESTATE IS ADMINISTERED THROUGH A PROBATE COURT" (2026-09-29, audit M5).
+// The MATTER decides where it has been answered: an Estate Settlement administering a probate estate
+// has a case number, Letters of Administration and a §733.604 clock exactly as a Probate job does —
+// and until today it had none of them. The Letters gate on activation, the case fields on both forms
+// and the Job Plan's two court chips all keyed on the SERVICE, so that job activated with no Letters
+// on file and nowhere to record the case. An UNANSWERED matter falls back to the service, because a
+// Probate service records that a case was open at intake — the rule `planTaskCtx.probateTrack` has
+// followed since 2026-09-21, and it reads this now rather than keeping a copy. Takes a job record, or
+// the two values a form is holding (`{svc, matterType}`); `svcKey` lets the Job Plan ask about the
+// service its estimate priced.
+function jobOnProbateTrack(job, svcKey) {
+  if (!job) return false;
+  var j = svcKey ? Object.assign({}, job, { svc: svcKey }) : job;
+  var d = matterDef(j);
+  if (d) return !!d.onProbate;
+  return j.svc === 'probate' || j.svc === 'contested_probate';
+}
+// Where the court record may be ENTERED — wider than the track on purpose. A Probate service always
+// shows it, because the save requires the case number there and a required field must never be hidden;
+// any estate whose matter is administered through probate shows it too, which is the half that was
+// missing. Read by Client Intake, Edit Client (render, mid-edit toggle and save) alike.
+function courtRecordShown(svc, matter) {
+  return svc === 'probate' || svc === 'contested_probate' || jobOnProbateTrack({ svc: svc, matterType: matter });
+}
 
 // ⚠⚠ THE PROBATE ROWS — one predicate, read by the on-screen summary, the workbook payload and
 // nothing else yet. Fla. Stat. §733.604 is a filing deadline in a probate proceeding, Letters of
@@ -8243,15 +8286,25 @@ function dateChainGuard(prefix, fbId) {
 
 function updateIntakeDateMins() { return dateChainGuard('i', 'i-fb'); }
 
-function computeInventoryDeadline(){
-  var l = document.getElementById('i-letters-date').value;
-  var out = document.getElementById('i-probate-deadline');
-  var fb  = document.getElementById('i-deadline-fb');
+// Fla. Stat. §733.604: the inventory is due 60 days after the Letters issue. One rule, read by Client
+// Intake and Edit Client alike, local calendar throughout.
+function inventoryDeadlineFrom(lettersDate) {
+  if (!lettersDate) return '';
+  var p = String(lettersDate).split('-');
+  var d = new Date(+p[0], +p[1] - 1, +p[2]);
+  if (isNaN(d.getTime())) return '';
+  d.setDate(d.getDate() + 60);
+  return _ymdLocal(d);
+}
+function computeInventoryDeadline(pfx){
+  pfx = pfx || 'i';
+  var l = (document.getElementById(pfx + '-letters-date') || {}).value || '';
+  var out = document.getElementById(pfx + '-probate-deadline');
+  var fb  = document.getElementById(pfx + '-deadline-fb');
   if(!l){ if(fb) fb.textContent='Inventory clock starts when Letters are issued.'; return; }
-  var p=l.split('-'); var d=new Date(+p[0],+p[1]-1,+p[2]); d.setDate(d.getDate()+60);
-  var iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  var iso = inventoryDeadlineFrom(l);
   if(out && !out.dataset.userEdited) out.value=iso;
-  var days=Math.ceil((d-new Date())/86400000);
+  var days = Math.round((new Date(iso + 'T12:00:00') - new Date(_todayStr() + 'T12:00:00')) / 86400000);
   if(fb) fb.textContent='Inventory due '+iso+' ('+days+' days from today).';
 }
 
@@ -8266,9 +8319,11 @@ function toggleIntakeFields() {
   // isEstate IS the living/deceased answer — see isDecedentJob. These three services are
   // the deceased-client half of the catalogue and the other four are the living half;
   // there is no in-between case and nothing here asks the user to disambiguate one.
-  // Probate-only fields — the COURT record. Case number, Letters, the §733.604 clock.
+  // The COURT record — case number, Letters, the §733.604 clock. On a Probate service, and on any
+  // estate whose matter is administered through probate (audit M5): an Estate Settlement on a probate
+  // matter had nowhere to record its case. The matter select repaints this on change.
   var pf = document.getElementById('probate-fields');
-  if (pf) pf.style.display = isProbate ? 'block' : 'none';
+  if (pf) pf.style.display = courtRecordShown(svc, (document.getElementById('i-matter-type') || {}).value || '') ? 'block' : 'none';
   // ⚠ EVERYTHING THAT IS A FACT ABOUT A DECEDENT RATHER THAN ABOUT A COURT CASE — date of
   // death, who builds the inventory, and the two documentation gates. These sat inside
   // #probate-fields until 2026-09-21, so an Estate Settlement was asked none of them and was
@@ -13400,7 +13455,7 @@ function openSignatureModal(jobId) {
   var who = document.getElementById('sig-by');
   if (who) who.value = expectedSignerName(job);
   var on = document.getElementById('sig-on');
-  if (on) on.value = new Date().toISOString().slice(0, 10);
+  if (on) on.value = _todayStr();
   var note = document.getElementById('sig-note'); if (note) note.value = '';
   var fb = document.getElementById('sig-fb'); if (fb) fb.innerHTML = '';
   var hint = document.getElementById('sig-hint');
@@ -13490,6 +13545,12 @@ function jobPayments(job) {
 // other two are recorded so the money is captured, not to unlock work.
 var PAYMENT_STAGES = ['deposit', 'midpoint', 'final'];
 var PAYMENT_STAGE_LABELS = { deposit: 'Deposit (50%)', midpoint: 'Midpoint (25%)', final: 'Final (25%)' };
+// The stage with its share, named as this job names it — 'Second (25%)' on Home Prep. See paymentStageWord.
+function paymentStageLabel(job, stage) {
+  var l = PAYMENT_STAGE_LABELS[stage] || stage;
+  var w = paymentStageWord(job, stage);
+  return w.renamed ? l.replace(/^Midpoint/, w.title) : l;
+}
 
 // ⚠⚠ WHICH METHODS ARE MONEY THE MOMENT THEY ARE RECORDED. One list, because the rule
 // used to be an inline `||` chain at the one write site and the next rail added to it
@@ -13545,6 +13606,17 @@ function jobIsSettled(job) {
   return !!job.deliveredOn || stagePaidTotal(job, 'final') > 0;
 }
 
+// ⚠⚠ WHAT CLOSING THIS JOB OUT KEEPS: EVERY PAYMENT RECORDED ON IT, ON ANY STAGE (2026-09-29, audit
+// M4; Anthony, Q2: "keep it and name the amount"). Mark Lost decided lost-or-retained on
+// `depositReceived`, which turns true only once the FULL 50% is in — so a client who had paid $2,000 of
+// a $4,575 deposit and walked away was recorded as a plain loss, `won` was cleared, and the $2,000
+// appeared nowhere on any screen, Win / Loss included. The money is the fact; how much of the deposit
+// it covered is not the question. Read by the modal, the save, the rail's terminal row and Win / Loss,
+// so the four cannot come to name the kept amount two ways.
+function closeoutRetainedTotal(job) {
+  return job ? Math.round(jobPaidTotal(job)) : 0;
+}
+
 // The gate the whole job hangs off. True when deposit payments meet the 50% target;
 // the 1% tolerance absorbs rounding between the estimate total and what a client's bank
 // actually sent. With no target known, any recorded deposit counts — refusing to call a
@@ -13596,8 +13668,10 @@ function openDepositModal(stage) {
   if (!job.agrSigned) { showFB(_dashFbTarget('agr-fb'),'warn','Record the signed agreement before the deposit.'); return; }
   var stageEl = document.getElementById('dep-stage');
   var wanted = (PAYMENT_STAGES.indexOf(stage) >= 0) ? stage : _defaultPaymentStage(job);
+  var _midOpt = stageEl && stageEl.querySelector ? stageEl.querySelector('option[value="midpoint"]') : null;
+  if (_midOpt) _midOpt.textContent = paymentStageLabel(job, 'midpoint');
   if (stageEl) stageEl.value = wanted;
-  document.getElementById('dep-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('dep-date').value = _todayStr();
   document.getElementById('dep-method').value = '';
   document.getElementById('dep-reference').value = '';
   document.getElementById('dep-payer').value = '';
@@ -13607,27 +13681,41 @@ function openDepositModal(stage) {
   document.getElementById('deposit-modal').style.display = 'flex';
 }
 
-// Re-points the whole modal at the selected stage. Only the deposit has a target the app
-// can derive (50% of the approved estimate); the midpoint and final amounts come off the
-// invoice the client was actually sent, which is computed from logged hours and actual
-// vendor quotes and is not reproducible here. So those stages prefill nothing and warn
-// about nothing — they are a recording surface, deliberately, not a second gate.
+// Re-points the whole modal at the selected stage. The deposit's target is the 50% of the
+// approved estimate the payments module has always derived (it is what funds the job); the
+// midpoint and the final come off the invoice itself — `invoiceHtml(...).outstanding`, the one
+// place those figures are computed — so the recorder asks for exactly what the client's own
+// invoice asks for, less anything already recorded against it. Only the deposit is ever
+// challenged as short; the other two are a recording surface, deliberately, not a second gate.
+//
+// ⚠ THE MIDPOINT AND THE FINAL USED TO OPEN BLANK, UNDER A "RECORD DEPOSIT" BUTTON (audit M6).
+// Pressing it with the amount empty was refused inside the modal, and the figure a person then
+// had to type was on a document on another screen.
 function onDepStageChange() {
   var job = _agrJob();
   if (!job) return;
   var stage = currentDepStage();
   var isDep = (stage === 'deposit');
-  var target = isDep ? depositTargetFor(job) : 0;
+  var word = paymentStageWord(job, stage);
   var already = stagePaidTotal(job, stage);
-  var outstanding = Math.max(0, target - already);
+  var target = 0, outstanding = 0, inv = null;
+  if (isDep) {
+    target = depositTargetFor(job);
+    outstanding = Math.max(0, target - already);
+  } else {
+    try { inv = invoiceHtml(job, stage); } catch (e) { inv = null; }
+    outstanding = (inv && !inv.blocked) ? inv.outstanding : 0;
+  }
 
   var titleEl = document.getElementById('dep-modal-title');
-  if (titleEl) titleEl.textContent = 'Record ' + (isDep ? 'Deposit' : (stage === 'midpoint' ? 'Midpoint Payment' : 'Final Payment'));
+  if (titleEl) titleEl.textContent = 'Record ' + (isDep ? 'Deposit' : word.title + ' Payment');
+  var btnEl = document.getElementById('dep-save-btn');
+  if (btnEl) btnEl.textContent = 'Record ' + (isDep ? 'Deposit' : word.title + ' Payment') + ' \u2192';
 
   // Prefill what is still OUTSTANDING, not the full target — a second cheque completing
-  // a part-paid deposit is the common case and should not need arithmetic in the field.
+  // a part-paid stage is the common case and should not need arithmetic in the field.
   var amtEl = document.getElementById('dep-amount');
-  if (amtEl) amtEl.value = isDep ? (outstanding ? outstanding : (target || '')) : '';
+  if (amtEl) amtEl.value = isDep ? (outstanding ? outstanding : (target || '')) : (outstanding || '');
 
   document.getElementById('dep-modal-sub').innerHTML = isDep
     ? (target
@@ -13635,9 +13723,15 @@ function onDepStageChange() {
           + (already ? ', of which <strong>' + fmt(already) + '</strong> is already recorded.' : '. ')
           + (outstanding ? ' Outstanding: <strong>' + fmt(outstanding) + '</strong>.' : '')
         : 'No approved estimate total found for this job, so the 50% target cannot be shown.')
-    : 'Enter the amount from the ' + (stage === 'midpoint' ? 'midpoint' : 'final') + ' invoice you sent. '
+    : (!inv
+        ? 'Enter the amount from the ' + word.invoice + ' you sent. '
+        : inv.blocked
+          ? 'The ' + word.invoice + ' cannot be priced yet — no hours are logged — so enter the amount from the invoice you sent. '
+          : 'The ' + word.invoice + ' asks for <strong>' + fmt(inv.amtDue) + '</strong>'
+            + (already && stage !== 'final' ? ', of which <strong>' + fmt(already) + '</strong> is already recorded here' : '')
+            + '. Outstanding: <strong>' + fmt(outstanding) + '</strong>. ')
       + 'Recording it does not gate anything — it captures the money so the job\'s paid total is complete.'
-      + (already ? ' <strong>' + fmt(already) + '</strong> already recorded at this stage.' : '');
+      + (already && (!inv || inv.blocked || stage === 'final') ? ' <strong>' + fmt(already) + '</strong> already recorded at this stage.' : '');
 
   // Show what has already come in AT THIS STAGE, so a second entry is made in full
   // knowledge of the first rather than duplicating it.
@@ -13773,7 +13867,7 @@ function saveDeposit() {
     try { loadInvoice(); } catch(e) {}   // invoice stage advances off depositReceived
   }
   var funded = isJobFunded(job);
-  var stageWord = PAYMENT_STAGE_LABELS[stage] || stage;
+  var stageWord = paymentStageLabel(job, stage);
   showFB(_dashFbTarget('agr-fb'), (!isDep || funded) ? 'ok' : 'warn', fmt(amount) + ' recorded against ' + stageWord
     + (clearsOnReceipt ? '' : ' — uncleared until the bank confirms')
     + (!isDep
@@ -14736,7 +14830,7 @@ function jobSchedule(job, est, todayStr, prog) {
   S.days = Math.max(1, S.days + S.coDays);
 
   S.hard = job.completion || '';
-  if (job.svc === 'probate' || job.svc === 'contested_probate') S.courtDeadline = job.probateDeadline || '';
+  if (jobOnProbateTrack(job)) S.courtDeadline = job.probateDeadline || '';   // the matter, not the service (M5)
   S.delivered = job.deliveredOn || '';
   S.start = job.start || '';   // the TARGET start, as intake recorded it
 
@@ -14928,6 +15022,11 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     (logs || []).forEach(function(e){ ((e && e.members) || []).forEach(function(m){ if (m && m.role === 'TC') _loggedTC += Number(m.hours) || 0; }); });
   }
   var _coHrsUnlogged = _coOnlyTC > 0 && _loggedTC === 0;
+  // The final cannot be priced until hours are logged — `finalAwaitsHours`, the rule `invoiceHtml` blocks on,
+  // asked with the hours this derivation was HANDED (it never reads the store), summed the way the invoice sums.
+  var _logTC = 0, _logPS = 0;
+  (logs || []).forEach(function(e){ ((e && e.members) || []).forEach(function(m){ if (!m) return; if (m.role === 'TC') _logTC += Number(m.hours) || 0; else _logPS += Number(m.hours) || 0; }); });
+  var _finAwaitsHrs = finalAwaitsHours(job, est, Math.round(_logTC * 10) / 10 + Math.round(_logPS * 10) / 10);
 
   // A walkthrough that produced a scored house happened, whatever the calendar
   // says — and a date in the past with no estimate behind it did too. Either is
@@ -14949,7 +15048,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
 
   function row(o) {
     return {
-      key: o.key, group: o.group, label: o.label, short: JT_SHORT[o.key] || o.label,
+      key: o.key, group: o.group, label: o.label, short: o.short || JT_SHORT[o.key] || o.label,
       // What the band says while this row is the live one — see JT_NEXT. The label stays the
       // milestone's name for the rail and the track.
       todo: o.todo || JT_NEXT[o.key] || o.label,
@@ -15019,6 +15118,9 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   // a running schedule already means no handover stamp; and `notYet` is only ever read on a LIVE row, which
   // needs the job active, whose schedule is running whenever it has a halfway to wait for. Each keeps the
   // intent where it is read.
+  // What the second 25% is called on this job — "Second" on Home Prep, where its estimate bills it
+  // once the vendor schedule is booked and there is no midpoint to name it after. See paymentStageWord.
+  var _mw = paymentStageWord(job, 'midpoint');
   var _midNotYet = !!(_sc && !_midSent && !_midDrafted && !_closed && _sc.state === 'running'
     && _sc.halfway && _sc.today && _sc.today < _sc.halfway
     && !(_sc.progress && (_sc.workPct >= 0.5 || _sc.roomsLocked)));
@@ -15101,7 +15203,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       // record's `sentAt` is a full ISO timestamp — two different shapes through one `atKind`. The
       // slice makes the fallback yyyy-mm-dd, which `atKind:'date'` already formats correctly.
       done: isAgreementSent(job),
-      at: job.agrSentAt || docSentAt(job, 'agreement').slice(0, 10), atKind: 'date',
+      at: job.agrSentAt || _localDateOf(docSentAt(job, 'agreement')), atKind: 'date',
       by: job.agrSentBy || (job.docState && job.docState.agreement && job.docState.agreement.sentBy) || '',
       // The one piece of agreement history still worth surfacing: the estimate was
       // edited after the packet was prepared, so the Exhibit A the client holds is stale.
@@ -15159,18 +15261,19 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     // never the midpoint.
     // ⚠ AFTER THE CLOSE IT IS DONE ONCE THE SHARE IS BILLED OR PAID — by its own payment, or by the final
     // going out (the final bills it) or being paid. Until then it is OPEN and says why.
-    row(_plan({ key: 'midpoint_invoiced', group: 'Work', label: 'Midpoint invoice sent',
+    row(_plan({ key: 'midpoint_invoiced', group: 'Work', label: _mw.title + ' invoice sent',
       done: _midSent || (_closed && (midPaid > 0 || _finSent || finPaid > 0)),
       open: _closed && !_midSent && !(midPaid > 0 || _finSent || finPaid > 0),
       at: docSentAt(job, 'invoice', 'midpoint'), atKind: 'iso',
       amount: hav ? split.midpoint : null,
       notYet: _midNotYet, dueOn: _midNotYet ? _sc.halfway : '',
-      todo: _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point' : '',
+      todo: _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point' : (_mw.renamed ? 'Send the ' + _mw.invoice : ''),
       sub: _midSent ? ''
         : _closed ? (midPaid > 0 ? '' : (_finSent || finPaid > 0) ? 'Billed on the final invoice' : 'Not sent \u2014 the final invoice bills it')
         : jtDraftLine(job, 'invoice:midpoint', true) }, _sc && _sc.halfway, 'halfway point')),
 
-    row({ key: 'midpoint_received', group: 'Work', label: 'Midpoint payment',
+    row({ key: 'midpoint_received', group: 'Work', label: _mw.title + ' payment',
+      todo: _mw.renamed ? 'Collect the ' + _mw.payment : '', short: _mw.renamed ? _mw.title : '',
       done: midPaid > 0 || (_closed && finPaid > 0),
       open: _closed && !(midPaid > 0) && !(finPaid > 0),
       amount: hav ? split.midpoint : null,
@@ -15190,14 +15293,23 @@ function jobTimeline(job, estRec, logs, cos, sched) {
 
     row({ key: 'final_invoiced', group: 'Close-out', label: 'Final invoice sent',
       done: !!docSentAt(job, 'invoice', 'final'), at: docSentAt(job, 'invoice', 'final'), atKind: 'iso',
-      sub: (!docSentAt(job, 'invoice', 'final') && _coHrsUnlogged)
+      // Said once the job is closed and the final is the next thing to send; before that an empty log is
+      // simply a job in progress, and the hours fold already says so each working day.
+      // ⚠ Each arm carries the stale-draft line too: a draft a Re-open or a price change retired is still
+      // sitting in a mailbox whatever else the row has to say, and it must go on being named.
+      sub: (!docSentAt(job, 'invoice', 'final') && _closed && _finAwaitsHrs)
+        ? 'No hours are logged yet \u2014 log them on the Job Plan and the final can be priced'
+          + (_finDraftLine ? '. ' + _finDraftLine : '')
+        : (!docSentAt(job, 'invoice', 'final') && _coHrsUnlogged)
         ? 'A change order added ' + _coOnlyTC.toFixed(1) + ' concierge hours and none are logged \u2014 log them on the Job Plan first, or this final bills the management fee alone'
           + (_finDraftLine ? '. ' + _finDraftLine : '')
         : _finDraftLine }),
 
     row({ key: 'final_paid', group: 'Close-out', label: 'Final payment',
       done: finPaid > 0, amount: hav ? split.final : null,
-      sub: finPaid > 0 ? ('$' + Math.round(finPaid).toLocaleString() + ' received') : 'Balance of actual hours' })
+      sub: finPaid > 0 ? ('$' + Math.round(finPaid).toLocaleString() + ' received')
+        : (est && est.fixedPrice) ? 'Balance of the fixed fee'
+        : estimateIsFeeOnly(est, job) ? 'Balance of the fee on actual vendor spend' : 'Balance of actual hours' })
   ];
 
   // A job that died collapses the whole rail to one honest line. Neither `lost`
@@ -15214,9 +15326,11 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       // (`confirmMarkLost` writes toISOString()). Handed over whole it rendered as
       // "2026-09-12T00:00:00Z" on the one row a client-facing screen shows on a dead
       // job. Take the date half and let it format like the rest of the rail.
-      done: true, at: (job.lostAt || '').slice(0, 10), atKind: 'date', by: '',
+      done: true, at: _localDateOf(job.lostAt), atKind: 'date', by: '',
       sub: (job.lostReasonLabel || job.lostReason || '')
-        + (retained && depPaid > 0 ? ' · $' + Math.round(depPaid).toLocaleString() + ' retained' : '')
+        // Everything received, not the deposit stage alone: a job abandoned after its midpoint was
+        // paid kept both, and naming only the deposit understated what the firm holds (audit M4).
+        + (retained && closeoutRetainedTotal(job) > 0 ? ' · $' + closeoutRetainedTotal(job).toLocaleString() + ' retained' : '')
     })].map(function (r) { r.state = 'terminal'; return r; });
   }
 
@@ -15512,7 +15626,7 @@ function noDraftToConfirm(job, key) {
 // ─── THE INVOICE'S FIRST REAL EMAIL ──────────────────────────────────────────
 function invoiceEmailSubject(job, stage) {
   var street = String(job && job.addr || '').split(',')[0].trim();
-  return 'Havellin Palm Beach — ' + (DOC_STAGE_WORD[stage] || 'Final') + ' Invoice for ' + (street || (job && job.name) || 'your property');
+  return 'Havellin Palm Beach — ' + paymentStageWord(job, stage).title + ' Invoice for ' + (street || (job && job.name) || 'your property');
 }
 
 // How an invoice email states its figure — read by the Gmail text part, the HTML part and the
@@ -15530,7 +15644,7 @@ function invoiceBalanceWords(amtDue) {
 
 function buildInvoiceEmailText(job, stage, amtDue) {
   var tc = assignedTCContact(job);
-  var word = (DOC_STAGE_WORD[stage] || 'Final').toLowerCase();
+  var word = paymentStageWord(job, stage).noun;
   var bw = invoiceBalanceWords(amtDue);
   return ['Dear ' + bestClientGreetingName(job) + ',', '',
     'Your ' + word + ' invoice for Havellin Palm Beach services at ' + (job.addr || 'your property') +
@@ -15550,7 +15664,7 @@ function buildInvoiceEmailHtml(job, stage, amtDue) {
   var B = EMAIL_BRAND;
   var tc = assignedTCContact(job);
   var street = String(job.addr || '').split(',')[0].trim();
-  var word = DOC_STAGE_WORD[stage] || 'Final';
+  var word = paymentStageWord(job, stage).title;
   return '' +
   '<div style="margin:0;padding:0;background:#f4f1ea;">' +
   '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">' +
@@ -16211,7 +16325,7 @@ function recordAgreementSignature(jobId, sig) {
   st.sig = {
     how: sig.how || '',
     signedBy: sig.signedBy || '',
-    signedOn: sig.signedOn || new Date().toISOString().slice(0, 10),
+    signedOn: sig.signedOn || _todayStr(),
     note: sig.note || '',
     // ⚠ THE FALLBACK IS `manual`, NOT THE FIRM'S PROVIDER, AND THAT MATTERS NOW THAT DOCUSIGN IS
     // THE DEFAULT. Reaching this fallback means no caller named a provider, and the only path that
@@ -16302,7 +16416,7 @@ function applyEsignStatus(jobId, status) {
   var blk = recordAgreementSignature(jobId, {
     how: 'esign',
     signedBy: status.signerName || '',
-    signedOn: (status.completedAt || '').slice(0, 10),
+    signedOn: _localDateOf(status.completedAt),
     provider: esignProviderKey(),
     envelopeId: st.esign.envelopeId,
     recordedBy: ESIGN_PROVIDERS[esignProviderKey()].label
@@ -16589,7 +16703,7 @@ function applyStripePayments(jobId, key, stage, d) {
   saveJobs(); syncJobToSheets(job);
   if (added) {
     _docNotice('ok', fmt(landed) + ' received by bank transfer on ' + (job.name || 'this job')
-               + ' (' + (PAYMENT_STAGE_LABELS[stage] || stage) + ') — recorded automatically from Stripe.', jobId);
+               + ' (' + paymentStageLabel(job, stage) + ') — recorded automatically from Stripe.', jobId);
     renderJobs();
   }
   return added;
@@ -16605,7 +16719,7 @@ function _stripeRecordPayment(job, stage, p) {
     uid: _photoUid(),
     stage: stage,
     amount: p.amount,
-    receivedOn: (p.createdAt || new Date().toISOString()).slice(0, 10),
+    receivedOn: _localDateOf(p.createdAt) || _todayStr(),
     // ⚠ `stripe_ach`, NOT `stripe`. A card is final on receipt and this is not — see
     // PAYMENT_METHODS_CLEAR_ON_RECEIPT. Recording it as a card would stamp clearedOn at once.
     method: 'stripe_ach',
@@ -16618,7 +16732,7 @@ function _stripeRecordPayment(job, stage, p) {
     // that the client authorised it. This record only exists because STRIPE REPORTED THE
     // INTENT `succeeded` — the money has genuinely settled. That is the one moment an ACH
     // payment is cleared, and it is why read-back is worth building at all.
-    clearedOn: (p.createdAt || new Date().toISOString()).slice(0, 10),
+    clearedOn: _localDateOf(p.createdAt) || _todayStr(),
     policyException: false,
     stripePiId: p.piId,
     evidence: null,
@@ -16942,18 +17056,72 @@ var DOC_ACTIONS = {
 
 var DOC_STAGE_WORD = { deposit: 'Deposit', midpoint: 'Midpoint', final: 'Final' };
 
+// ⚠⚠ WHAT A PAYMENT STAGE IS CALLED ON THIS JOB — the ONE answer, read by the rail, the band, the
+// buttons, the recorder, the invoice, its email and its filenames (2026-09-29, audit P10 low).
+// On Home Prep for Sale the second 25% is NOT a midpoint: the vendors invoice the client directly and
+// there are no phases to sit between, so the estimate bills it "once the vendor schedule is booked"
+// and the agreement calls it the Second Payment. The band still said "Send the midpoint invoice", and
+// the invoice the client received was headed Midpoint Invoice over a schedule its own estimate never
+// stated. ⚠ ONLY THE WORDS MOVE. The stage KEY stays 'midpoint' everywhere — docState, payments,
+// Drive keys and every gate read it — because renaming a stored key strands every record written
+// under the old one. ⚠ Reads nothing but the job's service and DOC_STAGE_WORD, so any surface that
+// already knew the stage word can ask it without learning anything new. An unknown stage reads as
+// Final, the same fallback every reader of DOC_STAGE_WORD already used.
+function paymentStageWord(job, stage) {
+  var title = DOC_STAGE_WORD[stage] || 'Final';
+  var renamed = stage === 'midpoint' && !!job && job.svc === 'prep';
+  if (renamed) title = 'Second';
+  var noun = title.toLowerCase();
+  return {
+    title: title, noun: noun, invoice: noun + ' invoice', payment: noun + ' payment', renamed: renamed,
+    // When it falls due, in the words each engagement's own estimate uses for it.
+    due: stage === 'deposit' ? 'on acceptance'
+       : stage === 'midpoint' ? (renamed ? 'once the vendor schedule is booked' : 'at project midpoint')
+       : (job && job.svc === 'prep' ? 'at show-ready handover' : 'on completion')
+  };
+}
+
 // The noun a button uses for a document ('Send estimate', 'View deposit invoice'). It was
-// hand-passed at five call sites, which is five copies of one word.
+// hand-passed at five call sites, which is five copies of one word. `job` is optional: without it
+// a stage reads by its default name, which is every stage on every service but Home Prep's second.
 var DOC_KIND_WORD = { estimate: 'estimate', agreement: 'packet', invoice: 'invoice' };
-function docWord(kind, stage) { return stage ? (stage + ' invoice') : (DOC_KIND_WORD[kind] || kind); }
+function docWord(kind, stage, job) { return stage ? paymentStageWord(job, stage).invoice : (DOC_KIND_WORD[kind] || kind); }
 
 // The human NAME of a document: 'Client Estimate' / 'Signing Packet' / 'Invoice — Deposit'.
 // ⚠ NEVER `docNames(...).client` OR `.printTitle` FOR A HEADING — both are stamped with
 // `new Date()`, so a title built from them silently re-dates on every render and on every
 // 15-second remote tick, on the one screen the firm is being asked to trust.
-function docTitle(kind, stage) {
+function docTitle(kind, stage, job) {
   var cfg = DOC_ACTIONS[kind];
-  return (cfg ? cfg.label : kind) + (stage ? ' — ' + (DOC_STAGE_WORD[stage] || stage) : '');
+  return (cfg ? cfg.label : kind) + (stage ? ' — ' + (DOC_STAGE_WORD[stage] ? paymentStageWord(job, stage).title : stage) : '');
+}
+
+// ⚠⚠ THE FINAL CANNOT BE PRICED UNTIL HOURS ARE LOGGED, AND THIS IS THE ONE PLACE THAT SAYS SO
+// (2026-09-29, audit P10 low). `invoiceHtml` blocks an hourly final with an empty timesheet — nobody
+// can unlock a missing timesheet — and the registry then refuses every verb on it, View included.
+// But the timeline's quick strip offers each document's View and Print from the rows AHEAD of the lit
+// one, so from the client's yes onward a job carried "View final invoice · Print final invoice" that
+// refused on the press, every time, until somebody logged an hour. Withheld now, by this predicate,
+// which `invoiceHtml` itself reads for its `blocked` answer — so the rail and the document cannot
+// come to disagree about whether the final can be opened. Fixed-price finals never consult the log
+// and fee-only ones never priced hours; both stay offered. `loggedHrs` is optional: the invoice passes
+// the hours it has already summed, and anything else lets this sum them the same way.
+function finalAwaitsHours(job, est, loggedHrs) {
+  if (!job) return false;
+  if (est === undefined) {
+    var _rec = (typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null;
+    est = (_rec && _rec.estimate) || null;
+  }
+  if (est && est.fixedPrice) return false;
+  if (estimateIsFeeOnly(est, job)) return false;
+  if (loggedHrs == null) {
+    var _tc = 0, _ps = 0;
+    jobLogEntries(job.id).forEach(function (entry) {
+      (entry.members || []).forEach(function (m) { if (m.role === 'TC') _tc += m.hours; else _ps += m.hours; });
+    });
+    loggedHrs = Math.round(_tc * 10) / 10 + Math.round(_ps * 10) / 10;
+  }
+  return loggedHrs === 0;
 }
 
 // ⚠ NAMED FOR THE DOCUMENT BEING REFUSED. The packet and the invoices share these refusals, and
@@ -17070,12 +17238,12 @@ function docNames(job, kind, opt) {
   // number is on the document's face, so it belongs in the filename that cites it.
   var coNo = (opt && opt.coNo) ? (' ' + opt.coNo) : '';
   var title = kind === 'agreement' ? 'Havellin Services Agreement'
-            : kind === 'invoice' ? ('Havellin ' + (DOC_STAGE_WORD[stage] || 'Final') + ' Invoice')
+            : kind === 'invoice' ? ('Havellin ' + paymentStageWord(job, stage).title + ' Invoice')
             : kind === 'changeorder' ? ('Havellin Change Order' + coNo)
             : 'Havellin Service Estimate';
   var client = title + (street ? ' - ' + street : '') + ' - ' + stamp;
   var driveBase = kind === 'agreement' ? 'Havellin Services Agreement'
-                : kind === 'invoice' ? ('Havellin Invoice - ' + (DOC_STAGE_WORD[stage] || 'Final'))
+                : kind === 'invoice' ? ('Havellin Invoice - ' + paymentStageWord(job, stage).title)
                 : kind === 'changeorder' ? ('Havellin Change Order' + coNo)
                 : 'Havellin Service Estimate';
   return {
@@ -17221,7 +17389,7 @@ function walkthroughHtml(job, est) {
 
   // Who priced it and when, and WHICH copy this is.
   var when = src.locked
-    ? ('Locked ' + fmtDate2((src.at || '').slice(0, 10)) + (src.by ? ' by ' + esc(src.by) : ''))
+    ? ('Locked ' + fmtDate2(_localDateOf(src.at)) + (src.by ? ' by ' + esc(src.by) : ''))
     : 'Draft — this estimate has not been approved, so these scores can still change';
   h += '<div class="ce-meta">'
     + '<div class="ce-meta-item"><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name || '—') + '</div></div>'
@@ -17365,7 +17533,7 @@ function _openViewer(title, sub, html, spec) {
 
 function openDocViewer(spec, html) {
   return _openViewer(
-    docTitle(spec.kind, spec.stage) + (spec.viewOnly ? docReadOnlyWord(spec.kind, spec.job, null) : ''),
+    docTitle(spec.kind, spec.stage, spec.job) + (spec.viewOnly ? docReadOnlyWord(spec.kind, spec.job, null) : ''),
     (spec.job.name || 'Client') + (spec.job.addr ? ' · ' + spec.job.addr : ''),
     html, spec);
 }
@@ -17432,9 +17600,9 @@ function _jtSendAction(id, job, kind, stage, what) {
 // row context at all — so bare "View"/"Print" rendered there as four identical pairs in
 // a row, `View · Print · View · Print · View · Print · View · Print`, with nothing saying
 // which document any of them opened. One label has to read correctly in both places.
-function _jtDocViews(id, kind, stage, viewOnly) {
+function _jtDocViews(id, kind, stage, viewOnly, job) {
   var opt = stage ? (",{stage:'" + stage + "'}") : '';
-  var of = ' ' + docWord(kind, stage);
+  var of = ' ' + docWord(kind, stage, job);
   var out = [{ label: '&#128065; View' + of, call: 'docAction(' + id + ",'" + kind + "','view'" + opt + ')' }];
   // ⚠ WITHHELD, NOT OFFERED-AND-REFUSED. An unapproved estimate may be read on our own screen
   // and must not reach paper, and a button that alerts a blocker back at you is worse than
@@ -17473,7 +17641,7 @@ function _jtDraftLink(id, job, kind, stage) {
   var st = (job.docState && job.docState[key]) || {};
   // Nor a link to one: opening the old-price draft is the first step to sending it.
   if (!st.draftUrl || !draftOutstanding(job, key)) return [];
-  return [{ label: '&#8599; Open the ' + docWord(kind, stage) + ' draft', call: 'openDocDraft(' + id + ",'" + key + "')" }];
+  return [{ label: '&#8599; Open the ' + docWord(kind, stage, job) + ' draft', call: 'openDocDraft(' + id + ",'" + key + "')" }];
 }
 
 // ⚠ THE ONE ASSEMBLER OF A DOCUMENT'S NON-PRIMARY LINKS. These three builders were called at
@@ -17489,8 +17657,14 @@ function _jtDocSecondaries(id, job, estRec, rowKey) {
   // midpoint left unpaid, so a link reopening a midpoint draft invites sending a second bill for the same
   // share. Reading the midpoint invoice stays open (View, Print, the filed copy); only the send path goes.
   var draft = (d.stage === 'midpoint' && job.deliveredOn) ? [] : _jtDraftLink(id, job, d.kind, d.stage);
+  // ⚠ NO VIEW OR PRINT ON A FINAL THAT CANNOT BE PRICED (2026-09-29, audit P10 low). The registry refuses
+  // every verb on an hourly final with an empty timesheet, so from the client's yes until the first hour
+  // was logged the strip carried two final-invoice buttons that refused on the press. Withheld on the same
+  // rule the invoice blocks on; a filed copy (there is none until it is priced) would still be offered.
+  var views = (d.kind === 'invoice' && d.stage === 'final' && finalAwaitsHours(job, estRec ? (estRec.estimate || null) : undefined))
+    ? [] : _jtDocViews(id, d.kind, d.stage, viewOnly, job);
   return draft
-    .concat(_jtDocViews(id, d.kind, d.stage, viewOnly),
+    .concat(views,
             _jtDriveLink(id, job, d.kind, d.stage));
 }
 
@@ -17507,13 +17681,16 @@ function jobTimelineActions(row, job, estRec) {
   // offered on a job with no approved estimate, no client acceptance and no agreement, and
   // two of those buttons rendered a real, printable bill off the draft.
   var _d = jobStageDoc(row.key);
+  // ⚠ A final that cannot be priced has no tray: its View and Print would both refuse, and the row's own
+  // line says to log the hours (see finalAwaitsHours). The Send button stays, and names the reason if pressed.
+  if (_d && _d.kind === 'invoice' && _d.stage === 'final' && finalAwaitsHours(job, estRec ? (estRec.estimate || null) : undefined)) _d = null;
   if (_d && (!docReadiness(_d.kind, job, estRec) || docPreviewOnly(_d.kind, job, estRec))) {
     out.doc = {
       kind: _d.kind, stage: _d.stage,
       // ⚠ THE WORD "DRAFT" IS THE WHOLE EXPLANATION OF THE MISSING PRINT BUTTON. One word in
       // the title the reader is already looking at, rather than a sentence about an absence.
       // "PREVIEW" is the same word for the packet before the client's yes (docPreviewOnly).
-      title: docTitle(_d.kind, _d.stage) + docReadOnlyWord(_d.kind, job, estRec),
+      title: docTitle(_d.kind, _d.stage, job) + docReadOnlyWord(_d.kind, job, estRec),
       acts: _jtDocSecondaries(id, job, estRec, row.key)
     };
     // ⚠ EDIT ESTIMATE IS A DOCUMENT ACTION AND BELONGS BESIDE THE DOCUMENT. It used to be
@@ -17661,6 +17838,15 @@ function jobTimelineActions(row, job, estRec) {
     // could ask for the money was reached from the step that records the money arriving.
     case 'deposit_received':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'deposit')" };
+      // ⚠⚠ THE ACH LINK STAYS BESIDE THE DEPOSIT UNTIL THE DEPOSIT IS IN (2026-09-29, Q12). It was offered only
+      // on the invoice row, which is done the moment the deposit invoice goes out — so from then on a client
+      // who paid part by cheque, or asked to pay by bank transfer after the invoice arrived, had no link to be
+      // sent, and the balance rule `stripePaymentLink` applies could never be reached. Beside the recorder,
+      // never as the primary, for the same reason as above; the one-link-per-stage rule still holds, so a link
+      // minted earlier comes back (flagged if it now asks for more than is owed) rather than a second one.
+      if (live && SHEETS_SYNC_URL) {
+        out.secondary.push({ label: '&#127974; ACH payment link', call: "dashStripeLink(" + id + ",'deposit')" });
+      }
       break;
 
     case 'job_active':
@@ -17683,7 +17869,7 @@ function jobTimelineActions(row, job, estRec) {
       // ⚠ ONE `_jtSendAction` CALL, whichever way it renders: the same send control on all five documents
       // is the point of that builder, and a second call here would be a second opinion of its label.
       if (live) {
-        var _mid = _jtSendAction(id, job, 'invoice', 'midpoint', 'midpoint invoice');
+        var _mid = _jtSendAction(id, job, 'invoice', 'midpoint', docWord('invoice', 'midpoint', job));
         if (row.notYet) out.secondary.push({ label: _mid.label + ' &mdash; due around ' + fmtDate2(row.dueOn), call: _mid.call });
         else out.primary = _mid;
       }
@@ -17697,7 +17883,7 @@ function jobTimelineActions(row, job, estRec) {
       // ⚠ AN OPEN MIDPOINT CAN STILL BE PAID, and the row that records it is no longer lit once the job is
       // closed. Out of sequence, so it rides the strip under the rail — which has no row context, so the
       // label names the stage rather than reading "Record payment" twice on one screen.
-      else if (row.state === 'open') out.secondary.push({ label: '&#10003; Record midpoint payment', call: "dashRecordPayment(" + id + ",'midpoint')" });
+      else if (row.state === 'open') out.secondary.push({ label: '&#10003; Record ' + paymentStageWord(job, 'midpoint').payment, call: "dashRecordPayment(" + id + ",'midpoint')" });
       break;
 
     case 'work_complete':
@@ -18107,8 +18293,10 @@ function _jtAtFmt(r) {
   if (!r.at) return '';
   if (r.atKind === 'date') return fmtDate2(r.at);
   if (r.atKind === 'iso') {
-    // docState writes ISO stamps; every other date on the rail is yyyy-mm-dd.
-    return r.at ? fmtDate2(String(r.at).slice(0, 10)) : '';
+    // docState writes ISO stamps; every other date on the rail is yyyy-mm-dd. ⚠ THROUGH THE LOCAL CLOCK:
+    // the first ten characters of an ISO stamp are the UTC date, so a document sent at 9:15pm Eastern
+    // printed as sent the next day (audit M7).
+    return r.at ? fmtDate2(_localDateOf(r.at)) : '';
   }
   if (r.atKind === 'epoch') {
     var _ms = Number(r.at);
@@ -18555,8 +18743,8 @@ function renderClientDashboard(jobId) {
   // (it needs the payment figures); we splice it into this slot at the end.
   h += '<!--TIMELINE_SLOT-->';
 
-  // PROBATE CARD (probate only)
-  if (job.svc === 'probate' || job.svc === 'contested_probate') {
+  // PROBATE CARD — every estate administered through probate, whatever service was sold (audit M5).
+  if (jobOnProbateTrack(job)) {
     h += '<div class="card" style="margin-bottom:12px;">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     h += sectionHdr('Probate Information');
@@ -18874,7 +19062,10 @@ function jobActivationBlockers(j) {
   var blockers = [];
   if (!j.agrSigned) blockers.push('Service agreement must be signed');
   if (!j.depositReceived) blockers.push('Deposit (50%) must be received');
-  if ((j.svc === 'probate' || j.svc === 'contested_probate') && j.executorAuth === 'pending') blockers.push('Executor authorization must be received');
+  // ⚠ THE MATTER, NOT THE SERVICE (audit M5) — see jobOnProbateTrack. And a blank is not an answer:
+  // `resolveExecutorAuth` reads anything unrecognised as pending, the rule both forms already save by,
+  // so a record carrying no answer is refused rather than waved through.
+  if (jobOnProbateTrack(j) && resolveExecutorAuth(j.executorAuth) === 'pending') blockers.push('Executor authorization must be received');
   return blockers;
 }
 
@@ -18977,10 +19168,12 @@ function applyJobTransition(j) {
     // yet paid against the payments actually received, so nothing is lost by closing now.
     // ⚠ And it no longer says a closed job cannot be re-opened — Re-open undoes a close until the final
     // invoice goes out (`jobReopenBlocker`), and the question says exactly that, no more.
+    // Home Prep calls this payment its second (paymentStageWord), and the question says so too.
+    var _mwc = paymentStageWord(j, 'midpoint');
     if (!j.deliveredOn && !(stagePaidTotal(j, 'midpoint') > 0)
         && !confirm('Close this job now?\n\n'
-          + 'No midpoint payment is recorded. That is fine: the final invoice bills everything not yet '
-          + 'paid, the midpoint\'s share included, against the payments actually received.\n\n'
+          + 'No ' + _mwc.noun + ' payment is recorded. That is fine: the final invoice bills everything not yet '
+          + 'paid, the ' + _mwc.noun + '\'s share included, against the payments actually received.\n\n'
           + 'Closing records today, ' + fmtDate2(_todayStr()) + ', as the day the work was handed over. '
           + 'Until the final invoice goes out, Re-open can undo the close.\n\n'
           + 'If the work is not finished, press Cancel.')) {
@@ -19149,7 +19342,9 @@ function winLossFigures() {
     // on the books reads as "we have converted nobody". A dash until a client is won or lost.
     convRate: decided > 0 ? Math.round(won.length / decided * 100) : null,
     lostRev: lost.reduce(function(a, j){ return a + (j.lostEst || j.havellinEst || 0); }, 0),
-    wonRev:  won.reduce(function(a, j){ return a + (j.havellinEst || 0); }, 0),
+    // ⚠ A RETAINED JOB COUNTS WHAT IT KEPT, NOT ITS ESTIMATE (audit M4). It was won and then walked away
+    // from; the $9,150 it was quoted never came in, and the $2,000 that did is the figure that is true.
+    wonRev:  won.reduce(function(a, j){ return a + (j.status === 'closed_retained' ? closeoutRetainedTotal(j) : (j.havellinEst || 0)); }, 0),
   };
 }
 
@@ -19230,7 +19425,9 @@ function winLossListHtml(kind, f, unread) {
         + '<td>' + esc(j.tc || '—') + '</td>'
         + '<td style="white-space:nowrap;">' + (j.wonAt ? esc(fmtDate2(j.wonAt))
             + (how ? '<div style="font-size:10px;color:var(--gray);">' + esc(how) + '</div>' : '') : '—') + '</td>'
-        + '<td>' + (j.havellinEst ? money(j.havellinEst) : '—') + '</td>'
+        + '<td>' + (j.status === 'closed_retained'
+            ? money(closeoutRetainedTotal(j)) + '<div style="font-size:10px;color:var(--gray);">retained</div>'
+            : (j.havellinEst ? money(j.havellinEst) : '—')) + '</td>'
         + '<td>' + _jobStatusCell(j) + '</td></tr>';
     });
     return h + '</tbody></table></div></div>';
@@ -19350,7 +19547,7 @@ function openWonModal(id) {
                .replace('{now}', fmtMoney(_raise.now));
   document.getElementById('won-go').textContent = _copy.go;
   document.getElementById('won-method').value = '';
-  document.getElementById('won-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('won-date').value = _todayStr();
   document.getElementById('won-note').value = '';
   document.getElementById('won-fb').innerHTML = '';
   document.getElementById('won-modal').style.display = 'flex';
@@ -19417,18 +19614,18 @@ function openCloseoutModal(id) {
   }
   closeoutJobId = id;
   var sub = document.getElementById('closeout-sub');
-  // A job that dies AFTER the deposit is not a loss — it was won, paid for, and then
+  // A job that dies AFTER money has come in is not a loss — it was won, paid for, and then
   // abandoned. Reporting them as one number would understate the win rate and overstate
   // lost revenue at the same time, in opposite directions.
-  var _funded = !!j.depositReceived;
-  if (sub) sub.innerHTML = _funded
-    ? 'Close out <strong>' + esc(j.name||'this client') + '</strong>. The deposit has already been '
-      + 'received, so this is recorded as <strong>closed — deposit retained</strong>, not as a loss. '
-      + 'The record is archived, never erased.'
+  var _kept = closeoutRetainedTotal(j);
+  if (sub) sub.innerHTML = _kept > 0
+    ? 'Close out <strong>' + esc(j.name||'this client') + '</strong>. <strong>' + fmt(_kept) + '</strong> has already been '
+      + 'received on this job, so this is recorded as <strong>closed — deposit retained</strong>, with the '
+      + fmt(_kept) + ' kept, not as a loss. The record is archived, never erased.'
     : 'Mark <strong>' + esc(j.name||'this client') + '</strong> as Lost with a reason. The record is '
       + 'archived — never erased — so we keep a win/loss history.';
   var _btn = document.querySelector('#closeout-modal button[onclick="confirmMarkLost()"]');
-  if (_btn) _btn.textContent = _funded ? 'Close — Retain Deposit' : 'Mark as Lost';
+  if (_btn) _btn.textContent = _kept > 0 ? 'Close — Retain ' + fmt(_kept) : 'Mark as Lost';
   var rs = document.getElementById('closeout-reason'); if (rs) rs.value = j.lostReason || '';
   var nt = document.getElementById('closeout-note'); if (nt) nt.value = j.lostNote || '';
   var fb = document.getElementById('closeout-fb'); if (fb) fb.innerHTML = '';
@@ -19443,15 +19640,21 @@ function confirmMarkLost() {
   if (!j) { closeCloseoutModal(); return; }
   var reason = document.getElementById('closeout-reason').value;
   if (!reason) { document.getElementById('closeout-fb').innerHTML = '<span style="color:var(--err-tx);font-size:12px;">Please select a reason.</span>'; return; }
-  // Post-deposit deaths keep the money and a distinct status; pre-deposit deaths are
-  // ordinary losses. See LIFECYCLE_AUDIT.md §8.6 — the retained-deposit position still
-  // needs agreement language before the money is treated as earned.
-  j.status = j.depositReceived ? 'closed_retained' : 'lost';
-  if (!j.depositReceived) j.won = false;   // won-then-withdrawn is not a win
+  // Deaths after money came in keep it and a distinct status; deaths before any payment are
+  // ordinary losses. See LIFECYCLE_AUDIT.md §8.6 — the agreements now say the deposit is earned
+  // on signature, which is what makes keeping it the record rather than a claim.
+  var _kept = closeoutRetainedTotal(j);
+  j.status = _kept > 0 ? 'closed_retained' : 'lost';
+  if (!(_kept > 0)) j.won = false;   // won-then-withdrawn with nothing paid is not a win
   j.lostReason = reason;
   j.lostReasonLabel = LOSS_REASONS[reason] || reason;
   j.lostNote = (document.getElementById('closeout-note').value || '').trim();
-  j.lostAt = new Date().toISOString();
+  // ⚠ WRITE-ONCE, SO AMENDING THE REASON DOES NOT MOVE THE DATE (2026-09-29, audit P10). The modal
+  // prefills the reason on a job already closed out precisely so it can be corrected, and this line
+  // used to restamp the loss to TODAY on that correction — the date we recorded losing the client
+  // moving every time somebody fixed a typo. `confirmMarkWon` deletes it, so a job lost, won back and
+  // lost again still gets its new date.
+  j.lostAt = j.lostAt || new Date().toISOString();
   // Snapshot the estimate at time of loss so win/loss reporting has the dollar figure.
   j.lostEst = j.havellinEst || 0;
   j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
@@ -19754,7 +19957,7 @@ function showPanel(id, btn) {
     rebuildDropdowns();
     var logDateEl = document.getElementById('log-date');
     if (logDateEl && !logDateEl.value) {
-      logDateEl.value = new Date().toISOString().split('T')[0];
+      logDateEl.value = _todayStr();
     }
     maybeStartPlanWatch();
   } else {
@@ -21078,8 +21281,9 @@ function buildEstimateMailto(e, job) {
 function buildInvoiceMailto(job, balance, stage) {
   if (!job) return '#';
   stage = stage || 'final';
-  var stageWord  = stage === 'deposit' ? 'deposit' : (stage === 'midpoint' ? 'midpoint' : 'final');
-  var stageTitle = stageWord.charAt(0).toUpperCase() + stageWord.slice(1);
+  var _sw = paymentStageWord(job, PAYMENT_STAGES.indexOf(stage) >= 0 ? stage : 'final');
+  var stageWord  = _sw.noun;
+  var stageTitle = _sw.title;
   var to = encodeURIComponent(bestClientEmail(job));
   var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - ' + stageTitle + ' Invoice for ' + (job.name||'Your Property'));
@@ -22010,7 +22214,7 @@ var EXEMPT_CAP_732_402 = 20000;
 function _avdDate(job) {
   if (!job || !job.deathDate) return '';
   var d = new Date(job.deathDate + 'T00:00:00'); d.setMonth(d.getMonth() + 6);
-  return d.toISOString().slice(0, 10);
+  return _ymdLocal(d);
 }
 function estateValueDate(job) {
   if (!job) return '';
@@ -23976,7 +24180,7 @@ function exportInventoryCSV(jobId) {
   if (!job) return;
   if (!_jobInvRefs(jobId).length) { alert('There is nothing in the inventory to export yet.'); return; }
   var csv = buildInventoryCSV(jobId);
-  var name = (job.hvlId || 'Havellin') + '_Inventory_' + new Date().toISOString().slice(0,10) + '.csv';
+  var name = (job.hvlId || 'Havellin') + '_Inventory_' + _todayStr() + '.csv';
   try {
     // The BOM is not decoration: without it Excel opens a UTF-8 CSV as Windows-1252 and
     // every § and é in a category or a note arrives mangled on the attorney's screen.
@@ -24243,7 +24447,7 @@ function invRecordApproval(jobId) {
   var who = (window.prompt('Who signed the approval? (name as signed)',
     (job && (invFiduciaryMode(job) ? job.executor : job.name)) || '') || '').trim();
   if (!who) return;
-  var when = (window.prompt('Date of the signed approval (YYYY-MM-DD):', new Date().toISOString().slice(0,10)) || '').trim();
+  var when = (window.prompt('Date of the signed approval (YYYY-MM-DD):', _todayStr()) || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(when)) { alert('Enter the date as YYYY-MM-DD.'); return; }
   picked.forEach(function(ref){
     ref.authBy = who; ref.approvalDate = when;
@@ -25918,7 +26122,7 @@ function _renderRemovedRows(jobId) {
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
       + '<span>#' + esc(_invItemNo(r)) + ' &middot; ' + esc(r.objectName || '(unnamed)') + '<span style="color:var(--gray);">' + esc(val)
       + (r.apprDoc ? ' · ' + esc(r.apprDoc) : '')
-      + (r.deletedAt ? ' · removed ' + esc(fmtDate2(new Date(r.deletedAt).toISOString().slice(0,10))) : '')
+      + (r.deletedAt ? ' · removed ' + esc(fmtDate2(_ymdLocal(new Date(r.deletedAt)))) : '')
       + (r.driveTrashed ? ' · <span style="color:var(--bronze);" title="Restore gives the row back. The photograph is in Google Drive\u2019s bin, which holds it for 30 days.">photo in the Drive bin</span>' : '')
       + '</span>'
       + (backAgain ? ' <span style="color:var(--bronze);" title="An item with this name is on the list again — this is the older copy you removed, not a second one.">&middot; already back on the list</span>' : '')
@@ -29354,6 +29558,14 @@ function unfilledPlannedPS(jobId, crew) {
   return out;
 }
 
+// The second concierge the ESTIMATE staffs: the Concierges control set to 2 (preparedBy2 on older records).
+// ⚠ rushCrewAdded is the one reader of that on the record — Exhibit A promises the second concierge off it —
+// so the team gate asks it rather than keeping its own copy of what "two concierges" means.
+function plannedTC2(jobId) {
+  var rec = (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null;
+  return !!(rec && rec.estimate && rushCrewAdded(rec.estimate).tc2);
+}
+
 function confirmJobTeam(jobId) {
   var crew = getJobCrew(jobId); if (!crew) return;
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -29369,6 +29581,17 @@ function confirmJobTeam(jobId) {
   }
   if (!crew.tc || !crew.tc.name) {
     showFB('log-fb','warn','No Transition Concierge named yet. Pick one on the Transition Concierge row above, then confirm the team.');
+    return;
+  }
+  // ⚠⚠ THE SECOND CONCIERGE THE ESTIMATE STAFFS NEEDS A NAME TOO (2026-09-29, Q19). The specialists had
+  // this rule and the concierges did not, so a job priced — and, on a rush job, PROMISED on Exhibit A —
+  // with two concierges confirmed its team with the second slot empty, and nothing then said who was
+  // coming. A name, or the concierge placeholder for one not picked yet. ⚠ Only the estimate's own
+  // choice (plannedTC2) is read: the engine's two-concierge recommendation is a load check, not a
+  // staffing decision, and a row it merely suggests stays optional.
+  if (plannedTC2(jobId) && !(crew.tc2 && crew.tc2.name)) {
+    showFB('log-fb','warn','The estimate staffs two Transition Concierges and the second slot has no name. '
+      + 'Pick one on the Transition Concierge 2 row, or “' + CONTRACTOR_TC_NAME + '” for a concierge you have not picked yet, then confirm the team.');
     return;
   }
   var missing = unfilledPlannedPS(jobId, crew);
@@ -29393,7 +29616,10 @@ function confirmJobTeam(jobId) {
   // the headcount before the names — but it costs at a placeholder rate rather than a
   // real one, so it is called out rather than waved through.
   var tbd = crew.ps.filter(function(p){ return p && p.name === 'Contractor TBD'; }).length;
-  if (tbd && !confirm(tbd + ' specialist slot' + (tbd > 1 ? 's are' : ' is') + ' still “Contractor TBD”.\n\n'
+  // The concierge placeholder is called out the same way, now that a second concierge slot can be filled with it.
+  var tcTbd = [crew.tc, crew.tc2].filter(function(t){ return t && t.name === CONTRACTOR_TC_NAME; }).length;
+  if ((tbd || tcTbd) && !confirm((tbd ? tbd + ' specialist slot' + (tbd > 1 ? 's are' : ' is') + ' still “Contractor TBD”.\n\n' : '')
+      + (tcTbd ? tcTbd + ' concierge slot' + (tcTbd > 1 ? 's are' : ' is') + ' still “' + CONTRACTOR_TC_NAME + '”.\n\n' : '')
       + 'Those hours will cost at the placeholder contractor rate, not a named person\'s rate, '
       + 'so margin on this job is an estimate until they are named.\n\nConfirm the team anyway?')) return;
 
@@ -29615,9 +29841,11 @@ function buildLogTeamRows() {
   var tc2Locked = !!(crew && crew.tc2 && crew.tc2.locked);
   var showTC2 = (estRecLog && (estRecLog.tcCount >= 2 || estRecLog.needsTC2)) || !!tc2Name;
   if (showTC2) {
-    html += '<div style="' + rowStyle + '">' +
+    var tc2NeedsName = !tc2Name && !teamOK && plannedTC2(jobId);
+    html += '<div style="' + rowStyle + (tc2NeedsName ? 'background:var(--warn-bg);padding:6px;border-radius:4px;' : '') + '">' +
       '<div>' +
-        '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge 2' + (tc2Locked ? lockTag : '') + '</label>' +
+        '<label style="margin:0;color:var(--bronze);font-weight:600;">Transition Concierge 2' + (tc2Locked ? lockTag : '')
+          + (tc2NeedsName ? ' <span style="font-size:9px;color:var(--warn-tx);font-weight:700;">needs a name</span>' : '') + '</label>' +
         '<select id="log-tc2-name"' + (tc2Locked ? ' disabled' : '') + ' onchange="setCrewTC2(' + jobId + ',this.value)" style="margin-top:4px;">' +
           _logSelectOptionsHtml('tc2', crew, tc2Name, 0, teamOK, tcNames, psNames) +
         '</select>' +
@@ -29831,7 +30059,7 @@ function saveLogEntry() {
 function clearLogEntry() {
   // Crew names persist (they live on job.crew); only hours/date/activity reset.
   document.getElementById('log-activity').value = '';
-  document.getElementById('log-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('log-date').value = _todayStr();
   for (var i = 0; i <= 6; i++) {
     var hrsEl = document.getElementById('log-m'+i+'-hrs');
     if (hrsEl) hrsEl.value = '';
@@ -30188,7 +30416,8 @@ function invoiceHtml(job, stage) {
   // invoice disagreeing about whether an engagement bills hours is exactly the drift the shared
   // predicate exists to prevent.
   var _feeOnly = estimateIsFeeOnly(est, job);
-  var _noHours = (stage === 'final') && !_fixed && !_feeOnly && (actTC + actPS) === 0;
+  // ⚠ ONE RULE, TWO READERS: the timeline withholds the final's View and Print on this same answer.
+  var _noHours = (stage === 'final') && finalAwaitsHours(job, est, actTC + actPS);
   // Crew hours with no concierge hours is almost always a logging slip rather than a
   // real shift: under the working-supervisor model the concierge is on site for every
   // crew hour, so PS time without TC time means someone logged the crew and forgot
@@ -30295,11 +30524,15 @@ function invoiceHtml(job, stage) {
   // ⚠ The SAME record the rail reads — its midpoint row says "Not sent — the final invoice bills
   // it" on exactly this condition — so the document and the timeline cannot tell two stories.
   // ⚠ The balance does not move: `finalDue` reads what arrived, never what was invoiced.
+  // ⚠ THE SECOND 25% IS NAMED AS ITS ENGAGEMENT NAMES IT — "Second" on Home Prep, whose estimate bills it
+  // once the vendor schedule is booked; every figure below is untouched. See paymentStageWord. Declared
+  // here, above its first reader: `var` hoists the name and not the value.
+  var _mw = paymentStageWord(job, 'midpoint'), _fw = paymentStageWord(job, 'final');
   var _midBilled     = !!docSentAt(job, 'invoice', 'midpoint') || stagePaidTotal(job, 'midpoint') > 0;
   var invoicedBefore = _midBilled ? midCumTarget : depositAmt;
   var paymentGap     = invoicedBefore - jobPaidTotal(job);
-  var _priorInvoices = _midBilled ? 'the deposit and midpoint invoices' : 'the deposit invoice';
-  var _midHereLbl    = '25% midpoint — billed on this invoice';
+  var _priorInvoices = _midBilled ? 'the deposit and ' + _mw.noun + ' invoices' : 'the deposit invoice';
+  var _midHereLbl    = '25% ' + _mw.noun + ' — billed on this invoice';
 
   // Aliases consumed by the final-invoice body below.
   var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;
@@ -30336,7 +30569,8 @@ function invoiceHtml(job, stage) {
   var balanceDue = finalDue;
   var overUnder = havellinTotalDiscounted - estHavellinTotal;
   var stageAmtDue = stage === 'deposit' ? depositAmt : (stage === 'midpoint' ? midpointAmt : finalDue);
-  var stageTitle = stage === 'deposit' ? 'Deposit Invoice' : (stage === 'midpoint' ? 'Midpoint Invoice' : 'Final Invoice');
+  var stageTitle = paymentStageWord(job, stage === 'deposit' || stage === 'midpoint' ? stage : 'final').title + ' Invoice';
+  var _schedNote = 'Payment schedule: 50% deposit now \u00b7 25% ' + _mw.due + ' \u00b7 25% ' + _fw.due + '.';
 
   // Logo (same as client estimate)
   // The wordmark. ⚠ This used to try `document.querySelector('#ce-page-content img')`
@@ -30512,7 +30746,7 @@ function invoiceHtml(job, stage) {
     '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(origEstimateTotal) + '</strong></td></tr>' +
     _coPayRow +
     '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
-    '<tr><td>' + (_midBilled ? '25% midpoint — fees trued to actuals' : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
+    '<tr><td>' + (_midBilled ? '25% ' + _mw.noun + ' — fees trued to actuals' : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
     '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
     _paymentGapRow(paymentGap, _priorInvoices, 'the balance below') +
     '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
@@ -30548,15 +30782,15 @@ function invoiceHtml(job, stage) {
     ? '<div style="margin-top:1rem;"><table class="pay-tbl">' +
         _amtDueBox('Deposit Due Now (50%)', stageAmtDue) +
       '</table>' +
-      '<div class="ce-note" style="margin-top:.5rem;">Payment schedule: 50% deposit now · 25% at project midpoint · 25% on completion.</div>' +
+      '<div class="ce-note" style="margin-top:.5rem;">' + _schedNote + '</div>' +
       '</div>'
     : '<div style="margin-top:1rem;"><table class="pay-tbl">' +
         '<tr><td colspan="2" style="color:var(--gray);">50% deposit — invoiced on acceptance</td><td class="r" style="color:var(--gray);">' + fmt(depositAmt) + '</td></tr>' +
         '<tr><td colspan="2" style="color:var(--ok-tx);">Received to date</td><td class="r" style="color:var(--ok-tx);">(' + fmt(receivedDep) + ')</td></tr>' +
         _paymentGapRow(depositAmt - stagePaidTotal(job, 'deposit'), 'the deposit invoice', 'the payment due below') +
-        _amtDueBox('Midpoint Payment Due Now (25%)', stageAmtDue) +
+        _amtDueBox(_mw.title + ' Payment Due Now (25%)', stageAmtDue) +
       '</table>' +
-      '<div class="ce-note" style="margin-top:.5rem;">Remaining 25% due upon completion.</div>' +
+      '<div class="ce-note" style="margin-top:.5rem;">Remaining 25% due ' + (_fw.due === 'on completion' ? 'upon completion' : _fw.due) + '.</div>' +
       '</div>';
 
   // Third-party vendor costs (movers, hauling, etc.) are billed to the client directly
@@ -30596,7 +30830,7 @@ function invoiceHtml(job, stage) {
       (_fxPrepFinal ? '<tr><td colspan="2">Home prep site management fee — on the prep vendors\' actual invoices</td><td class="r">' + fmt(prepFee) + '</td></tr>' : '') +
       _coPayRow +
       '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFeeEst > 0 ? 'Fixed price + prep fee on quotes' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
-      '<tr><td>' + (_midBilled ? '25% midpoint — invoiced at project midpoint' : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + prep fee on actuals' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
+      '<tr><td>' + (_midBilled ? '25% ' + _mw.noun + ' — invoiced ' + _mw.due : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + prep fee on actuals' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
       '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
       _paymentGapRow(paymentGap, _priorInvoices, 'the balance below') +
       _amtDueBox('Balance Due Upon Completion', balanceDue) +
@@ -30715,6 +30949,15 @@ function invoiceHtml(job, stage) {
     variancePct: _variancePct,
     overUnder: overUnder,
     amtDue: stageAmtDue,
+    // ⚠⚠ WHAT IS STILL OWED AGAINST THIS STAGE, NET OF WHAT HAS ALREADY COME IN AGAINST IT (2026-09-29,
+    // audit M6 / Q12). `amtDue` is what the stage's invoice ASKS for, and the three stages net payments
+    // differently on purpose: the deposit asks for the full 50% (a part payment does not rewrite the
+    // bill), the midpoint nets what the deposit actually brought in, the final nets everything. So the
+    // balance a person is recording a cheque against — or asking the bank for — is a question of its
+    // own. Answered here, beside the figures, so the payment recorder and the ACH link cannot each
+    // work it out their own way.
+    outstanding: Math.max(0, stage === 'final' ? finalDue
+      : (stageAmtDue - Math.round(stagePaidTotal(job, stage)))),
     warnHtml: _warnBanner
   };
 }
@@ -31452,7 +31695,7 @@ function loadJobPlanTab() {
   // Auto-set date
   var logDateEl = document.getElementById('log-date');
   if (logDateEl && !logDateEl.value) {
-    logDateEl.value = new Date().toISOString().split('T')[0];
+    logDateEl.value = _todayStr();
   }
 
   // ⚠⚠ THE THREE "AUTO-SELECT" LOOPS THAT STOOD HERE ARE GONE, AND THEY WERE A DEFECT RATHER THAN
@@ -31687,7 +31930,9 @@ function planCurrentStage(jobId, job, est) {
   // ⚠ A CLOSED JOB IS IN CLOSE-OUT, WHATEVER THE MIDPOINT SAYS (2026-09-29). The "money first" rule below
   // holds the NOW marker on Midpoint & pickups until the midpoint is paid; a job closed with it unpaid is
   // one the final now settles, and its plan must not go on pointing at an invoice the rail has passed.
-  if (job && job.deliveredOn) return 'p4';
+  // A job closed before the write-once delivery stamp existed carries the status and no stamp; it is in
+  // close-out all the same (audit P10 low: its plan marked Before Day 1 as NOW).
+  if (job && (job.deliveredOn || job.status === 'closed')) return 'p4';
   var rooms = _planRooms(jobId).rooms;
   var nL = rooms.filter(function(r) { return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   var nC = rooms.filter(function(r) { return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
@@ -31954,7 +32199,7 @@ function planTaskCtx(job, est) {
   return { svc: svc, isMM: isMM, isDownsizing: isDownsizing, isCleanout: isCleanout, isEstate: isEstate,
            isProbate: isProbate, isDocJob: isDocJob, isDisposal: isDisposal,
            matter: matterTypeOf(job),
-           probateTrack: mdef ? !!mdef.onProbate : isProbate,
+           probateTrack: jobOnProbateTrack(job, svc),
            trustTrack: mdef ? !!mdef.trust : false,
            tier: docTierOf(job),
            weInventory: docTierProduces(job, 'inventory'),
@@ -32017,20 +32262,28 @@ function planDerivedLines(jobId, job, est, phase) {
     var funded = isJobFunded(job);
     out.push({ key: 'deposit_received', ok: funded, label: 'Deposit received',
                detail: funded ? '$' + Math.round(depositPaidTotal(job)).toLocaleString() + ' recorded' : 'not yet — no crew is scheduled before it lands' });
-    if (ctx.isProbate) {
+    // ⚠ THE COURT CHIPS FOLLOW THE MATTER (audit M5). They keyed on the service, so an Estate Settlement
+    // administering a probate estate was never asked for its Letters or its §733.604 deadline — the same
+    // gap the activation gate had, on the screen that would have caught it.
+    if (ctx.probateTrack) {
       var letters = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
       out.push({ key: 'letters', ok: letters, label: 'Letters of Administration on file',
                  detail: job.executorAuth === 'notneeded' ? 'not required on this matter' : (letters ? 'received' : 'pending — recorded under Edit Client when the certified copy arrives, and the job cannot activate without it') });
     }
-    if (ctx.isDocJob) {
-      var atty = !!(job.probateAttyName || job.probateAttyFirm);
+    // ⚠ ASKED ON A PROBATE MATTER, SHOWN ANYWHERE ONE IS RECORDED (2026-09-29, audit P10). It sat red on
+    // a trust administration with no attorney, where there is none to record — a successor trustee
+    // frequently acts without counsel of record — and an open line nobody can close is the one people
+    // learn to read past. A probate estate has one (Florida requires the PR to be represented), so the
+    // missing line stays red there; an attorney recorded on any estate is still worth showing.
+    var atty = !!(job.probateAttyName || job.probateAttyFirm);
+    if (ctx.probateTrack || (ctx.isDocJob && atty)) {
       out.push({ key: 'attorney_on_file', ok: atty, label: 'Estate attorney on file',
                  detail: atty ? [job.probateAttyName, job.probateAttyFirm].filter(Boolean).join(', ') : 'not recorded — Edit Client' });
     }
-    if (ctx.isProbate) {
+    if (ctx.probateTrack) {
       var dl = !!job.probateDeadline;
       out.push({ key: 'deadline_733604', ok: dl, label: '§733.604 inventory deadline',
-                 detail: dl ? fmtDate2(job.probateDeadline) + ' — 60 days from the Letters' : 'not recorded — Edit Client, from the date the Letters issued' });
+                 detail: dl ? fmtDate2(job.probateDeadline) + ' — 60 days from the Letters' : 'not recorded — enter the date the Letters issued under Edit Client and the deadline follows' });
     }
   }
   if (phase === 'p1') {
@@ -33212,7 +33465,7 @@ function closeoutMeta(jobId, job) {
   return steps + ' of 3 done' + (c.vendors ? ' &middot; ' + c.rated + ' of ' + c.vendors + ' vendors rated' : '');
 }
 
-function _coFmt(iso) { return iso ? fmtDate2(String(iso).slice(0, 10)) : ''; }
+function _coFmt(iso) { return iso ? fmtDate2(_localDateOf(iso)) : ''; }
 
 function renderCloseoutBody(jobId, job) {
   var c = closeoutState(jobId, job);
@@ -34463,7 +34716,7 @@ function logVendorContact(btn, id) {
   var wrap = btn && btn.closest ? btn.closest('.vc-log') : null;
   var input = wrap ? wrap.querySelector('input') : null;
   var note = input ? String(input.value || '').trim() : '';
-  var today = new Date().toISOString().slice(0,10);
+  var today = _todayStr();
   var patch = { last_contacted: today, last_contact_note: note };
   // First point of contact ONLY promotes a still-"Identified" (or status-less) vendor
   // to Contacted. Anyone already further along (Vetting/Active/Backup/Do Not Use) keeps
@@ -35032,7 +35285,7 @@ function logReferralContact(btn, id){
   var wrap = btn && btn.closest ? btn.closest('.rc-log') : null;
   var input = wrap ? wrap.querySelector('input') : null;
   var note = input ? String(input.value || '').trim() : '';
-  var today = new Date().toISOString().slice(0,10);
+  var today = _todayStr();
   var patch = { last_contacted: today, last_contact_note: note };
   // First outreach promotes a still-"Identified" (or status-less) partner to Contacted.
   // Never downgrades one already at Intro Meeting / Active Partner / Dormant / Do Not Use.
@@ -35586,7 +35839,9 @@ function renderJobPlan(jobId, job, est) {
   var isMM = ctx.isMM, isProbate = ctx.isProbate, isDocJob = ctx.isDocJob, isDisposal = ctx.isDisposal;
   var hasPlaybook = ctx.hasPlaybook;
   var formal = ctx.formal;
-  var custodyMandatory = formal || isProbate; // mandatory on formal jobs + all probate; NOT on premium-rate alone
+  // Mandatory on formal jobs and on every court matter; NOT on premium-rate alone. The track is ADDED to
+  // the service test rather than replacing it (audit M5), so no probate job is ever made less strict.
+  var custodyMandatory = formal || isProbate || ctx.probateTrack;
   var rooms = _planRooms(jobId).rooms;
 
   // Midpoint billing: "all rooms locked" = the contractual midpoint, and
@@ -35711,7 +35966,7 @@ function renderJobPlan(jobId, job, est) {
     // vendor scorecard — is ONE renderer, shared with Job Admin & Inv. See renderCloseoutBody.
     planSubsec('Client &amp; vendors') +
     '<div id="closeout-plan-' + jobId + '">' + renderCloseoutBody(jobId, job) + '</div>' +
-    '<div style="font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5;">Financial close' + (isProbate ? ', the §733.604 filing list' : '') +
+    '<div style="font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5;">Financial close' + (ctx.probateTrack ? ', the §733.604 filing list' : '') +
       ' and records are desk work: they are under <strong>Job Admin</strong>, at the top of the <strong>Job Admin &amp; Inv</strong> tab.</div>';
 
   // Collections and vehicles flagged during the estimate walkthrough are NOT items yet.
@@ -36026,7 +36281,7 @@ function uploadWalkthroughNotesToDrive(jobId, estSnapshot) {
 
   function _doUpload(folderId) {
     if (!folderId) return;
-    var ts = new Date().toISOString().slice(0,10);
+    var ts = _todayStr();
 
     // One file per room. Deterministic name (section + index disambiguate
     // same-named rooms) so a re-lock overwrites rather than proliferates.
@@ -36072,7 +36327,7 @@ function exportEstimateToDrive(jobId, estSnapshot) {
   if (!job) return;
   function _doExport(folderId) {
     if (!folderId) return;
-    var ts = new Date().toISOString().slice(0,10);
+    var ts = _todayStr();
     var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
     // Rooms and hours vs vendor spend and fee — see the note on the table below.
     var _feeOnlyWs = estimateIsFeeOnly(est, job);
@@ -38377,7 +38632,14 @@ function stripePaymentLink(jobId, stage) {
   var st  = docState(job, key);
   // ⚠ A SECOND LINK FOR ONE STAGE IS TWO WAYS TO PAY THE SAME INVOICE, and a client who pays
   // both has overpaid by a deposit. Once minted, the same link comes back.
-  if (st.stripe && st.stripe.url) { _stripeShowLink(job, stage, st.stripe.url, false); return; }
+  if (st.stripe && st.stripe.url) {
+    // ⚠ BUT A LINK MINTED BEFORE A CHEQUE ARRIVED STILL ASKS FOR THE OLD FIGURE (2026-09-29, Q12). Re-showing
+    // it is a read, so it needs no approval — but it must not be handed over as though it were current.
+    var _now = null;
+    try { _now = invoiceHtml(job, stage); } catch (e) { _now = null; }
+    _stripeShowLink(job, stage, st.stripe.url, false, st.stripe.amount, (_now && !_now.blocked) ? _now.outstanding : null);
+    return;
+  }
 
   // ⚠⚠ IT IS A DOOR INTO THE AGREEMENT, SO IT STAMPS ON THE WAY THROUGH — the rule
   // `markAgreementSent` already follows, and the one the pre-existing dashboard-actions test
@@ -38401,19 +38663,27 @@ function stripePaymentLink(jobId, stage) {
   // document cannot disagree about what is owed.
   var inv = null;
   try { inv = invoiceHtml(job, stage); } catch (e) { inv = null; }
-  if (!inv) { _docNotice('warn', 'Could not price the ' + (PAYMENT_STAGE_LABELS[stage] || stage) + ' on this job.', jobId); return; }
+  if (!inv) { _docNotice('warn', 'Could not price the ' + paymentStageLabel(job, stage) + ' on this job.', jobId); return; }
   if (inv.blocked) {
     _docNotice('warn', 'That invoice is blocked and cannot be sent for payment yet'
                + (typeof inv.blocked === 'string' ? ' — ' + inv.blocked : '') + '.', jobId);
     return;
   }
-  var amt = Math.round(inv.amtDue || 0);
+  // ⚠⚠ WHAT IS STILL OUTSTANDING, NOT WHAT THE INVOICE ASKED FOR (2026-09-29, Q12: "after a partial deposit
+  // cheque, the ACH link asks only for the balance"). `amtDue` is the invoice's figure and the deposit's is
+  // never netted — so a $2,000 cheque against a $4,575 deposit left the link asking for the whole $4,575,
+  // and a client who used it overpaid by $2,000. `outstanding` is that figure less what has been recorded
+  // against the stage, the same number the payment recorder prefills.
+  var amt = Math.round(inv.outstanding || 0);
+  var _before = Math.max(0, Math.round(inv.amtDue || 0) - amt);
   if (!(amt > 0)) {
-    _docNotice('warn', 'Nothing is outstanding on the ' + (PAYMENT_STAGE_LABELS[stage] || stage) + '.', jobId);
+    _docNotice('warn', 'Nothing is outstanding on the ' + paymentStageLabel(job, stage) + '.', jobId);
     return;
   }
 
-  _docNotice('info', 'Creating an ACH payment link for ' + fmt(amt) + '\u2026', jobId);
+  _docNotice('info', 'Creating an ACH payment link for ' + fmt(amt)
+    + (_before > 0 ? ' \u2014 the balance of the ' + paymentStageLabel(job, stage) + ', after the ' + fmt(_before) + ' already received' : '')
+    + '\u2026', jobId);
 
   // ⚠⚠ NO AUTOMATIC RETRY — the rule `addVendor` and the DocuSign send already follow, for the
   // same reason. A failed POST never reveals whether it landed, and re-sending mints a SECOND
@@ -38424,7 +38694,8 @@ function stripePaymentLink(jobId, stage) {
     hvlId: job.hvlId || '',
     stage: stage,
     amount: amt,
-    description: 'Havellin Palm Beach \u2014 ' + (PAYMENT_STAGE_LABELS[stage] || stage)
+    // The client reads this on Stripe's page: a balance says so, or the figure reads as a mistake.
+    description: 'Havellin Palm Beach \u2014 ' + paymentStageLabel(job, stage) + (_before > 0 ? ' balance' : '')
                  + (job.hvlId ? ' (' + job.hvlId + ')' : '')
   }, function (ok, d) {
     if (!ok || !d || !d.ok || !d.url) {
@@ -38443,10 +38714,24 @@ function stripePaymentLink(jobId, stage) {
 // ⚠ THE LINK IS SHOWN, NEVER SENT BY THE APP. Anthony reviews and sends every client document
 // himself — the same requirement that makes `gmail.compose` deliberately unable to send. The
 // link rides the deposit invoice he is already sending.
-function _stripeShowLink(job, stage, url, fresh) {
+function _stripeShowLink(job, stage, url, fresh, linkAmt, outstanding) {
+  var label = paymentStageLabel(job, stage);
+  // ⚠ A LINK CANNOT BE EDITED ONCE MINTED, and one link per stage is the rule that stops a client paying
+  // the same invoice twice — so a link that now asks for more than is owed is named as such, with the
+  // amount it would over-collect, rather than handed over as current. There is no in-app way to retire it
+  // (that needs a backend action); the Stripe Dashboard is where it is switched off.
+  if (!fresh && linkAmt > 0 && outstanding != null && Math.round(outstanding) < Math.round(linkAmt)) {
+    _docNotice('warn', Math.round(outstanding) > 0
+      ? 'This ACH link asks for ' + fmt(linkAmt) + ', but only ' + fmt(outstanding) + ' is outstanding on the ' + label
+        + ' now \u2014 the rest came in another way. Do not send it: the client would overpay by ' + fmt(linkAmt - outstanding)
+        + '. Deactivate it in the Stripe Dashboard under Payment links, and take the balance by cheque or wire.'
+      : 'Nothing is outstanding on the ' + label + ' now, so this ACH link must not be sent again \u2014 it asks for '
+        + fmt(linkAmt) + '. If the client still has it, deactivate it in the Stripe Dashboard under Payment links.', job.id);
+    return;
+  }
   _docNotice('ok', (fresh ? 'ACH payment link created' : 'ACH payment link for this stage')
     + ' \u2014 bank transfer only, no card. Send it with the '
-    + (PAYMENT_STAGE_LABELS[stage] || stage) + ' invoice: ' + url
+    + label + ' invoice: ' + url
     + '  \u00b7  It records itself here once the transfer settles (about four business days).', job.id);
 }
 
@@ -38510,7 +38795,7 @@ function saveNotesModal() {
     if (job) {
       var nameEl = document.getElementById('name-'+_notesRoomId);
       var roomName = nameEl ? (nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent) : _notesRoomId;
-      var ts = new Date().toISOString().slice(0,10);
+      var ts = _todayStr();
       var filename = (job.hvlId?job.hvlId+'_':'') + _cleanName(roomName) + '_Notes_' + ts + '.txt';
       var dataUrl = 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text)));
       function _up() {
@@ -39196,7 +39481,7 @@ function showEditClient(jobId) {
   html += '<div class="sec" style="margin-top:14px;">Estate Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('Date of Death', '<input type="date" id="ec-date-of-death" value="'+(job.deathDate||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
-  html += fld('How is this estate being administered?', '<select id="ec-matter-type" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select — ask the attorney'}].concat(Object.keys(MATTER_TYPES).map(function(k){ return { v:k, l: MATTER_TYPES[k].label }; })), matterTypeOf(job))+'</select>', true);
+  html += fld('How is this estate being administered?', '<select id="ec-matter-type" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select — ask the attorney'}].concat(Object.keys(MATTER_TYPES).map(function(k){ return { v:k, l: MATTER_TYPES[k].label }; })), matterTypeOf(job))+'</select>', true);
   // Built from DOC_TIERS through the same helper Client Intake uses, so a tier cannot be
   // renamed on one form and not the other. Prefilled through docTierOf, which migrates a job
   // recorded before the tier existed off its stored scope — nothing had to be run on them.
@@ -39243,11 +39528,20 @@ function showEditClient(jobId) {
   html += '</div>'; // end estate block
 
   // Probate-only — the COURT record, and nothing else.
-  html += '<div id="ec-probate-fields" style="display:'+(isProbate?'block':'none')+';">';
+  // Shown on a Probate service and on any estate whose matter goes through probate (audit M5).
+  html += '<div id="ec-probate-fields" style="display:'+(courtRecordShown(job.svc, matterTypeOf(job))?'block':'none')+';">';
   html += '<div class="sec" style="margin-top:14px;">Probate Information</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('Probate Case Number', txt('probate-case', job.probateCase, 'e.g. 50-2026-CP-001234'), true);
-  html += fld('Court Deadline', '<input type="date" id="ec-probate-deadline" value="'+(job.probateDeadline||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">');
+  html += fld('Probate Case Number', txt('probate-case', job.probateCase, 'e.g. 50-2026-CP-001234'), 'probate');
+  // ⚠ THE LETTERS DATE WAS ASKED ONLY AT INTAKE, and Letters normally issue WEEKS after the first call —
+  // so on most estates it could never be recorded: the §733.604 deadline had nothing to count from and the
+  // workbook's Letters Issued row stayed blank for the life of the job (audit M5). The deadline follows it
+  // unless it was set by hand — an extension the court granted must not be overwritten by a recount.
+  var _ecDl60 = job.lettersDate ? inventoryDeadlineFrom(job.lettersDate) : '';
+  html += fld('Letters Issued', '<input type="date" id="ec-letters-date" value="'+esc(job.lettersDate||'')+'" onchange="computeInventoryDeadline(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">');
+  html += fld('Court Deadline', '<input type="date" id="ec-probate-deadline" value="'+(job.probateDeadline||'')+'"'
+    + ((job.probateDeadline && job.probateDeadline !== _ecDl60) ? ' data-user-edited="1"' : '')
+    + ' oninput="this.dataset.userEdited=\'1\'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><div id="ec-deadline-fb" class="fb"></div>');
   html += fld('Property Sale Required', '<select id="ec-probate-sale" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select'},{v:'yes',l:'Yes — property must be sold'},{v:'no',l:'No — heirs retaining property'},{v:'maybe',l:'Under discussion'}], job.probateSale)+'</select>', false);
   html += '</div>';
   html += '</div>'; // end probate fields
@@ -39290,7 +39584,7 @@ function ecToggleProbate() {
   var svcVal = document.getElementById('ec-svc') ? document.getElementById('ec-svc').value : '';
   var isP = ecIsProbateSvc(svcVal);
   var pf = document.getElementById('ec-probate-fields');
-  if (pf) pf.style.display = isP ? 'block' : 'none';
+  if (pf) pf.style.display = courtRecordShown(svcVal, (document.getElementById('ec-matter-type') || {}).value || '') ? 'block' : 'none';
   var af = document.getElementById('ec-estate-auth-fields');
   if (af) af.style.display = ecIsEstateSvc(svcVal) ? 'block' : 'none';
   var df = document.getElementById('ec-dest-fields');
@@ -39452,11 +39746,14 @@ function saveClientEdit(jobId) {
     job.probateAttyPhone = document.getElementById('ec-atty-phone').value;
     job.probateAttyEmail = document.getElementById('ec-atty-email').value;
   }
-  // Probate-only — the court record.
-  if (ecIsProbateSvc(svc)) {
+  // The court record — read wherever the modal SHOWED it (courtRecordShown), which since audit M5 is
+  // any estate on a probate matter as well as a Probate service. Reading it on the service alone would
+  // throw away a case number typed into a block the modal had just displayed.
+  if (courtRecordShown(svc, (document.getElementById('ec-matter-type') || {}).value || '')) {
     job.probateCase      = document.getElementById('ec-probate-case').value;
     job.probateDeadline  = document.getElementById('ec-probate-deadline').value;
     job.probateSale      = document.getElementById('ec-probate-sale').value;
+    job.lettersDate      = (document.getElementById('ec-letters-date') || {}).value || '';
   }
   // Authorized rep fields — estate settlement + probate
   if (isEstateEdit) {

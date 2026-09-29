@@ -406,7 +406,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const j = { id: 7, tc: 'Ashley Jerome', mustFind: 'The ring\nThe deeds', updatedAt: 1000 };
     const dom = domStub({ 'sf-host-plan': { attrs: { 'data-job': '7' } } });
     const t = sandbox({
-      fns: ['toggleMustFound', '_repaintStandingFlags', '_invJob', '_jobTouch', '_todayStr', 'mustFindItems', 'mustFoundOf',
+      fns: ['toggleMustFound', '_repaintStandingFlags', '_invJob', '_jobTouch', '_todayStr', '_ymdLocal', 'mustFindItems', 'mustFoundOf',
             '_mustFindKey', '_mfHandle', '_mfUnhandle', 'standingFlagsBlock', '_sfRowHtml', 'standingFlagLines', 'activeHouseFlags',
             'houseFlagsOf', 'esc'],
       vars: ['SF_HOSTS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],

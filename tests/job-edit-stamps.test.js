@@ -139,7 +139,7 @@ const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 
   'addLogisticsLine', 'removeLogisticsLine', 'getVendorActuals', 'prepFeeRate', 'logisticsCatsFor',
   'lookupVendorById', 'vendorIdOf', 'vendorContacts', '_vendorContact', 'resolveJobVendor',
   'getJobCrew', 'seedCrewFromEstimate', 'crewSlotHolding', 'crewDuplicates', '_crewRefuseDup', '_crewRefreshSelects',
-  'setCrewTC', 'setCrewTC2', 'setCrewPS', 'confirmJobTeam', 'reviseJobTeam', 'lockAssignedCrew', '_lockCrewSlots', 'crewMemberHasHours',
+  'setCrewTC', 'setCrewTC2', 'setCrewPS', 'confirmJobTeam', 'plannedTC2', 'rushCrewAdded', 'reviseJobTeam', 'lockAssignedCrew', '_lockCrewSlots', 'crewMemberHasHours',
   'unfilledPlannedPS', 'plannedPSCount', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'isJobWon', 'jobLogEntries',
   'setVendorRating', 'setVendorRatingNote', '_ratingJob', '_writeVendorScore', 'computeVendorAvg',
   'draftReviewRequest', 'markReviewRequestSent', 'toggleProbatePkg', 'setValBasis', 'setEstateAVD',
@@ -431,9 +431,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ─────────────────────────────────────────────────────────────────────────
   group('⚠⚠ HOUSE FLAGS — an Edit Client correction survives the stale save');
   {
-    const EC_FNS = ['saveClientEdit', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
+    const EC_FNS = ['saveClientEdit', 'courtRecordShown', 'jobOnProbateTrack', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
       'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'readHouseFlagInputs',
-      'isDecedentJob', 'matterTypeOf', 'matterDef', 'saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch'];
+      'isDecedentJob', 'matterTypeOf', 'invFiduciaryMode', 'matterDef', 'saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch'];
     const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'MATTER_TYPES', 'DOC_SCOPES'];
     const srv = server();

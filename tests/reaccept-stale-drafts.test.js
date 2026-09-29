@@ -136,7 +136,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { badges: [], fb: [], alerts: [] };
     const d = domStub({});
     const W = sandbox({
-      fns: ['openWonModal', 'confirmMarkWon'].concat(PRICE_FNS),
+      fns: ['openWonModal', 'confirmMarkWon', '_todayStr', '_ymdLocal'].concat(PRICE_FNS),
       vars: ['WON_MODAL_COPY', '_wonJobId'],
       stubs: {
         document: d, saveJobs() {}, syncJobToSheets() {}, renderJobs() {}, renderClientDashboard() {},
@@ -223,7 +223,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobActivationBlockers', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', 'jtDraftLine']
+      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', 'jtDraftLine',
+      // P10 (merged here): the final's row waits for logged hours.
+      'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries', 'jobOnProbateTrack', 'matterDef', '_ymdLocal', '_localDateOf', 'paymentStageWord']
       .concat(HELP, PRICE_FNS)),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',

@@ -80,7 +80,7 @@ const INTAKE_FNS = ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 're
 const INTAKE_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'];
 
 // The Edit Client modal's own dependency list (client-edit-fields.test.js).
-const EC_FNS = ['saveClientEdit', 'ecToggleProbate', 'executorAuthOptionsHtml', 'resolveExecutorAuth',
+const EC_FNS = ['saveClientEdit', 'courtRecordShown', 'jobOnProbateTrack', 'ecToggleProbate', 'executorAuthOptionsHtml', 'resolveExecutorAuth',
   'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange', 'docTierOptionsHtml',
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
   'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor',

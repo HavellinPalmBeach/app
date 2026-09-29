@@ -50,8 +50,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ NESTED ON THE JOB, NOT A NEW SHEET COLUMN. The Jobs sheet stores
     // JSON.stringify(job) in its Data column, so this rides the existing sync with no
     // Apps Script redeploy — the same reason `houseFlags` is shaped this way.
-    has(noComments(fn('docState', '_jobTouch')), 'job.docState', 'it lives on the job, so the existing sync carries it');
-    lacks(src, "'docState', '_jobTouch'," , 'and is not added to any column whitelist, because there is none to add to');
+    has(noComments(fn('docState')), 'job.docState', 'it lives on the job, so the existing sync carries it');
+    // ⚠ RESTATED 2026-09-29. This read `lacks(src, "'docState', '_jobTouch',")` — a function name had been
+    // written into the needle itself, so it could never match and passed on any code. The requirement:
+    // the key is named once as a quoted list-style entry in the app, by the per-key merge stamp, and no
+    // column list names it — adding it to one would be a second occurrence.
+    eq((src.match(/'docState',/g) || []).length, 1, 'and is not added to any column whitelist, because there is none to add to');
+    has(src, "_jobTouch(job, 'docState', docKey)", '…the one occurrence being the per-key merge stamp');
 
     // ⚠ KEYED BY KIND **PLUS STAGE**, because the invoice is three documents. Keying on
     // kind alone is how a midpoint inherits a final's record — the same collision
@@ -322,7 +327,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // so the rendered invoice arrives as unstyled text; the complete document is the
     // attached PDF, from the same conversion that writes the Drive copy.
     const ctx = sandbox({
-      fns: ['invoiceEmailSubject', 'buildInvoiceEmailText', 'invoiceBalanceWords', 'buildInvoiceEmailHtml',
+      fns: ['invoiceEmailSubject', 'paymentStageWord', 'buildInvoiceEmailText', 'invoiceBalanceWords', 'buildInvoiceEmailHtml',
             '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'DOC_STAGE_WORD', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {

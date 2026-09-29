@@ -58,7 +58,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lockedCollections: [{ name: 'Sterling flatware', dispLabel: 'Auction', note: 'Gorham, monogrammed' }],
   });
 
-  const WT_FNS = ['walkthroughHtml', 'walkthroughSource', '_wtRoomHrs', 'esc', 'fmtDate2',
+  const WT_FNS = ['walkthroughHtml', '_localDateOf', '_ymdLocal', 'walkthroughSource', '_wtRoomHrs', 'esc', 'fmtDate2',
     'svcLabelOf', '_vehicleLineName'];
   const WT_VARS = ['SVC_LABELS'];
 

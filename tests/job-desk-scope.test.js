@@ -17,7 +17,7 @@
 
 const { sandbox, source, fn, decl } = require('./harness');
 
-const CTX_FNS = ['planTaskCtx', 'planTasksFor', 'invFiduciaryMode', 'isDecedentJob',
+const CTX_FNS = ['planTaskCtx', 'jobOnProbateTrack', 'planTasksFor', 'invFiduciaryMode', 'isDecedentJob',
                  'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef',
                  'docTierOf', 'docTierDef', 'docTierProduces', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep'];
 const CTX_VARS = ['PLAN_TASKS', 'JOB_ADMIN_TASKS', 'DECEDENT_SERVICES', 'MATTER_TYPES',
@@ -239,7 +239,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const mk = () => {
       const a = sandbox({
-        fns: ['renderJobAdmin', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor',
+        fns: ['renderJobAdmin', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor',
               '_planTaskDone', 'planDerivedLines', 'planDerivedHtml', 'planTaskSectionsHtml',
               'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
               'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
@@ -289,7 +289,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE DESK CARD SAYS WHY ITS LIST LOOKS THE WAY IT DOES');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+      fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
             '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
             'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal', 'coHours'],

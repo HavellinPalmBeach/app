@@ -45,7 +45,7 @@ function rig(refs) {
     fns: ['planRoomStatusBtns', 'setPlanRoomStatus', 'roomStatusNormalize', '_invJob', 'lockRefusal',
       '_roomFoundAttest',
           'lockFlag', 'clearedFlag', '_shotCount', '_slotRefs', 'isDecedentJob', '_planRoomStatus',
-          'setRoomStatus', 'getJobPlan', '_planTouch', '_roomFoundDone', 'setRoomFoundDone', '_todayStr',
+          'setRoomStatus', 'getJobPlan', '_planTouch', '_roomFoundDone', 'setRoomFoundDone', '_todayStr', '_ymdLocal',
           '_roomFoundDoneHtml'],
     vars: ['ROOM_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
            'DECEDENT_SERVICES', 'jobPlanStore', '_roomWs'],

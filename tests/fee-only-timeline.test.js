@@ -37,8 +37,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: [
-      'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'paymentSplit',
-      'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon', 'isJobFunded',
+      'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'paymentSplit',
+      'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded',
       'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
       'docSentAt', 'docKeyFor', 'agreementSignature',
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
@@ -49,7 +49,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStageDoc', 'docReadiness', 'docTitle', 'docDraftOnly', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', '_jtDraftLink', '_jtDocViews', '_jtDriveLink', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove'
     , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'],
-    vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+    vars: ['JT_SHORT', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
            'JT_ROW_DOC', 'DOC_ACTIONS', 'DOC_KIND_WORD'],
   });
   const { jobTimeline, jobTimelineNext, jobTimelineActions } = ctx;
@@ -160,7 +160,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ THE NEEDLE IS THE QUOTED KEY, NOT THE WORD. A bare `prep` matches `prepItems`,
     // which is the field the fix legitimately reads — the first version of this check
     // failed on correct code for exactly that reason.
-    ["'prep'", '"prep"', 'svc', 'estimateIsFeeOnly', 'isPrep'].forEach((n) => {
+    ["'prep'", '"prep"', 'svc', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isPrep'].forEach((n) => {
       lacks(line, n, 'it names no service and no fee-only predicate (' + n + ')');
     });
   }

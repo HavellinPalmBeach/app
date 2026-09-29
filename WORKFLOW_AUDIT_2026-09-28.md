@@ -4,7 +4,7 @@ Five audits and a click-through of three jobs, from + Add New Client to final pa
 
 Status of each fix pack lives in this file: when a session lands a pack, it marks it done here and adds its CLAUDE.md entry.
 
-**Status, 2026-09-29:** P1–P7 have landed on `main`: C1, C2, H1, H2, H3, H4, H6, M1, M2, M3, M8 and nine lows are fixed and marked below. Still open: P8–P14 (H5, H7–H9, M4–M7, M9–M16 and the remaining lows). Questions still open: Q7, the Q14 follow-up and Anthony's OK on the Q20 reading, all three for P12 only.
+**Status, 2026-09-29:** P1–P8 and P10 have landed on `main`: C1, C2, H1, H2, H3, H4, H5, H6, M1–M8 and thirteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). One P10 low is a decision for Anthony (`deliveredBy` / `activatedBy`, under the lows). Still open: P9 and P11–P14 (H7–H9, M9–M16 and the remaining lows). Questions still open: Q7, the Q14 follow-up and Anthony's OK on the Q20 reading, all three for P12 only.
 
 ## TL;DR
 
@@ -153,7 +153,7 @@ A blank or 0 applies 1% and sends the estimate back for approval. The agreement 
 
 **Fix:** P6 (Make the client documents match the estimate)
 
-#### M4 · Job lifecycle · Marking a part-paid job Lost drops the money from the record.
+#### M4 · Job lifecycle · Marking a part-paid job Lost drops the money from the record. — **Fixed 2026-09-29**
 
 With $2,000 of a $4,575 deposit received, Mark Lost records a plain loss and clears Won. The $2,000 appears nowhere, Win/Loss included.
 
@@ -161,7 +161,7 @@ With $2,000 of a $4,575 deposit received, Mark Lost records a plain loss and cle
 
 **Fix:** P10 (Lifecycle and payment loose ends)
 
-#### M5 · Job lifecycle · An Estate Settlement on a probate matter activates without the Letters.
+#### M5 · Job lifecycle · An Estate Settlement on a probate matter activates without the Letters. — **Fixed 2026-09-29**
 
 The Letters gate and the case-number fields follow the service type, not the matter type. CLAUDE.md queued this on 2026-09-24.
 
@@ -169,7 +169,7 @@ The Letters gate and the case-number fields follow the service type, not the mat
 
 **Fix:** P10 (Lifecycle and payment loose ends)
 
-#### M6 · Payments · Recording a midpoint or final payment starts blank, under a "Record Deposit" button.
+#### M6 · Payments · Recording a midpoint or final payment starts blank, under a "Record Deposit" button. — **Fixed 2026-09-29**
 
 Only the deposit prefills. Pressing the button with the amount empty is refused inside the modal.
 
@@ -177,7 +177,7 @@ Only the deposit prefills. Pressing the button with the amount empty is refused 
 
 **Fix:** P10 (Lifecycle and payment loose ends)
 
-#### M7 · Dates · After 8pm Eastern, the hours, payment, won and signature dates default to tomorrow.
+#### M7 · Dates · After 8pm Eastern, the hours, payment, won and signature dates default to tomorrow. — **Fixed 2026-09-29**
 
 They use UTC. An evening hours entry lands on the next day in the log that bills the client, while the fold still says nothing was logged today.
 
@@ -290,12 +290,12 @@ A partner chosen and then hidden (by changing the source) is still saved, and pa
 **Job Plan & lifecycle** (fix: P10)
 
 - Change-order notices print on the hidden Build Estimate panel, and the card reads "None issued" until a redraw (fixed in P5).
-- The final invoice's View and Print are offered before activation, and Print then refuses.
-- "Estate attorney on file" stays red on a trust administration with no attorney.
-- A closed job's plan marks Before Day 1 as NOW.
-- Home Prep's second payment is called the "midpoint invoice", while its estimate says it is due when the vendor schedule is booked.
+- The final invoice's View and Print are offered before activation, and Print then refuses. *(fixed 2026-09-29)*
+- "Estate attorney on file" stays red on a trust administration with no attorney. *(fixed 2026-09-29)*
+- A closed job's plan marks Before Day 1 as NOW. *(fixed 2026-09-29)*
+- Home Prep's second payment is called the "midpoint invoice", while its estimate says it is due when the vendor schedule is booked. *(fixed 2026-09-29)*
 - A won job reads "Approved — Awaiting Client" in the client list after a re-approval. *(fixed 2026-09-29)*
-- `deliveredBy` and `activatedBy` record the estimate's approver, not whoever pressed the button.
+- `deliveredBy` and `activatedBy` record the estimate's approver, not whoever pressed the button. *(left for Anthony, 2026-09-29: which name should a handover carry — the approver, the assigned concierge, or a name asked at the press?)*
 
 **Other** (fix: P14)
 
@@ -321,7 +321,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P7** Let a finished job close with the midpoint unpaid (needs Q1)
 - [x] **P8** Measure work done against the rooms (needs Q3)
 - [ ] **P9** Bring Edit Client up to intake's rules (needs Q4, Q15–Q18)
-- [ ] **P10** Lifecycle and payment loose ends (needs Q2, Q12, Q19)
+- [x] **P10** Lifecycle and payment loose ends (needs Q2, Q12, Q19)
 - [ ] **P11** Harden the Apps Script backend (redeploy)
 - [ ] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20)
 - [ ] **P13** Documentation pass (needs the packs above first)
@@ -517,6 +517,8 @@ House process (CLAUDE.md): reproduce first, tests plus a revert sweep, a browser
 ### P10 · Lifecycle and payment loose ends
 
 Fixes: M4–M7, lifecycle lows · Needs: Q2, Q12, Q19
+
+**Landed 2026-09-29.** M4–M7, Q12, Q19 and four of the five lows; the fifth (`deliveredBy` / `activatedBy`) is a decision for Anthony, flagged below. One addition the prompt did not name: the ACH link now stays beside *Record payment* until the deposit is in, because the Q12 balance path was unreachable once the deposit invoice had gone out. See the CLAUDE.md entry.
 
 ```text
 Fix the lifecycle and payment loose ends (2026-09-28 workflow audit, findings M4–M7 and the job-plan lows).

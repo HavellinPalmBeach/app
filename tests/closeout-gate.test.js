@@ -36,7 +36,7 @@ const RENDER_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'jobP
   'svcLabelOf',
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
-  'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'winLossListHtml', '_wlClientCell',
+  'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'closeoutRetainedTotal', 'jobPaidTotal', 'winLossListHtml', '_wlClientCell',
   'isJobWon', 'secCaret', 'fmtDate2', 'jobStatusView', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'];
 const RENDER_VARS = ['currentFilter', 'SVC_LABELS', '_jobsWatch',
   '_jobsState', '_jobSort', '_wlOpen', 'JOB_SORTS', 'JOB_LIST_COLS', 'JOB_STATUS_ORDER',
@@ -65,7 +65,7 @@ function openModal(j) {
   const doc = domStub({});
   const alerts = [];
   const ctx = sandbox({
-    fns: ['openCloseoutModal', 'jobIsSettled', 'stagePaidTotal', 'jobPayments'],
+    fns: ['openCloseoutModal', 'closeoutRetainedTotal', 'jobPaidTotal', 'jobIsSettled', 'stagePaidTotal', 'jobPayments'],
     stubs: { document: doc, alert: (m) => alerts.push(String(m)) },
   });
   ctx.jobs = [j];
@@ -210,10 +210,16 @@ group('⚠ WHAT THE GATE MUST NOT REACH');
     payments: [{ stage: 'deposit', amount: 9970 }] }));
   has(retained, 'openCloseoutModal(7)', 'closed — deposit retained keeps it too');
 
-  // ⚠ `confirmMarkLost` IS UNTOUCHED. The gate is on the two doors into the modal; the
-  // writer itself is unchanged, so nothing about what a genuine loss records has moved.
-  has(fn('confirmMarkLost'), "j.status = j.depositReceived ? 'closed_retained' : 'lost';",
-    'the loss writer is unchanged');
+  // ⚠ The gate is on the two doors into the modal; `confirmMarkLost` holds no gate of its own.
+  // ⚠ RESTATED 2026-09-29 (audit M4 / P10), NOT DELETED. This pinned the writer as
+  // `j.depositReceived ? 'closed_retained' : 'lost'` — a boolean that is true only once the deposit is
+  // paid IN FULL, so a client who had paid $2,000 of a $4,575 deposit and walked away was recorded
+  // plain Lost, won cleared, and the $2,000 vanished from the report. The writer now asks the money:
+  // anything received keeps the job as Closed — Deposit Retained. What a loss with nothing paid records
+  // is unchanged, and lifecycle-loose-ends drives both.
+  has(fn('confirmMarkLost'), "j.status = _kept > 0 ? 'closed_retained' : 'lost';",
+    'the loss writer asks what was received, not whether the deposit was paid in full');
+  has(fn('confirmMarkLost'), 'closeoutRetainedTotal(j)', 'through the one definition of what was kept');
   lacks(fn('confirmMarkLost'), 'jobIsSettled', 'and holds no gate of its own');
 }
 };

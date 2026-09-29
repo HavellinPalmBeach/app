@@ -152,7 +152,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('planDerivedLines')), 'var feeOnly = jobIsFeeOnly(est, job);', 'the desk card’s hours line asks the job too');
     // ⚠ The documents the client already holds must keep saying what they signed. Reading the job's
     // answer there would rewrite a signed agreement's §3.3 the moment a change order was accepted.
-    ['clientEstimateHtml', 'buildPrepEstimateBody', 'agreementHtml', 'invoiceHtml'].forEach((f) => {
+    // `finalAwaitsHours` joined 2026-09-29 (audit P10): the invoice's no-hours gate moved into it, so the
+    // rule that the final blocks only when the ESTIMATE priced hours now lives there and must follow it.
+    ['clientEstimateHtml', 'buildPrepEstimateBody', 'agreementHtml', 'invoiceHtml', 'finalAwaitsHours'].forEach((f) => {
       lacks(noComments(fn(f)), 'jobIsFeeOnly', `${f} reads what was quoted, never jobIsFeeOnly`);
     });
     // The net: the definition and the two job surfaces, and nothing else.
@@ -216,7 +218,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ THE DESK CARD — an hours line appears, and says what an empty log will do');
   {
-    const deskFns = ['planDerivedLines', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
+    const deskFns = ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
       'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
       'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly'].concat(CO);
     const deskVars = ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
@@ -247,7 +249,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('THE HOURS FOLD AND THE HOURS SUMMARY — measured against the change order’s hours');
   {
-    const meta = (est, cos) => sandbox({ fns: ['planHoursMeta', '_todayStr'].concat(CO),
+    const meta = (est, cos) => sandbox({ fns: ['planHoursMeta', '_todayStr', '_ymdLocal'].concat(CO),
       stubs: { changeOrders: cos, jobLogEntries: () => TC_LOG(3) } }).planHoursMeta(1, PREP_JOB, est);
     eq(meta(prepEst(0), [accepted(8)]).est, 8, '⚠ the fold reads "3 of 8 logged", not "3 of 0"');
     eq(meta(prepEst(0), [co(8)]).est, 0, 'a draft moves nothing');
@@ -409,13 +411,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ THE FINAL INVOICE — the fee plus exactly the change-order hours logged');
   {
-    const invFns = ['invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+    const invFns = ['invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
       'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
       'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact',
       'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal',
       'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop'];
-    const invVars = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    const invVars = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
       'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
     // Walk the engagement stage by stage, paying each invoice in full, and return the final.
@@ -456,10 +458,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE BAND — the final-invoice step says an unlogged change order bills the fee alone');
   {
     const T = (cos) => sandbox({
-      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
+      fns: ['agrApprovalWithdrawn', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
             'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-            'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'docDraftPending', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'].concat(CO),
-      vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
+            'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending', 'estimateOutForApproval', 'priceAboveSent', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'].concat(CO),
+      vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { changeOrders: cos } });
     const sub = (est, cos, logged, jobOver) => {
       const job = Object.assign({}, PREP_JOB, { created: 'Sep 8, 2026', won: true, approved: true }, jobOver || {});

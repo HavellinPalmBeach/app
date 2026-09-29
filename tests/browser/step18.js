@@ -92,10 +92,12 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
      'View · Print · Filed copy, as big buttons');
   ok(r.bigCls.every((c) => /\bjt-btn\b/.test(c)), 'drawn as the band\'s own buttons, not strip links');
   ok(r.bigCalls.every((c) => /final/.test(c)), 'every one of them acts on the final invoice');
+  // ⚠ RESTATED 2026-09-29 (audit P10 low): a finished HOME PREP job, and Home Prep's middle invoice is its second
+  // invoice on every surface — the strip read "midpoint" beside a band and an invoice that do not.
   eq(r.strip.map((t) => t.replace(/^\S+\s/, '')),
      ['View estimate', 'Print estimate', 'Filed copy', 'View packet', 'Print packet', 'Filed copy',
       'View deposit invoice', 'Print deposit invoice', 'Filed copy',
-      'View midpoint invoice', 'Print midpoint invoice', 'Filed copy'],
+      'View second invoice', 'Print second invoice', 'Filed copy'],
      'the strip is the four documents before it, in lifecycle order');
   ok(r.stripCalls.every((c) => !/final/.test(c)), '⚠ and does not repeat the final invoice');
   eq(r.dupes, 0, '⚠⚠ no control on the dashboard renders twice');

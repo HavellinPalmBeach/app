@@ -87,8 +87,12 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   });
   // Restated 2026-09-23: the band names the STEP to take, never the milestone it finishes (JT_NEXT) —
   // "Midpoint invoice sent" read as though it had already gone out.
-  eq(plan.bandStep, 'Send the midpoint invoice', 'the Job Plan band names the midpoint invoice as the step to take');
-  ok(/Send midpoint invoice/.test(plan.prim), 'with Send midpoint invoice as its one filled button (' + plan.prim + ')');
+  // ⚠ RESTATED 2026-09-29 (audit P10 low): this is a HOME PREP job, and Home Prep has no project midpoint — its middle
+  // payment is its SECOND payment on every surface now (paymentStageWord). The requirement is unchanged: the band names
+  // the step to take on that invoice, as its one filled button.
+  eq(plan.bandStep, 'Send the second invoice', 'the Job Plan band names the second invoice as the step to take');
+  ok(/Send second invoice/.test(plan.prim), 'with Send second invoice as its one filled button (' + plan.prim + ')');
+  ok(!/midpoint/i.test(plan.bandStep + ' ' + plan.prim), 'and never calls a Home Prep payment a midpoint');
   eq(plan.nPrim, 1, 'exactly one filled button in the band');
   ok(plan.trackVis, 'the timeline track shows at 1440');
   ok(/^deposit & start$/i.test(plan.groups[0] || ''), 'the leg starts at DEPOSIT & START (' + plan.groups.join(' / ') + ')');
@@ -154,7 +158,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   });
   eq(admin.job, '901', 'Job Admin follows the job picked on the Job Plan');
   ok(admin.hdr, 'Job Admin carries the client header — client, service, property');
-  eq(admin.band, 'Send the midpoint invoice', 'and the same band, reminding the midpoint invoice');
+  eq(admin.band, 'Send the second invoice', 'and the same band, reminding the second invoice');
   ok(admin.order, 'in order: header, band, desk paperwork, close-out');
   eq(admin.contents, false, '⚠⚠ no inventory on a prep job — no Contents Record, Approval Request, line items or appraisers');
   eq(admin.rooms, false, 'no "All rooms cleared — 0 of 0"');
@@ -173,8 +177,9 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   await p.evaluate(() => activateOrCycle(901)); await p.waitForTimeout(250);
   acceptNext = false;
   eq(dlg.filter(m => /Cannot close the job yet/.test(m)).length, 0, 'with every used vendor rated, closing raises no ratings refusal');
-  ok(dlg.length === 1 && /Close this job now\?/.test(dlg[0]) && /No midpoint payment is recorded/.test(dlg[0]),
-     'the one question left is the early close, because no midpoint payment is recorded');
+  // ⚠ RESTATED 2026-09-29 (audit P10 low): on Home Prep the question names the SECOND payment, as every other surface does.
+  ok(dlg.length === 1 && /Close this job now\?/.test(dlg[0]) && /No second payment is recorded/.test(dlg[0]),
+     'the one question left is the early close, because no second payment is recorded');
   eq(await p.evaluate(() => jobs.find(j => j.id === 901).status), 'closed', 'and the job closes');
 
   // A labour job keeps its inventory on the tab, with the close-out beside it.
