@@ -108,7 +108,12 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
 - **Revert sweep on three tar copies: 29 changes, ALL RED, baseline 12,340 / 0 before and after on every copy, no needle
   mismatched, nothing threw.** Counts are on the bullets above. ⚠ That sweep ran on the tree **before** `main` was merged in, and
   one merge resolution sits on this build's code — the fixed-price final's Payment Summary takes `main`'s change-order row with
-  this build's three-argument gap row — so it is run again on three copies of the MERGED tree (baseline 13,526 / 0 on each).
+  this build's three-argument gap row — so it was run again on three copies of the MERGED tree: **all 29 red again with the
+  identical counts, baseline 13,526 / 0 before and after on every copy, no needle mismatched, nothing threw.** And the resolution
+  itself was reverted from both sides on a fourth copy: the fixed-price final taking `main`'s single-argument gap row fails **3**
+  (it would print *Outstanding from undefined — carried into undefined* on the client's final), and dropping `main`'s change-order
+  row from it fails **1** (`document-reconciliation`'s final-balance rule, on 4 scenarios), so neither half of the union can be
+  lost quietly.
 - **Verified in headless Chromium, `tests/browser/step36.js`** (written as step 29 and renumbered on the merge — `main`'s
   document-claims build took 29 first), **58 checks, 0 failed, 0 page errors**, through the real Close and
   Re-open buttons and their real questions (Cancel, then OK): the question on the close names Re-open; a closed job shows Re-open
