@@ -335,6 +335,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.cache()[0].sqft, '5200', 'and the cache keeps it');
   }
 
+  // The Drive failure notice, and the save helper it must NOT go through. `_saveJobEdit` and
+  // `_jobTouch` are lifted although nothing here calls them: a revert that sends the notice through
+  // the helper — making it stamp, so it no longer ties — then FAILS these groups on the clock
+  // check instead of throwing out of the file with every check after it unrun.
+  const FAIL_FNS = ['_driveFolderFailed', '_saveJobEdit', '_jobTouch'];
+
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ A WRITE QUEUED WHILE THE READ IS IN FLIGHT — the answer is discarded');
   {
@@ -345,7 +351,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // bare (tests/job-edit-stamps.test.js names it). It ties the local record, a tie goes to the
     // sheet, and only the recheck stops the stale answer wiping it.
     const job = { id: 1, name: 'Tripp Butler', svc: 'probate', updatedAt: 100 };
-    const r = rig({ fns: ['_driveFolderFailed'], local: [job], sheet: [job], stubs: { console: QUIET } });
+    const r = rig({ fns: FAIL_FNS, local: [job], sheet: [job], stubs: { console: QUIET } });
     r.refresh();
     eq(r.reads.length, 1, 'nothing was queued, so the sheet is asked');
     r.c._driveFolderFailed(r.c.jobs[0], 'the server refused', 'Exception: nope');
@@ -361,7 +367,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ A WRITE QUEUED *AND LANDED* WHILE THE READ IS IN FLIGHT — nothing is outstanding, and the answer still predates it');
   {
     const job = { id: 1, name: 'Tripp Butler', svc: 'probate', updatedAt: 100 };
-    const r = rig({ fns: ['_driveFolderFailed'], local: [job], sheet: [job], stubs: { console: QUIET } });
+    const r = rig({ fns: FAIL_FNS, local: [job], sheet: [job], stubs: { console: QUIET } });
     r.refresh();
     eq(r.reads.length, 1, 'the read goes out');
     r.c._driveFolderFailed(r.c.jobs[0], 'the server refused', 'Exception: nope');
@@ -396,7 +402,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Discarded: a write went out while the read was in flight. The list is not taken — but the
     // ledger's deletions are not a snapshot that can be behind our writes, so they still apply.
     const b = rig({
-      fns: ['_driveFolderFailed'],
+      fns: FAIL_FNS,
       local: [{ id: 1, name: 'Tripp Butler', notes: 'mine', updatedAt: 100 },
               { id: 4, name: 'Deleted Elsewhere', updatedAt: 100 }],
       sheet: [{ id: 1, name: 'Tripp Butler', notes: 'theirs', updatedAt: 100 }], deleted: ['4'],
