@@ -94,10 +94,10 @@ Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are sile
   anything."* It was false for every scalar a bare writer set — which is this defect. Corrected in place.
 
 ### Proof
-- **11,727 committed checks on this branch; 12,864 after merging the concurrent C1, H4, H3/M8, document-claims and H1/M1
-  sessions' suites** — +238 on the branch (`tests/job-edit-stamps.test.js` new at **234**, `job-plan-team-dates` +4) and
+- **11,727 committed checks on this branch; 12,959 after merging the concurrent C1, H4, H3/M8, document-claims, H1/M1 and
+  Reset builds' suites** — +238 on the branch (`tests/job-edit-stamps.test.js` new at **234**, `job-plan-team-dates` +4) and
   `jobs-refresh` +1 on the merge, so **+239 on top of `main`** at every merge (11,907 → 12,146, 12,165 → 12,404, 12,625 →
-  12,864). Against the
+  12,864, 12,720 → 12,959). Against the
   pre-change writers (the helpers merely added so it can load) the new suite fails **143 of 234**, with every check running.
   Four sandboxes restated rather than stubbed — the logistics, crew and confirm sandboxes in `job-plan-team-dates`, the rating
   sandbox in `job-closeout` — and `drive-folder`'s four lift `_saveJobEdit` / `_jobTouch` so a revert sending the failure
@@ -110,8 +110,8 @@ Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are sile
   exemptions fail in the other direction too. **Re-run on the tree after the H3/M8 merge (12,404): 68 changes** — the 67 less
   `cycleStatus`, which `main` deleted, plus the two H4 recheck reverts, which fail **2** and **6** as H4's own sweep recorded —
   **ALL RED, baseline 12,404 / 0 before and after on every copy, no needle mismatched**, the same figures throughout. The
-  document-claims and H1/M1 merge landed after it; on the final tree all 68 still find their code, needle by needle, and the
-  suite is green, so the results carry.
+  document-claims, H1/M1 and Reset merges landed after it; on the final tree all 68 still find their code, needle by needle,
+  and the suite is green, so the results carry.
   - **⚠ THREE REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** — `seen[1][1]` when the helper stopped
     syncing, `r.after.prepSourcing.Lp1.quote` when the quote did not survive. A read that throws stops the file, so each read as
     one failure with every check after it unrun. Every read is defensive now (`get`, `holds`); re-done, each fails with all 234
@@ -122,9 +122,9 @@ Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are sile
     the three sandboxes restated onto that notice lifted it and not the save helper — 55 checks never ran. They lift
     `_saveJobEdit` / `_jobTouch` now (as `drive-folder`'s four do, for the same reason); re-done, it fails **4** with all 12,404
     running.
-- **Verified end to end in headless Chromium, `tests/browser/step31.js`, 53 checks, 0 failed, 0 page errors** (written as step
-  26 and renumbered at each merge — H4 took 26, C1 27, H3/M8 28, the document claims 29 and H1/M1 30), with **two browser
-  contexts — two localStorages, which is what two devices are** — against one fake Apps Script running the REAL
+- **Verified end to end in headless Chromium, `tests/browser/step32.js`, 53 checks, 0 failed, 0 page errors** (written as step
+  26 and renumbered at each merge — H4 took 26, C1 27, H3/M8 28, the document claims 29, H1/M1 30 and the Reset 31), with **two
+  browser contexts — two localStorages, which is what two devices are** — against one fake Apps Script running the REAL
   `_mergeJobRecord`: device A sets the painter, the quote and status, adds the dumpster and confirms the team through the real
   Job Plan controls; device B, loaded before A started and never reloaded, edits a **different** client through the real Edit
   Client modal and presses Save; the sheet still holds A's work (the painter, a $12,500 mover, the dumpster, the team), a fresh
@@ -133,19 +133,82 @@ Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are sile
   after sign-off locks on the next save (one write) and the save after that writes none. **Against main without this fix it
   fails 25 of 53** (the same 25 on the build this branch started from, and on `main` after each concurrent session landed), and
   the failures read as the report: *the painter survived B's save — got undefined*, *the 30% fee is $7,020 — got 6000*, *the
-  $850 dumpster — got []*, the team chip red. `run.sh`'s default list is 1–31; on the MERGED tree steps 1–30 re-run as
+  $850 dumpster — got []*, the team chip red. `run.sh`'s default list is 1–32; on the MERGED tree steps 1–31 re-run as
   regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 78
-  / 58 / 78 / 28 / 90 / 58 / 62 / 53, 0 failed — **1,499 browser checks across the thirty-one**.
+  / 58 / 78 / 28 / 90 / 58 / 62 / 53 / 42, 0 failed — **1,541 browser checks across the thirty-two**.
 - Manual **§2** (a note: what happened, what it still does not do, and what to do) and **§11** (the plan refresh does not bring
   vendors or the team); playbook **Step 7** (reload before changing the team), a **`.stop` in Step 10c**, the plan-refresh note,
-  and **two** symptom→cause rows. Both `.md` copies hand-edited; **43 claims parity-checked, 0 mismatches** (387 with the H3/M8,
-  document-claims and H1/M1 sessions', on the merged tree); `doc-structure` green; tag balance clean with the stylesheet
+  and **two** symptom→cause rows. Both `.md` copies hand-edited; **43 claims parity-checked, 0 mismatches** (412 with the H3/M8,
+  document-claims, H1/M1 and Reset builds', on the merged tree); `doc-structure` green; tag balance clean with the stylesheet
   stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` 51/61 and 17/18 tables full width, 0 on the
   phone rule — as before.
 - **⚠ THE SHAPE TO COPY: "saved" is not "saved newer."** A save that does not move the record's clock is a save that loses the
   next tie — and on a merge that keeps the incoming copy on a tie, the next tie is whichever device saves next, about anything.
   **When a merge decides by timestamp, every write a person makes must move the timestamp, and no write the app makes on its own
   may.**
+
+## ⚠⚠ THE BOTTOM Reset BUTTON RUNS THE ONE RESET — AND IT WAS REPRICING THE JOB IT WAS PRESSED ON (FIXED 2026-09-29)
+Anthony, on the one item the C1 build (the entry below) left for him: *"route Reset through the new reset too."* App-only, no
+redeploy.
+
+- **⚠⚠ REPRODUCED ON THE PRE-CHANGE BUILD FIRST, AND IT WAS A MONEY DEFECT ON THE SAME CLIENT, NOT A LEAK ACROSS CLIENTS.** A premium
+  Estate Settlement contracted at *Contents list*, six rooms, **$22,505**. The real Reset button asked nothing, unticked **Premium
+  Estate**, set the documentation scope to **Full**, cleared the rooms and the vendor lines — and **kept** the discount, move styling,
+  the private note, the collection, the car, the prep line, the planner date and a half-typed collection. The same six rooms scored
+  again priced at **$17,700**: premium off took **$8,900** and Full put **$4,095** back, so the new figure still looked like a price.
+  **⚠ And a Save afterwards put it into the saved estimate** — driven on the old build, the saved record reopened premium-off at Full.
+- **`resetEstimate()` IS `resetEstimateJobState(bound job)` NOW — the private list is deleted, not trimmed.** Premium, the scope and
+  who walked the house seed from the job; the binding and the four fields `loadJobIntoEstimate` writes off the job record are untouched;
+  nothing is reloaded (a Reset is not an open, and a test asserts no fetch); a dictation still running is aborted, as on every path.
+- **⚠ IT IS NOT Start over, and that is the distinction to keep.** Start over reopens the client, so a SAVED estimate comes back; Reset
+  gives a blank estimate for this client and leaves the saved one byte-for-byte as it was until Save. With nothing saved the two land in
+  the same place. The tooltip says so, and so does the question.
+- **⚠ IT ASKS FIRST**, because it now takes the private note and the lists with the rooms — naming the client, and, when an estimate is
+  saved (`estimateHasContent`, so an empty record is not "saved"), saying the saved one is not changed and that Start over goes back to
+  it. **Cancel changes nothing, not even a running dictation.** A line under the button confirms the clear, because the button sits at
+  the foot of a long screen.
+- **⚠ THE LOCK IS ENFORCED WHERE THE ACTION RUNS, not only in the disabled button.** Out for approval or approved, Reset refuses, asks
+  nothing and clears nothing: calcAll would otherwise put a blank working copy under an estimate a manager is reviewing, and `checkPin`
+  approves the working copy. The *"a rule enforced only in what a control OFFERS is not enforced"* shape from 2026-09-23, one more time.
+- **Tests.** `estimate-reset` 305 → **398**: the whole derived net driven through the real `resetEstimate` on the same client (every
+  control, every room row, every piece of saved-estimate state), the three seeds, the binding and job-record fields untouched, no fetch,
+  Cancel, saved / empty-record / nothing-saved questions, the saved record unchanged, both lock states, the bound-job-or-null hand-off
+  under suppressed auto-save, the tooltip — and `resetEstimate` joins the *no path keeps a private list* and *calls the one reset* nets.
+  **Two suites restated, not deleted:** `doc-scope` pinned `_estimateDocScope = 'full'` inside Reset's body — **that line WAS the
+  defect** — and now drives Reset to the job's own intake answer; `estimate-walkthrough` pinned `_volHandSet = {}` there and now points at
+  the one reset. **12,002 committed checks on this branch; 12,720 after merging the concurrent H3/M8, document and H1/M1 sessions'
+  suites, 0 failed.** The first `<style>` block is byte-identical to `main`'s, before the merges and after them — no CSS.
+  **Revert sweep on three tar copies: 12 changes, ALL RED, baseline 11,993 / 0 before and after on every copy, no needle
+  mismatched.** The old body back (the defect itself) fails **55**; no confirm 12; the lock guard removed 8; resetting for nobody and the
+  saved branch inverted 6 each; the guard on *approved* only 4; the feedback line and the tooltip 2 each; an empty record counted as
+  saved, the unsuppressed auto-save, the unnamed client and the missing Start over pointer 1 each.
+  - **⚠ THE DEFECT REVERT CRASHED TWO SUITES ON THE FIRST SWEEP** (46 fails reported): the new sandboxes did not lift the old body's
+    `ROOMS`, so it threw and every check after it went unrun. Every Reset call in the tests is read defensively now; re-run on a fresh
+    copy it fails **55 with all 12,002 checks running**, baseline 12,002 / 0 before and after.
+- **Verified in headless Chromium, `tests/browser/step31.js`, 42 checks, 0 failed, 0 page errors**, pressing the real Reset button:
+  Cancel keeps everything; OK names the client, and the screen is a blank estimate for *this* client — premium, Contents list, Ashley as
+  the walker, the home value and sqft kept — with the same six rooms back at **$22,505**; with a saved estimate the question says it is
+  untouched, the record is byte-identical after, and Start over then brings it back; submitted, the button is disabled and a direct call
+  asks nothing and clears nothing. **Against the pre-change build it fails 24 of 42.** Written as step 28 and renumbered on two
+  merges — the concurrent H3/M8, document and H1/M1 sessions took 28, 29 and 30 first. `run.sh`'s default list is 1–31; on the
+  MERGED tree steps 1–30 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 /
+  52 / 27 / 58 / 69 / 75 / 33 / 78 / 58 / 78 / 28 / 90 / 58 / 62 / 53, 0 failed — **1,488 browser checks across the thirty-one**.
+  - **⚠ THE `showFB` 4-SECOND RACE BIT THE FIRST RUN, AND IT IS STILL NOT FIXED.** Every message arms an unconditional clear, so the
+    first run of section D read an EMPTY strip after Reset: an earlier message's timer (the Save's or the reopen's, both under four
+    seconds old while the revert sweep loaded the CPU) cleared Reset's line. Section D now waits out earlier timers and says why.
+    **A message written within four seconds of another can still vanish early** — a per-element timer in `showFB` is the fix,
+    recorded twice now and worth doing on its own.
+- **⚠ FOUND IN PASSING, NOT FIXED — BY READING, NOT DRIVEN: the device's scratch copy survives a Reset or a Start over.**
+  `saveEstimateScratch` refuses to write an empty-rooms state, so after either clear the scratch still holds the discarded build until
+  something new is scored. Opening that client **offline**, with no saved estimate, would restore it (under the *unsaved draft* warning).
+  Narrow — offline, nothing saved, and left before scoring anything new — and the same on both buttons.
+- Manual **§5h** (Reset rewritten: a blank estimate for this client, not Start over, locked with everything else, and what it used to do,
+  measured) and playbook **Step 2** (a sentence in the `.stop`) plus **one** symptom row. Both `.md` copies hand-edited; **18 claims
+  parity-checked, 0 mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and
+  17/18 tables full width, 0 on the phone rule — as before.
+- **⚠ THE SHAPE TO COPY: the reset that stays on the same client is the one nobody measures.** C1 was found because a leak crosses
+  clients and shows on the next client's documents. Reset never crossed a client, so its damage stayed on the job it was pressed on — and
+  two errors in opposite directions summed to a figure that still looked right.
 
 ## ⚠⚠ TWO MANAGER APPROVALS LIVED IN THE OPEN PAGE, NOT ON THE JOB — THE FINAL-INVOICE PIN AND THE AGREEMENT'S BAND (FIXED 2026-09-29)
 Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). App-only, no redeploy: the approval rides
@@ -537,11 +600,14 @@ net under it.
   the screen and the open restores the saved one; with nothing saved it starts from the intake answers. The question promised *intake
   answers* either way. It branches on the record now (`estimateHasContent`, so an empty record is correctly not "saved"), names what
   goes, and the button's tooltip says both.
-- **⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the bottom `Reset` button (`resetEstimate()`) is a FIFTH copy of a reset list**, on the
+- ~~**⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the bottom `Reset` button (`resetEstimate()`) is a FIFTH copy of a reset list**, on the
   same client. It clears the rooms, rush and fixed price, but **unticks Premium Estate even on a premium job**, sets the documentation
   scope to **full** whatever intake answered, and **leaves** the discount, move styling, private note, collections, vehicles, prep lines,
   walked-by and planner date. Not C1 (it never crosses clients), so left alone rather than redesigned in passing; the manual says to use
-  Start over. Routing it through `resetEstimateJobState(currentJob)` is one line if Anthony wants it.
+  Start over. Routing it through `resetEstimateJobState(currentJob)` is one line if Anthony wants it.~~ **BUILT THE SAME DAY** — Anthony:
+  *"route Reset through the new reset too."* See the entry at the top of this file. ⚠ *"One line"* was wrong: it also needed a confirm,
+  a lock refusal where the action runs, and a question that says whether a saved estimate is touched. *Kept rather than deleted, per the
+  standing rule that a fixed flag left standing reads as outstanding work.*
 - **Tests.** `tests/estimate-reset.test.js` new at **305**; five suites restated, not deleted — `doc-scope`, `estimate-walkthrough`,
   `fixed-price`, `prep-declutter`, `prep-fee-billing` each pinned the old three-copy reset by byte sequence or lifted
   `resetEstimateExtras`; each now drives `resetEstimateJobState` and asserts the requirement. **11,804 committed checks on this branch; 11,907 after merging the concurrent H4 session's suites.** The first `<style>` block is byte-identical at 97,897 bytes / 1,228 lines — no CSS.
@@ -8856,14 +8922,22 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 
 ## Branches
 - Active feature branch: `claude/clever-goodall-dyv11h`
-  (SIX sessions ran concurrently on 2026-09-29 off the 2026-09-28 workflow audit: C1 on `claude/exciting-carson-pv156f`, H4 on
-  `claude/elegant-edison-x0kgyn`, H3 and M8 on `claude/elegant-wright-nb6ffk`, the document findings on
-  `claude/dazzling-mendel-qns7nm`, H1 and M1 on `claude/charming-dirac-gcdfsl`, and C2 here. All six are on `main`. This branch
-  merged the other five on the way through, in three merges, and the browser steps resolved as a UNION: H4 keeps step 26, C1 27,
-  H3/M8 28, the document claims 29, H1/M1 30, and this one is **step 31**. The first merge restated the H4 suite's recheck cases,
-  which this fix had turned green (see the C2 entry); the second took `main`'s deletion of `cycleStatus`, dead code this branch
-  had stamped; the third kept `main`'s agreement-approval revoke in `applyDiscountRevision` and `revokeEstimateApproval`, with
-  this branch's stamp before each save.)
+  (SIX sessions ran concurrently on 2026-09-29 off the 2026-09-28 workflow audit, landing seven builds: C1 and then the bottom
+  Reset on `claude/exciting-carson-pv156f`, H4 on `claude/elegant-edison-x0kgyn`, H3 and M8 on `claude/elegant-wright-nb6ffk`,
+  the document findings on `claude/dazzling-mendel-qns7nm`, H1 and M1 on `claude/charming-dirac-gcdfsl`, and C2 here. All seven
+  are on `main`. This branch merged the other six on the way through, in four merges, and the browser steps resolved as a UNION:
+  H4 keeps step 26, C1 27, H3/M8 28, the document claims 29, H1/M1 30, the Reset 31, and this one is **step 32**. The first
+  merge restated the H4 suite's recheck cases, which this fix had turned green (see the C2 entry); the second took `main`'s
+  deletion of `cycleStatus`, dead code this branch had stamped; the third kept `main`'s agreement-approval revoke in
+  `applyDiscountRevision` and `revokeEstimateApproval`, with this branch's stamp before each save; the fourth conflicted only on
+  the build stamp, CLAUDE.md and both sessions' `tests/browser/step31.js`.)
+  (`claude/exciting-carson-pv156f` recorded, before this merge, that it was the active branch, and:)
+  (`claude/charming-dirac-gcdfsl`, `claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk` and
+  `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29. This branch's second build — the bottom Reset through the
+  one reset — landed after the other four were on `main` and merged them on the way through, twice, because two landed while it
+  was finishing; the merges conflicted on the build stamp, CLAUDE.md, `run.sh` and two browser step numbers, every one resolved
+  as a UNION. Browser steps: H4 keeps 26, C1 27, H3/M8 28, the document findings 29, H1/M1 30, and the Reset build is
+  **step 31**.)
   (`claude/charming-dirac-gcdfsl` recorded, before this merge, that it was the active branch, and:)
   (`claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`, `claude/exciting-carson-pv156f` and
   `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — FIVE sessions ran concurrently off the 2026-09-28
@@ -14083,9 +14157,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (fourth pass)** — both documents, against a Job Plan edit surviving the other
+- Last reconciled against the app: **2026-09-29 (fifth pass)** — both documents, against a Job Plan edit surviving the other
   device's save (manual §2 and §11; playbook Step 7, a `.stop` in Step 10c, the plan-refresh note and two symptom rows); see
   the entry at the top of this file.
+- Prior pass **2026-09-29 (fourth pass)** — both documents, against the bottom Reset button running the one
+  reset (manual §5h; playbook Step 2 and one symptom row); see its entry near the top of this file.
 - Prior pass **2026-09-29 (third pass)** — both documents, against the two manager approvals moving onto
   the job (manual §8, §12, §17; playbook a `.stop` under *What needs a PIN* and three symptom rows); see its entry near the
   top of this file.
