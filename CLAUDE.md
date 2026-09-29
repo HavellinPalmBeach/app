@@ -1,3 +1,104 @@
+## ⚠⚠ A FRESH ESTIMATE INHERITED THE LAST CLIENT'S — ONE RESET NOW, AND A NET UNDER IT (FIXED 2026-09-29)
+Workflow audit of 2026-09-28, finding **C1 (Critical)**: a fresh estimate on Build Estimate carried settings from the last
+client's estimate. App-only, no redeploy. `resetEstimateJobState(job)` is the one reset; `tests/estimate-reset.test.js` is the
+net under it.
+
+- **⚠⚠ REPRODUCED ON THE PRE-CHANGE BUILD BEFORE ANYTHING WAS TOUCHED, through the real buttons.** Client A priced with a 10%
+  discount, move styling, a private walkthrough note, a coin collection, a car and a planner date; **← Clients without saving**
+  (the bar keeps the work, by design); client B's Build estimate. B opened with **all of it**:
+
+  | | pre-change | now |
+  |---|---|---|
+  | `#e-discount` | **10** — only `restoreEstimateToUI` ever wrote it, so it survived a job switch AND a Save; the audit watched one 10% ride through five new clients | `0` |
+  | on fixed price | the leak took 10% off B's flat fee (**$18,240 → $16,416** on the house measured here; $2,220 on the audit's) and **printed no discount line** | B's own suggestion |
+  | `#e-move-styling` | ticked (+8 specialist hours on a Home Transition) | off |
+  | `_privateWalkNote` + its box | A's *"the son contests the will"*, saved on B and read in **B's Walkthrough view** | blank |
+  | `#e-prepared-by` | A's concierge, on a job naming nobody | blank |
+  | `collectionsData` / `vehiclesData` | A's coin collection and car, **printed on B's client estimate** | empty |
+  | `#tp-target` | A's date, so the planner advised a crew for A's deadline | blank |
+
+  **⚠ Save was not a clean break either**: `clearEstimateTab` missed the discount, styling, note and walker, so they rode through a
+  Save into the next client.
+- **⚠⚠ FOUR MORE THE AUDIT DID NOT LIST, ALL FOUND IN THE BROWSER WHILE REPRODUCING IT, and one of them defeated a gate.**
+  - **A's $4.2M home value rode onto B and let B save past *"Property value is required"*.** `loadJobIntoEstimate` wrote
+    `e-propval` only `if (job.propVal)`, so a job with none kept the last client's — the one refusal that exists to catch a missing
+    home value was satisfied by another house's. It writes `job.propVal || ''` now. Reverting fails the suite; the browser drives the
+    refusal on B.
+  - **A renamed *Other* row** (A's *Wine cellar*) sat on B's grid and became a room on B's estimate the moment B ticked it —
+    `clearAllRooms` never reset the name box `calcAll` reads. `restoreEstimateToUI` writes a saved estimate's own name back.
+  - **The room-note indicator stayed bronze and read *📝 Walkthrough*** on a room B had never noted — `setRoomState`'s off branch
+    cleared the note and left the button painted. Colour, weight and label all go back now.
+  - **A dictation still running** would append its last words to the NEXT client's same room row or private note (rows are positional).
+    Every open recogniser is `abort()`ed first — **never `stop()`, which still delivers the final result.**
+- **⚠⚠ ONE RESET, CALLED FROM EVERY PATH, AND THE SHAPE IS THE FIX.** The old reset lived in **four** hand-kept copies —
+  `neutralizeEstimateView`, the fresh-build branch of `applyOpenedEstimate`, `clearEstimateTab`, and `resetEstimateExtras` beside
+  them — each a list of the controls somebody remembered. `resetEstimateJobState(job)` is the list now, and `resetEstimateExtras` is
+  **deleted**. Callers: `neutralizeEstimateView` (so every open — `loadJobIntoEstimate` AND `editEstimateForJob`, which now passes the
+  job it is opening), the fresh-build branch, and `clearEstimateTab` with `null` (Save, unbind, Start over).
+  - **Three inputs seed from the JOB, never from blank and never from the last client**: Premium Estate (`job.premium`), the
+    documentation scope (`seedDocScopeFromJob`), and who walked the house (`job.siteVisitBy || job.tc`). A job with no answer gets
+    blank, which is the truth.
+  - **⚠ WHAT IT DELIBERATELY DOES NOT TOUCH:** the job binding (`#e-job`), the four fields `loadJobIntoEstimate` writes off the job
+    record (service, sqft, property value, target start), and the approval state (`loadEstimateForJob` answers that from the store).
+  - **⚠ A SAVED ESTIMATE GETS ALL OF IT BACK** because every open resets first and `restoreEstimateToUI` then writes the record over it —
+    so a field the record lacks comes back BLANK rather than as the last client's. **The planner target is the one input no record
+    carries**, and that is correct: it is a question asked on site, not a term of the estimate. Driven: A reopened after B has every
+    one of its values back, and `tp-target` blank.
+  - **⚠ THE RESUME IS UNTOUCHED.** `openEstimateScreen` on the SAME client still resumes the unsaved work and never comes through the
+    reset — the ← Clients bar's promise. Pinned in both the unit suite and the browser.
+- **⚠⚠ THE NET IS THE RULE, NOT TODAY'S LIST — and it is what makes the next control unable to leak.**
+  `tests/estimate-reset.test.js` derives the **call tree of `calcAll`** from source (it converges at 89 functions and 103 literal ids,
+  plus the dynamic prefixes the room grid and the vendor cards build ids from), adds every control in `#panel-estimate` and the state
+  variables `restoreEstimateToUI` assigns, sets every one to a previous client's value, drives the **real** open path for a different
+  job, and fails on anything that survives. Four exception maps, each **verified rather than trusted**: owned by the job (the five
+  job-record fields, each checked to follow the NEW job), seeded from the job (premium, walked-by), painted from a pin (`e-alpha`,
+  `e-docscope`), populated at load (`new-col-disp`). **Adding a control to Build Estimate and forgetting the reset fails the suite** —
+  which is the thing the four hand-kept copies could never promise.
+- **⚠ START OVER SAYS WHICH OF TWO THINGS IT DOES, because it always did one of two.** On a client with a **saved** estimate it clears
+  the screen and the open restores the saved one; with nothing saved it starts from the intake answers. The question promised *intake
+  answers* either way. It branches on the record now (`estimateHasContent`, so an empty record is correctly not "saved"), names what
+  goes, and the button's tooltip says both.
+- **⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the bottom `Reset` button (`resetEstimate()`) is a FIFTH copy of a reset list**, on the
+  same client. It clears the rooms, rush and fixed price, but **unticks Premium Estate even on a premium job**, sets the documentation
+  scope to **full** whatever intake answered, and **leaves** the discount, move styling, private note, collections, vehicles, prep lines,
+  walked-by and planner date. Not C1 (it never crosses clients), so left alone rather than redesigned in passing; the manual says to use
+  Start over. Routing it through `resetEstimateJobState(currentJob)` is one line if Anthony wants it.
+- **Tests.** `tests/estimate-reset.test.js` new at **305**; five suites restated, not deleted — `doc-scope`, `estimate-walkthrough`,
+  `fixed-price`, `prep-declutter`, `prep-fee-billing` each pinned the old three-copy reset by byte sequence or lifted
+  `resetEstimateExtras`; each now drives `resetEstimateJobState` and asserts the requirement. **11,804 committed checks.** The first `<style>` block is byte-identical at 97,897 bytes / 1,228 lines — no CSS.
+  **Revert sweep on four tar copies: 41 changes, ALL RED, baseline 11,792 / 0 before and after on every copy, no needle
+  mismatched, nothing crashed.** Taking the reset out of Save / unbind fails **42**; the fixed-price flags and clearing the rooms
+  16 each; the α and cost pins 14; the add-a-line boxes 12; the fresh branch's reset and the vendor + prep lists 11 each; the
+  fullness preset 9; the rest 1–7. The one-fail reverts are each the half of a pair the other half would otherwise cover: the
+  walker's site-visit-before-assigned order, drawing the collections table before emptying it, the disposition picker's default,
+  the three call sites passing the job, and restore writing a saved custom name back.
+  - **A second sweep on two fresh copies** covered what changed after the first one's copies were taken: the note button's label
+    (3), Start over collapsed to one question (2), its branch inverted (6), an empty record counted as saved (2), the tooltip (2);
+    11,804 / 0 before and after, with the home-value revert re-run there as a control (3). **⚠ Two of those checks were written
+    first, because nothing asserted the tooltip or the empty-record case** — a sweep over an unasserted line can only come back green.
+  - **⚠ ONE OF MY OWN BROWSER CHECKS COULD NOT FAIL, CAUGHT BEFORE IT RAN.** The collections and vehicles tables render each line as
+    INPUTS, so a `textContent` read passes over a table full of the last client's lines. It reads the input values now, and
+    asserts A's table shows A's lines first, so the check on B is falsifiable.
+- **Verified in headless Chromium, `tests/browser/step26.js`, 90 checks, 0 failed, 0 page errors**, driving the real controls (the
+  discount box, the styling box, the note box, the notes modal's Save, the Other row's name box, the + Add buttons, the planner date):
+  A priced; ← Clients and back to A **resumes**; ← Clients then B is **clean on all of it** including the home value, *Other*, and the
+  note button's colour and label; B's client estimate and Walkthrough view carry none of A; B's Save is **refused** on B's own missing
+  home value; on fixed price B's flat fee **is** its suggestion with no discount line; A saved then B — clean again; A reopened —
+  everything back; Start over asks the saved question on A (and restores the saved 10% over an unsaved 12%) and the intake question
+  on B. **Against the pre-change build it fails 39 of 90.** `run.sh`'s default list is 1–26; steps 1–25 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 /
+  15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 78 / 58 / 78, 0 failed — **1,243 browser checks across the twenty-six**.
+- Manual **§1** (Start over's two outcomes) and **§5h** (a note: what leaked and the measurements, what a fresh estimate holds now,
+  what has not changed, Start over and the older Reset, and the check for anything priced before today). Playbook **Step 2** (the
+  `.stop` corrected — it said Start over always starts from the intake answers — and a note) and **four** symptom→cause rows. Both
+  `.md` copies hand-edited; `doc-structure` green; **20 claims parity-checked, 0 mismatches** (three
+  apparent misses were the HTML's curly apostrophe against the `.md`'s straight one, verified by normalising rather than assumed);
+  rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as
+  before, since the four rows went into an existing table.
+- **⚠ THE SHAPE TO COPY: a reset written as a list of what to clear is a list of what somebody remembered.** Four copies, each correct
+  about the controls it named, and together they missed seven — including the one (the discount) that moved money on a client document
+  with no line to show it. The net walks what the pricing READS rather than what a person thinks to clear, which is the only list that
+  grows by itself.
+
 ## ⚠⚠ THE HOME PREP AGREEMENT STATES THE CONCIERGE RATE — THE CHANGE ORDER RESTATES IT (BUILT 2026-09-25)
 Anthony, the same evening the prep change-order route shipped (the entry below): *"I think we should mention the hourly rates in
 the home prep agreement."* That answers counsel bundle B5's third question, which the build below had left open by printing the
