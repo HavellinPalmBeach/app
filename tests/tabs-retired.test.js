@@ -160,12 +160,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const acts = noComments(fn('jobTimelineActions'));
     has(acts, "dashApproveInvoice(\" + id + \",'final')", 'the rail offers it on the final invoice row');
     const a = noComments(fn('dashApproveInvoice'));
-    has(a, 'currentInvJobId = jobId', 'primed to the right job');
-    has(a, 'currentInvStage = stage', 'and the right stage');
-    has(a, 'invoiceHtml(job, currentInvStage)', '⚠ and the verdict is computed FRESH, not read off a global');
+    // ⚠ RESTATED 2026-09-29, not deleted. Three of these pinned `currentInvJobId = jobId` and
+    // `currentInvStage = stage` — page state this door wrote only so `checkInvPin` could read it
+    // back, beside an approval that then applied to EVERY job's final. The requirement never was
+    // "write the globals", it was "the PIN lands on the right job": the modal is bound to it now.
+    has(a, 'openInvPinModal(jobId)', 'the PIN modal is bound to the right job');
+    lacks(a, 'currentInvJobId', '⚠ and the door writes no page pointer for checkInvPin to trust');
+    lacks(a, 'currentInvStage', 'nor a stage pointer — the stage the rail named goes straight into the verdict');
+    has(a, "invoiceHtml(job, stage || 'final')", '⚠ the verdict is computed FRESH for the stage the rail named, not read off a global');
     has(a, 'if (!d.requiresApproval)', 'an invoice inside tolerance says so rather than asking for a PIN');
-    has(a, 'openInvPinModal()', 'and the PIN modal is the one that already exists');
-    ok(a.indexOf('invoiceHtml', 'jobLogEntries') < a.indexOf('openInvPinModal'),
+    ok(a.indexOf('invoiceHtml(') < a.indexOf('openInvPinModal'),
       'the verdict comes before the modal, so a PIN is never asked for on an invoice that needs none');
     has(src, 'id="inv-pin-modal"', 'the modal is still in the DOM');
     has(fn('checkInvPin'), 'resolvePin(pin)', 'and still resolves a named approver');

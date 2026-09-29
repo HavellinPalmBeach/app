@@ -35,7 +35,7 @@ const FNS = [
   'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection',
   '_cePhases', 'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted',
   'proposedPlanRow', 'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml',
-  'agrPriceAdjustments', 'probateAgreementHtml', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
+  'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
   '_agrProbateCompliance', '_agrMidpointTrigger', '_fixedFeeBlurb', 'docStandardEffect', 'isFormalDoc',
   'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason', 'docTierOf',
   'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection', 'approvedEstimateFor', 'esignAnchor',
@@ -43,7 +43,7 @@ const FNS = [
   '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
   'matterTypeOf', 'invFiduciaryMode',
   // the three invoices
-  'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+  'invoiceHtml', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
   'coHoursLabel', '_coMoney', 'getVendorActuals', '_srcLineKey', '_invVendorFeeSentence', 'vendorGroupOfLine',
   'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'vendorCats', 'vendorPrimaryCat',
   'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor',
@@ -55,7 +55,7 @@ const VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERAN
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
   'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', 'agrApproved', 'agrApprovedBy',
   'agrApprovedAt', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES',
-  'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'invApproved',
+  'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
   'DOC_STAGE_WORD', 'EMAIL_BRAND', 'MAX_DISCOUNT_PCT'];
 
 // ── Reading money back off a rendered document ────────────────────────────────

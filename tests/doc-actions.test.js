@@ -142,7 +142,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The invoice's two verdicts must not collapse into one.
     const ib = noComments(src.slice(src.indexOf('invoice: {'), src.indexOf('var DOC_STAGE_WORD')));
     has(ib, 'if (d.blocked) return', 'blocked is its own refusal');
-    has(ib, 'if (d.requiresApproval && !invApproved) return', 'and needs-a-PIN is a different one');
+    // ⚠ RESTATED 2026-09-29, not deleted: it pinned `!invApproved`, a page global that let a PIN
+    // entered for one job unlock every job's final. The requirement is the same two verdicts —
+    // and the PIN's is now read off THIS job's record, for THIS figure (tests/approval-on-job).
+    has(ib, 'if (d.requiresApproval && !invFinalApproval(spec.job, d.amtDue))', 'and needs-a-PIN is a different one');
     has(ib, 'Math.round(d.variancePct * 100)', 'which says by how much it is off');
 
     // ⚠ TYPE CONFUSION, CAUGHT IN A BROWSER AND NOT BY A SOURCE ASSERTION. `spec.est` is

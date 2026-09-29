@@ -18,7 +18,7 @@
 
 const { sandbox } = require('./harness');
 
-const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
              'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson',
              'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine',
              'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc',
@@ -28,7 +28,7 @@ const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentSplit', 'rushScopeLine
 const VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',
               'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
               'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
-              'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'invApproved'];
+              'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
 
 // ⚠ THE ODD TOTAL IS THE POINT, NOT AN ACCIDENT. $25,715 puts the 50% stage target on a half
 // dollar (12,857.50) and the 75% one on a quarter (19,286.25), which is what makes the double

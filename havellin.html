@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:17pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:27pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -16358,6 +16358,13 @@ var DOC_ACTIONS = {
     text: function (spec) { return buildEstimateEmailText(spec.est, spec.job); },
     emailHtml: function (spec) { return buildEstimateEmailHtml(spec.est, spec.job); },
     mailto: function (spec) { return buildEstimateMailto(spec.est, spec.job); },
+    // ⚠⚠ EVERY CLIENT DOCUMENT KIND HIDES `.approved-stamp` IN ITS PDF, and the net in
+    // tests/approval-on-job.test.js walks DOC_ACTIONS so a fourth kind cannot be added without it.
+    // The band is our internal "approved" note; the print block hides it only under
+    // `@media print`, and the PDF that is sent or filed is converted server-side from
+    // `_exportDoc`'s copy of the page — which is not a print. The estimate carries no band today;
+    // it carries the rule so it never can.
+    pdfCss: '.approved-stamp{display:none!important;}',
     html: function (spec) { return clientEstimateHtml(spec.est, spec.job); },
     // The estimate is the client's copy of an approved price. An unapproved one is a
     // working draft and must not leave the building.
@@ -16380,8 +16387,10 @@ var DOC_ACTIONS = {
     text: function (spec) { return buildAgreementEmailText(spec.job); },
     emailHtml: function (spec) { return buildAgreementEmailHtml(spec.job); },
     mailto: function (spec) { return buildAgreementMailto(spec.job); },
-    // The packet paginates: the exhibit starts on a fresh page.
-    pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;} .agr-sig-page{break-before:page;page-break-before:always;}',
+    // The packet paginates: the exhibit starts on a fresh page. ⚠ And it hides the "Approved for
+    // Sending" band, which until 2026-09-29 reached the DocuSign PDF carrying another job's
+    // approver whenever the page had approved one last — see _agrApprovedStamp.
+    pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;} .agr-sig-page{break-before:page;page-break-before:always;} .approved-stamp{display:none!important;}',
     // ⚠ THE PACKET, NEVER THE BARE AGREEMENT. Both forms incorporate the Estimate as
     // Exhibit A and the estate form says the agreement is not valid without it, so a
     // client sent the agreement alone is signing against an exhibit they do not have.
@@ -16415,6 +16424,8 @@ var DOC_ACTIONS = {
     text: function (spec) { return buildInvoiceEmailText(spec.job, spec.stage, _docAmtDue(spec)); },
     emailHtml: function (spec) { return buildInvoiceEmailHtml(spec.job, spec.stage, _docAmtDue(spec)); },
     mailto: function (spec) { return buildInvoiceMailto(spec.job, _docAmtDue(spec), spec.stage); },
+    // The "Approved for Release" band on a PIN-approved final is ours, not the client's.
+    pdfCss: '.approved-stamp{display:none!important;}',
     html: function (spec) { var d = invoiceHtml(spec.job, spec.stage); return d ? d.html : ''; },
     blocker: function (spec) {
       // ⚠ THE SHARED GATE FIRST, AND IT IS THE HALF THAT WAS MISSING. This blocker only ever
@@ -16427,7 +16438,13 @@ var DOC_ACTIONS = {
       // ⚠ TWO DIFFERENT ANSWERS AND THEY MUST STAY APART. `blocked` cannot be unlocked by
       // anyone — nobody can unlock a missing timesheet. `requiresApproval` can, by a PIN.
       if (d.blocked) return 'No hours have been logged for this job, so the final cannot be issued. Log them on the Job Plan tab first.';
-      if (d.requiresApproval && !invApproved) return 'This final is ' + Math.round(d.variancePct * 100) + '% off the estimate, outside the ±' + estTolerancePctTxt() + ' tolerance, so it needs a manager PIN before it can be issued.';
+      // ⚠⚠ THE APPROVAL IS READ OFF THIS JOB, FOR THIS FIGURE — never a page global. A PIN
+      // entered for one job used to unlock every job's final; see invFinalApproval.
+      if (d.requiresApproval && !invFinalApproval(spec.job, d.amtDue)) {
+        var _stale = invFinalApprovalStaleTxt(spec.job, d.amtDue);
+        return 'This final is ' + Math.round(d.variancePct * 100) + '% off the estimate, outside the ±' + estTolerancePctTxt() + ' tolerance, so it needs a manager PIN before it can be issued.'
+          + (_stale ? ' ' + _stale : '');
+      }
       return '';
     }
   }
@@ -17380,16 +17397,21 @@ function dashWalkthrough(jobId) {
 // registry's blocker refuses a final outside tolerance and says it "needs a manager PIN",
 // and with that tab retired there was nowhere left to give one — a refusal with no door is
 // worse than no gate at all.
+//
+// \u26a0\u26a0 AND IT WAS THE DOOR THAT NEVER CLEARED THE PAGE GLOBAL. It wrote `currentInvJobId` so
+// `checkInvPin` could find the job, and the approval that PIN then set was honoured for EVERY
+// job's final until a reload \u2014 see invFinalApproval. It binds the modal to this job now and
+// writes no page state at all.
 function dashApproveInvoice(jobId, stage) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
-  currentInvJobId = jobId;
-  currentInvStage = stage || 'final';
-  var d = invoiceHtml(job, currentInvStage);
+  var d = invoiceHtml(job, stage || 'final');
   if (!d) { dashNotice('warn', 'This invoice could not be built.'); _dashRedraw(jobId); return; }
   if (!d.requiresApproval) { dashNotice('ok', 'This invoice is inside the \u00b1' + estTolerancePctTxt() + ' tolerance \u2014 no approval needed.'); _dashRedraw(jobId); return; }
-  invRequiresApproval = true;
-  openInvPinModal();
+  // Already approved at this figure: say so rather than asking for the PIN a second time.
+  var ap = invFinalApproval(job, d.amtDue);
+  if (ap) { dashNotice('ok', 'This final is already approved for release \u2014 ' + ap.by + ', ' + fmtDate2(ap.at) + ', at ' + fmt(ap.amtDue) + '.'); _dashRedraw(jobId); return; }
+  openInvPinModal(jobId);
 }
 
 // The ACH payment link. ⚠⚠ IT IS NO LONGER ONE-WAY — `stripeRefresh` reads the settled
@@ -28244,9 +28266,10 @@ function setVendorDirStatus(msg, isErr) {
 
 // ─── JOB LOG ──────────────────────────────────────────────────────────────────
 var jobLogs = {}; // keyed by job.id
-var invApproved = false;
-var invApprovedBy = '';
-var invApprovedAt = '';
+// ⚠⚠ NO `invApproved` / `invApprovedBy` / `invApprovedAt` HERE ANY MORE, AND THEY MUST NOT
+// COME BACK. A final's manager approval is a fact about ONE job, so it is recorded on that job
+// (`job.docState['invoice:final'].approval`) — see invFinalApproval beside checkInvPin for what
+// three page globals did to two jobs at once.
 var currentInvJobId = null;
 var currentInvStage = 'final'; // 'deposit' | 'midpoint' | 'final'
 var invRequiresApproval = false; // set per-render: only a final outside ±15% needs PIN
@@ -29237,7 +29260,9 @@ function loadInvoice() {
   var invSel = document.getElementById('invoice-job');
   var jobId = invSel ? parseInt(invSel.value) : 0;
   currentInvJobId = jobId || null;
-  invApproved = false;
+  // ⚠ No approval to reset here: it was a page global this loader cleared, and this loader
+  // was the only thing that ever cleared it. The approval is on the job now — see
+  // invFinalApproval — so picking another job cannot carry one across.
   var job = jobs.find(function(j){ return j.id === currentInvJobId; });
   currentInvStage = defaultInvStage(job);
   var stageSel = document.getElementById('inv-stage');
@@ -29247,7 +29272,6 @@ function loadInvoice() {
 
 function setInvStage(v) {
   currentInvStage = v || 'final';
-  invApproved = false; // re-approval required per stage document
   renderInvoice();
 }
 
@@ -29584,8 +29608,17 @@ function invoiceHtml(job, stage) {
     '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors</td></tr>';
   var prepRows = act.prep.map(_actualRow).join('');
 
-  var approvedStamp = (invApproved && invApprovedBy) ?
-    '<div class="approved-stamp"><div class="approved-stamp-text">✓ Approved for Release</div><div class="approved-stamp-sub">Approved by ' + invApprovedBy + ' on ' + invApprovedAt + '</div></div>' : '';
+  // ⚠⚠ THE BAND PRINTS FROM THIS JOB'S OWN RECORD, AND ONLY WHILE THAT RECORD STILL DESCRIBES
+  // THE FIGURE BELOW. It read three page globals, so a PIN entered for one job would have put
+  // "Approved for Release" on whichever final was built next — invFinalApproval says why.
+  // ⚠ AND IT HAD NEVER BEEN ON THE PAGE: the old `approvedStamp` was computed here and emitted
+  // nowhere (dead since at least 2026-09-21, the oldest commit this clone holds), so this is the
+  // first build in which a PIN-approved final shows it. It sits under the header as the
+  // agreement's does and is screen-only: the print block hides `.approved-stamp`, and every
+  // client document kind's `pdfCss` hides it from the PDF that is sent or filed.
+  var _finalApproval = (stage === 'final') ? invFinalApproval(job, stageAmtDue) : null;
+  var approvedStamp = _finalApproval ?
+    '<div class="approved-stamp"><div class="approved-stamp-text">✓ Approved for Release</div><div class="approved-stamp-sub">Approved by ' + esc(_finalApproval.by) + ' on ' + esc(fmtDate2(_finalApproval.at)) + '</div></div>' : '';
 
   // ⚠ A SHORTFALL IS NAMED, NEVER FOLDED SILENTLY INTO THE BALANCE. The balance below is
   // correct either way, but a client who owes an unpaid midpoint reads a final that is larger
@@ -29849,6 +29882,7 @@ function invoiceHtml(job, stage) {
     '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Havellin handles the work no family should face alone.</div>' +
     '</div>' +
     '<div class="ce-divider-thick"></div>' +
+    approvedStamp +
     '<div class="ce-title">' + stageTitle + '</div>' +
     '<div style="display:flex;justify-content:center;gap:2.5rem;margin:.35rem 0 .75rem;text-align:center;">' +
     '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
@@ -29936,9 +29970,12 @@ function renderInvoice() {
   var _warnBanner = doc.warnHtml;
   var _variancePct = doc.variancePct;
   var overUnder = doc.overUnder;
-  var unlocked = !invRequiresApproval || invApproved;
+  // The approval is read off the job for the figure this document asks for — the same test the
+  // registry's gate applies, so the tab cannot offer what a send would refuse.
+  var _ap = invRequiresApproval ? invFinalApproval(job, doc.amtDue) : null;
+  var unlocked = !invRequiresApproval || !!_ap;
 
-  btnApprove.style.display = (invRequiresApproval && !invApproved) ? 'inline-block' : 'none';
+  btnApprove.style.display = (invRequiresApproval && !_ap) ? 'inline-block' : 'none';
   btnPdf.style.display = unlocked ? 'inline-block' : 'none';
   if (mailEl) {
     mailEl.style.display = unlocked ? 'inline-block' : 'none';
@@ -29952,15 +29989,75 @@ function renderInvoice() {
   } else {
     var _vpct = Math.round(_variancePct * 100);
     var _dir = overUnder >= 0 ? 'over' : 'under';
-    badge.innerHTML = invApproved ? '<span class="badge b-approved">✓ Approved</span>' : '<span class="badge b-pending">Manager Approval Required</span>';
-    banner.innerHTML = _warnBanner + (invApproved ?
-      '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Invoice approved</strong> — ' + invApprovedBy + ' · ' + invApprovedAt + '</div></div>' :
-      '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Final is ' + _vpct + '% ' + _dir + ' the estimate</strong> — outside the ±15% tolerance, so manager review is required. Enter PIN to approve and unlock.</div></div>');
+    var _stale = _ap ? '' : invFinalApprovalStaleTxt(job, doc.amtDue);
+    badge.innerHTML = _ap ? '<span class="badge b-approved">✓ Approved</span>' : '<span class="badge b-pending">Manager Approval Required</span>';
+    banner.innerHTML = _warnBanner + (_ap ?
+      '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Invoice approved</strong> — ' + esc(_ap.by) + ' · ' + esc(fmtDate2(_ap.at)) + ' · at ' + fmt(_ap.amtDue) + '</div></div>' :
+      '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Final is ' + _vpct + '% ' + _dir + ' the estimate</strong> — outside the ±' + estTolerancePctTxt() + ' tolerance, so manager review is required. Enter PIN to approve and unlock.'
+        + (_stale ? '<div style="font-size:11px;margin-top:2px;">' + esc(_stale) + '</div>' : '') + '</div></div>');
   }
 }
 
-function openInvPinModal() {
-  document.getElementById('inv-pin-modal').style.display = 'flex';
+// ⚠⚠ THE ±15% FINAL-INVOICE APPROVAL IS A FACT ABOUT ONE JOB, SO IT LIVES ON THAT JOB
+// (2026-09-29, workflow audit finding H1). It was three page globals — `invApproved`,
+// `invApprovedBy`, `invApprovedAt` — which `checkInvPin` set and the registry's gate and the band
+// read. Only the retired Invoices tab (`loadInvoice`, `setInvStage`) ever cleared them, and
+// `dashApproveInvoice`, the one door left since that tab went, did not. Measured on the real
+// functions before the fix, with two jobs each 30% over their estimate:
+//
+//   A's final refused  →  the PIN entered for B from the dashboard  →  A's final PRINTS
+//   B approved at $16,000  →  45 more hours logged, the final now $22,000  →  B still approved
+//   a reload  →  B refused again: the approval existed nowhere but the page
+//
+// The record is `job.docState['invoice:final'].approval = {by, at, amtDue}`, written through the
+// `docState` accessor, so it stamps `at['docState:invoice:final']` and merges per key on the sheet
+// exactly as the send and filing records beside it do. App-only; no redeploy.
+//
+// ⚠⚠ IT IS HONOURED ONLY WHILE `amtDue` IS THE FIGURE THE FINAL ASKS FOR NOW. What a manager
+// approves is a number. More hours, an accepted change order, or a payment recorded after the PIN
+// all move it, and a gate that went on passing would be approving a document nobody has looked at.
+// The comparison is exact because the final's balance is whole dollars (`finalDue` is
+// round(basis) − round(received)). With no figure to compare against nothing is approved — the
+// reader fails closed.
+function invFinalApprovalRecord(job) {
+  var st = job && job.docState && job.docState[docKeyFor('invoice', { stage: 'final' })];
+  var ap = st && st.approval;
+  return (ap && ap.by) ? ap : null;
+}
+function invFinalApproval(job, amtDue) {
+  var ap = invFinalApprovalRecord(job);
+  if (!ap || amtDue === undefined || amtDue === null) return null;
+  return Number(ap.amtDue) === Number(amtDue) ? ap : null;
+}
+// Why an approval on file no longer counts, in plain text (the dashboard escapes it when it
+// paints), or '' when there is nothing to explain. A refusal that says only "needs a PIN" to the
+// manager who entered one yesterday reads as the app having lost it.
+function invFinalApprovalStaleTxt(job, amtDue) {
+  var ap = invFinalApprovalRecord(job);
+  if (!ap || invFinalApproval(job, amtDue)) return '';
+  return ap.by + ' approved it at ' + fmt(ap.amtDue) + ' on ' + fmtDate2(ap.at) + '; it now asks for '
+    + fmt(amtDue) + ' — the hours, a change order or a payment have moved it since — so it needs approving again.';
+}
+// The ONE writer. The figure is read off `invoiceHtml` at the moment of the PIN, never passed in,
+// so the approval cannot be recorded against a number the manager was not shown.
+function recordInvFinalApproval(job, by) {
+  if (!job || !by) return null;
+  var d = invoiceHtml(job, 'final');
+  if (!d) return null;
+  var st = docState(job, docKeyFor('invoice', { stage: 'final' }));
+  st.approval = { by: by, at: new Date().toISOString(), amtDue: d.amtDue };
+  saveJobs(); syncJobToSheets(job);
+  return st.approval;
+}
+
+// ⚠ THE MODAL IS BOUND TO ONE JOB WHEN IT OPENS, and the PIN is recorded against that job and no
+// other. `checkInvPin` used to find its job through `currentInvJobId` — another page global, which
+// `dashApproveInvoice` wrote only so this function could read it back. The retired tab's own button
+// passes nothing and binds the job that tab is showing.
+function openInvPinModal(jobId) {
+  var modal = document.getElementById('inv-pin-modal');
+  modal.dataset.jobId = String(jobId || currentInvJobId || '');
+  modal.style.display = 'flex';
   document.getElementById('inv-pin-input').value = '';
   document.getElementById('inv-pin-fb').innerHTML = '';
   setTimeout(function(){ document.getElementById('inv-pin-input').focus(); }, 100);
@@ -29970,31 +30067,42 @@ function checkInvPin() {
   var pin = document.getElementById('inv-pin-input').value;
   var _invApprover = resolvePin(pin);
   if (_invApprover) {
-    invApproved = true;
-    invApprovedBy = _invApprover;
-    invApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-    document.getElementById('inv-pin-modal').style.display = 'none';
-    renderInvoice();
-    // Notify the billing group that an approved invoice is ready to send.
-    var invJob = jobs.find(function(j){ return j.id === currentInvJobId; });
-    if (invJob) {
-      var invTc = assignedTCContact(invJob);
-      notifyDept(DEPT_EMAILS.billing,
-        'Havellin — Invoice Approved & Ready to Send: ' + (invJob.name||'Client'),
-        [
-          'An invoice has been approved and is ready to send to the client:',
-          '',
-          'Client: ' + (invJob.name||'—'),
-          'Property: ' + (invJob.addr||'—'),
-          'Service: ' + svcLabelOf(invJob),
-          'Approved by: ' + invApprovedBy + ' on ' + invApprovedAt,
-          '',
-          'Open the Havellin app, open this client from the Client Dashboard, and send the final invoice from the job timeline.',
-          '',
-          invTc.name,
-          'Havellin Palm Beach'
-        ]);
+    var modal = document.getElementById('inv-pin-modal');
+    var jobId = parseInt(modal.dataset && modal.dataset.jobId) || 0;
+    var invJob = jobs.find(function(j){ return j.id === jobId; });
+    var ap = invJob ? recordInvFinalApproval(invJob, _invApprover) : null;
+    if (!ap) {
+      // ⚠ NEVER FALLS BACK TO ANOTHER JOB. A modal with no job bound, or a job this device no
+      // longer holds, approves nothing — the fail-closed answer the page globals never had.
+      document.getElementById('inv-pin-fb').innerHTML = '<div class="alert a-err">This invoice could not be found. Close this and press Manager approval on the client again.</div>';
+      document.getElementById('inv-pin-input').value = '';
+      return;
     }
+    modal.style.display = 'none';
+    renderInvoice();   // the retired tab's own controls, when it is the one showing this job
+    var invTc = assignedTCContact(invJob);
+    // Notify the billing group that an approved invoice is ready to send.
+    notifyDept(DEPT_EMAILS.billing,
+      'Havellin — Invoice Approved & Ready to Send: ' + (invJob.name||'Client'),
+      [
+        'An invoice has been approved and is ready to send to the client:',
+        '',
+        'Client: ' + (invJob.name||'—'),
+        'Property: ' + (invJob.addr||'—'),
+        'Service: ' + svcLabelOf(invJob),
+        'Approved by: ' + ap.by + ' on ' + fmtDate2(ap.at),
+        'Final balance approved: ' + fmt(ap.amtDue),
+        '',
+        'Open the Havellin app, open this client from the Client Dashboard, and send the final invoice from the job timeline.',
+        '',
+        invTc.name,
+        'Havellin Palm Beach'
+      ]);
+    // ⚠ SAID ON THE SCREEN THE PIN WAS TYPED FROM. The dashboard used to get nothing back — the
+    // redraw went to the retired tab's panel — so a manager could not tell the PIN had taken.
+    dashNotice('ok', 'Final invoice approved for release by ' + ap.by + ' at ' + fmt(ap.amtDue)
+      + '. If the hours, a change order or a payment move that figure, it needs approving again.');
+    _dashRedraw(jobId);
   } else if (pin.length === 4) {
     document.getElementById('inv-pin-fb').innerHTML = '<div class="alert a-err">Incorrect PIN.</div>';
     document.getElementById('inv-pin-input').value = '';
@@ -36059,6 +36167,31 @@ function materialsBasisNote(pkgLabel, pkgCost) {
     + ', and billed at that price. The package is not cost-plus and carries no separate handling fee.';
 }
 
+// ⚠⚠ THE "APPROVED FOR SENDING" BAND READS THE JOB IT IS PRINTED ON (2026-09-29, workflow audit
+// finding M1). Both agreement forms built it from the page globals `agrApproved`, `agrApprovedBy`
+// and `agrApprovedAt`, which describe whichever job `ensureAgreementApproved` touched LAST — not
+// the job being drawn. Measured on the real builders: job A approved by Anthony on September 1,
+// then job B approved by Ashley today, and A's agreement — the HTML converted for DocuSign — read
+// "Approved by Ashley Jerome on September 29, 2026" on both forms. On a fresh page A read no band
+// at all, although A was approved: wrong in both directions, depending only on what the page had
+// done last.
+//
+// One renderer for both forms, because two copies of one band is how the standard form and the
+// estate form come to disagree. Screen-only: the print block hides `.approved-stamp`, and every
+// client document kind's `pdfCss` hides it from the PDF that is sent or filed.
+//
+// ⚠ The concurrent document-claims build (Q11, the same day) found the same defect from the other
+// side and fixed it inline at both sites: the signing packet may now be READ before the client
+// says yes, which is exactly when another job's "Approved for Sending" band on it would be a
+// false statement. The merge kept this one helper — which also drops " on " when no date is on
+// record rather than printing "Approved by X on ".
+function _agrApprovedStamp(job) {
+  if (!(job && job.agrApproved && job.agrApprovedBy)) return '';
+  return '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div>'
+    + '<div class="approved-stamp-sub">Approved by ' + esc(job.agrApprovedBy)
+    + (job.agrApprovedAt ? ' on ' + esc(job.agrApprovedAt) : '') + '</div></div>';
+}
+
 function probateAgreementHtml(job, est) {
   if (!job) return '';
   var jobId = job.id;
@@ -36104,13 +36237,7 @@ function probateAgreementHtml(job, est) {
   var letters = lettersMap[job.executorAuth] || 'Pending';
   var today = new Date();
   var monthYear = today.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  // ⚠ READ OFF THE JOB, NEVER THE AGREEMENT TAB'S GLOBALS. `agrApproved` / `agrApprovedBy` are
-  // whatever `loadAgreement` last primed — possibly another client — and this builder is pure: the
-  // packet is now viewable before the client says yes (Q11), which is exactly when another job's
-  // "Approved for Sending" stamp printing on it would be a false statement (2026-09-29).
-  var approvedStamp = (job.agrApproved && job.agrApprovedBy)
-    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+esc(job.agrApprovedBy)+' on '+esc(job.agrApprovedAt || '')+'</div></div>'
-    : '';
+  var approvedStamp = _agrApprovedStamp(job);   // THIS job's approval — never the page's; see the helper
   function pp(txt) { return '<p style="font-size:11px;line-height:1.65;margin-bottom:.5rem;">'+txt+'</p>'; }
   function bb(txt) { return '<strong>'+txt+'</strong>'; }
   function dRow(label,val) {
@@ -36767,13 +36894,7 @@ function agreementHtml(job, est) {
     ? '<img src="'+logoSrc+'" style="width:160px;height:auto;display:block;margin:0 auto;" alt="Havellin">'
     : '<div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:500;color:var(--gray-dk);text-align:center;letter-spacing:.04em;">Havellin</div>';
 
-  // ⚠ READ OFF THE JOB, NEVER THE AGREEMENT TAB'S GLOBALS. `agrApproved` / `agrApprovedBy` are
-  // whatever `loadAgreement` last primed — possibly another client — and this builder is pure: the
-  // packet is now viewable before the client says yes (Q11), which is exactly when another job's
-  // "Approved for Sending" stamp printing on it would be a false statement (2026-09-29).
-  var approvedStamp = (job.agrApproved && job.agrApprovedBy)
-    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+esc(job.agrApprovedBy)+' on '+esc(job.agrApprovedAt || '')+'</div></div>'
-    : '';
+  var approvedStamp = _agrApprovedStamp(job);   // THIS job's approval — never the page's; see the helper
 
   function p(txt) { return '<p style="font-size:11.5px;line-height:1.65;margin-bottom:.55rem;">'+txt+'</p>'; }
   function b(txt) { return '<strong>'+txt+'</strong>'; }

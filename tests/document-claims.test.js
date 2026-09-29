@@ -362,7 +362,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const AGR = sandbox({
     fns: ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt',
       'svcLabelOf', 'isDecedentJob', 'estTolerancePctTxt', 'paymentSplit', 'materialsBasisNote', 'materialsPackageQuoted',
-      'estimateDocScope', 'svcHasDocStep', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml',
+      'estimateDocScope', 'svcHasDocStep', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp',
       'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
       'docStandardEffect', 'isFormalDoc', 'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel',
       'docLevelFloorReason', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection',
