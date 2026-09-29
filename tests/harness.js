@@ -352,4 +352,84 @@ function domStub(seed = {}) {
   return doc;
 }
 
-module.exports = { fn, decl, sandbox, source, matchBrace, domStub, APP };
+/**
+ * Drive the REAL calcAll and hand back the estimate it builds.
+ *
+ * ⚠ WHY: a fixture estimate is a guess at what the engine produces, and a guess is exactly what
+ * hid the work-done defect (2026-09-29, workflow audit H5). Every progress test seeded rooms whose
+ * hours summed to est.totTC + est.totPS, so "every room cleared reads 100%" passed — and on a real
+ * estimate the rooms never sum to the totals (off-site coordination, move day and the round-up to
+ * whole billable hours belong to no room), so the app read 42–74%. Build the estimate the way the
+ * phone does, then assert on it.
+ *
+ * The function set is DERIVED from calcAll's own call tree (comment lines stripped, so a function
+ * named in a comment is not pulled in) and cached; nothing here is a hand-kept list. `var X;`
+ * globals with no initialiser are declared too, since `decl` only lifts `var X = …`.
+ *
+ * opts: svc, sqft, rooms (names, or {name, vol, cplx, state:'in'|'excl'}; vol/cplx default to the
+ * room's own default), job (merged into the job record calcAll reads by e-job), seed (extra element
+ * seeds), stubs, fns / vars (extra functions and vars the test wants lifted beside calcAll).
+ * Returns { ctx, doc, est } where est is the real currentEstimate snapshot.
+ */
+let _calcClosureCache = null;
+function calcClosure() {
+  if (_calcClosureCache) return _calcClosureCache;
+  const src = source();
+  const FNS = new Set((src.match(/(^|\n)function\s+([A-Za-z0-9_$]+)\s*\(/g) || []).map((s) => s.replace(/^\n?function\s+/, '').replace(/\s*\($/, '')));
+  const VARS = new Set((src.match(/(^|\n)var\s+([A-Za-z0-9_$]+)\s*=/g) || []).map((s) => s.replace(/^\n?var\s+/, '').replace(/\s*=$/, '')));
+  const BARE = (src.match(/(^|\n)var\s+([A-Za-z0-9_$]+)\s*;/g) || []).map((s) => s.replace(/^\n?var\s+/, '').replace(/\s*;$/, ''));
+  const live = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n');
+  const fns = new Set(); const vars = new Set();
+  const queue = [['f', 'calcAll'], ['f', 'roomDefault']];
+  while (queue.length) {
+    const [k, name] = queue.shift();
+    let body;
+    if (k === 'f') { if (fns.has(name)) continue; fns.add(name); try { body = live(fn(name)); } catch (e) { continue; } }
+    else { if (vars.has(name)) continue; vars.add(name); try { body = live(decl(name)); } catch (e) { continue; } }
+    for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) if (FNS.has(m[1]) && !fns.has(m[1])) queue.push(['f', m[1]]);
+    for (const m of body.matchAll(/[(,]\s*([A-Za-z_$][\w$]*)\s*[,)]/g)) if (FNS.has(m[1]) && !fns.has(m[1])) queue.push(['f', m[1]]);
+    for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) if (VARS.has(m[1]) && !vars.has(m[1])) queue.push(['v', m[1]]);
+  }
+  _calcClosureCache = { fns: [...fns], vars: [...vars], bare: BARE };
+  return _calcClosureCache;
+}
+
+function driveCalcAll(opts = {}) {
+  const C = calcClosure();
+  const svc = opts.svc || 'cleanout';
+  const sqft = opts.sqft == null ? 3500 : opts.sqft;
+  const job = Object.assign({ id: 7, name: 'Butler', svc, sqft, beds: 4, baths: 3, halfBaths: 1, destSqft: 2000 }, opts.job || {});
+  const doc = domStub(Object.assign({
+    'e-svc': svc, 'e-sqft': String(sqft), 'e-job': String(job.id), 'e-propval': '1500000',
+    'e-pkg': { value: '0', options: [{ text: 'None', value: '0' }], selectedIndex: 0 },
+  }, opts.seed || {}));
+  const bare = {}; C.bare.forEach((n) => { bare[n] = undefined; });
+  const ctx = sandbox({
+    fns: [...new Set([...C.fns, ...(opts.fns || [])])],
+    vars: [...new Set([...C.vars, ...(opts.vars || [])])],
+    stubs: Object.assign(bare, {
+      document: doc, setTimeout: () => 0, clearTimeout() {}, setInterval: () => 0, clearInterval() {},
+      jobs: [job],
+    }, opts.stubs || {}),
+  });
+  const want = (opts.rooms || []).map((r) => (typeof r === 'string' ? { name: r } : r));
+  const used = new Set();
+  let ri = 0;
+  ctx.ROOMS.forEach((sec) => sec.rooms.forEach((row) => {
+    const id = 'r' + ri; ri++;
+    const hit = want.find((w) => !used.has(w) && w.name === row.name && (!w.section || w.section === sec.section));
+    if (!hit) return;
+    used.add(hit);
+    const d = ctx.roomDefault(row.name);
+    doc.__seed('chk-' + id, { attrs: { 'data-state': hit.state || 'in' } });
+    doc.__seed('vol-' + id, String(hit.vol == null ? d.vol : hit.vol));
+    doc.__seed('cplx-' + id, String(hit.cplx == null ? d.cplx : hit.cplx));
+    doc.__seed('name-' + id, { textContent: row.name });
+  }));
+  const missed = want.filter((w) => !used.has(w)).map((w) => w.name);
+  if (missed.length) throw new Error('driveCalcAll: no room row named ' + missed.join(', '));
+  ctx.calcAll();
+  return { ctx, doc, est: ctx.currentEstimate };
+}
+
+module.exports = { fn, decl, sandbox, source, matchBrace, domStub, driveCalcAll, APP };

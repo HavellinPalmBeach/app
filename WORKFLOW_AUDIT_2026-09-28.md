@@ -85,7 +85,7 @@ With realistic Apps Script delays: create a client and press Build estimate stra
 
 **Fix:** P3 (Hold the cloud refresh until this device's saves land)
 
-#### H5 · Job Plan · "Work done" can't reach 100%, so jobs on schedule read as behind.
+#### H5 · Job Plan · "Work done" can't reach 100%, so jobs on schedule read as behind. — **Fixed 2026-09-29**
 
 Progress adds up room hours but divides by the whole estimate, which includes coordination and move-day hours no room carries. With every room cleared, real estimates read 42% (Home Transition) to 74% (Home Cleanout). A 4-day cleanout finished on day 3 says it will run a day late and tells you to re-plan or raise a change order, which H2 makes impossible.
 
@@ -317,7 +317,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P5** Give change orders their buttons (needs Q14)
 - [x] **P6** Make the client documents match the estimate (needs Q8, Q11)
 - [x] **P7** Let a finished job close with the midpoint unpaid (needs Q1)
-- [ ] **P8** Measure work done against the rooms (needs Q3)
+- [x] **P8** Measure work done against the rooms (needs Q3)
 - [ ] **P9** Bring Edit Client up to intake's rules (needs Q4, Q15–Q18)
 - [ ] **P10** Lifecycle and payment loose ends (needs Q2, Q12, Q19)
 - [ ] **P11** Harden the Apps Script backend (redeploy)
