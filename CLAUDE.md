@@ -69,7 +69,10 @@ placeholder. App-only, no redeploy.
   the assigned concierge, or a name asked at the press.
 - **14,047 committed checks** (`tests/lifecycle-loose-ends.test.js` 168 and `tests/local-dates.test.js` 51 new;
   `dashboard-actions`, `dashboard-schedule` and `doc-send` restated — two of `doc-send`'s needles had gone vacuous and are
-  restored). **Revert sweep on a tar copy: 62 changes, running when this was written — 21 of 62 red, 0 green so far.**
+  restored). **Revert sweep on four tar copies of HEAD: 63 changes, running when this was written — 20 of 63 red, 0 green so far,
+  baseline 14,047 / 0 on every copy.** ⚠ The first sweep was killed at 22 of 62 by a container restart, and the kill skipped
+  `sweep.py`'s `finally`, so revert #23 was still applied in its bed; that bed also predated the deposit-row ACH fix. Every bed
+  was rebuilt with `git archive` and all 63 re-run — the 63rd is that fix, which the first list did not cover.
 - **Verified in headless Chromium, `tests/browser/step39.js`, 137 checks, 0 failed, 0 page errors**, with the clock pinned at
   9:30pm Eastern (01:30 UTC the next day) through Playwright's clock rather than a stub: a Home Cleanout from its estimate to its
   deposit, the midpoint recorded without typing the amount, a part cheque and the balance link, the stale link refused, the
@@ -9710,7 +9713,12 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/elegant-wright-nb6ffk`
+- Active feature branch: `claude/business-workflow-audit-jnxev5`
+  (This session was ASSIGNED it: it is the 2026-09-28 audit's own branch, and P8 and P10 were built on it. Its draft PR,
+  HavellinPalmBeach/app#115, is merged; the work goes on top of the latest `main` and is pushed to both, as ever. P10's merges
+  took `main`'s Re-open and stale-draft builds, which conflicted on the build stamp and nothing else. P10's browser step is
+  **step 39**, and 1–39 are the default list.)
+  (`claude/elegant-wright-nb6ffk` recorded, before this build, that it was the active branch, and:)
   (This session was ASSIGNED it again for a follow-up to its H3/M8 build — Re-open and the final invoice's wording — started
   after every session's work was on `main`. Its merge brought in the seven builds `main` had gained meanwhile and conflicted
   on the build stamp, CLAUDE.md, two places in each document, twelve suites' pinned lists (resolved as a UNION), the fixed-price
@@ -9848,7 +9856,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/elegant-wright-nb6ffk:main`
+  `git push origin claude/business-workflow-audit-jnxev5:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -14994,7 +15002,12 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (tenth pass)** — both documents, against Re-open and the final invoice naming only
+- Last reconciled against the app: **2026-09-29 (eleventh pass)** — both documents, against P10's lifecycle and payment loose
+  ends: a part-paid walkaway retained and named, the court record and the Letters following the matter, the recorder prefilling
+  each stage, the ACH link asking for the balance, the second concierge slot, Home Prep's *second* payment and every date on the
+  local calendar (manual §4, §8, §8b, §9, §9a, §11 and §16a; playbook Steps 1, 7, 9, 11–12 and 13 and nine symptom rows); see
+  its entry near the top of this file.
+- Prior pass **2026-09-29 (tenth pass)** — both documents, against Re-open and the final invoice naming only
   the invoices that went out (manual §9, §9a, §9b, §11, §12; playbook Step 11 & 12, Step 13, *If the job dies instead*, the status
   table and seven symptom rows), including the retired final draft staying named on its row; see its entry near the top of this file.
 - Prior pass **2026-09-29 (ninth pass)** — both documents, against a Gmail draft a price change left behind
