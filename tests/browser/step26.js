@@ -1,263 +1,276 @@
-// Step 26 — a fresh estimate starts clean: nothing of the last client's estimate reaches the next
-// (2026-09-29, workflow audit finding C1).
+// Step 26 — the jobs refresh stands down while this device's own writes are still going out
+// (2026-09-29, workflow audit finding H4).
 //
-// Measured on the pre-change build: client A priced with a 10% discount, move styling, a private
-// walkthrough note, a coin collection, a car, a planner date, a renamed "Other" row and a room note,
-// then ← Clients WITHOUT saving (the bar keeps the work, by design), then client B's Build estimate —
-// and B opened carrying all of it. B's client estimate printed A's collection, A's car and a discount
-// line; B's Walkthrough view read A's family note; B named A's concierge as the walker; A's $4.2M home
-// value rode onto B, which had none, and B then saved past "Property value is required". Save was no
-// better: the discount, styling, note and walker survived the Save into the next client.
+// refreshJobsFromCloud REPLACED `jobs` with the sheet's list, and a write takes far longer than a
+// read. Measured on this page against a backend answering writes in 4 s and reads in 0.8 s:
+//   · Save Client, then Build estimate at once → the new client left this device (the list and the
+//     local cache both went to 0), the rooms scored next were refused with "Job not found." and lost,
+//     and the new client's Drive folder URL, landing a second later, found no job to write onto;
+//   · Edit Client 3,000 → 5,200 sq ft, then Build estimate → priced on 3,000, and 3,000 put back on
+//     the local record while the sheet held 5,200.
+// Five callers reach it, two on a timer. The rule now is refreshPlanAndLogFromCloud's: the sheet is
+// only authoritative once our own writes have landed in it.
 //
-// The fix is ONE reset (resetEstimateJobState) that every open, fresh build, Save and Start over runs;
-// tests/estimate-reset.test.js is the net under it. This drives the REAL page end to end:
-//   A. A priced through the real controls — the discount box, the styling box, the note box, the
-//      notes modal's Save, the Other row's name box, the + Add buttons, the planner date.
-//   B. ← Clients and back to A: the unsaved work is still there (the resume the bar promises).
-//   C. ← Clients, then B's Build estimate: every one of those is gone, and so is A's home value.
-//   D. B's client estimate and Walkthrough view carry none of it; B's Save is refused on its own
-//      missing home value; on fixed price B's flat fee is its own suggestion with no discount.
-//   E. A priced again and SAVED, then B again — the Save path — clean.
-//   F. A reopened: every one of them comes back from A's own record; only the planner date does not,
-//      because no record carries it.
-//   G. Start over says what it will do: back to the saved estimate on A, the intake answers on B.
-//   H. Overflow at 1440 and 390.
+// Drives the REAL page — the real + Add New Client and intake, the real band's Build estimate button,
+// the real scope toggles and Save, the real Edit Client modal — against a stubbed Apps Script that
+// answers with realistic latency. Writes commit at the END of their window, as a real execution
+// commits before it answers; reads are served from the sheet as it stood when they arrived.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step26.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
+const fs = require('fs');
+const path = require('path');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
+const APP_PATH = APP.replace(/^file:\/\//, '');
 let pass = 0, fail = 0;
-// ⚠ The browser is held OUTSIDE the async body so the catch can close it — run against the pre-change
-// build a check throws, and a catch that leaves Chromium open reads as a hang rather than as failures.
-let b = null;
+let b = null;   // held outside the body so the catch can close it (see step25)
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
-const same = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [got ' + JSON.stringify(a) + ', want ' + JSON.stringify(e) + ']');
+
+// The deployment answers the version probe with the backend's own lists, so no out-of-date banner
+// draws over the page. Read from the .gs beside the app under test, or the repo's.
+const GS_PATH = [path.join(path.dirname(APP_PATH), 'apps-script', 'main-sync.gs'),
+                 path.join(__dirname, '..', '..', 'apps-script', 'main-sync.gs')].find((f) => fs.existsSync(f));
+const GS = fs.readFileSync(GS_PATH, 'utf8');
+const listOf = (name) => JSON.parse(GS.match(new RegExp('var ' + name + ' = (\\[[\\s\\S]*?\\]);'))[1].replace(/'/g, '"'));
+const VERSION = (GS.match(/var BACKEND_VERSION = '([^']+)'/) || [])[1];
+const SYNC = 'https://script.google.com/macros/s/FAKE-STEP26/exec';
+const WRITE_MS = 4000, READ_MS = 800, FOLDER_MS = 1500;
+
+function backend() {
+  const sheet = { jobs: [], estimates: {}, seen: {} };
+  const trace = [];
+  const t0 = Date.now();
+  const at = () => Date.now() - t0;
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  function mergeJobs(arr) {
+    (arr || []).forEach((j) => {
+      if (!j || j.id == null) return;
+      const i = sheet.jobs.findIndex((x) => String(x.id) === String(j.id));
+      if (i < 0) sheet.jobs.push(clone(j));
+      else if (Number(j.updatedAt || 0) >= Number(sheet.jobs[i].updatedAt || 0)) sheet.jobs[i] = clone(j);
+      sheet.seen[j.id] = true;
+    });
+  }
+  async function handle(route) {
+    const req = route.request();
+    const u = new globalThis.URL(req.url());
+    const reply = (obj) => route.fulfill({ status: 200, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' }, body: JSON.stringify(obj) });
+    const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    if (req.method() === 'GET') {
+      const action = u.searchParams.get('action');
+      if (action === 'loadJobs') {
+        const snap = clone(sheet.jobs);
+        const present = {}; snap.forEach((j) => { present[j.id] = true; });
+        const deleted = Object.keys(sheet.seen).filter((k) => !present[k]);
+        trace.push({ t: at(), ev: 'GET loadJobs' });
+        await wait(READ_MS);
+        return reply({ ok: true, success: true, jobs: snap, deletedJobs: deleted });
+      }
+      if (action === 'loadEstimates') { const snap = clone(sheet.estimates); await wait(READ_MS); return reply({ ok: true, success: true, estimates: snap }); }
+      if (action === 'version') return reply({ ok: true, success: true, version: VERSION, actions: listOf('BACKEND_ACTIONS'), types: listOf('BACKEND_TYPES') });
+      if (action === 'loadJobPlans') return reply({ ok: true, success: true, jobPlans: {} });
+      if (action === 'loadLogs') return reply({ ok: true, success: true, logs: {} });
+      if (action === 'loadChangeOrders') return reply({ ok: true, success: true, changeOrders: [] });
+      if (action === 'loadContractors') return reply({ ok: true, success: true, contractors: { added: [], defaults: [] } });
+      if (action === 'loadMedia') return reply({ ok: true, success: true, media: {} });
+      return reply({ ok: false, error: 'Unknown action' });
+    }
+    let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
+    if (body.action === 'createFolder') {
+      await wait(FOLDER_MS);
+      return reply({ ok: true, folderUrl: 'https://drive.google.com/drive/folders/FAKE-' + (body.hvlId || 'x'), subfolders: {} });
+    }
+    const type = body.type || body.action || '?';
+    trace.push({ t: at(), ev: 'POST ' + type + ' sent' });
+    await wait(WRITE_MS);
+    if (type === 'saveAllJobs') mergeJobs(body.payload);
+    if (type === 'job') mergeJobs([body.payload]);
+    if (type === 'saveAllEstimates') Object.keys(body.payload || {}).forEach((k) => { sheet.estimates[k] = clone(body.payload[k]); });
+    trace.push({ t: at(), ev: 'POST ' + type + ' committed' });
+    return reply({ ok: true, success: true });
+  }
+  return { sheet, trace, handle };
+}
+
 (async () => {
   b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
-  p.setDefaultTimeout(8000);
-  const errs = []; p.on('pageerror', e => errs.push(String(e)));
-  const dialogs = []; p.on('dialog', async d => { dialogs.push(d.message()); await d.accept(); });
-  await p.goto(APP); await p.waitForTimeout(1500);
-  const future = (() => { const d = new Date(); d.setDate(d.getDate() + 30);
-    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10); })();
 
-  async function make(last, o) {
-    await p.evaluate(() => { const b = document.getElementById('btn-add-client'); if (b) b.click(); }); await p.waitForTimeout(300);
-    const id = await p.evaluate(([wt, last, o]) => {
-      const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
-      const pick = (id) => { const e = document.getElementById(id); const x = e && Array.from(e.options).find(x => x.value); if (x) { e.value = x.value; if (e.onchange) e.onchange(); } };
-      set('i-svc', 'downsizing_move'); toggleIntakeFields();
-      set('i-fname', 'Pat'); set('i-lname', last); set('i-addr', o.addr); set('i-city', 'Palm Beach'); set('i-zip', '33480');
-      set('i-sqft', '3500'); set('i-phone', '(561) 555-0199'); set('i-email', 'c@example.com'); set('i-dest-sqft', '2000');
-      if (o.homeValue) set('i-home-value', o.homeValue);
-      if (o.tc) set('i-tc', o.tc);
-      if (o.svb) set('i-site-visit-by', o.svb);
-      pick('i-ptype'); pick('i-src'); set('i-walkthrough', wt);
-      const st = new Date(wt); st.setDate(st.getDate() + 7); while (st.getDay() === 0 || st.getDay() === 6) st.setDate(st.getDate() + 1);
-      set('i-start', st.toISOString().slice(0, 10)); saveIntake(); return (jobs[0] || {}).id;
-    }, [future, last, o]);
-    await p.waitForTimeout(1500); return id;
-  }
-  const open = async (id) => { await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(900); };
-  const back = async () => { await p.click('#est-back'); await p.waitForTimeout(600); };
-
-  // Everything a person can leave on this screen, read the way they would see it.
-  const screen = () => p.evaluate(() => {
-    const v = (id) => { const e = document.getElementById(id); return e ? (e.type === 'checkbox' ? e.checked : e.value) : '(none)'; };
-    const custom = Array.from(document.querySelectorAll('input[id^="name-r"]'))[0];
-    const notesBtn = document.getElementById('notes-btn-r0');
-    return {
-      job: v('e-job'), discount: v('e-discount'), styling: v('e-move-styling'), note: v('e-private-note'), noteVar: _privateWalkNote,
-      by: v('e-prepared-by'), propval: v('e-propval'), target: v('tp-target'), prem: v('e-prem'),
-      newCol: v('new-col-name'), newVeh: v('new-veh-desc'),
-      collections: collectionsData.map(c => c.name), vehicles: vehiclesData.map(x => x.desc),
-      // The two tables render each line as INPUTS, so their text is in the values, not in textContent —
-      // a textContent read would pass on a table full of the last client's lines.
-      tableLines: ['collections-body', 'vehicles-body'].map(function (id) {
-        var t = document.getElementById(id);
-        return t ? Array.from(t.querySelectorAll('input')).map(function (i) { return i.value; }).join(' | ') + ' ' + t.textContent : '(no ' + id + ')';
-      }).join(' || '),
-      inScope: Array.from(document.querySelectorAll('.scope-toggle')).filter(t => t.getAttribute('data-state') !== 'off').length,
-      customName: custom ? custom.value : '(none)', roomNote: v('note-r0'),
-      noteBtn: notesBtn ? [notesBtn.style.color, notesBtn.style.fontWeight, notesBtn.textContent] : null,
-    };
-  });
-
-  // A, priced through the real controls.
-  async function priceA() {
+  async function open(be, seedJobs) {
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 950 } });
+    await ctx.addInitScript(([url, seed]) => {
+      if (sessionStorage.getItem('__seeded')) return;
+      sessionStorage.setItem('__seeded', '1');
+      localStorage.clear();
+      localStorage.setItem('hav_sheets_url', url);
+      if (seed) localStorage.setItem('havellin_jobs_v3', JSON.stringify(seed));
+    }, [SYNC, seedJobs || null]);
+    await ctx.route(SYNC + '**', be.handle);
+    const p = await ctx.newPage();
+    p.setDefaultTimeout(8000);
+    const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
+    p.on('dialog', (d) => d.accept());
+    await p.goto(APP); await p.waitForTimeout(2500);
+    // Every jobs read from here on, and whether THIS DEVICE still owed the sheet a write when it went
+    // out. The backend cannot tell: a write sits in the app's 250 ms outbox before it is on the wire.
     await p.evaluate(() => {
-      const fire = (el, ev) => el.dispatchEvent(new Event(ev, { bubbles: true }));
-      for (let i = 0; i < 6; i++) document.getElementById('chk-r' + i).click();          // the real scope toggles
-      const d = document.getElementById('e-discount'); d.value = '10'; fire(d, 'input'); fire(d, 'change');
-      const s = document.getElementById('e-move-styling'); s.checked = true; fire(s, 'change');
-      const n = document.getElementById('e-private-note'); n.value = 'The son contests the will.'; fire(n, 'input');
-      const custom = Array.from(document.querySelectorAll('input[id^="name-r"]'))[0];
-      custom.value = 'Alpha wine cellar'; fire(custom, 'input');
-      document.getElementById('chk-' + custom.id.slice(5)).click();
-      document.getElementById('new-col-name').value = 'Alpha coin collection';
-      document.querySelector('button[onclick="addCollection()"]').click();
-      document.getElementById('new-veh-desc').value = '1960 Alpha Corvette';
-      document.querySelector('button[onclick="addVehicle()"]').click();
-      document.getElementById('new-col-name').value = 'Alpha half-typed';
-      const t = document.getElementById('tp-target'); t.value = '2026-12-18'; fire(t, 'change');
-      openNotesModal('r0');
+      const f = window.fetch; window.__jobsReads = [];
+      window.fetch = function (u) {
+        if (String(u).indexOf('action=loadJobs') >= 0) window.__jobsReads.push({ owed: _syncWritesOutstanding() });
+        return f.apply(this, arguments);
+      };
     });
-    await p.fill('#notes-modal-text', 'Piano by the stairs');
-    await p.click('button[onclick="saveNotesModal()"]');
-    await p.waitForTimeout(200);
+    return { ctx, p, errs };
   }
-  const isA = (s, label) => {
-    same(s.discount, '10', label + ': the 10% discount');
-    same(s.styling, true, label + ': move styling');
-    same(s.note, 'The son contests the will.', label + ': the private note');
-    same(s.by, 'Ashley Jerome', label + ': walked by Ashley');
-    same(s.collections, ['Alpha coin collection'], label + ': the coin collection');
-    same(s.vehicles, ['1960 Alpha Corvette'], label + ': the car');
-    same(s.customName, 'Alpha wine cellar', label + ': the renamed Other row');
-    same(s.roomNote, 'Piano by the stairs', label + ': the room note');
-  };
-
-  const idA = await make('Alpha', { addr: '1 Alpha Way', homeValue: '4200000', tc: 'Ashley Jerome', svb: 'Ashley Jerome' });
-  const idB = await make('Bravo', { addr: '2 Bravo Rd' });
-  ok(idA && idB && idA !== idB, 'two clients: A with a home value and a concierge, B with neither');
-
-  // ── A. A priced ────────────────────────────────────────────────────────
-  console.log('## A. A priced through the real controls');
-  await open(idA);
-  await priceA();
-  const sA = await screen();
-  isA(sA, 'A as priced');
-  same(sA.target, '2026-12-18', 'A as priced: the planner date');
-  same(sA.newCol, 'Alpha half-typed', 'A as priced: a collection half-typed in the add box');
-  same(sA.noteBtn && sA.noteBtn[2], '📝 Walkthrough', 'A as priced: the room shows its note');
-  has(sA.tableLines, 'Alpha coin collection', 'A as priced: the collections table shows the coin collection (so B\'s check can fail)');
-  has(sA.tableLines, '1960 Alpha Corvette', 'A as priced: the vehicles table shows the car');
-
-  // ── B. The resume ─────────────────────────────────────────────────────
-  console.log('## B. ← Clients and straight back to A: the unsaved work is kept');
-  await back();
-  await open(idA);
-  const sA2 = await screen();
-  isA(sA2, 'A resumed');
-  same(sA2.target, '2026-12-18', 'A resumed: the planner date');
-
-  // ── C. B fresh, after an unsaved A ─────────────────────────────────────
-  console.log('## C. ← Clients, then B: nothing of A');
-  await back();
-  await open(idB);
-  const fresh = (s, label) => {
-    same(s.job, String(idB), label + ': the screen is B\'s');
-    same(s.discount, '0', label + ': ⚠ no discount');
-    same(s.styling, false, label + ': no move styling');
-    same([s.note, s.noteVar], ['', ''], label + ': ⚠ no private note, in the box or behind it');
-    same(s.by, '', label + ': ⚠ nobody named as walking B\'s house');
-    same(s.propval, '', label + ': ⚠ no home value — B has none on file, and A\'s $4.2M did not ride over');
-    same(s.target, '', label + ': no planner date');
-    same(s.prem, false, label + ': not Premium Estate');
-    same([s.newCol, s.newVeh], ['', ''], label + ': the add-a-line boxes are empty');
-    same([s.collections, s.vehicles], [[], []], label + ': ⚠ no collection and no car');
-    lacks(s.tableLines, 'Alpha', label + ': and neither table shows a line of A\'s');
-    has(s.tableLines, 'No collections flagged', label + ': the collections table reads empty');
-    has(s.tableLines, 'No vehicles or watercraft', label + ': and so does the vehicles table');
-    same(s.inScope, 0, label + ': no room in scope');
-    same(s.customName, 'Other', label + ': the renamed row reads Other again');
-    same(s.roomNote, '', label + ': no room note');
-    same(s.noteBtn && s.noteBtn.slice(0, 2), ['var(--gray)', ''], label + ': and no room shows a note');
-    same(s.noteBtn && s.noteBtn[2], '📝', label + ': its label back to the bare glyph');
-  };
-  fresh(await screen(), 'B after an unsaved A');
-
-  // ── D. B's documents, B's Save, B on fixed price ──────────────────────
-  console.log('## D. B\'s client estimate, Walkthrough view, Save and fixed price');
-  const docB = await p.evaluate((id) => {
-    for (let i = 0; i < 6; i++) document.getElementById('chk-r' + i).click();
-    calcAll();
-    const job = jobs.find(j => j.id === id);
-    const text = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.textContent.replace(/\s+/g, ' '); };
-    return { doc: text(clientEstimateHtml(currentEstimate, job)), walk: text(walkthroughHtml(job, JSON.parse(JSON.stringify(currentEstimate)))),
-             disc: currentEstimate.discountPct, sty: currentEstimate.moveStyling, note: currentEstimate.privateNote,
-             by: currentEstimate.preparedBy, cols: (currentEstimate.collections || []).length, vehs: (currentEstimate.vehicles || []).length };
-  }, idB);
-  lacks(docB.doc, 'Alpha coin collection', 'B\'s client estimate names no collection of A\'s');
-  lacks(docB.doc, 'Alpha Corvette', 'and no car of A\'s');
-  lacks(docB.doc, 'Preferred Client Discount', 'and prints no discount line');
-  lacks(docB.walk, 'contests the will', '⚠ B\'s Walkthrough view does not read A\'s family note');
-  lacks(docB.walk, 'Ashley Jerome', 'and does not name A\'s walker');
-  same([docB.disc || 0, !!docB.sty, docB.note || '', docB.by || '', docB.cols, docB.vehs], [0, false, '', '', 0, 0],
-    'B\'s own estimate record carries none of it');
-  await p.evaluate(() => { document.getElementById('e-fb').innerHTML = ''; });
-  await p.evaluate(() => document.querySelector('button[onclick="saveEstimateAndPreview()"]').click());
-  await p.waitForTimeout(300);
-  has(await p.evaluate(() => document.getElementById('e-fb').textContent), 'Property value is required',
-    '⚠ B\'s Save is refused on B\'s own missing home value');
-  ok(!(await p.evaluate((id) => !!estimateStore[id], idB)), 'and nothing is saved for B');
-  const fxB = await p.evaluate(() => {
-    const f = document.getElementById('e-fixed'); f.click(); calcAll();
-    const flat = _fxAmtGet(); const sug = window._fixedPriceSuggested;
-    const d = document.createElement('div'); d.innerHTML = clientEstimateHtml(currentEstimate, jobs.find(j => j.id === currentEstimate.jobId));
-    const t = d.textContent; f.click(); calcAll();
-    return { flat, sug, line: t.indexOf('Preferred Client Discount') >= 0 };
-  });
-  ok(fxB.flat > 0 && fxB.flat === fxB.sug, '⚠ on fixed price B\'s flat fee is its own suggestion ($' + fxB.flat + ' of $' + fxB.sug + ') — no leaked discount cut into it');
-  ok(!fxB.line, 'and no discount line');
-
-  // ── E. A saved, then B — the Save path ────────────────────────────────
-  console.log('## E. A priced again and saved, then B');
-  await back();
-  await open(idA);
-  await priceA();
-  await p.evaluate(() => document.querySelector('button[onclick="saveEstimateAndPreview()"]').click());
-  await p.waitForTimeout(2200);
-  ok(await p.evaluate((id) => !!(estimateStore[id] && estimateStore[id].estimate && estimateStore[id].estimate.rooms.length), idA), 'A is saved');
-  await open(idB);
-  fresh(await screen(), 'B after a SAVED A');
-
-  // ── F. A reopened ─────────────────────────────────────────────────────
-  console.log('## F. A reopened: everything back from A\'s own record');
-  await back();
-  await open(idA);
-  const sA3 = await screen();
-  isA(sA3, 'A reopened');
-  same(sA3.propval, '4200000', 'A reopened: its own home value');
-  same(sA3.prem, false, 'A reopened: Premium Estate as priced (off)');
-  same(sA3.target, '', 'A reopened: no planner date — no record carries it, it is a question asked on site');
-  same(sA3.noteBtn && sA3.noteBtn.slice(0, 2), ['var(--bronze)', '600'], 'A reopened: the room with a note shows it');
-
-  // ── G. Start over says what it will do ────────────────────────────────
-  console.log('## G. Start over');
-  dialogs.length = 0;
-  await p.evaluate(() => { document.getElementById('e-discount').value = '12'; });
-  await p.evaluate(() => document.querySelector('button[onclick="startEstimateOver()"]').click());
-  await p.waitForTimeout(900);
-  has(dialogs.join(' | '), 'reopen the saved estimate', 'on A (saved) the question says it goes back to the saved estimate');
-  same((await screen()).discount, '10', 'and it does — the saved 10%, not the unsaved 12%');
-  await back();
-  await open(idB);
-  await p.evaluate(() => { document.getElementById('e-discount').value = '12'; });
-  dialogs.length = 0;
-  await p.evaluate(() => document.querySelector('button[onclick="startEstimateOver()"]').click());
-  await p.waitForTimeout(900);
-  has(dialogs.join(' | '), 'start again from the intake answers', 'on B (nothing saved) it says it starts from the intake answers');
-  has(dialogs.join(' | '), 'private walkthrough note', 'and names the private note among what goes');
-  same((await screen()).discount, '0', 'and the discount goes');
-
-  // ── H. Overflow ───────────────────────────────────────────────────────
-  for (const w of [1440, 390]) {
-    await p.setViewportSize({ width: w, height: 900 });
-    await p.waitForTimeout(200);
-    const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    ok(ov <= 0, 'Build Estimate fits at ' + w + 'px (overflow ' + ov + ')');
+  const future = (days) => { const d = new Date(); d.setDate(d.getDate() + days);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10); };
+  const errsAll = [];
+  // Wait until this device owes the sheet nothing. A fixed sleep is a guess at how many 4 s writes
+  // are queued; this is the answer.
+  async function drain(p) {
+    for (let i = 0; i < 90; i++) {
+      await p.waitForTimeout(500);
+      if (!(await p.evaluate(() => _syncWritesOutstanding()))) return true;
+    }
+    return false;
   }
-  ok(errs.length === 0, 'no page errors (' + errs.join(' | ') + ')');
 
+  // ── A. Save Client, then Build estimate at once, score rooms, Save ─────────
+  {
+    const be = backend();
+    const { ctx, p, errs } = await open(be);
+    await p.click('#btn-add-client'); await p.waitForTimeout(300);
+    await p.evaluate(([wt, st]) => {
+      const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
+      const pick = (id) => { const el = document.getElementById(id); if (!el) return; for (const o of el.options) if (o.value) { el.value = o.value; break; } };
+      set('i-svc', 'downsizing'); toggleIntakeFields();
+      set('i-fname', 'Maeve'); set('i-lname', 'Ellsworth'); set('i-phone', '(561) 555-0100'); set('i-email', 'me@example.com');
+      set('i-addr', '12 Seaview Ave'); set('i-city', 'Palm Beach'); set('i-zip', '33480'); set('i-sqft', '3000');
+      pick('i-ptype'); pick('i-src'); set('i-start', st); set('i-walkthrough', wt); set('i-home-value', '2400000');
+    }, [future(10), future(20)]);
+    await p.click('button[onclick^="saveIntake"]');
+    const made = await p.evaluate(() => ({ n: jobs.length, id: (jobs[0] || {}).id }));
+    eq1(made.n, 1, 'Save Client creates the client');
+
+    // The band's own primary, pressed straight away — before either write has reached the sheet.
+    const band = await p.evaluate(() => { const x = document.querySelector('#client-dashboard-view .jt-next .jt-btn-p'); return x ? x.textContent.trim() : ''; });
+    eq1(band, 'Build estimate', 'the band offers Build estimate for a booked walkthrough');
+    await p.click('#client-dashboard-view .jt-next .jt-btn-p');
+    await p.waitForTimeout(2500);   // the estimates read lands; a jobs read would have landed by now too
+    const mid = await p.evaluate((id) => ({
+      n: jobs.length, has: jobs.some((j) => j.id === id),
+      cached: JSON.parse(localStorage.getItem('havellin_jobs_v3') || '[]').map((j) => j.id),
+      eJob: document.getElementById('e-job').value,
+      screen: (document.getElementById('panel-estimate') || {}).classList && document.getElementById('panel-estimate').classList.contains('active'),
+    }), made.id);
+    ok(mid.has && mid.n === 1, '⚠⚠ the new client is still on this device while its saves are going out — it went to 0 here (' + mid.n + ')');
+    ok(mid.cached.indexOf(made.id) >= 0, 'and in the local cache (' + JSON.stringify(mid.cached) + ')');
+    eq1(mid.eJob, String(made.id), 'Build estimate is bound to the client');
+    const owedReads = await p.evaluate(() => window.__jobsReads.filter((x) => x.owed).length);
+    eq1(owedReads, 0, '⚠ no jobs read is sent while this device still owes the sheet a write');
+
+    // Score three rooms with the real toggles, then the real Save.
+    // Room sections open collapsed: open the first by its header, as a person would, then take the
+    // first three toggles the page shows.
+    if (await p.evaluate(() => (document.getElementById('sec-body-0') || {}).style.display === 'none')) await p.click('#room-sec-0 .sec-hdr');
+    const toggles = [];
+    for (const t of await p.$$('button.scope-toggle')) { if (toggles.length < 3 && await t.isVisible()) toggles.push(t); }
+    eq1(toggles.length, 3, 'three room toggles are on screen');
+    for (const t of toggles) await t.click();
+    await p.evaluate(() => calcAll());
+    await p.click('button[onclick="saveEstimateAndPreview()"]');
+    await p.waitForTimeout(300);
+    const saved = await p.evaluate((id) => ({
+      rec: !!(estimateStore[id] && estimateStore[id].estimate),
+      rooms: ((estimateStore[id] && estimateStore[id].estimate && estimateStore[id].estimate.rooms) || []).length,
+      page: document.body.innerText,
+    }), made.id);
+    ok(saved.rec, '⚠⚠ Save saves — it was refused with "Job not found." and the walkthrough lost');
+    eq1(saved.rooms, 3, 'with the three rooms scored');
+    lacks(saved.page, 'Job not found', 'and nothing on screen says the job is missing');
+
+    ok(await drain(p), 'every write lands (the queue drains)');
+    const end = await p.evaluate((id) => ({ n: jobs.length, folder: ((jobs.find((j) => j.id === id) || {}).driveFolder) || '' }), made.id);
+    ok(be.sheet.jobs.some((j) => j.id === made.id), 'the sheet has the client');
+    ok(!!be.sheet.estimates[made.id], 'and its estimate');
+    eq1(end.n, 1, 'the device still has exactly the one client');
+    has(end.folder, 'FAKE-', '⚠ the Drive folder URL landed on the client — it found no job to write onto');
+    errsAll.push(...errs);
+    await ctx.close();
+  }
+
+  // ── B. Edit Client 3,000 → 5,200, then Build estimate ──────────────────────
+  const JOB = { id: 1790000000001, hvlId: 'HVL-0007', fname: 'Tripp', lname: 'Butler', name: 'Tripp Butler', email: 'tb@example.com',
+    phone: '(561) 555-0199', addr: '69 Beach Blvd', city: 'Palm Beach', zip: '33480', svc: 'downsizing', svcLabel: 'Home Editing',
+    status: 'new', sqft: '3000', propVal: '2400000', ptype: 'Single Family', start: future(20), walkthrough: future(10),
+    created: 'Sep 20, 2026', updatedAt: 1790000000001 };
+  {
+    const be = backend();
+    be.sheet.jobs.push(JSON.parse(JSON.stringify(JOB))); be.sheet.seen[JOB.id] = true;
+    const { ctx, p, errs } = await open(be, [JOB]);
+    await p.evaluate((id) => openClientDashboard(id), JOB.id); await p.waitForTimeout(200);
+    await p.evaluate((id) => showEditClient(id), JOB.id); await p.waitForTimeout(200);
+    await p.fill('#ec-sqft', '5200');
+    await p.click('#edit-client-modal button[onclick^="saveClientEdit"]');
+    await p.waitForTimeout(100);
+    await p.evaluate((id) => openEstimateScreen(id), JOB.id);
+    await p.waitForTimeout(2500);
+    const est = await p.evaluate((id) => {
+      Array.from(document.querySelectorAll('button.scope-toggle')).slice(0, 6).forEach((t) => t.click());
+      calcAll();
+      return { local: (jobs.find((j) => j.id === id) || {}).sqft, eSqft: document.getElementById('e-sqft').value,
+               priced: currentEstimate && currentEstimate.sqft,
+               cached: (JSON.parse(localStorage.getItem('havellin_jobs_v3') || '[]').find((j) => j.id === id) || {}).sqft };
+    }, JOB.id);
+    eq1(String(est.local), '5200', '⚠⚠ the local record keeps 5,200 — the refresh put 3,000 back');
+    eq1(String(est.priced), '5200', '⚠⚠ and the estimate is priced on 5,200 — it priced 3,000');
+    eq1(String(est.cached), '5200', 'and the cache keeps 5,200');
+    ok(await drain(p), 'the edit\'s writes land');
+    eq1(String((be.sheet.jobs[0] || {}).sqft), '5200', 'and the sheet has 5,200');
+
+    // ── C. And with nothing queued, the refresh still takes the sheet's copy ──
+    // The other device edits the job; this one opens its estimate again through the real loader.
+    be.sheet.jobs[0].sqft = '6100'; be.sheet.jobs[0].updatedAt = Date.now() + 60000;
+    const readsBefore = be.trace.filter((x) => x.ev === 'GET loadJobs').length;
+    await p.evaluate((id) => editEstimateForJob(id), JOB.id);
+    await p.waitForTimeout(2500);
+    const c = await p.evaluate((id) => ({ local: (jobs.find((j) => j.id === id) || {}).sqft,
+      eSqft: document.getElementById('e-sqft').value }), JOB.id);
+    // (twice, in fact: editEstimateForJob asks, and so does loadJobIntoEstimate on a fresh build)
+    ok(be.trace.filter((x) => x.ev === 'GET loadJobs').length - readsBefore >= 1, 'with nothing outstanding the sheet IS asked');
+    eq1(String(c.local), '6100', '⚠ and its newer copy is taken — the refresh still does its job');
+    eq1(String(c.eSqft), '6100', 'and the estimate reads it');
+    errsAll.push(...errs);
+    await ctx.close();
+  }
+
+  // ── D. Overflow — the estimate screen and the dashboard, a client just created ─
+  {
+    const be = backend();
+    be.sheet.jobs.push(JSON.parse(JSON.stringify(JOB))); be.sheet.seen[JOB.id] = true;
+    const { ctx, p, errs } = await open(be, [JOB]);
+    for (const w of [1440, 390]) {
+      await p.setViewportSize({ width: w, height: 900 });
+      await p.evaluate((id) => openClientDashboard(id), JOB.id); await p.waitForTimeout(300);
+      const od = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      ok(od <= 0, 'the dashboard fits at ' + w + 'px (overflow ' + od + ')');
+      await p.evaluate((id) => openEstimateScreen(id), JOB.id); await p.waitForTimeout(2000);
+      const oe = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      ok(oe <= 0, 'the estimate screen fits at ' + w + 'px (overflow ' + oe + ')');
+    }
+    errsAll.push(...errs);
+    await ctx.close();
+  }
+
+  ok(errsAll.length === 0, 'no page errors (' + errsAll.join(' | ') + ')');
   await b.close();
   console.log('\nstep26: ' + pass + ' passed, ' + fail + ' failed');
-})().catch(async e => {
+})().catch(async (e) => {
   console.log('THREW ' + (e && e.stack || e));
   console.log('step26: ' + pass + ' passed, ' + (fail + 1) + ' failed');
   try { if (b) await b.close(); } catch (_) { /* already gone */ }
 });
+
+function eq1(a, e, m) { ok(a === e, m + '  [expected ' + JSON.stringify(e) + ', got ' + JSON.stringify(a) + ']'); }

@@ -18927,23 +18927,66 @@ function clearEstimateScratch(jobId) {
   } catch(e) {}
 }
 
-// Pull the jobs list fresh from the sheet and overwrite the local array. Jobs
-// otherwise sync only at startup, which let job.status (approval state) and job
-// intake fields (sqft — the hours-engine backbone) go stale across devices. cb()
-// always runs, even offline, so callers can proceed.
+// Pull the jobs list fresh from the sheet. Jobs otherwise sync only at startup, which let
+// job.status (approval state) and job intake fields (sqft — the hours-engine backbone) go
+// stale across devices. cb() always runs — offline, or standing down — so callers can proceed.
+//
+// ⚠⚠ THE SHEET IS ONLY AUTHORITATIVE ONCE OUR OWN WRITES HAVE REACHED IT — the rule
+// refreshPlanAndLogFromCloud already followed and this function did not (fixed 2026-09-29,
+// audit finding H4). It REPLACED `jobs` with whatever the read returned, and a write takes far
+// longer than a read. Measured on the real page against a backend answering writes in 4 s and
+// reads in 0.8 s: Save Client then Build estimate emptied the list AND the local cache — the
+// sheet did not have the client yet — so the walkthrough scored next was refused with "Job not
+// found." and lost, and the new client's Drive folder URL landed on nothing; Edit Client
+// 3,000 → 5,200 sq ft then Build estimate priced the job on 3,000 and put 3,000 back on the
+// local record while the sheet held 5,200. Five callers reach it, two of them on a timer
+// (approvalWatchTick every 12 s, jobsWatchTick every 15 s). So:
+//   · it does not ask while a write is outstanding;
+//   · it asks again when the answer lands, because a write can be queued while the read is in
+//     flight — and _syncWriteSeq catches one queued AND landed in that window, which the
+//     outstanding check alone cannot see: the read may have been served before it committed;
+//   · either way the caller carries on with the local list, which is the fresher of the two.
+// ⚠ THE SHEET'S DELETIONS APPLY EVEN WHEN THE ANSWER IS DISCARDED. `deletedJobs` is the job
+// ledger's answer — every id the sheet has seen and no longer holds — not a snapshot that can be
+// behind our own writes, and the server refuses those ids whatever this device sends. So once an
+// answer has arrived they go through _applyDroppedJobs whether or not the list is then taken: a
+// client deleted on the other device leaves this one, says so, and takes its estimates, plans and
+// logs with it. (A refresh that stood down before asking learns them from the next answer, or from
+// the `dropped` list on this device's next write.)
+// ⚠ AND A NEWER LOCAL RECORD IS NEVER OVERWRITTEN — see _mergeCloudJobs. Membership stays the
+// sheet's: a job it does not hold is dropped, as ever. Keeping those is how deleted clients came
+// back on 2026-09-08, and the one case that looked like it needed it — a client just created on
+// this device — is the case standing down covers.
 function refreshJobsFromCloud(cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(); return; }
+  if (_syncWritesOutstanding()) { if (cb) cb(); return; }
+  var seq = _syncWriteSeq;
   fetch(SHEETS_SYNC_URL + '?action=loadJobs')
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if (data && Array.isArray(data.jobs) && !data.error) {
-        jobs = data.jobs;
-        try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
-        if (Array.isArray(data.deletedJobs)) _purgeLocalJobRecords(data.deletedJobs);
-      }
+      if (!(data && Array.isArray(data.jobs) && !data.error)) return;
+      _applyDroppedJobs(data.deletedJobs);
+      if (_syncWritesOutstanding() || _syncWriteSeq !== seq) return;
+      jobs = _mergeCloudJobs(jobs, migrateRetiredNames(data.jobs));
+      try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
     })
     .catch(function(){})
     .then(function(){ if (cb) cb(); });
+}
+
+// The sheet's list, with any local record strictly NEWER than the sheet's copy kept in its
+// place. Once this device's write has landed, the server's merged record carries the newest
+// updatedAt (_mergeJobRecord takes the newer record's scalars), so a TIE goes to the sheet — it
+// is our write, merged with whatever the other device added key by key. A local copy strictly
+// newer than that is one whose write the sheet has not seen, and replacing it is H4 by another
+// route. DOM-free, so the tests read the real rule.
+function _mergeCloudJobs(local, cloud) {
+  var mine = {};
+  (local || []).forEach(function(j){ if (j && j.id != null) mine[String(j.id)] = j; });
+  return (cloud || []).map(function(c){
+    var l = (c && c.id != null) ? mine[String(c.id)] : null;
+    return (l && Number(l.updatedAt || 0) > Number(c.updatedAt || 0)) ? l : c;
+  });
 }
 
 // Cloud-authoritative open. Refresh the jobs list AND fetch this job's saved
@@ -27581,6 +27624,11 @@ var _outbox = {};
 var _outboxTimer = null;
 var _outboxSending = false;
 var _OUTBOX_WINDOW = 250;   // long enough to catch a burst from one user action
+// Bumped by every main-sheet write queued (queuedPostSync is the one entry point). A reader
+// notes it before asking the sheet and compares when the answer lands: a write queued AND
+// landed in between leaves nothing outstanding, and the answer may still predate it. See
+// refreshJobsFromCloud.
+var _syncWriteSeq = 0;
 
 function _flushOutbox() {
   _outboxTimer = null;
@@ -27624,6 +27672,7 @@ function _flushOutbox() {
 // Directory writes use queuedDirectoryWrite below, which shares the retry queue.
 function queuedPostSync(body, okMsg, failMsg) {
   if (!SHEETS_SYNC_URL) return;
+  _syncWriteSeq++;
   // Keyed the same way the retry queue keys things, so a newer full snapshot supersedes
   // an older queued one rather than both being sent. Payloads are held by reference, so
   // a store mutated between queueing and sending goes out at its newest state — which is
@@ -29703,6 +29752,8 @@ var PLAN_WATCH_MS = 20000;
 // local store over a queued write would revert a room on screen seconds after somebody
 // locked it — a worse defect than the one this closes, and the kind that trains people to
 // stop trusting the tab. A tick with anything outstanding simply waits for the next one.
+// ⚠ TWO READERS: this and refreshJobsFromCloud (2026-09-29), which did not ask and emptied the
+// client list under a client whose own save had not landed yet. Both read the MAIN sheet.
 function _syncWritesOutstanding() {
   if (typeof _outboxSending !== 'undefined' && _outboxSending) return true;
   if (typeof _flushing !== 'undefined' && _flushing) return true;
