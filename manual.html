@@ -107,7 +107,7 @@
     </table>
     Both open as a <strong>full screen</strong>, the way a client opens from the list &mdash; not a pop-up. Across the top of each is a bar with the way back: <strong>&larr; Clients</strong> on the intake screen, <strong>&larr; <em>the client&rsquo;s name</em></strong> on the estimate screen. The <strong>Client Dashboard</strong> tab stays lit the whole time, because that is where you came from and where the bar returns you.
     <br><br><strong>Going back without saving loses nothing while the page is open.</strong> What you typed on the intake screen is still on the form when you press + Add New Client again, exactly as it was when this was a tab. On Build Estimate, going back to the dashboard and pressing <strong>Build estimate</strong> again on the <em>same</em> client picks the walkthrough up where you left it &mdash; opening a <em>different</em> client&rsquo;s estimate starts from their saved copy, as switching clients always did. <strong>Save</strong> is still what writes anything.
-    <br><br><strong>Build Estimate no longer has a job picker</strong> &mdash; it is always for the client you opened it from, named in the bar and on the Job card. The <strong>Clear</strong> button beside the old picker is now <strong>Start over</strong>: it asks first, clears the rooms and starts again from that client&rsquo;s intake answers, and changes nothing saved until you press Save. (Clear used to unbind the client as well, which on a screen with no picker would have left a form belonging to nobody.)
+    <br><br><strong>Build Estimate no longer has a job picker</strong> &mdash; it is always for the client you opened it from, named in the bar and on the Job card. The <strong>Clear</strong> button beside the old picker is now <strong>Start over</strong>: it asks first, then goes back to that client&rsquo;s <em>saved</em> estimate if there is one, or clears the lot and starts again from their intake answers if not (the question says which, as of 2026-09-29), and changes nothing saved until you press Save. (Clear used to unbind the client as well, which on a screen with no picker would have left a form belonging to nobody.)
     <br><br>Nothing on either form changed &mdash; every field, gate and refusal in &sect;4 and &sect;5 is exactly as described there. Only the route in moved.</div>
   <div class="note"><strong>Three tabs were retired from the navigation on 2026-09-11 — Client Estimate, Agreement and Invoices.</strong>
     Everything they carried now lives on the <strong>job timeline</strong> inside the Client Dashboard (§9), on the row for
@@ -474,6 +474,34 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     walkthrough is where you left it. Nothing is <em>saved</em> until you press Save &mdash; opening a different client, or reloading the
     page, starts from the saved copy. A submitted or approved estimate locks every control on the screen <em>except that back
     button</em>.</p>
+  <div class="note"><strong>&#9888;&#9888; A fresh estimate starts clean &mdash; nothing of the last client&rsquo;s comes with it (fixed 2026-09-29).</strong>
+    Until this date a new client&rsquo;s estimate opened carrying whatever the <em>previous</em> client&rsquo;s estimate had left on the
+    screen. Measured on the real page: client A priced with a 10% discount, move styling, a private walkthrough note, a coin collection,
+    a car and a target date, then <strong>&larr;</strong> without saving, then client B&rsquo;s <strong>Build estimate</strong> &mdash; and
+    B opened with <strong>all of it</strong>. B&rsquo;s client estimate printed A&rsquo;s collection, A&rsquo;s car and a discount line; on
+    fixed price the inherited discount quietly took 10% off B&rsquo;s flat fee and <strong>printed no discount line at all</strong>;
+    B&rsquo;s Walkthrough view read A&rsquo;s family note; B named A&rsquo;s concierge as the person who walked B&rsquo;s house; and
+    A&rsquo;s $4.2M home value rode onto B, who had none on file, and let B save straight past <em>&ldquo;Property value is
+    required&rdquo;</em>. <strong>Saving was no better</strong>: the discount, the styling, the note and the walker survived a Save into the
+    next client, and one 10% discount rode through five new clients in a row.
+    <br><br><strong>What a fresh estimate holds now.</strong> From the client&rsquo;s own record: service type, square footage, home value
+    (blank when intake has none, so Save asks for it), target start, Premium Estate, the <em>who builds the inventory</em> answer, and who
+    walked the house (blank when nobody is named). Everything else starts at its default: no discount, no move styling, no private note, no
+    collections, no vehicles, no vendors or prep lines, two specialists, one concierge, no materials package, rush and fixed price off,
+    fullness <em>Normal</em>, no target date, no room in scope, and every <em>Other</em> row named <em>Other</em> again.
+    <br><br><strong>What has not changed.</strong> A <em>saved</em> estimate reopens exactly as it was saved, all of it. And
+    <strong>&larr; then Build estimate on the same client</strong> still takes you back to your unsaved work. The one thing a reopened
+    estimate never carries is the <em>client needs it sooner</em> target date: no estimate records it, because it is a question asked on
+    site rather than a term of the quote.
+    <br><br><strong>Start over now says which of two things it will do</strong>, because it always did one of two. On a client with a
+    <strong>saved</strong> estimate it throws away what is on the screen and reopens the saved one; on a client with nothing saved it clears
+    the lot and starts again from the intake answers. Until today the question said <em>intake answers</em> either way. The
+    <strong>Reset</strong> button at the foot of the screen is older and narrower: on the same client it clears the rooms, rush and fixed
+    price, turns <strong>Premium Estate off even on a premium job</strong>, and leaves the discount, the collections, the vehicles and the
+    private note where they are. Use <strong>Start over</strong>.
+    <br><br><strong>If you priced a practice client straight after another before today</strong>, open its estimate and check that the
+    discount, move styling, the private note, <em>Walkthrough by</em>, the collections and the vehicles are that client&rsquo;s own before
+    anything goes out.</div>
   <div class="note"><strong>⚠ IT USED TO LOOK LIKE THE FORM HAD BEEN WIPED (fixed 2026-09-13).</strong> Anthony: <em>&ldquo;when you
     hit save estimate, the screen now just wipes.&rdquo;</em> The button was trying to navigate to the <strong>Client Estimate tab, which
     was retired from the navigation on 2026-09-11</strong> — so the navigation silently did nothing while the rest of the sequence went

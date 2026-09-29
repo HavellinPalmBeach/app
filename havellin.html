@@ -1766,7 +1766,7 @@ body.no-smf .smf-col{display:none;}
         <div style="display:flex;gap:6px;align-items:center;">
           <select id="e-job" onchange="loadJobIntoEstimate()" style="display:none;"><option value="">Select job</option></select>
           <div id="e-job-name" style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;">&mdash;</div>
-          <button class="btn-s" onclick="startEstimateOver()" title="Clear every room scored here and start again from the intake answers">Start over</button>
+          <button class="btn-s" onclick="startEstimateOver()" title="Discard what is on this screen: back to the saved estimate, or to the intake answers if nothing is saved">Start over</button>
         </div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span>
@@ -5070,6 +5070,11 @@ function setRoomState(id, state) {
   if (mediaBtns) mediaBtns.style.display = active ? 'flex' : 'none';
   if (!active) {
     note.value = '';
+    // The "this room has a note" colour and label go with the note. Left lit, they told the NEXT
+    // client's estimator that an empty room carried a note — the last client's, cleared a moment ago.
+    // (saveNotesModal relabels the button "📝 Walkthrough"; the grid draws it as the bare glyph.)
+    var notesBtn = document.getElementById('notes-btn-'+id);
+    if (notesBtn) { notesBtn.style.color = 'var(--gray)'; notesBtn.style.fontWeight = ''; notesBtn.textContent = '\uD83D\uDCDD'; }
     if (_activeRecognitions && _activeRecognitions[id]) { try { _activeRecognitions[id].stop(); } catch(e){} }
   }
   row.className = state === 'in' ? 'active-row' : state === 'excl' ? 'excluded-row' : 'inactive';
@@ -8979,22 +8984,15 @@ function clearIntake()     { resetIntakeFields(); }
 // Home Prep estimate bled into an unrelated Estate Settlement job. Called the instant
 // a job is selected, BEFORE the async fetch, so the transitional view is empty (not
 // stale). The async applyOpenedEstimate then fills in the real saved estimate.
-function neutralizeEstimateView() {
+//
+// ⚠ IT TAKES THE JOB BEING OPENED, and puts the screen at that job's fresh-build state — the one
+// list is resetEstimateJobState, and everything it clears is listed there. Every open comes through
+// here BEFORE its fetch, the saved path included, so a saved estimate is restored over a clean screen
+// rather than over the last client's; applyOpenedEstimate then either restores the saved record or
+// runs the same reset again for a fresh build.
+function neutralizeEstimateView(job) {
   window._suppressEstimateAutoSave = true;
-  // Drop any pinned α from the previously-loaded estimate. If the job being opened
-  // has a saved estimate, restoreEstimateToUI re-pins it from that record; if it
-  // doesn't, this is a fresh build and should price at the current Settings value.
-  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';
-  // ⚠ AND THE FULLNESS PRESET, for exactly the same reason and as of the same day it
-  // started mattering (2026-09-10). While the preset was a one-shot sweep, a stale
-  // _volPreset only lit the wrong chip; now that setRoomState SEEDS from it, carrying it
-  // across a job switch prices the next property off the last one's answer — tick a room
-  // on a fresh job after a packed estate and it opens at default+2. That is the bleed this
-  // whole function exists to stop. restoreEstimateToUI re-pins it from the saved record if
-  // the job being opened has one, the same way the α pin above is handled.
-  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
-  clearAllRooms();
-  resetEstimateExtras();
+  resetEstimateJobState(job || null);
   window._suppressEstimateAutoSave = false;
 }
 
@@ -9003,8 +9001,10 @@ function loadJobIntoEstimate() {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return;
 
-  // Clear the prior job's data from view immediately (see neutralizeEstimateView).
-  neutralizeEstimateView();
+  // Clear the prior job's data from view immediately, and put the screen at THIS job's
+  // fresh-build state (see neutralizeEstimateView). That includes who walked the house: it is
+  // seeded there from the site-visit concierge, else the assigned one, else nobody.
+  neutralizeEstimateView(job);
 
   renderJobRefStrip(job);
 
@@ -9015,17 +9015,16 @@ function loadJobIntoEstimate() {
   // JOB_STEPS coefficients, so we no longer auto-enable the generic "multiple
   // decision-makers / heirs?" +20% toggle for it — that would double-count. calcAll()
   // forces the toggle off and disables it for contested jobs.
-  // Auto-populate estimate prepared by from site visit TC
-  var prepByEl = document.getElementById('e-prepared-by');
-  if (prepByEl && job.siteVisitBy) prepByEl.value = job.siteVisitBy;
-  else if (prepByEl && job.tc) prepByEl.value = job.tc;
   var startDisplayEl = document.getElementById('e-start-date');
   if (startDisplayEl) startDisplayEl.value = job.start || '';
 
 
-  // Auto-populate property value from job intake
+  // Property value from job intake — WRITTEN EVERY TIME, blank when intake has none. It was
+  // written only when the job HAD one, so a client with no home value on file kept the last
+  // client's: measured on the real page, A's $4,200,000 rode onto B and B saved straight past the
+  // "Property value is required" refusal, which reads this very field.
   var ePropValEl = document.getElementById('e-propval');
-  if (ePropValEl && job.propVal) ePropValEl.value = job.propVal;
+  if (ePropValEl) ePropValEl.value = job.propVal || '';
 
   // Auto-populate sqft from job intake
   var eSqftEl = document.getElementById('e-sqft');
@@ -9124,42 +9123,13 @@ function applyOpenedEstimate(jobId, job, status) {
     }
     showFB('e-fb','warn','Offline — couldn’t reach the cloud and no estimate for "' + job.name + '" is stored on this device. Reconnect before building so you don’t overwrite a saved version you can’t see.');
   }
-  // No saved estimate — clear all rooms AND the non-room extras (package, third-
-  // party vendors, home prep) so this new client starts clean instead of inheriting
-  // the last estimate's selections.
-  _estimateAlphaPin = null; _estimateCostPin = null;
-  _estimateDocScope = seedDocScopeFromJob(job);   // fresh build — price at the current Settings α and the scope intake recorded
+  // No saved estimate — a FRESH BUILD for this client. Every per-job input goes back to where a
+  // fresh build for THIS job starts, through the one list (resetEstimateJobState), so this new
+  // client starts clean instead of inheriting the last estimate's selections. A saved estimate
+  // never reaches this line — restoreEstimateToUI puts its own record back above.
   window._suppressEstimateAutoSave = true;
-  clearAllRooms();
-  resetEstimateExtras();
+  resetEstimateJobState(job);
   window._suppressEstimateAutoSave = false;
-  document.getElementById('e-prem').checked = job.premium || false;
-  var _rshO = document.getElementById('e-rush'); if (_rshO) _rshO.checked = false;
-  // ⚠⚠ AND THE BILLING BASIS (2026-09-25). The fixed-price box, its amount and its row were
-  // reset by Save (clearEstimateTab) and by Reset, and by nothing on a job switch — so an
-  // estimate taken to fixed price and left WITHOUT saving (the ← Clients bar keeps the work, by
-  // design) handed its tick to the next client's fresh build. Measured on the real page: client A
-  // at $24,000 fixed, back, client B's Build estimate → B opened fixed price with its own
-  // suggestion ($11,580) in the box, and saved that way it quotes B a flat fee nobody chose. The
-  // flags beside it (_fixedAmountUserSet, _fixedAmountBasis) were already reset below; the
-  // control they describe was not. A saved estimate never reaches this line — restoreEstimateToUI
-  // puts its own basis back above.
-  var _fxO = document.getElementById('e-fixed'); if (_fxO) _fxO.checked = false;
-  var _fxAO = document.getElementById('e-fixed-amount'); if (_fxAO) _fxAO.value = '';
-  var _fxRowO = document.getElementById('fixed-amount-row'); if (_fxRowO) _fxRowO.style.display = 'none';
-  // Reset PS slots
-  var _crewReset = document.getElementById('ps-crew-size');
-  if (_crewReset) _crewReset.value = '2';
-  _crewUserSet = false;
-  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
-  // not inherit a previous job's manual choices, which is the whole reason these flags
-  // exist. Missing one leaves the next estimate silently pinned to the last one.
-  var _tcReset = document.getElementById('e-tc-count');
-  if (_tcReset) _tcReset.value = '1';
-  _tc2UserSet = false;
-  _fixedAmountUserSet = false;
-  _fixedAmountBasis = 0;
-  _fixedPrepMovedOut = 0;
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   calcAll();
@@ -9241,33 +9211,13 @@ function clearEstimateTab() {
   });
   var startEl = document.getElementById('e-start-date');
   if (startEl) startEl.value = '';
-  var targetEl = document.getElementById('e-target-date');
-  if (targetEl) targetEl.value = '';
-  document.getElementById('e-prem').checked = false;
-  var _fxN = document.getElementById('e-fixed'); if (_fxN) _fxN.checked = false;
-  var _fxAN = document.getElementById('e-fixed-amount'); if (_fxAN) _fxAN.value = '';
-  var _rshN = document.getElementById('e-rush'); if (_rshN) _rshN.checked = false;
-  var _fxRowN = document.getElementById('fixed-amount-row'); if (_fxRowN) _fxRowN.style.display = 'none';
-  var _crewReset = document.getElementById('ps-crew-size');
-  if (_crewReset) _crewReset.value = '2';
-  _crewUserSet = false;
-  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
-  // not inherit a previous job's manual choices, which is the whole reason these flags
-  // exist. Missing one leaves the next estimate silently pinned to the last one.
-  var _tcReset = document.getElementById('e-tc-count');
-  if (_tcReset) _tcReset.value = '1';
-  _tc2UserSet = false;
-  _fixedAmountUserSet = false;
-  _fixedAmountBasis = 0;
-  _fixedPrepMovedOut = 0;
-  clearAllRooms();
-  collectionsData = [];
-  renderCollections();
-  vehiclesData = [];
-  renderVehicles();
-  resetEstimateExtras();   // package + third-party vendors + home prep
-  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';   // nothing loaded — back to the current Settings α, full documentation
-  var _tp = document.getElementById('tp-target'); if (_tp) _tp.value = '';
+  // Every per-job input, for NOBODY — the screen is unbound. The one list; see resetEstimateJobState.
+  // ⚠ This is also the reset that runs after a SAVE, and until 2026-09-29 it was a hand-kept copy
+  // that missed the discount, move styling, the private note and who walked the house — so all four
+  // survived the Save into the next client's fresh estimate.
+  // (The 'e-target-date' write that lived here named an element that has never existed; the
+  //  planner's date, tp-target, is reset with everything else.)
+  resetEstimateJobState(null);
   // Recompute once against the now-empty inputs so every derived readout — the summary,
   // the crew badge, the timeline, the planner — goes to zero rather than keeping the last
   // job's numbers on screen. calcAll reassigns currentEstimate, so null it AFTER.
@@ -9287,6 +9237,11 @@ function clearAllRooms() {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
       if (roomState(id) !== 'off') setRoomState(id, 'off');
+      // ⚠ A RENAMED "Other" ROW GOES BACK TO ITS OWN NAME (2026-09-29). The name box is an input
+      // calcAll reads for the room's name, and nothing ever reset it — so A's "Wine cellar" sat on
+      // B's grid and became a room on B's estimate the moment B ticked that row. Measured on the
+      // real page. restoreEstimateToUI writes a saved estimate's own name back when it claims the row.
+      if (r.custom) { var _nm = document.getElementById('name-' + id); if (_nm && _nm.tagName === 'INPUT') _nm.value = r.name; }
       ri++;
     });
   });
@@ -9297,29 +9252,120 @@ function clearAllRooms() {
   calcAll();
 }
 
-// Clear every estimate input that lives OUTSIDE the room grid: the moving-
-// materials package, the third-party vendor table, and the home-prep section.
-// clearAllRooms() only resets rooms + the access/heirs toggles, so on its own a
-// fresh estimate for a new client would inherit the PREVIOUS client's package,
-// vendors, and prep selections — the "sticky selections" bug. A saved estimate
-// re-populates all of these in restoreEstimateToUI, so this only ever runs on the
-// no-saved-estimate (start-fresh) path.
-function resetEstimateExtras() {
-  var pkg = document.getElementById('e-pkg'); if (pkg) pkg.value = '0';
+// ⚠⚠ EVERYTHING THE BUILD ESTIMATE SCREEN HOLDS FOR ONE CLIENT, PUT BACK TO WHERE A FRESH BUILD
+// STARTS — AND THE ONE LIST OF IT (2026-09-29, workflow audit finding C1).
+//
+// The reset used to live in three hand-kept copies — neutralizeEstimateView, the fresh-build branch
+// of applyOpenedEstimate and clearEstimateTab, plus resetEstimateExtras beside them — and every copy
+// was a list of the controls somebody had remembered. Measured on the real page before this was
+// written: client A priced with a 10% discount, move styling, a private note, a coin collection, a
+// car and a planner date, ← Clients without saving, client B's Build estimate — B opened with ALL of
+// them. B's client estimate printed A's collection, A's car and a discount line; on a fixed-price
+// job the leaked discount cut the flat fee by 10% ($1,824 on the house measured here, $2,220 on the
+// audit's) and printed no discount line at all; B's
+// Walkthrough view read A's family note ("the son contests the will"); B named Ashley as the person
+// who walked a house they never saw; and A's $4.2M home value rode onto B, which had none, and let B
+// save straight past the "Property value is required" refusal. Save was no better: the discount, the
+// styling, the note and the walkthrough-by all survived clearEstimateTab into the next client —
+// a 10% discount rode through five new clients in a row.
+//
+// `job` is the client the screen is being put back to a FRESH BUILD for; null clears it for nobody
+// (clearEstimateTab — the screen unbound). Three inputs start from an answer on the job rather than
+// from blank, and they are seeded HERE so a job with no answer gets blank rather than the last
+// client's: the Premium Estate flag, the documentation scope, and who walked the house.
+//
+// ⚠ WHAT IT DELIBERATELY DOES NOT TOUCH: the job binding (#e-job) and the four fields read off the
+// job record — service type, square footage, property value, target start — which
+// loadJobIntoEstimate writes from the job being opened and clearEstimateTab blanks on unbind; and
+// the approval state, which loadEstimateForJob answers from the store.
+//
+// ⚠ A SAVED ESTIMATE GETS ALL OF IT BACK. Every open runs this first (neutralizeEstimateView) and
+// restoreEstimateToUI then writes the saved record over it — so a field the record does not carry
+// comes back BLANK rather than as whatever the last client left on screen. The planner's target date
+// is the one input no record carries, and that is correct: it is a question asked on site, not a term
+// of the estimate. ⚠ AND REOPENING THE SAME CLIENT NEVER COMES THROUGH HERE — openEstimateScreen
+// resumes the unsaved work instead, which is what the ← Clients bar promises.
+//
+// ⚠ ADDING A CONTROL TO THE BUILD ESTIMATE SCREEN MEANS ADDING IT HERE. tests/estimate-reset.test.js
+// walks every control calcAll reads, sets it to a previous client's answer, runs this, and fails on
+// any that survives — so the next one cannot be forgotten the way these seven were.
+function resetEstimateJobState(job) {
+  var el = function(id) { return document.getElementById(id); };
+  // 1. A DICTATION STILL RUNNING BELONGS TO THE CLIENT BEING LEFT. Room notes, collection notes and
+  //    the private note all append their final words to an element on this screen when the words
+  //    arrive — and room rows are positional (r0, r1…), so a sentence finished after the switch would
+  //    land in the NEXT client's same row, or in their private note. abort(), never stop(): stop()
+  //    still delivers the last result; abort() delivers nothing.
+  if (typeof _activeRecognitions === 'object' && _activeRecognitions) {
+    Object.keys(_activeRecognitions).forEach(function(k) {
+      var r = _activeRecognitions[k];
+      try { if (r && typeof r.abort === 'function') r.abort(); else if (r && typeof r.stop === 'function') r.stop(); } catch (e) {}
+    });
+  }
+
+  // 2. THE PINS. Each is re-pinned by restoreEstimateToUI from the saved record when the job has one;
+  //    otherwise this is a fresh build and prices at the current Settings α and cost card.
+  _estimateAlphaPin = null; _estimateCostPin = null;
+  // The documentation scope intake recorded — 'full' for no job, and for a job that never answered.
+  _estimateDocScope = seedDocScopeFromJob(job);
+  // ⚠ The fullness preset SEEDS every room ticked after it is pressed (setRoomState), so carrying it
+  // across prices the next property off the last one's answer — tick a room on a fresh job after a
+  // packed estate and it opens at default+2.
+  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
+
+  // 3. THE CONTROLS, back to their markup defaults.
+  var prem = el('e-prem'); if (prem) prem.checked = !!(job && job.premium);
+  var rush = el('e-rush'); if (rush) rush.checked = false;
+  // ⚠⚠ The billing basis (2026-09-25): an estimate taken to fixed price and left unsaved handed its
+  // tick to the next client's fresh build, which then quoted a flat fee nobody chose.
+  var fx = el('e-fixed'); if (fx) fx.checked = false;
+  var fxA = el('e-fixed-amount'); if (fxA) fxA.value = '';
+  var fxRow = el('fixed-amount-row'); if (fxRow) fxRow.style.display = 'none';
+  _fixedAmountUserSet = false; _fixedAmountBasis = 0; _fixedPrepMovedOut = 0;
+  // The preferred-client discount — the worst of the seven, because nothing but restoreEstimateToUI
+  // ever wrote this box, and on a fixed-price job it is taken off the flat fee with no line saying so.
+  var disc = el('e-discount'); if (disc) disc.value = '0';
+  // Move styling: +8 specialist hours on every Home Transition that inherited it.
+  var sty = el('e-move-styling'); if (sty) sty.checked = false;
+  // The date the client asked for. Saved on no record, so on a fresh build it can only be the last
+  // client's — and the planner then advises a crew for somebody else's deadline.
+  var tp = el('tp-target'); if (tp) tp.value = '';
+  // Who walked THIS house. loadJobIntoEstimate only ever wrote it when the job named somebody, so a
+  // job naming nobody kept the last client's walker — on the estimate, the agreement and the Drive
+  // working paper. A name the list does not offer leaves the select on "Select TC", which is the truth.
+  var by = el('e-prepared-by'); if (by) by.value = job ? (job.siteVisitBy || job.tc || '') : '';
+  // The private walkthrough note — one family's "the son contests the will" on the next family's
+  // estimate and its Walkthrough view. _privateWalkNote is the record; the box only mirrors it.
+  _privateWalkNote = '';
+  var pn = el('e-private-note'); if (pn) pn.value = '';
+  var pns = el('pnote-mic-status'); if (pns) pns.textContent = '';
+  // Crew and concierge counts, and the flags that say somebody chose them. Missing one leaves the
+  // next estimate silently pinned to the last one's manual choice.
+  var crew = el('ps-crew-size'); if (crew) crew.value = '2';
+  _crewUserSet = false;
+  var tcc = el('e-tc-count'); if (tcc) tcc.value = '1';
+  _tc2UserSet = false;
+  var pkg = el('e-pkg'); if (pkg) pkg.value = '0';
+  // A prep job opened straight after another prep job would otherwise price hours nobody walked.
+  var dc = el('e-declutter-hrs'); if (dc) dc.value = '0';
+  // The add-a-line boxes. A half-typed "coin collection" is still the last client's coin collection.
+  ['new-col-name', 'new-col-value', 'new-col-qty', 'new-veh-desc'].forEach(function(id) {
+    var x = el(id); if (x) x.value = '';
+  });
+  var ncd = el('new-col-disp'); if (ncd) ncd.value = 'auction';
+
+  // 4. THE LISTS. Vendors and prep lines render into the same group cards, so one render covers both.
   vendors = [];
-  var nvt = document.getElementById('new-vendor-type'); if (nvt) nvt.value = '';
-  var nvc = document.getElementById('new-vendor-cost'); if (nvc) nvc.value = '';
-  var nsmf = document.getElementById('new-smf'); if (nsmf) nsmf.textContent = '$0';
-  renderVendors();
-  // Clearing the lines is the whole reset now — inclusion is derived from them, so there is
-  // no checkbox to untick and no separate section to collapse.
   prepItems = [];
-  renderPrepItems();
-  // ⚠ AND THE DECLUTTER HOURS, for the same reason the fullness preset is dropped in
-  // neutralizeEstimateView: a prep job opened straight after another prep job would otherwise
-  // inherit the last property's answer and price hours nobody walked. restoreEstimateToUI re-pins
-  // it from the saved record when the job being opened has one.
-  var _dcReset = document.getElementById('e-declutter-hrs'); if (_dcReset) _dcReset.value = '0';
+  renderVendors();
+  collectionsData = [];
+  renderCollections();
+  vehiclesData = [];
+  renderVehicles();
+
+  // 5. THE ROOMS LAST — clearAllRooms clears the grid and the two adjustments and recomputes, so it
+  //    runs against everything above rather than half of it.
+  clearAllRooms();
 }
 
 
@@ -11974,8 +12020,10 @@ function editEstimateForJob(jobId) {
   // Drop the previously-loaded job's rooms/vendors/prep from view immediately, and
   // reflect this job's service type synchronously, so the slow cloud fetch below can
   // never show another job's estimate (e.g. a Home Prep build) under this job's name.
-  neutralizeEstimateView();
+  // The job goes in, so what the screen holds while the fetch is out is THIS job's fresh-build
+  // state rather than a blank one — the saved record, if there is one, is restored over it.
   var _editJob = jobs.find(function(j){ return j.id === jobId; });
+  neutralizeEstimateView(_editJob);
   if (_editJob) {
     paintEstimateService(_editJob.svc || '', _editJob);
     svcTypeChanged();
@@ -12281,6 +12329,11 @@ function restoreEstimateToUI(est) {
         if (candidate && !candidate.section) savedRoom = _claim(candidate);
       }
       if (savedRoom) {
+        // A renamed "Other" row gets its own saved name back. clearAllRooms puts every custom row
+        // back to its default name so one client's "Wine cellar" cannot reach the next; without this
+        // line the reopened estimate would read "Other" and the next save would record it that way.
+        var _nmR = document.getElementById('name-' + id);
+        if (r.custom && _nmR && _nmR.tagName === 'INPUT' && savedRoom.name) _nmR.value = savedRoom.name;
         var chk = document.getElementById('chk-' + id);
         if (chk) {
           setRoomState(id, savedRoom.excluded ? 'excl' : 'in');
@@ -18573,7 +18626,20 @@ function closeEstimateScreen() {
 function startEstimateOver() {
   var jid = parseInt((document.getElementById('e-job') || {}).value) || 0;
   if (!jid) { clearEstimateTab(); return; }
-  if (!confirm('Clear every room scored on this screen and start again from the intake answers?\n\nThe saved estimate is not changed unless you press Save.')) return;
+  // ⚠ THE QUESTION SAYS WHAT HAPPENS, AND IT IS ONE OF TWO THINGS (2026-09-29). This clears the screen
+  // through the one reset (resetEstimateJobState) and then opens the client again — so a client with a
+  // SAVED estimate gets that estimate back, and only a client with none starts from the intake answers.
+  // The old question promised the intake answers in both cases. And it names what goes, because since
+  // the same day that is everything: the discount, the styling and the private note, which the old
+  // hand-kept reset missed and so quietly kept, now go with the rooms and the lists. A note dictated in
+  // the car is the one thing here somebody would be sorry to lose without being asked.
+  var _soRec = estimateStore[jid];
+  var _soSaved = !!(_soRec && _soRec.estimate && estimateHasContent(_soRec.estimate));
+  if (!confirm(_soSaved
+      ? 'Discard the changes on this screen and reopen the saved estimate?\n\n'
+        + 'The rooms, collections, vehicles, vendors, the discount and the private walkthrough note all go back to what was last saved.'
+      : 'Clear everything on this screen and start again from the intake answers?\n\n'
+        + 'That is the rooms, collections, vehicles, vendors, the discount and the private walkthrough note. None of it has been saved.')) return;
   window._suppressEstimateAutoSave = true;
   clearEstimateTab();
   window._suppressEstimateAutoSave = false;

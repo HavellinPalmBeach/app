@@ -8196,7 +8196,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/change-order-fixes-ew3m2i`
+- Active feature branch: `claude/exciting-carson-pv156f`
+  (`claude/change-order-fixes-ew3m2i` is the previous name.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
@@ -8245,7 +8246,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/change-order-fixes-ew3m2i:main`
+  `git push origin claude/exciting-carson-pv156f:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -13391,7 +13392,9 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
+- Last reconciled against the app: **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h;
+  playbook Step 2 and four symptom rows); see the entry at the top of this file.
+- Prior pass **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
   concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows); see the entry at the top of this file.
 - Prior pass **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
   hours by a change order that prints the rate (manual §6c, §8, §9, §11, §12; playbook Step 10d, the Home Prep short version and
