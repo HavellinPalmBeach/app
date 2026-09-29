@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 6:36pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 11:24am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5239,6 +5239,7 @@ function changeEstimateService() {
   job.svcChangedBy   = (_by && _by.value) || job.tc || '';
   job.svc = next;
   job.svcLabel = SVC_LABELS[next] || next;
+  job.updatedAt = Date.now();   // stamp before the save — see _saveJobEdit
   saveJobs();
   syncJobToSheets(job);
 
@@ -8437,6 +8438,7 @@ function saveIntake() {
     created:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
   };
   jobs.unshift(job);
+  job.updatedAt = Date.now();
   saveJobs();
   syncJobToSheets(job);
   populateAgrSelect && setTimeout(populateAgrSelect, 100);
@@ -9388,6 +9390,7 @@ function saveEstimateAndPreview() {
   estimateApproved = false;
   currentEstimate.jobId = jobId;
   currentEstimate.job = job;
+  job.updatedAt = Date.now();
   saveJobs();
   saveEstimateState();   // single atomic write: estimate record + derived job summary + cloud
   syncJobToSheets(job);
@@ -11137,7 +11140,7 @@ function submitForApproval(opts) {
   if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
   saveEstimateState();
   // Now it's genuinely awaiting manager approval — reflect that on the job.
-  if (subJob) { subJob.status = 'pending'; subJob.approved = false; saveJobs(); syncJobToSheets(subJob); }
+  if (subJob) { subJob.status = 'pending'; subJob.approved = false; subJob.updatedAt = Date.now(); saveJobs(); syncJobToSheets(subJob); }
   updateApprovalUI();
 
   notifyManagerForApproval(currentEstimate, null);
@@ -11274,6 +11277,7 @@ function markEstimateSent() {
   if (!job) return;
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   job.estimateSentDate = today;
+  job.updatedAt = Date.now();
   saveJobs();
   syncJobToSheets(job);
   updateApprovalUI();
@@ -11409,7 +11413,7 @@ function applyDiscountRevision() {
   discountRevision = true;
   // Update job status back to pending
   var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
-  if (job) { job.status = 'pending'; job.approved = false; job.havellinEst = newHavellinTotal; saveJobs(); syncJobToSheets(job); }
+  if (job) { job.status = 'pending'; job.approved = false; job.havellinEst = newHavellinTotal; job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job); }
   saveEstimateState();   // single authoritative write (carries the revised totals + approval state)
   closeDiscountModal();
   renderClientEstimate();
@@ -11444,7 +11448,7 @@ function revokeEstimateApproval(jobId) {
       if (currentAgrJobId === job.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
       showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
     }
-    saveJobs(); syncJobToSheets(job);
+    job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
   }
   return job;
 }
@@ -11471,7 +11475,7 @@ function editEstimateFromCE() {
   // for what un-approving actually entails — it is not navigation.
   if (currentEstimate && currentEstimate.jobId) {
     var edJob = revokeEstimateApproval(currentEstimate.jobId);
-    if (edJob && edJob.status === 'pending') { edJob.status = 'new'; saveJobs(); syncJobToSheets(edJob); }
+    if (edJob && edJob.status === 'pending') { edJob.status = 'new'; edJob.updatedAt = Date.now(); saveJobs(); syncJobToSheets(edJob); }
   }
   saveEstimateState();
   // Go back to estimate tab with this job loaded
@@ -11551,7 +11555,7 @@ function submitDeny() {
     delete currentEstimate.lockedAt; delete currentEstimate.lockedBy;
   }
   var djob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
-  if (djob) { djob.status = 'new'; djob.approved = false; saveJobs(); syncJobToSheets(djob); }
+  if (djob) { djob.status = 'new'; djob.approved = false; djob.updatedAt = Date.now(); saveJobs(); syncJobToSheets(djob); }
   saveEstimateState();
   closeDenyModal();
   renderClientEstimate();
@@ -11633,7 +11637,7 @@ function checkPin() {
       // here also bypassed the signature + deposit blockers that activateOrCycle and
       // cycleStatus already enforce, so jobs went active without either.
       if (job) { job.status = (job.status === 'active' || job.status === 'closed') ? job.status : 'approved';
-                 job.approved = true; saveJobs(); }
+                 job.approved = true; job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job); }
     }
     // An approval clears any prior denial marker so the "Denied" banner doesn't linger.
     if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
@@ -12906,6 +12910,7 @@ function markAgreementSent() {
   job.agrSent = true;
   job.agrSentBy = _actor(job);
   job.agrSentAt = _stamp();
+  job.updatedAt = Date.now();
   saveJobs(); syncJobToSheets(job);
   updateAgrUI(); renderJobs(); _dashRedraw(job.id);
   showFB(_dashFbTarget('agr-fb'),'ok','Agreement recorded as sent. Record the signature when it comes back.');
@@ -13346,6 +13351,7 @@ function _attachPaymentEvidence(job, payment, file) {
         uploadToDrive(target, name, dataUrl, function(ok, fileUrl) {
           if (ok) {
             payment.evidence = fileUrl || name;
+            _jobTouch(job, 'payments', payment.uid);   // the record changed — see _saveJobEdit
             saveJobs(); syncJobToSheets(job);
             showSyncBadge('Payment evidence filed to Drive ✓');
             if (typeof updateAgrUI === 'function') updateAgrUI();
@@ -13441,6 +13447,7 @@ function acceptChangeOrder() {
     var baseTotal = b.est ? (b.est.havellinTotal || 0) : (b.job.havellinEst || 0);
     b.job.havellinEst = baseTotal + shift;
     b.job.totalEst = b.job.havellinEst;
+    b.job.updatedAt = Date.now();
     saveJobs();
     syncJobToSheets(b.job);
   }
@@ -13639,7 +13646,7 @@ function toggleProbatePkg(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   job.probatePkgSent = !job.probatePkgSent;
-  saveJobs();
+  _saveJobEdit(job);
   renderClientDashboard(jobId);
 }
 
@@ -17980,7 +17987,7 @@ function activateOrCycle(jobId) {
   var j = jobs.find(function(x){ return x.id===jobId; });
   if (!j) return;
   if (!applyJobTransition(j)) return;
-  saveJobs(); syncJobToSheets(j);
+  j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
   // ⚠⚠ AN ACTIVATION LANDS ON THE JOB PLAN (2026-09-23). Anthony: *"the activate job button on the
   // client dashboard should take you to the job plan."* Activating is starting the job, and the Job
   // Plan is where a started job is worked — so the press that starts it takes you there, on this
@@ -18032,7 +18039,7 @@ function cycleStatus(id) {
   var j = jobs.find(function(x){ return x.id===id; });
   if (!j) return;
   if (!applyJobTransition(j)) return;   // shared map + blockers + delivery stamp
-  saveJobs(); syncJobToSheets(j); renderJobs();
+  j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j); renderJobs();
 }
 
 // ─── WIN / LOSS — A ROW ON THE CLIENT DASHBOARD ──────────────────────────────
@@ -18299,7 +18306,7 @@ function confirmMarkWon() {
   // would otherwise keep showing on the record and in reporting.
   j.status = 'won';
   delete j.lostReason; delete j.lostReasonLabel; delete j.lostNote; delete j.lostAt; delete j.lostEst;
-  saveJobs(); syncJobToSheets(j);
+  j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
   document.getElementById('won-modal').style.display = 'none';
   renderJobs();
   if (typeof renderClientDashboard === 'function' && _dashboardJobId === j.id) renderClientDashboard(j.id);
@@ -18358,7 +18365,7 @@ function confirmMarkLost() {
   j.lostAt = new Date().toISOString();
   // Snapshot the estimate at time of loss so win/loss reporting has the dollar figure.
   j.lostEst = j.havellinEst || 0;
-  saveJobs(); syncJobToSheets(j);
+  j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
   closeCloseoutModal();
   renderJobs();
 }
@@ -18726,6 +18733,31 @@ function _jobTouch(job, kind, key) {
   job.updatedAt = Date.now();
 }
 
+// ⚠⚠ AN EDIT A PERSON MAKES TO A JOB MOVES THE JOB'S CLOCK, OR THE OTHER DEVICE UNDOES IT
+// (2026-09-29, workflow audit C2). saveJobs() fills `updatedAt` only when it is MISSING —
+// deliberately, so it never bumps a job this device did not touch — and the sheet merges a job
+// as one record, keeping the INCOMING copy on a tie (`incT >= curT` in _mergeJobRecord). So a
+// writer that called saveJobs() bare left the job at the stamp it had that morning, and the
+// next save from ANY device holding the morning copy won the tie and wrote it back. Measured on
+// the real writers and the real merge: a confirmed $23,400 painter, a confirmed team and an $850
+// dumpster came off the job, and the final invoice then billed the prep fee on the estimate
+// figure and dropped the dumpster.
+// So this is the one save for a person's edit: stamp FIRST (the device's own store and the
+// wire then agree), then save and sync — the house pairing. `kind`/`key` also stamp the
+// sub-record where one applies; the sheet unions stamps of every kind today, and a per-key
+// merge for these maps (fix pack P11) will read them.
+// ⚠ NEVER CALL IT FROM A WRITE THE APP MAKES ON ITS OWN — a render-time repair, a cached id, a
+// receipt from a backend. A stale device that merely LOOKED at a job would then claim to hold
+// the newest copy of it and win every scalar on it. Those saves stay bare and are named, with
+// the reason, in tests/job-edit-stamps.test.js.
+function _saveJobEdit(job, kind, key) {
+  if (!job) return;
+  if (kind) _jobTouch(job, kind, key);
+  job.updatedAt = Date.now();
+  saveJobs();
+  syncJobToSheets(job);
+}
+
 function saveJobs() {
   // Give every job a modified-time so the Sheet can MERGE saves by id (newest wins)
   // instead of doing a destructive full replace. Only fill when missing, so we never
@@ -18950,7 +18982,7 @@ function saveEstimateState() {
     if (_job && currentEstimate) {
       _job.havellinEst = currentEstimate.havellinTotal;
       _job.totalEst = currentEstimate.grandTotal;
-      saveJobs();
+      _saveJobEdit(_job);   // a person saved this estimate — see _saveJobEdit
     }
     // The in-progress scratch is now superseded by the saved record.
     clearEstimateScratch(jobId);
@@ -20713,6 +20745,7 @@ function setValBasis(jobId, v) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   job.valBasis = v;
+  job.updatedAt = Date.now();
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
   _invRefreshSummary(jobId);
@@ -20817,7 +20850,7 @@ function estateValueDate(job) {
 function setEstateAVD(jobId, on) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  job.avd = !!on; saveJobs();
+  job.avd = !!on; job.updatedAt = Date.now(); saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
@@ -24297,7 +24330,7 @@ function removeAppraiser(jobId, apprId) {
   _jobTouch(job, 'appraisers', apprId);
   // Unlink any items pointing at the removed appraiser.
   (_photoRefs[jobId] || []).forEach(function(r){ if (String(r.apprId) === String(apprId)) { r.apprId = ''; r.apprDoc = ''; } });
-  saveJobs(); savePhotoRefs(jobId);
+  saveJobs(); syncJobToSheets(job); savePhotoRefs(jobId);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
 }
@@ -28090,7 +28123,7 @@ function setCrewTC(jobId, name) {
   if (_crewRefuseDup(crew, 'tc', name)) return;
   // `picked`: somebody chose this concierge on the Job Plan, so the intake default stops
   // following Edit Client (see getJobCrew).
-  crew.tc.name = name; crew.tc.picked = true; saveJobs();
+  crew.tc.name = name; crew.tc.picked = true; _crewSave(jobId);
   _crewRefreshSelects();
 }
 function setCrewTC2(jobId, name) {
@@ -28098,7 +28131,7 @@ function setCrewTC2(jobId, name) {
   if (!crew.tc2) crew.tc2 = { name:'', locked:false };
   if (crew.tc2.locked) return;
   if (_crewRefuseDup(crew, 'tc2', name)) return;
-  crew.tc2.name = name; saveJobs();
+  crew.tc2.name = name; _crewSave(jobId);
   _crewRefreshSelects();
 }
 function setCrewPS(jobId, slot, name) {
@@ -28108,7 +28141,7 @@ function setCrewPS(jobId, slot, name) {
   if (_crewRefuseDup(crew, 'ps' + slot, name)) return;
   crew.ps[slot].name = name;
   crew.ps[slot].costRate = name ? getPSCostRate(name) : crew.ps[slot].costRate;
-  saveJobs();
+  _crewSave(jobId);
   _crewRefreshSelects();
 }
 // ─── JOB TEAM SIGN-OFF ────────────────────────────────────────────────────────
@@ -28191,8 +28224,8 @@ function confirmJobTeam(jobId) {
   crew.confirmed   = true;
   crew.confirmedBy = crew.tc.name;
   crew.confirmedAt = new Date().toISOString();
-  lockAssignedCrew(jobId);   // named slots fix; empty slots stay open for a mid-job add
-  saveJobs();
+  _lockCrewSlots(crew);      // named slots fix; empty slots stay open for a mid-job add
+  _crewSave(jobId);          // ONE save for the sign-off and the locks together
   buildLogTeamRows();
   _repaintPlanGates(jobId);   // the Job team chip at the top turns green now, not on the next redraw
   showFB('log-fb','ok','Job team confirmed. Hours can now be logged for this job.');
@@ -28218,7 +28251,7 @@ function reviseJobTeam(jobId) {
   if (crew.tc && !crewMemberHasHours(jobId, crew.tc.name)) crew.tc.locked = false;
   if (crew.tc2 && !crewMemberHasHours(jobId, crew.tc2.name)) crew.tc2.locked = false;
   (crew.ps || []).forEach(function(p){ if (p && !crewMemberHasHours(jobId, p.name)) p.locked = false; });
-  saveJobs();
+  _crewSave(jobId);
   buildLogTeamRows();
   _repaintPlanGates(jobId);
   showFB('log-fb','warn','Team reopened. Re-confirm it to resume logging hours.');
@@ -28226,12 +28259,32 @@ function reviseJobTeam(jobId) {
 
 // Lock every currently-assigned (named) role; empty slots stay open. Called on
 // the first hours save and on each subsequent save (so a later-filled slot locks).
+// Returns how many slots it locked.
+// ⚠ ONLY A LOCK THAT HAPPENED IS AN EDIT. This runs on EVERY hours save and after the first one
+// there is normally nothing left to lock — stamping then would let a device that merely logged a
+// day's hours (the log is its own store) claim to hold the newest copy of the whole job, and win
+// every other field on it with whatever it loaded that morning. So it stamps, saves and syncs
+// when a slot actually locked, and does nothing at all when none did.
 function lockAssignedCrew(jobId) {
-  var crew = getJobCrew(jobId); if (!crew) return;
-  if (crew.tc.name && !crew.tc.locked) crew.tc.locked = true;
-  if (crew.tc2 && crew.tc2.name && !crew.tc2.locked) crew.tc2.locked = true;
-  crew.ps.forEach(function(p){ if (p.name && !p.locked) p.locked = true; });
-  saveJobs();
+  var crew = getJobCrew(jobId); if (!crew) return 0;
+  var n = _lockCrewSlots(crew);
+  if (n) _crewSave(jobId);
+  return n;
+}
+// The locking itself, with no save. confirmJobTeam locks and then saves the sign-off it has just
+// written in the same object, so it calls this rather than lockAssignedCrew — or one press of
+// Confirm would write the job twice.
+function _lockCrewSlots(crew) {
+  var n = 0;
+  if (crew.tc.name && !crew.tc.locked) { crew.tc.locked = true; n++; }
+  if (crew.tc2 && crew.tc2.name && !crew.tc2.locked) { crew.tc2.locked = true; n++; }
+  crew.ps.forEach(function(p){ if (p.name && !p.locked) { p.locked = true; n++; } });
+  return n;
+}
+// The crew's one save. No key: the team is one object — named slots, their locks and the
+// sign-off — and there is no per-slot merge for a stamp to feed yet (that is fix pack P11).
+function _crewSave(jobId) {
+  _saveJobEdit(jobs.find(function(j){ return j.id === jobId; }));
 }
 
 // Names that may legitimately appear in more than one slot at once, because they stand
@@ -31425,7 +31478,8 @@ function refreshVendorSourcing(jobId) {
 // The ONE place a sourcing slot is addressed for writing. Every setter below goes through
 // it, so none of them has to know whether the estimate line carries an id — and none of
 // them can hold its own opinion of what a slot is called, which is how the readers and the
-// writers would come to key the same record two ways. Returns {job, rec} or null.
+// writers would come to key the same record two ways. Returns {job, rec, bucket, key} or null —
+// the last two are what _saveJobEdit stamps, so the write is stamped under the key it landed on.
 function _srcSlot(jobId, bucket, listKey, i) {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return null;
@@ -31442,7 +31496,7 @@ function _srcSlot(jobId, bucket, listKey, i) {
   var key = _srcLineKey(line, i);
   if (!job[bucket]) job[bucket] = {};
   if (!job[bucket][key]) job[bucket][key] = {};
-  return { job: job, rec: job[bucket][key] };
+  return { job: job, rec: job[bucket][key], bucket: bucket, key: key };
 }
 function _svcJob(jobId, i)  { return _srcSlot(jobId, 'vendorSourcing', 'vendors',   i); }
 function _prepJob(jobId, i) { return _srcSlot(jobId, 'prepSourcing',   'prepItems', i); }
@@ -31450,7 +31504,7 @@ function _srcSetVendor(slot, val) {
   var rec = slot.rec, v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
   rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
-  saveJobs();
+  _saveJobEdit(slot.job, slot.bucket, slot.key);
 }
 function setJobVendor(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
@@ -31458,11 +31512,11 @@ function setJobVendor(jobId, i, val) {
 }
 function setJobVendorQuote(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
-  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setJobVendorStatus(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
-  slot.rec.status = val; saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.status = val; _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setPrepVendor(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
@@ -31470,11 +31524,11 @@ function setPrepVendor(jobId, i, val) {
 }
 function setPrepVendorQuote(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
-  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setPrepVendorStatus(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
-  slot.rec.status = val; saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.status = val; _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function _collJob(jobId, collId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -31488,11 +31542,11 @@ function setCollVendor(jobId, collId, val) {
   var rec = job.collSourcing[collId], v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
   rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
-  saveJobs(); refreshVendorSourcing(jobId);
+  _saveJobEdit(job, 'collSourcing', collId); refreshVendorSourcing(jobId);
 }
 function setCollFee(jobId, collId, val) {
   var job = _collJob(jobId, collId); if (!job) return;
-  job.collSourcing[collId].fee = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  job.collSourcing[collId].fee = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(job, 'collSourcing', collId); refreshVendorSourcing(jobId);
 }
 function _logiJob(jobId, key) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -31510,15 +31564,15 @@ function setLogisticsVendor(jobId, key, val) {
   var rec = job.logisticsSourcing[key], v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
   rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
-  saveJobs(); refreshVendorSourcing(jobId);
+  _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 function setLogisticsQuote(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
-  job.logisticsSourcing[key].quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  job.logisticsSourcing[key].quote = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 function setLogisticsStatus(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
-  job.logisticsSourcing[key].status = val; saveJobs(); refreshVendorSourcing(jobId);
+  job.logisticsSourcing[key].status = val; _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 // Put an end-of-job category on this job (the add menu under the sourcing list). Refuses anything
 // that is not a catalogue key — the value arrives from a <select>, and a stray one must not mint a
@@ -31527,7 +31581,7 @@ function addLogisticsLine(jobId, key) {
   if (!key || !LOGISTICS_CATEGORIES.some(function(c){ return c.key === key; })) return;
   var job = _logiJob(jobId, key); if (!job) return;
   job.logisticsSourcing[key].added = true;
-  saveJobs(); refreshVendorSourcing(jobId);
+  _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 // Take one off. ⚠ A line with a vendor or a quote on it is asked about first: its quote is billed
 // as a third-party actual (getVendorActuals), so removing it takes it off the invoice too.
@@ -31542,7 +31596,8 @@ function removeLogisticsLine(jobId, key) {
       + (rec.vendorName ? rec.vendorName + ' comes off it' : 'It comes off')
       + (hasQuote ? ', and its $' + Number(rec.quote).toLocaleString() + ' quote is no longer billed' : '') + '.')) return;
   delete job.logisticsSourcing[key];
-  saveJobs(); refreshVendorSourcing(jobId);
+  // Stamped although the line is GONE — the same rule removeAppraiser follows (see _jobTouch).
+  _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 
 // ── ACTUAL COORDINATION HOURS (optional, observational) ──────────────────────
@@ -31562,15 +31617,15 @@ function removeLogisticsLine(jobId, key) {
 // exactly as it does today. That is deliberate — it is the disposable half of this change.
 function setJobVendorCoordHrs(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
-  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setPrepVendorCoordHrs(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
-  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setLogisticsCoordHrs(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
-  job.logisticsSourcing[key].coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  job.logisticsSourcing[key].coordHrs = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 
 // The input plus its estimate, for one sourcing row. `est` is the touch-derived figure the
@@ -31749,14 +31804,14 @@ function setVendorRating(jobId, vendorId, n) {
   rec.name = (lookupVendorById(vendorId)||{}).vendor_name || rec.name || '';
   rec.ratedAt = _todayStr();
   delete rec.writtenAt; delete rec.writeErr;
-  saveJobs(); syncJobToSheets(job);
+  _saveJobEdit(job, 'vendorRatings', vendorId);
   _writeVendorScore(job, vendorId);
   _repaintCloseout(jobId);
 }
 function setVendorRatingNote(jobId, vendorId, note) {
   var job = _ratingJob(jobId, vendorId); if (!job) return;
   job.vendorRatings[vendorId].note = note;
-  saveJobs(); syncJobToSheets(job);
+  _saveJobEdit(job, 'vendorRatings', vendorId);
   if (job.vendorRatings[vendorId].rating > 0) _writeVendorScore(job, vendorId);
 }
 function _writeVendorScore(job, vendorId) {
@@ -31938,7 +31993,7 @@ function draftReviewRequest(jobId) {
   if (!to) { _coNotice(jobId, 'warn', 'No client email on this job — add one under Edit Client first.'); return; }
   function record(url, via) {
     job.reviewAsk = { draftedAt: new Date().toISOString(), draftUrl: url || '', via: via, by: _actor(job) || '' };
-    saveJobs(); syncJobToSheets(job);
+    job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
     _repaintCloseout(jobId);
   }
   function viaMailto(why) {
@@ -31961,7 +32016,7 @@ function markReviewRequestSent(jobId) {
   if (!job || !job.reviewAsk || !job.reviewAsk.draftedAt) return;
   job.reviewAsk.sentAt = new Date().toISOString();
   job.reviewAsk.sentBy = _actor(job) || '';
-  saveJobs(); syncJobToSheets(job);
+  job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
   _repaintCloseout(jobId);
 }
 
@@ -35058,7 +35113,7 @@ function createDriveJobFolder(job) {
       // syncJobToSheets bumps it, which is what makes this device's copy win the
       // newest-wins merge — without it another device's untouched copy can overwrite
       // the folder URL that was just created. Same pairing as every other job edit.
-      saveJobs(); syncJobToSheets(j);
+      j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
       showSyncBadge('Drive folders created \u2713');
       openClientDashboard(job.id);
       return;
@@ -35088,7 +35143,7 @@ function createDriveJobFolder(job) {
         if (j && data && data.folderUrl) {
           j.driveFolder = data.folderUrl;
           delete j.driveFolderError;
-          saveJobs(); syncJobToSheets(j);
+          j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
           showSyncBadge('Drive folder created \u2713');
         } else {
           _driveFolderFailed(job, 'the server refused', (data && data.error) || '');
@@ -36836,6 +36891,7 @@ function ensureAgreementApproved(jobId) {
   job.agrApprovedBy = (rec && rec.approvedBy) || job.wonBy || job.tc || '';
   job.agrApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   delete job.agrRevokedBy; delete job.agrRevokedAt;
+  job.updatedAt = Date.now();
   saveJobs(); syncJobToSheets(job);
   agrApproved = true; agrApprovedBy = job.agrApprovedBy; agrApprovedAt = job.agrApprovedAt;
   // ⚠ ONE document is filed, and it is the SIGNING PACKET. The bare agreement was filed
@@ -37987,6 +38043,7 @@ function saveClientEdit(jobId) {
     job.executorAuth     = resolveExecutorAuth(document.getElementById('ec-exec-auth').value);
   }
 
+  job.updatedAt = Date.now();   // stamped before the save too, so this device's own store agrees with the wire
   saveJobs();
   // ⚠ saveJobs() fills updatedAt only when it is MISSING, deliberately, so it never bumps a job
   // this device did not touch — which means an Edit Client save on a job that already has one
