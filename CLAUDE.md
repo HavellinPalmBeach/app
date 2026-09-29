@@ -451,8 +451,9 @@ Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). A
   - **⚠ THE CONCURRENT DOCUMENT-CLAIMS BUILD FIXED THE SAME DEFECT INLINE THE SAME DAY (Q11)**, from the other side: the packet can
     now be read before Won, exactly when another job's band on it would be a false statement. The merge kept this helper; their
     assertions pass against it unchanged.
-  - The page globals themselves stay (the retired tab's `updateAgrUI` and `_actor` read them). The net below keeps them out of
-    every client document.
+  - The page globals themselves stay, and **the retired tab's `updateAgrUI` is now their only reader** (it paints for the job
+    `loadAgreement` primed them from). `_actor` read them too until the same afternoon — see *FIXED THE SAME DAY* below. The net
+    below keeps them out of every client document, and a second net keeps them out of everything else.
 - **⚠⚠ THE BAND STAYS OUT OF EVERY CLIENT PDF NOW.** `.approved-stamp` was hidden only under `@media print`, and the PDF that is
   emailed, sent for signature or filed is converted server-side from `_exportDoc`'s copy of the page, which is not a print. Every
   `DOC_ACTIONS` kind's `pdfCss` carries `.approved-stamp{display:none!important;}` (the estimate has no band today and carries
@@ -488,10 +489,42 @@ Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). A
   view only), **§17** (the PIN list). Playbook a `.stop` under *What needs a PIN* and **three** symptom rows. Both `.md` copies;
   **29 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered 1440/390 with 0 overflow, 0 page errors; under
   `print` 51/61 and 17/18 as before.
-- **⚠ FOUND IN PASSING, NOT FIXED: `_actor(job)` falls back to the page global `agrApprovedBy`.** On a job whose own agreement is
+- ~~**⚠ FOUND IN PASSING, NOT FIXED: `_actor(job)` falls back to the page global `agrApprovedBy`.** On a job whose own agreement is
   not approved yet, `draftedBy` on an estimate or invoice send, `sentBy`, `activatedBy`, `deliveredBy` and the review ask's `by`
   record whichever job the page approved last — measured *Ashley Jerome* on another client. The M1 class on internal attribution
-  rather than a client document; one line (`return (job && job.agrApprovedBy) || '';`), offered to Anthony.
+  rather than a client document; one line (`return (job && job.agrApprovedBy) || '';`), offered to Anthony.~~ **FIXED THE SAME
+  DAY** — Anthony: *"yes, fix the _actor fallback too."* *Kept rather than deleted, per the standing rule that a fixed flag left
+  standing reads as outstanding work.*
+- **⚠⚠ `_actor(job)` IS THIS JOB'S APPROVER OR NOBODY (2026-09-29, same day).** `return (job && job.agrApprovedBy) || '';` — the
+  page global is gone from it. **Measured on the real functions before the change, three jobs** (A approved by Anthony on
+  September 1, B approved by Ashley through the real `ensureAgreementApproved`, C neither): C's estimate **drafted** and **sent**
+  both read **Ashley Jerome**, C **activated** and **closed** both read **Ashley Jerome**, and `_actor(null)` returned **Ashley
+  Jerome with no job at all**. Now the two estimate records name **C's own concierge** — `docRecordSent` and `markDocSent` always
+  carried `|| job.tc`, and the foreign name was what kept that fallback from ever being reached — and activation and close read
+  **blank**.
+  - **⚠ A BLANK IS THE HONEST ANSWER, AND NO CORRECT NAME IS LOST.** The global is only ever written from some job's
+    `agrApprovedBy` (`loadAgreement`, `ensureAgreementApproved`) or cleared, so whenever it held THIS job's approver the job held it
+    too. Tested as the converse: A keeps Anthony on its DocuSign send, its legacy `agrSentBy` mirror and its activation while the
+    page names Ashley. The payment's and signature's `recordedBy`, `depositReceivedBy` and the review ask carry no `|| job.tc` and
+    read blank on a job with no approver on record — prelaunch, and deliberately not widened; one line was the ask.
+  - **THE SECOND NET, beside the document one: the page-level agreement approval is READ by `updateAgrUI` and by nothing else.**
+    It walks every top-level function with the `agrApprovedBy = …` write targets stripped, and counts reads across the whole file:
+    `agrApprovedBy` and `agrApprovedAt` read once each, by the retired tab's banner; **`agrApproved` itself is written and read by
+    nothing.** So the next function that takes the page's copy as the answer fails, whether or not it builds a client document —
+    the document net alone could not see `_actor`, which builds none.
+  - **12,658 committed checks on this branch, 13,089 after merging `main`** (the C2, H2 and Reset builds had landed; `approval-on-job`
+    198 → 231, and the second net stayed green over all three — none of them reads the page globals). **Revert-verified on a tar
+    copy of the tree: restoring the fallback fails 10 — 12,648 passed, 10 failed, every check ran.** The failures ARE the
+    measurement above. Browser steps 1–30 re-run as regressions before the merge, **0 failed — 1,446 checks**, and 1–33 on the
+    merged tree, **0 failed — 1,675 checks**; step 20 activates and step 28 closes through the real buttons, but neither reads the
+    attribution, so the driven proof is the unit suite.
+  - **⚠ FOUND IN PASSING, NOT FIXED: the manual (the handover-date note under §9a-ii) and the playbook (Step 13) say Close records "who
+    closed it".** It records `_actor(job)` — the job's price approver, since the app has no sign-in — so Ashley closing a job
+    Anthony priced reads Anthony. Pre-existing and unchanged by this fix (which only stops ANOTHER client's approver appearing);
+    a wording correction in four files, offered to Anthony. No other document describes these records.
+  - **⚠ OFFERED, NOT DONE: with `_actor` fixed the three page globals are one line from dead.** Pointing `updateAgrUI`'s banner at
+    `_agrJ.agrApprovedBy` / `_agrJ.agrApprovedAt` leaves them written and never read, and all three (plus their writes in
+    `loadAgreement`, `ensureAgreementApproved` and `revokeAgreementApproval`) can then be deleted. Small; Anthony's call.
 - **⚠ NOTED, NOT CHANGED:** 🔑 Manager approval is offered on every live final row, because the rail does not build the invoice
   on paint; inside tolerance and already approved are answered by the handler. The retired tab's own Approve button still binds
   `currentInvJobId` through `openInvPinModal()`; that tab has had no nav button since 2026-09-11.
@@ -9117,7 +9150,12 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   assignment wins, so it is promoted. The follow-up here — Edit estimate after the packet, and the won status — was built on
   the H1/M1 tree and merged `main`'s bottom Reset, C2 and H2 builds on the way through; the merge conflicted on the build stamp,
   CLAUDE.md, five estimate writers in `havellin.html` (resolved as a UNION: the shared status rule plus `main`'s edit stamps and
-  `checkPin`'s sync) and three suites' pinned lists. Browser steps 31–33 are theirs and this one is **step 34**.)
+  `checkPin`'s sync) and three suites' pinned lists. Browser steps 31–33 are theirs and this one is **step 34**. A second merge
+  took `main`'s `_actor` follow-up to H1/M1 (in that entry, near the top of this file) and conflicted only on the build stamp and this record.)
+  (`claude/charming-dirac-gcdfsl` recorded, before that second merge, that it was the active branch, and:)
+  (Back on this branch for one more commit after all eight builds below were on `main`: the `_actor` follow-up to H1/M1 —
+  attribution names this job's approver or nobody. The merge that brought `main` in conflicted only on the build stamp; no
+  browser step was added, and 1–33 are the default list.)
   (`claude/relaxed-fermi-nopl99` recorded, before this merge, that it was the active branch, and:)
   (`claude/charming-dirac-gcdfsl`, `claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`,
   `claude/exciting-carson-pv156f`, `claude/elegant-edison-x0kgyn` and `claude/clever-goodall-dyv11h` shipped alongside it on
