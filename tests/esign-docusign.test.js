@@ -97,8 +97,8 @@ const FULL_PROPS = {
 };
 
 // ── the app side ──────────────────────────────────────────────────────────────
-const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'agreementHtml', 'probateAgreementHtml', 'esignAnchor', 'agrBillingRates',
-                 'materialsBasisNote', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
+const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrApprovedStamp', 'esignAnchor', 'agrBillingRates',
+                 'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'estTolerancePctTxt', 'esignAnchorsPresent', 'estFixedFee', 'estPrepFeeOnTop',
@@ -559,7 +559,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
             'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_stamp',
             'esignSigner', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
-            'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'jobTimeline',
+            'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline',
             'jobTimelineNext', 'docDraftedAt', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'esignAvailable'],
@@ -652,7 +652,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['isAgreementSent', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'outstandingEnvelopes',
             'isAgreementSigned', 'agreementSignature', 'recordAgreementSignature', 'applyEsignStatus',
             'docState', '_jobTouch', '_actor', 'esignProviderKey', 'esignJobWatches',
-            'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+            'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'esignAvailable'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT', 'JT_NEXT'],
@@ -779,8 +779,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // a one-off."* Right, and the global version was a live defect for about an hour — see the
     // stranded-paper-job group below.
     const rail = (key) => sandbox({
-      fns: ['jobTimelineActions', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
-            'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+      fns: ['jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+            'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docKeyFor', 'docSentAt', 'esignAvailable',
             'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],

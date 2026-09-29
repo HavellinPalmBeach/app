@@ -53,12 +53,12 @@ const EST = {
 const est = (over) => Object.assign({}, EST, over || {});
 
 const DISCOUNT_FNS = ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor'];
-const DISCOUNT_VARS = ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT'];
+const DISCOUNT_VARS = ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'];
 
 // ── the real client estimate, so the document a client reads is what is asserted ─────
-const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
+const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection',
-                'proposedPlanRow', '_cePhases', 'materialsBasisNote', 'discountOnLabor',
+                'proposedPlanRow', '_cePhases', 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor',
                 // proposedPlanRow's prep narrative reads the rate rather than printing a 30.
                 'prepFeeRate',
                 // The client's stated job length is the shared definition now, not a second
@@ -80,7 +80,7 @@ const JOB = { id: 1, hvlId: 'HVL-0007', client: 'Butler Estate', svc: 'cleanout'
               premium: false, executor: 'Tripp Butler' };
 function invCtx(e, logs) {
   return sandbox({
-    fns: ['invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+    fns: ['invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
@@ -90,7 +90,7 @@ function invCtx(e, logs) {
     vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
-           'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'invApproved'],
+           'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'],
     stubs: {
       jobLogs: { 1: logs || [{ date: '2026-09-01', activity: 'clearance',
                    members: [{ name: 'Anthony Graziano', role: 'TC', hours: 80 },
@@ -189,7 +189,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // revision added the premium on top of it again.
     const pct = { value: 10 };
     const a = sandbox({
-      fns: DISCOUNT_FNS.concat(['applyDiscountRevision', 'estFixedFee', 'estPrepFeeOnTop']),
+      fns: DISCOUNT_FNS.concat(['applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'estFixedFee', 'estPrepFeeOnTop']),
       vars: DISCOUNT_VARS,
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },

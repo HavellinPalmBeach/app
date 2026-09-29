@@ -214,11 +214,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // working door was on the tab this slice retires. Every requirement below is unchanged;
     // it is asserted where it moved to, which means the rail gets it too.
     const rev = fn('revokeEstimateApproval');
-    has(rev, 'job.agrApproved = false', 'approval is withdrawn');
-    has(rev, "job.agrRevokedBy = 'estimate-edited'", 'and why is recorded on the job');
+    // ⚠ Restated 2026-09-29: the agreement half moved into `revokeAgreementApproval`, because the
+    // discount pop-up has to take the same approval off (it changes Exhibit A's price) and a second
+    // inline copy is how the two would come to disagree. Every requirement is unchanged; it is
+    // asserted where it moved to, plus the call that reaches it.
+    const agrRev = fn('revokeAgreementApproval');
+    has(rev, "revokeAgreementApproval(job, 'estimate-edited')", 'it revokes through the one shared helper, naming why');
+    has(agrRev, 'job.agrApproved = false', 'approval is withdrawn');
+    has(agrRev, "job.agrRevokedBy = why || 'estimate-edited'", 'and why is recorded on the job');
     has(rev, 'syncJobToSheets(job)', 'and it reaches the sheet, so the other device agrees');
-    has(rev, 'if (currentAgrJobId === job.id)', 'the live globals are cleared when the tab is showing that job');
-    has(rev, 'Agreement approval revoked', 'and the person is told, rather than finding out later');
+    has(agrRev, 'if (currentAgrJobId === job.id)', 'the live globals are cleared when the tab is showing that job');
+    has(agrRev, 'Agreement approval revoked', 'and the person is told, rather than finding out later');
     has(rev, 'delete job.estimateDriveAt', "the estimate's Drive stamp still clears too");
     has(rev, 'rec.approved = false', 'and the estimate record itself is un-approved');
 
@@ -231,7 +237,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Driven: an approved estimate really comes back editable.
     const ctx = sandbox({
-      fns: ['revokeEstimateApproval'],
+      fns: ['revokeEstimateApproval', 'revokeAgreementApproval'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, currentAgrJobId: 0 },
     });
     const job = { id: 7, approved: true, agrApproved: true, agrApprovedBy: 'Anthony Graziano',
@@ -276,7 +282,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ui = fn('updateAgrUI');
     has(ui, 'agrApprovalBlocker(currentAgrJobId)', 'the buttons read the shared gate');
     has(ui, 'Awaiting Client Acceptance', 'an unaccepted job gets its own badge');
-    has(ui, "agrRevokedBy === 'estimate-edited'", 'a revoked approval reads differently from one never given');
+    // Restated 2026-09-29: it read `agrRevokedBy === 'estimate-edited'` inline, so an approval a
+    // DISCOUNT withdrew read as one never given. Any withdrawal reads as withdrawn now.
+    has(ui, 'agrApprovalWithdrawn(_agrJ)', 'a revoked approval reads differently from one never given — whatever revoked it');
+    lacks(ui, "agrRevokedBy === 'estimate-edited'", 'and no reader keeps its own copy of which revocations count');
     has(ui, 'has not been filed anywhere', 'and the draft on screen is described as a preview');
     lacks(ui, '} else if (!estApproved) {', 'the single estimate-only refusal is gone');
   }

@@ -32,14 +32,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
   const noComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
-  const TL_FNS = ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent',
     'jobSchedule', 'jobProgress', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'coWorkingDays',
     '_coPaceFix', 'roomStatusNormalize'];
   const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
-    'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+    'docDraftOnly', 'docPreviewOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
     '_jtSendAction', 'agreementReady', 'jtRailHtml', 'jtTrackHtml', '_jtAtFmt', '_jtStateCls', 'fmtMoney',
     // ⚠ The REAL date formatter, not the harness's passthrough: the label promises "due around Sep 25, 2026"
     // and a passthrough would read "2026-09-25" and hide a formatting defect in a test that looks green.
@@ -483,8 +483,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-      'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
-      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
+      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize',

@@ -77,7 +77,7 @@ function coCtx(est, cos, seed) {
 // The invoice sandbox, as change-order-billing.test.js builds it.
 function inv(stubs) {
   return sandbox({
-    fns: ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+    fns: ['estTolerancePctTxt', 'invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
@@ -87,7 +87,7 @@ function inv(stubs) {
     vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
-           'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'invApproved'],
+           'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'],
     stubs: Object.assign({
       jobLogs: {}, estimateStore: {}, changeOrders: [], contractors: [],
       currentEstimate: null, currentInvStage: 'final', vendorDirectory: [], jobPlans: {},
@@ -373,8 +373,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-      'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
-      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
+      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
       // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.

@@ -43,10 +43,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
     'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
     'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-    'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
+    'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
     // The document tray: the step's document comes from the ONE row→document map, behind the
     // ONE readiness gate, so these lift with anything that drives the rail or a document verb.
-    'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+    'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
     'agreementReady', 'jobTimelineDoc',
     // The schedule strip and the planned dates the rail now carries.
     'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',

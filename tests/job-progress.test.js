@@ -380,9 +380,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // alone) and nothing drove the join. That is the same gap this repo has recorded four
     // times; the fix is always to drive the real renderer and read the real output.
 const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions',
+      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
-      '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
+      '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',

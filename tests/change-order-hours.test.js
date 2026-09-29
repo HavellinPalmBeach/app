@@ -257,8 +257,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-      'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
-      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
+      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor',
@@ -502,8 +502,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ §4.2 OF THE ESTATE AGREEMENT — the blank change-order form follows the billing basis');
   {
     const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf',
-      'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml',
-      'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
+      'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords',
+      'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
       '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger',
       '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docTierOf', 'docTierDef'];

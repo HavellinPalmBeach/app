@@ -1,365 +1,262 @@
-// Step 29 — a Job Plan edit made on one device survives the other device's next save (2026-09-29,
-// workflow audit finding C2). Written as step 26 and renumbered twice on the merges — the concurrent H4
-// and C1 sessions took 26 and 27, and the H3/M8 session took 28.
+// Step 29 — client documents say only what the estimate prices (2026-09-29, off the 2026-09-28 workflow
+// audit: H6, M2, M3, the document lows, Q8 and Q11).
 //
-// The defect: the Job Plan's sourcing and crew writers changed the job and called saveJobs() alone,
-// and saveJobs() fills `updatedAt` only when it is MISSING. So the edit left the job at the stamp it had
-// that morning — and saveAllJobs posts EVERY job, and the sheet's _mergeJobRecord keeps the incoming copy
-// on a tie (`incT >= curT`). The next save from a second device still holding the morning copy — an
-// edit to a DIFFERENT client is enough — won the tie and wrote the morning back over the edit: a
-// confirmed $23,400 painter, an $850 dumpster and a confirmed job team, gone, with nothing on either
-// screen saying so. The final invoice then billed the prep fee on the $20,000 estimate figure and
-// dropped the dumpster.
+// Drives the REAL page: the real intake, the real Build Estimate (rush, the concierge control, the
+// specialist crew, the discount box), the real client estimate, the real agreement builders, the real
+// invoices, the real Client Dashboard and its rail, the real discount pop-up typed into and its real
+// Apply button, and the real document viewer — so each claim is checked where a person reads it.
 //
-// This drives it with TWO BROWSERS — two separate contexts, so two separate localStorages, which is
-// what two devices are — against one fake Apps Script whose Jobs tab runs the REAL saveAllJobsToSheet /
-// saveJobToSheet / _mergeJobRecord out of apps-script/main-sync.gs. Device A is the iPad in the house:
-// the real Job Plan, the real sourcing selects and quote boxes, the real "+ Add an end-of-job vendor…"
-// menu, the real team selects and the real Confirm job team button, the real hours form. Device B is the
-// laptop at the desk that loaded the jobs before A started and never reloaded: it edits a different
-// client through the real Edit Client modal and presses the real Save. Then the sheet is read, and a
-// fresh reload of each device is read, and the bill is computed off what came back.
+//   A. H6  the rush line says priority scheduling, and names crew only when the estimate staffs it
+//   B. M2  the final's Original Estimate is the estimate alone, with the change order on its own line
+//   C. M3  the discount pop-up: 0 removes the discount, a blank is refused, the agreement is revoked
+//   D. M3  once the signing packet is out, Offer discount is gone and the door refuses
+//   E. Q11 the packet can be READ before the client says yes — and only read
+//   F. Q8  the agreement names the premium and the discount; no "(None — $0)" materials clause
+//   G. the invoice refusal names the invoice; overflow at 1440 and 390; no page errors
 //
-//   NODE_PATH=/path/to/node_modules node tests/browser/step29.js [/abs/path/to/havellin.html]
+//   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step29.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
-const fs = require('fs'), path = require('path'), vm = require('vm');
-const { matchBrace } = require(path.join(__dirname, '..', 'harness'));
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
+// Held outside the async body so the catch can close it (see step25).
 let b = null;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
-const eq = (a, e, m) => ok(a === e, m + '  [got ' + JSON.stringify(a) + ', want ' + JSON.stringify(e) + ']');
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
-
-// ── THE SHEET: the REAL merge out of main-sync.gs, over an in-memory Jobs tab ─────────────────────
-const GS = fs.readFileSync(path.join(__dirname, '..', '..', 'apps-script', 'main-sync.gs'), 'utf8');
-function gsFn(name) {
-  const re = new RegExp('(^|\\n)function\\s+' + name + '\\s*\\(', 'g');
-  const m = re.exec(GS); if (!m) throw new Error('not in .gs: ' + name);
-  const start = m.index + (m[1] ? m[1].length : 0), open = GS.indexOf('{', re.lastIndex);
-  return GS.slice(start, matchBrace(GS, open) + 1);
-}
-function gsVar(name) {
-  const m = GS.match(new RegExp('(^|\\n)(var\\s+' + name + '\\s*=[\\s\\S]*?;)\\n')); if (!m) throw new Error('not in .gs: var ' + name);
-  return m[2];
-}
-function fakeSheet(name, header) {
-  const rows = header ? [header.slice()] : [];
-  return {
-    getName: () => name,
-    getLastRow: () => rows.length,
-    getLastColumn: () => rows.reduce((m, r) => Math.max(m, r.length), 0),
-    appendRow(r) { rows.push(r.slice()); },
-    getDataRange() { return { getValues: () => rows.map((r) => r.slice()) }; },
-    getRange(r, c, nr, nc) {
-      return {
-        getValues() { const out = []; for (let i = 0; i < nr; i++) { const row = rows[r - 1 + i] || [], cells = [];
-          for (let j = 0; j < nc; j++) cells.push(row[c - 1 + j] === undefined ? '' : row[c - 1 + j]); out.push(cells); } return out; },
-        setValues(v) { v.forEach((cells, i) => { while (rows.length < r + i) rows.push([]); const row = rows[r - 1 + i];
-          cells.forEach((cell, j) => { row[c - 1 + j] = cell; }); }); },
-        clearContent() { for (let i = 0; i < nr; i++) { const row = rows[r - 1 + i]; if (!row) continue;
-          for (let j = 0; j < nc; j++) row[c - 1 + j] = ''; }
-          while (rows.length > 1 && rows[rows.length - 1].every((x) => x === '' || x === undefined)) rows.pop(); },
-      };
-    },
-  };
-}
-const S = {
-  console, Logger: { log() {} }, Date,
-  LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
-  // The deleted-job ledger has its own suite; it is not what this step is about.
-  _jobRefusal: () => null, _presentJobIds: () => ({}), getJobLedger: () => ({ seen: {}, since: 0 }), _ledgerMarkSeen: () => {},
-};
-const SHEETS = { Jobs: fakeSheet('Jobs', ['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']) };
-S.SpreadsheetApp = { openById: () => ({ getSheetByName: (n) => SHEETS[n] || null, insertSheet(n) { SHEETS[n] = fakeSheet(n); return SHEETS[n]; } }) };
-vm.createContext(S);
-vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'), gsVar('JOB_LIST_KEY'),
-  gsVar('BACKEND_VERSION'), gsVar('BACKEND_ACTIONS'), gsVar('BACKEND_TYPES'),
-  ...['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord'].map(gsFn)
-].join('\n\n'), S, { filename: 'main-sync.gs (extracted)' });
-const sheetJob = (id) => S.getJobsFromSheet().find((j) => j.id === id) || null;
-// The other stores are whole blobs the app reads back; nothing here is about how they merge.
-const STORES = { estimates: {}, jobPlans: {}, logs: {}, changeOrders: [] };
-const POSTS = [];   // { who, type, t } — every write either device sent, in the order it arrived
-
-async function wire(ctx, who) {
-  await ctx.route('**/exec*', async (route) => {
-    const req = route.request(), url = new URL(req.url()), action = url.searchParams.get('action');
-    const json = (o) => route.fulfill({ status: 200, contentType: 'application/json',
-      headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(o) });
-    if (req.method() === 'POST') {
-      let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
-      POSTS.push({ who, type: body.type || body.action || '?', t: Date.now() });
-      if (body.type === 'saveAllJobs') { S.saveAllJobsToSheet(body.payload); return json({ ok: true }); }
-      if (body.type === 'job') { S.saveJobToSheet(body.payload); return json({ ok: true }); }
-      if (body.type === 'saveAllEstimates') { Object.assign(STORES.estimates, body.payload || {}); return json({ ok: true }); }
-      if (body.type === 'saveAllJobPlans') { Object.assign(STORES.jobPlans, body.payload || {}); return json({ ok: true }); }
-      if (body.type === 'saveAllLogs') { Object.assign(STORES.logs, body.payload || {}); return json({ ok: true }); }
-      return json({ ok: true });
-    }
-    switch (action) {
-      case 'loadJobs': return json({ jobs: S.getJobsFromSheet(), deletedJobs: [] });
-      case 'loadEstimates': return json({ ok: true, estimates: STORES.estimates });
-      case 'loadJobPlans': return json({ ok: true, jobPlans: STORES.jobPlans });
-      case 'loadLogs': return json({ ok: true, logs: STORES.logs });
-      case 'loadChangeOrders': return json({ ok: true, changeOrders: STORES.changeOrders });
-      case 'loadContractors': return json({ ok: true, contractors: { added: [], defaults: [] } });
-      case 'loadMedia': return json({ ok: true, media: {} });
-      case 'version': return json({ ok: true, version: S.BACKEND_VERSION, actions: S.BACKEND_ACTIONS, types: S.BACKEND_TYPES });
-      default: return json({ ok: false, error: 'not in this test: ' + action });
-    }
-  });
-}
-
-// The directory the pickers read. `_row` is the id a job's sourcing record stores.
-const VENDORS = [
-  { _row: 11, vendor_name: 'Ace Painting', category: 'Painting', category_group: 'Property Preparation', phone: '5615550101', status: 'Active' },
-  { _row: 12, vendor_name: 'Bin There Dumpsters', category: 'Junk Removal & Dumpster', category_group: 'Disposal & Removal', phone: '5615550102', status: 'Active' },
-  { _row: 13, vendor_name: 'Two Men Movers', category: 'Moving Company', category_group: 'Moving & Logistics', phone: '5615550103', status: 'Active' },
-];
-
+const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
 (async () => {
   b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  async function device(who) {
-    const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 } });
-    await wire(ctx, who);
-    await ctx.addInitScript((v) => {
-      localStorage.setItem('hav_sheets_url', 'https://script.google.com/macros/s/FAKE/exec');
-      localStorage.setItem('hav_vendor_dir', JSON.stringify(v));
-    }, VENDORS);
-    const p = await ctx.newPage();
-    p.setDefaultTimeout(8000);
-    p.errs = []; p.on('pageerror', (e) => p.errs.push(String(e)));
-    p.on('dialog', async (d) => { await d.accept(); });
-    return { ctx, p };
-  }
-  // A write goes out through the outbox 250ms after the action and then one at a time; wait until
-  // nothing is queued, nothing is in flight and nothing is held for retry.
-  const settle = async (p) => {
-    for (let i = 0; i < 60; i++) {
-      await p.waitForTimeout(150);
-      const idle = await p.evaluate(() => !_outboxSending && !_flushing && !_outboxTimer &&
-        !Object.keys(_outbox).length && !Object.keys(_pendingWrites).length);
-      if (idle) return true;
-    }
-    return false;
-  };
-  const jobPosts = (who, since) => POSTS.filter((x) => x.who === who && x.t >= since && (x.type === 'saveAllJobs' || x.type === 'job'));
-
-  // ── SET-UP: two clients through the real intake, one priced through the real Build Estimate ─────────
-  console.log('\n## Set-up — the morning: two clients on the sheet, one won, signed and funded');
-  const A = await device('A');
-  await A.p.goto(APP); await A.p.waitForTimeout(1500);
+  const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
+  p.setDefaultTimeout(8000);
+  const errs = []; p.on('pageerror', e => errs.push(String(e)));
+  p.on('dialog', async d => { await d.accept(); });
+  await p.goto(APP); await p.waitForTimeout(1500);
+  await p.evaluate(() => {
+    window.__prints = []; window.print = function () {
+      const pt = document.getElementById('print-target');
+      window.__prints.push({ html: pt ? pt.innerHTML : '', title: document.title });
+    };
+    // The manager email is captured rather than sent: in a headless browser a mailto fallback is a
+    // navigation away from the page under test.
+    window.__mails = []; window.sendInternalEmail = function (to, subj, lines) { window.__mails.push({ subj: subj, text: lines.join('\n') }); };
+  });
   const future = (() => { const d = new Date(); d.setDate(d.getDate() + 30);
-    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
-  async function make(last) {
-    await A.p.evaluate(() => { const x = document.getElementById('btn-add-client'); if (x) x.click(); }); await A.p.waitForTimeout(300);
-    const id = await A.p.evaluate(([wt, last]) => {
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10); })();
+
+  async function make(svc, last) {
+    await p.evaluate(() => { const b = document.getElementById('btn-add-client'); if (b) b.click(); }); await p.waitForTimeout(300);
+    const id = await p.evaluate(([wt, svc, last]) => {
       const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
-      const pick = (id) => { const e = document.getElementById(id); const o = e && Array.from(e.options).find((x) => x.value); if (o) { e.value = o.value; if (e.onchange) e.onchange(); } };
-      set('i-svc', 'downsizing'); toggleIntakeFields();
+      const pick = (id) => { const e = document.getElementById(id); const o = e && Array.from(e.options).find(x => x.value); if (o) { e.value = o.value; if (e.onchange) e.onchange(); } };
+      set('i-svc', svc); toggleIntakeFields();
       set('i-fname', 'Pat'); set('i-lname', last); set('i-addr', '1 A St'); set('i-city', 'Palm Beach'); set('i-zip', '33480');
       set('i-sqft', '3500'); set('i-phone', '(561) 555-0199'); set('i-email', 'c@example.com'); set('i-home-value', '4200000');
       pick('i-ptype'); pick('i-src'); set('i-walkthrough', wt);
       const st = new Date(wt); st.setDate(st.getDate() + 7); while (st.getDay() === 0 || st.getDay() === 6) st.setDate(st.getDate() + 1);
       set('i-start', st.toISOString().slice(0, 10)); saveIntake(); return (jobs[0] || {}).id;
-    }, [future, last]);
-    await A.p.waitForTimeout(1200); return id;
+    }, [future, svc, last]);
+    await p.waitForTimeout(1500); return id;
   }
-  const id = await make('Butler');
-  const other = await make('Ellsworth');
-  ok(!!id && !!other && id !== other, 'two clients created through the real intake');
-  await A.p.evaluate((id) => dashGoEstimate(id), id); await A.p.waitForTimeout(700);
-  const est = await A.p.evaluate((id) => {
-    const js = document.getElementById('e-job'); js.value = String(id); if (js.onchange) js.onchange();
-    for (let i = 0; i < 6; i++) setRoomState('r' + i, 'in');
-    prepItems.length = 0; prepItems.push({ type: 'Painting', cost: 20000, lid: _srcLid() }); renderPrepItems();
-    vendors.length = 0; vendors.push({ type: 'Moving Company', cost: 12000, lid: _srcLid() });
-    calcAll();
-    const e = JSON.parse(JSON.stringify(currentEstimate));
-    estimateStore[id] = { approved: true, approvedBy: 'Anthony Graziano', estimate: e, savedAt: Date.now() };
-    const job = jobs.find((j) => j.id === id);
-    job.tc = 'Ashley Jerome'; job.won = true; job.status = 'won'; job.approved = true;
-    job.agrApproved = true; job.agrSent = true; job.agrSigned = true;
-    job.payments = [{ id: 1, uid: 'dep' + id, stage: 'deposit', amount: depositTargetFor(job), method: 'wire',
-                      date: _todayStr(), clearedOn: _todayStr() }];
-    job.updatedAt = Date.now(); saveJobs();
-    return e;
-  }, id);
-  ok(est && est.prepItems && est.prepItems.length === 1 && est.vendors.length === 1, 'the estimate carries a $20,000 painter line and a mover line');
-  await settle(A.p);
-  STORES.estimates[id] = await A.p.evaluate((id) => estimateStore[id], id);
-  const morning = sheetJob(id);
-  ok(!!morning && morning.won === true && !!morning.updatedAt, 'the sheet holds the morning job');
-  const MORNING = morning ? morning.updatedAt : 0;
 
-  // ── THE MORNING: BOTH DEVICES LOAD THE SHEET. B IS NEVER RELOADED AFTER THIS ─────────────────────
-  // A is reloaded too: the set-up above ran the real Build Estimate, whose own cloud refresh can land
-  // after the set-up writes and hand this page an older list. A device that has just opened the app
-  // holds exactly what the sheet holds, which is the state both devices start the day in.
-  await A.p.reload(); await A.p.waitForTimeout(2200);
-  eq(await A.p.evaluate((id) => (jobs.find((j) => j.id === id) || {}).updatedAt, id), MORNING, 'device A (the house) holds the morning copy');
-  const B = await device('B');
-  await B.p.goto(APP); await B.p.waitForTimeout(2200);
-  const bHas = await B.p.evaluate(([id, o]) => ({ n: jobs.length, has: !!jobs.find((j) => j.id === id), other: !!jobs.find((j) => j.id === o) }), [id, other]);
-  ok(bHas.has && bHas.other, 'device B (the desk) loaded both clients from the sheet');
-  eq(await B.p.evaluate((id) => jobs.find((j) => j.id === id).updatedAt, id), MORNING, 'and holds the morning copy of the job');
-
-  // ── A: THE REAL JOB PLAN, EDITED IN THE HOUSE ─────────────────────────────────────────────────
-  console.log('\n## A. Device A (the house) edits the Job Plan through the real controls');
-  const aStart = Date.now();
-  await A.p.evaluate((id) => openJobPlanFor(id), id); await A.p.waitForTimeout(1000);
-  // A press or a keystroke that cannot land is a FAILED CHECK, not a crash: run against a build that
-  // predates a control, the rest of the step still has something to say.
-  const on = (h) => '[onchange^="' + h + '"]';
-  async function choose(p, h, v) {
-    try { await p.locator(on(h)).first().selectOption(String(v)); await p.waitForTimeout(250); return true; }
-    catch (e) { ok(false, 'could not choose ' + v + ' in ' + h); return false; } }
-  async function type(p, h, v) {
-    try { const l = p.locator(on(h)).first(); await l.fill(String(v)); await l.dispatchEvent('change'); await p.waitForTimeout(250); return true; }
-    catch (e) { ok(false, 'could not type ' + v + ' into ' + h); return false; } }
-  async function press(p, sel) {
-    try { await p.locator(sel).first().click(); await p.waitForTimeout(300); return true; }
-    catch (e) { ok(false, 'could not press ' + sel); return false; } }
-  // The painter on the bundled prep line, the mover on the estimate's vendor line.
-  await choose(A.p, 'setPrepVendor(' + id + ',0,', 11);
-  await type(A.p, 'setPrepVendorQuote(' + id + ',0,', 23400);
-  await choose(A.p, 'setPrepVendorStatus(' + id + ',0,', 'Confirmed');
-  await choose(A.p, 'setJobVendor(' + id + ',0,', 13);
-  await type(A.p, 'setJobVendorQuote(' + id + ',0,', 12500);
-  await choose(A.p, 'setJobVendorStatus(' + id + ',0,', 'Confirmed');
-  // A dumpster nobody put on the estimate, through the real "+ Add an end-of-job vendor…" menu.
-  await choose(A.p, 'addLogisticsLine(' + id + ',', 'dumpster');
-  await choose(A.p, 'setLogisticsVendor(' + id + ",'dumpster',", 12);
-  await type(A.p, 'setLogisticsQuote(' + id + ",'dumpster',", 850);
-  await choose(A.p, 'setLogisticsStatus(' + id + ",'dumpster',", 'Confirmed');
-  // The team: the Hours fold, the real selects and the real Confirm job team button.
-  const hoursOpen = await A.p.evaluate(() => { const e = document.getElementById('phase-body-hours'); return !!e && e.style.display !== 'none'; });
-  if (!hoursOpen) await press(A.p, '[onclick="togglePhase(\'hours\')"]');
-  await choose(A.p, 'setCrewTC(' + id + ',', 'Ashley Jerome');
-  await choose(A.p, 'setCrewPS(' + id + ',0,', 'Anthony Graziano Jr');
-  await choose(A.p, 'setCrewPS(' + id + ',1,', 'Contractor TBD');
-  await press(A.p, '[onclick="confirmJobTeam(' + id + ')"]');
-  ok(await settle(A.p), 'device A\'s writes all went out');
-  const aJob = await A.p.evaluate((id) => JSON.parse(JSON.stringify(jobs.find((j) => j.id === id))), id);
-  const recOf = (j, bucket) => { const m = (j && j[bucket]) || {}; const k = Object.keys(m)[0]; return k ? m[k] : {}; };
-  eq(recOf(aJob, 'prepSourcing').vendorName, 'Ace Painting', 'the painter is on A\'s job');
-  eq(String(recOf(aJob, 'prepSourcing').quote), '23400', 'at $23,400');
-  eq(((aJob.logisticsSourcing || {}).dumpster || {}).vendorName, 'Bin There Dumpsters', 'the dumpster is on A\'s job');
-  ok(!!(aJob.crew && aJob.crew.confirmed), 'and the team is confirmed');
-  ok(aJob.updatedAt > MORNING, '⚠⚠ the edits moved the job\'s clock past the morning  [' + (aJob.updatedAt - MORNING) + 'ms]');
-  const afterA = sheetJob(id);
-  eq(recOf(afterA, 'prepSourcing').vendorName, 'Ace Painting', 'the sheet holds the painter once A\'s writes land');
-  ok(jobPosts('A', aStart).length > 0, 'A posted the job  (' + jobPosts('A', aStart).length + ' job writes)');
-
-  // ── B: THE STALE LAPTOP SAVES A DIFFERENT CLIENT ────────────────────────────────────────────────
-  console.log('\n## B. Device B, still on the morning copy, edits a DIFFERENT client and presses Save');
-  const bStart = Date.now();
-  await B.p.evaluate((o) => openClientDashboard(o), other); await B.p.waitForTimeout(500);
-  await press(B.p, '[onclick="dashEditClient(' + other + ')"]');
-  try { await B.p.fill('#ec-notes', 'Gate code 4417 — call the daughter first'); } catch (e) { ok(false, 'could not type the note'); }
-  await press(B.p, 'button[onclick="saveClientEdit(' + other + ')"]');
-  ok(await settle(B.p), 'device B\'s writes all went out');
-  const bSent = jobPosts('B', bStart);
-  ok(bSent.some((x) => x.type === 'saveAllJobs'), 'B posted the WHOLE job list — its morning copy of the Butler job included');
-  eq(await B.p.evaluate((id) => jobs.find((j) => j.id === id).updatedAt, id), MORNING, 'B never saw A\'s edits: it saved the morning copy');
-
-  // ── THE SHEET ─────────────────────────────────────────────────────────────────────────────────
-  console.log('\n## C. The sheet, after both');
-  const after = sheetJob(id);
-  const pr = recOf(after, 'prepSourcing'), mv = recOf(after, 'vendorSourcing'), du = ((after || {}).logisticsSourcing || {}).dumpster || {};
-  eq(pr.vendorName, 'Ace Painting', '⚠⚠ the painter survived B\'s save');
-  eq(String(pr.quote), '23400', '…at $23,400');
-  eq(pr.status, 'Confirmed', '…confirmed');
-  eq(mv.vendorName, 'Two Men Movers', 'the mover survived');
-  eq(String(mv.quote), '12500', '…at $12,500');
-  eq(du.vendorName, 'Bin There Dumpsters', '⚠⚠ the dumpster line survived');
-  eq(String(du.quote), '850', '…at $850');
-  ok(!!(after && after.crew && after.crew.confirmed), '⚠⚠ the confirmed team survived — it used to reset');
-  eq(after && after.crew && after.crew.ps && after.crew.ps[0] && after.crew.ps[0].name, 'Anthony Graziano Jr', '…with its specialist on it');
-  eq((sheetJob(other) || {}).notes, 'Gate code 4417 — call the daughter first', 'and B\'s own edit to the other client landed too — nothing was refused');
-
-  // ── THE BILL, OFF A FRESH RELOAD OF EACH DEVICE ─────────────────────────────────────────────────
-  console.log('\n## D. Both devices reloaded: what the Job Plan shows and what the final invoice bills');
-  for (const [who, d] of [['A', A], ['B', B]]) {
-    await d.p.reload(); await d.p.waitForTimeout(2200);
-    const bill = await d.p.evaluate((id) => {
-      const job = jobs.find((j) => j.id === id), e = estimateStore[id].estimate, a = getVendorActuals(job, e);
-      return { prepTotal: a.prepTotal, prepFee: a.prepFee, painter: (a.prep[0] || {}).vendorName,
-               dumpster: a.thirdParty.filter((l) => /Dumpster/.test(l.label)).map((l) => l.amount) };
-    }, id);
-    eq(bill.prepTotal, 23400, who + ': the prep actual is the painter\'s $23,400');
-    eq(bill.prepFee, 7020, who + ': so the 30% fee is $7,020 — the lost edit billed $6,000 on the $20,000 estimate figure');
-    eq(JSON.stringify(bill.dumpster), '[850]', who + ': the $850 dumpster is a third-party actual on the final');
-    eq(bill.painter, 'Ace Painting', who + ': the painter is named');
+  // The real Build Estimate: six rooms in scope, then the levers this step is about, then calcAll.
+  async function build(id, o) {
+    await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(700);
+    return p.evaluate(([id, o]) => {
+      const js = document.getElementById('e-job'); js.value = String(id); if (js.onchange) js.onchange();
+      for (let i = 0; i < 6; i++) setRoomState('r' + i, 'in');
+      document.getElementById('e-rush').checked = !!o.rush;
+      const d = document.getElementById('e-discount'); d.value = String(o.disc || 0);
+      // Each build starts from the ordinary crew: one concierge, the recommended specialists. The
+      // controls keep their last value across a rebuild of the same job, as they do for a person.
+      document.getElementById('e-tc-count').value = '1'; _tc2UserSet = false; _crewUserSet = false;
+      calcAll();
+      if (o.tc2) { document.getElementById('e-tc-count').value = '2'; _tc2UserSet = true; calcAll(); }
+      if (o.psExtra) {
+        const rec = currentEstimate.psRecommended;
+        document.getElementById('ps-crew-size').value = String(Math.min(6, rec + o.psExtra)); _crewUserSet = true; calcAll();
+      }
+      const e = JSON.parse(JSON.stringify(currentEstimate));
+      estimateStore[id] = { approved: true, approvedBy: 'Anthony Graziano', estimate: e };
+      const job = jobs.find(j => j.id === id);
+      job.approved = true; job.status = 'approved'; job.estimateSentDate = 'September 20, 2026';
+      Object.assign(job, o.job || {});
+      saveJobs();
+      return e;
+    }, [id, o || {}]);
   }
-  await A.p.evaluate((id) => openJobPlanFor(id), id); await A.p.waitForTimeout(1000);
-  const shown = await A.p.evaluate(([id]) => {
-    const q = (h) => { const e = document.querySelector('[onchange^="' + h + '"]'); return e ? e.value : null; };
-    const chip = document.querySelector('#plan-gates-' + id + ' [data-gate="team_confirmed"]');
-    return { painter: q('setPrepVendor(' + id + ',0,'), quote: q('setPrepVendorQuote(' + id + ',0,'),
-             status: q('setPrepVendorStatus(' + id + ',0,'), dumpster: q('setLogisticsQuote(' + id + ",'dumpster',"),
-             team: chip ? chip.className + ' ' + chip.textContent : '' };
-  }, [id]);
-  eq(shown.painter, '11', 'the reloaded Job Plan shows Ace Painting on the painting line');
-  eq(shown.quote, '23400', '…the $23,400 quote in its box');
-  eq(shown.status, 'Confirmed', '…and Confirmed');
-  eq(shown.dumpster, '850', 'the dumpster line is on the plan with its $850');
-  has(shown.team, 'gate-ok', 'the job-team chip is green  (' + shown.team.trim() + ')');
+  const T = (h) => p.evaluate((h) => { const d = document.createElement('div');
+    d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<\/th>/g, ' </th>').replace(/<br>/g, ' ');
+    return d.textContent.replace(/\s+/g, ' '); }, h);
+  const text = (sel) => p.evaluate((sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\s+/g, ' ') : ''; }, sel);
+  const click = async (sel) => { try { await p.click(sel); return true; } catch (e) { ok(false, 'could not press ' + sel); return false; } };
+  const fill = async (sel, v) => { try { await p.fill(sel, v); return true; } catch (e) { ok(false, 'could not type into ' + sel); return false; } };
+  const dash = async (id) => { await p.evaluate((id) => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(id); }, id); await p.waitForTimeout(500); };
+  const buttons = () => p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view button'))
+    .map(x => ({ t: x.textContent.replace(/\s+/g, ' ').trim(), c: x.getAttribute('onclick') || '' })));
+  const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
-  // ── E. AN HOURS SAVE THAT LOCKS NOTHING WRITES NOTHING TO THE JOB ─────────────────────────────────
-  // lockAssignedCrew runs on EVERY hours save. The team locks when it is confirmed, so on an ordinary
-  // day there is nothing left to lock — and a save that stamped anyway would let a device that merely
-  // logged its hours (the log is its own store) claim to hold the newest copy of the whole job.
-  console.log('\n## E. The hours form — a save that locks nothing writes nothing to the job');
-  const hrsOpen = await A.p.evaluate(() => { const e = document.getElementById('phase-body-hours'); return !!e && e.style.display !== 'none'; });
-  if (!hrsOpen) await press(A.p, '[onclick="togglePhase(\'hours\')"]');
-  // Measured on its own: against a build that lost the team above, staff it again first, so this
-  // section says what the hours save does rather than failing on a form the team gate has disabled.
-  if (!(await A.p.evaluate((id) => !!(jobs.find((j) => j.id === id).crew || {}).confirmed, id))) {
-    await choose(A.p, 'setCrewTC(' + id + ',', 'Ashley Jerome');
-    await choose(A.p, 'setCrewPS(' + id + ',0,', 'Anthony Graziano Jr');
-    await choose(A.p, 'setCrewPS(' + id + ',1,', 'Contractor TBD');
-    await press(A.p, '[onclick="confirmJobTeam(' + id + ')"]');
-    await settle(A.p);
-  }
-  const dayBefore = (n) => A.p.evaluate((n) => { const d = new Date(); d.setDate(d.getDate() - n);
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }, n);
-  async function logDay(n) {
-    const date = await dayBefore(n);
-    await A.p.evaluate((d) => { document.getElementById('log-date').value = d; }, date);
-    for (const f of ['#log-m0-hrs', '#log-m1-hrs']) { try { await A.p.fill(f, '6'); } catch (e) { ok(false, 'could not type hours into ' + f); } }
-    await press(A.p, '#btn-save-hours');
-    await settle(A.p);
-    return A.p.evaluate(() => (document.getElementById('log-fb') || {}).textContent || '');
-  }
-  const clock = () => A.p.evaluate((id) => jobs.find((j) => j.id === id).updatedAt, id);
-  const c0 = await clock();
-  const e1 = Date.now(); has(await logDay(0), 'Hours entry saved', 'a day\'s hours saved through the real form');
-  ok(POSTS.some((x) => x.who === 'A' && x.t >= e1 && x.type === 'saveAllLogs'), 'the hours went out (saveAllLogs)');
-  eq(jobPosts('A', e1).map((x) => x.type).join(','), '', '⚠⚠ and NO job write — the team was locked at sign-off, so there was nothing to lock');
-  eq(await clock(), c0, '⚠ the job\'s clock did not move: an hours save is not an edit to the job');
-  // A specialist added mid-job. Naming them IS an edit; the next hours save locks them, and THAT is an edit too.
-  await press(A.p, '[onclick="addLogPSSlot()"]');
-  const e2 = Date.now(); await choose(A.p, 'setCrewPS(' + id + ',2,', 'Contractor TBD'); await settle(A.p);
-  ok(jobPosts('A', e2).length > 0, 'naming a specialist added mid-job went to the sheet');
-  const e3 = Date.now(); await logDay(1);
-  ok(await A.p.evaluate((id) => !!((jobs.find((j) => j.id === id).crew.ps[2] || {}).locked), id), 'the next hours save locked the new slot');
-  ok(jobPosts('A', e3).length > 0, '…and that lock is an edit: it went to the sheet  (' + jobPosts('A', e3).map((x) => x.type).join(',') + ')');
-  eq(((sheetJob(id) || {}).crew || { ps: [] }).ps[2] && sheetJob(id).crew.ps[2].locked, true, '…where the new slot reads locked');
-  const c3 = await clock();
-  const e4 = Date.now(); await logDay(2);
-  eq(jobPosts('A', e4).map((x) => x.type).join(','), '', 'the save after that, locking nothing, sends no job write again');
-  eq(await clock(), c3, '…and leaves the clock where the lock put it');
+  // ── A. H6 ────────────────────────────────────────────────────────────────
+  console.log('\n## A. H6 — the rush line is priority scheduling; crew is named only when it is staffed');
+  const idR = await make('home_cleanout', 'Rush');
+  const eR = await build(idR, { rush: true, job: { won: true, status: 'won' } });
+  ok(eR.rush && eR.rushAmt > 0, 'a real rush estimate, premium $' + eR.rushAmt);
+  ok(eR.psRecommended >= 2 && eR.psCount === eR.psRecommended, 'the snapshot records the recommended crew beside the crew chosen (' + eR.psCount + '/' + eR.psRecommended + ')');
+  const ceR = await T(await p.evaluate((id) => clientEstimateHtml(estimateStore[id].estimate, jobs.find(j => j.id === id)), idR));
+  has(ceR, 'Expedited Delivery (20%) Priority scheduling to meet the timeline you requested', '⚠⚠ the estimate’s rush line says what the premium buys');
+  lacks(ceR, 'second Transition Concierge', 'and claims no second concierge the estimate does not staff');
+  lacks(ceR, 'expanded', 'nor an expanded crew');
+  lacks(ceR, 'compress the project calendar', 'the retired sentence is gone');
+  const eR2 = await build(idR, { rush: true, tc2: true, job: { won: true, status: 'won' } });
+  ok(!!eR2.needsTC2, 'the concierge control set to 2 reaches the record');
+  has(await T(await p.evaluate((id) => clientEstimateHtml(estimateStore[id].estimate, jobs.find(j => j.id === id)), idR)),
+      'with a second Transition Concierge working in parallel', 'a second concierge actually staffed is named');
+  const eR3 = await build(idR, { rush: true, psExtra: 1, job: { won: true, status: 'won' } });
+  ok(eR3.psCount === eR3.psRecommended + 1, 'a crew set above the recommendation reaches the record (' + eR3.psCount + ' over ' + eR3.psRecommended + ')');
+  const ceR3 = await T(await p.evaluate((id) => clientEstimateHtml(estimateStore[id].estimate, jobs.find(j => j.id === id)), idR));
+  has(ceR3, 'with an expanded crew of ' + eR3.psCount + ' Property Specialists working in parallel', 'an expanded crew actually staffed is named, with its size');
+  lacks(ceR3, 'second Transition Concierge', 'without inventing a second concierge');
+  // The invoices read the same sentence off the same record.
+  const invR = await p.evaluate((id) => {
+    const job = jobs.find(j => j.id === id), e = estimateStore[id].estimate;
+    jobLogs[id] = [{ date: '2026-09-21', activity: 'work', members: [
+      { name: 'Anthony Graziano', role: 'TC', hours: e.totTC }, { name: 'Anthony Graziano Jr', role: 'PS', hours: e.totPS }] }];
+    return { dep: invoiceHtml(job, 'deposit').html, fin: invoiceHtml(job, 'final').html };
+  }, idR);
+  has(await T(invR.fin), 'Priority scheduling to meet the timeline you requested, with an expanded crew', 'the final’s rush line is the estimate’s');
+  has(await T(invR.dep), 'Priority scheduling to meet the timeline you requested', 'and so is the deposit invoice’s');
+  lacks(await T(invR.dep), 'Compressing the project calendar', 'never the old advance-invoice wording');
 
-  // ── F. LAYOUT AND ERRORS ───────────────────────────────────────────────────────────────────────
-  const w1440 = await A.p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  await A.p.setViewportSize({ width: 390, height: 844 }); await A.p.waitForTimeout(400);
-  const w390 = await A.p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-  ok(w1440 <= 0, 'no horizontal overflow on the Job Plan at 1440  (' + w1440 + ')');
-  ok(w390 <= 0, 'no horizontal overflow on the Job Plan at 390  (' + w390 + ')');
-  eq(A.p.errs.length + B.p.errs.length, 0, 'no page errors on either device  ' + JSON.stringify(A.p.errs.concat(B.p.errs).slice(0, 2)));
+  // ── B. M2 ────────────────────────────────────────────────────────────────
+  console.log('\n## B. M2 — the final states the estimate alone, and the change order on its own line');
+  const idM = await make('home_cleanout', 'Change');
+  const eM = await build(idM, { job: { won: true, status: 'active', agrSigned: true, agrSent: true } });
+  const m2 = await p.evaluate((id) => {
+    const job = jobs.find(j => j.id === id), e = estimateStore[id].estimate;
+    changeOrders.push({ id: Date.now(), jobId: id, tcHrs: 10, psHrs: 10, reason: 'scope_add', description: 'Garage added',
+      createdAt: '2026-09-22', clientApproved: true, clientName: 'Pat Change', clientAcceptedAt: '2026-09-22' });
+    jobLogs[id] = [{ date: '2026-09-21', activity: 'work', members: [
+      { name: 'Anthony Graziano', role: 'TC', hours: e.totTC + 10 }, { name: 'Anthony Graziano Jr', role: 'PS', hours: e.totPS + 10 }] }];
+    const split = paymentSplit(e.havellinTotal);
+    job.payments = [{ id: 1, uid: 'm1', stage: 'deposit', amount: split.deposit, method: 'wire', date: '2026-09-15', clearedOn: '2026-09-15' },
+                    { id: 2, uid: 'm2', stage: 'midpoint', amount: split.midpoint, method: 'wire', date: '2026-09-20', clearedOn: '2026-09-20' }];
+    const d = invoiceHtml(job, 'final');
+    const box = document.createElement('div'); box.innerHTML = d.html;
+    const rows = Array.from(box.querySelectorAll('.pay-tbl tr')).map(r => r.textContent.replace(/\s+/g, ' ').trim());
+    return { rows, total: e.havellinTotal, split };
+  }, idM);
+  const iOrig = m2.rows.findIndex(r => /^Original Estimate/.test(r));
+  ok(iOrig >= 0, 'the payment summary has its Original Estimate row');
+  has(m2.rows[iOrig] || '', '$' + m2.total.toLocaleString(), '⚠⚠ it prints the estimate alone ($' + m2.total.toLocaleString() + ')');
+  has(m2.rows[iOrig + 1] || '', 'Approved Change Orders (1)', 'with the change order on the line directly beneath it');
+  has(m2.rows[iOrig + 1] || '', '+10.0 concierge', 'stated in hours');
+  has(m2.rows.join(' | '), '$' + m2.split.deposit.toLocaleString(), 'the deposit shown is half of the figure above it');
+
+  // ── C. M3 — the pop-up ───────────────────────────────────────────────────
+  console.log('\n## C. M3 — the discount pop-up removes a discount with 0, refuses a blank, and revokes the agreement');
+  const idD = await make('home_cleanout', 'Discount');
+  const eD = await build(idD, { disc: 10, job: { won: true, status: 'won', agrApproved: true, agrApprovedBy: 'Anthony Graziano', agrApprovedAt: 'September 21, 2026' } });
+  ok(eD.discountPct === 10 && eD.discountAmt > 0, 'a real 10% discount on the estimate ($' + eD.discountAmt + ')');
+  await dash(idD);
+  const btnsD = await buttons();
+  ok(btnsD.some(x => x.c === 'dashOfferDiscount(' + idD + ')'), 'Offer discount is on the rail while the packet has not gone out');
+  await click('button[onclick="dashOfferDiscount(' + idD + ')"]'); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => document.getElementById('discount-modal').style.display === 'flex'), 'the real button opens the pop-up');
+  ok(await p.evaluate(() => document.getElementById('dm-pct').value) === '10', 'showing the discount on the estimate');
+  has(await text('#discount-modal'), '0 removes the discount', 'the pop-up says how to take it off');
+  await fill('#dm-pct', ''); await p.evaluate(() => updateDiscountModal());
+  ok((await text('#dm-revised')) === '—', 'a blank previews nothing');
+  await click('#discount-modal .btn-p'); await p.waitForTimeout(250);
+  has(await text('#dm-fb'), 'between 0% and 15%', '⚠ a blank is refused, in the pop-up, naming the real range');
+  const still = await p.evaluate((id) => ({ pct: currentEstimate.discountPct, agr: jobs.find(j => j.id === id).agrApproved }), idD);
+  ok(still.pct === 10 && still.agr === true, 'and nothing changed — the discount and the agreement are untouched');
+  await fill('#dm-pct', '0'); await p.evaluate(() => updateDiscountModal());
+  const pre = eD.havellinTotal + eD.discountAmt;
+  ok((await text('#dm-revised')) === '$' + pre.toLocaleString(), '0 previews the total with the discount taken off ($' + pre.toLocaleString() + ')');
+  await click('#discount-modal .btn-p'); await p.waitForTimeout(400);
+  const after = await p.evaluate((id) => { const job = jobs.find(j => j.id === id), rec = estimateStore[id];
+    return { pct: rec.estimate.discountPct, amt: rec.estimate.discountAmt, total: rec.estimate.havellinTotal, approved: rec.approved,
+             agr: job.agrApproved, why: job.agrRevokedBy, modal: document.getElementById('discount-modal').style.display,
+             mail: (window.__mails[0] || {}).text || '' }; }, idD);
+  ok(after.pct === 0 && after.amt === 0, '⚠⚠ 0 REMOVED the discount (it used to become 1%)');
+  ok(after.total === pre, 'the total is back to $' + pre.toLocaleString());
+  ok(after.approved === false, 'and the estimate goes back to the manager');
+  ok(after.agr === false && after.why === 'discount-revised', '⚠⚠ the agreement’s approval is withdrawn, naming why');
+  ok(after.modal !== 'flex', 'the pop-up closes');
+  has(after.mail, 'has removed the client discount', 'the manager is told it was removed');
+  has(after.mail, 'Discount: removed', 'not "Proposed discount: 0%"');
+  await dash(idD);
+  has(await text('#client-dashboard-view'), 'A discount changed the price after this was prepared', 'the rail says why the packet must be re-approved');
+
+  // ── D. M3 — after the packet is out ──────────────────────────────────────
+  console.log('\n## D. M3 — once the signing packet has gone out, a price change is a change order');
+  const idS = await make('home_cleanout', 'Sent');
+  await build(idS, { disc: 5, job: { won: true, status: 'won', agrApproved: true, agrApprovedBy: 'Anthony Graziano',
+    agrApprovedAt: 'September 21, 2026', docState: { agreement: { sentAt: '2026-09-22T10:00:00Z', sentBy: 'Ashley Jerome' } } } });
+  await dash(idS);
+  ok(!(await buttons()).some(x => /dashOfferDiscount/.test(x.c)), '⚠⚠ Offer discount is gone once the packet has been sent (a DocuSign send writes only the record)');
+  await p.evaluate((id) => dashOfferDiscount(id), idS); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => document.getElementById('discount-modal').style.display !== 'flex'), 'and the handler does not open the pop-up');
+  has(await text('#dash-fb'), 'signing packet has gone to the client', 'it says why, on the dashboard');
+  has(await text('#dash-fb'), 'change order', 'naming the route that remains');
+
+  // ── E. Q11 ───────────────────────────────────────────────────────────────
+  console.log('\n## E. Q11 — the packet may be read before the client says yes, and only read');
+  const idQ = await make('downsizing', 'Preview');
+  await build(idQ, {});
+  await dash(idQ);
+  const btnsQ = await buttons();
+  ok(btnsQ.some(x => x.c === "docAction(" + idQ + ",'agreement','view')"), 'the packet can be opened from the rail before the yes');
+  ok(!btnsQ.some(x => /'agreement','(print|send|file)'/.test(x.c)), '⚠ and nothing on the rail prints, sends or files it');
+  await p.evaluate((id) => docAction(id, 'agreement', 'view'), idQ); await p.waitForTimeout(400);
+  has(await text('#doc-viewer-title'), 'Signing Packet — PREVIEW', 'the viewer titles it PREVIEW');
+  ok(await p.evaluate(() => getComputedStyle(document.getElementById('doc-viewer-print')).display === 'none'), '⚠ the viewer offers no Print');
+  has(await text('#doc-viewer-body'), 'Exhibit A', 'and shows the real packet, estimate and all');
+  const stamp = await p.evaluate((id) => { const j = jobs.find(x => x.id === id); return { agr: !!j.agrApproved, filed: !!(j.docState && j.docState.agreement && j.docState.agreement.filedAt) }; }, idQ);
+  ok(!stamp.agr && !stamp.filed, '⚠⚠ reading it stamped no approval and filed nothing');
+  await p.evaluate(() => closeDocViewer()); await p.waitForTimeout(150);
+  await p.evaluate((id) => { window.__prints = []; docAction(id, 'agreement', 'print'); }, idQ); await p.waitForTimeout(700);
+  ok(await p.evaluate(() => window.__prints.length === 0), 'printing it before the yes is refused');
+  has(await text('#dash-fb'), 'nothing to put under contract', 'saying why');
+  await p.evaluate((id) => { const j = jobs.find(x => x.id === id); j.won = true; j.status = 'won'; saveJobs(); }, idQ);
+  await p.evaluate((id) => docAction(id, 'agreement', 'view'), idQ); await p.waitForTimeout(400);
+  const tWon = await text('#doc-viewer-title');
+  ok(tWon.indexOf('PREVIEW') < 0 && tWon.indexOf('Signing Packet') >= 0, 'once won, the viewer shows the packet as itself');
+  ok(await p.evaluate(() => getComputedStyle(document.getElementById('doc-viewer-print')).display !== 'none'), 'with Print');
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+  ok((await overflow()) <= 0, 'the viewer at 390px has no horizontal overflow');
+  await p.setViewportSize({ width: 1440, height: 1000 });
+  await p.evaluate(() => closeDocViewer());
+
+  // ── F. Q8 and materials ──────────────────────────────────────────────────
+  console.log('\n## F. Q8 — the agreement names the premium and the discount; no "(None — $0)"');
+  const idA = await make('downsizing', 'Terms');
+  const eA = await build(idA, { rush: true, disc: 10, job: { won: true, status: 'won' } });
+  const agr = await T(await p.evaluate((id) => agreementHtml(jobs.find(j => j.id === id), estimateStore[id].estimate), idA));
+  has(agr, 'an expedited-delivery premium of twenty percent (20%) of Contractor’s fees is charged', '⚠⚠ the fee clause names the premium Exhibit A itemizes');
+  has(agr, 'A preferred-client discount of ten percent (10%) applies to Contractor’s labor fees and to the expedited-delivery premium charged on them',
+      'and the discount, reaching the premium as the estimate computes it');
+  ok(eA.pkgCost === 0, 'no materials package on this estimate');
+  lacks(agr, '(None — $0)', '⚠ §3.6 no longer quotes "(None — $0)"');
+  has(agr, 'No moving or packing materials package is quoted on the Estimate, and none is billed.', 'it says none is quoted');
+  const est2 = await T(await p.evaluate((id) => clientEstimateHtml(estimateStore[id].estimate, jobs.find(j => j.id === id)), idA));
+  lacks(est2, 'None — $0', 'and the estimate quotes it nowhere either');
+
+  // ── G. the gate wording, overflow, errors ────────────────────────────────
+  console.log('\n## G. The invoice refusal names the invoice; overflow and page errors');
+  const idG = await make('home_cleanout', 'Gate');
+  await build(idG, {});
+  await p.evaluate((id) => { estimateStore[id].approved = false; }, idG);
+  await dash(idG);
+  await p.evaluate((id) => docAction(id, 'invoice', 'view', { stage: 'deposit' }), idG); await p.waitForTimeout(300);
+  has(await text('#dash-fb'), 'The estimate must be approved before the invoice can be drawn.', '⚠ the invoice refusal names the invoice');
+  lacks(await text('#dash-fb'), 'before the agreement can be drawn', 'not the agreement');
+  await dash(idD);
+  ok((await overflow()) <= 0, 'the dashboard at 1440px has no horizontal overflow');
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+  ok((await overflow()) <= 0, 'nor at 390px');
+  ok(errs.length === 0, 'no page errors' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
+
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();
-  console.log(pass + ' passed, ' + fail + ' failed');
-})().catch(async (e) => { console.log('  ✗ threw: ' + (e && e.stack || e)); fail++; try { if (b) await b.close(); } catch (x) {}
-  console.log(pass + ' passed, ' + fail + ' failed'); process.exitCode = 1; });
+  process.exit(fail ? 1 : 0);
+})().catch(async e => { console.log('THREW: ' + (e && e.stack || e)); console.log(pass + ' passed, ' + (fail + 1) + ' failed'); if (b) await b.close(); process.exit(1); });

@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 11:38am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:19pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3586,11 +3586,13 @@ body.no-smf .smf-col{display:none;}
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
       <label style="font-size:12px;font-weight:600;white-space:nowrap;">Discount %</label>
-      <input type="number" id="dm-pct" min="1" max="15" step="1" value="5"
+      <input type="number" id="dm-pct" min="0" max="15" step="1" value="5"
         style="width:72px;text-align:center;font-size:18px;font-weight:700;"
         oninput="updateDiscountModal()">
       <span style="font-size:18px;font-weight:700;color:var(--gray-dk);">%</span>
+      <span style="font-size:11px;color:var(--gray);">0 removes the discount</span>
     </div>
+    <div id="dm-fb"></div>
     <div style="display:flex;gap:8px;">
       <button class="btn-s" style="flex:1;" onclick="closeDiscountModal()">Cancel</button>
       <button class="btn-p" style="flex:2;" onclick="applyDiscountRevision()">Apply &amp; Submit for Re-Approval</button>
@@ -6031,8 +6033,15 @@ function fixedPriceBuffer(svcKey) {
 // A flat premium on the Havellin services total, applied when the concierge marks the
 // job expedited. Deliberately NOT a markup on the TC/PS hourly rates: rates outside
 // NASMM norms read badly to a client comparing quotes, and a named line is both clearer
-// and easier to defend. It is also literally what the client is buying — a second
-// concierge and a larger crew working in parallel.
+// and easier to defend.
+//
+// ⚠⚠ IT ADDS NOBODY. This comment used to say the premium "is literally what the client is
+// buying — a second concierge and a larger crew working in parallel", and the client estimate
+// and the final invoice printed exactly that under the line. Both were false on the ordinary
+// rush job: ticking rush changes the price and nothing else (the crew is its own control, and
+// so is the second concierge), and the estimate is Exhibit A of a signed agreement. What the
+// client buys is PRIORITY SCHEDULING. rushScopeLine below is the one sentence, and it names a
+// second concierge or an expanded crew only when the estimate really staffs one (2026-09-29).
 //
 // This replaced a runway-keyed sliding scale (1.00 → 1.50 across 90/60/45/30 days to the
 // client's hard target) that had two problems: it measured calendar distance rather than
@@ -6040,6 +6049,31 @@ function fixedPriceBuffer(svcKey) {
 // and it only ever reached the SUGGESTED fixed-price figure, so it did nothing at all on
 // a job left hourly — which is every job by default. One flat number, one mechanism.
 var RUSH_PCT = 0.20;
+
+// The crew an estimate staffs BEYOND the ordinary, read off the saved record and nothing else:
+// a second concierge only when the Concierges control was set to 2 (preparedBy2 is the shape
+// older records used), and a larger specialist crew only when the count chosen is above the
+// count the engine recommended. psRecommended is stamped on every snapshot from 2026-09-29; a
+// record saved before that carries none, and an expanded crew is then NEVER claimed — the
+// comparison cannot be made, and a claim the record cannot support does not go on Exhibit A.
+function rushCrewAdded(e) {
+  if (!e) return { tc2: false, ps: 0 };
+  var rec = parseInt(e.psRecommended, 10);
+  var n = parseInt(e.psCount || e.nps, 10);
+  return { tc2: !!(e.needsTC2 || e.preparedBy2), ps: (rec >= 2 && n > rec) ? n : 0 };
+}
+
+// What the expedited-delivery premium is, in the one sentence the estimate and all three
+// invoices print under it. Priority scheduling always; a second concierge or an expanded crew
+// only when rushCrewAdded says the estimate has one.
+function rushScopeLine(e) {
+  var c = rushCrewAdded(e);
+  var crew = [];
+  if (c.tc2) crew.push('a second Transition Concierge');
+  if (c.ps) crew.push('an expanded crew of ' + c.ps + ' Property Specialists');
+  return 'Priority scheduling to meet the timeline you requested'
+    + (crew.length ? ', with ' + crew.join(' and ') + ' working in parallel' : '');
+}
 
 // Vendor coordination fee. ZERO since 2026-08-02, on labor jobs and bundled Home Prep
 // alike. Standalone Home Prep is untouched and still bills its 30% GC fee.
@@ -6604,6 +6638,11 @@ function calcAll() {
   var psFee = Math.round(totPS * psRate);
   var pkgCost = parseInt(document.getElementById('e-pkg').value) || 0;
   var pkgLabel = document.getElementById('e-pkg').options[document.getElementById('e-pkg').selectedIndex].text;
+  // ⚠ NOT ON STANDALONE PREP, which has no materials card: applyEstimateServiceMode HIDES it, and a
+  // hidden select keeps its value — so a job re-typed to Home Prep after a package was picked went
+  // on pricing the package into havellinTotal, while buildPrepEstimateBody (rightly) prints no
+  // materials row. A total above its own rows, off a control nobody can see (2026-09-29).
+  if (isPrep) { pkgCost = 0; pkgLabel = 'None — $0'; }
   var _collCost = getCollectionCost();
   var smf = calcVendorTotals() + Math.round(_collCost * SMF_PCT);
   // Excluded on standalone prep. buildPrepEstimateBody itemizes prep vendors, the 30% fee
@@ -7403,6 +7442,9 @@ function calcAll() {
     destPS: typeof destPS !== 'undefined' ? destPS : 0,
     psSlots: getPSSlots(),
     psCount: getScheduledPSCount(),
+    // The crew the engine recommended, beside the crew chosen, so a client document can tell
+    // an expanded crew from an ordinary one without re-running the solve (rushCrewAdded).
+    psRecommended: isPrep ? 0 : _recommendedPS,
     psCrewReason: '',   // field removed; kept on the record so older estimates still load
     // Internal walkthrough notes. Saved with the estimate but deliberately never read
     // by the client-estimate renderer — the whole point is that it is not client-facing.
@@ -10243,6 +10285,13 @@ function buildPrepEstimateBody(e, job) {
       (_dc > 0
         ? '<tr><td>Pre-prep declutter — Transition Concierge, hands-on clearing of the rooms (' + _dc.toFixed(1) + ' hrs &times; ' + fmt(_rate) + '/hr)</td><td class="r">' + fmt(_labour) + '</td></tr>'
         : '') +
+      // ⚠ THE DISCOUNT HAS A ROW, for the reason the labour row does: the subtotal is
+      // e.havellinTotal, which is net of it. A preferred-client discount comes off the declutter
+      // hours (discountOnLabor — the fee on vendor spend is not labour), and with no row for it
+      // the fee and the hours above added up to more than the total printed under them (2026-09-29).
+      ((e.discountAmt || 0) > 0
+        ? '<tr style="color:var(--ok-tx);"><td><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to the declutter hours as a valued client benefit</span></td><td class="r" style="font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
+        : '') +
       '</tbody>' +
       '<tr class="subtotal"><td>Havellin Services Total</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
       '</table>' +
@@ -10533,7 +10582,7 @@ function clientEstimateHtml(e, job) {
     // reads the 20% as having been applied to the already-discounted figure, which is the
     // rule the app followed until 2026-09-11 and no longer does.
     (!e.fixedPrice && e.rushAmt > 0
-      ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
+      ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(e) + '</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
       : '') +
     (!e.fixedPrice && e.discountPct > 0
       ? '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees' + (e.rushAmt > 0 ? ', including the expedited-delivery premium charged on them,' : '') + ' as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
@@ -10764,7 +10813,9 @@ function clientEstimateHtml(e, job) {
         (SMF_PCT > 0
               ? '<li>A ' + Math.round(SMF_PCT*100) + '% Service Management Fee applies to all third-party vendors coordinated by Havellin, including any home-prep vendors managed as part of this engagement.</li>'
               : '<li>Third-party vendors are billed to you directly at cost, with <strong>no coordination fee or markup</strong> added by Havellin. The concierge time spent sourcing, scheduling and supervising them is billed hourly like all other concierge time.</li>') +
-        '<li>' + materialsBasisNote(e.pkgLabel) + '</li>')) +
+        // Only when a package is quoted: on an estimate the absence explains itself (the fee table
+        // carries no materials row), and the sentence used to quote "(None — $0)" back at the client.
+        (materialsPackageQuoted(e.pkgLabel, e.pkgCost) ? '<li>' + materialsBasisNote(e.pkgLabel, e.pkgCost) + '</li>' : ''))) +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     // The insured-and-bonded bullet used to sit here and is gone (2026-09-10, Anthony's
     // call). The footer of this same document states it seven lines below, so as a Term it
@@ -10868,9 +10919,10 @@ function updateApprovalUI() {
     } else {
       // Offer Discount also revises the price, so it's locked once the agreement is
       // signed — post-signing price changes go through a Change Order.
-      if (btnOfferDiscount && !contractSigned) btnOfferDiscount.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = contractSigned ? ('Estimate sent ' + sentDate + ' · under signed agreement — locked.') : ('Estimate sent ' + sentDate + '. Edit to revise, or Offer Discount if the client pushes back.');
-      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Sent to client</strong> · ' + sentDate + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">' + (contractSigned ? 'Agreement signed — estimate locked. Revise via a Change Order.' : 'If the client wants a lower price, <strong>Edit</strong> to revise or use <strong>Offer Discount</strong>, then re-approve.') + '</div>' + driveNote + '</div>';
+      var _discOK = !discountOfferBlocker(ceJob);
+      if (btnOfferDiscount && _discOK) btnOfferDiscount.style.display = 'inline-block';
+      if (subtitle) subtitle.textContent = contractSigned ? ('Estimate sent ' + sentDate + ' · under signed agreement — locked.') : ('Estimate sent ' + sentDate + '. Edit to revise' + (_discOK ? ', or Offer Discount if the client pushes back.' : '.'));
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Sent to client</strong> · ' + sentDate + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">' + (contractSigned ? 'Agreement signed — estimate locked. Revise via a Change Order.' : _discOK ? 'If the client wants a lower price, <strong>Edit</strong> to revise or use <strong>Offer Discount</strong>, then re-approve.' : 'The signing packet has gone to the client — a price change now goes through a Change Order.') + '</div>' + driveNote + '</div>';
     }
 
   } else if (estimateSubmitted) {
@@ -11303,7 +11355,7 @@ function notifyManagerForApproval(est, disc) {
     'Hi Anthony,',
     '',
     isDisc
-      ? (tc.name + ' has offered a client discount that needs your approval:')
+      ? (tc.name + (disc.pct > 0 ? ' has offered a client discount that needs your approval:' : ' has removed the client discount; the revised total needs your approval:'))
       : 'An estimate is ready for your approval:',
     '',
     'Client: ' + (job.name||'—'),
@@ -11312,7 +11364,7 @@ function notifyManagerForApproval(est, disc) {
   ];
   if (isDisc) {
     lines.push('Original Havellin total: $' + Math.round(disc.original).toLocaleString());
-    lines.push('Proposed discount: ' + disc.pct + '%');
+    lines.push(disc.pct > 0 ? 'Proposed discount: ' + disc.pct + '%' : 'Discount: removed');
     lines.push('Revised Havellin total: $' + Math.round(disc.revised).toLocaleString());
   } else {
     lines.push('Havellin total: ' + total);
@@ -11397,8 +11449,46 @@ function discountPreview(est, pct) {
            basis: rushRate ? 'Discount (labor fees + expedited premium)' : 'Discount (labor fees only)' };
 }
 
+// ⚠⚠ ONE ANSWER TO "MAY A DISCOUNT STILL BE OFFERED", read by the rail, the Client Estimate panel's
+// button, the dashboard handler, the modal and the write — so no door offers what another refuses.
+// It was gated on the SIGNATURE alone, and a discount offered after the signing packet had gone
+// out re-priced an estimate whose Exhibit A the client was already reading and being asked to
+// sign. Anthony's rule (2026-09-28 audit): once the packet has been sent, a later price change is
+// a change order. `isAgreementSent` is the record, not the `agrSent` boolean — DocuSign never
+// wrote the boolean, which is the defect that function was written for.
+function discountOfferBlocker(job) {
+  if (!job) return 'This job could not be found.';
+  if (isAgreementSigned(job)) return 'The client has signed the agreement, so the price is locked. A change now goes through a change order.';
+  if (isAgreementSent(job)) return 'The signing packet has gone to the client with this price as its Exhibit A. A change now goes through a change order, not a discount.';
+  return '';
+}
+
+// What the modal's percentage box says, read by the preview AND the write so the two cannot
+// disagree about which numbers are allowed. ⚠ A BLANK IS NOT AN ANSWER AND 0 IS ONE: 0 removes the
+// discount. The write used to be Math.max(1, parseInt(…) || 0), which turned a blank AND a 0 into
+// 1% — so a discount could never be taken off again, and its own refusal ("between 1 and 30",
+// against a 15% cap) could never be reached (2026-09-29).
+function discountPctInput(raw) {
+  raw = String(raw == null ? '' : raw).trim();
+  var n = /^\d+$/.test(raw) ? parseInt(raw, 10) : NaN;
+  if (isNaN(n) || n > MAX_DISCOUNT_PCT)
+    return { pct: null, error: 'Enter a discount between 0% and ' + MAX_DISCOUNT_PCT + '% \u2014 0 removes the discount.' };
+  return { pct: n, error: '' };
+}
+
+function _discountModalSays(msg) {
+  var el = document.getElementById('dm-fb');
+  if (el) el.innerHTML = msg ? '<div class="alert a-warn" style="margin:0 0 .75rem;">' + esc(msg) + '</div>' : '';
+}
+
 function openDiscountModal() {
   if (!currentEstimate) return;
+  // ⚠ THE GATE AT THE DOOR TOO, not only on the buttons that lead to it — a gate beside the action
+  // can be reached around (docAction's rule).
+  var _dj = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  var _dblk = discountOfferBlocker(_dj);
+  if (_dblk) { showFB(_dashFbTarget('ce-fb'), 'warn', _dblk); return; }
+  _discountModalSays('');
   document.getElementById('dm-original').textContent = '$' + discountPreview(currentEstimate, 0).original.toLocaleString();
   document.getElementById('dm-pct').value = currentEstimate.discountPct > 0 ? currentEstimate.discountPct : 5;
   updateDiscountModal();
@@ -11408,7 +11498,15 @@ function openDiscountModal() {
 
 function updateDiscountModal() {
   if (!currentEstimate) return;
-  var pct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, parseInt(document.getElementById('dm-pct').value) || 0));
+  var inp = discountPctInput(document.getElementById('dm-pct').value);
+  // An out-of-range box previews nothing rather than a clamped figure the write would then refuse.
+  if (inp.error) {
+    var amtBad = document.getElementById('dm-amount'); if (amtBad) amtBad.textContent = '—';
+    document.getElementById('dm-revised').textContent = '—';
+    return;
+  }
+  _discountModalSays('');
+  var pct = inp.pct;
   var p = discountPreview(currentEstimate, pct);
   // Name the base explicitly — a manager approving this needs to see that on an
   // hourly job the % comes off labor, not off materials and vendor fees too. The wording
@@ -11426,10 +11524,23 @@ function closeDiscountModal() {
 
 function applyDiscountRevision() {
   if (!currentEstimate) return;
-  var pct = Math.min(MAX_DISCOUNT_PCT, Math.max(1, parseInt(document.getElementById('dm-pct').value) || 0));
-  if (!pct) { alert('Enter a discount % between 1 and 30.'); return; }
+  var _djob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  // ⚠ THE GATE AGAIN, AT THE WRITE: the modal can have been opened before the packet went out on
+  // the other device, and the button that opened it is not the rule.
+  var _dblk = discountOfferBlocker(_djob);
+  if (_dblk) { _discountModalSays(_dblk); return; }
+  var inp = discountPctInput(document.getElementById('dm-pct').value);
+  if (inp.error) { _discountModalSays(inp.error); return; }
+  var pct = inp.pct;
   // Same helper the modal previews with, so what the manager saw is what gets applied.
   var p = discountPreview(currentEstimate, pct);
+  if (pct === 0) {
+    // A fixed fee carries its discount INSIDE the fee (see discountPreview) — the pre-discount fee
+    // is not kept, so there is nothing separate to take off, and "removing" it here would re-submit
+    // an unchanged price for approval.
+    if (p.fixed) { _discountModalSays('A fixed fee carries any discount inside the fee itself, so there is nothing separate to remove \u2014 change the fee on Build Estimate.'); return; }
+    if (!((currentEstimate.discountPct || 0) > 0)) { _discountModalSays('This estimate has no discount to remove.'); return; }
+  }
   var baseTotal = p.original;
   var newDiscountAmt = p.discount;
   var newHavellinTotal = p.revised;
@@ -11469,13 +11580,22 @@ function applyDiscountRevision() {
   discountRevision = true;
   // Update job status back to pending
   var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  // ⚠⚠ AND THE AGREEMENT'S APPROVAL GOES WITH THE ESTIMATE'S, the way revokeEstimateApproval does it.
+  // This left `job.agrApproved` standing, so `ensureAgreementApproved` returned early on the next
+  // print or send and never re-filed the signing packet: Drive kept the Exhibit A at the OLD price
+  // while the estimate carried the new one (2026-09-28 audit, M3).
+  if (job) revokeAgreementApproval(job, 'discount-revised');
   if (job) { job.status = 'pending'; job.approved = false; job.havellinEst = newHavellinTotal; job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job); }
   saveEstimateState();   // single authoritative write (carries the revised totals + approval state)
   closeDiscountModal();
   renderClientEstimate();
   updateApprovalUI();
   notifyManagerForApproval(currentEstimate, { original: baseTotal, pct: pct, revised: newHavellinTotal });
-  showFB('ce-fb', 'ok', 'Discount applied. Manager notified by email — they will re-approve from their device with their PIN.');
+  // ⚠ THE CONFIRMATION GOES WHERE THE PERSON IS. `ce-fb` is on the Client Estimate panel, which has
+  // had no nav button since 2026-09-11 — so from the dashboard, where Offer discount lives, the one
+  // line saying it worked printed onto a screen nobody could see.
+  showFB(_dashFbTarget('ce-fb'), 'ok', (pct === 0 ? 'Discount removed.' : 'Discount applied.') + ' Manager notified by email \u2014 they will re-approve from their device with their PIN.');
+  if (job) _dashRedraw(job.id);
 }
 
 // ⚠⚠ EXTRACTED IN SLICE 7, BECAUSE THE RAIL'S "EDIT ESTIMATE" DID NOT DO IT AND WAS A DEAD
@@ -11496,17 +11616,41 @@ function revokeEstimateApproval(jobId) {
   if (job) {
     job.approved = false;
     delete job.estimateDriveAt; delete job.estimateDriveUrl;
-    if (job.agrApproved) {
-      job.agrApproved = false;
-      job.agrApprovedBy = ''; job.agrApprovedAt = '';
-      job.agrRevokedBy = 'estimate-edited';
-      job.agrRevokedAt = new Date().toISOString();
-      if (currentAgrJobId === job.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
-      showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
-    }
+    revokeAgreementApproval(job, 'estimate-edited');
     job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
   }
   return job;
+}
+
+// Takes the agreement's approval off a job whose Exhibit A is about to change — an edited estimate,
+// or a discount offered or removed. The CALLER saves. Returns true when there was one to revoke.
+//
+// ⚠⚠ IT CLEARS THE PACKET'S FILING GUARD, AND THAT IS THE HALF THAT MAKES RE-APPROVAL RE-FILE.
+// `_agrExportKey` is the approval DAY plus the approver, so a revoke and a re-approval the same day
+// by the same manager produced the same key, `exportSigningPacketToDrive` took it as already done,
+// and Drive kept the signing packet at the old price — the exact outcome revoking exists to prevent,
+// on the ordinary path (a discount offered and re-approved inside one afternoon).
+function revokeAgreementApproval(job, why) {
+  if (!job || !job.agrApproved) return false;
+  job.agrApproved = false;
+  job.agrApprovedBy = ''; job.agrApprovedAt = '';
+  job.agrRevokedBy = why || 'estimate-edited';
+  job.agrRevokedAt = new Date().toISOString();
+  if (currentAgrJobId === job.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
+  if (typeof _packetExported !== 'undefined') delete _packetExported[job.id];
+  showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
+  return true;
+}
+
+// Whether the agreement's approval was taken back because its Exhibit A changed, and why — read by
+// the rail's "Signing packet sent" row and the Agreement tab's banner, so a DISCOUNT that withdrew
+// the approval explains itself the way an edited estimate always has. Both read
+// `agrRevokedBy === 'estimate-edited'` until 2026-09-29, so a discount revoked the approval silently.
+function agrApprovalWithdrawn(job) {
+  if (!job || job.agrApproved || !job.agrRevokedBy) return '';
+  return job.agrRevokedBy === 'discount-revised'
+    ? 'A discount changed the price after this was prepared \u2014 re-approve the estimate and send a fresh packet'
+    : 'The estimate was edited after this was prepared \u2014 re-approve it and send a fresh packet';
 }
 
 function editEstimateFromCE() {
@@ -14671,8 +14815,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       by: job.agrSentBy || (job.docState && job.docState.agreement && job.docState.agreement.sentBy) || '',
       // The one piece of agreement history still worth surfacing: the estimate was
       // edited after the packet was prepared, so the Exhibit A the client holds is stale.
-      sub: (!isAgreementSent(job) && job.agrRevokedBy === 'estimate-edited')
-        ? 'The estimate was edited after this was prepared — re-approve it and send a fresh packet'
+      sub: (!isAgreementSent(job) && agrApprovalWithdrawn(job))
+        ? agrApprovalWithdrawn(job)
         : ((!isAgreementSent(job) && docDraftedAt(job, 'agreement'))
           ? 'Drafted \u2014 read it, send it, then confirm' : '') }),
 
@@ -14918,14 +15062,28 @@ function invoiceEmailSubject(job, stage) {
   return 'Havellin Palm Beach — ' + (DOC_STAGE_WORD[stage] || 'Final') + ' Invoice for ' + (street || (job && job.name) || 'your property');
 }
 
+// How an invoice email states its figure — read by the Gmail text part, the HTML part and the
+// mailto fallback, so the three cannot word one balance three ways. ⚠ A NEGATIVE BALANCE IS A
+// CREDIT AND IS WORDED AS ONE. A final that comes in under what the deposit and midpoint already
+// collected is correct (see _amtDueBox, which prints it as a green Credit), and its email read
+// "Balance due: $-2,741 … Payment is due within 7 calendar days" — telling a client who is owed
+// money that they owe it, in the one line of the email they are sure to read (2026-09-29).
+function invoiceBalanceWords(amtDue) {
+  if (amtDue < 0) return { label: 'Credit to you', amount: _emMoney(Math.abs(amtDue)),
+    terms: 'Nothing is due on this invoice. We will be in touch to arrange the credit.' };
+  return { label: 'Balance due', amount: amtDue ? _emMoney(amtDue) : 'see attached',
+    terms: 'Payment is due within 7 calendar days.' };
+}
+
 function buildInvoiceEmailText(job, stage, amtDue) {
   var tc = assignedTCContact(job);
   var word = (DOC_STAGE_WORD[stage] || 'Final').toLowerCase();
+  var bw = invoiceBalanceWords(amtDue);
   return ['Dear ' + bestClientGreetingName(job) + ',', '',
     'Your ' + word + ' invoice for Havellin Palm Beach services at ' + (job.addr || 'your property') +
       ' is attached as a PDF.', '',
-    'Balance due: ' + (amtDue ? _emMoney(amtDue) : 'see attached'),
-    'Payment is due within 7 calendar days.', '',
+    bw.label + ': ' + bw.amount,
+    bw.terms, '',
     // No signature block — Gmail appends the sender's own. See buildInvoiceEmailHtml.
     'Thank you for trusting Havellin Palm Beach with this transition.'].join('\n');
 }
@@ -14963,9 +15121,9 @@ function buildInvoiceEmailHtml(job, stage, amtDue) {
   (amtDue ? '<tr><td style="padding:18px 22px 0;font-family:Helvetica,Arial,sans-serif;">' +
     '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding:12px 14px;background:' + B.cream + ';border:1px solid ' + B.bronzeLt + ';">' +
-      '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Balance due</div>' +
-      '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:26px;color:' + B.ink + ';margin-top:3px;">' + _emHtml(_emMoney(amtDue)) + '</div>' +
-      '<div style="font-size:12px;color:' + B.gray + ';margin-top:4px;">Payment is due within 7 calendar days.</div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">' + _emHtml(invoiceBalanceWords(amtDue).label) + '</div>' +
+      '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:26px;color:' + B.ink + ';margin-top:3px;">' + _emHtml(invoiceBalanceWords(amtDue).amount) + '</div>' +
+      '<div style="font-size:12px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(invoiceBalanceWords(amtDue).terms) + '</div>' +
     '</td></tr></table></td></tr>' : '') +
   '<tr><td style="padding:22px 22px 26px;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:' + B.ink + ';line-height:1.6;">' +
     // ⚠⚠ NO SIGNATURE BLOCK, ON ANY OF THE THREE EMAILS. Anthony, 2026-09-11: *"we can
@@ -16207,6 +16365,13 @@ var DOC_ACTIONS = {
     text: function (spec) { return buildEstimateEmailText(spec.est, spec.job); },
     emailHtml: function (spec) { return buildEstimateEmailHtml(spec.est, spec.job); },
     mailto: function (spec) { return buildEstimateMailto(spec.est, spec.job); },
+    // ⚠⚠ EVERY CLIENT DOCUMENT KIND HIDES `.approved-stamp` IN ITS PDF, and the net in
+    // tests/approval-on-job.test.js walks DOC_ACTIONS so a fourth kind cannot be added without it.
+    // The band is our internal "approved" note; the print block hides it only under
+    // `@media print`, and the PDF that is sent or filed is converted server-side from
+    // `_exportDoc`'s copy of the page — which is not a print. The estimate carries no band today;
+    // it carries the rule so it never can.
+    pdfCss: '.approved-stamp{display:none!important;}',
     html: function (spec) { return clientEstimateHtml(spec.est, spec.job); },
     // The estimate is the client's copy of an approved price. An unapproved one is a
     // working draft and must not leave the building.
@@ -16229,8 +16394,10 @@ var DOC_ACTIONS = {
     text: function (spec) { return buildAgreementEmailText(spec.job); },
     emailHtml: function (spec) { return buildAgreementEmailHtml(spec.job); },
     mailto: function (spec) { return buildAgreementMailto(spec.job); },
-    // The packet paginates: the exhibit starts on a fresh page.
-    pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;} .agr-sig-page{break-before:page;page-break-before:always;}',
+    // The packet paginates: the exhibit starts on a fresh page. ⚠ And it hides the "Approved for
+    // Sending" band, which until 2026-09-29 reached the DocuSign PDF carrying another job's
+    // approver whenever the page had approved one last — see _agrApprovedStamp.
+    pdfCss: '.ce-page{max-width:800px;margin:0 auto;} .packet-exhibit{break-before:page;page-break-before:always;} .agr-sig-page{break-before:page;page-break-before:always;} .approved-stamp{display:none!important;}',
     // ⚠ THE PACKET, NEVER THE BARE AGREEMENT. Both forms incorporate the Estimate as
     // Exhibit A and the estate form says the agreement is not valid without it, so a
     // client sent the agreement alone is signing against an exhibit they do not have.
@@ -16246,7 +16413,12 @@ var DOC_ACTIONS = {
     // ⚠ THE `agreementReady` CODE→SENTENCE MAPPING MOVED INTO `DOC_READY_WHY`, IT WAS NOT
     // COPIED. The band's tray asks the same question before it offers the button, and two
     // wordings of one refusal is how an offered control and a refused one come to disagree.
-    blocker: function (spec) { return docReadiness('agreement', spec.job, estimateStore[spec.job.id]); }
+    // ⚠ READ BEFORE THE CLIENT SAYS YES, NEVER PRINTED, SENT OR FILED (Q11) — see docPreviewOnly.
+    blocker: function (spec, verb) {
+      var rec = estimateStore[spec.job.id];
+      if (verb === 'view' && docPreviewOnly('agreement', spec.job, rec)) return '';
+      return docReadiness('agreement', spec.job, rec);
+    }
   },
   invoice: {
     label: 'Invoice',
@@ -16259,6 +16431,8 @@ var DOC_ACTIONS = {
     text: function (spec) { return buildInvoiceEmailText(spec.job, spec.stage, _docAmtDue(spec)); },
     emailHtml: function (spec) { return buildInvoiceEmailHtml(spec.job, spec.stage, _docAmtDue(spec)); },
     mailto: function (spec) { return buildInvoiceMailto(spec.job, _docAmtDue(spec), spec.stage); },
+    // The "Approved for Release" band on a PIN-approved final is ours, not the client's.
+    pdfCss: '.approved-stamp{display:none!important;}',
     html: function (spec) { var d = invoiceHtml(spec.job, spec.stage); return d ? d.html : ''; },
     blocker: function (spec) {
       // ⚠ THE SHARED GATE FIRST, AND IT IS THE HALF THAT WAS MISSING. This blocker only ever
@@ -16271,7 +16445,13 @@ var DOC_ACTIONS = {
       // ⚠ TWO DIFFERENT ANSWERS AND THEY MUST STAY APART. `blocked` cannot be unlocked by
       // anyone — nobody can unlock a missing timesheet. `requiresApproval` can, by a PIN.
       if (d.blocked) return 'No hours have been logged for this job, so the final cannot be issued. Log them on the Job Plan tab first.';
-      if (d.requiresApproval && !invApproved) return 'This final is ' + Math.round(d.variancePct * 100) + '% off the estimate, outside the ±' + estTolerancePctTxt() + ' tolerance, so it needs a manager PIN before it can be issued.';
+      // ⚠⚠ THE APPROVAL IS READ OFF THIS JOB, FOR THIS FIGURE — never a page global. A PIN
+      // entered for one job used to unlock every job's final; see invFinalApproval.
+      if (d.requiresApproval && !invFinalApproval(spec.job, d.amtDue)) {
+        var _stale = invFinalApprovalStaleTxt(spec.job, d.amtDue);
+        return 'This final is ' + Math.round(d.variancePct * 100) + '% off the estimate, outside the ±' + estTolerancePctTxt() + ' tolerance, so it needs a manager PIN before it can be issued.'
+          + (_stale ? ' ' + _stale : '');
+      }
       return '';
     }
   }
@@ -16293,10 +16473,14 @@ function docTitle(kind, stage) {
   return (cfg ? cfg.label : kind) + (stage ? ' — ' + (DOC_STAGE_WORD[stage] || stage) : '');
 }
 
+// ⚠ NAMED FOR THE DOCUMENT BEING REFUSED. The packet and the invoices share these refusals, and
+// the invoice's read "…before the agreement can be drawn" — a sentence about the other document,
+// printed on the one a person had just tried to open (2026-09-29). `{doc}` is the document and
+// `{act}` what the client's yes unlocks for it; docReadiness fills both in for its kind.
 var DOC_READY_WHY = {
   nojob:    'This job could not be found.',
-  estimate: 'The estimate must be approved before the agreement can be drawn.',
-  notwon:   'Record the client\u2019s acceptance first — until they have said yes there is nothing to put under contract.'
+  estimate: 'The estimate must be approved before the {doc} can be drawn.',
+  notwon:   'Record the client\u2019s acceptance first — until they have said yes there is nothing to {act}.'
 };
 
 // ⚠⚠ THE ONE ANSWER TO "IS THE RECORD READY FOR THIS DOCUMENT TO EXIST AT ALL". Read by the
@@ -16321,7 +16505,8 @@ function docReadiness(kind, job, estRec) {
   // ⚠ `agreementReady`, not a restatement of "approved and won". The packet and the invoices
   // genuinely share that rule: an invoice priced off a draft is a bill for a number nobody
   // approved, and a packet built on one cites the wrong Exhibit A.
-  return DOC_READY_WHY[agreementReady(job, rec)] || '';
+  var noun = (kind === 'invoice') ? ['invoice', 'invoice'] : ['agreement', 'put under contract'];
+  return (DOC_READY_WHY[agreementReady(job, rec)] || '').replace('{doc}', noun[0]).replace('{act}', noun[1]);
 }
 
 // An estimate that EXISTS but is not approved: readable on our own screen, and it must not be
@@ -16332,6 +16517,25 @@ function docDraftOnly(kind, job, estRec) {
   if (kind !== 'estimate') return false;
   var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job && job.id] : null);
   return !!(rec && rec.estimate && !rec.approved);
+}
+
+// ⚠⚠ THE SIGNING PACKET MAY BE READ BEFORE THE CLIENT SAYS YES — AND ONLY READ (Q11, decided
+// 2026-09-29). A concierge talks a client through the contract they are deciding on, so the packet
+// opens on screen once the estimate is approved; printing, sending and filing still wait for the
+// client's acceptance, because each of those puts it in somebody's hands and is what stamps the
+// approval (see `commit`). ONLY the acceptance may be outstanding: an unapproved estimate still
+// refuses it outright, since its Exhibit A would be a draft nobody approved. Same shape as
+// docDraftOnly — one rule, read by the blocker, the tray and the viewer's Print button.
+function docPreviewOnly(kind, job, estRec) {
+  if (kind !== 'agreement' || !job) return false;
+  var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null);
+  return agreementReady(job, rec) === 'notwon';
+}
+
+// The one word that explains a document which may be read and not printed — on the band's tray
+// and on the viewer's title alike, so the two cannot come to name one state two ways.
+function docReadOnlyWord(kind, job, estRec) {
+  return docDraftOnly(kind, job, estRec) ? ' — DRAFT' : docPreviewOnly(kind, job, estRec) ? ' — PREVIEW' : '';
 }
 
 // The balance this invoice is asking for. ⚠ Read from `invoiceHtml`, which is the one
@@ -16437,7 +16641,10 @@ function docAction(jobId, kind, verb, opt) {
   var html = spec.cfg.html(spec);
   if (!html) { _docNotice('warn', 'There is nothing to ' + verb + ' on this document yet.', jobId); return false; }
 
-  if (verb === 'view') return openDocViewer(spec, html);
+  // ⚠ THE VIEWER'S PRINT BUTTON IS WITHHELD WHEN PRINTING WOULD BE REFUSED — a draft estimate, or
+  // the packet before the client's yes — rather than offered and then refused, which is the
+  // button-that-alerts-its-blocker-back shape this file removes wherever it turns up.
+  if (verb === 'view') { spec.viewOnly = !!spec.cfg.blocker(spec, 'print'); return openDocViewer(spec, html); }
   if (verb === 'print') return _printDocument('<div class="ce-page">' + html + '</div>', spec.names.printTitle);
   if (verb === 'send') return docSend(spec);
   if (verb === 'file') return docFile(spec, opt);
@@ -16652,7 +16859,7 @@ function _openViewer(title, sub, html, spec) {
   // internal one with no way to print — and one that only ever shows it puts a Print button
   // on a page carrying the private note.
   var pb = document.getElementById('doc-viewer-print');
-  if (pb) pb.style.display = spec ? '' : 'none';
+  if (pb) pb.style.display = (spec && !spec.viewOnly) ? '' : 'none';
   _docViewerSpec = spec || null;
   ttl.textContent = title;
   sb.textContent = sub;
@@ -16664,7 +16871,7 @@ function _openViewer(title, sub, html, spec) {
 
 function openDocViewer(spec, html) {
   return _openViewer(
-    docTitle(spec.kind, spec.stage),
+    docTitle(spec.kind, spec.stage) + (spec.viewOnly ? docReadOnlyWord(spec.kind, spec.job, null) : ''),
     (spec.job.name || 'Client') + (spec.job.addr ? ' · ' + spec.job.addr : ''),
     html, spec);
 }
@@ -16779,8 +16986,9 @@ function _jtDraftLink(id, job, kind, stage) {
 function _jtDocSecondaries(id, job, estRec, rowKey) {
   var d = jobStageDoc(rowKey);
   if (!d) return [];
-  if (docReadiness(d.kind, job, estRec)) return [];
-  var viewOnly = docDraftOnly(d.kind, job, estRec);
+  var preview = docPreviewOnly(d.kind, job, estRec);
+  if (docReadiness(d.kind, job, estRec) && !preview) return [];
+  var viewOnly = docDraftOnly(d.kind, job, estRec) || preview;
   // ⚠ NO MIDPOINT DRAFT ONCE THE JOB IS CLOSED (2026-09-29). From the close the final bills whatever the
   // midpoint left unpaid, so a link reopening a midpoint draft invites sending a second bill for the same
   // share. Reading the midpoint invoice stays open (View, Print, the filed copy); only the send path goes.
@@ -16803,12 +17011,13 @@ function jobTimelineActions(row, job, estRec) {
   // offered on a job with no approved estimate, no client acceptance and no agreement, and
   // two of those buttons rendered a real, printable bill off the draft.
   var _d = jobStageDoc(row.key);
-  if (_d && !docReadiness(_d.kind, job, estRec)) {
+  if (_d && (!docReadiness(_d.kind, job, estRec) || docPreviewOnly(_d.kind, job, estRec))) {
     out.doc = {
       kind: _d.kind, stage: _d.stage,
       // ⚠ THE WORD "DRAFT" IS THE WHOLE EXPLANATION OF THE MISSING PRINT BUTTON. One word in
       // the title the reader is already looking at, rather than a sentence about an absence.
-      title: docTitle(_d.kind, _d.stage) + (docDraftOnly(_d.kind, job, estRec) ? ' — DRAFT' : ''),
+      // "PREVIEW" is the same word for the packet before the client's yes (docPreviewOnly).
+      title: docTitle(_d.kind, _d.stage) + docReadOnlyWord(_d.kind, job, estRec),
       acts: _jtDocSecondaries(id, job, estRec, row.key)
     };
     // ⚠ EDIT ESTIMATE IS A DOCUMENT ACTION AND BELONGS BESIDE THE DOCUMENT. It used to be
@@ -16873,7 +17082,9 @@ function jobTimelineActions(row, job, estRec) {
       if (live && estApproved) out.primary = _jtSendAction(id, job, 'estimate', '', 'estimate');
       // A discount is a re-approval, so it is only offered on an approved estimate the
       // client has not yet signed against.
-      if (estApproved && !job.agrSigned) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
+      // ⚠ Withdrawn once the signing packet has gone out, not only once it is signed — see
+      // discountOfferBlocker: a later price change is a change order.
+      if (estApproved && !discountOfferBlocker(job)) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
       break;
 
     case 'client_accepted':
@@ -17193,16 +17404,21 @@ function dashWalkthrough(jobId) {
 // registry's blocker refuses a final outside tolerance and says it "needs a manager PIN",
 // and with that tab retired there was nowhere left to give one — a refusal with no door is
 // worse than no gate at all.
+//
+// \u26a0\u26a0 AND IT WAS THE DOOR THAT NEVER CLEARED THE PAGE GLOBAL. It wrote `currentInvJobId` so
+// `checkInvPin` could find the job, and the approval that PIN then set was honoured for EVERY
+// job's final until a reload \u2014 see invFinalApproval. It binds the modal to this job now and
+// writes no page state at all.
 function dashApproveInvoice(jobId, stage) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
-  currentInvJobId = jobId;
-  currentInvStage = stage || 'final';
-  var d = invoiceHtml(job, currentInvStage);
+  var d = invoiceHtml(job, stage || 'final');
   if (!d) { dashNotice('warn', 'This invoice could not be built.'); _dashRedraw(jobId); return; }
   if (!d.requiresApproval) { dashNotice('ok', 'This invoice is inside the \u00b1' + estTolerancePctTxt() + ' tolerance \u2014 no approval needed.'); _dashRedraw(jobId); return; }
-  invRequiresApproval = true;
-  openInvPinModal();
+  // Already approved at this figure: say so rather than asking for the PIN a second time.
+  var ap = invFinalApproval(job, d.amtDue);
+  if (ap) { dashNotice('ok', 'This final is already approved for release \u2014 ' + ap.by + ', ' + fmtDate2(ap.at) + ', at ' + fmt(ap.amtDue) + '.'); _dashRedraw(jobId); return; }
+  openInvPinModal(jobId);
 }
 
 // The ACH payment link. ⚠⚠ IT IS NO LONGER ONE-WAY — `stripeRefresh` reads the settled
@@ -17240,6 +17456,9 @@ function dashDenyEstimate(jobId) {
 }
 
 function dashOfferDiscount(jobId) {
+  var _job = jobs.find(function(j){ return j.id === jobId; });
+  var _blk = discountOfferBlocker(_job);
+  if (_blk) { dashNotice('warn', _blk); _dashRedraw(jobId); return; }
   if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
   openDiscountModal();
 }
@@ -20152,14 +20371,14 @@ function buildInvoiceMailto(job, balance, stage) {
   var to = encodeURIComponent(bestClientEmail(job));
   var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - ' + stageTitle + ' Invoice for ' + (job.name||'Your Property'));
-  var bal = balance ? '$' + Math.round(balance).toLocaleString() : 'see attached';
+  var bw = invoiceBalanceWords(balance);
   var body = mailtoBody([
     'Dear ' + bestClientGreetingName(job) + ',',
     '',
     'Please find attached your ' + stageWord + ' invoice for Havellin Palm Beach services at ' + (job.addr||'your property') + '.',
     '',
-    'Balance due: ' + bal,
-    'Payment is due within 7 calendar days.',
+    bw.label + ': ' + bw.amount,
+    bw.terms,
     '',
     'Thank you for trusting Havellin Palm Beach with this transition. It has been our honor to serve your family.'
   ].concat(mailtoSignoff(tc)));
@@ -28080,9 +28299,10 @@ function setVendorDirStatus(msg, isErr) {
 
 // ─── JOB LOG ──────────────────────────────────────────────────────────────────
 var jobLogs = {}; // keyed by job.id
-var invApproved = false;
-var invApprovedBy = '';
-var invApprovedAt = '';
+// ⚠⚠ NO `invApproved` / `invApprovedBy` / `invApprovedAt` HERE ANY MORE, AND THEY MUST NOT
+// COME BACK. A final's manager approval is a fact about ONE job, so it is recorded on that job
+// (`job.docState['invoice:final'].approval`) — see invFinalApproval beside checkInvPin for what
+// three page globals did to two jobs at once.
 var currentInvJobId = null;
 var currentInvStage = 'final'; // 'deposit' | 'midpoint' | 'final'
 var invRequiresApproval = false; // set per-render: only a final outside ±15% needs PIN
@@ -29093,7 +29313,9 @@ function loadInvoice() {
   var invSel = document.getElementById('invoice-job');
   var jobId = invSel ? parseInt(invSel.value) : 0;
   currentInvJobId = jobId || null;
-  invApproved = false;
+  // ⚠ No approval to reset here: it was a page global this loader cleared, and this loader
+  // was the only thing that ever cleared it. The approval is on the job now — see
+  // invFinalApproval — so picking another job cannot carry one across.
   var job = jobs.find(function(j){ return j.id === currentInvJobId; });
   currentInvStage = defaultInvStage(job);
   var stageSel = document.getElementById('inv-stage');
@@ -29103,7 +29325,6 @@ function loadInvoice() {
 
 function setInvStage(v) {
   currentInvStage = v || 'final';
-  invApproved = false; // re-approval required per stage document
   renderInvoice();
 }
 
@@ -29309,8 +29530,18 @@ function invoiceHtml(job, stage) {
   // ⚠ THE TARGETS SURVIVE, because the document legitimately states both: the stage rows say
   // what each earlier invoice ASKED for, and the received line says what came in. Collapsing
   // them into one figure is what produced the defect.
-  var depositAmt   = Math.round(0.5 * totalDepositBasis);
-  var midCumTarget = Math.round(0.75 * totalMidBasis);
+  // ⚠ THE STAGE TARGETS ARE paymentSplit's RUNNING TARGETS, NEVER A SECOND ROUNDING OF THEIR OWN.
+  // They were round(0.5 × basis) and round(0.75 × basis), which is not what paymentSplit prints: on
+  // any total ≡ 3 (mod 4) the two roundings land a dollar apart, so a $10,963 job whose estimate,
+  // agreement and Exhibit A all state 5,482 · 2,741 · 2,740 was invoiced 5,482 · 2,740 · 2,741 —
+  // the midpoint and the final swapping a dollar against the schedule the client signed, on one
+  // total in four. The cumulative 75% is the split's deposit PLUS its midpoint, of the midpoint's
+  // own basis, so where the basis has not moved the three invoices are the signed three exactly
+  // (2026-09-29).
+  var _depSplit    = paymentSplit(totalDepositBasis);
+  var _midSplit    = paymentSplit(totalMidBasis);
+  var depositAmt   = _depSplit.deposit;
+  var midCumTarget = _midSplit.deposit + _midSplit.midpoint;
   var receivedDep  = Math.round(stagePaidTotal(job, 'deposit'));
   var receivedAll  = Math.round(jobPaidTotal(job));
   // The midpoint asks for the cumulative 75% LESS WHAT HAS ACTUALLY ARRIVED, so a shortfall
@@ -29357,6 +29588,13 @@ function invoiceHtml(job, stage) {
   // treating its own approved change as a variance. This is the half that makes the hours
   // model work, and it is the reason the shift is derived at all.
   var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coShift;
+  // ⚠ BUT THE CLIENT'S "ORIGINAL ESTIMATE" ROW IS THE ESTIMATE ALONE, and the change orders are a
+  // line of their own beneath it. The row printed estHavellinTotal — the internal baseline above,
+  // change orders included — so a $10,962 job with a +10/+10 change order read "Original Estimate
+  // (basis for advance payments) $13,462" over a $5,481 deposit and a $2,741 midpoint that are
+  // half and a quarter of $10,962: a basis the advance payments visibly were not taken on, labelled
+  // as the one they were. The baseline stays exactly as it is for the ±15% gate (2026-09-29).
+  var origEstimateTotal = (est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted;
   var deposit = depositAmt;
   var midpoint = midpointAmt;
   // ⚠ THE NAME IS THE BUG. This was `deposit + midpoint` — the two targets — under a row
@@ -29386,11 +29624,29 @@ function invoiceHtml(job, stage) {
       teamMap[m.name].hours = Math.round((teamMap[m.name].hours + m.hours)*10)/10;
     });
   });
-  var teamRows = Object.keys(teamMap).map(function(name) {
+  // ⚠ EACH ROLE'S ROWS ADD UP TO THAT ROLE'S FEE — the rounding remainder rides on one row.
+  // Every row rounded on its own while the subtotal bills round(hours × rate) for the role, so
+  // two people sharing a role at a rate that lands on half a dollar ($185 × 10.3 = $1,905.50)
+  // printed $1,906 + $1,906 over a total that counted $3,811: rows a dollar or two above the
+  // total they sit under, on a premium final. The remainder goes on the role's longest row,
+  // the first of them on a tie, and no row moves by more than its own rounding (2026-09-29).
+  var _teamNames = Object.keys(teamMap);
+  var _teamFee = {};
+  _teamNames.forEach(function(name) {
+    var t = teamMap[name];
+    _teamFee[name] = Math.round(t.hours * (t.role === 'TC' ? tcRate : psRate));
+  });
+  [['TC', tcFee], ['PS', psFee]].forEach(function(rf) {
+    var inRole = _teamNames.filter(function(n){ return (teamMap[n].role === 'TC') === (rf[0] === 'TC'); });
+    if (!inRole.length) return;
+    var sum = inRole.reduce(function(a, n){ return a + _teamFee[n]; }, 0);
+    var top = inRole.reduce(function(best, n){ return teamMap[n].hours > teamMap[best].hours ? n : best; }, inRole[0]);
+    _teamFee[top] += rf[1] - sum;
+  });
+  var teamRows = _teamNames.map(function(name) {
     var t = teamMap[name];
     var rate = t.role === 'TC' ? tcRate : psRate;
-    var fee = Math.round(t.hours * rate);
-    return '<tr><td>' + esc(name) + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + t.hours.toFixed(1) + '</td><td style="text-align:right;">$' + rate + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(fee) + '</td></tr>';
+    return '<tr><td>' + esc(name) + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + t.hours.toFixed(1) + '</td><td style="text-align:right;">$' + rate + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(_teamFee[name]) + '</td></tr>';
   }).join('');
 
   // Vendor / prep rows — resolved actuals, with an "est." tag on any line still
@@ -29405,8 +29661,17 @@ function invoiceHtml(job, stage) {
     '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors</td></tr>';
   var prepRows = act.prep.map(_actualRow).join('');
 
-  var approvedStamp = (invApproved && invApprovedBy) ?
-    '<div class="approved-stamp"><div class="approved-stamp-text">✓ Approved for Release</div><div class="approved-stamp-sub">Approved by ' + invApprovedBy + ' on ' + invApprovedAt + '</div></div>' : '';
+  // ⚠⚠ THE BAND PRINTS FROM THIS JOB'S OWN RECORD, AND ONLY WHILE THAT RECORD STILL DESCRIBES
+  // THE FIGURE BELOW. It read three page globals, so a PIN entered for one job would have put
+  // "Approved for Release" on whichever final was built next — invFinalApproval says why.
+  // ⚠ AND IT HAD NEVER BEEN ON THE PAGE: the old `approvedStamp` was computed here and emitted
+  // nowhere (dead since at least 2026-09-21, the oldest commit this clone holds), so this is the
+  // first build in which a PIN-approved final shows it. It sits under the header as the
+  // agreement's does and is screen-only: the print block hides `.approved-stamp`, and every
+  // client document kind's `pdfCss` hides it from the PDF that is sent or filed.
+  var _finalApproval = (stage === 'final') ? invFinalApproval(job, stageAmtDue) : null;
+  var approvedStamp = _finalApproval ?
+    '<div class="approved-stamp"><div class="approved-stamp-text">✓ Approved for Release</div><div class="approved-stamp-sub">Approved by ' + esc(_finalApproval.by) + ' on ' + esc(fmtDate2(_finalApproval.at)) + '</div></div>' : '';
 
   // ⚠ A SHORTFALL IS NAMED, NEVER FOLDED SILENTLY INTO THE BALANCE. The balance below is
   // correct either way, but a client who owes an unpaid midpoint reads a final that is larger
@@ -29462,7 +29727,7 @@ function invoiceHtml(job, stage) {
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
-    (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
+    (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor' + (_rushRate > 0 ? ' and the expedited-delivery premium charged on it' : '') + ')</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
@@ -29500,15 +29765,20 @@ function invoiceHtml(job, stage) {
       : 'These hours are not billed separately. They are worked and logged like every other hour on this engagement and are already included in the figures above.') +
     '</div>' : '');
 
+  // The accepted change orders, on ONE line of their own, directly under the figure they change —
+  // the hours on T&M (already billed in the table above), the signed prices on fixed price.
+  var _coPayRow = jobCOs.length
+    ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>'
+    : '';
   var finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
     '<table class="pay-tbl">' +
-    '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(estHavellinTotal) + '</strong></td></tr>' +
+    '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(origEstimateTotal) + '</strong></td></tr>' +
+    _coPayRow +
     '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
     '<tr><td>25% midpoint — fees trued to actuals</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
     '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
     _paymentGapRow(paymentGap) +
     '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
-    (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +
     '</div>';
@@ -29527,7 +29797,7 @@ function invoiceHtml(job, stage) {
     (materials > 0 ? '<tr><td>Moving materials — ' + pkgLabel + '</td><td style="text-align:right;">' + fmt(materials) + '</td></tr>' : '') +
     (advSmf > 0 ? '<tr><td>Service Management Fee (15% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
     (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
-    (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">Compressing the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
+    (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
     '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">' + (stage === 'midpoint'
@@ -29587,11 +29857,11 @@ function invoiceHtml(job, stage) {
       '<table class="pay-tbl">' +
       '<tr style="background:var(--tan);"><td colspan="2"><strong>Fixed Project Fee</strong></td><td class="r"><strong>' + fmt(_fixedTotal) + '</strong></td></tr>' +
       (_fxPrepFinal ? '<tr><td colspan="2">Home prep site management fee — on the prep vendors\' actual invoices</td><td class="r">' + fmt(prepFee) + '</td></tr>' : '') +
+      _coPayRow +
       '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFeeEst > 0 ? 'Fixed price + prep fee on quotes' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
       '<tr><td>25% midpoint — invoiced at project midpoint</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + prep fee on actuals' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
       '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
       _paymentGapRow(paymentGap) +
-      (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
       _amtDueBox('Balance Due Upon Completion', balanceDue) +
       '</table></div>';
     var _fxPrepAdv = (_fixedPrepOnTop && advPrep > 0)
@@ -29665,6 +29935,7 @@ function invoiceHtml(job, stage) {
     '<div style="font-size:11px;color:#6B6B72;font-family:Raleway,sans-serif;font-style:italic;margin-top:3px;">Havellin handles the work no family should face alone.</div>' +
     '</div>' +
     '<div class="ce-divider-thick"></div>' +
+    approvedStamp +
     '<div class="ce-title">' + stageTitle + '</div>' +
     '<div style="display:flex;justify-content:center;gap:2.5rem;margin:.35rem 0 .75rem;text-align:center;">' +
     '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
@@ -29752,9 +30023,12 @@ function renderInvoice() {
   var _warnBanner = doc.warnHtml;
   var _variancePct = doc.variancePct;
   var overUnder = doc.overUnder;
-  var unlocked = !invRequiresApproval || invApproved;
+  // The approval is read off the job for the figure this document asks for — the same test the
+  // registry's gate applies, so the tab cannot offer what a send would refuse.
+  var _ap = invRequiresApproval ? invFinalApproval(job, doc.amtDue) : null;
+  var unlocked = !invRequiresApproval || !!_ap;
 
-  btnApprove.style.display = (invRequiresApproval && !invApproved) ? 'inline-block' : 'none';
+  btnApprove.style.display = (invRequiresApproval && !_ap) ? 'inline-block' : 'none';
   btnPdf.style.display = unlocked ? 'inline-block' : 'none';
   if (mailEl) {
     mailEl.style.display = unlocked ? 'inline-block' : 'none';
@@ -29768,15 +30042,75 @@ function renderInvoice() {
   } else {
     var _vpct = Math.round(_variancePct * 100);
     var _dir = overUnder >= 0 ? 'over' : 'under';
-    badge.innerHTML = invApproved ? '<span class="badge b-approved">✓ Approved</span>' : '<span class="badge b-pending">Manager Approval Required</span>';
-    banner.innerHTML = _warnBanner + (invApproved ?
-      '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Invoice approved</strong> — ' + invApprovedBy + ' · ' + invApprovedAt + '</div></div>' :
-      '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Final is ' + _vpct + '% ' + _dir + ' the estimate</strong> — outside the ±15% tolerance, so manager review is required. Enter PIN to approve and unlock.</div></div>');
+    var _stale = _ap ? '' : invFinalApprovalStaleTxt(job, doc.amtDue);
+    badge.innerHTML = _ap ? '<span class="badge b-approved">✓ Approved</span>' : '<span class="badge b-pending">Manager Approval Required</span>';
+    banner.innerHTML = _warnBanner + (_ap ?
+      '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Invoice approved</strong> — ' + esc(_ap.by) + ' · ' + esc(fmtDate2(_ap.at)) + ' · at ' + fmt(_ap.amtDue) + '</div></div>' :
+      '<div class="approval-banner" style="margin-bottom:1rem;"><div><strong>Final is ' + _vpct + '% ' + _dir + ' the estimate</strong> — outside the ±' + estTolerancePctTxt() + ' tolerance, so manager review is required. Enter PIN to approve and unlock.'
+        + (_stale ? '<div style="font-size:11px;margin-top:2px;">' + esc(_stale) + '</div>' : '') + '</div></div>');
   }
 }
 
-function openInvPinModal() {
-  document.getElementById('inv-pin-modal').style.display = 'flex';
+// ⚠⚠ THE ±15% FINAL-INVOICE APPROVAL IS A FACT ABOUT ONE JOB, SO IT LIVES ON THAT JOB
+// (2026-09-29, workflow audit finding H1). It was three page globals — `invApproved`,
+// `invApprovedBy`, `invApprovedAt` — which `checkInvPin` set and the registry's gate and the band
+// read. Only the retired Invoices tab (`loadInvoice`, `setInvStage`) ever cleared them, and
+// `dashApproveInvoice`, the one door left since that tab went, did not. Measured on the real
+// functions before the fix, with two jobs each 30% over their estimate:
+//
+//   A's final refused  →  the PIN entered for B from the dashboard  →  A's final PRINTS
+//   B approved at $16,000  →  45 more hours logged, the final now $22,000  →  B still approved
+//   a reload  →  B refused again: the approval existed nowhere but the page
+//
+// The record is `job.docState['invoice:final'].approval = {by, at, amtDue}`, written through the
+// `docState` accessor, so it stamps `at['docState:invoice:final']` and merges per key on the sheet
+// exactly as the send and filing records beside it do. App-only; no redeploy.
+//
+// ⚠⚠ IT IS HONOURED ONLY WHILE `amtDue` IS THE FIGURE THE FINAL ASKS FOR NOW. What a manager
+// approves is a number. More hours, an accepted change order, or a payment recorded after the PIN
+// all move it, and a gate that went on passing would be approving a document nobody has looked at.
+// The comparison is exact because the final's balance is whole dollars (`finalDue` is
+// round(basis) − round(received)). With no figure to compare against nothing is approved — the
+// reader fails closed.
+function invFinalApprovalRecord(job) {
+  var st = job && job.docState && job.docState[docKeyFor('invoice', { stage: 'final' })];
+  var ap = st && st.approval;
+  return (ap && ap.by) ? ap : null;
+}
+function invFinalApproval(job, amtDue) {
+  var ap = invFinalApprovalRecord(job);
+  if (!ap || amtDue === undefined || amtDue === null) return null;
+  return Number(ap.amtDue) === Number(amtDue) ? ap : null;
+}
+// Why an approval on file no longer counts, in plain text (the dashboard escapes it when it
+// paints), or '' when there is nothing to explain. A refusal that says only "needs a PIN" to the
+// manager who entered one yesterday reads as the app having lost it.
+function invFinalApprovalStaleTxt(job, amtDue) {
+  var ap = invFinalApprovalRecord(job);
+  if (!ap || invFinalApproval(job, amtDue)) return '';
+  return ap.by + ' approved it at ' + fmt(ap.amtDue) + ' on ' + fmtDate2(ap.at) + '; it now asks for '
+    + fmt(amtDue) + ' — the hours, a change order or a payment have moved it since — so it needs approving again.';
+}
+// The ONE writer. The figure is read off `invoiceHtml` at the moment of the PIN, never passed in,
+// so the approval cannot be recorded against a number the manager was not shown.
+function recordInvFinalApproval(job, by) {
+  if (!job || !by) return null;
+  var d = invoiceHtml(job, 'final');
+  if (!d) return null;
+  var st = docState(job, docKeyFor('invoice', { stage: 'final' }));
+  st.approval = { by: by, at: new Date().toISOString(), amtDue: d.amtDue };
+  saveJobs(); syncJobToSheets(job);
+  return st.approval;
+}
+
+// ⚠ THE MODAL IS BOUND TO ONE JOB WHEN IT OPENS, and the PIN is recorded against that job and no
+// other. `checkInvPin` used to find its job through `currentInvJobId` — another page global, which
+// `dashApproveInvoice` wrote only so this function could read it back. The retired tab's own button
+// passes nothing and binds the job that tab is showing.
+function openInvPinModal(jobId) {
+  var modal = document.getElementById('inv-pin-modal');
+  modal.dataset.jobId = String(jobId || currentInvJobId || '');
+  modal.style.display = 'flex';
   document.getElementById('inv-pin-input').value = '';
   document.getElementById('inv-pin-fb').innerHTML = '';
   setTimeout(function(){ document.getElementById('inv-pin-input').focus(); }, 100);
@@ -29786,31 +30120,42 @@ function checkInvPin() {
   var pin = document.getElementById('inv-pin-input').value;
   var _invApprover = resolvePin(pin);
   if (_invApprover) {
-    invApproved = true;
-    invApprovedBy = _invApprover;
-    invApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-    document.getElementById('inv-pin-modal').style.display = 'none';
-    renderInvoice();
-    // Notify the billing group that an approved invoice is ready to send.
-    var invJob = jobs.find(function(j){ return j.id === currentInvJobId; });
-    if (invJob) {
-      var invTc = assignedTCContact(invJob);
-      notifyDept(DEPT_EMAILS.billing,
-        'Havellin — Invoice Approved & Ready to Send: ' + (invJob.name||'Client'),
-        [
-          'An invoice has been approved and is ready to send to the client:',
-          '',
-          'Client: ' + (invJob.name||'—'),
-          'Property: ' + (invJob.addr||'—'),
-          'Service: ' + svcLabelOf(invJob),
-          'Approved by: ' + invApprovedBy + ' on ' + invApprovedAt,
-          '',
-          'Open the Havellin app, open this client from the Client Dashboard, and send the final invoice from the job timeline.',
-          '',
-          invTc.name,
-          'Havellin Palm Beach'
-        ]);
+    var modal = document.getElementById('inv-pin-modal');
+    var jobId = parseInt(modal.dataset && modal.dataset.jobId) || 0;
+    var invJob = jobs.find(function(j){ return j.id === jobId; });
+    var ap = invJob ? recordInvFinalApproval(invJob, _invApprover) : null;
+    if (!ap) {
+      // ⚠ NEVER FALLS BACK TO ANOTHER JOB. A modal with no job bound, or a job this device no
+      // longer holds, approves nothing — the fail-closed answer the page globals never had.
+      document.getElementById('inv-pin-fb').innerHTML = '<div class="alert a-err">This invoice could not be found. Close this and press Manager approval on the client again.</div>';
+      document.getElementById('inv-pin-input').value = '';
+      return;
     }
+    modal.style.display = 'none';
+    renderInvoice();   // the retired tab's own controls, when it is the one showing this job
+    var invTc = assignedTCContact(invJob);
+    // Notify the billing group that an approved invoice is ready to send.
+    notifyDept(DEPT_EMAILS.billing,
+      'Havellin — Invoice Approved & Ready to Send: ' + (invJob.name||'Client'),
+      [
+        'An invoice has been approved and is ready to send to the client:',
+        '',
+        'Client: ' + (invJob.name||'—'),
+        'Property: ' + (invJob.addr||'—'),
+        'Service: ' + svcLabelOf(invJob),
+        'Approved by: ' + ap.by + ' on ' + fmtDate2(ap.at),
+        'Final balance approved: ' + fmt(ap.amtDue),
+        '',
+        'Open the Havellin app, open this client from the Client Dashboard, and send the final invoice from the job timeline.',
+        '',
+        invTc.name,
+        'Havellin Palm Beach'
+      ]);
+    // ⚠ SAID ON THE SCREEN THE PIN WAS TYPED FROM. The dashboard used to get nothing back — the
+    // redraw went to the retired tab's panel — so a manager could not tell the PIN had taken.
+    dashNotice('ok', 'Final invoice approved for release by ' + ap.by + ' at ' + fmt(ap.amtDue)
+      + '. If the hours, a change order or a payment move that figure, it needs approving again.');
+    _dashRedraw(jobId);
   } else if (pin.length === 4) {
     document.getElementById('inv-pin-fb').innerHTML = '<div class="alert a-err">Incorrect PIN.</div>';
     document.getElementById('inv-pin-input').value = '';
@@ -35670,10 +36015,40 @@ function _agrHasPrepVendors(est) {
 // A contract states a percentage in words with the figure after it. Only the rates this app can
 // actually charge need a spelling; anything else falls back to the figure alone rather than
 // inventing prose for a number nobody set.
-var _PCT_WORDS = { 10:'ten', 15:'fifteen', 20:'twenty', 25:'twenty-five', 30:'thirty', 35:'thirty-five' };
+// ⚠ ONE TO FIFTEEN ARE HERE BECAUSE THE PREFERRED-CLIENT DISCOUNT IS NOW NAMED IN THE FEE CLAUSE
+// (agrPriceAdjustments, 2026-09-29), and MAX_DISCOUNT_PCT is 15 — every whole percentage a manager
+// can approve is a rate a contract can now state.
+var _PCT_WORDS = { 1:'one', 2:'two', 3:'three', 4:'four', 5:'five', 6:'six', 7:'seven', 8:'eight', 9:'nine',
+                   10:'ten', 11:'eleven', 12:'twelve', 13:'thirteen', 14:'fourteen', 15:'fifteen',
+                   20:'twenty', 25:'twenty-five', 30:'thirty', 35:'thirty-five' };
 function _pctWords(rate) {
   var n = Math.round((rate || 0) * 100);
   return (_PCT_WORDS[n] ? _PCT_WORDS[n] + ' percent (' + n + '%)' : n + '%');
+}
+
+// ⚠⚠ THE CONTRACT NAMES WHAT ITS EXHIBIT A PRICES (Q8, decided 2026-09-29). The estimate itemizes
+// the expedited-delivery premium and the preferred-client discount as rows of their own, and
+// neither agreement's fee clause mentioned either: a signed contract silent on two lines of the
+// exhibit it incorporates by reference. One sentence each, and only when the estimate carries one.
+//
+// ⚠ HOURLY ENGAGEMENTS ONLY. On a fixed fee both are inside the figure the fixed-fee clause already
+// states — the estimate prints neither row there (clientEstimateHtml) and invoiceHtml charges no
+// premium on top of a flat fee — so naming them would describe a charge that does not exist. The
+// rates are read off the saved estimate (rushPct is pinned the way α is), never off RUSH_PCT alone.
+// `party` is how the form names Havellin: "Contractor" on the standard form, "Havellin" on the
+// estate form. DRAFTED, NOT REVIEWED — in COUNSEL_REVIEW_BUNDLE.md.
+function agrPriceAdjustments(est, party) {
+  if (!est || est.fixedPrice) return '';
+  var out = [];
+  var rush = !!(est.rush && (est.rushAmt || 0) > 0);
+  if (rush)
+    out.push('At Client\u2019s request this engagement is scheduled on a priority basis, for which an expedited-delivery premium of '
+      + _pctWords(est.rushPct || RUSH_PCT) + ' of ' + party + '\u2019s fees is charged, as itemized on the Estimate and applied to the fees actually billed.');
+  if ((est.discountPct || 0) > 0 && (est.discountAmt || 0) > 0)
+    out.push('A preferred-client discount of ' + _pctWords(est.discountPct / 100) + ' applies to ' + party + '\u2019s labor fees'
+      + (rush ? ' and to the expedited-delivery premium charged on them' : '')
+      + ', as itemized on the Estimate and applied to the labor fees actually billed.');
+  return out.join('  ');
 }
 
 // ⚠ THE APPROVER NOUN HERE IS THE SAME DEFECT ONE CLAUSE OVER, and leaving it behind while
@@ -35829,10 +36204,47 @@ function agrBillingRates(job, est) {
 // has never existed. The invoice prints one line reading `Moving materials — Estate Premium`.
 // A promise of receipts the firm cannot produce is the half that matters on a probate matter.
 // **Nothing about what the client pays changes**; this states the basis truthfully.
-function materialsBasisNote(pkgLabel) {
+//
+// ⚠ AND NO PACKAGE IS AN ANSWER, NOT A LABEL TO QUOTE. The dropdown's first option is "None — $0",
+// and both agreements printed it straight into this sentence — "supplied as a fixed package,
+// quoted on the Estimate (None — $0), and billed at that price" — a clause describing a package
+// the engagement does not have (2026-09-29). A blank template (no estimate yet) still reads as
+// quoting one, so the form keeps stating the basis a package would be billed on.
+function materialsPackageQuoted(pkgLabel, pkgCost) {
+  if (pkgCost === 0) return false;
+  return !/^none\b/i.test(String(pkgLabel || '').trim());
+}
+function materialsBasisNote(pkgLabel, pkgCost) {
+  if (!materialsPackageQuoted(pkgLabel, pkgCost))
+    return 'No moving or packing materials package is quoted on the Estimate, and none is billed.';
   return 'Moving and packing materials are supplied as a fixed package, quoted on the Estimate'
     + (pkgLabel ? ' (' + pkgLabel + ')' : '')
     + ', and billed at that price. The package is not cost-plus and carries no separate handling fee.';
+}
+
+// ⚠⚠ THE "APPROVED FOR SENDING" BAND READS THE JOB IT IS PRINTED ON (2026-09-29, workflow audit
+// finding M1). Both agreement forms built it from the page globals `agrApproved`, `agrApprovedBy`
+// and `agrApprovedAt`, which describe whichever job `ensureAgreementApproved` touched LAST — not
+// the job being drawn. Measured on the real builders: job A approved by Anthony on September 1,
+// then job B approved by Ashley today, and A's agreement — the HTML converted for DocuSign — read
+// "Approved by Ashley Jerome on September 29, 2026" on both forms. On a fresh page A read no band
+// at all, although A was approved: wrong in both directions, depending only on what the page had
+// done last.
+//
+// One renderer for both forms, because two copies of one band is how the standard form and the
+// estate form come to disagree. Screen-only: the print block hides `.approved-stamp`, and every
+// client document kind's `pdfCss` hides it from the PDF that is sent or filed.
+//
+// ⚠ The concurrent document-claims build (Q11, the same day) found the same defect from the other
+// side and fixed it inline at both sites: the signing packet may now be READ before the client
+// says yes, which is exactly when another job's "Approved for Sending" band on it would be a
+// false statement. The merge kept this one helper — which also drops " on " when no date is on
+// record rather than printing "Approved by X on ".
+function _agrApprovedStamp(job) {
+  if (!(job && job.agrApproved && job.agrApprovedBy)) return '';
+  return '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div>'
+    + '<div class="approved-stamp-sub">Approved by ' + esc(job.agrApprovedBy)
+    + (job.agrApprovedAt ? ' on ' + esc(job.agrApprovedAt) : '') + '</div></div>';
 }
 
 function probateAgreementHtml(job, est) {
@@ -35880,9 +36292,7 @@ function probateAgreementHtml(job, est) {
   var letters = lettersMap[job.executorAuth] || 'Pending';
   var today = new Date();
   var monthYear = today.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  var approvedStamp = (agrApproved && agrApprovedBy)
-    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+agrApprovedBy+' on '+agrApprovedAt+'</div></div>'
-    : '';
+  var approvedStamp = _agrApprovedStamp(job);   // THIS job's approval — never the page's; see the helper
   function pp(txt) { return '<p style="font-size:11px;line-height:1.65;margin-bottom:.5rem;">'+txt+'</p>'; }
   function bb(txt) { return '<strong>'+txt+'</strong>'; }
   function dRow(label,val) {
@@ -35990,7 +36400,9 @@ function probateAgreementHtml(job, est) {
     ['Transition Concierge (TC)','$'+_agrRates.tc+' / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'
       + (job.premium ? ' Premium Estate rates apply to this engagement, reflecting the elevated care, handling and oversight required for a property containing fine art, antiques, collectibles or high-value contents.' : '')],
     ['Property Specialist (PS)','$'+_agrRates.ps+' / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
-    ['Moving &amp; Packing Materials','Fixed package price', materialsBasisNote(est && est.pkgLabel)],
+    ['Moving &amp; Packing Materials',
+      materialsPackageQuoted(est && est.pkgLabel, est && est.pkgCost) ? 'Fixed package price' : 'None quoted',
+      materialsBasisNote(est && est.pkgLabel, est && est.pkgCost)],
     // Follows SMF_PCT — see the §3.5 comment in renderAgreement. On a court-reviewed matter a
     // percentage markup on a third-party invoice is exactly the line counsel questions.
     (SMF_PCT > 0
@@ -36019,6 +36431,8 @@ function probateAgreementHtml(job, est) {
     content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);white-space:nowrap;">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+r[2]+'</td></tr>';
   });
   content += '</tbody></table>';
+  // The premium and the discount Exhibit A itemizes, named on the contract — see agrPriceAdjustments.
+  if (!isFixedAgr && agrPriceAdjustments(est, 'Havellin')) content += pp(agrPriceAdjustments(est, 'Havellin'));
   if (isFixedAgr) {
     content += pp(bb('Fixed Project Fee.')+'  Notwithstanding the hourly rates above, the Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of $'+_agrFlat.toLocaleString())+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates above apply only to Change-Order work authorized beyond that scope.'
       + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of what the home sale preparation vendors identified in Exhibit A actually invoice (estimated in Exhibit A at $'+_agrPrepEst.toLocaleString()+').' : ''));
@@ -36535,9 +36949,7 @@ function agreementHtml(job, est) {
     ? '<img src="'+logoSrc+'" style="width:160px;height:auto;display:block;margin:0 auto;" alt="Havellin">'
     : '<div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:500;color:var(--gray-dk);text-align:center;letter-spacing:.04em;">Havellin</div>';
 
-  var approvedStamp = (agrApproved && agrApprovedBy)
-    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+agrApprovedBy+' on '+agrApprovedAt+'</div></div>'
-    : '';
+  var approvedStamp = _agrApprovedStamp(job);   // THIS job's approval — never the page's; see the helper
 
   function p(txt) { return '<p style="font-size:11.5px;line-height:1.65;margin-bottom:.55rem;">'+txt+'</p>'; }
   function b(txt) { return '<strong>'+txt+'</strong>'; }
@@ -36659,7 +37071,8 @@ function agreementHtml(job, est) {
         // $150/hour rate card that shipped on a fee-only prep agreement until 2026-09-11, in the
         // same clause, running the other way. Both bases are stated here, and the specialist half
         // survives because it stays true: calcAll holds totPS at zero on prep unconditionally.
-        ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the management fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(_agrDcHrs.toFixed(1)+' hours')+' ('+b('$'+_agrDcAmt.toLocaleString())+') on that basis. '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.')
+        ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the management fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(_agrDcHrs.toFixed(1)+' hours')+' ('+b('$'+_agrDcAmt.toLocaleString())+') on that basis. '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'
+            + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : ''))
         // ⚠ THE CARVE-OUT (2026-09-25): a change order can now add concierge hours to a vendors-only prep
         // job, and this clause said flatly that none are billed. It keeps saying so for the engagement as
         // signed, and names the one route to hours — a signed Change Order stating the hours.
@@ -36675,7 +37088,8 @@ function agreementHtml(job, est) {
       : isFixedAgr
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+_agrFlat.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.'
           + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in Section 3.5, which covers the coordination and site supervision of the home sale preparation vendors, is not part of the fixed project fee and is charged in addition to it.' : ''))
-      : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'))+
+      : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'
+          + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : '')))+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
     // §3.5 follows SMF_PCT. The 15% Service Management Fee came off on 2026-08-02 — the
     // estimate, the invoice and the Terms all stopped charging it that day — and this clause
@@ -36702,7 +37116,7 @@ function agreementHtml(job, est) {
                  : _agrPrepInside ? '.  On this engagement that fee is included in the fixed project fee under Section 3.3.'
                  : '.  That fee covers Contractor\'s coordination and site supervision of the preparation work, which is not additionally billed as Transition Concierge time.'))
           : p(b('3.5 Vendor Coordination.')+'  Contractor adds no fee or markup to third-party vendor invoices. The Transition Concierge time spent sourcing, scheduling, and supervising vendors is '+(isFixedAgr ? 'included in the fixed project fee under Section 3.3.' : 'billed as Transition Concierge time under Section 3.3.')))+
-    p(b('3.6 Moving and Packing Materials.')+'  '+materialsBasisNote(est && est.pkgLabel))+
+    p(b('3.6 Moving and Packing Materials.')+'  '+materialsBasisNote(est && est.pkgLabel, est && est.pkgCost))+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
     // ⚠ AND THE 15% CLAUSE IS AN HOURS CLAUSE. A Change Order carries additional CONCIERGE
     // AND SPECIALIST HOURS (see coHours — it has carried no dollar amount since the rebuild),
@@ -37046,7 +37460,7 @@ function updateAgrUI() {
     // folder and unlocks sending. Two reasons, named separately, because they need different
     // things done about them.
     var _b = agrApprovalBlocker(currentAgrJobId);
-    var _rev = _agrJ && _agrJ.agrRevokedBy === 'estimate-edited' && !_agrJ.agrApproved;
+    var _rev = !!agrApprovalWithdrawn(_agrJ);
     btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none'; if (btnEmail) btnEmail.style.display='none';
     if (_b === 'estimate') {
       badge.innerHTML = '<span class="badge b-pending">Estimate Not Approved</span>';

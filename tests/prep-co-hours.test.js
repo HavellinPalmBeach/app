@@ -404,7 +404,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ THE FINAL INVOICE — the fee plus exactly the change-order hours logged');
   {
-    const invFns = ['invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+    const invFns = ['invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
       'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
       'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact',
@@ -412,7 +412,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop'];
     const invVars = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
-      'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'invApproved'];
+      'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
     // Walk the engagement stage by stage, paying each invoice in full, and return the final.
     const walk = (est, cos, loggedTC) => {
       const run = (payments, stage) => sandbox({ fns: invFns, vars: invVars, stubs: {
@@ -451,7 +451,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE BAND — the final-invoice step says an unlogged change order bills the fee alone');
   {
     const T = (cos) => sandbox({
-      fns: ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
             'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt',
             'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
             'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs'].concat(CO),
@@ -485,10 +485,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate',
       'fmt', 'esc', 'fmtDate2', 'svcLabelOf', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText',
       'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit', 'fmtCEDate', '_pctWords',
-      'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
+      'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
       '_agrProbateCompliance', '_agrMidpointTrigger', '_fixedFeeBlurb', 'estimateDocScope', 'svcHasDocStep',
       'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection', 'approvedEstimateFor',
-      'materialsBasisNote', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
+      'materialsBasisNote', 'materialsPackageQuoted', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docStandardEffect', 'isFormalDoc', 'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel',
       'docLevelFloorReason'];
     const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
