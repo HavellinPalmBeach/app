@@ -44,7 +44,7 @@ Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision 
     T&M rush + 10% job, 10 accepted concierge hours at $150 collect **$1,620** against **$1,500** on a plain job; on a fixed
     rush + discount job the final adds exactly the plain **$1,500**.
   - **Not carried on the acceptance panel** — offered to Anthony as a follow-up rather than widened into this commit.
-- **11,586 committed checks before the merges; 12,524, 12,722 and 12,817 after each of the three** (+97 of them here: `tests/change-order-card.test.js` new at 95, and 2 in `intake-house-flags` asserting
+- **11,586 committed checks before the merges; 12,524, 12,722, 12,817 and 13,056 after each of the four** (+97 of them here: `tests/change-order-card.test.js` new at 95, and 2 in `intake-house-flags` asserting
   `houseFlagSummary` is gone. The new suite covers `coCardActions`, a driven dashboard with one
   accepted and one pending change order asserting both controls, their onclicks, classes and uniqueness, Create → Accept
   through the real modals, the Q14 wording on every arm, and the invoice join). `coCardActions` / `coRateModsLine` lifted —
@@ -62,8 +62,8 @@ Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision 
     the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against a baseline of 12,524 / 0
     before and after. **On the second** (`main` moved while the first was being tested), H1/M1 had taken the final-invoice
     approval off the page, so `var invApproved` no longer exists and the invoice sandbox threw *not found*; it lifts
-    `invFinalApproval`, `invFinalApprovalRecord` and `docKeyFor` now, as `change-order-billing` does. The third (the Reset
-    build) needed nothing. The same four reverts re-run on the final tree: the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against 12,817 / 0 before
+    `invFinalApproval`, `invFinalApprovalRecord` and `docKeyFor` now, as `change-order-billing` does. The third and the fourth
+    (the Reset and C2 builds) needed nothing. The same four reverts re-run on the final tree: the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against 13,056 / 0 before
     and after.
 - **Verified in headless Chromium, `tests/browser/step33.js` new at 75, 0 failed, 0 page errors** (written as step 26 and
   renumbered 33 on the merges — the concurrent sessions took 26 to 32): a Home Editing job with rush
@@ -78,7 +78,7 @@ Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision 
     step a 600s ceiling that reports *TIMED OUT* rather than stalling. `run.sh`'s default list is 1–33.
   - **Before the merge, steps 1–26 re-run as regressions: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 101 / 73 / 99 / 75, 0 failed — 1,287 browser checks across the twenty-six.** Steps 23, 24 and 25 went 78 → 101, 58 → 73 and 78 → 99 — each press now also asserts its control is
     on the page exactly once — so 1,153 + 59 + the new step's 75 is the 1,287.
-  - **ON THE TREE AFTER ALL THREE MERGES, steps 1–32: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 75, 0 failed — 1,622 browser checks across the thirty-two.** (After the first merge, steps 1–30 ran 1,527.)
+  - **ON THE TREE AFTER ALL FOUR MERGES, steps 1–33: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75, 0 failed — 1,675 browser checks across the thirty-three.** (After the first merge, steps 1–30 ran 1,527; after the third, steps 1–32 ran 1,622.)
 - Manual **§9** (the + New route; the row's buttons; a note on the dead end with what to do about change orders raised before
   today; the notices; the Q14 note) and playbook **Step 10d** (the same, plus a `.stop` and a note in field language) and **four**
   symptom rows. Both `.md` copies hand-edited; **28 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
