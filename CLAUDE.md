@@ -90,14 +90,14 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
     *Final invoice sent* row then goes on saying *"The Gmail draft from Sep 30 (anthony@…) was made before the job was re-opened —
     delete it, don't send it"*, and once a fresh final is drafted, *"Drafted — read it, send it, then confirm. Delete the older Gmail
     draft from Sep 30 (…) — it was made before the job was re-opened"*: two finals in one mailbox are never left for somebody to
-    tell apart. Both are in the revert sweep on the merged tree, below.
+    tell apart. Not keeping it in the history fails 6, the note losing its re-open reason 3.
   - **⚠ FOUND WHILE MERGING AND FIXED: the question read the draft's day off the UTC stamp, and said "Gmail" whatever the route.**
     A final drafted after 8pm Eastern was named on the next day, and a plain email (the mailto fallback) was told to be deleted in
     Gmail. It reads `_draftDay`, `main`'s one local-calendar reading of a draft stamp, and the route decides the verb: *delete that
-    draft in Gmail (mailbox)* for a Gmail draft, *if that email was never sent, discard it* otherwise. All four are in the revert
-    sweep on the merged tree, below.
+    draft in Gmail (mailbox)* for a Gmail draft, *if that email was never sent, discard it* otherwise. The UTC day back fails
+    2, every route told Gmail 2, the mailbox unnamed 1, the route and mailbox left on the record 2.
   - The stale-draft suite's net — every reader of a draft stamp is named — carries `_reopenTransition` on its allow-list, with its
-    reason; removing the entry is in the sweep below.
+    reason; removing the entry fails 1.
   - **It asks; Cancel changes nothing; OK lands on the Job Plan** (`activateOrCycle` already navigates on a transition to active).
     The question names the day and who closed it, says the timeline returns to the step the job was on, and that hours, payments and
     anything already sent stay as they are. Cancel ignored fails 2; the question omitting the close 1, the stale draft 4.
@@ -141,7 +141,7 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   against 13,586 / 0 before and after, so the results carry. **The stale-draft build merged in last and moved one line of this
   build's code** (the void, now into the history): all 31 still find their code, the defect, the transition branch, the void and
   the question's draft clause re-run on a tar copy fail **21**, **75**, **19** and **4**, and the seven integration
-  reverts above are running on that copy at this commit; their counts follow in the next one.
+  reverts above are **all red** — 6, 3, 2, 2, 1, 2 and 1 — against 13,804 / 0 before and after, no needle mismatched, nothing threw.
 - **Verified in headless Chromium, `tests/browser/step38.js`** (written as step 29 and renumbered on all three merges — `main`'s
   document-claims build took 29 first, its work-done build 36 and its stale-draft build 37), **63 checks, 0 failed, 0 page errors**
   (58 before the third merge), through the real Close and
@@ -161,8 +161,9 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   1,816 browser checks across the thirty-six.** **After the second merge (`main`'s H5 build, whose own step is 36) the list is
   1–37 and all thirty-seven ran — the same figures with 14 at step 36 and this build's 58 at step 37, 0 failed — 1,830
   browser checks across the thirty-seven.** **After the third merge (`main`'s stale-draft build, whose own step is 37) the list
-  is 1–38 and the run of all thirty-eight is going at this commit; its figures follow in the next one**; against `main` without
-  this build step 38 still fails 5 and stops at section A.
+  is 1–38 and all thirty-eight ran — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 /
+  58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 61 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 14 / 61 / 63, 0 failed — 1,896 browser
+  checks across the thirty-eight**; against `main` without this build step 38 still fails 5 and stops at section A.
 - Manual **§9** (the Closed row; the *There is no Re-open* note replaced by an eight-bullet Re-open note; the handover note),
   **§9a** (two table rows, three bullets), **§11** (the ratings clause) and **§12** (the stage paragraph and a six-bullet note on the
   wording). Playbook **Step 11 & 12** (a bullet), **Step 13** (the intro, the `.stop`, the midpoint paragraph, and a new *Closed it by
