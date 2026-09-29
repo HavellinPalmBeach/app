@@ -24,6 +24,19 @@ page; the same content, prompts included, is `WORKFLOW_AUDIT_2026-09-28.md` in t
   (redeploy `2026-09-22b` with `ANTHROPIC_API_KEY`, the Quo redeploy, one DocuSign sandbox envelope, a Stripe test ACH, the Gmail
   consent audience, `previewOrphanRecords()`, the counsel bundle, binding the insurance and bond, the two Drive documents).
   **Do not build a pack whose question is unanswered** without saying which default you applied.
+- **⚠ ANSWERED 2026-09-29 — read each answer under its question in the file before building a pack.** Anthony: *"all the
+  rest seem fine to me"*, so every recommendation stands except two he changed. **Q9:** no rush on the 30% prep fee on either
+  basis, and *"if it's a rush job, it should impact both fixed and hourly jobs"*. On fixed price the 20% is already inside the
+  suggested fee, but no fixed-price document shows it and a hand-typed fee does not follow the tick, so P12 prints it as its own
+  line under the fee (like the Q13 discount). **Q20:** *"If we need an appraiser, don't we just add one? It's not mandatory and
+  shouldn't be blocked either."* Read as: appraisers are priced per estimate line (4 touches, 2 concierge hours each), the
+  built-in appraiser scheduling comes out of the `document` coordination on both top tiers (it double-charges a job with an
+  appraiser line today), no tier requires or refuses one, and `weArrangeAppraisals` answers yes when the estimate carries one.
+  **That reading awaits his OK.** **Still open:** Q7 (he asked what the bands are; measured, 9 of 24 normally-scored houses read
+  *Below range — review scores* and the day ranges run 2–6× the engine's plans; my call is a live range from the engine at Normal
+  and Full scoring, or delete the box) and a Q14 follow-up (a fixed-price RUSH job's change orders carrying the 20%; my call yes).
+  He also reports the `22b` redeploy and `ANTHROPIC_API_KEY` done; ticked in the file, **not verifiable from here** — the `/exec`
+  URL lives in each device's Settings, not the repo. No *out of date* banner on load means `agentIdentify` is deployed.
 - **When a pack lands:** tick it in the file (`- [x] **P1**`), mark its findings fixed rather than deleting them, and add the
   pack's own entry here as usual. The audit's probes lived in a session scratchpad and are gone, deliberately — each pack's
   prompt says what to reproduce first.

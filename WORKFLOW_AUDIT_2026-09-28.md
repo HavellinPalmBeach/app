@@ -207,7 +207,7 @@ A $21,840 fixed quote shows "Total project estimate $18,200"; with bundled prep,
 
 #### M11 · Build Estimate · The reference bands mislead in both directions.
 
-Estate Settlement reads "Above range" at 3,500 sq ft on default scores, and 7 of 24 neutral test points read "Below range — review scores", which invites scoring up.
+Estate Settlement reads "Above range" at 3,500 sq ft on default scores, and 9 of 24 normally-scored test houses read "Below range — review scores", which invites scoring up. The day ranges run 2 to 6 times the engine's plans, and the range grows 15–85% on homes over $5M although property value never moves the price.
 
 **Where:** `PRICING_REF` (Estate Settlement reuses Home Cleanout's bands), `updateRefBox`.
 
@@ -421,7 +421,7 @@ Fix:
 - Delete the dead change-order block in `detailHtml`, and consider the whole unused detail row (`houseFlagSummary` has no other reader).
 - Change browser steps 23–25 to press the real buttons instead of calling the functions.
 
-Decision to apply (edit before pasting if yours differs), Q14: an hourly change order's hours carry the job's rush premium and discount like every other hour, and a fixed-price change order is priced at the plain hourly rates. Say so in one line on the printed change order.
+Decision to apply (edit before pasting if yours differs), Q14: an hourly change order's hours carry the job's rush premium and discount like every other hour, and a fixed-price change order is priced at the plain hourly rates. Say so in one line on the printed change order. (Open follow-up, check the audit file's Q14: since rush now applies on fixed price too, a fixed-price RUSH job's change-order price may carry the 20% as well; my call is yes.)
 
 Tests: a driven dashboard render with one pending and one accepted change order, asserting both controls and their onclicks.
 
@@ -554,10 +554,10 @@ Fixes: M10–M12, estimator lows · Needs: Q5–Q7, Q9, Q10, Q13, Q20
 ```text
 Estimator fixes and pricing decisions (2026-09-28 workflow audit, findings M10–M12 and the Build Estimate lows).
 
-Decisions to apply (edit before pasting if yours differ): Q5 extra crew never lowers the fee below the two-specialist plan (speed is what rush is for); Q6 weight the whole-house fullness average by room size, so a light half bath doesn't dilute a packed garage; Q7 rebuild the reference bands from the engine at neutral and full scoring; Q9 rush does not apply to the 30% prep fee on any billing basis; Q10 Estate Settlement, Probate and Contested Probate estimates open on fixed price; Q13 a fixed-price discount prints as its own line; Q20 at the "Inventory with values" tier, keep inventory scheduling and drop appraiser scheduling from the price.
+Decisions to apply (edit before pasting if yours differ): Q5 extra crew never lowers the fee below the two-specialist plan (speed is what rush is for); Q6 weight the whole-house fullness average by room size, so a light half bath doesn't dilute a packed garage; Q7 (OPEN when this was written — check the audit file's Q7; my call is to replace the hand-typed table with a range the engine computes live for this house at Normal and at Full scoring, worded neutrally, and to drop the property-value multiplier from it); Q9 rush does not apply to the 30% prep fee on either basis, and a rush job carries the 20% on the services on BOTH bases — on fixed price it is already inside the suggested fee, so make it visible and binding: the fee is the fee for the scope and the premium prints as its own line under it (as the discount will, Q13), so ticking rush always raises the price, even over a fee typed by hand; Q10 Estate Settlement, Probate and Contested Probate estimates open on fixed price; Q13 a fixed-price discount prints as its own line; Q20 (Anthony: "If we need an appraiser, don't we just add one? It's not mandatory and shouldn't be blocked either.") price appraisers only when one is added to the estimate — each appraiser vendor line already books 4 touches (2 concierge hours) — so the `document` step's coordination keeps inventory scheduling and drops the built-in appraiser scheduling on both top tiers (a tunable share, like `DOC_CAPTURE_POOL_SHARE`), which also ends the double charge on a job that has an appraiser line; no tier requires or refuses an appraiser; and when the priced estimate carries an appraiser line, `weArrangeAppraisals` answers yes, so the values-tier agreement's bold carve-out, the estimate's close-out and the playbook's "do not offer to" stop contradicting Exhibit A. Confirm the Q20 reading in the audit file before building it.
 
 1. On fixed price, the Estimate Summary panel shows the hourly totals (`calcAll` writes `s-havellin` and `s-total` before the fixed-price block): a $21,840 quote shows "Total project estimate $18,200", and with bundled prep $79,150 against the document's $82,480. Fill it from the final figures, rename the first row "Services subtotal", and list rush above the discount as the documents do.
-2. Reference bands (`PRICING_REF`, `updateRefBox`): Estate Settlement reuses Home Cleanout's bands and reads "Above range" at 3,500 sq ft on default scores; 7 of 24 neutral test points read "Below range — review scores"; the first band says 2,000–3,000 sq ft but covers smaller houses; "Typical: 12–70 days" sits against plans of 2–11 days. Apply Q7.
+2. Reference bands (`PRICING_REF`, `updateRefBox`): Estate Settlement reuses Home Cleanout's bands and reads "Above range" at 3,500 sq ft on default scores ($18,300 against a $16,000 ceiling); 9 of 24 normally-scored test houses (six services at 2,000 / 3,500 / 6,000 / 10,000 sq ft) read "Below range — review scores"; the first band says 2,000–3,000 sq ft but covers everything under 2,000; the day ranges run 2 to 6 times the engine's plans (a 10,000 sq ft Home Cleanout plans 9 days against "20–45 days"); and `propValMultiplier` grows the range 15–85% on homes over $5M although property value never moves the price, so the more valuable the house the likelier a normal quote reads "review scores". Apply Q7.
 3. The price falls as the walkthrough gets more complete: scoring the rooms the coverage badge asks for dropped $18,200 to $17,000; with automatic crew sizing, 5,750 sq ft prices below 5,500 ($27,600 against $28,300); forcing 2 → 6 specialists cuts 14.6%. Apply Q5 and Q6.
 4. Apply Q9, Q10, Q13 and Q20.
 5. Low: re-saving a reopened estimate stamps the live `COST_RATES` instead of `activeCostRates()`. A saved estimate reprices when the Vendor Directory hasn't loaded (`vendorGroupOfLine` falls back to the first card); store each vendor line's coordination hours on the line. The unscored-room gate can't fire (`parseFloat(…) || 3` prices a blank or 0 as 3 and saves 9 or 2.5 as typed); clamp to 1–5 and validate. Standalone Home Prep lets you tick Fixed price and then ignores it; hide it. The two ways to discount a fixed fee disagree once a materials package is on the job. The Save button still reads "Save & Preview Client Estimate →".
@@ -603,57 +603,80 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp t
 
 ## Questions for Anthony
 
+**Answered 2026-09-29.** The recommendations stand except Q9 and Q20, which Anthony changed, and Q7 and a Q14 follow-up, which are still open. Each answer is under its question.
+
 ### Answer these first
 
 - **Q1** Should a job be closeable, and its final invoice sendable, while the midpoint payment is still outstanding? And should the midpoint invoice wait for the job's halfway date?  
-  *Recommendation:* Yes to both. A late midpoint cheque should never block the close; the final already nets out what has been paid. *(used by P7)*
+  *Recommendation:* Yes to both. A late midpoint cheque should never block the close; the final already nets out what has been paid. *(used by P7)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q2** A client pays part of the deposit, then walks away. Keep the money (Closed, deposit retained) or refund it?  
-  *Recommendation:* Keep it and name the amount. Your agreements say the deposit is earned on signature. *(used by P10)*
+  *Recommendation:* Keep it and name the amount. Your agreements say the deposit is earned on signature. *(used by P10)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q3** Should "work done" measure room work only, or count coordination time too?  
-  *Recommendation:* Room work only. Logged hours already show the rest. *(used by P8)*
+  *Recommendation:* Room work only. Logged hours already show the rest. *(used by P8)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q4** Should Edit Client let you switch a job between a living service and an estate service?  
-  *Recommendation:* No. Make it a new client, the rule Build Estimate already follows. *(used by P9)*
+  *Recommendation:* No. Make it a new client, the rule Build Estimate already follows. *(used by P9)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q5** Should adding crew ever lower the price? Today a 5,750 sq ft house can price below a 5,500 sq ft one.  
-  *Recommendation:* No. Floor the fee at the two-specialist plan; rush is how a client pays for speed. *(used by P12)*
+  *Recommendation:* No. Floor the fee at the two-specialist plan; rush is how a client pays for speed. *(used by P12)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q6** Should a room scored at its normal default pull the whole-house fullness down? Finishing the walkthrough cut one quote from $18,200 to $17,000.  
-  *Recommendation:* No. Weight the average by room size. *(used by P12)*
+  *Recommendation:* No. Weight the average by room size. *(used by P12)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q7** The reference bands no longer match the engine. Rebuild them from the engine, or keep them and drop the "review scores" nudge?  
-  *Recommendation:* Rebuild them. *(used by P12)*
+  *Recommendation:* Rebuild them. *(used by P12)*  
+  *Still open (2026-09-29):* Open. You asked what the bands are. They are a hand-typed table from before the current pricing engine, internal only: of 24 normally-scored test houses, 9 read "Below range — review scores" and one reads "Above range" (M11). My call now: replace the hand-typed table with a range the engine works out for this house (its sq ft and service at Normal and at Full scoring), worded neutrally so it never tells anyone to score up. Or delete the box.
 - **Q8** Should the agreement's fee clause name the 20% rush premium and the preferred-client discount? Today they appear only in Exhibit A, and on hourly jobs the premium lands on every hour above the stated rates.  
-  *Recommendation:* Yes, one sentence each. It matters most on probate. *(used by P6)*
+  *Recommendation:* Yes, one sentence each. It matters most on probate. *(used by P6)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q9** Should rush apply to the 30% prep fee? Hourly jobs charge it ($2,700 on a $45k package); fixed-price jobs don't.  
-  *Recommendation:* No, on both. Rush speeds up our crew, not the painter. *(used by P12)*
+  *Recommendation:* No, on both. Rush speeds up our crew, not the painter. *(used by P12)*  
+  *Answer (2026-09-29):* No rush on the 30% prep fee on either basis, and a rush job carries the 20% on both hourly and fixed-price jobs. On fixed price the premium is already built into the suggested fee, but no fixed-price document shows it and a fee you typed does not follow the tick, so it prints as its own line under the fee, like the discount (Q13).
 - **Q10** New estimates open hourly, while the estate guide on your website promises a fixed fee. Should Estate Settlement, Probate and Contested Probate open on fixed price?  
-  *Recommendation:* Yes. *(used by P12)*
+  *Recommendation:* Yes. *(used by P12)*  
+  *Answer (2026-09-29):* Agreed.
 
 ### The prompts assume the recommendation
 
 - **Q11** Should the agreement be viewable (not printable or sendable) before the client says yes? The manual says yes; the app says no.  
-  *Recommendation:* Yes, view only. *(used by P6)*
+  *Recommendation:* Yes, view only. *(used by P6)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q12** After a partial deposit cheque, should the ACH link ask only for the balance?  
-  *Recommendation:* Yes. *(used by P10)*
+  *Recommendation:* Yes. *(used by P10)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q13** On a fixed-price job the discount is folded into the fee and never shown. Show it as a line?  
-  *Recommendation:* Yes, so the client sees the concession. *(used by P12)*
+  *Recommendation:* Yes, so the client sees the concession. *(used by P12)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q14** Change-order hours carry the rush premium and the discount on hourly jobs, and plain rates on fixed-price jobs. Keep that?  
-  *Recommendation:* Keep it, and say so on the change order. *(used by P5)*
+  *Recommendation:* Keep it, and say so on the change order. *(used by P5)*  
+  *Still open (2026-09-29):* Agreed, with one follow-up open: now that rush applies on fixed price, should a fixed-price rush job's change-order hours carry the 20% too? My call: yes.
 - **Q15** Should the referral source and partner be correctable after intake?  
-  *Recommendation:* Yes, in Edit Client. *(used by P9)*
+  *Recommendation:* Yes, in Edit Client. *(used by P9)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q16** Warn when a new client matches an existing address?  
-  *Recommendation:* Warn, never block. *(used by P9)*
+  *Recommendation:* Warn, never block. *(used by P9)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q17** Should Home Prep intake ask the access and safety questions?  
-  *Recommendation:* Yes; vendors go through the house. Skip the must-find question. *(used by P9)*
+  *Recommendation:* Yes; vendors go through the house. Skip the must-find question. *(used by P9)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q18** If a start date moves past the closing date, keep both and flag it red?  
-  *Recommendation:* Yes. *(used by P9)*
+  *Recommendation:* Yes. *(used by P9)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q19** A two-concierge estimate can confirm its team with the second concierge slot empty. Require a name or Contractor TBD?  
-  *Recommendation:* Yes. *(used by P10)*
+  *Recommendation:* Yes. *(used by P10)*  
+  *Answer (2026-09-29):* Agreed.
 - **Q20** "Inventory with values" still prices appraiser scheduling (about $765 on a typical estate), though counsel books the appraisers at that tier. Drop it?  
-  *Recommendation:* Keep inventory scheduling, drop appraiser scheduling. *(used by P12)*
+  *Recommendation:* Keep inventory scheduling, drop appraiser scheduling. *(used by P12)*  
+  *Answer (2026-09-29):* "If we need an appraiser, don't we just add one? It's not mandatory and shouldn't be blocked either." So: an appraiser is priced when one is added to the estimate (each appraiser line already books 2 concierge hours, about $300), the documentation line keeps inventory scheduling and drops the built-in appraiser scheduling, and no tier requires or refuses an appraiser. When the estimate carries one, the agreement and the estimate say Havellin coordinates it; today the values-tier agreement says in bold that it does not, and the playbook says "do not offer to". Awaiting your OK on this reading.
 - **Q21** Neither agreement has a referral-fee disclosure. Add one?  
-  *Recommendation:* Yes, if you will pay or receive referral fees. Send it to counsel with the bundle. *(counsel bundle)*
+  *Recommendation:* Yes, if you will pay or receive referral fees. Send it to counsel with the bundle. *(counsel bundle)*  
+  *Answer (2026-09-29):* Agreed.
 
 ## Only Anthony can do these
 
-- [ ] **Redeploy the Apps Script.** The repo is at `2026-09-22b`; the last recorded deploy is `22a`. Add `ANTHROPIC_API_KEY` in Script Properties and run `testAgentIdentify()` once. Until then, Agent One (photo naming) can't run.
+- [x] **Redeploy the Apps Script.** The repo is at `2026-09-22b`; the last recorded deploy is `22a`. Add `ANTHROPIC_API_KEY` in Script Properties and run `testAgentIdentify()` once. Until then, Agent One (photo naming) can't run. *You report this done (2026-09-29). To confirm: no "out of date" banner when the app loads means the 22b deployment is live, and pressing Name N shots on a job with photos (or running `testAgentIdentify()` in the editor) proves the key.*
 - [ ] **Redeploy quo-sync.gs, then check before pruning.** Deploy the 2026-09-18 fix, fix the duplicate "David Schneider" vendor row, and run `dryRunQuoAll` before any prune.
 - [ ] **Send one DocuSign sandbox envelope end to end.** Check that the opt-out box renders, where the signature boxes land, that no green "Approved for Sending" band is on the PDF, and that the signed PDF and certificate file to Drive. Then move to production.
 - [ ] **Stripe: one test ACH link.** It proves the ACH-only check. Confirm the account's ACH limit covers your largest deposit.
