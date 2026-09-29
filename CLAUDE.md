@@ -7,7 +7,8 @@ Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when t
 
 - **Landed 2026-09-29, P1–P7:** C1, C2, H1, H2, H3, H4, H6, M1, M2, M3 and M8, plus nine lows, each with its own entry below.
   Spot-checked in the code on `main` the same day rather than taken from the entries' own claims; ticked and marked in the file.
-- **Still open:** P8 (H5: work done tops out at 42–74%) · P9 (H7–H9, M13–M16 and the intake lows: Edit Client) · P10 (M4–M7
+- **Landed 2026-09-29, P8 (this session, after P1–P7 merged):** H5 — see its entry below.
+- **Still open:** P9 (H7–H9, M13–M16 and the intake lows: Edit Client) · P10 (M4–M7
   and the lifecycle lows) · P11 (M9 and the per-key job merge; **needs an Apps Script redeploy**) · P12 (M10–M12 and the
   estimator lows) · P13 (the docs pass, after the others) · P14 (small backlog; its message-timer and dead-code items are done).
 - **Answers, 2026-09-29:** every recommendation stands except **Q9** (no rush on the 30% prep fee on either basis; rush applies
@@ -21,6 +22,43 @@ Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when t
 - **When a pack lands:** tick it in the file (`- [x] **P8**`) and mark its findings fixed rather than deleting them.
 - **⚠ THE SHAPE TO COPY, FROM H2:** a browser step that reaches a handler through `page.evaluate` proves the handler, not that
   anybody can reach it. Press the control.
+
+## ⚠⚠ WORK DONE COULD NEVER REACH 100% — IT IS MEASURED AGAINST THE ROOMS NOW (FIXED 2026-09-29, AUDIT H5 / P8)
+Fix pack P8 of the 2026-09-28 workflow audit, built after the other sessions' P1–P7 had merged. Anthony, Q3: *"Room work
+only. Logged hours already show the rest."* App-only, no redeploy.
+
+- **⚠⚠ THE DEFECT: `jobProgress` divided the room hours earned by `est.totTC + est.totPS`.** A room carries only its share of
+  the hands-on pool; the concierge's off-site coordination, the collections' on-site presence, move day and the round-up to
+  whole billable hours belong to NO room. **Measured through the real `calcAll` on a 22-room, 3,500 sq ft house, every room
+  cleared:** Home Editing 60% · Home Transition 56% · Home Cleanout 74% · Estate Settlement 74% · Probate 73% · Contested 70%.
+  And the pace verdict read off it: on a four-day cleanout finished on day 3 the Job Plan header and the Client Dashboard both
+  said *"74% of the work is done on working day 3 of 4. Tracking to Sep 25, 2026 at this rate, 1 working day past the planned
+  end. Re-plan with the client, or raise a change order"* — reproduced in the browser on the pre-change build.
+- **`workPct` = rooms earned ÷ the rooms' own hours**, and `planHrs` is that room total. **⚠ The unrounded sums decide it:**
+  `doneHrs` is rounded for display, and a rounded numerator over an unrounded total lands a hair under 1 (0.1 + 0.2 is
+  0.30000000000000004), which `jobSchedule`'s `ceil(elapsed / workPct)` turns into a whole extra working day on a finished
+  job. Reverting to the rounded numerator fails **9** — three of the six real estimates hit it.
+- **⚠ `has` still answers off the estimate's hours too.** An estimate whose rooms are all out of scope prices job-level hours,
+  so the hours half of the reading stays and work reads 0. The concurrent M8 suite pins that case; reverting fails 2.
+- **⚠ THE PROJECTION'S TIER GATES READ THE SAME ROOM FRACTION THEY PRINT.** `computeProjection` printed the room fraction
+  (*"40% complete"*) while gating tier 1/2 on `wholePctTC/PS` (room hours over the estimate totals), so a band could hold back
+  as though it were 10%. `wholePctTC`/`wholePctPS` are **deleted, not left computed**, and a net asserts `wholePct` appears
+  nowhere in live code. `change-order-hours`' one assertion on it is restated onto `tcPct`, which is the room fraction.
+- **`driveCalcAll` IN `tests/harness.js` — THE REAL PRICING ENGINE, DRIVEN.** The audit's instruction was *"build the estimate
+  with the real calcAll, not seeded rooms that happen to sum to the totals (that is why the 2026-09-13 tests passed)"*. The
+  function set is derived from calcAll's own call tree (93 functions, 75 vars, comment lines stripped so a name in a comment
+  pulls nothing in) and cached; `var X;` globals are declared too. It takes a service, a sq ft and room names (vol/cplx default
+  to each room's own default) and returns the real `currentEstimate`. **P12's monotonicity suite should be built on it.**
+- **13,411 committed checks** (`tests/work-done-rooms.test.js` new at 60). The first group asserts the PREMISE — on every one
+  of the six real estimates the rooms do NOT sum to the totals — so the suite cannot quietly go back to a fixture that hands the
+  code the answer. **Revert sweep on a tar copy: 5 changes, ALL RED, baseline 13,411 / 0 before and after** — the old basis 14,
+  the rounded numerator 9, each tier gate 2, `has` off the rooms alone 2.
+- **Verified in headless Chromium, `tests/browser/step36.js`, 14 checks, 0 failed, 0 page errors:** the estimate built through
+  the real Build Estimate (the section headers opened and 22 room toggles clicked), the last room cleared through the real
+  workspace Lock and Cleared buttons, the Job Plan header and the Client Dashboard both reading *100% of the work done* with no
+  pace flag on day 3 of 4, overflow 0 at 1440 and 390. **Against the pre-change build it fails 5.** `run.sh`'s default list is 1–36.
+- Manual **§9a-i** (a note: the correction, the measurement, that a late flag on a finished job before today was wrong, and the
+  projection bands); playbook one symptom→cause row. Both `.md` copies hand-edited; `doc-structure` green.
 
 ## ⚠⚠ EDIT ESTIMATE GOES ONCE THE SIGNING PACKET IS OUT, AND A WON CLIENT STAYS WON THROUGH A RE-PRICE (FIXED 2026-09-29)
 Two of the three items the document build flagged (the entry below the manager-approvals one). Anthony: *"yes, withdraw Edit

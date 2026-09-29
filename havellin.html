@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 2:48pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 5:01pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -14440,7 +14440,7 @@ function jobProgress(est, plan, logs, coHrs) {
   var P = { has:false, estTC:0, estPS:0, estHrs:0, actTC:0, actPS:0, actHrs:0, hoursPct:0,
             coTC:0, coPS:0, coHrs:0, authTC:0, authPS:0, authHrs:0,
             planTC:0, planPS:0, doneTC:0, donePS:0, doneHrs:0, planHrs:0,
-            workPct:0, tcPct:0, psPct:0, wholePctTC:0, wholePctPS:0,
+            workPct:0, tcPct:0, psPct:0,
             nRooms:0, nLocked:0, aboveFloor:false, invalidRooms:[] };
   // ⚠ ACCEPTED CHANGE-ORDER HOURS ARE PASSED IN (`coAcceptedHours(jobId)`), never read here — the
   // same rule as the plan and the log, so the tests drive this with no globals. They are set BEFORE
@@ -14497,23 +14497,32 @@ function jobProgress(est, plan, logs, coHrs) {
   P.tcPct = P.planTC > 0 ? P.doneTC / P.planTC : 0;
   P.psPct = P.planPS > 0 ? P.donePS / P.planPS : 0;
 
-  // Whole-job percent-complete: room hours earned divided by the ADJUSTED total.
-  // On zero-adjustment jobs estTC === planTC so wholePctTC === tcPct; on adjusted ones this
-  // aligns the change-order gate's basis with its adjusted trigger.
-  var adjTC = P.estTC > 0 ? P.estTC : P.planTC;
-  var adjPS = P.estPS > 0 ? P.estPS : P.planPS;
-  P.wholePctTC = adjTC > 0 ? P.doneTC / adjTC : 0;
-  P.wholePctPS = adjPS > 0 ? P.donePS / adjPS : 0;
+  // ⚠⚠ WORK DONE IS MEASURED AGAINST THE ROOMS, NEVER AGAINST THE WHOLE ESTIMATE (2026-09-29, workflow
+  // audit H5; Anthony, Q3: "room work only — logged hours already show the rest"). It divided the room
+  // hours earned by est.totTC + est.totPS, and a room carries only its share of the hands-on pool: the
+  // concierge's off-site coordination, the collections' on-site presence, move day and the round-up to
+  // whole billable hours belong to NO room. So the figure could never reach 100% — measured on real
+  // 22-room estimates built by calcAll with every room cleared, it read 42% (Home Transition) to 74%
+  // (Home Cleanout), and a cleanout finished on day 3 of 4 told the crew it would run a day late and to
+  // re-plan or raise a change order. The earlier tests passed because their seeded rooms happened to
+  // sum to the totals; a real estimate never does.
+  // ⚠ THE UNROUNDED SUMS DECIDE IT. doneHrs is rounded for display, and dividing a rounded numerator by
+  // an unrounded total can land a hair under 1 — which jobSchedule's `ceil(elapsed / workPct)` turns
+  // into a whole extra working day on a finished job.
   P.doneHrs = Math.round((P.doneTC + P.donePS) * 10) / 10;
-  P.planHrs = adjTC + adjPS;
-  P.workPct = P.planHrs > 0 ? P.doneHrs / P.planHrs : 0;
+  P.planHrs = Math.round((P.planTC + P.planPS) * 10) / 10;
+  var _roomHrs = P.planTC + P.planPS;
+  P.workPct = _roomHrs > 0 ? (P.doneTC + P.donePS) / _roomHrs : 0;
 
   // ⚠ THE NOISE FLOOR IS THE PROJECTION ENGINE'S OWN, NOT A SECOND ONE. One crew-day of
   // combined hours before anything derived from the burn rate may be trusted — on day one
   // of any job `elapsed / workPct` is wild, and a strip that cries "behind" on every job's
   // first morning is a strip people stop reading by the second week.
   P.aboveFloor = P.actHrs >= PROJ_CREW_DAY;
-  P.has = P.planHrs > 0;
+  // ⚠ `has` still answers off the ESTIMATE's hours as well as the rooms'. An estimate whose rooms are all
+  // out of scope prices job-level hours, and the hours-logged half of the reading is real there; only the
+  // work-done half has nothing to count, so it reads zero rather than withdrawing the whole strip.
+  P.has = P.estHrs > 0 || _roomHrs > 0;
   return P;
 }
 
@@ -30564,8 +30573,10 @@ function computeProjection(jobId) {
   var triggerTC = Math.round(estTC * (1 + EST_TOLERANCE_PCT) * 10) / 10;
   var triggerPS = Math.round(estPS * (1 + EST_TOLERANCE_PCT) * 10) / 10;
 
-  var wholePctTC = P.wholePctTC, wholePctPS = P.wholePctPS;
-
+  // ⚠ THE TIER GATES READ THE ROOM FRACTION THE BAND PRINTS (2026-09-29, audit H5). They read a
+  // whole-estimate fraction (room hours over est.totTC / totPS) while the message beside them printed
+  // the room fraction, so a band could say "40% complete" and gate as though it were 29%. One basis now,
+  // the same one the schedule strip's work-done figure and pace verdict read.
   function bandFor(proj, estHrs, pct) {
     if (!aboveFloor) return 'preliminary';
     if (pct === 0 || proj === null) return 'nodata';
@@ -30576,8 +30587,8 @@ function computeProjection(jobId) {
     return 'green';
   }
 
-  var tcBand = bandFor(projTC, estTC, wholePctTC);
-  var psBand = bandFor(projPS, estPS, wholePctPS);
+  var tcBand = bandFor(projTC, estTC, tcPct);
+  var psBand = bandFor(projPS, estPS, psPct);
   var rank   = { preliminary:0, nodata:0, green:1, amber:2, red:3 };
   var headlineBand = rank[tcBand] >= rank[psBand] ? tcBand : psBand;
 

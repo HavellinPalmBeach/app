@@ -98,7 +98,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // order into the work denominator would read 78% here forever.
     eq(withCO.workPct, 1, '⚠⚠ work done stays on the rooms — every room cleared is 100%, change order or not');
     eq(withCO.workPct, base.workPct, 'identical to the job with no change order');
-    eq(withCO.wholePctTC, base.wholePctTC, 'and the projection’s tier gate reads the same room fraction');
+    eq(withCO.tcPct, base.tcPct, 'and the projection’s tier gate reads the same room fraction');
 
     const three = P.jobProgress(EST_TM, PLAN, LOG(100, 70));
     eq(JSON.stringify(three), JSON.stringify(P.jobProgress(EST_TM, PLAN, LOG(100, 70), { tc: 0, ps: 0 })),
