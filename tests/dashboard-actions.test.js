@@ -36,10 +36,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
   const ctx = sandbox({
-    fns: ['jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'estimateSubmitBlocker',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
       // The document tray: `jobTimelineActions` builds the step's document from the ONE
       // row→document map, behind the ONE readiness gate, rather than five ungated concats.
-      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'agreementReady', 'isJobWon',
+      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', 'isJobWon',
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       // ⚠ LIFTED, NOT STUBBED. estimateSubmitBlocker grew a contract arm on 2026-09-22 and a
       // stub of it is exactly what would let the submit gate and the save gate drift apart.
@@ -49,7 +49,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositTargetFor', 'agreementReady',
       'docSentAt', 'docDraftedAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
-      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estimateEditBlocker', 'priceChangeBlocker'],
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
@@ -562,7 +562,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // every info alert in the file rendered as a warning.
     has(fb, "info:'a-info'", "showFB knows 'info'");
     has(src, '.a-info{background:var(--info-bg)', 'and the class it names exists');
-    has(fb, 'if (e2)', 'including on the timer that clears it');
+    // ⚠ RESTATED 2026-09-29. This pinned `if (e2)`, the old timer's guard on a strip looked up again by
+    // id four seconds later. The timer no longer looks anything up: it removes only the nodes its own
+    // call wrote, and only while they are still attached, so a strip that has gone cannot make it throw
+    // (and a later message cannot be wiped by it). Driven in feedback-strip.test.js.
+    has(fb, 'if (n.parentNode)', 'including on the timer that clears it — it removes a node only while it is still attached');
     has(noComments(body('populateAgrSelect()')), 'if (!sel) return', 'populateAgrSelect guards its select too');
 
     // The notice has to survive the innerHTML rewrite the redraw performs, and must not

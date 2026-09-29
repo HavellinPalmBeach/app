@@ -43,18 +43,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
     'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
     'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-    'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
+    'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
     // The document tray: the step's document comes from the ONE row→document map, behind the
     // ONE readiness gate, so these lift with anything that drives the rail or a document verb.
-    'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+    'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
     'agreementReady', 'jobTimelineDoc',
     // The schedule strip and the planned dates the rail now carries.
     'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
     // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
     'roomStatusNormalize',
     'workingDaysInclusive', 'approvedEstimateFor',
-    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
-    'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt',
+    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
+    'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView',
     // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
     'jobReopenBlocker'];
   const VARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
@@ -63,7 +63,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'PRODUCTIVE_HRS_PER_DAY',
       'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
       // Read up front by the Hours Log card since 2026-09-25 — lifted, never stubbed.
-      'EST_TOLERANCE_PCT'];
+      'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT'];
 
   const EST = () => ({ rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }], havellinTotal: 24100 });
   const BASE = { id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout', created: 'Sep 8, 2026',

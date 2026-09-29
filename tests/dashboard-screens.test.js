@@ -322,14 +322,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub({ 'e-job': { value: String(jid || '') } });
       const log = [];
       const c = sandbox({ fns: ['startEstimateOver'], stubs: { document: d, window: {}, confirm: () => answer,
+        clearEstimateScratch: (id) => log.push('scratch:' + id),
         clearEstimateTab: () => { log.push('clear'); d.getElementById('e-job').value = ''; },
         populateJobSelect: (id) => log.push('populate:' + id), loadJobIntoEstimate: () => log.push('load:' + d.getElementById('e-job').value) } });
       c.startEstimateOver();
       return log;
     };
     eq(run(7, false), [], 'cancelled, nothing is cleared');
-    eq(run(7, true), ['clear', 'populate:7', 'load:7'],
-      '⚠ confirmed, it clears and REBINDS the same client — the list is repopulated with its option first, or the select refuses the value');
+    // ⚠ RESTATED 2026-09-29: this device's unsaved-draft copy of the client goes FIRST, before the reopen —
+    // offline with nothing saved, the reopen restores that copy, and it held the build just discarded.
+    eq(run(7, true), ['scratch:7', 'clear', 'populate:7', 'load:7'],
+      '⚠ confirmed, it drops this client\'s unsaved-draft copy, clears, and REBINDS the same client — the list is repopulated with its option first, or the select refuses the value');
     eq(run(0, true), ['clear'], 'with no client bound it is the plain clear it always was');
   }
 
@@ -343,7 +346,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const d = domStub();
     d.getElementById('panel-estimate').querySelectorAll = () => els;
-    const c = sandbox({ fns: ['applyEstimateLock'],
+    const c = sandbox({ fns: ['applyEstimateLock', 'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       stubs: { document: d, estimateApproved: false, estimateSubmitted: true, jobs: [], currentEstimate: null,
                startApprovalWatch() {}, stopApprovalWatch() {} } });
     c.applyEstimateLock();
@@ -356,10 +359,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE TIMELINE CARRIES BUILD ESTIMATE WHEREVER THE WALKTHROUGH IS NEXT');
   {
     const ctx = sandbox({
-      fns: ['jobTimelineActions', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+      fns: ['jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docSentAt', 'docDraftedAt', 'docKeyFor', '_jtSendAction', '_jtDocViews',
             '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'esignAvailable', 'esignProviderKey', 'esignJobWatches',
-            'agreementSignature', 'isAgreementSigned'],
+            'agreementSignature', 'isAgreementSigned', 'estimateEditBlocker', 'priceChangeBlocker'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS',
              'ESIGN_PROVIDER_KEY', 'AGR_SIG_METHODS'],
       stubs: { SHEETS_SYNC_URL: '' },

@@ -30,13 +30,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 // ⚠ renderJobs grew the Win / Loss row, the sortable header and the shared status cell on
 // 2026-09-23. They are LIFTED, never stubbed: a stub of the sort or of the status vocabulary is
 // exactly what would let the list this suite reads drift from the one a person sees.
+// ⚠ The house-flag helpers left this list on 2026-09-29 with the dead detail row that was their only
+// reader here (audit H2): renderJobs no longer reads a house flag at all.
 const RENDER_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'jobPayments',
-  'houseFlagSummary', 'activeHouseFlags', 'houseFlagsOf', 'svcLabelOf',
+  'svcLabelOf',
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
   'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'winLossListHtml', '_wlClientCell',
-  'isJobWon', 'secCaret', 'fmtDate2'];
-const RENDER_VARS = ['currentFilter', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'SVC_LABELS', '_jobsWatch',
+  'isJobWon', 'secCaret', 'fmtDate2', 'jobStatusView'];
+const RENDER_VARS = ['currentFilter', 'SVC_LABELS', '_jobsWatch',
   '_jobsState', '_jobSort', '_wlOpen', 'JOB_SORTS', 'JOB_LIST_COLS', 'JOB_STATUS_ORDER',
   'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS'];
 

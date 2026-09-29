@@ -402,7 +402,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     eq(ctx._pctWords(0.30), 'thirty percent (30%)', 'a contract states the percentage in words');
     eq(ctx._pctWords(0.15), 'fifteen percent (15%)', 'and the SMF rate too, if it ever comes back');
-    eq(ctx._pctWords(0.07), '7%', 'a rate with no spelling falls back to the figure, not invented prose');
+    // ⚠ Restated 2026-09-29: 1–15 are spelled now, because the preferred-client discount (up to
+    // `MAX_DISCOUNT_PCT`) is named in both agreements' fee clauses and a contract states its
+    // percentages in words. The fallback is unchanged — it simply needs a rate the table lacks.
+    eq(ctx._pctWords(0.07), 'seven percent (7%)', 'every discount a manager can enter is spelled');
+    eq(ctx._pctWords(0.17), '17%', 'a rate with no spelling falls back to the figure, not invented prose');
 
     const agr = fn('agreementHtml');
     has(agr, '_agrHasPrepVendors(est)', '§3.5 branches on the ESTIMATE, not the service key');

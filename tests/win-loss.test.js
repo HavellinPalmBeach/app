@@ -34,7 +34,7 @@ const { sandbox, source, fn, domStub } = require('./harness');
 
 const WL_FNS = ['jobsUnread', 'jobsUnreadNotice', 'renderWinLoss', 'winLossBlockHtml', 'winLossFigures',
   'winLossListHtml', '_wlClientCell', '_jobStatusCell', 'toggleWinLossList', 'isJobWon', 'secCaret',
-  'esc', 'fmtDate2', 'svcLabelOf'];
+  'esc', 'fmtDate2', 'svcLabelOf', 'jobStatusView'];
 const WL_VARS = ['SVC_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS', '_wlOpen'];
 
 const JOBS = [

@@ -30,7 +30,8 @@ const text = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&mdash;/g,
 const noComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
 // ── the invoice ─────────────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'docSentAt', 'docKeyFor', 'jobLogEntries', 'coHours', 'coHoursTotal',
+const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'docSentAt', 'docKeyFor', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
+  'invFinalApproval', 'invFinalApprovalRecord', 'jobLogEntries', 'coHours', 'coHoursTotal',
   'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey',
   'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
   'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
@@ -38,7 +39,7 @@ const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'docSentAt', 'docKeyFor', 
   'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop'];
 const INV_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
-  'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'invApproved'];
+  'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
 
 // 80 TC @150 + 60 PS @100 + $1,940 materials = $19,940; the logged hours reproduce it exactly, so the only
 // thing that moves between two cases is the one thing each case is about.
@@ -86,7 +87,7 @@ const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimeline
   // Lifted, never stubbed — the button, the refusal and the undo are one rule read three ways.
   'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch',
   // The two readers of the handover stamp outside the rail.
-  'jobIsSettled', 'planCurrentStage', '_planRooms', '_planRoomStatus']);
+  'jobIsSettled', 'planCurrentStage', '_planRooms', '_planRoomStatus', 'docReadOnlyWord', 'docPreviewOnly', 'estimateEditBlocker', 'priceChangeBlocker', 'discountOfferBlocker']);
 const VARS = ['JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_READY_WHY',
   'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
   'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'JOB_TRANSITIONS', 'jobPlanStore'];
@@ -472,11 +473,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt',
       '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'fmtDate2',
-      'jobReopenBlocker'];
+      'jobReopenBlocker', 'jobStatusView', 'agrApprovalWithdrawn', 'docReadOnlyWord', 'discountOfferBlocker',
+      'docPreviewOnly', 'coCardActions', 'estimateEditBlocker', 'priceChangeBlocker'];
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK',
       'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY',
-      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT'];
+      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT'];
     const render = (job) => {
       const dom = domStub({});
       const c = sandbox({ fns: FNS, vars: DVARS, stubs: { document: dom, setTimeout: () => 0, clearTimeout: () => {},

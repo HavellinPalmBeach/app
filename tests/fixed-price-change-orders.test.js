@@ -53,13 +53,15 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 'estTolerancePctTxt', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'openCOAcceptModal',
                 'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'prepFeeRate',
                 // Lifted, never stubbed: _coJobBasis reads its rates through the agreements' one definition.
-                'agrBillingRates'];
+                'agrBillingRates',
+                // The printed change order's rush / discount line (Q14, 2026-09-29), lifted, never stubbed.
+                'coRateModsLine'];
 
 function coCtx(est, cos, seed) {
   const dom = domStub(seed || {});
   const said = [];
   const c = sandbox({
-    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS'],
+    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'RUSH_PCT'],
     stubs: {
       document: dom, setTimeout: () => 0,
       jobs: [Object.assign({}, JOB)], changeOrders: cos || [],
@@ -67,6 +69,9 @@ function coCtx(est, cos, seed) {
       currentEstimate: null,
       saveChangeOrders: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
       showFB: (id, kind, msg) => said.push({ id, kind, msg }),
+      // Create and Accept speak on the screen the person is on (2026-09-29, audit H2). The routing
+      // itself is driven for real in change-order-card.test.js; here it is recorded like showFB.
+      _docNotice: (kind, msg, jobId) => said.push({ id: 'doc', kind, msg, jobId }),
       docNames: () => ({ printTitle: 'Havellin Change Order' }),
     },
   });
@@ -77,7 +82,7 @@ function coCtx(est, cos, seed) {
 // The invoice sandbox, as change-order-billing.test.js builds it.
 function inv(stubs) {
   return sandbox({
-    fns: ['estTolerancePctTxt', 'invoiceHtml', 'docSentAt', 'docKeyFor', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+    fns: ['estTolerancePctTxt', 'invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
@@ -87,7 +92,7 @@ function inv(stubs) {
     vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
-           'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'invApproved'],
+           'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'],
     stubs: Object.assign({
       jobLogs: {}, estimateStore: {}, changeOrders: [], contractors: [],
       currentEstimate: null, currentInvStage: 'final', vendorDirectory: [], jobPlans: {},
@@ -373,23 +378,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-      'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
-      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
+      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
       // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
       'roomStatusNormalize',
       'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'dot', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coInclTxt',
       // Lifted, never stubbed: the band's change-order-hours sub asks estimateIsFeeOnly once an accepted
       // change order exists, so a sandbox without it throws rather than failing when that filter is broken.
-      'estimateIsFeeOnly', 'estDeclutterHrs'];
+      'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView'];
     const VARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
-      'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'];
+      'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT'];
     function dash(est, opts) {
       opts = opts || {};
       const dom = domStub({});

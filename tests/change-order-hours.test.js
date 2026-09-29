@@ -257,20 +257,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-      'jobActivationBlockers', 'jobPayments', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext',
-      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
+      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
+      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'dot', 'coWorkingDays', '_coPaceFix', 'coInclTxt', 'esc',
-      'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs'].concat(CO);
+      'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView'].concat(CO);
     const VARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
-      'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'];
+      'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT'];
     function dash(cos, opts) {
       opts = opts || {};
       const dom = domStub({});
@@ -469,8 +469,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
-              'agrBillingRates'].concat(CO),
-        vars: ['CO_REASONS'],
+              'agrBillingRates', 'coRateModsLine'].concat(CO),
+        vars: ['CO_REASONS', 'RUSH_PCT'],
         stubs: { jobs: [Object.assign({}, JOB)], changeOrders: cos, currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, EST_TM), approved: true } },
                  docNames: () => ({ printTitle: 'Havellin Change Order' }) },
@@ -502,8 +502,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ §4.2 OF THE ESTATE AGREEMENT — the blank change-order form follows the billing basis');
   {
     const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf',
-      'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml',
-      'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
+      'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords',
+      'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
       '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger',
       '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docTierOf', 'docTierDef'];

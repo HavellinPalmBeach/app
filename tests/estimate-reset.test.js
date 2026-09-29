@@ -156,17 +156,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                   propVal: 4200000, premium: true, tc: 'Ashley Jerome', siteVisitBy: 'Ashley Jerome' };
   const JOB_B = { id: 8, name: 'Pat Bravo', svc: 'downsizing_move', sqft: 2800, start: '2026-11-02' };
 
-  function build({ seed = {}, state = {}, jobs = [JOB_A, JOB_B], store = {}, current = null, confirmSays = true } = {}) {
+  // `status` is what the stubbed fetch answers. 'offline' drives the branch that restores this device's
+  // unsaved-draft copy (the scratch), which is where a discarded build used to come back from.
+  function build({ seed = {}, state = {}, jobs = [JOB_A, JOB_B], store = {}, current = null, confirmSays = true, status = 'cloud' } = {}) {
     const dom = domStub(seed);
     const log = [];
     let ctx = null;
     ctx = sandbox({
       fns: ['resetEstimateJobState', 'neutralizeEstimateView', 'loadJobIntoEstimate', 'applyOpenedEstimate',
-            'clearEstimateTab', 'startEstimateOver', 'restoreEstimateToUI', 'loadEstimateForJob',
-            'estimateHasContent', 'loadEstimateScratch', 'clearAllRooms', 'setRoomState', 'roomState',
+            'clearEstimateTab', 'startEstimateOver', 'resetEstimate', 'restoreEstimateToUI', 'loadEstimateForJob',
+            'estimateHasContent', 'loadEstimateScratch', 'clearEstimateScratch', 'clearAllRooms', 'setRoomState', 'roomState',
             'roomDefault', 'volPresetSeed', 'volPresetShift', 'paintVolPreset', 'seedDocScopeFromJob',
             'docScopeDef', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'estDeclutterHrs',
-            '_fxAmtSet'],
+            '_fxAmtSet',
+            // Reset's approved refusal asks the price-change rule (whether Edit estimate is still there):
+            // lifted, never stubbed, so this suite's refusal and the rule cannot come to disagree.
+            'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent',
+            'docSentAt', 'docKeyFor'],
       vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
              'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT',
              'TC_ONSITE_ALPHA_DEFAULT', '_activeRecognitions', ...STATE],
@@ -179,13 +185,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         updateRoomSectionCounts() {}, collapseEmptyRoomSections() {},
         paintEstimateService: (svc) => log.push('svc:' + svc),
         paintEstimateScreenHead() {}, svcTypeChanged() {}, renderJobRefStrip() {},
-        refreshEstimateFromCloud: (id, cb) => { log.push('fetch:' + id); cb('cloud'); },
+        refreshEstimateFromCloud: (id, cb) => { log.push('fetch:' + id); cb(status); },
         renderVendors: () => log.push('renderVendors v' + ctx.vendors.length + ' p' + ctx.prepItems.length),
         renderPrepItems: () => log.push('renderPrepItems p' + ctx.prepItems.length),
         renderCollections: () => log.push('renderCollections ' + ctx.collectionsData.length),
         renderVehicles: () => log.push('renderVehicles ' + ctx.vehiclesData.length),
         applyEstimateLock() {}, updateApprovalUI() {}, populateJobSelect() {}, toggleRoom() {},
-        showFB: (id, kind) => log.push('fb:' + kind),
+        showFB: (id, kind, msg) => log.push('fb:' + kind + ':' + msg),
       },
     });
     Object.assign(ctx, state);
@@ -374,6 +380,204 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ THE BOTTOM Reset BUTTON RUNS THE ONE RESET, FOR THE CLIENT THE SCREEN IS BOUND TO');
+  {
+    // It was a fifth hand-kept list. Measured on the real page (a premium Estate Settlement contracted
+    // at Contents list): it unticked Premium Estate, set the scope to Full, and kept the discount, the
+    // styling, the private note, the collections, the vehicles, the prep lines and the planner date —
+    // asking nothing. So: the whole net, driven through the real resetEstimate, on the SAME client.
+    // Read defensively: a Reset that throws must fail the checks after it, not stop the file with them unrun.
+    const press = (ctx, label) => { let err = null; try { ctx.resetEstimate(); } catch (e) { err = e; }
+      ok(!err, `${label}: Reset does not throw` + (err ? ' — threw ' + err.message : '')); };
+    const JOB_E = { id: 12, name: 'Pat Estate', svc: 'cleanout', docTier: 'contents', premium: true,
+                    siteVisitBy: 'Ashley Jerome', tc: 'Anthony Graziano', sqft: 3500, start: '2026-11-16', propVal: 4200000 };
+    const a = aLeftItThisWay(JOB_E.id);
+    const b = build({ seed: a.seed, state: a.state, jobs: [JOB_E] });
+    press(b.ctx, 'nothing saved');
+    const asked = (b.log.find((l) => l.startsWith('confirm:')) || '');
+    ok(asked.length > 0, 'it asks before it clears — it takes the private note and the lists with the rooms');
+    has(asked, 'blank estimate for Pat Estate', 'the question names the client the blank estimate is for');
+    has(asked, 'the discount', 'names the discount');
+    has(asked, 'the private walkthrough note', 'and the private note');
+    has(asked, 'None of it has been saved', 'and, with nothing saved, says so plainly');
+    lacks(asked, 'Start over reopens', 'and does not send anyone to a saved estimate that does not exist');
+    checkFresh(b, 'after Reset', JOB_E);
+    eq(b.v('e-prem').checked, true, '⚠ Premium Estate follows the job: a premium client stays premium (the old Reset unticked it — $8,900 off the measured job)');
+    eq(b.ctx._estimateDocScope, 'capture', '⚠ the documentation scope is what intake recorded (Contents list), not Full ($4,095 on the measured job)');
+    eq(b.v('e-prepared-by').value, JOB_E.siteVisitBy, 'and who walked the house is the job\'s answer again');
+    // Reset is not a job switch: the binding and the four fields read off the job record stay as they are.
+    eq(b.v('e-job').value, String(JOB_E.id), 'it stays bound to the same client');
+    ['e-svc', 'e-sqft', 'e-propval', 'e-start-date'].forEach((id) => eq(b.v(id).value, 'A:' + id,
+      `#${id} is untouched — Reset never writes a field the job record owns`));
+    ok(!b.log.some((l) => l.startsWith('fetch:')), 'and nothing is reloaded — a Reset is not an open');
+    ['r3', 'private_note', 'coll_1'].forEach((k) => eq(a.calls.find((c) => c.endsWith(' ' + k)), 'abort ' + k,
+      `a dictation still running on "${k}" is aborted, as on every other path`));
+    ok(b.log.some((l) => l.startsWith('fb:ok:Cleared to a blank estimate.')), 'and the line under the button says it happened');
+
+    // Cancel changes nothing.
+    const c0 = aLeftItThisWay(JOB_E.id);
+    const c = build({ seed: c0.seed, state: c0.state, jobs: [JOB_E], confirmSays: false });
+    press(c.ctx, 'Cancel');
+    eq(c.v('e-discount').value, 'A:e-discount', 'answering Cancel leaves the discount');
+    eq(c.ctx._privateWalkNote, 'The son contests the will.', 'the private note');
+    eq(c.ctx.roomState('r0'), 'in', 'and the rooms');
+    eq(c0.calls, [], 'and does not even stop a dictation');
+
+    // ⚠ WITH AN ESTIMATE SAVED, Reset IS NOT Start over: it gives a blank estimate and leaves the saved
+    // record where it is. Nothing is written until Save.
+    const savedE = { jobId: JOB_E.id, svc: JOB_E.svc, discountPct: 5, privateNote: 'Saved note.', collections: [{ id: 3, name: 'Saved silver' }],
+                     rooms: [{ idx: 0, section: ROWS[0].section, name: ROWS[0].name, vol: 3, cplx: 3 }] };
+    const store = { [JOB_E.id]: { estimate: savedE, approved: false } };
+    const before = JSON.stringify(store);
+    const d0 = aLeftItThisWay(JOB_E.id);
+    const d = build({ seed: d0.seed, state: d0.state, jobs: [JOB_E], store });
+    press(d.ctx, 'saved');
+    const askedSaved = (d.log.find((l) => l.startsWith('confirm:')) || '');
+    has(askedSaved, 'The saved estimate is not changed unless you press Save', 'with an estimate saved, the question says the saved one is not touched');
+    has(askedSaved, 'Start over reopens it instead', 'and points at the button that goes back to it');
+    lacks(askedSaved, 'None of it has been saved', 'and never claims nothing is saved');
+    eq(JSON.stringify(store), before, 'the saved record is exactly as it was');
+    eq(d.v('e-discount').value, '0', 'and the screen is BLANK — not the saved 5%, which is what Start over would bring back');
+    eq(d.ctx._privateWalkNote, '', 'no private note, saved or unsaved');
+    eq(d.ctx.collectionsData, [], 'no collection');
+    ok(d.log.some((l) => l.includes('The saved estimate is unchanged until you press Save')), 'and the line under the button repeats that the saved one is unchanged');
+    // An empty record is not a saved estimate — the open treats it as a fresh build — so the question
+    // must not promise one.
+    const f0 = aLeftItThisWay(JOB_E.id);
+    const f = build({ seed: f0.seed, state: f0.state, jobs: [JOB_E], store: { [JOB_E.id]: { estimate: { jobId: JOB_E.id, svc: JOB_E.svc, rooms: [] } } } });
+    press(f.ctx, 'empty record');
+    has((f.log.find((l) => l.startsWith('confirm:')) || ''), 'None of it has been saved', 'an EMPTY saved record gets the nothing-saved question');
+
+    // ⚠ A LOCKED ESTIMATE IS REFUSED WHERE THE ACTION RUNS, not only by the disabled button: calcAll would
+    // put a blank working copy under an estimate a manager is reviewing, and checkPin approves the working copy.
+    [['estimateSubmitted', 'out for manager approval'], ['estimateApproved', 'Edit estimate']].forEach(([flag, says]) => {
+      const l0 = aLeftItThisWay(JOB_E.id);
+      const l = build({ seed: l0.seed, state: Object.assign({}, l0.state, { [flag]: true }), jobs: [JOB_E] });
+      press(l.ctx, flag);
+      ok(!l.log.some((x) => x.startsWith('confirm:')), `${flag}: nothing is asked`);
+      eq(l.v('e-discount').value, 'A:e-discount', `${flag}: nothing is cleared`);
+      eq(l.ctx.roomState('r0'), 'in', `${flag}: the rooms stay`);
+      ok(l.log.some((x) => x.startsWith('fb:warn:') && x.includes(says)), `${flag}: the refusal says why ("${says}")`);
+    });
+
+    // It resets for the job it is bound to — the object, by id — and for nobody when unbound, with the
+    // scratch auto-save suppressed while it runs, like the open does.
+    const seen = [];
+    const r = sandbox({ fns: ['resetEstimate', 'clearEstimateScratch'],
+      stubs: { document: domStub({ 'e-job': { value: '12' } }), jobs: [JOB_E], estimateStore: {}, window: {},
+               estimateApproved: false, estimateSubmitted: false, confirm: () => true, showFB() {},
+               estimateHasContent: () => false,
+               resetEstimateJobState(job) { seen.push([job, r.window._suppressEstimateAutoSave]); } } });
+    press(r, 'bound');
+    eq(seen.map((x) => x[0] && x[0].id), [12], 'the bound job is what the reset seeds from');
+    ok(seen.every((x) => x[1] === true), 'with the scratch auto-save suppressed while it runs');
+    eq(r.window._suppressEstimateAutoSave, false, 'and released afterwards');
+    const u = sandbox({ fns: ['resetEstimate', 'clearEstimateScratch'],
+      stubs: { document: domStub({ 'e-job': { value: '' } }), jobs: [JOB_E], estimateStore: {}, window: {},
+               estimateApproved: false, estimateSubmitted: false, confirm: () => true, showFB() {},
+               estimateHasContent: () => false, resetEstimateJobState(job) { seen.push([job]); } } });
+    press(u, 'unbound');
+    eq((seen[1] || [])[0], null, 'and an unbound screen resets for nobody (null)');
+
+    // The button's tooltip is the first thing that says what it does.
+    const rsBtn = (src.match(/<button[^>]*onclick="resetEstimate\(\)"[^>]*>/) || [''])[0];
+    has(rsBtn, 'blank estimate for this client', 'the Reset tooltip says it gives a blank estimate for this client');
+    has(rsBtn, 'not changed unless you press Save', 'and that a saved estimate is not changed');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ WHAT THE TWO BUTTONS DISCARD, THIS DEVICE FORGETS TOO — the unsaved-draft copy goes with it');
+  {
+    // calcAll keeps an unsaved-draft copy of the working estimate on this device (saveEstimateScratch),
+    // and an open that is offline with nothing saved restores it — the field safety net. It refuses to
+    // write an empty-rooms state, so after Reset or Start over it went on holding the build just
+    // discarded. Measured on the real page: offline with nothing saved, Start over put the four discarded
+    // rooms straight back under "restored an unsaved draft"; Reset, a reload and an offline open did the same.
+    // Driven here through the REAL Start over / Reset, the real clear, the real open and the real restore.
+    const KEY = 'havellin_est_scratch';
+    const draftFor = (job) => JSON.stringify({ jobId: job.id, savedAt: 1, approved: false, submitted: false,
+      estimate: { jobId: job.id, svc: job.svc, discountPct: 10, privateNote: 'The discarded note.',
+                  rooms: [{ idx: 0, section: ROWS[0].section, name: ROWS[0].name, vol: 5, cplx: 4 }] } });
+    const draftOwner = (b) => { const s = b.ctx.localStorage.getItem(KEY); return s ? JSON.parse(s).jobId : null; };
+    const said = (b, needle) => b.log.some((l) => l.startsWith('fb:') && l.includes(needle));
+    // Read defensively: a handler that throws must fail the checks after it, not stop the file.
+    const press = (b, name) => { let err = null; try { b.ctx[name](); } catch (e) { err = e; }
+      ok(!err, `${name} does not throw` + (err ? ' — threw ' + err.message : '')); };
+
+    // START OVER, OFFLINE, NOTHING SAVED — the case that restored the discarded build on the spot.
+    const s0 = aLeftItThisWay(JOB_A.id);
+    const s = build({ seed: s0.seed, state: s0.state, status: 'offline' });
+    s.ctx.localStorage.setItem(KEY, draftFor(JOB_A));
+    press(s, 'startEstimateOver');
+    eq(draftOwner(s), null, '⚠ Start over drops this client\'s unsaved-draft copy');
+    ok(!said(s, 'restored an unsaved draft'), '⚠⚠ and its own reopen, offline with nothing saved, does NOT bring the discarded build back');
+    ok(said(s, 'no estimate for "' + JOB_A.name + '" is stored on this device'), 'it says nothing is stored here, and starts from the intake answers');
+    eq(s.v('e-discount').value, '0', 'no discount from the discarded build');
+    eq(s.ctx._privateWalkNote, '', 'no private note from it');
+    eq(s.ctx.roomState(ROWS[0].id), 'off', 'and no room from it');
+
+    const sc0 = aLeftItThisWay(JOB_A.id);
+    const sc = build({ seed: sc0.seed, state: sc0.state, status: 'offline', confirmSays: false });
+    sc.ctx.localStorage.setItem(KEY, draftFor(JOB_A));
+    press(sc, 'startEstimateOver');
+    eq(draftOwner(sc), JOB_A.id, 'answering Cancel keeps it — nothing was discarded');
+
+    // With an estimate saved, Start over offline reopens THAT, never the draft — and still drops the draft,
+    // which is the unsaved work it was asked to throw away.
+    const w0 = aLeftItThisWay(JOB_A.id);
+    const savedW = { jobId: JOB_A.id, svc: JOB_A.svc, discountPct: 5, privateNote: 'Saved note.',
+                     rooms: [{ idx: 0, section: ROWS[0].section, name: ROWS[0].name, vol: 3, cplx: 3 }] };
+    const w = build({ seed: w0.seed, state: w0.state, status: 'offline', store: { [JOB_A.id]: { estimate: savedW, approved: false } } });
+    w.ctx.localStorage.setItem(KEY, draftFor(JOB_A));
+    press(w, 'startEstimateOver');
+    eq(w.v('e-discount').value, 5, 'with an estimate saved, it reopens the SAVED 5% offline, never the draft\'s 10%');
+    eq(draftOwner(w), null, 'and the draft is gone too');
+
+    // RESET blanks the screen in place, so the copy is what an offline open would bring back LATER.
+    const r0 = aLeftItThisWay(JOB_A.id);
+    const r = build({ seed: r0.seed, state: r0.state, status: 'offline' });
+    r.ctx.localStorage.setItem(KEY, draftFor(JOB_A));
+    press(r, 'resetEstimate');
+    eq(draftOwner(r), null, '⚠ Reset drops this client\'s unsaved-draft copy');
+    // …then the open that used to bring it back: a reload, and this client opened offline with nothing saved.
+    r.log.length = 0;
+    r.ctx.currentEstimate = null;   // a reload holds no working copy
+    press(r, 'loadJobIntoEstimate');
+    ok(!said(r, 'restored an unsaved draft'), '⚠⚠ opened offline afterwards, the discarded build does NOT come back');
+    eq([r.v('e-discount').value, r.ctx._privateWalkNote, r.ctx.roomState(ROWS[0].id)], ['0', '', 'off'],
+       'no discount, no private note and no room from it');
+
+    const rc0 = aLeftItThisWay(JOB_A.id);
+    const rc = build({ seed: rc0.seed, state: rc0.state, confirmSays: false });
+    rc.ctx.localStorage.setItem(KEY, draftFor(JOB_A));
+    press(rc, 'resetEstimate');
+    eq(draftOwner(rc), JOB_A.id, 'answering Cancel on Reset keeps it');
+    ['estimateSubmitted', 'estimateApproved'].forEach((flag) => {
+      const l0 = aLeftItThisWay(JOB_A.id);
+      const l = build({ seed: l0.seed, state: Object.assign({}, l0.state, { [flag]: true }) });
+      l.ctx.localStorage.setItem(KEY, draftFor(JOB_A));
+      press(l, 'resetEstimate');
+      eq(draftOwner(l), JOB_A.id, `${flag}: a locked Reset clears nothing, this device's copy included`);
+    });
+
+    // Only THIS client's copy. There is one slot on the device and it may hold another client's draft.
+    const o0 = aLeftItThisWay(JOB_A.id);
+    const o = build({ seed: o0.seed, state: o0.state });
+    o.ctx.localStorage.setItem(KEY, draftFor(JOB_B));
+    press(o, 'resetEstimate');
+    eq(draftOwner(o), JOB_B.id, 'Reset on one client leaves ANOTHER client\'s unsaved draft where it is');
+    const so0 = aLeftItThisWay(JOB_A.id);
+    const so = build({ seed: so0.seed, state: so0.state });
+    so.ctx.localStorage.setItem(KEY, draftFor(JOB_B));
+    press(so, 'startEstimateOver');
+    eq(draftOwner(so), JOB_B.id, 'and so does Start over');
+    const ub = build({ seed: { 'e-job': { value: '' } } });
+    ub.ctx.localStorage.setItem(KEY, draftFor(JOB_B));
+    press(ub, 'resetEstimate');
+    eq(draftOwner(ub), JOB_B.id, 'and a Reset on an unbound screen names nobody\'s draft, so it clears none');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────────────────────────
   group('⚠⚠ A SAVED ESTIMATE STILL GETS EVERYTHING BACK — A, then B, then A again');
   {
     const customRow = CUSTOM[0];
@@ -537,13 +741,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // No path keeps a private list: the only controls any of them names are the ones the job owns,
     // and none of them assigns the state a saved estimate carries.
     ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab', 'loadJobIntoEstimate',
-     'editEstimateForJob', 'startEstimateOver'].forEach((name) => {
+     'editEstimateForJob', 'startEstimateOver', 'resetEstimate'].forEach((name) => {
       const body = live(fn(name));
       const named = [...NET.keys()].filter((id) => body.includes("'" + id + "'") && !(id in OWNED_BY_THE_JOB));
       eq(named, [], `${name} names no per-client control of its own — the one list is resetEstimateJobState`);
       eq(assignedTopVars(name).filter((v) => STATE.includes(v)), [], `${name} assigns none of the state a saved estimate carries`);
     });
-    ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab'].forEach((name) =>
+    ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab', 'resetEstimate'].forEach((name) =>
       has(live(fn(name)), 'resetEstimateJobState(', `${name} calls the one reset`));
     lacks(src, 'function resetEstimateExtras', 'resetEstimateExtras, the fourth copy, is gone rather than left beside it');
   }

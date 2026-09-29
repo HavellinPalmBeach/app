@@ -37,7 +37,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: [
-      'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'paymentSplit',
+      'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'paymentSplit',
       'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon', 'isJobFunded',
       'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
       'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature',
@@ -47,7 +47,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // estimate_approved" and the band actually RENDERING a submit button are two
       // different claims, and this defect lived precisely in the gap between them.
       'jobStageDoc', 'docReadiness', 'docTitle', 'docDraftOnly', 'docWord',
-      '_jtDocSecondaries', '_jtDraftLink', '_jtDocViews', '_jtDriveLink',
+      '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', '_jtDraftLink', '_jtDocViews', '_jtDriveLink', 'estimateEditBlocker', 'priceChangeBlocker'
     ],
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
            'JT_ROW_DOC', 'DOC_ACTIONS', 'DOC_KIND_WORD'],

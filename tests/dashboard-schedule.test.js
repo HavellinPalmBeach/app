@@ -403,10 +403,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // no hard target: an error-coloured warning nobody can act on, visible in the screenshot
     // that asked for these two fields to move here. A stub that does not match the real source
     // is worse than no stub — this repo has now paid for that twice.
-    const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions',
+    const DFNS = ['renderClientDashboard', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
+      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
-      '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
+      '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
       // Lifted, never stubbed (2026-09-29): jobProgress now counts every in-scope room's status before it
       // checks the room's hours, for the every-room-locked midpoint, so it reaches this on every fixture.
@@ -416,7 +416,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
-      'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix',
+      'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView',
       // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
       'jobReopenBlocker'];
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
@@ -425,7 +425,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
       // The Hours Log card reads the ±15% up front since 2026-09-25 (one figure for its label, its
       // red and its sentence) — lifted, never stubbed, so it is the app's tolerance being tested.
-      'EST_TOLERANCE_PCT'];
+      'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT'];
     const paint = (over, rec) => {
       const job = Object.assign({ id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout',
         status: 'won', won: true, approved: true, walkthrough: '2020-01-01',
@@ -603,10 +603,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the document in play right now — and "done" is not "sent"');
   {
     const D = sandbox({
-      fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'jobStageDoc', 'docReadiness',
-            'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink',
+      fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
+            'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
-            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'],
+            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
     });
     const REC = { estimate: { jobId: 7 }, approved: true };
@@ -758,7 +758,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the rail carries PLANNED dates, and they can never be read as actuals');
   {
     const R = sandbox({
-      fns: ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
             'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent'],

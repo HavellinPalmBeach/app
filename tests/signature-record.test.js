@@ -116,9 +116,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Driven: flip the provider and watch the primary disappear.
     const rail = sandbox({
-      fns: ['jobTimelineActions', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
-        'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'agreementReady', 'isJobWon',
-            'docKeyFor', 'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'],
+      fns: ['jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'docSentAt', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+        'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', 'isJobWon',
+            'docKeyFor', 'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker'],
       vars: ['ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual' },
     });
@@ -167,7 +167,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // was invisible to the suite. The record being right does not help if the row prints
     // something else.
     const rail = sandbox({
-      fns: ['jobTimeline', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
             'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent'],

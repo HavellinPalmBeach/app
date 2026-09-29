@@ -1,235 +1,262 @@
-// Step 29 — Re-open a closed job, and a final that no longer claims a midpoint invoice nobody sent
-// (2026-09-29). Anthony, answering two of the four things the H3 build flagged: "yes to 2 and 3, reword
-// the final and add Re-open".
+// Step 29 — client documents say only what the estimate prices (2026-09-29, off the 2026-09-28 workflow
+// audit: H6, M2, M3, the document lows, Q8 and Q11).
 //
-// Drives the REAL page: the real Close job and Re-open job buttons on the Client Dashboard band and the real
-// questions they ask (Cancel, then OK), the real rail, the real Job Plan the Re-open lands on, the real client
-// list's ✕, and the real final invoice opened in the real document viewer. ⚠ Today is PINNED through
-// `_todayStr`, the app's one wall-clock read. A Gmail draft cannot be made from a headless page, so a draft is
-// written as the record the send path writes — which is all the rail and the Re-open read.
+// Drives the REAL page: the real intake, the real Build Estimate (rush, the concierge control, the
+// specialist crew, the discount box), the real client estimate, the real agreement builders, the real
+// invoices, the real Client Dashboard and its rail, the real discount pop-up typed into and its real
+// Apply button, and the real document viewer — so each claim is checked where a person reads it.
 //
-//   NODE_PATH=/path/to/node_modules node tests/browser/step29.js [/abs/path/to/havellin.html]
+//   A. H6  the rush line says priority scheduling, and names crew only when the estimate staffs it
+//   B. M2  the final's Original Estimate is the estimate alone, with the change order on its own line
+//   C. M3  the discount pop-up: 0 removes the discount, a blank is refused, the agreement is revoked
+//   D. M3  once the signing packet is out, Offer discount is gone and the door refuses
+//   E. Q11 the packet can be READ before the client says yes — and only read
+//   F. Q8  the agreement names the premium and the discount; no "(None — $0)" materials clause
+//   G. the invoice refusal names the invoice; overflow at 1440 and 390; no page errors
+//
+//   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step29.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
-let pass = 0, fail = 0;
-const ok = (c, m) => { if (c) pass++; else { fail++; console.log('  FAIL ' + m); } };
-const eq = (a, b, m) => ok(JSON.stringify(a) === JSON.stringify(b), m + ' (got ' + JSON.stringify(a) + ')');
-const has = (s, n, m) => ok(String(s).indexOf(n) >= 0, m + ' (in ' + JSON.stringify(String(s).slice(0, 400)) + ')');
-const lacks = (s, n, m) => ok(String(s).indexOf(n) < 0, m + ' (found ' + JSON.stringify(n) + ')');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
-let b;
-
+let pass = 0, fail = 0;
+// Held outside the async body so the catch can close it (see step25).
+let b = null;
+const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
+const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
+const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
 (async () => {
-  b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());
+  b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
-  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-  let answer = true; const dialogs = [];
-  p.on('dialog', async (d) => { dialogs.push({ type: d.type(), msg: d.message() }); if (answer || d.type() === 'alert') await d.accept(); else await d.dismiss(); });
+  p.setDefaultTimeout(8000);
+  const errs = []; p.on('pageerror', e => errs.push(String(e)));
+  p.on('dialog', async d => { await d.accept(); });
   await p.goto(APP); await p.waitForTimeout(1500);
-  const overflow = () => p.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth));
-  const setToday = (d) => p.evaluate((d) => { window._todayStr = function () { return d; }; }, d);
-
-  // Two six-working-day Estate Settlements activated Wednesday 23 September (halfway Friday the 25th, planned
-  // end the 30th), every room cleared. 7201 has its midpoint invoice SENT and unpaid; 7202 never sent one and
-  // its deposit came in $50 short — inside the 1% the funding test allows, so the job is funded and its rail
-  // reads normally, while the final still has a gap to name. 40 TC @150 + 100 PS @100 = $16,000, and the hours
-  // logged reproduce it, so the final is not held for a variance and reads exactly what it bills.
   await p.evaluate(() => {
-    const mk = (id, name) => ({ id, hvlId: 'HVL-26' + id, name, fname: name.split(' ')[0], lname: name.split(' ').slice(-1)[0],
-      sqft: '3000', svc: 'cleanout', addr: '210 Worth Ave', city: 'Palm Beach', email: 'x' + id + '@example.com', phone: '(561) 555-0100',
-      start: '2026-09-23', activatedOn: '2026-09-23', walkthrough: '2026-09-10', created: '2026-09-08', status: 'active', won: true,
-      wonAt: '2026-09-12', approved: true, estimateSentDate: 'Sep 11, 2026', agrApproved: true, agrApprovedBy: 'Anthony Graziano',
-      agrSent: true, agrSigned: true, depositReceived: true, depositReceivedAt: '2026-09-19', tc: 'Ashley Jerome',
-      payments: [{ id: 1, uid: 'p1' + id, stage: 'deposit', amount: id === 7202 ? 7950 : 8000, date: '2026-09-19', method: 'wire', clearedOn: '2026-09-19' }],
-      docState: { 'invoice:deposit': { draftedAt: '2026-09-15T15:00:00Z', sentAt: '2026-09-15T15:00:00Z' } } });
-    const est = (id) => ({ jobId: id, svc: 'cleanout', days: 6, totTC: 40, totPS: 100, tcFee: 6000, psFee: 10000, pkgCost: 0, smf: 0,
-      prepFee: 0, tcRate: 150, psRate: 100, havellinTotal: 16000, havellinTotalFull: 16000, psCount: 2, fixedPrice: false, rush: false,
-      discountPct: 0, discountAmt: 0, preparedBy: 'Ashley Jerome',
-      rooms: [{ idx: 1, name: 'Kitchen', section: 'Kitchen & Utility', vol: 3, cplx: 3, tcH: 20, psH: 50 },
-              { idx: 2, name: 'Study', section: 'Entry & Living', vol: 3, cplx: 3, tcH: 20, psH: 50 }],
-      vendors: [], collections: [], prepItems: [] });
-    [mk(7201, 'Cordelia ZZ Pemberton'), mk(7202, 'Ambrose ZZ Kittredge')].forEach((j) => {
-      jobs.unshift(j);
-      estimateStore[j.id] = { estimate: est(j.id), approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: Date.now() };
-      jobPlanStore[j.id] = { rooms: { 1: { status: 'cleared' }, 2: { status: 'cleared' } } };
-      jobLogs[j.id] = [{ id: 1, date: '2026-09-28', activity: 'clearance',
-        members: [{ name: 'Ashley Jerome', role: 'TC', hours: 40 }, { name: 'Contractor TBD', role: 'PS', hours: 100 }] }];
-    });
-    jobs.find((x) => x.id === 7201).docState['invoice:midpoint'] = { draftedAt: '2026-09-25T15:00:00Z', sentAt: '2026-09-25T15:00:00Z' };
-    saveJobs();
-  });
-
-  const openDash = async (id) => {
-    await p.evaluate((id) => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(id); }, id);
-    await p.waitForTimeout(300);
-  };
-  const band = () => p.evaluate(() => {
-    const nx = document.querySelector('#client-dashboard-view .jt-next');
-    const t = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
-    return {
-      step: t(nx && nx.querySelector('.jt-next-step')),
-      filled: nx ? Array.from(nx.querySelectorAll('.jt-btn-p')).map((x) => ({ t: t(x), c: x.getAttribute('onclick') })) : [],
-      outline: nx ? Array.from(nx.querySelectorAll('button.jt-btn:not(.jt-btn-p)')).map((x) => ({ t: t(x), c: x.getAttribute('onclick') })) : [],
-      page: document.getElementById('client-dashboard-view').innerHTML,
+    window.__prints = []; window.print = function () {
+      const pt = document.getElementById('print-target');
+      window.__prints.push({ html: pt ? pt.innerHTML : '', title: document.title });
     };
+    // The manager email is captured rather than sent: in a headless browser a mailto fallback is a
+    // navigation away from the page under test.
+    window.__mails = []; window.sendInternalEmail = function (to, subj, lines) { window.__mails.push({ subj: subj, text: lines.join('\n') }); };
   });
-  const rail = () => p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view .jt-rail .jt-row')).map((r) => ({
-    cls: r.className.replace('jt-row ', ''), lbl: (r.querySelector('.jt-lbl') || {}).textContent, sub: (r.querySelector('.jt-sub') || {}).textContent || '' })));
-  const job = (id) => p.evaluate((id) => JSON.parse(JSON.stringify(jobs.find((x) => x.id === id))), id);
-  const press = async (sel) => { await p.click(sel); await p.waitForTimeout(400); };
-  const BTN = (id) => '#client-dashboard-view .jt-next button[onclick="activateOrCycle(' + id + ')"]';
+  const future = (() => { const d = new Date(); d.setDate(d.getDate() + 30);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10); })();
 
-  // ── A. CLOSE, THEN THE RE-OPEN ON THE BAND ─────────────────────────────
-  console.log('\n## A. A closed job carries Re-open job beside Send final invoice');
-  await setToday('2026-09-30');
-  await openDash(7201);
-  answer = true; dialogs.length = 0;
-  await press(BTN(7201));
-  has((dialogs[0] || {}).msg, 'Until the final invoice goes out, Re-open can undo the close.', '⚠ the close question now says Re-open can undo it');
-  lacks((dialogs[0] || {}).msg, 'cannot be re-opened', 'and no longer that it cannot');
-  eq((await job(7201)).deliveredOn, '2026-09-30', 'closed, handed over today');
-  let s = await band();
-  eq(s.filled.map((x) => x.c), ["docAction(7201,'invoice','send',{stage:'final'})"], 'Send final invoice is the one filled button');
-  const reo = s.outline.filter((x) => x.c === 'activateOrCycle(7201)');
-  eq(reo.map((x) => x.t), ['↺ Re-open job'], '⚠⚠ Re-open job sits beside it, as an outline, once');
-  eq((s.page.match(/activateOrCycle\(7201\)/g) || []).length, 1, 'and nowhere else on the page');
-  let onc = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view [onclick]')).map((e) => e.getAttribute('onclick')));
-  eq(onc.length, new Set(onc).size, 'every control on the closed job\'s dashboard is unique');
+  async function make(svc, last) {
+    await p.evaluate(() => { const b = document.getElementById('btn-add-client'); if (b) b.click(); }); await p.waitForTimeout(300);
+    const id = await p.evaluate(([wt, svc, last]) => {
+      const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
+      const pick = (id) => { const e = document.getElementById(id); const o = e && Array.from(e.options).find(x => x.value); if (o) { e.value = o.value; if (e.onchange) e.onchange(); } };
+      set('i-svc', svc); toggleIntakeFields();
+      set('i-fname', 'Pat'); set('i-lname', last); set('i-addr', '1 A St'); set('i-city', 'Palm Beach'); set('i-zip', '33480');
+      set('i-sqft', '3500'); set('i-phone', '(561) 555-0199'); set('i-email', 'c@example.com'); set('i-home-value', '4200000');
+      pick('i-ptype'); pick('i-src'); set('i-walkthrough', wt);
+      const st = new Date(wt); st.setDate(st.getDate() + 7); while (st.getDay() === 0 || st.getDay() === 6) st.setDate(st.getDate() + 1);
+      set('i-start', st.toISOString().slice(0, 10)); saveIntake(); return (jobs[0] || {}).id;
+    }, [future, svc, last]);
+    await p.waitForTimeout(1500); return id;
+  }
 
-  // Cancel changes nothing.
-  answer = false; dialogs.length = 0;
-  const before = await job(7201);
-  await press(BTN(7201));
-  eq(dialogs.length, 1, 'pressing Re-open asks once');
-  const q0 = (dialogs[0] || {}).msg || '';
-  has(q0, 'Re-open this job?', 'the question says what it is');
-  has(q0, 'It was closed on Sep 30, 2026 by Anthony Graziano.', 'names the close it would undo');
-  has(q0, 'clears that handover date', 'says the handover date goes');
-  eq(await job(7201), before, '⚠ Cancel leaves the job exactly as it was');
-  eq(await p.evaluate(() => document.querySelector('.panel.active').id), 'panel-jobs', 'and goes nowhere');
+  // The real Build Estimate: six rooms in scope, then the levers this step is about, then calcAll.
+  async function build(id, o) {
+    await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(700);
+    return p.evaluate(([id, o]) => {
+      const js = document.getElementById('e-job'); js.value = String(id); if (js.onchange) js.onchange();
+      for (let i = 0; i < 6; i++) setRoomState('r' + i, 'in');
+      document.getElementById('e-rush').checked = !!o.rush;
+      const d = document.getElementById('e-discount'); d.value = String(o.disc || 0);
+      // Each build starts from the ordinary crew: one concierge, the recommended specialists. The
+      // controls keep their last value across a rebuild of the same job, as they do for a person.
+      document.getElementById('e-tc-count').value = '1'; _tc2UserSet = false; _crewUserSet = false;
+      calcAll();
+      if (o.tc2) { document.getElementById('e-tc-count').value = '2'; _tc2UserSet = true; calcAll(); }
+      if (o.psExtra) {
+        const rec = currentEstimate.psRecommended;
+        document.getElementById('ps-crew-size').value = String(Math.min(6, rec + o.psExtra)); _crewUserSet = true; calcAll();
+      }
+      const e = JSON.parse(JSON.stringify(currentEstimate));
+      estimateStore[id] = { approved: true, approvedBy: 'Anthony Graziano', estimate: e };
+      const job = jobs.find(j => j.id === id);
+      job.approved = true; job.status = 'approved'; job.estimateSentDate = 'September 20, 2026';
+      Object.assign(job, o.job || {});
+      saveJobs();
+      return e;
+    }, [id, o || {}]);
+  }
+  const T = (h) => p.evaluate((h) => { const d = document.createElement('div');
+    d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<\/th>/g, ' </th>').replace(/<br>/g, ' ');
+    return d.textContent.replace(/\s+/g, ' '); }, h);
+  const text = (sel) => p.evaluate((sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\s+/g, ' ') : ''; }, sel);
+  const click = async (sel) => { try { await p.click(sel); return true; } catch (e) { ok(false, 'could not press ' + sel); return false; } };
+  const fill = async (sel, v) => { try { await p.fill(sel, v); return true; } catch (e) { ok(false, 'could not type into ' + sel); return false; } };
+  const dash = async (id) => { await p.evaluate((id) => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(id); }, id); await p.waitForTimeout(500); };
+  const buttons = () => p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view button'))
+    .map(x => ({ t: x.textContent.replace(/\s+/g, ' ').trim(), c: x.getAttribute('onclick') || '' })));
+  const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
-  // ── B. A FINAL DRAFTED, THEN RE-OPEN → OK ──────────────────────────────
-  console.log('\n## B. A final drafted after the close is voided by the Re-open, which lands on the Job Plan');
-  await p.evaluate(() => { const j = jobs.find((x) => x.id === 7201);
-    const st = docState(j, 'invoice:final');
-    Object.assign(st, { draftedAt: '2026-09-30T16:00:00Z', draftedBy: 'Anthony Graziano', draftUrl: 'https://mail.google.com/mail/u/0/#drafts?compose=x',
-      pdfOk: true, filedAt: '2026-09-30T16:01:00Z', filedUrl: 'https://drive.google.com/file/d/x/view' }); saveJobs(); });
-  await openDash(7201);
-  s = await band();
-  eq(s.filled.map((x) => x.c), ["markDocSent(7201,'invoice:final')"], 'with a final drafted, the band waits on "I\'ve sent it"');
-  answer = true; dialogs.length = 0;
-  await press(BTN(7201));
-  const q1 = (dialogs[0] || {}).msg || '';
-  has(q1, 'The final invoice drafted on Sep 30, 2026 billed the job as it stood at the close and no longer applies — delete that draft in Gmail.',
-      '⚠⚠ the question says the draft is stale and to delete it in Gmail');
-  has(q1, 'The copy filed to Drive is replaced when the final goes out.', 'and what happens to the Drive copy');
-  const j1 = await job(7201);
-  eq(j1.status, 'active', 'OK: the job is active again');
-  ok(!('deliveredOn' in j1), '⚠⚠ the handover stamp is cleared');
-  eq((j1.reopens || []).map((e) => [e.closedOn, e.closedBy, e.reopenedOn, e.finalDraftVoided]),
-     [['2026-09-30', 'Anthony Graziano', '2026-09-30', '2026-09-30T16:00:00Z']], 'the close it undid is kept on the record, with the voided draft');
-  eq(Object.keys(j1.docState['invoice:final']), [], 'the stale draft is off the record');
-  eq(j1.activatedOn, '2026-09-23', 'the day the job really started is untouched');
-  const landed = await p.evaluate(() => ({ panel: document.querySelector('.panel.active').id, pick: (document.getElementById('plan-job') || {}).value,
-    now: Array.from(document.querySelectorAll('#job-plan-content .stg-cur')).map((e) => e.id) }));
-  eq(landed.panel, 'panel-job-plan', '⚠ it lands on the Job Plan');
-  eq(landed.pick, '7201', 'on this client');
-  eq(landed.now, ['stage-p2'], 'with NOW back on Midpoint & pickups — not Close-out');
+  // ── A. H6 ────────────────────────────────────────────────────────────────
+  console.log('\n## A. H6 — the rush line is priority scheduling; crew is named only when it is staffed');
+  const idR = await make('home_cleanout', 'Rush');
+  const eR = await build(idR, { rush: true, job: { won: true, status: 'won' } });
+  ok(eR.rush && eR.rushAmt > 0, 'a real rush estimate, premium $' + eR.rushAmt);
+  ok(eR.psRecommended >= 2 && eR.psCount === eR.psRecommended, 'the snapshot records the recommended crew beside the crew chosen (' + eR.psCount + '/' + eR.psRecommended + ')');
+  const ceR = await T(await p.evaluate((id) => clientEstimateHtml(estimateStore[id].estimate, jobs.find(j => j.id === id)), idR));
+  has(ceR, 'Expedited Delivery (20%) Priority scheduling to meet the timeline you requested', '⚠⚠ the estimate’s rush line says what the premium buys');
+  lacks(ceR, 'second Transition Concierge', 'and claims no second concierge the estimate does not staff');
+  lacks(ceR, 'expanded', 'nor an expanded crew');
+  lacks(ceR, 'compress the project calendar', 'the retired sentence is gone');
+  const eR2 = await build(idR, { rush: true, tc2: true, job: { won: true, status: 'won' } });
+  ok(!!eR2.needsTC2, 'the concierge control set to 2 reaches the record');
+  has(await T(await p.evaluate((id) => clientEstimateHtml(estimateStore[id].estimate, jobs.find(j => j.id === id)), idR)),
+      'with a second Transition Concierge working in parallel', 'a second concierge actually staffed is named');
+  const eR3 = await build(idR, { rush: true, psExtra: 1, job: { won: true, status: 'won' } });
+  ok(eR3.psCount === eR3.psRecommended + 1, 'a crew set above the recommendation reaches the record (' + eR3.psCount + ' over ' + eR3.psRecommended + ')');
+  const ceR3 = await T(await p.evaluate((id) => clientEstimateHtml(estimateStore[id].estimate, jobs.find(j => j.id === id)), idR));
+  has(ceR3, 'with an expanded crew of ' + eR3.psCount + ' Property Specialists working in parallel', 'an expanded crew actually staffed is named, with its size');
+  lacks(ceR3, 'second Transition Concierge', 'without inventing a second concierge');
+  // The invoices read the same sentence off the same record.
+  const invR = await p.evaluate((id) => {
+    const job = jobs.find(j => j.id === id), e = estimateStore[id].estimate;
+    jobLogs[id] = [{ date: '2026-09-21', activity: 'work', members: [
+      { name: 'Anthony Graziano', role: 'TC', hours: e.totTC }, { name: 'Anthony Graziano Jr', role: 'PS', hours: e.totPS }] }];
+    return { dep: invoiceHtml(job, 'deposit').html, fin: invoiceHtml(job, 'final').html };
+  }, idR);
+  has(await T(invR.fin), 'Priority scheduling to meet the timeline you requested, with an expanded crew', 'the final’s rush line is the estimate’s');
+  has(await T(invR.dep), 'Priority scheduling to meet the timeline you requested', 'and so is the deposit invoice’s');
+  lacks(await T(invR.dep), 'Compressing the project calendar', 'never the old advance-invoice wording');
 
-  await openDash(7201);
-  s = await band();
-  eq(s.step, 'Collect the midpoint payment', '⚠⚠ the dashboard band is back on the step the job was on');
-  eq(s.filled.map((x) => x.c), ["dashRecordPayment(7201,'midpoint')"], 'Record payment is its filled button');
-  eq(s.outline.filter((x) => x.c === 'activateOrCycle(7201)').map((x) => x.t), ['■ Close job'], 'Close job is back beside it');
-  lacks(s.page, 'Re-open job', 'and Re-open is gone');
-  const r1 = await rail();
-  eq(r1.filter((r) => r.cls === 'jt-open').length, 0, 'no row is drawn open any more');
-  eq((r1.filter((r) => r.lbl === 'Work complete')[0] || {}).sub, 'Re-opened — the earlier close was undone', '⚠ Work complete says the job was re-opened');
-  lacks(s.page, "openDocDraft(7201,'invoice:final')", 'no link to the voided draft survives');
-  onc = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view [onclick]')).map((e) => e.getAttribute('onclick')));
-  eq(onc.length, new Set(onc).size, 'every control on the re-opened job\'s dashboard is unique');
-  await p.evaluate(() => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); closeClientDashboard(); renderJobs(); });
-  await p.waitForTimeout(200);
-  ok(await p.evaluate(() => !!document.querySelector('#panel-jobs button[onclick*="openCloseoutModal(7201)"]')),
-     'the client list offers ✕ again — a job back in progress can still be lost');
+  // ── B. M2 ────────────────────────────────────────────────────────────────
+  console.log('\n## B. M2 — the final states the estimate alone, and the change order on its own line');
+  const idM = await make('home_cleanout', 'Change');
+  const eM = await build(idM, { job: { won: true, status: 'active', agrSigned: true, agrSent: true } });
+  const m2 = await p.evaluate((id) => {
+    const job = jobs.find(j => j.id === id), e = estimateStore[id].estimate;
+    changeOrders.push({ id: Date.now(), jobId: id, tcHrs: 10, psHrs: 10, reason: 'scope_add', description: 'Garage added',
+      createdAt: '2026-09-22', clientApproved: true, clientName: 'Pat Change', clientAcceptedAt: '2026-09-22' });
+    jobLogs[id] = [{ date: '2026-09-21', activity: 'work', members: [
+      { name: 'Anthony Graziano', role: 'TC', hours: e.totTC + 10 }, { name: 'Anthony Graziano Jr', role: 'PS', hours: e.totPS + 10 }] }];
+    const split = paymentSplit(e.havellinTotal);
+    job.payments = [{ id: 1, uid: 'm1', stage: 'deposit', amount: split.deposit, method: 'wire', date: '2026-09-15', clearedOn: '2026-09-15' },
+                    { id: 2, uid: 'm2', stage: 'midpoint', amount: split.midpoint, method: 'wire', date: '2026-09-20', clearedOn: '2026-09-20' }];
+    const d = invoiceHtml(job, 'final');
+    const box = document.createElement('div'); box.innerHTML = d.html;
+    const rows = Array.from(box.querySelectorAll('.pay-tbl tr')).map(r => r.textContent.replace(/\s+/g, ' ').trim());
+    return { rows, total: e.havellinTotal, split };
+  }, idM);
+  const iOrig = m2.rows.findIndex(r => /^Original Estimate/.test(r));
+  ok(iOrig >= 0, 'the payment summary has its Original Estimate row');
+  has(m2.rows[iOrig] || '', '$' + m2.total.toLocaleString(), '⚠⚠ it prints the estimate alone ($' + m2.total.toLocaleString() + ')');
+  has(m2.rows[iOrig + 1] || '', 'Approved Change Orders (1)', 'with the change order on the line directly beneath it');
+  has(m2.rows[iOrig + 1] || '', '+10.0 concierge', 'stated in hours');
+  has(m2.rows.join(' | '), '$' + m2.split.deposit.toLocaleString(), 'the deposit shown is half of the figure above it');
 
-  // ── C. CLOSED AGAIN, TWO DAYS LATER ────────────────────────────────────
-  console.log('\n## C. Closed again: a new handover day, the question asked again, a FRESH final to send');
-  await setToday('2026-10-02');
-  await openDash(7201);
-  answer = true; dialogs.length = 0;
-  await press(BTN(7201));
-  has((dialogs[0] || {}).msg, 'Oct 2, 2026', 'the early-close question is asked again, naming the new day');
-  eq((await job(7201)).deliveredOn, '2026-10-02', '⚠ the new close stamps its own day');
-  s = await band();
-  eq(s.filled.map((x) => x.c), ["docAction(7201,'invoice','send',{stage:'final'})"], '⚠⚠ the band SENDS a fresh final — never "I\'ve sent it" over the stale draft');
-  eq(s.outline.filter((x) => x.c === 'activateOrCycle(7201)').map((x) => x.t), ['↺ Re-open job'], 'and Re-open is offered again');
+  // ── C. M3 — the pop-up ───────────────────────────────────────────────────
+  console.log('\n## C. M3 — the discount pop-up removes a discount with 0, refuses a blank, and revokes the agreement');
+  const idD = await make('home_cleanout', 'Discount');
+  const eD = await build(idD, { disc: 10, job: { won: true, status: 'won', agrApproved: true, agrApprovedBy: 'Anthony Graziano', agrApprovedAt: 'September 21, 2026' } });
+  ok(eD.discountPct === 10 && eD.discountAmt > 0, 'a real 10% discount on the estimate ($' + eD.discountAmt + ')');
+  await dash(idD);
+  const btnsD = await buttons();
+  ok(btnsD.some(x => x.c === 'dashOfferDiscount(' + idD + ')'), 'Offer discount is on the rail while the packet has not gone out');
+  await click('button[onclick="dashOfferDiscount(' + idD + ')"]'); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => document.getElementById('discount-modal').style.display === 'flex'), 'the real button opens the pop-up');
+  ok(await p.evaluate(() => document.getElementById('dm-pct').value) === '10', 'showing the discount on the estimate');
+  has(await text('#discount-modal'), '0 removes the discount', 'the pop-up says how to take it off');
+  await fill('#dm-pct', ''); await p.evaluate(() => updateDiscountModal());
+  ok((await text('#dm-revised')) === '—', 'a blank previews nothing');
+  await click('#discount-modal .btn-p'); await p.waitForTimeout(250);
+  has(await text('#dm-fb'), 'between 0% and 15%', '⚠ a blank is refused, in the pop-up, naming the real range');
+  const still = await p.evaluate((id) => ({ pct: currentEstimate.discountPct, agr: jobs.find(j => j.id === id).agrApproved }), idD);
+  ok(still.pct === 10 && still.agr === true, 'and nothing changed — the discount and the agreement are untouched');
+  await fill('#dm-pct', '0'); await p.evaluate(() => updateDiscountModal());
+  const pre = eD.havellinTotal + eD.discountAmt;
+  ok((await text('#dm-revised')) === '$' + pre.toLocaleString(), '0 previews the total with the discount taken off ($' + pre.toLocaleString() + ')');
+  await click('#discount-modal .btn-p'); await p.waitForTimeout(400);
+  const after = await p.evaluate((id) => { const job = jobs.find(j => j.id === id), rec = estimateStore[id];
+    return { pct: rec.estimate.discountPct, amt: rec.estimate.discountAmt, total: rec.estimate.havellinTotal, approved: rec.approved,
+             agr: job.agrApproved, why: job.agrRevokedBy, modal: document.getElementById('discount-modal').style.display,
+             mail: (window.__mails[0] || {}).text || '' }; }, idD);
+  ok(after.pct === 0 && after.amt === 0, '⚠⚠ 0 REMOVED the discount (it used to become 1%)');
+  ok(after.total === pre, 'the total is back to $' + pre.toLocaleString());
+  ok(after.approved === false, 'and the estimate goes back to the manager');
+  ok(after.agr === false && after.why === 'discount-revised', '⚠⚠ the agreement’s approval is withdrawn, naming why');
+  ok(after.modal !== 'flex', 'the pop-up closes');
+  has(after.mail, 'has removed the client discount', 'the manager is told it was removed');
+  has(after.mail, 'Discount: removed', 'not "Proposed discount: 0%"');
+  await dash(idD);
+  has(await text('#client-dashboard-view'), 'A discount changed the price after this was prepared', 'the rail says why the packet must be re-approved');
 
-  // ── D. THE FINAL GOES OUT: NO RE-OPEN ──────────────────────────────────
-  console.log('\n## D. Once the final has gone out, nothing re-opens the job');
-  await p.evaluate(() => { const j = jobs.find((x) => x.id === 7201);
-    Object.assign(docState(j, 'invoice:final'), { draftedAt: '2026-10-02T15:00:00Z', sentAt: '2026-10-02T15:30:00Z' }); saveJobs(); });
-  await openDash(7201);
-  s = await band();
-  lacks(s.page, 'Re-open job', '⚠⚠ no Re-open anywhere on the page');
-  lacks(s.page, 'activateOrCycle(7201)', 'and no control reaches the transition');
-  dialogs.length = 0;
-  const beforeD = await job(7201);
-  await p.evaluate(() => activateOrCycle(7201));
-  await p.waitForTimeout(300);
-  eq(dialogs.map((d) => d.type), ['alert'], 'called directly, it refuses with an alert and asks nothing');
-  has((dialogs[0] || {}).msg, 'its final invoice has already gone out to the client', 'naming why');
-  eq(await job(7201), beforeD, 'and nothing on the job moves');
+  // ── D. M3 — after the packet is out ──────────────────────────────────────
+  console.log('\n## D. M3 — once the signing packet has gone out, a price change is a change order');
+  const idS = await make('home_cleanout', 'Sent');
+  await build(idS, { disc: 5, job: { won: true, status: 'won', agrApproved: true, agrApprovedBy: 'Anthony Graziano',
+    agrApprovedAt: 'September 21, 2026', docState: { agreement: { sentAt: '2026-09-22T10:00:00Z', sentBy: 'Ashley Jerome' } } } });
+  await dash(idS);
+  ok(!(await buttons()).some(x => /dashOfferDiscount/.test(x.c)), '⚠⚠ Offer discount is gone once the packet has been sent (a DocuSign send writes only the record)');
+  await p.evaluate((id) => dashOfferDiscount(id), idS); await p.waitForTimeout(300);
+  ok(await p.evaluate(() => document.getElementById('discount-modal').style.display !== 'flex'), 'and the handler does not open the pop-up');
+  has(await text('#dash-fb'), 'signing packet has gone to the client', 'it says why, on the dashboard');
+  has(await text('#dash-fb'), 'change order', 'naming the route that remains');
 
-  // ── E. THE FINAL, WITH THE MIDPOINT NEVER SENT ─────────────────────────
-  console.log('\n## E. The final invoice of a job closed with its midpoint never sent');
-  await setToday('2026-09-30');
-  await openDash(7202);
-  answer = true; dialogs.length = 0;
-  await press(BTN(7202));
-  eq((await job(7202)).status, 'closed', 'closed with the midpoint never sent');
-  await p.evaluate(() => docAction(7202, 'invoice', 'view', { stage: 'final' }));
-  await p.waitForTimeout(400);
-  const inv = await p.evaluate(() => ({ open: getComputedStyle(document.getElementById('doc-viewer-modal')).display,
-    t: (document.getElementById('doc-viewer-body') || {}).textContent.replace(/\s+/g, ' ') }));
-  eq(inv.open, 'flex', 'the real final invoice opens in the viewer');
-  has(inv.t, '25% midpoint — billed on this invoice', '⚠⚠ the midpoint is billed ON the final, not "invoiced at project midpoint"');
-  has(inv.t, 'Outstanding from the deposit invoice — carried into the balance below', 'the short deposit is outstanding from the deposit invoice alone');
-  lacks(inv.t, 'deposit and midpoint invoices', 'no midpoint invoice is named that never went out');
-  lacks(inv.t, 'fees trued to actuals', 'and the old midpoint row is gone');
-  // textContent runs the label cell into the amount cell with no space between them.
-  has(inv.t, 'Outstanding from the deposit invoice — carried into the balance below+$50', 'the $50 short on the deposit, named against the deposit invoice');
-  has(inv.t, '$8,050', 'the balance is the job less what arrived — $16,000 less $7,950');
+  // ── E. Q11 ───────────────────────────────────────────────────────────────
+  console.log('\n## E. Q11 — the packet may be read before the client says yes, and only read');
+  const idQ = await make('downsizing', 'Preview');
+  await build(idQ, {});
+  await dash(idQ);
+  const btnsQ = await buttons();
+  ok(btnsQ.some(x => x.c === "docAction(" + idQ + ",'agreement','view')"), 'the packet can be opened from the rail before the yes');
+  ok(!btnsQ.some(x => /'agreement','(print|send|file)'/.test(x.c)), '⚠ and nothing on the rail prints, sends or files it');
+  await p.evaluate((id) => docAction(id, 'agreement', 'view'), idQ); await p.waitForTimeout(400);
+  has(await text('#doc-viewer-title'), 'Signing Packet — PREVIEW', 'the viewer titles it PREVIEW');
+  ok(await p.evaluate(() => getComputedStyle(document.getElementById('doc-viewer-print')).display === 'none'), '⚠ the viewer offers no Print');
+  has(await text('#doc-viewer-body'), 'Exhibit A', 'and shows the real packet, estimate and all');
+  const stamp = await p.evaluate((id) => { const j = jobs.find(x => x.id === id); return { agr: !!j.agrApproved, filed: !!(j.docState && j.docState.agreement && j.docState.agreement.filedAt) }; }, idQ);
+  ok(!stamp.agr && !stamp.filed, '⚠⚠ reading it stamped no approval and filed nothing');
+  await p.evaluate(() => closeDocViewer()); await p.waitForTimeout(150);
+  await p.evaluate((id) => { window.__prints = []; docAction(id, 'agreement', 'print'); }, idQ); await p.waitForTimeout(700);
+  ok(await p.evaluate(() => window.__prints.length === 0), 'printing it before the yes is refused');
+  has(await text('#dash-fb'), 'nothing to put under contract', 'saying why');
+  await p.evaluate((id) => { const j = jobs.find(x => x.id === id); j.won = true; j.status = 'won'; saveJobs(); }, idQ);
+  await p.evaluate((id) => docAction(id, 'agreement', 'view'), idQ); await p.waitForTimeout(400);
+  const tWon = await text('#doc-viewer-title');
+  ok(tWon.indexOf('PREVIEW') < 0 && tWon.indexOf('Signing Packet') >= 0, 'once won, the viewer shows the packet as itself');
+  ok(await p.evaluate(() => getComputedStyle(document.getElementById('doc-viewer-print')).display !== 'none'), 'with Print');
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+  ok((await overflow()) <= 0, 'the viewer at 390px has no horizontal overflow');
+  await p.setViewportSize({ width: 1440, height: 1000 });
   await p.evaluate(() => closeDocViewer());
 
-  // The same document for the job whose midpoint WAS sent: the old wording, because it is true there.
-  await p.evaluate(() => { const j = jobs.find((x) => x.id === 7201); delete j.docState['invoice:final'].sentAt; saveJobs(); });
-  await p.evaluate(() => docAction(7201, 'invoice', 'view', { stage: 'final' }));
-  await p.waitForTimeout(400);
-  const inv2 = await p.evaluate(() => (document.getElementById('doc-viewer-body') || {}).textContent.replace(/\s+/g, ' '));
-  has(inv2, '25% midpoint — fees trued to actuals', 'a midpoint that was sent is named as sent');
-  has(inv2, 'Outstanding from the deposit and midpoint invoices', 'with both invoices on the gap');
-  await p.evaluate(() => closeDocViewer());
+  // ── F. Q8 and materials ──────────────────────────────────────────────────
+  console.log('\n## F. Q8 — the agreement names the premium and the discount; no "(None — $0)"');
+  const idA = await make('downsizing', 'Terms');
+  const eA = await build(idA, { rush: true, disc: 10, job: { won: true, status: 'won' } });
+  const agr = await T(await p.evaluate((id) => agreementHtml(jobs.find(j => j.id === id), estimateStore[id].estimate), idA));
+  has(agr, 'an expedited-delivery premium of twenty percent (20%) of Contractor’s fees is charged', '⚠⚠ the fee clause names the premium Exhibit A itemizes');
+  has(agr, 'A preferred-client discount of ten percent (10%) applies to Contractor’s labor fees and to the expedited-delivery premium charged on them',
+      'and the discount, reaching the premium as the estimate computes it');
+  ok(eA.pkgCost === 0, 'no materials package on this estimate');
+  lacks(agr, '(None — $0)', '⚠ §3.6 no longer quotes "(None — $0)"');
+  has(agr, 'No moving or packing materials package is quoted on the Estimate, and none is billed.', 'it says none is quoted');
+  const est2 = await T(await p.evaluate((id) => clientEstimateHtml(estimateStore[id].estimate, jobs.find(j => j.id === id)), idA));
+  lacks(est2, 'None — $0', 'and the estimate quotes it nowhere either');
 
-  // ── F. THE LEGACY CLOSED JOB ───────────────────────────────────────────
-  console.log('\n## F. A job closed before the handover stamp shipped is offered Re-open, never Activate');
-  await p.evaluate(() => { const j = jobs.find((x) => x.id === 7202);
-    delete j.deliveredOn; delete j.deliveredAt; delete j.deliveredBy; saveJobs(); });
-  await openDash(7202);
-  s = await band();
-  eq(s.step, 'Activate the job', 'with no handover stamp its lit step is Job active');
-  eq(s.filled.length, 0, '⚠ which carries no Activate button on a closed job');
-  eq(s.outline.filter((x) => x.c === 'activateOrCycle(7202)').map((x) => x.t), ['↺ Re-open job'], 'Re-open job instead, once');
-  lacks(s.page, 'Activate job', 'Activate job is nowhere on the page');
+  // ── G. the gate wording, overflow, errors ────────────────────────────────
+  console.log('\n## G. The invoice refusal names the invoice; overflow and page errors');
+  const idG = await make('home_cleanout', 'Gate');
+  await build(idG, {});
+  await p.evaluate((id) => { estimateStore[id].approved = false; }, idG);
+  await dash(idG);
+  await p.evaluate((id) => docAction(id, 'invoice', 'view', { stage: 'deposit' }), idG); await p.waitForTimeout(300);
+  has(await text('#dash-fb'), 'The estimate must be approved before the invoice can be drawn.', '⚠ the invoice refusal names the invoice');
+  lacks(await text('#dash-fb'), 'before the agreement can be drawn', 'not the agreement');
+  await dash(idD);
+  ok((await overflow()) <= 0, 'the dashboard at 1440px has no horizontal overflow');
+  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+  ok((await overflow()) <= 0, 'nor at 390px');
+  ok(errs.length === 0, 'no page errors' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
-  // ── G. LAYOUT ──────────────────────────────────────────────────────────
-  const ov = []; for (const w of [1440, 390]) { await p.setViewportSize({ width: w, height: 900 }); await openDash(7202); ov.push(await overflow()); }
-  eq(ov, [0, 0], 'the dashboard with Re-open on its band fits at 1440 and 390');
-
-  ok(errs.length === 0, 'no page errors (' + errs.join(' | ') + ')');
+  console.log('\n' + pass + ' passed, ' + fail + ' failed');
   await b.close();
-  console.log('\nstep29: ' + pass + ' passed, ' + fail + ' failed');
-})().catch(async (e) => {
-  console.log('THREW ' + (e && e.stack || e));
-  console.log('step29: ' + pass + ' passed, ' + (fail + 1) + ' failed');
-  try { if (b) await b.close(); } catch (_) { /* already gone */ }
-});
+  process.exit(fail ? 1 : 0);
+})().catch(async e => { console.log('THREW: ' + (e && e.stack || e)); console.log(pass + ' passed, ' + (fail + 1) + ' failed'); if (b) await b.close(); process.exit(1); });

@@ -1,5 +1,29 @@
+## ⚠⚠ OPEN: THE 2026-09-28 WORKFLOW AUDIT — `WORKFLOW_AUDIT_2026-09-28.md` IS THE TRACKER; READ IT BEFORE BUILDING A PACK
+Anthony, 2026-09-28: *"I need both the high level TLDR on what's working and what's not working, and then specific prompts and
+questions to address any of the shortcomings or bugs you find."* **61 findings (2 Critical · 9 High · 16 Medium · 34 Low) in
+fourteen fix packs, P1–P14**, each a self-contained prompt with a *"Decision to apply"* line. He works from a private artifact
+page; the file in the repo root is the same content plus his answers, and it is the record of what has landed. **Docs only.
+Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when that session hit its context limit.
+
+- **Landed 2026-09-29, P1–P7:** C1, C2, H1, H2, H3, H4, H6, M1, M2, M3 and M8, plus nine lows, each with its own entry below.
+  Spot-checked in the code on `main` the same day rather than taken from the entries' own claims; ticked and marked in the file.
+- **Still open:** P8 (H5: work done tops out at 42–74%) · P9 (H7–H9, M13–M16 and the intake lows: Edit Client) · P10 (M4–M7
+  and the lifecycle lows) · P11 (M9 and the per-key job merge; **needs an Apps Script redeploy**) · P12 (M10–M12 and the
+  estimator lows) · P13 (the docs pass, after the others) · P14 (small backlog; its message-timer and dead-code items are done).
+- **Answers, 2026-09-29:** every recommendation stands except **Q9** (no rush on the 30% prep fee on either basis; rush applies
+  on fixed price too, printed as its own line) and **Q20** (an appraiser is priced per estimate line and no tier requires or
+  refuses one; **his OK on that reading is still pending**). Also still open: **Q7** (rebuild the reference bands live from the
+  engine, or delete the box) and a **Q14 follow-up** (does a fixed-price rush job's change order carry the 20%? my call yes).
+  All three block P12 only. **Do not build a pack whose question is unanswered** without saying which default you applied.
+- **Anthony's own items:** O1 (the `2026-09-22b` redeploy with `ANTHROPIC_API_KEY`) reported done, not verifiable from here;
+  O2–O9 open (the Quo redeploy, a DocuSign sandbox envelope, a Stripe test ACH, the Gmail consent audience,
+  `previewOrphanRecords()`, the counsel bundle, the insurance and bond, the two Drive documents).
+- **When a pack lands:** tick it in the file (`- [x] **P8**`) and mark its findings fixed rather than deleting them.
+- **⚠ THE SHAPE TO COPY, FROM H2:** a browser step that reaches a handler through `page.evaluate` proves the handler, not that
+  anybody can reach it. Press the control.
+
 ## ⚠⚠ RE-OPEN UNDOES A MISTAKEN CLOSE, AND THE FINAL NO LONGER CLAIMS A MIDPOINT INVOICE THAT NEVER WENT OUT (BUILT 2026-09-29)
-Anthony, on the four things the H3 build (the entry below) left for him: *"yes to 2 and 3, reword the final and add Re-open"*.
+Anthony, on the four things the H3 build (its entry is further down, below the seven builds that landed on `main` the same day) left for him: *"yes to 2 and 3, reword the final and add Re-open"*.
 The other two are unchanged: the reading of *"half the work"* (every room locked also counts) stands as shipped, unanswered; and
 the filled *Log today's hours* button on activation day was not taken, so it is **not built**. App-only, no redeploy.
 
@@ -69,14 +93,24 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   - **Two devices**: the real `_mergeJobRecord` from `main-sync.gs`, driven in both orders — a Re-open on one device survives the
     other device's older copy of the closed job (the status and the cleared stamp follow the newer record; the voided draft follows
     its per-key stamp).
-- **12,340 committed checks** (`tests/job-reopen.test.js` new at 154, driving the real `invoiceHtml`, the real rail, transition and
-  band, the rendered dashboard and the real backend merge). **Restated, not deleted:** five rail suites that pinned *no Re-open*
+- **12,340 committed checks on this build; 13,526 after merging the seven builds that landed on `main` alongside it**
+  (`tests/job-reopen.test.js` new at 154, driving the real `invoiceHtml`, the real rail, transition and band, the rendered
+  dashboard and the real backend merge). **⚠ The merge made four of `main`'s new suites throw** — `approval-on-job`,
+  `change-order-card`, `document-reconciliation`, and `document-claims` through the list it borrows — because `invoiceHtml` now
+  reads `docSentAt`; each lifts it (never a stub). And `job-reopen`'s own sandboxes took `main`'s new helpers
+  (`estimateEditBlocker`, `priceChangeBlocker`, `discountOfferBlocker`, `docReadOnlyWord`, `docPreviewOnly`, `coCardActions`,
+  `jobStatusView`, `JOB_STATUS_LABELS`, `paymentSplit`, `rushScopeLine`, `rushCrewAdded`, `invFinalApproval`) and dropped
+  `invApproved`, which H1 deleted. ⚠ **Its dashboard group does not lift `_todayStr`**: a lifted function overrides a stub of
+  the same name, and the stub is what pins the date. **Restated, not deleted:** five rail suites that pinned *no Re-open*
   (`job-close-midpoint` at four sites, `job-closeout`, `job-plan-team-dates`, `dashboard-schedule`, `dashboard-utility-bar`), and
   `payments-received`, whose final-invoice fixtures meant a midpoint invoice had gone out and now carry the send record that says
   so. **Nine invoice sandboxes lift `docSentAt` / `docKeyFor`**, which `invoiceHtml` now reads — lifted, never stubbed.
 - **Revert sweep on three tar copies: 29 changes, ALL RED, baseline 12,340 / 0 before and after on every copy, no needle
-  mismatched, nothing threw.** Counts are on the bullets above.
-- **Verified in headless Chromium, `tests/browser/step29.js`, 58 checks, 0 failed, 0 page errors**, through the real Close and
+  mismatched, nothing threw.** Counts are on the bullets above. ⚠ That sweep ran on the tree **before** `main` was merged in, and
+  one merge resolution sits on this build's code — the fixed-price final's Payment Summary takes `main`'s change-order row with
+  this build's three-argument gap row — so it is run again on three copies of the MERGED tree (baseline 13,526 / 0 on each).
+- **Verified in headless Chromium, `tests/browser/step36.js`** (written as step 29 and renumbered on the merge — `main`'s
+  document-claims build took 29 first), **58 checks, 0 failed, 0 page errors**, through the real Close and
   Re-open buttons and their real questions (Cancel, then OK): the question on the close names Re-open; a closed job shows Re-open
   beside *Send final invoice*; a final drafted then Re-opened is voided, the job lands on the Job Plan with NOW on *Midpoint & pickups*, the
   band reads *Collect the midpoint payment* with Close back, *Work complete* says re-opened and the ✕ is back on the client list;
@@ -98,6 +132,786 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   history, and the rule still holds. And **when a document names an earlier document, check that the earlier document exists**: a
   sentence about money outstanding is a claim about which bills went out, and the balance being right under it does not make the
   sentence true.
+
+## ⚠⚠ EDIT ESTIMATE GOES ONCE THE SIGNING PACKET IS OUT, AND A WON CLIENT STAYS WON THROUGH A RE-PRICE (FIXED 2026-09-29)
+Two of the three items the document build flagged (the entry below the manager-approvals one). Anthony: *"yes, withdraw Edit
+estimate once the packet is sent. if we are offering a discount, and therefore it is "pending" how is it also "won"?"* App-only,
+no redeploy.
+
+- **⚠⚠ REPRODUCED ON THE REAL FUNCTIONS FIRST**, and confirmed by the browser step against the pre-change build:
+
+  | | before | now |
+  |---|---|---|
+  | a sent packet, emailed or DocuSign's record alone | **✎ Edit estimate on four rail rows** (built · approved · sent · accepted) | none |
+  | `dashEditEstimate` on a sent packet | **un-approved the estimate AND the agreement**, then opened Build Estimate | refused, naming the change order; nothing written |
+  | the same door on a SIGNED agreement | the rail hid the button; **the door itself checked nothing** | refused |
+  | a won client offered a discount | *Pending Approval* | ***Won · Pending Re-approval*** |
+  | … then the manager's PIN | ***Approved — Awaiting Client*** | *Won* |
+  | … or a deny instead | ***New*** | *Won* |
+  | `isJobWon` throughout | true | true |
+
+- **⚠⚠ ONE RULE, TWO DOORS: `priceChangeBlocker(job, how)`.** Signed → the price is locked; `isAgreementSent` (the RECORD —
+  DocuSign writes only it) → a change order. `discountOfferBlocker` is `priceChangeBlocker(job, 'a discount')`, byte-identical
+  to what it said before; `estimateEditBlocker` is `priceChangeBlocker(job, 'an edit to the estimate')`. The reason is the same
+  for both: the packet carries this estimate as its Exhibit A, so an edit after it moves the price the client is being asked to
+  sign, exactly as a discount does. Change orders stay open (`openChangeOrder` is ungated).
+  - **Read at every door, not only on the button.** The rail's document tray (it tested `!job.agrSigned`, so the button stood
+    for the whole stretch the packet sat with the client); `dashEditEstimate` (checked **nothing**); `editEstimateFromCE`, the
+    Client Estimate panel's own door, whose button may have been drawn before the packet went out on the other device;
+    `updateApprovalUI` (that button, both subtitles and the lock note); and `applyEstimateLock`, whose new arm reads **Estimate
+    Locked — Signing Packet Sent** rather than offering two buttons that are no longer there. A net: `revokeEstimateApproval` has
+    exactly two callers and each asks `estimateEditBlocker` before it.
+- **⚠⚠ THE STATUS LINE IS ONE STRING CARRYING TWO FACTS, AND THE CLIENT'S YES WAS NEVER IN IT.** Before the yes it tracks the
+  ESTIMATE (new → pending → approved); after it, the JOB (won → active → closed). The yes lives on `job.won` (`isJobWon`), which
+  is why the rail, staffing, the Job Plan and Win / Loss were right throughout and only the words were wrong: six estimate
+  writers put the estimate's phase over whatever the job had reached.
+  - **`estimateEventStatus(job, next)` is the one rule, read by all six** (save, submit, discount, approve, deny, edit). Active,
+    closed and deposit-retained are never moved (`checkPin` already spared the first two; nothing spared the third). Not won →
+    `next`, exactly as before, a lost job's comeback included. Won → `'pending'` stays pending and everything else is `'won'`.
+  - **⚠ WHY A WON JOB STILL GOES TO `pending` RATHER THAN STAYING `won`.** `pending` is load-bearing across devices: it is the
+    Pending Approval filter the manager works from, what `maybeStartJobsWatch` polls on, and the rail's `estSubmitted` fallback
+    (`job.status === 'pending'`). Holding `won` would hide a re-price from the manager and stop the other device noticing it.
+  - **`jobStatusView(j)` is the one READING** — the list cell, the Won list, the dashboard header's chip and the Status sort. Won
+    + pending reads ***Won · Pending Re-approval***; won + `''`/`new`/`approved` reads **Won**, a derivation, so a won job an
+    estimate event knocked back before today reads right with nothing migrated. **The header's private `statusLabels` map is
+    deleted** — it was a second vocabulary, and the reason the chip could say something the list did not.
+  - **⚠ THE WRITE AND THE READING COVER EACH OTHER, SO REVERTING ONE FAILS FEW CHECKS.** Put the old write back and every label
+    still reads right through the derivation; only the raw-status assertions fail (5). That is by design — the reading is needed
+    for jobs written before today — and the raw-status assertions are what pin the write.
+  - Nothing changes for a client who has not said yes; the Pending Approval filter still tests `status === 'pending'`, which is
+    why the re-priced won client is correctly on it.
+- **12,798 committed checks on this branch, 13,229 after merging `main`'s Reset, C2 and H2 builds, 13,262 after its `_actor`
+  follow-up, 13,330 after its feedback-strip build, and 13,351 with Reset's refusal (below)** (`tests/price-lock-won-status.test.js`
+  new at 173, 194 with that; twenty suites' pinned `fns:`/`vars:` lists gained the helpers, lifted, never stubbed). The first merge
+  is 12,625 at the merge base + 173 here + 431 on `main`, the second 13,229 + 33 (`approval-on-job` 198 → 231), the third 13,262 +
+  68 (`estimate-reset` 398 → 427, `feedback-strip` 27, `source-bytes` 12), and **at all three, every suite carries exactly ours +
+  theirs − base** (106 suites, then 108), checked file by file, because a merge that quietly drops a group reads as a smaller
+  green total. The first merge's one break was correct:
+  `main`'s new `change-order-card` suite lifts the dashboard, whose header chip now reads `jobStatusView`, so it lifts the same
+  helpers now. ⚠ **My list-extension script over-reached** into `lacks()` needle lists (`signing-packet`, `document-renderers`)
+  and tuple lists (`dashboard-actions` HANDLERS, `estimate-contract-gate`, `room-coverage`); caught by diffing every suite's check
+  count against the HEAD baseline rather than by the totals, and all reverted.
+- **Revert sweep, run twice.** Before the merge, on four tar copies: **28 changes, ALL RED, baseline 12,795 / 0 before and after
+  on every copy, no needle mismatched, nothing crashed.** The shared rule ignoring a sent packet (the defect, for both doors)
+  fails **56**, the edit door ignoring it **42**, `dashEditEstimate`'s gate 15, the rule reading the boolean rather than
+  DocuSign's record 10, the active/closed/retained guard 10, the panel's own door 8; the rest 1–5. **On the merged tree, again
+  on four copies: 32 changes, ALL RED, baseline 13,229 / 0 before and after**, the 28 failing exactly as before, plus the two
+  missing-job guards (below: the panel 2, the banner 1) and two reverts of the merge's UNION itself — the submit losing `main`'s
+  edit stamp and `checkPin` losing its sync — each failing `main`'s job-edit net (1 each), so neither half can be dropped
+  quietly. After the second merge all 32 still find their code, needle by needle, and the two defects re-run on that tree fail
+  **56** and **5** again, against 13,262 / 0 before and after. After the third all 32 still find their code, and on the final tree
+  the two defects fail **62** and **5** (the Reset refusal's checks join the first), `main`'s old `showFB` clear **8** and its
+  Start over without the clear **8**, against 13,351 / 0 before and after — the union holds from both sides.
+  - **⚠ FOUR WRITER REVERTS FAIL ONLY THE SOURCE NETS (2 each), AND THAT IS HONEST RATHER THAN WEAK.** A discount or a submit on
+    a won job IS pending, and Save and the panel's Edit are withheld while the estimate is out for approval, so on every state
+    those four can reach the literal and the rule give the same answer. What the nets pin is that the next change to the rule
+    reaches all six writers, which is the thing that went wrong.
+- **Verified in headless Chromium, `tests/browser/step35.js`, 43 checks, 0 failed, 0 page errors**, through the real rail, the
+  real Edit estimate and Offer discount buttons, the real discount pop-up and Apply, the real PIN typed into its modal, the real
+  Deny modal, the real Build Estimate banner and the real client list with its real Pending Approval filter: nothing to edit or
+  discount once the packet is out (emailed or DocuSign), the door refusing and un-approving nothing, the banner naming the packet,
+  a signed agreement refused at the door; before the packet Edit estimate still works and the client stays won; a won client's
+  discount reading *Won · Pending Re-approval* on the header, the list and the Pending Approval filter, *Won* after the PIN and
+  after a deny; a client not yet won reading *Pending Approval* then *Approved — Awaiting Client*; overflow 0 at 1440 and 390.
+  **Against the pre-change build it fails 19.** Written as step 34 and renumbered on the third merge: the feedback-strip session
+  took 34 first. `run.sh`'s default list is 1–35; on the tree after all three merges steps 1–35 re-run — 59 / 33 / 56 / 47 / 47 /
+  28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 /
+  53 / 75 / 37 / 43, 0 failed — **1,755 browser checks across the thirty-five** — and steps 31, 34 and 35 again after Reset's
+  refusal, 42 / 37 / 43, 0 failed.
+  - **⚠ A FIXTURE TRAP WORTH KNOWING: `saveEstimateState()` rebuilds the store record from the page's approval GLOBALS**, which
+    describe whichever estimate was last open. A fixture that sets `estimateStore[id] = {approved: true, …}` and then calls it
+    writes that estimate back **unapproved** — six false failures on the first run. The step writes localStorage directly.
+- Manual **§1** (the table row), **§5** (the opening and the Won-dropdown note), **§5c** (the discount bullet), **§8** (the
+  after-the-packet note), **§9** (the Pending Approval filter, a *Won · Pending Re-approval* row in the status table, and a note
+  with the before/after), **§9a** (the timeline row). Playbook the service-type `.stop`, the Won-dropdown `.stop`, the lever
+  table, the Step 6 `.stop`, the status table (a new row) and the symptom table (one row rewritten, one new, two corrected).
+  Both `.md` copies hand-edited; **30 claims parity-checked, 0 mismatches** (two apparent misses were table-cell boundaries in my
+  checker, verified); `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18
+  tables full width, as before — and the same again, re-rendered on the tree after all three merges.
+- **⚠ OPEN, AND IT IS ANTHONY'S CALL: a price change after the yes is not re-asked.** A discount only lowers what the client
+  accepted, but an edit before the packet goes out can RAISE it, and the app keeps the acceptance (`won`, `wonAt`) and the old
+  `estimateSentDate` (an edit does not clear it), so the revised figure reaches the client only as the packet's Exhibit A.
+  Whether a raise after Won should reopen the acceptance, or at least re-offer sending the estimate, is a decision, not a fix.
+- **⚠ A JOB MISSING FROM THIS DEVICE IS NEVER SAID TO HAVE A PACKET OUT.** The blocker refuses a job it cannot find ("could not
+  be found"), and the panel and the Build Estimate banner first read that refusal as *the packet is with the client* — a claim
+  about a packet nobody sent, on a job dropped by another device while its estimate was open here. Both ask for the job first.
+  Found re-reading `updateApprovalUI`, not by a test; three checks pin it now.
+- **⚠ FOUND ON THE THIRD MERGE AND FIXED: Reset's refusal on an approved estimate said *"press ✎ Edit estimate on the client's
+  timeline first"*** — the button this build withdraws once the packet is out, and the one the rail had always hidden once signed.
+  Only a direct call reaches it (the button is disabled on a locked estimate), but a refusal is only as good as the route it names.
+  It asks `estimateEditBlocker` for the client the screen is bound to (`e-job`, the one the reset would clear) and relays the
+  rule's sentence: the change order once the packet is out, the price lock once signed, *could not be found* for a job this
+  device no longer holds. While Edit estimate really is there it keeps its old sentence, which `estimate-reset` pins.
+  - **THE NET IS THE RULE, NOT THE THREE SITES IT FINDS TODAY:** any top-level function whose live code names Edit estimate must
+    ask `estimateEditBlocker` (`resetEstimate`, `applyEstimateLock`, `jobTimelineActions`). `estimate-reset`'s `build()` lifts the
+    rule's helpers, never stubs them. Driven in `price-lock-won-status` (+21); the old sentence back fails **11**, never resolving
+    the job **7**.
+  - Found re-running this build's every-caller searches after the merge, once `main`'s NUL-byte fix made a whole-file search
+    trustworthy again. The line itself sat above the byte: what missed it the first time was not looking, not the search.
+- **Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**
+- **⚠ FOUND IN PASSING, NOT FIXED: the rail offers *Edit estimate* while the estimate is OUT FOR APPROVAL.** The document tray
+  carries it on the lit *Estimate approved* row, and pressing it opens Build Estimate locked under *Out for Manager Approval* —
+  whose banner says it reopens once approved or denied, so it is a detour rather than a trap. Pre-existing and unrelated to the
+  packet rule; withholding it while `estSubmitted` is one line if wanted.
+- **⚠ THE SHAPE TO COPY: when one string carries two facts, a writer that knows only one of them overwrites the other.** The
+  yes was already stored apart; what was missing was one function for every writer of the status and one for every reader.
+  And a rule enforced on a button is not enforced: the door behind it has to ask the same question.
+
+## ⚠⚠ A MESSAGE WAS WIPED BY THE TIMER OF THE ONE BEFORE IT, AND WHAT RESET AND START OVER THREW AWAY CAME BACK OFFLINE (FIXED 2026-09-29)
+Anthony, on the two items the Reset build (below) had found and left open: *"yes, fix both."* App-only, **no Apps Script redeploy**
+— nothing in `apps-script/` changed.
+
+- **⚠⚠ BOTH REPRODUCED ON THE REAL PAGE BEFORE ANYTHING CHANGED, AND THE SECOND WAS WORSE THAN RECORDED.**
+
+  | | pre-change | now |
+  |---|---|---|
+  | a message written three seconds after another | **gone a second and a half later** | lives its own four seconds |
+  | Save pressed twice on no rooms, three seconds apart | the second refusal **flashed and vanished** | stays until its own four seconds are up |
+  | four rooms, offline, nothing saved: **Start over → OK** | **the same four rooms straight back**, under *restored an unsaved draft*, right after a question promising the intake answers | intake answers; the copy gone |
+  | four rooms, **Reset → OK**, reload, open offline | **all four back** | nothing back |
+
+  The Reset entry had called the second one *"narrow — offline, nothing saved, and left before scoring anything new"*. For Start
+  over it was not narrow at all: **it was immediate**, because the reopen that follows the clear is exactly what reads the copy.
+
+### `showFB` — a message's timer clears THAT message and nothing else
+- **THE MECHANISM.** Every message armed `setTimeout(… innerHTML = '' …, 4000)` on whatever the strip held four seconds later, and
+  none was ever cancelled — so a message written within four seconds of another was cleared by the **older** one's timer. CLAUDE.md
+  had recorded it twice (2026-09-22 and the Reset build) with *"a per-element timer is the fix"*.
+- **⚠⚠ A PER-STRIP TIMER WOULD NOT HAVE BEEN ENOUGH, AND THE SWEEP PROVES IT (fails 5).** Two things write that strip without going
+  through `showFB`: `renderClientDashboard` paints `_dashNotice` into a **new** `#dash-fb` on every redraw — which is where the
+  change-order card's Create and Accept notices now land — and `_dashSendState` writes *Building PDF…* straight into it. A per-strip
+  clear still fires four seconds after the last `showFB` call and wipes whichever of those is there by then.
+- **THE RULE NOW.** The timer holds the nodes **its own call wrote** (`Array.prototype.slice.call(el.childNodes)`, taken AFTER the
+  write) and removes each one only while it is still attached (`if (n.parentNode)`). An `innerHTML` write detaches the old children,
+  so a later message, a redraw's notice or a progress line all make the older timer a no-op, and a message nobody replaced still
+  clears at exactly four seconds. Checked that nothing needed the old wipe: every other write into a strip is a clear, a modal's own
+  refusal (the PIN, deny, change-order, acceptance, close-out and quick-partner modals) or the send path's progress line, and every
+  path after *Building PDF…* ends in a notice that replaces it.
+  - **⚠ BOTH HALVES ARE LOAD-BEARING.** Dropping the attached test fails **5** (and in a browser `null.removeChild` throws inside the
+    timer); taking the snapshot BEFORE the write holds the previous message's nodes, so the new one never clears — fails **6**.
+- **⚠ THE REAL `showFB` HAD NEVER RUN IN A TEST.** Every suite stubs it, and a `domStub` cannot drive it — its `innerHTML` is a plain
+  string with nothing behind it. `tests/feedback-strip.test.js` (new, **27**) carries a small fake strip that does the four things a
+  real element does that `showFB` depends on (a write detaches the old children, `childNodes`, `removeChild`, a detached node's
+  `parentNode` is null) and a fake clock whose `clearTimeout` is **real**, so a per-strip design is measured on what it does rather
+  than failing on a ReferenceError.
+
+### The unsaved-draft copy goes with what Reset and Start over discard
+- **THE MECHANISM.** `calcAll` keeps an unsaved-draft copy on the device (`havellin_est_scratch`, one slot) so a page that drops
+  mid-walkthrough can be reopened with no connection — `applyOpenedEstimate`'s offline branch restores it when nothing is saved.
+  **`saveEstimateScratch` refuses an empty-rooms state**, deliberately, so it never writes a blank over a real build — which is also
+  why a clear could never overwrite it. Only a **Save** removed it (`saveEstimateState`).
+- **THE FIX: `clearEstimateScratch(jid)` after OK, on both buttons, and only there.**
+  - **Start over clears it BEFORE the reopen**, because the reopen is what reads it. No clear fails **8**; clearing after the reopen
+    fails **6**.
+  - **Reset clears it with a bound job only (`if (jid)`), and that guard is load-bearing:** `clearEstimateScratch(0)` clears ANY
+    client's copy (its `!jobId ||` arm), so an unbound Reset would throw away somebody else's draft. No clear fails **3**; dropping
+    the guard **1**.
+  - **Cancel clears nothing and a locked Reset clears nothing** — both return above the call. Moving the clear above the question
+    fails **1** on Reset and **2** on Start over; above the lock guard **3**.
+  - **Another client's copy is never touched** — `clearEstimateScratch` compares the slot's job id. Clearing any client's fails **1**
+    on Reset and **2** on Start over.
+- **⚠ THE SAFETY NET IS UNCHANGED, AND THE BROWSER PROVES IT STILL WORKS:** four rooms, a reload with no button pressed, an offline
+  open, and the draft comes back under *Offline — restored an unsaved draft*.
+
+### ⚠⚠ AND A RAW NUL BYTE HID THE LAST 6,000 LINES OF THE APP FROM EVERY REPO-WIDE SEARCH
+- **Found while checking this build's call sites, not by any test.** `_vendorCatKey` joined a group and a category on a **literal
+  NUL byte** typed into the source at line 33,010 of 39,236. Measured: a repo-wide search for the vendor form's own 45-second
+  watchdog message (line 33,647) found **nothing**, while a search for a line above 33,010 found `havellin.html` fine — every
+  repo-wide search had been skipping **227 top-level functions**: the Vendor Directory, Referral Partners, both agreement builders,
+  the Drive folder code and the Contractors roster among them. GNU `grep` prints *binary file matches* in place of the lines.
+  **A session hunting for every caller of a function it is about to delete gets a false "none" there, and that is how a
+  ReferenceError ships.** Worth knowing when reading older entries: a *"no other callers"* conclusion drawn from a repo-wide
+  search before today did not cover that stretch.
+- **The page did not even run the character the source said** — the HTML parser replaces a NUL inside a `<script>` with U+FFFD — so
+  the browser joined on U+FFFD while the harness joined on U+0000. It is written `'\u0000'` now, the way the file's two other
+  NUL-joined keys already were. **Nothing a person sees moves**: the key is an in-memory object key for which vendor categories
+  are open, reached by index and never through markup or storage.
+- **`tests/source-bytes.test.js` (new, 12)** asserts every shipped file — the app, the three HTML documents, both markdown copies,
+  the Apps Script files — carries no raw control byte but tab, line feed and carriage return, and names the line when one does.
+  Putting the byte back fails it **1**, at *line 33010*.
+
+- **13,157 committed checks on the merged tree; 13,089 on `main` before this build (+68: `feedback-strip` 27, `source-bytes` 12,
+  `estimate-reset` 398 → 427).** **Restated, not deleted:** `dashboard-actions` pinned the old clear's `if (e2)` and now pins
+  `if (n.parentNode)`; `dashboard-screens`' Start over order is `['scratch:7', 'clear', 'populate:7', 'load:7']` (the clear comes
+  first) and an unbound one still `['clear']`; `doc-scope`'s and `estimate-reset`'s sandboxes **lift** `clearEstimateScratch` rather
+  than stub it. `estimate-reset`'s `build()` gained a `status` argument so a test can answer the open `'offline'` — the only state
+  in which the copy is ever read.
+- **Revert sweep on a tar copy: 13 changes, ALL RED, baseline 13,015 / 0 before and after, file restored byte-identical, no needle
+  mismatched.** The old clear back (THE DEFECT) **8**, the per-strip timer 5, the attached test 5, the snapshot before the write 6;
+  Reset with no clear 3, no bound-job guard 1, above the lock guard 3, before the question 1, any client's copy 1; Start over with no
+  clear **8**, after the reopen 6, before the question 2, any client's copy 2. The NUL byte was reverted separately (fails 1).
+- **Verified in headless Chromium, `tests/browser/step34.js`, 37 checks, 0 failed, 0 page errors** (written as step 33 and
+  renumbered on the merge — the change-order card session took 33). ⚠ **The network is ABORTED, not absent**: with no sync URL the
+  app answers *offline* synchronously and the open's messages land in a different order from a phone with no signal, so the URL is
+  set and every request to it is aborted. Two messages three seconds apart; the real Save button twice; a redraw's notice on the
+  dashboard outliving an older message's timer; Start over offline and Cancel; Reset, reload and an offline open; the safety net;
+  another client's draft surviving a Reset; overflow 0 at 1440 and 390. **Against `main` without this build it fails 10** — one
+  in each of the three message sections, four on Start over, three on Reset. `run.sh`'s default list is 1–34; steps 1–33 re-run as
+  regressions on the merged tree — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 /
+  58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75, 0 failed — **1,712 browser checks across the
+  thirty-four**. The first `<style>` block is byte-identical to `main`'s at 98,696 bytes — no CSS.
+- Manual **§5h** (one paragraph inside the fresh-estimate note: the copy, what it used to do measured, and that the safety net is
+  unchanged) and playbook **one** symptom row. Both `.md` copies hand-edited; **15 claims parity-checked, 0 mismatches**;
+  `doc-structure` green; rendered at 1440/390 with 0 overflow and 0 page errors; under `print` 51/61 and 17/18 tables full width,
+  0 on the phone rule — as before. **The footer stamps on all four read *reconciled 2026-08-03***, two months stale while the
+  opening note of each says *"the version stamp at the foot of each says when"*; they read 2026-09-29 now.
+- **⚠ THE SHAPE TO COPY: a safety net is a store, and every button that discards what it protects has to empty it too.** Save did;
+  the two buttons added later that also throw the work away did not, and the net then restored exactly what somebody had just asked
+  to be rid of — under a message that made it look like a rescue.
+
+## ⚠⚠ A CHANGE ORDER COULD BE CREATED AND NEVER PRINTED OR ACCEPTED — THE CARD CARRIES BOTH NOW (FIXED 2026-09-29)
+Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision on Q14 applied. App-only, no redeploy.
+
+- **⚠⚠ BOTH CONTROLS LIVED IN A ROW THAT WAS NEVER ON THE PAGE.** `openCOAcceptModal` and `printChangeOrder` were called only
+  inside `renderJobs`' `detailHtml` — 70 lines built on every client-list paint and never appended (*"Detail expand
+  suppressed"*). The dashboard's Change Orders card read *Awaiting acceptance* with nothing to press. **Reproduced on the
+  pre-change build in Chromium through the real + New and Create buttons:** after Create the card still read *None issued*;
+  the notice went to `#e-fb` inside the hidden Build Estimate panel (`offsetParent` null) and read *"Open the job in Client
+  Dashboard to get client sign-off"* — on the Client Dashboard; **no element anywhere in the DOM carried either onclick**;
+  after a forced redraw the row read *Awaiting acceptance* beside + New alone; the detail row never reached the DOM.
+  - **What that cost, because an unaccepted change order moves nothing:** the client never had a page to sign; accepted hours
+    never lengthened the plan or cleared the overrun flags (`coAcceptedHours` filters on `clientApproved`); a fixed-price change
+    was never billed (`coCharge` sums accepted ones); a vendors-only Home Prep job never opened its hours log (`jobIsFeeOnly`).
+    **Every change order raised before today is still unaccepted**, and both documents say to open each job and take it.
+- **⚠⚠ STEPS 23–25 WERE GREEN THROUGH IT BECAUSE THEY CALLED BOTH FUNCTIONS THROUGH `page.evaluate`.** A browser step that
+  calls the function instead of pressing the button proves the function, not the path — the same gap `dashboard-actions`
+  records for source checks, one level up. They press the real buttons now: `openDash` opens the dashboard from the client
+  list, and `press` counts the selector at exactly one before clicking. **Against the pre-change build: step23 fails 2 and
+  step24 fails 2 (each stops at the first press of a button that is not there), step25 fails 37, and the new step (33 on the merges) fails 20.**
+- **`coCardActions(co)` IS THE ONE RULE:** PDF on every row, Get Acceptance only while unaccepted, and nothing without a real id
+  (a `NaN` onclick is a control that looks pressable and does nothing). Rendered beside the status pill — Get Acceptance bronze
+  (the primary), PDF outline. **The only live callers of either function are in it**; a test asserts each appears exactly once
+  in comment-stripped source, so a second door cannot be added quietly. The row also names who accepted (escaped — driven with
+  `O'Hara <b>Trust</b>`), the one thing the dead block showed that the card did not.
+- **The two notices moved and the card redraws.** `saveChangeOrder` and `acceptChangeOrder` end in `_docNotice('ok', msg, jobId)`
+  — `#dash-fb` through `_jobBandHost`, then `_dashRedraw` — so the row is on screen the moment Create is pressed. The create
+  notice names the change order and where its two buttons are. **A refusal still prints inside the modal (`co-fb`)**, where the
+  person is; a test drives it.
+- **⚠ THE DETAIL ROW AND `houseFlagSummary` ARE DELETED, NOT LEFT DEAD.** `houseFlagSummary` had no other reader (CLAUDE.md
+  recorded that on 2026-09-10). Every field the row carried is on the Client Dashboard. Three suites lifted the helpers and
+  were restated; restoring the row fails 11 and crashes two suites (their sandboxes no longer lift the helper), loudly.
+- **Q14, DECIDED BY ANTHONY: an hourly change order's hours carry the job's rush premium and discount like every other hour;
+  a fixed-price change order is priced at the plain hourly rates. One line on the printed page says which.**
+  `coRateModsLine(est, fixed, prep)`:
+  - T&M — *"Like every other hour on this engagement, these hours carry the 20% expedited-delivery premium and the 10%
+    preferred-client discount on the final invoice."* Fixed — *"It is priced at the plain hourly rates shown: the
+    expedited-delivery premium and the preferred-client discount in your fixed project fee do not apply to it."*
+  - The premium reads the estimate's pinned `rushPct`, never today's `RUSH_PCT`. On fixed, a discount folded in by *Offer
+    Discount* counts (`prevApprovedTotal`), since `applyDiscountRevision` bakes it into the fee and zeroes `discountPct`.
+  - **⚠ Prep says *"These hours carry …"*, never *"like every other hour"*** — a vendors-only prep job has no other hours, and
+    prep never carries the premium (`calcAll` forces rush off). Found writing the prep case, not by a test.
+  - **A job with neither prints no line** — the standing rule against explaining an absence.
+  - **The line states what the invoice ALREADY does; nothing about billing changed, and it is driven, not asserted:** on a
+    T&M rush + 10% job, 10 accepted concierge hours at $150 collect **$1,620** against **$1,500** on a plain job; on a fixed
+    rush + discount job the final adds exactly the plain **$1,500**.
+  - **Not carried on the acceptance panel** — offered to Anthony as a follow-up rather than widened into this commit.
+- **11,586 committed checks before the merges; 12,524, 12,722, 12,817 and 13,056 after each of the four** (+97 of them here: `tests/change-order-card.test.js` new at 95, and 2 in `intake-house-flags` asserting
+  `houseFlagSummary` is gone. The new suite covers `coCardActions`, a driven dashboard with one
+  accepted and one pending change order asserting both controls, their onclicks, classes and uniqueness, Create → Accept
+  through the real modals, the Q14 wording on every arm, and the invoice join). `coCardActions` / `coRateModsLine` lifted —
+  never stubbed — into the eight suites that render the card or print the page; `_docNotice` stubbed to record in the two that
+  drive `saveChangeOrder`. **Revert sweep on four tar copies: 20 changes, ALL RED, baseline 11,586 / 0 before and after on every
+  copy, no needle mismatched.** Not rendering the card's controls (the defect) fails 19, Create printing to `#e-fb` again (the
+  other half) 23, dropping Get Acceptance 18, Accept to `#e-fb` 11, no Q14 line 9, the rest 1–5.
+  - **⚠ FOUR REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** — index reads on a button list the revert
+    had emptied (`buttons(row)[1].call`). Read defensively now; re-done, all four fail cleanly with every check running.
+  - **⚠ THE MERGES BROKE THE NEW SUITE TWICE, CORRECTLY, BY THROWING.** On the first, the concurrent sessions gave the dashboard three more
+    dependencies and the invoice three: its two sandboxes lift `agrApprovalWithdrawn`, `docReadOnlyWord`,
+    `discountOfferBlocker` and `docPreviewOnly`, and `paymentSplit`, `rushScopeLine` and `rushCrewAdded`, as main's own suites
+    do — lifted, never stubbed. `dashboard-schedule` and `job-progress` conflicted on the same lists and took the union.
+    Re-run on the merged tree, the four reverts that matter (the card's controls, both notices, the Q14 line) are still red:
+    the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against a baseline of 12,524 / 0
+    before and after. **On the second** (`main` moved while the first was being tested), H1/M1 had taken the final-invoice
+    approval off the page, so `var invApproved` no longer exists and the invoice sandbox threw *not found*; it lifts
+    `invFinalApproval`, `invFinalApprovalRecord` and `docKeyFor` now, as `change-order-billing` does. The third and the fourth
+    (the Reset and C2 builds) needed nothing. The same four reverts re-run on the final tree: the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against 13,056 / 0 before
+    and after.
+- **Verified in headless Chromium, `tests/browser/step33.js` new at 75, 0 failed, 0 page errors** (written as step 26 and
+  renumbered 33 on the merges — the concurrent sessions took 26 to 32): a Home Editing job with rush
+  and a 10% discount, opened from the client list; + New → Create lands the notice on the dashboard and the row with PDF and a
+  bronze Get Acceptance; PDF prints the T&M line and no `$`; Get Acceptance → Accept, the notice, the row *Accepted* with PDF
+  alone, the Hours Log *incl. +8.0 hrs by change order*; a second pending change order with unique onclicks; a fixed $24,000 rush
+  + discount job printing *+ $2,000* and the fixed line; a plain fixed job printing none; no detail row and no change-order
+  control in the client list; overflow 0 and all three buttons inside the viewport at 1440 and 390.
+  - **⚠ AND THE RUNNER HUNG FOR SEVENTEEN MINUTES ON THE PRE-CHANGE BUILD, WHICH IS ITS OWN DEFECT.** step23 and step24 did not
+    close the browser when they threw, so node stayed alive and `run.sh` never reached the next step. Both close it in the catch
+    now (as 25 and 33 do), steps 23 and 33 set the 8s default action timeout 24 and 25 already used, and `run.sh` gives every
+    step a 600s ceiling that reports *TIMED OUT* rather than stalling. `run.sh`'s default list is 1–33.
+  - **Before the merge, steps 1–26 re-run as regressions: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 101 / 73 / 99 / 75, 0 failed — 1,287 browser checks across the twenty-six.** Steps 23, 24 and 25 went 78 → 101, 58 → 73 and 78 → 99 — each press now also asserts its control is
+    on the page exactly once — so 1,153 + 59 + the new step's 75 is the 1,287.
+  - **ON THE TREE AFTER ALL FOUR MERGES, steps 1–33: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75, 0 failed — 1,675 browser checks across the thirty-three.** (After the first merge, steps 1–30 ran 1,527; after the third, steps 1–32 ran 1,622.)
+- Manual **§9** (the + New route; the row's buttons; a note on the dead end with what to do about change orders raised before
+  today; the notices; the Q14 note) and playbook **Step 10d** (the same, plus a `.stop` and a note in field language) and **four**
+  symptom rows. Both `.md` copies hand-edited; **28 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
+  1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as before.
+  The first `<style>` block is byte-identical at 98,760 bytes; the app diff is 106 insertions against 81 deletions.
+- **⚠ A CHANGE ORDER CANNOT BE DELETED, AND THE DOCUMENTS SAY WHAT THAT MEANS HERE.** Anyone who pressed Create twice on the old
+  build (it looked as though nothing happened) holds a duplicate: print and accept only one — the other moves nothing and is
+  never billed.
+- **⚠ THE SHAPE TO COPY: a control that exists only inside markup nothing appends is not a control.** Grep finds the onclick, the
+  function works when called, and every test that calls it passes — the one question none of them asks is whether a person can
+  reach it. **Count the callers of a user-facing action, and press the button in the browser.**
+
+## ⚠⚠ A JOB PLAN EDIT WAS UNDONE BY THE OTHER DEVICE'S NEXT SAVE — A PERSON'S EDIT NOW MOVES THE JOB'S CLOCK (FIXED 2026-09-29)
+Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are silently undone by the other device."* App-only,
+**no Apps Script redeploy** — nothing in `apps-script/` changed, and the merge the fix relies on is the one already deployed.
+
+- **⚠⚠ THE MECHANISM, AND EVERY LINK OF IT IS DELIBERATE ON ITS OWN.** `saveJobs()` fills `updatedAt` only when it is
+  **missing**, so it never bumps a job this device did not touch. `saveAllJobs` posts **every** job. The sheet merges a job as
+  one record and keeps the **incoming** copy on a tie (`incT >= curT` in `_mergeJobRecord`). So a writer that changed the job
+  and called `saveJobs()` alone left it at the morning's stamp, and the next save from any device still holding the morning
+  copy — **an edit to a different client is enough** — won the tie and wrote the morning back.
+- **REPRODUCED ON THE REAL WRITERS AND THE REAL MERGE BEFORE ANYTHING CHANGED**, driving `havellin.html`'s writers against
+  `main-sync.gs`'s `saveAllJobsToSheet` / `saveJobToSheet` / `_mergeJobRecord` in a vm: a confirmed **$23,400** painter, an
+  **$850** dumpster and a confirmed team came off the job when the desk saved a different client, and `getVendorActuals` then
+  billed the prep fee on the **$20,000** estimate figure (**$6,000** against the real **$7,020**) and dropped the dumpster
+  from the final invoice (**$850 → $0**). Nothing on either screen said so.
+- **⚠⚠ AND THE CREW'S OWN HOURS SAVE WAS ONE OF THOSE SAVES, EVERY DAY.** `lockAssignedCrew` runs on **every hours save** and
+  ended in an unconditional `saveJobs()` — a whole-list post of that device's copy of every job. So the desk sets the vendors on
+  the Job Plan, the house logs the day on a copy loaded that morning, and the vendors are gone; driven in the unit suite. It
+  saves only when it actually locked a slot now.
+
+### `_saveJobEdit(job, kind, key)` — the one save for a person's edit
+- **Stamp FIRST, then `saveJobs(); syncJobToSheets(job);`** — the house pairing. First, because `saveJobs()` writes this
+  device's own store from the object as it stands: stamped only by the sync's own bump afterwards, the device's store holds
+  the edit at the morning's clock while the wire carries it newer. A test reads the device's localStorage back.
+- **`kind`/`key` stamp the sub-record too** (`at['prepSourcing:Lp1']`, `collSourcing:c1`, `logisticsSourcing:dumpster`,
+  `vendorRatings:11`). The sheet already unions stamps of every kind, so they ride today and a per-key merge can read them.
+  **`_srcSlot` returns `bucket` and `key`** for this, so the stamp lands on the line id, never its position. **The crew has no
+  key** — one object, and no per-slot merge exists for a stamp to feed. `_crewSave(jobId)` is the crew's door to the helper.
+- **THE 22 JOB PLAN WRITERS**: the thirteen sourcing writers and six crew writers the audit named, plus
+  `setJobVendorCoordHrs` / `setPrepVendorCoordHrs` / `setLogisticsCoordHrs`, which saved the same way and the audit did not name.
+- **⚠ `lockAssignedCrew` STAMPS ONLY A LOCK THAT HAPPENED, and returns the count.** Stamping every call would make every
+  hours save on a stale device claim the job — the defect turned inside out. Driven: nothing to lock → **no save, nothing on
+  the wire, the clock unmoved**.
+- **⚠ FOUND WRITING IT: ONE PRESS OF *Confirm job team* WROTE THE JOB TWICE.** It called `lockAssignedCrew` (which saved) and
+  then saved again. `_lockCrewSlots(crew)` is the locking with no save; confirm locks and saves once. Pinned in two suites
+  (`saves === 1`), and `lockAssignedCrew` is lifted into the confirm sandbox so a return to the old call FAILS rather than throws.
+
+### ⚠⚠ The rule: a PERSON'S edit stamps; a write the APP makes on its own stays bare
+- **Five named exemptions**, each with its reason in the test: `resolveJobVendor` (render-time repair of a moved directory row
+  — the name is the identity, the id a cache), `_writeVendorScore` (the Vendor Directory's receipt — the rating was stamped when
+  given), `fetchSubfolderIds` (a cache of Drive ids), `_driveFolderFailed` (a failure notice; the retry is a person's press),
+  `hardDeleteJob` (not an edit). **Stamping any of them is the defect in reverse**: a stale device that merely LOOKED at a job
+  would claim the newest copy of it and win every scalar on it. Driven: a stale device's render-time repair does not write its
+  morning copy over the desk's quote.
+- **THE NET IS THE RULE, NOT TODAY'S NAMES.** Every live `saveJobs()` in the file — **46** today (46 when written too: the H3/M8
+  merge deleted the dead `cycleStatus`, and the H1/M1 merge added `recordInvFinalApproval`, the final-invoice PIN, which stamps
+  through `docState` and syncs, so the net passed it with no change), cross-checked against a plain scan so a masking bug cannot
+  lose one — must save an object stamped before the call (`.updatedAt = Date.now()`, `_jobTouch(x,`, `docState(x,`) **and**
+  synced after it (`syncJobToSheets(x)`), **the same receiver both times**, or be one of the five exemptions, which must still
+  save and must stay bare. A writer added tomorrow that saves bare fails here. **⚠ The count's floor is a vacuity guard at 40,
+  never today's figure** — it was pinned at 45 and the merge's honest deletion put it on the line.
+
+### Every other writer that saved a job without stamping it
+- **Genuinely losing, like the Job Plan's (saved, never synced, never stamped):** `toggleProbatePkg`; `saveEstimateState`'s
+  job figures (`havellinEst` / `totalEst`, which every save of an estimate writes); **`checkPin`'s `job.approved`** (saved,
+  never synced); and **the cheque photograph** — `_attachPaymentEvidence` now stamps `payments:<uid>`, because a stale copy of
+  the same payment with no photograph otherwise won it back through the per-key merge.
+- **Already synced, so the sheet got a newer copy, now stamped before the save so the device's own store agrees:**
+  `changeEstimateService`, `saveIntake`, `saveEstimateAndPreview`, `submitForApproval`, `markEstimateSent`,
+  `applyDiscountRevision`, `revokeEstimateApproval`, `editEstimateFromCE`, `submitDeny`, `markAgreementSent`,
+  `acceptChangeOrder`, `activateOrCycle`, `confirmMarkWon`,
+  `confirmMarkLost`, `setValBasis`, `setEstateAVD`, `setVendorRating` / `setVendorRatingNote` (through the helper, with the
+  rating's key), `draftReviewRequest`, `markReviewRequestSent`, `createDriveJobFolder` (both arms), `ensureAgreementApproved`,
+  and **`saveClientEdit`, which carries the house flags**. `removeAppraiser` gains the sync it was missing. (`cycleStatus` was
+  stamped too; main has since deleted it as dead code, and the merge took the deletion.)
+
+### ⚠⚠ The merge found that this fix had quietly disarmed the concurrent H4 suite
+- **`tests/jobs-refresh.test.js` used the probate-package toggle as its example of an edit that does not move the job's
+  clock** — true when it was written that morning, and false once this change made the toggle stamp. The stale refresh
+  answer then stopped TYING the local record and became simply OLDER than it, so `_mergeCloudJobs` kept the local copy
+  whatever the H4 recheck did. **Measured, not argued: with the toggle stamped, reverting the recheck (`_syncWriteSeq !== seq`,
+  or the whole response-time line) left that suite at 103 / 0 — green.** Nothing failed, which is exactly why it had to be
+  looked for. The three cases now use the **Drive failure notice** — a save the app makes on its own and deliberately leaves
+  unstamped, so it still ties — and the reverts fail **2** and **6** again, as H4's own sweep recorded. The H4 entry's
+  *"It matters on the `saveJobs()`-only edits (`toggleProbatePkg` and others)"* is corrected in place: it matters now on the
+  writes the app makes on its own.
+- **⚠ THE SHAPE: a fix that closes one gap can open a hole in somebody else's test without failing it.** When a change makes a
+  function behave better, look for suites that used its OLD behaviour as the thing they were testing against.
+
+### What it does NOT fix, measured and pinned so it cannot be mistaken for fixed
+- **P11 — a stale device making its OWN edit still takes the whole job.** The house sets the painter; the desk, on its morning
+  copy, sets the dumpster: the desk's stamp is later, the sheet takes its whole record, and the painter is gone. A per-key merge
+  for the sourcing maps and the crew needs a backend redeploy. A test asserts the loss **and** that the painter's per-key stamp
+  is still on the record, ready for it — **when P11 lands that assertion flips; update it and this entry together.**
+- **⚠ AND THE SAME DOOR OPENS WITH NOBODY PRESSING ANYTHING — found building the test, measured, NOT fixed here.** The DocuSign
+  and Stripe arrival checks run when a client is opened; they write `checkedAt` through `docState`, which stamps the RECORD, and
+  sync it. So a stale device merely **opening** a client with an outstanding envelope or payment link takes the whole job —
+  driven: DocuSign answers *"still out"* to the stale laptop and the desk's $23,400 quote is gone. It is the inverse of this
+  fix (an automatic write claiming to be newest) and it sits on the DocuSign rate-limit path, so it is its own change: stamp
+  only the `docState` key on an answer that changes nothing else (app-only), or P11. Pinned by a test that flips when fixed.
+- **⚠ THE JOB PLAN'S 20-SECOND REFRESH DOES NOT BRING VENDORS OR THE TEAM.** `refreshPlanAndLogFromCloud` re-reads the plan and
+  the log; vendors and the team live on the job record. Both documents now say: **reload before changing a vendor or the team on
+  a client somebody else has been working.**
+- **⚠ CORRECTS 2026-09-12.** That entry says *"With the job merge fixed, a stale list **displays** stale rather than **losing**
+  anything."* It was false for every scalar a bare writer set — which is this defect. Corrected in place.
+
+### Proof
+- **11,727 committed checks on this branch; 12,959 after merging the concurrent C1, H4, H3/M8, document-claims, H1/M1 and
+  Reset builds' suites** — +238 on the branch (`tests/job-edit-stamps.test.js` new at **234**, `job-plan-team-dates` +4) and
+  `jobs-refresh` +1 on the merge, so **+239 on top of `main`** at every merge (11,907 → 12,146, 12,165 → 12,404, 12,625 →
+  12,864, 12,720 → 12,959). Against the
+  pre-change writers (the helpers merely added so it can load) the new suite fails **143 of 234**, with every check running.
+  Four sandboxes restated rather than stubbed — the logistics, crew and confirm sandboxes in `job-plan-team-dates`, the rating
+  sandbox in `job-closeout` — and `drive-folder`'s four lift `_saveJobEdit` / `_jobTouch` so a revert sending the failure
+  recorder through the helper fails the exemption check instead of throwing there.
+- **Revert sweep on four tar copies, twice.** On the branch: **67 changes, ALL RED, baseline 11,727 / 0 before and after on
+  every copy, no needle mismatched, nothing crashed.** Biggest: the crew save stamping and syncing nothing **28**, the helper not
+  syncing **27**, the helper stamping after the save **25**, `_lockCrewSlots` forgetting the specialists **11**; `_srcSetVendor`
+  and `setPrepVendorQuote` bare, `lockAssignedCrew`'s old unconditional save and `_lockCrewSlots` never counting **10** each; the
+  other 59 fail 1–7. Stamping the directory receipt, the Drive failure notice or the subfolder cache fails **3** each, so the
+  exemptions fail in the other direction too. **Re-run on the tree after the H3/M8 merge (12,404): 68 changes** — the 67 less
+  `cycleStatus`, which `main` deleted, plus the two H4 recheck reverts, which fail **2** and **6** as H4's own sweep recorded —
+  **ALL RED, baseline 12,404 / 0 before and after on every copy, no needle mismatched**, the same figures throughout. The
+  document-claims, H1/M1 and Reset merges landed after it; on the final tree all 68 still find their code, needle by needle,
+  and the suite is green, so the results carry.
+  - **⚠ THREE REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** — `seen[1][1]` when the helper stopped
+    syncing, `r.after.prepSourcing.Lp1.quote` when the quote did not survive. A read that throws stops the file, so each read as
+    one failure with every check after it unrun. Every read is defensive now (`get`, `holds`); re-done, each fails with all 234
+    running.
+  - **⚠ ONE CAME BACK GREEN AND IT WAS A REAL GAP**: `_lockCrewSlots` forgetting the **second concierge** — nothing had ever
+    driven a named `tc2` through the lock. Covered in both suites now (a lock after sign-off, and confirm).
+  - **⚠ AND ONE CRASHED A SUITE ON THE MERGED RE-RUN**: the Drive failure notice stamping threw out of `jobs-refresh`, because
+    the three sandboxes restated onto that notice lifted it and not the save helper — 55 checks never ran. They lift
+    `_saveJobEdit` / `_jobTouch` now (as `drive-folder`'s four do, for the same reason); re-done, it fails **4** with all 12,404
+    running.
+- **Verified end to end in headless Chromium, `tests/browser/step32.js`, 53 checks, 0 failed, 0 page errors** (written as step
+  26 and renumbered at each merge — H4 took 26, C1 27, H3/M8 28, the document claims 29, H1/M1 30 and the Reset 31), with **two
+  browser contexts — two localStorages, which is what two devices are** — against one fake Apps Script running the REAL
+  `_mergeJobRecord`: device A sets the painter, the quote and status, adds the dumpster and confirms the team through the real
+  Job Plan controls; device B, loaded before A started and never reloaded, edits a **different** client through the real Edit
+  Client modal and presses Save; the sheet still holds A's work (the painter, a $12,500 mover, the dumpster, the team), a fresh
+  reload of each device reads it, the reloaded Job Plan shows it and the team chip is green, and the bill comes back **$23,400 /
+  $7,020 / $850**. The hours form: a save with nothing to lock writes **no** job and moves no clock; a slot added and named
+  after sign-off locks on the next save (one write) and the save after that writes none. **Against main without this fix it
+  fails 25 of 53** (the same 25 on the build this branch started from, and on `main` after each concurrent session landed), and
+  the failures read as the report: *the painter survived B's save — got undefined*, *the 30% fee is $7,020 — got 6000*, *the
+  $850 dumpster — got []*, the team chip red. `run.sh`'s default list is 1–32; on the MERGED tree steps 1–31 re-run as
+  regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 78
+  / 58 / 78 / 28 / 90 / 58 / 62 / 53 / 42, 0 failed — **1,541 browser checks across the thirty-two**.
+- Manual **§2** (a note: what happened, what it still does not do, and what to do) and **§11** (the plan refresh does not bring
+  vendors or the team); playbook **Step 7** (reload before changing the team), a **`.stop` in Step 10c**, the plan-refresh note,
+  and **two** symptom→cause rows. Both `.md` copies hand-edited; **43 claims parity-checked, 0 mismatches** (412 with the H3/M8,
+  document-claims, H1/M1 and Reset builds', on the merged tree); `doc-structure` green; tag balance clean with the stylesheet
+  stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` 51/61 and 17/18 tables full width, 0 on the
+  phone rule — as before.
+- **⚠ THE SHAPE TO COPY: "saved" is not "saved newer."** A save that does not move the record's clock is a save that loses the
+  next tie — and on a merge that keeps the incoming copy on a tie, the next tie is whichever device saves next, about anything.
+  **When a merge decides by timestamp, every write a person makes must move the timestamp, and no write the app makes on its own
+  may.**
+
+## ⚠⚠ THE BOTTOM Reset BUTTON RUNS THE ONE RESET — AND IT WAS REPRICING THE JOB IT WAS PRESSED ON (FIXED 2026-09-29)
+Anthony, on the one item the C1 build (the entry below) left for him: *"route Reset through the new reset too."* App-only, no
+redeploy.
+
+- **⚠⚠ REPRODUCED ON THE PRE-CHANGE BUILD FIRST, AND IT WAS A MONEY DEFECT ON THE SAME CLIENT, NOT A LEAK ACROSS CLIENTS.** A premium
+  Estate Settlement contracted at *Contents list*, six rooms, **$22,505**. The real Reset button asked nothing, unticked **Premium
+  Estate**, set the documentation scope to **Full**, cleared the rooms and the vendor lines — and **kept** the discount, move styling,
+  the private note, the collection, the car, the prep line, the planner date and a half-typed collection. The same six rooms scored
+  again priced at **$17,700**: premium off took **$8,900** and Full put **$4,095** back, so the new figure still looked like a price.
+  **⚠ And a Save afterwards put it into the saved estimate** — driven on the old build, the saved record reopened premium-off at Full.
+- **`resetEstimate()` IS `resetEstimateJobState(bound job)` NOW — the private list is deleted, not trimmed.** Premium, the scope and
+  who walked the house seed from the job; the binding and the four fields `loadJobIntoEstimate` writes off the job record are untouched;
+  nothing is reloaded (a Reset is not an open, and a test asserts no fetch); a dictation still running is aborted, as on every path.
+- **⚠ IT IS NOT Start over, and that is the distinction to keep.** Start over reopens the client, so a SAVED estimate comes back; Reset
+  gives a blank estimate for this client and leaves the saved one byte-for-byte as it was until Save. With nothing saved the two land in
+  the same place. The tooltip says so, and so does the question.
+- **⚠ IT ASKS FIRST**, because it now takes the private note and the lists with the rooms — naming the client, and, when an estimate is
+  saved (`estimateHasContent`, so an empty record is not "saved"), saying the saved one is not changed and that Start over goes back to
+  it. **Cancel changes nothing, not even a running dictation.** A line under the button confirms the clear, because the button sits at
+  the foot of a long screen.
+- **⚠ THE LOCK IS ENFORCED WHERE THE ACTION RUNS, not only in the disabled button.** Out for approval or approved, Reset refuses, asks
+  nothing and clears nothing: calcAll would otherwise put a blank working copy under an estimate a manager is reviewing, and `checkPin`
+  approves the working copy. The *"a rule enforced only in what a control OFFERS is not enforced"* shape from 2026-09-23, one more time.
+- **Tests.** `estimate-reset` 305 → **398**: the whole derived net driven through the real `resetEstimate` on the same client (every
+  control, every room row, every piece of saved-estimate state), the three seeds, the binding and job-record fields untouched, no fetch,
+  Cancel, saved / empty-record / nothing-saved questions, the saved record unchanged, both lock states, the bound-job-or-null hand-off
+  under suppressed auto-save, the tooltip — and `resetEstimate` joins the *no path keeps a private list* and *calls the one reset* nets.
+  **Two suites restated, not deleted:** `doc-scope` pinned `_estimateDocScope = 'full'` inside Reset's body — **that line WAS the
+  defect** — and now drives Reset to the job's own intake answer; `estimate-walkthrough` pinned `_volHandSet = {}` there and now points at
+  the one reset. **12,002 committed checks on this branch; 12,720 after merging the concurrent H3/M8, document and H1/M1 sessions'
+  suites, 0 failed.** The first `<style>` block is byte-identical to `main`'s, before the merges and after them — no CSS.
+  **Revert sweep on three tar copies: 12 changes, ALL RED, baseline 11,993 / 0 before and after on every copy, no needle
+  mismatched.** The old body back (the defect itself) fails **55**; no confirm 12; the lock guard removed 8; resetting for nobody and the
+  saved branch inverted 6 each; the guard on *approved* only 4; the feedback line and the tooltip 2 each; an empty record counted as
+  saved, the unsuppressed auto-save, the unnamed client and the missing Start over pointer 1 each.
+  - **⚠ THE DEFECT REVERT CRASHED TWO SUITES ON THE FIRST SWEEP** (46 fails reported): the new sandboxes did not lift the old body's
+    `ROOMS`, so it threw and every check after it went unrun. Every Reset call in the tests is read defensively now; re-run on a fresh
+    copy it fails **55 with all 12,002 checks running**, baseline 12,002 / 0 before and after.
+- **Verified in headless Chromium, `tests/browser/step31.js`, 42 checks, 0 failed, 0 page errors**, pressing the real Reset button:
+  Cancel keeps everything; OK names the client, and the screen is a blank estimate for *this* client — premium, Contents list, Ashley as
+  the walker, the home value and sqft kept — with the same six rooms back at **$22,505**; with a saved estimate the question says it is
+  untouched, the record is byte-identical after, and Start over then brings it back; submitted, the button is disabled and a direct call
+  asks nothing and clears nothing. **Against the pre-change build it fails 24 of 42.** Written as step 28 and renumbered on two
+  merges — the concurrent H3/M8, document and H1/M1 sessions took 28, 29 and 30 first. `run.sh`'s default list is 1–31; on the
+  MERGED tree steps 1–30 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 /
+  52 / 27 / 58 / 69 / 75 / 33 / 78 / 58 / 78 / 28 / 90 / 58 / 62 / 53, 0 failed — **1,488 browser checks across the thirty-one**.
+  - ~~**⚠ THE `showFB` 4-SECOND RACE BIT THE FIRST RUN, AND IT IS STILL NOT FIXED.** Every message arms an unconditional clear, so the
+    first run of section D read an EMPTY strip after Reset: an earlier message's timer (the Save's or the reopen's, both under four
+    seconds old while the revert sweep loaded the CPU) cleared Reset's line. Section D now waits out earlier timers and says why.
+    **A message written within four seconds of another can still vanish early** — a per-element timer in `showFB` is the fix,
+    recorded twice now and worth doing on its own.~~ **FIXED THE SAME DAY — see the entry at the top of this file.** ⚠ *"A
+    per-element timer is the fix"* was wrong: the dashboard's notices are painted by a redraw, not by `showFB`, so a per-strip
+    clear still wipes them, and the sweep proved it (fails 5). A message's timer clears the nodes it wrote and nothing else.
+    *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
+- ~~**⚠ FOUND IN PASSING, NOT FIXED — BY READING, NOT DRIVEN: the device's scratch copy survives a Reset or a Start over.**
+  `saveEstimateScratch` refuses to write an empty-rooms state, so after either clear the scratch still holds the discarded build until
+  something new is scored. Opening that client **offline**, with no saved estimate, would restore it (under the *unsaved draft* warning).
+  Narrow — offline, nothing saved, and left before scoring anything new — and the same on both buttons.~~ **FIXED THE SAME DAY — see
+  the entry at the top of this file.** ⚠ *"Narrow"* was wrong for Start over, and driving it is what showed it: the reopen that
+  follows the clear is exactly what reads the copy, so offline with nothing saved the discarded rooms came back **immediately**.
+  *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
+- Manual **§5h** (Reset rewritten: a blank estimate for this client, not Start over, locked with everything else, and what it used to do,
+  measured) and playbook **Step 2** (a sentence in the `.stop`) plus **one** symptom row. Both `.md` copies hand-edited; **18 claims
+  parity-checked, 0 mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and
+  17/18 tables full width, 0 on the phone rule — as before.
+- **⚠ THE SHAPE TO COPY: the reset that stays on the same client is the one nobody measures.** C1 was found because a leak crosses
+  clients and shows on the next client's documents. Reset never crossed a client, so its damage stayed on the job it was pressed on — and
+  two errors in opposite directions summed to a figure that still looked right.
+
+## ⚠⚠ TWO MANAGER APPROVALS LIVED IN THE OPEN PAGE, NOT ON THE JOB — THE FINAL-INVOICE PIN AND THE AGREEMENT'S BAND (FIXED 2026-09-29)
+Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). App-only, no redeploy: the approval rides
+`job.docState`, which the backend already merges per key (`JOB_KEYED_MAPS`).
+
+- **⚠⚠ H1 — THE FINAL-INVOICE PIN WAS THREE PAGE GLOBALS.** `invApproved` / `invApprovedBy` / `invApprovedAt` were set by
+  `checkInvPin` and read by the registry's gate (`DOC_ACTIONS.invoice.blocker`) and the band in `invoiceHtml`. Only the retired
+  Invoices tab (`loadInvoice`, `setInvStage`) ever cleared them, and `dashApproveInvoice`, the one door since that tab went on
+  2026-09-11, did not. **Measured on the real functions before anything changed**, two jobs each 30% over their estimate:
+
+  | | before | after |
+  |---|---|---|
+  | the PIN typed for B from B's dashboard | **A's final prints too** | A still refused |
+  | B approved at $16,000, then 45 more hours (final $22,000) | **still approved** | refused, naming who approved what, at what figure |
+  | a reload | **B refused again** — the approval existed nowhere | B still approved |
+
+- **THE RECORD: `job.docState['invoice:final'].approval = {by, at, amtDue}`**, written by `recordInvFinalApproval(job, by)`, the
+  ONE writer, through the `docState` accessor, so it stamps `at['docState:invoice:final']` and merges per key like the send and
+  filing records beside it. **The figure is read off `invoiceHtml(job, 'final')` at the moment of the PIN, never passed in**, so
+  an approval cannot be recorded against a number the manager was not shown. `at` is an ISO timestamp; readers format it.
+- **⚠⚠ IT COUNTS ONLY WHILE `amtDue` IS STILL THE FIGURE THE FINAL ASKS FOR.** `invFinalApproval(job, amtDue)` is the one reader
+  the gate, the band and the retired tab share. What a manager approves is a number: more hours, an accepted change order or a
+  payment recorded after the PIN all move it, and the final asks again, the refusal naming who approved it, at what figure, and
+  what it asks for now (`invFinalApprovalStaleTxt`). Put the figure back and the approval on file counts again. The comparison is
+  exact because the final's balance is whole dollars. **No figure to compare against approves nothing** — a paid-up final
+  approved at $0 is not satisfied by a missing figure.
+  - **⚠ A LIMIT, STATED RATHER THAN HIDDEN: an exact offset keeps it.** More hours and an equal payment in the same interval leave
+    the balance where the manager approved it, so the approval stands. It is still the figure they approved; if a manager ever
+    needs to see every change whatever the balance, bind it to the hours as well.
+- **THE DOOR.** `dashApproveInvoice` binds the PIN modal to its job (`openInvPinModal(jobId)` → `modal.dataset.jobId`), writes
+  **no page state** (`currentInvJobId`, `currentInvStage`, `invRequiresApproval` untouched), and on a final already approved at
+  today's figure says who approved it and when instead of asking twice. `checkInvPin` finds its job on the modal and **never falls
+  back to another job**: no job bound, or one this device no longer holds, approves nothing and says so. The billing email
+  carries the approved figure, and the confirmation now lands on the dashboard the PIN was typed from; it used to redraw only
+  the retired tab, so a manager could not tell the PIN had taken.
+- **⚠ THE INVOICE'S BAND HAD NEVER BEEN DRAWN.** `invoiceHtml` built `approvedStamp` and emitted it nowhere (dead since at least
+  2026-09-21, the oldest commit this clone holds). It is emitted now, under the header as the agreement's is, from the record
+  and only for the figure on the page. Screen-only.
+- **⚠ THE APPROVAL SHARES THE `invoice:final` SUB-RECORD WITH THE SEND AND FILING RECORDS, AND THE SHEET MERGES A SUB-RECORD
+  WHOLE** (newest stamp wins; the backend's rule since 2026-09-12, already shared by send and file). Every writer to that key on
+  a final that needs approval is itself gated by the approval, so the ordinary paths converge. The one uncovered ordering: a
+  final **sent while inside tolerance**, pushed outside it by later hours, then approved on a device whose copy never saw the
+  send record — the approval wins and the send record is lost from the sheet. Rare, and recorded rather than fixed: separating
+  them needs a key of its own (the task named this one) or a backend change.
+- **The three globals are DELETED**, with a note where they were; `loadInvoice` and `setInvStage` lost their resets with them.
+- **⚠⚠ M1 — THE AGREEMENT'S "APPROVED FOR SENDING" BAND.** Both forms printed it from `agrApproved` / `agrApprovedBy` /
+  `agrApprovedAt`, which describe whichever job `ensureAgreementApproved` touched LAST. Measured: A approved by Anthony on
+  September 1, then B approved by Ashley today, and A's agreement — the standard form, the estate form and the signing packet,
+  the HTML converted for DocuSign — read **"Approved by Ashley Jerome on September 29, 2026"**; on a fresh page A read **no band
+  at all**, though approved. `_agrApprovedStamp(job)` is the one renderer both forms call: this job's own `agrApproved` and
+  `agrApprovedBy`, escaped, " on <date>" only when a date is on record, and **no band over a blank approver**.
+  - **⚠ THE CONCURRENT DOCUMENT-CLAIMS BUILD FIXED THE SAME DEFECT INLINE THE SAME DAY (Q11)**, from the other side: the packet can
+    now be read before Won, exactly when another job's band on it would be a false statement. The merge kept this helper; their
+    assertions pass against it unchanged.
+  - The page globals themselves stay, and **the retired tab's `updateAgrUI` is now their only reader** (it paints for the job
+    `loadAgreement` primed them from). `_actor` read them too until the same afternoon — see *FIXED THE SAME DAY* below. The net
+    below keeps them out of every client document, and a second net keeps them out of everything else.
+- **⚠⚠ THE BAND STAYS OUT OF EVERY CLIENT PDF NOW.** `.approved-stamp` was hidden only under `@media print`, and the PDF that is
+  emailed, sent for signature or filed is converted server-side from `_exportDoc`'s copy of the page, which is not a print. Every
+  `DOC_ACTIONS` kind's `pdfCss` carries `.approved-stamp{display:none!important;}` (the estimate has no band today and carries
+  the rule so it never can); a test walks `DOC_ACTIONS`, so a fourth kind cannot be added without it.
+- **12,625 committed checks after the merge with `main`** (`tests/approval-on-job.test.js` new at **198**; seventeen suites'
+  sandbox lists dropped `invApproved` and lift the new helpers rather than stubbing them; `doc-actions` and `tabs-retired`
+  restated, not deleted — the second pinned `currentInvJobId = jobId`, page state the door wrote only so `checkInvPin` could read
+  it back). Two-job driven cases for both findings, the reload as a JSON round trip, the sheet merge driven through the real `.gs`
+  functions in both orders, the band's escaping, the driven PDF (the document posted to `htmlToPdf` and to Drive), and **THE
+  NET**: a call-graph walk from every `DOC_ACTIONS` closure (html, emailHtml, text, mailto, subject, cc, blocker), transitively
+  over top-level functions, fails on any read of a page-level approval variable, and every top-level `/approv/i` var must be on
+  its list or exempted by name with a reason.
+- **Revert sweep: 28 changes on four tar copies, baseline 11,685 / 0 before and after on every copy, no needle mismatched; 27 red
+  on the first pass.** Biggest: `dashApproveInvoice` not binding the modal **36**, `checkInvPin` finding its job through
+  `currentInvJobId` **35**, the standard form reading the page globals **12**, the defect itself (any job's approval counts)
+  **10**, the approval ignoring the figure **9**, the band never emitted **9**, the estate form reading the globals **8**; the
+  rest 1–5.
+  - **⚠ THE ONE GREEN WAS MY TEST.** `band()` read the band through "Approved by X on Y", so a band over a blank approver read
+    *(no band)* while sitting in the markup, and dropping the approver guard passed. Absence is COUNTED now; re-done it fails 2.
+  - **⚠ THREE REVERTS CRASHED A SUITE.** Two were mine, unguarded reads on a missing record; they are defensive now, and re-done
+    those reverts fail 35 and 36 with every check running. The third is right: making the gate also read the page mirror
+    `invRequiresApproval` crashes `doc-file.test.js`, whose sandbox does not declare it — loud is the correct direction.
+- **Verified in headless Chromium, `tests/browser/step30.js`, 53 checks, 0 failed, 0 page errors** (renumbered from 26 on the
+  merge; the concurrent sessions hold 26–29), through the real intake and Build Estimate on two clients walked to their finals at
+  1.4× their hours: both refused; the PIN typed through B's visible rail button and the real modal binds B, records
+  `{by, at, amtDue}` on B and nothing on A, and A still does not print; more hours re-ask with the approval named, and the figure
+  put back is honoured; the button does not ask twice; a reload keeps it; the viewer shows the band, print media and each kind's
+  PDF copy hide it (a control copy without the `pdfCss` shows it); A's agreement names Anthony, September 1 after B is approved
+  by Ashley today, on both forms and in the packet; overflow 0 at 1440 and 390. **Against the pre-change build it fails 25.**
+  `run.sh`'s default list is 1–30; steps 1–29 re-run on the merged tree, 0 failed — **1,446 browser checks across the
+  thirty**.
+- Manual **§8** (the band names this agreement's approval; regenerate older ones), **§12** (one client, one figure; the band on
+  view only), **§17** (the PIN list). Playbook a `.stop` under *What needs a PIN* and **three** symptom rows. Both `.md` copies;
+  **29 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered 1440/390 with 0 overflow, 0 page errors; under
+  `print` 51/61 and 17/18 as before.
+- ~~**⚠ FOUND IN PASSING, NOT FIXED: `_actor(job)` falls back to the page global `agrApprovedBy`.** On a job whose own agreement is
+  not approved yet, `draftedBy` on an estimate or invoice send, `sentBy`, `activatedBy`, `deliveredBy` and the review ask's `by`
+  record whichever job the page approved last — measured *Ashley Jerome* on another client. The M1 class on internal attribution
+  rather than a client document; one line (`return (job && job.agrApprovedBy) || '';`), offered to Anthony.~~ **FIXED THE SAME
+  DAY** — Anthony: *"yes, fix the _actor fallback too."* *Kept rather than deleted, per the standing rule that a fixed flag left
+  standing reads as outstanding work.*
+- **⚠⚠ `_actor(job)` IS THIS JOB'S APPROVER OR NOBODY (2026-09-29, same day).** `return (job && job.agrApprovedBy) || '';` — the
+  page global is gone from it. **Measured on the real functions before the change, three jobs** (A approved by Anthony on
+  September 1, B approved by Ashley through the real `ensureAgreementApproved`, C neither): C's estimate **drafted** and **sent**
+  both read **Ashley Jerome**, C **activated** and **closed** both read **Ashley Jerome**, and `_actor(null)` returned **Ashley
+  Jerome with no job at all**. Now the two estimate records name **C's own concierge** — `docRecordSent` and `markDocSent` always
+  carried `|| job.tc`, and the foreign name was what kept that fallback from ever being reached — and activation and close read
+  **blank**.
+  - **⚠ A BLANK IS THE HONEST ANSWER, AND NO CORRECT NAME IS LOST.** The global is only ever written from some job's
+    `agrApprovedBy` (`loadAgreement`, `ensureAgreementApproved`) or cleared, so whenever it held THIS job's approver the job held it
+    too. Tested as the converse: A keeps Anthony on its DocuSign send, its legacy `agrSentBy` mirror and its activation while the
+    page names Ashley. The payment's and signature's `recordedBy`, `depositReceivedBy` and the review ask carry no `|| job.tc` and
+    read blank on a job with no approver on record — prelaunch, and deliberately not widened; one line was the ask.
+  - **THE SECOND NET, beside the document one: the page-level agreement approval is READ by `updateAgrUI` and by nothing else.**
+    It walks every top-level function with the `agrApprovedBy = …` write targets stripped, and counts reads across the whole file:
+    `agrApprovedBy` and `agrApprovedAt` read once each, by the retired tab's banner; **`agrApproved` itself is written and read by
+    nothing.** So the next function that takes the page's copy as the answer fails, whether or not it builds a client document —
+    the document net alone could not see `_actor`, which builds none.
+  - **12,658 committed checks on this branch, 13,089 after merging `main`** (the C2, H2 and Reset builds had landed; `approval-on-job`
+    198 → 231, and the second net stayed green over all three — none of them reads the page globals). **Revert-verified on a tar
+    copy of the tree: restoring the fallback fails 10 — 12,648 passed, 10 failed, every check ran.** The failures ARE the
+    measurement above. Browser steps 1–30 re-run as regressions before the merge, **0 failed — 1,446 checks**, and 1–33 on the
+    merged tree, **0 failed — 1,675 checks**; step 20 activates and step 28 closes through the real buttons, but neither reads the
+    attribution, so the driven proof is the unit suite.
+  - **⚠ FOUND IN PASSING, NOT FIXED: the manual (the handover-date note under §9a-ii) and the playbook (Step 13) say Close records "who
+    closed it".** It records `_actor(job)` — the job's price approver, since the app has no sign-in — so Ashley closing a job
+    Anthony priced reads Anthony. Pre-existing and unchanged by this fix (which only stops ANOTHER client's approver appearing);
+    a wording correction in four files, offered to Anthony. No other document describes these records.
+  - **⚠ OFFERED, NOT DONE: with `_actor` fixed the three page globals are one line from dead.** Pointing `updateAgrUI`'s banner at
+    `_agrJ.agrApprovedBy` / `_agrJ.agrApprovedAt` leaves them written and never read, and all three (plus their writes in
+    `loadAgreement`, `ensureAgreementApproved` and `revokeAgreementApproval`) can then be deleted. Small; Anthony's call.
+- **⚠ NOTED, NOT CHANGED:** 🔑 Manager approval is offered on every live final row, because the rail does not build the invoice
+  on paint; inside tolerance and already approved are answered by the handler. The retired tab's own Approve button still binds
+  `currentInvJobId` through `openInvPinModal()`; that tab has had no nav button since 2026-09-11.
+- **⚠ THE SHAPE TO COPY: an approval is a fact about one record, so it lives on that record.** A page variable answers "what did
+  this screen do last", and every reader that took it for "what is true of this job" printed another client's approval.
+
+## ⚠⚠ THE CLIENT DOCUMENTS SAY ONLY WHAT THE ESTIMATE PRICES — AND EVERY ONE NOW ADDS UP TO ITS OWN TOTALS (FIXED 2026-09-29)
+Off the 2026-09-28 workflow audit, findings **H6, M2, M3 and the document lows**, plus two decisions Anthony made on it: **Q8**
+(name the rush premium and the discount in both agreements' fee clauses, one sentence each) and **Q11** (the agreement may be
+viewed, not printed or sent, before the client is marked Won). App-only, no redeploy. **Every finding was reproduced on the real
+functions before anything was changed.**
+
+- **⚠⚠ H6 — THE RUSH LINE PROMISED PEOPLE THE PREMIUM DOES NOT BUY, ON EXHIBIT A.** Under *Expedited Delivery (20%)* the estimate
+  and the final printed *"A second Transition Concierge and an expanded specialist crew working in parallel to compress the project
+  calendar at your request"* (the deposit and midpoint: *"Compressing the project calendar at your request"*). Rush is a flat premium and adds nobody — the crew and the
+  second concierge are their own controls — and the estimate is the signed agreement's Exhibit A. **`rushScopeLine(e)` is the one
+  sentence**, read by the estimate and both invoice rows: *"Priority scheduling to meet the timeline you requested"*, plus *"with a
+  second Transition Concierge"* / *"an expanded crew of N Property Specialists … working in parallel"* **only when
+  `rushCrewAdded(e)` finds one**: `needsTC2` (or the legacy `preparedBy2`), or `psCount` above the new **`psRecommended`**, stamped
+  on every snapshot by `calcAll` from today.
+  - **⚠ A RECORD WITH NO `psRecommended` NEVER CLAIMS AN EXPANDED CREW.** The comparison cannot be made on an estimate saved before
+    today, and a claim the record cannot support does not go on Exhibit A. The `RUSH_PCT` comment that said the premium *"is
+    literally what the client is buying — a second concierge and a larger crew"* is corrected at the source, and so are the manual
+    §5c bullet and the playbook's lever row, which said the same.
+- **⚠⚠ M2 — THE FINAL'S *ORIGINAL ESTIMATE* ROW FOLDED THE CHANGE ORDERS IN.** *Original Estimate (basis for advance payments)*
+  printed the estimate plus the accepted change orders' hours at the rates: a $10,962 job with a +10/+10 change order read
+  **$13,462** over a **$5,481** deposit and a **$2,741** midpoint — half and a quarter of a different number. It prints
+  `est.havellinTotal` now, and **`_coPayRow` — *Approved Change Orders (N)*, the hours on T&M (*"billed in the hours above"*) or the
+  signed prices on fixed price — sits on its own line directly under it**, on both the T&M and the fixed-price summaries.
+- **⚠⚠ M3 — THE DISCOUNT POP-UP COULD NEVER TAKE A DISCOUNT OFF, AND A DISCOUNT LEFT THE PACKET AT THE OLD PRICE.**
+  - **`Math.max(1, parseInt(…) || 0)` turned a blank AND a 0 into 1%**, so its own refusal (*"between 1 and 30"*, against a 15%
+    cap) was unreachable. **`discountPctInput(raw)`** is read by the preview and the write alike: whole numbers **0–15**, anything
+    else refused with *"Enter a discount between 0% and 15% — 0 removes the discount"* printed in the pop-up's new `#dm-fb`, and the
+    preview shows an em dash rather than a clamped figure the write would refuse. **0 removes it** — refused, with the reason, on an
+    estimate carrying no discount, and on a fixed fee, where the discount lives inside the fee and there is nothing separate to take
+    off. The manager email and the confirmation say *removed*.
+  - **It left `job.agrApproved` standing**, so `ensureAgreementApproved` returned early and never re-filed the signing packet: Drive
+    kept Exhibit A at the old price. `applyDiscountRevision` calls **`revokeAgreementApproval(job, 'discount-revised')`**, extracted
+    out of `revokeEstimateApproval` so both take the same path — **and it clears `_packetExported[job.id]`**, because
+    `_agrExportKey` is the approval DAY plus the approver, so a revoke and a re-approval the same afternoon by the same manager
+    produced the same key and the packet was taken as already filed. **`agrApprovalWithdrawn(job)`** is the one explanation, read by
+    the rail's *Signing packet sent* row and the Agreement tab's banner — both read `agrRevokedBy === 'estimate-edited'`, so a
+    discount revoked the approval silently.
+  - **⚠ OFFER DISCOUNT WAS STILL REACHABLE AFTER THE PACKET WENT OUT, and is withdrawn there now** — Anthony's rule: a later price
+    change is a change order. **`discountOfferBlocker(job)`** (signed → the price is locked; `isAgreementSent` — the record, never
+    the boolean DocuSign does not write — → a change order) is read by the rail, `dashOfferDiscount`, `openDiscountModal` **and
+    `applyDiscountRevision`**, because a pop-up opened before the packet went out on the other device must not write after it.
+- **THE LOWS.** (1) **The midpoint and final billed their own re-rounding** of the cumulative 75%, a dollar off `paymentSplit` in
+  opposite directions on 12 of 79 audited totals; `invoiceHtml` bills `paymentSplit`'s running targets now (`_depSplit` / `_midSplit`).
+  (2) **`buildPrepEstimateBody` printed no discount row**, so the fee and the declutter hours came to more than its total; it does
+  now. (3) **A credit final was emailed as *"Balance due: $-2,741 … due within 7 calendar days"***; `invoiceBalanceWords(amtDue)` is
+  read by the text part, the HTML part and the mailto: *"Credit to you: $2,741 — Nothing is due on this invoice."* (4) **Premium
+  finals: two people sharing a role at a rate landing on half a dollar each rounded up** ($185 × 10.3 = $1,905.50, printed $1,906 +
+  $1,906 over a $3,811 total); the remainder rides on the role's longest row. (5) **Both agreements printed *"(None — $0)"*** inside
+  the materials sentence; `materialsPackageQuoted` → *"No moving or packing materials package is quoted on the Estimate, and none is
+  billed"*, and the estimate's Terms carry the materials bullet only when a package is quoted. (6) **The invoice gate said
+  *"…before the agreement can be drawn"***: `DOC_READY_WHY.estimate` names its `{doc}`.
+- **Q8 — `agrPriceAdjustments(est, party)`**, one sentence each for the premium and the discount, only on an **hourly** engagement
+  and only when the estimate carries one, in the standard form's §3.3 (all three arms) and the estate form's §3.1 under the fee
+  table. `_PCT_WORDS` gained **1–15** so every discount a manager can approve spells out. **Drafted, not reviewed — counsel bundle
+  B6**, with the question of whether *"to meet the timeline you requested"* reads as a completion promise.
+- **Q11 — `docPreviewOnly(kind, job, estRec)`**: the packet on an approved estimate whose client has not said yes yet. The
+  agreement blocker allows `view` only, `docAction` marks the viewer `viewOnly` (no Print button), and `docReadOnlyWord` titles it
+  *Signing Packet — PREVIEW* on the tray and the viewer alike. Viewing commits nothing: no stamp, no filing.
+  - **⚠ BOTH AGREEMENT BUILDERS STOPPED READING THE TAB'S GLOBALS FOR THE APPROVED STAMP.** `agrApproved` / `agrApprovedBy` are
+    whatever `loadAgreement` last primed — possibly another client — and a preview before Won is exactly when another job's
+    *Approved for Sending* stamp would print on this one. They read `job.agrApproved` / `job.agrApprovedBy`, escaped.
+- **THE TESTS ASSERT WHAT A READER CHECKS, NOT A FIGURE SOMEBODY WORKED OUT.** `tests/document-reconciliation.test.js` renders the
+  real estimate, all three invoices, both agreement forms and the three email parts over **289 scenarios** — services, billing
+  bases, rush, discount, premium rates, totals on every residue mod 4, change orders, two-person roles, credits — and holds
+  **14 rules** (the rows add up to each printed total, the schedule signed is the schedule billed, no phantom materials package, crew
+  claims match the estimate, the emails word a credit as one…), reporting failures by rule with the scenarios that broke it.
+  `tests/document-claims.test.js` drives the rest: the pop-up through the real modal functions, the rail, both doors, the
+  preview through `docAction`, and the exact Q8 sentences. **12,427 committed checks after the merge with `main`** (11,751 on this branch before it; `document-claims` 226,
+  `document-reconciliation` 29). The merge's one break was correct: `main`'s new `job-close-midpoint` suite lifts
+  `jobTimelineActions`, which now reaches `docPreviewOnly` / `docReadOnlyWord` / `discountOfferBlocker` / `agrApprovalWithdrawn`,
+  and its lists lift them.
+  Thirty existing suites' pinned `fns:` lists gained the new helpers, lifted rather than stubbed, and **five pins across four suites are restated as the requirement rather than deleted**:
+  `estimate-delivery` (the revoke is asserted where it moved, in `revokeAgreementApproval`; the banner asks the shared withdrawal
+  helper rather than testing `'estimate-edited'` itself), `agreement-rates` (the materials note takes the cost, and a $0 package is
+  none), `service-change` (`_pctWords` spells 1–15, so its fallback is tested on 17%) and `walkthrough-view` (the viewer's Print
+  hides for a view-only document too).
+- **Revert sweep on four tar copies: 53 changes, 52 red on the first pass, baseline 11,748 / 0 before
+  and after on every copy, no needle mismatched, nothing crashed** (every run totalled 11,748). Biggest: the write turning 0 and a
+  blank into 1% fails **24**, the blocker ignoring a sent packet **16**, Q8's percentages unspelled **15**, no package reading as a
+  package **13**, the ungated write **12**; the rest 1–6.
+  - **⚠ THE ONE GREEN WAS MY TEST.** Reverting the estate form's approved stamp to the tab's globals passed, because the check
+    looked for the *other client's* name — and restoring only the condition stamps this job *Approved for Sending* with its own
+    empty approver, so no foreign name appears. It asserts the stamp itself now, both ways and escaped; re-done it fails 1. The
+    same shape this file keeps recording: a check that looks for the symptom it imagined rather than the state it protects.
+- **Verified in headless Chromium, `tests/browser/step29.js`** (step 26 when written; `main` had taken 26–28 by the merge)**, 62
+  checks, 0 failed, 0 page errors**, through the real Build
+  Estimate, the real pop-up and the real rail: an ordinary rush estimate and its invoices read *priority scheduling*; the
+  Concierges control at 2 and a crew above the recommendation each name themselves; the final's summary reads *Original Estimate*
+  = the estimate with *Approved Change Orders (1)* under it; a blank discount refused, 0 removing it, the agreement revoked with
+  *"A discount changed the price…"* on the row; a sent packet leaving no *Offer discount* and `dashOfferDiscount` refusing; the
+  preview packet with no Print and nothing filed, then Print after Won; the Q8 sentences and the materials sentence in the real
+  agreements; overflow 0 at 1440 and 390. **Against the pre-change build it fails 42.** `run.sh`'s default list is 1–29;
+  steps 1–28 re-run on the merged tree, 0 failed — **1,393 browser checks across the twenty-nine**. The first `<style>` block is
+  byte-identical at 98,760 bytes — no CSS; the pop-up gained a hint and a message slot in its markup.
+- Manual **§5c** (the rush bullet corrected; 0 removes, the button goes after the packet), **§7**, **§8** (the preview, Q8, the
+  materials sentence, discount after the packet; the *Awaiting Client Acceptance* note corrected), **§9a** (the timeline row),
+  **§12**; playbook the lever table (the rush row said it buys *"a second concierge and a bigger crew"*), **Step 6** (two `.stop`s
+  extended), the invoice list (a negative final's clause, stale since the variance line went on 2026-09-11, corrected) and **four**
+  symptom rows. **The playbook's symptom table had no separator row in `CONCIERGE_GUIDE.md`**, so it never rendered as a table;
+  fixed. Both `.md` copies hand-edited; **42 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
+  1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width as before. **Counsel bundle B6** added.
+- **⚠ FOUND, NOT BUILT, FLAGGED TO ANTHONY:** ~~(1) *Edit estimate* is still reachable after the packet is sent, so a price can still
+  move under Exhibit A by that door;~~ **BUILT THE SAME DAY** — Anthony: *"yes, withdraw Edit estimate once the packet is sent"*;
+  see the entry at the top of this file. (2) a Gmail packet draft created before a discount is not updated by the re-file —
+  **still open**; ~~(3) `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won
+  survives).~~ **FIXED THE SAME DAY** — a won client re-priced reads *Won · Pending Re-approval* and returns to *Won*; same entry.
+  *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
+- **⚠ THE SHAPE TO COPY: a document is checked by adding up its own rows.** Every defect here printed the right figure somewhere
+  and a wrong one beside it, and every earlier test asserted a figure. The matrix reads the page the way a client does.
 
 ## ⚠⚠ A FINISHED JOB COULD NOT BE CLOSED UNTIL ITS MIDPOINT WAS PAID, AND THE MIDPOINT WAS ASKED FOR ON DAY ONE (FIXED 2026-09-29)
 The 2026-09-28 workflow audit's findings **H3** (High) and **M8**, with Anthony's decision **Q1** applied as written: *Close is
@@ -128,7 +942,7 @@ the work is done.* App-only, no redeploy.
   - **⚠ ASKED ONCE, ONLY IN THE STRETCH THAT IS NEW.** `applyJobTransition` confirms *Close this job now?* when no midpoint payment
     is recorded and the job has never been closed: it names the unpaid midpoint, says the final bills everything not yet paid,
     names today as the handover date, and ~~says neither can be undone~~ **(since the same evening) says Re-open can undo the close
-    until the final goes out** — the entry above. Cancel changes nothing. **The ratings refusal comes first**
+    until the final goes out** — its entry near the top of this file. Cancel changes nothing. **The ratings refusal comes first**
     (a question the app then refuses is worse than none), and with a midpoint payment on file it asks nothing — the normal close
     off Work complete is unchanged.
 - **⚠⚠ A SIXTH ROW STATE, `open`, IS WHAT LETS THE FINAL TAKE THE LIGHT.** Once `deliveredOn` is stamped an unsettled midpoint
@@ -144,7 +958,7 @@ the work is done.* App-only, no redeploy.
   - **⚠ NOTHING OFFERS THE MIDPOINT SEND AFTER THE CLOSE** — the row is never live again, and `_jtDocSecondaries` withholds the
     midpoint's draft link once `deliveredOn` is set — because a midpoint sent after the close bills one share twice. **So *I've
     sent it* cannot be pressed after the close either**: a midpoint sent from Gmail has to be confirmed before closing, and both
-    documents say so — **or, since the same evening, Re-open, confirm it, and close again** (the entry above). Reading it (View,
+    documents say so — **or, since the same evening, Re-open, confirm it, and close again** (its entry near the top of this file). Reading it (View,
     Print, the filed copy) stays.
 - **⚠⚠ M8 — THE MIDPOINT IS NOT DUE ON DAY ONE.** `_midNotYet` in `jobTimeline`: a running schedule with a halfway point, today
   before it, the midpoint neither sent nor drafted, and neither half the work (`workPct >= 0.5`) nor every room locked. The row
@@ -177,7 +991,7 @@ the work is done.* App-only, no redeploy.
   (2026-07-30) carries no `deliveredOn`, so its rail reads *Job active* undone and offers Activate job, which would re-open it.
   Prelaunch, so dummy data only.~~ **RE-OPEN BUILT THE SAME EVENING, AND THE LEGACY CASE CLOSED WITH IT** — Anthony: *"add
   Re-open"*. The decision this bullet deferred: the stamp comes **off** and the undone close is kept on `job.reopens`; a closed job
-  never offers Activate. See the entry at the top of this file. *Kept rather than deleted, per the standing rule that a fixed flag
+  never offers Activate. See its entry near the top of this file. *Kept rather than deleted, per the standing rule that a fixed flag
   left standing reads as outstanding work.*
 - **12,165 committed checks on the merged tree** (11,850 on this build before the merge; `tests/job-close-midpoint.test.js` new at
   256, driving the REAL rail, actions, band, transition, Job Plan stage marker and rendered dashboard, and the real `renderJobPlan`
@@ -224,7 +1038,7 @@ the work is done.* App-only, no redeploy.
   than "slightly off": it told a client who had paid every invoice they were sent that a midpoint was outstanding.** (2) The
   activation-day band has no filled button; a *Log today's hours* primary was considered and not built — **offered, not taken**.
   ~~(3) No Re-open.~~ **(3) BUILT THE SAME EVENING.** (4) **Home Prep is unchanged**: its second payment is due when the vendor
-  schedule is booked, not on a calendar. For (1) and (3) see the entry at the top of this file. *Kept rather than deleted, per the
+  schedule is booked, not on a calendar. For (1) and (3) see its entry near the top of this file. *Kept rather than deleted, per the
   standing rule.*
 - **⚠ THE SHAPE TO COPY: when a control lives on one row, walk every state in which the rows in front of it can stay unfinished for
   a reason the crew does not control.** A client's cheque is exactly such a reason, and the only exit the rail left was a false
@@ -290,11 +1104,14 @@ net under it.
   the screen and the open restores the saved one; with nothing saved it starts from the intake answers. The question promised *intake
   answers* either way. It branches on the record now (`estimateHasContent`, so an empty record is correctly not "saved"), names what
   goes, and the button's tooltip says both.
-- **⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the bottom `Reset` button (`resetEstimate()`) is a FIFTH copy of a reset list**, on the
+- ~~**⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the bottom `Reset` button (`resetEstimate()`) is a FIFTH copy of a reset list**, on the
   same client. It clears the rooms, rush and fixed price, but **unticks Premium Estate even on a premium job**, sets the documentation
   scope to **full** whatever intake answered, and **leaves** the discount, move styling, private note, collections, vehicles, prep lines,
   walked-by and planner date. Not C1 (it never crosses clients), so left alone rather than redesigned in passing; the manual says to use
-  Start over. Routing it through `resetEstimateJobState(currentJob)` is one line if Anthony wants it.
+  Start over. Routing it through `resetEstimateJobState(currentJob)` is one line if Anthony wants it.~~ **BUILT THE SAME DAY** — Anthony:
+  *"route Reset through the new reset too."* See the entry at the top of this file. ⚠ *"One line"* was wrong: it also needed a confirm,
+  a lock refusal where the action runs, and a question that says whether a saved estimate is touched. *Kept rather than deleted, per the
+  standing rule that a fixed flag left standing reads as outstanding work.*
 - **Tests.** `tests/estimate-reset.test.js` new at **305**; five suites restated, not deleted — `doc-scope`, `estimate-walkthrough`,
   `fixed-price`, `prep-declutter`, `prep-fee-billing` each pinned the old three-copy reset by byte sequence or lifted
   `resetEstimateExtras`; each now drives `resetEstimateJobState` and asserts the requirement. **11,804 committed checks on this branch; 11,907 after merging the concurrent H4 session's suites.** The first `<style>` block is byte-identical at 97,897 bytes / 1,228 lines — no CSS.
@@ -362,7 +1179,11 @@ App-only, no redeploy.
   Nothing is outstanding by the time the answer arrives, and the answer may still predate the write. `queuedPostSync` bumps the
   count on every main-sheet write; the refresh notes it before asking and refuses an answer if it moved. **It matters on the
   `saveJobs()`-only edits** (`toggleProbatePkg` and others), which do not bump `updatedAt`: the stale answer TIES the local
-  record, and a tie goes to the sheet. A test pins `queuedPostSync` as the one road to the main sheet — `postSyncTo` is called
+  record, and a tie goes to the sheet. **⚠ CORRECTED 2026-09-29 (C2, the entry at the top of this file): every edit a PERSON
+  makes now stamps the job, `toggleProbatePkg` included, so this matters on the saves the app makes on its OWN and leaves
+  unstamped by rule — the Drive failure notice, the subfolder cache, a render-time vendor repair, the directory receipt. The
+  suite's three recheck cases were restated onto the failure notice: on the stamped toggle they went green under their own
+  reverts.** A test pins `queuedPostSync` as the one road to the main sheet — `postSyncTo` is called
   by the two senders and nothing else, `postSync` by nothing — because the count is only complete while that holds.
 - **⚠ THE SHEET'S DELETIONS APPLY EVEN WHEN THE ANSWER IS DISCARDED.** `deletedJobs` is the job ledger's answer — ids seen and
   no longer held — not a snapshot that can be behind our writes, and the server refuses those ids whatever this device sends.
@@ -2150,11 +2971,12 @@ usable, 12 / 12 / 17 / 23 required); it also found three findings, and he took a
 
   The first `<style>` block is **byte-identical to HEAD at 93,446 bytes / 1,168 lines / 635 rules** — no CSS —
   and markup tag balance is unchanged from HEAD.
-- **⚠ FOUND IN PASSING, NOT FIXED: `showFB` CLEARS ITS STRIP ON A 4-SECOND TIMER, UNCONDITIONALLY.** So a
+- ~~**⚠ FOUND IN PASSING, NOT FIXED: `showFB` CLEARS ITS STRIP ON A 4-SECOND TIMER, UNCONDITIONALLY.** So a
   refusal fired less than four seconds after a previous one is wiped by the **old** timer a moment after it is
   written — press Save twice in quick succession and the second message vanishes instantly. Pre-existing and
   unrelated; it cost the browser probe two runs before the cause was measured rather than guessed at, and the
-  probe now blanks the strip before each press so it measures the gate and not the toast race.
+  probe now blanks the strip before each press so it measures the gate and not the toast race.~~ **FIXED
+  2026-09-29 — see the entry at the top of this file.** *Kept rather than deleted, per the standing rule.*
 - Manual **§4** (two notes — the two optional-but-blocking answers with the whole dead end, and the destination
   block losing three fields), **§5h** (the two refusals and why the walkthrough really is kept), **§11** (the
   per-service table said both gate chips are *"read from intake"* — **the §733.604 deadline is, the
@@ -7528,7 +8350,9 @@ asked which to take and chose all of them in one redeploy.
   something is `pending`. With the job merge fixed, a stale list **displays** stale rather than **losing**
   anything, and the Job Plan is the one surface two people genuinely work at once. Widening every poll would
   put traffic on every device all day for a display problem. Reload for a current Client Dashboard; both
-  documents say so.
+  documents say so. **⚠ CORRECTED 2026-09-29: a stale list could LOSE things, not only display them** — every field a writer
+  set with a bare `saveJobs()` (the whole Job Plan vendor and team section among them) lost the next tie to a stale device's
+  save, because `saveJobs()` never moved the job's clock. That is audit finding C2; see its entry at the top of this file.
 - **4538 committed checks** (`tests/job-record-merge.test.js`, 65 new — the first coverage of what a job
   merge does at all). **All sixteen changes revert-verified individually** — the bulk job path fails **5**,
   the unstamped-is-weakest arm **4**, the log void **4**, the queued-write stand-down and the splice **2**
@@ -8603,6 +9427,72 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 
 ## Branches
 - Active feature branch: `claude/elegant-wright-nb6ffk`
+  (This session was ASSIGNED it again for a follow-up to its H3/M8 build — Re-open and the final invoice's wording — started
+  after every session's work was on `main`. Its merge brought in the seven builds `main` had gained meanwhile and conflicted
+  on the build stamp, CLAUDE.md, two places in each document, twelve suites' pinned lists (resolved as a UNION), the fixed-price
+  final's Payment Summary (resolved to `main`'s change-order row with this build's three-argument gap row) and
+  `tests/browser/step29.js`, which both sessions had written: `main`'s keeps step 29, this one is renumbered **step 36**, and
+  1–36 are the default list.)
+  (`claude/dazzling-mendel-qns7nm` recorded, before this merge, that it was the active branch, and:)
+  (This session was ASSIGNED it again after `claude/relaxed-fermi-nopl99` had recorded itself as active below; a session's
+  assignment wins, so it is promoted. The follow-up here — Edit estimate after the packet, and the won status — was built on
+  the H1/M1 tree and merged `main`'s bottom Reset, C2 and H2 builds on the way through; the merge conflicted on the build stamp,
+  CLAUDE.md, five estimate writers in `havellin.html` (resolved as a UNION: the shared status rule plus `main`'s edit stamps and
+  `checkPin`'s sync) and three suites' pinned lists. Browser steps 31–33 are theirs and this one was written as **step 34**. A second merge
+  took `main`'s `_actor` follow-up to H1/M1 (in that entry, near the top of this file) and conflicted only on the build stamp and this record.
+  A third took `main`'s feedback-strip and draft-copy build, and conflicted on the build stamp, this file and `tests/browser/step34.js`,
+  which both sessions had written: theirs landed first and keeps step 34, this one is renumbered **step 35**, and 1–35 are the
+  default list.)
+  (`claude/exciting-carson-pv156f` recorded, before that third merge, that it was the active branch, and:)
+  (Back on this branch for a third build after every session's work was on `main`: the feedback strip's four-second timer and
+  the draft copy that Reset and Start over left behind — the two items the Reset build had flagged — plus the raw NUL byte in
+  `_vendorCatKey`. The merge that brought `main` in was clean. The change-order card session had taken step 33, so this build's
+  browser step is **step 34**, and 1–34 are the default list.)
+  (`claude/charming-dirac-gcdfsl` recorded, before this merge, that it was the active branch, and:)
+  (Back on this branch for one more commit after all eight builds below were on `main`: the `_actor` follow-up to H1/M1 —
+  attribution names this job's approver or nobody. The merge that brought `main` in conflicted only on the build stamp; no
+  browser step was added, and 1–33 are the default list.)
+  (`claude/relaxed-fermi-nopl99` recorded, before this merge, that it was the active branch, and:)
+  (`claude/charming-dirac-gcdfsl`, `claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`,
+  `claude/exciting-carson-pv156f`, `claude/elegant-edison-x0kgyn` and `claude/clever-goodall-dyv11h` shipped alongside it on
+  2026-09-29 — SEVEN sessions ran concurrently off the 2026-09-28 workflow audit, landing eight builds: C1 and then the
+  bottom Reset, H4, H3 and M8, the document findings, H1 and M1, C2, and H2 (the change-order card) here. All eight are on
+  `main`. This branch merged the others on the way through, in four merges — `main` moved three times while the first was
+  being tested: H1/M1, the Reset build, then C2. They conflicted on the build stamp, CLAUDE.md, `run.sh`, two pinned `fns:`
+  lists, the invoice sandbox and four browser step numbers, every one resolved as a UNION. Browser steps: H4 keeps 26, C1 27,
+  H3/M8 28, the document findings 29, H1/M1 30, the Reset build 31, C2 32, and this one is **step 33**.)
+  (`claude/clever-goodall-dyv11h` recorded, before this merge, that it was the active branch, and:)
+  (SIX sessions ran concurrently on 2026-09-29 off the 2026-09-28 workflow audit, landing seven builds: C1 and then the bottom
+  Reset on `claude/exciting-carson-pv156f`, H4 on `claude/elegant-edison-x0kgyn`, H3 and M8 on `claude/elegant-wright-nb6ffk`,
+  the document findings on `claude/dazzling-mendel-qns7nm`, H1 and M1 on `claude/charming-dirac-gcdfsl`, and C2 here. All seven
+  are on `main`. This branch merged the other six on the way through, in four merges, and the browser steps resolved as a UNION:
+  H4 keeps step 26, C1 27, H3/M8 28, the document claims 29, H1/M1 30, the Reset 31, and this one is **step 32**. The first
+  merge restated the H4 suite's recheck cases, which this fix had turned green (see the C2 entry); the second took `main`'s
+  deletion of `cycleStatus`, dead code this branch had stamped; the third kept `main`'s agreement-approval revoke in
+  `applyDiscountRevision` and `revokeEstimateApproval`, with this branch's stamp before each save; the fourth conflicted only on
+  the build stamp, CLAUDE.md and both sessions' `tests/browser/step31.js`.)
+  (`claude/exciting-carson-pv156f` recorded, before this merge, that it was the active branch, and:)
+  (`claude/charming-dirac-gcdfsl`, `claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk` and
+  `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29. This branch's second build — the bottom Reset through the
+  one reset — landed after the other four were on `main` and merged them on the way through, twice, because two landed while it
+  was finishing; the merges conflicted on the build stamp, CLAUDE.md, `run.sh` and two browser step numbers, every one resolved
+  as a UNION. Browser steps: H4 keeps 26, C1 27, H3/M8 28, the document findings 29, H1/M1 30, and the Reset build is
+  **step 31**.)
+  (`claude/charming-dirac-gcdfsl` recorded, before this merge, that it was the active branch, and:)
+  (`claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`, `claude/exciting-carson-pv156f` and
+  `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — FIVE sessions ran concurrently off the 2026-09-28
+  workflow audit, H1 and M1 here. All five are on `main`. This branch merged the other four on the way through; the merge
+  conflicted on two lines of `havellin.html` (both sessions had moved the agreement's band off the page globals, resolved to
+  the shared `_agrApprovedStamp`) and on fifteen suites' sandbox lists, every one resolved as a UNION. Browser steps 26–29 are
+  theirs and this one is **step 30**.)
+  (`claude/dazzling-mendel-qns7nm` recorded, before this merge, that it was the active branch, and:)
+  (`claude/elegant-wright-nb6ffk`, `claude/exciting-carson-pv156f` and `claude/elegant-edison-x0kgyn` shipped alongside it on
+  2026-09-29 — FOUR sessions ran concurrently off the 2026-09-28 workflow audit: C1 and H4 on the last two, H3 and M8 on the
+  first, and the document findings (H6, M2, M3, the lows, Q8, Q11) here. All four are on `main`. This branch merged the other
+  three on the way through; the merge conflicted on the build stamp, CLAUDE.md, the playbook's symptom table, `run.sh` and
+  `tests/browser/step26.js`, every one resolved as a UNION, with `_jtDocSecondaries` taking both the closed-job midpoint rule
+  and the preview gate. Browser steps: H4 keeps 26, C1 27, H3/M8 28, and this one is **step 29**.)
+  (`claude/elegant-wright-nb6ffk` recorded, before this merge, that it was the active branch, and:)
   (`claude/exciting-carson-pv156f` and `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — THREE sessions ran
   concurrently off the 2026-09-28 workflow audit: C1 (a fresh estimate inheriting the last one's) and H4 (the jobs refresh)
   there, H3 and M8 (closing a job with the midpoint unpaid, and the midpoint's timing) here. All three are on `main`. This branch
@@ -8611,7 +9501,11 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   (`claude/exciting-carson-pv156f` recorded this about the first two: *two sessions ran concurrently … the merge conflicted on
   the build stamp, CLAUDE.md and both sessions' `tests/browser/step26.js`, resolved as a UNION — theirs keeps step 26 and this
   one is step 27*.)
-  (`claude/change-order-fixes-ew3m2i` is the previous name.)
+  (`claude/exciting-carson-pv156f` is the previous name.)
+  (`claude/change-order-fixes-ew3m2i` is the previous name. It carried the two 2026-09-25 Home Prep change-order
+  builds to `main`; the sessions above were each assigned a new name at the same commit.)
+  (`claude/tender-pascal-trkc5b` merged the 2026-09-28 audit and Anthony's answers to `main` on 2026-09-29 and built nothing;
+  `claude/business-workflow-audit-jnxev5` is the audit's own branch.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
@@ -13806,16 +14700,34 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (third pass)** — both documents, against Re-open and the final invoice naming only
+- Last reconciled against the app: **2026-09-29 (ninth pass)** — both documents, against Re-open and the final invoice naming only
   the invoices that went out (manual §9, §9a, §11, §12; playbook Step 11 & 12, Step 13, *If the job dies instead*, the status table
-  and six symptom rows); see the entry at the top of this file.
+  and six symptom rows); see its entry near the top of this file.
+- Prior pass **2026-09-29 (eighth pass)** — both documents, against Edit estimate going once the signing
+  packet is out and a won client reading *Won · Pending Re-approval* while a revised price waits (manual §1, §5, §5c, §8, §9,
+  §9a; playbook the two `.stop`s on Build Estimate, the lever table, Step 6, the status table and four symptom rows); see its
+  entry near the top of this file.
+- Prior pass **2026-09-29 (seventh pass)** — both documents, against Reset and Start over discarding this
+  device's unsaved-draft copy (manual §5h; playbook one symptom row), and the footer stamps of all four files moved from
+  *reconciled 2026-08-03* to 2026-09-29; see its entry near the top of this file.
+- Prior pass **2026-09-29 (sixth pass)** — both documents, against the change-order card carrying PDF and Get
+  Acceptance, the notices moving to the dashboard, and the one Q14 line on the printed change order (manual §9; playbook
+  Step 10d and four symptom rows); see its entry near the top of this file.
+- Prior pass **2026-09-29 (fifth pass)** — both documents, against a Job Plan edit surviving the other
+  device's save (manual §2 and §11; playbook Step 7, a `.stop` in Step 10c, the plan-refresh note and two symptom rows); see
+  its entry near the top of this file.
+- Prior pass **2026-09-29 (fourth pass)** — both documents, against the bottom Reset button running the one
+  reset (manual §5h; playbook Step 2 and one symptom row); see its entry near the top of this file.
+- Prior pass **2026-09-29 (third pass)** — both documents, against the two manager approvals moving onto
+  the job (manual §8, §12, §17; playbook a `.stop` under *What needs a PIN* and three symptom rows); see its entry near the
+  top of this file.
 - Prior pass **2026-09-29 (second pass)** — both documents, against Close job from activation on, the final
   after the close with the midpoint unpaid, and the midpoint's timing (manual §9, §9a, §9a-i, §11, §12; playbook Steps 10, 10a,
-  11 and 13, the status table and eight symptom rows).
+  11 and 13, the status table and eight symptom rows); see its entry near the top of this file.
 - Prior pass **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h;
   playbook Step 2 and four symptom rows).
 - Prior pass **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
-  concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows); see the entry at the top of this file.
+  concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows).
 - Prior pass **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
   hours by a change order that prints the rate (manual §6c, §8, §9, §11, §12; playbook Step 10d, the Home Prep short version and
   the symptom table).

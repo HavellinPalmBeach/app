@@ -25,9 +25,9 @@ const { fn, sandbox, domStub, source } = require('./harness');
 const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'fmtDate2',
   'svcLabelOf', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText',
   'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit',
-  'clientEstimateHtml', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
-  'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'proposedPlanRow',
-  'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml', 'probateAgreementHtml',
+  'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
+  'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted', 'proposedPlanRow',
+  'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp',
   'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices', '_agrProbateCompliance',
   '_agrMidpointTrigger', '_fixedFeeBlurb', 'docStandardEffect', 'isFormalDoc', 'gateDispute',
   '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason',
@@ -259,7 +259,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('the INVOICE bills the hours, and gates on them');
   {
-    const invFns = ['invoiceHtml', 'docSentAt', 'docKeyFor', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+    const invFns = ['invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
       'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson',
       'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine',
       'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2',
@@ -269,7 +269,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const invVars = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',
       'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
       'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES',
-      'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'invApproved'];
+      'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
     const mkInv = (dcHrs, loggedTC, stage) => {
       const est = prepEst(dcHrs);
       const logs = loggedTC > 0

@@ -33,7 +33,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // #7 — THE BAND SAYS WHAT TO DO NEXT, NOT WHAT THE MILESTONE WILL BE CALLED ONCE IT IS DONE
   // ═══════════════════════════════════════════════════════════════════════════
-  const TL_FNS = ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent'];
@@ -78,9 +78,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#7, driven through the real band renderer');
   {
-    const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
-      'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
-      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney']);
+    const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
+      'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor']);
     const B = sandbox({ fns: DFNS, vars: ['JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
       'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
       stubs: { _todayStr: () => '2026-09-23', Intl: global.Intl } });
@@ -319,8 +319,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('#2 — add, remove, and a touched line stays put');
   {
     const saved = []; const asked = []; const refreshed = [];
-    const W = sandbox({ fns: ['addLogisticsLine', 'removeLogisticsLine', '_logiJob', 'setLogisticsVendor'], vars: ['LOGISTICS_CATEGORIES'],
-      stubs: { saveJobs: () => saved.push(1), refreshVendorSourcing: (id) => refreshed.push(id),
+    // _saveJobEdit and _jobTouch are LIFTED, never stubbed — they are the stamp this change exists for.
+    const W = sandbox({ fns: ['addLogisticsLine', 'removeLogisticsLine', '_logiJob', 'setLogisticsVendor', '_saveJobEdit', '_jobTouch'],
+      vars: ['LOGISTICS_CATEGORIES'],
+      stubs: { saveJobs: () => saved.push(1), syncJobToSheets: () => {}, refreshVendorSourcing: (id) => refreshed.push(id),
                lookupVendorById: () => null, vendorIdOf: () => '', _vendorContact: () => '',
                confirm: (m) => { asked.push(m); return W.__answer; } } });
     const job = { id: 7, svc: 'downsizing_move' };
@@ -442,11 +444,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // stub, find no job, and return null, so every "refusal" below would be the early return on a
     // missing crew. That is exactly how this group first passed with nothing refused at all.
     const S = sandbox({ fns: ['setCrewTC', 'setCrewTC2', 'setCrewPS', '_crewRefuseDup', '_crewRefreshSelects', 'crewSlotHolding',
-                              'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName'],
+                              'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
+                              '_crewSave', '_saveJobEdit', '_jobTouch'],
       vars: CREW_VARS,
-      stubs: { document: dom, getJobCrew: () => crew, saveJobs: () => saves.push(1),
+      stubs: { document: dom, getJobCrew: () => crew, saveJobs: () => saves.push(1), syncJobToSheets: () => {},
                showFB: (id, kind, msg) => said.push({ id, kind, msg }), getPSCostRate: () => 60,
                rebuildLogDropdowns: () => rebuilt.push(1), getAllActiveTC: () => [], getAllActivePS: () => [] } });
+    S.jobs = [{ id: 7, crew: crew }];
 
     S.setCrewPS(7, 1, 'Anthony Graziano Jr');
     eq(crew.ps[1].name, '', '⚠⚠ Anthony Jr in slot 2 when he is already slot 1 is REFUSED — the record does not take it');
@@ -481,17 +485,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠⚠ #5 — the confirm is the backstop for a crew that already carries a duplicate');
   {
-    const said = []; let locked = 0;
-    const crew = { tc: { name: 'Ashley Jerome', locked: false }, tc2: { name: '', locked: false },
+    const said = []; let saves = 0;
+    const crew = { tc: { name: 'Ashley Jerome', locked: false }, tc2: { name: 'Bob Smith', locked: false },
                    ps: [{ name: 'Anthony Graziano Jr', locked: false }, { name: 'Anthony Graziano Jr', locked: false }], confirmed: false };
-    const K = sandbox({ fns: ['confirmJobTeam', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName'], vars: CREW_VARS,
+    const anyLocked = () => !!(crew.tc.locked || crew.tc2.locked || crew.ps.some((p) => p.locked));
+    // The locking is LIFTED, never stubbed (2026-09-29): confirmJobTeam locks through _lockCrewSlots
+    // and saves once itself, and a stub is what would let the lock and the save drift apart.
+    // lockAssignedCrew is lifted too, although confirm no longer calls it — so a confirm that goes
+    // back to locking through it (a second save) FAILS the one-save check here instead of throwing.
+    const K = sandbox({ fns: ['confirmJobTeam', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
+                              '_lockCrewSlots', '_crewSave', '_saveJobEdit', '_jobTouch', 'lockAssignedCrew'], vars: CREW_VARS,
       stubs: { getJobCrew: () => crew, isJobWon: () => true, unfilledPlannedPS: () => [], plannedPSCount: () => 2,
-               showFB: (id, kind, msg) => said.push({ kind, msg }), confirm: () => true, lockAssignedCrew: () => { locked++; },
-               saveJobs: () => {}, buildLogTeamRows: () => {}, _repaintPlanGates: () => {} } });
+               showFB: (id, kind, msg) => said.push({ kind, msg }), confirm: () => true,
+               saveJobs: () => { saves++; }, syncJobToSheets: () => {}, buildLogTeamRows: () => {}, _repaintPlanGates: () => {} } });
     K.jobs = [{ id: 7 }];
     K.confirmJobTeam(7);
     ok(!crew.confirmed, '⚠⚠ the team Anthony locked in — both specialists Anthony Jr — does NOT confirm now');
-    eq(locked, 0, '…nobody is locked');
+    ok(!anyLocked(), '…nobody is locked');
+    eq(saves, 0, '…and nothing is saved');
     const k0 = said[0] || {};
     eq(k0.kind, 'err', '…and it is refused in red');
     has(k0.msg || '', 'Anthony Graziano Jr</strong> is in 2 slots (Property Specialist 1, Property Specialist 2)', '…naming who and where');
@@ -500,6 +511,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     K.confirmJobTeam(7);
     ok(crew.confirmed, 'with the extra slot changed, it confirms');
     eq((said[said.length - 1] || {}).kind, 'ok', '…and says so');
+    ok(crew.tc.locked && crew.ps[0].locked && crew.ps[1].locked, '…with every named slot locked');
+    ok(crew.tc2.locked, '…the second concierge included');
+    eq(saves, 1, '⚠ in ONE save — the locks and the sign-off are one object and one write, not two');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
