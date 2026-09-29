@@ -23,13 +23,16 @@ set -u
 cd "$(dirname "$0")/../.."
 APP_PATH="${APP_PATH:-$PWD/havellin.html}"
 export APP="file://$APP_PATH"
-steps=("$@"); [ ${#steps[@]} -eq 0 ] && steps=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32)
+steps=("$@"); [ ${#steps[@]} -eq 0 ] && steps=(1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33)
 rc=0
 for n in "${steps[@]}"; do
   f="tests/browser/step$n.js"
   [ -f "$f" ] || { echo "  step$n: no such script"; rc=1; continue; }
   printf '  step%-3s ' "$n"
-  out=$(node "$f" "$APP_PATH" 2>&1)
+  # ⚠ A per-step ceiling, so a step that hangs (a throw that leaves the browser open keeps node alive)
+  # reports itself rather than stalling every step after it. No step comes near ten minutes.
+  out=$(timeout 600 node "$f" "$APP_PATH" 2>&1); st=$?
+  if [ $st -eq 124 ]; then echo "step$n: TIMED OUT after 600s"; rc=1; continue; fi
   echo "$out" | tail -1
   echo "$out" | grep -q " 0 failed" || rc=1
 done

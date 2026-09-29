@@ -510,6 +510,131 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(H.fn('probateAgreementHtml'), '_agrApprovedStamp(job)', 'and so does the estate form');
   }
 
+  // ═══ _actor: the same defect on internal attribution ═══════════════════════
+  // Found in passing on M1 and fixed the same day on Anthony's word ("yes, fix the _actor fallback
+  // too"). `_actor(job)` fell back to the page global `agrApprovedBy` — whichever job the page approved
+  // LAST — so on a job whose own agreement was not approved yet it stamped ANOTHER client's approver
+  // as the person who drafted and sent the estimate, and on a job whose own approver was blank, as the
+  // person who activated and closed it. Three jobs, because it takes a third to have no approval:
+  // A approved by Anthony on September 1, B approved by Ashley through the real stamp, C neither.
+  function actorCtx() {
+    const said = { notices: [], alerts: [] };
+    const ctx = sandbox({
+      fns: AGR_FNS.concat(['_actor', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'docState',
+        '_jobTouch', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'jobPayments']),
+      vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS']),
+      stubs: {
+        document: domStub({}), currentEstimate: null,
+        estimateStore: { 1: { estimate: AEST(1), approved: true, approvedBy: 'Anthony Graziano' },
+                         2: { estimate: AEST(2), approved: true, approvedBy: 'Ashley Jerome' },
+                         3: { estimate: AEST(3), approved: false } },
+        populateAgrSelect() {}, renderAgreement() {}, updateAgrUI() {}, exportSigningPacketToDrive() {},
+        saveJobs() {}, syncJobToSheets() {}, setTimeout() {},
+        _approvedEstimateHtml() { return ''; },
+        // markDocSent's estimate branch primes the estimate tab and calls the legacy recorder; both
+        // have their own suites. What this file asks is who the send record NAMES.
+        _primeEstimateFor() { return true; }, markEstimateSent() {},
+        dashNotice(type, msg) { said.notices.push({ type, msg }); }, _dashRedraw() {},
+        // The activation and close gates have their own suites; here they are open so the stamp is reached.
+        jobActivationBlockers() { return []; }, jobCloseBlockers() { return []; },
+        confirm() { return true; }, alert(m) { said.alerts.push(m); } } });
+    ctx.jobs = [
+      { id: 1, hvlId: 'HVL-0001', name: 'Alder', svc: 'downsizing', addr: '1 Ocean Blvd', tc: 'Anthony Graziano',
+        won: true, approved: true, status: 'won', agrApproved: true, agrApprovedBy: 'Anthony Graziano', agrApprovedAt: 'September 1, 2026' },
+      { id: 2, hvlId: 'HVL-0002', name: 'Birch', svc: 'downsizing', addr: '2 Ocean Blvd', tc: 'Ashley Jerome',
+        won: true, approved: true, status: 'won' },
+      { id: 3, hvlId: 'HVL-0003', name: 'Cedar', svc: 'downsizing', addr: '3 Ocean Blvd', tc: 'Carla Ortiz',
+        status: 'new' } ];
+    ctx.__said = said;
+    return ctx;
+  }
+
+  group('⚠⚠ _actor names this job\'s approver or nobody — never the page\'s');
+  {
+    const ctx = actorCtx();
+    const [A, B, C] = ctx.jobs;
+    eq(ctx.ensureAgreementApproved(2), '', 'fixture: B is approved through the real stamp');
+    eq([B.agrApprovedBy, ctx.agrApprovedBy], ['Ashley Jerome', 'Ashley Jerome'], 'fixture: B names Ashley, and so does the page global');
+    eq(C.agrApprovedBy, undefined, 'fixture: C has no agreement approval of its own');
+    eq(ctx._actor(C), '', '⚠⚠ C gets NOBODY — it used to get Ashley Jerome, B\'s approver');
+    eq(ctx._actor(A), 'Anthony Graziano', 'A still gets its own approver, though the page names Ashley');
+    eq(ctx._actor(B), 'Ashley Jerome', 'and B its own');
+    eq([ctx._actor(null), ctx._actor(undefined)], ['', ''], 'no job, nobody');
+    ctx.agrApprovedBy = 'Mallory';
+    eq([ctx._actor(A), ctx._actor(C)], ['Anthony Graziano', ''], 'whatever the page global holds, it is never the answer');
+  }
+
+  group('⚠⚠ _actor driven: an estimate drafted and sent for a job with no approval names its own concierge');
+  {
+    const ctx = actorCtx();
+    const C = ctx.jobs[2];
+    ctx.ensureAgreementApproved(2);
+    ctx.docRecordSent({ job: C, key: 'estimate' }, { provider: 'gmail', draftUrl: 'https://mail.google.com/x', pdfOk: true });
+    const st = () => (C.docState || {}).estimate || {};
+    ok(!!st().draftedAt, 'fixture: the draft was recorded');
+    eq(st().draftedBy, 'Carla Ortiz', '⚠⚠ drafted by C\'s own concierge — it used to read Ashley Jerome, who approved B');
+    eq(st().sentAt, undefined, 'fixture: a Gmail draft is not a send — the confirming tap records that');
+    ctx.markDocSent(3, 'estimate');
+    ok(!!st().sentAt, 'fixture: the confirming tap recorded the send');
+    eq(st().sentBy, 'Carla Ortiz', '⚠⚠ sent by C\'s own concierge — it used to read Ashley Jerome');
+    ok(!!(C.at || {})['docState:estimate'], 'fixture: written through the docState accessor, which stamps');
+  }
+
+  group('_actor driven, the converse: a job with its own approver keeps it, on the DocuSign send too');
+  {
+    const ctx = actorCtx();
+    const A = ctx.jobs[0];
+    ctx.ensureAgreementApproved(2);
+    eq(ctx.agrApprovedBy, 'Ashley Jerome', 'fixture: the page global names B');
+    ctx.docRecordSent({ job: A, key: 'agreement' }, { provider: 'docusign', pdfOk: true, extra: { envelopeId: 'env-1' } });
+    eq([A.docState.agreement.draftedBy, A.docState.agreement.sentBy], ['Anthony Graziano', 'Anthony Graziano'], 'A\'s agreement is sent by A\'s approver');
+    eq(A.agrSentBy, 'Anthony Graziano', 'and the legacy mirror says the same — no correct name is lost');
+  }
+
+  group('⚠⚠ _actor driven: activating and closing a job whose own approver is blank names nobody');
+  {
+    const ctx = actorCtx();
+    const [A, , C] = ctx.jobs;
+    ctx.ensureAgreementApproved(2);
+    C.status = 'won';
+    ok(ctx.applyJobTransition(C), 'fixture: C activates');
+    eq([C.status, !!C.activatedOn], ['active', true], 'fixture: and is stamped');
+    eq(C.activatedBy, '', '⚠⚠ activated by nobody on record — it used to read Ashley Jerome, who approved another job');
+    ok(ctx.applyJobTransition(C), 'fixture: C closes');
+    eq([C.status, !!C.deliveredOn], ['closed', true], 'fixture: and is stamped');
+    eq(C.deliveredBy, '', '⚠⚠ delivered by nobody on record — never the page\'s approver');
+    ok(ctx.applyJobTransition(A), 'fixture: A activates');
+    eq(A.activatedBy, 'Anthony Graziano', 'the converse: A is activated by its own approver');
+    eq(ctx.__said.alerts, [], 'fixture: nothing refused');
+  }
+
+  group('⚠⚠ the page-level agreement approval is read by the retired tab\'s banner and by nothing else');
+  {
+    // A write is not a read: `agrApprovedBy = ...` targets are stripped before looking. What survives is
+    // every place the page's copy is TAKEN as the answer, and there must be exactly one — the retired
+    // Agreement tab's own banner, which paints for `currentAgrJobId`, the job `loadAgreement` primed the
+    // globals from, and has had no nav button since 2026-09-11. `_actor` read it too until 2026-09-29.
+    const readersOf = (v) => {
+      const out = [];
+      for (const n of FN_NAMES) {
+        let b; try { b = stripLine(H.fn(n)); } catch (e) { continue; }
+        if (bareRead(b.replace(new RegExp('(^|[^.\\w$])' + v + '\\s*=(?!=)', 'g'), '$1'), v)) out.push(n);
+      }
+      return out.sort();
+    };
+    eq(readersOf('agrApprovedBy'), ['updateAgrUI'], '⚠⚠ agrApprovedBy: the retired tab\'s banner and nothing else');
+    eq(readersOf('agrApprovedAt'), ['updateAgrUI'], 'agrApprovedAt: the same');
+    eq(readersOf('agrApproved'), [], 'agrApproved: written, and read by nothing');
+    // ⚠ Not vacuous: outside any function too, and the scan sees the lines it exists for.
+    // (The declaration `var agrApprovedBy = ''` is a write, and the lookahead drops it with the others.)
+    const readsInFile = (v) => (LIVE.match(new RegExp('(^|[^.\\w$])' + v + '(?![\\w$])(?!\\s*=(?!=))', 'g')) || []).length;
+    eq(readsInFile('agrApprovedBy'), 1, 'one read of agrApprovedBy in the whole app — the banner\'s');
+    eq(readsInFile('agrApproved'), 0, 'and none of agrApproved');
+    lacks(stripLine(H.fn('_actor')), 'agrApprovedBy ||', '_actor keeps no fallback to the page');
+    ok(bareRead(stripLine("function _actor(job) {\n  return (job && job.agrApprovedBy) || agrApprovedBy || '';\n}"), 'agrApprovedBy'),
+      'the scan catches the line this replaced');
+  }
+
   // ═══ the PDF: the band can never reach a client PDF ════════════════════════
   group('⚠⚠ every client document kind hides .approved-stamp in its PDF');
   {

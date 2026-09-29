@@ -7,8 +7,10 @@
 // Log, the Job Plan's hours summary and projection, and the line under the hours fold. On a fixed price
 // they now name the price (the change order) or the margin (the hours); on T&M they read as before.
 //
-// Drives the REAL page: the real change-order modal typed into, the real Create and Accept buttons, the
-// real print path (window.print stubbed to read the print target), the real invoices across three
+// Drives the REAL page: the change order raised from the dashboard's + New, typed into, created, then
+// accepted and printed from its own row's Get Acceptance and PDF buttons (2026-09-29 — until then this step
+// called those functions directly, because nothing on screen offered them), the real print path
+// (window.print stubbed to read the print target), the real invoices across three
 // stages, the real dashboard and the real Job Plan — on a fixed-price job and a T&M job side by side.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step23.js [/abs/path/to/havellin.html]
@@ -18,9 +20,14 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
+// ⚠ The browser is held OUTSIDE the body so the catch can close it. A throw that leaves it open
+// keeps node alive forever, and run.sh then hangs on the first failure instead of reporting it —
+// found running this step against the pre-2026-09-29 build, where it sat for seventeen minutes.
+let b = null;
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
+  p.setDefaultTimeout(8000);
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
   p.on('dialog', async d => { await d.accept(); });
   await p.goto(APP); await p.waitForTimeout(1500);
@@ -73,9 +80,34 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     return d.textContent.replace(/\s+/g, ' '); }, h);
   const text = (sel) => p.evaluate((sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\s+/g, ' ') : ''; }, sel);
 
+  // ⚠⚠ THE REAL BUTTONS (restated 2026-09-29, audit H2). These helpers called openChangeOrder,
+  // openCOAcceptModal and printChangeOrder through page.evaluate — which is how this step passed while no
+  // screen offered either of the last two: they were reachable only from a client-list row that was never
+  // added to the page. They press what a person presses now: the client's row in the list, + New on the
+  // Change Orders card, and PDF / Get Acceptance on the change order's own row. A control that is not on
+  // screen exactly once is a FAILED CHECK, and nothing is pressed in its place.
+  async function openDash(id) {
+    await p.click('.nb[onclick*="\'jobs\'"]'); await p.waitForTimeout(250);
+    await press('tr[onclick="openClientDashboard(' + id + ')"]'); await p.waitForTimeout(400);
+  }
+  async function ensureDash(id) {
+    const on = await p.evaluate((id) => { const v = document.getElementById('client-dashboard-view');
+      return !!(v && v.offsetParent !== null && _dashboardJobId === id); }, id);
+    if (!on) await openDash(id);
+  }
+  async function press(sel) {
+    const n = await p.locator(sel).count();
+    ok(n === 1, 'one control on screen: ' + sel + ' (' + n + ')');
+    if (n !== 1) return false;
+    try { await p.click(sel, { timeout: 5000 }); return true; }
+    catch (e) { ok(false, 'could not press ' + sel); return false; }
+  }
+  const jobOf = (coId) => p.evaluate((c) => (changeOrders.find(x => x.id === c) || {}).jobId, coId);
+
   // Raise a change order through the real modal; returns the readout seen while typing and the new id.
   async function raise(id, tc, ps, desc) {
-    await p.evaluate((id) => openChangeOrder(id), id); await p.waitForTimeout(150);
+    await ensureDash(id);
+    await press('#client-dashboard-view button[onclick="openChangeOrder(' + id + ')"]'); await p.waitForTimeout(150);
     if (tc) await p.fill('#co-tc-hrs', String(tc));
     if (ps) await p.fill('#co-ps-hrs', String(ps));
     await p.fill('#co-description', desc);
@@ -91,7 +123,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     return seen;
   }
   async function accept(coId, name) {
-    await p.evaluate((c) => openCOAcceptModal(c), coId); await p.waitForTimeout(200);
+    await ensureDash(await jobOf(coId));
+    await press('#client-dashboard-view button[onclick="openCOAcceptModal(' + coId + ')"]'); await p.waitForTimeout(200);
     const seen = { summary: await text('#coa-summary'), terms: await text('#coa-terms') };
     await p.fill('#coa-client-name', name);
     await p.click('#co-accept-modal .btn-p'); await p.waitForTimeout(200);
@@ -99,8 +132,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     return seen;
   }
   async function print(coId) {
-    await p.evaluate((c) => { window.__prints = []; printChangeOrder(c); }, coId); await p.waitForTimeout(350);
-    const got = await p.evaluate(() => window.__prints[0] || null);
+    await ensureDash(await jobOf(coId));
+    await p.evaluate(() => { window.__prints = []; });
+    await press('#client-dashboard-view button[onclick="printChangeOrder(' + coId + ')"]'); await p.waitForTimeout(350);
+    const got = (await p.evaluate(() => window.__prints[0] || null)) || { html: '', title: '' };
     await p.waitForTimeout(700);
     got.after = await p.evaluate(() => ({ target: document.getElementById('print-target').innerHTML.length,
       visible: Array.from(document.querySelectorAll('.panel')).filter(x => getComputedStyle(x).display !== 'none').length }));
@@ -255,21 +290,31 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   has(await text('#job-plan-content'), 'Stop — Change Order before the next room.', 'and the T&M line under the fold');
 
   // ── C. Overflow with each modal open ─────────────────────────────────────
+  // Both modals opened by their real buttons, so a change order still WAITING on the client is needed:
+  // Get Acceptance is offered only on one, and c1 / c2 are accepted by now.
+  const c3 = await raise(idF, 0, 1, 'Held open for the modal check.');
+  ok(!!c3.coId, 'a third change order, left unaccepted');
   for (const w of [1440, 390]) {
     await p.setViewportSize({ width: w, height: 900 });
-    await p.evaluate((id) => { openChangeOrder(id); document.getElementById('co-tc-hrs').value = '20'; updateCOHours(); }, idF); await p.waitForTimeout(200);
+    await ensureDash(idF);
+    await press('#client-dashboard-view button[onclick="openChangeOrder(' + idF + ')"]'); await p.waitForTimeout(200);
+    await p.fill('#co-tc-hrs', '20'); await p.waitForTimeout(100);
     const ov1 = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const box = await p.evaluate(() => { const r = document.querySelector('#change-order-modal > div').getBoundingClientRect(); return { l: r.left, r: r.right }; });
     ok(ov1 <= 0 && box.l >= 0 && box.r <= w, 'change-order modal fits at ' + w + 'px (overflow ' + ov1 + ', box ' + Math.round(box.l) + '–' + Math.round(box.r) + ')');
-    await p.evaluate(() => closeChangeOrder());
-    await p.evaluate((c) => openCOAcceptModal(c), c1.coId); await p.waitForTimeout(200);
+    await press('#change-order-modal button:has-text("Cancel")'); await p.waitForTimeout(100);
+    await press('#client-dashboard-view button[onclick="openCOAcceptModal(' + c3.coId + ')"]'); await p.waitForTimeout(200);
     const ov2 = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const box2 = await p.evaluate(() => { const r = document.querySelector('#co-accept-modal > div').getBoundingClientRect(); return { l: r.left, r: r.right }; });
     ok(ov2 <= 0 && box2.l >= 0 && box2.r <= w, 'acceptance modal fits at ' + w + 'px (overflow ' + ov2 + ', box ' + Math.round(box2.l) + '–' + Math.round(box2.r) + ')');
-    await p.evaluate(() => closeCOAcceptModal());
+    await press('#co-accept-modal button:has-text("Cancel")'); await p.waitForTimeout(100);
   }
   ok(errs.length === 0, 'no page errors (' + errs.join(' | ') + ')');
 
   await b.close();
   console.log('\nstep23: ' + pass + ' passed, ' + fail + ' failed');
-})().catch(e => { console.log('THREW ' + (e && e.stack || e)); console.log('step23: ' + pass + ' passed, ' + (fail + 1) + ' failed'); });
+})().catch(async e => {
+  console.log('THREW ' + (e && e.stack || e));
+  console.log('step23: ' + pass + ' passed, ' + (fail + 1) + ' failed');
+  try { if (b) await b.close(); } catch (_) { /* already gone */ }
+});

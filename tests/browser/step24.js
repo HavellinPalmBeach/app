@@ -17,8 +17,9 @@
 //      that the retired sentence is gone. The requirement — never "no approved estimate", and say
 //      what is true about how the hours are billed — is unchanged.
 //
-// Drives the REAL page: the real change-order modal typed into, the real Create and Accept buttons,
-// the real dashboard, the real Job Plan, the real print path and the real agreement builder — on a
+// Drives the REAL page: the change order raised from the dashboard's + New, typed into, created, then
+// accepted and printed from its own row's Get Acceptance and PDF buttons (2026-09-29 — until then this step
+// called those functions directly, because nothing on screen offered them), the real dashboard, the real Job Plan, the real print path and the real agreement builder — on a
 // T&M job and a fixed-price job.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step24.js [/abs/path/to/havellin.html]
@@ -28,8 +29,12 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
+// ⚠ The browser is held OUTSIDE the body so the catch can close it. A throw that leaves it open
+// keeps node alive forever, and run.sh then hangs on the first failure instead of reporting it —
+// found running this step against the pre-2026-09-29 build, where it sat for seventeen minutes.
+let b = null;
 (async () => {
-  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
   // Short action timeout: run against a build that predates a control, the script should fail the
   // check and move on rather than sit out Playwright's 30-second default on every missing element.
@@ -84,8 +89,33 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     return d.textContent.replace(/\s+/g, ' '); }, h);
   const text = (sel) => p.evaluate((sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\s+/g, ' ') : ''; }, sel);
 
+  // ⚠⚠ THE REAL BUTTONS (restated 2026-09-29, audit H2). These helpers called openChangeOrder,
+  // openCOAcceptModal and printChangeOrder through page.evaluate — which is how this step passed while no
+  // screen offered either of the last two: they were reachable only from a client-list row that was never
+  // added to the page. They press what a person presses now: the client's row in the list, + New on the
+  // Change Orders card, and PDF / Get Acceptance on the change order's own row. A control that is not on
+  // screen exactly once is a FAILED CHECK, and nothing is pressed in its place.
+  async function openDash(id) {
+    await p.click('.nb[onclick*="\'jobs\'"]'); await p.waitForTimeout(250);
+    await press('tr[onclick="openClientDashboard(' + id + ')"]'); await p.waitForTimeout(400);
+  }
+  async function ensureDash(id) {
+    const on = await p.evaluate((id) => { const v = document.getElementById('client-dashboard-view');
+      return !!(v && v.offsetParent !== null && _dashboardJobId === id); }, id);
+    if (!on) await openDash(id);
+  }
+  async function press(sel) {
+    const n = await p.locator(sel).count();
+    ok(n === 1, 'one control on screen: ' + sel + ' (' + n + ')');
+    if (n !== 1) return false;
+    try { await p.click(sel, { timeout: 5000 }); return true; }
+    catch (e) { ok(false, 'could not press ' + sel); return false; }
+  }
+  const jobOf = (coId) => p.evaluate((c) => (changeOrders.find(x => x.id === c) || {}).jobId, coId);
+
   async function raise(id, tc, ps, desc) {
-    await p.evaluate((id) => openChangeOrder(id), id); await p.waitForTimeout(150);
+    await ensureDash(id);
+    await press('#client-dashboard-view button[onclick="openChangeOrder(' + id + ')"]'); await p.waitForTimeout(150);
     if (tc) await p.fill('#co-tc-hrs', String(tc));
     if (ps) await p.fill('#co-ps-hrs', String(ps));
     await p.fill('#co-description', desc);
@@ -95,14 +125,17 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     return seen;
   }
   async function accept(coId, name) {
-    await p.evaluate((c) => openCOAcceptModal(c), coId); await p.waitForTimeout(200);
+    await ensureDash(await jobOf(coId));
+    await press('#client-dashboard-view button[onclick="openCOAcceptModal(' + coId + ')"]'); await p.waitForTimeout(200);
     await p.fill('#coa-client-name', name);
     await p.click('#co-accept-modal .btn-p'); await p.waitForTimeout(200);
     return p.evaluate((c) => { const co = changeOrders.find(x => x.id === c); return !!(co && co.clientApproved); }, coId);
   }
   async function print(coId) {
-    await p.evaluate((c) => { window.__prints = []; printChangeOrder(c); }, coId); await p.waitForTimeout(350);
-    const got = await p.evaluate(() => window.__prints[0] || null);
+    await ensureDash(await jobOf(coId));
+    await p.evaluate(() => { window.__prints = []; });
+    await press('#client-dashboard-view button[onclick="printChangeOrder(' + coId + ')"]'); await p.waitForTimeout(350);
+    const got = (await p.evaluate(() => window.__prints[0] || null)) || { html: '', title: '' };
     await p.waitForTimeout(700);
     got.text = await T(got.html);
     return got;
@@ -224,19 +257,21 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
 
   // ── D. FEE-ONLY HOME PREP ────────────────────────────────────────────────
   console.log('\n## D. A fee-only Home Prep job’s change-order readout says what is true');
-  const prep = await p.evaluate(() => {
+  const prepId = await p.evaluate(() => {
     const src = jobs[0];
     const id = Math.max.apply(null, jobs.map(j => j.id)) + 1;
     jobs.unshift(Object.assign({}, src, { id: id, hvlId: 'HVL-PREP', name: 'Prep Client', svc: 'prep' }));
     estimateStore[id] = { approved: true, estimate: { jobId: id, svc: 'prep', totTC: 0, totPS: 0, rooms: [],
       prepEnabled: true, prepItems: [{ cat: 'Painting', cost: 10000 }], prepFee: 3000, havellinTotal: 3000 } };
-    openChangeOrder(id);
-    document.getElementById('co-tc-hrs').value = '6'; updateCOHours();
-    const r = document.getElementById('co-hrs-note').textContent.replace(/\s+/g, ' ');
-    const rate = _coJobBasis(id).tcRate, fee = Math.round(prepFeeRate() * 100);
-    closeChangeOrder();
-    return { r: r, rate: rate, fee: fee };
+    return id;
   });
+  // Raised the way a person raises one: the client's row, then + New on the Change Orders card.
+  await openDash(prepId);
+  await press('#client-dashboard-view button[onclick="openChangeOrder(' + prepId + ')"]'); await p.waitForTimeout(150);
+  await p.fill('#co-tc-hrs', '6'); await p.waitForTimeout(100);
+  const prep = { r: await text('#co-hrs-note') };
+  Object.assign(prep, await p.evaluate((id) => ({ rate: _coJobBasis(id).tcRate, fee: Math.round(prepFeeRate() * 100) }), prepId));
+  await press('#change-order-modal button:has-text("Cancel")');
   lacks(prep.r, 'no approved estimate', '⚠⚠ a priced prep job is never told it has no estimate');
   // Restated (see the header): the hours ARE billed now, at the concierge rate, on top of the fee.
   has(prep.r, '+6.0 concierge hrs at $' + prep.rate + ' an hour', 'it names the hours and the rate they are billed at');
@@ -252,7 +287,9 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   // ── E. Overflow ──────────────────────────────────────────────────────────
   for (const w of [1440, 390]) {
     await p.setViewportSize({ width: w, height: 900 });
-    await p.evaluate((id) => openClientDashboard(id), idH); await p.waitForTimeout(400);
+    // Opened from the client list, so the dashboard measured is the one on screen — its Change Orders
+    // card carrying a PDF on both rows now (2026-09-29).
+    await openDash(idH);
     const ovD = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok(ovD <= 0, 'the dashboard fits at ' + w + 'px (overflow ' + ovD + ')');
     await p.evaluate((id) => openJobPlanFor(id, 'hours'), idH); await p.waitForTimeout(700);
@@ -265,4 +302,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   console.log('\nstep24: ' + pass + ' passed, ' + fail + ' failed');
 
   function eq0(t, m) { ok(String(t).trim() === '', m + '  [got: ' + String(t).slice(0, 80) + ']'); }
-})().catch(e => { console.log('THREW ' + (e && e.stack || e)); console.log('step24: ' + pass + ' passed, ' + (fail + 1) + ' failed'); });
+})().catch(async e => {
+  console.log('THREW ' + (e && e.stack || e));
+  console.log('step24: ' + pass + ' passed, ' + (fail + 1) + ' failed');
+  try { if (b) await b.close(); } catch (_) { /* already gone */ }
+});

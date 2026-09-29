@@ -15,7 +15,7 @@
 // service names, and how the Edit Client modal kept a hardcoded service list that a rename
 // missed. There is a check below that fails if any label is written down twice.
 
-const { sandbox, source, domStub } = require('./harness');
+const { sandbox, source, domStub, fn } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
@@ -28,7 +28,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     fns: [
       'esc',
       'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines', 'jobHasStandingFlags',
-      'houseFlagSummary', 'houseFlagInputsHtml', '_houseFlagRowClass', 'standingFlagsBlock',
+      'houseFlagInputsHtml', '_houseFlagRowClass', 'standingFlagsBlock',
       // The must-find items and the Found tick (2026-09-19), and the hosts the brief renders through.
       '_sfRowHtml', '_sfHost', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', '_mfUnhandle',
     ],
@@ -115,8 +115,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.activeHouseFlags({ houseFlags: { access: { on: false, note: 'gate code 4417' } } }), [],
        'a note left behind by an untick does not put the row back on the brief');
 
-    eq(ctx.houseFlagSummary(FULL), 'Cash · Firearms & ammunition', 'the one-line list for the client table');
-    eq(ctx.houseFlagSummary(LEGACY), '', 'and nothing at all when nothing is ticked');
+  }
+
+  // ⚠ houseFlagSummary is DELETED (2026-09-29, audit H2), and the requirement it stood for is unchanged:
+  // the flags reach the crew on the Job Plan, the dashboard, the room workspace and the desk block, all
+  // through standingFlagsBlock. Its one reader was renderJobs' expandable detail row, which was built on
+  // every paint and never added to the page, so the "one-line list for the client table" this suite
+  // asserted had not reached a screen since the detail row was suppressed. Pinned absent, so a later
+  // pass does not restore a summary with nowhere to render it and read it as coverage.
+  group('houseFlagSummary is gone with the dead detail row it was written for');
+  {
+    const live = src.split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+    ok(live.length > src.length * 0.5, 'the comment strip did not eat the file');
+    lacks(live, 'function houseFlagSummary(', 'no definition survives');
+    lacks(live, 'houseFlagSummary(', 'and nothing calls it');
+    lacks(fn('renderJobs'), 'detailHtml', 'the client list builds no detail row to put it in');
   }
 
   group('standingFlagLines — THE POINT: what the crew is read before Day 1');

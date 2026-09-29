@@ -1,3 +1,96 @@
+## ⚠⚠ A CHANGE ORDER COULD BE CREATED AND NEVER PRINTED OR ACCEPTED — THE CARD CARRIES BOTH NOW (FIXED 2026-09-29)
+Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision on Q14 applied. App-only, no redeploy.
+
+- **⚠⚠ BOTH CONTROLS LIVED IN A ROW THAT WAS NEVER ON THE PAGE.** `openCOAcceptModal` and `printChangeOrder` were called only
+  inside `renderJobs`' `detailHtml` — 70 lines built on every client-list paint and never appended (*"Detail expand
+  suppressed"*). The dashboard's Change Orders card read *Awaiting acceptance* with nothing to press. **Reproduced on the
+  pre-change build in Chromium through the real + New and Create buttons:** after Create the card still read *None issued*;
+  the notice went to `#e-fb` inside the hidden Build Estimate panel (`offsetParent` null) and read *"Open the job in Client
+  Dashboard to get client sign-off"* — on the Client Dashboard; **no element anywhere in the DOM carried either onclick**;
+  after a forced redraw the row read *Awaiting acceptance* beside + New alone; the detail row never reached the DOM.
+  - **What that cost, because an unaccepted change order moves nothing:** the client never had a page to sign; accepted hours
+    never lengthened the plan or cleared the overrun flags (`coAcceptedHours` filters on `clientApproved`); a fixed-price change
+    was never billed (`coCharge` sums accepted ones); a vendors-only Home Prep job never opened its hours log (`jobIsFeeOnly`).
+    **Every change order raised before today is still unaccepted**, and both documents say to open each job and take it.
+- **⚠⚠ STEPS 23–25 WERE GREEN THROUGH IT BECAUSE THEY CALLED BOTH FUNCTIONS THROUGH `page.evaluate`.** A browser step that
+  calls the function instead of pressing the button proves the function, not the path — the same gap `dashboard-actions`
+  records for source checks, one level up. They press the real buttons now: `openDash` opens the dashboard from the client
+  list, and `press` counts the selector at exactly one before clicking. **Against the pre-change build: step23 fails 2 and
+  step24 fails 2 (each stops at the first press of a button that is not there), step25 fails 37, and the new step (33 on the merges) fails 20.**
+- **`coCardActions(co)` IS THE ONE RULE:** PDF on every row, Get Acceptance only while unaccepted, and nothing without a real id
+  (a `NaN` onclick is a control that looks pressable and does nothing). Rendered beside the status pill — Get Acceptance bronze
+  (the primary), PDF outline. **The only live callers of either function are in it**; a test asserts each appears exactly once
+  in comment-stripped source, so a second door cannot be added quietly. The row also names who accepted (escaped — driven with
+  `O'Hara <b>Trust</b>`), the one thing the dead block showed that the card did not.
+- **The two notices moved and the card redraws.** `saveChangeOrder` and `acceptChangeOrder` end in `_docNotice('ok', msg, jobId)`
+  — `#dash-fb` through `_jobBandHost`, then `_dashRedraw` — so the row is on screen the moment Create is pressed. The create
+  notice names the change order and where its two buttons are. **A refusal still prints inside the modal (`co-fb`)**, where the
+  person is; a test drives it.
+- **⚠ THE DETAIL ROW AND `houseFlagSummary` ARE DELETED, NOT LEFT DEAD.** `houseFlagSummary` had no other reader (CLAUDE.md
+  recorded that on 2026-09-10). Every field the row carried is on the Client Dashboard. Three suites lifted the helpers and
+  were restated; restoring the row fails 11 and crashes two suites (their sandboxes no longer lift the helper), loudly.
+- **Q14, DECIDED BY ANTHONY: an hourly change order's hours carry the job's rush premium and discount like every other hour;
+  a fixed-price change order is priced at the plain hourly rates. One line on the printed page says which.**
+  `coRateModsLine(est, fixed, prep)`:
+  - T&M — *"Like every other hour on this engagement, these hours carry the 20% expedited-delivery premium and the 10%
+    preferred-client discount on the final invoice."* Fixed — *"It is priced at the plain hourly rates shown: the
+    expedited-delivery premium and the preferred-client discount in your fixed project fee do not apply to it."*
+  - The premium reads the estimate's pinned `rushPct`, never today's `RUSH_PCT`. On fixed, a discount folded in by *Offer
+    Discount* counts (`prevApprovedTotal`), since `applyDiscountRevision` bakes it into the fee and zeroes `discountPct`.
+  - **⚠ Prep says *"These hours carry …"*, never *"like every other hour"*** — a vendors-only prep job has no other hours, and
+    prep never carries the premium (`calcAll` forces rush off). Found writing the prep case, not by a test.
+  - **A job with neither prints no line** — the standing rule against explaining an absence.
+  - **The line states what the invoice ALREADY does; nothing about billing changed, and it is driven, not asserted:** on a
+    T&M rush + 10% job, 10 accepted concierge hours at $150 collect **$1,620** against **$1,500** on a plain job; on a fixed
+    rush + discount job the final adds exactly the plain **$1,500**.
+  - **Not carried on the acceptance panel** — offered to Anthony as a follow-up rather than widened into this commit.
+- **11,586 committed checks before the merges; 12,524, 12,722, 12,817 and 13,056 after each of the four** (+97 of them here: `tests/change-order-card.test.js` new at 95, and 2 in `intake-house-flags` asserting
+  `houseFlagSummary` is gone. The new suite covers `coCardActions`, a driven dashboard with one
+  accepted and one pending change order asserting both controls, their onclicks, classes and uniqueness, Create → Accept
+  through the real modals, the Q14 wording on every arm, and the invoice join). `coCardActions` / `coRateModsLine` lifted —
+  never stubbed — into the eight suites that render the card or print the page; `_docNotice` stubbed to record in the two that
+  drive `saveChangeOrder`. **Revert sweep on four tar copies: 20 changes, ALL RED, baseline 11,586 / 0 before and after on every
+  copy, no needle mismatched.** Not rendering the card's controls (the defect) fails 19, Create printing to `#e-fb` again (the
+  other half) 23, dropping Get Acceptance 18, Accept to `#e-fb` 11, no Q14 line 9, the rest 1–5.
+  - **⚠ FOUR REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** — index reads on a button list the revert
+    had emptied (`buttons(row)[1].call`). Read defensively now; re-done, all four fail cleanly with every check running.
+  - **⚠ THE MERGES BROKE THE NEW SUITE TWICE, CORRECTLY, BY THROWING.** On the first, the concurrent sessions gave the dashboard three more
+    dependencies and the invoice three: its two sandboxes lift `agrApprovalWithdrawn`, `docReadOnlyWord`,
+    `discountOfferBlocker` and `docPreviewOnly`, and `paymentSplit`, `rushScopeLine` and `rushCrewAdded`, as main's own suites
+    do — lifted, never stubbed. `dashboard-schedule` and `job-progress` conflicted on the same lists and took the union.
+    Re-run on the merged tree, the four reverts that matter (the card's controls, both notices, the Q14 line) are still red:
+    the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against a baseline of 12,524 / 0
+    before and after. **On the second** (`main` moved while the first was being tested), H1/M1 had taken the final-invoice
+    approval off the page, so `var invApproved` no longer exists and the invoice sandbox threw *not found*; it lifts
+    `invFinalApproval`, `invFinalApprovalRecord` and `docKeyFor` now, as `change-order-billing` does. The third and the fourth
+    (the Reset and C2 builds) needed nothing. The same four reverts re-run on the final tree: the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against 13,056 / 0 before
+    and after.
+- **Verified in headless Chromium, `tests/browser/step33.js` new at 75, 0 failed, 0 page errors** (written as step 26 and
+  renumbered 33 on the merges — the concurrent sessions took 26 to 32): a Home Editing job with rush
+  and a 10% discount, opened from the client list; + New → Create lands the notice on the dashboard and the row with PDF and a
+  bronze Get Acceptance; PDF prints the T&M line and no `$`; Get Acceptance → Accept, the notice, the row *Accepted* with PDF
+  alone, the Hours Log *incl. +8.0 hrs by change order*; a second pending change order with unique onclicks; a fixed $24,000 rush
+  + discount job printing *+ $2,000* and the fixed line; a plain fixed job printing none; no detail row and no change-order
+  control in the client list; overflow 0 and all three buttons inside the viewport at 1440 and 390.
+  - **⚠ AND THE RUNNER HUNG FOR SEVENTEEN MINUTES ON THE PRE-CHANGE BUILD, WHICH IS ITS OWN DEFECT.** step23 and step24 did not
+    close the browser when they threw, so node stayed alive and `run.sh` never reached the next step. Both close it in the catch
+    now (as 25 and 33 do), steps 23 and 33 set the 8s default action timeout 24 and 25 already used, and `run.sh` gives every
+    step a 600s ceiling that reports *TIMED OUT* rather than stalling. `run.sh`'s default list is 1–33.
+  - **Before the merge, steps 1–26 re-run as regressions: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 101 / 73 / 99 / 75, 0 failed — 1,287 browser checks across the twenty-six.** Steps 23, 24 and 25 went 78 → 101, 58 → 73 and 78 → 99 — each press now also asserts its control is
+    on the page exactly once — so 1,153 + 59 + the new step's 75 is the 1,287.
+  - **ON THE TREE AFTER ALL FOUR MERGES, steps 1–33: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75, 0 failed — 1,675 browser checks across the thirty-three.** (After the first merge, steps 1–30 ran 1,527; after the third, steps 1–32 ran 1,622.)
+- Manual **§9** (the + New route; the row's buttons; a note on the dead end with what to do about change orders raised before
+  today; the notices; the Q14 note) and playbook **Step 10d** (the same, plus a `.stop` and a note in field language) and **four**
+  symptom rows. Both `.md` copies hand-edited; **28 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
+  1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as before.
+  The first `<style>` block is byte-identical at 98,760 bytes; the app diff is 106 insertions against 81 deletions.
+- **⚠ A CHANGE ORDER CANNOT BE DELETED, AND THE DOCUMENTS SAY WHAT THAT MEANS HERE.** Anyone who pressed Create twice on the old
+  build (it looked as though nothing happened) holds a duplicate: print and accept only one — the other moves nothing and is
+  never billed.
+- **⚠ THE SHAPE TO COPY: a control that exists only inside markup nothing appends is not a control.** Grep finds the onclick, the
+  function works when called, and every test that calls it passes — the one question none of them asks is whether a person can
+  reach it. **Count the callers of a user-facing action, and press the button in the browser.**
+
 ## ⚠⚠ A JOB PLAN EDIT WAS UNDONE BY THE OTHER DEVICE'S NEXT SAVE — A PERSON'S EDIT NOW MOVES THE JOB'S CLOCK (FIXED 2026-09-29)
 Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are silently undone by the other device."* App-only,
 **no Apps Script redeploy** — nothing in `apps-script/` changed, and the merge the fix relies on is the one already deployed.
@@ -263,8 +356,9 @@ Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). A
   - **⚠ THE CONCURRENT DOCUMENT-CLAIMS BUILD FIXED THE SAME DEFECT INLINE THE SAME DAY (Q11)**, from the other side: the packet can
     now be read before Won, exactly when another job's band on it would be a false statement. The merge kept this helper; their
     assertions pass against it unchanged.
-  - The page globals themselves stay (the retired tab's `updateAgrUI` and `_actor` read them). The net below keeps them out of
-    every client document.
+  - The page globals themselves stay, and **the retired tab's `updateAgrUI` is now their only reader** (it paints for the job
+    `loadAgreement` primed them from). `_actor` read them too until the same afternoon — see *FIXED THE SAME DAY* below. The net
+    below keeps them out of every client document, and a second net keeps them out of everything else.
 - **⚠⚠ THE BAND STAYS OUT OF EVERY CLIENT PDF NOW.** `.approved-stamp` was hidden only under `@media print`, and the PDF that is
   emailed, sent for signature or filed is converted server-side from `_exportDoc`'s copy of the page, which is not a print. Every
   `DOC_ACTIONS` kind's `pdfCss` carries `.approved-stamp{display:none!important;}` (the estimate has no band today and carries
@@ -300,10 +394,42 @@ Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). A
   view only), **§17** (the PIN list). Playbook a `.stop` under *What needs a PIN* and **three** symptom rows. Both `.md` copies;
   **29 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered 1440/390 with 0 overflow, 0 page errors; under
   `print` 51/61 and 17/18 as before.
-- **⚠ FOUND IN PASSING, NOT FIXED: `_actor(job)` falls back to the page global `agrApprovedBy`.** On a job whose own agreement is
+- ~~**⚠ FOUND IN PASSING, NOT FIXED: `_actor(job)` falls back to the page global `agrApprovedBy`.** On a job whose own agreement is
   not approved yet, `draftedBy` on an estimate or invoice send, `sentBy`, `activatedBy`, `deliveredBy` and the review ask's `by`
   record whichever job the page approved last — measured *Ashley Jerome* on another client. The M1 class on internal attribution
-  rather than a client document; one line (`return (job && job.agrApprovedBy) || '';`), offered to Anthony.
+  rather than a client document; one line (`return (job && job.agrApprovedBy) || '';`), offered to Anthony.~~ **FIXED THE SAME
+  DAY** — Anthony: *"yes, fix the _actor fallback too."* *Kept rather than deleted, per the standing rule that a fixed flag left
+  standing reads as outstanding work.*
+- **⚠⚠ `_actor(job)` IS THIS JOB'S APPROVER OR NOBODY (2026-09-29, same day).** `return (job && job.agrApprovedBy) || '';` — the
+  page global is gone from it. **Measured on the real functions before the change, three jobs** (A approved by Anthony on
+  September 1, B approved by Ashley through the real `ensureAgreementApproved`, C neither): C's estimate **drafted** and **sent**
+  both read **Ashley Jerome**, C **activated** and **closed** both read **Ashley Jerome**, and `_actor(null)` returned **Ashley
+  Jerome with no job at all**. Now the two estimate records name **C's own concierge** — `docRecordSent` and `markDocSent` always
+  carried `|| job.tc`, and the foreign name was what kept that fallback from ever being reached — and activation and close read
+  **blank**.
+  - **⚠ A BLANK IS THE HONEST ANSWER, AND NO CORRECT NAME IS LOST.** The global is only ever written from some job's
+    `agrApprovedBy` (`loadAgreement`, `ensureAgreementApproved`) or cleared, so whenever it held THIS job's approver the job held it
+    too. Tested as the converse: A keeps Anthony on its DocuSign send, its legacy `agrSentBy` mirror and its activation while the
+    page names Ashley. The payment's and signature's `recordedBy`, `depositReceivedBy` and the review ask carry no `|| job.tc` and
+    read blank on a job with no approver on record — prelaunch, and deliberately not widened; one line was the ask.
+  - **THE SECOND NET, beside the document one: the page-level agreement approval is READ by `updateAgrUI` and by nothing else.**
+    It walks every top-level function with the `agrApprovedBy = …` write targets stripped, and counts reads across the whole file:
+    `agrApprovedBy` and `agrApprovedAt` read once each, by the retired tab's banner; **`agrApproved` itself is written and read by
+    nothing.** So the next function that takes the page's copy as the answer fails, whether or not it builds a client document —
+    the document net alone could not see `_actor`, which builds none.
+  - **12,658 committed checks on this branch, 13,089 after merging `main`** (the C2, H2 and Reset builds had landed; `approval-on-job`
+    198 → 231, and the second net stayed green over all three — none of them reads the page globals). **Revert-verified on a tar
+    copy of the tree: restoring the fallback fails 10 — 12,648 passed, 10 failed, every check ran.** The failures ARE the
+    measurement above. Browser steps 1–30 re-run as regressions before the merge, **0 failed — 1,446 checks**, and 1–33 on the
+    merged tree, **0 failed — 1,675 checks**; step 20 activates and step 28 closes through the real buttons, but neither reads the
+    attribution, so the driven proof is the unit suite.
+  - **⚠ FOUND IN PASSING, NOT FIXED: the manual (the handover-date note under §9a-ii) and the playbook (Step 13) say Close records "who
+    closed it".** It records `_actor(job)` — the job's price approver, since the app has no sign-in — so Ashley closing a job
+    Anthony priced reads Anthony. Pre-existing and unchanged by this fix (which only stops ANOTHER client's approver appearing);
+    a wording correction in four files, offered to Anthony. No other document describes these records.
+  - **⚠ OFFERED, NOT DONE: with `_actor` fixed the three page globals are one line from dead.** Pointing `updateAgrUI`'s banner at
+    `_agrJ.agrApprovedBy` / `_agrJ.agrApprovedAt` leaves them written and never read, and all three (plus their writes in
+    `loadAgreement`, `ensureAgreementApproved` and `revokeAgreementApproval`) can then be deleted. Small; Anthony's call.
 - **⚠ NOTED, NOT CHANGED:** 🔑 Manager approval is offered on every live final row, because the rail does not build the invoice
   on paint; inside tolerance and already approved are answered by the handler. The retired tab's own Approve button still binds
   `currentInvJobId` through `openInvPinModal()`; that tab has had no nav button since 2026-09-11.
@@ -8921,7 +9047,20 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/clever-goodall-dyv11h`
+- Active feature branch: `claude/charming-dirac-gcdfsl`
+  (Back on this branch for one more commit after all eight builds below were on `main`: the `_actor` follow-up to H1/M1 —
+  attribution names this job's approver or nobody. The merge that brought `main` in conflicted only on the build stamp; no
+  browser step was added, and 1–33 are the default list.)
+  (`claude/relaxed-fermi-nopl99` recorded, before this merge, that it was the active branch, and:)
+  (`claude/charming-dirac-gcdfsl`, `claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`,
+  `claude/exciting-carson-pv156f`, `claude/elegant-edison-x0kgyn` and `claude/clever-goodall-dyv11h` shipped alongside it on
+  2026-09-29 — SEVEN sessions ran concurrently off the 2026-09-28 workflow audit, landing eight builds: C1 and then the
+  bottom Reset, H4, H3 and M8, the document findings, H1 and M1, C2, and H2 (the change-order card) here. All eight are on
+  `main`. This branch merged the others on the way through, in four merges — `main` moved three times while the first was
+  being tested: H1/M1, the Reset build, then C2. They conflicted on the build stamp, CLAUDE.md, `run.sh`, two pinned `fns:`
+  lists, the invoice sandbox and four browser step numbers, every one resolved as a UNION. Browser steps: H4 keeps 26, C1 27,
+  H3/M8 28, the document findings 29, H1/M1 30, the Reset build 31, C2 32, and this one is **step 33**.)
+  (`claude/clever-goodall-dyv11h` recorded, before this merge, that it was the active branch, and:)
   (SIX sessions ran concurrently on 2026-09-29 off the 2026-09-28 workflow audit, landing seven builds: C1 and then the bottom
   Reset on `claude/exciting-carson-pv156f`, H4 on `claude/elegant-edison-x0kgyn`, H3 and M8 on `claude/elegant-wright-nb6ffk`,
   the document findings on `claude/dazzling-mendel-qns7nm`, H1 and M1 on `claude/charming-dirac-gcdfsl`, and C2 here. All seven
@@ -8962,7 +9101,8 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   the build stamp, CLAUDE.md and both sessions' `tests/browser/step26.js`, resolved as a UNION — theirs keeps step 26 and this
   one is step 27*.)
   (`claude/exciting-carson-pv156f` is the previous name.)
-  (`claude/change-order-fixes-ew3m2i` is the previous name.)
+  (`claude/change-order-fixes-ew3m2i` is the previous name. It carried the two 2026-09-25 Home Prep change-order
+  builds to `main`; the sessions above were each assigned a new name at the same commit.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
@@ -9011,7 +9151,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/clever-goodall-dyv11h:main`
+  `git push origin claude/charming-dirac-gcdfsl:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -14157,9 +14297,12 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (fifth pass)** — both documents, against a Job Plan edit surviving the other
+- Last reconciled against the app: **2026-09-29 (sixth pass)** — both documents, against the change-order card carrying PDF and Get
+  Acceptance, the notices moving to the dashboard, and the one Q14 line on the printed change order (manual §9; playbook
+  Step 10d and four symptom rows); see the entry at the top of this file.
+- Prior pass **2026-09-29 (fifth pass)** — both documents, against a Job Plan edit surviving the other
   device's save (manual §2 and §11; playbook Step 7, a `.stop` in Step 10c, the plan-refresh note and two symptom rows); see
-  the entry at the top of this file.
+  its entry near the top of this file.
 - Prior pass **2026-09-29 (fourth pass)** — both documents, against the bottom Reset button running the one
   reset (manual §5h; playbook Step 2 and one symptom row); see its entry near the top of this file.
 - Prior pass **2026-09-29 (third pass)** — both documents, against the two manager approvals moving onto
@@ -14171,7 +14314,7 @@ teaching people to ignore it.
 - Prior pass **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h;
   playbook Step 2 and four symptom rows).
 - Prior pass **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
-  concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows); see the entry at the top of this file.
+  concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows).
 - Prior pass **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
   hours by a change order that prints the rate (manual §6c, §8, §9, §11, §12; playbook Step 10d, the Home Prep short version and
   the symptom table).
