@@ -8,8 +8,9 @@ Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when t
 - **Landed 2026-09-29, P1–P7:** C1, C2, H1, H2, H3, H4, H6, M1, M2, M3 and M8, plus nine lows, each with its own entry below.
   Spot-checked in the code on `main` the same day rather than taken from the entries' own claims; ticked and marked in the file.
 - **Landed 2026-09-29, P8 (built after P1–P7 merged):** H5 — see its entry below.
-- **Still open:** P9 (H7–H9, M13–M16 and the intake lows: Edit Client) · P10 (M4–M7
-  and the lifecycle lows) · P11 (M9 and the per-key job merge; **needs an Apps Script redeploy**) · P12 (M10–M12 and the
+- **Landed 2026-09-29, P10:** M4–M7, Q12, Q19 and the lifecycle lows — see its entry below. One low is left for Anthony:
+  `deliveredBy` / `activatedBy` record the estimate's approver, and which name a handover should carry is his call.
+- **Still open:** P9 (H7–H9, M13–M16 and the intake lows: Edit Client) · P11 (M9 and the per-key job merge; **needs an Apps Script redeploy**) · P12 (M10–M12 and the
   estimator lows) · P13 (the docs pass, after the others) · P14 (small backlog; its message-timer and dead-code items are done).
 - **Answers, 2026-09-29:** every recommendation stands except **Q9** (no rush on the 30% prep fee on either basis; rush applies
   on fixed price too, printed as its own line) and **Q20** (an appraiser is priced per estimate line and no tier requires or
@@ -22,6 +23,65 @@ Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when t
 - **When a pack lands:** tick it in the file (`- [x] **P8**`) and mark its findings fixed rather than deleting them.
 - **⚠ THE SHAPE TO COPY, FROM H2:** a browser step that reaches a handler through `page.evaluate` proves the handler, not that
   anybody can reach it. Press the control.
+
+## ⚠⚠ A PART-PAID WALKAWAY KEEPS ITS MONEY, THE LETTERS FOLLOW THE MATTER, THE RECORDER PREFILLS, AND EVERY DATE IS LOCAL (FIXED 2026-09-29, AUDIT M4–M7 / P10)
+Fix pack P10 of the 2026-09-28 workflow audit. The decisions applied are the recommendations Anthony took with *"all the rest
+seem fine to me"*: **Q2** a client who paid part of the deposit and walks away is Closed — Deposit Retained with the amount
+named, **Q12** after a part cheque the ACH link asks only for the balance, **Q19** the second concierge slot needs a name or the
+placeholder. App-only, no redeploy.
+
+- **⚠⚠ M4 — `closeoutRetainedTotal(job)` IS EVERY PAYMENT RECORDED, ON ANY STAGE.** Mark Lost decided on `depositReceived`,
+  which is true only at the full 50%, so a client who had paid $2,000 of a $4,575 deposit walked away as a plain loss, `won` was
+  cleared, and the $2,000 appeared nowhere, Win / Loss included. The modal, the save, the rail's terminal row and Win / Loss read
+  the one answer; the button reads *Close — Retain $2,000*. **Win / Loss counts a retained job at what it KEPT, not its estimate**
+  (`wonRev` and the Won list). **`lostAt` is write-once now**, closing the flag this file carried from 2026-09-22 (an amended
+  reason re-dated the loss).
+- **⚠⚠ M5 — `jobOnProbateTrack(job, svcKey)` IS THE ONE ANSWER TO "ADMINISTERED THROUGH A PROBATE COURT"**, matter first and the
+  service as the fallback for an unanswered matter; `planTaskCtx.probateTrack` reads it rather than keeping a copy.
+  `courtRecordShown(svc, matter)` is where the court record may be ENTERED — wider on purpose, because a Probate service always
+  shows it (the save requires the case number there). Read by the activation gate, both forms' court block (render, mid-edit
+  toggle, save), the Letters, §733.604 and attorney chips, the schedule's court deadline and the dashboard's probate card.
+  **Edit Client gains the Letters date** and recomputes the deadline from it (never over a hand-edited one). **A blank
+  authorization blocks now**: the gate reads `resolveExecutorAuth`, where it tested `=== 'pending'`. The asterisks still follow
+  the service, and the case number's joined `.req-probate`.
+- **⚠ M6 — THE RECORDER PREFILLS EVERY STAGE AND NAMES IT.** The deposit at 50% less what is in; the midpoint and the final at
+  `invoiceHtml(job, stage).outstanding` — the invoice's own *Payment Due Now*, never re-derived. Title and button read
+  `paymentStageLabel` (*Record Midpoint Payment →*). A final that cannot be priced prefills nothing and says so.
+- **⚠⚠ Q12 — THE ACH LINK ASKS FOR THE BALANCE, AND A STALE ONE IS NAMED, NEVER HANDED BACK AS CURRENT.** The outstanding amount
+  rides the request and the Stripe description reads *… balance*. A Stripe link cannot be edited, so `_stripeShowLink` compares
+  the link's amount with what is outstanding and refuses to show one asking more, with the overpayment and the Dashboard fix.
+  **⚠ FOUND BY THE BROWSER STEP, NOT BY ANY TEST: THE BALANCE PATH WAS UNREACHABLE.** The link was offered only beside *Send
+  deposit invoice*, a row that is done once the invoice goes out — so the one client the balance rule exists for, a part cheque
+  in hand, could never be sent a link. It rides the `deposit_received` row while that row is live now (unit revert fails 2).
+- **⚠ M7 — EVERY DATE THE APP STAMPS OR DEFAULTS IS THE LOCAL CALENDAR DAY** (`_todayStr` / `_ymdLocal` / `_localDateOf`): the
+  hours form, the payment, won and signature dates, activation, close, the alternate valuation date, Stripe's received date, the
+  rail's ISO stamps and the CSV filename. After 8pm Eastern each read tomorrow. **A net forbids a UTC slice of a `new Date()` in
+  live code**, so the next one cannot be added quietly.
+- **Q19 — `plannedTC2(jobId)`:** the estimate's own two-concierge choice (`rushCrewAdded(e).tc2`, which Exhibit A promises on a
+  rush job) needs a name or *Contractor — TC* before the team confirms. The engine's recommendation alone stays optional.
+- **The lows:** Home Prep's middle payment is its **Second** on every surface (`paymentStageWord`: band, rail, invoice title and
+  due box, `docTitle` / `docWord`, email subject, client PDF name); **the final's View and Print wait for logged hours**
+  (`finalAwaitsHours`, the rule the invoice itself blocks on — both used to be offered and then refuse); the attorney chip is
+  asked on a probate matter and shown wherever one is recorded; a closed plan reads Close-out without the delivery stamp. The
+  `checkPin` won-status low was fixed on `main` (084c00b) before this pack.
+- **⚠ LEFT FOR ANTHONY, NOT BUILT: `deliveredBy` and `activatedBy` record the estimate's approver** (`_actor`), not whoever
+  pressed the button. The app has no sign-in, so the question is which name a handover should carry — the approver as today,
+  the assigned concierge, or a name asked at the press.
+- **14,047 committed checks** (`tests/lifecycle-loose-ends.test.js` 168 and `tests/local-dates.test.js` 51 new;
+  `dashboard-actions`, `dashboard-schedule` and `doc-send` restated — two of `doc-send`'s needles had gone vacuous and are
+  restored). **Revert sweep on a tar copy: 62 changes, running when this was written — 21 of 62 red, 0 green so far.**
+- **Verified in headless Chromium, `tests/browser/step39.js`, 137 checks, 0 failed, 0 page errors**, with the clock pinned at
+  9:30pm Eastern (01:30 UTC the next day) through Playwright's clock rather than a stub: a Home Cleanout from its estimate to its
+  deposit, the midpoint recorded without typing the amount, a part cheque and the balance link, the stale link refused, the
+  part-paid walkaway retained and named, an Estate Settlement on a probate matter refused activation until the Letters, the
+  second concierge slot, and the lows — every step pressed. **Against the pre-P10 build it fails 82.** Steps 1, 15, 18 and 19
+  were **restated, not weakened**: they pinned the court record following the service, Home Prep's *midpoint* and a retained
+  job at its estimate; each restated check fails on the pre-P10 build. **2,040 browser checks across the thirty-nine**, 0 failed.
+- Manual §4, §8, §8b, §9, §9a, §11 and §16a; playbook Steps 1, 7, 9, 11–12 and 13 plus nine symptom→cause rows. Both `.md`
+  copies mirrored; **48 claims parity-checked, 0 mismatches**; `doc-structure` green.
+- **⚠ THE SHAPE TO COPY: a control offered only while an earlier row is lit is gone the moment that row is done.** The balance
+  rule was right and unreachable, because the link lived on the step BEFORE the one where a balance exists. When a rule applies
+  in a state, check the control is still on screen in that state.
 
 ## ⚠⚠ RE-OPEN UNDOES A MISTAKEN CLOSE, AND THE FINAL NO LONGER CLAIMS A MIDPOINT INVOICE THAT NEVER WENT OUT (BUILT 2026-09-29)
 Anthony, on the four things the H3 build (its entry is further down, below the seven builds that landed on `main` the same day) left for him: *"yes to 2 and 3, reword the final and add Re-open"*.
@@ -90,14 +150,14 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
     *Final invoice sent* row then goes on saying *"The Gmail draft from Sep 30 (anthony@…) was made before the job was re-opened —
     delete it, don't send it"*, and once a fresh final is drafted, *"Drafted — read it, send it, then confirm. Delete the older Gmail
     draft from Sep 30 (…) — it was made before the job was re-opened"*: two finals in one mailbox are never left for somebody to
-    tell apart. Both are in the revert sweep on the merged tree, below.
+    tell apart. Not keeping it in the history fails 6, the note losing its re-open reason 3.
   - **⚠ FOUND WHILE MERGING AND FIXED: the question read the draft's day off the UTC stamp, and said "Gmail" whatever the route.**
     A final drafted after 8pm Eastern was named on the next day, and a plain email (the mailto fallback) was told to be deleted in
     Gmail. It reads `_draftDay`, `main`'s one local-calendar reading of a draft stamp, and the route decides the verb: *delete that
-    draft in Gmail (mailbox)* for a Gmail draft, *if that email was never sent, discard it* otherwise. All four are in the revert
-    sweep on the merged tree, below.
+    draft in Gmail (mailbox)* for a Gmail draft, *if that email was never sent, discard it* otherwise. The UTC day back fails
+    2, every route told Gmail 2, the mailbox unnamed 1, the route and mailbox left on the record 2.
   - The stale-draft suite's net — every reader of a draft stamp is named — carries `_reopenTransition` on its allow-list, with its
-    reason; removing the entry is in the sweep below.
+    reason; removing the entry fails 1.
   - **It asks; Cancel changes nothing; OK lands on the Job Plan** (`activateOrCycle` already navigates on a transition to active).
     The question names the day and who closed it, says the timeline returns to the step the job was on, and that hours, payments and
     anything already sent stay as they are. Cancel ignored fails 2; the question omitting the close 1, the stale draft 4.
@@ -141,7 +201,7 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   against 13,586 / 0 before and after, so the results carry. **The stale-draft build merged in last and moved one line of this
   build's code** (the void, now into the history): all 31 still find their code, the defect, the transition branch, the void and
   the question's draft clause re-run on a tar copy fail **21**, **75**, **19** and **4**, and the seven integration
-  reverts above are running on that copy at this commit; their counts follow in the next one.
+  reverts above are **all red** — 6, 3, 2, 2, 1, 2 and 1 — against 13,804 / 0 before and after, no needle mismatched, nothing threw.
 - **Verified in headless Chromium, `tests/browser/step38.js`** (written as step 29 and renumbered on all three merges — `main`'s
   document-claims build took 29 first, its work-done build 36 and its stale-draft build 37), **63 checks, 0 failed, 0 page errors**
   (58 before the third merge), through the real Close and
@@ -161,8 +221,9 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   1,816 browser checks across the thirty-six.** **After the second merge (`main`'s H5 build, whose own step is 36) the list is
   1–37 and all thirty-seven ran — the same figures with 14 at step 36 and this build's 58 at step 37, 0 failed — 1,830
   browser checks across the thirty-seven.** **After the third merge (`main`'s stale-draft build, whose own step is 37) the list
-  is 1–38 and the run of all thirty-eight is going at this commit; its figures follow in the next one**; against `main` without
-  this build step 38 still fails 5 and stops at section A.
+  is 1–38 and all thirty-eight ran — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 /
+  58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 61 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 14 / 61 / 63, 0 failed — 1,896 browser
+  checks across the thirty-eight**; against `main` without this build step 38 still fails 5 and stops at section A.
 - Manual **§9** (the Closed row; the *There is no Re-open* note replaced by an eight-bullet Re-open note; the handover note),
   **§9a** (two table rows, three bullets), **§11** (the ratings clause) and **§12** (the stage paragraph and a six-bullet note on the
   wording). Playbook **Step 11 & 12** (a bullet), **Step 13** (the intro, the `.stop`, the midpoint paragraph, and a new *Closed it by
