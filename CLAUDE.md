@@ -45,11 +45,13 @@ no redeploy.
     for jobs written before today — and the raw-status assertions are what pin the write.
   - Nothing changes for a client who has not said yes; the Pending Approval filter still tests `status === 'pending'`, which is
     why the re-priced won client is correctly on it.
-- **12,798 committed checks on this branch, 13,229 after merging `main`'s Reset, C2 and H2 builds, and 13,262 after its `_actor`
-  follow-up** (`tests/price-lock-won-status.test.js` new at 173; twenty suites' pinned `fns:`/`vars:` lists gained the helpers,
-  lifted, never stubbed). The first merge is 12,625 at the merge base + 173 here + 431 on `main`, the second 13,229 + 33
-  (`approval-on-job` 198 → 231), and **at both, every one of the 106 suites carries exactly ours + theirs − base**, checked file
-  by file, because a merge that quietly drops a group reads as a smaller green total. The first merge's one break was correct:
+- **12,798 committed checks on this branch, 13,229 after merging `main`'s Reset, C2 and H2 builds, 13,262 after its `_actor`
+  follow-up, 13,330 after its feedback-strip build, and 13,351 with Reset's refusal (below)** (`tests/price-lock-won-status.test.js`
+  new at 173, 194 with that; twenty suites' pinned `fns:`/`vars:` lists gained the helpers, lifted, never stubbed). The first merge
+  is 12,625 at the merge base + 173 here + 431 on `main`, the second 13,229 + 33 (`approval-on-job` 198 → 231), the third 13,262 +
+  68 (`estimate-reset` 398 → 427, `feedback-strip` 27, `source-bytes` 12), and **at all three, every suite carries exactly ours +
+  theirs − base** (106 suites, then 108), checked file by file, because a merge that quietly drops a group reads as a smaller
+  green total. The first merge's one break was correct:
   `main`'s new `change-order-card` suite lifts the dashboard, whose header chip now reads `jobStatusView`, so it lifts the same
   helpers now. ⚠ **My list-extension script over-reached** into `lacks()` needle lists (`signing-packet`, `document-renderers`)
   and tuple lists (`dashboard-actions` HANDLERS, `estimate-contract-gate`, `room-coverage`); caught by diffing every suite's check
@@ -62,22 +64,25 @@ no redeploy.
   missing-job guards (below: the panel 2, the banner 1) and two reverts of the merge's UNION itself — the submit losing `main`'s
   edit stamp and `checkPin` losing its sync — each failing `main`'s job-edit net (1 each), so neither half can be dropped
   quietly. After the second merge all 32 still find their code, needle by needle, and the two defects re-run on that tree fail
-  **56** and **5** again, against 13,262 / 0 before and after.
+  **56** and **5** again, against 13,262 / 0 before and after. After the third all 32 still find their code, and on the final tree
+  the two defects fail **62** and **5** (the Reset refusal's checks join the first), `main`'s old `showFB` clear **8** and its
+  Start over without the clear **8**, against 13,351 / 0 before and after — the union holds from both sides.
   - **⚠ FOUR WRITER REVERTS FAIL ONLY THE SOURCE NETS (2 each), AND THAT IS HONEST RATHER THAN WEAK.** A discount or a submit on
     a won job IS pending, and Save and the panel's Edit are withheld while the estimate is out for approval, so on every state
     those four can reach the literal and the rule give the same answer. What the nets pin is that the next change to the rule
     reaches all six writers, which is the thing that went wrong.
-- **Verified in headless Chromium, `tests/browser/step34.js`, 43 checks, 0 failed, 0 page errors**, through the real rail, the
+- **Verified in headless Chromium, `tests/browser/step35.js`, 43 checks, 0 failed, 0 page errors**, through the real rail, the
   real Edit estimate and Offer discount buttons, the real discount pop-up and Apply, the real PIN typed into its modal, the real
   Deny modal, the real Build Estimate banner and the real client list with its real Pending Approval filter: nothing to edit or
   discount once the packet is out (emailed or DocuSign), the door refusing and un-approving nothing, the banner naming the packet,
   a signed agreement refused at the door; before the packet Edit estimate still works and the client stays won; a won client's
   discount reading *Won · Pending Re-approval* on the header, the list and the Pending Approval filter, *Won* after the PIN and
   after a deny; a client not yet won reading *Pending Approval* then *Approved — Awaiting Client*; overflow 0 at 1440 and 390.
-  **Against the pre-change build it fails 19.** `run.sh`'s default list is 1–34; on the tree after both merges steps 1–34
-  re-run — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 /
-  99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75 / 43, 0 failed — **1,718 browser checks across the thirty-four**, the same figures
-  step for step as on the tree before the `_actor` merge.
+  **Against the pre-change build it fails 19.** Written as step 34 and renumbered on the third merge: the feedback-strip session
+  took 34 first. `run.sh`'s default list is 1–35; on the tree after all three merges steps 1–35 re-run — 59 / 33 / 56 / 47 / 47 /
+  28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 /
+  53 / 75 / 37 / 43, 0 failed — **1,755 browser checks across the thirty-five** — and steps 31, 34 and 35 again after Reset's
+  refusal, 42 / 37 / 43, 0 failed.
   - **⚠ A FIXTURE TRAP WORTH KNOWING: `saveEstimateState()` rebuilds the store record from the page's approval GLOBALS**, which
     describe whichever estimate was last open. A fixture that sets `estimateStore[id] = {approved: true, …}` and then calls it
     writes that estimate back **unapproved** — six false failures on the first run. The step writes localStorage directly.
@@ -87,7 +92,7 @@ no redeploy.
   table, the Step 6 `.stop`, the status table (a new row) and the symptom table (one row rewritten, one new, two corrected).
   Both `.md` copies hand-edited; **30 claims parity-checked, 0 mismatches** (two apparent misses were table-cell boundaries in my
   checker, verified); `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18
-  tables full width, as before — and the same again, re-rendered on the tree after both merges.
+  tables full width, as before — and the same again, re-rendered on the tree after all three merges.
 - **⚠ OPEN, AND IT IS ANTHONY'S CALL: a price change after the yes is not re-asked.** A discount only lowers what the client
   accepted, but an edit before the packet goes out can RAISE it, and the app keeps the acceptance (`won`, `wonAt`) and the old
   `estimateSentDate` (an edit does not clear it), so the revised figure reaches the client only as the packet's Exhibit A.
@@ -96,6 +101,18 @@ no redeploy.
   be found"), and the panel and the Build Estimate banner first read that refusal as *the packet is with the client* — a claim
   about a packet nobody sent, on a job dropped by another device while its estimate was open here. Both ask for the job first.
   Found re-reading `updateApprovalUI`, not by a test; three checks pin it now.
+- **⚠ FOUND ON THE THIRD MERGE AND FIXED: Reset's refusal on an approved estimate said *"press ✎ Edit estimate on the client's
+  timeline first"*** — the button this build withdraws once the packet is out, and the one the rail had always hidden once signed.
+  Only a direct call reaches it (the button is disabled on a locked estimate), but a refusal is only as good as the route it names.
+  It asks `estimateEditBlocker` for the client the screen is bound to (`e-job`, the one the reset would clear) and relays the
+  rule's sentence: the change order once the packet is out, the price lock once signed, *could not be found* for a job this
+  device no longer holds. While Edit estimate really is there it keeps its old sentence, which `estimate-reset` pins.
+  - **THE NET IS THE RULE, NOT THE THREE SITES IT FINDS TODAY:** any top-level function whose live code names Edit estimate must
+    ask `estimateEditBlocker` (`resetEstimate`, `applyEstimateLock`, `jobTimelineActions`). `estimate-reset`'s `build()` lifts the
+    rule's helpers, never stubs them. Driven in `price-lock-won-status` (+21); the old sentence back fails **11**, never resolving
+    the job **7**.
+  - Found re-running this build's every-caller searches after the merge, once `main`'s NUL-byte fix made a whole-file search
+    trustworthy again. The line itself sat above the byte: what missed it the first time was not looking, not the search.
 - **Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**
 - **⚠ FOUND IN PASSING, NOT FIXED: the rail offers *Edit estimate* while the estimate is OUT FOR APPROVAL.** The document tray
   carries it on the lit *Estimate approved* row, and pressing it opens Build Estimate locked under *Out for Manager Approval* —
