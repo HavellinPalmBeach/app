@@ -62,7 +62,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // `uploadHtmlToDrive` overwrites BY FILENAME — that asymmetry is load-bearing and
     // CLAUDE.md records it: the client-facing name is dated, the Drive name is not,
     // precisely so a re-file REPLACES. A changed name orphans every copy already there.
-    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD', 'DOC_READY_WHY'] });
+    const nm = sandbox({ fns: ['docNames', 'paymentStageWord', 'docKeyFor', 'estimateDocNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD', 'DOC_READY_WHY'] });
     const job = { hvlId: 'HVL-0007', addr: '69 Beach Blvd, Palm Beach FL', name: 'Butler' };
     eq(nm.docNames(job, 'estimate', {}).drive, nm.estimateDocNames(job).driveClient,
       'the estimate keeps the exact name it already files under');
@@ -132,7 +132,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         // (`agreementReady` stays STUBBED in these sandboxes — this suite is about the FILING
         // path, and lifting the real one would make every case turn on the win state instead.)
         'docReadiness', 'docDraftOnly',
-            'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor'],
+            'docKeyFor', 'docNames', 'paymentStageWord', 'docSpec', 'approvedEstimateFor'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {},
@@ -204,7 +204,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // An unresolved subfolder falls back to the job root rather than dropping the document.
     const fb = sandbox({
-      fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec', 'approvedEstimateFor',
+      fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'paymentStageWord', 'docSpec', 'approvedEstimateFor',
         'docReadiness', 'docDraftOnly'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: Object.assign({}, {
@@ -342,7 +342,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         // (`agreementReady` stays STUBBED in these sandboxes — this suite is about the FILING
         // path, and lifting the real one would make every case turn on the win state instead.)
         'docReadiness', 'docDraftOnly',
-            'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'docSpec',
+            'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'paymentStageWord', 'docSpec',
             'approvedEstimateFor', 'agreementReady'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: {

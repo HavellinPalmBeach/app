@@ -32,11 +32,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     opts = opts || {};
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
-            'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr',
+            'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr', '_ymdLocal',
             'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours'],
       vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES'],
@@ -142,8 +142,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const { out } = plan(JOB(), EST());
     // ⚠ FOUR since 2026-09-23: the Job team chip joined the row (see the group on it below). It is on
     // every labour job — a plan with no team to confirm does not exist — so the count moved by one.
-    eq((out.match(/class="gate-chip /g) || []).length, 4, 'agreement · deposit · attorney · job team on an estate settlement with no vendors');
-    eq((out.match(/gate-no/g) || []).length, 4, 'all four red on a job with nothing recorded');
+    // ⚠ THREE since 2026-09-29 (audit P10): the attorney chip is asked on a PROBATE matter and shown on any
+    // estate with one recorded. This fixture answers no matter type and records no attorney — the
+    // trust-administration shape where the old red chip was a line nobody could close.
+    eq((out.match(/class="gate-chip /g) || []).length, 3, 'agreement · deposit · job team on an estate settlement with no vendors and no probate matter');
+    eq((out.match(/gate-no/g) || []).length, 3, 'all three red on a job with nothing recorded');
+    const probate = plan(JOB({ matterType: 'probate' }), EST()).out;
+    ['letters', 'attorney_on_file', 'deadline_733604'].forEach((k) => has(probate, 'data-gate="' + k + '"', 'on a probate matter the ' + k + ' chip joins the row'));
+    eq((probate.match(/class="gate-chip /g) || []).length, 6, 'six chips on a probate matter: the three court facts beside the three every job has');
+    has(plan(JOB({ probateAttyName: 'Richard Comiter' }), EST()).out, 'gate-ok" data-gate="attorney_on_file"',
+        'an attorney recorded on any estate still shows, green');
     has(out, '<strong>Deposit received:</strong> not yet', 'and the fix is under the row, not in a tooltip');
     lacks(out, 'id="plan-derived-p0-7"', 'the Before Day 1 card does not repeat them as lines');
     eq((out.match(/class="pl-derived"/g) || []).length, 2, 'derived-line blocks survive on Midpoint & pickups and Close-out only');
@@ -269,7 +277,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the checklists: a sentence, not a form label; a lone box spans the row');
   {
-    const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
+    const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
                         vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'jobPlanStore', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'], stubs: { _planTaskDone: (j, k) => k === 'coi_provided', isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false } });
     const box = c.planChk(7, 'precall', 'Pre-job call placed');
     has(box, '<label class="plan-chk">', 'the box is a class, not seven inline properties');
@@ -287,9 +295,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the schedule strip on the plan header — the dashboard’s own, never a second reading of the dates');
   {
-    const s = sandbox({ fns: ['planScheduleHtml', '_planScheduleStrip', 'jobSchedule', 'jtScheduleHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
+    const s = sandbox({ fns: ['planScheduleHtml', '_planScheduleStrip', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal',
                               'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coWorkingDays', '_coPaceFix'],
-                        vars: ['PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
+                        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
                         stubs: { docSentAt: () => null, jobLogEntries: () => [], _todayStr: () => '2026-09-24' } });
     const est = EST({ days: 6 });
     s.estimateStore[7] = { estimate: est, approved: true };

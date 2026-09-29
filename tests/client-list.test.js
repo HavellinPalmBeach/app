@@ -20,7 +20,7 @@ const LIST_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'jobPay
   'svcLabelOf',
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
-  'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'winLossListHtml', '_wlClientCell',
+  'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'closeoutRetainedTotal', 'jobPaidTotal', 'winLossListHtml', '_wlClientCell',
   'isJobWon', 'secCaret', 'fmtDate2', 'setJobSort', 'setFilter', 'jobStatusView'];
 const LIST_VARS = ['currentFilter', 'SVC_LABELS', 'SVC_ORDER', '_jobsWatch',
   '_jobsState', '_jobSort', '_wlOpen', 'JOB_SORTS', 'JOB_LIST_COLS', 'JOB_STATUS_ORDER',

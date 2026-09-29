@@ -237,9 +237,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('jobSchedule reads it — and the WORK against the calendar is a new flag');
   {
     const S = sandbox({
-      fns: ['jobSchedule', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive',
+      fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
             'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
-      vars: ['PRODUCTIVE_HRS_PER_DAY'],
+      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
     });
     // A 6-day job that activated on its target start. `today` is the fourth working day.
     const JOB = (over) => Object.assign({ id: 7, svc: 'cleanout', start: '2026-09-21',
@@ -380,10 +380,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // alone) and nothing drove the join. That is the same gap this repo has recorded four
     // times; the fix is always to drive the real renderer and read the real output.
 const DFNS = ['renderClientDashboard', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
+      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-      'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', 'jobProgress',
+      'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
@@ -391,7 +391,7 @@ const DFNS = ['renderClientDashboard', 'coCardActions', 'field', 'fmtDate2', 'do
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent',
       'roomStatusNormalize', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView'];
-    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
+    const DVARS = ['MATTER_TYPES', 'DECEDENT_SERVICES', '_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY',
       'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',

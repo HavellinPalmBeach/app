@@ -32,11 +32,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
   const noComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
-  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent',
-    'jobSchedule', 'jobProgress', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'coWorkingDays',
+    'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'coWorkingDays',
     '_coPaceFix', 'roomStatusNormalize'];
   const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
     'docDraftOnly', 'docPreviewOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
@@ -47,7 +47,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The transition behind every Close button, and the one handler both buttons call.
     'applyJobTransition', 'activateOrCycle', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob',
     'lookupVendorById', 'vendorIdOf', '_actor', 'estimateEditBlocker', 'priceChangeBlocker', 'agreementSignature', 'isAgreementSent', 'docKeyFor']);
-  const VARS = ['JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+  const VARS = ['DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
     'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
     'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY',
     'JOB_TRANSITIONS'];
@@ -398,12 +398,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const drafted = JOB({ status: 'closed', deliveredOn: '2026-09-30', docState: Object.assign({}, DEP_SENT, {
       'invoice:midpoint': { draftedAt: '2026-09-29T10:00:00Z', draftUrl: 'https://mail.google.com/mid' },
       'invoice:final': { draftedAt: '2026-09-30T10:00:00Z', draftUrl: 'https://mail.google.com/fin' } }) });
+    // ⚠ A closed time-and-materials job whose final was drafted had hours logged — the final cannot be built
+    // without them. Since 2026-09-29 (audit P10) the rail withholds the final's View/Print while no hours are
+    // logged, because the document itself refuses then; this fixture used to leave the log empty, a state
+    // the app cannot reach with a drafted final, so it now carries the day's hours the final was built from.
+    R.jobLogs = { 7: [{ id: 1, date: '2026-09-29', members: [{ name: 'Ashley Jerome', role: 'TC', hours: 10 }, { name: 'Crew', role: 'PS', hours: 20 }] }] };
     const s = rail(drafted, '2026-09-30', CLEARED);
+    delete R.jobLogs;
     const mid = s.acts('midpoint_invoiced');
     ok(!!mid.doc, 'the midpoint invoice can still be read');
     ok(((mid.doc || {}).acts || []).some((b) => /View midpoint invoice/.test(b.label)), 'View is there');
     lacks(((mid.doc || {}).acts || []).map((b) => b.call).join(' '), 'openDocDraft', '⚠ but its draft link is withheld on a closed job');
+    R.jobLogs = { 7: [{ id: 1, date: '2026-09-29', members: [{ name: 'Ashley Jerome', role: 'TC', hours: 10 }, { name: 'Crew', role: 'PS', hours: 20 }] }] };
     const fin = s.acts('final_invoiced');
+    delete R.jobLogs;
     has(((fin.doc || {}).acts || []).map((b) => b.call).join(' '), "openDocDraft(7,'invoice:final')", 'the FINAL draft is still offered — the rule is the midpoint alone');
     eq(s.filled && s.filled.call, "markDocSent(7,'invoice:final')", 'and the final\'s confirming tap is the filled button');
     const live = rail(JOB({ docState: Object.assign({}, DEP_SENT, {
@@ -435,7 +443,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // brought into line with, and it must not go on asking for the midpoint after the final bills it.
     const dom = domStub({});
     const P = sandbox({
-      fns: ['renderJobPlan', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', '_planRooms', '_planRoomStatus',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
@@ -483,16 +491,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
+      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
-      'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', 'jobProgress',
+      'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize',
       'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'fmtDate2', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView'];
-    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK',
+    const DVARS = ['MATTER_TYPES', 'DECEDENT_SERVICES', '_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK',
       'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY',
       'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT'];

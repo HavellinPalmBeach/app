@@ -378,8 +378,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ecBody = src.slice(src.indexOf('function saveClientEdit('));
     const ecFn = ecBody.slice(0, ecBody.indexOf('\nfunction formatPhone'));
     const ecEst = ecFn.indexOf('if (isEstateEdit) {');
-    const ecPro = ecFn.indexOf('if (ecIsProbateSvc(svc)) {');
-    ok(ecEst > 0 && ecPro > ecEst, 'the estate branch runs first, and the probate branch after it');
+    // ⚠ RESTATED 2026-09-29 (audit M5 / P10): the court-record branch reads `courtRecordShown(svc, …)`
+    // now — the service OR a probate matter — rather than the Probate service alone. The ordering is
+    // the requirement and it is unchanged: the estate branch first, the court record after it.
+    const ecPro = ecFn.indexOf('if (courtRecordShown(svc,');
+    ok(ecEst > 0 && ecPro > ecEst, 'the estate branch runs first, and the court-record branch after it');
     ok(ecFn.indexOf('job.docTier') > ecEst && ecFn.indexOf('job.docTier') < ecPro,
        'the edit-client save writes the tier for Estate Settlement as well as probate');
     ok(ecFn.indexOf('job.docScope = docTierScopeMirror(job.docTier)') > ecEst,

@@ -25,10 +25,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const run = (svc) => {
     const d = domStub({ 'i-svc': svc });
     const c = sandbox({
-      fns: ['toggleIntakeFields', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+      fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
             'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
             'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob', 'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
-      vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: { document: d },
     });
     d.querySelectorAll = () => [];

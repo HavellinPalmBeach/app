@@ -38,7 +38,7 @@ const liveLines = (s) => String(s).split('\n')
   .filter((l) => { const t = l.trim(); return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('<!--')); })
   .join('\n');
 
-const EC_FNS = ['showEditClient', 'saveClientEdit', 'ecToggleProbate',
+const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate',
                 'executorAuthOptionsHtml', 'resolveExecutorAuth', 
                 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
                 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope',
@@ -362,13 +362,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     has(live, 'buildExecutorAuthOptions();', 'and the builder is actually called at load — an empty select is the whole risk of shipping one');
 
-    // ⚠⚠ THE RESET DEFAULT IS LOAD-BEARING, AND THE REASON IS THE ACTIVATION GATE.
-    // `jobActivationBlockers` blocks on `=== 'pending'`, so a BLANK does not block: a probate job
-    // carrying one would activate with no Letters on file and nothing on any screen saying so.
-    // And `.value = ''` on a <select> with no blank option leaves the PREVIOUS client's answer
-    // standing, which is the leak INTAKE_FIELDS exists to close.
+    // ⚠⚠ THE RESET DEFAULT IS LOAD-BEARING. `.value = ''` on a <select> with no blank option leaves
+    // the PREVIOUS client's answer standing, which is the leak INTAKE_FIELDS exists to close — and on
+    // this field the leaked answer is the one the activation gate reads.
+    // ⚠ RESTATED 2026-09-29 (audit M5 / P10), NOT DELETED. This pinned `executorAuth === 'pending'`, under
+    // a comment explaining that a BLANK therefore did not block — a probate job carrying one activated
+    // with no Letters on file. The gate now reads the answer through `resolveExecutorAuth`, the rule both
+    // forms already save by, so a blank is refused too; the requirement was always "no Letters, no start".
     has(src, "'i-executor-auth': 'pending'", 'the reset sweep puts it back to pending rather than blank');
-    has(fn('jobActivationBlockers'), "executorAuth === 'pending'", 'and the activation gate really does key on that exact value');
+    has(fn('jobActivationBlockers'), "resolveExecutorAuth(j.executorAuth) === 'pending'", 'and the activation gate reads the answer through the one resolver, so a blank blocks too');
 
     const c = sandbox({ fns: ['resolveExecutorAuth', 'executorAuthOptionsHtml', 'esc'],
                         vars: ['EXECUTOR_AUTH_OPTIONS'] });
@@ -407,8 +409,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const said = [];
       const cc = sandbox({
         fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef',
-              'jobActivationBlockers'],
-        vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
+              'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob'],
+        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
         stubs: { document: d, jobs: [], showFB: (el, k, m) => said.push({ k, m }),
                  saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
                  clearIntakeForm() {}, populateAgrSelect: null, showPanel() {},
@@ -448,7 +450,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(intake('notneeded').blocked, [], 'and a matter with no Letters is not held up by one');
 
     const d = sandbox({
-      fns: ['planDerivedLines', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+      fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
             '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
             'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coAcceptedHours', 'coHoursTotal', 'coHours'],

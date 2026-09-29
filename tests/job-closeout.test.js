@@ -23,7 +23,7 @@ const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')
 
 const CARD_FNS = ['renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
   '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
-  'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'planChk',
+  'bestClientEmail', '_coFmt', '_localDateOf', '_ymdLocal', 'renderVendorScorecard', 'computeVendorAvg', 'planChk',
   '_planTaskDone', 'chkGrid', 'jobCloseBlockers'];
 
 // A prep job: four trades sourced, three confirmed (one twice — the same firm on two lines), one
@@ -77,10 +77,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ RATINGS ARE MANDATORY — the job does not close with a vendor unrated');
   {
     const t = sandbox({
-      fns: ['applyJobTransition', 'jobActivationBlockers', 'jobCloseBlockers', 'unratedVendorsForJob',
-            '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_todayStr',
+      fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobCloseBlockers', 'unratedVendorsForJob',
+            '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_todayStr', '_ymdLocal',
             'stagePaidTotal', 'jobPayments'],
-      vars: ['JOB_TRANSITIONS'],
+      vars: ['DECEDENT_SERVICES', 'JOB_TRANSITIONS'],
       stubs: { vendorDirectory: VENDORS, agrApprovedBy: '', alerts: [] },
     });
     const said = [], asked = [];
@@ -300,7 +300,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the desk card stops asking a prep job questions that do not apply to it');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
+      fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly',
             'planTasksFor', 'coAcceptedHours', 'coHoursTotal', 'coHours'],

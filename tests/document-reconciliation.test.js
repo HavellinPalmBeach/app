@@ -43,7 +43,7 @@ const FNS = [
   '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
   'matterTypeOf', 'invFiduciaryMode',
   // the three invoices
-  'invoiceHtml', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+  'invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
   'coHoursLabel', '_coMoney', 'getVendorActuals', '_srcLineKey', '_invVendorFeeSentence', 'vendorGroupOfLine',
   'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'vendorCats', 'vendorPrimaryCat',
   'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor',
@@ -51,7 +51,7 @@ const FNS = [
   'buildInvoiceEmailText', 'buildInvoiceEmailHtml', 'buildInvoiceMailto', 'invoiceBalanceWords', '_emMoney',
   '_emHtml', 'bestClientGreetingName', 'firstName', 'bestClientEmail', 'mailtoBody', 'mailtoSignoff', 'invoiceEmailSubject',
 ];
-const VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
+const VARS = ['PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
   'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', 'agrApproved', 'agrApprovedBy',
   'agrApprovedAt', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES',
@@ -266,7 +266,10 @@ module.exports = function ({ group, ok, eq }) {
     const midTotal = rowAmt(docs.midpoint, /^(Project Total|Havellin Services Total)/);
     const ms = ctx.paymentSplit(midTotal);
     seen('midpoint invoice');
-    if (mid.amtDue !== ms.deposit + ms.midpoint - dep.amtDue || rowAmt(docs.midpoint, /^Midpoint Payment Due Now/) !== mid.amtDue)
+    // ⚠ A Home Prep job's middle payment is its SECOND payment on every document since 2026-09-29 (audit
+    // P10): the agreement and the estimate already named it by what triggers it (the vendor schedule
+    // booked), and an invoice headed "Midpoint" was the one document calling it something else.
+    if (mid.amtDue !== ms.deposit + ms.midpoint - dep.amtDue || rowAmt(docs.midpoint, /^(Midpoint|Second) Payment Due Now/) !== mid.amtDue)
       fail('midpoint invoice', L(`midpoint ${mid.amtDue} on ${midTotal} after ${dep.amtDue}`));
 
     // 5. The final's payment summary: the estimate as the estimate, and a balance that is its own

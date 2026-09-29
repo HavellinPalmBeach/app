@@ -558,12 +558,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
             'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_stamp',
-            'esignSigner', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
-            'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline',
+            'esignSigner', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus', '_localDateOf', '_ymdLocal',
+            'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly',
             'jobTimelineNext', 'docDraftedAt', 'paymentSplit', 'unscoredRoomNames',
-            'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+            'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'esignAvailable'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
+      vars: ['DOC_STAGE_WORD', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
              'JT_ROW_DOC', 'JT_SHORT', 'JT_NEXT'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -650,12 +650,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // broken state, which is every agreement DocuSign has ever sent, so that is the job to drive.
     const c = sandbox({
       fns: ['isAgreementSent', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'outstandingEnvelopes',
-            'isAgreementSigned', 'agreementSignature', 'recordAgreementSignature', 'applyEsignStatus',
+            'isAgreementSigned', 'agreementSignature', 'recordAgreementSignature', 'applyEsignStatus', '_localDateOf', '_ymdLocal',
             'docState', '_jobTouch', '_actor', 'esignProviderKey', 'esignJobWatches',
-            'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
-            'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+            'agrApprovalWithdrawn', 'jobTimeline', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+            'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'esignAvailable'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT', 'JT_NEXT'],
+      vars: ['DOC_STAGE_WORD', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT', 'JT_NEXT'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
                esignArchiveSigned() {}, ESIGN_PROVIDER_KEY: 'docusign' },
     });
@@ -882,7 +882,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // identically stale screen.
     let posts = [];
     const c = sandbox({
-      fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'applyEsignStatus',
+      fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'applyEsignStatus', '_localDateOf', '_ymdLocal',
             'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature', 'docState',
             '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
@@ -1516,7 +1516,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // stubs it to 'manual', which is exactly the value that cannot tell the two implementations apart.
     const c = sandbox({
       fns: ['recordAgreementSignature', 'agreementSignature', 'isAgreementSigned', 'docState',
-            '_jobTouch', '_actor', 'esignProviderKey', 'esignAvailable', 'applyEsignStatus',
+            '_jobTouch', '_actor', 'esignProviderKey', 'esignAvailable', 'applyEsignStatus', '_localDateOf', '_ymdLocal',
             'esignJobWatches', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'AGR_SIG_MANUAL_METHODS'],
       stubs: {
@@ -1607,7 +1607,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const posts = [];
       const c = sandbox({
         fns: ['dashCheckEsign', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes',
-              'applyEsignStatus', 'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature',
+              'applyEsignStatus', '_localDateOf', '_ymdLocal', 'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature',
               'docState', '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey',
               'isAgreementSent', 'docSentAt', 'docKeyFor', '_esignRecordBlockerText'],
         vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],

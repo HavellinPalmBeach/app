@@ -26,7 +26,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('the date primitives — one clock read, and a counter that does NOT clamp');
   {
-    const d = sandbox({ fns: ['_todayStr', 'workingDaysInclusive', 'workingDaysBetween', 'addWorkingDays'] });
+    const d = sandbox({ fns: ['_todayStr', '_ymdLocal', 'workingDaysInclusive', 'workingDaysBetween', 'addWorkingDays'] });
 
     // ⚠ `workingDaysBetween` CLAMPS ITS START TO TODAY, so it answers "how far is this deadline
     // from now" and returns a confident, silent 0 for any window that has already closed. No
@@ -55,7 +55,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const frozen = new realDate('2026-09-14T03:30:00Z');   // 11:30pm on the 13th, Eastern
       const Fake = function () { return frozen; };
       Fake.prototype = realDate.prototype;
-      const t = sandbox({ fns: ['_todayStr'], stubs: { Date: Fake } });
+      const t = sandbox({ fns: ['_todayStr', '_ymdLocal'], stubs: { Date: Fake } });
       eq(t._todayStr(), '2026-09-13', '⚠ _todayStr reads the LOCAL calendar day');
       eq(frozen.toISOString().slice(0, 10), '2026-09-14',
          '…while toISOString says the 14th — the evening slip this closes');
@@ -98,8 +98,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('jobSchedule — the plan, the actual, and the two independent flags');
   {
     const S = sandbox({
-      fns: ['jobSchedule', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
-      vars: ['PRODUCTIVE_HRS_PER_DAY'],
+      fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
+      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
     });
     const EST = { days: 6, svc: 'cleanout' };
     const sched = (job, today) => S.jobSchedule(Object.assign({ id: 7, svc: 'cleanout' }, job), EST, today);
@@ -404,10 +404,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // that asked for these two fields to move here. A stub that does not match the real source
     // is worse than no stub — this repo has now paid for that twice.
     const DFNS = ['renderClientDashboard', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
+      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-      'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
+      'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
       // Lifted, never stubbed (2026-09-29): jobProgress now counts every in-scope room's status before it
       // checks the room's hours, for the every-room-locked midpoint, so it reaches this on every fixture.
       'roomStatusNormalize',
@@ -417,7 +417,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView'];
-    const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
+    const DVARS = ['MATTER_TYPES', 'DECEDENT_SERVICES', '_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
       'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
@@ -601,8 +601,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the document in play right now — and "done" is not "sent"');
   {
     const D = sandbox({
-      fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
-            'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
+      fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'finalAwaitsHours', 'estimateIsFeeOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
+            'docDraftOnly', 'docTitle', 'paymentStageWord', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
             'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
@@ -680,10 +680,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('job.activatedOn — the write-once anchor the elapsed reading had none of');
   {
-    const t = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', '_actor', 'isJobFunded',
+    const t = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', 'isJobFunded',
                               'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'isAgreementSigned',
-                              'agreementSignature', '_todayStr', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf'],
-                        vars: ['JOB_TRANSITIONS'],
+                              'agreementSignature', '_todayStr', '_ymdLocal', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf'],
+                        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'JOB_TRANSITIONS'],
                         // ⚠ Closing with no midpoint payment asks first (2026-09-29); this job has none,
                         // and the question is answered yes so the close this check is about happens.
                         stubs: { agrApprovedBy: '', approvedBy: 'Anthony Graziano', confirm: () => true } });
@@ -751,11 +751,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the rail carries PLANNED dates, and they can never be read as actuals');
   {
     const R = sandbox({
-      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
             'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent'],
-      vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
+      vars: ['DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
     });
     const JOB = { id: 7, name: 'Butler', svc: 'cleanout', status: 'won', won: true, approved: true,

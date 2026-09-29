@@ -32,7 +32,7 @@
 
 const { sandbox, source, fn, domStub } = require('./harness');
 
-const WL_FNS = ['jobsUnread', 'jobsUnreadNotice', 'renderWinLoss', 'winLossBlockHtml', 'winLossFigures',
+const WL_FNS = ['jobsUnread', 'jobsUnreadNotice', 'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'closeoutRetainedTotal', 'jobPaidTotal', 'jobPayments',
   'winLossListHtml', '_wlClientCell', '_jobStatusCell', 'toggleWinLossList', 'isJobWon', 'secCaret',
   'esc', 'fmtDate2', 'svcLabelOf', 'jobStatusView'];
 const WL_VARS = ['SVC_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS', '_wlOpen'];
@@ -169,10 +169,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ CLOSED — DEPOSIT RETAINED IS A WIN, AND THE LIST SAYS WHICH KIND. confirmMarkLost keeps
     // won=true on a job that walked after paying; the tile counts it, so the list must show it —
     // with its own status, not folded silently in among jobs that ran to the end.
-    const ret = wl('ready', [Object.assign({}, JOBS[0], { id: 107, name: 'Walked', status: 'closed_retained' })], { won: true });
+    // ⚠ RESTATED 2026-09-29 (audit M4 / P10, Anthony's Q2: "keep it and name the amount"). A retained job's
+    // figure is what it KEPT, not the estimate it walked away from — the $19,940 quote never came in and
+    // the deposit did. The fixture used to carry no payment at all, a state Mark Lost can no longer write
+    // (nothing received is a plain loss), so it now carries the deposit it retained.
+    const ret = wl('ready', [Object.assign({}, JOBS[0], { id: 107, name: 'Walked', status: 'closed_retained',
+      payments: [{ id: 1, stage: 'deposit', amount: 9970, method: 'wire' }] })], { won: true });
     has(ret.won, 'Closed — Deposit Retained', '⚠ a deposit-retained job is on the Won list, named as one');
     eq(ret.vals[0], '1', 'and the tile counts it');
-    has(ret.won, '1 client · $19,940</span>', 'one client is "1 client", not "1 clients"');
+    has(ret.won, '1 client · $9,970</span>', 'one client is "1 client", not "1 clients" — worth the $9,970 it kept');
+    has(ret.won, 'retained</div>', 'and the row says the figure is what was retained');
+    lacks(ret.won, '$19,940', 'never the estimate it walked away from');
     // What was lost is an ESTIMATE of work that never happened; what was won is the price the client
     // accepted. The word goes on the Lost list and only there.
     lacks(w.won, 'estimated', 'the Won list\'s value is not called an estimate');

@@ -89,10 +89,10 @@ function gsCtx({ props = { STRIPE_SECRET_KEY: 'sk' + '_test_zzz' }, fetch = null
   return ctx;
 }
 
-const FNS = ['saveDeposit', 'jobPayments', 'stagePaidTotal', 'jobPaidTotal', 'depositPaidTotal',
+const FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPayments', 'stagePaidTotal', 'jobPaidTotal', 'depositPaidTotal',
              'depositClearedTotal', 'isJobFunded', 'depositTargetFor', 'paymentMethodLabel',
              'updateDepModalHints', 'currentDepStage', '_photoUid', 'fmt'];
-const VARS = ['PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', 'PAYMENT_METHODS_CLEAR_ON_RECEIPT', '_photoUidSeq',
+const VARS = ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', 'PAYMENT_METHODS_CLEAR_ON_RECEIPT', '_photoUidSeq',
               'LARGE_DEPOSIT_THRESHOLD'];
 
 // The $25,715 estate job this project already uses as its worked example. 50% is $12,858 —
@@ -455,7 +455,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ─── THE APP SIDE OF THE READ-BACK ───────────────────────────────────────────
   // A sandbox holding the real recorder over the real payment helpers, so the record that
   // comes out is the one `isJobFunded`, the rail and the invoice all read.
-  const RB_FNS = ['applyStripePayments', '_stripeRecordPayment', '_stripeDue', 'outstandingPayments',
+  const RB_FNS = ['applyStripePayments', 'paymentStageLabel', 'paymentStageWord', '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_stripeDue', 'outstandingPayments',
                   'stripeRefresh', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
                   'depositClearedTotal', 'isJobFunded', 'depositTargetFor', '_photoUid',
                   '_jobTouch', 'docState', 'fmt'];
@@ -465,7 +465,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const posts = [];
     const ctx = sandbox({
       fns: RB_FNS,
-      vars: ['PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', '_photoUidSeq', 'STRIPE_RECHECK_MINS'],
+      vars: ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', '_photoUidSeq', 'STRIPE_RECHECK_MINS'],
       stubs: {
         jobs: jobsSeed,
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/x/exec',

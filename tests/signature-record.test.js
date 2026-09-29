@@ -27,7 +27,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const box = (stubs) => sandbox({
     fns: ['agreementSignature', 'isAgreementSigned', 'recordAgreementSignature', 'expectedSignerName',
-          'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'applyEsignStatus', 'outstandingEnvelopes', '_actor', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
+          'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'applyEsignStatus', '_localDateOf', '_ymdLocal', 'outstandingEnvelopes', '_actor', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
     vars: ['AGR_SIG_METHODS', 'AGR_SIG_MANUAL_METHODS', 'ESIGN_PROVIDERS'],
     stubs: Object.assign({
       saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
@@ -167,11 +167,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // was invisible to the suite. The record being right does not help if the row prints
     // something else.
     const rail = sandbox({
-      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
             'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
-            'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+            'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
             'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent'],
-      vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
+      vars: ['DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual', REQUIRE_WALKTHROUGH_NOTES: false },
     });
     const base = () => ({ id: 7, name: 'Butler', created: 'Sep 8, 2026', svc: 'cleanout',

@@ -371,7 +371,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const calls = [];
     const d = sandbox({
-      fns: ['planDerivedLines', 'planDerivedHtml', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
+      fns: ['planDerivedLines', 'planDerivedHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal', 'coHours'],
       vars: ['DECEDENT_SERVICES', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'jobPlanStore',
              'estimateStore', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
@@ -437,7 +437,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ CHECKBOXES ARE NAMED, NEVER prefix + array index');
   {
-    const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
+    const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep'],
                         vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'CLOSEOUT_TASK_KEYS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
                         stubs: { isFormalDoc: () => false } });
     const keys = t.PLAN_TASKS.map((x) => x.key);
@@ -503,7 +503,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ JOB ADMIN IS ON THE INVENTORY TAB, and reading a tick never mints a plan');
   {
     const a = sandbox({
-      fns: ['renderJobAdmin', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', '_planTaskDone', 'planDerivedLines', 'planDerivedHtml',
+      fns: ['renderJobAdmin', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', '_planTaskDone', 'planDerivedLines', 'planDerivedHtml',
             'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', '_jobAdminIsOpen', 'coAcceptedHours', 'coHoursTotal', 'coHours'],
       vars: ['DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
@@ -546,12 +546,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', '_planRooms', '_planRoomStatus',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             // The stages (2026-09-19, evening): the gate chips, the fold counts, the current stage.
-            'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr',
+            'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr', '_ymdLocal',
             // The open job body (2026-09-20): stage cards on a thread, marked off the stage the job is in.
             'planStageCard', 'planStageState', 'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours'],
       vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
@@ -617,7 +617,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // plan and the rooms-locked line is the count on the rooms header; only Midpoint & pickups and
     // Close-out still draw a derived block. Four surfaces, one rule each.
     has(out, 'id="plan-gates-7"', 'the gates render as a chip row');
-    ['agreement_signed', 'deposit_received', 'attorney_on_file'].forEach((k) => has(out, 'data-gate="' + k + '"', k + ' is a gate chip'));
+    ['agreement_signed', 'deposit_received'].forEach((k) => has(out, 'data-gate="' + k + '"', k + ' is a gate chip'));
+    // ⚠ RESTATED 2026-09-29 (audit P10), NOT DELETED. The attorney chip is asked on a PROBATE matter and
+    // shown on any estate that has one recorded. This fixture is an Estate Settlement with no matter type
+    // answered and no attorney, which is the trust-administration shape the audit found reading red over
+    // a line nobody could close. The chip is proven on the same job with the matter answered probate.
+    lacks(out, 'data-gate="attorney_on_file"', 'no attorney chip on an estate that is not on the probate track and has none recorded');
+    const outP = j.renderJobPlan(7, Object.assign({}, job, { matterType: 'probate' }), est);
+    has(outP, 'data-gate="attorney_on_file"', 'attorney_on_file is a gate chip on a probate matter');
+    const outA = j.renderJobPlan(7, Object.assign({}, job, { probateAttyName: 'Richard Comiter' }), est);
+    has(outA, 'data-gate="attorney_on_file"', 'and on any estate with an attorney recorded');
     has(out, '<span class="stg-count">0 of 2 locked &middot; 0 cleared</span>', 'the rooms card heading carries the locked count');
     ['p2', 'p4'].forEach((ph) => has(out, 'plan-derived-' + ph + '-7', ph + ' still has its derived lines'));
     lacks(out, 'plan-derived-p0-7', 'and Before Day 1 does not repeat the chips as lines');

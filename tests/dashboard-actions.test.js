@@ -36,11 +36,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
   const ctx = sandbox({
-    fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
       // The document tray: `jobTimelineActions` builds the step's document from the ONE
       // row→document map, behind the ONE readiness gate, rather than five ungated concats.
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', 'isJobWon',
-      'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
+      'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef',
       // ⚠ LIFTED, NOT STUBBED. estimateSubmitBlocker grew a contract arm on 2026-09-22 and a
       // stub of it is exactly what would let the submit gate and the save gate drift apart.
       'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
@@ -50,7 +50,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docSentAt', 'docDraftedAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
       'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estimateEditBlocker', 'priceChangeBlocker'],
-    vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
+    vars: ['EXECUTOR_AUTH_OPTIONS', 'JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
       'DECEDENT_SERVICES', 'JOB_STEPS'],

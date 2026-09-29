@@ -198,10 +198,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (svc) => {
       const d = classDom({ 'i-svc': svc }, {});
       const c = sandbox({
-        fns: ['toggleIntakeFields', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+        fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
-        vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS' ],
         stubs: { document: d },
       });
@@ -306,10 +306,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (svc) => {
       const d = classDom({ 'i-svc': svc }, marks);
       const c = sandbox({
-        fns: ['toggleIntakeFields', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+        fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
-        vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS' ],
         stubs: { document: d },
       });
@@ -420,8 +420,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const body = src.slice(src.indexOf('function saveClientEdit('));
     const fnBody = body.slice(0, body.indexOf('\nfunction formatPhone'));
     const est = fnBody.indexOf('if (isEstateEdit) {');
-    const pro = fnBody.indexOf('if (ecIsProbateSvc(svc)) {');
-    ok(est > 0 && pro > est, 'the estate branch runs first, and the probate branch after it');
+    // ⚠ RESTATED 2026-09-29 (audit M5 / P10): the court-record branch reads `courtRecordShown(svc, …)`,
+    // the service OR a probate matter, since an Estate Settlement administering a probate estate had
+    // nowhere to enter its case number. The requirement — decedent facts before the court record — holds.
+    const pro = fnBody.indexOf('if (courtRecordShown(svc,');
+    ok(est > 0 && pro > est, 'the estate branch runs first, and the court-record branch after it');
     ['job.deathDate', 'job.gate706', 'job.gateDispute', 'job.probateAttyName'].forEach((k) => {
       const at = fnBody.indexOf(k + ' ');
       ok(at > est && at < pro, k + ' is written on every estate service');
@@ -450,7 +453,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // Every one of them is something a person sees and no source needle noticed.
   group('driving the Edit Client modal');
   {
-    const EC_FNS = ['showEditClient', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
+    const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
                     'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass',
                     'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
@@ -477,8 +480,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                   docScope: 'capture' };
 
     const est = open(JOB);
-    eq((est.html.match(/class="ec-req-probate"/g) || []).length, 5,
-       'all five attorney fields carry the conditional mark');
+    // ⚠ RESTATED 2026-09-29 (audit M5 / P10): five attorney fields AND the case number. The court record
+    // now renders on any estate whose matter is administered through probate, not the Probate service
+    // alone — and on an Estate Settlement the save accepts a blank case number, so its asterisk had to
+    // become the conditional one too. An unconditional mark there would label a field required that the
+    // save does not require, which is the defect the attorney block's own marks were withdrawn for.
+    eq((est.html.match(/class="ec-req-probate"/g) || []).length, 6,
+       'all five attorney fields and the case number carry the conditional mark');
+    const _caseLbl = est.html.slice(est.html.lastIndexOf('<label', est.html.indexOf('Probate Case Number')), est.html.indexOf('id="ec-probate-case"'));
+    has(_caseLbl, 'class="ec-req-probate"', 'the case number’s mark is the conditional one, never a fixed asterisk');
     has(est.html, 'class="ec-req-probate" style="color:#A32D2D;display:none;"',
         'and it is withheld on an Estate Settlement, where the save accepts them blank');
     has(est.html, 'data-doclevel="formal"',
