@@ -408,6 +408,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
+      // Lifted, never stubbed (2026-09-29): jobProgress now counts every in-scope room's status before it
+      // checks the room's hours, for the every-room-locked midpoint, so it reaches this on every fixture.
+      'roomStatusNormalize',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
@@ -417,7 +420,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
-      'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+      'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
       // The Hours Log card reads the ±15% up front since 2026-09-25 (one figure for its label, its
       // red and its sentence) — lifted, never stubbed, so it is the app's tolerance being tested.
       'EST_TOLERANCE_PCT'];
@@ -681,7 +684,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                               'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'isAgreementSigned',
                               'agreementSignature', '_todayStr', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf'],
                         vars: ['JOB_TRANSITIONS'],
-                        stubs: { agrApprovedBy: '', approvedBy: 'Anthony Graziano' } });
+                        // ⚠ Closing with no midpoint payment asks first (2026-09-29); this job has none,
+                        // and the question is answered yes so the close this check is about happens.
+                        stubs: { agrApprovedBy: '', approvedBy: 'Anthony Graziano', confirm: () => true } });
     const j = { id: 7, status: 'won', won: true, agrSigned: true, depositReceived: true,
                 payments: [{ id: 1, stage: 'deposit', amount: 12050 }] };
     ok(t.applyJobTransition(j), 'a won, signed, funded job activates');
