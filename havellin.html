@@ -338,6 +338,7 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-row.jt-cur::before{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 2.5px,var(--white) 2.5px);}
 .jt-row.jt-blk::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--err-tx) 0 2.5px,var(--white) 2.5px);}
 .jt-row.jt-term::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--err-tx) 2.5px);}
+.jt-row.jt-open::before{border-color:var(--warn-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--warn-tx) 2.5px);}
 /* Takes the slack so the meta sits hard right and the label never wraps while there
    is room for it. */
 .jt-lbl{flex:1 1 auto;min-width:0;font-size:12.5px;color:var(--gray);}
@@ -356,6 +357,12 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-row.jt-wait .jt-lbl{color:var(--gray);opacity:.72;}
 .jt-row.jt-term{border-left-color:var(--err-tx);}
 .jt-row.jt-term .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
+/* OPEN — a midpoint the client had not paid when the job was closed (2026-09-29). Behind the job,
+   not in front of it: a filled amber node like a done one, never the bronze of the live step or the
+   red of a blocker, and its sub-line says what settles it. */
+.jt-row.jt-open{border-left-color:var(--warn-tx);}
+.jt-row.jt-open .jt-lbl{color:var(--gray-dk);}
+.jt-row.jt-open .jt-sub{color:var(--warn-tx);}
 /* Actions. The primary lives in the band and nowhere else; `.jt-ghost` is the
    quiet out-of-sequence action on a row (edit the client, edit the estimate). */
 .jt-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
@@ -434,6 +441,9 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-step.jt-cur .jt-node{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 2.5px,var(--white) 2.5px);}
 .jt-step.jt-blk .jt-node{border-color:var(--err-tx);background:radial-gradient(circle,var(--err-tx) 0 2.5px,var(--white) 2.5px);}
 .jt-step.jt-term .jt-node{border-color:var(--err-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--err-tx) 2.5px);}
+.jt-step.jt-open::after{background:var(--warn-tx);}
+.jt-step.jt-open .jt-node{border-color:var(--warn-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--warn-tx) 2.5px);}
+.jt-step.jt-open .jt-slbl,.jt-step.jt-open .jt-ssub{color:var(--warn-tx);}
 .jt-slbl{font-size:11.5px;color:var(--gray);margin-top:7px;line-height:1.25;}
 .jt-step.jt-done .jt-slbl{color:var(--gray-dk);}
 .jt-step.jt-cur .jt-slbl,.jt-step.jt-blk .jt-slbl,.jt-step.jt-term .jt-slbl{font-weight:600;color:var(--gray-dk);}
@@ -1258,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 11:42am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 11:47am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1766,7 +1776,7 @@ body.no-smf .smf-col{display:none;}
         <div style="display:flex;gap:6px;align-items:center;">
           <select id="e-job" onchange="loadJobIntoEstimate()" style="display:none;"><option value="">Select job</option></select>
           <div id="e-job-name" style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;">&mdash;</div>
-          <button class="btn-s" onclick="startEstimateOver()" title="Clear every room scored here and start again from the intake answers">Start over</button>
+          <button class="btn-s" onclick="startEstimateOver()" title="Discard what is on this screen: back to the saved estimate, or to the intake answers if nothing is saved">Start over</button>
         </div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span>
@@ -5072,6 +5082,11 @@ function setRoomState(id, state) {
   if (mediaBtns) mediaBtns.style.display = active ? 'flex' : 'none';
   if (!active) {
     note.value = '';
+    // The "this room has a note" colour and label go with the note. Left lit, they told the NEXT
+    // client's estimator that an empty room carried a note — the last client's, cleared a moment ago.
+    // (saveNotesModal relabels the button "📝 Walkthrough"; the grid draws it as the bare glyph.)
+    var notesBtn = document.getElementById('notes-btn-'+id);
+    if (notesBtn) { notesBtn.style.color = 'var(--gray)'; notesBtn.style.fontWeight = ''; notesBtn.textContent = '\uD83D\uDCDD'; }
     if (_activeRecognitions && _activeRecognitions[id]) { try { _activeRecognitions[id].stop(); } catch(e){} }
   }
   row.className = state === 'in' ? 'active-row' : state === 'excl' ? 'excluded-row' : 'inactive';
@@ -9021,22 +9036,15 @@ function clearIntake()     { resetIntakeFields(); }
 // Home Prep estimate bled into an unrelated Estate Settlement job. Called the instant
 // a job is selected, BEFORE the async fetch, so the transitional view is empty (not
 // stale). The async applyOpenedEstimate then fills in the real saved estimate.
-function neutralizeEstimateView() {
+//
+// ⚠ IT TAKES THE JOB BEING OPENED, and puts the screen at that job's fresh-build state — the one
+// list is resetEstimateJobState, and everything it clears is listed there. Every open comes through
+// here BEFORE its fetch, the saved path included, so a saved estimate is restored over a clean screen
+// rather than over the last client's; applyOpenedEstimate then either restores the saved record or
+// runs the same reset again for a fresh build.
+function neutralizeEstimateView(job) {
   window._suppressEstimateAutoSave = true;
-  // Drop any pinned α from the previously-loaded estimate. If the job being opened
-  // has a saved estimate, restoreEstimateToUI re-pins it from that record; if it
-  // doesn't, this is a fresh build and should price at the current Settings value.
-  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';
-  // ⚠ AND THE FULLNESS PRESET, for exactly the same reason and as of the same day it
-  // started mattering (2026-09-10). While the preset was a one-shot sweep, a stale
-  // _volPreset only lit the wrong chip; now that setRoomState SEEDS from it, carrying it
-  // across a job switch prices the next property off the last one's answer — tick a room
-  // on a fresh job after a packed estate and it opens at default+2. That is the bleed this
-  // whole function exists to stop. restoreEstimateToUI re-pins it from the saved record if
-  // the job being opened has one, the same way the α pin above is handled.
-  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
-  clearAllRooms();
-  resetEstimateExtras();
+  resetEstimateJobState(job || null);
   window._suppressEstimateAutoSave = false;
 }
 
@@ -9045,8 +9053,10 @@ function loadJobIntoEstimate() {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return;
 
-  // Clear the prior job's data from view immediately (see neutralizeEstimateView).
-  neutralizeEstimateView();
+  // Clear the prior job's data from view immediately, and put the screen at THIS job's
+  // fresh-build state (see neutralizeEstimateView). That includes who walked the house: it is
+  // seeded there from the site-visit concierge, else the assigned one, else nobody.
+  neutralizeEstimateView(job);
 
   renderJobRefStrip(job);
 
@@ -9057,17 +9067,16 @@ function loadJobIntoEstimate() {
   // JOB_STEPS coefficients, so we no longer auto-enable the generic "multiple
   // decision-makers / heirs?" +20% toggle for it — that would double-count. calcAll()
   // forces the toggle off and disables it for contested jobs.
-  // Auto-populate estimate prepared by from site visit TC
-  var prepByEl = document.getElementById('e-prepared-by');
-  if (prepByEl && job.siteVisitBy) prepByEl.value = job.siteVisitBy;
-  else if (prepByEl && job.tc) prepByEl.value = job.tc;
   var startDisplayEl = document.getElementById('e-start-date');
   if (startDisplayEl) startDisplayEl.value = job.start || '';
 
 
-  // Auto-populate property value from job intake
+  // Property value from job intake — WRITTEN EVERY TIME, blank when intake has none. It was
+  // written only when the job HAD one, so a client with no home value on file kept the last
+  // client's: measured on the real page, A's $4,200,000 rode onto B and B saved straight past the
+  // "Property value is required" refusal, which reads this very field.
   var ePropValEl = document.getElementById('e-propval');
-  if (ePropValEl && job.propVal) ePropValEl.value = job.propVal;
+  if (ePropValEl) ePropValEl.value = job.propVal || '';
 
   // Auto-populate sqft from job intake
   var eSqftEl = document.getElementById('e-sqft');
@@ -9166,42 +9175,13 @@ function applyOpenedEstimate(jobId, job, status) {
     }
     showFB('e-fb','warn','Offline — couldn’t reach the cloud and no estimate for "' + job.name + '" is stored on this device. Reconnect before building so you don’t overwrite a saved version you can’t see.');
   }
-  // No saved estimate — clear all rooms AND the non-room extras (package, third-
-  // party vendors, home prep) so this new client starts clean instead of inheriting
-  // the last estimate's selections.
-  _estimateAlphaPin = null; _estimateCostPin = null;
-  _estimateDocScope = seedDocScopeFromJob(job);   // fresh build — price at the current Settings α and the scope intake recorded
+  // No saved estimate — a FRESH BUILD for this client. Every per-job input goes back to where a
+  // fresh build for THIS job starts, through the one list (resetEstimateJobState), so this new
+  // client starts clean instead of inheriting the last estimate's selections. A saved estimate
+  // never reaches this line — restoreEstimateToUI puts its own record back above.
   window._suppressEstimateAutoSave = true;
-  clearAllRooms();
-  resetEstimateExtras();
+  resetEstimateJobState(job);
   window._suppressEstimateAutoSave = false;
-  document.getElementById('e-prem').checked = job.premium || false;
-  var _rshO = document.getElementById('e-rush'); if (_rshO) _rshO.checked = false;
-  // ⚠⚠ AND THE BILLING BASIS (2026-09-25). The fixed-price box, its amount and its row were
-  // reset by Save (clearEstimateTab) and by Reset, and by nothing on a job switch — so an
-  // estimate taken to fixed price and left WITHOUT saving (the ← Clients bar keeps the work, by
-  // design) handed its tick to the next client's fresh build. Measured on the real page: client A
-  // at $24,000 fixed, back, client B's Build estimate → B opened fixed price with its own
-  // suggestion ($11,580) in the box, and saved that way it quotes B a flat fee nobody chose. The
-  // flags beside it (_fixedAmountUserSet, _fixedAmountBasis) were already reset below; the
-  // control they describe was not. A saved estimate never reaches this line — restoreEstimateToUI
-  // puts its own basis back above.
-  var _fxO = document.getElementById('e-fixed'); if (_fxO) _fxO.checked = false;
-  var _fxAO = document.getElementById('e-fixed-amount'); if (_fxAO) _fxAO.value = '';
-  var _fxRowO = document.getElementById('fixed-amount-row'); if (_fxRowO) _fxRowO.style.display = 'none';
-  // Reset PS slots
-  var _crewReset = document.getElementById('ps-crew-size');
-  if (_crewReset) _crewReset.value = '2';
-  _crewUserSet = false;
-  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
-  // not inherit a previous job's manual choices, which is the whole reason these flags
-  // exist. Missing one leaves the next estimate silently pinned to the last one.
-  var _tcReset = document.getElementById('e-tc-count');
-  if (_tcReset) _tcReset.value = '1';
-  _tc2UserSet = false;
-  _fixedAmountUserSet = false;
-  _fixedAmountBasis = 0;
-  _fixedPrepMovedOut = 0;
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   calcAll();
@@ -9283,33 +9263,13 @@ function clearEstimateTab() {
   });
   var startEl = document.getElementById('e-start-date');
   if (startEl) startEl.value = '';
-  var targetEl = document.getElementById('e-target-date');
-  if (targetEl) targetEl.value = '';
-  document.getElementById('e-prem').checked = false;
-  var _fxN = document.getElementById('e-fixed'); if (_fxN) _fxN.checked = false;
-  var _fxAN = document.getElementById('e-fixed-amount'); if (_fxAN) _fxAN.value = '';
-  var _rshN = document.getElementById('e-rush'); if (_rshN) _rshN.checked = false;
-  var _fxRowN = document.getElementById('fixed-amount-row'); if (_fxRowN) _fxRowN.style.display = 'none';
-  var _crewReset = document.getElementById('ps-crew-size');
-  if (_crewReset) _crewReset.value = '2';
-  _crewUserSet = false;
-  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
-  // not inherit a previous job's manual choices, which is the whole reason these flags
-  // exist. Missing one leaves the next estimate silently pinned to the last one.
-  var _tcReset = document.getElementById('e-tc-count');
-  if (_tcReset) _tcReset.value = '1';
-  _tc2UserSet = false;
-  _fixedAmountUserSet = false;
-  _fixedAmountBasis = 0;
-  _fixedPrepMovedOut = 0;
-  clearAllRooms();
-  collectionsData = [];
-  renderCollections();
-  vehiclesData = [];
-  renderVehicles();
-  resetEstimateExtras();   // package + third-party vendors + home prep
-  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';   // nothing loaded — back to the current Settings α, full documentation
-  var _tp = document.getElementById('tp-target'); if (_tp) _tp.value = '';
+  // Every per-job input, for NOBODY — the screen is unbound. The one list; see resetEstimateJobState.
+  // ⚠ This is also the reset that runs after a SAVE, and until 2026-09-29 it was a hand-kept copy
+  // that missed the discount, move styling, the private note and who walked the house — so all four
+  // survived the Save into the next client's fresh estimate.
+  // (The 'e-target-date' write that lived here named an element that has never existed; the
+  //  planner's date, tp-target, is reset with everything else.)
+  resetEstimateJobState(null);
   // Recompute once against the now-empty inputs so every derived readout — the summary,
   // the crew badge, the timeline, the planner — goes to zero rather than keeping the last
   // job's numbers on screen. calcAll reassigns currentEstimate, so null it AFTER.
@@ -9329,6 +9289,11 @@ function clearAllRooms() {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
       if (roomState(id) !== 'off') setRoomState(id, 'off');
+      // ⚠ A RENAMED "Other" ROW GOES BACK TO ITS OWN NAME (2026-09-29). The name box is an input
+      // calcAll reads for the room's name, and nothing ever reset it — so A's "Wine cellar" sat on
+      // B's grid and became a room on B's estimate the moment B ticked that row. Measured on the
+      // real page. restoreEstimateToUI writes a saved estimate's own name back when it claims the row.
+      if (r.custom) { var _nm = document.getElementById('name-' + id); if (_nm && _nm.tagName === 'INPUT') _nm.value = r.name; }
       ri++;
     });
   });
@@ -9339,29 +9304,120 @@ function clearAllRooms() {
   calcAll();
 }
 
-// Clear every estimate input that lives OUTSIDE the room grid: the moving-
-// materials package, the third-party vendor table, and the home-prep section.
-// clearAllRooms() only resets rooms + the access/heirs toggles, so on its own a
-// fresh estimate for a new client would inherit the PREVIOUS client's package,
-// vendors, and prep selections — the "sticky selections" bug. A saved estimate
-// re-populates all of these in restoreEstimateToUI, so this only ever runs on the
-// no-saved-estimate (start-fresh) path.
-function resetEstimateExtras() {
-  var pkg = document.getElementById('e-pkg'); if (pkg) pkg.value = '0';
+// ⚠⚠ EVERYTHING THE BUILD ESTIMATE SCREEN HOLDS FOR ONE CLIENT, PUT BACK TO WHERE A FRESH BUILD
+// STARTS — AND THE ONE LIST OF IT (2026-09-29, workflow audit finding C1).
+//
+// The reset used to live in three hand-kept copies — neutralizeEstimateView, the fresh-build branch
+// of applyOpenedEstimate and clearEstimateTab, plus resetEstimateExtras beside them — and every copy
+// was a list of the controls somebody had remembered. Measured on the real page before this was
+// written: client A priced with a 10% discount, move styling, a private note, a coin collection, a
+// car and a planner date, ← Clients without saving, client B's Build estimate — B opened with ALL of
+// them. B's client estimate printed A's collection, A's car and a discount line; on a fixed-price
+// job the leaked discount cut the flat fee by 10% ($1,824 on the house measured here, $2,220 on the
+// audit's) and printed no discount line at all; B's
+// Walkthrough view read A's family note ("the son contests the will"); B named Ashley as the person
+// who walked a house they never saw; and A's $4.2M home value rode onto B, which had none, and let B
+// save straight past the "Property value is required" refusal. Save was no better: the discount, the
+// styling, the note and the walkthrough-by all survived clearEstimateTab into the next client —
+// a 10% discount rode through five new clients in a row.
+//
+// `job` is the client the screen is being put back to a FRESH BUILD for; null clears it for nobody
+// (clearEstimateTab — the screen unbound). Three inputs start from an answer on the job rather than
+// from blank, and they are seeded HERE so a job with no answer gets blank rather than the last
+// client's: the Premium Estate flag, the documentation scope, and who walked the house.
+//
+// ⚠ WHAT IT DELIBERATELY DOES NOT TOUCH: the job binding (#e-job) and the four fields read off the
+// job record — service type, square footage, property value, target start — which
+// loadJobIntoEstimate writes from the job being opened and clearEstimateTab blanks on unbind; and
+// the approval state, which loadEstimateForJob answers from the store.
+//
+// ⚠ A SAVED ESTIMATE GETS ALL OF IT BACK. Every open runs this first (neutralizeEstimateView) and
+// restoreEstimateToUI then writes the saved record over it — so a field the record does not carry
+// comes back BLANK rather than as whatever the last client left on screen. The planner's target date
+// is the one input no record carries, and that is correct: it is a question asked on site, not a term
+// of the estimate. ⚠ AND REOPENING THE SAME CLIENT NEVER COMES THROUGH HERE — openEstimateScreen
+// resumes the unsaved work instead, which is what the ← Clients bar promises.
+//
+// ⚠ ADDING A CONTROL TO THE BUILD ESTIMATE SCREEN MEANS ADDING IT HERE. tests/estimate-reset.test.js
+// walks every control calcAll reads, sets it to a previous client's answer, runs this, and fails on
+// any that survives — so the next one cannot be forgotten the way these seven were.
+function resetEstimateJobState(job) {
+  var el = function(id) { return document.getElementById(id); };
+  // 1. A DICTATION STILL RUNNING BELONGS TO THE CLIENT BEING LEFT. Room notes, collection notes and
+  //    the private note all append their final words to an element on this screen when the words
+  //    arrive — and room rows are positional (r0, r1…), so a sentence finished after the switch would
+  //    land in the NEXT client's same row, or in their private note. abort(), never stop(): stop()
+  //    still delivers the last result; abort() delivers nothing.
+  if (typeof _activeRecognitions === 'object' && _activeRecognitions) {
+    Object.keys(_activeRecognitions).forEach(function(k) {
+      var r = _activeRecognitions[k];
+      try { if (r && typeof r.abort === 'function') r.abort(); else if (r && typeof r.stop === 'function') r.stop(); } catch (e) {}
+    });
+  }
+
+  // 2. THE PINS. Each is re-pinned by restoreEstimateToUI from the saved record when the job has one;
+  //    otherwise this is a fresh build and prices at the current Settings α and cost card.
+  _estimateAlphaPin = null; _estimateCostPin = null;
+  // The documentation scope intake recorded — 'full' for no job, and for a job that never answered.
+  _estimateDocScope = seedDocScopeFromJob(job);
+  // ⚠ The fullness preset SEEDS every room ticked after it is pressed (setRoomState), so carrying it
+  // across prices the next property off the last one's answer — tick a room on a fresh job after a
+  // packed estate and it opens at default+2.
+  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
+
+  // 3. THE CONTROLS, back to their markup defaults.
+  var prem = el('e-prem'); if (prem) prem.checked = !!(job && job.premium);
+  var rush = el('e-rush'); if (rush) rush.checked = false;
+  // ⚠⚠ The billing basis (2026-09-25): an estimate taken to fixed price and left unsaved handed its
+  // tick to the next client's fresh build, which then quoted a flat fee nobody chose.
+  var fx = el('e-fixed'); if (fx) fx.checked = false;
+  var fxA = el('e-fixed-amount'); if (fxA) fxA.value = '';
+  var fxRow = el('fixed-amount-row'); if (fxRow) fxRow.style.display = 'none';
+  _fixedAmountUserSet = false; _fixedAmountBasis = 0; _fixedPrepMovedOut = 0;
+  // The preferred-client discount — the worst of the seven, because nothing but restoreEstimateToUI
+  // ever wrote this box, and on a fixed-price job it is taken off the flat fee with no line saying so.
+  var disc = el('e-discount'); if (disc) disc.value = '0';
+  // Move styling: +8 specialist hours on every Home Transition that inherited it.
+  var sty = el('e-move-styling'); if (sty) sty.checked = false;
+  // The date the client asked for. Saved on no record, so on a fresh build it can only be the last
+  // client's — and the planner then advises a crew for somebody else's deadline.
+  var tp = el('tp-target'); if (tp) tp.value = '';
+  // Who walked THIS house. loadJobIntoEstimate only ever wrote it when the job named somebody, so a
+  // job naming nobody kept the last client's walker — on the estimate, the agreement and the Drive
+  // working paper. A name the list does not offer leaves the select on "Select TC", which is the truth.
+  var by = el('e-prepared-by'); if (by) by.value = job ? (job.siteVisitBy || job.tc || '') : '';
+  // The private walkthrough note — one family's "the son contests the will" on the next family's
+  // estimate and its Walkthrough view. _privateWalkNote is the record; the box only mirrors it.
+  _privateWalkNote = '';
+  var pn = el('e-private-note'); if (pn) pn.value = '';
+  var pns = el('pnote-mic-status'); if (pns) pns.textContent = '';
+  // Crew and concierge counts, and the flags that say somebody chose them. Missing one leaves the
+  // next estimate silently pinned to the last one's manual choice.
+  var crew = el('ps-crew-size'); if (crew) crew.value = '2';
+  _crewUserSet = false;
+  var tcc = el('e-tc-count'); if (tcc) tcc.value = '1';
+  _tc2UserSet = false;
+  var pkg = el('e-pkg'); if (pkg) pkg.value = '0';
+  // A prep job opened straight after another prep job would otherwise price hours nobody walked.
+  var dc = el('e-declutter-hrs'); if (dc) dc.value = '0';
+  // The add-a-line boxes. A half-typed "coin collection" is still the last client's coin collection.
+  ['new-col-name', 'new-col-value', 'new-col-qty', 'new-veh-desc'].forEach(function(id) {
+    var x = el(id); if (x) x.value = '';
+  });
+  var ncd = el('new-col-disp'); if (ncd) ncd.value = 'auction';
+
+  // 4. THE LISTS. Vendors and prep lines render into the same group cards, so one render covers both.
   vendors = [];
-  var nvt = document.getElementById('new-vendor-type'); if (nvt) nvt.value = '';
-  var nvc = document.getElementById('new-vendor-cost'); if (nvc) nvc.value = '';
-  var nsmf = document.getElementById('new-smf'); if (nsmf) nsmf.textContent = '$0';
-  renderVendors();
-  // Clearing the lines is the whole reset now — inclusion is derived from them, so there is
-  // no checkbox to untick and no separate section to collapse.
   prepItems = [];
-  renderPrepItems();
-  // ⚠ AND THE DECLUTTER HOURS, for the same reason the fullness preset is dropped in
-  // neutralizeEstimateView: a prep job opened straight after another prep job would otherwise
-  // inherit the last property's answer and price hours nobody walked. restoreEstimateToUI re-pins
-  // it from the saved record when the job being opened has one.
-  var _dcReset = document.getElementById('e-declutter-hrs'); if (_dcReset) _dcReset.value = '0';
+  renderVendors();
+  collectionsData = [];
+  renderCollections();
+  vehiclesData = [];
+  renderVehicles();
+
+  // 5. THE ROOMS LAST — clearAllRooms clears the grid and the two adjustments and recomputes, so it
+  //    runs against everything above rather than half of it.
+  clearAllRooms();
 }
 
 
@@ -11774,8 +11830,8 @@ function checkPin() {
       var job = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
       // 'approved' — NOT 'active'. Approving our own estimate is an internal event; it
       // says nothing about whether the client accepted, signed, or paid. Setting 'active'
-      // here also bypassed the signature + deposit blockers that activateOrCycle and
-      // cycleStatus already enforce, so jobs went active without either.
+      // here also bypassed the signature + deposit blockers that activateOrCycle (via
+      // applyJobTransition) already enforces, so jobs went active without either.
       if (job) { job.status = (job.status === 'active' || job.status === 'closed') ? job.status : 'approved';
                  job.approved = true; saveJobs(); }
     }
@@ -11985,9 +12041,11 @@ function renderJobs() {
     var startFmt = j.start ? new Date(j.start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
     var statusCell = _jobStatusCell(j);
 
-    // action buttons vary by status
-    var actions = '<button class="icon-btn" onclick="cycleStatus('+j.id+')">Status</button>';
-    actions = '<button class="btn-bronze" style="padding:4px 10px;font-size:10px;" onclick="event.stopPropagation();openClientDashboard('+j.id+')">Open →</button>';
+    // ⚠ THERE WAS A "Status" BUTTON HERE, AND IT NEVER RENDERED (removed 2026-09-29, workflow audit H3).
+    // It was assigned and then overwritten by the Open line on the very next statement, so the client
+    // list has had no status control at all — which is why the docs' "Re-open" button did not exist.
+    // Closing a job is the timeline's (Close job, from activation on); nothing re-opens one.
+    var actions = '<button class="btn-bronze" style="padding:4px 10px;font-size:10px;" onclick="event.stopPropagation();openClientDashboard('+j.id+')">Open →</button>';
     // ⚠ WITHDRAWN ON A SETTLED JOB. This is the mark-lost control and it belongs here for
     // most of an engagement — a client really can cancel mid-job. Once the work has been
     // delivered or the final payment is in there is nothing left to lose, and pressing it
@@ -12118,8 +12176,10 @@ function editEstimateForJob(jobId) {
   // Drop the previously-loaded job's rooms/vendors/prep from view immediately, and
   // reflect this job's service type synchronously, so the slow cloud fetch below can
   // never show another job's estimate (e.g. a Home Prep build) under this job's name.
-  neutralizeEstimateView();
+  // The job goes in, so what the screen holds while the fetch is out is THIS job's fresh-build
+  // state rather than a blank one — the saved record, if there is one, is restored over it.
   var _editJob = jobs.find(function(j){ return j.id === jobId; });
+  neutralizeEstimateView(_editJob);
   if (_editJob) {
     paintEstimateService(_editJob.svc || '', _editJob);
     svcTypeChanged();
@@ -12425,6 +12485,11 @@ function restoreEstimateToUI(est) {
         if (candidate && !candidate.section) savedRoom = _claim(candidate);
       }
       if (savedRoom) {
+        // A renamed "Other" row gets its own saved name back. clearAllRooms puts every custom row
+        // back to its default name so one client's "Wine cellar" cannot reach the next; without this
+        // line the reopened estimate would read "Other" and the next save would record it that way.
+        var _nmR = document.getElementById('name-' + id);
+        if (r.custom && _nmR && _nmR.tagName === 'INPUT' && savedRoom.name) _nmR.value = savedRoom.name;
         var chk = document.getElementById('chk-' + id);
         if (chk) {
           setRoomState(id, savedRoom.excluded ? 'excl' : 'in');
@@ -14243,7 +14308,7 @@ function jobProgress(est, plan, logs, coHrs) {
             coTC:0, coPS:0, coHrs:0, authTC:0, authPS:0, authHrs:0,
             planTC:0, planPS:0, doneTC:0, donePS:0, doneHrs:0, planHrs:0,
             workPct:0, tcPct:0, psPct:0, wholePctTC:0, wholePctPS:0,
-            aboveFloor:false, invalidRooms:[] };
+            nRooms:0, nLocked:0, aboveFloor:false, invalidRooms:[] };
   // ⚠ ACCEPTED CHANGE-ORDER HOURS ARE PASSED IN (`coAcceptedHours(jobId)`), never read here — the
   // same rule as the plan and the log, so the tests drive this with no globals. They are set BEFORE
   // the early return because the schedule reads them to lengthen the plan, and a job whose estimate
@@ -14281,11 +14346,17 @@ function jobProgress(est, plan, logs, coHrs) {
   var rooms = (plan && plan.rooms) || {};
   est.rooms.filter(function(r){ return !r.excluded; })   // homeowner-handled rooms aren't tracked
            .forEach(function(r) {
+    var s = roomStatusNormalize(rooms[r.idx] && rooms[r.idx].status);
+    // ⚠ EVERY ROOM LOCKED IS COUNTED BY ROOM, NOT BY HOURS, and before the hours are checked (2026-09-29).
+    // It is the Job Plan's own "project midpoint" — its red banner, its derived line and its stage marker
+    // all read "every in-scope room locked" — and the rail's midpoint timing asks the same question. A
+    // room with unreadable hours is still a room somebody has or has not locked.
+    P.nRooms++;
+    if (TC_DONE_STATUSES[s]) P.nLocked++;
     var tcH = Number(r.tcH), psH = Number(r.psH);
     if (!Number.isFinite(tcH) || !Number.isFinite(psH)) { P.invalidRooms.push(r.name || ('Room ' + r.idx)); return; }
     P.planTC += tcH;
     P.planPS += psH;
-    var s = roomStatusNormalize(rooms[r.idx] && rooms[r.idx].status);
     if (TC_DONE_STATUSES[s]) P.doneTC += tcH;
     if (PS_DONE_STATUSES[s]) P.donePS += psH;
   });
@@ -14368,7 +14439,7 @@ function jobSchedule(job, est, todayStr, prog) {
             start:'', anchor:'', anchorKind:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
             actualStart:'', actualStartKind:'',
             elapsed:0, overBy:0, endVariance:0, remaining:0,
-            progress:false, workPct:0, hoursPct:0, actHrs:0, estHrs:0,
+            progress:false, workPct:0, roomsLocked:false, hoursPct:0, actHrs:0, estHrs:0,
             paceEnd:'', paceBy:0,
             fit:'', fitTxt:'', pace:'', paceTxt:'', paceFix:'' };
   if (!job) return S;
@@ -14464,6 +14535,7 @@ function jobSchedule(job, est, todayStr, prog) {
   if (prog && prog.has && S.state === 'running') {
     S.progress = true;
     S.workPct = prog.workPct;
+    S.roomsLocked = prog.nRooms > 0 && prog.nLocked === prog.nRooms;
     S.hoursPct = prog.hoursPct;
     S.actHrs = prog.actHrs;
     S.estHrs = prog.authHrs;   // the authorised budget — the estimate plus accepted change orders
@@ -14598,8 +14670,13 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       key: o.key, group: o.group, label: o.label, short: JT_SHORT[o.key] || o.label,
       // What the band says while this row is the live one — see JT_NEXT. The label stays the
       // milestone's name for the rail and the track.
-      todo: JT_NEXT[o.key] || o.label,
+      todo: o.todo || JT_NEXT[o.key] || o.label,
       done: !!o.done,
+      // ⚠ OPEN — passed and not settled; see the state walk at the foot of this function. Only the
+      // two midpoint rows ever carry it, and only once the job is closed.
+      open: !!o.open,
+      // The midpoint before it is due: the band offers the send as an outline button naming the day.
+      notYet: !!o.notYet, dueOn: o.dueOn || '',
       at: o.at || '', atKind: o.atKind || 'text', by: o.by || '',
       sub: o.sub || '', amount: (typeof o.amount === 'number') ? o.amount : null,
       blockedWhy: o.blockedWhy || '', blockedFix: o.blockedFix || '',
@@ -14620,11 +14697,48 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   // function beside a builder — a second helper here is a second place to forget the guard.
   var _sc = sched || null;
   function _plan(o, dateStr, lbl) {
-    if (!_sc || !dateStr || o.done || _sc.state === 'dead' || _sc.state === 'none' || _sc.state === 'vendor') return o;
+    if (!_sc || !dateStr || o.done || o.open || _sc.state === 'dead' || _sc.state === 'none' || _sc.state === 'vendor') return o;
     o.plan = dateStr; o.planLbl = lbl;
     o.planLate = !!(_sc.today && dateStr < _sc.today);
     return o;
   }
+
+  // ⚠⚠ THE MIDPOINT NO LONGER HOLDS THE JOB (2026-09-29, workflow audit H3). The two midpoint rows sat
+  // in front of Work complete and the final, the light lands on the earliest gap, and "Close job" lived
+  // on Work complete alone — so a finished house whose midpoint cheque had not arrived could be neither
+  // closed nor sent its final, and the only way past was to record money that had not come in. The
+  // decision (Q1): a job may be closed any time after activation, and the final goes out with the
+  // midpoint unpaid, because the final already bills everything not yet paid against the payments
+  // actually received. So once the job is CLOSED an unsettled midpoint row is passed rather than lit
+  // (`open`, below), the final takes the light, and the row stays visibly open until the money is in.
+  // ⚠ A PAYMENT ON THE FINAL SETTLES THE MIDPOINT TOO, and that is arithmetic rather than generosity:
+  // the final's balance is the whole job less everything received, so the midpoint's share is inside it.
+  var _closed = !!job.deliveredOn;
+  var _midSent = !!docSentAt(job, 'invoice', 'midpoint');
+  var _finSent = !!docSentAt(job, 'invoice', 'final');
+  var _midDrafted = !_midSent && !!docDraftedAt(job, 'invoice', 'midpoint');
+  // ⚠⚠ AND THE MIDPOINT IS NOT DUE ON DAY ONE (M8). The estimate tells the client the second payment is
+  // due at the project midpoint, and on activation day the band's one filled button read Send midpoint
+  // invoice. Until the calendar halfway — or half the work done, whichever comes first — the invoice is
+  // an outline button saying when it is due and the band says to get on with the work. ⚠ "HALF THE WORK"
+  // IS EITHER READING THE APP ALREADY HAS: half the hours earned by room status (the strip's "% of the
+  // work done"), or EVERY ROOM LOCKED — which the Job Plan has always called the project midpoint (its
+  // red banner, its derived line, its Midpoint & pickups marker) and the estate agreement bills on
+  // ("upon completion of the Asset Inventory stage or at project midpoint, whichever comes first"). A
+  // locked room earns only its concierge hours, so on hours alone every room locked reads about a third,
+  // and the band would have said "not yet" under a banner saying "you're at the project midpoint". ⚠ It needs a
+  // RUNNING schedule with a halfway point: without one there is nothing to wait for (a job under three
+  // working days, one with no start to count from, Home Prep on the vendors' calendar), so the invoice
+  // is the step exactly as it always was. ⚠ A DRAFT IS NEVER "NOT YET" — somebody chose to send early,
+  // and confirming it is the next thing to do.
+  // ⚠ `!_closed` AND THE `running` TEST ARE BELT AND BRACES, AND BOTH REVERTS ARE GREEN — recorded here
+  // rather than covered by assertions that could not fail. `jobSchedule` answers `done` before `running`, so
+  // a running schedule already means no handover stamp; and `notYet` is only ever read on a LIVE row, which
+  // needs the job active, whose schedule is running whenever it has a halfway to wait for. Each keeps the
+  // intent where it is read.
+  var _midNotYet = !!(_sc && !_midSent && !_midDrafted && !_closed && _sc.state === 'running'
+    && _sc.halfway && _sc.today && _sc.today < _sc.halfway
+    && !(_sc.progress && (_sc.workPct >= 0.5 || _sc.roomsLocked)));
 
   var rows = [
     // `created` is stamped short form ("Sep 22, 2026"), so raw happened to read right — but a
@@ -14743,15 +14857,25 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     // says is "by now you should be about half way through the work, so this invoice is
     // about due" — which is why the strip above calls the same date the halfway point and
     // never the midpoint.
+    // ⚠ AFTER THE CLOSE IT IS DONE ONCE THE SHARE IS BILLED OR PAID — by its own payment, or by the final
+    // going out (the final bills it) or being paid. Until then it is OPEN and says why.
     row(_plan({ key: 'midpoint_invoiced', group: 'Work', label: 'Midpoint invoice sent',
-      done: !!docSentAt(job, 'invoice', 'midpoint'), at: docSentAt(job, 'invoice', 'midpoint'), atKind: 'iso',
+      done: _midSent || (_closed && (midPaid > 0 || _finSent || finPaid > 0)),
+      open: _closed && !_midSent && !(midPaid > 0 || _finSent || finPaid > 0),
+      at: docSentAt(job, 'invoice', 'midpoint'), atKind: 'iso',
       amount: hav ? split.midpoint : null,
-      sub: (!docSentAt(job, 'invoice', 'midpoint') && docDraftedAt(job, 'invoice', 'midpoint'))
-        ? 'Drafted \u2014 read it, send it, then confirm' : '' }, _sc && _sc.halfway, 'halfway point')),
+      notYet: _midNotYet, dueOn: _midNotYet ? _sc.halfway : '',
+      todo: _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point' : '',
+      sub: _midSent ? ''
+        : _closed ? (midPaid > 0 ? '' : (_finSent || finPaid > 0) ? 'Billed on the final invoice' : 'Not sent \u2014 the final invoice bills it')
+        : _midDrafted ? 'Drafted \u2014 read it, send it, then confirm' : '' }, _sc && _sc.halfway, 'halfway point')),
 
     row({ key: 'midpoint_received', group: 'Work', label: 'Midpoint payment',
-      done: midPaid > 0, amount: hav ? split.midpoint : null,
-      sub: midPaid > 0 ? ('$' + Math.round(midPaid).toLocaleString() + ' received') : '' }),
+      done: midPaid > 0 || (_closed && finPaid > 0),
+      open: _closed && !(midPaid > 0) && !(finPaid > 0),
+      amount: hav ? split.midpoint : null,
+      sub: midPaid > 0 ? ('$' + Math.round(midPaid).toLocaleString() + ' received')
+        : _closed ? (finPaid > 0 ? 'Paid with the final invoice' : 'Unpaid \u2014 the final invoice carries it') : '' }),
 
     // ⚠ `deliveredOn` — the WRITE-ONCE stamp `applyJobTransition` sets on the first
     // close, so re-opening and re-closing never moves the date the job was really
@@ -14803,9 +14927,16 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   // skip — `markEstimateSent` is the only writer of `estimateSentDate`, so a job
   // whose agreement is signed and funded can still carry no estimate-sent date. A
   // later row that IS done stays done; the light lands on the earliest gap.
+  //
+  // ⚠⚠ `open` IS THE SIXTH STATE AND IT NEVER TAKES THE LIGHT (2026-09-29). A midpoint the client has
+  // not paid by the time the job is closed is behind the job, not in front of it: the final carries it,
+  // so the step to take is the final. Lighting the open row instead is exactly the dead end this
+  // replaced. It is not `waiting` either — waiting is the future, painted grey, and this is money
+  // outstanding on work already done — so it has its own amber node until the payment settles it.
   var lit = false;
   for (var i = 0; i < rows.length; i++) {
     if (rows[i].done) { rows[i].state = 'done'; continue; }
+    if (rows[i].open) { rows[i].state = 'open'; continue; }
     if (!lit) { rows[i].state = rows[i].blockedWhy ? 'blocked' : 'current'; lit = true; }
     else rows[i].state = 'waiting';
   }
@@ -16834,7 +16965,11 @@ function _jtDocSecondaries(id, job, estRec, rowKey) {
   var preview = docPreviewOnly(d.kind, job, estRec);
   if (docReadiness(d.kind, job, estRec) && !preview) return [];
   var viewOnly = docDraftOnly(d.kind, job, estRec) || preview;
-  return _jtDraftLink(id, job, d.kind, d.stage)
+  // ⚠ NO MIDPOINT DRAFT ONCE THE JOB IS CLOSED (2026-09-29). From the close the final bills whatever the
+  // midpoint left unpaid, so a link reopening a midpoint draft invites sending a second bill for the same
+  // share. Reading the midpoint invoice stays open (View, Print, the filed copy); only the send path goes.
+  var draft = (d.stage === 'midpoint' && job.deliveredOn) ? [] : _jtDraftLink(id, job, d.kind, d.stage);
+  return draft
     .concat(_jtDocViews(id, d.kind, d.stage, viewOnly),
             _jtDriveLink(id, job, d.kind, d.stage));
 }
@@ -17005,7 +17140,19 @@ function jobTimelineActions(row, job, estRec) {
       break;
 
     case 'midpoint_invoiced':
-      if (live) out.primary = _jtSendAction(id, job, 'invoice', 'midpoint', 'midpoint invoice');
+      // ⚠⚠ NOT THE FILLED BUTTON BEFORE IT IS DUE (2026-09-29, workflow audit M8). On activation day this
+      // was the band's one filled button, while the estimate tells the client the midpoint is due at the
+      // project midpoint. Until the halfway point (or half the work done — `jobTimeline` decides) it is
+      // an outline button that says when it falls due; it can still be sent early, it is simply not the
+      // thing to do today. ⚠ The DAY is formatted here, never in `jobTimeline`: the derivation stays free
+      // of formatting and hands over yyyy-mm-dd, the way `plan` does.
+      // ⚠ ONE `_jtSendAction` CALL, whichever way it renders: the same send control on all five documents
+      // is the point of that builder, and a second call here would be a second opinion of its label.
+      if (live) {
+        var _mid = _jtSendAction(id, job, 'invoice', 'midpoint', 'midpoint invoice');
+        if (row.notYet) out.secondary.push({ label: _mid.label + ' &mdash; due around ' + fmtDate2(row.dueOn), call: _mid.call });
+        else out.primary = _mid;
+      }
       break;
 
     // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
@@ -17013,6 +17160,10 @@ function jobTimelineActions(row, job, estRec) {
     // could ask for the money was reached from the step that records the money arriving.
     case 'midpoint_received':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'midpoint')" };
+      // ⚠ AN OPEN MIDPOINT CAN STILL BE PAID, and the row that records it is no longer lit once the job is
+      // closed. Out of sequence, so it rides the strip under the rail — which has no row context, so the
+      // label names the stage rather than reading "Record payment" twice on one screen.
+      else if (row.state === 'open') out.secondary.push({ label: '&#10003; Record midpoint payment', call: "dashRecordPayment(" + id + ",'midpoint')" });
       break;
 
     case 'work_complete':
@@ -17033,6 +17184,19 @@ function jobTimelineActions(row, job, estRec) {
     case 'final_paid':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'final')" };
       break;
+  }
+
+  // ⚠⚠ CLOSE JOB IS REACHABLE FROM ACTIVATION ON (2026-09-29, workflow audit H3). It lived on Work
+  // complete alone, which sits behind both midpoint rows — so a finished job with an unpaid midpoint had
+  // no way to close, and the client list's Status button that might have closed it was overwritten on
+  // the line after it was built. Now every live step of an ACTIVE job carries it as an outline button
+  // beside that step's own, and Work complete keeps it as the primary. ⚠ ONE CALL, `activateOrCycle`,
+  // from both places, so the vendor-rating gate (`jobCloseBlockers`) and the early-close question in
+  // `applyJobTransition` cannot be reached around. ⚠ `status === 'active'` and not a row position: the
+  // lit row can legitimately be an earlier one on an active job (a deposit handed over by cheque never
+  // "sent" its invoice), and closing is a question about the job, not about which gap the light is on.
+  if (live && job.status === 'active' && row.key !== 'work_complete') {
+    out.secondary.push({ label: '&#9632; Close job', call: 'activateOrCycle(' + id + ')' });
   }
   return out;
 }
@@ -17369,7 +17533,7 @@ function _jtAtFmt(r) {
   return String(r.at);
 }
 function _jtStateCls(r) {
-  return {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}[r.state] || 'jt-wait';
+  return {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term', open:'jt-open'}[r.state] || 'jt-wait';
 }
 
 // The rows AFTER the signature — the second leg of the track, headed DEPOSIT & START. That is
@@ -18087,14 +18251,22 @@ function renderClientDashboard(jobId) {
 }
 
 // ─── STATUS TRANSITIONS ───────────────────────────────────────────────────────
-// ONE map, read by both status buttons. They used to carry a copy each and the copies
-// were expected to be edited in lockstep, which is a rule no one can keep.
+// ONE map. There used to be two status buttons carrying a copy each, expected to be edited in
+// lockstep, which is a rule no one can keep. ⚠ ONE READER NOW: `activateOrCycle`, pressed from the
+// timeline (Activate job, and Close job from activation on). The client list's Status button was
+// deleted on 2026-09-29 — it had been overwritten on the line after it was built and never rendered.
+// ⚠ `closed: 'active'` STAYS IN THE MAP AND NO CONTROL REACHES IT: a Re-open would leave the write-once
+// `deliveredOn` standing on an active job, and what that should mean is a decision, not a button.
+// ⚠ ONE LEGACY CASE, NOTED AND NOT CHANGED: a job closed before the handover stamp shipped (2026-07-30)
+// carries no `deliveredOn`, so its rail reads Job active undone and offers Activate job — which would
+// reach this entry and re-open it. Prelaunch dummy data only.
 //
 // `closed` used to cycle back to `new`. A closed job is a delivered job, so a single
 // mis-tap on a phone threw it back to the start of the lifecycle — and once revenue
 // recognition hangs off delivery (UNEARNED_REVENUE_SPEC.md §2b) that same tap would
-// un-recognize it and re-fire the entry on the way forward. Re-open now resumes at
-// `active`, which is what the button has always been labelled.
+// un-recognize it and re-fire the entry on the way forward. Re-open was made to resume at
+// `active`, which is what the button was labelled — and then the button turned out never to render
+// (see above), so that transition is in the map with nothing pressing it.
 //
 // `lost` and `closed_retained` are deliberately absent: they are terminal, and the old
 // `|| 'new'` fallback silently resurrected them as brand-new jobs.
@@ -18125,6 +18297,23 @@ function applyJobTransition(j) {
     var cb = jobCloseBlockers(j);
     if (cb.length) {
       alert('Cannot close the job yet:\n\n' + cb.map(function(b){ return '• ' + b; }).join('\n'));
+      return false;
+    }
+    // ⚠⚠ CLOSING WITH THE MIDPOINT UNPAID IS ALLOWED AND IS ASKED ONCE (2026-09-29, workflow audit H3).
+    // Close job is now an outline button beside every step of an active job, so for the whole working
+    // phase it is one tap on an iPad from a write-once stamp: `deliveredOn` below is never moved, and no
+    // control re-opens a closed job. The question is scoped to exactly the stretch that is new — before
+    // any midpoint payment is recorded. Once one is, the light is on Work complete and Close is its
+    // primary, as it always was, and asking there would be a question on every normal close.
+    // ⚠ It says what the final does rather than warning off the close: the final bills everything not
+    // yet paid against the payments actually received, so nothing is lost by closing now.
+    if (!j.deliveredOn && !(stagePaidTotal(j, 'midpoint') > 0)
+        && !confirm('Close this job now?\n\n'
+          + 'No midpoint payment is recorded. That is fine: the final invoice bills everything not yet '
+          + 'paid, the midpoint\'s share included, against the payments actually received.\n\n'
+          + 'Closing records today, ' + fmtDate2(_todayStr()) + ', as the day the work was handed over. '
+          + 'That date cannot be changed, and a closed job cannot be re-opened.\n\n'
+          + 'If the work is not finished, press Cancel.')) {
       return false;
     }
   }
@@ -18223,13 +18412,6 @@ function openJobPlanFor(jobId, fold) {
 // with the hours log closed inside its fold.
 function goToJobLog(jobId) {
   openJobPlanFor(jobId, 'hours');
-}
-
-function cycleStatus(id) {
-  var j = jobs.find(function(x){ return x.id===id; });
-  if (!j) return;
-  if (!applyJobTransition(j)) return;   // shared map + blockers + delivery stamp
-  saveJobs(); syncJobToSheets(j); renderJobs();
 }
 
 // ─── WIN / LOSS — A ROW ON THE CLIENT DASHBOARD ──────────────────────────────
@@ -18770,7 +18952,20 @@ function closeEstimateScreen() {
 function startEstimateOver() {
   var jid = parseInt((document.getElementById('e-job') || {}).value) || 0;
   if (!jid) { clearEstimateTab(); return; }
-  if (!confirm('Clear every room scored on this screen and start again from the intake answers?\n\nThe saved estimate is not changed unless you press Save.')) return;
+  // ⚠ THE QUESTION SAYS WHAT HAPPENS, AND IT IS ONE OF TWO THINGS (2026-09-29). This clears the screen
+  // through the one reset (resetEstimateJobState) and then opens the client again — so a client with a
+  // SAVED estimate gets that estimate back, and only a client with none starts from the intake answers.
+  // The old question promised the intake answers in both cases. And it names what goes, because since
+  // the same day that is everything: the discount, the styling and the private note, which the old
+  // hand-kept reset missed and so quietly kept, now go with the rooms and the lists. A note dictated in
+  // the car is the one thing here somebody would be sorry to lose without being asked.
+  var _soRec = estimateStore[jid];
+  var _soSaved = !!(_soRec && _soRec.estimate && estimateHasContent(_soRec.estimate));
+  if (!confirm(_soSaved
+      ? 'Discard the changes on this screen and reopen the saved estimate?\n\n'
+        + 'The rooms, collections, vehicles, vendors, the discount and the private walkthrough note all go back to what was last saved.'
+      : 'Clear everything on this screen and start again from the intake answers?\n\n'
+        + 'That is the rooms, collections, vehicles, vendors, the discount and the private walkthrough note. None of it has been saved.')) return;
   window._suppressEstimateAutoSave = true;
   clearEstimateTab();
   window._suppressEstimateAutoSave = false;
@@ -19058,23 +19253,66 @@ function clearEstimateScratch(jobId) {
   } catch(e) {}
 }
 
-// Pull the jobs list fresh from the sheet and overwrite the local array. Jobs
-// otherwise sync only at startup, which let job.status (approval state) and job
-// intake fields (sqft — the hours-engine backbone) go stale across devices. cb()
-// always runs, even offline, so callers can proceed.
+// Pull the jobs list fresh from the sheet. Jobs otherwise sync only at startup, which let
+// job.status (approval state) and job intake fields (sqft — the hours-engine backbone) go
+// stale across devices. cb() always runs — offline, or standing down — so callers can proceed.
+//
+// ⚠⚠ THE SHEET IS ONLY AUTHORITATIVE ONCE OUR OWN WRITES HAVE REACHED IT — the rule
+// refreshPlanAndLogFromCloud already followed and this function did not (fixed 2026-09-29,
+// audit finding H4). It REPLACED `jobs` with whatever the read returned, and a write takes far
+// longer than a read. Measured on the real page against a backend answering writes in 4 s and
+// reads in 0.8 s: Save Client then Build estimate emptied the list AND the local cache — the
+// sheet did not have the client yet — so the walkthrough scored next was refused with "Job not
+// found." and lost, and the new client's Drive folder URL landed on nothing; Edit Client
+// 3,000 → 5,200 sq ft then Build estimate priced the job on 3,000 and put 3,000 back on the
+// local record while the sheet held 5,200. Five callers reach it, two of them on a timer
+// (approvalWatchTick every 12 s, jobsWatchTick every 15 s). So:
+//   · it does not ask while a write is outstanding;
+//   · it asks again when the answer lands, because a write can be queued while the read is in
+//     flight — and _syncWriteSeq catches one queued AND landed in that window, which the
+//     outstanding check alone cannot see: the read may have been served before it committed;
+//   · either way the caller carries on with the local list, which is the fresher of the two.
+// ⚠ THE SHEET'S DELETIONS APPLY EVEN WHEN THE ANSWER IS DISCARDED. `deletedJobs` is the job
+// ledger's answer — every id the sheet has seen and no longer holds — not a snapshot that can be
+// behind our own writes, and the server refuses those ids whatever this device sends. So once an
+// answer has arrived they go through _applyDroppedJobs whether or not the list is then taken: a
+// client deleted on the other device leaves this one, says so, and takes its estimates, plans and
+// logs with it. (A refresh that stood down before asking learns them from the next answer, or from
+// the `dropped` list on this device's next write.)
+// ⚠ AND A NEWER LOCAL RECORD IS NEVER OVERWRITTEN — see _mergeCloudJobs. Membership stays the
+// sheet's: a job it does not hold is dropped, as ever. Keeping those is how deleted clients came
+// back on 2026-09-08, and the one case that looked like it needed it — a client just created on
+// this device — is the case standing down covers.
 function refreshJobsFromCloud(cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(); return; }
+  if (_syncWritesOutstanding()) { if (cb) cb(); return; }
+  var seq = _syncWriteSeq;
   fetch(SHEETS_SYNC_URL + '?action=loadJobs')
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if (data && Array.isArray(data.jobs) && !data.error) {
-        jobs = data.jobs;
-        try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
-        if (Array.isArray(data.deletedJobs)) _purgeLocalJobRecords(data.deletedJobs);
-      }
+      if (!(data && Array.isArray(data.jobs) && !data.error)) return;
+      _applyDroppedJobs(data.deletedJobs);
+      if (_syncWritesOutstanding() || _syncWriteSeq !== seq) return;
+      jobs = _mergeCloudJobs(jobs, migrateRetiredNames(data.jobs));
+      try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
     })
     .catch(function(){})
     .then(function(){ if (cb) cb(); });
+}
+
+// The sheet's list, with any local record strictly NEWER than the sheet's copy kept in its
+// place. Once this device's write has landed, the server's merged record carries the newest
+// updatedAt (_mergeJobRecord takes the newer record's scalars), so a TIE goes to the sheet — it
+// is our write, merged with whatever the other device added key by key. A local copy strictly
+// newer than that is one whose write the sheet has not seen, and replacing it is H4 by another
+// route. DOM-free, so the tests read the real rule.
+function _mergeCloudJobs(local, cloud) {
+  var mine = {};
+  (local || []).forEach(function(j){ if (j && j.id != null) mine[String(j.id)] = j; });
+  return (cloud || []).map(function(c){
+    var l = (c && c.id != null) ? mine[String(c.id)] : null;
+    return (l && Number(l.updatedAt || 0) > Number(c.updatedAt || 0)) ? l : c;
+  });
 }
 
 // Cloud-authoritative open. Refresh the jobs list AND fetch this job's saved
@@ -27712,6 +27950,11 @@ var _outbox = {};
 var _outboxTimer = null;
 var _outboxSending = false;
 var _OUTBOX_WINDOW = 250;   // long enough to catch a burst from one user action
+// Bumped by every main-sheet write queued (queuedPostSync is the one entry point). A reader
+// notes it before asking the sheet and compares when the answer lands: a write queued AND
+// landed in between leaves nothing outstanding, and the answer may still predate it. See
+// refreshJobsFromCloud.
+var _syncWriteSeq = 0;
 
 function _flushOutbox() {
   _outboxTimer = null;
@@ -27755,6 +27998,7 @@ function _flushOutbox() {
 // Directory writes use queuedDirectoryWrite below, which shares the retry queue.
 function queuedPostSync(body, okMsg, failMsg) {
   if (!SHEETS_SYNC_URL) return;
+  _syncWriteSeq++;
   // Keyed the same way the retry queue keys things, so a newer full snapshot supersedes
   // an older queued one rather than both being sent. Payloads are held by reference, so
   // a store mutated between queueing and sending goes out at its newest state — which is
@@ -29874,6 +30118,8 @@ var PLAN_WATCH_MS = 20000;
 // local store over a queued write would revert a room on screen seconds after somebody
 // locked it — a worse defect than the one this closes, and the kind that trains people to
 // stop trusting the tab. A tick with anything outstanding simply waits for the next one.
+// ⚠ TWO READERS: this and refreshJobsFromCloud (2026-09-29), which did not ask and emptied the
+// client list under a client whose own save had not landed yet. Both read the MAIN sheet.
 function _syncWritesOutstanding() {
   if (typeof _outboxSending !== 'undefined' && _outboxSending) return true;
   if (typeof _flushing !== 'undefined' && _flushing) return true;
@@ -30538,6 +30784,10 @@ function planHoursMetaHtml(jobId, job, est) {
 // active test on purpose — an active job with every room locked is at the midpoint, not in the
 // house. Move day is never "current" by rule: it reads done once Close-out is, and ahead until then.
 function planCurrentStage(jobId, job, est) {
+  // ⚠ A CLOSED JOB IS IN CLOSE-OUT, WHATEVER THE MIDPOINT SAYS (2026-09-29). The "money first" rule below
+  // holds the NOW marker on Midpoint & pickups until the midpoint is paid; a job closed with it unpaid is
+  // one the final now settles, and its plan must not go on pointing at an invoice the rail has passed.
+  if (job && job.deliveredOn) return 'p4';
   var rooms = _planRooms(jobId).rooms;
   var nL = rooms.filter(function(r) { return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   var nC = rooms.filter(function(r) { return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
@@ -30890,9 +31140,14 @@ function planDerivedLines(jobId, job, est, phase) {
   }
   if (phase === 'p2') {
     var sent = !!docSentAt(job, 'invoice', 'midpoint');
+    // ⚠ NOT ON A CLOSED JOB (2026-09-29). From the close the final bills an unsent midpoint's share and the
+    // rail stops offering the send, so this line says so rather than instructing a second bill — and drops
+    // its button, which would open an invoice nobody is going to send.
+    var _midClosed = !sent && !!job.deliveredOn;
     out.push({ key: 'midpoint_sent', ok: sent, label: 'Midpoint invoice sent',
-               detail: sent ? 'sent' : 'send it from the Client Dashboard the moment every room is locked — collection takes time',
-               action: { label: 'Open the midpoint invoice', call: 'openInvoiceFor(' + jobId + ',\'midpoint\')' } });
+               detail: sent ? 'sent' : _midClosed ? 'not sent — the job is closed, so the final invoice bills it'
+                 : 'send it from the Client Dashboard the moment every room is locked — collection takes time',
+               action: _midClosed ? null : { label: 'Open the midpoint invoice', call: 'openInvoiceFor(' + jobId + ',\'midpoint\')' } });
     var paid = stagePaidTotal(job, 'midpoint');
     out.push({ key: 'midpoint_received', ok: paid > 0, label: 'Midpoint payment received',
                detail: paid > 0 ? '$' + Math.round(paid).toLocaleString() + ' recorded' : 'not yet — recorded on the Client Dashboard when it lands' });
@@ -34440,7 +34695,10 @@ function renderJobPlan(jobId, job, est) {
   var _midAmtStr = _midAmt ? '$' + Math.round(_midAmt).toLocaleString() : '';
   var _allLocked = rooms.length > 0 && rooms.every(function(r){ return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; });
   var _midSent = !!docSentAt(job, 'invoice', 'midpoint');
-  var _midBanner = (hasPlaybook && _allLocked && !_midSent)
+  // ⚠ NOT ON A CLOSED JOB (2026-09-29). From the close the final bills whatever the midpoint left unpaid,
+  // and the rail deliberately stops offering the midpoint send; a red banner telling the crew to send it
+  // would be the one surface still asking for a second bill for the same share.
+  var _midBanner = (hasPlaybook && _allLocked && !_midSent && !job.deliveredOn)
     ? '<div class="alert a-err" style="margin-bottom:12px;font-size:12.5px;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">' +
         '<span>&#9888; <strong>All rooms are locked — you&rsquo;re at the project midpoint.</strong> The 25% midpoint invoice' +
         (_midAmtStr ? ' (' + _midAmtStr + ')' : '') + ' hasn&rsquo;t been sent. Don&rsquo;t finish the job with money outstanding.</span>' +

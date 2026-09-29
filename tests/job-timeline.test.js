@@ -518,7 +518,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.jobTimeline(null, null, [], []).length, 0, 'no job renders no rail');
     rows.forEach((r) => {
       ok(typeof r.key === 'string' && r.key.length > 0, `${r.key}: has a key`);
-      ok(['done', 'current', 'blocked', 'waiting', 'terminal'].indexOf(r.state) >= 0, `${r.key}: state is one of the five`);
+      // Six since 2026-09-29 — `open` is a midpoint left unpaid at the close; job-close-midpoint.test.js drives it.
+      ok(['done', 'current', 'blocked', 'waiting', 'terminal', 'open'].indexOf(r.state) >= 0, `${r.key}: state is one of the six`);
       ok(r.blockedFix === '' || r.blockedWhy !== '', `${r.key}: never offers a fix without naming the problem`);
     });
   }
@@ -667,8 +668,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // Every state the derivation can emit must have a class that paints it, or a row
     // silently renders as an ordinary one.
-    has(src, "{done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}",
-      'all five states map to a class');
+    // ⚠ SIX SINCE 2026-09-29: `open` is a midpoint the client had not paid when the job was closed.
+    has(src, "{done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term', open:'jt-open'}",
+      'all six states map to a class');
     has(css, '.jt-wait .jt-lbl{', 'including waiting');
     // Measured in Chromium: the blocked band painted the same tan as an ordinary NEXT
     // band, differing only by a word. A warning has to read as a warning — the standing
@@ -686,7 +688,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // nothing read as a milestone being ticked off. Every state paints its own node, or
     // a step silently renders as an ordinary one.
     has(css, '.jt-row::before{', 'each step draws a milestone node on the thread');
-    ['.jt-done::before{', '.jt-cur::before{', '.jt-blk::before{', '.jt-term::before{'].forEach((r) => {
+    ['.jt-done::before{', '.jt-cur::before{', '.jt-blk::before{', '.jt-term::before{', '.jt-open::before{'].forEach((r) => {
       has(css, r, `the ${r.slice(4, -10)} state paints its own node`);
     });
     has(css, '.jt-done::before{border-color:var(--sage-dk)', 'and a completed milestone goes green');

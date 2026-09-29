@@ -158,7 +158,11 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
   has(j1.sched, 'Planned end Sep 30, 2026', '⚠⚠ …and ONE end, counted from it');
   ['target was', 'now ending', 'Oct 5, 2026', 'Oct 7, 2026', 'Oct 12, 2026', 'Target end', 'Target start'].forEach((s) =>
     lacks(j1.sched, s, '⚠⚠ #3 "' + s + '" is gone from the strip'));
-  eq(j1.band, 'Send the midpoint invoice', '⚠⚠ #7 NEXT reads "Send the midpoint invoice" — not "Midpoint invoice sent"');
+  // ⚠ RESTATED 2026-09-29 (workflow audit M8): on ACTIVATION DAY the midpoint invoice is not yet due — it falls due at the
+  // halfway point (Sep 25 here) — so the band names the work rather than the send. The #7 requirement is unchanged: NEXT is a
+  // step in the imperative, never the milestone's past-participle name.
+  eq(j1.band, 'Do the work — the midpoint invoice is due at the halfway point', '⚠⚠ #7 NEXT reads the STEP — on activation day, the work');
+  lacks(j1.band, 'Midpoint invoice sent', '⚠⚠ #7 …and never the milestone name');
 
   console.log('\n=== #5 ONE PERSON, ONE SLOT — and #6 the chip follows the team ===');
   // The team sits in the Hours & daily close fold — a tool, closed until somebody opens it.
@@ -232,7 +236,7 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
   await p.click('.nb:has-text("Client Dashboard")'); await p.waitForTimeout(250);
   await p.evaluate(() => openClientDashboard(7001)); await p.waitForTimeout(250);
   const dashBand = await p.evaluate(() => (document.querySelector('#client-dashboard-view .jt-next-step') || {}).textContent);
-  eq(dashBand, 'Send the midpoint invoice', '#7 the dashboard band reads the step too');
+  eq(dashBand, 'Do the work — the midpoint invoice is due at the halfway point', '#7 the dashboard band reads the step too (restated 2026-09-29, M8)');
   await p.click('#client-dashboard-view button:has-text("+ Log Hours Today")'); await p.waitForTimeout(600);
   const lh = await p.evaluate(() => ({ panel: (document.querySelector('.panel.active') || {}).id, job: document.getElementById('plan-job').value,
     hoursOpen: (document.getElementById('phase-body-hours') || { style: {} }).style.display !== 'none',

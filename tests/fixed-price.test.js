@@ -207,8 +207,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(rs, 'Math.round(est.fixedAmount || est.havellinTotal || 0)', 'the flat fee reads fixedAmount first');
     has(rs, '_fxAmtSet(_restoredFlat - _fixedPrepMovedOut);', 'and written back formatted');
     // A record saved before today has no fixedSuggested: the basis reads 0, and 0 never claims a move.
-    eq(src.split('  _tc2UserSet = false;\n  _fixedAmountUserSet = false;\n  _fixedAmountBasis = 0;\n').length - 1, 3,
-       'the three job-switch resets zero the basis with the flag — a basis leaking across jobs would warn about the wrong estimate');
+    // ⚠ RESTATED 2026-09-29: this counted three byte-identical copies of these lines, one per reset
+    // path. There is one reset now (resetEstimateJobState) and every path runs it, so the requirement
+    // is driven against that: the basis goes to zero with the flag, on every job switch.
+    {
+      const rs = sandbox({ fns: ['resetEstimateJobState'],
+        vars: ['_tc2UserSet', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut'],
+        stubs: { document: domStub(), seedDocScopeFromJob: () => 'full', paintVolPreset() {}, renderVendors() {},
+                 renderCollections() {}, renderVehicles() {}, clearAllRooms() {} } });
+      rs._tc2UserSet = true; rs._fixedAmountUserSet = true; rs._fixedAmountBasis = 21600;
+      rs.resetEstimateJobState({ id: 8 });
+      eq([rs._tc2UserSet, rs._fixedAmountUserSet, rs._fixedAmountBasis], [false, false, 0],
+         'the job-switch reset zeroes the basis with the flag — a basis leaking across jobs would warn about the wrong estimate');
+      ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab'].forEach((name) =>
+        has(fn(name), 'resetEstimateJobState(', `${name} runs it`));
+    }
     const tg = noComments(fn('toggleFixedPrice'));
     has(tg, '_fixedAmountBasis = 0;', 'the toggle prefill starts with no basis');
   }
@@ -227,14 +240,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'ps-crew-size': { value: '4' }, 'e-tc-count': { value: '2' } });
       const restored = [];
       const c = sandbox({
-        fns: ['applyOpenedEstimate'],
+        // The fresh branch runs the ONE reset (2026-09-29), so it is lifted rather than stubbed: a stub
+        // of it would let this group pass with nothing cleared at all.
+        fns: ['applyOpenedEstimate', 'resetEstimateJobState'],
         vars: ['_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_crewUserSet', '_tc2UserSet',
                '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'estimateApproved', 'approvedBy', 'approvedAt'],
         stubs: { document: dom, currentEstimate: saved ? { jobId: 2, fixedPrice: true } : null,
                  loadEstimateForJob: () => !!saved, estimateHasContent: () => !!saved,
                  restoreEstimateToUI: (e) => restored.push(e), loadEstimateScratch: () => null,
-                 clearAllRooms: () => {}, resetEstimateExtras: () => {}, updateApprovalUI: () => {}, calcAll: () => {},
-                 seedDocScopeFromJob: () => 'full', showFB: () => {} },
+                 clearAllRooms: () => {}, updateApprovalUI: () => {}, calcAll: () => {},
+                 seedDocScopeFromJob: () => 'full', showFB: () => {},
+                 paintVolPreset() {}, renderVendors() {}, renderCollections() {}, renderVehicles() {} },
       });
       c._fixedAmountUserSet = true; c._fixedAmountBasis = 21600;
       c.applyOpenedEstimate(2, { id: 2, name: 'Bravo', premium: false }, 'ready');

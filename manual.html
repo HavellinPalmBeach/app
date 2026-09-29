@@ -107,7 +107,7 @@
     </table>
     Both open as a <strong>full screen</strong>, the way a client opens from the list &mdash; not a pop-up. Across the top of each is a bar with the way back: <strong>&larr; Clients</strong> on the intake screen, <strong>&larr; <em>the client&rsquo;s name</em></strong> on the estimate screen. The <strong>Client Dashboard</strong> tab stays lit the whole time, because that is where you came from and where the bar returns you.
     <br><br><strong>Going back without saving loses nothing while the page is open.</strong> What you typed on the intake screen is still on the form when you press + Add New Client again, exactly as it was when this was a tab. On Build Estimate, going back to the dashboard and pressing <strong>Build estimate</strong> again on the <em>same</em> client picks the walkthrough up where you left it &mdash; opening a <em>different</em> client&rsquo;s estimate starts from their saved copy, as switching clients always did. <strong>Save</strong> is still what writes anything.
-    <br><br><strong>Build Estimate no longer has a job picker</strong> &mdash; it is always for the client you opened it from, named in the bar and on the Job card. The <strong>Clear</strong> button beside the old picker is now <strong>Start over</strong>: it asks first, clears the rooms and starts again from that client&rsquo;s intake answers, and changes nothing saved until you press Save. (Clear used to unbind the client as well, which on a screen with no picker would have left a form belonging to nobody.)
+    <br><br><strong>Build Estimate no longer has a job picker</strong> &mdash; it is always for the client you opened it from, named in the bar and on the Job card. The <strong>Clear</strong> button beside the old picker is now <strong>Start over</strong>: it asks first, then goes back to that client&rsquo;s <em>saved</em> estimate if there is one, or clears the lot and starts again from their intake answers if not (the question says which, as of 2026-09-29), and changes nothing saved until you press Save. (Clear used to unbind the client as well, which on a screen with no picker would have left a form belonging to nobody.)
     <br><br>Nothing on either form changed &mdash; every field, gate and refusal in &sect;4 and &sect;5 is exactly as described there. Only the route in moved.</div>
   <div class="note"><strong>Three tabs were retired from the navigation on 2026-09-11 — Client Estimate, Agreement and Invoices.</strong>
     Everything they carried now lives on the <strong>job timeline</strong> inside the Client Dashboard (§9), on the row for
@@ -474,6 +474,34 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     walkthrough is where you left it. Nothing is <em>saved</em> until you press Save &mdash; opening a different client, or reloading the
     page, starts from the saved copy. A submitted or approved estimate locks every control on the screen <em>except that back
     button</em>.</p>
+  <div class="note"><strong>&#9888;&#9888; A fresh estimate starts clean &mdash; nothing of the last client&rsquo;s comes with it (fixed 2026-09-29).</strong>
+    Until this date a new client&rsquo;s estimate opened carrying whatever the <em>previous</em> client&rsquo;s estimate had left on the
+    screen. Measured on the real page: client A priced with a 10% discount, move styling, a private walkthrough note, a coin collection,
+    a car and a target date, then <strong>&larr;</strong> without saving, then client B&rsquo;s <strong>Build estimate</strong> &mdash; and
+    B opened with <strong>all of it</strong>. B&rsquo;s client estimate printed A&rsquo;s collection, A&rsquo;s car and a discount line; on
+    fixed price the inherited discount quietly took 10% off B&rsquo;s flat fee and <strong>printed no discount line at all</strong>;
+    B&rsquo;s Walkthrough view read A&rsquo;s family note; B named A&rsquo;s concierge as the person who walked B&rsquo;s house; and
+    A&rsquo;s $4.2M home value rode onto B, who had none on file, and let B save straight past <em>&ldquo;Property value is
+    required&rdquo;</em>. <strong>Saving was no better</strong>: the discount, the styling, the note and the walker survived a Save into the
+    next client, and one 10% discount rode through five new clients in a row.
+    <br><br><strong>What a fresh estimate holds now.</strong> From the client&rsquo;s own record: service type, square footage, home value
+    (blank when intake has none, so Save asks for it), target start, Premium Estate, the <em>who builds the inventory</em> answer, and who
+    walked the house (blank when nobody is named). Everything else starts at its default: no discount, no move styling, no private note, no
+    collections, no vehicles, no vendors or prep lines, two specialists, one concierge, no materials package, rush and fixed price off,
+    fullness <em>Normal</em>, no target date, no room in scope, and every <em>Other</em> row named <em>Other</em> again.
+    <br><br><strong>What has not changed.</strong> A <em>saved</em> estimate reopens exactly as it was saved, all of it. And
+    <strong>&larr; then Build estimate on the same client</strong> still takes you back to your unsaved work. The one thing a reopened
+    estimate never carries is the <em>client needs it sooner</em> target date: no estimate records it, because it is a question asked on
+    site rather than a term of the quote.
+    <br><br><strong>Start over now says which of two things it will do</strong>, because it always did one of two. On a client with a
+    <strong>saved</strong> estimate it throws away what is on the screen and reopens the saved one; on a client with nothing saved it clears
+    the lot and starts again from the intake answers. Until today the question said <em>intake answers</em> either way. The
+    <strong>Reset</strong> button at the foot of the screen is older and narrower: on the same client it clears the rooms, rush and fixed
+    price, turns <strong>Premium Estate off even on a premium job</strong>, and leaves the discount, the collections, the vehicles and the
+    private note where they are. Use <strong>Start over</strong>.
+    <br><br><strong>If you priced a practice client straight after another before today</strong>, open its estimate and check that the
+    discount, move styling, the private note, <em>Walkthrough by</em>, the collections and the vehicles are that client&rsquo;s own before
+    anything goes out.</div>
   <div class="note"><strong>⚠ IT USED TO LOOK LIKE THE FORM HAD BEEN WIPED (fixed 2026-09-13).</strong> Anthony: <em>&ldquo;when you
     hit save estimate, the screen now just wipes.&rdquo;</em> The button was trying to navigate to the <strong>Client Estimate tab, which
     was retired from the navigation on 2026-09-11</strong> — so the navigation silently did nothing while the rest of the sequence went
@@ -1194,7 +1222,9 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   <div class="note"><strong>&#9888; Build Estimate is reached from HERE and nowhere else, as of 2026-09-23</strong> &mdash; the tab is gone (&sect;1). So it has to be on the band whenever the estimate is the next thing, and that was not true of one row: the <em>Walkthrough</em> step stays lit until <strong>noon</strong> on the walkthrough date, and its only button used to be <em>Change the walkthrough date</em>. On the morning of a walkthrough &mdash; standing in the house &mdash; there would have been no way onto the estimate at all. A <strong>booked</strong> walkthrough&rsquo;s brown button is now <strong>Build estimate</strong>, because building the estimate IS the walkthrough; an unbooked one still asks for the date first and offers the estimate beside it.</div>
   <p><strong>Exactly one step is ever lit</strong> — as the current step, or as blocked. That is the promise the timeline exists to
     keep: open a client, and the one thing to do next is on screen. Completed steps go green; a blocked one goes red and says both
-    the reason and the fix, on the row rather than in a tooltip (a tooltip cannot be reached on an iPad at all).</p>
+    the reason and the fix, on the row rather than in a tooltip (a tooltip cannot be reached on an iPad at all). On a
+    <strong>closed</strong> job a midpoint that was never paid, or never sent, wears an <strong>amber ring</strong>: open, not lit,
+    and saying what settles it (below).</p>
   <table>
     <tr><th>Milestone</th><th>What is on the row</th></tr>
     <tr><td>Client intake</td><td>Recorded at intake.</td></tr>
@@ -1207,10 +1237,11 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><td>Agreement signed</td><td><strong>&#10003; Record the signed agreement</strong> — see §8.</td></tr>
     <tr><td>Deposit invoice sent</td><td><strong>&#9993; Send deposit invoice</strong>, <strong>&#127974; ACH payment link</strong> (&sect;8b).</td></tr>
     <tr><td>Deposit received</td><td><strong>&#10003; Record payment</strong>.</td></tr>
-    <tr><td>Job active</td><td><strong>&#9654; Activate job</strong>. Blocks on executor authorisation where that applies. Once it goes through you land on <strong>that client&rsquo;s Job Plan</strong> (2026-09-23), and pressing it before the target start asks first (&sect;9a-i).</td></tr>
-    <tr><td>Midpoint / Final invoice sent</td><td>Same send pair. The final carries <strong>&#128273; Manager approval</strong> when it is outside &plusmn;15% (§12).</td></tr>
-    <tr><td>Midpoint / Final payment</td><td><strong>&#10003; Record payment</strong> at that stage.</td></tr>
-    <tr><td>Work complete</td><td><strong>&#9632; Close job</strong> — stamps the handover date, once.</td></tr>
+    <tr><td>Job active</td><td><strong>&#9654; Activate job</strong>. Blocks on executor authorisation where that applies. Once it goes through you land on <strong>that client&rsquo;s Job Plan</strong> (2026-09-23), and pressing it before the target start asks first (&sect;9a-i). From here on, <strong>&#9632; Close job</strong> sits beside every lit step as an outline button (2026-09-29, below).</td></tr>
+    <tr><td>Midpoint invoice sent</td><td>The same send pair &mdash; the filled button from the plan&rsquo;s <strong>halfway day</strong>, once half the work is done, or once <strong>every room is locked</strong>, whichever comes first. Before then the band says <em>Do the work</em> and the send is an outline button reading <em>due around &lt;date&gt;</em> (below).</td></tr>
+    <tr><td>Final invoice sent</td><td>The same send pair. The final carries <strong>&#128273; Manager approval</strong> when it is outside &plusmn;15% (§12). It is the filled button <strong>the moment the job is closed</strong>, whatever the midpoint rows say.</td></tr>
+    <tr><td>Midpoint / Final payment</td><td><strong>&#10003; Record payment</strong> at that stage. An unpaid midpoint on a closed job stays <strong>open</strong>, and <strong>&#10003; Record midpoint payment</strong> stays in the strip.</td></tr>
+    <tr><td>Work complete</td><td><strong>&#9632; Close job</strong> — stamps the handover date, once. The filled button here; an outline beside every lit step from <em>Job active</em> on.</td></tr>
   </table>
   <div class="note"><strong>The action button is drawn in the pinned band and nowhere else.</strong> The lit row and the band are
     the same step, so drawing it twice would put one control on screen twice and make you check which is real. The rows themselves
@@ -1235,6 +1266,54 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     the light lands on the <em>earliest</em> gap rather than treating everything after it as unfinished.</div>
   <div class="note"><strong>A dead job collapses to one row.</strong> <em>Lost</em> and <em>Closed — Deposit Retained</em> are
     terminal, so there is no next action and nothing is lit — a button there would invite a click the app refuses.</div>
+  <div class="note"><strong>&#9888;&#9888; Close job is offered from the day the job is active, and the final invoice does not wait for
+    the midpoint (2026-09-29).</strong> The rows run <em>Midpoint invoice sent &rarr; Midpoint payment &rarr; Work complete &rarr; Final
+    invoice</em>, and <em>Close job</em> used to live on <em>Work complete</em> alone. So a finished job whose midpoint invoice had gone out
+    unpaid read <em>Collect the midpoint payment</em> with <strong>no way to close it and no way to send the final</strong>: the only way
+    out was to record money that had not arrived. The client list&rsquo;s Status button, which looked like a second route, had never
+    rendered at all (&sect;9). Decided with Anthony off the 2026-09-28 workflow audit:
+    <ul>
+      <li><strong>&#9632; Close job is an outline button beside the lit step on every step from <em>Job active</em> on.</strong> On
+        <em>Work complete</em> it is the filled button, as before, and it still refuses while any vendor used is unrated (&sect;11).</li>
+      <li><strong>With no midpoint payment recorded it asks first</strong>: <em>Close this job now?</em>, saying that the final invoice
+        bills everything not yet paid, that today is recorded as the handover date, and that neither can be undone. Cancel changes
+        nothing. With a midpoint payment on file it asks nothing, as before.</li>
+      <li><strong>The moment the job is closed, the final invoice is the band&rsquo;s filled button</strong>, whatever the midpoint
+        rows say. That is safe because the final reconciles against the payments actually received (&sect;12): an unpaid midpoint&rsquo;s
+        share is simply still owed, and the final bills it.</li>
+      <li><strong>The midpoint rows stay open until they are settled</strong>, with an amber ring rather than a light. The payment row
+        reads <em>Unpaid &mdash; the final invoice carries it</em> and <strong>&#10003; Record midpoint payment</strong> stays in the
+        strip, so a midpoint cheque that arrives later is recorded normally and the row goes green. Once the final is paid it reads
+        <em>Paid with the final invoice</em>, because its share was inside that balance.</li>
+      <li><strong>A midpoint invoice that never went out</strong> reads <em>Not sent &mdash; the final invoice bills it</em>, then
+        <em>Billed on the final invoice</em> once the final has gone. <strong>Nothing offers to send it after the close</strong> (it would
+        bill one share twice) and its draft link is withdrawn. Delete any midpoint draft still sitting in Gmail. If you did send it from
+        Gmail, press <em>I&rsquo;ve sent it</em> <strong>before</strong> you close.</li>
+      <li><strong>Nothing re-opens a closed job</strong>, and the handover date is stamped once. Close when the work is handed over,
+        not before.</li>
+      <li>The Job Plan follows: a closed job is marked <strong>NOW</strong> on <em>Close-out</em> even with the midpoint unpaid.
+        <strong>Home Prep is unchanged</strong>: its second payment is due when the vendor schedule is booked, not on a calendar.</li>
+    </ul></div>
+  <div class="note"><strong>&#9888; The midpoint invoice falls due at the halfway point, not on activation day (2026-09-29).</strong> The
+    estimate tells the client the midpoint is due <em>at project midpoint</em>, and the band used to make <em>Send midpoint invoice</em>
+    its filled button the day the job was activated. Now, until the plan&rsquo;s <strong>halfway day</strong> (&sect;9a-i), until
+    <strong>half the work is done</strong> (the strip&rsquo;s <em>% of the work done</em>, read off the room statuses) or until
+    <strong>every room is locked</strong>, whichever comes first, the band reads <em>Do the work &mdash; the midpoint invoice is due at the halfway point</em> and has
+    <strong>no filled button</strong>. The send sits beside it as an outline, <em>&#9993; Send midpoint invoice &mdash; due around
+    &lt;date&gt;</em>, so a client who asks for it early can still have it. On the halfway day, once half the work is done or once every
+    room is locked, it is the filled button again. A midpoint already drafted is never held back, and a job with no calendar to read (Home Prep, a plan under
+    three working days, no schedule at all) behaves as before.
+    <br><br><strong>Every room locked makes it due, because that is the project midpoint the rest of the app already uses.</strong>
+    The Job Plan&rsquo;s red <em>All rooms are locked &mdash; you&rsquo;re at the project midpoint</em> banner, its <em>All rooms
+    locked &mdash; the project midpoint</em> line and its <em>Midpoint &amp; pickups</em> marker all fire on it, and the estate agreement
+    bills the midpoint <em>&ldquo;upon completion of the Asset Inventory stage or at project midpoint, whichever comes first&rdquo;</em>.
+    It is counted by room rather than by hours on purpose: a locked room has earned its concierge hours and not its specialist hours,
+    so on hours alone every room locked reads about a third of the work, and the band would have said <em>not yet</em> under a banner
+    saying <em>you&rsquo;re at the project midpoint</em>. A room out of scope does not count against it; a room in scope with no hours on
+    the estimate still does.
+    <br><br><strong>Once the job is closed the banner and that line stand down.</strong> The banner is gone, and <em>Midpoint invoice
+    sent</em> under <em>Midpoint &amp; pickups</em> reads <em>not sent &mdash; the job is closed, so the final invoice bills it</em>
+    with no button: sending the midpoint after the close would bill one share twice.</div>
 
   <h3>9a-i. The schedule strip &mdash; how long the job is, and where you are in it</h3>
   <p>Above the timeline, one line: <strong>Target start &middot; N working days &middot; Halfway &middot; Target end</strong> until the job starts, and <strong>Started &middot; Working day X of Y &middot; Halfway &middot; Planned end</strong>
@@ -1256,10 +1335,13 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
   </table>
   <div class="note"><strong>The same strip is on the Job Plan header (new 2026-09-20).</strong> It sits under the client line, above the standing-flags brief, and it is the same renderer reading the same schedule &mdash; the plan header used to hand-compute a <em>Target Start</em> and a <em>Projected</em> end of its own, which is how it once printed a different completion date from the client&rsquo;s estimate. Anthony asked for it there in so many words: <em>&ldquo;target start date is this, actual start date is that, today is &hellip; projected six days, today is the 24th, three more days &hellip; that lets you know where you stand in the job.&rdquo;</em>
     <br><br><strong>&#9888; Its first half was reversed on 2026-09-23</strong>: once a job starts, the strip no longer prints the target start beside the actual one (the next note but one). And <strong>the Job Plan now redraws every time you open it</strong>, so a target start moved in Edit Client is on the plan header the moment you walk back to it &mdash; until 2026-09-23 the plan only redrew when you picked a different client, so it went on showing the old dates.</div>
-  <div class="note"><strong>&#9888; &ldquo;Halfway&rdquo; is a CALENDAR halfway and has nothing to do with the midpoint invoice.</strong>
-    The payment split is a flat 50/25/25 with no calendar in it at all, so the midpoint invoice has no date relationship to this
-    figure. The strip never prints the word <em>midpoint</em> beside it for exactly that reason &mdash; two facts two inches apart on
-    one card must not share a word, or the strip reads as a statement about when money is due that nobody made.</div>
+  <div class="note"><strong>&#9888; &ldquo;Halfway&rdquo; is a CALENDAR halfway, and since 2026-09-29 it is also when the midpoint invoice
+    falls due.</strong> The payment split is a flat 50/25/25, so the <em>amount</em> of the midpoint has no calendar in it; its
+    <em>timing</em> does. The estimate says the midpoint is due at project midpoint, and the band now holds the midpoint invoice back as an
+    outline button until the halfway day, until half the work is done or until every room is locked, whichever comes first (&sect;9a). The strip itself still never
+    prints the word <em>midpoint</em> beside the date: the band is where the invoice is asked for.
+    <br><br><em>Corrected 2026-09-29.</em> This note used to say the halfway day had nothing to do with the midpoint invoice, while the
+    amber <em>past the halfway point and the midpoint invoice has not gone out</em> flag below already tied the two together.</div>
   <div class="note"><strong>&#9888;&#9888; ONCE THE JOB STARTS, EVERY DATE ON THE STRIP IS COUNTED FROM THE DAY IT STARTED, AND THE
     TARGET DATES GO (reversed 2026-09-23).</strong> Until this date the plan stayed anchored on the target start for good, and a job
     activated on a different day grew a second set of dates beside the first: <em>target was &lt;date&gt;</em> next to its start, and
@@ -1381,12 +1463,12 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><td>Approved — Awaiting Client</td><td>We've approved our own estimate. <strong>The client has not answered.</strong> Nothing may be staffed yet.</td></tr>
     <tr><td><strong>Won</strong></td><td>The client has accepted. Staffing unlocks here.</td></tr>
     <tr><td>Active</td><td>Signed + deposit received — work in progress</td></tr>
-    <tr><td>Closed</td><td>Final invoice paid and closed. <strong>Delivery is stamped here</strong> — see below.</td></tr>
+    <tr><td>Closed</td><td>The work is handed over. <strong>Delivery is stamped here</strong> — see below. The final invoice goes out after the close and may still be unpaid; the timeline says so.</td></tr>
     <tr><td>Lost</td><td>Died before any money arrived. <strong>Terminal.</strong></td></tr>
     <tr><td>Closed — Deposit Retained</td><td>Died <em>after</em> the deposit. We keep the money; it still counts as won because it produced revenue. <strong>Terminal.</strong></td></tr>
   </table>
-  <div class="note"><strong>Re-open resumes; it does not reset.</strong> The status button on a closed job reads <strong>Re-open</strong> and returns it to <em>Active</em>, where it left off. It used to send the job back to <em>New</em>, so one mis-tap on a phone threw a delivered job to the very start of the lifecycle. <em>Lost</em> and <em>Closed — Deposit Retained</em> are terminal and the button will not move them at all — previously it silently turned a lost job into a brand-new one. If a lost client comes back, start a new job.</div>
-  <div class="note"><strong>The handover date is recorded once.</strong> The first time a job is closed, the app stamps the delivery date, the time, and who closed it. Re-opening and re-closing does <em>not</em> move that date — it records when the work was actually handed over, not the last time somebody touched the button. Nothing in the app previously recorded delivery at all (the <em>completion date</em> on the intake form is a target, not an observation), and this is the field revenue recognition will read once the QuickBooks twin goes live.</div>
+  <div class="note"><strong>&#9888; There is no Re-open, and there was never a working one (corrected 2026-09-29).</strong> This note used to say the status button on a closed job read <strong>Re-open</strong> and returned it to <em>Active</em>. The client list did build a <em>Status</em> button, and the very next line of code replaced it with <em>Open &rarr;</em>, so it never reached the screen; the 2026-09-28 workflow audit found it, and it is gone. <strong>Nothing in the app re-opens a closed job</strong>, and the handover date is stamped once, so close only when the work is handed over. A job closed by mistake is not stuck: hours can still be logged, every payment recorded, and the final bills whatever is unpaid. What cannot be moved is the handover date &mdash; there is no in-app way to change it, so tell Anthony. <em>Lost</em> and <em>Closed — Deposit Retained</em> are terminal. If a lost client comes back, start a new job.</div>
+  <div class="note"><strong>The handover date is recorded once.</strong> The first time a job is closed, the app stamps the delivery date, the time, and who closed it, and nothing moves that date afterwards &mdash; it records when the work was actually handed over, not the last time somebody touched a button. Nothing in the app previously recorded delivery at all (the <em>completion date</em> on the intake form is a target, not an observation), and this is the field revenue recognition will read once the QuickBooks twin goes live.</div>
   <div class="note"><strong>"Approved" and "Won" are different things, and the difference is the point.</strong>
     Approved means a manager signed off on our own figure. Won means the <em>client</em> said yes. Previously the app had no
     way to tell them apart — it counted a job as won the moment we approved our own estimate, so the win rate measured how
@@ -1835,7 +1917,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     <tr><td><strong>In the house</strong></td><td>the room cards, three across on a desk, with the four in-house boxes under the grid</td><td>open, second on the thread</td></tr>
     <tr><td><strong>Midpoint &amp; pickups</strong></td><td>midpoint invoice sent and received, release authority, donation receipts, TC at pickups, shredding</td><td>open; marked <strong>NOW</strong> once every room is locked</td></tr>
     <tr><td><strong>Move day</strong></td><td>the thirteen move-day boxes</td><td>open; Home Transition only</td></tr>
-    <tr><td><strong>Close-out</strong></td><td>final walk, empty-house check, real estate handoff, then the <strong>Close-out card</strong>: satisfaction call, Google review email, referral ask, required vendor scorecard (below)</td><td>open; marked <strong>NOW</strong> once the midpoint is paid and the rooms are cleared</td></tr>
+    <tr><td><strong>Close-out</strong></td><td>final walk, empty-house check, real estate handoff, then the <strong>Close-out card</strong>: satisfaction call, Google review email, referral ask, required vendor scorecard (below)</td><td>open; marked <strong>NOW</strong> once the midpoint is paid and the rooms are cleared, or the moment the job is closed</td></tr>
   </table>
   <div class="note"><strong>The Close-out card &mdash; every service, on the Job Plan and on Job Admin &amp; Inv (new 2026-09-22).</strong> Anthony: <em>&ldquo;should we rate every vendor we use at the end of a job? &hellip; shouldn&rsquo;t we close out with asking for a client review on google or something? job closeout needs work too.&rdquo;</em> The client half of the close was three boxes at the foot of the Close-out stage, and <strong>a Home Prep job had none of it</strong>. It is one card now, four numbered steps in the order they are done:
     <ol>
@@ -1844,7 +1926,7 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
       <li><strong>Referral ask</strong> &mdash; tick it once asked.</li>
       <li><strong>Vendor scorecard</strong> &mdash; one to five stars on <strong>every vendor used</strong>, with an optional note. It now lists all four kinds &mdash; service vendors, collection partners, <strong>prep trades and the end-of-job haulers</strong> (the last two were never on it, so a prep job read <em>No vendors were assigned</em> over four confirmed trades). <em>Used</em> means <strong>Confirmed</strong> on the sourcing card; a firm that only quoted is not listed. A firm on two lines is one row. <strong>Each star saves itself</strong> to the job and to the Vendor Directory&rsquo;s rolling score &mdash; the old <em>Write scores to vendor directory</em> button is gone &mdash; and each row says whether it reached the directory.</li>
     </ol>
-    <strong>&#9888; Ratings are required.</strong> <em>Close job</em> refuses while any vendor used is unrated, and names who is outstanding. It gates the close only &mdash; nothing mid-job asks for a verdict on work still in progress, and re-opening a closed job is not gated. The call and referral ticks keep the keys they had on the Close-out stage, so a tick made before today still reads ticked.</div>
+    <strong>&#9888; Ratings are required.</strong> <em>Close job</em> refuses while any vendor used is unrated, and names who is outstanding. It gates the close only &mdash; nothing mid-job asks for a verdict on work still in progress. Since 2026-09-29 <em>Close job</em> is offered from the day the job is active (&sect;9a), so the scorecard is the one thing to finish before pressing it; nothing re-opens a closed job. The call and referral ticks keep the keys they had on the Close-out stage, so a tick made before today still reads ticked.</div>
   <div class="note"><strong>The brown Next band is on the Job Plan too (new 2026-09-22)</strong>, under the client line and above the plan, with the <em>Deposit &amp; Start</em> half of the timeline beneath it &mdash; the Client Dashboard&rsquo;s own band and buttons. Send the midpoint invoice, record a payment or close the job from here without leaving the plan. It appears once the job is won.</div>
   <div class="note"><strong>&#9888;&#9888; THE PER-JOB NDA BOX IS GONE, AND SO IS THE CONTRACT CLAUSE IT SERVED (2026-09-20).</strong>
     <em>NDA signed by every crew member and contractor before entry</em> was a Before Day 1 box on every labour job. Anthony:
@@ -1997,7 +2079,8 @@ Intake → Estimate → Manager Approval → Send to Client → <strong>Client A
     no invoice was retained anywhere in any form.</div>
   <p><strong>You no longer pick a stage — the timeline lights the invoice that is due.</strong> Each of the three has its own
     row, so the stage is wherever the job has got to: an unrecorded deposit lights <em>Deposit invoice sent</em>, a funded deposit
-    moves the light on to the midpoint, and a recorded midpoint payment on to the final. The three are separate records, so a
+    moves the light on to the midpoint, and a recorded midpoint payment on to the final &mdash; or, since 2026-09-29, <strong>closing
+    the job</strong> moves it straight to the final, whatever the midpoint says (&sect;9a). The three are separate records, so a
     midpoint can never inherit a final&rsquo;s gate.
     <br><em>Historical:</em> when there was a single Stage selector it read a flag that nothing ever set, so every funded job stuck on
     the Midpoint stage and the Final invoice could only be reached by picking it by hand.</p>

@@ -272,8 +272,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(nc.fixedPrepMovedNote(0), '', 'and says nothing when nothing moved');
     const calc = noComments(fn('calcAll'));
     has(calc, 'fixedPrepMovedNote(_fixedPrepMovedOut)', 'the panel reads the figure the reopen recorded');
-    eq(src.split('  _fixedAmountBasis = 0;\n  _fixedPrepMovedOut = 0;\n').length - 1, 3,
-       'the three job-switch resets clear it, or the note would follow the manager onto the next client');
+    // ⚠ RESTATED 2026-09-29: this counted three byte-identical copies, one per reset path. There is one
+    // reset now (resetEstimateJobState) and every path runs it — driven against that.
+    {
+      const rs = sandbox({ fns: ['resetEstimateJobState'], vars: ['_fixedAmountBasis', '_fixedPrepMovedOut'],
+        stubs: { document: domStub(), seedDocScopeFromJob: () => 'full', paintVolPreset() {}, renderVendors() {},
+                 renderCollections() {}, renderVehicles() {}, clearAllRooms() {} } });
+      rs._fixedPrepMovedOut = 225;
+      rs.resetEstimateJobState({ id: 8 });
+      eq(rs._fixedPrepMovedOut, 0, 'the job-switch reset clears it, or the note would follow the manager onto the next client');
+      ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab'].forEach((name) =>
+        has(fn(name), 'resetEstimateJobState(', `${name} runs it`));
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────────
