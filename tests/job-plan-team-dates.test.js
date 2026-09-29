@@ -170,7 +170,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const asked = [];
     const T = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', '_actor', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
                               'depositPaidTotal', 'isAgreementSigned', 'agreementSignature', 'jobCloseBlockers', 'unratedVendorsForJob',
-                              '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf'],
+                              '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
+                              // The Re-open is its own branch of the transition (2026-09-29).
+                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
                         vars: ['JOB_TRANSITIONS'],
                         stubs: { _todayStr: () => '2026-09-23', fmtDate2: (d) => 'D:' + d, agrApprovedBy: '', approvedBy: 'Anthony Graziano',
                                  confirm: (m) => { asked.push(m); return T.__answer; } } });
@@ -202,11 +204,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const noStart = READY();
     ok(T.applyJobTransition(noStart), 'a job with no target start at all');
     eq(asked.length, 0, 'has nothing to be early against');
-    // A re-open keeps its original stamp, so there is nothing to confirm.
+    // A re-open keeps its original stamp, so there is nothing to confirm about the START. ⚠ Restated 2026-09-29:
+    // a Re-open now asks its own question (it undoes a close), but never the early-activation one.
     const reopen = READY({ status: 'closed', start: '2026-10-05', activatedOn: '2026-09-01' });
     ok(T.applyJobTransition(reopen) && reopen.status === 'active', 're-opening a closed job');
-    eq(asked.length, 0, '⚠ asks nothing — its start date was fixed on the first activation');
-    eq(reopen.activatedOn, '2026-09-01', '…and keeps it');
+    eq(asked.length, 1, 'asks one question');
+    lacks(asked[0] || '', 'Activate this job today', '⚠ and it is not the activation question — its start date was fixed on the first activation');
+    has(asked[0] || '', 'Re-open this job', 'it is the Re-open question');
+    eq(reopen.activatedOn, '2026-09-01', '…and keeps the start date');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

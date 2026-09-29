@@ -429,7 +429,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
-      'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove'];
+      'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',
+      // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
+      'jobReopenBlocker'];
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
@@ -695,7 +697,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const t = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', '_actor', 'isJobFunded',
                               'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'isAgreementSigned',
-                              'agreementSignature', '_todayStr', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf'],
+                              'agreementSignature', '_todayStr', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
+                              // The Re-open is its own branch of the transition (2026-09-29).
+                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
                         vars: ['JOB_TRANSITIONS'],
                         // ⚠ Closing with no midpoint payment asks first (2026-09-29); this job has none,
                         // and the question is answered yes so the close this check is about happens.
@@ -711,8 +715,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(j.status, 'closed', 'it closes');
     t.applyJobTransition(j);                      // closed -> active (Re-open)
     eq(j.status, 'active', 'and re-opens');
+    // ⚠ Restated 2026-09-29. The Re-open is its own branch now and never reaches the activation guard below,
+    // so this asserts the requirement (a Re-open does not move the day the job really started) rather than
+    // which line keeps it. The guard stays pinned by the source check that follows.
     eq(j.activatedOn, first,
-       '⚠⚠ WRITE-ONCE: JOB_TRANSITIONS.closed is "active", so re-opening would otherwise reset the date the job really started');
+       '⚠⚠ a Re-open keeps the date the job really started — undoing a close is not a second activation');
 
     has(noComments(fn('applyJobTransition')), "if (next === 'active' && !j.activatedOn)",
         'the guard is the whole mechanism');

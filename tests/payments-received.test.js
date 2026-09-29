@@ -20,7 +20,7 @@
 
 const { sandbox, fn } = require('./harness');
 
-const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+const FNS = ['estTolerancePctTxt', 'invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
              '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
              '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
              'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
@@ -49,7 +49,7 @@ const LOGS = [{ date: '2026-09-01', activity: 'clearance',
 const pay = (stage, amount) => ({ stage, amount, date: '2026-09-01', method: 'wire' });
 const paid = (list) => list.reduce((s, p) => s + p.amount, 0);
 
-function doc(payments, stage, estOverride) {
+function doc(payments, stage, estOverride, jobOverride) {
   const est = Object.assign({}, EST, estOverride || {});
   const ctx = sandbox({
     fns: FNS, vars: VARS,
@@ -60,11 +60,16 @@ function doc(payments, stage, estOverride) {
       currentInvStage: stage || 'final', vendorDirectory: [], jobPlans: {},
     },
   });
-  const job = { id: 1, hvlId: 'HVL-0007', client: 'Butler Estate', svc: 'cleanout',
+  const job = Object.assign({ id: 1, hvlId: 'HVL-0007', client: 'Butler Estate', svc: 'cleanout',
                 address: '69 Beach Blvd', tc: 'Anthony Graziano', status: 'active',
-                executor: 'Tripp Butler', payments: payments };
+                executor: 'Tripp Butler', payments: payments }, jobOverride || {});
   return ctx.invoiceHtml(job, stage || 'final');
 }
+// ⚠ A MIDPOINT INVOICE THAT WENT OUT HAS A SEND RECORD, and the final reads it (2026-09-29). Every
+// case below that describes an invoiced-but-unpaid midpoint carries this; before the final began
+// asking the record, those fixtures described a midpoint invoice with nothing saying one was sent,
+// and the document assumed it. `job-close-midpoint` drives the never-sent side.
+const SENT_MID = { docState: { 'invoice:midpoint': { sentAt: '2026-09-15T14:00:00Z' } } };
 // The whole engagement: what the client sent, plus what the final still asks for.
 const engagement = (payments) => paid(payments) + Math.round(doc(payments).amtDue);
 const text = (h) => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
@@ -103,12 +108,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ AN UNPAID MIDPOINT DOES NOT VANISH');
   {
     // Printing the final before the midpoint cheque has landed is completely ordinary.
+    // ⚠ The midpoint invoice WENT OUT here — that is the case this group is about — so the fixture
+    // records the send; the never-sent midpoint is its own case, in job-close-midpoint.
     const depOnly = [pay('deposit', DEPOSIT)];
-    eq(Math.round(doc(depOnly).amtDue), TOTAL - DEPOSIT,
+    eq(Math.round(doc(depOnly, 'final', null, SENT_MID).amtDue), TOTAL - DEPOSIT,
        '⚠⚠ the unpaid midpoint is carried into the final — $4,985 used to drop off the job');
     eq(engagement(depOnly), TOTAL, 'the engagement still collects the total');
-    has(text(doc(depOnly).html), 'Outstanding from the deposit and midpoint invoices',
+    has(text(doc(depOnly, 'final', null, SENT_MID).html), 'Outstanding from the deposit and midpoint invoices',
         'and the document says why the final is larger than 25%');
+    // The converse the record makes possible: the same money with NO midpoint invoice sent.
+    eq(Math.round(doc(depOnly).amtDue), TOTAL - DEPOSIT, 'with no midpoint invoice sent the balance is the same');
+    has(text(doc(depOnly).html), '25% midpoint — billed on this invoice',
+        '⚠ and the page says the midpoint is billed HERE rather than calling it outstanding from an invoice that never went out');
+    lacks(text(doc(depOnly).html), 'Outstanding from the deposit and midpoint invoices',
+          'no midpoint invoice is named that the record says was never sent');
   }
 
   group('⚠⚠ A CLIENT WHO PAID AHEAD IS CREDITED, NOT BILLED AGAIN');
@@ -138,8 +151,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and it is loud, which is the point — the old code quietly assumed 75% had arrived.
     eq(Math.round(doc([]).amtDue), TOTAL, 'with no payment on file the whole total is due');
     eq(Math.round(doc(undefined).amtDue), TOTAL, 'and a job with no payments array does not throw');
-    has(text(doc([]).html), 'Outstanding from the deposit and midpoint invoices',
-        'with the reason on the page');
+    // ⚠ The reason on the page follows the record (2026-09-29): with only the deposit invoice sent it
+    // is that invoice outstanding and the midpoint billed here; with both sent, both are named.
+    has(text(doc([]).html), 'Outstanding from the deposit invoice',
+        'with the reason on the page — the deposit invoice is outstanding');
+    has(text(doc([]).html), '25% midpoint — billed on this invoice', 'and the midpoint is billed here');
+    eq(Math.round(doc([], 'final', null, SENT_MID).amtDue), TOTAL, 'the same total is due with the midpoint sent');
+    has(text(doc([], 'final', null, SENT_MID).html), 'Outstanding from the deposit and midpoint invoices',
+        'and then both invoices are named');
   }
 
   group('⚠ BANK ROUNDING IS NOT A DEBT');
@@ -191,12 +210,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const fx = { fixedPrice: true, fixedAmount: TOTAL, havellinTotal: TOTAL };
     const full = [pay('deposit', DEPOSIT), pay('midpoint', MIDPOINT)];
     eq(Math.round(doc(full, 'final', fx).amtDue), 4985, 'paid in full, the flat fee closes out');
-    eq(Math.round(doc([pay('deposit', DEPOSIT)], 'final', fx).amtDue), TOTAL - DEPOSIT,
+    eq(Math.round(doc([pay('deposit', DEPOSIT)], 'final', fx, SENT_MID).amtDue), TOTAL - DEPOSIT,
        '⚠ an unpaid midpoint is carried on a fixed-price job too — it has its own summary '
        + 'block, which is exactly how one of two copies gets missed');
-    has(text(doc([pay('deposit', DEPOSIT)], 'final', fx).html),
+    has(text(doc([pay('deposit', DEPOSIT)], 'final', fx, SENT_MID).html),
         'Outstanding from the deposit and midpoint invoices',
         'and its summary names the gap the same way');
+    // ⚠ And it reads the same record, or the fixed-price copy is the one that keeps saying
+    // "invoiced at project midpoint" over a midpoint that never went out.
+    has(text(doc([pay('deposit', DEPOSIT)], 'final', fx).html), '25% midpoint — billed on this invoice',
+        'with no midpoint sent, the fixed-price summary bills it here');
+    lacks(text(doc([pay('deposit', DEPOSIT)], 'final', fx).html), 'invoiced at project midpoint',
+          'and claims no midpoint invoice');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

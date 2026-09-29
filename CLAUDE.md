@@ -1,9 +1,10 @@
 ## ⚠⚠ A RAISED PRICE ASKS THE CLIENT AGAIN, A DRAFT MADE BEFORE A PRICE CHANGE SAYS SO, AND EDIT ESTIMATE WAITS FOR THE PIN (BUILT 2026-09-29)
 The three things the Edit-estimate build (*Edit estimate goes once the signing packet is out*, below) left open, answered by
 Anthony: *"1 yes, 2 warning is fine, 3 hide until PIN"*. App-only, **no redeploy**: `estimateSentTotal`, `acceptedTotal` and
-`priorAcceptances` ride the job's JSON. **Item 2 is the concurrent stale-draft build's design since the merge** (its entry is two
-below: `priceChangedAt` on the job, read by `draftIsStale`); this build's own mark on the draft's record is deleted, and what it
-adds there is the one rule that design lacked — `docDraftPending` (§2).
+`priorAcceptances` ride the job's JSON. **Item 2 is the concurrent stale-draft build's design since the merge** (its entry,
+*A Gmail draft a discount left behind could be confirmed as sent*, is below the Re-open one: `priceChangedAt` on the job, read by
+`draftIsStale`); this build's own mark on the draft's record is deleted, and what it adds there is the one rule that design lacked
+— `docDraftPending` (§2).
 
 - **⚠⚠ ALL THREE REPRODUCED ON THE REAL FUNCTIONS FIRST:**
 
@@ -156,7 +157,7 @@ Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when t
 
 - **Landed 2026-09-29, P1–P7:** C1, C2, H1, H2, H3, H4, H6, M1, M2, M3 and M8, plus nine lows, each with its own entry below.
   Spot-checked in the code on `main` the same day rather than taken from the entries' own claims; ticked and marked in the file.
-- **Landed 2026-09-29, P8 (this session, after P1–P7 merged):** H5 — see its entry below.
+- **Landed 2026-09-29, P8 (built after P1–P7 merged):** H5 — see its entry below.
 - **Still open:** P9 (H7–H9, M13–M16 and the intake lows: Edit Client) · P10 (M4–M7
   and the lifecycle lows) · P11 (M9 and the per-key job merge; **needs an Apps Script redeploy**) · P12 (M10–M12 and the
   estimator lows) · P13 (the docs pass, after the others) · P14 (small backlog; its message-timer and dead-code items are done).
@@ -171,6 +172,163 @@ Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when t
 - **When a pack lands:** tick it in the file (`- [x] **P8**`) and mark its findings fixed rather than deleting them.
 - **⚠ THE SHAPE TO COPY, FROM H2:** a browser step that reaches a handler through `page.evaluate` proves the handler, not that
   anybody can reach it. Press the control.
+
+## ⚠⚠ RE-OPEN UNDOES A MISTAKEN CLOSE, AND THE FINAL NO LONGER CLAIMS A MIDPOINT INVOICE THAT NEVER WENT OUT (BUILT 2026-09-29)
+Anthony, on the four things the H3 build (its entry is further down, below the seven builds that landed on `main` the same day) left for him: *"yes to 2 and 3, reword the final and add Re-open"*.
+The other two are unchanged: the reading of *"half the work"* (every room locked also counts) stands as shipped, unanswered; and
+the filled *Log today's hours* button on activation day was not taken, so it is **not built**. App-only, no redeploy.
+
+- **⚠⚠ THE WORDING WAS WORSE THAN "READS SLIGHTLY OFF", AND THE MEASUREMENT IS WHY.** Reproduced on the real `invoiceHtml`
+  before anything changed: a $19,940 job closed with the deposit paid in full and no midpoint invoice ever sent.
+
+  | | pre-change | now |
+  |---|---|---|
+  | the final's midpoint row | *25% midpoint — fees trued to actuals* (T&M) · *invoiced at project midpoint* (fixed) | *25% midpoint — billed on this invoice* |
+  | the gap row | **Outstanding from the deposit and midpoint invoices — carried into the balance below +$4,985** | **none** — the one invoice sent was paid in full |
+  | the midpoint invoice over a $5,000 deposit | *Outstanding from the deposit **and midpoint** invoices — carried into the **balance** below* | *Outstanding from the deposit invoice — carried into the **payment due** below* |
+  | a final blocked for no hours | *$14,955 already invoiced at deposit and midpoint* | *$9,970 already invoiced at the deposit* |
+  | balance due | $9,970 | **$9,970** |
+
+  So a client who had paid every invoice they were ever sent was told $4,985 was **outstanding** from an invoice they never
+  received — over a balance that was right. The H3 entry recorded it as words; it was a false statement of arrears on the page
+  that asks for money. The midpoint invoice had its own version: it named *the midpoint invoice* as an earlier document on the
+  page that IS the midpoint invoice, and pointed at *the balance below* over a line reading *Midpoint Payment Due Now*.
+- **`_midBilled` IS THE ONE TEST, AND IT IS THE RAIL'S OWN.** `!!docSentAt(job,'invoice','midpoint') || stagePaidTotal(job,
+  'midpoint') > 0` — sent, **or paid** (a client who paid it was plainly asked for it, and a printed copy handed over leaves no send
+  record). The timeline's midpoint row reads *Not sent — the final invoice bills it* on the same condition, so the document and the
+  rail cannot tell two stories. `invoicedBefore` is the 75% target when billed and the deposit target when not; `_priorInvoices`
+  names what came before; the unbilled midpoint row states its own 25% share (`midCumTarget − depositAmt`) rather than the
+  carried-forward figure, because a deposit shortfall is named on the gap row and printing it on both describes one set of dollars
+  twice. Billed only when sent fails 11, only when paid 10, always billed (the defect) **21**.
+  - **⚠ THE BALANCE DOES NOT MOVE, BY CONSTRUCTION.** `finalDue` is the total less what was **received**, never less what was
+    invoiced; every case in the suite asserts the balance equals the old build's.
+  - **`_paymentGapRow(gap, from, into)` takes both halves of its sentence** — three callers (the T&M final, the fixed-price final,
+    the midpoint invoice), none single-argument; a test counts the definition and the three. Naming both invoices whatever happened fails 4, the midpoint invoice naming itself 4, measuring against the 75% target
+    4, the fixed row labels 5 (T&M) and 3 (fixed), the unbilled row carrying the shortfall 2, the no-hours block 2.
+  - ⚠ Found in passing, **not fixed**: a fee-only **Home Prep** final calls its second payment *25% midpoint* (before and after this
+    change) where the prep estimate and agreement say *due once the vendor schedule is booked*, and heads its total *logged hours
+    + actual fees* on an engagement that bills no hours. The money is right; flagged rather than folded in.
+- **⚠⚠ RE-OPEN IS THE MAP'S `closed: 'active'`, THROUGH THE ONE DOOR.** `activateOrCycle` → `applyJobTransition`, which routes a
+  closed job to `_reopenTransition` **before** the close question, the ratings and the activation checks — the job was activated
+  long ago (`activatedOn` is kept) and the only question is about undoing a close. **↺ Re-open job** is an outline secondary beside
+  the lit row of a closed job (`live && status === 'closed' && !jobReopenBlocker(job)`), on the dashboard and on the band at the
+  top of the Job Plan and Job Admin & Inv. Close and Re-open are never on one job together, so every onclick stays unique (driven on
+  the rendered dashboard). Removing the branch from the transition fails **65**; removing the button 17; Re-open on every row 7.
+  - **⚠⚠ THE LINE IS THE FINAL INVOICE.** `jobReopenBlocker` refuses once the final is **sent** or a final payment is on file — the
+    client then holds a bill saying the job is finished, and a re-open would put the app out of step with it. One answer, read by
+    the rail (which withholds the button) and by the transition (which refuses in the same words). Ignoring the sent final fails 7,
+    the final payment 4, the rail offering-and-refusing 5, the transition not consulting it 7.
+  - **⚠⚠ THE HANDOVER STAMP IS CLEARED, NEVER EDITED, AND THE CLOSE IT UNDOES IS KEPT ON `job.reopens`.** The H3 entry declined a
+    Re-open because *"a Re-open would leave `deliveredOn` standing on an active job, and what that should mean is a decision, not a
+    button"*. The decision: the stamp comes **off**, so the rail, the Job Plan's NOW marker (`planCurrentStage`) and the lost-button
+    gate (`jobIsSettled`) all read the job as in progress again and the next close stamps its own day; and the undone close is
+    recorded — `closedOn/At/By`, `reopenedOn/At/By`, `finalDraftVoided` — appended, never overwritten. Nothing ever moves a handover
+    date to another day, which is what the write-once rule protects. Leaving the stamp standing fails 17, not recording the close 17,
+    overwriting the history 2.
+  - **⚠⚠ A FINAL DRAFTED BUT NOT SENT IS VOIDED ON THE RECORD, THROUGH THE `docState` ACCESSOR.** After a close the band's filled
+    button is *Send final invoice*, so a mistaken close has often drafted one, priced as the job stood at the close. Left on the
+    record the strip offers the stale draft and the next close's primary is *I've sent it* pointing at it. The question names the
+    draft and says to delete it in Gmail (the app cannot reach the mailbox); `draftedAt/By/Url/pdfOk/filedAt/filedUrl` come off
+    through `docState()`, which stamps `at['docState:invoice:final']` — **writing around it lets the other device's copy of the
+    draft win the per-key merge and bring it back**. A final only filed, never drafted, is left alone. Not voiding fails 19,
+    bypassing the accessor 2, voiding a filed-only final 2.
+  - **⚠⚠ AND SINCE THE THIRD MERGE IT IS VOIDED INTO THE STALE-DRAFT HISTORY, NOT MERELY OFF THE RECORD.** `main`'s stale-draft
+    build (the entry below this one) landed while this was being pushed: a draft a price change overtook stays named on its row,
+    from `st.staleDrafts`, until a final actually goes out. A Re-open retires a final on exactly those terms — the draft is still
+    sitting in a mailbox at a figure that no longer applies — so `_reopenTransition` pushes `{draftedAt, provider, mailbox,
+    why:'reopen'}` into that history and `staleDraftNote` gains a third reason, *"was made before the job was re-opened"*. The
+    *Final invoice sent* row then goes on saying *"The Gmail draft from Sep 30 (anthony@…) was made before the job was re-opened —
+    delete it, don't send it"*, and once a fresh final is drafted, *"Drafted — read it, send it, then confirm. Delete the older Gmail
+    draft from Sep 30 (…) — it was made before the job was re-opened"*: two finals in one mailbox are never left for somebody to
+    tell apart. Both are in the revert sweep on the merged tree, below.
+  - **⚠ FOUND WHILE MERGING AND FIXED: the question read the draft's day off the UTC stamp, and said "Gmail" whatever the route.**
+    A final drafted after 8pm Eastern was named on the next day, and a plain email (the mailto fallback) was told to be deleted in
+    Gmail. It reads `_draftDay`, `main`'s one local-calendar reading of a draft stamp, and the route decides the verb: *delete that
+    draft in Gmail (mailbox)* for a Gmail draft, *if that email was never sent, discard it* otherwise. All four are in the revert
+    sweep on the merged tree, below.
+  - The stale-draft suite's net — every reader of a draft stamp is named — carries `_reopenTransition` on its allow-list, with its
+    reason; removing the entry is in the sweep below.
+  - **It asks; Cancel changes nothing; OK lands on the Job Plan** (`activateOrCycle` already navigates on a transition to active).
+    The question names the day and who closed it, says the timeline returns to the step the job was on, and that hours, payments and
+    anything already sent stay as they are. Cancel ignored fails 2; the question omitting the close 1, the stale draft 4.
+  - **`Work complete` reads *Re-opened — the earlier close was undone*** while a re-opened job is open. Reverting fails 2.
+  - **⚠ THE LEGACY CASE THE H3 ENTRY FLAGGED IS CLOSED BY THE SAME CHANGE.** A job closed before 2026-07-30 carries no
+    `deliveredOn`, so its `job_active` row reads undone and offered **Activate job** — a re-open with no question. The Activate
+    primary is withheld on a closed job and the Re-open secondary covers it. Reverting fails 4.
+  - **The early-close question stops saying *cannot be re-opened*** — *"Until the final invoice goes out, Re-open can undo the
+    close."* Reverting fails 4.
+  - **Two devices**: the real `_mergeJobRecord` from `main-sync.gs`, driven in both orders — a Re-open on one device survives the
+    other device's older copy of the closed job (the status and the cleared stamp follow the newer record; the voided draft follows
+    its per-key stamp).
+- **12,340 committed checks on this build; 13,526 after merging the seven builds that landed on `main` alongside it; 13,586
+  after merging `main`'s H5 build (its `work-done-rooms` suite, 60), which landed while this one was being pushed; 13,804 after
+  merging `main`'s stale-draft build, which landed while THAT was being pushed** (+204 from it — its `stale-draft` suite at 201 and
+  a check each in three suites it touched — and +14 here: `job-reopen` 154 → 168, the history, the row, the plain email and the
+  evening draft). **At that merge every suite carries ours + theirs − base, checked file by file across all 111, except
+  `job-reopen`, which carries exactly those 14.** ⚠ It made `job-reopen` throw: `main` deleted `docDraftedAt`, which its sandboxes
+  lifted; they lift `draftOutstanding` and the stale-draft helpers now, and the dashboard group `_dashShown` / `_dashKeepNotice`.
+  (`tests/job-reopen.test.js` new at 154, driving the real `invoiceHtml`, the real rail, transition and band, the rendered
+  dashboard and the real backend merge.) **⚠ The merge made four of `main`'s new suites throw** — `approval-on-job`,
+  `change-order-card`, `document-reconciliation`, and `document-claims` through the list it borrows — because `invoiceHtml` now
+  reads `docSentAt`; each lifts it (never a stub). And `job-reopen`'s own sandboxes took `main`'s new helpers
+  (`estimateEditBlocker`, `priceChangeBlocker`, `discountOfferBlocker`, `docReadOnlyWord`, `docPreviewOnly`, `coCardActions`,
+  `jobStatusView`, `JOB_STATUS_LABELS`, `paymentSplit`, `rushScopeLine`, `rushCrewAdded`, `invFinalApproval`) and dropped
+  `invApproved`, which H1 deleted. ⚠ **Its dashboard group does not lift `_todayStr`**: a lifted function overrides a stub of
+  the same name, and the stub is what pins the date. **Restated, not deleted:** five rail suites that pinned *no Re-open*
+  (`job-close-midpoint` at four sites, `job-closeout`, `job-plan-team-dates`, `dashboard-schedule`, `dashboard-utility-bar`), and
+  `payments-received`, whose final-invoice fixtures meant a midpoint invoice had gone out and now carry the send record that says
+  so. **Nine invoice sandboxes lift `docSentAt` / `docKeyFor`**, which `invoiceHtml` now reads — lifted, never stubbed.
+- **Revert sweep on three tar copies: 29 changes, ALL RED, baseline 12,340 / 0 before and after on every copy, no needle
+  mismatched, nothing threw.** Counts are on the bullets above. ⚠ That sweep ran on the tree **before** `main` was merged in, and
+  one merge resolution sits on this build's code — the fixed-price final's Payment Summary takes `main`'s change-order row with
+  this build's three-argument gap row — so it was run again on three copies of the MERGED tree: **all 29 red again with the
+  identical counts, baseline 13,526 / 0 before and after on every copy, no needle mismatched, nothing threw.** And the resolution
+  itself was reverted from both sides on a fourth copy: the fixed-price final taking `main`'s single-argument gap row fails **3**
+  (it would print *Outstanding from undefined — carried into undefined* on the client's final), and dropping `main`'s change-order
+  row from it fails **1** (`document-reconciliation`'s final-balance rule, on 4 scenarios), so neither half of the union can be
+  lost quietly. `main`'s H5 build merged in after that and touched no line of this build's code: all 31 reverts still find
+  their code on the final tree, needle by needle, and the defect and the transition branch re-run there fail **21** and **65**
+  against 13,586 / 0 before and after, so the results carry. **The stale-draft build merged in last and moved one line of this
+  build's code** (the void, now into the history): all 31 still find their code, the defect, the transition branch, the void and
+  the question's draft clause re-run on a tar copy fail **21**, **75**, **19** and **4**, and the seven integration
+  reverts above are running on that copy at this commit; their counts follow in the next one.
+- **Verified in headless Chromium, `tests/browser/step38.js`** (written as step 29 and renumbered on all three merges — `main`'s
+  document-claims build took 29 first, its work-done build 36 and its stale-draft build 37), **63 checks, 0 failed, 0 page errors**
+  (58 before the third merge), through the real Close and
+  Re-open buttons and their real questions (Cancel, then OK): the question on the close names Re-open; a closed job shows Re-open
+  beside *Send final invoice*; a final drafted then Re-opened is voided, the job lands on the Job Plan with NOW on *Midpoint & pickups*, the
+  band reads *Collect the midpoint payment* with Close back, *Work complete* says re-opened and the ✕ is back on the client list;
+  the final's row then names the retired draft with its day and mailbox, and a fresh final drafted through the real `docRecordSent`
+  after the re-close reads *send this one, delete the older*, the line going once the final is sent;
+  a re-close on another day stamps that day and offers a fresh final; once the final is sent there is no Re-open and a direct call
+  alerts only; the final in the viewer reads *billed on this invoice* with the $50 short deposit named against *the deposit invoice*
+  over the right balance, while a job whose midpoint went out keeps the old wording; a legacy closed job offers Re-open and never
+  Activate; overflow 0 at 1440 and 390. **Against the pre-change build it fails 5 and stops at section A**, because the button it
+  presses does not exist. `step28` restated, not weakened (its close question now names Re-open; 61 / 0). Before the merge `run.sh`'s
+  default list was 1–29 and steps 1–28 re-ran as regressions, 0 failed — 1,392 browser checks across the twenty-nine. **On the
+  merged tree the default list is 1–36, and all thirty-six ran — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 /
+  25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 61 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 58, 0 failed —
+  1,816 browser checks across the thirty-six.** **After the second merge (`main`'s H5 build, whose own step is 36) the list is
+  1–37 and all thirty-seven ran — the same figures with 14 at step 36 and this build's 58 at step 37, 0 failed — 1,830
+  browser checks across the thirty-seven.** **After the third merge (`main`'s stale-draft build, whose own step is 37) the list
+  is 1–38 and the run of all thirty-eight is going at this commit; its figures follow in the next one**; against `main` without
+  this build step 38 still fails 5 and stops at section A.
+- Manual **§9** (the Closed row; the *There is no Re-open* note replaced by an eight-bullet Re-open note; the handover note),
+  **§9a** (two table rows, three bullets), **§11** (the ratings clause) and **§12** (the stage paragraph and a six-bullet note on the
+  wording). Playbook **Step 11 & 12** (a bullet), **Step 13** (the intro, the `.stop`, the midpoint paragraph, and a new *Closed it by
+  mistake?* subsection with a `.stop` and a note), *If the job dies instead* (the ✕ comes back), the status table, and the symptom
+  table — two rows corrected, four new. Both `.md` copies hand-edited; **46 claims parity-checked, 0 mismatches** (one apparent miss
+  was two table cells glued by the checker, verified present in both); a stale sweep for seven retired wordings returns **0**;
+  `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on
+  the phone rule — as at HEAD. **On the third merge** the manual's Re-open note gained a bullet (the *Final invoice sent* row goes on
+  naming the retired draft) and its draft bullet the day, the mailbox and the plain-email case; §9b's stale-draft note names the
+  re-open reason; the playbook's Step 13 note says the row keeps reminding you, and the symptom table has a new row for it. **58
+  claims parity-checked, 0 mismatches** (the same glued table cells, verified), `doc-structure` green, rendered again with the same
+  figures.
+- **⚠ THE SHAPE TO COPY: a write-once stamp is a rule against EDITING a record, not against UNDOING an act.** Clear it, keep the
+  history, and the rule still holds. And **when a document names an earlier document, check that the earlier document exists**: a
+  sentence about money outstanding is a claim about which bills went out, and the balance being right under it does not make the
+  sentence true.
 
 ## ⚠⚠ A GMAIL DRAFT A DISCOUNT LEFT BEHIND COULD BE CONFIRMED AS SENT — IT IS FLAGGED NOW, AND THE DASHBOARD KEEPS ITS MESSAGE (FIXED 2026-09-29)
 Anthony, three items in one line: *"done allow edit after a signing packet has been sent. just flag a previous Gmail draft if a
@@ -304,6 +462,10 @@ discount is offered. the final invoice shouldn't go out until after the mid poin
 - Put to Anthony: **(a)** require the midpoint invoice to be sent before the final goes out — in our control, so not the dead end Q1
   removed, but two invoices on one day for a job that closed early — or **(b)** keep the rule and word the final for a job whose
   midpoint never went out. **Recommended (b).**
+- **(b) WAS BUILT THE SAME EVENING, in the Re-open build (its entry is directly above this one).** Anthony, answering the H3/M8
+  build's same flag: *"yes to 2 and 3, reword the final and add Re-open"*. The final now names only the invoices that went out,
+  and an unsent midpoint's share reads *25% midpoint — billed on this invoice*. *Kept rather than deleted, per the standing rule
+  that a fixed flag left standing reads as outstanding work.*
 
 ## ⚠⚠ WORK DONE COULD NEVER REACH 100% — IT IS MEASURED AGAINST THE ROOMS NOW (FIXED 2026-09-29, AUDIT H5 / P8)
 Fix pack P8 of the 2026-09-28 workflow audit, built after the other sessions' P1–P7 had merged. Anthony, Q3: *"Room work
@@ -1162,7 +1324,8 @@ the work is done.* App-only, no redeploy.
   cheque never "sent" its invoice).
   - **⚠ ASKED ONCE, ONLY IN THE STRETCH THAT IS NEW.** `applyJobTransition` confirms *Close this job now?* when no midpoint payment
     is recorded and the job has never been closed: it names the unpaid midpoint, says the final bills everything not yet paid,
-    names today as the handover date, and says neither can be undone. Cancel changes nothing. **The ratings refusal comes first**
+    names today as the handover date, and ~~says neither can be undone~~ **(since the same evening) says Re-open can undo the close
+    until the final goes out** — its entry near the top of this file. Cancel changes nothing. **The ratings refusal comes first**
     (a question the app then refuses is worse than none), and with a midpoint payment on file it asks nothing — the normal close
     off Work complete is unchanged.
 - **⚠⚠ A SIXTH ROW STATE, `open`, IS WHAT LETS THE FINAL TAKE THE LIGHT.** Once `deliveredOn` is stamped an unsettled midpoint
@@ -1178,7 +1341,8 @@ the work is done.* App-only, no redeploy.
   - **⚠ NOTHING OFFERS THE MIDPOINT SEND AFTER THE CLOSE** — the row is never live again, and `_jtDocSecondaries` withholds the
     midpoint's draft link once `deliveredOn` is set — because a midpoint sent after the close bills one share twice. **So *I've
     sent it* cannot be pressed after the close either**: a midpoint sent from Gmail has to be confirmed before closing, and both
-    documents say so. Reading it (View, Print, the filed copy) stays.
+    documents say so — **or, since the same evening, Re-open, confirm it, and close again** (its entry near the top of this file). Reading it (View,
+    Print, the filed copy) stays.
 - **⚠⚠ M8 — THE MIDPOINT IS NOT DUE ON DAY ONE.** `_midNotYet` in `jobTimeline`: a running schedule with a halfway point, today
   before it, the midpoint neither sent nor drafted, and neither half the work (`workPct >= 0.5`) nor every room locked. The row
   then carries `notYet`, `dueOn` and a `todo` the band prints; `jobTimelineActions` renders the ONE `_jtSendAction` as an outline
@@ -1203,12 +1367,15 @@ the work is done.* App-only, no redeploy.
 - **THE JOB PLAN FOLLOWS THE RAIL.** `planCurrentStage` puts NOW on Close-out for any job with `deliveredOn` (the money-first rule
   would otherwise hold it on Midpoint & pickups forever); on a closed job the red midpoint banner stands down and *Midpoint invoice
   sent* reads *not sent — the job is closed, so the final invoice bills it* with no button.
-- **THE DEAD STATUS BUTTON AND `cycleStatus` ARE DELETED; NO RE-OPEN WAS WIRED** — the task's either/or, taken on the side that
-  adds no new way to move a write-once stamp. `JOB_TRANSITIONS.closed: 'active'` stays in the map with nothing pressing it: a
-  Re-open would leave `deliveredOn` standing on an active job, and what that should mean is a decision, not a button. **A close by
-  mistake needs Anthony.** ⚠ One legacy case, noted and not changed: a job closed before the handover stamp shipped (2026-07-30)
-  carries no `deliveredOn`, so its rail reads *Job active* undone and offers Activate job, which would re-open it. Prelaunch, so
-  dummy data only.
+- **THE DEAD STATUS BUTTON AND `cycleStatus` ARE DELETED** (still true). ~~NO RE-OPEN WAS WIRED — the task's either/or, taken on
+  the side that adds no new way to move a write-once stamp. `JOB_TRANSITIONS.closed: 'active'` stays in the map with nothing
+  pressing it: a Re-open would leave `deliveredOn` standing on an active job, and what that should mean is a decision, not a button.
+  A close by mistake needs Anthony. ⚠ One legacy case, noted and not changed: a job closed before the handover stamp shipped
+  (2026-07-30) carries no `deliveredOn`, so its rail reads *Job active* undone and offers Activate job, which would re-open it.
+  Prelaunch, so dummy data only.~~ **RE-OPEN BUILT THE SAME EVENING, AND THE LEGACY CASE CLOSED WITH IT** — Anthony: *"add
+  Re-open"*. The decision this bullet deferred: the stamp comes **off** and the undone close is kept on `job.reopens`; a closed job
+  never offers Activate. See its entry near the top of this file. *Kept rather than deleted, per the standing rule that a fixed flag
+  left standing reads as outstanding work.*
 - **12,165 committed checks on the merged tree** (11,850 on this build before the merge; `tests/job-close-midpoint.test.js` new at
   256, driving the REAL rail, actions, band, transition, Job Plan stage marker and rendered dashboard, and the real `renderJobPlan`
   for the banner). Restated, never deleted: `job-timeline` (five states → six, each with a class and a node), `closeout-gate` (its
@@ -1248,11 +1415,14 @@ the work is done.* App-only, no redeploy.
   symptom rows plus one corrected. Both `.md` copies hand-edited; **93 sentences parity-checked**; the three apparent misses are
   curly against straight quotes, two of them in an older note, verified by eye; `doc-structure` green; rendered at 1440/390
   with 0 overflow and 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as at HEAD.
-- **Noted, not built, and flagged to Anthony:** (1) the final invoice's own wording presumes the midpoint went out — *25%
+- **Noted, not built, and flagged to Anthony:** ~~(1) the final invoice's own wording presumes the midpoint went out — *25%
   midpoint — invoiced at project midpoint* and *Outstanding from the deposit and midpoint invoices* — which reads slightly off on a
-  job closed with the midpoint never sent; **the money is right**, only the words. (2) The activation-day band has no filled
-  button; a *Log today's hours* primary was considered and not built. (3) No Re-open. (4) **Home Prep is unchanged**: its second
-  payment is due when the vendor schedule is booked, not on a calendar.
+  job closed with the midpoint never sent; the money is right, only the words.~~ **(1) REWORDED THE SAME EVENING, and it was worse
+  than "slightly off": it told a client who had paid every invoice they were sent that a midpoint was outstanding.** (2) The
+  activation-day band has no filled button; a *Log today's hours* primary was considered and not built — **offered, not taken**.
+  ~~(3) No Re-open.~~ **(3) BUILT THE SAME EVENING.** (4) **Home Prep is unchanged**: its second payment is due when the vendor
+  schedule is booked, not on a calendar. For (1) and (3) see its entry near the top of this file. *Kept rather than deleted, per the
+  standing rule.*
 - **⚠ THE SHAPE TO COPY: when a control lives on one row, walk every state in which the rows in front of it can stay unfinished for
   a reason the crew does not control.** A client's cheque is exactly such a reason, and the only exit the rail left was a false
   record of it.
@@ -9648,8 +9818,25 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   item 2, built the other way (the job carries when the price moved) — and conflicted on the build stamp, CLAUDE.md, all four
   documents, ten sites in `havellin.html`, twenty-three suites' pinned lists and `tests/browser/step37.js`: its design was kept
   with this build's send-order rule folded in (see the entry at the top of this file), its browser step keeps **step 37**,
-  this one is renumbered **step 38**, and 1–38 are the default list.)
-  (`claude/exciting-carson-pv156f` recorded, before that merge, that it was the active branch, and:)
+  this one is renumbered **step 38**, and 1–38 are the default list. Then the concurrent Re-open build
+  landed on `main` as well (Re-open a mistakenly closed job; the final names only the invoices that went out), and a fourth merge
+  took it: it conflicted on the build stamp, CLAUDE.md, four suites' pinned lists (resolved as a UNION) and
+  `tests/browser/step38.js`, which that build had written too — its keeps **step 38**, this one is **step 39**, and 1–39 are
+  the default list.)
+  (`claude/elegant-wright-nb6ffk` recorded, before this merge, that it was the active branch, and:)
+  (This session was ASSIGNED it again for a follow-up to its H3/M8 build — Re-open and the final invoice's wording — started
+  after every session's work was on `main`. Its merge brought in the seven builds `main` had gained meanwhile and conflicted
+  on the build stamp, CLAUDE.md, two places in each document, twelve suites' pinned lists (resolved as a UNION), the fixed-price
+  final's Payment Summary (resolved to `main`'s change-order row with this build's three-argument gap row) and
+  `tests/browser/step29.js`, which both sessions had written: `main`'s keeps step 29, this one is renumbered **step 36**, and
+  1–36 are the default list. `main` then gained the H5 build while this one was being pushed, and a second merge took it:
+  it conflicted only on the build stamp, CLAUDE.md and `tests/browser/step36.js`, which that build had written too — its
+  keeps step 36, this one is **step 37**, and 1–37 are the default list. Then the stale-draft build landed on `main` too, and a
+  third merge took it: it conflicted on the build stamp, CLAUDE.md, three suites' pinned lists (resolved as a UNION) and
+  `tests/browser/step37.js`, which that build had written as well — its keeps step 37, this one is **step 38**, and 1–38 are
+  the default list. The Re-open's void now goes into that build's draft history, and its suite's allow-list names it.)
+  (`claude/exciting-carson-pv156f` recorded, before both of those merges took its stale-draft build, that it was the active
+  branch, and:)
   (Back on this branch for the stale-draft build: a Gmail draft a discount or an edit left behind is flagged, and the dashboard
   keeps its message through a redraw the app makes on its own. Built on `main` after the Edit-estimate / won-status build and
   the audit's docs merge, both of which it took by fast-forward, and then P8 (H5) from a concurrent session, which had taken
@@ -14920,11 +15107,17 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (tenth pass — the merge of two ninth passes)**. This build and the concurrent
+- Last reconciled against the app: **2026-09-29 (eleventh pass — the merge of two tenth passes)**. This build's tenth pass
+  (itself the merge of two ninth passes) and the concurrent Re-open build's tenth pass merged without a conflict in either
+  document, so both stand as written; see the re-acceptance entry at the top of this file for what was checked.
+- Prior pass **2026-09-29 (tenth pass, this build — the merge of two ninth passes)**. This build and the concurrent
   stale-draft build each ran a ninth pass the same day and both described the out-of-date Gmail draft. The merge kept the
   stale-draft build's wording in manual §8 and §9b (its two conflicting hunks), took out this build's duplicate `.stop` in
   playbook Step 4 and its duplicate symptom row (the stale-draft build's own say the same), and left everything else from both
   passes standing. Both `.md` copies follow; see the re-acceptance entry at the top of this file.
+- Prior pass **2026-09-29 (tenth pass, the concurrent Re-open build)** — both documents, against Re-open and the final invoice naming only
+  the invoices that went out (manual §9, §9a, §9b, §11, §12; playbook Step 11 & 12, Step 13, *If the job dies instead*, the status
+  table and seven symptom rows), including the retired final draft staying named on its row; see its entry near the top of this file.
 - Prior pass **2026-09-29 (ninth pass, this build)** — both documents, against a raised price asking the client again
   (*Won · Awaiting Re-acceptance*) and Edit estimate waiting for the manager's PIN (manual §1, §5, §7, §8, §9, §9a, §9b;
   playbook Steps 2, 4, 5 and 6, the status list and four symptom rows, two corrected). Its stale-draft wording is the part the

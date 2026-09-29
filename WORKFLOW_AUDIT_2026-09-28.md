@@ -77,6 +77,8 @@ Close job appears only on the Work complete step, which comes after the midpoint
 
 **Fix:** P7 (Let a finished job close with the midpoint unpaid)
 
+**Follow-up, 2026-09-29:** Anthony took two of the four things the P7 build left open (*"yes to 2 and 3, reword the final and add Re-open"*). The final invoice now names only the invoices that actually went out, and a closed job can be re-opened with **↺ Re-open job** on its timeline until the final invoice goes out. Not taken: a filled *Log today's hours* button on activation day; the every-room-locked reading of "half the work" stands as shipped. See CLAUDE.md.
+
 #### H4 · Sync · A cloud refresh wipes edits that haven't reached the sheet yet. — **Fixed 2026-09-29**
 
 With realistic Apps Script delays: create a client and press Build estimate straight away, and the client disappears from the device; score rooms and Save, and it says "Job not found" and the walkthrough is lost. Change square footage in Edit Client and press Build estimate: it prices the old size, and the change reverts on this device.
@@ -579,7 +581,7 @@ Documentation pass, after the fix packs above have landed (2026-09-28 workflow a
 - Playbook Step 6 says sending the agreement opens a Gmail draft and needs "✓ I've sent it"; it goes through DocuSign with no tap.
 - Manual §4 says "All fields marked * are required", that Notes shows on the client list (that detail row is dead code), and lists "Job Log" and "Estimate" subfolders.
 - Manual §15's DocuSign line is stale.
-- The manual (~line 1351) and the playbook (~964, ~996) say a closed job's status button reads Re-open; no such control exists. The playbook's "Final invoice paid → close the job" has the order backwards.
+- The manual (~line 1351) and the playbook (~964, ~996) say a closed job's status button reads Re-open; no such control exists. The playbook's "Final invoice paid → close the job" has the order backwards. *(Done 2026-09-29 with P7 and its follow-up: there is now a real ↺ Re-open job on the timeline, and both documents describe it and the close order.)*
 - The playbook contradicts itself on changing a job's service type.
 - The 2026-09-20 photo-delete and note-saving pass was never done (manual §10 ~1492, playbook ~713–717 and ~1181).
 - CLAUDE.md says the engine overshoots the bands above ~3,000 sq ft; it now sits below them at 6,000+ sq ft for half the services.

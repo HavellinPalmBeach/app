@@ -135,7 +135,9 @@ let b;
   has(dialogs[0] || '', 'No midpoint payment is recorded', 'naming the unpaid midpoint');
   has(dialogs[0] || '', 'the final invoice bills everything not yet paid', 'and what the final does about it');
   has(dialogs[0] || '', 'Sep 30, 2026', 'and today as the handover date');
-  has(dialogs[0] || '', 'cannot be re-opened', 'and that it cannot be undone');
+  // Restated 2026-09-29: the question said a closed job "cannot be re-opened" until Re-open landed (step 29).
+  has(dialogs[0] || '', 'Until the final invoice goes out, Re-open can undo the close', 'and that Re-open can undo it until the final goes out');
+  lacks(dialogs[0] || '', 'cannot be re-opened', 'and no longer that it cannot');
   const cancelled = await p.evaluate(() => { const j = jobs.find((x) => x.id === 7101); return { st: j.status, d: j.deliveredOn || '' }; });
   eq(cancelled, { st: 'active', d: '' }, 'Cancel leaves the job active with no handover date stamped');
 
@@ -148,7 +150,8 @@ let b;
   s = await band(7101);
   eq(s.step, 'Send the final invoice', '⚠⚠ the band moves to the FINAL invoice');
   eq(s.filled.map((x) => x.c), ["docAction(7101,'invoice','send',{stage:'final'})"], 'and Send final invoice is its one filled button');
-  ok(!s.outline.some((x) => x.c === 'activateOrCycle(7101)'), 'a closed job is offered no Close');
+  ok(!s.outline.some((x) => /Close job/.test(x.t)), 'a closed job is offered no Close');
+  eq(s.outline.filter((x) => x.c === 'activateOrCycle(7101)').map((x) => x.t), ['↺ Re-open job'], 'the one transition on its band is Re-open job (2026-09-29)');
   const rail = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view .jt-rail .jt-row')).map((r) => ({
     cls: r.className.replace('jt-row ', ''), lbl: (r.querySelector('.jt-lbl') || {}).textContent, sub: (r.querySelector('.jt-sub') || {}).textContent || '' })));
   const mr = rail.filter((r) => r.lbl === 'Midpoint payment')[0] || {};
@@ -158,7 +161,7 @@ let b;
   has(s.page, "dashRecordPayment(7101,'midpoint')", 'the midpoint payment can still be recorded, from the strip');
   has(s.page, 'Record midpoint payment', 'under a label that names the stage');
   lacks(s.page, "docAction(7101,'invoice','send',{stage:'midpoint'})", 'nothing on the page sends the midpoint a second time');
-  lacks(s.page, 'activateOrCycle(7101)', 'and nothing on the page re-opens the job');
+  eq((s.page.match(/activateOrCycle\(7101\)/g) || []).length, 1, 'the transition is on the page once — the Re-open, in the band');
   const onc = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view [onclick]')).map((e) => e.getAttribute('onclick')));
   eq(onc.length, new Set(onc).size, 'every control on the closed job\'s dashboard is unique');
 
@@ -183,6 +186,7 @@ let b;
   has(s.step, 'Every milestone on this job is recorded', 'once the final is paid the band reads Complete');
   has(s.page, 'Paid with the final invoice', 'and the midpoint row says the final settled it');
   lacks(s.page, 'jt-row jt-open', 'nothing is left open');
+  lacks(s.page, 'Re-open job', 'and once the final has gone out nothing offers Re-open');
 
   // ── D. THE MIDPOINT INVOICE NEVER WENT OUT ─────────────────────────────
   console.log('\n## D. The midpoint invoice was never sent — close from its own band');

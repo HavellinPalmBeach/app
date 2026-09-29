@@ -926,6 +926,7 @@ Open the client. **Each invoice has its own row on the timeline** — *Deposit i
 - **There is no "job ran over estimate" line, in either direction — removed 2026-09-11.** It used to say *"client was notified per T&Cs"* on any overage at all, which the app has never had a record of. An estimate is an estimate. And **an accepted change order moves the figure the variance is measured against**, so a job run properly cannot show a real overrun here. The document still prints *Original Estimate* and *Actual Havellin services total* on adjacent rows — nothing is hidden. **Nothing about what the client pays changed.**
 - **A final more than ±15% off the estimate still stops for a manager PIN.** That is internal and did not go with the line above. If it fires, the question to ask is whether a change order should have been raised and accepted while the extra hours were still ahead of you.
 - **A $1 credit line on a client who paid correctly is gone.** **Fixed 2026-09-11.** Where a stage payment landed on a part dollar — 25% of $25,715 is $6,428.75 — the summary printed *"Received ahead of the invoiced schedule — credited in the balance below ($1)"* over a difference of fifty cents. **The balance was always right**; only the line was wrong.
+- **A final on a job closed before its midpoint invoice went out says so (2026-09-29).** Its midpoint row reads *25% midpoint — billed on this invoice*, and any gap names *the deposit invoice* alone. It used to name a midpoint invoice that never existed. A midpoint counts as invoiced once the timeline has it sent, or once a midpoint payment is recorded. **The balance was right either way**; only the words changed.
 - **A negative final invoice is not a bug.** If the job ran far enough under estimate, the 75% taken by midpoint overcollected. It renders as a green Credit, and since 2026-09-29 the covering email says *Credit to you* and that nothing is due — it used to read *“Balance due: $-2,741 … due within 7 calendar days”*. That's correct — issue it, and tell the client the credit is coming.
 - **The final’s *Original Estimate* row is the estimate the client signed (since 2026-09-29).** Accepted change orders sit on their own line directly under it. The row used to add the change orders in, so it no longer matched the deposit and midpoint printed beneath it.
 - **Every invoice you print files itself to Drive**, one file per stage, so the three never overwrite each other. Reprinting a stage replaces its own copy — which is what you want when you correct a figure and reissue.
@@ -933,13 +934,21 @@ Open the client. **Each invoice has its own row on the timeline** — *Deposit i
 
 ## Step 13 · Close the job — Client Dashboard
 
-Work handed over → close the job, with **■ Close job** on the band. It is there from the day the job is active (2026-09-29): an outline button beside whatever step is lit, and the filled button once the midpoint is paid. The app stamps the delivery date, the time, and who closed it, **once**. Then the **final invoice** is the filled button (Step 12).
+Work handed over → close the job, with **■ Close job** on the band. It is there from the day the job is active (2026-09-29): an outline button beside whatever step is lit, and the filled button once the midpoint is paid. The app stamps the delivery date, the time, and who closed it. Then the **final invoice** is the filled button (Step 12).
 
-> **⚠** **⚠ Close when the work is handed over, and never record a payment that has not arrived to get there.** Until 2026-09-29 a finished job with its midpoint unpaid had no way to close and no way to send the final — the band read *Collect the midpoint payment* and nothing else. That is gone: close it, and the final bills the midpoint's share with everything else. With no midpoint payment on file, *Close job* asks *Close this job now?* first — press **Cancel** if the work is not finished. **Nothing re-opens a closed job** and the handover date cannot be changed in the app, so a close by mistake needs Anthony.
+> **⚠** **⚠ Close when the work is handed over, and never record a payment that has not arrived to get there.** Until 2026-09-29 a finished job with its midpoint unpaid had no way to close and no way to send the final — the band read *Collect the midpoint payment* and nothing else. That is gone: close it, and the final bills the midpoint's share with everything else. With no midpoint payment on file, *Close job* asks *Close this job now?* first — press **Cancel** if the work is not finished. Closed it by mistake? **↺ Re-open job** undoes it until the final invoice goes out (below).
 
 On the Job Plan, a closed job loses the red *you're at the project midpoint* banner, and *Midpoint invoice sent* reads *not sent — the job is closed, so the final invoice bills it* with no button to press.
 
-After the close the midpoint rows wear an **amber ring** until they are settled: *Unpaid — the final invoice carries it*, or *Not sent — the final invoice bills it*. A midpoint cheque that turns up later is recorded as normal (**✓ Record midpoint payment** is in the strip at the foot of the timeline); once the final is paid the row reads *Paid with the final invoice*. If you had drafted the midpoint invoice and not sent it, delete the draft in Gmail. If you had sent it from Gmail, press *I've sent it* **before** you close.
+After the close the midpoint rows wear an **amber ring** until they are settled: *Unpaid — the final invoice carries it*, or *Not sent — the final invoice bills it*. A midpoint cheque that turns up later is recorded as normal (**✓ Record midpoint payment** is in the strip at the foot of the timeline); once the final is paid the row reads *Paid with the final invoice*. If you had drafted the midpoint invoice and not sent it, delete the draft in Gmail. If you had sent it from Gmail, press *I've sent it* **before** you close — or, if you have already closed, press **Re-open job**, confirm it, and close again.
+
+### Closed it by mistake? Re-open job (new 2026-09-29)
+
+On a closed job, **↺ Re-open job** sits beside the lit step as an outline button, where *Close job* was. It asks first: *Re-open this job?*, with the day it was closed and who closed it. OK puts the job back to *Active*, clears the handover date and lands you on the Job Plan. The timeline goes back to the step the job was on, *Close job* is back, and *Work complete* reads *Re-opened — the earlier close was undone*. Close it again when the work is handed over; that day becomes the handover. Nothing else moves: the hours, the payments and anything already sent stay as they are.
+
+> **⚠** **⚠ Re-open is gone once the final invoice has gone out, or once a final payment is recorded.** The client is then holding a bill that says the job is finished. If the job needs anything after that, tell Anthony.
+
+> **If you drafted the final before you noticed**, the question says so, with the day and the Gmail account: that draft billed the job as it stood at the close. **Delete it in Gmail** — the app cannot reach your mailbox. The *Final invoice sent* row keeps reminding you until a final actually goes out. When you close again the band offers a fresh *Send final invoice*; once you have drafted it, the row says to send that one and delete the older.
 
 ### Before you close it — the Close-out card (new 2026-09-22)
 
@@ -968,6 +977,8 @@ The **✕** on the job card opens closeout, and what it does depends on whether 
 > **If the final invoice has not been paid, that is chasing money — not a lost job.** The work was done. Record the payment when it arrives; never close a delivered client out as lost to tidy the list. One press used to turn a fully paid $19,940 job into *Closed — Deposit Retained* with *Price / estimate too high* against it.
 >
 > A job already marked *Lost* or *Closed — Deposit Retained* **keeps** the ✕, so you can still correct the reason. A lost job is not in the default list — press the **Lost** filter to find it.
+>
+> **Re-opening a closed job brings the ✕ back**, because the work is no longer recorded as delivered.
 
 ## Where the job sits — the status list
 
@@ -980,7 +991,7 @@ The **✕** on the job card opens closeout, and what it does depends on whether 
 | **Won · Pending Re-approval** | The client accepted, and a revised price — a discount, or an edit before the packet went out — is waiting on a manager PIN | Everything Won unlocks: the client is still won. The PIN or a deny returns it to **Won**. |
 | **Won · Awaiting Re-acceptance** | The client accepted, and a manager has since approved the estimate at a **higher** price | Staffing and the Job Plan carry on. The agreement, the deposit invoice and the payment link wait for their yes to the new price (step 5). |
 | Active | Signed and deposited — work in progress | Hours, photos, invoices |
-| Closed | Work handed over; delivery stamped | The final invoice, and any payment still owed. Nothing re-opens it. |
+| Closed | Work handed over; delivery stamped | The final invoice, and any payment still owed. **Re-open job** puts it back to Active until the final goes out. |
 | Lost | Died before any money arrived | Terminal |
 | Closed — Deposit Retained | Died after the deposit; we keep it | Terminal. Still counts as won. |
 
@@ -1055,10 +1066,15 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | **The rush line no longer says we add a second concierge** | Correct. The 20% buys priority scheduling. The estimate names a second concierge or a bigger crew only when you have actually staffed one. Do not promise extra people for the premium. |
 | **The job is finished, the band says _Collect the midpoint payment_, and there is no way to close it** | Fixed 2026-09-29. **■ Close job** is beside the lit step from the day the job is active. Press it: the final invoice becomes the filled button and bills the midpoint's share with everything else. **Never record a payment that has not arrived** to move the band. |
 | **Activation day: the band says _Do the work_ and has no filled button** | Correct (2026-09-29). The midpoint invoice falls due at the plan's halfway day, once half the work is done, or once every room is locked. It waits beside the band as an outline button reading *due around <date>*; press it early only if the client asked. |
-| **_Close job_ asks _Close this job now?_ and mentions the midpoint** | No midpoint payment is recorded. That is fine: the final bills it. OK closes and stamps today as the handover date, which cannot be changed. Cancel if the work is not finished. |
+| **_Close job_ asks _Close this job now?_ and mentions the midpoint** | No midpoint payment is recorded. That is fine: the final bills it. OK closes and stamps today as the handover date; *Re-open job* undoes it until the final goes out. Cancel if the work is not finished. |
 | **A closed job's Job Plan has no red midpoint banner, and *Midpoint invoice sent* says *not sent — the job is closed*** | Correct (2026-09-29). The final invoice bills the midpoint's share, so there is nothing to send. Do not send the midpoint now: it would bill that share twice. |
 | **The midpoint rows have an amber ring on a closed job** | Open, not lit: the midpoint was not paid (or not sent) before the close. The row says what settles it. Record a midpoint cheque from the strip if one arrives; paying the final settles it too. |
-| **You closed a job by mistake and cannot find _Re-open_** | There is none, and there never was a working one: the old Status button on the client list never reached the screen and is gone. Nothing is stuck — hours, payments and the final all still work — but the handover date can only be corrected by Anthony. |
+| **You closed a job by mistake** | Fixed 2026-09-29. **↺ Re-open job** is beside the lit step of a closed job. It asks first, then puts the job back to *Active* and clears the handover date. Close it again when the work is handed over. |
+| **A closed job has no _Re-open job_ button** | On purpose: the final invoice has gone out, or a final payment is recorded, so the client holds a bill that says the job is finished. Tell Anthony. |
+| **_Re-open_ says the final invoice drafted on a date no longer applies** | You drafted the final before you noticed the close was a mistake, and it billed the job as it stood then. Press OK, then delete that draft in Gmail. A fresh one goes out when you close again. |
+| **The final invoice row says a Gmail draft _was made before the job was re-opened_** | That is the final you drafted before a Re-open. It is still in Gmail at the old figure. Delete it; do not send it. If you have since drafted a fresh final, send the fresh one. The line goes the moment a final is sent. |
+| **_Work complete_ says _Re-opened — the earlier close was undone_** | Somebody closed this job and then re-opened it. The earlier close is kept on the record. Close it again when the work is handed over. |
+| **The final invoice says _25% midpoint — billed on this invoice_** | Correct (2026-09-29). No midpoint invoice went out before the close, so the final bills the midpoint's share itself. The balance is right either way. |
 | **You drafted the midpoint invoice, closed the job, and the draft link is gone** | On purpose: the final bills that share now, so sending the midpoint would bill it twice. Delete the draft in Gmail. |
 | **_Close job_ says it cannot close the job yet** | A vendor you used is not rated. The message names them. Open the Close-out card (Job Plan or Job Admin & Inv), give each a star rating, and close again. |
 | **_Draft review request_ is greyed out** | The satisfaction call is not ticked. Call the client first, tick it, and the button comes on. |

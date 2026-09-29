@@ -671,6 +671,9 @@ function run({ group, ok, eq, has, lacks }) {
       // The send-order rule, folded into the first two on the merge with the re-acceptance build: a draft newer
       // than the last send is outstanding again (the revised estimate after a raise).
       docDraftPending: 'the send-order rule',
+      // The Re-open (2026-09-29): it RETIRES a final drafted at the close into the history (staleDrafts), the same
+      // place docRecordSent keeps one a price change overtook. It reads the stamp to move it, never as "is there one to send".
+      _reopenTransition: 'the Re-open, retiring a final drafted at the close',
       // A different record entirely: job.reviewAsk, the Google-review email at the close.
       closeoutState: 'reviewAsk', renderCloseoutBody: 'reviewAsk', draftReviewRequest: 'reviewAsk', markReviewRequestSent: 'reviewAsk',
     };
