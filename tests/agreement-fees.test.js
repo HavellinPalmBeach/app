@@ -61,8 +61,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // `isFixedAgr` is false on prep — the fixed-price toggle is not reachable there — so the
   // HOURLY arm is what a prep client would have signed. The estimate's Terms were corrected
   // for exactly this on 2026-09-08 and the agreement was never given the same arm.
-  const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'probateAgreementHtml', 'isDecedentJob', 'prepFeeRate',
-                   '_pctWords', 'agrBillingRates', 'materialsBasisNote', '_agrHasPrepVendors',
+  const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'isDecedentJob', 'prepFeeRate',
+                   '_pctWords', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted', '_agrHasPrepVendors',
                    '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
                    'estimateDocScope', 'svcHasDocStep', 'fmt', 'esc', 'paymentSplit',
                    'conciergePhones', 'assignedTCContact', 'samePerson', 'canonPersonName',

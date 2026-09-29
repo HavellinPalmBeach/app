@@ -22,7 +22,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote',
+const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
                  '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
@@ -242,6 +242,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = ctx();
     has(c.materialsBasisNote('Estate Basic — $500'), 'Estate Basic — $500', 'it names a known package');
     lacks(c.materialsBasisNote(''), '()', 'and renders cleanly with no package selected');
+    // ⚠⚠ A "None — $0" package is NOT a package. Both agreements printed the label in brackets —
+    // "quoted on the Estimate (None — $0)" — which reads as a quote for nothing.
+    lacks(c.materialsBasisNote('None — $0', 0), 'None', '⚠ the none case never prints the label');
+    has(c.materialsBasisNote('None — $0', 0), 'No moving or packing materials package is quoted',
+        'it says plainly that none is quoted');
+    lacks(c.materialsBasisNote('Estate Basic — $500', 0), 'fixed package',
+          'a zero cost reads as no package whatever the label says');
     const uses = (src.match(/materialsBasisNote\(/g) || []).length;
     ok(uses >= 4, 'defined once and read by the estimate table, the Terms and both agreements');
   }
@@ -251,7 +258,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Exhibit A and the agreement are one document to a client; a materials basis stated two
     // ways across the staple is the drift this repo records more often than anything else.
     const ce = noComments(fn('clientEstimateHtml'));
-    has(ce, 'materialsBasisNote(e.pkgLabel)', 'the estimate Terms read the shared definition');
+    // ⚠ Restated 2026-09-29: the note now takes the COST as well as the label, because a package
+    // of $0 is no package — both agreements printed "(None — $0)" as though one were quoted.
+    has(ce, 'materialsBasisNote(e.pkgLabel, e.pkgCost)', 'the estimate Terms read the shared definition');
+    has(ce, 'materialsPackageQuoted(e.pkgLabel, e.pkgCost)', 'and only state a materials basis when a package was quoted');
     has(ce, 'Fixed package', 'and its fee-table cell states the basis in two words');
     // ⚠ Again the needle, not the code: a bare '25%' matches the PAYMENT SCHEDULE (25% midpoint,
     // 25% final), which is correct and must stay. Pin the claim itself.

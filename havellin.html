@@ -338,6 +338,7 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-row.jt-cur::before{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 2.5px,var(--white) 2.5px);}
 .jt-row.jt-blk::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--err-tx) 0 2.5px,var(--white) 2.5px);}
 .jt-row.jt-term::before{border-color:var(--err-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--err-tx) 2.5px);}
+.jt-row.jt-open::before{border-color:var(--warn-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--warn-tx) 2.5px);}
 /* Takes the slack so the meta sits hard right and the label never wraps while there
    is room for it. */
 .jt-lbl{flex:1 1 auto;min-width:0;font-size:12.5px;color:var(--gray);}
@@ -356,6 +357,12 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-row.jt-wait .jt-lbl{color:var(--gray);opacity:.72;}
 .jt-row.jt-term{border-left-color:var(--err-tx);}
 .jt-row.jt-term .jt-lbl{font-weight:600;color:var(--err-tx);font-size:13px;}
+/* OPEN — a midpoint the client had not paid when the job was closed (2026-09-29). Behind the job,
+   not in front of it: a filled amber node like a done one, never the bronze of the live step or the
+   red of a blocker, and its sub-line says what settles it. */
+.jt-row.jt-open{border-left-color:var(--warn-tx);}
+.jt-row.jt-open .jt-lbl{color:var(--gray-dk);}
+.jt-row.jt-open .jt-sub{color:var(--warn-tx);}
 /* Actions. The primary lives in the band and nowhere else; `.jt-ghost` is the
    quiet out-of-sequence action on a row (edit the client, edit the estimate). */
 .jt-acts{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
@@ -434,6 +441,9 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-step.jt-cur .jt-node{border-color:var(--bronze);background:radial-gradient(circle,var(--bronze) 0 2.5px,var(--white) 2.5px);}
 .jt-step.jt-blk .jt-node{border-color:var(--err-tx);background:radial-gradient(circle,var(--err-tx) 0 2.5px,var(--white) 2.5px);}
 .jt-step.jt-term .jt-node{border-color:var(--err-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--err-tx) 2.5px);}
+.jt-step.jt-open::after{background:var(--warn-tx);}
+.jt-step.jt-open .jt-node{border-color:var(--warn-tx);background:radial-gradient(circle,var(--white) 0 2.5px,var(--warn-tx) 2.5px);}
+.jt-step.jt-open .jt-slbl,.jt-step.jt-open .jt-ssub{color:var(--warn-tx);}
 .jt-slbl{font-size:11.5px;color:var(--gray);margin-top:7px;line-height:1.25;}
 .jt-step.jt-done .jt-slbl{color:var(--gray-dk);}
 .jt-step.jt-cur .jt-slbl,.jt-step.jt-blk .jt-slbl,.jt-step.jt-term .jt-slbl{font-weight:600;color:var(--gray-dk);}
@@ -1258,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:09pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:28pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1766,7 +1776,7 @@ body.no-smf .smf-col{display:none;}
         <div style="display:flex;gap:6px;align-items:center;">
           <select id="e-job" onchange="loadJobIntoEstimate()" style="display:none;"><option value="">Select job</option></select>
           <div id="e-job-name" style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;">&mdash;</div>
-          <button class="btn-s" onclick="startEstimateOver()" title="Clear every room scored here and start again from the intake answers">Start over</button>
+          <button class="btn-s" onclick="startEstimateOver()" title="Discard what is on this screen: back to the saved estimate, or to the intake answers if nothing is saved">Start over</button>
         </div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span>
@@ -3576,11 +3586,13 @@ body.no-smf .smf-col{display:none;}
     </div>
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;">
       <label style="font-size:12px;font-weight:600;white-space:nowrap;">Discount %</label>
-      <input type="number" id="dm-pct" min="1" max="15" step="1" value="5"
+      <input type="number" id="dm-pct" min="0" max="15" step="1" value="5"
         style="width:72px;text-align:center;font-size:18px;font-weight:700;"
         oninput="updateDiscountModal()">
       <span style="font-size:18px;font-weight:700;color:var(--gray-dk);">%</span>
+      <span style="font-size:11px;color:var(--gray);">0 removes the discount</span>
     </div>
+    <div id="dm-fb"></div>
     <div style="display:flex;gap:8px;">
       <button class="btn-s" style="flex:1;" onclick="closeDiscountModal()">Cancel</button>
       <button class="btn-p" style="flex:2;" onclick="applyDiscountRevision()">Apply &amp; Submit for Re-Approval</button>
@@ -5070,6 +5082,11 @@ function setRoomState(id, state) {
   if (mediaBtns) mediaBtns.style.display = active ? 'flex' : 'none';
   if (!active) {
     note.value = '';
+    // The "this room has a note" colour and label go with the note. Left lit, they told the NEXT
+    // client's estimator that an empty room carried a note — the last client's, cleared a moment ago.
+    // (saveNotesModal relabels the button "📝 Walkthrough"; the grid draws it as the bare glyph.)
+    var notesBtn = document.getElementById('notes-btn-'+id);
+    if (notesBtn) { notesBtn.style.color = 'var(--gray)'; notesBtn.style.fontWeight = ''; notesBtn.textContent = '\uD83D\uDCDD'; }
     if (_activeRecognitions && _activeRecognitions[id]) { try { _activeRecognitions[id].stop(); } catch(e){} }
   }
   row.className = state === 'in' ? 'active-row' : state === 'excl' ? 'excluded-row' : 'inactive';
@@ -6015,8 +6032,15 @@ function fixedPriceBuffer(svcKey) {
 // A flat premium on the Havellin services total, applied when the concierge marks the
 // job expedited. Deliberately NOT a markup on the TC/PS hourly rates: rates outside
 // NASMM norms read badly to a client comparing quotes, and a named line is both clearer
-// and easier to defend. It is also literally what the client is buying — a second
-// concierge and a larger crew working in parallel.
+// and easier to defend.
+//
+// ⚠⚠ IT ADDS NOBODY. This comment used to say the premium "is literally what the client is
+// buying — a second concierge and a larger crew working in parallel", and the client estimate
+// and the final invoice printed exactly that under the line. Both were false on the ordinary
+// rush job: ticking rush changes the price and nothing else (the crew is its own control, and
+// so is the second concierge), and the estimate is Exhibit A of a signed agreement. What the
+// client buys is PRIORITY SCHEDULING. rushScopeLine below is the one sentence, and it names a
+// second concierge or an expanded crew only when the estimate really staffs one (2026-09-29).
 //
 // This replaced a runway-keyed sliding scale (1.00 → 1.50 across 90/60/45/30 days to the
 // client's hard target) that had two problems: it measured calendar distance rather than
@@ -6024,6 +6048,31 @@ function fixedPriceBuffer(svcKey) {
 // and it only ever reached the SUGGESTED fixed-price figure, so it did nothing at all on
 // a job left hourly — which is every job by default. One flat number, one mechanism.
 var RUSH_PCT = 0.20;
+
+// The crew an estimate staffs BEYOND the ordinary, read off the saved record and nothing else:
+// a second concierge only when the Concierges control was set to 2 (preparedBy2 is the shape
+// older records used), and a larger specialist crew only when the count chosen is above the
+// count the engine recommended. psRecommended is stamped on every snapshot from 2026-09-29; a
+// record saved before that carries none, and an expanded crew is then NEVER claimed — the
+// comparison cannot be made, and a claim the record cannot support does not go on Exhibit A.
+function rushCrewAdded(e) {
+  if (!e) return { tc2: false, ps: 0 };
+  var rec = parseInt(e.psRecommended, 10);
+  var n = parseInt(e.psCount || e.nps, 10);
+  return { tc2: !!(e.needsTC2 || e.preparedBy2), ps: (rec >= 2 && n > rec) ? n : 0 };
+}
+
+// What the expedited-delivery premium is, in the one sentence the estimate and all three
+// invoices print under it. Priority scheduling always; a second concierge or an expanded crew
+// only when rushCrewAdded says the estimate has one.
+function rushScopeLine(e) {
+  var c = rushCrewAdded(e);
+  var crew = [];
+  if (c.tc2) crew.push('a second Transition Concierge');
+  if (c.ps) crew.push('an expanded crew of ' + c.ps + ' Property Specialists');
+  return 'Priority scheduling to meet the timeline you requested'
+    + (crew.length ? ', with ' + crew.join(' and ') + ' working in parallel' : '');
+}
 
 // Vendor coordination fee. ZERO since 2026-08-02, on labor jobs and bundled Home Prep
 // alike. Standalone Home Prep is untouched and still bills its 30% GC fee.
@@ -6588,6 +6637,11 @@ function calcAll() {
   var psFee = Math.round(totPS * psRate);
   var pkgCost = parseInt(document.getElementById('e-pkg').value) || 0;
   var pkgLabel = document.getElementById('e-pkg').options[document.getElementById('e-pkg').selectedIndex].text;
+  // ⚠ NOT ON STANDALONE PREP, which has no materials card: applyEstimateServiceMode HIDES it, and a
+  // hidden select keeps its value — so a job re-typed to Home Prep after a package was picked went
+  // on pricing the package into havellinTotal, while buildPrepEstimateBody (rightly) prints no
+  // materials row. A total above its own rows, off a control nobody can see (2026-09-29).
+  if (isPrep) { pkgCost = 0; pkgLabel = 'None — $0'; }
   var _collCost = getCollectionCost();
   var smf = calcVendorTotals() + Math.round(_collCost * SMF_PCT);
   // Excluded on standalone prep. buildPrepEstimateBody itemizes prep vendors, the 30% fee
@@ -7387,6 +7441,9 @@ function calcAll() {
     destPS: typeof destPS !== 'undefined' ? destPS : 0,
     psSlots: getPSSlots(),
     psCount: getScheduledPSCount(),
+    // The crew the engine recommended, beside the crew chosen, so a client document can tell
+    // an expanded crew from an ordinary one without re-running the solve (rushCrewAdded).
+    psRecommended: isPrep ? 0 : _recommendedPS,
     psCrewReason: '',   // field removed; kept on the record so older estimates still load
     // Internal walkthrough notes. Saved with the estimate but deliberately never read
     // by the client-estimate renderer — the whole point is that it is not client-facing.
@@ -8976,22 +9033,15 @@ function clearIntake()     { resetIntakeFields(); }
 // Home Prep estimate bled into an unrelated Estate Settlement job. Called the instant
 // a job is selected, BEFORE the async fetch, so the transitional view is empty (not
 // stale). The async applyOpenedEstimate then fills in the real saved estimate.
-function neutralizeEstimateView() {
+//
+// ⚠ IT TAKES THE JOB BEING OPENED, and puts the screen at that job's fresh-build state — the one
+// list is resetEstimateJobState, and everything it clears is listed there. Every open comes through
+// here BEFORE its fetch, the saved path included, so a saved estimate is restored over a clean screen
+// rather than over the last client's; applyOpenedEstimate then either restores the saved record or
+// runs the same reset again for a fresh build.
+function neutralizeEstimateView(job) {
   window._suppressEstimateAutoSave = true;
-  // Drop any pinned α from the previously-loaded estimate. If the job being opened
-  // has a saved estimate, restoreEstimateToUI re-pins it from that record; if it
-  // doesn't, this is a fresh build and should price at the current Settings value.
-  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';
-  // ⚠ AND THE FULLNESS PRESET, for exactly the same reason and as of the same day it
-  // started mattering (2026-09-10). While the preset was a one-shot sweep, a stale
-  // _volPreset only lit the wrong chip; now that setRoomState SEEDS from it, carrying it
-  // across a job switch prices the next property off the last one's answer — tick a room
-  // on a fresh job after a packed estate and it opens at default+2. That is the bleed this
-  // whole function exists to stop. restoreEstimateToUI re-pins it from the saved record if
-  // the job being opened has one, the same way the α pin above is handled.
-  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
-  clearAllRooms();
-  resetEstimateExtras();
+  resetEstimateJobState(job || null);
   window._suppressEstimateAutoSave = false;
 }
 
@@ -9000,8 +9050,10 @@ function loadJobIntoEstimate() {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return;
 
-  // Clear the prior job's data from view immediately (see neutralizeEstimateView).
-  neutralizeEstimateView();
+  // Clear the prior job's data from view immediately, and put the screen at THIS job's
+  // fresh-build state (see neutralizeEstimateView). That includes who walked the house: it is
+  // seeded there from the site-visit concierge, else the assigned one, else nobody.
+  neutralizeEstimateView(job);
 
   renderJobRefStrip(job);
 
@@ -9012,17 +9064,16 @@ function loadJobIntoEstimate() {
   // JOB_STEPS coefficients, so we no longer auto-enable the generic "multiple
   // decision-makers / heirs?" +20% toggle for it — that would double-count. calcAll()
   // forces the toggle off and disables it for contested jobs.
-  // Auto-populate estimate prepared by from site visit TC
-  var prepByEl = document.getElementById('e-prepared-by');
-  if (prepByEl && job.siteVisitBy) prepByEl.value = job.siteVisitBy;
-  else if (prepByEl && job.tc) prepByEl.value = job.tc;
   var startDisplayEl = document.getElementById('e-start-date');
   if (startDisplayEl) startDisplayEl.value = job.start || '';
 
 
-  // Auto-populate property value from job intake
+  // Property value from job intake — WRITTEN EVERY TIME, blank when intake has none. It was
+  // written only when the job HAD one, so a client with no home value on file kept the last
+  // client's: measured on the real page, A's $4,200,000 rode onto B and B saved straight past the
+  // "Property value is required" refusal, which reads this very field.
   var ePropValEl = document.getElementById('e-propval');
-  if (ePropValEl && job.propVal) ePropValEl.value = job.propVal;
+  if (ePropValEl) ePropValEl.value = job.propVal || '';
 
   // Auto-populate sqft from job intake
   var eSqftEl = document.getElementById('e-sqft');
@@ -9121,42 +9172,13 @@ function applyOpenedEstimate(jobId, job, status) {
     }
     showFB('e-fb','warn','Offline — couldn’t reach the cloud and no estimate for "' + job.name + '" is stored on this device. Reconnect before building so you don’t overwrite a saved version you can’t see.');
   }
-  // No saved estimate — clear all rooms AND the non-room extras (package, third-
-  // party vendors, home prep) so this new client starts clean instead of inheriting
-  // the last estimate's selections.
-  _estimateAlphaPin = null; _estimateCostPin = null;
-  _estimateDocScope = seedDocScopeFromJob(job);   // fresh build — price at the current Settings α and the scope intake recorded
+  // No saved estimate — a FRESH BUILD for this client. Every per-job input goes back to where a
+  // fresh build for THIS job starts, through the one list (resetEstimateJobState), so this new
+  // client starts clean instead of inheriting the last estimate's selections. A saved estimate
+  // never reaches this line — restoreEstimateToUI puts its own record back above.
   window._suppressEstimateAutoSave = true;
-  clearAllRooms();
-  resetEstimateExtras();
+  resetEstimateJobState(job);
   window._suppressEstimateAutoSave = false;
-  document.getElementById('e-prem').checked = job.premium || false;
-  var _rshO = document.getElementById('e-rush'); if (_rshO) _rshO.checked = false;
-  // ⚠⚠ AND THE BILLING BASIS (2026-09-25). The fixed-price box, its amount and its row were
-  // reset by Save (clearEstimateTab) and by Reset, and by nothing on a job switch — so an
-  // estimate taken to fixed price and left WITHOUT saving (the ← Clients bar keeps the work, by
-  // design) handed its tick to the next client's fresh build. Measured on the real page: client A
-  // at $24,000 fixed, back, client B's Build estimate → B opened fixed price with its own
-  // suggestion ($11,580) in the box, and saved that way it quotes B a flat fee nobody chose. The
-  // flags beside it (_fixedAmountUserSet, _fixedAmountBasis) were already reset below; the
-  // control they describe was not. A saved estimate never reaches this line — restoreEstimateToUI
-  // puts its own basis back above.
-  var _fxO = document.getElementById('e-fixed'); if (_fxO) _fxO.checked = false;
-  var _fxAO = document.getElementById('e-fixed-amount'); if (_fxAO) _fxAO.value = '';
-  var _fxRowO = document.getElementById('fixed-amount-row'); if (_fxRowO) _fxRowO.style.display = 'none';
-  // Reset PS slots
-  var _crewReset = document.getElementById('ps-crew-size');
-  if (_crewReset) _crewReset.value = '2';
-  _crewUserSet = false;
-  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
-  // not inherit a previous job's manual choices, which is the whole reason these flags
-  // exist. Missing one leaves the next estimate silently pinned to the last one.
-  var _tcReset = document.getElementById('e-tc-count');
-  if (_tcReset) _tcReset.value = '1';
-  _tc2UserSet = false;
-  _fixedAmountUserSet = false;
-  _fixedAmountBasis = 0;
-  _fixedPrepMovedOut = 0;
   estimateApproved = false; approvedBy = ''; approvedAt = '';
   updateApprovalUI();
   calcAll();
@@ -9238,33 +9260,13 @@ function clearEstimateTab() {
   });
   var startEl = document.getElementById('e-start-date');
   if (startEl) startEl.value = '';
-  var targetEl = document.getElementById('e-target-date');
-  if (targetEl) targetEl.value = '';
-  document.getElementById('e-prem').checked = false;
-  var _fxN = document.getElementById('e-fixed'); if (_fxN) _fxN.checked = false;
-  var _fxAN = document.getElementById('e-fixed-amount'); if (_fxAN) _fxAN.value = '';
-  var _rshN = document.getElementById('e-rush'); if (_rshN) _rshN.checked = false;
-  var _fxRowN = document.getElementById('fixed-amount-row'); if (_fxRowN) _fxRowN.style.display = 'none';
-  var _crewReset = document.getElementById('ps-crew-size');
-  if (_crewReset) _crewReset.value = '2';
-  _crewUserSet = false;
-  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
-  // not inherit a previous job's manual choices, which is the whole reason these flags
-  // exist. Missing one leaves the next estimate silently pinned to the last one.
-  var _tcReset = document.getElementById('e-tc-count');
-  if (_tcReset) _tcReset.value = '1';
-  _tc2UserSet = false;
-  _fixedAmountUserSet = false;
-  _fixedAmountBasis = 0;
-  _fixedPrepMovedOut = 0;
-  clearAllRooms();
-  collectionsData = [];
-  renderCollections();
-  vehiclesData = [];
-  renderVehicles();
-  resetEstimateExtras();   // package + third-party vendors + home prep
-  _estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';   // nothing loaded — back to the current Settings α, full documentation
-  var _tp = document.getElementById('tp-target'); if (_tp) _tp.value = '';
+  // Every per-job input, for NOBODY — the screen is unbound. The one list; see resetEstimateJobState.
+  // ⚠ This is also the reset that runs after a SAVE, and until 2026-09-29 it was a hand-kept copy
+  // that missed the discount, move styling, the private note and who walked the house — so all four
+  // survived the Save into the next client's fresh estimate.
+  // (The 'e-target-date' write that lived here named an element that has never existed; the
+  //  planner's date, tp-target, is reset with everything else.)
+  resetEstimateJobState(null);
   // Recompute once against the now-empty inputs so every derived readout — the summary,
   // the crew badge, the timeline, the planner — goes to zero rather than keeping the last
   // job's numbers on screen. calcAll reassigns currentEstimate, so null it AFTER.
@@ -9284,6 +9286,11 @@ function clearAllRooms() {
     sec.rooms.forEach(function(r) {
       var id = 'r' + ri;
       if (roomState(id) !== 'off') setRoomState(id, 'off');
+      // ⚠ A RENAMED "Other" ROW GOES BACK TO ITS OWN NAME (2026-09-29). The name box is an input
+      // calcAll reads for the room's name, and nothing ever reset it — so A's "Wine cellar" sat on
+      // B's grid and became a room on B's estimate the moment B ticked that row. Measured on the
+      // real page. restoreEstimateToUI writes a saved estimate's own name back when it claims the row.
+      if (r.custom) { var _nm = document.getElementById('name-' + id); if (_nm && _nm.tagName === 'INPUT') _nm.value = r.name; }
       ri++;
     });
   });
@@ -9294,29 +9301,120 @@ function clearAllRooms() {
   calcAll();
 }
 
-// Clear every estimate input that lives OUTSIDE the room grid: the moving-
-// materials package, the third-party vendor table, and the home-prep section.
-// clearAllRooms() only resets rooms + the access/heirs toggles, so on its own a
-// fresh estimate for a new client would inherit the PREVIOUS client's package,
-// vendors, and prep selections — the "sticky selections" bug. A saved estimate
-// re-populates all of these in restoreEstimateToUI, so this only ever runs on the
-// no-saved-estimate (start-fresh) path.
-function resetEstimateExtras() {
-  var pkg = document.getElementById('e-pkg'); if (pkg) pkg.value = '0';
+// ⚠⚠ EVERYTHING THE BUILD ESTIMATE SCREEN HOLDS FOR ONE CLIENT, PUT BACK TO WHERE A FRESH BUILD
+// STARTS — AND THE ONE LIST OF IT (2026-09-29, workflow audit finding C1).
+//
+// The reset used to live in three hand-kept copies — neutralizeEstimateView, the fresh-build branch
+// of applyOpenedEstimate and clearEstimateTab, plus resetEstimateExtras beside them — and every copy
+// was a list of the controls somebody had remembered. Measured on the real page before this was
+// written: client A priced with a 10% discount, move styling, a private note, a coin collection, a
+// car and a planner date, ← Clients without saving, client B's Build estimate — B opened with ALL of
+// them. B's client estimate printed A's collection, A's car and a discount line; on a fixed-price
+// job the leaked discount cut the flat fee by 10% ($1,824 on the house measured here, $2,220 on the
+// audit's) and printed no discount line at all; B's
+// Walkthrough view read A's family note ("the son contests the will"); B named Ashley as the person
+// who walked a house they never saw; and A's $4.2M home value rode onto B, which had none, and let B
+// save straight past the "Property value is required" refusal. Save was no better: the discount, the
+// styling, the note and the walkthrough-by all survived clearEstimateTab into the next client —
+// a 10% discount rode through five new clients in a row.
+//
+// `job` is the client the screen is being put back to a FRESH BUILD for; null clears it for nobody
+// (clearEstimateTab — the screen unbound). Three inputs start from an answer on the job rather than
+// from blank, and they are seeded HERE so a job with no answer gets blank rather than the last
+// client's: the Premium Estate flag, the documentation scope, and who walked the house.
+//
+// ⚠ WHAT IT DELIBERATELY DOES NOT TOUCH: the job binding (#e-job) and the four fields read off the
+// job record — service type, square footage, property value, target start — which
+// loadJobIntoEstimate writes from the job being opened and clearEstimateTab blanks on unbind; and
+// the approval state, which loadEstimateForJob answers from the store.
+//
+// ⚠ A SAVED ESTIMATE GETS ALL OF IT BACK. Every open runs this first (neutralizeEstimateView) and
+// restoreEstimateToUI then writes the saved record over it — so a field the record does not carry
+// comes back BLANK rather than as whatever the last client left on screen. The planner's target date
+// is the one input no record carries, and that is correct: it is a question asked on site, not a term
+// of the estimate. ⚠ AND REOPENING THE SAME CLIENT NEVER COMES THROUGH HERE — openEstimateScreen
+// resumes the unsaved work instead, which is what the ← Clients bar promises.
+//
+// ⚠ ADDING A CONTROL TO THE BUILD ESTIMATE SCREEN MEANS ADDING IT HERE. tests/estimate-reset.test.js
+// walks every control calcAll reads, sets it to a previous client's answer, runs this, and fails on
+// any that survives — so the next one cannot be forgotten the way these seven were.
+function resetEstimateJobState(job) {
+  var el = function(id) { return document.getElementById(id); };
+  // 1. A DICTATION STILL RUNNING BELONGS TO THE CLIENT BEING LEFT. Room notes, collection notes and
+  //    the private note all append their final words to an element on this screen when the words
+  //    arrive — and room rows are positional (r0, r1…), so a sentence finished after the switch would
+  //    land in the NEXT client's same row, or in their private note. abort(), never stop(): stop()
+  //    still delivers the last result; abort() delivers nothing.
+  if (typeof _activeRecognitions === 'object' && _activeRecognitions) {
+    Object.keys(_activeRecognitions).forEach(function(k) {
+      var r = _activeRecognitions[k];
+      try { if (r && typeof r.abort === 'function') r.abort(); else if (r && typeof r.stop === 'function') r.stop(); } catch (e) {}
+    });
+  }
+
+  // 2. THE PINS. Each is re-pinned by restoreEstimateToUI from the saved record when the job has one;
+  //    otherwise this is a fresh build and prices at the current Settings α and cost card.
+  _estimateAlphaPin = null; _estimateCostPin = null;
+  // The documentation scope intake recorded — 'full' for no job, and for a job that never answered.
+  _estimateDocScope = seedDocScopeFromJob(job);
+  // ⚠ The fullness preset SEEDS every room ticked after it is pressed (setRoomState), so carrying it
+  // across prices the next property off the last one's answer — tick a room on a fresh job after a
+  // packed estate and it opens at default+2.
+  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
+
+  // 3. THE CONTROLS, back to their markup defaults.
+  var prem = el('e-prem'); if (prem) prem.checked = !!(job && job.premium);
+  var rush = el('e-rush'); if (rush) rush.checked = false;
+  // ⚠⚠ The billing basis (2026-09-25): an estimate taken to fixed price and left unsaved handed its
+  // tick to the next client's fresh build, which then quoted a flat fee nobody chose.
+  var fx = el('e-fixed'); if (fx) fx.checked = false;
+  var fxA = el('e-fixed-amount'); if (fxA) fxA.value = '';
+  var fxRow = el('fixed-amount-row'); if (fxRow) fxRow.style.display = 'none';
+  _fixedAmountUserSet = false; _fixedAmountBasis = 0; _fixedPrepMovedOut = 0;
+  // The preferred-client discount — the worst of the seven, because nothing but restoreEstimateToUI
+  // ever wrote this box, and on a fixed-price job it is taken off the flat fee with no line saying so.
+  var disc = el('e-discount'); if (disc) disc.value = '0';
+  // Move styling: +8 specialist hours on every Home Transition that inherited it.
+  var sty = el('e-move-styling'); if (sty) sty.checked = false;
+  // The date the client asked for. Saved on no record, so on a fresh build it can only be the last
+  // client's — and the planner then advises a crew for somebody else's deadline.
+  var tp = el('tp-target'); if (tp) tp.value = '';
+  // Who walked THIS house. loadJobIntoEstimate only ever wrote it when the job named somebody, so a
+  // job naming nobody kept the last client's walker — on the estimate, the agreement and the Drive
+  // working paper. A name the list does not offer leaves the select on "Select TC", which is the truth.
+  var by = el('e-prepared-by'); if (by) by.value = job ? (job.siteVisitBy || job.tc || '') : '';
+  // The private walkthrough note — one family's "the son contests the will" on the next family's
+  // estimate and its Walkthrough view. _privateWalkNote is the record; the box only mirrors it.
+  _privateWalkNote = '';
+  var pn = el('e-private-note'); if (pn) pn.value = '';
+  var pns = el('pnote-mic-status'); if (pns) pns.textContent = '';
+  // Crew and concierge counts, and the flags that say somebody chose them. Missing one leaves the
+  // next estimate silently pinned to the last one's manual choice.
+  var crew = el('ps-crew-size'); if (crew) crew.value = '2';
+  _crewUserSet = false;
+  var tcc = el('e-tc-count'); if (tcc) tcc.value = '1';
+  _tc2UserSet = false;
+  var pkg = el('e-pkg'); if (pkg) pkg.value = '0';
+  // A prep job opened straight after another prep job would otherwise price hours nobody walked.
+  var dc = el('e-declutter-hrs'); if (dc) dc.value = '0';
+  // The add-a-line boxes. A half-typed "coin collection" is still the last client's coin collection.
+  ['new-col-name', 'new-col-value', 'new-col-qty', 'new-veh-desc'].forEach(function(id) {
+    var x = el(id); if (x) x.value = '';
+  });
+  var ncd = el('new-col-disp'); if (ncd) ncd.value = 'auction';
+
+  // 4. THE LISTS. Vendors and prep lines render into the same group cards, so one render covers both.
   vendors = [];
-  var nvt = document.getElementById('new-vendor-type'); if (nvt) nvt.value = '';
-  var nvc = document.getElementById('new-vendor-cost'); if (nvc) nvc.value = '';
-  var nsmf = document.getElementById('new-smf'); if (nsmf) nsmf.textContent = '$0';
-  renderVendors();
-  // Clearing the lines is the whole reset now — inclusion is derived from them, so there is
-  // no checkbox to untick and no separate section to collapse.
   prepItems = [];
-  renderPrepItems();
-  // ⚠ AND THE DECLUTTER HOURS, for the same reason the fullness preset is dropped in
-  // neutralizeEstimateView: a prep job opened straight after another prep job would otherwise
-  // inherit the last property's answer and price hours nobody walked. restoreEstimateToUI re-pins
-  // it from the saved record when the job being opened has one.
-  var _dcReset = document.getElementById('e-declutter-hrs'); if (_dcReset) _dcReset.value = '0';
+  renderVendors();
+  collectionsData = [];
+  renderCollections();
+  vehiclesData = [];
+  renderVehicles();
+
+  // 5. THE ROOMS LAST — clearAllRooms clears the grid and the two adjustments and recomputes, so it
+  //    runs against everything above rather than half of it.
+  clearAllRooms();
 }
 
 
@@ -10181,6 +10279,13 @@ function buildPrepEstimateBody(e, job) {
       (_dc > 0
         ? '<tr><td>Pre-prep declutter — Transition Concierge, hands-on clearing of the rooms (' + _dc.toFixed(1) + ' hrs &times; ' + fmt(_rate) + '/hr)</td><td class="r">' + fmt(_labour) + '</td></tr>'
         : '') +
+      // ⚠ THE DISCOUNT HAS A ROW, for the reason the labour row does: the subtotal is
+      // e.havellinTotal, which is net of it. A preferred-client discount comes off the declutter
+      // hours (discountOnLabor — the fee on vendor spend is not labour), and with no row for it
+      // the fee and the hours above added up to more than the total printed under them (2026-09-29).
+      ((e.discountAmt || 0) > 0
+        ? '<tr style="color:var(--ok-tx);"><td><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to the declutter hours as a valued client benefit</span></td><td class="r" style="font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
+        : '') +
       '</tbody>' +
       '<tr class="subtotal"><td>Havellin Services Total</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
       '</table>' +
@@ -10471,7 +10576,7 @@ function clientEstimateHtml(e, job) {
     // reads the 20% as having been applied to the already-discounted figure, which is the
     // rule the app followed until 2026-09-11 and no longer does.
     (!e.fixedPrice && e.rushAmt > 0
-      ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
+      ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(e) + '</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
       : '') +
     (!e.fixedPrice && e.discountPct > 0
       ? '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees' + (e.rushAmt > 0 ? ', including the expedited-delivery premium charged on them,' : '') + ' as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
@@ -10702,7 +10807,9 @@ function clientEstimateHtml(e, job) {
         (SMF_PCT > 0
               ? '<li>A ' + Math.round(SMF_PCT*100) + '% Service Management Fee applies to all third-party vendors coordinated by Havellin, including any home-prep vendors managed as part of this engagement.</li>'
               : '<li>Third-party vendors are billed to you directly at cost, with <strong>no coordination fee or markup</strong> added by Havellin. The concierge time spent sourcing, scheduling and supervising them is billed hourly like all other concierge time.</li>') +
-        '<li>' + materialsBasisNote(e.pkgLabel) + '</li>')) +
+        // Only when a package is quoted: on an estimate the absence explains itself (the fee table
+        // carries no materials row), and the sentence used to quote "(None — $0)" back at the client.
+        (materialsPackageQuoted(e.pkgLabel, e.pkgCost) ? '<li>' + materialsBasisNote(e.pkgLabel, e.pkgCost) + '</li>' : ''))) +
     '<li>This estimate is valid for 30 days from the date above.</li>' +
     // The insured-and-bonded bullet used to sit here and is gone (2026-09-10, Anthony's
     // call). The footer of this same document states it seven lines below, so as a Term it
@@ -10806,9 +10913,10 @@ function updateApprovalUI() {
     } else {
       // Offer Discount also revises the price, so it's locked once the agreement is
       // signed — post-signing price changes go through a Change Order.
-      if (btnOfferDiscount && !contractSigned) btnOfferDiscount.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = contractSigned ? ('Estimate sent ' + sentDate + ' · under signed agreement — locked.') : ('Estimate sent ' + sentDate + '. Edit to revise, or Offer Discount if the client pushes back.');
-      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Sent to client</strong> · ' + sentDate + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">' + (contractSigned ? 'Agreement signed — estimate locked. Revise via a Change Order.' : 'If the client wants a lower price, <strong>Edit</strong> to revise or use <strong>Offer Discount</strong>, then re-approve.') + '</div>' + driveNote + '</div>';
+      var _discOK = !discountOfferBlocker(ceJob);
+      if (btnOfferDiscount && _discOK) btnOfferDiscount.style.display = 'inline-block';
+      if (subtitle) subtitle.textContent = contractSigned ? ('Estimate sent ' + sentDate + ' · under signed agreement — locked.') : ('Estimate sent ' + sentDate + '. Edit to revise' + (_discOK ? ', or Offer Discount if the client pushes back.' : '.'));
+      if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Sent to client</strong> · ' + sentDate + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">' + (contractSigned ? 'Agreement signed — estimate locked. Revise via a Change Order.' : _discOK ? 'If the client wants a lower price, <strong>Edit</strong> to revise or use <strong>Offer Discount</strong>, then re-approve.' : 'The signing packet has gone to the client — a price change now goes through a Change Order.') + '</div>' + driveNote + '</div>';
     }
 
   } else if (estimateSubmitted) {
@@ -11241,7 +11349,7 @@ function notifyManagerForApproval(est, disc) {
     'Hi Anthony,',
     '',
     isDisc
-      ? (tc.name + ' has offered a client discount that needs your approval:')
+      ? (tc.name + (disc.pct > 0 ? ' has offered a client discount that needs your approval:' : ' has removed the client discount; the revised total needs your approval:'))
       : 'An estimate is ready for your approval:',
     '',
     'Client: ' + (job.name||'—'),
@@ -11250,7 +11358,7 @@ function notifyManagerForApproval(est, disc) {
   ];
   if (isDisc) {
     lines.push('Original Havellin total: $' + Math.round(disc.original).toLocaleString());
-    lines.push('Proposed discount: ' + disc.pct + '%');
+    lines.push(disc.pct > 0 ? 'Proposed discount: ' + disc.pct + '%' : 'Discount: removed');
     lines.push('Revised Havellin total: $' + Math.round(disc.revised).toLocaleString());
   } else {
     lines.push('Havellin total: ' + total);
@@ -11334,8 +11442,46 @@ function discountPreview(est, pct) {
            basis: rushRate ? 'Discount (labor fees + expedited premium)' : 'Discount (labor fees only)' };
 }
 
+// ⚠⚠ ONE ANSWER TO "MAY A DISCOUNT STILL BE OFFERED", read by the rail, the Client Estimate panel's
+// button, the dashboard handler, the modal and the write — so no door offers what another refuses.
+// It was gated on the SIGNATURE alone, and a discount offered after the signing packet had gone
+// out re-priced an estimate whose Exhibit A the client was already reading and being asked to
+// sign. Anthony's rule (2026-09-28 audit): once the packet has been sent, a later price change is
+// a change order. `isAgreementSent` is the record, not the `agrSent` boolean — DocuSign never
+// wrote the boolean, which is the defect that function was written for.
+function discountOfferBlocker(job) {
+  if (!job) return 'This job could not be found.';
+  if (isAgreementSigned(job)) return 'The client has signed the agreement, so the price is locked. A change now goes through a change order.';
+  if (isAgreementSent(job)) return 'The signing packet has gone to the client with this price as its Exhibit A. A change now goes through a change order, not a discount.';
+  return '';
+}
+
+// What the modal's percentage box says, read by the preview AND the write so the two cannot
+// disagree about which numbers are allowed. ⚠ A BLANK IS NOT AN ANSWER AND 0 IS ONE: 0 removes the
+// discount. The write used to be Math.max(1, parseInt(…) || 0), which turned a blank AND a 0 into
+// 1% — so a discount could never be taken off again, and its own refusal ("between 1 and 30",
+// against a 15% cap) could never be reached (2026-09-29).
+function discountPctInput(raw) {
+  raw = String(raw == null ? '' : raw).trim();
+  var n = /^\d+$/.test(raw) ? parseInt(raw, 10) : NaN;
+  if (isNaN(n) || n > MAX_DISCOUNT_PCT)
+    return { pct: null, error: 'Enter a discount between 0% and ' + MAX_DISCOUNT_PCT + '% \u2014 0 removes the discount.' };
+  return { pct: n, error: '' };
+}
+
+function _discountModalSays(msg) {
+  var el = document.getElementById('dm-fb');
+  if (el) el.innerHTML = msg ? '<div class="alert a-warn" style="margin:0 0 .75rem;">' + esc(msg) + '</div>' : '';
+}
+
 function openDiscountModal() {
   if (!currentEstimate) return;
+  // ⚠ THE GATE AT THE DOOR TOO, not only on the buttons that lead to it — a gate beside the action
+  // can be reached around (docAction's rule).
+  var _dj = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  var _dblk = discountOfferBlocker(_dj);
+  if (_dblk) { showFB(_dashFbTarget('ce-fb'), 'warn', _dblk); return; }
+  _discountModalSays('');
   document.getElementById('dm-original').textContent = '$' + discountPreview(currentEstimate, 0).original.toLocaleString();
   document.getElementById('dm-pct').value = currentEstimate.discountPct > 0 ? currentEstimate.discountPct : 5;
   updateDiscountModal();
@@ -11345,7 +11491,15 @@ function openDiscountModal() {
 
 function updateDiscountModal() {
   if (!currentEstimate) return;
-  var pct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, parseInt(document.getElementById('dm-pct').value) || 0));
+  var inp = discountPctInput(document.getElementById('dm-pct').value);
+  // An out-of-range box previews nothing rather than a clamped figure the write would then refuse.
+  if (inp.error) {
+    var amtBad = document.getElementById('dm-amount'); if (amtBad) amtBad.textContent = '—';
+    document.getElementById('dm-revised').textContent = '—';
+    return;
+  }
+  _discountModalSays('');
+  var pct = inp.pct;
   var p = discountPreview(currentEstimate, pct);
   // Name the base explicitly — a manager approving this needs to see that on an
   // hourly job the % comes off labor, not off materials and vendor fees too. The wording
@@ -11363,10 +11517,23 @@ function closeDiscountModal() {
 
 function applyDiscountRevision() {
   if (!currentEstimate) return;
-  var pct = Math.min(MAX_DISCOUNT_PCT, Math.max(1, parseInt(document.getElementById('dm-pct').value) || 0));
-  if (!pct) { alert('Enter a discount % between 1 and 30.'); return; }
+  var _djob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  // ⚠ THE GATE AGAIN, AT THE WRITE: the modal can have been opened before the packet went out on
+  // the other device, and the button that opened it is not the rule.
+  var _dblk = discountOfferBlocker(_djob);
+  if (_dblk) { _discountModalSays(_dblk); return; }
+  var inp = discountPctInput(document.getElementById('dm-pct').value);
+  if (inp.error) { _discountModalSays(inp.error); return; }
+  var pct = inp.pct;
   // Same helper the modal previews with, so what the manager saw is what gets applied.
   var p = discountPreview(currentEstimate, pct);
+  if (pct === 0) {
+    // A fixed fee carries its discount INSIDE the fee (see discountPreview) — the pre-discount fee
+    // is not kept, so there is nothing separate to take off, and "removing" it here would re-submit
+    // an unchanged price for approval.
+    if (p.fixed) { _discountModalSays('A fixed fee carries any discount inside the fee itself, so there is nothing separate to remove \u2014 change the fee on Build Estimate.'); return; }
+    if (!((currentEstimate.discountPct || 0) > 0)) { _discountModalSays('This estimate has no discount to remove.'); return; }
+  }
   var baseTotal = p.original;
   var newDiscountAmt = p.discount;
   var newHavellinTotal = p.revised;
@@ -11406,13 +11573,22 @@ function applyDiscountRevision() {
   discountRevision = true;
   // Update job status back to pending
   var job = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+  // ⚠⚠ AND THE AGREEMENT'S APPROVAL GOES WITH THE ESTIMATE'S, the way revokeEstimateApproval does it.
+  // This left `job.agrApproved` standing, so `ensureAgreementApproved` returned early on the next
+  // print or send and never re-filed the signing packet: Drive kept the Exhibit A at the OLD price
+  // while the estimate carried the new one (2026-09-28 audit, M3).
+  if (job) revokeAgreementApproval(job, 'discount-revised');
   if (job) { job.status = 'pending'; job.approved = false; job.havellinEst = newHavellinTotal; saveJobs(); syncJobToSheets(job); }
   saveEstimateState();   // single authoritative write (carries the revised totals + approval state)
   closeDiscountModal();
   renderClientEstimate();
   updateApprovalUI();
   notifyManagerForApproval(currentEstimate, { original: baseTotal, pct: pct, revised: newHavellinTotal });
-  showFB('ce-fb', 'ok', 'Discount applied. Manager notified by email — they will re-approve from their device with their PIN.');
+  // ⚠ THE CONFIRMATION GOES WHERE THE PERSON IS. `ce-fb` is on the Client Estimate panel, which has
+  // had no nav button since 2026-09-11 — so from the dashboard, where Offer discount lives, the one
+  // line saying it worked printed onto a screen nobody could see.
+  showFB(_dashFbTarget('ce-fb'), 'ok', (pct === 0 ? 'Discount removed.' : 'Discount applied.') + ' Manager notified by email \u2014 they will re-approve from their device with their PIN.');
+  if (job) _dashRedraw(job.id);
 }
 
 // ⚠⚠ EXTRACTED IN SLICE 7, BECAUSE THE RAIL'S "EDIT ESTIMATE" DID NOT DO IT AND WAS A DEAD
@@ -11433,17 +11609,41 @@ function revokeEstimateApproval(jobId) {
   if (job) {
     job.approved = false;
     delete job.estimateDriveAt; delete job.estimateDriveUrl;
-    if (job.agrApproved) {
-      job.agrApproved = false;
-      job.agrApprovedBy = ''; job.agrApprovedAt = '';
-      job.agrRevokedBy = 'estimate-edited';
-      job.agrRevokedAt = new Date().toISOString();
-      if (currentAgrJobId === job.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
-      showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
-    }
+    revokeAgreementApproval(job, 'estimate-edited');
     saveJobs(); syncJobToSheets(job);
   }
   return job;
+}
+
+// Takes the agreement's approval off a job whose Exhibit A is about to change — an edited estimate,
+// or a discount offered or removed. The CALLER saves. Returns true when there was one to revoke.
+//
+// ⚠⚠ IT CLEARS THE PACKET'S FILING GUARD, AND THAT IS THE HALF THAT MAKES RE-APPROVAL RE-FILE.
+// `_agrExportKey` is the approval DAY plus the approver, so a revoke and a re-approval the same day
+// by the same manager produced the same key, `exportSigningPacketToDrive` took it as already done,
+// and Drive kept the signing packet at the old price — the exact outcome revoking exists to prevent,
+// on the ordinary path (a discount offered and re-approved inside one afternoon).
+function revokeAgreementApproval(job, why) {
+  if (!job || !job.agrApproved) return false;
+  job.agrApproved = false;
+  job.agrApprovedBy = ''; job.agrApprovedAt = '';
+  job.agrRevokedBy = why || 'estimate-edited';
+  job.agrRevokedAt = new Date().toISOString();
+  if (currentAgrJobId === job.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
+  if (typeof _packetExported !== 'undefined') delete _packetExported[job.id];
+  showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
+  return true;
+}
+
+// Whether the agreement's approval was taken back because its Exhibit A changed, and why — read by
+// the rail's "Signing packet sent" row and the Agreement tab's banner, so a DISCOUNT that withdrew
+// the approval explains itself the way an edited estimate always has. Both read
+// `agrRevokedBy === 'estimate-edited'` until 2026-09-29, so a discount revoked the approval silently.
+function agrApprovalWithdrawn(job) {
+  if (!job || job.agrApproved || !job.agrRevokedBy) return '';
+  return job.agrRevokedBy === 'discount-revised'
+    ? 'A discount changed the price after this was prepared \u2014 re-approve the estimate and send a fresh packet'
+    : 'The estimate was edited after this was prepared \u2014 re-approve it and send a fresh packet';
 }
 
 function editEstimateFromCE() {
@@ -11627,8 +11827,8 @@ function checkPin() {
       var job = jobs.find(function(j){ return j.id===currentEstimate.jobId; });
       // 'approved' — NOT 'active'. Approving our own estimate is an internal event; it
       // says nothing about whether the client accepted, signed, or paid. Setting 'active'
-      // here also bypassed the signature + deposit blockers that activateOrCycle and
-      // cycleStatus already enforce, so jobs went active without either.
+      // here also bypassed the signature + deposit blockers that activateOrCycle (via
+      // applyJobTransition) already enforces, so jobs went active without either.
       if (job) { job.status = (job.status === 'active' || job.status === 'closed') ? job.status : 'approved';
                  job.approved = true; saveJobs(); }
     }
@@ -11838,9 +12038,11 @@ function renderJobs() {
     var startFmt = j.start ? new Date(j.start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—';
     var statusCell = _jobStatusCell(j);
 
-    // action buttons vary by status
-    var actions = '<button class="icon-btn" onclick="cycleStatus('+j.id+')">Status</button>';
-    actions = '<button class="btn-bronze" style="padding:4px 10px;font-size:10px;" onclick="event.stopPropagation();openClientDashboard('+j.id+')">Open →</button>';
+    // ⚠ THERE WAS A "Status" BUTTON HERE, AND IT NEVER RENDERED (removed 2026-09-29, workflow audit H3).
+    // It was assigned and then overwritten by the Open line on the very next statement, so the client
+    // list has had no status control at all — which is why the docs' "Re-open" button did not exist.
+    // Closing a job is the timeline's (Close job, from activation on); nothing re-opens one.
+    var actions = '<button class="btn-bronze" style="padding:4px 10px;font-size:10px;" onclick="event.stopPropagation();openClientDashboard('+j.id+')">Open →</button>';
     // ⚠ WITHDRAWN ON A SETTLED JOB. This is the mark-lost control and it belongs here for
     // most of an engagement — a client really can cancel mid-job. Once the work has been
     // delivered or the final payment is in there is nothing left to lose, and pressing it
@@ -11907,8 +12109,10 @@ function editEstimateForJob(jobId) {
   // Drop the previously-loaded job's rooms/vendors/prep from view immediately, and
   // reflect this job's service type synchronously, so the slow cloud fetch below can
   // never show another job's estimate (e.g. a Home Prep build) under this job's name.
-  neutralizeEstimateView();
+  // The job goes in, so what the screen holds while the fetch is out is THIS job's fresh-build
+  // state rather than a blank one — the saved record, if there is one, is restored over it.
   var _editJob = jobs.find(function(j){ return j.id === jobId; });
+  neutralizeEstimateView(_editJob);
   if (_editJob) {
     paintEstimateService(_editJob.svc || '', _editJob);
     svcTypeChanged();
@@ -12214,6 +12418,11 @@ function restoreEstimateToUI(est) {
         if (candidate && !candidate.section) savedRoom = _claim(candidate);
       }
       if (savedRoom) {
+        // A renamed "Other" row gets its own saved name back. clearAllRooms puts every custom row
+        // back to its default name so one client's "Wine cellar" cannot reach the next; without this
+        // line the reopened estimate would read "Other" and the next save would record it that way.
+        var _nmR = document.getElementById('name-' + id);
+        if (r.custom && _nmR && _nmR.tagName === 'INPUT' && savedRoom.name) _nmR.value = savedRoom.name;
         var chk = document.getElementById('chk-' + id);
         if (chk) {
           setRoomState(id, savedRoom.excluded ? 'excl' : 'in');
@@ -14116,7 +14325,7 @@ function jobProgress(est, plan, logs, coHrs) {
             coTC:0, coPS:0, coHrs:0, authTC:0, authPS:0, authHrs:0,
             planTC:0, planPS:0, doneTC:0, donePS:0, doneHrs:0, planHrs:0,
             workPct:0, tcPct:0, psPct:0, wholePctTC:0, wholePctPS:0,
-            aboveFloor:false, invalidRooms:[] };
+            nRooms:0, nLocked:0, aboveFloor:false, invalidRooms:[] };
   // ⚠ ACCEPTED CHANGE-ORDER HOURS ARE PASSED IN (`coAcceptedHours(jobId)`), never read here — the
   // same rule as the plan and the log, so the tests drive this with no globals. They are set BEFORE
   // the early return because the schedule reads them to lengthen the plan, and a job whose estimate
@@ -14154,11 +14363,17 @@ function jobProgress(est, plan, logs, coHrs) {
   var rooms = (plan && plan.rooms) || {};
   est.rooms.filter(function(r){ return !r.excluded; })   // homeowner-handled rooms aren't tracked
            .forEach(function(r) {
+    var s = roomStatusNormalize(rooms[r.idx] && rooms[r.idx].status);
+    // ⚠ EVERY ROOM LOCKED IS COUNTED BY ROOM, NOT BY HOURS, and before the hours are checked (2026-09-29).
+    // It is the Job Plan's own "project midpoint" — its red banner, its derived line and its stage marker
+    // all read "every in-scope room locked" — and the rail's midpoint timing asks the same question. A
+    // room with unreadable hours is still a room somebody has or has not locked.
+    P.nRooms++;
+    if (TC_DONE_STATUSES[s]) P.nLocked++;
     var tcH = Number(r.tcH), psH = Number(r.psH);
     if (!Number.isFinite(tcH) || !Number.isFinite(psH)) { P.invalidRooms.push(r.name || ('Room ' + r.idx)); return; }
     P.planTC += tcH;
     P.planPS += psH;
-    var s = roomStatusNormalize(rooms[r.idx] && rooms[r.idx].status);
     if (TC_DONE_STATUSES[s]) P.doneTC += tcH;
     if (PS_DONE_STATUSES[s]) P.donePS += psH;
   });
@@ -14241,7 +14456,7 @@ function jobSchedule(job, est, todayStr, prog) {
             start:'', anchor:'', anchorKind:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
             actualStart:'', actualStartKind:'',
             elapsed:0, overBy:0, endVariance:0, remaining:0,
-            progress:false, workPct:0, hoursPct:0, actHrs:0, estHrs:0,
+            progress:false, workPct:0, roomsLocked:false, hoursPct:0, actHrs:0, estHrs:0,
             paceEnd:'', paceBy:0,
             fit:'', fitTxt:'', pace:'', paceTxt:'', paceFix:'' };
   if (!job) return S;
@@ -14337,6 +14552,7 @@ function jobSchedule(job, est, todayStr, prog) {
   if (prog && prog.has && S.state === 'running') {
     S.progress = true;
     S.workPct = prog.workPct;
+    S.roomsLocked = prog.nRooms > 0 && prog.nLocked === prog.nRooms;
     S.hoursPct = prog.hoursPct;
     S.actHrs = prog.actHrs;
     S.estHrs = prog.authHrs;   // the authorised budget — the estimate plus accepted change orders
@@ -14471,8 +14687,13 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       key: o.key, group: o.group, label: o.label, short: JT_SHORT[o.key] || o.label,
       // What the band says while this row is the live one — see JT_NEXT. The label stays the
       // milestone's name for the rail and the track.
-      todo: JT_NEXT[o.key] || o.label,
+      todo: o.todo || JT_NEXT[o.key] || o.label,
       done: !!o.done,
+      // ⚠ OPEN — passed and not settled; see the state walk at the foot of this function. Only the
+      // two midpoint rows ever carry it, and only once the job is closed.
+      open: !!o.open,
+      // The midpoint before it is due: the band offers the send as an outline button naming the day.
+      notYet: !!o.notYet, dueOn: o.dueOn || '',
       at: o.at || '', atKind: o.atKind || 'text', by: o.by || '',
       sub: o.sub || '', amount: (typeof o.amount === 'number') ? o.amount : null,
       blockedWhy: o.blockedWhy || '', blockedFix: o.blockedFix || '',
@@ -14493,11 +14714,48 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   // function beside a builder — a second helper here is a second place to forget the guard.
   var _sc = sched || null;
   function _plan(o, dateStr, lbl) {
-    if (!_sc || !dateStr || o.done || _sc.state === 'dead' || _sc.state === 'none' || _sc.state === 'vendor') return o;
+    if (!_sc || !dateStr || o.done || o.open || _sc.state === 'dead' || _sc.state === 'none' || _sc.state === 'vendor') return o;
     o.plan = dateStr; o.planLbl = lbl;
     o.planLate = !!(_sc.today && dateStr < _sc.today);
     return o;
   }
+
+  // ⚠⚠ THE MIDPOINT NO LONGER HOLDS THE JOB (2026-09-29, workflow audit H3). The two midpoint rows sat
+  // in front of Work complete and the final, the light lands on the earliest gap, and "Close job" lived
+  // on Work complete alone — so a finished house whose midpoint cheque had not arrived could be neither
+  // closed nor sent its final, and the only way past was to record money that had not come in. The
+  // decision (Q1): a job may be closed any time after activation, and the final goes out with the
+  // midpoint unpaid, because the final already bills everything not yet paid against the payments
+  // actually received. So once the job is CLOSED an unsettled midpoint row is passed rather than lit
+  // (`open`, below), the final takes the light, and the row stays visibly open until the money is in.
+  // ⚠ A PAYMENT ON THE FINAL SETTLES THE MIDPOINT TOO, and that is arithmetic rather than generosity:
+  // the final's balance is the whole job less everything received, so the midpoint's share is inside it.
+  var _closed = !!job.deliveredOn;
+  var _midSent = !!docSentAt(job, 'invoice', 'midpoint');
+  var _finSent = !!docSentAt(job, 'invoice', 'final');
+  var _midDrafted = !_midSent && !!docDraftedAt(job, 'invoice', 'midpoint');
+  // ⚠⚠ AND THE MIDPOINT IS NOT DUE ON DAY ONE (M8). The estimate tells the client the second payment is
+  // due at the project midpoint, and on activation day the band's one filled button read Send midpoint
+  // invoice. Until the calendar halfway — or half the work done, whichever comes first — the invoice is
+  // an outline button saying when it is due and the band says to get on with the work. ⚠ "HALF THE WORK"
+  // IS EITHER READING THE APP ALREADY HAS: half the hours earned by room status (the strip's "% of the
+  // work done"), or EVERY ROOM LOCKED — which the Job Plan has always called the project midpoint (its
+  // red banner, its derived line, its Midpoint & pickups marker) and the estate agreement bills on
+  // ("upon completion of the Asset Inventory stage or at project midpoint, whichever comes first"). A
+  // locked room earns only its concierge hours, so on hours alone every room locked reads about a third,
+  // and the band would have said "not yet" under a banner saying "you're at the project midpoint". ⚠ It needs a
+  // RUNNING schedule with a halfway point: without one there is nothing to wait for (a job under three
+  // working days, one with no start to count from, Home Prep on the vendors' calendar), so the invoice
+  // is the step exactly as it always was. ⚠ A DRAFT IS NEVER "NOT YET" — somebody chose to send early,
+  // and confirming it is the next thing to do.
+  // ⚠ `!_closed` AND THE `running` TEST ARE BELT AND BRACES, AND BOTH REVERTS ARE GREEN — recorded here
+  // rather than covered by assertions that could not fail. `jobSchedule` answers `done` before `running`, so
+  // a running schedule already means no handover stamp; and `notYet` is only ever read on a LIVE row, which
+  // needs the job active, whose schedule is running whenever it has a halfway to wait for. Each keeps the
+  // intent where it is read.
+  var _midNotYet = !!(_sc && !_midSent && !_midDrafted && !_closed && _sc.state === 'running'
+    && _sc.halfway && _sc.today && _sc.today < _sc.halfway
+    && !(_sc.progress && (_sc.workPct >= 0.5 || _sc.roomsLocked)));
 
   var rows = [
     // `created` is stamped short form ("Sep 22, 2026"), so raw happened to read right — but a
@@ -14567,8 +14825,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       by: job.agrSentBy || (job.docState && job.docState.agreement && job.docState.agreement.sentBy) || '',
       // The one piece of agreement history still worth surfacing: the estimate was
       // edited after the packet was prepared, so the Exhibit A the client holds is stale.
-      sub: (!isAgreementSent(job) && job.agrRevokedBy === 'estimate-edited')
-        ? 'The estimate was edited after this was prepared — re-approve it and send a fresh packet'
+      sub: (!isAgreementSent(job) && agrApprovalWithdrawn(job))
+        ? agrApprovalWithdrawn(job)
         : ((!isAgreementSent(job) && docDraftedAt(job, 'agreement'))
           ? 'Drafted \u2014 read it, send it, then confirm' : '') }),
 
@@ -14616,15 +14874,25 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     // says is "by now you should be about half way through the work, so this invoice is
     // about due" — which is why the strip above calls the same date the halfway point and
     // never the midpoint.
+    // ⚠ AFTER THE CLOSE IT IS DONE ONCE THE SHARE IS BILLED OR PAID — by its own payment, or by the final
+    // going out (the final bills it) or being paid. Until then it is OPEN and says why.
     row(_plan({ key: 'midpoint_invoiced', group: 'Work', label: 'Midpoint invoice sent',
-      done: !!docSentAt(job, 'invoice', 'midpoint'), at: docSentAt(job, 'invoice', 'midpoint'), atKind: 'iso',
+      done: _midSent || (_closed && (midPaid > 0 || _finSent || finPaid > 0)),
+      open: _closed && !_midSent && !(midPaid > 0 || _finSent || finPaid > 0),
+      at: docSentAt(job, 'invoice', 'midpoint'), atKind: 'iso',
       amount: hav ? split.midpoint : null,
-      sub: (!docSentAt(job, 'invoice', 'midpoint') && docDraftedAt(job, 'invoice', 'midpoint'))
-        ? 'Drafted \u2014 read it, send it, then confirm' : '' }, _sc && _sc.halfway, 'halfway point')),
+      notYet: _midNotYet, dueOn: _midNotYet ? _sc.halfway : '',
+      todo: _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point' : '',
+      sub: _midSent ? ''
+        : _closed ? (midPaid > 0 ? '' : (_finSent || finPaid > 0) ? 'Billed on the final invoice' : 'Not sent \u2014 the final invoice bills it')
+        : _midDrafted ? 'Drafted \u2014 read it, send it, then confirm' : '' }, _sc && _sc.halfway, 'halfway point')),
 
     row({ key: 'midpoint_received', group: 'Work', label: 'Midpoint payment',
-      done: midPaid > 0, amount: hav ? split.midpoint : null,
-      sub: midPaid > 0 ? ('$' + Math.round(midPaid).toLocaleString() + ' received') : '' }),
+      done: midPaid > 0 || (_closed && finPaid > 0),
+      open: _closed && !(midPaid > 0) && !(finPaid > 0),
+      amount: hav ? split.midpoint : null,
+      sub: midPaid > 0 ? ('$' + Math.round(midPaid).toLocaleString() + ' received')
+        : _closed ? (finPaid > 0 ? 'Paid with the final invoice' : 'Unpaid \u2014 the final invoice carries it') : '' }),
 
     // ⚠ `deliveredOn` — the WRITE-ONCE stamp `applyJobTransition` sets on the first
     // close, so re-opening and re-closing never moves the date the job was really
@@ -14676,9 +14944,16 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   // skip — `markEstimateSent` is the only writer of `estimateSentDate`, so a job
   // whose agreement is signed and funded can still carry no estimate-sent date. A
   // later row that IS done stays done; the light lands on the earliest gap.
+  //
+  // ⚠⚠ `open` IS THE SIXTH STATE AND IT NEVER TAKES THE LIGHT (2026-09-29). A midpoint the client has
+  // not paid by the time the job is closed is behind the job, not in front of it: the final carries it,
+  // so the step to take is the final. Lighting the open row instead is exactly the dead end this
+  // replaced. It is not `waiting` either — waiting is the future, painted grey, and this is money
+  // outstanding on work already done — so it has its own amber node until the payment settles it.
   var lit = false;
   for (var i = 0; i < rows.length; i++) {
     if (rows[i].done) { rows[i].state = 'done'; continue; }
+    if (rows[i].open) { rows[i].state = 'open'; continue; }
     if (!lit) { rows[i].state = rows[i].blockedWhy ? 'blocked' : 'current'; lit = true; }
     else rows[i].state = 'waiting';
   }
@@ -14797,14 +15072,28 @@ function invoiceEmailSubject(job, stage) {
   return 'Havellin Palm Beach — ' + (DOC_STAGE_WORD[stage] || 'Final') + ' Invoice for ' + (street || (job && job.name) || 'your property');
 }
 
+// How an invoice email states its figure — read by the Gmail text part, the HTML part and the
+// mailto fallback, so the three cannot word one balance three ways. ⚠ A NEGATIVE BALANCE IS A
+// CREDIT AND IS WORDED AS ONE. A final that comes in under what the deposit and midpoint already
+// collected is correct (see _amtDueBox, which prints it as a green Credit), and its email read
+// "Balance due: $-2,741 … Payment is due within 7 calendar days" — telling a client who is owed
+// money that they owe it, in the one line of the email they are sure to read (2026-09-29).
+function invoiceBalanceWords(amtDue) {
+  if (amtDue < 0) return { label: 'Credit to you', amount: _emMoney(Math.abs(amtDue)),
+    terms: 'Nothing is due on this invoice. We will be in touch to arrange the credit.' };
+  return { label: 'Balance due', amount: amtDue ? _emMoney(amtDue) : 'see attached',
+    terms: 'Payment is due within 7 calendar days.' };
+}
+
 function buildInvoiceEmailText(job, stage, amtDue) {
   var tc = assignedTCContact(job);
   var word = (DOC_STAGE_WORD[stage] || 'Final').toLowerCase();
+  var bw = invoiceBalanceWords(amtDue);
   return ['Dear ' + bestClientGreetingName(job) + ',', '',
     'Your ' + word + ' invoice for Havellin Palm Beach services at ' + (job.addr || 'your property') +
       ' is attached as a PDF.', '',
-    'Balance due: ' + (amtDue ? _emMoney(amtDue) : 'see attached'),
-    'Payment is due within 7 calendar days.', '',
+    bw.label + ': ' + bw.amount,
+    bw.terms, '',
     // No signature block — Gmail appends the sender's own. See buildInvoiceEmailHtml.
     'Thank you for trusting Havellin Palm Beach with this transition.'].join('\n');
 }
@@ -14842,9 +15131,9 @@ function buildInvoiceEmailHtml(job, stage, amtDue) {
   (amtDue ? '<tr><td style="padding:18px 22px 0;font-family:Helvetica,Arial,sans-serif;">' +
     '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">' +
     '<tr><td style="padding:12px 14px;background:' + B.cream + ';border:1px solid ' + B.bronzeLt + ';">' +
-      '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Balance due</div>' +
-      '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:26px;color:' + B.ink + ';margin-top:3px;">' + _emHtml(_emMoney(amtDue)) + '</div>' +
-      '<div style="font-size:12px;color:' + B.gray + ';margin-top:4px;">Payment is due within 7 calendar days.</div>' +
+      '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">' + _emHtml(invoiceBalanceWords(amtDue).label) + '</div>' +
+      '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:26px;color:' + B.ink + ';margin-top:3px;">' + _emHtml(invoiceBalanceWords(amtDue).amount) + '</div>' +
+      '<div style="font-size:12px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(invoiceBalanceWords(amtDue).terms) + '</div>' +
     '</td></tr></table></td></tr>' : '') +
   '<tr><td style="padding:22px 22px 26px;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:' + B.ink + ';line-height:1.6;">' +
     // ⚠⚠ NO SIGNATURE BLOCK, ON ANY OF THE THREE EMAILS. Anthony, 2026-09-11: *"we can
@@ -16125,7 +16414,12 @@ var DOC_ACTIONS = {
     // ⚠ THE `agreementReady` CODE→SENTENCE MAPPING MOVED INTO `DOC_READY_WHY`, IT WAS NOT
     // COPIED. The band's tray asks the same question before it offers the button, and two
     // wordings of one refusal is how an offered control and a refused one come to disagree.
-    blocker: function (spec) { return docReadiness('agreement', spec.job, estimateStore[spec.job.id]); }
+    // ⚠ READ BEFORE THE CLIENT SAYS YES, NEVER PRINTED, SENT OR FILED (Q11) — see docPreviewOnly.
+    blocker: function (spec, verb) {
+      var rec = estimateStore[spec.job.id];
+      if (verb === 'view' && docPreviewOnly('agreement', spec.job, rec)) return '';
+      return docReadiness('agreement', spec.job, rec);
+    }
   },
   invoice: {
     label: 'Invoice',
@@ -16172,10 +16466,14 @@ function docTitle(kind, stage) {
   return (cfg ? cfg.label : kind) + (stage ? ' — ' + (DOC_STAGE_WORD[stage] || stage) : '');
 }
 
+// ⚠ NAMED FOR THE DOCUMENT BEING REFUSED. The packet and the invoices share these refusals, and
+// the invoice's read "…before the agreement can be drawn" — a sentence about the other document,
+// printed on the one a person had just tried to open (2026-09-29). `{doc}` is the document and
+// `{act}` what the client's yes unlocks for it; docReadiness fills both in for its kind.
 var DOC_READY_WHY = {
   nojob:    'This job could not be found.',
-  estimate: 'The estimate must be approved before the agreement can be drawn.',
-  notwon:   'Record the client\u2019s acceptance first — until they have said yes there is nothing to put under contract.'
+  estimate: 'The estimate must be approved before the {doc} can be drawn.',
+  notwon:   'Record the client\u2019s acceptance first — until they have said yes there is nothing to {act}.'
 };
 
 // ⚠⚠ THE ONE ANSWER TO "IS THE RECORD READY FOR THIS DOCUMENT TO EXIST AT ALL". Read by the
@@ -16200,7 +16498,8 @@ function docReadiness(kind, job, estRec) {
   // ⚠ `agreementReady`, not a restatement of "approved and won". The packet and the invoices
   // genuinely share that rule: an invoice priced off a draft is a bill for a number nobody
   // approved, and a packet built on one cites the wrong Exhibit A.
-  return DOC_READY_WHY[agreementReady(job, rec)] || '';
+  var noun = (kind === 'invoice') ? ['invoice', 'invoice'] : ['agreement', 'put under contract'];
+  return (DOC_READY_WHY[agreementReady(job, rec)] || '').replace('{doc}', noun[0]).replace('{act}', noun[1]);
 }
 
 // An estimate that EXISTS but is not approved: readable on our own screen, and it must not be
@@ -16211,6 +16510,25 @@ function docDraftOnly(kind, job, estRec) {
   if (kind !== 'estimate') return false;
   var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job && job.id] : null);
   return !!(rec && rec.estimate && !rec.approved);
+}
+
+// ⚠⚠ THE SIGNING PACKET MAY BE READ BEFORE THE CLIENT SAYS YES — AND ONLY READ (Q11, decided
+// 2026-09-29). A concierge talks a client through the contract they are deciding on, so the packet
+// opens on screen once the estimate is approved; printing, sending and filing still wait for the
+// client's acceptance, because each of those puts it in somebody's hands and is what stamps the
+// approval (see `commit`). ONLY the acceptance may be outstanding: an unapproved estimate still
+// refuses it outright, since its Exhibit A would be a draft nobody approved. Same shape as
+// docDraftOnly — one rule, read by the blocker, the tray and the viewer's Print button.
+function docPreviewOnly(kind, job, estRec) {
+  if (kind !== 'agreement' || !job) return false;
+  var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null);
+  return agreementReady(job, rec) === 'notwon';
+}
+
+// The one word that explains a document which may be read and not printed — on the band's tray
+// and on the viewer's title alike, so the two cannot come to name one state two ways.
+function docReadOnlyWord(kind, job, estRec) {
+  return docDraftOnly(kind, job, estRec) ? ' — DRAFT' : docPreviewOnly(kind, job, estRec) ? ' — PREVIEW' : '';
 }
 
 // The balance this invoice is asking for. ⚠ Read from `invoiceHtml`, which is the one
@@ -16316,7 +16634,10 @@ function docAction(jobId, kind, verb, opt) {
   var html = spec.cfg.html(spec);
   if (!html) { _docNotice('warn', 'There is nothing to ' + verb + ' on this document yet.', jobId); return false; }
 
-  if (verb === 'view') return openDocViewer(spec, html);
+  // ⚠ THE VIEWER'S PRINT BUTTON IS WITHHELD WHEN PRINTING WOULD BE REFUSED — a draft estimate, or
+  // the packet before the client's yes — rather than offered and then refused, which is the
+  // button-that-alerts-its-blocker-back shape this file removes wherever it turns up.
+  if (verb === 'view') { spec.viewOnly = !!spec.cfg.blocker(spec, 'print'); return openDocViewer(spec, html); }
   if (verb === 'print') return _printDocument('<div class="ce-page">' + html + '</div>', spec.names.printTitle);
   if (verb === 'send') return docSend(spec);
   if (verb === 'file') return docFile(spec, opt);
@@ -16531,7 +16852,7 @@ function _openViewer(title, sub, html, spec) {
   // internal one with no way to print — and one that only ever shows it puts a Print button
   // on a page carrying the private note.
   var pb = document.getElementById('doc-viewer-print');
-  if (pb) pb.style.display = spec ? '' : 'none';
+  if (pb) pb.style.display = (spec && !spec.viewOnly) ? '' : 'none';
   _docViewerSpec = spec || null;
   ttl.textContent = title;
   sb.textContent = sub;
@@ -16543,7 +16864,7 @@ function _openViewer(title, sub, html, spec) {
 
 function openDocViewer(spec, html) {
   return _openViewer(
-    docTitle(spec.kind, spec.stage),
+    docTitle(spec.kind, spec.stage) + (spec.viewOnly ? docReadOnlyWord(spec.kind, spec.job, null) : ''),
     (spec.job.name || 'Client') + (spec.job.addr ? ' · ' + spec.job.addr : ''),
     html, spec);
 }
@@ -16658,9 +16979,14 @@ function _jtDraftLink(id, job, kind, stage) {
 function _jtDocSecondaries(id, job, estRec, rowKey) {
   var d = jobStageDoc(rowKey);
   if (!d) return [];
-  if (docReadiness(d.kind, job, estRec)) return [];
-  var viewOnly = docDraftOnly(d.kind, job, estRec);
-  return _jtDraftLink(id, job, d.kind, d.stage)
+  var preview = docPreviewOnly(d.kind, job, estRec);
+  if (docReadiness(d.kind, job, estRec) && !preview) return [];
+  var viewOnly = docDraftOnly(d.kind, job, estRec) || preview;
+  // ⚠ NO MIDPOINT DRAFT ONCE THE JOB IS CLOSED (2026-09-29). From the close the final bills whatever the
+  // midpoint left unpaid, so a link reopening a midpoint draft invites sending a second bill for the same
+  // share. Reading the midpoint invoice stays open (View, Print, the filed copy); only the send path goes.
+  var draft = (d.stage === 'midpoint' && job.deliveredOn) ? [] : _jtDraftLink(id, job, d.kind, d.stage);
+  return draft
     .concat(_jtDocViews(id, d.kind, d.stage, viewOnly),
             _jtDriveLink(id, job, d.kind, d.stage));
 }
@@ -16678,12 +17004,13 @@ function jobTimelineActions(row, job, estRec) {
   // offered on a job with no approved estimate, no client acceptance and no agreement, and
   // two of those buttons rendered a real, printable bill off the draft.
   var _d = jobStageDoc(row.key);
-  if (_d && !docReadiness(_d.kind, job, estRec)) {
+  if (_d && (!docReadiness(_d.kind, job, estRec) || docPreviewOnly(_d.kind, job, estRec))) {
     out.doc = {
       kind: _d.kind, stage: _d.stage,
       // ⚠ THE WORD "DRAFT" IS THE WHOLE EXPLANATION OF THE MISSING PRINT BUTTON. One word in
       // the title the reader is already looking at, rather than a sentence about an absence.
-      title: docTitle(_d.kind, _d.stage) + (docDraftOnly(_d.kind, job, estRec) ? ' — DRAFT' : ''),
+      // "PREVIEW" is the same word for the packet before the client's yes (docPreviewOnly).
+      title: docTitle(_d.kind, _d.stage) + docReadOnlyWord(_d.kind, job, estRec),
       acts: _jtDocSecondaries(id, job, estRec, row.key)
     };
     // ⚠ EDIT ESTIMATE IS A DOCUMENT ACTION AND BELONGS BESIDE THE DOCUMENT. It used to be
@@ -16748,7 +17075,9 @@ function jobTimelineActions(row, job, estRec) {
       if (live && estApproved) out.primary = _jtSendAction(id, job, 'estimate', '', 'estimate');
       // A discount is a re-approval, so it is only offered on an approved estimate the
       // client has not yet signed against.
-      if (estApproved && !job.agrSigned) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
+      // ⚠ Withdrawn once the signing packet has gone out, not only once it is signed — see
+      // discountOfferBlocker: a later price change is a change order.
+      if (estApproved && !discountOfferBlocker(job)) out.secondary.push({ label: 'Offer discount', call: 'dashOfferDiscount(' + id + ')' });
       break;
 
     case 'client_accepted':
@@ -16828,7 +17157,19 @@ function jobTimelineActions(row, job, estRec) {
       break;
 
     case 'midpoint_invoiced':
-      if (live) out.primary = _jtSendAction(id, job, 'invoice', 'midpoint', 'midpoint invoice');
+      // ⚠⚠ NOT THE FILLED BUTTON BEFORE IT IS DUE (2026-09-29, workflow audit M8). On activation day this
+      // was the band's one filled button, while the estimate tells the client the midpoint is due at the
+      // project midpoint. Until the halfway point (or half the work done — `jobTimeline` decides) it is
+      // an outline button that says when it falls due; it can still be sent early, it is simply not the
+      // thing to do today. ⚠ The DAY is formatted here, never in `jobTimeline`: the derivation stays free
+      // of formatting and hands over yyyy-mm-dd, the way `plan` does.
+      // ⚠ ONE `_jtSendAction` CALL, whichever way it renders: the same send control on all five documents
+      // is the point of that builder, and a second call here would be a second opinion of its label.
+      if (live) {
+        var _mid = _jtSendAction(id, job, 'invoice', 'midpoint', 'midpoint invoice');
+        if (row.notYet) out.secondary.push({ label: _mid.label + ' &mdash; due around ' + fmtDate2(row.dueOn), call: _mid.call });
+        else out.primary = _mid;
+      }
       break;
 
     // ⚠ SENDING AND RECEIVING ARE TWO ROWS AND TWO BUTTONS. They used to share one: the
@@ -16836,6 +17177,10 @@ function jobTimelineActions(row, job, estRec) {
     // could ask for the money was reached from the step that records the money arriving.
     case 'midpoint_received':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'midpoint')" };
+      // ⚠ AN OPEN MIDPOINT CAN STILL BE PAID, and the row that records it is no longer lit once the job is
+      // closed. Out of sequence, so it rides the strip under the rail — which has no row context, so the
+      // label names the stage rather than reading "Record payment" twice on one screen.
+      else if (row.state === 'open') out.secondary.push({ label: '&#10003; Record midpoint payment', call: "dashRecordPayment(" + id + ",'midpoint')" });
       break;
 
     case 'work_complete':
@@ -16856,6 +17201,19 @@ function jobTimelineActions(row, job, estRec) {
     case 'final_paid':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'final')" };
       break;
+  }
+
+  // ⚠⚠ CLOSE JOB IS REACHABLE FROM ACTIVATION ON (2026-09-29, workflow audit H3). It lived on Work
+  // complete alone, which sits behind both midpoint rows — so a finished job with an unpaid midpoint had
+  // no way to close, and the client list's Status button that might have closed it was overwritten on
+  // the line after it was built. Now every live step of an ACTIVE job carries it as an outline button
+  // beside that step's own, and Work complete keeps it as the primary. ⚠ ONE CALL, `activateOrCycle`,
+  // from both places, so the vendor-rating gate (`jobCloseBlockers`) and the early-close question in
+  // `applyJobTransition` cannot be reached around. ⚠ `status === 'active'` and not a row position: the
+  // lit row can legitimately be an earlier one on an active job (a deposit handed over by cheque never
+  // "sent" its invoice), and closing is a question about the job, not about which gap the light is on.
+  if (live && job.status === 'active' && row.key !== 'work_complete') {
+    out.secondary.push({ label: '&#9632; Close job', call: 'activateOrCycle(' + id + ')' });
   }
   return out;
 }
@@ -17086,6 +17444,9 @@ function dashDenyEstimate(jobId) {
 }
 
 function dashOfferDiscount(jobId) {
+  var _job = jobs.find(function(j){ return j.id === jobId; });
+  var _blk = discountOfferBlocker(_job);
+  if (_blk) { dashNotice('warn', _blk); _dashRedraw(jobId); return; }
   if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
   openDiscountModal();
 }
@@ -17189,7 +17550,7 @@ function _jtAtFmt(r) {
   return String(r.at);
 }
 function _jtStateCls(r) {
-  return {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term'}[r.state] || 'jt-wait';
+  return {done:'jt-done', current:'jt-cur', blocked:'jt-blk', waiting:'jt-wait', terminal:'jt-term', open:'jt-open'}[r.state] || 'jt-wait';
 }
 
 // The rows AFTER the signature — the second leg of the track, headed DEPOSIT & START. That is
@@ -17915,14 +18276,22 @@ function renderClientDashboard(jobId) {
 }
 
 // ─── STATUS TRANSITIONS ───────────────────────────────────────────────────────
-// ONE map, read by both status buttons. They used to carry a copy each and the copies
-// were expected to be edited in lockstep, which is a rule no one can keep.
+// ONE map. There used to be two status buttons carrying a copy each, expected to be edited in
+// lockstep, which is a rule no one can keep. ⚠ ONE READER NOW: `activateOrCycle`, pressed from the
+// timeline (Activate job, and Close job from activation on). The client list's Status button was
+// deleted on 2026-09-29 — it had been overwritten on the line after it was built and never rendered.
+// ⚠ `closed: 'active'` STAYS IN THE MAP AND NO CONTROL REACHES IT: a Re-open would leave the write-once
+// `deliveredOn` standing on an active job, and what that should mean is a decision, not a button.
+// ⚠ ONE LEGACY CASE, NOTED AND NOT CHANGED: a job closed before the handover stamp shipped (2026-07-30)
+// carries no `deliveredOn`, so its rail reads Job active undone and offers Activate job — which would
+// reach this entry and re-open it. Prelaunch dummy data only.
 //
 // `closed` used to cycle back to `new`. A closed job is a delivered job, so a single
 // mis-tap on a phone threw it back to the start of the lifecycle — and once revenue
 // recognition hangs off delivery (UNEARNED_REVENUE_SPEC.md §2b) that same tap would
-// un-recognize it and re-fire the entry on the way forward. Re-open now resumes at
-// `active`, which is what the button has always been labelled.
+// un-recognize it and re-fire the entry on the way forward. Re-open was made to resume at
+// `active`, which is what the button was labelled — and then the button turned out never to render
+// (see above), so that transition is in the map with nothing pressing it.
 //
 // `lost` and `closed_retained` are deliberately absent: they are terminal, and the old
 // `|| 'new'` fallback silently resurrected them as brand-new jobs.
@@ -17953,6 +18322,23 @@ function applyJobTransition(j) {
     var cb = jobCloseBlockers(j);
     if (cb.length) {
       alert('Cannot close the job yet:\n\n' + cb.map(function(b){ return '• ' + b; }).join('\n'));
+      return false;
+    }
+    // ⚠⚠ CLOSING WITH THE MIDPOINT UNPAID IS ALLOWED AND IS ASKED ONCE (2026-09-29, workflow audit H3).
+    // Close job is now an outline button beside every step of an active job, so for the whole working
+    // phase it is one tap on an iPad from a write-once stamp: `deliveredOn` below is never moved, and no
+    // control re-opens a closed job. The question is scoped to exactly the stretch that is new — before
+    // any midpoint payment is recorded. Once one is, the light is on Work complete and Close is its
+    // primary, as it always was, and asking there would be a question on every normal close.
+    // ⚠ It says what the final does rather than warning off the close: the final bills everything not
+    // yet paid against the payments actually received, so nothing is lost by closing now.
+    if (!j.deliveredOn && !(stagePaidTotal(j, 'midpoint') > 0)
+        && !confirm('Close this job now?\n\n'
+          + 'No midpoint payment is recorded. That is fine: the final invoice bills everything not yet '
+          + 'paid, the midpoint\'s share included, against the payments actually received.\n\n'
+          + 'Closing records today, ' + fmtDate2(_todayStr()) + ', as the day the work was handed over. '
+          + 'That date cannot be changed, and a closed job cannot be re-opened.\n\n'
+          + 'If the work is not finished, press Cancel.')) {
       return false;
     }
   }
@@ -18051,13 +18437,6 @@ function openJobPlanFor(jobId, fold) {
 // with the hours log closed inside its fold.
 function goToJobLog(jobId) {
   openJobPlanFor(jobId, 'hours');
-}
-
-function cycleStatus(id) {
-  var j = jobs.find(function(x){ return x.id===id; });
-  if (!j) return;
-  if (!applyJobTransition(j)) return;   // shared map + blockers + delivery stamp
-  saveJobs(); syncJobToSheets(j); renderJobs();
 }
 
 // ─── WIN / LOSS — A ROW ON THE CLIENT DASHBOARD ──────────────────────────────
@@ -18598,7 +18977,20 @@ function closeEstimateScreen() {
 function startEstimateOver() {
   var jid = parseInt((document.getElementById('e-job') || {}).value) || 0;
   if (!jid) { clearEstimateTab(); return; }
-  if (!confirm('Clear every room scored on this screen and start again from the intake answers?\n\nThe saved estimate is not changed unless you press Save.')) return;
+  // ⚠ THE QUESTION SAYS WHAT HAPPENS, AND IT IS ONE OF TWO THINGS (2026-09-29). This clears the screen
+  // through the one reset (resetEstimateJobState) and then opens the client again — so a client with a
+  // SAVED estimate gets that estimate back, and only a client with none starts from the intake answers.
+  // The old question promised the intake answers in both cases. And it names what goes, because since
+  // the same day that is everything: the discount, the styling and the private note, which the old
+  // hand-kept reset missed and so quietly kept, now go with the rooms and the lists. A note dictated in
+  // the car is the one thing here somebody would be sorry to lose without being asked.
+  var _soRec = estimateStore[jid];
+  var _soSaved = !!(_soRec && _soRec.estimate && estimateHasContent(_soRec.estimate));
+  if (!confirm(_soSaved
+      ? 'Discard the changes on this screen and reopen the saved estimate?\n\n'
+        + 'The rooms, collections, vehicles, vendors, the discount and the private walkthrough note all go back to what was last saved.'
+      : 'Clear everything on this screen and start again from the intake answers?\n\n'
+        + 'That is the rooms, collections, vehicles, vendors, the discount and the private walkthrough note. None of it has been saved.')) return;
   window._suppressEstimateAutoSave = true;
   clearEstimateTab();
   window._suppressEstimateAutoSave = false;
@@ -18886,23 +19278,66 @@ function clearEstimateScratch(jobId) {
   } catch(e) {}
 }
 
-// Pull the jobs list fresh from the sheet and overwrite the local array. Jobs
-// otherwise sync only at startup, which let job.status (approval state) and job
-// intake fields (sqft — the hours-engine backbone) go stale across devices. cb()
-// always runs, even offline, so callers can proceed.
+// Pull the jobs list fresh from the sheet. Jobs otherwise sync only at startup, which let
+// job.status (approval state) and job intake fields (sqft — the hours-engine backbone) go
+// stale across devices. cb() always runs — offline, or standing down — so callers can proceed.
+//
+// ⚠⚠ THE SHEET IS ONLY AUTHORITATIVE ONCE OUR OWN WRITES HAVE REACHED IT — the rule
+// refreshPlanAndLogFromCloud already followed and this function did not (fixed 2026-09-29,
+// audit finding H4). It REPLACED `jobs` with whatever the read returned, and a write takes far
+// longer than a read. Measured on the real page against a backend answering writes in 4 s and
+// reads in 0.8 s: Save Client then Build estimate emptied the list AND the local cache — the
+// sheet did not have the client yet — so the walkthrough scored next was refused with "Job not
+// found." and lost, and the new client's Drive folder URL landed on nothing; Edit Client
+// 3,000 → 5,200 sq ft then Build estimate priced the job on 3,000 and put 3,000 back on the
+// local record while the sheet held 5,200. Five callers reach it, two of them on a timer
+// (approvalWatchTick every 12 s, jobsWatchTick every 15 s). So:
+//   · it does not ask while a write is outstanding;
+//   · it asks again when the answer lands, because a write can be queued while the read is in
+//     flight — and _syncWriteSeq catches one queued AND landed in that window, which the
+//     outstanding check alone cannot see: the read may have been served before it committed;
+//   · either way the caller carries on with the local list, which is the fresher of the two.
+// ⚠ THE SHEET'S DELETIONS APPLY EVEN WHEN THE ANSWER IS DISCARDED. `deletedJobs` is the job
+// ledger's answer — every id the sheet has seen and no longer holds — not a snapshot that can be
+// behind our own writes, and the server refuses those ids whatever this device sends. So once an
+// answer has arrived they go through _applyDroppedJobs whether or not the list is then taken: a
+// client deleted on the other device leaves this one, says so, and takes its estimates, plans and
+// logs with it. (A refresh that stood down before asking learns them from the next answer, or from
+// the `dropped` list on this device's next write.)
+// ⚠ AND A NEWER LOCAL RECORD IS NEVER OVERWRITTEN — see _mergeCloudJobs. Membership stays the
+// sheet's: a job it does not hold is dropped, as ever. Keeping those is how deleted clients came
+// back on 2026-09-08, and the one case that looked like it needed it — a client just created on
+// this device — is the case standing down covers.
 function refreshJobsFromCloud(cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(); return; }
+  if (_syncWritesOutstanding()) { if (cb) cb(); return; }
+  var seq = _syncWriteSeq;
   fetch(SHEETS_SYNC_URL + '?action=loadJobs')
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if (data && Array.isArray(data.jobs) && !data.error) {
-        jobs = data.jobs;
-        try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
-        if (Array.isArray(data.deletedJobs)) _purgeLocalJobRecords(data.deletedJobs);
-      }
+      if (!(data && Array.isArray(data.jobs) && !data.error)) return;
+      _applyDroppedJobs(data.deletedJobs);
+      if (_syncWritesOutstanding() || _syncWriteSeq !== seq) return;
+      jobs = _mergeCloudJobs(jobs, migrateRetiredNames(data.jobs));
+      try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
     })
     .catch(function(){})
     .then(function(){ if (cb) cb(); });
+}
+
+// The sheet's list, with any local record strictly NEWER than the sheet's copy kept in its
+// place. Once this device's write has landed, the server's merged record carries the newest
+// updatedAt (_mergeJobRecord takes the newer record's scalars), so a TIE goes to the sheet — it
+// is our write, merged with whatever the other device added key by key. A local copy strictly
+// newer than that is one whose write the sheet has not seen, and replacing it is H4 by another
+// route. DOM-free, so the tests read the real rule.
+function _mergeCloudJobs(local, cloud) {
+  var mine = {};
+  (local || []).forEach(function(j){ if (j && j.id != null) mine[String(j.id)] = j; });
+  return (cloud || []).map(function(c){
+    var l = (c && c.id != null) ? mine[String(c.id)] : null;
+    return (l && Number(l.updatedAt || 0) > Number(c.updatedAt || 0)) ? l : c;
+  });
 }
 
 // Cloud-authoritative open. Refresh the jobs list AND fetch this job's saved
@@ -19907,14 +20342,14 @@ function buildInvoiceMailto(job, balance, stage) {
   var to = encodeURIComponent(bestClientEmail(job));
   var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - ' + stageTitle + ' Invoice for ' + (job.name||'Your Property'));
-  var bal = balance ? '$' + Math.round(balance).toLocaleString() : 'see attached';
+  var bw = invoiceBalanceWords(balance);
   var body = mailtoBody([
     'Dear ' + bestClientGreetingName(job) + ',',
     '',
     'Please find attached your ' + stageWord + ' invoice for Havellin Palm Beach services at ' + (job.addr||'your property') + '.',
     '',
-    'Balance due: ' + bal,
-    'Payment is due within 7 calendar days.',
+    bw.label + ': ' + bw.amount,
+    bw.terms,
     '',
     'Thank you for trusting Havellin Palm Beach with this transition. It has been our honor to serve your family.'
   ].concat(mailtoSignoff(tc)));
@@ -27540,6 +27975,11 @@ var _outbox = {};
 var _outboxTimer = null;
 var _outboxSending = false;
 var _OUTBOX_WINDOW = 250;   // long enough to catch a burst from one user action
+// Bumped by every main-sheet write queued (queuedPostSync is the one entry point). A reader
+// notes it before asking the sheet and compares when the answer lands: a write queued AND
+// landed in between leaves nothing outstanding, and the answer may still predate it. See
+// refreshJobsFromCloud.
+var _syncWriteSeq = 0;
 
 function _flushOutbox() {
   _outboxTimer = null;
@@ -27583,6 +28023,7 @@ function _flushOutbox() {
 // Directory writes use queuedDirectoryWrite below, which shares the retry queue.
 function queuedPostSync(body, okMsg, failMsg) {
   if (!SHEETS_SYNC_URL) return;
+  _syncWriteSeq++;
   // Keyed the same way the retry queue keys things, so a newer full snapshot supersedes
   // an older queued one rather than both being sent. Payloads are held by reference, so
   // a store mutated between queueing and sending goes out at its newest state — which is
@@ -29037,8 +29478,18 @@ function invoiceHtml(job, stage) {
   // ⚠ THE TARGETS SURVIVE, because the document legitimately states both: the stage rows say
   // what each earlier invoice ASKED for, and the received line says what came in. Collapsing
   // them into one figure is what produced the defect.
-  var depositAmt   = Math.round(0.5 * totalDepositBasis);
-  var midCumTarget = Math.round(0.75 * totalMidBasis);
+  // ⚠ THE STAGE TARGETS ARE paymentSplit's RUNNING TARGETS, NEVER A SECOND ROUNDING OF THEIR OWN.
+  // They were round(0.5 × basis) and round(0.75 × basis), which is not what paymentSplit prints: on
+  // any total ≡ 3 (mod 4) the two roundings land a dollar apart, so a $10,963 job whose estimate,
+  // agreement and Exhibit A all state 5,482 · 2,741 · 2,740 was invoiced 5,482 · 2,740 · 2,741 —
+  // the midpoint and the final swapping a dollar against the schedule the client signed, on one
+  // total in four. The cumulative 75% is the split's deposit PLUS its midpoint, of the midpoint's
+  // own basis, so where the basis has not moved the three invoices are the signed three exactly
+  // (2026-09-29).
+  var _depSplit    = paymentSplit(totalDepositBasis);
+  var _midSplit    = paymentSplit(totalMidBasis);
+  var depositAmt   = _depSplit.deposit;
+  var midCumTarget = _midSplit.deposit + _midSplit.midpoint;
   var receivedDep  = Math.round(stagePaidTotal(job, 'deposit'));
   var receivedAll  = Math.round(jobPaidTotal(job));
   // The midpoint asks for the cumulative 75% LESS WHAT HAS ACTUALLY ARRIVED, so a shortfall
@@ -29085,6 +29536,13 @@ function invoiceHtml(job, stage) {
   // treating its own approved change as a variance. This is the half that makes the hours
   // model work, and it is the reason the shift is derived at all.
   var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coShift;
+  // ⚠ BUT THE CLIENT'S "ORIGINAL ESTIMATE" ROW IS THE ESTIMATE ALONE, and the change orders are a
+  // line of their own beneath it. The row printed estHavellinTotal — the internal baseline above,
+  // change orders included — so a $10,962 job with a +10/+10 change order read "Original Estimate
+  // (basis for advance payments) $13,462" over a $5,481 deposit and a $2,741 midpoint that are
+  // half and a quarter of $10,962: a basis the advance payments visibly were not taken on, labelled
+  // as the one they were. The baseline stays exactly as it is for the ±15% gate (2026-09-29).
+  var origEstimateTotal = (est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted;
   var deposit = depositAmt;
   var midpoint = midpointAmt;
   // ⚠ THE NAME IS THE BUG. This was `deposit + midpoint` — the two targets — under a row
@@ -29114,11 +29572,29 @@ function invoiceHtml(job, stage) {
       teamMap[m.name].hours = Math.round((teamMap[m.name].hours + m.hours)*10)/10;
     });
   });
-  var teamRows = Object.keys(teamMap).map(function(name) {
+  // ⚠ EACH ROLE'S ROWS ADD UP TO THAT ROLE'S FEE — the rounding remainder rides on one row.
+  // Every row rounded on its own while the subtotal bills round(hours × rate) for the role, so
+  // two people sharing a role at a rate that lands on half a dollar ($185 × 10.3 = $1,905.50)
+  // printed $1,906 + $1,906 over a total that counted $3,811: rows a dollar or two above the
+  // total they sit under, on a premium final. The remainder goes on the role's longest row,
+  // the first of them on a tie, and no row moves by more than its own rounding (2026-09-29).
+  var _teamNames = Object.keys(teamMap);
+  var _teamFee = {};
+  _teamNames.forEach(function(name) {
+    var t = teamMap[name];
+    _teamFee[name] = Math.round(t.hours * (t.role === 'TC' ? tcRate : psRate));
+  });
+  [['TC', tcFee], ['PS', psFee]].forEach(function(rf) {
+    var inRole = _teamNames.filter(function(n){ return (teamMap[n].role === 'TC') === (rf[0] === 'TC'); });
+    if (!inRole.length) return;
+    var sum = inRole.reduce(function(a, n){ return a + _teamFee[n]; }, 0);
+    var top = inRole.reduce(function(best, n){ return teamMap[n].hours > teamMap[best].hours ? n : best; }, inRole[0]);
+    _teamFee[top] += rf[1] - sum;
+  });
+  var teamRows = _teamNames.map(function(name) {
     var t = teamMap[name];
     var rate = t.role === 'TC' ? tcRate : psRate;
-    var fee = Math.round(t.hours * rate);
-    return '<tr><td>' + esc(name) + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + t.hours.toFixed(1) + '</td><td style="text-align:right;">$' + rate + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(fee) + '</td></tr>';
+    return '<tr><td>' + esc(name) + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + t.hours.toFixed(1) + '</td><td style="text-align:right;">$' + rate + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(_teamFee[name]) + '</td></tr>';
   }).join('');
 
   // Vendor / prep rows — resolved actuals, with an "est." tag on any line still
@@ -29190,7 +29666,7 @@ function invoiceHtml(job, stage) {
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
-    (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">A second Transition Concierge and an expanded specialist crew working in parallel to compress the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
+    (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor' + (_rushRate > 0 ? ' and the expedited-delivery premium charged on it' : '') + ')</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
@@ -29228,15 +29704,20 @@ function invoiceHtml(job, stage) {
       : 'These hours are not billed separately. They are worked and logged like every other hour on this engagement and are already included in the figures above.') +
     '</div>' : '');
 
+  // The accepted change orders, on ONE line of their own, directly under the figure they change —
+  // the hours on T&M (already billed in the table above), the signed prices on fixed price.
+  var _coPayRow = jobCOs.length
+    ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>'
+    : '';
   var finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
     '<table class="pay-tbl">' +
-    '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(estHavellinTotal) + '</strong></td></tr>' +
+    '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(origEstimateTotal) + '</strong></td></tr>' +
+    _coPayRow +
     '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
     '<tr><td>25% midpoint — fees trued to actuals</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
     '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
     _paymentGapRow(paymentGap) +
     '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
-    (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +
     '</div>';
@@ -29255,7 +29736,7 @@ function invoiceHtml(job, stage) {
     (materials > 0 ? '<tr><td>Moving materials — ' + pkgLabel + '</td><td style="text-align:right;">' + fmt(materials) + '</td></tr>' : '') +
     (advSmf > 0 ? '<tr><td>Service Management Fee (15% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
     (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
-    (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">Compressing the project calendar at your request</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
+    (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
     '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">' + (stage === 'midpoint'
@@ -29315,11 +29796,11 @@ function invoiceHtml(job, stage) {
       '<table class="pay-tbl">' +
       '<tr style="background:var(--tan);"><td colspan="2"><strong>Fixed Project Fee</strong></td><td class="r"><strong>' + fmt(_fixedTotal) + '</strong></td></tr>' +
       (_fxPrepFinal ? '<tr><td colspan="2">Home prep site management fee — on the prep vendors\' actual invoices</td><td class="r">' + fmt(prepFee) + '</td></tr>' : '') +
+      _coPayRow +
       '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFeeEst > 0 ? 'Fixed price + prep fee on quotes' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
       '<tr><td>25% midpoint — invoiced at project midpoint</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + prep fee on actuals' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
       '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
       _paymentGapRow(paymentGap) +
-      (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
       _amtDueBox('Balance Due Upon Completion', balanceDue) +
       '</table></div>';
     var _fxPrepAdv = (_fixedPrepOnTop && advPrep > 0)
@@ -29662,6 +30143,8 @@ var PLAN_WATCH_MS = 20000;
 // local store over a queued write would revert a room on screen seconds after somebody
 // locked it — a worse defect than the one this closes, and the kind that trains people to
 // stop trusting the tab. A tick with anything outstanding simply waits for the next one.
+// ⚠ TWO READERS: this and refreshJobsFromCloud (2026-09-29), which did not ask and emptied the
+// client list under a client whose own save had not landed yet. Both read the MAIN sheet.
 function _syncWritesOutstanding() {
   if (typeof _outboxSending !== 'undefined' && _outboxSending) return true;
   if (typeof _flushing !== 'undefined' && _flushing) return true;
@@ -30326,6 +30809,10 @@ function planHoursMetaHtml(jobId, job, est) {
 // active test on purpose — an active job with every room locked is at the midpoint, not in the
 // house. Move day is never "current" by rule: it reads done once Close-out is, and ahead until then.
 function planCurrentStage(jobId, job, est) {
+  // ⚠ A CLOSED JOB IS IN CLOSE-OUT, WHATEVER THE MIDPOINT SAYS (2026-09-29). The "money first" rule below
+  // holds the NOW marker on Midpoint & pickups until the midpoint is paid; a job closed with it unpaid is
+  // one the final now settles, and its plan must not go on pointing at an invoice the rail has passed.
+  if (job && job.deliveredOn) return 'p4';
   var rooms = _planRooms(jobId).rooms;
   var nL = rooms.filter(function(r) { return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   var nC = rooms.filter(function(r) { return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
@@ -30678,9 +31165,14 @@ function planDerivedLines(jobId, job, est, phase) {
   }
   if (phase === 'p2') {
     var sent = !!docSentAt(job, 'invoice', 'midpoint');
+    // ⚠ NOT ON A CLOSED JOB (2026-09-29). From the close the final bills an unsent midpoint's share and the
+    // rail stops offering the send, so this line says so rather than instructing a second bill — and drops
+    // its button, which would open an invoice nobody is going to send.
+    var _midClosed = !sent && !!job.deliveredOn;
     out.push({ key: 'midpoint_sent', ok: sent, label: 'Midpoint invoice sent',
-               detail: sent ? 'sent' : 'send it from the Client Dashboard the moment every room is locked — collection takes time',
-               action: { label: 'Open the midpoint invoice', call: 'openInvoiceFor(' + jobId + ',\'midpoint\')' } });
+               detail: sent ? 'sent' : _midClosed ? 'not sent — the job is closed, so the final invoice bills it'
+                 : 'send it from the Client Dashboard the moment every room is locked — collection takes time',
+               action: _midClosed ? null : { label: 'Open the midpoint invoice', call: 'openInvoiceFor(' + jobId + ',\'midpoint\')' } });
     var paid = stagePaidTotal(job, 'midpoint');
     out.push({ key: 'midpoint_received', ok: paid > 0, label: 'Midpoint payment received',
                detail: paid > 0 ? '$' + Math.round(paid).toLocaleString() + ' recorded' : 'not yet — recorded on the Client Dashboard when it lands' });
@@ -34228,7 +34720,10 @@ function renderJobPlan(jobId, job, est) {
   var _midAmtStr = _midAmt ? '$' + Math.round(_midAmt).toLocaleString() : '';
   var _allLocked = rooms.length > 0 && rooms.every(function(r){ return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; });
   var _midSent = !!docSentAt(job, 'invoice', 'midpoint');
-  var _midBanner = (hasPlaybook && _allLocked && !_midSent)
+  // ⚠ NOT ON A CLOSED JOB (2026-09-29). From the close the final bills whatever the midpoint left unpaid,
+  // and the rail deliberately stops offering the midpoint send; a red banner telling the crew to send it
+  // would be the one surface still asking for a second bill for the same share.
+  var _midBanner = (hasPlaybook && _allLocked && !_midSent && !job.deliveredOn)
     ? '<div class="alert a-err" style="margin-bottom:12px;font-size:12.5px;line-height:1.5;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">' +
         '<span>&#9888; <strong>All rooms are locked — you&rsquo;re at the project midpoint.</strong> The 25% midpoint invoice' +
         (_midAmtStr ? ' (' + _midAmtStr + ')' : '') + ' hasn&rsquo;t been sent. Don&rsquo;t finish the job with money outstanding.</span>' +
@@ -35382,10 +35877,40 @@ function _agrHasPrepVendors(est) {
 // A contract states a percentage in words with the figure after it. Only the rates this app can
 // actually charge need a spelling; anything else falls back to the figure alone rather than
 // inventing prose for a number nobody set.
-var _PCT_WORDS = { 10:'ten', 15:'fifteen', 20:'twenty', 25:'twenty-five', 30:'thirty', 35:'thirty-five' };
+// ⚠ ONE TO FIFTEEN ARE HERE BECAUSE THE PREFERRED-CLIENT DISCOUNT IS NOW NAMED IN THE FEE CLAUSE
+// (agrPriceAdjustments, 2026-09-29), and MAX_DISCOUNT_PCT is 15 — every whole percentage a manager
+// can approve is a rate a contract can now state.
+var _PCT_WORDS = { 1:'one', 2:'two', 3:'three', 4:'four', 5:'five', 6:'six', 7:'seven', 8:'eight', 9:'nine',
+                   10:'ten', 11:'eleven', 12:'twelve', 13:'thirteen', 14:'fourteen', 15:'fifteen',
+                   20:'twenty', 25:'twenty-five', 30:'thirty', 35:'thirty-five' };
 function _pctWords(rate) {
   var n = Math.round((rate || 0) * 100);
   return (_PCT_WORDS[n] ? _PCT_WORDS[n] + ' percent (' + n + '%)' : n + '%');
+}
+
+// ⚠⚠ THE CONTRACT NAMES WHAT ITS EXHIBIT A PRICES (Q8, decided 2026-09-29). The estimate itemizes
+// the expedited-delivery premium and the preferred-client discount as rows of their own, and
+// neither agreement's fee clause mentioned either: a signed contract silent on two lines of the
+// exhibit it incorporates by reference. One sentence each, and only when the estimate carries one.
+//
+// ⚠ HOURLY ENGAGEMENTS ONLY. On a fixed fee both are inside the figure the fixed-fee clause already
+// states — the estimate prints neither row there (clientEstimateHtml) and invoiceHtml charges no
+// premium on top of a flat fee — so naming them would describe a charge that does not exist. The
+// rates are read off the saved estimate (rushPct is pinned the way α is), never off RUSH_PCT alone.
+// `party` is how the form names Havellin: "Contractor" on the standard form, "Havellin" on the
+// estate form. DRAFTED, NOT REVIEWED — in COUNSEL_REVIEW_BUNDLE.md.
+function agrPriceAdjustments(est, party) {
+  if (!est || est.fixedPrice) return '';
+  var out = [];
+  var rush = !!(est.rush && (est.rushAmt || 0) > 0);
+  if (rush)
+    out.push('At Client\u2019s request this engagement is scheduled on a priority basis, for which an expedited-delivery premium of '
+      + _pctWords(est.rushPct || RUSH_PCT) + ' of ' + party + '\u2019s fees is charged, as itemized on the Estimate and applied to the fees actually billed.');
+  if ((est.discountPct || 0) > 0 && (est.discountAmt || 0) > 0)
+    out.push('A preferred-client discount of ' + _pctWords(est.discountPct / 100) + ' applies to ' + party + '\u2019s labor fees'
+      + (rush ? ' and to the expedited-delivery premium charged on them' : '')
+      + ', as itemized on the Estimate and applied to the labor fees actually billed.');
+  return out.join('  ');
 }
 
 // ⚠ THE APPROVER NOUN HERE IS THE SAME DEFECT ONE CLAUSE OVER, and leaving it behind while
@@ -35541,7 +36066,19 @@ function agrBillingRates(job, est) {
 // has never existed. The invoice prints one line reading `Moving materials — Estate Premium`.
 // A promise of receipts the firm cannot produce is the half that matters on a probate matter.
 // **Nothing about what the client pays changes**; this states the basis truthfully.
-function materialsBasisNote(pkgLabel) {
+//
+// ⚠ AND NO PACKAGE IS AN ANSWER, NOT A LABEL TO QUOTE. The dropdown's first option is "None — $0",
+// and both agreements printed it straight into this sentence — "supplied as a fixed package,
+// quoted on the Estimate (None — $0), and billed at that price" — a clause describing a package
+// the engagement does not have (2026-09-29). A blank template (no estimate yet) still reads as
+// quoting one, so the form keeps stating the basis a package would be billed on.
+function materialsPackageQuoted(pkgLabel, pkgCost) {
+  if (pkgCost === 0) return false;
+  return !/^none\b/i.test(String(pkgLabel || '').trim());
+}
+function materialsBasisNote(pkgLabel, pkgCost) {
+  if (!materialsPackageQuoted(pkgLabel, pkgCost))
+    return 'No moving or packing materials package is quoted on the Estimate, and none is billed.';
   return 'Moving and packing materials are supplied as a fixed package, quoted on the Estimate'
     + (pkgLabel ? ' (' + pkgLabel + ')' : '')
     + ', and billed at that price. The package is not cost-plus and carries no separate handling fee.';
@@ -35592,8 +36129,12 @@ function probateAgreementHtml(job, est) {
   var letters = lettersMap[job.executorAuth] || 'Pending';
   var today = new Date();
   var monthYear = today.toLocaleDateString('en-US',{month:'long',year:'numeric'});
-  var approvedStamp = (agrApproved && agrApprovedBy)
-    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+agrApprovedBy+' on '+agrApprovedAt+'</div></div>'
+  // ⚠ READ OFF THE JOB, NEVER THE AGREEMENT TAB'S GLOBALS. `agrApproved` / `agrApprovedBy` are
+  // whatever `loadAgreement` last primed — possibly another client — and this builder is pure: the
+  // packet is now viewable before the client says yes (Q11), which is exactly when another job's
+  // "Approved for Sending" stamp printing on it would be a false statement (2026-09-29).
+  var approvedStamp = (job.agrApproved && job.agrApprovedBy)
+    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+esc(job.agrApprovedBy)+' on '+esc(job.agrApprovedAt || '')+'</div></div>'
     : '';
   function pp(txt) { return '<p style="font-size:11px;line-height:1.65;margin-bottom:.5rem;">'+txt+'</p>'; }
   function bb(txt) { return '<strong>'+txt+'</strong>'; }
@@ -35702,7 +36243,9 @@ function probateAgreementHtml(job, est) {
     ['Transition Concierge (TC)','$'+_agrRates.tc+' / hour','Senior lead on-site. Manages all phases, client communication, legal documentation, and vendor coordination.'
       + (job.premium ? ' Premium Estate rates apply to this engagement, reflecting the elevated care, handling and oversight required for a property containing fine art, antiques, collectibles or high-value contents.' : '')],
     ['Property Specialist (PS)','$'+_agrRates.ps+' / hour','Physical estate work — sorting, packing, staging, loading. Scheduled by TC as needed.'],
-    ['Moving &amp; Packing Materials','Fixed package price', materialsBasisNote(est && est.pkgLabel)],
+    ['Moving &amp; Packing Materials',
+      materialsPackageQuoted(est && est.pkgLabel, est && est.pkgCost) ? 'Fixed package price' : 'None quoted',
+      materialsBasisNote(est && est.pkgLabel, est && est.pkgCost)],
     // Follows SMF_PCT — see the §3.5 comment in renderAgreement. On a court-reviewed matter a
     // percentage markup on a third-party invoice is exactly the line counsel questions.
     (SMF_PCT > 0
@@ -35731,6 +36274,8 @@ function probateAgreementHtml(job, est) {
     content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--gray-dk);">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);white-space:nowrap;">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;color:var(--gray-dk);">'+r[2]+'</td></tr>';
   });
   content += '</tbody></table>';
+  // The premium and the discount Exhibit A itemizes, named on the contract — see agrPriceAdjustments.
+  if (!isFixedAgr && agrPriceAdjustments(est, 'Havellin')) content += pp(agrPriceAdjustments(est, 'Havellin'));
   if (isFixedAgr) {
     content += pp(bb('Fixed Project Fee.')+'  Notwithstanding the hourly rates above, the Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of $'+_agrFlat.toLocaleString())+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates above apply only to Change-Order work authorized beyond that scope.'
       + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of what the home sale preparation vendors identified in Exhibit A actually invoice (estimated in Exhibit A at $'+_agrPrepEst.toLocaleString()+').' : ''));
@@ -36247,8 +36792,12 @@ function agreementHtml(job, est) {
     ? '<img src="'+logoSrc+'" style="width:160px;height:auto;display:block;margin:0 auto;" alt="Havellin">'
     : '<div style="font-family:\'Cormorant Garamond\',serif;font-size:28px;font-weight:500;color:var(--gray-dk);text-align:center;letter-spacing:.04em;">Havellin</div>';
 
-  var approvedStamp = (agrApproved && agrApprovedBy)
-    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+agrApprovedBy+' on '+agrApprovedAt+'</div></div>'
+  // ⚠ READ OFF THE JOB, NEVER THE AGREEMENT TAB'S GLOBALS. `agrApproved` / `agrApprovedBy` are
+  // whatever `loadAgreement` last primed — possibly another client — and this builder is pure: the
+  // packet is now viewable before the client says yes (Q11), which is exactly when another job's
+  // "Approved for Sending" stamp printing on it would be a false statement (2026-09-29).
+  var approvedStamp = (job.agrApproved && job.agrApprovedBy)
+    ? '<div class="approved-stamp"><div class="approved-stamp-text">&#10003; Approved for Sending</div><div class="approved-stamp-sub">Approved by '+esc(job.agrApprovedBy)+' on '+esc(job.agrApprovedAt || '')+'</div></div>'
     : '';
 
   function p(txt) { return '<p style="font-size:11.5px;line-height:1.65;margin-bottom:.55rem;">'+txt+'</p>'; }
@@ -36371,7 +36920,8 @@ function agreementHtml(job, est) {
         // $150/hour rate card that shipped on a fee-only prep agreement until 2026-09-11, in the
         // same clause, running the other way. Both bases are stated here, and the specialist half
         // survives because it stays true: calcAll holds totPS at zero on prep unconditionally.
-        ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the management fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(_agrDcHrs.toFixed(1)+' hours')+' ('+b('$'+_agrDcAmt.toLocaleString())+') on that basis. '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.')
+        ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the management fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(_agrDcHrs.toFixed(1)+' hours')+' ('+b('$'+_agrDcAmt.toLocaleString())+') on that basis. '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'
+            + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : ''))
         // ⚠ THE CARVE-OUT (2026-09-25): a change order can now add concierge hours to a vendors-only prep
         // job, and this clause said flatly that none are billed. It keeps saying so for the engagement as
         // signed, and names the one route to hours — a signed Change Order stating the hours.
@@ -36387,7 +36937,8 @@ function agreementHtml(job, est) {
       : isFixedAgr
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+_agrFlat.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.'
           + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in Section 3.5, which covers the coordination and site supervision of the home sale preparation vendors, is not part of the fixed project fee and is charged in addition to it.' : ''))
-      : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'))+
+      : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'
+          + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : '')))+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
     // §3.5 follows SMF_PCT. The 15% Service Management Fee came off on 2026-08-02 — the
     // estimate, the invoice and the Terms all stopped charging it that day — and this clause
@@ -36414,7 +36965,7 @@ function agreementHtml(job, est) {
                  : _agrPrepInside ? '.  On this engagement that fee is included in the fixed project fee under Section 3.3.'
                  : '.  That fee covers Contractor\'s coordination and site supervision of the preparation work, which is not additionally billed as Transition Concierge time.'))
           : p(b('3.5 Vendor Coordination.')+'  Contractor adds no fee or markup to third-party vendor invoices. The Transition Concierge time spent sourcing, scheduling, and supervising vendors is '+(isFixedAgr ? 'included in the fixed project fee under Section 3.3.' : 'billed as Transition Concierge time under Section 3.3.')))+
-    p(b('3.6 Moving and Packing Materials.')+'  '+materialsBasisNote(est && est.pkgLabel))+
+    p(b('3.6 Moving and Packing Materials.')+'  '+materialsBasisNote(est && est.pkgLabel, est && est.pkgCost))+
     p(b('3.7 Invoices and Payment.')+'  Invoices are due within 7 calendar days of the invoice date. Late payments accrue a late charge of 1.5% per month (18% per annum) on any outstanding balance until paid in full. Contractor may suspend or terminate Services for non-payment.')+
     // ⚠ AND THE 15% CLAUSE IS AN HOURS CLAUSE. A Change Order carries additional CONCIERGE
     // AND SPECIALIST HOURS (see coHours — it has carried no dollar amount since the rebuild),
@@ -36758,7 +37309,7 @@ function updateAgrUI() {
     // folder and unlocks sending. Two reasons, named separately, because they need different
     // things done about them.
     var _b = agrApprovalBlocker(currentAgrJobId);
-    var _rev = _agrJ && _agrJ.agrRevokedBy === 'estimate-edited' && !_agrJ.agrApproved;
+    var _rev = !!agrApprovalWithdrawn(_agrJ);
     btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none'; if (btnEmail) btnEmail.style.display='none';
     if (_b === 'estimate') {
       badge.innerHTML = '<span class="badge b-pending">Estimate Not Approved</span>';

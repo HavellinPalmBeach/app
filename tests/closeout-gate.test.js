@@ -173,8 +173,10 @@ group('openCloseoutModal refuses a settled job, so the button cannot be reached 
 
   // The gate is the shared predicate at both ends, never a second copy of the rule.
   has(fn('openCloseoutModal'), 'jobIsSettled(j)', 'the handler asks the shared predicate');
-  has(source().slice(source().indexOf('// action buttons vary by status')),
-    'if (!jobIsSettled(j)) actions +=', 'and so does the renderer');
+  // ⚠ RESTATED 2026-09-29. This sliced the source from the comment `// action buttons vary by status`,
+  // which went with the dead Status button it sat over — and a slice from a missing anchor is the last
+  // character of the file, so the needle could never match. The requirement is the renderer.
+  has(fn('renderJobs'), 'if (!jobIsSettled(j)) actions +=', 'and so does the renderer');
   lacks(fn('openCloseoutModal'), 'deliveredOn',
     'the handler holds no copy of what settled means');
 }

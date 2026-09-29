@@ -12,7 +12,7 @@
 // both read the pin — an agreement promising a §733.604 inventory over an estimate that
 // priced none is a contract for work nobody is paying for.
 
-const { sandbox, source, fn } = require('./harness');
+const { sandbox, source, fn, domStub } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
 
@@ -112,9 +112,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(src, "computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal, activeDocScope())", 'calcAll prices at the pinned scope');
     has(src, "docScope: activeDocScope()", 'the snapshot stamps the scope it was priced under');
     has(src, "_estimateDocScope = docScopeDef(est.docScope) ? est.docScope : 'full';", 'restoreEstimateToUI pins the saved scope back');
-    const resets = (src.match(/_estimateAlphaPin = null; _estimateCostPin = null; _estimateDocScope = 'full';/g) || []).length;
-    eq(resets, 2, 'the two no-job reset sites clear the scope pin with the α pin');
-    has(src, "_estimateDocScope = seedDocScopeFromJob(job);   // fresh build", 'the fresh-build site seeds from the job instead — a stale scope on a fresh build misprices the next job');
+    // ⚠ RESTATED 2026-09-29. This pinned two byte-identical reset lines and a third that seeded from
+    // the job — three hand-kept copies of one reset, and the copies are what let the discount, the
+    // private note and five other inputs leak onto the next client (tests/estimate-reset.test.js).
+    // There is one reset now, resetEstimateJobState, and the requirement is driven against it: the
+    // scope pin goes with the α pin on every job switch and every unbind, and a fresh build seeds it
+    // from the job it is for — never left at the last estimate's.
+    const rs = sandbox({
+      fns: ['resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
+             'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', '_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope'],
+      stubs: { document: domStub(), paintVolPreset() {}, renderVendors() {}, renderCollections() {}, renderVehicles() {}, clearAllRooms() {} },
+    });
+    rs._estimateAlphaPin = 0.35; rs._estimateDocScope = 'capture';
+    rs.resetEstimateJobState(null);
+    eq([rs._estimateAlphaPin, rs._estimateDocScope], [null, 'full'], 'the no-job reset (Save, unbind) clears the scope pin with the α pin');
+    rs._estimateAlphaPin = 0.35; rs._estimateDocScope = 'capture';
+    rs.resetEstimateJobState({ svc: 'cleanout', docScope: 'none' });
+    eq([rs._estimateAlphaPin, rs._estimateDocScope], [null, 'none'], 'a fresh build seeds it from the job instead — a stale scope on a fresh build misprices the next job');
+    ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab'].forEach((name) =>
+      has(fn(name), 'resetEstimateJobState(', `${name} runs that one reset rather than a copy of its own`));
     // Asserted against resetEstimate's BODY rather than against two adjacent source lines.
     // The literal version failed the day the fullness preset gained a second thing to clear
     // beside it (_volHandSet, 2026-09-10) — a true statement about the requirement should not
@@ -357,6 +374,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The intake answer never restates a priced estimate: the restore path reads the
     // snapshot's own pin, and only the fresh-build path reads the job.
     has(src, "_estimateDocScope = docScopeDef(est.docScope) ? est.docScope : 'full';", 'a saved estimate restores its OWN scope, never intake\'s');
-    eq((src.match(/seedDocScopeFromJob\(/g) || []).length, 2, 'the seed is read in exactly one place besides its definition — the fresh-build site');
+    // The one read is inside resetEstimateJobState, which runs on every open before the fetch and again
+    // on a fresh build — and a saved estimate's own scope is restored over it (driven in estimate-reset).
+    eq((src.match(/seedDocScopeFromJob\(/g) || []).length, 2, 'the seed is read in exactly one place besides its definition — the one reset');
   }
 };

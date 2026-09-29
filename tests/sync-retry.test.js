@@ -79,7 +79,10 @@ function rig(opts) {
           '_pendingChipCopy', '_enqueueWrite', '_retrySoon', '_scheduleRetry',
           'flushPendingWrites', 'retryPendingWrites', '_flushOutbox', 'queuedPostSync'],
     vars: ['_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays',
-           'SYNC_STUCK_TRIES', '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW'],
+           'SYNC_STUCK_TRIES', '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW',
+           // queuedPostSync bumps it on every main-sheet write (2026-09-29) — lifted, not stubbed,
+           // because it is the write count refreshJobsFromCloud compares against.
+           '_syncWriteSeq'],
     stubs: {
       SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
       showSyncBadge(m) { badges.push(String(m)); },
