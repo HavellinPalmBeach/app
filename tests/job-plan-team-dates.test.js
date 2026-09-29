@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
-    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent'];
+    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'];
   const EST = () => ({ svc: 'cleanout', days: 6, totTC: 11, totPS: 22, havellinTotal: 20000,
     rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3, tcH: 5, psH: 10 },
             { idx: 1, name: 'Study', vol: 3, cplx: 3, tcH: 6, psH: 12 }] });
@@ -51,7 +51,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠⚠ #7 — the band says the STEP ("Send the midpoint invoice"), never the finished milestone');
   {
-    const T = sandbox({ fns: TL_FNS, vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'] });
+    const T = sandbox({ fns: TL_FNS, vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'] });
     const rec = { estimate: EST(), approved: true, savedAt: 1789067253747 };
     T.estimateStore = { 7: rec };
     const rows = T.jobTimeline(ELLSWORTH(), rec, [], []);

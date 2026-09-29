@@ -352,7 +352,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ docReadiness — ONE gate, and the live defect it closes');
   {
     const G = sandbox({
-      fns: ['docReadiness', 'docDraftOnly', 'agreementReady', 'isJobWon'],
+      fns: ['docReadiness', 'docDraftOnly', 'agreementReady', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'fmtMoney'],
       vars: ['DOC_READY_WHY'],
     });
     const JOB = { id: 7 };
@@ -384,7 +384,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!G.docDraftOnly('invoice', JOB, DRAFT), '⚠ and draft-only is an ESTIMATE rule, not a general one');
 
     // ⚠ ONE GATE, READ BY BOTH ENDS: what is OFFERED and what happens when it is PRESSED.
-    eq((src.match(/docReadiness\(/g) || []).length, 6,
+    // ⚠ RESTATED 2026-09-29, NOT DELETED. This counted every call at 6 — the definition, the three registry
+    // blockers, the tray and the assembler, which is the one gate read by both ends. The re-acceptance build
+    // added three sites that PRINT the gate's sentence inside a 'reaccept' branch (the Agreement tab's banner,
+    // its Approve & File refusal, the Stripe link's refusal) and decide nothing. The requirement was always that
+    // nothing gates on a second rule, so the six are still counted and each of the three is held to its branch.
+    const _printers = ['updateAgrUI', 'approveAgreementNow', 'stripePaymentLink'];
+    _printers.forEach((name) => {
+      const lines = noComments(fn(name)).split('\n');
+      const at = lines.map((l, i) => (l.indexOf('docReadiness(') >= 0 ? i : -1)).filter((i) => i >= 0);
+      eq(at.length, 1, name + ': prints the gate\'s sentence at exactly one site');
+      ok(at.length === 1 && lines.slice(Math.max(0, at[0] - 4), at[0] + 1).join('\n').indexOf("'reaccept'") >= 0,
+         name + ': and only inside its re-acceptance branch — it decides nothing');
+    });
+    eq((src.match(/docReadiness\(/g) || []).length - _printers.length, 6,
        'the definition, the three registry blockers, the tray and the assembler');
     ['estimate', 'agreement', 'invoice'].forEach((k) => {
       const blk = noComments(src.slice(src.indexOf('  ' + k + ': {'), src.indexOf('  ' + k + ': {') + 4000));
@@ -416,7 +429,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docDraftedAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
-      'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView'];
+      'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'priceAboveAcceptance', '_approvedPriceAbove'];
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
@@ -604,7 +617,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
             'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
-            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker'],
+            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'docDraftStale', 'fmtMoney'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
     });
     const REC = { estimate: { jobId: 7 }, approved: true };
@@ -754,8 +767,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-            'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent'],
-      vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
+            'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'],
+      vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
     });
     const JOB = { id: 7, name: 'Butler', svc: 'cleanout', status: 'won', won: true, approved: true,

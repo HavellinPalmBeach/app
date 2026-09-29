@@ -1,3 +1,121 @@
+## ⚠⚠ A RAISED PRICE ASKS THE CLIENT AGAIN, A DRAFT MADE BEFORE A PRICE CHANGE SAYS SO, AND EDIT ESTIMATE WAITS FOR THE PIN (BUILT 2026-09-29)
+The three things the Edit-estimate build (*Edit estimate goes once the signing packet is out*, below) left open, answered by
+Anthony: *"1 yes, 2 warning is fine, 3 hide until PIN"*. App-only, **no redeploy**: `estimateSentTotal`, `acceptedTotal` and
+`priorAcceptances` ride the job's JSON, and the stale mark rides `job.docState`, which the backend already merges per key.
+
+- **⚠⚠ ALL THREE REPRODUCED ON THE REAL FUNCTIONS FIRST:**
+
+  | | before | now |
+  |---|---|---|
+  | accepted at $20,000, the estimate edited to $24,100 and re-approved | every row before the packet green; the band lit **Send for signature — DocuSign** | the send is lit again (**✉ Send revised estimate**), then **Client accepted the revised price**; the packet waits |
+  | a packet drafted in Gmail, a discount revoking the agreement, the manager re-approving | the band's one filled button read **✓ I've sent it** — over a draft at the old price | the row names the stale draft, the button is an ordinary send, and the tap is refused |
+  | an estimate out for manager approval | **Edit estimate** on four rows of the tray; pressing it landed on Build Estimate locked under *Out for Manager Approval* | offered nowhere, and both doors refuse |
+
+### 1 · a raise after the client saw the price asks them again
+- **TWO FACTS, TWO RECORDS, ONE RULE.** `estimateSentTotal` is the price on the estimate the client last RECEIVED (written by
+  `markEstimateSent`); `acceptedTotal` the price they last SAID YES TO (written by `confirmMarkWon`). `_approvedPriceAbove`
+  compares each with the APPROVED estimate and **only a raise counts** — a discount lowers what they agreed, so there is nothing
+  to agree to again. `priceAboveSent` and `priceAboveAcceptance` are the two readers.
+- **⚠ THE ONE EXTENSION BEYOND WHAT WAS ASKED, REPORTED TO ANTHONY: the send reopens BEFORE Won too.** An estimate raised after it
+  was sent and before the client decided would otherwise be "accepted" at a figure they never saw — and `acceptedTotal` would then
+  record the new price against a yes to the old one. So on a job not yet won a raise reopens the send and nothing else; the status
+  is untouched, because nobody has said yes.
+- **THE JOB STAYS WON.** `won`, `wonAt`, staffing and the Job Plan are untouched until the new yes. The rail reopens the send
+  (*"Sent at $X — the approved estimate is now $Y, so the client needs the revised one"*), then the acceptance (*"Accepted $X —
+  the approved estimate is now $Y, so they are asked again"*), with Mark lost beside it — a client can say no to a higher price.
+  The status reads ***Won · Awaiting Re-acceptance*** through `jobStatusView`, on the header, the list and the Won list, and the
+  key stays `won` so the sort does not move the job.
+- **THE NEW YES IS A SECOND ACCEPTANCE, NOT A SECOND WIN.** The modal names what is being accepted (*Client Accepted the Revised
+  Price*, both figures, *"nothing about staffing changes"*), `confirmMarkWon` moves the old yes into `priorAcceptances[]`
+  (`{total, at, method, note, by}`) rather than overwriting it, and **the raise is measured before anything is overwritten**.
+- **THE PACKET, THE INVOICES AND THE PAYMENT LINK WAIT.** `agreementReady` answers `'reaccept'` and every reader inherits it: the
+  packet may be READ (a preview, no Print — `docPreviewOnly`), and printing, sending, filing, the deposit invoice, the Agreement
+  tab's Approve & File and the Stripe link each refuse naming both figures (`DOC_READY_WHY.reaccept`). `agrApprovalBlocker`
+  delegates to `agreementReady` now rather than keeping its own copy of the rule.
+- **THE MANAGER AND THE CONCIERGE ARE TOLD, IN ONE SENTENCE.** `priceRaiseSentence` is read by `checkPin`'s notice (on the screen
+  the PIN was typed on) and by the approval email to the concierge.
+- **Nothing is asked once the packet is out** (the price is locked there, and the packet carries the approved price as its Exhibit
+  A), **nothing after a discount**, and **nothing of a job with no recorded figure** — there is no honest value to invent for a
+  price nobody wrote down.
+- **⚠ A CLIENT WHO WAS WON, WALKED AWAY AND CAME BACK HAS NO ACCEPTANCE TO REOPEN.** `confirmMarkLost` clears `won` and keeps
+  `acceptedTotal`, and the comeback returns through `estimateEventStatus`. `priceAboveAcceptance` requires `isJobWon`, so a
+  withdrawn yes is never treated as a standing one: the comeback's yes is a FIRST acceptance (the first-acceptance modal,
+  announced as a win), and if the estimate they hold is below the approved one the send reopens first, as for any client not yet
+  won. **Found by the revert sweep, not by reading** (below).
+- **⚠ A LEGACY LIMIT, STATED RATHER THAN HIDDEN:** a job whose estimate was sent before today (no sent figure) and accepted after
+  it (a figure) reopens the ACCEPTANCE and not the send. The sentence the manager and the concierge get still says to send the
+  revised estimate first. A test records it.
+
+### 2 · a draft made before a price change is flagged, never deleted
+- **⚠⚠ FOUND BUILDING THE REVISED SEND: A SECOND DRAFT AFTER A SEND READ AS SENT.** The test for "waiting on the confirming tap"
+  was `draftedAt && !sentAt`, so the revised estimate — drafted after the first one went — offered no *I've sent it*, no draft
+  link, and the row's date never moved. `docDraftPending(st)` is the one definition: a draft newer than the last send is
+  outstanding. `doc-send` pinned the old expression and is restated to drive the new one, not deleted.
+- **`staleOutstandingDrafts(job, why)` marks every draft still waiting**, through the `docState` accessor (so the mark stamps and
+  merges per key), at the two places the price moves before the packet: an approved estimate taken back for editing, and a
+  discount offered or removed. **A document already SENT is not touched** — it went at the price that stood then.
+- **The row names it** (*"The estimate draft in Gmail was made before the discount changed the price — delete it"*), the band's
+  button is an ordinary send, **`markDocSent` refuses the confirming tap before either legacy recorder runs**, and the old draft
+  is offered only as *Open the old estimate draft to delete it*. `docDraftStale` requires the mark to be at or after the draft,
+  and `docRecordSent` clears it, so a fresh draft is never read as stale.
+- **The app deletes nothing in anybody's mailbox** — it cannot, and on Anthony's answer it should not try.
+
+### 3 · Edit estimate waits for the manager's PIN
+- **`estimateOutForApproval(job, estRec)` is one answer, read at four sites** — the rail, its action builder, `dashEditEstimate`
+  and `editEstimateFromCE`. The rail and the action builder each carried their own copy of the test and the two doors asked it
+  nowhere. `job.status === 'pending'` is trusted as the signal even when the record's flag has drifted across devices; no store
+  fallback, so the rail answers for the record it was handed. `ESTIMATE_OUT_FOR_APPROVAL_TXT` says it opens again once a manager
+  approves or denies it.
+
+### ⚠⚠ AND THE BROWSER STEP FOUND A PRE-EXISTING ONE: THE DISCOUNT'S CONFIRMATION WAS ERASED BY ITS OWN REDRAW
+- `applyDiscountRevision` wrote *Discount applied* with `showFB` into `#dash-fb` and then called `_dashRedraw`, which rewrites the
+  drilldown — so the confirmation, and now the warning about a draft still carrying the old price, reached nobody. It goes through
+  `_docNotice` whenever a band is on screen; the retired Client Estimate panel keeps its own strip. Unit-driven with the real
+  `_jobBandHost` / `_docNotice` lifted. **The shape: a line written into a strip that the next call rewrites was never shown,
+  however correct the line.**
+
+### Proof
+- **13,640 committed checks** (13,351 before this build): `tests/reaccept-stale-drafts.test.js` new at **278**, and 11 more in
+  existing suites. Twenty-nine suites' pinned `fns:`/`vars:` lists gained the helpers — **lifted, never stubbed**. **Three pins
+  restated, not deleted:** `doc-send` (the tap now reads `docDraftPending`), `estimate-delivery` (the agreement blocker delegates
+  to `agreementReady`) and `dashboard-schedule` (the three sites that PRINT the readiness gate's sentence inside a `reaccept`
+  branch are held to that branch, and the six gating readers are still counted).
+- **Revert sweep on four tar copies: 65 changes, baseline 13,622 / 0 before and after on every copy, file restored byte-identical,
+  no needle mismatched.** **64 red, one green (below).** Biggest: `agreementReady` with no `reaccept` **24**, the rail's send row
+  ignoring a raise 9, its acceptance row 7, the rule reopening on any change rather than a raise 7, `agrApprovalBlocker` keeping
+  its own copy of the rule 7, a second draft read as sent again 6, the confirming tap accepted on a stale draft 6,
+  `dashEditEstimate` letting an estimate out for approval through 6 and `editEstimateFromCE` 5, a sent packet not stopping the
+  raise 6; the rest 1–5. **The two behaviour-identical reverts** (the rail and its action builder going back to their own inline
+  out-for-approval expressions) **fail the source net, 1 each** — which is the point: the rule has one definition, and the next
+  change to it reaches all four readers.
+  - **⚠ ONE CAME BACK GREEN AND IT WAS A REAL GAP: the comeback client.** Dropping `isJobWon` from `priceAboveAcceptance` passed,
+    because no fixture had a job that was won, lost and brought back. The group is written; re-done it fails **8**.
+  - **A follow-up pass on four copies of the CURRENT tree** (baseline 13,640 / 0 before and after, restored byte-identical)
+    covered what changed after the first copies were taken: the discount's notice going back to `showFB` and the redraw that
+    erases it fails **5**; its warning flattened to *ok* (the first pass's R60, whose needle the fix had moved) fails 1; the
+    comeback revert fails **8**; the discount marking no drafts fails 4 (3 on the first pass — the restated discount bed added a
+    check).
+- **Verified in headless Chromium, `tests/browser/step36.js`, 88 checks, 0 failed, 0 page errors**, through the real rail, the
+  real Send / I've sent it / Client accepted buttons (only `gmailCreateDraft` stubbed), the real Build Estimate raised by the real
+  **Packed** chip, the real Save, Submit, PIN, discount pop-up and Won modal: a client accepted at **$11,750** and re-priced to
+  **$19,900** stays Won, reads *Won · Awaiting Re-acceptance* on the header and the list, lights **✉ Send revised estimate**,
+  refuses the packet (a PREVIEW with no Print) and keeps the Job Plan open; the revised estimate's second draft waits on its tap,
+  then *Client accepted the revised price* (Mark lost beside it) records $19,900 with the $11,750 yes kept; a draft made before a
+  discount is named on its row, its button is an ordinary send, the tap is refused at the door and a fresh draft carries no mark;
+  an edit marks a waiting draft too; no Edit estimate anywhere while a manager has the estimate, the door refusing and Build
+  Estimate not opened; before the yes a raise reopens only the send; a job recorded before today is asked nothing; overflow 0 at
+  1440 and 390. **Against the pre-change build it fails 58.** `run.sh`'s default list is 1–36; steps 1–35 re-run as regressions —
+  59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28
+  / 90 / 58 / 62 / 53 / 42 / 53 / 75 / 37 / 43, 0 failed — **1,843 browser checks across the thirty-six**.
+- Manual **§1, §5, §7, §8, §9** (a status row), **§9a** (three table rows and two notes) and **§9b** (two table rows and a note);
+  playbook **Step 2** (two `.stop`s), **Step 4** (two `.stop`s), **Step 5** (a `.stop` with the revised-price order), **Step 6**,
+  the status list and **four** symptom rows, plus two corrected. Both `.md` copies hand-edited; **52 claims parity-checked, 0
+  mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables
+  full width, as before.
+- **⚠ THE SHAPE TO COPY: a figure the client has seen is a record, and a price change is measured against the record, not against
+  a flag.** `won` and `estimateSentDate` said something happened; neither said at what price, which is the one thing a raise is a
+  change to.
+
 ## ⚠⚠ EDIT ESTIMATE GOES ONCE THE SIGNING PACKET IS OUT, AND A WON CLIENT STAYS WON THROUGH A RE-PRICE (FIXED 2026-09-29)
 Two of the three items the document build flagged (the entry below the manager-approvals one). Anthony: *"yes, withdraw Edit
 estimate once the packet is sent. if we are offering a discount, and therefore it is "pending" how is it also "won"?"* App-only,
@@ -93,10 +211,13 @@ no redeploy.
   Both `.md` copies hand-edited; **30 claims parity-checked, 0 mismatches** (two apparent misses were table-cell boundaries in my
   checker, verified); `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18
   tables full width, as before — and the same again, re-rendered on the tree after all three merges.
-- **⚠ OPEN, AND IT IS ANTHONY'S CALL: a price change after the yes is not re-asked.** A discount only lowers what the client
+- ~~**⚠ OPEN, AND IT IS ANTHONY'S CALL: a price change after the yes is not re-asked.** A discount only lowers what the client
   accepted, but an edit before the packet goes out can RAISE it, and the app keeps the acceptance (`won`, `wonAt`) and the old
   `estimateSentDate` (an edit does not clear it), so the revised figure reaches the client only as the packet's Exhibit A.
-  Whether a raise after Won should reopen the acceptance, or at least re-offer sending the estimate, is a decision, not a fix.
+  Whether a raise after Won should reopen the acceptance, or at least re-offer sending the estimate, is a decision, not a fix.~~
+  **DECIDED AND BUILT THE SAME DAY** — Anthony: *"1 yes"*. A raise after Won reopens the send and then the acceptance, and the
+  packet waits for the new yes; see the entry at the top of this file. *Kept rather than deleted, per the standing rule that a
+  fixed flag left standing reads as outstanding work.*
 - **⚠ A JOB MISSING FROM THIS DEVICE IS NEVER SAID TO HAVE A PACKET OUT.** The blocker refuses a job it cannot find ("could not
   be found"), and the panel and the Build Estimate banner first read that refusal as *the packet is with the client* — a claim
   about a packet nobody sent, on a job dropped by another device while its estimate was open here. Both ask for the job first.
@@ -113,11 +234,16 @@ no redeploy.
     the job **7**.
   - Found re-running this build's every-caller searches after the merge, once `main`'s NUL-byte fix made a whole-file search
     trustworthy again. The line itself sat above the byte: what missed it the first time was not looking, not the search.
-- **Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**
+- ~~**Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**~~
+  **DECIDED AND BUILT THE SAME DAY** — Anthony: *"warning is fine"*. The app deletes nothing in a mailbox; a draft made before a
+  price change is marked, named on its row, and cannot be recorded as sent. See the entry at the top of this file.
 - **⚠ FOUND IN PASSING, NOT FIXED: the rail offers *Edit estimate* while the estimate is OUT FOR APPROVAL.** The document tray
   carries it on the lit *Estimate approved* row, and pressing it opens Build Estimate locked under *Out for Manager Approval* —
   whose banner says it reopens once approved or denied, so it is a detour rather than a trap. Pre-existing and unrelated to the
-  packet rule; withholding it while `estSubmitted` is one line if wanted.
+  packet rule; withholding it while `estSubmitted` is one line if wanted. **BUILT THE SAME DAY** — Anthony: *"hide until PIN"*.
+  ⚠ *"One line"* was wrong again: the rail and its action builder each carried their own copy of the out-for-approval test and
+  the two doors behind the button asked it nowhere, so it became one shared rule read at four sites. See the entry at the top
+  of this file.
 - **⚠ THE SHAPE TO COPY: when one string carries two facts, a writer that knows only one of them overwrites the other.** The
   yes was already stored apart; what was missing was one function for every writer of the status and one for every reader.
   And a rule enforced on a button is not enforced: the door behind it has to ask the same question.
@@ -771,8 +897,9 @@ functions before anything was changed.**
   1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width as before. **Counsel bundle B6** added.
 - **⚠ FOUND, NOT BUILT, FLAGGED TO ANTHONY:** ~~(1) *Edit estimate* is still reachable after the packet is sent, so a price can still
   move under Exhibit A by that door;~~ **BUILT THE SAME DAY** — Anthony: *"yes, withdraw Edit estimate once the packet is sent"*;
-  see the entry at the top of this file. (2) a Gmail packet draft created before a discount is not updated by the re-file —
-  **still open**; ~~(3) `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won
+  see the entry at the top of this file. ~~(2) a Gmail packet draft created before a discount is not updated by the re-file —
+  **still open**;~~ **DECIDED AND BUILT THE SAME DAY** — Anthony: *"warning is fine"*; see the re-acceptance entry at the top of
+  this file; ~~(3) `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won
   survives).~~ **FIXED THE SAME DAY** — a won client re-priced reads *Won · Pending Re-approval* and returns to *Won*; same entry.
   *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
 - **⚠ THE SHAPE TO COPY: a document is checked by adding up its own rows.** Every defect here printed the right figure somewhere
@@ -9284,6 +9411,10 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 
 ## Branches
 - Active feature branch: `claude/dazzling-mendel-qns7nm`
+  (Back on this branch after PR #119 merged, for Anthony's answers to the three items it left open — a raised price asks the
+  client again, a draft made before a price change is flagged, Edit estimate waits for the PIN. Written as **step 36**, and 1–36
+  are the default list. `main` gained the 2026-09-28 workflow-audit tracker (docs only) while it was being built, merged on the
+  way through.)
   (This session was ASSIGNED it again after `claude/relaxed-fermi-nopl99` had recorded itself as active below; a session's
   assignment wins, so it is promoted. The follow-up here — Edit estimate after the packet, and the won status — was built on
   the H1/M1 tree and merged `main`'s bottom Reset, C2 and H2 builds on the way through; the merge conflicted on the build stamp,
@@ -14548,10 +14679,14 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (eighth pass)** — both documents, against Edit estimate going once the signing
+- Last reconciled against the app: **2026-09-29 (ninth pass)** — both documents, against a raised price asking the client
+  again (*Won · Awaiting Re-acceptance*), a Gmail draft made before a price change being flagged, and Edit estimate waiting for
+  the manager's PIN (manual §1, §5, §7, §8, §9, §9a, §9b; playbook Steps 2, 4, 5 and 6, the status list and four symptom rows,
+  two corrected); see the entry at the top of this file.
+- Prior pass **2026-09-29 (eighth pass)** — both documents, against Edit estimate going once the signing
   packet is out and a won client reading *Won · Pending Re-approval* while a revised price waits (manual §1, §5, §5c, §8, §9,
-  §9a; playbook the two `.stop`s on Build Estimate, the lever table, Step 6, the status table and four symptom rows); see the
-  entry at the top of this file.
+  §9a; playbook the two `.stop`s on Build Estimate, the lever table, Step 6, the status table and four symptom rows); see its
+  entry near the top of this file.
 - Prior pass **2026-09-29 (seventh pass)** — both documents, against Reset and Start over discarding this
   device's unsaved-draft copy (manual §5h; playbook one symptom row), and the footer stamps of all four files moved from
   *reconciled 2026-08-03* to 2026-09-29; see its entry near the top of this file.

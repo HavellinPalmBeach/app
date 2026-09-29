@@ -39,7 +39,7 @@ const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentSplit', 'rushScope
   'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'docReadiness', 'agreementReady',
   'isJobWon', 'resolvePin', 'checkInvPin', 'dashApproveInvoice', 'openInvPinModal', 'invFinalApproval',
   'invFinalApprovalRecord', 'invFinalApprovalStaleTxt', 'recordInvFinalApproval', 'docState',
-  'docKeyFor', '_jobTouch', 'docSpec', 'docAction', 'approvedEstimateFor'];
+  'docKeyFor', '_jobTouch', 'docSpec', 'docAction', 'approvedEstimateFor', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'fmtMoney'];
 const INV_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
   'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES',
@@ -107,7 +107,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
   '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
   'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', '_agrApprovedStamp',
   'ensureAgreementApproved', 'agreementReady', 'isJobWon', '_primeAgreementFor', 'loadAgreement',
-  'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml'];
+  'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docDraftStale', 'docDraftPending'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT',
   'DECEDENT_SERVICES', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'currentAgrJobId',
   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
@@ -695,6 +695,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const APPROV_EXEMPT = {
     _approvalWatch: 'the estimate approval POLL (a timer handle and a job id) — not an approval',
     MANAGER_APPROVAL_EMAIL: 'the mailbox approval requests go to — a constant address, not an approval',
+    ESTIMATE_OUT_FOR_APPROVAL_TXT: 'the sentence a door prints while a manager has the estimate — a constant, not an approval',
   };
 
   group('⚠⚠ THE NET: no client-document builder reads a page-level approval variable');

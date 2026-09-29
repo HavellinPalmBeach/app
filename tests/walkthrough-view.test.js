@@ -237,7 +237,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Driven: the real opener against a real stub, both ways round.
     const dom = domStub({});
-    const c = sandbox({ fns: ['_openViewer', 'openPlainViewer', 'openDocViewer', 'docReadOnlyWord', 'docPreviewOnly', 'docDraftOnly', 'agreementReady', 'docTitle', 'printDocViewer'],
+    const c = sandbox({ fns: ['_openViewer', 'openPlainViewer', 'openDocViewer', 'docReadOnlyWord', 'docPreviewOnly', 'docDraftOnly', 'agreementReady', 'docTitle', 'printDocViewer', 'priceAboveAcceptance', '_approvedPriceAbove', 'isJobWon', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_KIND_WORD', '_docViewerSpec'],
       stubs: { document: dom, docAction: () => { throw new Error('printed an internal page'); } } });
     c.openPlainViewer('Walkthrough & Scope', 'Butler', '<p>x</p>');

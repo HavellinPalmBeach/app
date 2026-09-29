@@ -85,7 +85,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobActivationBlockers', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'docDraftedAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink'].concat(BLK_FNS),
+      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove'].concat(BLK_FNS),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],
@@ -135,9 +135,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function editBed(jobO, recO) {
     const said = { notices: [], nav: [], redraw: 0, badges: [] };
     const E = sandbox({
-      fns: ['dashEditEstimate', 'revokeEstimateApproval', 'revokeAgreementApproval', 'estimateEventStatus', 'isJobWon'].concat(BLK_FNS),
+      fns: ['dashEditEstimate', 'revokeEstimateApproval', 'revokeAgreementApproval', 'estimateEventStatus', 'isJobWon', 'staleOutstandingDrafts', 'docDraftPending', 'docDraftStale', 'estimateOutForApproval'].concat(BLK_FNS),
       vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'estimateApproved',
-        'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt'],
+        'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
       stubs: {
         _primeEstimateFor(id) { E.currentEstimate = Object.assign({ jobId: id, lockedRooms: [1] }, (E.estimateStore[id] || {}).estimate || {}); return true; },
         saveJobs() {}, syncJobToSheets() {}, saveEstimateState() {}, showSyncBadge(m) { said.badges.push(m); },
@@ -192,9 +192,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { fb: [], nav: [] };
     const C = sandbox({
       fns: ['editEstimateFromCE', 'revokeEstimateApproval', 'revokeAgreementApproval', 'estimateEventStatus', 'isJobWon',
-        '_dashFbTarget', '_jobBandHost'].concat(BLK_FNS),
+        '_dashFbTarget', '_jobBandHost', 'staleOutstandingDrafts', 'docDraftPending', 'docDraftStale', 'estimateOutForApproval'].concat(BLK_FNS),
       vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'estimateApproved',
-        'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt', '_dashboardJobId'],
+        'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt', '_dashboardJobId', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, saveEstimateState() {}, showSyncBadge() {},
         showFB(el, k, m) { said.fb.push({ el, k, m }); }, editEstimateForJob(id) { said.nav.push(id); },
@@ -398,11 +398,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'unscoredRoomNames', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'svcHasDocStep', 'matterTypeOf',
     'docTierOf', 'docTierDef', 'buildLockSnapshot', 'submitDeny', 'isJobWon', '_jobStatusCell', 'jobStatusView',
     'estimateEventStatus', 'submitForApproval', 'estimateSubmitBlocker', 'estimateNoteGaps', 'editEstimateFromCE',
-    'revokeEstimateApproval'].concat(BLK_FNS);
+    'revokeEstimateApproval', 'priceAboveAcceptance', '_approvedPriceAbove', 'staleOutstandingDrafts', 'docDraftPending', 'docDraftStale', 'estimateOutForApproval', 'priceRaiseSentence', 'priceAboveSent', 'fmtMoney'].concat(BLK_FNS);
   const ST_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', 'agrApproved',
     'agrApprovedBy', 'agrApprovedAt', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt', 'MANAGER_PINS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT',
-    'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS'];
+    'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];
   function lifeBed(jobO) {
     const doc = domStub({ 'dm-pct': '5', 'pin-input': '3010', 'deny-reason': 'Go back to the client first', 'deny-pin': '3010' });
     const ctx = sandbox({ fns: ST_FNS, vars: ST_VARS, stubs: {
@@ -464,7 +464,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('jobStatusView: ONE reading of the status, and a won job never reads as a pre-won phase');
   {
-    const V = sandbox({ fns: ['jobStatusView', 'isJobWon', '_jobStatusCell'], vars: ['JOB_STATUS_LABELS', 'JOB_STATUS_DOT'] });
+    const V = sandbox({ fns: ['jobStatusView', 'isJobWon', '_jobStatusCell', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'], vars: ['JOB_STATUS_LABELS', 'JOB_STATUS_DOT'] });
     const v = (j) => V.jobStatusView(j);
     eq(v({ status: 'pending', won: true }).label, 'Won · Pending Re-approval', 'won + pending: both facts');
     eq(v({ status: 'pending', won: true }).key, 'pending', '⚠ keyed pending, so the manager’s Pending Approval filter still finds it');
@@ -483,7 +483,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
   {
     // The Status sort reads the same view.
-    const s = sandbox({ fns: ['sortJobsForList', 'svcLabelOf', 'jobStatusView', 'isJobWon'],
+    const s = sandbox({ fns: ['sortJobsForList', 'svcLabelOf', 'jobStatusView', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       vars: ['SVC_LABELS', 'SVC_ORDER', 'JOB_STATUS_ORDER', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'JOB_SORTS'] });
     const list = [{ id: 1, status: 'approved', won: true, name: 'A' }, { id: 2, status: 'approved', name: 'B' },
       { id: 3, status: 'active', won: true, name: 'C' }];

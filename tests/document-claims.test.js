@@ -86,7 +86,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw',
     'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
     'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashOfferDiscount', 'dashNotice', '_primeEstimateFor',
-    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon'];
+    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'staleOutstandingDrafts', 'docDraftPending', 'docDraftStale'];
   const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', 'agrApproved',
     'agrApprovedBy', 'agrApprovedAt', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt'];
@@ -218,7 +218,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature',
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews',
-      '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker'],
+      '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove'],
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],
@@ -324,7 +324,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const calls = { commit: 0, viewer: [], printed: 0, notices: [] };
     const D = sandbox({
       fns: ['docAction', 'docReadiness', 'docPreviewOnly', 'agreementReady', 'isJobWon', 'docReadOnlyWord', 'docDraftOnly',
-        'docTitle', 'openDocViewer', '_openViewer'],
+        'docTitle', 'openDocViewer', '_openViewer', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'fmtMoney'],
       vars: ['DOC_ACTIONS', 'DOC_READY_WHY', 'DOC_STAGE_WORD', '_docViewerSpec'],
       stubs: {
         document: domStub({}),

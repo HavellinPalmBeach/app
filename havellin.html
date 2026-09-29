@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 2:48pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 4:58pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3665,9 +3665,10 @@ body.no-smf .smf-col{display:none;}
 
 <div class="modal-overlay" id="won-modal" style="display:none;">
   <div class="modal-box" style="width:420px;">
-    <div class="modal-title">Client Accepted the Estimate</div>
-    <div class="modal-sub">This marks the job <strong>won</strong> and unlocks staffing. Nothing is signed yet
-      — the agreement and deposit still follow.</div>
+    <!-- The title, the line under it and the button are written by openWonModal from WON_MODAL_COPY on every
+         open, in both directions: the same modal records a first yes and a yes to a raised price. -->
+    <div class="modal-title" id="won-title"></div>
+    <div class="modal-sub" id="won-sub"></div>
 
     <label style="margin-top:0;">How did they accept?</label>
     <select id="won-method">
@@ -3687,7 +3688,7 @@ body.no-smf .smf-col{display:none;}
     <div id="won-fb" style="margin-top:10px;"></div>
     <div style="display:flex;gap:8px;margin-top:1rem;">
       <button class="btn-s" style="flex:1;" onclick="document.getElementById('won-modal').style.display='none'">Cancel</button>
-      <button class="btn-p" style="flex:2;" onclick="confirmMarkWon()">Mark as Won →</button>
+      <button class="btn-p" style="flex:2;" id="won-go" onclick="confirmMarkWon()"></button>
     </div>
   </div>
 </div>
@@ -11417,6 +11418,10 @@ function markEstimateSent() {
   if (!job) return;
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   job.estimateSentDate = today;
+  // ⚠ AND THE PRICE THAT WENT, because the date alone cannot tell a later RAISE from the estimate the
+  // client already has — see priceAboveSent. It is the figure on the document they received.
+  var _sentTotal = Math.round(Number(currentEstimate.havellinTotal) || 0);
+  if (_sentTotal > 0) job.estimateSentTotal = _sentTotal;
   job.updatedAt = Date.now();
   saveJobs();
   syncJobToSheets(job);
@@ -11506,6 +11511,78 @@ function priceChangeBlocker(job, how) {
 }
 function discountOfferBlocker(job) { return priceChangeBlocker(job, 'a discount'); }
 function estimateEditBlocker(job) { return priceChangeBlocker(job, 'an edit to the estimate'); }
+
+// ⚠⚠ A PRICE RAISED AFTER THE CLIENT SAW IT IS A PRICE THEY HAVE NOT SEEN (2026-09-29). Anthony, on the
+// question the Edit-estimate build left open — should a raise after Won send the client back to accept
+// again, or at least re-offer the estimate: "yes". Before this the app kept the acceptance (`won`, `wonAt`)
+// and the old `estimateSentDate` through any re-price, so an estimate edited UP after the client's yes
+// reached them only as the signing packet's Exhibit A: a higher figure, in a contract, with nothing on the
+// timeline asking anyone to tell them first. Measured on the real functions before the fix: accepted at
+// $20,000, edited to $24,100 and re-approved, and the rail lit "Send for signature — DocuSign" with every
+// row before it green.
+//
+// TWO FACTS, TWO RECORDS, ONE RULE. `estimateSentTotal` is the price on the estimate the client last
+// RECEIVED (written by markEstimateSent) and `acceptedTotal` the price they last SAID YES TO (written by
+// confirmMarkWon). Each is compared with the APPROVED estimate, and only a RAISE counts — a discount only
+// lowers what the client agreed, so there is nothing for them to agree to again.
+// ⚠ A JOB RECORDED BEFORE TODAY CARRIES NEITHER FIGURE AND NOTHING IS ASKED OF IT. There is no honest value
+// to invent for a price nobody wrote down, and asking the client to re-accept a figure the app cannot
+// name would be a claim about the job the record cannot support.
+// ⚠ ONCE THE PACKET IS OUT THERE IS NOTHING TO ASK. The price is locked from there (priceChangeBlocker),
+// and the packet carries the approved price as its Exhibit A — so the client holds the current figure,
+// and their signature is the acceptance of it.
+// ⚠ IT READS THE RECORD IT IS HANDED AND NEVER FALLS BACK when handed one, so the rail answers for the
+// record it was given; a caller with no record in hand passes null and the store answers.
+// ⚠ The order of the tests is deliberate: the recorded figure is asked first, so a job with none never
+// reaches the packet or the store at all.
+function _approvedPriceAbove(job, estRec, recorded) {
+  var was = Number(recorded);
+  if (!job || !(was > 0)) return null;
+  if (isAgreementSigned(job) || isAgreementSent(job)) return null;
+  var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null);
+  if (!(rec && rec.approved && rec.estimate)) return null;
+  var now = Math.round(Number(rec.estimate.havellinTotal) || 0);
+  return (now > Math.round(was)) ? { was: Math.round(was), now: now } : null;
+}
+// The price the client said yes to, against the approved one — `{was, now}` or null.
+function priceAboveAcceptance(job, estRec) {
+  if (!job || !isJobWon(job)) return null;
+  return _approvedPriceAbove(job, estRec, job.acceptedTotal);
+}
+// The price on the estimate the client last received, against the approved one — `{was, now}` or null.
+// ⚠ NOT ONLY AFTER WON, and that is what keeps `acceptedTotal` honest: an estimate raised after it was
+// sent and before the client decided would otherwise be "accepted" at a figure they never saw.
+function priceAboveSent(job, estRec) {
+  if (!job || !job.estimateSentDate) return null;
+  return _approvedPriceAbove(job, estRec, job.estimateSentTotal);
+}
+// What to tell the people involved once an approval puts the price above what the client has — read by the
+// manager's PIN (on screen) and by the email to the concierge, so the two say the same thing. '' when the
+// approved price is not above either figure.
+function priceRaiseSentence(job, estRec) {
+  var acc = priceAboveAcceptance(job, estRec);
+  if (acc) return 'The client accepted ' + fmtMoney(acc.was) + ' and the approved estimate is now ' + fmtMoney(acc.now)
+    + '. Send them the revised estimate and record their acceptance again before the signing packet goes out.';
+  var snt = priceAboveSent(job, estRec);
+  if (snt) return 'The estimate the client has shows ' + fmtMoney(snt.was) + ' and the approved one is now ' + fmtMoney(snt.now)
+    + '. Send them the revised estimate before they decide.';
+  return '';
+}
+
+// ⚠⚠ ONE ANSWER TO "IS THIS ESTIMATE WAITING ON A MANAGER" (2026-09-29). Anthony, on the rail offering Edit
+// estimate while the estimate was out for approval: "hide until PIN". The rail and its action builder each
+// carried this expression, and the doors that open the estimate for editing asked it nowhere — so the tray
+// offered Edit estimate on four rows and pressing it landed on Build Estimate locked under "Out for Manager
+// Approval". `job.status === 'pending'` syncs reliably per job, so it is trusted as the signal even when the
+// record's own flag has drifted across devices.
+// ⚠ NO STORE FALLBACK: the rail answers for the record it was handed. A door passes `estimateStore[id]`.
+function estimateOutForApproval(job, estRec) {
+  if (!job) return false;
+  var approved = !!((estRec && estRec.approved) || job.approved);
+  return !!((estRec && estRec.submitted) || (job.status === 'pending' && !approved));
+}
+var ESTIMATE_OUT_FOR_APPROVAL_TXT = 'This estimate is out for manager approval, so it cannot be edited. '
+  + 'It opens for editing again once a manager approves it or denies it.';
 
 // What the modal's percentage box says, read by the preview AND the write so the two cannot
 // disagree about which numbers are allowed. ⚠ A BLANK IS NOT AN ANSWER AND 0 IS ONE: 0 removes the
@@ -11629,6 +11706,7 @@ function applyDiscountRevision() {
   // print or send and never re-filed the signing packet: Drive kept the Exhibit A at the OLD price
   // while the estimate carried the new one (2026-09-28 audit, M3).
   if (job) revokeAgreementApproval(job, 'discount-revised');
+  var _staleDrafts = job ? staleOutstandingDrafts(job, 'discount-revised') : [];
   // ⚠ A WON job stays won — the revised price waits on the manager as "Won · Pending Re-approval"
   // (estimateEventStatus), not as a client who never said yes.
   if (job) { job.status = estimateEventStatus(job, 'pending'); job.approved = false; job.havellinEst = newHavellinTotal; job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job); }
@@ -11640,7 +11718,15 @@ function applyDiscountRevision() {
   // ⚠ THE CONFIRMATION GOES WHERE THE PERSON IS. `ce-fb` is on the Client Estimate panel, which has
   // had no nav button since 2026-09-11 — so from the dashboard, where Offer discount lives, the one
   // line saying it worked printed onto a screen nobody could see.
-  showFB(_dashFbTarget('ce-fb'), 'ok', (pct === 0 ? 'Discount removed.' : 'Discount applied.') + ' Manager notified by email \u2014 they will re-approve from their device with their PIN.');
+  // \u26a0\u26a0 AND THROUGH THE NOTICE, NEVER showFB, WHEN A BAND IS ON SCREEN (found by browser step 36, 2026-09-29).
+  // `_dashRedraw` rewrites the drilldown, so a line showFB wrote into the old `#dash-fb` was destroyed on the same
+  // tick \u2014 the confirmation, and the warning about a draft still carrying the old price, reached nobody.
+  // `_docNotice` sets the notice the redraw paints. The retired Client Estimate panel keeps its own strip.
+  var _dkind = _staleDrafts.length ? 'warn' : 'ok';
+  var _dmsg = (pct === 0 ? 'Discount removed.' : 'Discount applied.') + ' Manager notified by email \u2014 they will re-approve from their device with their PIN.'
+    + (_staleDrafts.length ? ' A draft made before this still has the old price \u2014 delete it; the timeline offers a fresh one.' : '');
+  if (job && _jobBandHost()) { _docNotice(_dkind, _dmsg, job.id); return; }
+  showFB('ce-fb', _dkind, _dmsg);
   if (job) _dashRedraw(job.id);
 }
 
@@ -11663,6 +11749,9 @@ function revokeEstimateApproval(jobId) {
     job.approved = false;
     delete job.estimateDriveAt; delete job.estimateDriveUrl;
     revokeAgreementApproval(job, 'estimate-edited');
+    // ⚠ AND EVERY DRAFT STILL WAITING TO BE SENT IS NOW AT A PRICE THAT NO LONGER STANDS — see
+    // staleOutstandingDrafts. After the revoke, so its warning is the toast left on screen.
+    staleOutstandingDrafts(job, 'estimate-edited');
     job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
   }
   return job;
@@ -11706,6 +11795,9 @@ function editEstimateFromCE() {
     var _ceEdJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
     var _ceEdBlk = estimateEditBlocker(_ceEdJob);
     if (_ceEdBlk) { showFB(_dashFbTarget('ce-fb'), 'warn', _ceEdBlk); return; }
+    // ⚠ Out for approval too — the panel hides its button there, and this is the door behind it; letting it
+    // through would un-submit an estimate a manager is reviewing.
+    if (_ceEdJob && estimateOutForApproval(_ceEdJob, estimateStore[_ceEdJob.id])) { showFB(_dashFbTarget('ce-fb'), 'warn', ESTIMATE_OUT_FOR_APPROVAL_TXT); return; }
   }
   // Reset submitted state so TC can edit freely
   estimateSubmitted = false;
@@ -11768,8 +11860,14 @@ function notifyTCOfDecision(job, est, decision, reason) {
       : ('Your estimate for ' + client + ' was denied and sent back for revision.')
   ];
   if (!approved && reason) { lines.push(''); lines.push('Reason: ' + reason); }
+  // The same sentence the manager saw under the PIN — a raise the concierge is not told about is a
+  // client who learns the new price from the contract.
+  var _raise = approved ? priceRaiseSentence(job, (typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null) : '';
+  if (_raise) { lines.push(''); lines.push(_raise); }
   lines.push('');
-  lines.push('Open the Havellin app → Client Estimate → select ' + client + (approved ? '.' : ' to revise and resubmit for approval.'));
+  // ⚠ The Client Estimate tab has had no nav button since 2026-09-11, so this line named a screen nobody
+  // could open. It names the one the manager's own email already names.
+  lines.push('Open the Havellin app and open ' + client + ' from the Client Dashboard' + (approved ? '.' : ' to revise the estimate and resubmit it for approval.'));
   lines.push('');
   lines.push('Havellin Palm Beach');
   var mailto = 'mailto:' + tc.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(lines.join('\n'));
@@ -11905,6 +12003,14 @@ function checkPin() {
     }
     applyEstimateLock();
     renderClientEstimate();
+    // ⚠ A RAISE IS SAID HERE, WHERE THE PRICE WAS JUST SETTLED, and not only on the rail below it: the
+    // manager who typed the PIN may think the job is done, and the concierge is the one who now has a
+    // client to go back to. priceRaiseSentence is the one wording, read by the email below as well.
+    if (currentEstimate && currentEstimate.jobId) {
+      var _raiseJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+      var _raiseTxt = _raiseJob ? priceRaiseSentence(_raiseJob, estimateStore[_raiseJob.id]) : '';
+      if (_raiseTxt) dashNotice('warn', 'Approved. ' + _raiseTxt);
+    }
     // The manager may have typed that PIN on the Client Dashboard. renderClientEstimate
     // writes into #panel-client-estimate whether or not it is the visible panel — which
     // is what keeps the Drive export below working — but nothing was redrawing the rail
@@ -11997,10 +12103,15 @@ function jobStatusView(j) {
   var s = (j && j.status) || '';
   var won = isJobWon(j);
   if (won && (s === '' || s === 'new' || s === 'approved')) s = 'won';
+  // ⚠ A RAISE THE CLIENT HAS NOT ACCEPTED IS STILL A WON JOB, and it reads as both facts — the key stays
+  // 'won' so the sort and the Won list keep it where it is, and the words say what is outstanding.
+  var reask = (won && s === 'won') ? priceAboveAcceptance(j, null) : null;
   return {
     key: s,
-    label: (won && s === 'pending') ? 'Won \u00b7 Pending Re-approval' : (JOB_STATUS_LABELS[s] || s),
-    dot: JOB_STATUS_DOT[s] || 's-new'
+    label: (won && s === 'pending') ? 'Won \u00b7 Pending Re-approval'
+      : reask ? 'Won \u00b7 Awaiting Re-acceptance'
+      : (JOB_STATUS_LABELS[s] || s),
+    dot: reask ? 's-pending' : (JOB_STATUS_DOT[s] || 's-new')
   };
 }
 var JOB_SORTS = {
@@ -14758,8 +14869,12 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   // `job.status==='pending'` syncs reliably per job, so it is trusted as the
   // submitted signal even when the estimate blob's own flag has drifted across
   // devices — the same expression the action bar above already uses.
-  var estSubmitted = !!((estRec && estRec.submitted) || (job.status === 'pending' && !estApproved));
+  var estSubmitted = estimateOutForApproval(job, estRec);
   var won = isJobWon(job);
+  // The approved price against what the client last received and last said yes to — each null unless it
+  // is a RAISE. See _approvedPriceAbove; both read the record handed in, never the store.
+  var _sentRaise = estRec ? priceAboveSent(job, estRec) : null;
+  var _accRaise = estRec ? priceAboveAcceptance(job, estRec) : null;
   var funded = isJobFunded(job);
   var _jtSig = agreementSignature(job);   // null until something is actually signed
   var depPaid = depositPaidTotal(job);
@@ -14914,14 +15029,28 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     // "September 10, 2026"). Printed raw it sat two rows above *Agreement signed* rendering
     // the SAME DAY as "Sep 10, 2026" — one rail, one kind of fact, two formats. The
     // renderer owns how a date looks; the derivation never formats one.
+    // ⚠⚠ SENT IS NOT DONE WHEN THE PRICE HAS GONE UP SINCE (2026-09-29). The client holds the estimate at
+    // the figure that went; an approval above it is a price they have not seen, so the row asks for the
+    // revised one — with the date and the drafted line withheld, since a lit row reading "Sep 20" says it
+    // happened. A job with no recorded figure reads sent exactly as before (see _approvedPriceAbove).
     row({ key: 'estimate_sent', group: 'Estimate', label: 'Estimate sent to client',
-      done: !!job.estimateSentDate, at: job.estimateSentDate, atKind: 'date',
-      sub: (!job.estimateSentDate && docDraftedAt(job, 'estimate'))
-        ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
+      done: !!job.estimateSentDate && !_sentRaise, at: _sentRaise ? '' : job.estimateSentDate, atKind: 'date',
+      todo: _sentRaise ? 'Send the revised estimate to the client' : '',
+      sub: (job.estimateSentDate && !_sentRaise) ? ''
+        : (_jtDraftSub(job, 'estimate', '')
+          || (_sentRaise ? ('Sent at ' + fmtMoney(_sentRaise.was) + ' \u2014 the approved estimate is now '
+                            + fmtMoney(_sentRaise.now) + ', so the client needs the revised one') : '')) }),
 
+    // ⚠⚠ AND A YES TO ONE PRICE IS NOT A YES TO A HIGHER ONE (Anthony, 2026-09-29: a raise after Won sends the
+    // client back to accept again). The job stays WON — staffing and the Job Plan stay open, and a won job
+    // re-priced is still the client's — but this row is undone until the new figure is accepted, and
+    // agreementReady holds the packet until it is.
     row({ key: 'client_accepted', group: 'Acceptance', label: 'Client accepted',
-      done: won, at: job.wonAt || '', atKind: 'date', by: job.wonBy || '',
-      sub: won && job.wonMethod
+      done: won && !_accRaise, at: _accRaise ? '' : (job.wonAt || ''), atKind: 'date', by: _accRaise ? '' : (job.wonBy || ''),
+      todo: _accRaise ? 'Get the client\u2019s decision on the revised price' : '',
+      sub: _accRaise
+        ? ('Accepted ' + fmtMoney(_accRaise.was) + ' \u2014 the approved estimate is now ' + fmtMoney(_accRaise.now) + ', so they are asked again')
+        : won && job.wonMethod
         ? ({ email: 'By email', call: 'By phone', text: 'By text', in_person: 'In person' }[job.wonMethod] || '')
         : '' }),
 
@@ -14941,10 +15070,11 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       by: job.agrSentBy || (job.docState && job.docState.agreement && job.docState.agreement.sentBy) || '',
       // The one piece of agreement history still worth surfacing: the estimate was
       // edited after the packet was prepared, so the Exhibit A the client holds is stale.
-      sub: (!isAgreementSent(job) && agrApprovalWithdrawn(job))
-        ? agrApprovalWithdrawn(job)
-        : ((!isAgreementSent(job) && docDraftedAt(job, 'agreement'))
-          ? 'Drafted \u2014 read it, send it, then confirm' : '') }),
+      // ⚠ A STALE DRAFT IS SAID FIRST, because it names the one thing to do before anything else — a draft
+      // at the old price is sitting where it can still be sent (see staleOutstandingDrafts).
+      sub: isAgreementSent(job) ? ''
+        : (docDraftStale((job.docState || {}).agreement) ? _jtDraftSub(job, 'agreement', '')
+          : (agrApprovalWithdrawn(job) || _jtDraftSub(job, 'agreement', ''))) }),
 
     // ⚠ `by` IS THE SIGNER NOW, NOT THE RECORDER. It read `agrSignedBy`, which holds the
     // Havellin manager who approved the price — so this row named one of ours as having
@@ -14965,8 +15095,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     row({ key: 'deposit_invoiced', group: 'Deposit & start', label: 'Deposit invoice sent',
       done: !!docSentAt(job, 'invoice', 'deposit'), at: docSentAt(job, 'invoice', 'deposit'), atKind: 'iso',
       amount: hav ? split.deposit : null,
-      sub: (!docSentAt(job, 'invoice', 'deposit') && docDraftedAt(job, 'invoice', 'deposit'))
-        ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
+      sub: docSentAt(job, 'invoice', 'deposit') ? '' : _jtDraftSub(job, 'invoice', 'deposit') }),
 
     row({ key: 'deposit_received', group: 'Deposit & start', label: 'Deposit received',
       done: funded, amount: hav ? split.deposit : null,
@@ -15180,6 +15309,56 @@ function docDraftedAt(job, kind, stage) {
   if (!job || !job.docState) return '';
   var st = job.docState[docKeyFor(kind, { stage: stage })];
   return (st && st.draftedAt) || '';
+}
+
+// ⚠⚠ A DRAFT IS WAITING ON ITS CONFIRMING TAP WHEN IT IS NEWER THAN THE LAST SEND — not merely when nothing
+// has been sent (2026-09-29). The test was `draftedAt && !sentAt`, so a document drafted a SECOND time — the
+// revised estimate after a raise, the one case the rail now asks for — read as sent the moment it was
+// drafted: no "I've sent it", no draft link, and the date on the row never moved. ⚠ An unreadable stamp
+// reads as sent, which is how the old test read every draft that had a send behind it.
+function docDraftPending(st) {
+  if (!st || !st.draftedAt) return false;
+  if (!st.sentAt) return true;
+  var d = Date.parse(st.draftedAt), s = Date.parse(st.sentAt);
+  return !isNaN(d) && !isNaN(s) && d > s;
+}
+
+// ⚠⚠ A DRAFT MADE BEFORE THE PRICE MOVED STILL SAYS THE OLD PRICE, AND IT IS SITTING WHERE IT CAN BE SENT
+// (2026-09-29). Gmail drafts are snapshots — nothing the app does afterwards reaches them — so an estimate,
+// a signing packet or a deposit invoice drafted and then re-priced by an edit or a discount went on waiting
+// in the mailbox at the figure that no longer stands, while the rail asked for the confirming tap on it.
+// Measured on the real functions: a packet drafted, a discount revoking the agreement, the manager
+// re-approving — and the band's one filled button read "I've sent it". Anthony: "warning is fine". So the
+// app deletes nothing in anybody's mailbox (it cannot, and should not try); it marks the draft stale, says
+// so on its row, turns its button into a fresh send and refuses the confirming tap on it.
+// ⚠ `staleAt` must be at or after the draft it condemns, so a fresh draft is never read as stale by a
+// marker left from an older one (docRecordSent also clears it, belt and braces).
+function docDraftStale(st) {
+  if (!docDraftPending(st) || !st.staleAt) return false;
+  var z = Date.parse(st.staleAt), d = Date.parse(st.draftedAt);
+  return !isNaN(z) && !isNaN(d) && z >= d;
+}
+
+// Marks every draft still waiting on its tap as made-before-the-price-moved. Called where the price moves
+// before the packet goes out — an approved estimate taken back for editing, a discount offered or removed.
+// Through the `docState` accessor, so each mark stamps and merges per key like every other send record.
+// Returns the keys it marked. ⚠ A document already SENT is not touched: it went at the price that stood
+// then, and the rows that ask for a revised one say so from the figures, not from this marker.
+function staleOutstandingDrafts(job, why) {
+  if (!job || !job.docState) return [];
+  var out = [];
+  Object.keys(job.docState).forEach(function (k) {
+    var cur = job.docState[k];
+    if (!docDraftPending(cur) || docDraftStale(cur)) return;
+    var st = docState(job, k);
+    st.staleAt = new Date().toISOString();
+    st.staleWhy = why || 'estimate-edited';
+    out.push(k);
+  });
+  if (out.length) showSyncBadge(out.length === 1
+    ? 'A draft made before this change still has the old price — delete it'
+    : out.length + ' drafts made before this change still have the old price — delete them', true);
+  return out;
 }
 
 // ─── THE INVOICE'S FIRST REAL EMAIL ──────────────────────────────────────────
@@ -16381,6 +16560,8 @@ function docFiledAt(job, kind, stage) {
 function docRecordSent(spec, res) {
   var st = docState(spec.job, spec.key);
   st.draftedAt = new Date().toISOString();
+  // A fresh draft carries the price that stands now, so a marker left on the one it replaces goes.
+  delete st.staleAt; delete st.staleWhy;
   st.draftedBy = _actor(spec.job) || spec.job.tc || '';
   st.provider = res.provider;
   st.draftUrl = res.draftUrl || '';
@@ -16417,6 +16598,14 @@ function docRecordSent(spec, res) {
 function markDocSent(jobId, docKey) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) return;
+  // ⚠⚠ A STALE DRAFT IS REFUSED HERE, AHEAD OF THE LEGACY RECORDERS — `markAgreementSent` stamps the approval
+  // and files the packet on the way through, so asking after it would have filed the new price and recorded
+  // the old one as sent. The rail no longer offers this tap on a stale draft; this is the door behind it.
+  if (docDraftStale(job.docState && job.docState[docKey])) {
+    dashNotice('warn', 'That draft was made before the price changed, so it still has the old figure and cannot be recorded as sent. Delete it, and send a fresh one from the timeline.');
+    _dashRedraw(jobId);
+    return;
+  }
   // ⚠ THE TWO LEGACY RECORDERS OWN THEIR OWN RULES AND ARE CALLED, NEVER REIMPLEMENTED.
   // `markEstimateSent` writes `estimateSentDate`, which six surfaces read; and
   // `markAgreementSent` REFUSES without an approved agreement, stamping that approval
@@ -16606,7 +16795,9 @@ function docTitle(kind, stage) {
 var DOC_READY_WHY = {
   nojob:    'This job could not be found.',
   estimate: 'The estimate must be approved before the {doc} can be drawn.',
-  notwon:   'Record the client\u2019s acceptance first — until they have said yes there is nothing to {act}.'
+  notwon:   'Record the client\u2019s acceptance first — until they have said yes there is nothing to {act}.',
+  // {was} and {now} are the two figures, filled in by docReadiness off priceAboveAcceptance.
+  reaccept: 'The client accepted {was} and the approved estimate is now {now}. Send them the revised estimate and record their acceptance again before the {doc} goes out.'
 };
 
 // ⚠⚠ THE ONE ANSWER TO "IS THE RECORD READY FOR THIS DOCUMENT TO EXIST AT ALL". Read by the
@@ -16632,7 +16823,13 @@ function docReadiness(kind, job, estRec) {
   // genuinely share that rule: an invoice priced off a draft is a bill for a number nobody
   // approved, and a packet built on one cites the wrong Exhibit A.
   var noun = (kind === 'invoice') ? ['invoice', 'invoice'] : ['agreement', 'put under contract'];
-  return (DOC_READY_WHY[agreementReady(job, rec)] || '').replace('{doc}', noun[0]).replace('{act}', noun[1]);
+  var code = agreementReady(job, rec);
+  var why = (DOC_READY_WHY[code] || '').replace('{doc}', noun[0]).replace('{act}', noun[1]);
+  if (code === 'reaccept') {
+    var r = priceAboveAcceptance(job, rec) || {};
+    why = why.replace('{was}', fmtMoney(r.was || 0)).replace('{now}', fmtMoney(r.now || 0));
+  }
+  return why;
 }
 
 // An estimate that EXISTS but is not approved: readable on our own screen, and it must not be
@@ -16652,10 +16849,13 @@ function docDraftOnly(kind, job, estRec) {
 // approval (see `commit`). ONLY the acceptance may be outstanding: an unapproved estimate still
 // refuses it outright, since its Exhibit A would be a draft nobody approved. Same shape as
 // docDraftOnly — one rule, read by the blocker, the tray and the viewer's Print button.
+// ⚠ AND THE SAME BEFORE A RE-ACCEPTANCE (2026-09-29): the packet carries the raised price as its Exhibit A,
+// which is exactly what the concierge is talking the client through, and exactly what must not go out yet.
 function docPreviewOnly(kind, job, estRec) {
   if (kind !== 'agreement' || !job) return false;
   var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null);
-  return agreementReady(job, rec) === 'notwon';
+  var code = agreementReady(job, rec);
+  return code === 'notwon' || code === 'reaccept';
 }
 
 // The one word that explains a document which may be read and not printed — on the band's tray
@@ -17049,7 +17249,11 @@ function _jtSendAction(id, job, kind, stage, what) {
   var key = docKeyFor(kind, stage ? { stage: stage } : null);
   var st = (job.docState && job.docState[key]) || {};
   var opt = stage ? (",{stage:'" + stage + "'}") : '';
-  if (st.draftedAt && !st.sentAt) {
+  // ⚠ A STALE DRAFT GETS THE ORDINARY SEND, NEVER THE CONFIRMING TAP. It still carries the old price, so
+  // "I've sent it" on it would record as sent a document that must not go — see staleOutstandingDrafts. The
+  // button reads exactly as a first send (it names the route, which is the rule for this label) and the row's
+  // own line says what to do about the old draft.
+  if (docDraftPending(st) && !docDraftStale(st)) {
     return { label: '&#10003; I&rsquo;ve sent it', call: 'markDocSent(' + id + ",'" + key + "')" };
   }
   return { label: '&#9993; Send ' + what, call: 'docAction(' + id + ",'" + kind + "','send'" + opt + ')' };
@@ -17102,8 +17306,26 @@ function _jtDriveLink(id, job, kind, stage) {
 function _jtDraftLink(id, job, kind, stage) {
   var key = docKeyFor(kind, stage ? { stage: stage } : null);
   var st = (job.docState && job.docState[key]) || {};
-  if (!st.draftUrl || st.sentAt) return [];
-  return [{ label: '&#8599; Open the ' + docWord(kind, stage) + ' draft', call: 'openDocDraft(' + id + ",'" + key + "')" }];
+  if (!st.draftUrl || !docDraftPending(st)) return [];
+  // ⚠ A stale draft is still worth opening — to delete it — and the label says that is what it is for.
+  return [{ label: '&#8599; Open the ' + (docDraftStale(st) ? 'old ' : '') + docWord(kind, stage) + ' draft'
+                 + (docDraftStale(st) ? ' to delete it' : ''),
+            call: 'openDocDraft(' + id + ",'" + key + "')" }];
+}
+
+// The line under a document's row while a draft waits on its tap — the drafted reminder, or, on a draft made
+// before the price moved, what to do about it. ⚠ The mailbox is named only when the draft IS in Gmail: the
+// plain-email route opens a compose window in whatever mail program the device uses.
+function _jtDraftSub(job, kind, stage) {
+  var key = docKeyFor(kind, stage ? { stage: stage } : null);
+  var st = (job && job.docState && job.docState[key]) || null;
+  if (!docDraftPending(st)) return '';
+  if (docDraftStale(st)) {
+    return 'The ' + docWord(kind, stage) + ' draft' + (st.provider === 'gmail' ? ' in Gmail' : '')
+      + ' was made before ' + (st.staleWhy === 'discount-revised' ? 'the discount changed the price' : 'the estimate was edited')
+      + ' \u2014 delete it, and if it already went to the client, tell them the revised one replaces it';
+  }
+  return 'Drafted \u2014 read it, send it, then confirm';
 }
 
 // ⚠ THE ONE ASSEMBLER OF A DOCUMENT'S NON-PRIMARY LINKS. These three builders were called at
@@ -17129,7 +17351,7 @@ function jobTimelineActions(row, job, estRec) {
   var out = { primary: null, secondary: [], doc: null };
   var live = (row.state === 'current' || row.state === 'blocked');
   var estApproved = !!((estRec && estRec.approved) || job.approved);
-  var estSubmitted = !!((estRec && estRec.submitted) || (job.status === 'pending' && !estApproved));
+  var estSubmitted = estimateOutForApproval(job, estRec);
 
   // ⚠⚠ BUILT ONCE, FROM THE ONE MAP, BEHIND THE ONE GATE. This used to be five separate
   // `out.secondary.concat(...)` lines inside the switch below, and only ONE of them
@@ -17155,7 +17377,11 @@ function jobTimelineActions(row, job, estRec) {
     // rule as Offer discount (priceChangeBlocker): the packet carries this estimate as its
     // Exhibit A, and a later price change is a change order. It used to test `!job.agrSigned`,
     // which kept it on screen for the whole stretch the packet sat with the client (2026-09-29).
-    if (_d.kind === 'estimate' && !estimateEditBlocker(job)) {
+    // ⚠⚠ AND WITHHELD WHILE THE ESTIMATE IS OUT FOR APPROVAL (Anthony, 2026-09-29: "hide until PIN"). It
+    // was offered on all four estimate rows there, and pressing it opened Build Estimate locked under "Out
+    // for Manager Approval" — a detour to a screen that could do nothing. The manager's PIN or deny is the
+    // one next move, and the band already offers both; dashEditEstimate refuses it at the door as well.
+    if (_d.kind === 'estimate' && !estimateEditBlocker(job) && !estSubmitted) {
       out.doc.acts = out.doc.acts.concat([{ label: '&#9998; Edit estimate', call: 'dashEditEstimate(' + id + ')' }]);
     }
   }
@@ -17206,7 +17432,9 @@ function jobTimelineActions(row, job, estRec) {
       break;
 
     case 'estimate_sent':
-      if (live && estApproved) out.primary = _jtSendAction(id, job, 'estimate', '', 'estimate');
+      // ⚠ ONE `_jtSendAction` CALL whichever it reads: a raise since the send makes it the REVISED estimate.
+      if (live && estApproved) out.primary = _jtSendAction(id, job, 'estimate', '',
+        (estRec && priceAboveSent(job, estRec)) ? 'revised estimate' : 'estimate');
       // A discount is a re-approval, so it is only offered on an approved estimate the
       // client has not yet signed against.
       // ⚠ Withdrawn once the signing packet has gone out, not only once it is signed — see
@@ -17216,7 +17444,11 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'client_accepted':
       if (live) {
-        out.primary = { label: '&#10003; Client accepted — mark won', call: 'openWonModal(' + id + ')' };
+        // ⚠ The same modal either way — openWonModal reads the raise and asks about the new figure, and
+        // confirmMarkWon records it as a second acceptance rather than a second win.
+        out.primary = (estRec && priceAboveAcceptance(job, estRec))
+          ? { label: '&#10003; Client accepted the revised price', call: 'openWonModal(' + id + ')' }
+          : { label: '&#10003; Client accepted — mark won', call: 'openWonModal(' + id + ')' };
         out.secondary.push({ label: 'Mark lost', call: 'openCloseoutModal(' + id + ')', danger: true });
       }
       break;
@@ -17483,6 +17715,9 @@ function dashEditEstimate(jobId) {
   var _ejob = jobs.find(function (j) { return j.id === jobId; });
   var _eblk = estimateEditBlocker(_ejob);
   if (_eblk) { dashNotice('warn', _eblk); _dashRedraw(jobId); return; }
+  // ⚠ AND NOT WHILE A MANAGER HAS IT (2026-09-29, "hide until PIN") — the rail withholds the button; this is
+  // the door behind it. It used to open Build Estimate locked under "Out for Manager Approval".
+  if (_ejob && estimateOutForApproval(_ejob, estimateStore[jobId])) { dashNotice('warn', ESTIMATE_OUT_FOR_APPROVAL_TXT); _dashRedraw(jobId); return; }
   if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
   if (estimateStore[jobId] && estimateStore[jobId].approved) {
     revokeEstimateApproval(jobId);
@@ -18809,6 +19044,25 @@ function isJobWon(job) {
   return job.status === 'active' || job.status === 'closed' || job.status === 'closed_retained';
 }
 
+// ⚠ ONE MODAL, TWO QUESTIONS, AND EVERY OPEN WRITES ALL THREE LINES — a line only ever set for the second
+// question would go on showing on the next first one (the rule the change-order modal's specialist box
+// learned). A re-acceptance is the client saying yes to a RAISED price after they had already said yes:
+// the job is not won again, and nothing about staffing changes.
+var WON_MODAL_COPY = {
+  won: {
+    title: 'Client Accepted the Estimate',
+    sub: 'This marks the job <strong>won</strong> and unlocks staffing. Nothing is signed yet \u2014 the agreement and deposit still follow.',
+    go: 'Mark as Won \u2192'
+  },
+  reaccept: {
+    title: 'Client Accepted the Revised Price',
+    // {was} {when} {now} are filled in on open.
+    sub: 'They accepted <strong>{was}</strong>{when}. The approved estimate is now <strong>{now}</strong> \u2014 record their '
+       + 'acceptance of the new figure before the signing packet goes out. The job is already won; nothing about staffing changes.',
+    go: 'Record Acceptance \u2192'
+  }
+};
+
 function openWonModal(id) {
   var j = jobs.find(function(x){ return x.id === id; });
   if (!j) return;
@@ -18819,6 +19073,14 @@ function openWonModal(id) {
     return;
   }
   _wonJobId = id;
+  var _raise = priceAboveAcceptance(j, rec);
+  var _copy = WON_MODAL_COPY[_raise ? 'reaccept' : 'won'];
+  document.getElementById('won-title').textContent = _copy.title;
+  document.getElementById('won-sub').innerHTML = !_raise ? _copy.sub
+    : _copy.sub.replace('{was}', fmtMoney(_raise.was))
+               .replace('{when}', j.wonAt ? ' on ' + esc(fmtDate2(j.wonAt)) : '')
+               .replace('{now}', fmtMoney(_raise.now));
+  document.getElementById('won-go').textContent = _copy.go;
   document.getElementById('won-method').value = '';
   document.getElementById('won-date').value = new Date().toISOString().split('T')[0];
   document.getElementById('won-note').value = '';
@@ -18840,11 +19102,26 @@ function confirmMarkWon() {
       !confirm('No note recorded for a ' + (method === 'call' ? 'phone call' : 'conversation in person') + '.\n\n'
         + 'That leaves nothing describing what the client actually agreed to. Continue anyway?')) return;
 
+  // ⚠ READ BEFORE ANYTHING IS OVERWRITTEN: the raise is measured against the acceptance on record, and the
+  // lines below replace it.
+  var _raise = priceAboveAcceptance(j, estimateStore[j.id]);
+  if (_raise) {
+    // The earlier yes is kept, not overwritten: it is what the client agreed before the price moved, and
+    // the record of a re-acceptance is only worth anything beside the acceptance it replaces.
+    j.priorAcceptances = (j.priorAcceptances || []).concat([{
+      total: _raise.was, at: j.wonAt || '', method: j.wonMethod || '', note: j.wonNote || '', by: j.wonBy || ''
+    }]);
+  }
   j.won = true;
   j.wonAt = date;
   j.wonMethod = method;
   j.wonNote = note;
   j.wonBy = (typeof approvedBy !== 'undefined' && approvedBy) || j.tc || '';
+  // ⚠⚠ THE PRICE THEY SAID YES TO (2026-09-29) — the figure a later raise is measured against. It is the
+  // APPROVED estimate's, because that is the only figure a client can accept (openWonModal refuses without one).
+  var _accEst = estimateStore[j.id] && estimateStore[j.id].estimate;
+  var _accTotal = Math.round(Number(_accEst && _accEst.havellinTotal) || 0);
+  if (_accTotal > 0) j.acceptedTotal = _accTotal;
   // Clear any prior loss — a client who comes back is won, and the stale loss reason
   // would otherwise keep showing on the record and in reporting.
   j.status = 'won';
@@ -18853,7 +19130,8 @@ function confirmMarkWon() {
   document.getElementById('won-modal').style.display = 'none';
   renderJobs();
   if (typeof renderClientDashboard === 'function' && _dashboardJobId === j.id) renderClientDashboard(j.id);
-  showSyncBadge('Job marked won — staffing unlocked ✓');
+  showSyncBadge(_raise ? 'Acceptance of the revised price recorded \u2014 the signing packet can go out \u2713'
+                       : 'Job marked won — staffing unlocked ✓');
 }
 
 function openCloseoutModal(id) {
@@ -37632,6 +37910,13 @@ function updateAgrUI() {
         + (_rev ? 'The agreement attaches the estimate as Exhibit A, so it cannot stay approved against a version that is changing. Re-approve the estimate, then re-approve here — Drive is refreshed automatically.'
                 : 'Approve the estimate on the job timeline before approving and sending the agreement.')
         + '</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">The draft below is a preview and has not been filed anywhere.</div></div>';
+    } else if (_b === 'reaccept') {
+      // ⚠ THE CLIENT DID SAY YES — to a lower price. "Has not accepted the estimate yet" would be false about
+      // this job, and the fix is different: send the revised estimate and record the new yes.
+      badge.innerHTML = '<span class="badge b-pending">Awaiting Re-acceptance</span>';
+      banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>'
+        + esc(docReadiness('agreement', _agrJ, null)) + '</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">'
+        + 'Record it with <strong>Client accepted the revised price</strong> on the client\'s timeline. The draft below is a preview at the new price and has not been filed anywhere.</div></div>';
     } else {
       badge.innerHTML = '<span class="badge b-pending">Awaiting Client Acceptance</span>';
       banner.innerHTML = '<div class="approval-banner" style="margin-bottom:1rem;background:var(--tan);"><div><strong>The client has not accepted the estimate yet.</strong></div><div style="font-size:11px;color:var(--gray);margin-top:2px;">Send the estimate, and when they say yes record it with <strong>Mark Won</strong> on the Client Dashboard. Approving here is what files the agreement and the signing packet into their Drive folder, so it waits for the yes.</div><div style="font-size:11px;color:var(--gray);margin-top:2px;">The draft below is a preview and has not been filed anywhere.</div></div>';
@@ -37681,11 +37966,16 @@ function updateAgrUI() {
 //
 // So approval became a CONSEQUENCE rather than a step. `agreementReady` is the question;
 // `ensureAgreementApproved` stamps it the first time anyone prints, sends or files.
+// ⚠⚠ AND A YES TO A LOWER PRICE IS NOT A YES TO THIS ONE (2026-09-29): an approved estimate above the figure
+// the client accepted holds the packet until they accept the new one — 'reaccept'. Every reader of this
+// rule inherits it: the packet may be read and not sent (docPreviewOnly), and the invoices wait too, since a
+// deposit on the new price is money asked for under a figure the client has not agreed to.
 function agreementReady(job, estRec) {
   if (!job) return 'nojob';
   var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null);
   if (!(rec && rec.approved)) return 'estimate';
   if (!isJobWon(job)) return 'notwon';
+  if (priceAboveAcceptance(job, rec)) return 'reaccept';
   return '';
 }
 
@@ -37744,12 +38034,10 @@ function ensureAgreementApproved(jobId) {
   return '';
 }
 
+// ⚠ A SECOND COPY OF agreementReady UNTIL 2026-09-29 — the same three tests written out again, which is how
+// the Agreement tab would have gone on approving a packet the rail was holding for a re-acceptance.
 function agrApprovalBlocker(jobId) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return 'nojob';
-  if (!(estimateStore[jobId] && estimateStore[jobId].approved)) return 'estimate';
-  if (!isJobWon(job)) return 'notwon';
-  return '';
+  return agreementReady(jobs.find(function(j){ return j.id === jobId; }), null);
 }
 
 // ⚠ THE AGREEMENT'S MANAGER PIN IS GONE — see `agreementReady` for why it was reviewing
@@ -37762,6 +38050,7 @@ function approveAgreementNow() {
   var blk = ensureAgreementApproved(currentAgrJobId);
   if (blk === 'estimate') { showFB(_dashFbTarget('agr-fb'),'warn','Approve the estimate for this job first.'); return; }
   if (blk === 'notwon')   { showFB(_dashFbTarget('agr-fb'),'warn','Record the client\'s acceptance first — until they have said yes there is nothing to put under contract.'); return; }
+  if (blk === 'reaccept') { showFB(_dashFbTarget('agr-fb'),'warn', docReadiness('agreement', jobs.find(function(j){ return j.id === currentAgrJobId; }), null)); return; }
   if (blk)                { showFB(_dashFbTarget('agr-fb'),'warn','This job could not be found.'); return; }
   renderAgreement();
   _dashRedraw(currentAgrJobId);
@@ -37798,8 +38087,12 @@ function stripePaymentLink(jobId, stage) {
   // agreement nobody approved requests money under terms that were never signed off.
   // ⚠ IT GATES THE MINT, NOT THE RE-SHOW ABOVE. A link already in a client's hands is a read;
   // re-displaying it must not turn on an estimate that has since been reopened for editing.
-  if (ensureAgreementApproved(job.id)) {
-    _docNotice('warn', 'The estimate must be approved and the client\'s acceptance recorded before asking for payment.', jobId);
+  var _payBlk = ensureAgreementApproved(job.id);
+  if (_payBlk) {
+    // A raise the client has not accepted names both figures — "record their acceptance" alone would read as
+    // a job nobody has won.
+    _docNotice('warn', _payBlk === 'reaccept' ? docReadiness('invoice', job, null)
+      : 'The estimate must be approved and the client\'s acceptance recorded before asking for payment.', jobId);
     return;
   }
 

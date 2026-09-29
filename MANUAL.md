@@ -25,7 +25,7 @@ Browser-based app used by all Havellin staff. No installation. Data syncs across
 > | To… | Press | Where it lands when you save |
 > |---|---|---|
 > | Create a client | **+ Add New Client**, the first thing on the Client Dashboard's client list | The **new client's own dashboard**, at once, with *Client created* above the timeline |
-> | Build or edit the estimate | **Build estimate** — the brown button in the band above the client's timeline (§9a). Once an estimate exists, **✎ Edit estimate** beside the estimate document does the same, and un-approves it first if it was approved — until the signing packet goes out, when it is withdrawn and a change is a change order (§8). | That **client's dashboard** (as it has since 2026-09-13) |
+> | Build or edit the estimate | **Build estimate** — the brown button in the band above the client's timeline (§9a). Once an estimate exists, **✎ Edit estimate** beside the estimate document does the same, and un-approves it first if it was approved — until the signing packet goes out, when it is withdrawn and a change is a change order (§8). It is not offered while a manager has the estimate for approval, and comes back once they approve it or deny it. | That **client's dashboard** (as it has since 2026-09-13) |
 >
 > Both open as a **full screen**, the way a client opens from the list — not a pop-up. Across the top of each is a bar with the way back: **← Clients** on the intake screen, **← *the client's name*** on the estimate screen. The **Client Dashboard** tab stays lit the whole time, because that is where you came from and where the bar returns you.
 >
@@ -307,7 +307,7 @@ Item photos, collection photos/appraisals and the inventory workbook live in **E
 
 ## 5. Estimate (Labor-Based Services)
 
-**Screen: Build Estimate** → opened from the client's own timeline with the brown **Build estimate** button (or **✎ Edit estimate** beside the estimate once one exists, until the signing packet goes out). It is a full screen off the Client Dashboard as of 2026-09-23, not a tab, and it is always for that one client — named in the bar across the top, whose **←** button returns you to them (§1). This section covers the labor-based services (Home Editing, Home Transition, Cleanout, Estate Settlement, Probate). Home Prep for Sale uses the fee-only flow in Section 6.
+**Screen: Build Estimate** → opened from the client's own timeline with the brown **Build estimate** button (or **✎ Edit estimate** beside the estimate once one exists, until the signing packet goes out — and not while a manager has it for approval). It is a full screen off the Client Dashboard as of 2026-09-23, not a tab, and it is always for that one client — named in the bar across the top, whose **←** button returns you to them (§1). This section covers the labor-based services (Home Editing, Home Transition, Cleanout, Estate Settlement, Probate). Home Prep for Sale uses the fee-only flow in Section 6.
 
 > **⚠ There is no job dropdown on Build Estimate any more (2026-09-23).** The note below describes the picker the tab had, and why a Won job came off it; with the screen opened *from* the client there is nothing to pick, and the door it describes — *Edit estimate* on the client's dashboard — is now the only one. **Clear** became **Start over**, on the same client.
 
@@ -796,7 +796,7 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 > **An unapproved estimate cannot be emailed.** The app refuses, and says so on the dashboard where you pressed it. Approve it first — the figure isn't final until someone has signed off on it.
 
-**✉ Send estimate** on the *Estimate sent to client* row builds a formatted HTML email with the estimate PDF attached and leaves it as a **draft in your own Gmail**. Read it, add anything personal, and send it yourself. Then hit **✓ I've sent it** here to record delivery. Wait for the client to confirm before taking further steps.
+**✉ Send estimate** on the *Estimate sent to client* row builds a formatted HTML email with the estimate PDF attached and leaves it as a **draft in your own Gmail**. Read it, add anything personal, and send it yourself. Then hit **✓ I've sent it** here to record delivery. Wait for the client to confirm before taking further steps. If a manager later approves the estimate at a price **above the one you sent**, the row opens again and the button reads **✉ Send revised estimate** (§9a).
 
 > **The draft is in the mailbox of whoever is signed in on the device, and that is the point (new 2026-09-08).** Ashley pressing the button gets a draft in Ashley's Gmail that sends from Ashley's address, lands in Ashley's Sent folder, and gets the client's reply. Google asks which account the first time on each device and is silent afterwards. The app holds a Gmail token only in memory and never writes it to the device, and the scope it requests is **compose only** — it can create a draft and cannot send one. Nothing leaves the building without a person pressing send.
 >
@@ -866,7 +866,7 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 > **⚠ An UNANSWERED matter type signs the probate wording, byte for byte.** That is the safe direction and it is what protects every estate papered before the field existed: stripping a §733.604 promise off a real probate matter on the strength of a question nobody was asked is the bad failure. A test compares the two, clause by clause. **⚠ And the approver noun follows it everywhere** — the Scope of Services paragraph, the §5.1 representations, and five cells of the §5.3 authorisation table all read *Written PR approval* on forms that issue on matters with no PR. One noun now, so the table cannot say PR three inches under a §5.2 that says successor trustee. A trust matter also gains its own authority warranty in §5.1, which the form asked for nowhere.
 
-> **THE CLIENT'S YES IS WHAT TRIGGERS THE AGREEMENT, and since 2026-09-08 the app enforces it.** Approving an agreement needs the estimate approved *and* the job marked **✓ Client Accepted — Mark Won** on the Client Dashboard (§9). Until then the tab shows *Awaiting Client Acceptance*, and Approve, Print / Save PDF, sending the signing packet and Stripe are all withheld — a correct manager PIN is refused too, with the reason. *(Since 2026-09-29 the packet may be **viewed** on screen before then, marked PREVIEW — see the note under Generate & Send.)*
+> **THE CLIENT'S YES IS WHAT TRIGGERS THE AGREEMENT, and since 2026-09-08 the app enforces it.** Approving an agreement needs the estimate approved *and* the job marked **✓ Client Accepted — Mark Won** on the Client Dashboard (§9). Until then the tab shows *Awaiting Client Acceptance*, and Approve, Print / Save PDF, sending the signing packet and Stripe are all withheld — a correct manager PIN is refused too, with the reason. *(Since 2026-09-29 the packet may be **viewed** on screen before then, marked PREVIEW — see the note under Generate & Send.)* **And a yes to a lower price is not a yes to this one (2026-09-29):** when a manager approves the estimate at a price above the one the client accepted, the tab reads *Awaiting Re-acceptance* and everything above waits again, until **✓ Client accepted the revised price** is recorded (§9a).
 >
 > **Why it needed a gate rather than a rule.** Anthony, walking a dummy client: *"it looks like an agreement gets pushed into Google Drive before an estimate is even approved … there was an agreement in the client file before we even solidified the estimate."* Approving the agreement is what **files it and the signing packet into the client's Drive folder**, and the only thing standing in front of that was our own estimate approval — an internal event that says nothing about whether the client agreed to anything.
 >
@@ -902,7 +902,7 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 
 > **⚠ FOUR CHANGES TO THE AGREEMENT AND ITS PACKET (2026-09-29).**
 >
-> **You can read the packet before the client says yes.** Once the estimate is approved, **👁 View packet** opens the signing packet from the *Signing packet sent* row, titled *Signing Packet — PREVIEW*, so you can walk a client through the contract they are deciding on. **Print and Send still wait for *Client accepted — mark won***: the viewer carries no Print button, and viewing stamps nothing and files nothing. An estimate that is not approved yet opens no packet at all.
+> **You can read the packet before the client says yes.** Once the estimate is approved, **👁 View packet** opens the signing packet from the *Signing packet sent* row, titled *Signing Packet — PREVIEW*, so you can walk a client through the contract they are deciding on. **Print and Send still wait for *Client accepted — mark won*** (or, after a raise, *Client accepted the revised price*): the viewer carries no Print button, and viewing stamps nothing and files nothing. An estimate that is not approved yet opens no packet at all.
 >
 > **The fee clause names the rush premium and the discount.** Both forms add one sentence each (§3.3 on the standard form, §3.1 under the fee table on the estate form), only when the estimate carries one and only on an hourly engagement (on a fixed fee both sit inside the fee the clause already states):
 > *“At Client’s request this engagement is scheduled on a priority basis, for which an expedited-delivery premium of twenty percent (20%) of Contractor’s fees is charged, as itemized on the Estimate and applied to the fees actually billed.”*
@@ -1208,9 +1208,9 @@ Opening a client draws a **timeline** of sixteen milestones, from intake to fina
 | Client intake | Recorded at intake. |
 | Walkthrough | With a walkthrough date booked: **Build estimate** (the brown button) and **Change the walkthrough date** beside it. With none booked: **Set the walkthrough date**, and **Build estimate** beside it. |
 | Estimate built | **Build estimate** — opens the Build Estimate screen on this job (§5). |
-| Estimate approved | **Submit for approval**, then **🔑 Manager approval** (PIN), **Deny**, **Offer discount** and **✎ Edit estimate** (both until the signing packet goes out). |
-| Estimate sent to client | **✉ Send estimate** → **✓ I've sent it**. Plus View / Print / the Drive copy. |
-| Client accepted | **✓ Client accepted — mark won**. |
+| Estimate approved | **Submit for approval**, then **🔑 Manager approval** (PIN), **Deny**, **Offer discount** and **✎ Edit estimate** (both until the signing packet goes out; *Edit estimate* is not offered while the estimate is with the manager, below). |
+| Estimate sent to client | **✉ Send estimate** → **✓ I've sent it**. Plus View / Print / the Drive copy. Opens again, reading **✉ Send revised estimate**, when the approved price rises above the one that went (below). |
+| Client accepted | **✓ Client accepted — mark won**. After a raise: **✓ Client accepted the revised price**, with **Mark lost** beside it (below). |
 | Signing packet sent | **✉ Send signing packet** → **✓ I've sent it**. |
 | Agreement signed | **✓ Record the signed agreement** — see §8. |
 | Deposit invoice sent | **✉ Send deposit invoice**, **🏦 ACH payment link** (§8b). |
@@ -1230,6 +1230,19 @@ Opening a client draws a **timeline** of sixteen milestones, from intake to fina
 > **The timeline is driven by the five things that actually carry a job's state, not by the status label.** The status word on a job card moves independently of the estimate record, the client's acceptance, the agreement chain and the payments — re-approving an estimate on a signed, funded job even knocks the status back to *Approved*. Each milestone reads whichever of the five owns it, so the timeline stays right when the status word is not. **Trust the timeline over the status chip.**
 
 > **A step can be done out of order and the timeline copes.** *Estimate sent to client* is a button somebody can legitimately skip, so a signed and funded job may carry no estimate-sent date. Later steps stay green and the light lands on the *earliest* gap rather than treating everything after it as unfinished.
+
+> **⚠⚠ A higher price asks the client again (2026-09-29).** Anthony, deciding it: if a won client's estimate is edited up and re-approved, the acceptance is asked again. The app records two figures — the price on the estimate when you press *I've sent it*, and the price the client accepted when you press *Client accepted* — and when a manager approves the estimate at a price **above** either of them:
+>
+> - **Above the price sent:** *Estimate sent to client* opens again and the band reads **Send revised estimate**, both before the client has said yes and after. Without that, the acceptance recorded next would be at a figure they never saw.
+> - **Above the price accepted:** *Client accepted* opens again and reads **Client accepted the revised price**, with **Mark lost** beside it — a client can say no to a higher price. The pop-up names the figure they accepted and the one they are being asked about, and **Record Acceptance** keeps the earlier yes beside the new one.
+> - **The job stays Won.** Staffing, the Job Plan and Win / Loss are untouched; the status reads **Won · Awaiting Re-acceptance** (§9). The signing packet, the deposit invoice and the Stripe link wait for the new yes; the packet may be read on screen, marked PREVIEW, and not printed or sent.
+> - **The manager is told where the PIN was typed**, and the concierge's *Estimate Approved* email carries the same sentence.
+> - **A discount never reopens anything** — it only lowers what the client agreed to — and **nothing reopens once the signing packet has gone out**: the client is reading and signing the current price.
+> - **A client who was won, marked lost and came back** is asked a first yes, not a re-acceptance: the old yes was withdrawn when they walked away.
+>
+> **⚠ A job recorded before 2026-09-29 carries neither figure and is asked nothing** — there is no honest number to compare. An estimate *sent* before then and *accepted* after it reopens the acceptance but not the send; the manager's notice and the concierge's email both say to send the revised estimate first, so do that before asking.
+
+> **⚠ *Edit estimate* waits for the manager (2026-09-29).** While an estimate is out for approval it is locked on Build Estimate, and the timeline used to offer *Edit estimate* anyway, landing you on a screen reading *Out for Manager Approval*. Anthony: *"hide until PIN."* It is not offered on any row until the manager approves or denies, and pressing it by any other route is refused with the same reason. The manager's PIN is the next move on the timeline.
 
 > **A dead job collapses to one row.** *Lost* and *Closed — Deposit Retained* are terminal, so there is no next action and nothing is lit — a button there would invite a click the app refuses.
 
@@ -1342,6 +1355,7 @@ The tray advances with the job — *Client Estimate* through the approval and se
 | Approved — Awaiting Client | We've approved our own estimate. **The client has not answered.** Nothing may be staffed yet. |
 | **Won** | The client has accepted. Staffing unlocks here. |
 | **Won · Pending Re-approval** | The client has said yes and a revised price — a discount, or an edit resubmitted before the packet went out — is waiting on a manager PIN. **Still won**: staffing, the Job Plan and Win / Loss all read it as won. It is on the Pending Approval filter, and the PIN or a deny returns it to **Won**. |
+| **Won · Awaiting Re-acceptance** | The client said yes, and a manager has since approved the estimate at a **higher** price. **Still won** — staffing and the Job Plan are untouched — but the signing packet, the deposit invoice and the Stripe link wait until the client accepts the new figure (§9a). It returns to **Won** once *Client accepted the revised price* is recorded. |
 | Active | Signed + deposit received — work in progress |
 | Closed | The work is handed over. **Delivery is stamped here** — see below. The final invoice goes out after the close and may still be unpaid; the timeline says so. |
 | Lost | Died before any money arrived. **Terminal.** |
@@ -1364,11 +1378,21 @@ Client estimate · signing packet · deposit invoice · midpoint invoice · fina
 | **👁 View** | Opens the document in a reader over the dashboard. Closing it drops the document. |
 | **🖨 Print** | Print / Save as PDF. The PDF is named for the client and the property, never a database key. |
 | **✉ Send…** | Builds the PDF, creates a **draft in your own Gmail** with it attached and the right department CC'd, and opens it. |
-| **✓ I've sent it** | Appears after the draft is made. Press it once you have actually sent the mail. |
-| **↗ Open the … draft** | Re-opens the draft you made. It is withdrawn once you confirm the send. |
+| **✓ I've sent it** | Appears after the draft is made. Press it once you have actually sent the mail. **Not offered on a draft made before the price changed** (below). |
+| **↗ Open the … draft** | Re-opens the draft you made. It is withdrawn once you confirm the send. On a draft made before the price changed it reads *Open the old … draft to delete it*. |
 | **📁 Filed copy** / **📁 File to Drive** | Opens the copy in the client's Drive folder, or files it if that did not land. |
 
 > **Why there are two taps and not one.** The app is allowed to *create* a Gmail draft and is deliberately not allowed to send one — that is the feature: every client email is read by a person before it goes. So between the app making the draft and the mail leaving there is a real gap the app cannot see across. Pressing **Send** records a *draft*; pressing **✓ I've sent it** records the *send*. Recording the draft as a send would turn the timeline green over an untouched draft sitting in a mailbox — and on the estimate, that is what unlocks Mark Won. The row says *"Drafted — read it, send it, then confirm"* while it is waiting.
+
+> **⚠ A draft made before the price changed is flagged, and cannot be recorded as sent (2026-09-29).** A Gmail draft is a snapshot: offer a discount or edit the estimate after pressing *Send*, and the draft still carries the old figure. Anthony, choosing a warning over a deletion: *"warning is fine."* So the app never touches the draft in your mailbox, and instead:
+>
+> - a notice says so the moment it happens — *"A draft made before this change still has the old price — delete it"* — and a discount's confirmation carries the same warning;
+> - the row names it — *"The estimate draft in Gmail was made before the discount changed the price — delete it, and if it already went to the client, tell them the revised one replaces it"*;
+> - the band's button goes back to an ordinary **Send**, which makes a fresh draft at the price that stands;
+> - **✓ I've sent it is not offered** on the old draft and is refused if reached another way, so a send is never recorded at a price the client was not sent;
+> - the old draft is offered only as *Open the old … draft to delete it*.
+>
+> It covers the estimate, the signing packet and the invoices alike. **If the old draft already went to the client**, send the fresh one and tell them it replaces the first; the app cannot know which of the two they read.
 
 > **The confirming tap belongs to the mail provider, not to the document.** If a sender that can send on its own is ever wired in, the tap disappears by itself on all five documents. Nothing on screen needs changing for that.
 
