@@ -1,3 +1,27 @@
+## ⚠⚠ OPEN: THE 2026-09-28 WORKFLOW AUDIT — `WORKFLOW_AUDIT_2026-09-28.md` IS THE TRACKER; READ IT BEFORE BUILDING A PACK
+Anthony, 2026-09-28: *"I need both the high level TLDR on what's working and what's not working, and then specific prompts and
+questions to address any of the shortcomings or bugs you find."* **61 findings (2 Critical · 9 High · 16 Medium · 34 Low) in
+fourteen fix packs, P1–P14**, each a self-contained prompt with a *"Decision to apply"* line. He works from a private artifact
+page; the file in the repo root is the same content plus his answers, and it is the record of what has landed. **Docs only.
+Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when that session hit its context limit.
+
+- **Landed 2026-09-29, P1–P7:** C1, C2, H1, H2, H3, H4, H6, M1, M2, M3 and M8, plus nine lows, each with its own entry below.
+  Spot-checked in the code on `main` the same day rather than taken from the entries' own claims; ticked and marked in the file.
+- **Still open:** P8 (H5: work done tops out at 42–74%) · P9 (H7–H9, M13–M16 and the intake lows: Edit Client) · P10 (M4–M7
+  and the lifecycle lows) · P11 (M9 and the per-key job merge; **needs an Apps Script redeploy**) · P12 (M10–M12 and the
+  estimator lows) · P13 (the docs pass, after the others) · P14 (small backlog; its message-timer and dead-code items are done).
+- **Answers, 2026-09-29:** every recommendation stands except **Q9** (no rush on the 30% prep fee on either basis; rush applies
+  on fixed price too, printed as its own line) and **Q20** (an appraiser is priced per estimate line and no tier requires or
+  refuses one; **his OK on that reading is still pending**). Also still open: **Q7** (rebuild the reference bands live from the
+  engine, or delete the box) and a **Q14 follow-up** (does a fixed-price rush job's change order carry the 20%? my call yes).
+  All three block P12 only. **Do not build a pack whose question is unanswered** without saying which default you applied.
+- **Anthony's own items:** O1 (the `2026-09-22b` redeploy with `ANTHROPIC_API_KEY`) reported done, not verifiable from here;
+  O2–O9 open (the Quo redeploy, a DocuSign sandbox envelope, a Stripe test ACH, the Gmail consent audience,
+  `previewOrphanRecords()`, the counsel bundle, the insurance and bond, the two Drive documents).
+- **When a pack lands:** tick it in the file (`- [x] **P8**`) and mark its findings fixed rather than deleting them.
+- **⚠ THE SHAPE TO COPY, FROM H2:** a browser step that reaches a handler through `page.evaluate` proves the handler, not that
+  anybody can reach it. Press the control.
+
 ## ⚠⚠ EDIT ESTIMATE GOES ONCE THE SIGNING PACKET IS OUT, AND A WON CLIENT STAYS WON THROUGH A RE-PRICE (FIXED 2026-09-29)
 Two of the three items the document build flagged (the entry below the manager-approvals one). Anthony: *"yes, withdraw Edit
 estimate once the packet is sent. if we are offering a discount, and therefore it is "pending" how is it also "won"?"* App-only,
@@ -9354,6 +9378,8 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   (`claude/exciting-carson-pv156f` is the previous name.)
   (`claude/change-order-fixes-ew3m2i` is the previous name. It carried the two 2026-09-25 Home Prep change-order
   builds to `main`; the sessions above were each assigned a new name at the same commit.)
+  (`claude/tender-pascal-trkc5b` merged the 2026-09-28 audit and Anthony's answers to `main` on 2026-09-29 and built nothing;
+  `claude/business-workflow-audit-jnxev5` is the audit's own branch.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
