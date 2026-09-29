@@ -4,7 +4,7 @@ Five audits and a click-through of three jobs, from + Add New Client to final pa
 
 Status of each fix pack lives in this file: when a session lands a pack, it marks it done here and adds its CLAUDE.md entry.
 
-**Status, 2026-09-29:** P1–P7 have landed on `main`: C1, C2, H1, H2, H3, H4, H6, M1, M2, M3, M8 and nine lows are fixed and marked below. Still open: P8–P14 (H5, H7–H9, M4–M7, M9–M16 and the remaining lows). Questions still open: Q7, the Q14 follow-up and Anthony's OK on the Q20 reading, all three for P12 only.
+**Status, 2026-09-29:** P1–P8 have landed on `main`: C1, C2, H1, H2, H3, H4, H5, H6, M1, M2, M3, M8 and nine lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). Still open: P9–P14 (H7–H9, M4–M7, M9–M16 and the remaining lows). Questions still open: Q7, the Q14 follow-up and Anthony's OK on the Q20 reading, all three for P12 only.
 
 ## TL;DR
 
