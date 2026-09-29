@@ -36,10 +36,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
   const ctx = sandbox({
-    fns: ['jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'estimateSubmitBlocker',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
       // The document tray: `jobTimelineActions` builds the step's document from the ONE
       // row→document map, behind the ONE readiness gate, rather than five ungated concats.
-      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'agreementReady', 'isJobWon',
+      'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', 'isJobWon',
       'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       // ⚠ LIFTED, NOT STUBBED. estimateSubmitBlocker grew a contract arm on 2026-09-22 and a
       // stub of it is exactly what would let the submit gate and the save gate drift apart.

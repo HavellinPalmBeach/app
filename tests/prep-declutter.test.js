@@ -25,9 +25,9 @@ const { fn, sandbox, domStub, source } = require('./harness');
 const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'fmtDate2',
   'svcLabelOf', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText',
   'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit',
-  'clientEstimateHtml', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
-  'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'proposedPlanRow',
-  'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml', 'probateAgreementHtml',
+  'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
+  'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted', 'proposedPlanRow',
+  'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml',
   'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices', '_agrProbateCompliance',
   '_agrMidpointTrigger', '_fixedFeeBlurb', 'docStandardEffect', 'isFormalDoc', 'gateDispute',
   '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason',
@@ -259,7 +259,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('the INVOICE bills the hours, and gates on them');
   {
-    const invFns = ['invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+    const invFns = ['invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
       'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson',
       'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine',
       'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2',

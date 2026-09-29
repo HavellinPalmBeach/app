@@ -404,9 +404,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // that asked for these two fields to move here. A stub that does not match the real source
     // is worse than no stub — this repo has now paid for that twice.
     const DFNS = ['renderClientDashboard', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions',
+      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
-      '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
+      '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
@@ -598,8 +598,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the document in play right now — and "done" is not "sent"');
   {
     const D = sandbox({
-      fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'jobStageDoc', 'docReadiness',
-            'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink',
+      fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
+            'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
             'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
@@ -746,7 +746,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the rail carries PLANNED dates, and they can never be read as actuals');
   {
     const R = sandbox({
-      fns: ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
             'docSentAt', 'docDraftedAt', 'docKeyFor', 'isAgreementSent'],

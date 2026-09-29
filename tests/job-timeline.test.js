@@ -59,7 +59,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: [
-      'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+      'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments',
       'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
       // Slice 4: the rail reads where each document has been.

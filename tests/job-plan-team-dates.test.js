@@ -33,7 +33,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // #7 — THE BAND SAYS WHAT TO DO NEXT, NOT WHAT THE MILESTONE WILL BE CALLED ONCE IT IS DONE
   // ═══════════════════════════════════════════════════════════════════════════
-  const TL_FNS = ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent'];
@@ -78,8 +78,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#7, driven through the real band renderer');
   {
-    const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
-      'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+    const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
+      'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
       '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney']);
     const B = sandbox({ fns: DFNS, vars: ['JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
       'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],

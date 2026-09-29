@@ -1,3 +1,106 @@
+## ⚠⚠ THE CLIENT DOCUMENTS SAY ONLY WHAT THE ESTIMATE PRICES — AND EVERY ONE NOW ADDS UP TO ITS OWN TOTALS (FIXED 2026-09-29)
+Off the 2026-09-28 workflow audit, findings **H6, M2, M3 and the document lows**, plus two decisions Anthony made on it: **Q8**
+(name the rush premium and the discount in both agreements' fee clauses, one sentence each) and **Q11** (the agreement may be
+viewed, not printed or sent, before the client is marked Won). App-only, no redeploy. **Every finding was reproduced on the real
+functions before anything was changed.**
+
+- **⚠⚠ H6 — THE RUSH LINE PROMISED PEOPLE THE PREMIUM DOES NOT BUY, ON EXHIBIT A.** Under *Expedited Delivery (20%)* the estimate
+  and the final printed *"A second Transition Concierge and an expanded specialist crew working in parallel to compress the project
+  calendar at your request"* (the deposit and midpoint: *"Compressing the project calendar at your request"*). Rush is a flat premium and adds nobody — the crew and the
+  second concierge are their own controls — and the estimate is the signed agreement's Exhibit A. **`rushScopeLine(e)` is the one
+  sentence**, read by the estimate and both invoice rows: *"Priority scheduling to meet the timeline you requested"*, plus *"with a
+  second Transition Concierge"* / *"an expanded crew of N Property Specialists … working in parallel"* **only when
+  `rushCrewAdded(e)` finds one**: `needsTC2` (or the legacy `preparedBy2`), or `psCount` above the new **`psRecommended`**, stamped
+  on every snapshot by `calcAll` from today.
+  - **⚠ A RECORD WITH NO `psRecommended` NEVER CLAIMS AN EXPANDED CREW.** The comparison cannot be made on an estimate saved before
+    today, and a claim the record cannot support does not go on Exhibit A. The `RUSH_PCT` comment that said the premium *"is
+    literally what the client is buying — a second concierge and a larger crew"* is corrected at the source, and so are the manual
+    §5c bullet and the playbook's lever row, which said the same.
+- **⚠⚠ M2 — THE FINAL'S *ORIGINAL ESTIMATE* ROW FOLDED THE CHANGE ORDERS IN.** *Original Estimate (basis for advance payments)*
+  printed the estimate plus the accepted change orders' hours at the rates: a $10,962 job with a +10/+10 change order read
+  **$13,462** over a **$5,481** deposit and a **$2,741** midpoint — half and a quarter of a different number. It prints
+  `est.havellinTotal` now, and **`_coPayRow` — *Approved Change Orders (N)*, the hours on T&M (*"billed in the hours above"*) or the
+  signed prices on fixed price — sits on its own line directly under it**, on both the T&M and the fixed-price summaries.
+- **⚠⚠ M3 — THE DISCOUNT POP-UP COULD NEVER TAKE A DISCOUNT OFF, AND A DISCOUNT LEFT THE PACKET AT THE OLD PRICE.**
+  - **`Math.max(1, parseInt(…) || 0)` turned a blank AND a 0 into 1%**, so its own refusal (*"between 1 and 30"*, against a 15%
+    cap) was unreachable. **`discountPctInput(raw)`** is read by the preview and the write alike: whole numbers **0–15**, anything
+    else refused with *"Enter a discount between 0% and 15% — 0 removes the discount"* printed in the pop-up's new `#dm-fb`, and the
+    preview shows an em dash rather than a clamped figure the write would refuse. **0 removes it** — refused, with the reason, on an
+    estimate carrying no discount, and on a fixed fee, where the discount lives inside the fee and there is nothing separate to take
+    off. The manager email and the confirmation say *removed*.
+  - **It left `job.agrApproved` standing**, so `ensureAgreementApproved` returned early and never re-filed the signing packet: Drive
+    kept Exhibit A at the old price. `applyDiscountRevision` calls **`revokeAgreementApproval(job, 'discount-revised')`**, extracted
+    out of `revokeEstimateApproval` so both take the same path — **and it clears `_packetExported[job.id]`**, because
+    `_agrExportKey` is the approval DAY plus the approver, so a revoke and a re-approval the same afternoon by the same manager
+    produced the same key and the packet was taken as already filed. **`agrApprovalWithdrawn(job)`** is the one explanation, read by
+    the rail's *Signing packet sent* row and the Agreement tab's banner — both read `agrRevokedBy === 'estimate-edited'`, so a
+    discount revoked the approval silently.
+  - **⚠ OFFER DISCOUNT WAS STILL REACHABLE AFTER THE PACKET WENT OUT, and is withdrawn there now** — Anthony's rule: a later price
+    change is a change order. **`discountOfferBlocker(job)`** (signed → the price is locked; `isAgreementSent` — the record, never
+    the boolean DocuSign does not write — → a change order) is read by the rail, `dashOfferDiscount`, `openDiscountModal` **and
+    `applyDiscountRevision`**, because a pop-up opened before the packet went out on the other device must not write after it.
+- **THE LOWS.** (1) **The midpoint and final billed their own re-rounding** of the cumulative 75%, a dollar off `paymentSplit` in
+  opposite directions on 12 of 79 audited totals; `invoiceHtml` bills `paymentSplit`'s running targets now (`_depSplit` / `_midSplit`).
+  (2) **`buildPrepEstimateBody` printed no discount row**, so the fee and the declutter hours came to more than its total; it does
+  now. (3) **A credit final was emailed as *"Balance due: $-2,741 … due within 7 calendar days"***; `invoiceBalanceWords(amtDue)` is
+  read by the text part, the HTML part and the mailto: *"Credit to you: $2,741 — Nothing is due on this invoice."* (4) **Premium
+  finals: two people sharing a role at a rate landing on half a dollar each rounded up** ($185 × 10.3 = $1,905.50, printed $1,906 +
+  $1,906 over a $3,811 total); the remainder rides on the role's longest row. (5) **Both agreements printed *"(None — $0)"*** inside
+  the materials sentence; `materialsPackageQuoted` → *"No moving or packing materials package is quoted on the Estimate, and none is
+  billed"*, and the estimate's Terms carry the materials bullet only when a package is quoted. (6) **The invoice gate said
+  *"…before the agreement can be drawn"***: `DOC_READY_WHY.estimate` names its `{doc}`.
+- **Q8 — `agrPriceAdjustments(est, party)`**, one sentence each for the premium and the discount, only on an **hourly** engagement
+  and only when the estimate carries one, in the standard form's §3.3 (all three arms) and the estate form's §3.1 under the fee
+  table. `_PCT_WORDS` gained **1–15** so every discount a manager can approve spells out. **Drafted, not reviewed — counsel bundle
+  B6**, with the question of whether *"to meet the timeline you requested"* reads as a completion promise.
+- **Q11 — `docPreviewOnly(kind, job, estRec)`**: the packet on an approved estimate whose client has not said yes yet. The
+  agreement blocker allows `view` only, `docAction` marks the viewer `viewOnly` (no Print button), and `docReadOnlyWord` titles it
+  *Signing Packet — PREVIEW* on the tray and the viewer alike. Viewing commits nothing: no stamp, no filing.
+  - **⚠ BOTH AGREEMENT BUILDERS STOPPED READING THE TAB'S GLOBALS FOR THE APPROVED STAMP.** `agrApproved` / `agrApprovedBy` are
+    whatever `loadAgreement` last primed — possibly another client — and a preview before Won is exactly when another job's
+    *Approved for Sending* stamp would print on this one. They read `job.agrApproved` / `job.agrApprovedBy`, escaped.
+- **THE TESTS ASSERT WHAT A READER CHECKS, NOT A FIGURE SOMEBODY WORKED OUT.** `tests/document-reconciliation.test.js` renders the
+  real estimate, all three invoices, both agreement forms and the three email parts over **289 scenarios** — services, billing
+  bases, rush, discount, premium rates, totals on every residue mod 4, change orders, two-person roles, credits — and holds
+  **14 rules** (the rows add up to each printed total, the schedule signed is the schedule billed, no phantom materials package, crew
+  claims match the estimate, the emails word a credit as one…), reporting failures by rule with the scenarios that broke it.
+  `tests/document-claims.test.js` drives the rest: the pop-up through the real modal functions, the rail, both doors, the
+  preview through `docAction`, and the exact Q8 sentences. **11,751 committed checks** (`document-claims` 226, `document-reconciliation` 29).
+  Thirty existing suites' pinned `fns:` lists gained the new helpers, lifted rather than stubbed, and **five pins across four suites are restated as the requirement rather than deleted**:
+  `estimate-delivery` (the revoke is asserted where it moved, in `revokeAgreementApproval`; the banner asks the shared withdrawal
+  helper rather than testing `'estimate-edited'` itself), `agreement-rates` (the materials note takes the cost, and a $0 package is
+  none), `service-change` (`_pctWords` spells 1–15, so its fallback is tested on 17%) and `walkthrough-view` (the viewer's Print
+  hides for a view-only document too).
+- **Revert sweep on four tar copies: 53 changes, 52 red on the first pass, baseline 11,748 / 0 before
+  and after on every copy, no needle mismatched, nothing crashed** (every run totalled 11,748). Biggest: the write turning 0 and a
+  blank into 1% fails **24**, the blocker ignoring a sent packet **16**, Q8's percentages unspelled **15**, no package reading as a
+  package **13**, the ungated write **12**; the rest 1–6.
+  - **⚠ THE ONE GREEN WAS MY TEST.** Reverting the estate form's approved stamp to the tab's globals passed, because the check
+    looked for the *other client's* name — and restoring only the condition stamps this job *Approved for Sending* with its own
+    empty approver, so no foreign name appears. It asserts the stamp itself now, both ways and escaped; re-done it fails 1. The
+    same shape this file keeps recording: a check that looks for the symptom it imagined rather than the state it protects.
+- **Verified in headless Chromium, `tests/browser/step26.js`, 62 checks, 0 failed, 0 page errors**, through the real Build
+  Estimate, the real pop-up and the real rail: an ordinary rush estimate and its invoices read *priority scheduling*; the
+  Concierges control at 2 and a crew above the recommendation each name themselves; the final's summary reads *Original Estimate*
+  = the estimate with *Approved Change Orders (1)* under it; a blank discount refused, 0 removing it, the agreement revoked with
+  *"A discount changed the price…"* on the row; a sent packet leaving no *Offer discount* and `dashOfferDiscount` refusing; the
+  preview packet with no Print and nothing filed, then Print after Won; the Q8 sentences and the materials sentence in the real
+  agreements; overflow 0 at 1440 and 390. **Against the pre-change build it fails 42.** `run.sh`'s default list is 1–26;
+  steps 1–25 re-run as regressions, 0 failed — **1,215 browser checks across the twenty-six**. The first `<style>` block is
+  byte-identical at 98,760 bytes — no CSS; the pop-up gained a hint and a message slot in its markup.
+- Manual **§5c** (the rush bullet corrected; 0 removes, the button goes after the packet), **§7**, **§8** (the preview, Q8, the
+  materials sentence, discount after the packet; the *Awaiting Client Acceptance* note corrected), **§9a** (the timeline row),
+  **§12**; playbook the lever table (the rush row said it buys *"a second concierge and a bigger crew"*), **Step 6** (two `.stop`s
+  extended), the invoice list (a negative final's clause, stale since the variance line went on 2026-09-11, corrected) and **four**
+  symptom rows. **The playbook's symptom table had no separator row in `CONCIERGE_GUIDE.md`**, so it never rendered as a table;
+  fixed. Both `.md` copies hand-edited; **42 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
+  1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width as before. **Counsel bundle B6** added.
+- **⚠ FOUND, NOT BUILT, FLAGGED TO ANTHONY:** (1) *Edit estimate* is still reachable after the packet is sent, so a price can still
+  move under Exhibit A by that door; (2) a Gmail packet draft created before a discount is not updated by the re-file; (3)
+  `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won survives).
+- **⚠ THE SHAPE TO COPY: a document is checked by adding up its own rows.** Every defect here printed the right figure somewhere
+  and a wrong one beside it, and every earlier test asserted a figure. The matrix reads the page the way a client does.
+
 ## ⚠⚠ THE HOME PREP AGREEMENT STATES THE CONCIERGE RATE — THE CHANGE ORDER RESTATES IT (BUILT 2026-09-25)
 Anthony, the same evening the prep change-order route shipped (the entry below): *"I think we should mention the hourly rates in
 the home prep agreement."* That answers counsel bundle B5's third question, which the build below had left open by printing the
@@ -8196,7 +8299,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/change-order-fixes-ew3m2i`
+- Active feature branch: `claude/dazzling-mendel-qns7nm`
+  (`claude/change-order-fixes-ew3m2i` is the previous name.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
@@ -8245,7 +8349,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/change-order-fixes-ew3m2i:main`
+  `git push origin claude/dazzling-mendel-qns7nm:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
