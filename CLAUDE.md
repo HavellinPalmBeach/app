@@ -1,3 +1,103 @@
+## ⚠⚠ TWO MANAGER APPROVALS LIVED IN THE OPEN PAGE, NOT ON THE JOB — THE FINAL-INVOICE PIN AND THE AGREEMENT'S BAND (FIXED 2026-09-29)
+Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). App-only, no redeploy: the approval rides
+`job.docState`, which the backend already merges per key (`JOB_KEYED_MAPS`).
+
+- **⚠⚠ H1 — THE FINAL-INVOICE PIN WAS THREE PAGE GLOBALS.** `invApproved` / `invApprovedBy` / `invApprovedAt` were set by
+  `checkInvPin` and read by the registry's gate (`DOC_ACTIONS.invoice.blocker`) and the band in `invoiceHtml`. Only the retired
+  Invoices tab (`loadInvoice`, `setInvStage`) ever cleared them, and `dashApproveInvoice`, the one door since that tab went on
+  2026-09-11, did not. **Measured on the real functions before anything changed**, two jobs each 30% over their estimate:
+
+  | | before | after |
+  |---|---|---|
+  | the PIN typed for B from B's dashboard | **A's final prints too** | A still refused |
+  | B approved at $16,000, then 45 more hours (final $22,000) | **still approved** | refused, naming who approved what, at what figure |
+  | a reload | **B refused again** — the approval existed nowhere | B still approved |
+
+- **THE RECORD: `job.docState['invoice:final'].approval = {by, at, amtDue}`**, written by `recordInvFinalApproval(job, by)`, the
+  ONE writer, through the `docState` accessor, so it stamps `at['docState:invoice:final']` and merges per key like the send and
+  filing records beside it. **The figure is read off `invoiceHtml(job, 'final')` at the moment of the PIN, never passed in**, so
+  an approval cannot be recorded against a number the manager was not shown. `at` is an ISO timestamp; readers format it.
+- **⚠⚠ IT COUNTS ONLY WHILE `amtDue` IS STILL THE FIGURE THE FINAL ASKS FOR.** `invFinalApproval(job, amtDue)` is the one reader
+  the gate, the band and the retired tab share. What a manager approves is a number: more hours, an accepted change order or a
+  payment recorded after the PIN all move it, and the final asks again, the refusal naming who approved it, at what figure, and
+  what it asks for now (`invFinalApprovalStaleTxt`). Put the figure back and the approval on file counts again. The comparison is
+  exact because the final's balance is whole dollars. **No figure to compare against approves nothing** — a paid-up final
+  approved at $0 is not satisfied by a missing figure.
+  - **⚠ A LIMIT, STATED RATHER THAN HIDDEN: an exact offset keeps it.** More hours and an equal payment in the same interval leave
+    the balance where the manager approved it, so the approval stands. It is still the figure they approved; if a manager ever
+    needs to see every change whatever the balance, bind it to the hours as well.
+- **THE DOOR.** `dashApproveInvoice` binds the PIN modal to its job (`openInvPinModal(jobId)` → `modal.dataset.jobId`), writes
+  **no page state** (`currentInvJobId`, `currentInvStage`, `invRequiresApproval` untouched), and on a final already approved at
+  today's figure says who approved it and when instead of asking twice. `checkInvPin` finds its job on the modal and **never falls
+  back to another job**: no job bound, or one this device no longer holds, approves nothing and says so. The billing email
+  carries the approved figure, and the confirmation now lands on the dashboard the PIN was typed from; it used to redraw only
+  the retired tab, so a manager could not tell the PIN had taken.
+- **⚠ THE INVOICE'S BAND HAD NEVER BEEN DRAWN.** `invoiceHtml` built `approvedStamp` and emitted it nowhere (dead since at least
+  2026-09-21, the oldest commit this clone holds). It is emitted now, under the header as the agreement's is, from the record
+  and only for the figure on the page. Screen-only.
+- **⚠ THE APPROVAL SHARES THE `invoice:final` SUB-RECORD WITH THE SEND AND FILING RECORDS, AND THE SHEET MERGES A SUB-RECORD
+  WHOLE** (newest stamp wins; the backend's rule since 2026-09-12, already shared by send and file). Every writer to that key on
+  a final that needs approval is itself gated by the approval, so the ordinary paths converge. The one uncovered ordering: a
+  final **sent while inside tolerance**, pushed outside it by later hours, then approved on a device whose copy never saw the
+  send record — the approval wins and the send record is lost from the sheet. Rare, and recorded rather than fixed: separating
+  them needs a key of its own (the task named this one) or a backend change.
+- **The three globals are DELETED**, with a note where they were; `loadInvoice` and `setInvStage` lost their resets with them.
+- **⚠⚠ M1 — THE AGREEMENT'S "APPROVED FOR SENDING" BAND.** Both forms printed it from `agrApproved` / `agrApprovedBy` /
+  `agrApprovedAt`, which describe whichever job `ensureAgreementApproved` touched LAST. Measured: A approved by Anthony on
+  September 1, then B approved by Ashley today, and A's agreement — the standard form, the estate form and the signing packet,
+  the HTML converted for DocuSign — read **"Approved by Ashley Jerome on September 29, 2026"**; on a fresh page A read **no band
+  at all**, though approved. `_agrApprovedStamp(job)` is the one renderer both forms call: this job's own `agrApproved` and
+  `agrApprovedBy`, escaped, " on <date>" only when a date is on record, and **no band over a blank approver**.
+  - **⚠ THE CONCURRENT DOCUMENT-CLAIMS BUILD FIXED THE SAME DEFECT INLINE THE SAME DAY (Q11)**, from the other side: the packet can
+    now be read before Won, exactly when another job's band on it would be a false statement. The merge kept this helper; their
+    assertions pass against it unchanged.
+  - The page globals themselves stay (the retired tab's `updateAgrUI` and `_actor` read them). The net below keeps them out of
+    every client document.
+- **⚠⚠ THE BAND STAYS OUT OF EVERY CLIENT PDF NOW.** `.approved-stamp` was hidden only under `@media print`, and the PDF that is
+  emailed, sent for signature or filed is converted server-side from `_exportDoc`'s copy of the page, which is not a print. Every
+  `DOC_ACTIONS` kind's `pdfCss` carries `.approved-stamp{display:none!important;}` (the estimate has no band today and carries
+  the rule so it never can); a test walks `DOC_ACTIONS`, so a fourth kind cannot be added without it.
+- **12,625 committed checks after the merge with `main`** (`tests/approval-on-job.test.js` new at **198**; seventeen suites'
+  sandbox lists dropped `invApproved` and lift the new helpers rather than stubbing them; `doc-actions` and `tabs-retired`
+  restated, not deleted — the second pinned `currentInvJobId = jobId`, page state the door wrote only so `checkInvPin` could read
+  it back). Two-job driven cases for both findings, the reload as a JSON round trip, the sheet merge driven through the real `.gs`
+  functions in both orders, the band's escaping, the driven PDF (the document posted to `htmlToPdf` and to Drive), and **THE
+  NET**: a call-graph walk from every `DOC_ACTIONS` closure (html, emailHtml, text, mailto, subject, cc, blocker), transitively
+  over top-level functions, fails on any read of a page-level approval variable, and every top-level `/approv/i` var must be on
+  its list or exempted by name with a reason.
+- **Revert sweep: 28 changes on four tar copies, baseline 11,685 / 0 before and after on every copy, no needle mismatched; 27 red
+  on the first pass.** Biggest: `dashApproveInvoice` not binding the modal **36**, `checkInvPin` finding its job through
+  `currentInvJobId` **35**, the standard form reading the page globals **12**, the defect itself (any job's approval counts)
+  **10**, the approval ignoring the figure **9**, the band never emitted **9**, the estate form reading the globals **8**; the
+  rest 1–5.
+  - **⚠ THE ONE GREEN WAS MY TEST.** `band()` read the band through "Approved by X on Y", so a band over a blank approver read
+    *(no band)* while sitting in the markup, and dropping the approver guard passed. Absence is COUNTED now; re-done it fails 2.
+  - **⚠ THREE REVERTS CRASHED A SUITE.** Two were mine, unguarded reads on a missing record; they are defensive now, and re-done
+    those reverts fail 35 and 36 with every check running. The third is right: making the gate also read the page mirror
+    `invRequiresApproval` crashes `doc-file.test.js`, whose sandbox does not declare it — loud is the correct direction.
+- **Verified in headless Chromium, `tests/browser/step30.js`, 53 checks, 0 failed, 0 page errors** (renumbered from 26 on the
+  merge; the concurrent sessions hold 26–29), through the real intake and Build Estimate on two clients walked to their finals at
+  1.4× their hours: both refused; the PIN typed through B's visible rail button and the real modal binds B, records
+  `{by, at, amtDue}` on B and nothing on A, and A still does not print; more hours re-ask with the approval named, and the figure
+  put back is honoured; the button does not ask twice; a reload keeps it; the viewer shows the band, print media and each kind's
+  PDF copy hide it (a control copy without the `pdfCss` shows it); A's agreement names Anthony, September 1 after B is approved
+  by Ashley today, on both forms and in the packet; overflow 0 at 1440 and 390. **Against the pre-change build it fails 25.**
+  `run.sh`'s default list is 1–30; steps 1–29 re-run on the merged tree, 0 failed — **1,446 browser checks across the
+  thirty**.
+- Manual **§8** (the band names this agreement's approval; regenerate older ones), **§12** (one client, one figure; the band on
+  view only), **§17** (the PIN list). Playbook a `.stop` under *What needs a PIN* and **three** symptom rows. Both `.md` copies;
+  **29 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered 1440/390 with 0 overflow, 0 page errors; under
+  `print` 51/61 and 17/18 as before.
+- **⚠ FOUND IN PASSING, NOT FIXED: `_actor(job)` falls back to the page global `agrApprovedBy`.** On a job whose own agreement is
+  not approved yet, `draftedBy` on an estimate or invoice send, `sentBy`, `activatedBy`, `deliveredBy` and the review ask's `by`
+  record whichever job the page approved last — measured *Ashley Jerome* on another client. The M1 class on internal attribution
+  rather than a client document; one line (`return (job && job.agrApprovedBy) || '';`), offered to Anthony.
+- **⚠ NOTED, NOT CHANGED:** 🔑 Manager approval is offered on every live final row, because the rail does not build the invoice
+  on paint; inside tolerance and already approved are answered by the handler. The retired tab's own Approve button still binds
+  `currentInvJobId` through `openInvPinModal()`; that tab has had no nav button since 2026-09-11.
+- **⚠ THE SHAPE TO COPY: an approval is a fact about one record, so it lives on that record.** A page variable answers "what did
+  this screen do last", and every reader that took it for "what is true of this job" printed another client's approval.
+
 ## ⚠⚠ THE CLIENT DOCUMENTS SAY ONLY WHAT THE ESTIMATE PRICES — AND EVERY ONE NOW ADDS UP TO ITS OWN TOTALS (FIXED 2026-09-29)
 Off the 2026-09-28 workflow audit, findings **H6, M2, M3 and the document lows**, plus two decisions Anthony made on it: **Q8**
 (name the rush premium and the discount in both agreements' fee clauses, one sentence each) and **Q11** (the agreement may be
@@ -8600,7 +8700,14 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/dazzling-mendel-qns7nm`
+- Active feature branch: `claude/charming-dirac-gcdfsl`
+  (`claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`, `claude/exciting-carson-pv156f` and
+  `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — FIVE sessions ran concurrently off the 2026-09-28
+  workflow audit, H1 and M1 here. All five are on `main`. This branch merged the other four on the way through; the merge
+  conflicted on two lines of `havellin.html` (both sessions had moved the agreement's band off the page globals, resolved to
+  the shared `_agrApprovedStamp`) and on fifteen suites' sandbox lists, every one resolved as a UNION. Browser steps 26–29 are
+  theirs and this one is **step 30**.)
+  (`claude/dazzling-mendel-qns7nm` recorded, before this merge, that it was the active branch, and:)
   (`claude/elegant-wright-nb6ffk`, `claude/exciting-carson-pv156f` and `claude/elegant-edison-x0kgyn` shipped alongside it on
   2026-09-29 — FOUR sessions ran concurrently off the 2026-09-28 workflow audit: C1 and H4 on the last two, H3 and M8 on the
   first, and the document findings (H6, M2, M3, the lows, Q8, Q11) here. All four are on `main`. This branch merged the other
@@ -8665,7 +8772,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/dazzling-mendel-qns7nm:main`
+  `git push origin claude/charming-dirac-gcdfsl:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -13811,7 +13918,10 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (second pass)** — both documents, against Close job from activation on, the final
+- Last reconciled against the app: **2026-09-29 (third pass)** — both documents, against the two manager approvals moving onto
+  the job (manual §8, §12, §17; playbook a `.stop` under *What needs a PIN* and three symptom rows); see the entry at the top of
+  this file.
+- Prior pass **2026-09-29 (second pass)** — both documents, against Close job from activation on, the final
   after the close with the midpoint unpaid, and the midpoint's timing (manual §9, §9a, §9a-i, §11, §12; playbook Steps 10, 10a,
   11 and 13, the status table and eight symptom rows); see the entry at the top of this file.
 - Prior pass **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h;
