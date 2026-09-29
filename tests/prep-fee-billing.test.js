@@ -64,9 +64,9 @@ const FIXED = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20225, 
 const LEGACY = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20000, grandTotal: 20750 });
 
 // ── the real client estimate ────────────────────────────────────────────────
-const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
+const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases',
-                'materialsBasisNote', 'discountOnLabor', 'prepFeeRate', 'estWorkingDays', 'estFixedFee',
+                'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor', 'prepFeeRate', 'estWorkingDays', 'estFixedFee',
                 'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
@@ -74,7 +74,7 @@ const JOB = { id: 1, svc: 'downsizing_move', name: 'Pat Transition', address: '1
 const ceDoc = (e) => sandbox({ fns: CE_FNS, vars: CE_VARS }).clientEstimateHtml(e, JOB);
 
 // ── the real invoice ────────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
                  'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
                  '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor',
                  'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
@@ -106,7 +106,7 @@ const actuals = () => ({ La1: { quote: 900, status: 'Confirmed', vendorName: 'Br
 // ── the real agreements ─────────────────────────────────────────────────────
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate',
@@ -199,9 +199,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const pct = { value: 10 };
     const a = sandbox({
-      fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision',
+      fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
             'estFixedFee', 'estPrepFeeOnTop'],
-      vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT'],
+      vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
         currentEstimate: Object.assign({}, FIXED), jobs: [{ id: 1, status: 'approved' }],
@@ -213,9 +213,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a.currentEstimate.fixedAmount, 18000, '10% off the $20,000 flat fee');
     eq(a.currentEstimate.havellinTotal, 18225, '⚠ and the $225 prep fee is still on top — not dropped by the discount');
     const b = sandbox({
-      fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision',
+      fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
             'estFixedFee', 'estPrepFeeOnTop'],
-      vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT'],
+      vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
         currentEstimate: Object.assign({}, LEGACY), jobs: [{ id: 1, status: 'approved' }],
@@ -271,8 +271,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(nc.fixedPrepMovedNote(0), '', 'and says nothing when nothing moved');
     const calc = noComments(fn('calcAll'));
     has(calc, 'fixedPrepMovedNote(_fixedPrepMovedOut)', 'the panel reads the figure the reopen recorded');
-    eq(src.split('  _fixedAmountBasis = 0;\n  _fixedPrepMovedOut = 0;\n').length - 1, 3,
-       'the three job-switch resets clear it, or the note would follow the manager onto the next client');
+    // ⚠ RESTATED 2026-09-29: this counted three byte-identical copies, one per reset path. There is one
+    // reset now (resetEstimateJobState) and every path runs it — driven against that.
+    {
+      const rs = sandbox({ fns: ['resetEstimateJobState'], vars: ['_fixedAmountBasis', '_fixedPrepMovedOut'],
+        stubs: { document: domStub(), seedDocScopeFromJob: () => 'full', paintVolPreset() {}, renderVendors() {},
+                 renderCollections() {}, renderVehicles() {}, clearAllRooms() {} } });
+      rs._fixedPrepMovedOut = 225;
+      rs.resetEstimateJobState({ id: 8 });
+      eq(rs._fixedPrepMovedOut, 0, 'the job-switch reset clears it, or the note would follow the manager onto the next client');
+      ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab'].forEach((name) =>
+        has(fn(name), 'resetEstimateJobState(', `${name} runs it`));
+    }
   }
 
   // ───────────────────────────────────────────────────────────────────────────

@@ -218,7 +218,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // next client document with no way to print.
     const ov = noComments(fn('_openViewer'));
     has(ov, "getElementById('doc-viewer-print')", 'the opener reaches the print button');
-    has(ov, "spec ? '' : 'none'", 'showing it for a document and hiding it for an internal page');
+    // ⚠ Restated 2026-09-29: a document the reader may VIEW but not print (a draft estimate, the
+    // agreement before the client is won — Q11) hides it too, so the rule reads the spec's viewOnly
+    // flag as well. Shown for a printable document, hidden for everything else, set every open.
+    has(ov, "(spec && !spec.viewOnly) ? '' : 'none'", 'showing it for a document and hiding it for an internal page');
     has(src, 'id="doc-viewer-print"', 'and the button carries the id it is found by');
 
     const plain = noComments(fn('openPlainViewer'));
@@ -234,7 +237,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Driven: the real opener against a real stub, both ways round.
     const dom = domStub({});
-    const c = sandbox({ fns: ['_openViewer', 'openPlainViewer', 'openDocViewer', 'docTitle', 'printDocViewer'],
+    const c = sandbox({ fns: ['_openViewer', 'openPlainViewer', 'openDocViewer', 'docReadOnlyWord', 'docPreviewOnly', 'docDraftOnly', 'agreementReady', 'docTitle', 'printDocViewer'],
       vars: ['DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_KIND_WORD', '_docViewerSpec'],
       stubs: { document: dom, docAction: () => { throw new Error('printed an internal page'); } } });
     c.openPlainViewer('Walkthrough & Scope', 'Butler', '<p>x</p>');

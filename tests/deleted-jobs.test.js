@@ -369,8 +369,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fl.slice(0, fl.indexOf('\n}\n')), '_applyDroppedJobs(res.dropped)', 'so does the retry queue');
     const lj = APP.slice(APP.indexOf('function loadJobs('));
     has(lj.slice(0, lj.indexOf('\n}\n')), '_purgeLocalJobRecords(data.deletedJobs)', 'loadJobs purges local records for deleted jobs');
+    // ⚠ RESTATED 2026-09-29, not deleted. refreshJobsFromCloud stands down while this device's
+    // own writes are outstanding (audit H4), and the sheet's deletions must still reach it then —
+    // so they go through _applyDroppedJobs, which purges the records AND takes the jobs off the
+    // list, on both paths. The requirement was never the byte sequence; jobs-refresh.test.js
+    // drives it.
     const rj = APP.slice(APP.indexOf('function refreshJobsFromCloud('));
-    has(rj.slice(0, rj.indexOf('\n}\n')), '_purgeLocalJobRecords(data.deletedJobs)', 'so does refreshJobsFromCloud');
+    has(rj.slice(0, rj.indexOf('\n}\n')), '_applyDroppedJobs(data.deletedJobs)', 'so does refreshJobsFromCloud, through _applyDroppedJobs');
     const hd = APP.slice(APP.indexOf('function hardDeleteJob('));
     has(hd.slice(0, hd.indexOf('\n}\n')), '_purgeLocalJobRecords([id])', 'the deliberate delete shares the purge rather than carrying a second copy');
     // The one thing _applyDroppedJobs must never do.

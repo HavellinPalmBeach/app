@@ -110,7 +110,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // is not an ordering. What has to be true is that the estimate is ALREADY un-approved at
     // the moment the hand-off happens, because what lands on the other side reads it.
     const ord = sandbox({
-      fns: ['dashEditEstimate', 'revokeEstimateApproval'],
+      fns: ['dashEditEstimate', 'revokeEstimateApproval', 'revokeAgreementApproval'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, saveEstimateState() {},
         dashNotice() {}, _dashRedraw() {}, currentAgrJobId: 0, currentEstimate: null,

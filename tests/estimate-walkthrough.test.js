@@ -20,7 +20,7 @@
 // standing in the room looking at it — and a preset is a guess about the property as a
 // whole. The guess does not get to flatten the observation.
 
-const { sandbox, source, fn } = require('./harness');
+const { sandbox, source, fn, domStub } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
@@ -205,10 +205,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // preset joined that line the day setRoomState began SEEDING from it: while it was a
     // one-shot sweep a stale _volPreset only lit the wrong chip, but a seed carried across a
     // job switch prices the next property off the last one's answer.
-    has(fn('neutralizeEstimateView'), "_volPreset = 'normal'; _volHandSet = {}; paintVolPreset();",
-      'opening another job does not price it at the last job\'s fullness');
-    has(fn('neutralizeEstimateView'), '_estimateAlphaPin = null',
-      'alongside the pins it already drops for the same reason');
+    // ⚠ RESTATED 2026-09-29: this pinned the two lines inside neutralizeEstimateView, which now hands
+    // the job to the one reset (resetEstimateJobState) instead of keeping a copy. Driven through it.
+    {
+      const nv = sandbox({
+        fns: ['neutralizeEstimateView', 'resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf',
+              'docTierDef', 'docTierScope', 'svcHasDocStep', 'paintVolPreset'],
+        vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
+               'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'VOL_PRESETS', '_volPreset', '_volHandSet', '_estimateAlphaPin'],
+        stubs: { document: domStub(), window: {}, renderVendors() {}, renderCollections() {}, renderVehicles() {}, clearAllRooms() {} },
+      });
+      nv._volPreset = 'packed'; nv._volHandSet = { r3: true }; nv._estimateAlphaPin = 0.35;
+      nv.neutralizeEstimateView({ id: 8, svc: 'downsizing_move' });
+      eq([nv._volPreset, JSON.stringify(nv._volHandSet)], ['normal', '{}'],
+        'opening another job does not price it at the last job\'s fullness');
+      eq(nv._estimateAlphaPin, null, 'alongside the pins it already drops for the same reason');
+    }
 
     // The seed is defined once. Two copies of the shift is exactly how applyVolPreset and
     // setRoomState came to disagree about the same house in the first place.
