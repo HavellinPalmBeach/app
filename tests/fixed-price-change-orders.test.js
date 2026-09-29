@@ -53,13 +53,15 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 'estTolerancePctTxt', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'openCOAcceptModal',
                 'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'prepFeeRate',
                 // Lifted, never stubbed: _coJobBasis reads its rates through the agreements' one definition.
-                'agrBillingRates'];
+                'agrBillingRates',
+                // The printed change order's rush / discount line (Q14, 2026-09-29), lifted, never stubbed.
+                'coRateModsLine'];
 
 function coCtx(est, cos, seed) {
   const dom = domStub(seed || {});
   const said = [];
   const c = sandbox({
-    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS'],
+    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'RUSH_PCT'],
     stubs: {
       document: dom, setTimeout: () => 0,
       jobs: [Object.assign({}, JOB)], changeOrders: cos || [],
@@ -67,6 +69,9 @@ function coCtx(est, cos, seed) {
       currentEstimate: null,
       saveChangeOrders: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
       showFB: (id, kind, msg) => said.push({ id, kind, msg }),
+      // Create and Accept speak on the screen the person is on (2026-09-29, audit H2). The routing
+      // itself is driven for real in change-order-card.test.js; here it is recorded like showFB.
+      _docNotice: (kind, msg, jobId) => said.push({ id: 'doc', kind, msg, jobId }),
       docNames: () => ({ printTitle: 'Havellin Change Order' }),
     },
   });
@@ -380,7 +385,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
       'roomStatusNormalize',
       'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'dot', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coInclTxt',
       // Lifted, never stubbed: the band's change-order-hours sub asks estimateIsFeeOnly once an accepted

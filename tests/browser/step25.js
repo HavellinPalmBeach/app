@@ -11,8 +11,10 @@
 // agreement." §3.3 now states the concierge rate itself, so section H reads it off the real agreement and
 // checks it is the rate on the printed page, and a Premium Estate prep job shows both follow the estimate.
 //
-// Drives the REAL page: the real intake, the real Build Estimate on a prep job, the real change-order
-// modal typed into and its real Create button, the real acceptance panel and its Accept button, the real
+// Drives the REAL page: the real intake, the real Build Estimate on a prep job, the change order raised
+// from the dashboard's + New and its real Create button, then accepted and printed from its own row's Get
+// Acceptance and PDF buttons (2026-09-29 — until then this step called those functions directly, because
+// nothing on screen offered them), the real acceptance panel and its Accept button, the real
 // Job Plan (the log appearing, the real team sign-off, hours typed and the real Save), the real Budget &
 // Fee card, the band on the dashboard, the desk card, the real print path, the real invoices and the
 // real agreement builder — with a Home Editing job beside it to show nothing leaks onto T&M.
@@ -90,8 +92,33 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
 
   // A press or a keystroke that cannot land is a FAILED CHECK, not a crash: against a build that
   // predates a control the rest of the run still has something to say.
-  const click = async (sel) => { try { await p.click(sel); return true; } catch (e) { ok(false, 'could not press ' + sel); return false; } };
+  const click = async (sel) => { try { await p.click(sel, { timeout: 5000 }); return true; } catch (e) { ok(false, 'could not press ' + sel); return false; } };
   const fill = async (sel, v) => { try { await p.fill(sel, v); return true; } catch (e) { ok(false, 'could not type into ' + sel); return false; } };
+  // ⚠⚠ THE REAL BUTTONS (restated 2026-09-29, audit H2). This step called openChangeOrder,
+  // openCOAcceptModal and printChangeOrder through page.evaluate — which is how it passed while no screen
+  // offered either of the last two: they were reachable only from a client-list row that was never added
+  // to the page, so a vendors-only prep job could never actually open its hours log. It presses what a
+  // person presses now: the client's row in the list, + New on the Change Orders card, and PDF / Get
+  // Acceptance on the change order's own row. A control that is not on screen exactly once is a FAILED
+  // CHECK, and nothing is pressed in its place.
+  async function press(sel) {
+    const n = await p.locator(sel).count();
+    ok(n === 1, 'one control on screen: ' + sel + ' (' + n + ')');
+    if (n !== 1) return false;
+    return click(sel);
+  }
+  async function openDash(id) {
+    await click('.nb[onclick*="\'jobs\'"]'); await p.waitForTimeout(250);
+    await press('tr[onclick="openClientDashboard(' + id + ')"]'); await p.waitForTimeout(400);
+  }
+  async function ensureDash(id) {
+    const on = await p.evaluate((id) => { const v = document.getElementById('client-dashboard-view');
+      return !!(v && v.offsetParent !== null && _dashboardJobId === id); }, id);
+    if (!on) await openDash(id);
+  }
+  const newCO = async (id) => { await ensureDash(id); await press('#client-dashboard-view button[onclick="openChangeOrder(' + id + ')"]'); await p.waitForTimeout(200); };
+  const cancelCO = () => press('#change-order-modal button:has-text("Cancel")');
+  const jobOf = (coId) => p.evaluate((c) => (changeOrders.find(x => x.id === c) || {}).jobId, coId);
   const T = (h) => p.evaluate((h) => { const d = document.createElement('div');
     d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<\/th>/g, ' </th>').replace(/<br>/g, ' ');
     return d.textContent.replace(/\s+/g, ' '); }, h);
@@ -100,7 +127,9 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     return !!ls && getComputedStyle(ls).display !== 'none' && ls.offsetParent !== null; });
   async function openPlan(id) { await p.evaluate((id) => openJobPlanFor(id, 'hours'), id); await p.waitForTimeout(900); }
   async function print(coId) {
-    await p.evaluate((c) => { window.__prints = []; printChangeOrder(c); }, coId); await p.waitForTimeout(350);
+    await ensureDash(await jobOf(coId));
+    await p.evaluate(() => { window.__prints = []; });
+    await press('#client-dashboard-view button[onclick="printChangeOrder(' + coId + ')"]'); await p.waitForTimeout(350);
     const got = await p.evaluate(() => window.__prints[0] || null);
     await p.waitForTimeout(700);
     if (got) got.text = await T(got.html);
@@ -134,7 +163,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
 
   // ── B. THE CHANGE ORDER ─────────────────────────────────────────────────
   console.log('\n## B. The change order — concierge hours only, and the readout states the rate');
-  await p.evaluate((id) => openChangeOrder(id), idP); await p.waitForTimeout(200);
+  await newCO(idP);
   const box = await p.evaluate(() => { const e = document.getElementById('co-ps-hrs'); return { dis: e.disabled, ph: e.placeholder }; });
   ok(box.dis === true, '⚠ the specialist box is off on Home Prep');
   ok(box.ph === 'Not used on Home Prep', 'and says why (' + box.ph + ')');
@@ -170,7 +199,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
 
   // ── C. THE ACCEPTANCE ───────────────────────────────────────────────────
   console.log('\n## C. The client accepts — and the panel they sign under names the rate');
-  await p.evaluate((c) => openCOAcceptModal(c), coId); await p.waitForTimeout(200);
+  await ensureDash(idP);
+  await press('#client-dashboard-view button[onclick="openCOAcceptModal(' + coId + ')"]'); await p.waitForTimeout(200);
   const sum = await text('#coa-summary');
   has(sum, 'Rate$150 an hour, billed as worked', '⚠⚠ the acceptance panel states the rate');
   has(sum, 'about $1,200', 'and what the hours come to');
@@ -280,20 +310,20 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   const agrQ = await T(await p.evaluate((id) => agreementHtml(jobs.find(j => j.id === id), estimateStore[id].estimate), idQ));
   has(agrQ, "Transition Concierge rate of $185/hour", '⚠⚠ its agreement states $185 an hour');
   lacks(agrQ, '$150/hour', 'and not the standard rate anywhere');
-  await p.evaluate((id) => openChangeOrder(id), idQ); await p.waitForTimeout(200);
+  await newCO(idQ);
   await fill('#co-tc-hrs', '4');
   const rq = await text('#co-hrs-note');
   has(rq, '+4.0 concierge hrs at $185 an hour', '⚠⚠ and the change-order readout names the same $185');
   has(rq, 'the rate is the one its agreement states in Section 3.3', 'and says that is where the rate comes from');
-  await p.evaluate(() => closeChangeOrder());
+  await cancelCO();
 
   // ── I. A HOME EDITING JOB BESIDE IT ─────────────────────────────────────
   console.log('\n## I. The same modal on a Home Editing job straight afterwards — nothing leaks onto T&M');
   const idH = await make('downsizing', 'Hourly');
   await build(idH, false);
-  await p.evaluate((id) => openChangeOrder(id), idP); await p.waitForTimeout(150);
-  await p.evaluate(() => closeChangeOrder());
-  await p.evaluate((id) => openChangeOrder(id), idH); await p.waitForTimeout(200);
+  await newCO(idP);
+  await cancelCO();
+  await newCO(idH);
   const hb = await p.evaluate(() => { const e = document.getElementById('co-ps-hrs'); return { dis: e.disabled, ph: e.placeholder }; });
   ok(hb.dis === false, '⚠⚠ the specialist box is back on for a labour job after a prep job had it off');
   ok(hb.ph === 'e.g. 16 (negative to reduce)', 'with its own hint (' + hb.ph + ')');
@@ -301,7 +331,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   await fill('#co-tc-hrs', '10'); await fill('#co-ps-hrs', '10');
   has(await text('#co-hrs-note'), 'hrs on the estimate becomes', 'the T&M readout, measured in hours');
   lacks(await text('#co-hrs-note'), '$', 'and no price');
-  await p.evaluate(() => closeChangeOrder());
+  await cancelCO();
 
   // ── J. Overflow ─────────────────────────────────────────────────────────
   for (const w of [1440, 390]) {
@@ -309,14 +339,16 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     await openPlan(idP);
     const ovP = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok(ovP <= 0, 'the prep Job Plan with its hours log fits at ' + w + 'px (overflow ' + ovP + ')');
-    await p.evaluate((id) => openClientDashboard(id), idP); await p.waitForTimeout(400);
+    // Opened from the client list, so the dashboard measured is the one on screen — its Change Orders
+    // card carrying the PDF (2026-09-29).
+    await openDash(idP);
     const ovD = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     ok(ovD <= 0, 'the dashboard fits at ' + w + 'px (overflow ' + ovD + ')');
-    await p.evaluate((id) => openChangeOrder(id), idP); await p.waitForTimeout(200);
+    await newCO(idP);
     const ovM = await p.evaluate(() => { const m = document.querySelector('#change-order-modal .modal, #change-order-modal > div');
       const r = m ? m.getBoundingClientRect() : { left: 0, right: 0 }; return { l: r.left, r: r.right, vw: window.innerWidth }; });
     ok(ovM.l >= 0 && ovM.r <= ovM.vw + 0.5, 'the change-order modal sits inside the viewport at ' + w + 'px');
-    await p.evaluate(() => closeChangeOrder());
+    await cancelCO();
   }
   ok(errs.length === 0, 'no page errors (' + errs.join(' | ') + ')');
 

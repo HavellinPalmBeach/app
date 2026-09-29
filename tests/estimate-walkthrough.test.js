@@ -197,7 +197,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(src, 'volHandSet: _volHandSet', 'never as a map keyed by row id — those are positional');
     has(fn('restoreEstimateToUI'), 'if (savedRoom.volSet) _volHandSet[id] = true; else delete _volHandSet[id];',
       'reopening an estimate restores which rooms were observed');
-    has(fn('resetEstimate'), '_volHandSet = {}', 'Reset clears them');
+    // ⚠ RESTATED 2026-09-29: this pinned the byte sequence inside resetEstimate's own body. Reset runs the
+    // one reset now (resetEstimateJobState), and that is where the map is cleared; estimate-reset drives
+    // Reset end to end and checks every piece of saved-estimate state, this map included, comes back.
+    has(fn('resetEstimate'), 'resetEstimateJobState(', 'Reset runs the one reset');
+    has(fn('resetEstimateJobState'), '_volHandSet = {}', 'which clears them');
 
     // ⚠ AND SWITCHING JOBS CLEARS THE PRESET ITSELF. neutralizeEstimateView exists because a
     // Home Prep estimate once bled into an unrelated Estate Settlement job, and it already

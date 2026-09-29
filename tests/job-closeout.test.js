@@ -243,7 +243,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let answer = true;
     const t = sandbox({
       fns: ['setVendorRating', 'setVendorRatingNote', '_ratingJob', '_writeVendorScore', 'computeVendorAvg',
-            'lookupVendorById', 'vendorIdOf'],
+            'lookupVendorById', 'vendorIdOf', '_saveJobEdit', '_jobTouch'],
       vars: ['VENDOR_RATING_WINDOW'],
       stubs: {
         vendorDirectory: VENDORS, VENDOR_SYNC_URL: 'https://vendor', saveJobs() {}, syncJobToSheets() {},
