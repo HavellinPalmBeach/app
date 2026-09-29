@@ -285,8 +285,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const seen = [];
     const s = sandbox({
-      fns: ['_jobsLanded'],
-      vars: [],
+      fns: ['_jobsLanded', '_asBackgroundRedraw'],
+      vars: ['_dashKeepNotice'],
       stubs: {
         document: { getElementById: () => null },
         renderJobs: () => seen.push('jobs'),
@@ -315,7 +315,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Called from four sites on three different paths; a throw in any one of them must not
     // take the other three with it, or one broken surface silences the rest.
-    const s3 = sandbox({ fns: ['_jobsLanded'], vars: [],
+    const s3 = sandbox({ fns: ['_jobsLanded', '_asBackgroundRedraw'], vars: ['_dashKeepNotice'],
       stubs: { document: { getElementById: () => null } } });
     eq(typeof s3._jobsLanded(), 'undefined', 'with every surface absent it does nothing and does not throw');
   }

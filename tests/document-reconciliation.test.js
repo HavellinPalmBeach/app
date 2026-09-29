@@ -43,7 +43,7 @@ const FNS = [
   '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
   'matterTypeOf', 'invFiduciaryMode',
   // the three invoices
-  'invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+  'invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
   'coHoursLabel', '_coMoney', 'getVendorActuals', '_srcLineKey', '_invVendorFeeSentence', 'vendorGroupOfLine',
   'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'vendorCats', 'vendorPrimaryCat',
   'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor',

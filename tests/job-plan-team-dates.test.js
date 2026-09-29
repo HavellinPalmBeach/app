@@ -33,10 +33,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // #7 — THE BAND SAYS WHAT TO DO NEXT, NOT WHAT THE MILESTONE WILL BE CALLED ONCE IT IS DONE
   // ═══════════════════════════════════════════════════════════════════════════
-  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
-    'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
-    'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
-    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent'];
+  const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+    'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
+    'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
+    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'];
   const EST = () => ({ svc: 'cleanout', days: 6, totTC: 11, totPS: 22, havellinTotal: 20000,
     rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3, tcH: 5, psH: 10 },
             { idx: 1, name: 'Study', vol: 3, cplx: 3, tcH: 6, psH: 12 }] });
@@ -80,7 +80,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
       'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
-      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor']);
+      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor', 'draftOutstanding', 'draftIsStale']);
     const B = sandbox({ fns: DFNS, vars: ['DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
       'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
       stubs: { _todayStr: () => '2026-09-23', Intl: global.Intl } });
@@ -170,8 +170,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const asked = [];
     const T = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
                               'depositPaidTotal', 'isAgreementSigned', 'agreementSignature', 'jobCloseBlockers', 'unratedVendorsForJob',
-                              '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf'],
-                        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'JOB_TRANSITIONS'],
+                              '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
+                              // The Re-open is its own branch of the transition (2026-09-29).
+                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
+                        vars: ['JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
                         stubs: { _todayStr: () => '2026-09-23', fmtDate2: (d) => 'D:' + d, agrApprovedBy: '', approvedBy: 'Anthony Graziano',
                                  confirm: (m) => { asked.push(m); return T.__answer; } } });
     const READY = (over) => Object.assign({ id: 7, status: 'won', won: true, agrSigned: true, depositReceived: true,
@@ -202,11 +204,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const noStart = READY();
     ok(T.applyJobTransition(noStart), 'a job with no target start at all');
     eq(asked.length, 0, 'has nothing to be early against');
-    // A re-open keeps its original stamp, so there is nothing to confirm.
+    // A re-open keeps its original stamp, so there is nothing to confirm about the START. ⚠ Restated 2026-09-29:
+    // a Re-open now asks its own question (it undoes a close), but never the early-activation one.
     const reopen = READY({ status: 'closed', start: '2026-10-05', activatedOn: '2026-09-01' });
     ok(T.applyJobTransition(reopen) && reopen.status === 'active', 're-opening a closed job');
-    eq(asked.length, 0, '⚠ asks nothing — its start date was fixed on the first activation');
-    eq(reopen.activatedOn, '2026-09-01', '…and keeps it');
+    eq(asked.length, 1, 'asks one question');
+    lacks(asked[0] || '', 'Activate this job today', '⚠ and it is not the activation question — its start date was fixed on the first activation');
+    has(asked[0] || '', 'Re-open this job', 'it is the Re-open question');
+    eq(reopen.activatedOn, '2026-09-01', '…and keeps the start date');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

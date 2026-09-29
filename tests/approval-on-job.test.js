@@ -30,7 +30,7 @@ const { sandbox, domStub, source, matchBrace } = H;
 const SRC = source();
 
 // ─── the invoice sandbox ─────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentStageWord', 'finalAwaitsHours', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'coHours', 'coHoursTotal',
+const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'coHours', 'coHoursTotal',
   'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals',
   '_srcLineKey', 'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate',
   'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc',
@@ -108,7 +108,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
   'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', '_agrApprovedStamp',
   'ensureAgreementApproved', 'agreementReady', 'isJobWon', '_primeAgreementFor', 'loadAgreement',
   'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml'];
-const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT',
+const AGR_VARS = ['DOC_STAGE_WORD', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT',
   'DECEDENT_SERVICES', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'currentAgrJobId',
   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
 const AEST = (id) => ({ jobId: id, tcFee: 15000, psFee: 5000, pkgCost: 0, smf: 0, prepFee: 0,
@@ -520,8 +520,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function actorCtx() {
     const said = { notices: [], alerts: [] };
     const ctx = sandbox({
-      fns: AGR_FNS.concat(['_actor', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'docState',
-        '_jobTouch', '_stamp', '_todayStr', '_ymdLocal', 'fmtDate2', 'stagePaidTotal', 'jobPayments']),
+      fns: AGR_FNS.concat(['_actor', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
+        '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm']),
       vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS']),
       stubs: {
         document: domStub({}), currentEstimate: null,

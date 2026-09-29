@@ -237,7 +237,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Driven: an approved estimate really comes back editable.
     const ctx = sandbox({
-      fns: ['revokeEstimateApproval', 'revokeAgreementApproval'],
+      fns: ['revokeEstimateApproval', 'revokeAgreementApproval', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, currentAgrJobId: 0 },
     });
     const job = { id: 7, approved: true, agrApproved: true, agrApprovedBy: 'Anthony Graziano',
@@ -524,7 +524,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'the notice names the mailbox the draft was created in, with an honest fallback');
     lacks(src, 'function _showDraftLink(', 'the tab-strip version is gone');
     has(fn('docRecordSent'), 'st.draftUrl = res.draftUrl', 'the link is kept on the document record');
-    const drafts = sandbox({ fns: ['_jtDraftLink', 'docKeyFor', 'docWord', 'paymentStageWord'], vars: ['DOC_STAGE_WORD', 'DOC_KIND_WORD'] });
+    const drafts = sandbox({ fns: ['_jtDraftLink', 'docKeyFor', 'docWord', 'paymentStageWord', 'draftOutstanding', 'draftIsStale'], vars: ['DOC_STAGE_WORD', 'DOC_KIND_WORD'] });
     const job = { id: 7, docState: { estimate: { draftedAt: 'x', draftUrl: 'https://mail.google.com/x' } } };
     eq(drafts._jtDraftLink(7, job, 'estimate', '').length, 1, 'and the rail offers it while the draft is outstanding');
     eq(drafts._jtDraftLink(7, job, 'estimate', '')[0].call, "openDocDraft(7,'estimate')",

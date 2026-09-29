@@ -77,10 +77,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ RATINGS ARE MANDATORY — the job does not close with a vendor unrated');
   {
     const t = sandbox({
-      fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobCloseBlockers', 'unratedVendorsForJob',
-            '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_todayStr', '_ymdLocal',
-            'stagePaidTotal', 'jobPayments'],
-      vars: ['DECEDENT_SERVICES', 'JOB_TRANSITIONS'],
+      fns: ['applyJobTransition', 'paymentStageWord', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobActivationBlockers', 'jobCloseBlockers', 'unratedVendorsForJob',
+            '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_todayStr',
+            'stagePaidTotal', 'jobPayments',
+            // The Re-open is its own branch of the transition (2026-09-29).
+            'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
+      vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'DECEDENT_SERVICES'],
       stubs: { vendorDirectory: VENDORS, agrApprovedBy: '', alerts: [] },
     });
     const said = [], asked = [];
@@ -105,9 +107,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     j.vendorRatings[5] = { rating: 3 };
     ok(t.applyJobTransition(j) === true, 'once every vendor used is rated, it closes');
     eq(j.status, 'closed', 'and the status moves');
-    j.agrSigned = true; j.depositReceived = true;   // re-opening IS an activation, with its own gate
+    // ⚠ Restated 2026-09-29: a Re-open is no longer an activation. It is its own branch — asked, recorded,
+    // and gated on the final invoice alone — so neither the ratings nor the activation checks reach it.
     j.vendorRatings = {};
+    asked.length = 0;
     ok(t.applyJobTransition(j) === true && j.status === 'active', 're-opening a closed job is not gated on ratings');
+    ok(asked.length === 1 && /Re-open this job/.test(asked[0]), 'it asks the Re-open question, once');
+    ok(!j.deliveredOn, 'and the close it undid is off the record');
     const none = { id: 9, status: 'active' };
     ok(t.applyJobTransition(none) === true, 'a job with nobody to rate closes as it always did');
     // An activation is not a close — the gate must not leak onto the other transition.

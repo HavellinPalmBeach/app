@@ -86,10 +86,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw',
     'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
     'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashOfferDiscount', 'dashNotice', '_primeEstimateFor',
-    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon'];
+    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'discountDraftWarning'];
   const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', 'agrApproved',
     'agrApprovedBy', 'agrApprovedAt', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
-    'discountRevision', 'approvedBy', 'approvedAt'];
+    'discountRevision', 'approvedBy', 'approvedAt', '_dashShown', '_dashKeepNotice'];
   // An hourly estimate: labour 20,000, a 10% discount, no rush — agreed at 18,000.
   const EST = (o) => Object.assign({ jobId: 1, tcFee: 12000, psFee: 8000, havellinTotalFull: 20000, rush: false, rushAmt: 0,
     discountPct: 10, discountAmt: 2000, havellinTotal: 18000, grandTotal: 18000, fixedPrice: false }, o || {});
@@ -129,7 +129,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!('1' in ctx._packetExported),
        '⚠⚠ and the packet’s filing guard is cleared, so re-approval RE-FILES Drive the same day by the same manager');
     ok(said.badges.some((m) => /Agreement approval revoked/.test(m)), 'the revocation says so');
-    ok(said.fb.some((f) => /^Discount removed\./.test(f.m)), 'the confirmation says the discount was REMOVED, not applied');
+    // ⚠ RESTATED 2026-09-29, not deleted: the confirmation is the dashboard's NOTICE now. It was a showFB
+    // written a moment before _dashRedraw rewrote the strip it was written into — measured in a browser,
+    // #dash-fb read empty straight after Apply — so the person pressing it never saw it at all.
+    ok(/^Discount removed\./.test((ctx._dashNotice || {}).msg || ''), 'the confirmation says the discount was REMOVED, not applied');
+    eq(said.fb.filter((f) => /^Discount (removed|applied)/.test(f.m)).length, 0,
+       'and it is not written onto a strip the redraw wipes');
     const mail = said.mail[0] || { subj: '', text: '' };
     has(mail.text, 'has removed the client discount', 'the manager’s email says it was removed');
     has(mail.text, 'Discount: removed', 'rather than "Proposed discount: 0%"');
@@ -143,7 +148,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.currentEstimate.discountPct, 5, 'a 5% discount lands as 5%');
     eq(ctx.currentEstimate.havellinTotal, 19000, 'off the labour');
     eq(job.agrRevokedBy, 'discount-revised', 'and a discount offered revokes the agreement too');
-    ok(said.fb.some((f) => /^Discount applied\./.test(f.m)), 'confirmed as applied');
+    ok(/^Discount applied\./.test((ctx._dashNotice || {}).msg || ''), 'confirmed as applied');
     has((said.mail[0] || {}).text, 'Proposed discount: 5%', 'the manager is told the percentage');
   }
 
@@ -216,9 +221,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docPreviewOnly', 'agreementReady', 'isJobWon', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
-      'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature',
+      'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews',
-      '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker'],
+      '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'],
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],

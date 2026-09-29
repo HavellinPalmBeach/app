@@ -84,8 +84,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docPreviewOnly', 'agreementReady', 'isJobWon', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
-      'depositPaidTotal', 'depositTargetFor', 'docDraftedAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink'].concat(BLK_FNS),
+      'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
+      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'].concat(BLK_FNS),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],
@@ -135,7 +135,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function editBed(jobO, recO) {
     const said = { notices: [], nav: [], redraw: 0, badges: [] };
     const E = sandbox({
-      fns: ['dashEditEstimate', 'revokeEstimateApproval', 'revokeAgreementApproval', 'estimateEventStatus', 'isJobWon'].concat(BLK_FNS),
+      fns: ['dashEditEstimate', 'revokeEstimateApproval', 'revokeAgreementApproval', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch'].concat(BLK_FNS),
       vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'estimateApproved',
         'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt'],
       stubs: {
@@ -192,7 +192,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { fb: [], nav: [] };
     const C = sandbox({
       fns: ['editEstimateFromCE', 'revokeEstimateApproval', 'revokeAgreementApproval', 'estimateEventStatus', 'isJobWon',
-        '_dashFbTarget', '_jobBandHost'].concat(BLK_FNS),
+        '_dashFbTarget', '_jobBandHost', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch'].concat(BLK_FNS),
       vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'estimateApproved',
         'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt', '_dashboardJobId'],
       stubs: {
@@ -398,11 +398,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'unscoredRoomNames', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'svcHasDocStep', 'matterTypeOf',
     'docTierOf', 'docTierDef', 'buildLockSnapshot', 'submitDeny', 'isJobWon', '_jobStatusCell', 'jobStatusView',
     'estimateEventStatus', 'submitForApproval', 'estimateSubmitBlocker', 'estimateNoteGaps', 'editEstimateFromCE',
-    'revokeEstimateApproval'].concat(BLK_FNS);
+    'revokeEstimateApproval', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice'].concat(BLK_FNS);
   const ST_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', 'agrApproved',
     'agrApprovedBy', 'agrApprovedAt', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt', 'MANAGER_PINS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT',
-    'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS'];
+    'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', '_dashShown', '_dashKeepNotice'];
   function lifeBed(jobO) {
     const doc = domStub({ 'dm-pct': '5', 'pin-input': '3010', 'deny-reason': 'Go back to the client first', 'deny-pin': '3010' });
     const ctx = sandbox({ fns: ST_FNS, vars: ST_VARS, stubs: {

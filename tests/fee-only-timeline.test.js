@@ -40,7 +40,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'paymentSplit',
       'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded',
       'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
-      'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature',
+      'docSentAt', 'docKeyFor', 'agreementSignature',
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
       'isAgreementSent',
       // ⚠ `jobTimelineActions` is LIFTED, never stubbed. The rail saying "you are on
@@ -48,8 +48,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // different claims, and this defect lived precisely in the gap between them.
       'jobStageDoc', 'docReadiness', 'docTitle', 'docDraftOnly', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', '_jtDraftLink', '_jtDocViews', '_jtDriveLink', 'estimateEditBlocker', 'priceChangeBlocker'
-    ],
-    vars: ['MATTER_TYPES', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+    , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'],
+    vars: ['JT_SHORT', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
            'JT_ROW_DOC', 'DOC_ACTIONS', 'DOC_KIND_WORD'],
   });
   const { jobTimeline, jobTimelineNext, jobTimelineActions } = ctx;

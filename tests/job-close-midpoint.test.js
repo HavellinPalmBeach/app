@@ -34,10 +34,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
-    'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
+    'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent',
-    'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'coWorkingDays',
-    '_coPaceFix', 'roomStatusNormalize'];
+    'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'coWorkingDays',
+    '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'];
   const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
     'docDraftOnly', 'docPreviewOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
     '_jtSendAction', 'agreementReady', 'jtRailHtml', 'jtTrackHtml', '_jtAtFmt', '_jtStateCls', 'fmtMoney',
@@ -46,8 +46,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'fmtDate2',
     // The transition behind every Close button, and the one handler both buttons call.
     'applyJobTransition', 'activateOrCycle', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob',
-    'lookupVendorById', 'vendorIdOf', '_actor', 'estimateEditBlocker', 'priceChangeBlocker', 'agreementSignature', 'isAgreementSent', 'docKeyFor']);
-  const VARS = ['DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+    'lookupVendorById', 'vendorIdOf', '_actor', 'estimateEditBlocker', 'priceChangeBlocker', 'agreementSignature', 'isAgreementSent', 'docKeyFor', 'draftOutstanding', 'draftIsStale',
+    // The Re-open (2026-09-29): the same door, its own branch. Lifted, never stubbed — a stub of "can this job
+    // be re-opened" is exactly what would let the rail's button and the transition's refusal disagree.
+    'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch']);
+  const VARS = ['JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
     'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
     'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY',
     'JOB_TRANSITIONS'];
@@ -237,7 +240,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(after.by.midpoint_invoiced.state, 'done', 'the midpoint invoice went out, so its row is done');
     eq(after.by.midpoint_received.state, 'open', 'the midpoint PAYMENT stays open until it is paid');
     eq(after.by.midpoint_received.sub, 'Unpaid — the final invoice carries it', 'and says what settles it');
-    ok(!after.outline.some((b) => b.call === 'activateOrCycle(7)'), 'a closed job is offered no Close — and nothing re-opens it');
+    // ⚠ A closed job is offered no CLOSE — and, since 2026-09-29, a Re-open in its place: the same one call,
+    // under its own label, as an outline beside the step (the final is still the thing to do next).
+    const reo = after.outline.filter((b) => b.call === 'activateOrCycle(7)');
+    eq(reo.length, 1, 'a closed job carries the transition exactly once on its band');
+    has(reo.length ? reo[0].label : '', 'Re-open job', '⚠⚠ as Re-open job');
+    lacks(after.outline.map((b) => b.label).join(' '), 'Close job', 'and never as Close job');
   }
 
   group('H3 — the midpoint invoice never went out: both rows are open once the job closes, and settle with the final');
@@ -345,13 +353,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const all = act.rows.map((r) => act.acts(r.key));
     eq(all.reduce((n, a) => n + a.secondary.filter((b) => b.call === 'activateOrCycle(7)').length, 0), 1,
        'across every row of the rail, one Close secondary — the lit one');
-    // ⚠ NOTHING ON THE RAIL RE-OPENS A CLOSED JOB. JOB_TRANSITIONS.closed is still 'active', and no
-    // control presses it: the one that tried (the client list's Status button) never rendered.
+    // ⚠⚠ ONE CONTROL RE-OPENS A CLOSED JOB, AND IT IS ON THE LIT ROW ALONE (2026-09-29, restated — until today
+    // this pinned that NOTHING did, because the one control that tried, the client list's Status button, never
+    // rendered). JOB_TRANSITIONS.closed is still 'active'; what changed is that pressing it now UNDOES the close.
     const closed = rail(JOB({ status: 'closed', deliveredOn: '2026-09-30' }), '2026-09-30', CLEARED);
-    const calls = closed.rows.map((r) => closed.acts(r.key)).map((a) => [a.primary].concat(a.secondary, a.doc ? a.doc.acts : []))
-      .reduce((x, y) => x.concat(y), []).filter(Boolean).map((b) => b.call).join(' ');
-    lacks(calls, 'activateOrCycle', 'no action on any row of a closed job calls the transition that would re-open it');
-    eq(R.JOB_TRANSITIONS.closed, 'active', 'the map entry itself is kept — it is the controls that are gone');
+    const allActs = closed.rows.map((r) => ({ key: r.key, a: closed.acts(r.key) }));
+    const reopens = allActs.map((x) => [x.a.primary].concat(x.a.secondary, x.a.doc ? x.a.doc.acts : [])
+      .filter((b) => b && b.call === 'activateOrCycle(7)').map((b) => ({ key: x.key, label: b.label })))
+      .reduce((x, y) => x.concat(y), []);
+    eq(reopens.length, 1, 'across every row of a closed job, the transition is offered exactly once');
+    eq(reopens.length ? reopens[0].key : '', closed.next && closed.next.key, '…on the lit row, as the undo beside the step');
+    has(reopens.length ? reopens[0].label : '', 'Re-open job', 'labelled Re-open job, never Close or Activate');
+    eq(allActs.filter((x) => x.a.primary && x.a.primary.call === 'activateOrCycle(7)').length, 0,
+       'and never as a primary — sending the final is still the thing to do next');
+    eq(R.JOB_TRANSITIONS.closed, 'active', 'the map entry is the Re-open');
+    // Withheld — not offered-and-refused — once the final invoice has gone out, or a final payment is on file.
+    const finSent = rail(JOB({ status: 'closed', deliveredOn: '2026-09-30', docState: Object.assign({}, DEP_SENT, {
+      'invoice:final': { draftedAt: '2026-09-30T10:00:00Z', sentAt: '2026-09-30T11:00:00Z' } }) }), '2026-09-30', CLEARED);
+    eq(finSent.rows.map((r) => finSent.acts(r.key)).map((a) => [a.primary].concat(a.secondary, a.doc ? a.doc.acts : []))
+      .reduce((x, y) => x.concat(y), []).filter((b) => b && b.call === 'activateOrCycle(7)').length, 0,
+       '⚠⚠ once the final has gone out there is no Re-open anywhere on the rail');
+    const finPaid = rail(JOB({ status: 'closed', deliveredOn: '2026-09-30', payments: [{ id: 1, stage: 'deposit', amount: 10000 },
+      { id: 3, stage: 'final', amount: 10000 }] }), '2026-09-30', CLEARED);
+    eq(finPaid.outline.filter((b) => b.call === 'activateOrCycle(7)').length, 0,
+       'nor once a final payment is on file, sent or not');
   }
 
   group('the early close is asked once, before any midpoint payment, and only then');
@@ -366,8 +391,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(q, 'No midpoint payment is recorded', 'the question names why it is being asked');
     has(q, 'the final invoice bills everything not yet paid', 'says what the final does about it');
     has(q, 'Sep 30, 2026', 'names today as the handover date, formatted');
-    has(q, 'cannot be changed', 'says the date is permanent');
-    has(q, 'cannot be re-opened', 'and that a closed job stays closed');
+    // ⚠ Restated 2026-09-29: the question used to say the date "cannot be changed, and a closed job cannot be
+    // re-opened". Both went false the moment Re-open landed, and a question that overstates the stakes is
+    // one people learn to answer without reading.
+    has(q, 'Until the final invoice goes out, Re-open can undo the close', '⚠ says the close can be undone, and until when');
+    lacks(q, 'cannot be re-opened', 'and no longer says a closed job stays closed');
+    lacks(q, 'cannot be changed', 'nor that the date is permanent');
     has(q, 'press Cancel', 'and how to back out');
     asked.length = 0; answer = true;
     ok(R.applyJobTransition(j) === true, 'OK closes it');
@@ -379,11 +408,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     asked.length = 0; answer = false;
     ok(R.applyJobTransition(paid) === true, 'a job with its midpoint paid closes');
     eq(asked.length, 0, 'without a question');
-    // ⚠ A job carrying a handover date already (one re-opened before the Status button was found dead)
-    // is not asked: the stamp is write-once, so "closing records today" would be false on it.
-    const reopened = JOB({ deliveredOn: '2026-09-18' });
+    // ⚠ DEFENSIVE, not a live path: an ACTIVE job carrying a handover date. A Re-open clears the stamp (below),
+    // so the only way to reach this is a record written by hand or by an older build. The stamp is still
+    // write-once — a close never overwrites one — and the question is not asked over it, because "closing
+    // records today" would be false there.
+    const stamped = JOB({ deliveredOn: '2026-09-18' });
     asked.length = 0; answer = false;
-    ok(R.applyJobTransition(reopened) === true && reopened.deliveredOn === '2026-09-18', 're-closing keeps the first handover date');
+    ok(R.applyJobTransition(stamped) === true && stamped.deliveredOn === '2026-09-18', 'a close never overwrites a handover date already on the record');
     eq(asked.length, 0, 'and asks nothing — it would be promising a stamp it does not write');
     // Activation is a different transition and never asks about the midpoint.
     const w = JOB({ status: 'won', activatedOn: '', start: '' });
@@ -489,7 +520,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // with the REAL date formatter and a pinned today, so "due around" reads a real day.
     const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
-      'docDraftedAt', 'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
+      'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
       'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
@@ -499,11 +530,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
-      'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'fmtDate2', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView'];
-    const DVARS = ['MATTER_TYPES', 'DECEDENT_SERVICES', '_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK',
+      'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'fmtDate2', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml',
+      'jobReopenBlocker'];
+    const DVARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK',
       'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY',
-      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT'];
+      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice'];
     function render(job, today, plan) {
       const dom = domStub({});
       const c = sandbox({ fns: FNS, vars: DVARS, stubs: {
@@ -537,7 +569,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(after, 'Unpaid — the final invoice carries it', 'saying what settles it');
     has(after, "dashRecordPayment(7,'midpoint')", 'and its payment can be recorded from the strip');
     lacks(after, "docAction(7,'invoice','send',{stage:'midpoint'})", 'nothing on the page sends the midpoint again');
-    lacks(after, 'activateOrCycle(7)', 'and nothing re-opens the job');
+    // ⚠ Restated 2026-09-29: the page used to carry no transition at all on a closed job. It carries ONE, the
+    // Re-open, as an outline in the band — never in the strip, never twice.
+    eq((after.match(/activateOrCycle\(7\)/g) || []).length, 1, 'the transition is on the page exactly once');
+    has(b2, 'jt-btn" onclick="activateOrCycle(7)">&#8634; Re-open job', 'as an outline Re-open job, in the band');
     const d2 = onclicks(after);
     eq(d2.length, new Set(d2).size, 'every onclick on the closed job\'s dashboard is unique');
   }
