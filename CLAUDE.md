@@ -75,7 +75,9 @@ Anthony: *"1 yes, 2 warning is fine, 3 hide until PIN"*. App-only, **no redeploy
   however correct the line.**
 
 ### Proof
-- **13,640 committed checks** (13,351 before this build): `tests/reaccept-stale-drafts.test.js` new at **278**, and 11 more in
+- **13,640 committed checks** (13,351 before this build), **13,700 after merging `main`'s H5 / P8 build** — 13,640 here +
+  `work-done-rooms` 60, and every suite carries exactly ours + theirs − base (110 suites, checked file by file, because a merge
+  that quietly drops a group reads as a smaller green total): `tests/reaccept-stale-drafts.test.js` new at **278**, and 11 more in
   existing suites. Twenty-nine suites' pinned `fns:`/`vars:` lists gained the helpers — **lifted, never stubbed**. **Three pins
   restated, not deleted:** `doc-send` (the tap now reads `docDraftPending`), `estimate-delivery` (the agreement blocker delegates
   to `agreementReady`) and `dashboard-schedule` (the three sites that PRINT the readiness gate's sentence inside a `reaccept`
@@ -95,6 +97,11 @@ Anthony: *"1 yes, 2 warning is fine, 3 hide until PIN"*. App-only, **no redeploy
     erases it fails **5**; its warning flattened to *ok* (the first pass's R60, whose needle the fix had moved) fails 1; the
     comeback revert fails **8**; the discount marking no drafts fails 4 (3 on the first pass — the restated discount bed added a
     check).
+  - **On the tree after merging `main`'s H5 / P8 build** all 66 reverts still find their code, needle by needle, and the eight
+    that matter most, re-run on four fresh copies, fail exactly as they did before it — `agreementReady` with no `reaccept`
+    **24**, the rail's send row 9, its acceptance row 7, the rule reopening on any change 7, `agrApprovalBlocker`'s own copy 7,
+    the row button's old draft test 7, the comeback client **8**, the discount notice 5 — against 13,700 / 0 before and after on
+    every copy, each restored byte-identical. The two builds touch different functions, and this is the check that says so.
 - **Verified in headless Chromium, `tests/browser/step37.js`, 88 checks, 0 failed, 0 page errors** (written as step 36 and
   renumbered 37 on the merge — the H5 / P8 session took 36), through the real rail, the
   real Send / I've sent it / Client accepted buttons (only `gmailCreateDraft` stubbed), the real Build Estimate raised by the real
@@ -105,9 +112,10 @@ Anthony: *"1 yes, 2 warning is fine, 3 hide until PIN"*. App-only, **no redeploy
   discount is named on its row, its button is an ordinary send, the tap is refused at the door and a fresh draft carries no mark;
   an edit marks a waiting draft too; no Edit estimate anywhere while a manager has the estimate, the door refusing and Build
   Estimate not opened; before the yes a raise reopens only the send; a job recorded before today is asked nothing; overflow 0 at
-  1440 and 390. **Against the pre-change build it fails 58.** `run.sh`'s default list is 1–36; steps 1–35 re-run as regressions —
-  59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28
-  / 90 / 58 / 62 / 53 / 42 / 53 / 75 / 37 / 43, 0 failed — **1,843 browser checks across the thirty-six**.
+  1440 and 390. **Against the pre-change build it fails 58.** `run.sh`'s default list is 1–37; on the tree after the merge steps
+  1–36 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 /
+  75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 14, 0 failed — **1,857 browser checks across the
+  thirty-seven** (1,843 across the thirty-six before the merge; `main`'s step 36 is the 14).
 - Manual **§1, §5, §7, §8, §9** (a status row), **§9a** (three table rows and two notes) and **§9b** (two table rows and a note);
   playbook **Step 2** (two `.stop`s), **Step 4** (two `.stop`s), **Step 5** (a `.stop` with the revised-price order), **Step 6**,
   the status list and **four** symptom rows, plus two corrected. Both `.md` copies hand-edited; **52 claims parity-checked, 0
