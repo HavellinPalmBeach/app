@@ -45,15 +45,24 @@ no redeploy.
     for jobs written before today — and the raw-status assertions are what pin the write.
   - Nothing changes for a client who has not said yes; the Pending Approval filter still tests `status === 'pending'`, which is
     why the re-priced won client is correctly on it.
-- **12,795 committed checks** (`tests/price-lock-won-status.test.js` new at 170; twenty suites' pinned `fns:`/`vars:` lists gained
-  the helpers, lifted, never stubbed). ⚠ **My list-extension script over-reached** into `lacks()` needle lists (`signing-packet`,
-  `document-renderers`) and tuple lists (`dashboard-actions` HANDLERS, `estimate-contract-gate`, `room-coverage`); caught by
-  diffing every suite's check count against the HEAD baseline rather than by the totals, and all reverted. **Revert sweep on four
-  tar copies: 28 changes, ALL RED, baseline 12,795 / 0 before and after on every copy, no needle mismatched, nothing crashed.**
-  The shared rule ignoring a sent packet (the defect, for both doors) fails **56**, the edit door ignoring it **42**,
-  `dashEditEstimate`'s gate 15, the rule reading the boolean rather than DocuSign's record 10, the active/closed/retained guard
-  10, the panel's own door 8; the rest 1–5. The two missing-job guards (below) came after the copies were taken and were
-  revert-verified on the working tree, red each.
+- **12,798 committed checks on this branch, 13,229 after merging `main`'s Reset, C2 and H2 builds, and 13,262 after its `_actor`
+  follow-up** (`tests/price-lock-won-status.test.js` new at 173; twenty suites' pinned `fns:`/`vars:` lists gained the helpers,
+  lifted, never stubbed). The first merge is 12,625 at the merge base + 173 here + 431 on `main`, the second 13,229 + 33
+  (`approval-on-job` 198 → 231), and **at both, every one of the 106 suites carries exactly ours + theirs − base**, checked file
+  by file, because a merge that quietly drops a group reads as a smaller green total. The first merge's one break was correct:
+  `main`'s new `change-order-card` suite lifts the dashboard, whose header chip now reads `jobStatusView`, so it lifts the same
+  helpers now. ⚠ **My list-extension script over-reached** into `lacks()` needle lists (`signing-packet`, `document-renderers`)
+  and tuple lists (`dashboard-actions` HANDLERS, `estimate-contract-gate`, `room-coverage`); caught by diffing every suite's check
+  count against the HEAD baseline rather than by the totals, and all reverted.
+- **Revert sweep, run twice.** Before the merge, on four tar copies: **28 changes, ALL RED, baseline 12,795 / 0 before and after
+  on every copy, no needle mismatched, nothing crashed.** The shared rule ignoring a sent packet (the defect, for both doors)
+  fails **56**, the edit door ignoring it **42**, `dashEditEstimate`'s gate 15, the rule reading the boolean rather than
+  DocuSign's record 10, the active/closed/retained guard 10, the panel's own door 8; the rest 1–5. **On the merged tree, again
+  on four copies: 32 changes, ALL RED, baseline 13,229 / 0 before and after**, the 28 failing exactly as before, plus the two
+  missing-job guards (below: the panel 2, the banner 1) and two reverts of the merge's UNION itself — the submit losing `main`'s
+  edit stamp and `checkPin` losing its sync — each failing `main`'s job-edit net (1 each), so neither half can be dropped
+  quietly. After the second merge all 32 still find their code, needle by needle, and the two defects re-run on that tree fail
+  **56** and **5** again, against 13,262 / 0 before and after.
   - **⚠ FOUR WRITER REVERTS FAIL ONLY THE SOURCE NETS (2 each), AND THAT IS HONEST RATHER THAN WEAK.** A discount or a submit on
     a won job IS pending, and Save and the panel's Edit are withheld while the estimate is out for approval, so on every state
     those four can reach the literal and the rule give the same answer. What the nets pin is that the next change to the rule
@@ -75,7 +84,7 @@ no redeploy.
   table, the Step 6 `.stop`, the status table (a new row) and the symptom table (one row rewritten, one new, two corrected).
   Both `.md` copies hand-edited; **30 claims parity-checked, 0 mismatches** (two apparent misses were table-cell boundaries in my
   checker, verified); `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18
-  tables full width, as before.
+  tables full width, as before — and the same again, re-rendered on the tree after both merges.
 - **⚠ OPEN, AND IT IS ANTHONY'S CALL: a price change after the yes is not re-asked.** A discount only lowers what the client
   accepted, but an edit before the packet goes out can RAISE it, and the app keeps the acceptance (`won`, `wonAt`) and the old
   `estimateSentDate` (an edit does not clear it), so the revised figure reaches the client only as the packet's Exhibit A.
