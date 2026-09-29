@@ -74,7 +74,10 @@ no redeploy.
   a signed agreement refused at the door; before the packet Edit estimate still works and the client stays won; a won client's
   discount reading *Won · Pending Re-approval* on the header, the list and the Pending Approval filter, *Won* after the PIN and
   after a deny; a client not yet won reading *Pending Approval* then *Approved — Awaiting Client*; overflow 0 at 1440 and 390.
-  **Against the pre-change build it fails 19.** BROWSER_TBD
+  **Against the pre-change build it fails 19.** `run.sh`'s default list is 1–34; on the tree after both merges steps 1–34
+  re-run — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 /
+  99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75 / 43, 0 failed — **1,718 browser checks across the thirty-four**, the same figures
+  step for step as on the tree before the `_actor` merge.
   - **⚠ A FIXTURE TRAP WORTH KNOWING: `saveEstimateState()` rebuilds the store record from the page's approval GLOBALS**, which
     describe whichever estimate was last open. A fixture that sets `estimateStore[id] = {approved: true, …}` and then calls it
     writes that estimate back **unapproved** — six false failures on the first run. The step writes localStorage directly.
