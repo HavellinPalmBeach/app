@@ -19,7 +19,7 @@ const LIST_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'jobPay
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
   'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'winLossListHtml', '_wlClientCell',
-  'isJobWon', 'secCaret', 'fmtDate2', 'setJobSort', 'setFilter'];
+  'isJobWon', 'secCaret', 'fmtDate2', 'setJobSort', 'setFilter', 'jobStatusView'];
 const LIST_VARS = ['currentFilter', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'SVC_LABELS', 'SVC_ORDER', '_jobsWatch',
   '_jobsState', '_jobSort', '_wlOpen', 'JOB_SORTS', 'JOB_LIST_COLS', 'JOB_STATUS_ORDER',
   'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS'];
@@ -99,7 +99,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ sortJobsForList — the rule, driven on real jobs');
   {
-    const s = sandbox({ fns: ['sortJobsForList', 'svcLabelOf'], vars: ['SVC_LABELS', 'SVC_ORDER', 'JOB_STATUS_ORDER', 'JOB_SORTS'] });
+    const s = sandbox({ fns: ['sortJobsForList', 'svcLabelOf', 'jobStatusView', 'isJobWon'], vars: ['SVC_LABELS', 'SVC_ORDER', 'JOB_STATUS_ORDER', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'JOB_SORTS'] });
     const by = (key, dir, jobs) => s.sortJobsForList(jobs || JOBS, key, dir).map((j) => j.name).join(',');
     const before = JOBS.map((j) => j.name).join(',');
 
@@ -288,7 +288,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(rj, 'var sdot', 'nor its own dot map');
     has(rj, '_jobStatusCell(j)', 'it asks the shared cell');
     has(fn('winLossListHtml'), '_jobStatusCell(j)', 'and so does the Won list');
-    const s = sandbox({ fns: ['_jobStatusCell', 'esc'], vars: ['JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'JOB_STATUS_ORDER'] });
+    const s = sandbox({ fns: ['_jobStatusCell', 'esc', 'jobStatusView', 'isJobWon'], vars: ['JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'JOB_STATUS_ORDER'] });
     s.JOB_STATUS_ORDER.forEach((st) => ok(!!s.JOB_STATUS_LABELS[st], st + ' has a label'));
     has(s._jobStatusCell({ status: 'closed_retained' }), 'Closed — Deposit Retained', 'the deposit-retained wording');
     has(s._jobStatusCell({ status: 'pending' }), '<strong style="color:#7a4f00;">Pending Approval</strong>', 'pending keeps its amber emphasis');

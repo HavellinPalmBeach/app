@@ -86,7 +86,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw',
     'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
     'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashOfferDiscount', 'dashNotice', '_primeEstimateFor',
-    'notifyManagerForApproval'];
+    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon'];
   const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', 'agrApproved',
     'agrApprovedBy', 'agrApprovedAt', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt'];
@@ -198,7 +198,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('M3 — discountOfferBlocker is the one rule, and it reads the RECORD');
   {
-    const b = sandbox({ fns: ['discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
+    const b = sandbox({ fns: ['discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'priceChangeBlocker'],
       vars: ['currentInvStage'] });
     eq(b.discountOfferBlocker({ id: 1 }), '', 'a job whose packet has not gone out may still be offered one');
     has(b.discountOfferBlocker({ id: 1, agrSent: true }), 'signing packet has gone to the client', 'sent (the boolean) refuses');
@@ -218,7 +218,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
       'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature',
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews',
-      '_jtDraftLink', '_jtDriveLink', 'isAgreementSent'],
+      '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker'],
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],

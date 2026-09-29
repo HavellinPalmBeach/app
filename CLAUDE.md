@@ -1,3 +1,98 @@
+## ⚠⚠ EDIT ESTIMATE GOES ONCE THE SIGNING PACKET IS OUT, AND A WON CLIENT STAYS WON THROUGH A RE-PRICE (FIXED 2026-09-29)
+Two of the three items the document build flagged (the entry below the manager-approvals one). Anthony: *"yes, withdraw Edit
+estimate once the packet is sent. if we are offering a discount, and therefore it is "pending" how is it also "won"?"* App-only,
+no redeploy.
+
+- **⚠⚠ REPRODUCED ON THE REAL FUNCTIONS FIRST**, and confirmed by the browser step against the pre-change build:
+
+  | | before | now |
+  |---|---|---|
+  | a sent packet, emailed or DocuSign's record alone | **✎ Edit estimate on four rail rows** (built · approved · sent · accepted) | none |
+  | `dashEditEstimate` on a sent packet | **un-approved the estimate AND the agreement**, then opened Build Estimate | refused, naming the change order; nothing written |
+  | the same door on a SIGNED agreement | the rail hid the button; **the door itself checked nothing** | refused |
+  | a won client offered a discount | *Pending Approval* | ***Won · Pending Re-approval*** |
+  | … then the manager's PIN | ***Approved — Awaiting Client*** | *Won* |
+  | … or a deny instead | ***New*** | *Won* |
+  | `isJobWon` throughout | true | true |
+
+- **⚠⚠ ONE RULE, TWO DOORS: `priceChangeBlocker(job, how)`.** Signed → the price is locked; `isAgreementSent` (the RECORD —
+  DocuSign writes only it) → a change order. `discountOfferBlocker` is `priceChangeBlocker(job, 'a discount')`, byte-identical
+  to what it said before; `estimateEditBlocker` is `priceChangeBlocker(job, 'an edit to the estimate')`. The reason is the same
+  for both: the packet carries this estimate as its Exhibit A, so an edit after it moves the price the client is being asked to
+  sign, exactly as a discount does. Change orders stay open (`openChangeOrder` is ungated).
+  - **Read at every door, not only on the button.** The rail's document tray (it tested `!job.agrSigned`, so the button stood
+    for the whole stretch the packet sat with the client); `dashEditEstimate` (checked **nothing**); `editEstimateFromCE`, the
+    Client Estimate panel's own door, whose button may have been drawn before the packet went out on the other device;
+    `updateApprovalUI` (that button, both subtitles and the lock note); and `applyEstimateLock`, whose new arm reads **Estimate
+    Locked — Signing Packet Sent** rather than offering two buttons that are no longer there. A net: `revokeEstimateApproval` has
+    exactly two callers and each asks `estimateEditBlocker` before it.
+- **⚠⚠ THE STATUS LINE IS ONE STRING CARRYING TWO FACTS, AND THE CLIENT'S YES WAS NEVER IN IT.** Before the yes it tracks the
+  ESTIMATE (new → pending → approved); after it, the JOB (won → active → closed). The yes lives on `job.won` (`isJobWon`), which
+  is why the rail, staffing, the Job Plan and Win / Loss were right throughout and only the words were wrong: six estimate
+  writers put the estimate's phase over whatever the job had reached.
+  - **`estimateEventStatus(job, next)` is the one rule, read by all six** (save, submit, discount, approve, deny, edit). Active,
+    closed and deposit-retained are never moved (`checkPin` already spared the first two; nothing spared the third). Not won →
+    `next`, exactly as before, a lost job's comeback included. Won → `'pending'` stays pending and everything else is `'won'`.
+  - **⚠ WHY A WON JOB STILL GOES TO `pending` RATHER THAN STAYING `won`.** `pending` is load-bearing across devices: it is the
+    Pending Approval filter the manager works from, what `maybeStartJobsWatch` polls on, and the rail's `estSubmitted` fallback
+    (`job.status === 'pending'`). Holding `won` would hide a re-price from the manager and stop the other device noticing it.
+  - **`jobStatusView(j)` is the one READING** — the list cell, the Won list, the dashboard header's chip and the Status sort. Won
+    + pending reads ***Won · Pending Re-approval***; won + `''`/`new`/`approved` reads **Won**, a derivation, so a won job an
+    estimate event knocked back before today reads right with nothing migrated. **The header's private `statusLabels` map is
+    deleted** — it was a second vocabulary, and the reason the chip could say something the list did not.
+  - **⚠ THE WRITE AND THE READING COVER EACH OTHER, SO REVERTING ONE FAILS FEW CHECKS.** Put the old write back and every label
+    still reads right through the derivation; only the raw-status assertions fail (5). That is by design — the reading is needed
+    for jobs written before today — and the raw-status assertions are what pin the write.
+  - Nothing changes for a client who has not said yes; the Pending Approval filter still tests `status === 'pending'`, which is
+    why the re-priced won client is correctly on it.
+- **12,795 committed checks** (`tests/price-lock-won-status.test.js` new at 170; twenty suites' pinned `fns:`/`vars:` lists gained
+  the helpers, lifted, never stubbed). ⚠ **My list-extension script over-reached** into `lacks()` needle lists (`signing-packet`,
+  `document-renderers`) and tuple lists (`dashboard-actions` HANDLERS, `estimate-contract-gate`, `room-coverage`); caught by
+  diffing every suite's check count against the HEAD baseline rather than by the totals, and all reverted. **Revert sweep on four
+  tar copies: 28 changes, ALL RED, baseline 12,795 / 0 before and after on every copy, no needle mismatched, nothing crashed.**
+  The shared rule ignoring a sent packet (the defect, for both doors) fails **56**, the edit door ignoring it **42**,
+  `dashEditEstimate`'s gate 15, the rule reading the boolean rather than DocuSign's record 10, the active/closed/retained guard
+  10, the panel's own door 8; the rest 1–5. The two missing-job guards (below) came after the copies were taken and were
+  revert-verified on the working tree, red each.
+  - **⚠ FOUR WRITER REVERTS FAIL ONLY THE SOURCE NETS (2 each), AND THAT IS HONEST RATHER THAN WEAK.** A discount or a submit on
+    a won job IS pending, and Save and the panel's Edit are withheld while the estimate is out for approval, so on every state
+    those four can reach the literal and the rule give the same answer. What the nets pin is that the next change to the rule
+    reaches all six writers, which is the thing that went wrong.**
+- **Verified in headless Chromium, `tests/browser/step31.js`, 43 checks, 0 failed, 0 page errors**, through the real rail, the
+  real Edit estimate and Offer discount buttons, the real discount pop-up and Apply, the real PIN typed into its modal, the real
+  Deny modal, the real Build Estimate banner and the real client list with its real Pending Approval filter: nothing to edit or
+  discount once the packet is out (emailed or DocuSign), the door refusing and un-approving nothing, the banner naming the packet,
+  a signed agreement refused at the door; before the packet Edit estimate still works and the client stays won; a won client's
+  discount reading *Won · Pending Re-approval* on the header, the list and the Pending Approval filter, *Won* after the PIN and
+  after a deny; a client not yet won reading *Pending Approval* then *Approved — Awaiting Client*; overflow 0 at 1440 and 390.
+  **Against the pre-change build it fails 19.** BROWSER_TBD
+  - **⚠ A FIXTURE TRAP WORTH KNOWING: `saveEstimateState()` rebuilds the store record from the page's approval GLOBALS**, which
+    describe whichever estimate was last open. A fixture that sets `estimateStore[id] = {approved: true, …}` and then calls it
+    writes that estimate back **unapproved** — six false failures on the first run. The step writes localStorage directly.
+- Manual **§1** (the table row), **§5** (the opening and the Won-dropdown note), **§5c** (the discount bullet), **§8** (the
+  after-the-packet note), **§9** (the Pending Approval filter, a *Won · Pending Re-approval* row in the status table, and a note
+  with the before/after), **§9a** (the timeline row). Playbook the service-type `.stop`, the Won-dropdown `.stop`, the lever
+  table, the Step 6 `.stop`, the status table (a new row) and the symptom table (one row rewritten, one new, two corrected).
+  Both `.md` copies hand-edited; **30 claims parity-checked, 0 mismatches** (two apparent misses were table-cell boundaries in my
+  checker, verified); `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18
+  tables full width, as before.
+- **⚠ OPEN, AND IT IS ANTHONY'S CALL: a price change after the yes is not re-asked.** A discount only lowers what the client
+  accepted, but an edit before the packet goes out can RAISE it, and the app keeps the acceptance (`won`, `wonAt`) and the old
+  `estimateSentDate` (an edit does not clear it), so the revised figure reaches the client only as the packet's Exhibit A.
+  Whether a raise after Won should reopen the acceptance, or at least re-offer sending the estimate, is a decision, not a fix.
+- **⚠ A JOB MISSING FROM THIS DEVICE IS NEVER SAID TO HAVE A PACKET OUT.** The blocker refuses a job it cannot find ("could not
+  be found"), and the panel and the Build Estimate banner first read that refusal as *the packet is with the client* — a claim
+  about a packet nobody sent, on a job dropped by another device while its estimate was open here. Both ask for the job first.
+  Found re-reading `updateApprovalUI`, not by a test; three checks pin it now.
+- **Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**
+- **⚠ FOUND IN PASSING, NOT FIXED: the rail offers *Edit estimate* while the estimate is OUT FOR APPROVAL.** The document tray
+  carries it on the lit *Estimate approved* row, and pressing it opens Build Estimate locked under *Out for Manager Approval* —
+  whose banner says it reopens once approved or denied, so it is a detour rather than a trap. Pre-existing and unrelated to the
+  packet rule; withholding it while `estSubmitted` is one line if wanted.
+- **⚠ THE SHAPE TO COPY: when one string carries two facts, a writer that knows only one of them overwrites the other.** The
+  yes was already stored apart; what was missing was one function for every writer of the status and one for every reader.
+  And a rule enforced on a button is not enforced: the door behind it has to ask the same question.
+
 ## ⚠⚠ TWO MANAGER APPROVALS LIVED IN THE OPEN PAGE, NOT ON THE JOB — THE FINAL-INVOICE PIN AND THE AGREEMENT'S BAND (FIXED 2026-09-29)
 Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). App-only, no redeploy: the approval rides
 `job.docState`, which the backend already merges per key (`JOB_KEYED_MAPS`).
@@ -199,9 +294,12 @@ functions before anything was changed.**
   symptom rows. **The playbook's symptom table had no separator row in `CONCIERGE_GUIDE.md`**, so it never rendered as a table;
   fixed. Both `.md` copies hand-edited; **42 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
   1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width as before. **Counsel bundle B6** added.
-- **⚠ FOUND, NOT BUILT, FLAGGED TO ANTHONY:** (1) *Edit estimate* is still reachable after the packet is sent, so a price can still
-  move under Exhibit A by that door; (2) a Gmail packet draft created before a discount is not updated by the re-file; (3)
-  `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won survives).
+- **⚠ FOUND, NOT BUILT, FLAGGED TO ANTHONY:** ~~(1) *Edit estimate* is still reachable after the packet is sent, so a price can still
+  move under Exhibit A by that door;~~ **BUILT THE SAME DAY** — Anthony: *"yes, withdraw Edit estimate once the packet is sent"*;
+  see the entry at the top of this file. (2) a Gmail packet draft created before a discount is not updated by the re-file —
+  **still open**; ~~(3) `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won
+  survives).~~ **FIXED THE SAME DAY** — a won client re-priced reads *Won · Pending Re-approval* and returns to *Won*; same entry.
+  *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
 - **⚠ THE SHAPE TO COPY: a document is checked by adding up its own rows.** Every defect here printed the right figure somewhere
   and a wrong one beside it, and every earlier test asserted a figure. The matrix reads the page the way a client does.
 
@@ -8700,7 +8798,11 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/charming-dirac-gcdfsl`
+- Active feature branch: `claude/dazzling-mendel-qns7nm`
+  (This session was ASSIGNED it again after `claude/charming-dirac-gcdfsl` had recorded itself as active below; a session's
+  assignment wins, so it is promoted. The follow-up here — Edit estimate after the packet, and the won status — was built on top
+  of the merged tree, H1/M1 included; browser step 30 is theirs and this one is **step 31**.)
+  (`claude/charming-dirac-gcdfsl` recorded, before this, that it was the active branch, and:)
   (`claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`, `claude/exciting-carson-pv156f` and
   `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — FIVE sessions ran concurrently off the 2026-09-28
   workflow audit, H1 and M1 here. All five are on `main`. This branch merged the other four on the way through; the merge
@@ -8772,7 +8874,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/charming-dirac-gcdfsl:main`
+  `git push origin claude/dazzling-mendel-qns7nm:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -13918,7 +14020,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (third pass)** — both documents, against the two manager approvals moving onto
+- Last reconciled against the app: **2026-09-29 (fourth pass)** — both documents, against Edit estimate going once the signing
+  packet is out and a won client reading *Won · Pending Re-approval* while a revised price waits (manual §1, §5, §5c, §8, §9,
+  §9a; playbook the two `.stop`s on Build Estimate, the lever table, Step 6, the status table and four symptom rows); see the
+  entry at the top of this file.
+- Prior pass **2026-09-29 (third pass)** — both documents, against the two manager approvals moving onto
   the job (manual §8, §12, §17; playbook a `.stop` under *What needs a PIN* and three symptom rows); see the entry at the top of
   this file.
 - Prior pass **2026-09-29 (second pass)** — both documents, against Close job from activation on, the final

@@ -343,7 +343,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const d = domStub();
     d.getElementById('panel-estimate').querySelectorAll = () => els;
-    const c = sandbox({ fns: ['applyEstimateLock'],
+    const c = sandbox({ fns: ['applyEstimateLock', 'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
       stubs: { document: d, estimateApproved: false, estimateSubmitted: true, jobs: [], currentEstimate: null,
                startApprovalWatch() {}, stopApprovalWatch() {} } });
     c.applyEstimateLock();
@@ -359,7 +359,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docSentAt', 'docDraftedAt', 'docKeyFor', '_jtSendAction', '_jtDocViews',
             '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'esignAvailable', 'esignProviderKey', 'esignJobWatches',
-            'agreementSignature', 'isAgreementSigned'],
+            'agreementSignature', 'isAgreementSigned', 'estimateEditBlocker', 'priceChangeBlocker'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS',
              'ESIGN_PROVIDER_KEY', 'AGR_SIG_METHODS'],
       stubs: { SHEETS_SYNC_URL: '' },

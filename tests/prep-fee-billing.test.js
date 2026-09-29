@@ -200,7 +200,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pct = { value: 10 };
     const a = sandbox({
       fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
-            'estFixedFee', 'estPrepFeeOnTop'],
+            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon'],
       vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
@@ -214,7 +214,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a.currentEstimate.havellinTotal, 18225, '⚠ and the $225 prep fee is still on top — not dropped by the discount');
     const b = sandbox({
       fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
-            'estFixedFee', 'estPrepFeeOnTop'],
+            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon'],
       vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },

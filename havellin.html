@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:19pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 1:21pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -9481,7 +9481,7 @@ function saveEstimateAndPreview() {
   estimateApproved = false;
   approvedBy = ''; approvedAt = '';
   job.inRange = inRange;
-  if (job.status === 'pending' || !job.status || job.status === 'new') job.status = 'new';
+  job.status = estimateEventStatus(job, (job.status === 'pending' || !job.status || job.status === 'new') ? 'new' : job.status);
   job.approved = false;
   estimateApproved = false;
   currentEstimate.jobId = jobId;
@@ -10883,7 +10883,14 @@ function updateApprovalUI() {
     // an executed contract and changes go through a Change Order, never an edit.
     var contractSigned = !!(ceJob && ceJob.agrSigned);
     badge.innerHTML = '<span class="badge b-approved">&#10003; Approved</span>' + (contractSigned ? ' <span class="badge b-ok">Under signed agreement</span>' : '');
-    if (btnEdit && !contractSigned) btnEdit.style.display = 'inline-block';
+    // ⚠ The panel's own Edit Estimate button reads the rule the rail reads (priceChangeBlocker):
+    // withdrawn once the signing packet has gone out, not only once it is signed.
+    // ⚠ `_packetOut` needs the JOB: with the job gone from this device (dropped on another one), the
+    // blocker still refuses — "this job could not be found" — and reading that as "the packet is out"
+    // would print a claim about a packet nobody sent.
+    var _editOK = !estimateEditBlocker(ceJob);
+    var _packetOut = !!ceJob && !contractSigned && !_editOK;
+    if (btnEdit && _editOK) btnEdit.style.display = 'inline-block';
     if (btnPdf) btnPdf.style.display = 'inline-block';
     // ⚠ THE ESTIMATE FILES ITSELF, so this button is shown ONLY when that did not happen.
     // checkPin calls saveFolderEstimate(true) on approval and editEstimateFromCE clears the
@@ -10900,7 +10907,8 @@ function updateApprovalUI() {
     // the escape hatch, reached automatically by DOC_SEND_PROVIDERS.mailto.
     var htmlEmailEl = document.getElementById('btn-html-email-est');
     if (htmlEmailEl) htmlEmailEl.style.display = 'inline-block';
-    var lockNote = contractSigned ? ' Locked by the signed agreement — revise via a Change Order.' : '';
+    var lockNote = contractSigned ? ' Locked by the signed agreement — revise via a Change Order.'
+      : _packetOut ? ' The signing packet has gone to the client — revise via a Change Order.' : '';
     // A filing record that outlives the toast. Answers "is this estimate in Drive?"
     // on reopening the tab tomorrow, and links straight to the filed copy.
     _paintDriveEstBtn();
@@ -10911,14 +10919,18 @@ function updateApprovalUI() {
       : '';
     if (!sentDate) {
       if (btnMarkSent) btnMarkSent.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = (contractSigned ? 'Approved · under signed agreement.' : 'Approved — not yet sent. Edit if you still need changes, or send to the client and mark as sent.') ;
+      if (subtitle) subtitle.textContent = (contractSigned ? 'Approved · under signed agreement.'
+        : _packetOut ? 'Approved · the signing packet is with the client — a change now goes through a Change Order.'
+        : 'Approved — not yet sent. Edit if you still need changes, or send to the client and mark as sent.') ;
       if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Approved</strong> · ' + approvedBy + ' · ' + approvedAt + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Print or email to client, then click <strong>Mark as Sent</strong> to record delivery.' + lockNote + '</div>' + driveNote + '</div>';
     } else {
-      // Offer Discount also revises the price, so it's locked once the agreement is
-      // signed — post-signing price changes go through a Change Order.
+      // Offer Discount also revises the price, so it follows the same rule as Edit Estimate:
+      // withdrawn once the signing packet has gone out — a later change is a Change Order.
       var _discOK = !discountOfferBlocker(ceJob);
       if (btnOfferDiscount && _discOK) btnOfferDiscount.style.display = 'inline-block';
-      if (subtitle) subtitle.textContent = contractSigned ? ('Estimate sent ' + sentDate + ' · under signed agreement — locked.') : ('Estimate sent ' + sentDate + '. Edit to revise' + (_discOK ? ', or Offer Discount if the client pushes back.' : '.'));
+      if (subtitle) subtitle.textContent = contractSigned ? ('Estimate sent ' + sentDate + ' · under signed agreement — locked.')
+        : _packetOut ? ('Estimate sent ' + sentDate + ' · the signing packet is with the client — a change now goes through a Change Order.')
+        : ('Estimate sent ' + sentDate + '. Edit to revise' + (_discOK ? ', or Offer Discount if the client pushes back.' : '.'));
       if (bannerWrap) bannerWrap.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div><strong>Sent to client</strong> · ' + sentDate + '</div><div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">' + (contractSigned ? 'Agreement signed — estimate locked. Revise via a Change Order.' : _discOK ? 'If the client wants a lower price, <strong>Edit</strong> to revise or use <strong>Offer Discount</strong>, then re-approve.' : 'The signing packet has gone to the client — a price change now goes through a Change Order.') + '</div>' + driveNote + '</div>';
     }
 
@@ -10978,10 +10990,16 @@ function applyEstimateLock() {
         _bIcon = '&#8987;'; // hourglass
         _bTitle = 'Out for Manager Approval';
         _bText = 'Locked while the manager reviews. It reopens for edits as soon as it’s approved or denied.';
+      } else if (estimateApproved && !_signedLk && _ceJobLk && estimateEditBlocker(_ceJobLk)) {
+        // ⚠ The packet is out: Edit Estimate and Offer Discount are both withdrawn (priceChangeBlocker),
+        // so a banner offering them would send somebody looking for two buttons that are not there.
+        _bIcon = '&#128274;'; // lock
+        _bTitle = 'Estimate Locked — Signing Packet Sent';
+        _bText = 'The signing packet has gone to the client with this estimate as its Exhibit A. To make changes, create a Change Order from the Client Dashboard.';
       } else if (estimateApproved && !_signedLk) {
         _bIcon = '&#9998;'; // pencil
         _bTitle = 'Approved — Locked for Direct Edits';
-        _bText = 'Still negotiable: to revise price or scope, use <strong>Edit Estimate</strong> or <strong>Offer Discount</strong> on the client&rsquo;s timeline (manager re-approval required). A Change Order is only needed once the agreement is signed.';
+        _bText = 'Still negotiable: to revise price or scope, use <strong>Edit Estimate</strong> or <strong>Offer Discount</strong> on the client&rsquo;s timeline (manager re-approval required). A Change Order is only needed once the signing packet has gone out.';
       } else {
         _bIcon = '&#128274;'; // lock
         _bTitle = 'Estimate Locked — Under Signed Agreement';
@@ -11245,7 +11263,7 @@ function submitForApproval(opts) {
   if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
   saveEstimateState();
   // Now it's genuinely awaiting manager approval — reflect that on the job.
-  if (subJob) { subJob.status = 'pending'; subJob.approved = false; saveJobs(); syncJobToSheets(subJob); }
+  if (subJob) { subJob.status = estimateEventStatus(subJob, 'pending'); subJob.approved = false; saveJobs(); syncJobToSheets(subJob); }
   updateApprovalUI();
 
   notifyManagerForApproval(currentEstimate, null);
@@ -11445,19 +11463,31 @@ function discountPreview(est, pct) {
            basis: rushRate ? 'Discount (labor fees + expedited premium)' : 'Discount (labor fees only)' };
 }
 
-// ⚠⚠ ONE ANSWER TO "MAY A DISCOUNT STILL BE OFFERED", read by the rail, the Client Estimate panel's
-// button, the dashboard handler, the modal and the write — so no door offers what another refuses.
-// It was gated on the SIGNATURE alone, and a discount offered after the signing packet had gone
-// out re-priced an estimate whose Exhibit A the client was already reading and being asked to
-// sign. Anthony's rule (2026-09-28 audit): once the packet has been sent, a later price change is
-// a change order. `isAgreementSent` is the record, not the `agrSent` boolean — DocuSign never
-// wrote the boolean, which is the defect that function was written for.
-function discountOfferBlocker(job) {
+// ⚠⚠ ONE ANSWER TO "MAY THIS ESTIMATE'S PRICE STILL MOVE", read by every door that moves it — Offer
+// discount AND Edit estimate, on the rail, the Client Estimate panel's buttons, the dashboard
+// handlers, the modal and the write — so no door offers what another refuses. Anthony's rule
+// (2026-09-28 audit): once the signing packet has been sent, a later price change is a change order.
+// `isAgreementSent` is the record, not the `agrSent` boolean — DocuSign never wrote the boolean,
+// which is the defect that function was written for.
+//
+// ⚠⚠ EDIT ESTIMATE WAS THE SECOND DOOR, AND IT STAYED OPEN A DAY LONGER THAN THE DISCOUNT (2026-09-29).
+// The discount was withdrawn once the packet went out; Edit estimate went on being offered until the
+// SIGNATURE, on the rail's document tray and the strip at its foot, and its handler checked nothing at
+// all. Measured on the real rail before the fix: a job whose packet was out — by email or by DocuSign
+// — offered Edit estimate on four rows, and pressing it un-approved the estimate AND the agreement
+// while the packet (possibly a live DocuSign envelope the client could still sign) sat in the
+// client's hands carrying an Exhibit A the app now called unapproved. Anthony: "yes, withdraw Edit
+// estimate once the packet is sent."
+//
+// `how` finishes the sentence for the door that asked, and is the ONLY thing the two doors differ in.
+function priceChangeBlocker(job, how) {
   if (!job) return 'This job could not be found.';
   if (isAgreementSigned(job)) return 'The client has signed the agreement, so the price is locked. A change now goes through a change order.';
-  if (isAgreementSent(job)) return 'The signing packet has gone to the client with this price as its Exhibit A. A change now goes through a change order, not a discount.';
+  if (isAgreementSent(job)) return 'The signing packet has gone to the client with this price as its Exhibit A. A change now goes through a change order' + (how ? ', not ' + how : '') + '.';
   return '';
 }
+function discountOfferBlocker(job) { return priceChangeBlocker(job, 'a discount'); }
+function estimateEditBlocker(job) { return priceChangeBlocker(job, 'an edit to the estimate'); }
 
 // What the modal's percentage box says, read by the preview AND the write so the two cannot
 // disagree about which numbers are allowed. ⚠ A BLANK IS NOT AN ANSWER AND 0 IS ONE: 0 removes the
@@ -11581,7 +11611,9 @@ function applyDiscountRevision() {
   // print or send and never re-filed the signing packet: Drive kept the Exhibit A at the OLD price
   // while the estimate carried the new one (2026-09-28 audit, M3).
   if (job) revokeAgreementApproval(job, 'discount-revised');
-  if (job) { job.status = 'pending'; job.approved = false; job.havellinEst = newHavellinTotal; saveJobs(); syncJobToSheets(job); }
+  // ⚠ A WON job stays won — the revised price waits on the manager as "Won · Pending Re-approval"
+  // (estimateEventStatus), not as a client who never said yes.
+  if (job) { job.status = estimateEventStatus(job, 'pending'); job.approved = false; job.havellinEst = newHavellinTotal; saveJobs(); syncJobToSheets(job); }
   saveEstimateState();   // single authoritative write (carries the revised totals + approval state)
   closeDiscountModal();
   renderClientEstimate();
@@ -11650,6 +11682,13 @@ function agrApprovalWithdrawn(job) {
 }
 
 function editEstimateFromCE() {
+  // ⚠ The same gate as the rail's door, checked here too: this button is drawn by updateApprovalUI,
+  // which may have painted it before the packet went out on the other device.
+  if (currentEstimate) {
+    var _ceEdJob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
+    var _ceEdBlk = estimateEditBlocker(_ceEdJob);
+    if (_ceEdBlk) { showFB(_dashFbTarget('ce-fb'), 'warn', _ceEdBlk); return; }
+  }
   // Reset submitted state so TC can edit freely
   estimateSubmitted = false;
   estimateApproved = false;
@@ -11671,7 +11710,8 @@ function editEstimateFromCE() {
   // for what un-approving actually entails — it is not navigation.
   if (currentEstimate && currentEstimate.jobId) {
     var edJob = revokeEstimateApproval(currentEstimate.jobId);
-    if (edJob && edJob.status === 'pending') { edJob.status = 'new'; saveJobs(); syncJobToSheets(edJob); }
+    var _edNext = edJob ? estimateEventStatus(edJob, edJob.status === 'pending' ? 'new' : edJob.status) : '';
+    if (edJob && _edNext !== edJob.status) { edJob.status = _edNext; saveJobs(); syncJobToSheets(edJob); }
   }
   saveEstimateState();
   // Go back to estimate tab with this job loaded
@@ -11751,7 +11791,7 @@ function submitDeny() {
     delete currentEstimate.lockedAt; delete currentEstimate.lockedBy;
   }
   var djob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
-  if (djob) { djob.status = 'new'; djob.approved = false; saveJobs(); syncJobToSheets(djob); }
+  if (djob) { djob.status = estimateEventStatus(djob, 'new'); djob.approved = false; saveJobs(); syncJobToSheets(djob); }
   saveEstimateState();
   closeDenyModal();
   renderClientEstimate();
@@ -11832,7 +11872,9 @@ function checkPin() {
       // says nothing about whether the client accepted, signed, or paid. Setting 'active'
       // here also bypassed the signature + deposit blockers that activateOrCycle (via
       // applyJobTransition) already enforces, so jobs went active without either.
-      if (job) { job.status = (job.status === 'active' || job.status === 'closed') ? job.status : 'approved';
+      // ⚠ A re-approval on a WON job returns it to 'won', never to "Approved — Awaiting Client":
+      // the client has already said yes (estimateEventStatus, 2026-09-29).
+      if (job) { job.status = estimateEventStatus(job, 'approved');
                  job.approved = true; saveJobs(); }
     }
     // An approval clears any prior denial marker so the "Denied" banner doesn't linger.
@@ -11905,6 +11947,44 @@ var JOB_STATUS_LABELS = { new: 'New', pending: 'Pending Approval', approved: 'Ap
   active: 'Active', closed: 'Closed', closed_retained: 'Closed — Deposit Retained', lost: 'Lost' };
 var JOB_STATUS_DOT = { new: 's-new', pending: 's-pending', approved: 's-pending', won: 's-active', active: 's-active',
   closed: 's-closed', closed_retained: 's-closed', lost: 's-lost' };
+
+// ⚠⚠ WHAT AN ESTIMATE EVENT LEAVES A JOB'S STATUS AT — save, submit, discount, approve, deny, edit.
+// The status line is ONE string carrying two different facts: before the client's yes it tracks the
+// ESTIMATE (new → pending → approved), after it tracks the JOB (won → active → closed). Six estimate
+// writes put the estimate's phase over it whatever the job had reached, so a WON client offered a
+// discount read "Pending Approval", then "Approved — Awaiting Client" once the manager re-approved (a
+// client who had already said yes), or "New" after a deny — while `job.won` stayed true and the rail,
+// staffing and Win / Loss all went on reading the job as won. Measured on the real functions before
+// the fix, in that order. Anthony: "if we are offering a discount, and therefore it is 'pending' how
+// is it also 'won'?" (2026-09-29).
+//
+// The rule: before the yes, the estimate's phase IS the status, exactly as it always was (a lost job
+// coming back through a revised estimate included). After it, the one estimate state worth a status
+// is 'pending' — a revised price waiting on a manager is the Pending Approval filter the manager works
+// from, the flag the jobs watch polls on, and the signal the rail reads across devices — and every
+// other estimate event leaves the job at 'won'. Active, closed and deposit-retained are never moved by
+// an estimate event at all (checkPin already spared active and closed, and nothing spared the third).
+function estimateEventStatus(job, next) {
+  var s = (job && job.status) || '';
+  if (s === 'active' || s === 'closed' || s === 'closed_retained') return s;
+  if (!isJobWon(job)) return next;
+  return next === 'pending' ? 'pending' : 'won';
+}
+
+// ONE reading of the status for every surface that prints or sorts it — the client list, the Won
+// list, the dashboard header's chip and the Status sort. A won job never reads as a pre-won phase:
+// a revised price awaiting the manager reads as BOTH facts, and a won job an estimate event knocked
+// back to 'new' or 'approved' before 2026-09-29 reads as won — a derivation, so nothing is migrated.
+function jobStatusView(j) {
+  var s = (j && j.status) || '';
+  var won = isJobWon(j);
+  if (won && (s === '' || s === 'new' || s === 'approved')) s = 'won';
+  return {
+    key: s,
+    label: (won && s === 'pending') ? 'Won \u00b7 Pending Re-approval' : (JOB_STATUS_LABELS[s] || s),
+    dot: JOB_STATUS_DOT[s] || 's-new'
+  };
+}
 var JOB_SORTS = {
   client: { label: 'Client / Property', first: 'asc',  val: function(j){ return String(j.name || '').toLowerCase(); } },
   // ⚠ Service sorts in CATALOGUE order (SVC_ORDER, the order every service picker uses — the four
@@ -11918,7 +11998,7 @@ var JOB_SORTS = {
   hav:    { label: 'Havellin Est.',     first: 'desc', val: function(j){ return j.havellinEst || null; } },
   tot:    { label: 'Total Est.',        first: 'desc', val: function(j){ return j.totalEst || null; } },
   start:  { label: 'Start Date',        first: 'asc',  val: function(j){ return j.start || ''; } },
-  status: { label: 'Status',            first: 'asc',  val: function(j){ var i = JOB_STATUS_ORDER.indexOf(j.status); return i < 0 ? JOB_STATUS_ORDER.length : i; } },
+  status: { label: 'Status',            first: 'asc',  val: function(j){ var i = JOB_STATUS_ORDER.indexOf(jobStatusView(j).key); return i < 0 ? JOB_STATUS_ORDER.length : i; } },
   re:     { label: 'RE',                first: 'desc', val: function(j){ return j.re === 'yes' ? 2 : (j.re === 'no' ? 0 : 1); } }
 };
 // The columns, in table order. `null` is Actions, which does not sort. The header row is painted
@@ -11977,8 +12057,9 @@ function jobsHeadHtml() {
 
 // A job's status, the way every list on the dashboard prints it.
 function _jobStatusCell(j) {
-  if (j.status === 'pending') return '<span class="sdot s-pending"></span><strong style="color:#7a4f00;">Pending Approval</strong>';
-  return '<span class="sdot ' + (JOB_STATUS_DOT[j.status] || 's-new') + '"></span>' + esc(JOB_STATUS_LABELS[j.status] || j.status || '');
+  var v = jobStatusView(j);
+  if (v.key === 'pending') return '<span class="sdot s-pending"></span><strong style="color:#7a4f00;">' + esc(v.label) + '</strong>';
+  return '<span class="sdot ' + v.dot + '"></span>' + esc(v.label || '');
 }
 
 function renderJobs() {
@@ -17018,10 +17099,11 @@ function jobTimelineActions(row, job, estRec) {
     // in Anthony's screenshot it rendered at the FOOT of the page in the quick strip rather
     // than under the estimate it edits. ⚠ `dashEditEstimate`, never `dashGoEstimate`: editing
     // an APPROVED estimate has to un-approve it first or the form it lands on is locked.
-    // ⚠ Withdrawn on a signed agreement, because `updateApprovalUI` hides Edit Estimate on
-    // exactly that condition — the signature IS the lock, and a second door into the same
-    // edit that ignored it would be a way around it.
-    if (_d.kind === 'estimate' && !job.agrSigned) {
+    // ⚠ Withdrawn once the signing packet has gone out, not only once it is signed — the same
+    // rule as Offer discount (priceChangeBlocker): the packet carries this estimate as its
+    // Exhibit A, and a later price change is a change order. It used to test `!job.agrSigned`,
+    // which kept it on screen for the whole stretch the packet sat with the client (2026-09-29).
+    if (_d.kind === 'estimate' && !estimateEditBlocker(job)) {
       out.doc.acts = out.doc.acts.concat([{ label: '&#9998; Edit estimate', call: 'dashEditEstimate(' + id + ')' }]);
     }
   }
@@ -17344,6 +17426,11 @@ function dashGoEstimate(jobId) {
 // own Edit Estimate button always did, which is why nobody noticed: the working door was on
 // the tab this slice retires.
 function dashEditEstimate(jobId) {
+  // ⚠ THE GATE AT THE DOOR, not only on the button that leads to it — this handler used to check
+  // nothing, so even a SIGNED agreement's estimate could be un-approved by anything that called it.
+  var _ejob = jobs.find(function (j) { return j.id === jobId; });
+  var _eblk = estimateEditBlocker(_ejob);
+  if (_eblk) { dashNotice('warn', _eblk); _dashRedraw(jobId); return; }
   if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
   if (estimateStore[jobId] && estimateStore[jobId].approved) {
     revokeEstimateApproval(jobId);
@@ -17815,7 +17902,8 @@ function renderClientDashboard(jobId) {
 
   // ── Status badge colours
   var statusColors = {new:'#888780',pending:'#A67C45',approved:'#A67C45',won:'#1D9E75',active:'#1D9E75',closed:'#3C3489',closed_retained:'#3C3489',lost:'#B0413E'};
-  var statusLabels = {new:'New',pending:'Pending Approval',approved:'Approved — Awaiting Client',won:'Won',active:'Active',closed:'Closed',closed_retained:'Closed — Deposit Retained',lost:'Lost'};
+  // (The chip's LABEL is `jobStatusView`'s — this function kept a second copy of the status vocabulary,
+  // which is how a won job's chip and its row in the client list would come to disagree.)
 
   // (`reComm` is gone: it was computed here and read NOWHERE. The RE chip recomputes from a
   // different source — `job.propVal || est.propVal` against `est.propVal`, and
@@ -17906,7 +17994,8 @@ function renderClientDashboard(jobId) {
   // (hover for the how-to) so they no longer need a separate full-width box.
   var _bpad = 'font-size:12px;padding:6px 13px;border-radius:5px;';
   h += '<div class="dash-chips">';
-  h += '<span class="badge" style="'+_bpad+'background:'+statusColors[job.status]+';color:white;">'+statusLabels[job.status]+'</span>';
+  var _sv = jobStatusView(job);
+  h += '<span class="badge" style="'+_bpad+'background:'+statusColors[_sv.key]+';color:white;">'+esc(_sv.label)+'</span>';
   h += '<span class="badge b-bronze" style="'+_bpad+'">'+svcLabel+'</span>';
   if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="'+_bpad+'">'+job.priority.charAt(0).toUpperCase()+job.priority.slice(1)+' priority</span>';
   if (job.premium) h += '<span class="badge" style="'+_bpad+'background:var(--tan);color:var(--bronze);">Premium estate</span>';

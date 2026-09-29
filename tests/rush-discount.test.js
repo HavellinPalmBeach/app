@@ -189,7 +189,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // revision added the premium on top of it again.
     const pct = { value: 10 };
     const a = sandbox({
-      fns: DISCOUNT_FNS.concat(['applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'estFixedFee', 'estPrepFeeOnTop']),
+      fns: DISCOUNT_FNS.concat(['applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon']),
       vars: DISCOUNT_VARS,
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
