@@ -16,7 +16,7 @@ Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision 
   calls the function instead of pressing the button proves the function, not the path — the same gap `dashboard-actions`
   records for source checks, one level up. They press the real buttons now: `openDash` opens the dashboard from the client
   list, and `press` counts the selector at exactly one before clicking. **Against the pre-change build: step23 fails 2 and
-  step24 fails 2 (each stops at the first press of a button that is not there), step25 fails 37, and the new step (31 on the merges) fails 20.**
+  step24 fails 2 (each stops at the first press of a button that is not there), step25 fails 37, and the new step (32 on the merges) fails 20.**
 - **`coCardActions(co)` IS THE ONE RULE:** PDF on every row, Get Acceptance only while unaccepted, and nothing without a real id
   (a `NaN` onclick is a control that looks pressable and does nothing). Rendered beside the status pill — Get Acceptance bronze
   (the primary), PDF outline. **The only live callers of either function are in it**; a test asserts each appears exactly once
@@ -44,7 +44,7 @@ Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision 
     T&M rush + 10% job, 10 accepted concierge hours at $150 collect **$1,620** against **$1,500** on a plain job; on a fixed
     rush + discount job the final adds exactly the plain **$1,500**.
   - **Not carried on the acceptance panel** — offered to Anthony as a follow-up rather than widened into this commit.
-- **11,586 committed checks before the merge, 12,524 after it** (+97 of them here: `tests/change-order-card.test.js` new at 95, and 2 in `intake-house-flags` asserting
+- **11,586 committed checks before the merges; 12,524, 12,722 and 12,817 after each of the three** (+97 of them here: `tests/change-order-card.test.js` new at 95, and 2 in `intake-house-flags` asserting
   `houseFlagSummary` is gone. The new suite covers `coCardActions`, a driven dashboard with one
   accepted and one pending change order asserting both controls, their onclicks, classes and uniqueness, Create → Accept
   through the real modals, the Q14 wording on every arm, and the invoice join). `coCardActions` / `coRateModsLine` lifted —
@@ -54,15 +54,19 @@ Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision 
   other half) 23, dropping Get Acceptance 18, Accept to `#e-fb` 11, no Q14 line 9, the rest 1–5.
   - **⚠ FOUR REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** — index reads on a button list the revert
     had emptied (`buttons(row)[1].call`). Read defensively now; re-done, all four fail cleanly with every check running.
-  - **⚠ THE MERGE BROKE THE NEW SUITE, CORRECTLY, BY THROWING.** The concurrent sessions gave the dashboard three more
+  - **⚠ THE MERGES BROKE THE NEW SUITE TWICE, CORRECTLY, BY THROWING.** On the first, the concurrent sessions gave the dashboard three more
     dependencies and the invoice three: its two sandboxes lift `agrApprovalWithdrawn`, `docReadOnlyWord`,
     `discountOfferBlocker` and `docPreviewOnly`, and `paymentSplit`, `rushScopeLine` and `rushCrewAdded`, as main's own suites
     do — lifted, never stubbed. `dashboard-schedule` and `job-progress` conflicted on the same lists and took the union.
     Re-run on the merged tree, the four reverts that matter (the card's controls, both notices, the Q14 line) are still red:
     the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against a baseline of 12,524 / 0
-    before and after.
-- **Verified in headless Chromium, `tests/browser/step31.js` new at 75, 0 failed, 0 page errors** (written as step 26 and
-  renumbered 31 on the merges — the concurrent audit sessions took 26 to 30): a Home Editing job with rush
+    before and after. **On the second** (`main` moved while the first was being tested), H1/M1 had taken the final-invoice
+    approval off the page, so `var invApproved` no longer exists and the invoice sandbox threw *not found*; it lifts
+    `invFinalApproval`, `invFinalApprovalRecord` and `docKeyFor` now, as `change-order-billing` does. The third (the Reset
+    build) needed nothing. The same four reverts re-run on the final tree: the card's controls 19, Create to `#e-fb` 23, Accept to `#e-fb` 11, the Q14 line 9, against 12,817 / 0 before
+    and after.
+- **Verified in headless Chromium, `tests/browser/step32.js` new at 75, 0 failed, 0 page errors** (written as step 26 and
+  renumbered 32 on the merges — the concurrent sessions took 26 to 31): a Home Editing job with rush
   and a 10% discount, opened from the client list; + New → Create lands the notice on the dashboard and the row with PDF and a
   bronze Get Acceptance; PDF prints the T&M line and no `$`; Get Acceptance → Accept, the notice, the row *Accepted* with PDF
   alone, the Hours Log *incl. +8.0 hrs by change order*; a second pending change order with unique onclicks; a fixed $24,000 rush
@@ -70,11 +74,11 @@ Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision 
   control in the client list; overflow 0 and all three buttons inside the viewport at 1440 and 390.
   - **⚠ AND THE RUNNER HUNG FOR SEVENTEEN MINUTES ON THE PRE-CHANGE BUILD, WHICH IS ITS OWN DEFECT.** step23 and step24 did not
     close the browser when they threw, so node stayed alive and `run.sh` never reached the next step. Both close it in the catch
-    now (as 25 and 31 do), steps 23 and 31 set the 8s default action timeout 24 and 25 already used, and `run.sh` gives every
-    step a 600s ceiling that reports *TIMED OUT* rather than stalling. `run.sh`'s default list is 1–31.
+    now (as 25 and 32 do), steps 23 and 32 set the 8s default action timeout 24 and 25 already used, and `run.sh` gives every
+    step a 600s ceiling that reports *TIMED OUT* rather than stalling. `run.sh`'s default list is 1–32.
   - **Before the merge, steps 1–26 re-run as regressions: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 101 / 73 / 99 / 75, 0 failed — 1,287 browser checks across the twenty-six.** Steps 23, 24 and 25 went 78 → 101, 58 → 73 and 78 → 99 — each press now also asserts its control is
     on the page exactly once — so 1,153 + 59 + the new step's 75 is the 1,287.
-  - **ON THE MERGED TREE, steps 1–30: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 75, 0 failed — 1,527 browser checks across the thirty.**
+  - **ON THE TREE AFTER ALL THREE MERGES, steps 1–32: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 75, 0 failed — 1,622 browser checks across the thirty-two.** (After the first merge, steps 1–30 ran 1,527.)
 - Manual **§9** (the + New route; the row's buttons; a note on the dead end with what to do about change orders raised before
   today; the notices; the Q14 note) and playbook **Step 10d** (the same, plus a `.stop` and a note in field language) and **four**
   symptom rows. Both `.md` copies hand-edited; **28 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
@@ -86,6 +90,69 @@ Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision 
 - **⚠ THE SHAPE TO COPY: a control that exists only inside markup nothing appends is not a control.** Grep finds the onclick, the
   function works when called, and every test that calls it passes — the one question none of them asks is whether a person can
   reach it. **Count the callers of a user-facing action, and press the button in the browser.**
+
+## ⚠⚠ THE BOTTOM Reset BUTTON RUNS THE ONE RESET — AND IT WAS REPRICING THE JOB IT WAS PRESSED ON (FIXED 2026-09-29)
+Anthony, on the one item the C1 build (the entry below) left for him: *"route Reset through the new reset too."* App-only, no
+redeploy.
+
+- **⚠⚠ REPRODUCED ON THE PRE-CHANGE BUILD FIRST, AND IT WAS A MONEY DEFECT ON THE SAME CLIENT, NOT A LEAK ACROSS CLIENTS.** A premium
+  Estate Settlement contracted at *Contents list*, six rooms, **$22,505**. The real Reset button asked nothing, unticked **Premium
+  Estate**, set the documentation scope to **Full**, cleared the rooms and the vendor lines — and **kept** the discount, move styling,
+  the private note, the collection, the car, the prep line, the planner date and a half-typed collection. The same six rooms scored
+  again priced at **$17,700**: premium off took **$8,900** and Full put **$4,095** back, so the new figure still looked like a price.
+  **⚠ And a Save afterwards put it into the saved estimate** — driven on the old build, the saved record reopened premium-off at Full.
+- **`resetEstimate()` IS `resetEstimateJobState(bound job)` NOW — the private list is deleted, not trimmed.** Premium, the scope and
+  who walked the house seed from the job; the binding and the four fields `loadJobIntoEstimate` writes off the job record are untouched;
+  nothing is reloaded (a Reset is not an open, and a test asserts no fetch); a dictation still running is aborted, as on every path.
+- **⚠ IT IS NOT Start over, and that is the distinction to keep.** Start over reopens the client, so a SAVED estimate comes back; Reset
+  gives a blank estimate for this client and leaves the saved one byte-for-byte as it was until Save. With nothing saved the two land in
+  the same place. The tooltip says so, and so does the question.
+- **⚠ IT ASKS FIRST**, because it now takes the private note and the lists with the rooms — naming the client, and, when an estimate is
+  saved (`estimateHasContent`, so an empty record is not "saved"), saying the saved one is not changed and that Start over goes back to
+  it. **Cancel changes nothing, not even a running dictation.** A line under the button confirms the clear, because the button sits at
+  the foot of a long screen.
+- **⚠ THE LOCK IS ENFORCED WHERE THE ACTION RUNS, not only in the disabled button.** Out for approval or approved, Reset refuses, asks
+  nothing and clears nothing: calcAll would otherwise put a blank working copy under an estimate a manager is reviewing, and `checkPin`
+  approves the working copy. The *"a rule enforced only in what a control OFFERS is not enforced"* shape from 2026-09-23, one more time.
+- **Tests.** `estimate-reset` 305 → **398**: the whole derived net driven through the real `resetEstimate` on the same client (every
+  control, every room row, every piece of saved-estimate state), the three seeds, the binding and job-record fields untouched, no fetch,
+  Cancel, saved / empty-record / nothing-saved questions, the saved record unchanged, both lock states, the bound-job-or-null hand-off
+  under suppressed auto-save, the tooltip — and `resetEstimate` joins the *no path keeps a private list* and *calls the one reset* nets.
+  **Two suites restated, not deleted:** `doc-scope` pinned `_estimateDocScope = 'full'` inside Reset's body — **that line WAS the
+  defect** — and now drives Reset to the job's own intake answer; `estimate-walkthrough` pinned `_volHandSet = {}` there and now points at
+  the one reset. **12,002 committed checks on this branch; 12,720 after merging the concurrent H3/M8, document and H1/M1 sessions'
+  suites, 0 failed.** The first `<style>` block is byte-identical to `main`'s, before the merges and after them — no CSS.
+  **Revert sweep on three tar copies: 12 changes, ALL RED, baseline 11,993 / 0 before and after on every copy, no needle
+  mismatched.** The old body back (the defect itself) fails **55**; no confirm 12; the lock guard removed 8; resetting for nobody and the
+  saved branch inverted 6 each; the guard on *approved* only 4; the feedback line and the tooltip 2 each; an empty record counted as
+  saved, the unsuppressed auto-save, the unnamed client and the missing Start over pointer 1 each.
+  - **⚠ THE DEFECT REVERT CRASHED TWO SUITES ON THE FIRST SWEEP** (46 fails reported): the new sandboxes did not lift the old body's
+    `ROOMS`, so it threw and every check after it went unrun. Every Reset call in the tests is read defensively now; re-run on a fresh
+    copy it fails **55 with all 12,002 checks running**, baseline 12,002 / 0 before and after.
+- **Verified in headless Chromium, `tests/browser/step31.js`, 42 checks, 0 failed, 0 page errors**, pressing the real Reset button:
+  Cancel keeps everything; OK names the client, and the screen is a blank estimate for *this* client — premium, Contents list, Ashley as
+  the walker, the home value and sqft kept — with the same six rooms back at **$22,505**; with a saved estimate the question says it is
+  untouched, the record is byte-identical after, and Start over then brings it back; submitted, the button is disabled and a direct call
+  asks nothing and clears nothing. **Against the pre-change build it fails 24 of 42.** Written as step 28 and renumbered on two
+  merges — the concurrent H3/M8, document and H1/M1 sessions took 28, 29 and 30 first. `run.sh`'s default list is 1–31; on the
+  MERGED tree steps 1–30 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 /
+  52 / 27 / 58 / 69 / 75 / 33 / 78 / 58 / 78 / 28 / 90 / 58 / 62 / 53, 0 failed — **1,488 browser checks across the thirty-one**.
+  - **⚠ THE `showFB` 4-SECOND RACE BIT THE FIRST RUN, AND IT IS STILL NOT FIXED.** Every message arms an unconditional clear, so the
+    first run of section D read an EMPTY strip after Reset: an earlier message's timer (the Save's or the reopen's, both under four
+    seconds old while the revert sweep loaded the CPU) cleared Reset's line. Section D now waits out earlier timers and says why.
+    **A message written within four seconds of another can still vanish early** — a per-element timer in `showFB` is the fix,
+    recorded twice now and worth doing on its own.
+- **⚠ FOUND IN PASSING, NOT FIXED — BY READING, NOT DRIVEN: the device's scratch copy survives a Reset or a Start over.**
+  `saveEstimateScratch` refuses to write an empty-rooms state, so after either clear the scratch still holds the discarded build until
+  something new is scored. Opening that client **offline**, with no saved estimate, would restore it (under the *unsaved draft* warning).
+  Narrow — offline, nothing saved, and left before scoring anything new — and the same on both buttons.
+- Manual **§5h** (Reset rewritten: a blank estimate for this client, not Start over, locked with everything else, and what it used to do,
+  measured) and playbook **Step 2** (a sentence in the `.stop`) plus **one** symptom row. Both `.md` copies hand-edited; **18 claims
+  parity-checked, 0 mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and
+  17/18 tables full width, 0 on the phone rule — as before.
+- **⚠ THE SHAPE TO COPY: the reset that stays on the same client is the one nobody measures.** C1 was found because a leak crosses
+  clients and shows on the next client's documents. Reset never crossed a client, so its damage stayed on the job it was pressed on — and
+  two errors in opposite directions summed to a figure that still looked right.
 
 ## ⚠⚠ TWO MANAGER APPROVALS LIVED IN THE OPEN PAGE, NOT ON THE JOB — THE FINAL-INVOICE PIN AND THE AGREEMENT'S BAND (FIXED 2026-09-29)
 Off the 2026-09-28 workflow audit, findings **H1** (High) and **M1** (Medium). App-only, no redeploy: the approval rides
@@ -477,11 +544,14 @@ net under it.
   the screen and the open restores the saved one; with nothing saved it starts from the intake answers. The question promised *intake
   answers* either way. It branches on the record now (`estimateHasContent`, so an empty record is correctly not "saved"), names what
   goes, and the button's tooltip says both.
-- **⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the bottom `Reset` button (`resetEstimate()`) is a FIFTH copy of a reset list**, on the
+- ~~**⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the bottom `Reset` button (`resetEstimate()`) is a FIFTH copy of a reset list**, on the
   same client. It clears the rooms, rush and fixed price, but **unticks Premium Estate even on a premium job**, sets the documentation
   scope to **full** whatever intake answered, and **leaves** the discount, move styling, private note, collections, vehicles, prep lines,
   walked-by and planner date. Not C1 (it never crosses clients), so left alone rather than redesigned in passing; the manual says to use
-  Start over. Routing it through `resetEstimateJobState(currentJob)` is one line if Anthony wants it.
+  Start over. Routing it through `resetEstimateJobState(currentJob)` is one line if Anthony wants it.~~ **BUILT THE SAME DAY** — Anthony:
+  *"route Reset through the new reset too."* See the entry at the top of this file. ⚠ *"One line"* was wrong: it also needed a confirm,
+  a lock refusal where the action runs, and a question that says whether a saved estimate is touched. *Kept rather than deleted, per the
+  standing rule that a fixed flag left standing reads as outstanding work.*
 - **Tests.** `tests/estimate-reset.test.js` new at **305**; five suites restated, not deleted — `doc-scope`, `estimate-walkthrough`,
   `fixed-price`, `prep-declutter`, `prep-fee-billing` each pinned the old three-copy reset by byte sequence or lifted
   `resetEstimateExtras`; each now drives `resetEstimateJobState` and asserts the requirement. **11,804 committed checks on this branch; 11,907 after merging the concurrent H4 session's suites.** The first `<style>` block is byte-identical at 97,897 bytes / 1,228 lines — no CSS.
@@ -8793,10 +8863,18 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   (`claude/charming-dirac-gcdfsl`, `claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`,
   `claude/exciting-carson-pv156f` and `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — SIX sessions ran
   concurrently off the 2026-09-28 workflow audit: C1 and H4, H3 and M8, the document findings, H1 and M1, and H2 (the
-  change-order card) here. All six are on `main`. This branch merged the other five on the way through, in two merges —
-  `main` moved again while the first was being tested. They conflicted on the build stamp, CLAUDE.md, `run.sh`, two pinned
-  `fns:` lists and two browser step numbers, every one resolved as a UNION. Browser steps: H4 keeps 26, C1 27, H3/M8 28,
-  the document findings 29, H1/M1 30, and this one is **step 31**.)
+  change-order card) here. All six are on `main`. This branch merged the others on the way through, in three merges —
+  `main` moved twice while the first was being tested: H1/M1, then `claude/exciting-carson-pv156f`'s second build (the
+  bottom Reset through the one reset). They conflicted on the build stamp, CLAUDE.md, `run.sh`, two pinned `fns:` lists, the
+  invoice sandbox and three browser step numbers, every one resolved as a UNION. Browser steps: H4 keeps 26, C1 27, H3/M8 28,
+  the document findings 29, H1/M1 30, the Reset build 31, and this one is **step 32**.)
+  (`claude/exciting-carson-pv156f` recorded, before this merge, that it was the active branch, and:)
+  (`claude/charming-dirac-gcdfsl`, `claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk` and
+  `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29. This branch's second build — the bottom Reset through the
+  one reset — landed after the other four were on `main` and merged them on the way through, twice, because two landed while it
+  was finishing; the merges conflicted on the build stamp, CLAUDE.md, `run.sh` and two browser step numbers, every one resolved
+  as a UNION. Browser steps: H4 keeps 26, C1 27, H3/M8 28, the document findings 29, H1/M1 30, and the Reset build is
+  **step 31**.)
   (`claude/charming-dirac-gcdfsl` recorded, before this merge, that it was the active branch, and:)
   (`claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk`, `claude/exciting-carson-pv156f` and
   `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — FIVE sessions ran concurrently off the 2026-09-28
@@ -14016,9 +14094,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (fourth pass)** — both documents, against the change-order card carrying PDF and Get
+- Last reconciled against the app: **2026-09-29 (fifth pass)** — both documents, against the change-order card carrying PDF and Get
   Acceptance, the notices moving to the dashboard, and the one Q14 line on the printed change order (manual §9; playbook
   Step 10d and four symptom rows); see the entry at the top of this file.
+- Prior pass **2026-09-29 (fourth pass)** — both documents, against the bottom Reset button running the one
+  reset (manual §5h; playbook Step 2 and one symptom row).
 - Prior pass **2026-09-29 (third pass)** — both documents, against the two manager approvals moving onto
   the job (manual §8, §12, §17; playbook a `.stop` under *What needs a PIN* and three symptom rows).
 - Prior pass **2026-09-29 (second pass)** — both documents, against Close job from activation on, the final

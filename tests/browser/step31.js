@@ -1,273 +1,211 @@
-// Step 31 (numbered 31 on the merges — the concurrent sessions took 26 to 30) — a change order can be printed and accepted from the screen that shows it (2026-09-29,
-// workflow audit H2).
+// Step 31 — the bottom Reset button runs the one reset, for the client the screen is bound to
+// (2026-09-29, the same day as C1 and step 27; written as step 28 and renumbered on two merges —
+// the concurrent H3/M8, document and H1/M1 sessions took 28, 29 and 30 first).
 //
-// The dead end: printChangeOrder and openCOAcceptModal were called from exactly one place — a hidden
-// detail row the client list built for every client and never added to the page. So a change order
-// raised from the dashboard's + New could never be printed or accepted; its row read "Awaiting
-// acceptance" with nothing to press, and an unaccepted change order moves nothing. Create and Accept
-// also printed their notices to #e-fb, a strip on the hidden Build Estimate panel, and redrew nothing,
-// so the card went on reading "None issued" under a modal that had just closed. Steps 23–25 passed
-// through all of it because they called both functions through page.evaluate; they press the real
-// buttons now, and this step is the one that proves the buttons are there.
-//
-// Plus Q14, Anthony's decision: an hourly change order's hours carry the job's rush premium and discount
-// like every other hour; a fixed-price change order is priced at the plain hourly rates; one line on the
-// printed change order says so — and only on a job that carries one of them.
-//
-// Drives the REAL page: the real intake, the real Build Estimate (the expedite toggle and the discount
-// box typed into), the client's row in the real list, + New on the Change Orders card, the real modal and
-// Create, the row's PDF through the real print path and its Get Acceptance through the real acceptance
-// panel, the real dashboard redrawn under each notice, the real client list, at 1440 and 390.
+// Measured on the pre-change build: a premium Estate Settlement contracted at Contents list, six rooms,
+// $22,505. Reset asked nothing, unticked Premium Estate, set the documentation scope to Full, and kept
+// the discount, the move styling, the private note, the collection, the car, the prep line, the planner
+// date and a half-typed collection. The same six rooms scored again priced at $17,700 — Premium off took
+// $8,900 and Full put $4,095 back, so the new total still looked like a price. It is
+// resetEstimateJobState(bound job) now. This drives the REAL page:
+//   A. The job priced as contracted, then everything a person can leave on the screen.
+//   B. Reset, Cancel: nothing changes.
+//   C. Reset, OK: the question names the client and says nothing is saved; the screen is a blank
+//      estimate for THIS client — premium and Contents list from the job, the walker from the job,
+//      the home value and square footage kept — and the same six rooms price at the contract figure.
+//   D. Saved: Reset leaves the saved estimate as it is and says so; Start over then reopens it.
+//   E. Locked: out for approval the button is disabled, and calling Reset anyway refuses and clears nothing.
+//   F. Overflow at 1440 and 390.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step31.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
-let b = null;   // outside the body, so the catch can close it rather than leave node running
+// ⚠ Held outside the async body so the catch can close it: run against the pre-change build a check
+// throws, and a catch that leaves Chromium open reads as a hang rather than as failures.
+let b = null;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
+const same = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [got ' + JSON.stringify(a) + ', want ' + JSON.stringify(e) + ']');
 (async () => {
   b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
   p.setDefaultTimeout(8000);
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
-  p.on('dialog', async d => { await d.accept(); });
+  const dialogs = []; let answer = true;
+  p.on('dialog', async d => { dialogs.push(d.message()); if (d.type() === 'confirm' && !answer) await d.dismiss(); else await d.accept(); });
   await p.goto(APP); await p.waitForTimeout(1500);
-  await p.evaluate(() => { window.__prints = []; window.print = function () {
-    const pt = document.getElementById('print-target');
-    window.__prints.push({ html: pt ? pt.innerHTML : '', title: document.title });
-  }; });
   const future = (() => { const d = new Date(); d.setDate(d.getDate() + 30);
     while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
     return d.toISOString().slice(0, 10); })();
 
-  // A press that cannot land is a FAILED CHECK, not a crash: against the pre-change build the rest of
-  // the run still has something to say about what is missing.
-  const click = async (sel) => { try { await p.click(sel, { timeout: 5000 }); return true; } catch (e) { ok(false, 'could not press ' + sel); return false; } };
-  async function press(sel) {
-    const n = await p.locator(sel).count();
-    ok(n === 1, 'one control on screen: ' + sel + ' (' + n + ')');
-    if (n !== 1) return false;
-    return click(sel);
-  }
-  const text = (sel) => p.evaluate((sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
-  const T = (h) => p.evaluate((h) => { const d = document.createElement('div');
-    d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<\/th>/g, ' </th>').replace(/<br>/g, ' ');
-    return d.textContent.replace(/\s+/g, ' '); }, h);
-  const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  // A premium Estate Settlement, contracted at Contents list, walked by Ashley.
+  await p.evaluate(() => { const b = document.getElementById('btn-add-client'); if (b) b.click(); }); await p.waitForTimeout(300);
+  const id = await p.evaluate((wt) => {
+    const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
+    const pick = (id) => { const e = document.getElementById(id); const o = e && Array.from(e.options).find(x => x.value); if (o) { e.value = o.value; if (e.onchange) e.onchange(); } };
+    set('i-svc', 'cleanout'); toggleIntakeFields();
+    set('i-fname', 'Pat'); set('i-lname', 'Resetson'); set('i-addr', '69 Beach Blvd'); set('i-city', 'Palm Beach'); set('i-zip', '33480');
+    set('i-sqft', '3500'); set('i-home-value', '4200000');
+    set('i-date-of-death', '2026-06-01'); set('i-executor-fname', 'Tripp'); set('i-executor-lname', 'Butler');
+    set('i-executor-email', 'tb@example.com'); set('i-executor-phone', '(561) 555-0111'); pick('i-executor-role');
+    set('i-matter-type', 'probate'); set('i-doc-tier', 'contents');
+    set('i-prem', 'yes'); set('i-site-visit-by', 'Ashley Jerome');
+    pick('i-ptype'); pick('i-src'); set('i-walkthrough', wt);
+    const st = new Date(wt); st.setDate(st.getDate() + 7); while (st.getDay() === 0 || st.getDay() === 6) st.setDate(st.getDate() + 1);
+    set('i-start', st.toISOString().slice(0, 10)); saveIntake(); return (jobs[0] || {}).id;
+  }, future);
+  await p.waitForTimeout(1500);
+  const open = async () => { await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(900); };
 
-  async function make(last) {
-    await p.evaluate(() => { const b = document.getElementById('btn-add-client'); if (b) b.click(); }); await p.waitForTimeout(300);
-    const id = await p.evaluate(([wt, last]) => {
-      const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
-      const pick = (id) => { const e = document.getElementById(id); const o = e && Array.from(e.options).find(x => x.value); if (o) { e.value = o.value; if (e.onchange) e.onchange(); } };
-      set('i-svc', 'downsizing'); toggleIntakeFields();
-      set('i-fname', 'Pat'); set('i-lname', last); set('i-addr', '1 A St'); set('i-city', 'Palm Beach'); set('i-zip', '33480');
-      set('i-sqft', '3500'); set('i-phone', '(561) 555-0199'); set('i-email', 'c@example.com'); set('i-home-value', '4200000');
-      pick('i-ptype'); pick('i-src'); set('i-walkthrough', wt);
-      const st = new Date(wt); st.setDate(st.getDate() + 7); while (st.getDay() === 0 || st.getDay() === 6) st.setDate(st.getDate() + 1);
-      set('i-start', st.toISOString().slice(0, 10)); saveIntake(); return (jobs[0] || {}).id;
-    }, [future, last]);
-    await p.waitForTimeout(1500); return id;
-  }
-  // The real Build Estimate, with the expedite toggle and the discount box set on the form itself, then
-  // approved, won and signed — the state a change order is raised in.
-  async function build(id, o) {
-    await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(700);
-    return p.evaluate(([id, o]) => {
-      const js = document.getElementById('e-job'); js.value = String(id); if (js.onchange) js.onchange();
-      for (let i = 0; i < 6; i++) setRoomState('r' + i, 'in');
-      document.getElementById('e-rush').checked = !!o.rush;
-      document.getElementById('e-discount').value = String(o.disc || 0);
-      calcAll();
-      if (o.fixed) {
-        const fx = document.getElementById('e-fixed'); fx.checked = true; toggleFixedPrice(); calcAll();
-        _fxAmtSet(o.fixed); markFixedAmountEdited(); calcAll();
-      }
-      const e = JSON.parse(JSON.stringify(currentEstimate));
-      estimateStore[id] = { approved: true, approvedBy: 'Anthony Graziano', estimate: e };
-      const job = jobs.find(j => j.id === id);
-      job.won = true; job.status = 'active'; job.agrSigned = true; job.agrSent = true;
-      return e;
-    }, [id, o]);
-  }
-  // The client's own row in the real list — the way anybody reaches a dashboard.
-  async function openDash(id) {
-    await click('.nb[onclick*="\'jobs\'"]'); await p.waitForTimeout(250);
-    await press('tr[onclick="openClientDashboard(' + id + ')"]'); await p.waitForTimeout(400);
-  }
-  const dashShown = (id) => p.evaluate((id) => { const v = document.getElementById('client-dashboard-view');
-    return !!(v && v.offsetParent !== null && _dashboardJobId === id); }, id);
-  // The Change Orders card: its rows, and the buttons on each, read off the rendered page.
-  const card = () => p.evaluate(() => {
-    const c = Array.from(document.querySelectorAll('#client-dashboard-view .card')).find(x => /Raise a change order/.test(x.textContent));
-    if (!c) return null;
+  const screen = () => p.evaluate(() => {
+    const v = (id) => { const e = document.getElementById(id); return e ? (e.type === 'checkbox' ? e.checked : e.value) : '(none)'; };
     return {
-      text: c.textContent.replace(/\s+/g, ' '),
-      rows: Array.from(c.querySelectorAll('.doc-r')).map(r => ({
-        text: r.textContent.replace(/\s+/g, ' ').trim(),
-        buttons: Array.from(r.querySelectorAll('button')).map(bt => ({ label: bt.textContent.trim(), call: bt.getAttribute('onclick'),
-          bg: getComputedStyle(bt).backgroundColor, visible: bt.offsetParent !== null })) })),
+      job: v('e-job'), prem: v('e-prem'), scope: _estimateDocScope, discount: v('e-discount'), styling: v('e-move-styling'),
+      note: v('e-private-note'), noteVar: _privateWalkNote, by: v('e-prepared-by'), target: v('tp-target'),
+      collections: collectionsData.map(c => c.name), vehicles: vehiclesData.map(x => x.desc),
+      prep: prepItems.map(x => x.type), vendors: vendors.map(x => x.type),
+      newCol: v('new-col-name'), newVeh: v('new-veh-desc'), propval: v('e-propval'), sqft: v('e-sqft'),
+      inScope: Array.from(document.querySelectorAll('.scope-toggle')).filter(t => t.getAttribute('data-state') !== 'off').length,
+      // The two tables render each line as INPUTS, so a textContent read passes over a full table.
+      tableLines: ['collections-body', 'vehicles-body'].map(function (id) {
+        var t = document.getElementById(id);
+        return t ? Array.from(t.querySelectorAll('input')).map(function (i) { return i.value; }).join(' | ') + ' ' + t.textContent : '(no ' + id + ')';
+      }).join(' || '),
+      fb: (document.getElementById('e-fb') || {}).textContent || '',
+      total: currentEstimate ? currentEstimate.havellinTotal : null,
     };
   });
-  const fb = () => p.evaluate(() => { const e = document.getElementById('dash-fb');
-    return { text: e ? e.textContent.replace(/\s+/g, ' ').trim() : '', visible: !!(e && e.offsetParent !== null) }; });
+  const sixRooms = async () => { await p.evaluate(() => { for (let i = 0; i < 6; i++) document.getElementById('chk-r' + i).click(); calcAll(); }); await p.waitForTimeout(150); };
+  // Everything a person can leave on this client's screen, through the real controls where there is one.
+  const leaveEverything = () => p.evaluate(() => {
+    const fire = (el, ev) => el.dispatchEvent(new Event(ev, { bubbles: true }));
+    const d = document.getElementById('e-discount'); d.value = '10'; fire(d, 'input'); fire(d, 'change');
+    const s = document.getElementById('e-move-styling'); s.checked = true; fire(s, 'change');
+    const n = document.getElementById('e-private-note'); n.value = 'The son contests the will.'; fire(n, 'input');
+    document.getElementById('new-col-name').value = 'Resetson coin collection';
+    document.querySelector('button[onclick="addCollection()"]').click();
+    document.getElementById('new-veh-desc').value = '1960 Resetson Corvette';
+    document.querySelector('button[onclick="addVehicle()"]').click();
+    document.getElementById('new-col-name').value = 'half-typed';
+    const t = document.getElementById('tp-target'); t.value = '2026-12-18'; fire(t, 'change');
+    const by = document.getElementById('e-prepared-by'); const other = Array.from(by.options).find(o => o.value && o.value !== 'Ashley Jerome');
+    if (other) { by.value = other.value; fire(by, 'change'); }
+    // The category pickers fill from the vendor directory, empty offline — so these two are pushed the
+    // way step 21 does, and drawn through the real renderers.
+    prepItems.push({ type: 'Painting', cost: 5000, lid: _srcLid() }); renderPrepItems();
+    vendors.push({ type: 'Mover', cost: 3000, lid: _srcLid() }); renderVendors();
+    calcAll();
+  });
+  const pressReset = async (yes) => {
+    answer = yes; dialogs.length = 0;
+    await p.evaluate(() => { document.getElementById('e-fb').innerHTML = ''; });
+    await p.click('button[onclick="resetEstimate()"]'); await p.waitForTimeout(400);
+    answer = true;
+  };
 
-  // ── A. THE HOURLY JOB ────────────────────────────────────────────────────
-  console.log('\n## A. Home Editing, time and materials, expedited, 10% preferred-client discount');
-  const idH = await make('Rush');
-  const eH = await build(idH, { rush: true, disc: 10 });
-  ok(eH.rush === true && eH.discountPct === 10 && !eH.fixedPrice, 'an hourly estimate carrying the premium and the discount');
-  ok(Math.round((eH.rushPct || 0) * 100) === 20, 'the premium pinned on the estimate at 20% (' + eH.rushPct + ')');
+  // ── A ─────────────────────────────────────────────────────────────────
+  console.log('## A. As contracted, then everything left on the screen');
+  await open();
+  await sixRooms();
+  const contract = await screen();
+  same([contract.prem, contract.scope], [true, 'capture'], 'the job opens premium, at Contents list (the scope intake recorded)');
+  ok(contract.total > 0, 'six rooms price at the contract figure ($' + contract.total + ')');
+  await leaveEverything();
+  const left = await screen();
+  same([left.discount, left.styling, left.note, left.target, left.collections, left.vehicles, left.prep, left.vendors, left.newCol],
+    ['10', true, 'The son contests the will.', '2026-12-18', ['Resetson coin collection'], ['1960 Resetson Corvette'], ['Painting'], ['Mover'], 'half-typed'],
+    'the screen carries a discount, styling, a private note, a planner date, a collection, a car, a prep line, a vendor and a half-typed line');
+  ok(left.by && left.by !== 'Ashley Jerome', 'and names somebody other than the job\'s walker (' + left.by + ')');
+  has(left.tableLines, 'Resetson coin collection', 'the collections table shows the coin collection (so the check after Reset can fail)');
 
-  await openDash(idH);
-  ok(await dashShown(idH), 'the client’s row opens their dashboard');
-  const c0 = await card();
-  ok(!!c0, 'the dashboard carries the Change Orders card');
-  has(c0 && c0.text, 'None issued', 'with nothing issued yet');
+  // ── B ─────────────────────────────────────────────────────────────────
+  console.log('## B. Reset, then Cancel');
+  await pressReset(false);
+  ok(dialogs.length === 1, 'Reset asks first (' + dialogs.length + ' question)');
+  const kept = await screen();
+  same([kept.discount, kept.note, kept.collections, kept.inScope], ['10', 'The son contests the will.', ['Resetson coin collection'], 6],
+    'Cancel changes nothing — the discount, the note, the collection and the six rooms are all still there');
 
-  // ── B. CREATE ────────────────────────────────────────────────────────────
-  console.log('\n## B. + New, then Create — the notice and the redrawn card, on the screen it was raised from');
-  await press('#client-dashboard-view button[onclick="openChangeOrder(' + idH + ')"]'); await p.waitForTimeout(200);
-  ok(await p.evaluate(() => document.getElementById('change-order-modal').style.display === 'flex'), '+ New opens the change-order modal');
-  await p.fill('#co-tc-hrs', '8'); await p.fill('#co-ps-hrs', '8');
-  await p.fill('#co-description', 'Added the pool house to scope.');
-  await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
-  const coId = await p.evaluate((id) => { const c = changeOrders.filter(c => c.jobId === id).pop(); return c ? c.id : null; }, idH);
-  ok(!!coId, 'Create writes the change order');
-  ok(await p.evaluate(() => document.getElementById('change-order-modal').style.display === 'none'), 'and closes the modal');
-  ok(await dashShown(idH), 'leaving you on the dashboard you raised it from');
+  // ── C ─────────────────────────────────────────────────────────────────
+  console.log('## C. Reset, then OK');
+  await pressReset(true);
+  const q = dialogs.join(' | ');
+  has(q, 'blank estimate for Pat Resetson', 'the question names the client');
+  has(q, 'the private walkthrough note', 'and names the private note among what goes');
+  has(q, 'None of it has been saved', 'and says nothing here is saved');
+  const r = await screen();
+  same(r.job, String(id), 'still bound to the same client');
+  same(r.prem, true, '⚠ Premium Estate stays on — it is the job\'s answer (the old Reset unticked it)');
+  same(r.scope, 'capture', '⚠ the scope is Contents list, what intake recorded (the old Reset set Full)');
+  same(r.by, 'Ashley Jerome', 'who walked the house is the job\'s answer again');
+  same([r.propval, r.sqft], ['4200000', '3500'], 'the home value and square footage are the job\'s, untouched');
+  same(r.discount, '0', '⚠ no discount');
+  same(r.styling, false, 'no move styling');
+  same([r.note, r.noteVar], ['', ''], '⚠ no private note, in the box or behind it');
+  same(r.target, '', 'no planner date');
+  same([r.collections, r.vehicles, r.prep, r.vendors], [[], [], [], []], '⚠ no collection, car, prep line or vendor');
+  lacks(r.tableLines, 'Resetson', 'and neither table shows a line of them');
+  same([r.newCol, r.newVeh], ['', ''], 'the add-a-line boxes are empty');
+  same(r.inScope, 0, 'no room in scope');
+  has(r.fb, 'Cleared to a blank estimate.', 'and the line under the button says so');
+  await sixRooms();
+  const again = await screen();
+  same(again.total, contract.total, '⚠⚠ the same six rooms price at the contract figure again ($' + again.total + ' of $' + contract.total + ')');
 
-  const n1 = await fb();
-  ok(n1.visible, '⚠⚠ the notice is on screen, in the dashboard’s own strip');
-  has(n1.text, 'created (+8.0 concierge / +8.0 specialist hrs) — waiting on the client', 'naming the change order and what it waits on');
-  has(n1.text, 'PDF prints it for them to sign and Get Acceptance records their agreement', 'and the two controls that finish it');
-  lacks(n1.text, 'Open the job in Client Dashboard', '⚠ never sending you to the screen you are on');
-  const eFb = await p.evaluate(() => (document.getElementById('e-fb') || {}).textContent || '');
-  lacks(eFb, 'Change', 'nothing printed to the hidden Build Estimate strip');
+  // ── D ─────────────────────────────────────────────────────────────────
+  console.log('## D. With an estimate saved');
+  await leaveEverything();
+  await p.evaluate(() => document.querySelector('button[onclick="saveEstimateAndPreview()"]').click());
+  await p.waitForTimeout(2200);
+  const savedRec = await p.evaluate((id) => estimateStore[id] && JSON.parse(JSON.stringify(estimateStore[id].estimate)), id);
+  ok(!!(savedRec && savedRec.rooms && savedRec.rooms.length === 6 && savedRec.discountPct === 10), 'the estimate is saved: six rooms at a 10% discount');
+  await open();
+  same((await screen()).discount, '10', 'reopened, it reads its saved 10%');
+  // ⚠ WAIT OUT THE EARLIER MESSAGES. showFB arms an unconditional 4-second clear on every message, so
+  // the Save's and the reopen's own timers can wipe a later message early (a pre-existing race, recorded
+  // in CLAUDE.md). Without this wait the check on Reset's line below reads a timer, not Reset.
+  await p.waitForTimeout(4300);
+  await p.evaluate(() => { const d = document.getElementById('e-discount'); d.value = '12'; d.dispatchEvent(new Event('input', { bubbles: true })); calcAll(); });
+  const beforeReset = await p.evaluate((id) => JSON.stringify(estimateStore[id]), id);
+  await pressReset(true);
+  const qs = dialogs.join(' | ');
+  has(qs, 'The saved estimate is not changed unless you press Save', 'the question says the saved estimate is not touched');
+  has(qs, 'Start over reopens it instead', 'and points at the button that goes back to it');
+  lacks(qs, 'None of it has been saved', 'and never claims nothing is saved');
+  const rs = await screen();
+  same([rs.discount, rs.note, rs.collections, rs.inScope], ['0', '', [], 0], 'the screen is blank');
+  has(rs.fb, 'The saved estimate is unchanged until you press Save', 'and the line under the button says the saved one is unchanged');
+  const afterReset = await p.evaluate((id) => JSON.stringify(estimateStore[id]), id);
+  ok(afterReset === beforeReset, '⚠ the saved record is exactly as it was before Reset');
+  dialogs.length = 0;
+  await p.evaluate(() => document.querySelector('button[onclick="startEstimateOver()"]').click());
+  await p.waitForTimeout(900);
+  has(dialogs.join(' | '), 'reopen the saved estimate', 'Start over then offers the saved estimate');
+  const back = await screen();
+  same([back.discount, back.collections, back.inScope, back.prem, back.scope], ['10', ['Resetson coin collection'], 6, true, 'capture'],
+    'and brings it back: its 10%, its collection, its six rooms, premium, Contents list');
 
-  const c1 = await card();
-  const row1 = c1 && c1.rows.find(r => r.text.indexOf('CO-' + String(coId).slice(-6)) >= 0);
-  ok(!!row1, '⚠⚠ the card is redrawn at once — the new row is on screen');
-  lacks(c1 && c1.text, 'None issued', 'and the card no longer reads None issued');
-  has(c1 && c1.text, '1 issued', 'it counts one');
-  has(row1 && row1.text, 'Awaiting acceptance', 'the row reads Awaiting acceptance …');
-  const b1 = row1 ? row1.buttons : [];
-  ok(b1.length === 2 && b1[0].label === 'PDF' && /Get Acceptance/i.test(b1[1].label), '⚠⚠ … with PDF and Get Acceptance on it (' + b1.map(x => x.label).join(' · ') + ')');
-  ok(b1.length === 2 && b1[0].call === 'printChangeOrder(' + coId + ')' && b1[1].call === 'openCOAcceptModal(' + coId + ')',
-     '⚠⚠ each naming this change order');
-  ok(b1.length === 2 && b1[1].bg === 'rgb(166, 124, 69)', 'Get Acceptance is the bronze primary (' + (b1[1] ? b1[1].bg : '') + ')');
-  ok(b1.every(x => x.visible), 'both are visible');
+  // ── E ─────────────────────────────────────────────────────────────────
+  console.log('## E. Locked');
+  const lockedBtn = await p.evaluate(() => { estimateSubmitted = true; applyEstimateLock(); return document.querySelector('button[onclick="resetEstimate()"]').disabled; });
+  ok(lockedBtn, 'out for approval, the Reset button is disabled');
+  dialogs.length = 0;
+  const refused = await p.evaluate(() => { document.getElementById('e-fb').innerHTML = ''; resetEstimate();
+    return { fb: document.getElementById('e-fb').textContent, disc: document.getElementById('e-discount').value, n: collectionsData.length,
+             rooms: Array.from(document.querySelectorAll('.scope-toggle')).filter(t => t.getAttribute('data-state') !== 'off').length }; });
+  same(dialogs.length, 0, '⚠ called anyway, it asks nothing');
+  same([refused.disc, refused.n, refused.rooms], ['10', 1, 6], 'and clears nothing — the working copy a manager is reviewing keeps its discount, collection and six rooms');
+  has(refused.fb, 'out for manager approval', 'and says why');
+  await p.evaluate(() => { estimateSubmitted = false; applyEstimateLock(); });
 
-  // ── C. PDF ───────────────────────────────────────────────────────────────
-  console.log('\n## C. PDF — the client’s copy, and Q14 on it');
-  await p.evaluate(() => { window.__prints = []; });
-  await press('#client-dashboard-view button[onclick="printChangeOrder(' + coId + ')"]'); await p.waitForTimeout(400);
-  const pr = await p.evaluate(() => window.__prints[0] || null);
-  ok(!!(pr && pr.html), '⚠⚠ the PDF button prints the change order through the real print path');
-  ok(/^Havellin Change Order CO-\d{6} - 1 A St - /.test(pr ? pr.title : ''), 'named for what it is (' + (pr ? pr.title : '') + ')');
-  const prt = pr ? await T(pr.html) : '';
-  has(prt, 'This change order does not itself create a charge.', 'the T&M terms');
-  has(prt, 'Like every other hour on this engagement, these hours carry the 20% expedited-delivery premium and the 10% preferred-client discount on the final invoice.',
-      '⚠⚠ Q14: the hours carry the job’s premium and discount, in one line');
-  ok(!/\$\s?[\d,]/.test(prt), 'and still no dollar figure on a T&M change order');
-  await p.waitForTimeout(700);
-  ok(await dashShown(idH), 'printing leaves you on the dashboard');
-
-  // ── D. GET ACCEPTANCE ────────────────────────────────────────────────────
-  console.log('\n## D. Get Acceptance, then Accept — the row, the notice and the hours all move');
-  await press('#client-dashboard-view button[onclick="openCOAcceptModal(' + coId + ')"]'); await p.waitForTimeout(200);
-  ok(await p.evaluate(() => document.getElementById('co-accept-modal').style.display === 'flex'), 'Get Acceptance opens the acceptance panel');
-  has(await text('#coa-co-ref'), 'CO-' + String(coId).slice(-6), 'on this change order');
-  await p.fill('#coa-client-name', 'Pat Rush');
-  await press('#co-accept-modal button:has-text("I Accept This Change Order")'); await p.waitForTimeout(300);
-  ok(await p.evaluate((c) => { const co = changeOrders.find(x => x.id === c); return !!(co && co.clientApproved && co.clientName === 'Pat Rush'); }, coId),
-     'Accept records the client’s agreement');
-  ok(await p.evaluate(() => document.getElementById('co-accept-modal').style.display === 'none'), 'and closes the panel');
-  const n2 = await fb();
-  ok(n2.visible, 'the acceptance notice is on the dashboard');
-  has(n2.text, 'Change Order accepted by Pat Rush (+8.0 concierge / +8.0 specialist hrs). These hours bill on the final invoice as they are worked.',
-      'saying who accepted and how the hours bill');
-  const c2 = await card();
-  const row2 = c2 && c2.rows.find(r => r.text.indexOf('CO-' + String(coId).slice(-6)) >= 0);
-  has(row2 && row2.text, 'Accepted', '⚠⚠ the row reads Accepted at once');
-  has(row2 && row2.text, 'accepted by Pat Rush', 'naming who accepted');
-  ok(row2 && row2.buttons.length === 1 && row2.buttons[0].call === 'printChangeOrder(' + coId + ')', '⚠ and offers the PDF alone');
-  ok(await p.evaluate(() => document.querySelectorAll('#client-dashboard-view [onclick^="openCOAcceptModal("]').length === 0),
-     'nothing left to accept on the screen');
-  has(await text('#client-dashboard-view'), 'incl. +8.0 hrs by change order', '⚠⚠ the Hours Log bars now carry the hours the client signed for');
-
-  // ── E. A SECOND, PENDING CHANGE ORDER BESIDE IT ──────────────────────────
-  await press('#client-dashboard-view button[onclick="openChangeOrder(' + idH + ')"]'); await p.waitForTimeout(200);
-  await p.fill('#co-tc-hrs', '2'); await p.fill('#co-description', 'Cleared the storage unit as well.');
-  await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
-  const co2 = await p.evaluate((id) => changeOrders.filter(c => c.jobId === id).pop().id, idH);
-  const c3 = await card();
-  ok(c3 && c3.rows.filter(r => /CO-\d{6}/.test(r.text)).length === 2, 'two change orders on the card');
-  const calls = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view [onclick]')).map(e => e.getAttribute('onclick')));
-  ok(calls.filter(c => c === 'openCOAcceptModal(' + co2 + ')').length === 1 && calls.filter(c => /^openCOAcceptModal\(/.test(c)).length === 1,
-     'Get Acceptance on the pending one only');
-  ok(calls.filter(c => /^printChangeOrder\(/.test(c)).length === 2, 'a PDF on each');
-  ok(calls.length === new Set(calls).size, 'no control on the dashboard twice (' + calls.length + ')');
-
-  // ── F. THE FIXED PRICE ───────────────────────────────────────────────────
-  console.log('\n## F. A fixed price at $24,000, expedited, 10% off — the change order is at the plain rates');
-  const idF = await make('Flat');
-  const eF = await build(idF, { rush: true, disc: 10, fixed: 24000 });
-  ok(eF.fixedPrice === true && eF.fixedAmount === 24000 && eF.rush === true, 'a $24,000 fixed fee, expedited');
-  await openDash(idF);
-  await press('#client-dashboard-view button[onclick="openChangeOrder(' + idF + ')"]'); await p.waitForTimeout(200);
-  await p.fill('#co-tc-hrs', '8'); await p.fill('#co-ps-hrs', '8'); await p.fill('#co-description', 'Added the pool house to scope.');
-  await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
-  const coF = await p.evaluate((id) => changeOrders.filter(c => c.jobId === id).pop().id, idF);
-  await p.evaluate(() => { window.__prints = []; });
-  await press('#client-dashboard-view button[onclick="printChangeOrder(' + coF + ')"]'); await p.waitForTimeout(400);
-  const prF = await p.evaluate(() => window.__prints[0] || null);
-  const prFt = prF ? await T(prF.html) : '';
-  has(prFt, 'This change order adjusts your fixed project fee by the amount above.', 'the fixed terms');
-  has(prFt, '+ $2,000', 'the price is 8 × $150 + 8 × $100 — the plain rate card');
-  has(prFt, 'It is priced at the plain hourly rates shown: the expedited-delivery premium and the preferred-client discount in your fixed project fee do not apply to it.',
-      '⚠⚠ Q14: said in one line on the fixed page');
-  lacks(prFt, '20% expedited', 'with no percentage — the fixed-price estimate never itemised the premium');
-  await p.waitForTimeout(700);
-
-  // A plain fixed job with neither prints no line: explaining an absence draws attention to it.
-  const idN = await make('Plain');
-  await build(idN, { fixed: 24000 });
-  await openDash(idN);
-  await press('#client-dashboard-view button[onclick="openChangeOrder(' + idN + ')"]'); await p.waitForTimeout(200);
-  await p.fill('#co-tc-hrs', '4'); await p.fill('#co-description', 'Garage shelving.');
-  await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
-  const coN = await p.evaluate((id) => changeOrders.filter(c => c.jobId === id).pop().id, idN);
-  await p.evaluate(() => { window.__prints = []; });
-  await press('#client-dashboard-view button[onclick="printChangeOrder(' + coN + ')"]'); await p.waitForTimeout(400);
-  const prN = await p.evaluate(() => window.__prints[0] || null);
-  lacks(prN ? await T(prN.html) : 'x plain hourly rates', 'plain hourly rates', 'a fixed job with neither premium nor discount prints no such line');
-  await p.waitForTimeout(700);
-
-  // ── G. THE CLIENT LIST HAS NO DEAD DETAIL ROW ────────────────────────────
-  console.log('\n## G. The client list');
-  await click('.nb[onclick*="\'jobs\'"]'); await p.waitForTimeout(300);
-  const list = await p.evaluate(() => ({ detail: document.querySelectorAll('[id^="detail-"]').length,
-    rows: document.querySelectorAll('tr[onclick^="openClientDashboard("]').length,
-    // Scoped to the list's own table: the dashboard drilldown lives inside the same panel, hidden but
-    // still holding the last client's buttons, so a panel-wide count would read those as the list's.
-    coCalls: document.querySelectorAll('#jobs-body [onclick*="ChangeOrder("], #jobs-body [onclick*="openCOAcceptModal("]').length,
-    dashShown: (() => { const v = document.getElementById('client-dashboard-view'); return !!(v && v.offsetParent !== null); })() }));
-  ok(list.rows >= 3 && !list.dashShown, 'the list is on screen with its clients (' + list.rows + ')');
-  ok(list.detail === 0, 'no hidden detail row anywhere in the page');
-  ok(list.coCalls === 0, 'and no change-order control on the list — the dashboard card is its one home');
-
-  // ── H. OVERFLOW ──────────────────────────────────────────────────────────
+  // ── F ─────────────────────────────────────────────────────────────────
   for (const w of [1440, 390]) {
     await p.setViewportSize({ width: w, height: 900 });
-    await openDash(idH);
-    const ov = await overflow();
-    ok(ov <= 0, 'the dashboard with an accepted and a pending change order fits at ' + w + 'px (overflow ' + ov + ')');
-    const rects = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view [onclick^="printChangeOrder("], #client-dashboard-view [onclick^="openCOAcceptModal("]'))
-      .map(e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, w: r.width }; }));
-    ok(rects.length === 3 && rects.every(r => r.l >= 0 && r.r <= w + 0.5 && r.w > 0), 'all three change-order buttons sit inside the viewport at ' + w + 'px');
+    await p.waitForTimeout(200);
+    const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    ok(ov <= 0, 'Build Estimate fits at ' + w + 'px (overflow ' + ov + ')');
   }
   ok(errs.length === 0, 'no page errors (' + errs.join(' | ') + ')');
 
