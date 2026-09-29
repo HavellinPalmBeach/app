@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:19pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 1:12pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -13102,8 +13102,19 @@ function _stamp() {
 }
 // Who is acting. There is no session identity in the app, so the agreement's approver is
 // the best available attribution — it is a real, PIN-resolved person (see resolvePin).
+//
+// ⚠⚠ THIS JOB'S APPROVER OR NOBODY — NEVER THE PAGE GLOBAL `agrApprovedBy`. That variable is
+// whichever job `loadAgreement` or `ensureAgreementApproved` touched LAST, so falling back to it
+// stamped another client's approver on this one: an estimate drafted or sent before this job's
+// agreement is approved (`draftedBy`, `sentBy`), and an activation, a close or a review ask on a
+// job whose own approver is blank. Measured before the fix: Ashley Jerome, who approved one client,
+// recorded as the person who drafted, sent, activated and closed another — and returned even with
+// no job at all (`_actor(null)`). The same defect as finding M1 on the agreement's band
+// (2026-09-29), on internal attribution rather than a client document. A blank is the honest
+// answer here — the callers that have a better one (`|| job.tc`) now reach it, and the global only
+// ever holds some job's `agrApprovedBy`, so no correct name is lost.
 function _actor(job) {
-  return (job && job.agrApprovedBy) || agrApprovedBy || '';
+  return (job && job.agrApprovedBy) || '';
 }
 
 function markAgreementSent() {
@@ -37503,8 +37514,10 @@ function ensureAgreementApproved(jobId) {
   var rec = estimateStore[jobId];
   job.agrApproved = true;
   // Attribution without a PIN: the manager who approved the PRICE is the named person
-  // who signed off on everything this document says. `_actor` reads this for agrSentBy,
-  // agrSignedBy, depositReceivedBy and deliveredBy, so it must never be blank.
+  // who signed off on everything this document says. `_actor` reads this — and, since
+  // 2026-09-29, nothing else — for agrSentBy, a document's draftedBy and sentBy, a payment's
+  // and a signature's recordedBy, depositReceivedBy, activatedBy, deliveredBy and the review
+  // ask, so it must never be blank.
   job.agrApprovedBy = (rec && rec.approvedBy) || job.wonBy || job.tc || '';
   job.agrApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   delete job.agrRevokedBy; delete job.agrRevokedAt;
