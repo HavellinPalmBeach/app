@@ -105,6 +105,108 @@ no redeploy.
   yes was already stored apart; what was missing was one function for every writer of the status and one for every reader.
   And a rule enforced on a button is not enforced: the door behind it has to ask the same question.
 
+## ⚠⚠ A MESSAGE WAS WIPED BY THE TIMER OF THE ONE BEFORE IT, AND WHAT RESET AND START OVER THREW AWAY CAME BACK OFFLINE (FIXED 2026-09-29)
+Anthony, on the two items the Reset build (below) had found and left open: *"yes, fix both."* App-only, **no Apps Script redeploy**
+— nothing in `apps-script/` changed.
+
+- **⚠⚠ BOTH REPRODUCED ON THE REAL PAGE BEFORE ANYTHING CHANGED, AND THE SECOND WAS WORSE THAN RECORDED.**
+
+  | | pre-change | now |
+  |---|---|---|
+  | a message written three seconds after another | **gone a second and a half later** | lives its own four seconds |
+  | Save pressed twice on no rooms, three seconds apart | the second refusal **flashed and vanished** | stays until its own four seconds are up |
+  | four rooms, offline, nothing saved: **Start over → OK** | **the same four rooms straight back**, under *restored an unsaved draft*, right after a question promising the intake answers | intake answers; the copy gone |
+  | four rooms, **Reset → OK**, reload, open offline | **all four back** | nothing back |
+
+  The Reset entry had called the second one *"narrow — offline, nothing saved, and left before scoring anything new"*. For Start
+  over it was not narrow at all: **it was immediate**, because the reopen that follows the clear is exactly what reads the copy.
+
+### `showFB` — a message's timer clears THAT message and nothing else
+- **THE MECHANISM.** Every message armed `setTimeout(… innerHTML = '' …, 4000)` on whatever the strip held four seconds later, and
+  none was ever cancelled — so a message written within four seconds of another was cleared by the **older** one's timer. CLAUDE.md
+  had recorded it twice (2026-09-22 and the Reset build) with *"a per-element timer is the fix"*.
+- **⚠⚠ A PER-STRIP TIMER WOULD NOT HAVE BEEN ENOUGH, AND THE SWEEP PROVES IT (fails 5).** Two things write that strip without going
+  through `showFB`: `renderClientDashboard` paints `_dashNotice` into a **new** `#dash-fb` on every redraw — which is where the
+  change-order card's Create and Accept notices now land — and `_dashSendState` writes *Building PDF…* straight into it. A per-strip
+  clear still fires four seconds after the last `showFB` call and wipes whichever of those is there by then.
+- **THE RULE NOW.** The timer holds the nodes **its own call wrote** (`Array.prototype.slice.call(el.childNodes)`, taken AFTER the
+  write) and removes each one only while it is still attached (`if (n.parentNode)`). An `innerHTML` write detaches the old children,
+  so a later message, a redraw's notice or a progress line all make the older timer a no-op, and a message nobody replaced still
+  clears at exactly four seconds. Checked that nothing needed the old wipe: every other write into a strip is a clear, a modal's own
+  refusal (the PIN, deny, change-order, acceptance, close-out and quick-partner modals) or the send path's progress line, and every
+  path after *Building PDF…* ends in a notice that replaces it.
+  - **⚠ BOTH HALVES ARE LOAD-BEARING.** Dropping the attached test fails **5** (and in a browser `null.removeChild` throws inside the
+    timer); taking the snapshot BEFORE the write holds the previous message's nodes, so the new one never clears — fails **6**.
+- **⚠ THE REAL `showFB` HAD NEVER RUN IN A TEST.** Every suite stubs it, and a `domStub` cannot drive it — its `innerHTML` is a plain
+  string with nothing behind it. `tests/feedback-strip.test.js` (new, **27**) carries a small fake strip that does the four things a
+  real element does that `showFB` depends on (a write detaches the old children, `childNodes`, `removeChild`, a detached node's
+  `parentNode` is null) and a fake clock whose `clearTimeout` is **real**, so a per-strip design is measured on what it does rather
+  than failing on a ReferenceError.
+
+### The unsaved-draft copy goes with what Reset and Start over discard
+- **THE MECHANISM.** `calcAll` keeps an unsaved-draft copy on the device (`havellin_est_scratch`, one slot) so a page that drops
+  mid-walkthrough can be reopened with no connection — `applyOpenedEstimate`'s offline branch restores it when nothing is saved.
+  **`saveEstimateScratch` refuses an empty-rooms state**, deliberately, so it never writes a blank over a real build — which is also
+  why a clear could never overwrite it. Only a **Save** removed it (`saveEstimateState`).
+- **THE FIX: `clearEstimateScratch(jid)` after OK, on both buttons, and only there.**
+  - **Start over clears it BEFORE the reopen**, because the reopen is what reads it. No clear fails **8**; clearing after the reopen
+    fails **6**.
+  - **Reset clears it with a bound job only (`if (jid)`), and that guard is load-bearing:** `clearEstimateScratch(0)` clears ANY
+    client's copy (its `!jobId ||` arm), so an unbound Reset would throw away somebody else's draft. No clear fails **3**; dropping
+    the guard **1**.
+  - **Cancel clears nothing and a locked Reset clears nothing** — both return above the call. Moving the clear above the question
+    fails **1** on Reset and **2** on Start over; above the lock guard **3**.
+  - **Another client's copy is never touched** — `clearEstimateScratch` compares the slot's job id. Clearing any client's fails **1**
+    on Reset and **2** on Start over.
+- **⚠ THE SAFETY NET IS UNCHANGED, AND THE BROWSER PROVES IT STILL WORKS:** four rooms, a reload with no button pressed, an offline
+  open, and the draft comes back under *Offline — restored an unsaved draft*.
+
+### ⚠⚠ AND A RAW NUL BYTE HID THE LAST 6,000 LINES OF THE APP FROM EVERY REPO-WIDE SEARCH
+- **Found while checking this build's call sites, not by any test.** `_vendorCatKey` joined a group and a category on a **literal
+  NUL byte** typed into the source at line 33,010 of 39,236. Measured: a repo-wide search for the vendor form's own 45-second
+  watchdog message (line 33,647) found **nothing**, while a search for a line above 33,010 found `havellin.html` fine — every
+  repo-wide search had been skipping **227 top-level functions**: the Vendor Directory, Referral Partners, both agreement builders,
+  the Drive folder code and the Contractors roster among them. GNU `grep` prints *binary file matches* in place of the lines.
+  **A session hunting for every caller of a function it is about to delete gets a false "none" there, and that is how a
+  ReferenceError ships.** Worth knowing when reading older entries: a *"no other callers"* conclusion drawn from a repo-wide
+  search before today did not cover that stretch.
+- **The page did not even run the character the source said** — the HTML parser replaces a NUL inside a `<script>` with U+FFFD — so
+  the browser joined on U+FFFD while the harness joined on U+0000. It is written `'\u0000'` now, the way the file's two other
+  NUL-joined keys already were. **Nothing a person sees moves**: the key is an in-memory object key for which vendor categories
+  are open, reached by index and never through markup or storage.
+- **`tests/source-bytes.test.js` (new, 12)** asserts every shipped file — the app, the three HTML documents, both markdown copies,
+  the Apps Script files — carries no raw control byte but tab, line feed and carriage return, and names the line when one does.
+  Putting the byte back fails it **1**, at *line 33010*.
+
+- **13,157 committed checks on the merged tree; 13,089 on `main` before this build (+68: `feedback-strip` 27, `source-bytes` 12,
+  `estimate-reset` 398 → 427).** **Restated, not deleted:** `dashboard-actions` pinned the old clear's `if (e2)` and now pins
+  `if (n.parentNode)`; `dashboard-screens`' Start over order is `['scratch:7', 'clear', 'populate:7', 'load:7']` (the clear comes
+  first) and an unbound one still `['clear']`; `doc-scope`'s and `estimate-reset`'s sandboxes **lift** `clearEstimateScratch` rather
+  than stub it. `estimate-reset`'s `build()` gained a `status` argument so a test can answer the open `'offline'` — the only state
+  in which the copy is ever read.
+- **Revert sweep on a tar copy: 13 changes, ALL RED, baseline 13,015 / 0 before and after, file restored byte-identical, no needle
+  mismatched.** The old clear back (THE DEFECT) **8**, the per-strip timer 5, the attached test 5, the snapshot before the write 6;
+  Reset with no clear 3, no bound-job guard 1, above the lock guard 3, before the question 1, any client's copy 1; Start over with no
+  clear **8**, after the reopen 6, before the question 2, any client's copy 2. The NUL byte was reverted separately (fails 1).
+- **Verified in headless Chromium, `tests/browser/step34.js`, 37 checks, 0 failed, 0 page errors** (written as step 33 and
+  renumbered on the merge — the change-order card session took 33). ⚠ **The network is ABORTED, not absent**: with no sync URL the
+  app answers *offline* synchronously and the open's messages land in a different order from a phone with no signal, so the URL is
+  set and every request to it is aborted. Two messages three seconds apart; the real Save button twice; a redraw's notice on the
+  dashboard outliving an older message's timer; Start over offline and Cancel; Reset, reload and an offline open; the safety net;
+  another client's draft surviving a Reset; overflow 0 at 1440 and 390. **Against `main` without this build it fails 10** — one
+  in each of the three message sections, four on Start over, three on Reset. `run.sh`'s default list is 1–34; steps 1–33 re-run as
+  regressions on the merged tree — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 /
+  58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75, 0 failed — **1,712 browser checks across the
+  thirty-four**. The first `<style>` block is byte-identical to `main`'s at 98,696 bytes — no CSS.
+- Manual **§5h** (one paragraph inside the fresh-estimate note: the copy, what it used to do measured, and that the safety net is
+  unchanged) and playbook **one** symptom row. Both `.md` copies hand-edited; **15 claims parity-checked, 0 mismatches**;
+  `doc-structure` green; rendered at 1440/390 with 0 overflow and 0 page errors; under `print` 51/61 and 17/18 tables full width,
+  0 on the phone rule — as before. **The footer stamps on all four read *reconciled 2026-08-03***, two months stale while the
+  opening note of each says *"the version stamp at the foot of each says when"*; they read 2026-09-29 now.
+- **⚠ THE SHAPE TO COPY: a safety net is a store, and every button that discards what it protects has to empty it too.** Save did;
+  the two buttons added later that also throw the work away did not, and the net then restored exactly what somebody had just asked
+  to be rid of — under a message that made it look like a rescue.
+
 ## ⚠⚠ A CHANGE ORDER COULD BE CREATED AND NEVER PRINTED OR ACCEPTED — THE CARD CARRIES BOTH NOW (FIXED 2026-09-29)
 Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision on Q14 applied. App-only, no redeploy.
 
@@ -393,15 +495,21 @@ redeploy.
   merges — the concurrent H3/M8, document and H1/M1 sessions took 28, 29 and 30 first. `run.sh`'s default list is 1–31; on the
   MERGED tree steps 1–30 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 /
   52 / 27 / 58 / 69 / 75 / 33 / 78 / 58 / 78 / 28 / 90 / 58 / 62 / 53, 0 failed — **1,488 browser checks across the thirty-one**.
-  - **⚠ THE `showFB` 4-SECOND RACE BIT THE FIRST RUN, AND IT IS STILL NOT FIXED.** Every message arms an unconditional clear, so the
+  - ~~**⚠ THE `showFB` 4-SECOND RACE BIT THE FIRST RUN, AND IT IS STILL NOT FIXED.** Every message arms an unconditional clear, so the
     first run of section D read an EMPTY strip after Reset: an earlier message's timer (the Save's or the reopen's, both under four
     seconds old while the revert sweep loaded the CPU) cleared Reset's line. Section D now waits out earlier timers and says why.
     **A message written within four seconds of another can still vanish early** — a per-element timer in `showFB` is the fix,
-    recorded twice now and worth doing on its own.
-- **⚠ FOUND IN PASSING, NOT FIXED — BY READING, NOT DRIVEN: the device's scratch copy survives a Reset or a Start over.**
+    recorded twice now and worth doing on its own.~~ **FIXED THE SAME DAY — see the entry at the top of this file.** ⚠ *"A
+    per-element timer is the fix"* was wrong: the dashboard's notices are painted by a redraw, not by `showFB`, so a per-strip
+    clear still wipes them, and the sweep proved it (fails 5). A message's timer clears the nodes it wrote and nothing else.
+    *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
+- ~~**⚠ FOUND IN PASSING, NOT FIXED — BY READING, NOT DRIVEN: the device's scratch copy survives a Reset or a Start over.**
   `saveEstimateScratch` refuses to write an empty-rooms state, so after either clear the scratch still holds the discarded build until
   something new is scored. Opening that client **offline**, with no saved estimate, would restore it (under the *unsaved draft* warning).
-  Narrow — offline, nothing saved, and left before scoring anything new — and the same on both buttons.
+  Narrow — offline, nothing saved, and left before scoring anything new — and the same on both buttons.~~ **FIXED THE SAME DAY — see
+  the entry at the top of this file.** ⚠ *"Narrow"* was wrong for Start over, and driving it is what showed it: the reopen that
+  follows the clear is exactly what reads the copy, so offline with nothing saved the discarded rooms came back **immediately**.
+  *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
 - Manual **§5h** (Reset rewritten: a blank estimate for this client, not Start over, locked with everything else, and what it used to do,
   measured) and playbook **Step 2** (a sentence in the `.stop`) plus **one** symptom row. Both `.md` copies hand-edited; **18 claims
   parity-checked, 0 mismatches**; `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and
@@ -2703,11 +2811,12 @@ usable, 12 / 12 / 17 / 23 required); it also found three findings, and he took a
 
   The first `<style>` block is **byte-identical to HEAD at 93,446 bytes / 1,168 lines / 635 rules** — no CSS —
   and markup tag balance is unchanged from HEAD.
-- **⚠ FOUND IN PASSING, NOT FIXED: `showFB` CLEARS ITS STRIP ON A 4-SECOND TIMER, UNCONDITIONALLY.** So a
+- ~~**⚠ FOUND IN PASSING, NOT FIXED: `showFB` CLEARS ITS STRIP ON A 4-SECOND TIMER, UNCONDITIONALLY.** So a
   refusal fired less than four seconds after a previous one is wiped by the **old** timer a moment after it is
   written — press Save twice in quick succession and the second message vanishes instantly. Pre-existing and
   unrelated; it cost the browser probe two runs before the cause was measured rather than guessed at, and the
-  probe now blanks the strip before each press so it measures the gate and not the toast race.
+  probe now blanks the strip before each press so it measures the gate and not the toast race.~~ **FIXED
+  2026-09-29 — see the entry at the top of this file.** *Kept rather than deleted, per the standing rule.*
 - Manual **§4** (two notes — the two optional-but-blocking answers with the whole dead end, and the destination
   block losing three fields), **§5h** (the two refusals and why the walkthrough really is kept), **§11** (the
   per-service table said both gate chips are *"read from intake"* — **the §733.604 deadline is, the
@@ -9162,9 +9271,17 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   assignment wins, so it is promoted. The follow-up here — Edit estimate after the packet, and the won status — was built on
   the H1/M1 tree and merged `main`'s bottom Reset, C2 and H2 builds on the way through; the merge conflicted on the build stamp,
   CLAUDE.md, five estimate writers in `havellin.html` (resolved as a UNION: the shared status rule plus `main`'s edit stamps and
-  `checkPin`'s sync) and three suites' pinned lists. Browser steps 31–33 are theirs and this one is **step 34**. A second merge
-  took `main`'s `_actor` follow-up to H1/M1 (in that entry, near the top of this file) and conflicted only on the build stamp and this record.)
-  (`claude/charming-dirac-gcdfsl` recorded, before that second merge, that it was the active branch, and:)
+  `checkPin`'s sync) and three suites' pinned lists. Browser steps 31–33 are theirs and this one was written as **step 34**. A second merge
+  took `main`'s `_actor` follow-up to H1/M1 (in that entry, near the top of this file) and conflicted only on the build stamp and this record.
+  A third took `main`'s feedback-strip and draft-copy build, and conflicted on the build stamp, this file and `tests/browser/step34.js`,
+  which both sessions had written: theirs landed first and keeps step 34, this one is renumbered **step 35**, and 1–35 are the
+  default list.)
+  (`claude/exciting-carson-pv156f` recorded, before that third merge, that it was the active branch, and:)
+  (Back on this branch for a third build after every session's work was on `main`: the feedback strip's four-second timer and
+  the draft copy that Reset and Start over left behind — the two items the Reset build had flagged — plus the raw NUL byte in
+  `_vendorCatKey`. The merge that brought `main` in was clean. The change-order card session had taken step 33, so this build's
+  browser step is **step 34**, and 1–34 are the default list.)
+  (`claude/charming-dirac-gcdfsl` recorded, before this merge, that it was the active branch, and:)
   (Back on this branch for one more commit after all eight builds below were on `main`: the `_actor` follow-up to H1/M1 —
   attribution names this job's approver or nobody. The merge that brought `main` in conflicted only on the build stamp; no
   browser step was added, and 1–33 are the default list.)
@@ -14414,13 +14531,16 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (seventh pass)** — both documents, against Edit estimate going once the signing
+- Last reconciled against the app: **2026-09-29 (eighth pass)** — both documents, against Edit estimate going once the signing
   packet is out and a won client reading *Won · Pending Re-approval* while a revised price waits (manual §1, §5, §5c, §8, §9,
   §9a; playbook the two `.stop`s on Build Estimate, the lever table, Step 6, the status table and four symptom rows); see the
   entry at the top of this file.
+- Prior pass **2026-09-29 (seventh pass)** — both documents, against Reset and Start over discarding this
+  device's unsaved-draft copy (manual §5h; playbook one symptom row), and the footer stamps of all four files moved from
+  *reconciled 2026-08-03* to 2026-09-29; see its entry near the top of this file.
 - Prior pass **2026-09-29 (sixth pass)** — both documents, against the change-order card carrying PDF and Get
   Acceptance, the notices moving to the dashboard, and the one Q14 line on the printed change order (manual §9; playbook
-  Step 10d and four symptom rows); see the entry at the top of this file.
+  Step 10d and four symptom rows); see its entry near the top of this file.
 - Prior pass **2026-09-29 (fifth pass)** — both documents, against a Job Plan edit surviving the other
   device's save (manual §2 and §11; playbook Step 7, a `.stop` in Step 10c, the plan-refresh note and two symptom rows); see
   its entry near the top of this file.

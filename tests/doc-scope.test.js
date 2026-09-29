@@ -140,7 +140,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // resetEstimate and the real one reset, for the client the screen is bound to.
     const rr = sandbox({
       fns: ['resetEstimate', 'resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf', 'docTierDef',
-            'docTierScope', 'svcHasDocStep', 'estimateHasContent'],
+            'docTierScope', 'svcHasDocStep', 'estimateHasContent', 'clearEstimateScratch'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
              'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', '_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_volPreset', '_volHandSet'],
       stubs: { document: domStub({ 'e-job': { value: '5' } }), jobs: [{ id: 5, svc: 'cleanout', docScope: 'none' }],

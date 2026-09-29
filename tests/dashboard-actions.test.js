@@ -562,7 +562,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // every info alert in the file rendered as a warning.
     has(fb, "info:'a-info'", "showFB knows 'info'");
     has(src, '.a-info{background:var(--info-bg)', 'and the class it names exists');
-    has(fb, 'if (e2)', 'including on the timer that clears it');
+    // ⚠ RESTATED 2026-09-29. This pinned `if (e2)`, the old timer's guard on a strip looked up again by
+    // id four seconds later. The timer no longer looks anything up: it removes only the nodes its own
+    // call wrote, and only while they are still attached, so a strip that has gone cannot make it throw
+    // (and a later message cannot be wiped by it). Driven in feedback-strip.test.js.
+    has(fb, 'if (n.parentNode)', 'including on the timer that clears it — it removes a node only while it is still attached');
     has(noComments(body('populateAgrSelect()')), 'if (!sel) return', 'populateAgrSelect guards its select too');
 
     // The notice has to survive the innerHTML rewrite the redraw performs, and must not
