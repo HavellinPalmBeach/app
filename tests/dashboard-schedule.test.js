@@ -63,7 +63,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     has(noComments(fn('applyJobTransition')), 'j.deliveredOn = _todayStr();',
         'and the delivery stamp reads it rather than rolling its own UTC date');
-    lacks(noComments(fn('applyJobTransition')), "toISOString().split('T')[0, 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf']",
+    // ⚠ From 2026-09-22 to 2026-09-29 this needle read "toISOString().split('T')[0, 'jobCloseBlockers', …]" —
+    // five function names had been written into the string itself, so the check could never match anything
+    // and passed on any code. Restored; tests/local-dates.test.js now forbids the UTC slice file-wide.
+    lacks(noComments(fn('applyJobTransition')), "toISOString().split('T')[0]",
           'the UTC form is gone from the transition');
   }
 

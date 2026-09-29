@@ -383,6 +383,25 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '⚠ and withheld entirely on a device with no backend URL');
     ctx.SHEETS_SYNC_URL = prevUrl;
 
+    // ⚠⚠ AND IT STAYS BESIDE THE RECORDER UNTIL THE DEPOSIT IS IN (2026-09-29, Q12). The invoice row is done
+    // the moment the deposit invoice goes out, so a link offered there alone could never be asked for after a
+    // part cheque — the one case the balance rule in `stripePaymentLink` exists for. The fixture above lands
+    // on deposit_received, the recorder's row: driven as the band draws it.
+    const rcv = actFor(depSent, depRec);
+    eq(rcv.row.key, 'deposit_received', 'with the deposit invoice sent, the live row is the recorder\'s');
+    eq(rcv.a.primary && rcv.a.primary.call, "dashRecordPayment(7,'deposit')", '…whose primary is still the recorder');
+    ok(rcv.a.secondary.some((x) => x.call === "dashStripeLink(7,'deposit')"),
+      '⚠⚠ and the ACH link rides beside it, carrying the stage — it was unreachable once the invoice went out');
+    eq(rcv.a.secondary.filter((x) => /dashStripeLink/.test(x.call)).length, 1, '…once');
+    ctx.SHEETS_SYNC_URL = '';
+    ok(!actFor(depSent, depRec).a.secondary.some((x) => /dashStripeLink/.test(x.call)),
+      '⚠ withheld there too on a device with no backend URL');
+    ctx.SHEETS_SYNC_URL = prevUrl;
+    const rcvRow = rcv.r.rows.filter((x) => x.key === 'deposit_received')[0];
+    ok(!ctx.jobTimelineActions(Object.assign({}, rcvRow, { state: 'done' }), rcv.r.job, rcv.r.rec)
+      .secondary.some((x) => /dashStripeLink/.test(x.call)),
+      '⚠ and gone once the deposit is in — a done row offers nothing, so the strip under the rail never carries it');
+
     // ⚠ A blocked estimate points at where the fix is, rather than at nothing.
     const halfRec = { estimate: EST(), approved: false };
     halfRec.estimate.rooms.push({ name: 'Garage (2-car)', vol: 0, cplx: 0, note: 'x' });

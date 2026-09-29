@@ -49,6 +49,8 @@ Press **+ Add New Client** at the top of the Client Dashboard. Fill in everythin
 > **⚠** **⚠ Two of these are optional on the form and will stop you dead at the estimate.** **Approximate home value**, on every job, and on a **Home Transition** the **New home sq ft**. The form lets you save without either — and **Build Estimate then refuses to save the walkthrough** until they are there. Ask for both on the call: the value is a Zillow ballpark, and the new home's size is what prices move day. **If you find out later, it is not a disaster** — open the client on the Client Dashboard and press **✎ Edit Client**; both are there from 2026-09-22, and nothing you have scored is lost. Before that date there was nowhere to put either one and the only way out was to re-create the client.
 
 > **On an estate job you are now asked whether the Letters are in hand (new 2026-09-22).** It sits with the authorized representative: **Pending · Received · Not Required**, and it opens on *Pending*, which is the right answer on almost every first call. Say *Received* only if a certified copy is already in hand, and *Not Required* on a matter with no Letters at all. **On probate this is what stops the job being activated**, so it is worth asking rather than leaving; when the copy turns up later you set it under **✎ Edit Client**. Before this date the app did not really ask — it read a field that was not on the form, so every estate job sat at Pending whatever you were told on the call.
+>
+> **⚠ It is the MATTER that decides, from 2026-09-29, not the service.** An **Estate Settlement whose estate is going through probate** (you answered *Probate* or *Both* to how it is being administered) now gets the **Probate Details** block too — case number, Letters date, the §733.604 deadline — nothing in it required, and it **cannot be activated until the Letters are Received**, exactly like a Probate job. Before, that job had nowhere to put its case number and activated with no Letters on file. A trust matter is never asked.
 
 > **The Move Destination block asks three things, not six (2026-09-22).** Address, city, and the new home's square footage. **Zip, bedrooms and bathrooms are gone** — nothing in the app ever read one of them, so they were three more questions on a call that is already long. If a client volunteers the layout, it goes in *Notes*.
 
@@ -426,6 +428,7 @@ Do this in the wait between sending the agreement and the deposit landing. You k
 - **Reload before you change the team on a client somebody else has touched today** — the team is saved on the client, and a change made on an older copy takes the whole client (see the red box in Step 10c).
 - **Revise team** reopens the roster — but anyone who has already logged hours stays locked. You can add to a team mid-job; you can never retroactively remove somebody who worked. Hours stay shut until you re-confirm.
 - **One person, one slot.** A name taken disappears from the other selects, and picking somebody who already holds another slot is refused on the spot, naming the slot they are in (2026-09-23). The confirm refuses it too. Only *Contractor TBD* and *Contractor — TC* may appear twice.
+- **A second concierge the estimate staffs needs a name before the team confirms** (2026-09-29). If the estimate's box says the scope needs a second concierge, the *Transition Concierge 2* row reads *needs a name* and **Save & Confirm Job Team** refuses until it has one — pick somebody, or *Contractor — TC* if you have not picked yet. On a rush job the estimate *promised* that second person, so the slot cannot quietly go empty.
 - **The concierge row starts on whoever was assigned at intake**, not whoever did the walkthrough (2026-09-23). Reassign the job in **✎ Edit Client** before the team is confirmed and the plan follows; once you pick a concierge on the plan or confirm the team, that choice stands.
 
 > **The chip row at the top of the plan tells you whether the team is done (new 2026-09-23).** *Job team confirmed* sits beside *Vendors lined up*: red until you press **Save & Confirm Job Team**, green the moment you do. **It goes red again if one person is in two slots** — press **Revise team** and give one of them to somebody else.
@@ -471,14 +474,14 @@ Worth knowing before they phone you about it. On the signing screen they are ask
 
 ## Step 9 · Record the deposit — Client Dashboard
 
-The deposit is **50% of the approved total** and it is **never waived or varied**. The same button records all three payments; a *Which payment is this?* picker at the top opens on the first unsatisfied stage, so in normal use you never touch it.
+The deposit is **50% of the approved total** and it is **never waived or varied**. The same button records all three payments; a *Which payment is this?* picker at the top opens on the first unsatisfied stage, so in normal use you never touch it. Press **✓ Record payment** on a timeline row and it opens on that row's stage, with the stage in its title and on its button: *Record Deposit*, *Record Midpoint Payment*, *Record Final Payment* (*Record Second Payment* on Home Prep).
 
 Recording a payment captures evidence, not a tick:
 
 | Field | What to put |
 | --- | --- |
-| **Amount** | Prefilled with what's still outstanding — a second cheque needs no arithmetic in the field. |
-| **Date received** | The day it reached your hand, not the day it clears. |
+| **Amount** | Prefilled with what is still outstanding on that stage — the deposit at 50% less anything already in, the midpoint and the final at **the figure their own invoice asks for** (2026-09-29; they used to open blank). A second cheque needs no arithmetic. **Check it against the cheque in your hand**, and if the cheque is different, type what arrived. |
+| **Date received** | The day it reached your hand, not the day it clears. It opens on today — your today: until 2026-09-29, after 8pm it opened on tomorrow. |
 | **Method & reference** | Cheque number, wire confirmation, Stripe id. Pick **Bank transfer (ACH)** only for a transfer *not* sent through our payment link — one sent through the link records itself. |
 | **Paid by** | The trust, estate account, law firm or the client. In estate work the payer is often not the client, and this is what shows the estate is funding the engagement properly. It also settles the argument if heirs later dispute who paid for what. |
 | **Photo of the cheque** | Take it *before the cheque leaves your hands.* Five seconds, and it's what makes a hand-recorded payment a document rather than an assertion. It files to Drive against the payment. |
@@ -487,11 +490,13 @@ Recording a payment captures evidence, not a tick:
 
 > **Work starts on *received*, not *cleared*.** Waiting for cheques to clear costs three to five days on every job. Wires, cards and cash are marked cleared on receipt; cheques **and ACH bank transfers** show as *uncleared* on the dashboard until the money genuinely settles.
 
-> **⚠ A CLIENT CAN PAY THE DEPOSIT BY BANK TRANSFER, AND THAT ONE RECORDS ITSELF.** The deposit row of the timeline carries **🏦 ACH payment link** beside *Send deposit invoice*. Press it, send the link the app shows you along with the invoice, and when the transfer lands the payment writes itself — amount, date, payer, and *Stripe* as who recorded it. **Do not also record it by hand**, or the deposit is on the job twice.
+> **⚠ A CLIENT CAN PAY THE DEPOSIT BY BANK TRANSFER, AND THAT ONE RECORDS ITSELF.** The deposit row of the timeline carries **🏦 ACH payment link** beside *Send deposit invoice*, and beside *Record payment* until the deposit is in. Press it, send the link the app shows you along with the invoice, and when the transfer lands the payment writes itself — amount, date, payer, and *Stripe* as who recorded it. **Do not also record it by hand**, or the deposit is on the job twice.
 >
 > **It takes about four business days, and that is the normal state of it.** The client authorises the transfer on day one and the money arrives on day four or five. In between, the client will tell you they have paid and the app will show nothing. They are both right. **Do not record it by hand to make the screen agree with them** — that is the app claiming money is in the account when it is not.
 >
 > **The check runs when you open the client.** There is no timer and no other refresh. If you are waiting on a transfer, open the client.
+>
+> **After a part cheque the link asks only for the balance** (2026-09-29), and the Stripe page says *balance* so the smaller figure does not look like a mistake. **If the app says a link it already made "asks for $…, but only $… is outstanding … Do not send it"**, it was made before the cheque came in: a link cannot be edited, so switch it off in the Stripe Dashboard under Payment links and take the balance by cheque or wire.
 >
 > **Cards are not accepted.** Not an oversight and not a setting to change: a card on a $25,715 job costs Havellin $747 against $16.50 on a bank transfer, and the "3% convenience fee" that would cover it is only legal on tickets under about $300. If a client insists on a card, the answer is a cheque or a wire.
 
@@ -509,10 +514,10 @@ Two things worth knowing when you ask for one:
 | Milestone | Amount | Timing |
 | --- | --- | --- |
 | Deposit | 50% of the estimate | On signing |
-| Midpoint | Brings the cumulative to 75%, with vendor and prep fees trued to the actual quotes you've logged | At project midpoint |
+| Midpoint *(Second payment on Home Prep)* | Brings the cumulative to 75%, with vendor and prep fees trued to the actual quotes you've logged | At project midpoint (Home Prep: once the vendor schedule is booked) |
 | Final | The balance — labour trued to logged hours, fees on actuals, plus any accepted Change Orders | Within 7 days of the final invoice |
 
-> Only the deposit gates anything. Recording a midpoint or final payment captures the money so the job's paid total is complete — it doesn't unlock anything, and a midpoint cheque of any size will never fund a job. Those two stages prefill nothing and challenge nothing: type what arrived.
+> Only the deposit gates anything. Recording a midpoint or final payment captures the money so the job's paid total is complete — it doesn't unlock anything, and a midpoint cheque of any size will never fund a job. Those two stages open on what their own invoice asks for and challenge nothing: check the figure against the cheque.
 
 ## Step 10 · Work the job
 
@@ -895,7 +900,7 @@ Open the client. **Each invoice has its own row on the timeline** — *Deposit i
 | Stage | What it bills |
 | --- | --- |
 | **Deposit** | 50% on the estimate basis. No actuals exist yet. |
-| **Midpoint** | Brings the cumulative collected to 75% and trues vendor and prep fees to the quotes you logged. Labour stays on estimate until the hours are complete. |
+| **Midpoint** *(Second on Home Prep)* | Brings the cumulative collected to 75% and trues vendor and prep fees to the quotes you logged. Labour stays on estimate until the hours are complete. **On Home Prep it is the _Second invoice_ on every screen and document** (2026-09-29): that engagement has no project midpoint, and its estimate bills the second 25% once the vendor schedule is booked. |
 | **Final** | Labour trued to logged hours, fees on actuals, plus any accepted Change Orders. |
 
 > **The midpoint invoice waits for the halfway point (2026-09-29).** The estimate tells the client the midpoint is due at project midpoint, so the band no longer asks for it on the day you activate. Until the plan's halfway day, until half the work is done or until every room is locked, whichever comes first, the band says *Do the work — the midpoint invoice is due at the halfway point* and has **no filled button**; the send sits beside it as an outline, *✉ Send midpoint invoice — due around <date>*. Press it early only if the client asked for it. On the halfway day, or the day the last room is locked, it is the filled button again.
@@ -908,7 +913,7 @@ Open the client. **Each invoice has its own row on the timeline** — *Deposit i
 
 > **⚠** **A PIN approves one client's final at one figure (2026-09-29).** Press **🔑 Manager approval** on the client whose final it is — the approval is recorded on that client and no other, and it survives a reload. If more hours are logged, a change order is accepted or a payment comes in after the PIN, the balance moves and the final asks again, naming who approved it and at what figure. That is the app asking a manager to look at the new number, not losing the old approval. Until 2026-09-29 a PIN typed for one client released *every* client's final until the page was reloaded, and the reload forgot it. The green *Approved for Release* band you see when you view an approved final is for us: it never prints and never goes in the client's PDF.
 
-> **⚠** **No hours logged = no final invoice.** No PIN, no PDF, no email, and no manager can unlock it. This is the one thing most likely to bite a practice run: skip the daily logging and the final simply will not issue. Go log the hours, then reprint. (Fixed-price jobs are exempt — their total doesn't come from the log. **A Home Prep job is exempt only if it quoted no declutter hours;** one that did is gated like any other, and rightly, because the final bills what is logged.)
+> **⚠** **No hours logged = no final invoice.** No PIN, no PDF, no email, and no manager can unlock it. This is the one thing most likely to bite a practice run: skip the daily logging and the final simply will not issue. Go log the hours, then reprint. (Fixed-price jobs are exempt — their total doesn't come from the log. **A Home Prep job is exempt only if it quoted no declutter hours;** one that did is gated like any other, and rightly, because the final bills what is logged.) **From 2026-09-29 the timeline stops offering View and Print on that final** — both used to be there and then refuse on the press — and once the job is closed the row says *No hours are logged yet — log them on the Job Plan and the final can be priced*.
 
 ### Things you'll see on an invoice
 
@@ -955,10 +960,10 @@ On the Job Plan's Close-out stage and on Job Admin & Inv, on **every** job, Home
 
 ### If the job dies instead
 
-The **✕** on the job card opens closeout, and what it does depends on whether money arrived:
+The **✕** on the job card opens closeout, and what it does depends on whether *any* money arrived:
 
-- **Before the deposit** → *Lost*, with a reason (price, scope, timing, unresponsive, competitor, other) and an optional note — competitor name, price gap. A job marked Won that then withdraws flips back to not-won: a win that produced nothing isn't a win.
-- **After the deposit** → the button becomes **Close — Retain Deposit**. We keep the money and it still counts as won, because it produced revenue.
+- **Nothing received** → *Lost*, with a reason (price, scope, timing, unresponsive, competitor, other) and an optional note — competitor name, price gap. A job marked Won that then withdraws flips back to not-won: a win that produced nothing isn't a win.
+- **Anything received, on any stage** → the box names the amount and the button reads **Close — Retain $2,000** (whatever came in). We keep the money and it still counts as won, at what it kept rather than what it was quoted (2026-09-29). Until then a client who had paid *part* of the deposit and walked was recorded as a plain loss and the money they had paid appeared nowhere.
 
 > **⚠** Both of those are **terminal**. Nothing in the app moves them. If a lost client comes back, start a new job.
 
@@ -1045,6 +1050,15 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 
 | Symptom | What's missing |
 | --- | --- |
+| **_Activate job_ refuses on an Estate Settlement: _Executor authorization must be received_** | Correct (2026-09-29). The estate is going through probate — you answered *Probate* or *Both* to how it is administered — and a probate estate cannot start without its Letters, whatever the service. When the certified copy is in hand, set it to *Received* under **&#9998; Edit Client**, with the date the Letters issued. If the estate is really a trust matter, correct the matter there instead. |
+| **An Estate Settlement now shows _Probate Details_ — case number, Letters, §733.604** | Correct (2026-09-29). Its matter is recorded as probate, so it has a court case like any Probate job. Nothing in the block is required on an Estate Settlement; fill in what you have. It disappears if the matter is changed to trust or neither. |
+| **The _Record payment_ box opens on a figure that is not the cheque in your hand** | It opens on what that stage's invoice asks for, less anything already recorded (2026-09-29). Type what actually arrived — the box is a starting point, and the money is what you record. Only the deposit asks before accepting a short amount. |
+| **The ACH link button says _"This ACH link asks for $…, but only $… is outstanding … Do not send it"_** | That link was made before a cheque came in. A Stripe link cannot be edited: switch it off in the Stripe Dashboard under *Payment links*, and take the balance by cheque or wire. A link made after a part cheque asks only for the balance. |
+| **A client paid part of the deposit and walked away** | Press **✕**. With any money received, on any stage, it closes out as *Closed — Deposit Retained* naming the amount (2026-09-29) — the button reads *Close — Retain $…*. It used to be recorded as a plain loss and the money appeared nowhere. |
+| **_Save & Confirm Job Team_ refuses: _the second slot has no name_** | The estimate staffs two concierges (its *second concierge* box is ticked). Pick someone on the *Transition Concierge 2* row, or *Contractor — TC* if you have not picked yet (2026-09-29). The estimate priced two, and on a rush job promised them to the client; if the job really needs only one, raise it with the manager rather than confirming with the slot empty. |
+| **A date entered one evening reads as the next day** | Recorded before 2026-09-29: after 8pm Eastern (7pm in winter) every date the app filled in read tomorrow. Correct it where it was entered — a payment in its record, an hours line on the Job Plan. Anything entered since is today where you are. |
+| **The final invoice row has no View or Print** | An hourly job with no hours logged: the final cannot be priced yet (2026-09-29). Log the hours on the Job Plan and both come back. |
+| **Home Prep's middle invoice says _Second_, not _Midpoint_** | Correct (2026-09-29). Home Prep has no project midpoint; its estimate bills the second 25% once the vendor schedule is booked, and every screen and document now names it the way the estimate does. |
 | **_Offer discount_ or _✎ Edit estimate_ has gone from the timeline** | The signing packet has been sent. The client is being asked to sign that price, so it cannot be re-priced any more, by a discount or an edit: a change now goes through a change order (step 10d). Build Estimate says the same in its banner. |
 | **A won client reads _Won · Pending Re-approval_** | You offered a discount (or resubmitted an edit) and it is waiting on a manager PIN. The client is still won — staffing and the Job Plan are unaffected — and the PIN returns it to *Won*. Before 2026-09-29 it read *Pending Approval*, then *Approved — Awaiting Client* or *New*, as if the client had never said yes; it reads *Won* now with nothing to re-do. |
 | **The discount box says “between 0% and 15%”** | You typed more than 15, a decimal or nothing. Whole numbers 0–15 only. **0 takes the discount off.** |

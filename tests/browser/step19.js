@@ -128,7 +128,10 @@ const JOBS = [
   eq([won.exp, won.caret], ['true', '▾'], 'pressing Won opens it, and the caret turns');
   eq(won.rows, ['Butler', 'Ashby', 'Ellery', 'Farrell'], 'newest acceptance first, and the one with no recorded acceptance date last');
   ok(/Closed — Deposit Retained/.test(won.text), '⚠ the retained deposit is on the Won list, named as one');
-  ok(/4 clients · \$83,940/.test(won.text), 'the list heading counts them and what they are worth');
+  // ⚠ RESTATED 2026-09-29 (audit M4 / P10): a retained deposit counts what it KEPT, not its estimate — Farrell was quoted
+  // $9,000, paid the $4,500 deposit and walked, and the $4,500 is the figure that is true. 19,940 + 31,000 + 24,000 + 4,500.
+  ok(/4 clients · \$79,440/.test(won.text), 'the list heading counts them and what they are worth, a retained job at what it kept');
+  ok(/\$4,500/.test(won.text) && /retained/.test(won.text), 'and the Farrell row shows the $4,500 it kept, named as retained');
   eq(won.gap, 10, 'the list sits one gap under the row it opened from');
 
   console.log('\n=== A ROW OPENS ITS CLIENT, AND THE LIST IS STILL OPEN ON THE WAY BACK ===');

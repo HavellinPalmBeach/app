@@ -17679,6 +17679,15 @@ function jobTimelineActions(row, job, estRec) {
     // could ask for the money was reached from the step that records the money arriving.
     case 'deposit_received':
       if (live) out.primary = { label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'deposit')" };
+      // ⚠⚠ THE ACH LINK STAYS BESIDE THE DEPOSIT UNTIL THE DEPOSIT IS IN (2026-09-29, Q12). It was offered only
+      // on the invoice row, which is done the moment the deposit invoice goes out — so from then on a client
+      // who paid part by cheque, or asked to pay by bank transfer after the invoice arrived, had no link to be
+      // sent, and the balance rule `stripePaymentLink` applies could never be reached. Beside the recorder,
+      // never as the primary, for the same reason as above; the one-link-per-stage rule still holds, so a link
+      // minted earlier comes back (flagged if it now asks for more than is owed) rather than a second one.
+      if (live && SHEETS_SYNC_URL) {
+        out.secondary.push({ label: '&#127974; ACH payment link', call: "dashStripeLink(" + id + ",'deposit')" });
+      }
       break;
 
     case 'job_active':

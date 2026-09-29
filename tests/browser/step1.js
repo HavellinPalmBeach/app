@@ -42,13 +42,20 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   }
   const cleanoutMarks = await page.evaluate(() => ({
     marks: Array.from(document.querySelectorAll('.req-probate')).map(e => getComputedStyle(e).display),
+    attyMarks: document.querySelectorAll('#estate-fields .req-probate').length,
+    caseMark: !!document.querySelector('#probate-fields .req-probate'),
     note: document.getElementById('i-atty-req-note').textContent,
     readout: (document.getElementById('i-gate-readout').innerText || '').replace(/\s+/g, ' ').trim(),
     readoutClass: (document.querySelector('#i-gate-readout .alert') || {}).className || '',
     doclevelDisabled: document.getElementById('i-doclevel').disabled,
   }));
-  eq(cleanoutMarks.marks.length, 5, 'five attorney asterisks exist');
-  eq(cleanoutMarks.marks.every(d => d === 'none'), true, 'and all five are withheld on an Estate Settlement');
+  // ⚠ RESTATED 2026-09-29 (audit M5 / P10): the court record now shows on an Estate Settlement whose MATTER is
+  // probate, where the case number is offered and not required — so its asterisk joined the class that says
+  // "required on a Probate service only". Five attorney marks and the case number's: six, all withheld here.
+  eq(cleanoutMarks.marks.length, 6, 'six required-on-probate marks exist');
+  eq(cleanoutMarks.attyMarks, 5, 'five of them on the attorney fields');
+  eq(cleanoutMarks.caseMark, true, 'and one on the case number');
+  eq(cleanoutMarks.marks.every(d => d === 'none'), true, 'and all six are withheld on an Estate Settlement');
   ok(/never open probate/.test(cleanoutMarks.note), 'the heading says the attorney is optional here');
   ok(/Strict Mode/.test(cleanoutMarks.readout), 'the readout explains Strict Mode ON SCREEN (it used to render into a hidden div)');
   ok(/a-warn/.test(cleanoutMarks.readoutClass), 'and is amber while the 706 question is open');
@@ -142,7 +149,22 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   eq(ec.g706, true, 'and the 706 gate — Strict Mode is no longer a one-way door');
   eq(ec.gdis, true, 'and the dispute gate');
   eq(ec.atty, true, 'and the estate attorney the Job Plan asks for by name');
-  eq(ec.caseNo, false, 'and withholds the court record on a matter with no case');
+  // ⚠ RESTATED 2026-09-29 (audit M5 / P10): this fixture's matter is PROBATE (answered at intake), and the court
+  // record follows the matter now rather than the service — an Estate Settlement administering a probate estate had
+  // nowhere to record its case number or its Letters date. The requirement this line pinned is unchanged: a matter
+  // with no court case is not offered one, driven with a trust matter straight after.
+  eq(ec.caseNo, true, 'and, on a probate matter, offers the court record');
+  const ecTrust = await page.evaluate((jobId) => {
+    const j = jobs.find(x => x.id === jobId); const was = j.matterType;
+    document.getElementById('edit-client-modal').style.display = 'none';
+    j.matterType = 'trust'; showEditClient(jobId);
+    const e = document.getElementById('ec-probate-case'); const shown = e ? (e.offsetParent !== null) : null;
+    document.getElementById('edit-client-modal').style.display = 'none';
+    j.matterType = was; showEditClient(jobId);
+    return { shown, was };
+  }, saved.id);
+  eq(ecTrust.was, 'probate', 'the fixture really is a probate matter');
+  eq(ecTrust.shown, false, 'and withholds the court record on a trust matter, which has no court case');
   eq(ec.order, true, 'the estate block precedes the probate block, as intake orders them');
   eq(ec.marks.every(d => d === 'none'), true, 'the attorney asterisks are withheld here too');
   ok(ec.readoutText.length > 0, 'the readout is painted on open: ' + ec.readoutText.slice(0, 70));
@@ -176,7 +198,7 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   eq(written.atty, 'Richard Comiter', 'and the estate attorney, on a service that never opens probate');
   eq(written.firm, 'Comiter Singer', 'with their firm');
   eq(written.scope, 'none', 'and the inventory answer');
-  eq(written.caseNo, '', 'and no court record is invented for a matter that has none');
+  eq(written.caseNo, '', 'and no case number is invented when nobody typed one');
 
   const ecProbate = await page.evaluate(() => {
     document.getElementById('edit-client-modal').style.display = 'none';
@@ -190,14 +212,21 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   eq(ecProbate.atty, true, 'and still has the attorney');
   eq(ecProbate.marks.every(d => d === 'inline'), true, 'with its asterisks restored');
 
+  // ⚠ RESTATED 2026-09-29 (audit M5 / P10): switching to an Estate Settlement mid-edit KEEPS the court record while the
+  // matter is still probate — the matter decides now — and the asterisks still follow the SERVICE, because the save
+  // requires the case and the attorney on a Probate service only. Switching the matter to trust is what hides it.
   const toggled = await page.evaluate(() => {
     document.getElementById('ec-svc').value = 'cleanout';
     ecToggleProbate();
-    return { caseNo: document.getElementById('ec-probate-fields').style.display,
-             marks: Array.from(document.querySelectorAll('.ec-req-probate')).map(e => getComputedStyle(e).display) };
+    const onProbateMatter = document.getElementById('ec-probate-fields').style.display;
+    const marks = Array.from(document.querySelectorAll('.ec-req-probate')).map(e => getComputedStyle(e).display);
+    document.getElementById('ec-matter-type').value = 'trust';
+    ecToggleProbate();
+    return { onProbateMatter, marks, onTrust: document.getElementById('ec-probate-fields').style.display };
   });
-  eq(toggled.caseNo, 'none', 'switching the service mid-edit hides the court record');
-  eq(toggled.marks.every(d => d === 'none'), true, 'and the asterisks follow it');
+  eq(toggled.onProbateMatter, 'block', 'switching the service mid-edit keeps the court record on a probate matter');
+  eq(toggled.marks.every(d => d === 'none'), true, 'and the asterisks follow the service off');
+  eq(toggled.onTrust, 'none', 'switching the matter to trust mid-edit hides the court record');
 
   console.log('\n=== OVERFLOW ===');
   await page.evaluate(() => { const m = document.getElementById('edit-client-modal'); if (m) m.style.display = 'none'; });
