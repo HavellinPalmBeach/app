@@ -51,8 +51,8 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   twice. Billed only when sent fails 11, only when paid 10, always billed (the defect) **21**.
   - **⚠ THE BALANCE DOES NOT MOVE, BY CONSTRUCTION.** `finalDue` is the total less what was **received**, never less what was
     invoiced; every case in the suite asserts the balance equals the old build's.
-  - **`_paymentGapRow(gap, from, into)` takes both halves of its sentence** — four call sites, none single-argument (a test counts
-    them). Naming both invoices whatever happened fails 4, the midpoint invoice naming itself 4, measuring against the 75% target
+  - **`_paymentGapRow(gap, from, into)` takes both halves of its sentence** — three callers (the T&M final, the fixed-price final,
+    the midpoint invoice), none single-argument; a test counts the definition and the three. Naming both invoices whatever happened fails 4, the midpoint invoice naming itself 4, measuring against the 75% target
     4, the fixed row labels 5 (T&M) and 3 (fixed), the unbilled row carrying the shortfall 2, the no-hours block 2.
   - ⚠ Found in passing, **not fixed**: a fee-only **Home Prep** final calls its second payment *25% midpoint* (before and after this
     change) where the prep estimate and agreement say *due once the vendor schedule is booked*, and heads its total *logged hours
@@ -118,8 +118,11 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   alerts only; the final in the viewer reads *billed on this invoice* with the $50 short deposit named against *the deposit invoice*
   over the right balance, while a job whose midpoint went out keeps the old wording; a legacy closed job offers Re-open and never
   Activate; overflow 0 at 1440 and 390. **Against the pre-change build it fails 5 and stops at section A**, because the button it
-  presses does not exist. `step28` restated, not weakened (its close question now names Re-open; 61 / 0). `run.sh`'s default list is
-  1–29; steps 1–28 re-run as regressions, 0 failed — **1,392 browser checks across the twenty-nine**.
+  presses does not exist. `step28` restated, not weakened (its close question now names Re-open; 61 / 0). Before the merge `run.sh`'s
+  default list was 1–29 and steps 1–28 re-ran as regressions, 0 failed — 1,392 browser checks across the twenty-nine. **On the
+  merged tree the default list is 1–36, and all thirty-six ran — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 /
+  25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 61 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 58, 0 failed —
+  1,816 browser checks across the thirty-six.**
 - Manual **§9** (the Closed row; the *There is no Re-open* note replaced by an eight-bullet Re-open note; the handover note),
   **§9a** (two table rows, three bullets), **§11** (the ratings clause) and **§12** (the stage paragraph and a six-bullet note on the
   wording). Playbook **Step 11 & 12** (a bullet), **Step 13** (the intro, the `.stop`, the midpoint paragraph, and a new *Closed it by
