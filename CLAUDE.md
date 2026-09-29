@@ -27,7 +27,8 @@ redeploy.
   under suppressed auto-save, the tooltip — and `resetEstimate` joins the *no path keeps a private list* and *calls the one reset* nets.
   **Two suites restated, not deleted:** `doc-scope` pinned `_estimateDocScope = 'full'` inside Reset's body — **that line WAS the
   defect** — and now drives Reset to the job's own intake answer; `estimate-walkthrough` pinned `_volHandSet = {}` there and now points at
-  the one reset. **12,002 committed checks.** The first `<style>` block is byte-identical to HEAD (97,897 / 1,228 lines) — no CSS.
+  the one reset. **12,002 committed checks on this branch; 12,522 after merging the concurrent H3/M8 and document sessions' suites,
+  0 failed.** The first `<style>` block is byte-identical to `main`'s, before the merge and after it — no CSS.
   **Revert sweep on three tar copies: 12 changes, ALL RED, baseline 11,993 / 0 before and after on every copy, no needle
   mismatched.** The old body back (the defect itself) fails **55**; no confirm 12; the lock guard removed 8; resetting for nobody and the
   saved branch inverted 6 each; the guard on *approved* only 4; the feedback line and the tooltip 2 each; an empty record counted as
@@ -35,13 +36,14 @@ redeploy.
   - **⚠ THE DEFECT REVERT CRASHED TWO SUITES ON THE FIRST SWEEP** (46 fails reported): the new sandboxes did not lift the old body's
     `ROOMS`, so it threw and every check after it went unrun. Every Reset call in the tests is read defensively now; re-run on a fresh
     copy it fails **55 with all 12,002 checks running**, baseline 12,002 / 0 before and after.
-- **Verified in headless Chromium, `tests/browser/step28.js`, 42 checks, 0 failed, 0 page errors**, pressing the real Reset button:
+- **Verified in headless Chromium, `tests/browser/step30.js`, 42 checks, 0 failed, 0 page errors**, pressing the real Reset button:
   Cancel keeps everything; OK names the client, and the screen is a blank estimate for *this* client — premium, Contents list, Ashley as
   the walker, the home value and sqft kept — with the same six rooms back at **$22,505**; with a saved estimate the question says it is
   untouched, the record is byte-identical after, and Start over then brings it back; submitted, the button is disabled and a direct call
-  asks nothing and clears nothing. **Against the pre-change build it fails 24 of 42.** `run.sh`'s default list is 1–28; steps 1–27
-  re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 /
-  78 / 58 / 78 / 28 / 90, 0 failed — **1,313 browser checks across the twenty-eight**.
+  asks nothing and clears nothing. **Against the pre-change build it fails 24 of 42.** Written as step 28 and renumbered on the merge —
+  the concurrent H3/M8 and document sessions took 28 and 29 first. `run.sh`'s default list is 1–30; on the MERGED tree steps 1–29
+  re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 /
+  33 / 78 / 58 / 78 / 28 / 90 / 58 / 62, 0 failed — **1,435 browser checks across the thirty**.
   - **⚠ THE `showFB` 4-SECOND RACE BIT THE FIRST RUN, AND IT IS STILL NOT FIXED.** Every message arms an unconditional clear, so the
     first run of section D read an EMPTY strip after Reset: an earlier message's timer (the Save's or the reopen's, both under four
     seconds old while the revert sweep loaded the CPU) cleared Reset's line. Section D now waits out earlier timers and says why.
@@ -58,6 +60,236 @@ redeploy.
 - **⚠ THE SHAPE TO COPY: the reset that stays on the same client is the one nobody measures.** C1 was found because a leak crosses
   clients and shows on the next client's documents. Reset never crossed a client, so its damage stayed on the job it was pressed on — and
   two errors in opposite directions summed to a figure that still looked right.
+
+## ⚠⚠ THE CLIENT DOCUMENTS SAY ONLY WHAT THE ESTIMATE PRICES — AND EVERY ONE NOW ADDS UP TO ITS OWN TOTALS (FIXED 2026-09-29)
+Off the 2026-09-28 workflow audit, findings **H6, M2, M3 and the document lows**, plus two decisions Anthony made on it: **Q8**
+(name the rush premium and the discount in both agreements' fee clauses, one sentence each) and **Q11** (the agreement may be
+viewed, not printed or sent, before the client is marked Won). App-only, no redeploy. **Every finding was reproduced on the real
+functions before anything was changed.**
+
+- **⚠⚠ H6 — THE RUSH LINE PROMISED PEOPLE THE PREMIUM DOES NOT BUY, ON EXHIBIT A.** Under *Expedited Delivery (20%)* the estimate
+  and the final printed *"A second Transition Concierge and an expanded specialist crew working in parallel to compress the project
+  calendar at your request"* (the deposit and midpoint: *"Compressing the project calendar at your request"*). Rush is a flat premium and adds nobody — the crew and the
+  second concierge are their own controls — and the estimate is the signed agreement's Exhibit A. **`rushScopeLine(e)` is the one
+  sentence**, read by the estimate and both invoice rows: *"Priority scheduling to meet the timeline you requested"*, plus *"with a
+  second Transition Concierge"* / *"an expanded crew of N Property Specialists … working in parallel"* **only when
+  `rushCrewAdded(e)` finds one**: `needsTC2` (or the legacy `preparedBy2`), or `psCount` above the new **`psRecommended`**, stamped
+  on every snapshot by `calcAll` from today.
+  - **⚠ A RECORD WITH NO `psRecommended` NEVER CLAIMS AN EXPANDED CREW.** The comparison cannot be made on an estimate saved before
+    today, and a claim the record cannot support does not go on Exhibit A. The `RUSH_PCT` comment that said the premium *"is
+    literally what the client is buying — a second concierge and a larger crew"* is corrected at the source, and so are the manual
+    §5c bullet and the playbook's lever row, which said the same.
+- **⚠⚠ M2 — THE FINAL'S *ORIGINAL ESTIMATE* ROW FOLDED THE CHANGE ORDERS IN.** *Original Estimate (basis for advance payments)*
+  printed the estimate plus the accepted change orders' hours at the rates: a $10,962 job with a +10/+10 change order read
+  **$13,462** over a **$5,481** deposit and a **$2,741** midpoint — half and a quarter of a different number. It prints
+  `est.havellinTotal` now, and **`_coPayRow` — *Approved Change Orders (N)*, the hours on T&M (*"billed in the hours above"*) or the
+  signed prices on fixed price — sits on its own line directly under it**, on both the T&M and the fixed-price summaries.
+- **⚠⚠ M3 — THE DISCOUNT POP-UP COULD NEVER TAKE A DISCOUNT OFF, AND A DISCOUNT LEFT THE PACKET AT THE OLD PRICE.**
+  - **`Math.max(1, parseInt(…) || 0)` turned a blank AND a 0 into 1%**, so its own refusal (*"between 1 and 30"*, against a 15%
+    cap) was unreachable. **`discountPctInput(raw)`** is read by the preview and the write alike: whole numbers **0–15**, anything
+    else refused with *"Enter a discount between 0% and 15% — 0 removes the discount"* printed in the pop-up's new `#dm-fb`, and the
+    preview shows an em dash rather than a clamped figure the write would refuse. **0 removes it** — refused, with the reason, on an
+    estimate carrying no discount, and on a fixed fee, where the discount lives inside the fee and there is nothing separate to take
+    off. The manager email and the confirmation say *removed*.
+  - **It left `job.agrApproved` standing**, so `ensureAgreementApproved` returned early and never re-filed the signing packet: Drive
+    kept Exhibit A at the old price. `applyDiscountRevision` calls **`revokeAgreementApproval(job, 'discount-revised')`**, extracted
+    out of `revokeEstimateApproval` so both take the same path — **and it clears `_packetExported[job.id]`**, because
+    `_agrExportKey` is the approval DAY plus the approver, so a revoke and a re-approval the same afternoon by the same manager
+    produced the same key and the packet was taken as already filed. **`agrApprovalWithdrawn(job)`** is the one explanation, read by
+    the rail's *Signing packet sent* row and the Agreement tab's banner — both read `agrRevokedBy === 'estimate-edited'`, so a
+    discount revoked the approval silently.
+  - **⚠ OFFER DISCOUNT WAS STILL REACHABLE AFTER THE PACKET WENT OUT, and is withdrawn there now** — Anthony's rule: a later price
+    change is a change order. **`discountOfferBlocker(job)`** (signed → the price is locked; `isAgreementSent` — the record, never
+    the boolean DocuSign does not write — → a change order) is read by the rail, `dashOfferDiscount`, `openDiscountModal` **and
+    `applyDiscountRevision`**, because a pop-up opened before the packet went out on the other device must not write after it.
+- **THE LOWS.** (1) **The midpoint and final billed their own re-rounding** of the cumulative 75%, a dollar off `paymentSplit` in
+  opposite directions on 12 of 79 audited totals; `invoiceHtml` bills `paymentSplit`'s running targets now (`_depSplit` / `_midSplit`).
+  (2) **`buildPrepEstimateBody` printed no discount row**, so the fee and the declutter hours came to more than its total; it does
+  now. (3) **A credit final was emailed as *"Balance due: $-2,741 … due within 7 calendar days"***; `invoiceBalanceWords(amtDue)` is
+  read by the text part, the HTML part and the mailto: *"Credit to you: $2,741 — Nothing is due on this invoice."* (4) **Premium
+  finals: two people sharing a role at a rate landing on half a dollar each rounded up** ($185 × 10.3 = $1,905.50, printed $1,906 +
+  $1,906 over a $3,811 total); the remainder rides on the role's longest row. (5) **Both agreements printed *"(None — $0)"*** inside
+  the materials sentence; `materialsPackageQuoted` → *"No moving or packing materials package is quoted on the Estimate, and none is
+  billed"*, and the estimate's Terms carry the materials bullet only when a package is quoted. (6) **The invoice gate said
+  *"…before the agreement can be drawn"***: `DOC_READY_WHY.estimate` names its `{doc}`.
+- **Q8 — `agrPriceAdjustments(est, party)`**, one sentence each for the premium and the discount, only on an **hourly** engagement
+  and only when the estimate carries one, in the standard form's §3.3 (all three arms) and the estate form's §3.1 under the fee
+  table. `_PCT_WORDS` gained **1–15** so every discount a manager can approve spells out. **Drafted, not reviewed — counsel bundle
+  B6**, with the question of whether *"to meet the timeline you requested"* reads as a completion promise.
+- **Q11 — `docPreviewOnly(kind, job, estRec)`**: the packet on an approved estimate whose client has not said yes yet. The
+  agreement blocker allows `view` only, `docAction` marks the viewer `viewOnly` (no Print button), and `docReadOnlyWord` titles it
+  *Signing Packet — PREVIEW* on the tray and the viewer alike. Viewing commits nothing: no stamp, no filing.
+  - **⚠ BOTH AGREEMENT BUILDERS STOPPED READING THE TAB'S GLOBALS FOR THE APPROVED STAMP.** `agrApproved` / `agrApprovedBy` are
+    whatever `loadAgreement` last primed — possibly another client — and a preview before Won is exactly when another job's
+    *Approved for Sending* stamp would print on this one. They read `job.agrApproved` / `job.agrApprovedBy`, escaped.
+- **THE TESTS ASSERT WHAT A READER CHECKS, NOT A FIGURE SOMEBODY WORKED OUT.** `tests/document-reconciliation.test.js` renders the
+  real estimate, all three invoices, both agreement forms and the three email parts over **289 scenarios** — services, billing
+  bases, rush, discount, premium rates, totals on every residue mod 4, change orders, two-person roles, credits — and holds
+  **14 rules** (the rows add up to each printed total, the schedule signed is the schedule billed, no phantom materials package, crew
+  claims match the estimate, the emails word a credit as one…), reporting failures by rule with the scenarios that broke it.
+  `tests/document-claims.test.js` drives the rest: the pop-up through the real modal functions, the rail, both doors, the
+  preview through `docAction`, and the exact Q8 sentences. **12,427 committed checks after the merge with `main`** (11,751 on this branch before it; `document-claims` 226,
+  `document-reconciliation` 29). The merge's one break was correct: `main`'s new `job-close-midpoint` suite lifts
+  `jobTimelineActions`, which now reaches `docPreviewOnly` / `docReadOnlyWord` / `discountOfferBlocker` / `agrApprovalWithdrawn`,
+  and its lists lift them.
+  Thirty existing suites' pinned `fns:` lists gained the new helpers, lifted rather than stubbed, and **five pins across four suites are restated as the requirement rather than deleted**:
+  `estimate-delivery` (the revoke is asserted where it moved, in `revokeAgreementApproval`; the banner asks the shared withdrawal
+  helper rather than testing `'estimate-edited'` itself), `agreement-rates` (the materials note takes the cost, and a $0 package is
+  none), `service-change` (`_pctWords` spells 1–15, so its fallback is tested on 17%) and `walkthrough-view` (the viewer's Print
+  hides for a view-only document too).
+- **Revert sweep on four tar copies: 53 changes, 52 red on the first pass, baseline 11,748 / 0 before
+  and after on every copy, no needle mismatched, nothing crashed** (every run totalled 11,748). Biggest: the write turning 0 and a
+  blank into 1% fails **24**, the blocker ignoring a sent packet **16**, Q8's percentages unspelled **15**, no package reading as a
+  package **13**, the ungated write **12**; the rest 1–6.
+  - **⚠ THE ONE GREEN WAS MY TEST.** Reverting the estate form's approved stamp to the tab's globals passed, because the check
+    looked for the *other client's* name — and restoring only the condition stamps this job *Approved for Sending* with its own
+    empty approver, so no foreign name appears. It asserts the stamp itself now, both ways and escaped; re-done it fails 1. The
+    same shape this file keeps recording: a check that looks for the symptom it imagined rather than the state it protects.
+- **Verified in headless Chromium, `tests/browser/step29.js`** (step 26 when written; `main` had taken 26–28 by the merge)**, 62
+  checks, 0 failed, 0 page errors**, through the real Build
+  Estimate, the real pop-up and the real rail: an ordinary rush estimate and its invoices read *priority scheduling*; the
+  Concierges control at 2 and a crew above the recommendation each name themselves; the final's summary reads *Original Estimate*
+  = the estimate with *Approved Change Orders (1)* under it; a blank discount refused, 0 removing it, the agreement revoked with
+  *"A discount changed the price…"* on the row; a sent packet leaving no *Offer discount* and `dashOfferDiscount` refusing; the
+  preview packet with no Print and nothing filed, then Print after Won; the Q8 sentences and the materials sentence in the real
+  agreements; overflow 0 at 1440 and 390. **Against the pre-change build it fails 42.** `run.sh`'s default list is 1–29;
+  steps 1–28 re-run on the merged tree, 0 failed — **1,393 browser checks across the twenty-nine**. The first `<style>` block is
+  byte-identical at 98,760 bytes — no CSS; the pop-up gained a hint and a message slot in its markup.
+- Manual **§5c** (the rush bullet corrected; 0 removes, the button goes after the packet), **§7**, **§8** (the preview, Q8, the
+  materials sentence, discount after the packet; the *Awaiting Client Acceptance* note corrected), **§9a** (the timeline row),
+  **§12**; playbook the lever table (the rush row said it buys *"a second concierge and a bigger crew"*), **Step 6** (two `.stop`s
+  extended), the invoice list (a negative final's clause, stale since the variance line went on 2026-09-11, corrected) and **four**
+  symptom rows. **The playbook's symptom table had no separator row in `CONCIERGE_GUIDE.md`**, so it never rendered as a table;
+  fixed. Both `.md` copies hand-edited; **42 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
+  1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width as before. **Counsel bundle B6** added.
+- **⚠ FOUND, NOT BUILT, FLAGGED TO ANTHONY:** (1) *Edit estimate* is still reachable after the packet is sent, so a price can still
+  move under Exhibit A by that door; (2) a Gmail packet draft created before a discount is not updated by the re-file; (3)
+  `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won survives).
+- **⚠ THE SHAPE TO COPY: a document is checked by adding up its own rows.** Every defect here printed the right figure somewhere
+  and a wrong one beside it, and every earlier test asserted a figure. The matrix reads the page the way a client does.
+
+## ⚠⚠ A FINISHED JOB COULD NOT BE CLOSED UNTIL ITS MIDPOINT WAS PAID, AND THE MIDPOINT WAS ASKED FOR ON DAY ONE (FIXED 2026-09-29)
+The 2026-09-28 workflow audit's findings **H3** (High) and **M8**, with Anthony's decision **Q1** applied as written: *Close is
+allowed any time after activation, and the final can go out with the midpoint still unpaid (the final already reconciles against
+payments received). The midpoint invoice is a secondary button, "due around <halfway date>", until the calendar halfway or half
+the work is done.* App-only, no redeploy.
+
+- **⚠⚠ REPRODUCED ON THE REAL RAIL BEFORE ANYTHING WAS CHANGED** (the real `jobTimeline`, `jobTimelineActions` and `jtBandHtml`,
+  a six-day Estate Settlement activated Wednesday 23 September, halfway Friday the 25th):
+
+  | | pre-change | now |
+  |---|---|---|
+  | activation day, the band's filled button | **✉ Send midpoint invoice** | none — *Do the work — the midpoint invoice is due at the halfway point*, the send an outline reading *due around Sep 25, 2026* |
+  | every room cleared, midpoint sent and unpaid | *Collect the midpoint payment* · **Close job reachable from nowhere** (`allCloseCalls: []`) | the same step, **■ Close job** beside it |
+  | a job closed with the midpoint unpaid | still lit on *Midpoint payment*; **the final unreachable** | **Send final invoice** is the filled button |
+  | `cycleStatus(` in the file | 2 (a definition, and a button overwritten on the next line) | 0 |
+
+- **⚠⚠ THE DEAD END WAS STRUCTURAL, AND THE SECOND DOOR NEVER EXISTED.** The light lands on the earliest unfinished row
+  (`jobTimelineNext`); *Close job* lived on `work_complete` alone, behind both midpoint rows; the final comes after it. The client
+  list's Status button was assigned in `renderJobs` and **overwritten by the Open line on the very next statement**, so it never
+  rendered — the "Re-open" both documents described has never been on a screen. The only way out was to record money that had not
+  arrived, which is the one thing this app most needs never to happen.
+- **■ CLOSE JOB IS AN OUTLINE BUTTON BESIDE EVERY LIT STEP OF AN ACTIVE JOB** — `live && job.status === 'active' && row.key !==
+  'work_complete'`, after the switch in `jobTimelineActions`; `work_complete` keeps it as the filled button. **One call,
+  `activateOrCycle`, from both**, so `jobCloseBlockers` (the vendor ratings) still refuses and cannot be reached around. Keyed on
+  the STATUS rather than a row, because the lit row on an active job can legitimately be an earlier gap (a deposit handed over by
+  cheque never "sent" its invoice).
+  - **⚠ ASKED ONCE, ONLY IN THE STRETCH THAT IS NEW.** `applyJobTransition` confirms *Close this job now?* when no midpoint payment
+    is recorded and the job has never been closed: it names the unpaid midpoint, says the final bills everything not yet paid,
+    names today as the handover date, and says neither can be undone. Cancel changes nothing. **The ratings refusal comes first**
+    (a question the app then refuses is worse than none), and with a midpoint payment on file it asks nothing — the normal close
+    off Work complete is unchanged.
+- **⚠⚠ A SIXTH ROW STATE, `open`, IS WHAT LETS THE FINAL TAKE THE LIGHT.** Once `deliveredOn` is stamped an unsettled midpoint
+  row is `open` and the state walk steps over it (`if (rows[i].open) { … continue; }`). Settled: the invoice row by its own send,
+  a midpoint payment, the final going out or the final paid; the payment row by a midpoint payment or the final paid — **the final's balance is the
+  whole job less everything received, so the midpoint's share is inside it**; that is arithmetic, not generosity. The subs say
+  what settles each (*Not sent — the final invoice bills it* → *Billed on the final invoice*; *Unpaid — the final invoice carries
+  it* → *Paid with the final invoice*), and **✓ Record midpoint payment** rides the strip (no row context there, so the label
+  names the stage).
+  - **⚠ `open` IS NEITHER `done` NOR `waiting`.** Done would read as paid; waiting is the future in grey, and this is money
+    outstanding on work already handed over. Its own class, `.jt-open`, on the rail's node and thread and the track's node and
+    connector, amber (`--warn-tx`, measured `rgb(133, 79, 11)`). `_jtStateCls` maps six states now.
+  - **⚠ NOTHING OFFERS THE MIDPOINT SEND AFTER THE CLOSE** — the row is never live again, and `_jtDocSecondaries` withholds the
+    midpoint's draft link once `deliveredOn` is set — because a midpoint sent after the close bills one share twice. **So *I've
+    sent it* cannot be pressed after the close either**: a midpoint sent from Gmail has to be confirmed before closing, and both
+    documents say so. Reading it (View, Print, the filed copy) stays.
+- **⚠⚠ M8 — THE MIDPOINT IS NOT DUE ON DAY ONE.** `_midNotYet` in `jobTimeline`: a running schedule with a halfway point, today
+  before it, the midpoint neither sent nor drafted, and neither half the work (`workPct >= 0.5`) nor every room locked. The row
+  then carries `notYet`, `dueOn` and a `todo` the band prints; `jobTimelineActions` renders the ONE `_jtSendAction` as an outline
+  with the day formatted there, never in the derivation. **On the halfway day itself it is due** (the calendar halfway is the day,
+  not the day after). A draft is never "not yet"; Home Prep, a plan under three working days and no schedule behave as before.
+  - **⚠⚠ "HALF THE WORK" IS READ TWO WAYS, AND THE SECOND WAS FOUND BY READING THE JOB PLAN, NOT BY ANY TEST.** Half the hours
+    earned by room status, **or every in-scope room locked** — which the Job Plan has always called the project midpoint (its red
+    *All rooms are locked — you're at the project midpoint* banner, its *All rooms locked — the project midpoint* line, its
+    Midpoint & pickups marker), and which the estate agreement bills on (*"upon completion of the Asset Inventory stage or at
+    project midpoint, whichever comes first"*). A locked room earns only its concierge hours, so on hours alone every room locked
+    reads about a third, and **the first cut would have had the band say "not yet" beside a banner saying "you're at the project
+    midpoint"**. `jobProgress` counts `nRooms` / `nLocked` **by room, before the hours check** (a room with unreadable hours is
+    still a room somebody has or has not locked); `jobSchedule` carries `roomsLocked`, and **zero rooms in scope is never "every
+    room locked"**. ⚠ This is a reading of Anthony's *"half the work is done"*, told to him rather than assumed.
+  - **⚠ MOVING THAT COUNT ABOVE THE HOURS CHECK MADE THREE SUITES THROW** — `dashboard-schedule`, `dashboard-utility-bar` and
+    `fixed-price-change-orders`, whose fixtures' rooms carry no hours, so `roomStatusNormalize` had never been reached and was never
+    lifted. Load is not drive, again. Lifted, never stubbed.
+  - **⚠ TWO GUARDS ARE BELT AND BRACES AND THEIR REVERTS ARE GREEN** — `!_closed` (`jobSchedule` answers `done` before `running`,
+    so a running schedule already means no handover stamp) and `_sc.state === 'running'` (`notYet` is only read on a LIVE row,
+    which needs the job active, whose schedule is running whenever it has a halfway). Recorded at the source and in the suite
+    rather than covered by assertions that could not fail.
+- **THE JOB PLAN FOLLOWS THE RAIL.** `planCurrentStage` puts NOW on Close-out for any job with `deliveredOn` (the money-first rule
+  would otherwise hold it on Midpoint & pickups forever); on a closed job the red midpoint banner stands down and *Midpoint invoice
+  sent* reads *not sent — the job is closed, so the final invoice bills it* with no button.
+- **THE DEAD STATUS BUTTON AND `cycleStatus` ARE DELETED; NO RE-OPEN WAS WIRED** — the task's either/or, taken on the side that
+  adds no new way to move a write-once stamp. `JOB_TRANSITIONS.closed: 'active'` stays in the map with nothing pressing it: a
+  Re-open would leave `deliveredOn` standing on an active job, and what that should mean is a decision, not a button. **A close by
+  mistake needs Anthony.** ⚠ One legacy case, noted and not changed: a job closed before the handover stamp shipped (2026-07-30)
+  carries no `deliveredOn`, so its rail reads *Job active* undone and offers Activate job, which would re-open it. Prelaunch, so
+  dummy data only.
+- **12,165 committed checks on the merged tree** (11,850 on this build before the merge; `tests/job-close-midpoint.test.js` new at
+  256, driving the REAL rail, actions, band, transition, Job Plan stage marker and rendered dashboard, and the real `renderJobPlan`
+  for the banner). Restated, never deleted: `job-timeline` (five states → six, each with a class and a node), `closeout-gate` (its
+  slice was anchored on the comment that sat over the dead button, and a slice from a missing anchor is the file's last character),
+  `job-closeout` and `dashboard-schedule` (a close with no midpoint payment now asks — answered yes, with an assertion that a
+  ratings refusal comes BEFORE the question); three sandboxes lift `roomStatusNormalize` (above).
+- **Revert sweep on two tar copies of the tree: 44 changes, every one red except the two belt-and-braces guards above; baselines
+  11,724 / 0 and 11,850 / 0 before and after on each copy, no needle mismatched.** Biggest: the state walk ignoring `open` and the
+  row helper dropping it 19 each, the midpoint never "not yet" 17, Close job removed and the payment row never open 15 each, the
+  early-close question not asked 12, the not-yet midpoint back to the filled button 9, Close offered on every live row and the
+  locked rooms never counted 8 each; the rest 1–6.
+  - **⚠ FIVE REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** (Close removed, the state walk, the payment row
+    never open, the row helper, the strip's Record button) — each check indexed into a result the revert had emptied, so the file
+    stopped at the first one and read as a handful of failures with the rest unrun. Read defensively now; re-done on the second
+    sweep they fail 15 / 19 / 15 / 19 / 4 with every check running.
+- **Verified in headless Chromium, `tests/browser/step28.js`, 58 checks, 0 failed, 0 page errors**, driving the real dashboard, the
+  real Close button and the real question it asks (Cancel, then OK), the real rail and track, the real Job Plan and the real client
+  list, with today pinned through `_todayStr`: on activation day the band has **no filled button** and the send reads *due around
+  Sep 25, 2026*, with Close job beside it; on the halfway day the send is the filled button again; with every room locked on day two
+  it is due, and the Job Plan's red banner and its band agree; on the audit's job **■ Close job** is on the band, Cancel stamps
+  nothing, OK closes it with today's handover date, and **Send final invoice** is the one filled button, the midpoint payment drawn
+  open in amber `rgb(133, 79, 11)` on the desk track and the phone rail and still recordable from the strip; once the final is paid
+  the band reads Complete and nothing is left open; a job whose midpoint never went out closes from its own band with both midpoint
+  rows open; on the closed job the Job Plan's NOW is Close-out, the banner is gone and the derived line has no button; the client
+  list has no Status button and no `cycleStatus`; overflow 0 at 1440 and 390. **Against the pre-change build it fails 6 and stops
+  at section C**, because the Close button it has to press does not exist. `run.sh`'s default list is 1–28; steps 1–27 re-run on
+  the merged tree as regressions, 0 failed — **1,331 browser checks across the twenty-eight**. `step15` and `step20` restated, not
+  weakened: step 15's close now answers the early-close question (the ratings refusal it tests is unchanged, 43), and step 20's
+  band on activation day reads the work rather than the send (the imperative-step rule it tests is unchanged, 69).
+- Manual **§9** (the status table's *Closed* row; the *Re-open resumes* note replaced by *There is no Re-open, and there was
+  never a working one*), **§9a** (the intro's amber ring, the four table rows, a Close note of seven bullets, and the M8 note with
+  every room locked and the closed Job Plan), **§9a-i** (the halfway note corrected — it said the halfway day had nothing to do with
+  the midpoint invoice, while the amber *past the halfway point and the midpoint invoice has not gone out* flag already tied them),
+  **§11** (the Close-out row; the ratings note lost its re-opening clause) and **§12** (closing moves the light to the final).
+  Playbook **Step 10** (the halfway note), **10a** (locking every room makes the midpoint due), **11** (two notes), **13**
+  (rewritten around Close job, the question and the open rows), *If the job dies instead*, the status table, and **seven** new
+  symptom rows plus one corrected. Both `.md` copies hand-edited; **93 sentences parity-checked**; the three apparent misses are
+  curly against straight quotes, two of them in an older note, verified by eye; `doc-structure` green; rendered at 1440/390
+  with 0 overflow and 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as at HEAD.
+- **Noted, not built, and flagged to Anthony:** (1) the final invoice's own wording presumes the midpoint went out — *25%
+  midpoint — invoiced at project midpoint* and *Outstanding from the deposit and midpoint invoices* — which reads slightly off on a
+  job closed with the midpoint never sent; **the money is right**, only the words. (2) The activation-day band has no filled
+  button; a *Log today's hours* primary was considered and not built. (3) No Re-open. (4) **Home Prep is unchanged**: its second
+  payment is due when the vendor schedule is booked, not on a calendar.
+- **⚠ THE SHAPE TO COPY: when a control lives on one row, walk every state in which the rows in front of it can stay unfinished for
+  a reason the crew does not control.** A client's cheque is exactly such a reason, and the only exit the rail left was a false
+  record of it.
 
 ## ⚠⚠ A FRESH ESTIMATE INHERITED THE LAST CLIENT'S — ONE RESET NOW, AND A NET UNDER IT (FIXED 2026-09-29)
 Workflow audit of 2026-09-28, finding **C1 (Critical)**: a fresh estimate on Build Estimate carried settings from the last
@@ -8435,10 +8667,27 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
 
 ## Branches
 - Active feature branch: `claude/exciting-carson-pv156f`
-  (`claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — two sessions ran concurrently off the 2026-09-28
-  workflow audit: finding C1 here, H4 there. Both are on `main`, and this branch merged theirs on the way through; the merge
-  conflicted on the build stamp, CLAUDE.md and **both sessions' `tests/browser/step26.js`**, resolved as a UNION — theirs keeps
-  step 26 and this one is **step 27**.)
+  (`claude/dazzling-mendel-qns7nm`, `claude/elegant-wright-nb6ffk` and `claude/elegant-edison-x0kgyn` shipped alongside it on
+  2026-09-29. This branch's second build — the bottom Reset through the one reset — landed after the other three were on `main`
+  and merged them on the way through; the merge conflicted on the build stamp, CLAUDE.md, `run.sh` and both sessions'
+  `tests/browser/step28.js`, every one resolved as a UNION. Browser steps: H4 keeps 26, C1 27, H3/M8 28, the document findings
+  29, and the Reset build is **step 30**.)
+  (`claude/dazzling-mendel-qns7nm` recorded, before this merge, that it was the active branch, and:)
+  (`claude/elegant-wright-nb6ffk`, `claude/exciting-carson-pv156f` and `claude/elegant-edison-x0kgyn` shipped alongside it on
+  2026-09-29 — FOUR sessions ran concurrently off the 2026-09-28 workflow audit: C1 and H4 on the last two, H3 and M8 on the
+  first, and the document findings (H6, M2, M3, the lows, Q8, Q11) here. All four are on `main`. This branch merged the other
+  three on the way through; the merge conflicted on the build stamp, CLAUDE.md, the playbook's symptom table, `run.sh` and
+  `tests/browser/step26.js`, every one resolved as a UNION, with `_jtDocSecondaries` taking both the closed-job midpoint rule
+  and the preview gate. Browser steps: H4 keeps 26, C1 27, H3/M8 28, and this one is **step 29**.)
+  (`claude/elegant-wright-nb6ffk` recorded, before this merge, that it was the active branch, and:)
+  (`claude/exciting-carson-pv156f` and `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — THREE sessions ran
+  concurrently off the 2026-09-28 workflow audit: C1 (a fresh estimate inheriting the last one's) and H4 (the jobs refresh)
+  there, H3 and M8 (closing a job with the midpoint unpaid, and the midpoint's timing) here. All three are on `main`. This branch
+  took both on the way through by fast-forward, with its own work re-applied on top without a conflict, and the browser steps
+  resolved as a UNION: H4 keeps step 26, C1 step 27, and this one is **step 28**.)
+  (`claude/exciting-carson-pv156f` recorded this about the first two: *two sessions ran concurrently … the merge conflicted on
+  the build stamp, CLAUDE.md and both sessions' `tests/browser/step26.js`, resolved as a UNION — theirs keeps step 26 and this
+  one is step 27*.)
   (`claude/change-order-fixes-ew3m2i` is the previous name.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
@@ -13634,10 +13883,13 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (second pass)** — both documents, against the bottom Reset button running the one
+- Last reconciled against the app: **2026-09-29 (third pass)** — both documents, against the bottom Reset button running the one
   reset (manual §5h; playbook Step 2 and one symptom row); see the entry at the top of this file.
-- Prior pass **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h; playbook Step 2 and four
-  symptom rows).
+- Prior pass **2026-09-29 (second pass)** — both documents, against Close job from activation on, the final after the close with
+  the midpoint unpaid, and the midpoint's timing (manual §9, §9a, §9a-i, §11, §12; playbook Steps 10, 10a, 11 and 13, the status
+  table and eight symptom rows).
+- Prior pass **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h;
+  playbook Step 2 and four symptom rows).
 - Prior pass **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
   concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows); see the entry at the top of this file.
 - Prior pass **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge

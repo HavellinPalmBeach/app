@@ -29,7 +29,7 @@ const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')
 // The invoice, driven the way payments-received drives it — this is the promise that matters
 // most to Anthony's plan ("go fixed price and avoid having to log hours"): a fixed-price final
 // bills with an EMPTY timesheet, and a time-and-materials one still refuses.
-const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
                  '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
                  '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
                  'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',

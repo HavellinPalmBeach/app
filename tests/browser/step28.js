@@ -1,216 +1,241 @@
-// Step 28 — the bottom Reset button runs the one reset, for the client the screen is bound to
-// (2026-09-29, the same day as C1 and step 27).
+// Step 28 — Close job and the midpoint (2026-09-29, workflow audit H3 and M8).
 //
-// Measured on the pre-change build: a premium Estate Settlement contracted at Contents list, six rooms,
-// $22,505. Reset asked nothing, unticked Premium Estate, set the documentation scope to Full, and kept
-// the discount, the move styling, the private note, the collection, the car, the prep line, the planner
-// date and a half-typed collection. The same six rooms scored again priced at $17,700 — Premium off took
-// $8,900 and Full put $4,095 back, so the new total still looked like a price. It is
-// resetEstimateJobState(bound job) now. This drives the REAL page:
-//   A. The job priced as contracted, then everything a person can leave on the screen.
-//   B. Reset, Cancel: nothing changes.
-//   C. Reset, OK: the question names the client and says nothing is saved; the screen is a blank
-//      estimate for THIS client — premium and Contents list from the job, the walker from the job,
-//      the home value and square footage kept — and the same six rooms price at the contract figure.
-//   D. Saved: Reset leaves the saved estimate as it is and says so; Start over then reopens it.
-//   E. Locked: out for approval the button is disabled, and calling Reset anyway refuses and clears nothing.
-//   F. Overflow at 1440 and 390.
+//   H3: "a finished job can't be closed, or sent its final invoice, until a midpoint payment is
+//        recorded … With the midpoint invoice sent and unpaid, the band reads 'Collect the midpoint
+//        payment' and nothing can close the job; the only way out is to record money that hasn't
+//        arrived."
+//   M8: "on activation day the band's filled button is 'Send midpoint invoice', while the estimate
+//        says the midpoint is due at the project midpoint."
+//
+// Both were reproduced on the old build before anything changed. This drives the REAL page: the real
+// Client Dashboard and its band, the real Close job button and the real question it asks (answered
+// Cancel, then OK), the real rail and track, the real Job Plan, and the real client list. ⚠ Today is
+// PINNED through `_todayStr`, the app's one wall-clock read, so the dates mean the same thing on every
+// day this is re-run.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step28.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
-const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
-// ⚠ Held outside the async body so the catch can close it: run against the pre-change build a check
-// throws, and a catch that leaves Chromium open reads as a hang rather than as failures.
-let b = null;
-const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
-const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
-const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
-const same = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [got ' + JSON.stringify(a) + ', want ' + JSON.stringify(e) + ']');
+const ok = (c, m) => { if (c) pass++; else { fail++; console.log('  FAIL ' + m); } };
+const eq = (a, b, m) => ok(JSON.stringify(a) === JSON.stringify(b), m + ' (got ' + JSON.stringify(a) + ')');
+const has = (s, n, m) => ok(String(s).indexOf(n) >= 0, m + ' (in ' + JSON.stringify(String(s).slice(0, 400)) + ')');
+const lacks = (s, n, m) => ok(String(s).indexOf(n) < 0, m + ' (found ' + JSON.stringify(n) + ')');
+const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
+let b;
+
 (async () => {
-  b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+  b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
-  p.setDefaultTimeout(8000);
-  const errs = []; p.on('pageerror', e => errs.push(String(e)));
-  const dialogs = []; let answer = true;
-  p.on('dialog', async d => { dialogs.push(d.message()); if (d.type() === 'confirm' && !answer) await d.dismiss(); else await d.accept(); });
+  const errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  let answer = true; const dialogs = [];
+  p.on('dialog', async (d) => { dialogs.push(d.message()); if (answer) await d.accept(); else await d.dismiss(); });
   await p.goto(APP); await p.waitForTimeout(1500);
-  const future = (() => { const d = new Date(); d.setDate(d.getDate() + 30);
-    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
-    return d.toISOString().slice(0, 10); })();
+  const overflow = () => p.evaluate(() => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth));
+  const setToday = (d) => p.evaluate((d) => { window._todayStr = function () { return d; }; }, d);
 
-  // A premium Estate Settlement, contracted at Contents list, walked by Ashley.
-  await p.evaluate(() => { const b = document.getElementById('btn-add-client'); if (b) b.click(); }); await p.waitForTimeout(300);
-  const id = await p.evaluate((wt) => {
-    const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
-    const pick = (id) => { const e = document.getElementById(id); const o = e && Array.from(e.options).find(x => x.value); if (o) { e.value = o.value; if (e.onchange) e.onchange(); } };
-    set('i-svc', 'cleanout'); toggleIntakeFields();
-    set('i-fname', 'Pat'); set('i-lname', 'Resetson'); set('i-addr', '69 Beach Blvd'); set('i-city', 'Palm Beach'); set('i-zip', '33480');
-    set('i-sqft', '3500'); set('i-home-value', '4200000');
-    set('i-date-of-death', '2026-06-01'); set('i-executor-fname', 'Tripp'); set('i-executor-lname', 'Butler');
-    set('i-executor-email', 'tb@example.com'); set('i-executor-phone', '(561) 555-0111'); pick('i-executor-role');
-    set('i-matter-type', 'probate'); set('i-doc-tier', 'contents');
-    set('i-prem', 'yes'); set('i-site-visit-by', 'Ashley Jerome');
-    pick('i-ptype'); pick('i-src'); set('i-walkthrough', wt);
-    const st = new Date(wt); st.setDate(st.getDate() + 7); while (st.getDay() === 0 || st.getDay() === 6) st.setDate(st.getDate() + 1);
-    set('i-start', st.toISOString().slice(0, 10)); saveIntake(); return (jobs[0] || {}).id;
-  }, future);
-  await p.waitForTimeout(1500);
-  const open = async () => { await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(900); };
+  // Two Estate Settlement jobs, six working days each, activated Wednesday 23 September: working days
+  // 23, 24, 25, 28, 29, 30 — so the halfway point is Friday the 25th. 7101 will have its midpoint
+  // invoice SENT and unpaid (the audit's case); 7102 will never send one.
+  await p.evaluate(() => {
+    const mk = (id, name) => ({ id, hvlId: 'HVL-26' + id, name, fname: name.split(' ')[0], lname: name.split(' ').slice(-1)[0],
+      sqft: '3000', svc: 'cleanout', addr: '200 Worth Ave', city: 'Palm Beach', email: 'x' + id + '@example.com', phone: '(561) 555-0100',
+      start: '2026-09-23', activatedOn: '2026-09-23', walkthrough: '2026-09-10', created: '2026-09-08', status: 'active', won: true,
+      wonAt: '2026-09-12', approved: true, estimateSentDate: 'Sep 11, 2026', agrApproved: true, agrApprovedBy: 'Anthony Graziano',
+      agrSent: true, agrSigned: true, depositReceived: true, depositReceivedAt: '2026-09-19', tc: 'Ashley Jerome',
+      payments: [{ id: 1, uid: 'p1' + id, stage: 'deposit', amount: 10000, date: '2026-09-19', method: 'wire', clearedOn: '2026-09-19' }],
+      docState: { 'invoice:deposit': { draftedAt: '2026-09-15T15:00:00Z', sentAt: '2026-09-15T15:00:00Z' } } });
+    const est = (id) => ({ jobId: id, svc: 'cleanout', days: 6, totTC: 10, totPS: 20, havellinTotal: 20000, psCount: 2,
+      rooms: [{ idx: 1, name: 'Kitchen', section: 'Kitchen & Utility', vol: 3, cplx: 3, tcH: 5, psH: 10 },
+              { idx: 2, name: 'Study', section: 'Entry & Living', vol: 3, cplx: 3, tcH: 5, psH: 10 }],
+      vendors: [], collections: [], prepItems: [] });
+    [mk(7101, 'Harriet ZZ Whitcombe'), mk(7102, 'Edmund ZZ Farrow')].forEach((j) => {
+      jobs.unshift(j);
+      estimateStore[j.id] = { estimate: est(j.id), approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: Date.now() };
+    });
+    saveJobs();
+  });
 
-  const screen = () => p.evaluate(() => {
-    const v = (id) => { const e = document.getElementById(id); return e ? (e.type === 'checkbox' ? e.checked : e.value) : '(none)'; };
-    return {
-      job: v('e-job'), prem: v('e-prem'), scope: _estimateDocScope, discount: v('e-discount'), styling: v('e-move-styling'),
-      note: v('e-private-note'), noteVar: _privateWalkNote, by: v('e-prepared-by'), target: v('tp-target'),
-      collections: collectionsData.map(c => c.name), vehicles: vehiclesData.map(x => x.desc),
-      prep: prepItems.map(x => x.type), vendors: vendors.map(x => x.type),
-      newCol: v('new-col-name'), newVeh: v('new-veh-desc'), propval: v('e-propval'), sqft: v('e-sqft'),
-      inScope: Array.from(document.querySelectorAll('.scope-toggle')).filter(t => t.getAttribute('data-state') !== 'off').length,
-      // The two tables render each line as INPUTS, so a textContent read passes over a full table.
-      tableLines: ['collections-body', 'vehicles-body'].map(function (id) {
-        var t = document.getElementById(id);
-        return t ? Array.from(t.querySelectorAll('input')).map(function (i) { return i.value; }).join(' | ') + ' ' + t.textContent : '(no ' + id + ')';
-      }).join(' || '),
-      fb: (document.getElementById('e-fb') || {}).textContent || '',
-      total: currentEstimate ? currentEstimate.havellinTotal : null,
-    };
-  });
-  const sixRooms = async () => { await p.evaluate(() => { for (let i = 0; i < 6; i++) document.getElementById('chk-r' + i).click(); calcAll(); }); await p.waitForTimeout(150); };
-  // Everything a person can leave on this client's screen, through the real controls where there is one.
-  const leaveEverything = () => p.evaluate(() => {
-    const fire = (el, ev) => el.dispatchEvent(new Event(ev, { bubbles: true }));
-    const d = document.getElementById('e-discount'); d.value = '10'; fire(d, 'input'); fire(d, 'change');
-    const s = document.getElementById('e-move-styling'); s.checked = true; fire(s, 'change');
-    const n = document.getElementById('e-private-note'); n.value = 'The son contests the will.'; fire(n, 'input');
-    document.getElementById('new-col-name').value = 'Resetson coin collection';
-    document.querySelector('button[onclick="addCollection()"]').click();
-    document.getElementById('new-veh-desc').value = '1960 Resetson Corvette';
-    document.querySelector('button[onclick="addVehicle()"]').click();
-    document.getElementById('new-col-name').value = 'half-typed';
-    const t = document.getElementById('tp-target'); t.value = '2026-12-18'; fire(t, 'change');
-    const by = document.getElementById('e-prepared-by'); const other = Array.from(by.options).find(o => o.value && o.value !== 'Ashley Jerome');
-    if (other) { by.value = other.value; fire(by, 'change'); }
-    // The category pickers fill from the vendor directory, empty offline — so these two are pushed the
-    // way step 21 does, and drawn through the real renderers.
-    prepItems.push({ type: 'Painting', cost: 5000, lid: _srcLid() }); renderPrepItems();
-    vendors.push({ type: 'Mover', cost: 3000, lid: _srcLid() }); renderVendors();
-    calcAll();
-  });
-  const pressReset = async (yes) => {
-    answer = yes; dialogs.length = 0;
-    await p.evaluate(() => { document.getElementById('e-fb').innerHTML = ''; });
-    await p.click('button[onclick="resetEstimate()"]'); await p.waitForTimeout(400);
-    answer = true;
+  const openDash = async (id) => {
+    await p.evaluate((id) => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(id); }, id);
+    await p.waitForTimeout(300);
   };
+  const band = (id) => p.evaluate((id) => {
+    const nx = document.querySelector('#client-dashboard-view .jt-next');
+    const t = (el) => (el ? el.textContent.replace(/\s+/g, ' ').trim() : '');
+    return {
+      step: t(nx && nx.querySelector('.jt-next-step')),
+      filled: nx ? Array.from(nx.querySelectorAll('.jt-btn-p')).map((x) => ({ t: t(x), c: x.getAttribute('onclick') })) : [],
+      outline: nx ? Array.from(nx.querySelectorAll('button.jt-btn:not(.jt-btn-p)')).map((x) => ({ t: t(x), c: x.getAttribute('onclick') })) : [],
+      page: document.getElementById('client-dashboard-view').innerHTML,
+    };
+  }, id);
 
-  // ── A ─────────────────────────────────────────────────────────────────
-  console.log('## A. As contracted, then everything left on the screen');
-  await open();
-  await sixRooms();
-  const contract = await screen();
-  same([contract.prem, contract.scope], [true, 'capture'], 'the job opens premium, at Contents list (the scope intake recorded)');
-  ok(contract.total > 0, 'six rooms price at the contract figure ($' + contract.total + ')');
-  await leaveEverything();
-  const left = await screen();
-  same([left.discount, left.styling, left.note, left.target, left.collections, left.vehicles, left.prep, left.vendors, left.newCol],
-    ['10', true, 'The son contests the will.', '2026-12-18', ['Resetson coin collection'], ['1960 Resetson Corvette'], ['Painting'], ['Mover'], 'half-typed'],
-    'the screen carries a discount, styling, a private note, a planner date, a collection, a car, a prep line, a vendor and a half-typed line');
-  ok(left.by && left.by !== 'Ashley Jerome', 'and names somebody other than the job\'s walker (' + left.by + ')');
-  has(left.tableLines, 'Resetson coin collection', 'the collections table shows the coin collection (so the check after Reset can fail)');
+  // ── A. ACTIVATION DAY (M8) ─────────────────────────────────────────────
+  console.log('\n## A. Activation day — the midpoint invoice is not the filled button');
+  await setToday('2026-09-23');
+  await openDash(7101);
+  let s = await band(7101);
+  eq(s.step, 'Do the work — the midpoint invoice is due at the halfway point', 'the band says to do the work, and when the invoice falls due');
+  eq(s.filled.length, 0, '⚠⚠ the band has NO filled button on activation day (it was Send midpoint invoice)');
+  const sendEarly = s.outline.filter((x) => /Send midpoint invoice/.test(x.t))[0] || { t: '', c: '' };
+  eq(sendEarly.t, '✉ Send midpoint invoice — due around Sep 25, 2026', 'the send is an outline button naming the halfway day');
+  eq(sendEarly.c, "docAction(7101,'invoice','send',{stage:'midpoint'})", 'and it is the same send every document uses');
+  ok(s.outline.some((x) => x.c === 'activateOrCycle(7101)' && /Close job/.test(x.t)), 'Close job sits beside it from day one');
+  has(s.page, 'Planned halfway point Sep 25, 2026', 'the rail row carries the same day as its plan');
+  const ovA = []; for (const w of [1440, 390]) { await p.setViewportSize({ width: w, height: 900 }); await openDash(7101); ovA.push(await overflow()); }
+  eq(ovA, [0, 0], 'the activation-day dashboard fits at 1440 and 390');
+  await p.setViewportSize({ width: 1440, height: 1000 });
 
-  // ── B ─────────────────────────────────────────────────────────────────
-  console.log('## B. Reset, then Cancel');
-  await pressReset(false);
-  ok(dialogs.length === 1, 'Reset asks first (' + dialogs.length + ' question)');
-  const kept = await screen();
-  same([kept.discount, kept.note, kept.collections, kept.inScope], ['10', 'The son contests the will.', ['Resetson coin collection'], 6],
-    'Cancel changes nothing — the discount, the note, the collection and the six rooms are all still there');
+  // ── B. THE HALFWAY DAY ─────────────────────────────────────────────────
+  console.log('\n## B. On the halfway day the midpoint invoice is the filled button again');
+  await setToday('2026-09-25');
+  await openDash(7101);
+  s = await band(7101);
+  eq(s.filled.map((x) => x.c), ["docAction(7101,'invoice','send',{stage:'midpoint'})"], 'Send midpoint invoice is the one filled button on the 25th');
+  eq(s.step, 'Send the midpoint invoice', 'and the band reads the ordinary step');
 
-  // ── C ─────────────────────────────────────────────────────────────────
-  console.log('## C. Reset, then OK');
-  await pressReset(true);
-  const q = dialogs.join(' | ');
-  has(q, 'blank estimate for Pat Resetson', 'the question names the client');
-  has(q, 'the private walkthrough note', 'and names the private note among what goes');
-  has(q, 'None of it has been saved', 'and says nothing here is saved');
-  const r = await screen();
-  same(r.job, String(id), 'still bound to the same client');
-  same(r.prem, true, '⚠ Premium Estate stays on — it is the job\'s answer (the old Reset unticked it)');
-  same(r.scope, 'capture', '⚠ the scope is Contents list, what intake recorded (the old Reset set Full)');
-  same(r.by, 'Ashley Jerome', 'who walked the house is the job\'s answer again');
-  same([r.propval, r.sqft], ['4200000', '3500'], 'the home value and square footage are the job\'s, untouched');
-  same(r.discount, '0', '⚠ no discount');
-  same(r.styling, false, 'no move styling');
-  same([r.note, r.noteVar], ['', ''], '⚠ no private note, in the box or behind it');
-  same(r.target, '', 'no planner date');
-  same([r.collections, r.vehicles, r.prep, r.vendors], [[], [], [], []], '⚠ no collection, car, prep line or vendor');
-  lacks(r.tableLines, 'Resetson', 'and neither table shows a line of them');
-  same([r.newCol, r.newVeh], ['', ''], 'the add-a-line boxes are empty');
-  same(r.inScope, 0, 'no room in scope');
-  has(r.fb, 'Cleared to a blank estimate.', 'and the line under the button says so');
-  await sixRooms();
-  const again = await screen();
-  same(again.total, contract.total, '⚠⚠ the same six rooms price at the contract figure again ($' + again.total + ' of $' + contract.total + ')');
+  // ── B2. EVERY ROOM LOCKED, BEFORE THE HALFWAY DAY ─────────────────────
+  // The Job Plan has always called every room locked the project midpoint (its red banner, its derived
+  // line); the band must not say "not yet" beside a banner saying "you're at the project midpoint".
+  console.log('\n## B2. Every room locked before the halfway day — the band and the Job Plan agree it is due');
+  await setToday('2026-09-24');
+  await p.evaluate(() => { jobPlanStore[7101] = { rooms: { 1: { status: 'locked' }, 2: { status: 'locked' } } }; });
+  await openDash(7101);
+  s = await band(7101);
+  eq(s.step, 'Send the midpoint invoice', 'every room locked on day 2: the band asks for the midpoint');
+  eq(s.filled.map((x) => x.c), ["docAction(7101,'invoice','send',{stage:'midpoint'})"], 'and Send midpoint invoice is its filled button');
+  ok(await p.evaluate(() => openJobPlanFor(7101)), 'the Job Plan opens on the same job');
+  await p.waitForTimeout(500);
+  const planB2 = await p.evaluate(() => ({ html: (document.getElementById('job-plan-content') || {}).innerHTML || '',
+    prim: ((document.querySelector('#jband-slot-plan .jt-btn-p') || { getAttribute: () => '' }).getAttribute('onclick')) }));
+  has(planB2.html, 'All rooms are locked', 'the Job Plan carries its red project-midpoint banner');
+  has(planB2.html, 'collection takes time', 'and its Midpoint invoice sent line still asks for it');
+  eq(planB2.prim, "docAction(7101,'invoice','send',{stage:'midpoint'})", '⚠⚠ and the Job Plan\'s band asks for the same invoice, beside it');
 
-  // ── D ─────────────────────────────────────────────────────────────────
-  console.log('## D. With an estimate saved');
-  await leaveEverything();
-  await p.evaluate(() => document.querySelector('button[onclick="saveEstimateAndPreview()"]').click());
-  await p.waitForTimeout(2200);
-  const savedRec = await p.evaluate((id) => estimateStore[id] && JSON.parse(JSON.stringify(estimateStore[id].estimate)), id);
-  ok(!!(savedRec && savedRec.rooms && savedRec.rooms.length === 6 && savedRec.discountPct === 10), 'the estimate is saved: six rooms at a 10% discount');
-  await open();
-  same((await screen()).discount, '10', 'reopened, it reads its saved 10%');
-  // ⚠ WAIT OUT THE EARLIER MESSAGES. showFB arms an unconditional 4-second clear on every message, so
-  // the Save's and the reopen's own timers can wipe a later message early (a pre-existing race, recorded
-  // in CLAUDE.md). Without this wait the check on Reset's line below reads a timer, not Reset.
-  await p.waitForTimeout(4300);
-  await p.evaluate(() => { const d = document.getElementById('e-discount'); d.value = '12'; d.dispatchEvent(new Event('input', { bubbles: true })); calcAll(); });
-  const beforeReset = await p.evaluate((id) => JSON.stringify(estimateStore[id]), id);
-  await pressReset(true);
-  const qs = dialogs.join(' | ');
-  has(qs, 'The saved estimate is not changed unless you press Save', 'the question says the saved estimate is not touched');
-  has(qs, 'Start over reopens it instead', 'and points at the button that goes back to it');
-  lacks(qs, 'None of it has been saved', 'and never claims nothing is saved');
-  const rs = await screen();
-  same([rs.discount, rs.note, rs.collections, rs.inScope], ['0', '', [], 0], 'the screen is blank');
-  has(rs.fb, 'The saved estimate is unchanged until you press Save', 'and the line under the button says the saved one is unchanged');
-  const afterReset = await p.evaluate((id) => JSON.stringify(estimateStore[id]), id);
-  ok(afterReset === beforeReset, '⚠ the saved record is exactly as it was before Reset');
-  dialogs.length = 0;
-  await p.evaluate(() => document.querySelector('button[onclick="startEstimateOver()"]').click());
-  await p.waitForTimeout(900);
-  has(dialogs.join(' | '), 'reopen the saved estimate', 'Start over then offers the saved estimate');
-  const back = await screen();
-  same([back.discount, back.collections, back.inScope, back.prem, back.scope], ['10', ['Resetson coin collection'], 6, true, 'capture'],
-    'and brings it back: its 10%, its collection, its six rooms, premium, Contents list');
+  // ── C. H3: EVERY ROOM CLEARED, MIDPOINT SENT AND UNPAID ────────────────
+  console.log('\n## C. The audit\'s case — every room cleared, midpoint invoice sent and unpaid');
+  await setToday('2026-09-30');
+  await p.evaluate(() => {
+    const j = jobs.find((x) => x.id === 7101);
+    j.docState['invoice:midpoint'] = { draftedAt: '2026-09-25T15:00:00Z', sentAt: '2026-09-25T15:00:00Z' };
+    jobPlanStore[7101] = { rooms: { 1: { status: 'cleared' }, 2: { status: 'cleared' } } };
+    saveJobs();
+  });
+  await openDash(7101);
+  s = await band(7101);
+  eq(s.step, 'Collect the midpoint payment', 'the band is on collecting the midpoint');
+  eq(s.filled.map((x) => x.c), ["dashRecordPayment(7101,'midpoint')"], 'Record payment is the filled button');
+  ok(s.outline.some((x) => x.c === 'activateOrCycle(7101)'), '⚠⚠ and Close job is reachable from that band — the dead end is gone');
 
-  // ── E ─────────────────────────────────────────────────────────────────
-  console.log('## E. Locked');
-  const lockedBtn = await p.evaluate(() => { estimateSubmitted = true; applyEstimateLock(); return document.querySelector('button[onclick="resetEstimate()"]').disabled; });
-  ok(lockedBtn, 'out for approval, the Reset button is disabled');
-  dialogs.length = 0;
-  const refused = await p.evaluate(() => { document.getElementById('e-fb').innerHTML = ''; resetEstimate();
-    return { fb: document.getElementById('e-fb').textContent, disc: document.getElementById('e-discount').value, n: collectionsData.length,
-             rooms: Array.from(document.querySelectorAll('.scope-toggle')).filter(t => t.getAttribute('data-state') !== 'off').length }; });
-  same(dialogs.length, 0, '⚠ called anyway, it asks nothing');
-  same([refused.disc, refused.n, refused.rooms], ['10', 1, 6], 'and clears nothing — the working copy a manager is reviewing keeps its discount, collection and six rooms');
-  has(refused.fb, 'out for manager approval', 'and says why');
-  await p.evaluate(() => { estimateSubmitted = false; applyEstimateLock(); });
+  // Press Close, answer Cancel.
+  answer = false; dialogs.length = 0;
+  await p.click('#client-dashboard-view .jt-next button[onclick="activateOrCycle(7101)"]');
+  await p.waitForTimeout(300);
+  eq(dialogs.length, 1, 'pressing Close asks once');
+  has(dialogs[0] || '', 'No midpoint payment is recorded', 'naming the unpaid midpoint');
+  has(dialogs[0] || '', 'the final invoice bills everything not yet paid', 'and what the final does about it');
+  has(dialogs[0] || '', 'Sep 30, 2026', 'and today as the handover date');
+  has(dialogs[0] || '', 'cannot be re-opened', 'and that it cannot be undone');
+  const cancelled = await p.evaluate(() => { const j = jobs.find((x) => x.id === 7101); return { st: j.status, d: j.deliveredOn || '' }; });
+  eq(cancelled, { st: 'active', d: '' }, 'Cancel leaves the job active with no handover date stamped');
 
-  // ── F ─────────────────────────────────────────────────────────────────
-  for (const w of [1440, 390]) {
-    await p.setViewportSize({ width: w, height: 900 });
-    await p.waitForTimeout(200);
-    const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    ok(ov <= 0, 'Build Estimate fits at ' + w + 'px (overflow ' + ov + ')');
-  }
+  // Press it again, answer OK.
+  answer = true; dialogs.length = 0;
+  await p.click('#client-dashboard-view .jt-next button[onclick="activateOrCycle(7101)"]');
+  await p.waitForTimeout(400);
+  const closed = await p.evaluate(() => { const j = jobs.find((x) => x.id === 7101); return { st: j.status, d: j.deliveredOn || '' }; });
+  eq(closed, { st: 'closed', d: '2026-09-30' }, 'OK closes the job and stamps today as the handover');
+  s = await band(7101);
+  eq(s.step, 'Send the final invoice', '⚠⚠ the band moves to the FINAL invoice');
+  eq(s.filled.map((x) => x.c), ["docAction(7101,'invoice','send',{stage:'final'})"], 'and Send final invoice is its one filled button');
+  ok(!s.outline.some((x) => x.c === 'activateOrCycle(7101)'), 'a closed job is offered no Close');
+  const rail = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view .jt-rail .jt-row')).map((r) => ({
+    cls: r.className.replace('jt-row ', ''), lbl: (r.querySelector('.jt-lbl') || {}).textContent, sub: (r.querySelector('.jt-sub') || {}).textContent || '' })));
+  const mr = rail.filter((r) => r.lbl === 'Midpoint payment')[0] || {};
+  eq(mr.cls, 'jt-open', 'the midpoint payment is drawn OPEN on the rail');
+  eq(mr.sub, 'Unpaid — the final invoice carries it', 'saying what settles it');
+  eq((rail.filter((r) => r.lbl === 'Final invoice sent')[0] || {}).cls, 'jt-cur', 'and the final invoice is the current step');
+  has(s.page, "dashRecordPayment(7101,'midpoint')", 'the midpoint payment can still be recorded, from the strip');
+  has(s.page, 'Record midpoint payment', 'under a label that names the stage');
+  lacks(s.page, "docAction(7101,'invoice','send',{stage:'midpoint'})", 'nothing on the page sends the midpoint a second time');
+  lacks(s.page, 'activateOrCycle(7101)', 'and nothing on the page re-opens the job');
+  const onc = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view [onclick]')).map((e) => e.getAttribute('onclick')));
+  eq(onc.length, new Set(onc).size, 'every control on the closed job\'s dashboard is unique');
+
+  // The colour of the open state, measured rather than assumed — on the track (desk) and the rail (phone).
+  const trackNode = await p.evaluate(() => { const n = document.querySelector('#client-dashboard-view .jt-step.jt-open .jt-node');
+    return n ? getComputedStyle(n).borderTopColor : null; });
+  eq(trackNode, 'rgb(133, 79, 11)', 'the open node on the desk track is amber (--warn-tx)');
+  await p.setViewportSize({ width: 390, height: 900 }); await openDash(7101);
+  const railNode = await p.evaluate(() => { const r = document.querySelector('#client-dashboard-view .jt-rail .jt-row.jt-open');
+    return r ? { vis: r.offsetParent !== null, c: getComputedStyle(r, '::before').borderTopColor } : null; });
+  eq(railNode, { vis: true, c: 'rgb(133, 79, 11)' }, 'and on the phone rail, visible and amber');
+  eq(await overflow(), 0, 'the closed job\'s dashboard fits at 390');
+  await p.setViewportSize({ width: 1440, height: 1000 }); await openDash(7101);
+  eq(await overflow(), 0, 'and at 1440');
+
+  // The final goes out and is paid — both written as the record, then redrawn.
+  await p.evaluate(() => { const j = jobs.find((x) => x.id === 7101);
+    j.docState['invoice:final'] = { draftedAt: '2026-10-01T15:00:00Z', sentAt: '2026-10-01T15:00:00Z' };
+    j.payments.push({ id: 3, uid: 'p3', stage: 'final', amount: 10000, date: '2026-10-05', method: 'check' }); saveJobs(); });
+  await setToday('2026-10-05'); await openDash(7101);
+  s = await band(7101);
+  has(s.step, 'Every milestone on this job is recorded', 'once the final is paid the band reads Complete');
+  has(s.page, 'Paid with the final invoice', 'and the midpoint row says the final settled it');
+  lacks(s.page, 'jt-row jt-open', 'nothing is left open');
+
+  // ── D. THE MIDPOINT INVOICE NEVER WENT OUT ─────────────────────────────
+  console.log('\n## D. The midpoint invoice was never sent — close from its own band');
+  await setToday('2026-09-29');
+  await p.evaluate(() => { jobPlanStore[7102] = { rooms: { 1: { status: 'cleared' }, 2: { status: 'cleared' } } }; });
+  await openDash(7102);
+  s = await band(7102);
+  eq(s.filled.map((x) => x.c), ["docAction(7102,'invoice','send',{stage:'midpoint'})"], 'past the halfway point the midpoint send is the filled button');
+  answer = true; dialogs.length = 0;
+  await p.click('#client-dashboard-view .jt-next button[onclick="activateOrCycle(7102)"]');
+  await p.waitForTimeout(400);
+  s = await band(7102);
+  eq(s.filled.map((x) => x.c), ["docAction(7102,'invoice','send',{stage:'final'})"], 'closed: the final is the filled button');
+  const rail2 = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view .jt-rail .jt-row')).map((r) => ({
+    cls: r.className.replace('jt-row ', ''), lbl: (r.querySelector('.jt-lbl') || {}).textContent, sub: (r.querySelector('.jt-sub') || {}).textContent || '' })));
+  eq(rail2.filter((r) => /^Midpoint/.test(r.lbl)).map((r) => [r.cls, r.sub]),
+     [['jt-open', 'Not sent — the final invoice bills it'], ['jt-open', 'Unpaid — the final invoice carries it']],
+     'both midpoint rows are open, each saying the final carries it');
+  lacks(s.page, "docAction(7102,'invoice','send',{stage:'midpoint'})", 'and the midpoint send is gone from the page');
+
+  // ── E. THE JOB PLAN ────────────────────────────────────────────────────
+  console.log('\n## E. The Job Plan of a job closed with its midpoint unpaid is in Close-out');
+  ok(await p.evaluate(() => openJobPlanFor(7102)), 'the Job Plan opens on the closed job');
+  await p.waitForTimeout(500);
+  const plan = await p.evaluate(() => {
+    const prim = document.querySelector('#jband-slot-plan .jt-btn-p');
+    return { now: Array.from(document.querySelectorAll('#job-plan-content .stg-cur')).map((e) => e.id),
+      band: ((document.querySelector('#jband-slot-plan .jt-next-step') || {}).textContent || '').trim(),
+      prim: prim ? prim.getAttribute('onclick') : '' };
+  });
+  eq(plan.now, ['stage-p4'], 'the NOW marker is on Close-out, not on Midpoint & pickups');
+  eq(plan.band, 'Send the final invoice', 'the Job Plan\'s band says the same as the dashboard\'s');
+  eq(plan.prim, "docAction(7102,'invoice','send',{stage:'final'})", 'with the same filled button');
+  // Every room is cleared here, so before the close the red project-midpoint banner stood over this plan.
+  const planE = await p.evaluate(() => (document.getElementById('job-plan-content') || {}).innerHTML || '');
+  lacks(planE, 'All rooms are locked', '⚠ the red "send the midpoint" banner stands down on a closed job');
+  has(planE, 'not sent — the job is closed, so the final invoice bills it', 'and Midpoint invoice sent says the final bills it');
+  lacks(planE, "openInvoiceFor(7102,'midpoint')", 'with nothing left on the plan that opens the midpoint invoice');
+
+  // ── F. THE CLIENT LIST ─────────────────────────────────────────────────
+  console.log('\n## F. The client list carries no dead Status button, and nothing is left calling one');
+  await p.evaluate(() => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); closeClientDashboard(); renderJobs(); });
+  await p.waitForTimeout(200);
+  const list = await p.evaluate(() => ({ status: Array.from(document.querySelectorAll('#panel-jobs button')).filter((x) => x.textContent.trim() === 'Status').length,
+    fn: typeof window.cycleStatus, rows: document.querySelectorAll('#panel-jobs button[onclick*="openClientDashboard"]').length }));
+  eq(list.status, 0, 'no Status button on the client list');
+  eq(list.fn, 'undefined', 'and no cycleStatus function behind one');
+  ok(list.rows >= 2, 'the rows still open their client (' + list.rows + ')');
+
   ok(errs.length === 0, 'no page errors (' + errs.join(' | ') + ')');
-
   await b.close();
   console.log('\nstep28: ' + pass + ' passed, ' + fail + ' failed');
-})().catch(async e => {
+})().catch(async (e) => {
   console.log('THREW ' + (e && e.stack || e));
   console.log('step28: ' + pass + ' passed, ' + (fail + 1) + ' failed');
   try { if (b) await b.close(); } catch (_) { /* already gone */ }
