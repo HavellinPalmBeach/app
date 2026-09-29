@@ -913,6 +913,17 @@ Hit **Submit for Approval** → manager enters PIN → estimate is locked and ma
 >
 > **A discount changes the price, so it takes the packet’s approval with it.** Offering, changing or removing a discount now revokes the agreement’s approval along with the estimate’s, the *Signing packet sent* row says why, and the next print or send re-files the packet at the new price — before today Drive kept the packet with the old Exhibit A. **Once the packet has been sent, *Offer discount* and *✎ Edit estimate* are both withdrawn**: the client is reading and being asked to sign that price, so a change after that is a change order (§9). *Edit estimate* was the second door (2026-09-29): it stayed until the signature, and pressing it un-approved the estimate and the packet together. Both buttons ask one rule, which reads a DocuSign send as well as an emailed one; pressing either anyway is refused with the reason, and Build Estimate reads **Estimate Locked — Signing Packet Sent**.
 
+> **⚠ A GMAIL DRAFT MADE BEFORE A DISCOUNT IS FLAGGED, NEVER SENT (2026-09-29).** Anthony: *“just flag a previous Gmail draft if a discount is offered.”* A packet sent by email is a **draft in your own Gmail** until you send it and tap **✓ I’ve sent it**, and nothing reaches back into a draft once it is made — so a discount offered in between leaves a draft carrying the old price. On the build before this the row then offered only *I’ve sent it* and *Open the packet draft*, both over that draft. Measured through the real buttons: a packet drafted at $11,750, a 10% discount, the manager’s PIN — and one tap recorded the $11,750 packet as *sent*.
+>
+> **What happens now:**
+> • **Before you apply it**, the discount pop-up names the draft — the day it was made and the Gmail account it is in — and says to delete it and send a fresh packet once the manager re-approves.
+> • **After**, the confirmation says the same in amber, on the dashboard.
+> • The *Signing packet sent* row stops offering *I’ve sent it* and the link to the old draft, names the draft to delete, and offers **Send** again once the price is re-approved.
+> • The fresh send says which of the two drafts to delete, and the line goes once the fresh packet is confirmed sent.
+> **The app never deletes anything in Gmail** — the draft may be in a colleague’s mailbox, and deleting mail is for a person to do knowingly. **Editing the estimate does the same** to a draft made before the edit, and both changes flag an estimate or invoice draft exactly as they flag the packet. It works across two devices: the flag rides on the job, so a discount offered on the other laptop still flags a draft made on this one.
+>
+> **⚠ Already sent it from Gmail and forgot the tap?** Do not apply the discount. Cancel, tap *I’ve sent it*, and the price is then a change order — the pop-up says so. **A discount offered before today set no flag**, so a draft made before an older discount is not named anywhere: if you discounted a job whose packet was drafted and never sent, look in Gmail for it.
+
 > **⚠ THIS NOTE USED TO DESCRIBE A DIFFERENT BUTTON.** Until 2026-09-18 *Generate Payment Link* asked a *separate* Apps Script for a link and mailed it to `billing@`, and nothing ever read back from Stripe. It is **🏦 ACH payment link** now, it sits on the deposit row of the timeline, and the payment records itself when the money lands. See **§8b**.
 
 ### Then, as each thing actually happens
@@ -1366,11 +1377,15 @@ Client estimate · signing packet · deposit invoice · midpoint invoice · fina
 | **👁 View** | Opens the document in a reader over the dashboard. Closing it drops the document. |
 | **🖨 Print** | Print / Save as PDF. The PDF is named for the client and the property, never a database key. |
 | **✉ Send…** | Builds the PDF, creates a **draft in your own Gmail** with it attached and the right department CC'd, and opens it. |
-| **✓ I've sent it** | Appears after the draft is made. Press it once you have actually sent the mail. |
-| **↗ Open the … draft** | Re-opens the draft you made. It is withdrawn once you confirm the send. |
+| **✓ I've sent it** | Appears after the draft is made. Press it once you have actually sent the mail. **Withdrawn if the price changes after the draft was made** — a discount or *Edit estimate* leaves that draft at the old price, and the row names it for you to delete instead. |
+| **↗ Open the … draft** | Re-opens the draft you made. It is withdrawn once you confirm the send, and when a price change leaves the draft out of date. |
 | **📁 Filed copy** / **📁 File to Drive** | Opens the copy in the client's Drive folder, or files it if that did not land. |
 
 > **Why there are two taps and not one.** The app is allowed to *create* a Gmail draft and is deliberately not allowed to send one — that is the feature: every client email is read by a person before it goes. So between the app making the draft and the mail leaving there is a real gap the app cannot see across. Pressing **Send** records a *draft*; pressing **✓ I've sent it** records the *send*. Recording the draft as a send would turn the timeline green over an untouched draft sitting in a mailbox — and on the estimate, that is what unlocks Mark Won. The row says *"Drafted — read it, send it, then confirm"* while it is waiting.
+
+> **⚠ A DRAFT THE PRICE HAS MOVED PAST IS NOT THE DRAFT ANY MORE (2026-09-29).** Nothing reaches back into a Gmail draft once it is made, so a discount or an *Edit estimate* between the draft and the send leaves it at the old price. Until today the row went on offering **✓ I’ve sent it** over it, and one tap recorded the old-price document as sent. Now the tap and the link to that draft go, **Send** comes back, and the row names the draft to delete — *“The Gmail draft from Sep 29 (anthony@…) has the old price — delete it, don’t send it”*, or *“was made before the estimate was edited”* after an edit. A fresh send tells the two drafts apart until the new one is confirmed. The app never deletes anything in Gmail; the details are in §8.
+
+> **A message on the dashboard stays until you do something (2026-09-29).** The app refreshes the dashboard on its own — when the client list or the estimates finish loading, while it checks for the manager’s decision, and when DocuSign or Stripe answers — and until today each of those refreshes wiped whatever message was above the timeline. Submitting an estimate starts the manager-approval check at once, so *“Submitted for manager approval”* and the discount’s own confirmation both vanished a second after they appeared. A refresh the app makes on its own keeps the message now; the next thing you press or open replaces it.
 
 > **The confirming tap belongs to the mail provider, not to the document.** If a sender that can send on its own is ever wired in, the tap disappears by itself on all five documents. Nothing on screen needs changing for that.
 

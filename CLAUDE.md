@@ -23,6 +23,139 @@ Merged to `main` on 2026-09-29**, after sitting on the audit's own branch when t
 - **⚠ THE SHAPE TO COPY, FROM H2:** a browser step that reaches a handler through `page.evaluate` proves the handler, not that
   anybody can reach it. Press the control.
 
+## ⚠⚠ A GMAIL DRAFT A DISCOUNT LEFT BEHIND COULD BE CONFIRMED AS SENT — IT IS FLAGGED NOW, AND THE DASHBOARD KEEPS ITS MESSAGE (FIXED 2026-09-29)
+Anthony, three items in one line: *"done allow edit after a signing packet has been sent. just flag a previous Gmail draft if a
+discount is offered. the final invoice shouldn't go out until after the mid point, right?"* App-only, **no Apps Script redeploy**.
+
+- **The first was already built and on `main`** (084c00b, c2f1e3d, 46d8f06 — the *Edit estimate goes once the signing packet
+  is out* entry, two below): *Edit estimate* and *Offer discount* both go once the signing packet is out, and Reset's refusal
+  asks the same rule.
+- **The third is a question, answered and put back to him, not built** — the last subsection.
+
+### ⚠⚠ THE DEFECT, REPRODUCED THROUGH THE REAL BUTTONS BEFORE ANYTHING CHANGED
+- A document sent by email is a **draft** until a person sends it and taps *✓ I've sent it*, and nothing reaches back into a draft
+  once it is made. On `main`: a signing packet drafted by email at **$11,750** (deposit $5,875), a 10% discount (**$10,575**,
+  deposit $5,288), the manager's PIN — and the band offered **only** *✓ I've sent it* and *↗ Open the packet draft*, both over the
+  $11,750 draft. **One tap recorded the old-price packet as SENT** and stamped a fresh agreement approval over it. The DocuSign send,
+  which builds a new packet at the new price, was not offered at all: a draft on record replaces the send button (`_jtSendAction`).
+- **⚠ AND THE DISCOUNT'S OWN CONFIRMATION NEVER REACHED THE SCREEN.** `applyDiscountRevision` wrote it with `showFB` into the strip
+  `_dashRedraw` rewrites on the same tick: `#dash-fb` read **empty** straight after Apply.
+
+### The design
+- **`notePriceChange(job, why)` stamps two JOB scalars** — `priceChangedAt` (ISO) and `priceChangeWhy` (`discount` | `edit`) — and
+  returns the drafts it has just left out of date. Called by `applyDiscountRevision` and by `revokeEstimateApproval`, so *Edit
+  estimate* flags an estimate draft the same way.
+- **⚠⚠ STALENESS IS READ OFF THE JOB, NEVER WRITTEN INTO THE DRAFT'S OWN RECORD.** The first cut rewrote the draft at the door, and
+  that misses the two-device case: the draft is made on one device, the discount offered on the other's morning copy, which holds no
+  draft to rewrite — and the per-key `docState` merge hands the untouched draft back, live, beside the revoked approval.
+  `priceChangedAt` rides the discounting device's save, so a draft made before it reads stale wherever the two records meet.
+  `draftIsStale(job, st)` is the comparison; both stamps are ISO, so string order is chronological (R29 below).
+- **`draftOutstanding(job, key)` IS THE ONE DEFINITION OF A LIVE DRAFT** — made, not recorded sent, not overtaken by a price
+  change — read by the confirming tap (`_jtSendAction`), the link (`_jtDraftLink`), the row line (`jtDraftLine`), the packet row,
+  `markDocSent`'s guard, `_midDrafted` and the discount pop-up (`outstandingDrafts`). **`docDraftedAt` is deleted**: it answered
+  *was a draft made* and every reader used it as *is there a draft to send*, which a price change makes false while the stamp stands.
+  A net asserts no function reads a draft stamp outside the named few.
+- **⚠ IT FLAGS; IT NEVER TOUCHES GMAIL.** Deleting mail is for a person to do knowingly, and the draft may be in a colleague's
+  account this device's sign-in cannot see. What the app owns is its reading of its own record: the tap and the link go, *Send* comes
+  back, and every surface names the draft — the day and the mailbox — until the document is actually sent.
+- **ONE SENTENCE, `staleDraftNote(job, key, fresh, named)`**, read by the row, the send's notice and the refusal;
+  `discountDraftWarning` is the pop-up's (before the discount), `staleDraftNotice` the confirmation's (after), `noDraftToConfirm` the
+  refusal's. Five surfaces wording one draft five ways is how they come to disagree about which one to delete. It says *Gmail draft …
+  delete it, don't send it* on the Gmail route and *email … if it was never sent, discard it* on the mailto one, *has the old price*
+  after a discount and *was made before the estimate was edited* after an edit, and tells two drafts apart (*Delete the older Gmail
+  draft from Sep 29 (anthony@…)*) while a fresh one is outstanding. `_draftDay` names the day on this device's calendar, never a
+  slice of the UTC stamp, which names tomorrow after 8pm Eastern (R19).
+- **`docRecordSent` keeps the overtaken draft as `staleDrafts[]` history** when a fresh draft replaces a stale one, and records the
+  **`mailbox`** a Gmail draft was made in. A draft made before today carries no mailbox and is named by its day alone.
+- **⚠ THE PACKET'S POP-UP WARNING ALSO SAYS WHAT TO DO IF IT HAS ALREADY GONE**: *"Already sent it? Cancel and tap 'I've sent it'
+  instead — a price change after the packet goes out is a change order."* The app knows a draft was made, never that it was sent;
+  a packet sent from Gmail with the tap forgotten is in the client's hands, and the tap is what tells `priceChangeBlocker` so.
+- **`markDocSent` refuses without an outstanding draft**, with the reason on the dashboard (`noDraftToConfirm`; *ok* when the
+  document is already recorded sent, *warn* otherwise). Its only caller is the tap, and the tap is only offered over a live draft, so
+  the refusal fires only on a screen painted before the flag or before the other device recorded the send.
+- **The discount's confirmation goes through `_docNotice`**, amber when it names a draft.
+- **⚠ WHAT IT DELIBERATELY DOES NOT DO:** a job with no `priceChangedAt` flags nothing, so **a discount offered before today set no
+  flag** and a draft made before an older discount is named nowhere (both documents say to look in Gmail). DocuSign never leaves a
+  draft — it writes `sentAt` the moment the envelope goes — so this is the Gmail and mailto routes only.
+
+### ⚠⚠ THE CONFIRMATION WAS STILL WIPED, BY THE APPROVAL WATCH — FOUND IN THE BROWSER, NOT BY ANY TEST
+- Routing it through `_docNotice` painted it, and **it was gone a second later**. Instrumented: a discount submits the estimate, which
+  arms the approval watch, and **`startApprovalWatch` fires `approvalWatchTick` at once**; its `refreshEstimateFromCloud` callback
+  redraws the dashboard when the fetch answers. A notice is shown once and cleared, so that second redraw — the app's, not the
+  person's — painted none. **`dashSubmitEstimate`'s *"Submitted for manager approval"* was lost the same way on every device with a
+  sync URL**, and nothing had ever asserted it stayed.
+- **`_dashShown` · `_dashKeepNotice` · `_dashNoticeHtml(host, jobId, mine)` · `_asBackgroundRedraw(fn)`.** `_dashShown` is the
+  message now on screen, per surface and job; a redraw run under `_asBackgroundRedraw` paints it again, and every other redraw clears
+  it exactly as before. **Never across surfaces or jobs.** The flag is restored in a `finally`, so a throw cannot leave every later
+  redraw keeping messages. `renderClientDashboard` and `jobProgressBlockHtml` both paint through the one painter.
+- **The background callers:** `approvalWatchTick`, `_jobsLanded`, `_estStoreLanded`, and `openClientDashboard`'s DocuSign and Stripe
+  arrival checks. **`applyEsignStatus` and `esignArchiveSigned` redraw plainly, deliberately:** the archive sets its own notice first
+  (a new message wins either way), and a recorded signature changes the whole band, which is the moment an older message should go.
+  The only message that can clear is one pressed in the second between opening a client and DocuSign's answer.
+- **A redraw a person causes is never a background one** — `_docNotice`, `dashNotice`, `markDocSent`, `applyDiscountRevision` and
+  opening a client are nets (N13).
+
+### Proof
+- **13,615 committed checks on the merged tree; 13,411 on `main` before this build, P8 included** (+204:
+  `tests/stale-draft.test.js` new at **201**, and three restated assertions that grew a check each; 13,555 on this branch before
+  the merge). About twenty-five suites' sandbox lists lift the new helpers — never stubbed — and five assertions are **restated,
+  not deleted**: `doc-send` (`docDraftedAt` → `draftOutstanding`; `_jtSendAction` asks the one definition; the send notice's
+  ternary; and `markDocSent`'s fixtures now carry a draft, since the tap refuses without one), `document-claims` (the discount's
+  confirmation is the dashboard notice, and nothing writes it onto a strip the redraw wipes) and `dashboard-actions` (the
+  dashboard paints through `_dashNoticeHtml`, which clears once shown).
+- **Revert sweep one, the flag: 34 changes on four tar copies, ALL RED, ZERO GREEN, baseline 13,521 / 0 before and after on every
+  copy, no needle mismatched.** Biggest: `draftIsStale` always false **47**, `draftOutstanding` ignoring staleness **27**, the
+  `markDocSent` guard removed **13**, `priceChangedAt` not an ISO stamp **10**, the discount not noting the change and its
+  confirmation back on `showFB` **9** each; the rest 1–6. ⚠ **R30 (`_midDrafted` back on the raw stamp) was predicted belt-and-braces
+  and fails 1 — on the net** that no function reads a draft stamp outside the named few, not behaviourally: it only matters on a
+  midpoint draft a price change overtook before the halfway point.
+- **Revert sweep two, the kept notice:** **14 changes on four tar copies, ALL RED, ZERO GREEN, baseline 13,554 / 0 before and after on every
+  copy, no needle mismatched.** A notice never cleared once shown fails **8**; the dashboard and the job band back on their own inline
+  paint 3 and 2; the keep ignoring the job, no `finally`, the flag never read and `_dashShown` surviving a plain render 2 each; the keep
+  ignoring the surface, a surface that is not the handlers' consuming the notice, and each of the four background callers redrawing
+  plainly 1 each. ⚠ **Opening a client run as a background redraw failed 1, on the arrival-check count** — which would still read 2
+  with the main paint wrapped and one arrival check unwrapped. A direct assertion was added (the one check above the 13,554); re-done
+  it fails **2**, and that swap fails 1. In the browser, the approval watch redrawing plainly and the keep removed each fail **5** of
+  step 37 — section C's four and H's one. ⚠ **And my waiter matched itself with `pgrep -f`** for twenty minutes after the sweep had
+  finished — the trap the 2026-09-25 entry records. Wait on a pid or on the result file.
+- **Verified in headless Chromium, `tests/browser/step37.js`, 61 checks, 0 failed, 0 page errors**, pressing the real buttons: a
+  paper-route Gmail draft at the old price (Gmail's drafts API routed, the real MIME read back); the pop-up naming it before the
+  discount and while typing; the confirmation after Apply naming it, amber, **and still on screen after the approval watch's own
+  redraw** (render count ≥ 2); `priceChangedAt` on the job with the draft's own record untouched; no tap and no link before or after
+  the PIN, Send and the paper route back, the band naming the withdrawal and the draft, a direct `markDocSent` refused with its
+  reason; a fresh send creating a second draft at the NEW deposit, the notice saying which to delete, the history kept, the tap back
+  over the new draft and recording it, the row then empty; the edit door naming an estimate draft *made before the estimate was
+  edited*; **Submit for approval's notice surviving the watch it starts**; overflow 0 at 1440 and 390, the pop-up's warning inside
+  390. **Against `main` before this build it fails 34 of 63, every check running.** Measured again on `main` after P8 landed:
+  the same 34. `run.sh`'s default list is 1–37 (P8's step 36 landed first, so this one was renumbered 37 on the merge); on the
+  merged tree steps 1–36 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 /
+  52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 14, 0 failed — **1,830 browser
+  checks across the thirty-seven**. The first `<style>` block is byte-identical to `main`'s at 99,561 bytes — no CSS.
+- Manual **§8** (a note) and **§9b** (two table rows and two notes); playbook **Step 4** and **Step 6** (a `.stop` each) and **four**
+  symptom rows. Both `.md` copies hand-edited; **56 claims parity-checked, 0 mismatches** (one apparent miss was a space the tag
+  stripper put after a parenthesis, verified); `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under
+  `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as before.
+- **Closes the document build's flag (2)** — *a Gmail packet draft created before a discount is not updated by the re-file* —
+  struck through in both places it was recorded, with a pointer here.
+
+### Found in passing, not fixed
+- **An estimate recorded sent but never filed offers *📁 File to Drive* once a discount or an edit sends it back for approval**, and
+  the press is refused — the estimate's gate refuses an unapproved one. `_jtDriveLink` reads `sentAt && !filedAt` and nothing else.
+- **After a discount and the manager's re-approval, the packet row still says *"re-approve the estimate and send a fresh packet"***
+  until the first send re-stamps the agreement (`agrApprovalWithdrawn` reads `!job.agrApproved`). Half the sentence is done by then.
+- **The playbook's Step 4 still describes a *✉ Plain email* button** that came off the tab on 2026-09-09 (the app falls back to the
+  plain email by itself). A docs low for P13.
+- *Edit estimate* on an estimate out for approval is already recorded in that Edit-estimate entry.
+
+### The final invoice and the midpoint — answered and asked back, not built
+- **In practice yes**: the final is offered only once the job is closed. But under **Q1** (answered 2026-09-29: *close any time after
+  activation, and the final can go out with the midpoint unpaid*), a job can close before the midpoint invoice was ever **sent**, and
+  the final then bills both shares. **The money is right; the words are not** — the final still reads *25% midpoint — invoiced at
+  project midpoint* and *Outstanding from the deposit and midpoint invoices* (the H3/M8 entry flagged it).
+- Put to Anthony: **(a)** require the midpoint invoice to be sent before the final goes out — in our control, so not the dead end Q1
+  removed, but two invoices on one day for a job that closed early — or **(b)** keep the rule and word the final for a job whose
+  midpoint never went out. **Recommended (b).**
+
 ## ⚠⚠ WORK DONE COULD NEVER REACH 100% — IT IS MEASURED AGAINST THE ROOMS NOW (FIXED 2026-09-29, AUDIT H5 / P8)
 Fix pack P8 of the 2026-09-28 workflow audit, built after the other sessions' P1–P7 had merged. Anthony, Q3: *"Room work
 only. Logged hours already show the rest."* App-only, no redeploy.
@@ -175,7 +308,9 @@ no redeploy.
     the job **7**.
   - Found re-running this build's every-caller searches after the merge, once `main`'s NUL-byte fix made a whole-file search
     trustworthy again. The line itself sat above the byte: what missed it the first time was not looking, not the search.
-- **Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**
+- ~~**Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**~~
+  **FIXED THE SAME DAY** — Anthony: *"just flag a previous Gmail draft if a discount is offered."* It is flagged, never rewritten;
+  see the stale-draft entry near the top of this file. *Kept rather than deleted, per the standing rule.*
 - **⚠ FOUND IN PASSING, NOT FIXED: the rail offers *Edit estimate* while the estimate is OUT FOR APPROVAL.** The document tray
   carries it on the lit *Estimate approved* row, and pressing it opens Build Estimate locked under *Out for Manager Approval* —
   whose banner says it reopens once approved or denied, so it is a detour rather than a trap. Pre-existing and unrelated to the
@@ -833,8 +968,8 @@ functions before anything was changed.**
   1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width as before. **Counsel bundle B6** added.
 - **⚠ FOUND, NOT BUILT, FLAGGED TO ANTHONY:** ~~(1) *Edit estimate* is still reachable after the packet is sent, so a price can still
   move under Exhibit A by that door;~~ **BUILT THE SAME DAY** — Anthony: *"yes, withdraw Edit estimate once the packet is sent"*;
-  see the entry at the top of this file. (2) a Gmail packet draft created before a discount is not updated by the re-file —
-  **still open**; ~~(3) `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won
+  see the entry at the top of this file. ~~(2) a Gmail packet draft created before a discount is not updated by the re-file~~ —
+  **FIXED THE SAME DAY**: it is flagged, never rewritten (the stale-draft entry near the top of this file); ~~(3) `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won
   survives).~~ **FIXED THE SAME DAY** — a won client re-priced reads *Won · Pending Re-approval* and returns to *Won*; same entry.
   *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
 - **⚠ THE SHAPE TO COPY: a document is checked by adding up its own rows.** Every defect here printed the right figure somewhere
@@ -9345,7 +9480,12 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/dazzling-mendel-qns7nm`
+- Active feature branch: `claude/exciting-carson-pv156f`
+  (Back on this branch for the stale-draft build: a Gmail draft a discount or an edit left behind is flagged, and the dashboard
+  keeps its message through a redraw the app makes on its own. Built on `main` after the Edit-estimate / won-status build and
+  the audit's docs merge, both of which it took by fast-forward, and then P8 (H5) from a concurrent session, which had taken
+  step 36 first — this one is **step 37**; 1–37 are the default list.)
+  (`claude/dazzling-mendel-qns7nm` recorded, before this build, that it was the active branch, and:)
   (This session was ASSIGNED it again after `claude/relaxed-fermi-nopl99` had recorded itself as active below; a session's
   assignment wins, so it is promoted. The follow-up here — Edit estimate after the packet, and the won status — was built on
   the H1/M1 tree and merged `main`'s bottom Reset, C2 and H2 builds on the way through; the merge conflicted on the build stamp,
@@ -9466,7 +9606,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/dazzling-mendel-qns7nm:main`
+  `git push origin claude/exciting-carson-pv156f:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -14612,10 +14752,14 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (eighth pass)** — both documents, against Edit estimate going once the signing
+- Last reconciled against the app: **2026-09-29 (ninth pass)** — both documents, against a Gmail draft a price change left behind
+  being flagged rather than confirmable, and the dashboard keeping its message through a redraw the app makes on its own (manual
+  §8 and §9b; playbook Step 4 and Step 6 and four symptom rows); see the entry at the top of this file. P8's H5 note (manual
+  §9a-i, one playbook row) landed just before it and is recorded in its own entry.
+- Prior pass **2026-09-29 (eighth pass)** — both documents, against Edit estimate going once the signing
   packet is out and a won client reading *Won · Pending Re-approval* while a revised price waits (manual §1, §5, §5c, §8, §9,
-  §9a; playbook the two `.stop`s on Build Estimate, the lever table, Step 6, the status table and four symptom rows); see the
-  entry at the top of this file.
+  §9a; playbook the two `.stop`s on Build Estimate, the lever table, Step 6, the status table and four symptom rows); see its
+  entry near the top of this file.
 - Prior pass **2026-09-29 (seventh pass)** — both documents, against Reset and Start over discarding this
   device's unsaved-draft copy (manual §5h; playbook one symptom row), and the footer stamps of all four files moved from
   *reconciled 2026-08-03* to 2026-09-29; see its entry near the top of this file.
