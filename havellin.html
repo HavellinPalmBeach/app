@@ -9635,6 +9635,13 @@ function resetEstimate() {
   window._suppressEstimateAutoSave = true;
   resetEstimateJobState(job || null);
   window._suppressEstimateAutoSave = false;
+  // ⚠⚠ AND THIS DEVICE'S COPY OF THE BUILD GOES WITH IT (2026-09-29). calcAll keeps an unsaved-draft copy
+  // of the working estimate on this device (saveEstimateScratch), so a page that drops in the field loses
+  // nothing, and an offline open with nothing saved restores it. That copy refuses an empty-rooms state,
+  // so after a Reset it went on holding the build just discarded. Measured: four rooms, Reset, reload,
+  // open offline, the four rooms back under "restored an unsaved draft". Only THIS client's copy, and only
+  // on OK: Cancel and a locked estimate return above, and an unbound screen names nobody's draft.
+  if (jid) clearEstimateScratch(jid);
   showFB('e-fb', 'ok', 'Cleared to a blank estimate.' + (saved ? ' The saved estimate is unchanged until you press Save.' : ''));
 }
 
@@ -18995,6 +19002,12 @@ function startEstimateOver() {
         + 'The rooms, collections, vehicles, vendors, the discount and the private walkthrough note all go back to what was last saved.'
       : 'Clear everything on this screen and start again from the intake answers?\n\n'
         + 'That is the rooms, collections, vehicles, vendors, the discount and the private walkthrough note. None of it has been saved.')) return;
+  // ⚠⚠ THIS DEVICE'S UNSAVED-DRAFT COPY GOES FIRST, BEFORE THE REOPEN BELOW (2026-09-29). The reopen is
+  // the open path, and offline with nothing saved that path restores the scratch copy (saveEstimateScratch),
+  // which still held the build this button had just been told to discard: the copy refuses an empty-rooms
+  // state, so the clear never overwrote it. Measured: four rooms scored, Start over, OK, and the same four
+  // rooms came straight back under "restored an unsaved draft", after a question promising the intake answers.
+  clearEstimateScratch(jid);
   window._suppressEstimateAutoSave = true;
   clearEstimateTab();
   window._suppressEstimateAutoSave = false;
@@ -19106,7 +19119,21 @@ function showFB(elId, type, msg) {
   var el = document.getElementById(elId);
   if (!el) return;
   el.innerHTML = '<div class="alert '+cls+'">'+msg+'</div>';
-  setTimeout(function(){ var e2 = document.getElementById(elId); if (e2) e2.innerHTML=''; }, 4000);
+  // ⚠⚠ THE CLEAR TAKES THIS MESSAGE AND NOTHING ELSE (2026-09-29). It was `innerHTML = ''` on whatever
+  // the strip held four seconds later, armed by every message and cancelled by none, so a message
+  // written within four seconds of another was wiped by the OLDER one's timer. Measured on the real
+  // page: a message written three seconds after another was gone a second and a half later. Press Save
+  // twice within four seconds and the second refusal went early, on the one line that says why Save did
+  // nothing. A notice the drilldown paints on a redraw went the same way, cleared by a timer armed on the
+  // strip that redraw had replaced. So the timer holds the nodes THIS call wrote and removes them only while
+  // they are still attached: anything written since (another message, a redraw's notice, a "Building
+  // the PDF…" state) has detached them, and each message lives its own four seconds.
+  // ⚠ NOT A PER-STRIP TIMER, which is what this was first recorded as needing: that would let the next
+  // showFB cancel the old clear, and still let it wipe a redraw's notice, which does not come through here.
+  var mine = Array.prototype.slice.call(el.childNodes || []);
+  setTimeout(function(){
+    mine.forEach(function(n){ if (n.parentNode) n.parentNode.removeChild(n); });
+  }, 4000);
 }
 
 // Where a message should land. The agreement and payment handlers print to strips
@@ -32980,7 +33007,7 @@ var VENDOR_GROUP_ORDER = [
   'Property Preparation'
 ];
 function _vendorGroupRank(g){ var i = VENDOR_GROUP_ORDER.indexOf(g); return i < 0 ? VENDOR_GROUP_ORDER.length : i; }
-function _vendorCatKey(g, c){ return g + ' ' + c; }
+function _vendorCatKey(g, c){ return g + '\u0000' + c; }
 function vendorFiltersActive() {
   return !!(vendorSearchQuery()
     || (document.getElementById('v-filter-cat')||{}).value
