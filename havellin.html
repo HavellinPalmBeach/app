@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 11:19am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:13pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2193,7 +2193,7 @@ body.no-smf .smf-col{display:none;}
 
       <div class="card" style="margin-top:1rem;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-s" onclick="resetEstimate()">Reset</button>
+          <button class="btn-s" onclick="resetEstimate()" title="Clear this screen to a blank estimate for this client. A saved estimate is not changed unless you press Save">Reset</button>
           <button class="btn-p" onclick="saveEstimateAndPreview()">Save &amp; Preview Client Estimate →</button>
         </div>
         <div id="e-fb"></div>
@@ -9545,42 +9545,42 @@ function populateJobSelect(forceJobId) {
   else if (cur) sel.value = cur;
 }
 
+// ⚠⚠ THE BOTTOM Reset BUTTON GOES THROUGH THE ONE RESET (2026-09-29, the same day as C1). It was a
+// fifth hand-kept list, and on the client it was pressed for it did worse than forget things: it
+// unticked Premium Estate on a premium job and set the documentation scope to Full whatever intake
+// had answered. Measured on the real page, a premium Estate Settlement contracted at Contents list,
+// six rooms, $22,505: Reset, the same six rooms scored again, $17,700. Premium off took $8,900 and
+// Full put $4,095 back, so the new total still looked like a price. It also kept the discount, the
+// move styling, the private note, the collections, the vehicles, the prep lines, the planner date and
+// a half-typed collection, and asked nothing. It is resetEstimateJobState for the client the screen
+// is bound to now: a blank estimate for THIS client, seeded from their job exactly as a first open is.
+//
+// ⚠ IT IS NOT Start over. Start over discards the screen and opens the client again, so a SAVED
+// estimate comes back. Reset gives a blank estimate and leaves the saved one where it is: nothing is
+// written until Save. With nothing saved the two land in the same place.
+//
+// ⚠ IT ASKS FIRST, because it takes the private note and the lists with the rooms. And it refuses a
+// locked estimate HERE as well as in the disabled button: calcAll would put a blank working copy under
+// an estimate a manager is reviewing, and checkPin approves the working copy.
 function resetEstimate() {
-  var ri = 0;
-  ROOMS.forEach(function(sec) { sec.rooms.forEach(function(r) { var id='r'+ri; setRoomState(id, 'off'); ri++; }); });
-  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
-  _estimateDocScope = 'full';
-  document.getElementById('e-prem').checked = false;
-  var _fxR = document.getElementById('e-fixed'); if (_fxR) _fxR.checked = false;
-  var _fxAR = document.getElementById('e-fixed-amount'); if (_fxAR) _fxAR.value = '';
-  var _rshR = document.getElementById('e-rush'); if (_rshR) _rshR.checked = false;
-  var _fxRowR = document.getElementById('fixed-amount-row'); if (_fxRowR) _fxRowR.style.display = 'none';
-  // 'adj-rush' used to be in this list and has no element — getElementById returned null
-  // and the assignment threw, so Reset died here and left everything after it un-reset.
-  // Guarded as well as corrected: a renamed toggle shouldn't be able to break Reset again.
-  ['adj-access','adj-heirs'].forEach(function(id){ var el=document.getElementById(id); if (el) el.checked=false; });
-  document.getElementById('e-pkg').value=0;
-  var coordEl = document.getElementById('e-coord-days'); if(coordEl) coordEl.value=0;
-  var vendorEl = document.getElementById('e-vendor-total'); if(vendorEl) vendorEl.value=0;
-  var stagerEl = document.getElementById('e-stager'); if(stagerEl) stagerEl.value='none';
-  var stagerWrap = document.getElementById('stager-cost-wrap'); if(stagerWrap) stagerWrap.style.display='none';
-  var prepFields = document.getElementById('prep-fields'); if(prepFields) prepFields.style.display='none';
-  var prepNote = document.getElementById('prep-note'); if(prepNote) prepNote.style.display='none';
-  // Reset PS slots to defaults
-  var _crewReset = document.getElementById('ps-crew-size');
-  if (_crewReset) _crewReset.value = '2';
-  _crewUserSet = false;
-  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
-  // not inherit a previous job's manual choices, which is the whole reason these flags
-  // exist. Missing one leaves the next estimate silently pinned to the last one.
-  var _tcReset = document.getElementById('e-tc-count');
-  if (_tcReset) _tcReset.value = '1';
-  _tc2UserSet = false;
-  _fixedAmountUserSet = false;
-  _fixedAmountBasis = 0;
-  _fixedPrepMovedOut = 0;
-  var _dcR = document.getElementById('e-declutter-hrs'); if (_dcR) _dcR.value = '0';
-  vendors=[]; renderVendors(); calcAll();
+  if (estimateApproved || estimateSubmitted) {
+    showFB('e-fb', 'warn', estimateApproved
+      ? 'This estimate is approved, so it is locked. To rebuild it, press \u270e Edit estimate on the client\u2019s timeline first; that takes it back to a draft.'
+      : 'This estimate is out for manager approval, so it is locked. Reset opens again once it is approved or denied.');
+    return;
+  }
+  var jid = parseInt((document.getElementById('e-job') || {}).value) || 0;
+  var job = jid ? jobs.find(function(j){ return j.id === jid; }) : null;
+  var rec = jid ? estimateStore[jid] : null;
+  var saved = !!(rec && rec.estimate && estimateHasContent(rec.estimate));
+  if (!confirm('Clear this screen and start a blank estimate' + (job ? ' for ' + (job.name || 'this client') : '') + '?\n\n'
+      + 'The rooms, collections, vehicles, vendors, the discount and the private walkthrough note all go. '
+      + (saved ? 'The saved estimate is not changed unless you press Save. Start over reopens it instead.'
+               : 'None of it has been saved.'))) return;
+  window._suppressEstimateAutoSave = true;
+  resetEstimateJobState(job || null);
+  window._suppressEstimateAutoSave = false;
+  showFB('e-fb', 'ok', 'Cleared to a blank estimate.' + (saved ? ' The saved estimate is unchanged until you press Save.' : ''));
 }
 
 // ─── CLIENT ESTIMATE PREVIEW ──────────────────────────────────────────────────
