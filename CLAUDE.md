@@ -41,12 +41,13 @@ Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are sile
   `hardDeleteJob` (not an edit). **Stamping any of them is the defect in reverse**: a stale device that merely LOOKED at a job
   would claim the newest copy of it and win every scalar on it. Driven: a stale device's render-time repair does not write its
   morning copy over the desk's quote.
-- **THE NET IS THE RULE, NOT TODAY'S NAMES.** Every live `saveJobs()` in the file — **45** today (46 when written; the H3/M8
-  merge deleted the dead `cycleStatus`), cross-checked against a plain scan so a masking bug cannot lose one — must save an
-  object stamped before the call (`.updatedAt = Date.now()`, `_jobTouch(x,`, `docState(x,`) **and** synced after it
-  (`syncJobToSheets(x)`), **the same receiver both times**, or be one of the five exemptions, which must still save and must
-  stay bare. A writer added tomorrow that saves bare fails here. **⚠ The count's floor is a vacuity guard at 40, never today's
-  figure** — it was pinned at 45 and the merge's honest deletion put it on the line.
+- **THE NET IS THE RULE, NOT TODAY'S NAMES.** Every live `saveJobs()` in the file — **46** today (46 when written too: the H3/M8
+  merge deleted the dead `cycleStatus`, and the H1/M1 merge added `recordInvFinalApproval`, the final-invoice PIN, which stamps
+  through `docState` and syncs, so the net passed it with no change), cross-checked against a plain scan so a masking bug cannot
+  lose one — must save an object stamped before the call (`.updatedAt = Date.now()`, `_jobTouch(x,`, `docState(x,`) **and**
+  synced after it (`syncJobToSheets(x)`), **the same receiver both times**, or be one of the five exemptions, which must still
+  save and must stay bare. A writer added tomorrow that saves bare fails here. **⚠ The count's floor is a vacuity guard at 40,
+  never today's figure** — it was pinned at 45 and the merge's honest deletion put it on the line.
 
 ### Every other writer that saved a job without stamping it
 - **Genuinely losing, like the Job Plan's (saved, never synced, never stamped):** `toggleProbatePkg`; `saveEstimateState`'s
@@ -93,9 +94,10 @@ Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are sile
   anything."* It was false for every scalar a bare writer set — which is this defect. Corrected in place.
 
 ### Proof
-- **11,727 committed checks on this branch; 12,404 after merging the concurrent C1, H4 and H3/M8 sessions' suites** — +238 on
-  the branch (`tests/job-edit-stamps.test.js` new at **234**, `job-plan-team-dates` +4) and `jobs-refresh` +1 on the merge, so
-  **+239 on top of `main`** (11,907 → 12,146 at the first merge, 12,165 → 12,404 at the second). Against the
+- **11,727 committed checks on this branch; 12,864 after merging the concurrent C1, H4, H3/M8, document-claims and H1/M1
+  sessions' suites** — +238 on the branch (`tests/job-edit-stamps.test.js` new at **234**, `job-plan-team-dates` +4) and
+  `jobs-refresh` +1 on the merge, so **+239 on top of `main`** at every merge (11,907 → 12,146, 12,165 → 12,404, 12,625 →
+  12,864). Against the
   pre-change writers (the helpers merely added so it can load) the new suite fails **143 of 234**, with every check running.
   Four sandboxes restated rather than stubbed — the logistics, crew and confirm sandboxes in `job-plan-team-dates`, the rating
   sandbox in `job-closeout` — and `drive-folder`'s four lift `_saveJobEdit` / `_jobTouch` so a revert sending the failure
@@ -107,7 +109,9 @@ Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are sile
   other 59 fail 1–7. Stamping the directory receipt, the Drive failure notice or the subfolder cache fails **3** each, so the
   exemptions fail in the other direction too. **Re-run on the tree after the H3/M8 merge (12,404): 68 changes** — the 67 less
   `cycleStatus`, which `main` deleted, plus the two H4 recheck reverts, which fail **2** and **6** as H4's own sweep recorded —
-  **ALL RED, baseline 12,404 / 0 before and after on every copy, no needle mismatched**, the same figures throughout.
+  **ALL RED, baseline 12,404 / 0 before and after on every copy, no needle mismatched**, the same figures throughout. The
+  document-claims and H1/M1 merge landed after it; on the final tree all 68 still find their code, needle by needle, and the
+  suite is green, so the results carry.
   - **⚠ THREE REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** — `seen[1][1]` when the helper stopped
     syncing, `r.after.prepSourcing.Lp1.quote` when the quote did not survive. A read that throws stops the file, so each read as
     one failure with every check after it unrun. Every read is defensive now (`get`, `holds`); re-done, each fails with all 234
@@ -118,25 +122,26 @@ Workflow audit (2026-09-28), finding **C2**, Critical: *"Job Plan edits are sile
     the three sandboxes restated onto that notice lifted it and not the save helper — 55 checks never ran. They lift
     `_saveJobEdit` / `_jobTouch` now (as `drive-folder`'s four do, for the same reason); re-done, it fails **4** with all 12,404
     running.
-- **Verified end to end in headless Chromium, `tests/browser/step29.js`, 53 checks, 0 failed, 0 page errors** (written as step
-  26 and renumbered twice on the merges — H4 took 26, C1 27 and H3/M8 28), with **two browser contexts — two
-  localStorages, which is what two devices are** — against one fake Apps Script running the REAL `_mergeJobRecord`: device A sets
-  the painter, the quote and status, adds the dumpster and confirms the team through the real Job Plan controls; device B, loaded
-  before A started and never reloaded, edits a **different** client through the real Edit Client modal and presses Save; the sheet
-  still holds A's work (the painter, a $12,500 mover, the dumpster, the team), a fresh reload of each device reads it, the
-  reloaded Job Plan shows it and the team chip is green, and the bill comes back **$23,400 / $7,020 / $850**. The hours
-  form: a save with nothing to lock writes **no** job and moves no clock; a slot added and named after sign-off locks on the next
-  save (one write) and the save after that writes none. **Against main without this fix it fails 25 of 53** (the same 25 on the
-  build this branch started from, and on `main` after the H3/M8 commit), and the failures read as the report: *the painter
-  survived B's save — got undefined*, *the 30% fee is $7,020 — got 6000*, *the $850 dumpster — got []*, the team chip red.
-  `run.sh`'s default list is 1–29; on the MERGED tree steps 1–28 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 /
-  25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 78 / 58 / 78 / 28 / 90 / 58, 0 failed —
-  **1,384 browser checks across the twenty-nine**.
+- **Verified end to end in headless Chromium, `tests/browser/step31.js`, 53 checks, 0 failed, 0 page errors** (written as step
+  26 and renumbered at each merge — H4 took 26, C1 27, H3/M8 28, the document claims 29 and H1/M1 30), with **two browser
+  contexts — two localStorages, which is what two devices are** — against one fake Apps Script running the REAL
+  `_mergeJobRecord`: device A sets the painter, the quote and status, adds the dumpster and confirms the team through the real
+  Job Plan controls; device B, loaded before A started and never reloaded, edits a **different** client through the real Edit
+  Client modal and presses Save; the sheet still holds A's work (the painter, a $12,500 mover, the dumpster, the team), a fresh
+  reload of each device reads it, the reloaded Job Plan shows it and the team chip is green, and the bill comes back **$23,400 /
+  $7,020 / $850**. The hours form: a save with nothing to lock writes **no** job and moves no clock; a slot added and named
+  after sign-off locks on the next save (one write) and the save after that writes none. **Against main without this fix it
+  fails 25 of 53** (the same 25 on the build this branch started from, and on `main` after each concurrent session landed), and
+  the failures read as the report: *the painter survived B's save — got undefined*, *the 30% fee is $7,020 — got 6000*, *the
+  $850 dumpster — got []*, the team chip red. `run.sh`'s default list is 1–31; on the MERGED tree steps 1–30 re-run as
+  regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 78
+  / 58 / 78 / 28 / 90 / 58 / 62 / 53, 0 failed — **1,499 browser checks across the thirty-one**.
 - Manual **§2** (a note: what happened, what it still does not do, and what to do) and **§11** (the plan refresh does not bring
   vendors or the team); playbook **Step 7** (reload before changing the team), a **`.stop` in Step 10c**, the plan-refresh note,
-  and **two** symptom→cause rows. Both `.md` copies hand-edited; **43 claims parity-checked, 0 mismatches** (224 with the
-  H3/M8 session's, on the merged tree); `doc-structure` green; tag balance clean with the stylesheet stripped; rendered at
-  1440/390 with **0 overflow, 0 page errors**; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as before.
+  and **two** symptom→cause rows. Both `.md` copies hand-edited; **43 claims parity-checked, 0 mismatches** (387 with the H3/M8,
+  document-claims and H1/M1 sessions', on the merged tree); `doc-structure` green; tag balance clean with the stylesheet
+  stripped; rendered at 1440/390 with **0 overflow, 0 page errors**; under `print` 51/61 and 17/18 tables full width, 0 on the
+  phone rule — as before.
 - **⚠ THE SHAPE TO COPY: "saved" is not "saved newer."** A save that does not move the record's clock is a save that loses the
   next tie — and on a merge that keeps the incoming copy on a tie, the next tie is whichever device saves next, about anything.
   **When a merge decides by timestamp, every write a person makes must move the timestamp, and no write the app makes on its own
