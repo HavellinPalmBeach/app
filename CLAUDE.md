@@ -1,3 +1,74 @@
+## ⚠⚠ THE JOBS REFRESH EMPTIED THE CLIENT LIST UNDER A CLIENT WHOSE OWN SAVE HAD NOT LANDED (FIXED 2026-09-29)
+The 2026-09-28 workflow audit's finding **H4** (High). `refreshJobsFromCloud` replaced `jobs` with the sheet's list whole,
+even while this device's own saves were still queued, and a write takes far longer than a read. Five callers reach it —
+`refreshEstimateFromCloud` (so `editEstimateForJob` and `loadJobIntoEstimate`: every Build estimate), the client-estimate
+load, `approvalWatchTick` (every 12 s while an estimate is submitted) and `jobsWatchTick` (every 15 s while any job is pending).
+App-only, no redeploy.
+
+- **⚠⚠ REPRODUCED ON THE REAL PAGE BEFORE ANYTHING WAS CHANGED**, against a stubbed Apps Script answering writes in 4 s
+  (committing at the END of the window, as a real execution does) and reads in 0.8 s (served from the sheet as it stood when
+  they arrived). Now `tests/browser/step26.js`:
+
+  | | pre-fix build | now |
+  |---|---|---|
+  | Save Client, then the band's **Build estimate** at once | the list **and the local cache go to 0** | the client stays, cached |
+  | a jobs read sent while this device still owed the sheet a write | **1** | **0** |
+  | three rooms scored, **Save** | refused *"Job not found."* — the walkthrough is lost | saved, three rooms |
+  | the Drive folder URL, landing 1.5 s after the save | finds no job — **lost** | on the client |
+  | once every write has landed | **0 clients on this device** until a reload | 1 |
+  | Edit Client 3,000 → 5,200 sq ft, then Build estimate | local record **and the estimate on 3,000** (six rooms: $8,900), sheet 5,200 | **5,200** on the record, the estimate ($15,150) and the cache |
+
+  The sheet had the client the whole time; it was this device that dropped it — which is why it read as data loss.
+- **⚠⚠ THE RULE IS `refreshPlanAndLogFromCloud`'s: THE SHEET IS ONLY AUTHORITATIVE ONCE OUR OWN WRITES HAVE REACHED IT.**
+  It does not ask while `_syncWritesOutstanding()` is true; it checks again when the answer lands; and either way the caller
+  **carries on with the local list** (`cb` always runs), which is the fresher of the two. Every caller already proceeds off
+  `jobs` in its callback, so nothing downstream changed.
+- **⚠⚠ A WRITE QUEUED *AND LANDED* WHILE THE READ WAS OUT IS INVISIBLE TO THE OUTSTANDING CHECK — `_syncWriteSeq` catches it.**
+  Nothing is outstanding by the time the answer arrives, and the answer may still predate the write. `queuedPostSync` bumps the
+  count on every main-sheet write; the refresh notes it before asking and refuses an answer if it moved. **It matters on the
+  `saveJobs()`-only edits** (`toggleProbatePkg` and others), which do not bump `updatedAt`: the stale answer TIES the local
+  record, and a tie goes to the sheet. A test pins `queuedPostSync` as the one road to the main sheet — `postSyncTo` is called
+  by the two senders and nothing else, `postSync` by nothing — because the count is only complete while that holds.
+- **⚠ THE SHEET'S DELETIONS APPLY EVEN WHEN THE ANSWER IS DISCARDED.** `deletedJobs` is the job ledger's answer — ids seen and
+  no longer held — not a snapshot that can be behind our writes, and the server refuses those ids whatever this device sends.
+  They go through `_applyDroppedJobs`, so the refresh now also **says so** (*N clients deleted elsewhere — removed from this
+  device too*) and redraws — the old code removed them silently and purged their records with no word. A refresh that stood
+  down before asking learns them from the next answer, or from the `dropped` list on this device's next write.
+- **⚠ `_mergeCloudJobs` — MEMBERSHIP IS THE SHEET'S; A STRICTLY NEWER LOCAL RECORD IS KEPT; A TIE GOES TO THE SHEET.** A job the
+  sheet does not hold is dropped, as ever: keeping those is how deleted clients came back on 2026-09-08, and the one case that
+  looked like it needed it — a client just created here — is the case standing down covers. A tie goes to the sheet because
+  `_mergeJobRecord` gives the merged record the newest stamp, so once our write lands the sheet's copy IS our write plus the
+  other device's keys. And the refresh now runs `migrateRetiredNames` on the way in, as `loadJobs` always did.
+- **⚠ BELT-AND-BRACES, RECORDED RATHER THAN PINNED: the response-time `_syncWritesOutstanding()`.** Every main-sheet write is
+  counted, so the write count catches every case that check does, and reverting it alone is **green by construction**. It stays
+  because it is the rule the job-plan refresh states; the one extra thing it sees is a failed DIRECTORY write, which costs one
+  skipped refresh and never any data. The first draft of the suite pinned it with a count of the call in the source — a check
+  that could not fail for any reason but the byte sequence — and it came out.
+- **11,592 committed checks** (`tests/jobs-refresh.test.js` new at 103, driving the REAL `saveIntake`, `saveClientEdit` and
+  `toggleProbatePkg` through the REAL outbox and retry queue against a backend whose requests stay OPEN until the test answers
+  them; `sync-retry` lifts `_syncWriteSeq` because it lifts `queuedPostSync`; `deleted-jobs`' pin that the refresh purged records
+  restated, not deleted, to the new route). **Revert sweep on three tar copies: 17 changes, 16 red and the one belt-and-braces
+  green, baseline 11,592 / 0 before and after on every copy, no needle mismatched, nothing crashed** — the old body back (the defect itself) fails **34**, no stand-down before asking **15**, both response-time checks gone 6, the stand-down forgetting its caller 5, the deletions going back to a silent purge 5, the merge keeping local-only jobs 5, and the other ten 1–3 each.
+  - **⚠ ONE REVERT CRASHED THE FILE ON THE FIRST SWEEP** (the stand-down forgetting its callback: my read helper threw when no
+    read was open, so the file stopped with checks unrun). The helper returns false now; re-done it fails 5 with every check
+    running.
+- **Verified in headless Chromium, `tests/browser/step26.js`, 28 checks, 0 failed, 0 page errors**, through the real + Add New
+  Client, the band's real Build estimate button, the real room toggles and Save, and the real Edit Client modal: the client
+  survives, no jobs read goes out while a write is owed (counted inside the page — the backend cannot see a write still in the
+  250 ms outbox, and the first cut of that check passed on the pre-fix build for exactly that reason), Save saves three rooms,
+  the folder URL lands, 5,200 is priced; with nothing queued the refresh asks and takes the other device's newer copy; overflow 0
+  at 1440 and 390. **Against the pre-fix build it fails 12.** `run.sh`'s default list is 1–26; steps 1–25 re-run as regressions, 0 failed — **1,181 browser checks across the twenty-six**.
+- **No document pass.** Neither the manual nor the playbook describes the refresh; the deleted-elsewhere message they do describe
+  now also appears when a refresh catches up, which is what they already say it means.
+- **⚠ FOUND IN PASSING, NOT FIXED: `refreshPlanAndLogFromCloud` checks only BEFORE it asks.** A plan edit queued while its 20 s
+  read is out has its answer replace `jobPlanStore` whole — the change reverts on screen until the next tick. The queued write
+  still carries it (the payload is held by reference, and the server's per-key stamps keep it) unless a SECOND plan edit is
+  queued before the first goes out, whose body is built from the replaced store and supersedes it in the outbox — then the
+  first change is lost. Narrow, and the same three lines port across: note `_syncWriteSeq` before asking, refuse on a move.
+- **⚠ AND THE STARTUP READ HAS THE SAME SHAPE, UNREACHABLE BY A PERSON.** `loadJobs` overwrites the list when its read lands a
+  few seconds after load; a write queued in that window would be dropped the same way, but nobody fills in an intake form in
+  three seconds, and `_pendingWrites` is memory-only, so a reload starts with nothing owed.
+
 ## ⚠⚠ THE HOME PREP AGREEMENT STATES THE CONCIERGE RATE — THE CHANGE ORDER RESTATES IT (BUILT 2026-09-25)
 Anthony, the same evening the prep change-order route shipped (the entry below): *"I think we should mention the hourly rates in
 the home prep agreement."* That answers counsel bundle B5's third question, which the build below had left open by printing the
@@ -8196,7 +8267,8 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/change-order-fixes-ew3m2i`
+- Active feature branch: `claude/elegant-edison-x0kgyn`
+  (`claude/change-order-fixes-ew3m2i` is the previous name.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
@@ -8245,7 +8317,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/change-order-fixes-ew3m2i:main`
+  `git push origin claude/elegant-edison-x0kgyn:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
