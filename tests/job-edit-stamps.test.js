@@ -633,7 +633,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       return n + (code.match(/\bsaveJobs\(\)/g) || []).length - (/function saveJobs\(\)/.test(code) ? 1 : 0);
     }, 0);
     eq(calls.length, plain, 'sanity: every live saveJobs() call in the file is inspected (' + calls.length + ')');
-    ok(calls.length >= 45, 'sanity: and there are as many as there should be');
+    // A vacuity guard, not the count: the plain scan above is the cross-check, and this only stops
+    // both scans breaking together and agreeing on nothing. (46 when this was written; 45 once the
+    // H3/M8 merge deleted the dead cycleStatus. A floor pinned at today's figure fails the next
+    // honest deletion.)
+    ok(calls.length >= 40, 'sanity: and there are as many as there should be');
 
     const RECV = '([A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*)';
     const receivers = (text, re) => { const out = new Set(); let x; const g = new RegExp(re, 'g'); while ((x = g.exec(text))) out.add(x[1]); return out; };

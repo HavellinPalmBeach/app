@@ -20,7 +20,10 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
-  const dlg = []; p.on('dialog', async d => { dlg.push(d.message()); await d.dismiss(); });
+  // Dismissed unless a check sets acceptNext — the ratings refusal is an alert, and the early-close question (2026-09-29)
+  // is a confirm that only OK can answer.
+  let acceptNext = false;
+  const dlg = []; p.on('dialog', async d => { dlg.push(d.message()); if (acceptNext) await d.accept(); else await d.dismiss(); });
   await p.goto(APP); await p.waitForTimeout(1500);
 
   // Two clients: a prep job worked through to the midpoint, and a second client whose dashboard
@@ -163,9 +166,15 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   eq(admin.closeoutSat, true, 'the call ticked on the Job Plan reads ticked here — one record');
 
   // Close now that every used vendor is rated.
-  dlg.length = 0;
+  // ⚠ RESTATED 2026-09-29 (workflow audit H3): this job has no midpoint payment on file, and Close job now asks first
+  // ("Close this job now?") rather than refusing to be reached at all. The requirement here is unchanged — once every
+  // used vendor is rated the RATINGS refusal is gone and the job closes — so the one dialog left must be that question.
+  dlg.length = 0; acceptNext = true;
   await p.evaluate(() => activateOrCycle(901)); await p.waitForTimeout(250);
-  eq(dlg.length, 0, 'with every used vendor rated, closing raises nothing');
+  acceptNext = false;
+  eq(dlg.filter(m => /Cannot close the job yet/.test(m)).length, 0, 'with every used vendor rated, closing raises no ratings refusal');
+  ok(dlg.length === 1 && /Close this job now\?/.test(dlg[0]) && /No midpoint payment is recorded/.test(dlg[0]),
+     'the one question left is the early close, because no midpoint payment is recorded');
   eq(await p.evaluate(() => jobs.find(j => j.id === 901).status), 'closed', 'and the job closes');
 
   // A labour job keeps its inventory on the tab, with the close-out beside it.

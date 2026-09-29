@@ -78,18 +78,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const t = sandbox({
       fns: ['applyJobTransition', 'jobActivationBlockers', 'jobCloseBlockers', 'unratedVendorsForJob',
-            '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_todayStr'],
+            '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_todayStr',
+            'stagePaidTotal', 'jobPayments'],
       vars: ['JOB_TRANSITIONS'],
       stubs: { vendorDirectory: VENDORS, agrApprovedBy: '', alerts: [] },
     });
-    const said = [];
+    const said = [], asked = [];
     t.alert = (m) => said.push(m);
+    // ⚠ These jobs carry no midpoint payment, so a close that gets past the ratings asks first
+    // (2026-09-29). Answered yes; the new suite drives the question itself.
+    t.confirm = (m) => { asked.push(m); return true; };
     const j = JOB();
     eq(t.jobCloseBlockers(j).length, 1, 'three vendors unrated is one blocker');
     has(t.jobCloseBlockers(j)[0], 'Ace Painting', 'which names them');
     has(t.jobCloseBlockers(j)[0], 'Junk Kings', 'every one of them');
     has(t.jobCloseBlockers(j)[0], 'Close-out card', 'and says where the fix is');
     ok(t.applyJobTransition(j) === false, 'closing an active job with vendors unrated is refused');
+    eq(asked.length, 0, '⚠ and it is refused BEFORE the midpoint question — never asked a question it then refuses');
     eq(j.status, 'active', 'and the status does not move');
     ok(!j.deliveredOn, 'nor is a delivery date stamped on a close that did not happen');
     has(said[0] || '', 'Cannot close the job yet', 'and the refusal is said out loud');

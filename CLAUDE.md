@@ -1,3 +1,126 @@
+## ⚠⚠ A FINISHED JOB COULD NOT BE CLOSED UNTIL ITS MIDPOINT WAS PAID, AND THE MIDPOINT WAS ASKED FOR ON DAY ONE (FIXED 2026-09-29)
+The 2026-09-28 workflow audit's findings **H3** (High) and **M8**, with Anthony's decision **Q1** applied as written: *Close is
+allowed any time after activation, and the final can go out with the midpoint still unpaid (the final already reconciles against
+payments received). The midpoint invoice is a secondary button, "due around <halfway date>", until the calendar halfway or half
+the work is done.* App-only, no redeploy.
+
+- **⚠⚠ REPRODUCED ON THE REAL RAIL BEFORE ANYTHING WAS CHANGED** (the real `jobTimeline`, `jobTimelineActions` and `jtBandHtml`,
+  a six-day Estate Settlement activated Wednesday 23 September, halfway Friday the 25th):
+
+  | | pre-change | now |
+  |---|---|---|
+  | activation day, the band's filled button | **✉ Send midpoint invoice** | none — *Do the work — the midpoint invoice is due at the halfway point*, the send an outline reading *due around Sep 25, 2026* |
+  | every room cleared, midpoint sent and unpaid | *Collect the midpoint payment* · **Close job reachable from nowhere** (`allCloseCalls: []`) | the same step, **■ Close job** beside it |
+  | a job closed with the midpoint unpaid | still lit on *Midpoint payment*; **the final unreachable** | **Send final invoice** is the filled button |
+  | `cycleStatus(` in the file | 2 (a definition, and a button overwritten on the next line) | 0 |
+
+- **⚠⚠ THE DEAD END WAS STRUCTURAL, AND THE SECOND DOOR NEVER EXISTED.** The light lands on the earliest unfinished row
+  (`jobTimelineNext`); *Close job* lived on `work_complete` alone, behind both midpoint rows; the final comes after it. The client
+  list's Status button was assigned in `renderJobs` and **overwritten by the Open line on the very next statement**, so it never
+  rendered — the "Re-open" both documents described has never been on a screen. The only way out was to record money that had not
+  arrived, which is the one thing this app most needs never to happen.
+- **■ CLOSE JOB IS AN OUTLINE BUTTON BESIDE EVERY LIT STEP OF AN ACTIVE JOB** — `live && job.status === 'active' && row.key !==
+  'work_complete'`, after the switch in `jobTimelineActions`; `work_complete` keeps it as the filled button. **One call,
+  `activateOrCycle`, from both**, so `jobCloseBlockers` (the vendor ratings) still refuses and cannot be reached around. Keyed on
+  the STATUS rather than a row, because the lit row on an active job can legitimately be an earlier gap (a deposit handed over by
+  cheque never "sent" its invoice).
+  - **⚠ ASKED ONCE, ONLY IN THE STRETCH THAT IS NEW.** `applyJobTransition` confirms *Close this job now?* when no midpoint payment
+    is recorded and the job has never been closed: it names the unpaid midpoint, says the final bills everything not yet paid,
+    names today as the handover date, and says neither can be undone. Cancel changes nothing. **The ratings refusal comes first**
+    (a question the app then refuses is worse than none), and with a midpoint payment on file it asks nothing — the normal close
+    off Work complete is unchanged.
+- **⚠⚠ A SIXTH ROW STATE, `open`, IS WHAT LETS THE FINAL TAKE THE LIGHT.** Once `deliveredOn` is stamped an unsettled midpoint
+  row is `open` and the state walk steps over it (`if (rows[i].open) { … continue; }`). Settled: the invoice row by its own send,
+  a midpoint payment, the final going out or the final paid; the payment row by a midpoint payment or the final paid — **the final's balance is the
+  whole job less everything received, so the midpoint's share is inside it**; that is arithmetic, not generosity. The subs say
+  what settles each (*Not sent — the final invoice bills it* → *Billed on the final invoice*; *Unpaid — the final invoice carries
+  it* → *Paid with the final invoice*), and **✓ Record midpoint payment** rides the strip (no row context there, so the label
+  names the stage).
+  - **⚠ `open` IS NEITHER `done` NOR `waiting`.** Done would read as paid; waiting is the future in grey, and this is money
+    outstanding on work already handed over. Its own class, `.jt-open`, on the rail's node and thread and the track's node and
+    connector, amber (`--warn-tx`, measured `rgb(133, 79, 11)`). `_jtStateCls` maps six states now.
+  - **⚠ NOTHING OFFERS THE MIDPOINT SEND AFTER THE CLOSE** — the row is never live again, and `_jtDocSecondaries` withholds the
+    midpoint's draft link once `deliveredOn` is set — because a midpoint sent after the close bills one share twice. **So *I've
+    sent it* cannot be pressed after the close either**: a midpoint sent from Gmail has to be confirmed before closing, and both
+    documents say so. Reading it (View, Print, the filed copy) stays.
+- **⚠⚠ M8 — THE MIDPOINT IS NOT DUE ON DAY ONE.** `_midNotYet` in `jobTimeline`: a running schedule with a halfway point, today
+  before it, the midpoint neither sent nor drafted, and neither half the work (`workPct >= 0.5`) nor every room locked. The row
+  then carries `notYet`, `dueOn` and a `todo` the band prints; `jobTimelineActions` renders the ONE `_jtSendAction` as an outline
+  with the day formatted there, never in the derivation. **On the halfway day itself it is due** (the calendar halfway is the day,
+  not the day after). A draft is never "not yet"; Home Prep, a plan under three working days and no schedule behave as before.
+  - **⚠⚠ "HALF THE WORK" IS READ TWO WAYS, AND THE SECOND WAS FOUND BY READING THE JOB PLAN, NOT BY ANY TEST.** Half the hours
+    earned by room status, **or every in-scope room locked** — which the Job Plan has always called the project midpoint (its red
+    *All rooms are locked — you're at the project midpoint* banner, its *All rooms locked — the project midpoint* line, its
+    Midpoint & pickups marker), and which the estate agreement bills on (*"upon completion of the Asset Inventory stage or at
+    project midpoint, whichever comes first"*). A locked room earns only its concierge hours, so on hours alone every room locked
+    reads about a third, and **the first cut would have had the band say "not yet" beside a banner saying "you're at the project
+    midpoint"**. `jobProgress` counts `nRooms` / `nLocked` **by room, before the hours check** (a room with unreadable hours is
+    still a room somebody has or has not locked); `jobSchedule` carries `roomsLocked`, and **zero rooms in scope is never "every
+    room locked"**. ⚠ This is a reading of Anthony's *"half the work is done"*, told to him rather than assumed.
+  - **⚠ MOVING THAT COUNT ABOVE THE HOURS CHECK MADE THREE SUITES THROW** — `dashboard-schedule`, `dashboard-utility-bar` and
+    `fixed-price-change-orders`, whose fixtures' rooms carry no hours, so `roomStatusNormalize` had never been reached and was never
+    lifted. Load is not drive, again. Lifted, never stubbed.
+  - **⚠ TWO GUARDS ARE BELT AND BRACES AND THEIR REVERTS ARE GREEN** — `!_closed` (`jobSchedule` answers `done` before `running`,
+    so a running schedule already means no handover stamp) and `_sc.state === 'running'` (`notYet` is only read on a LIVE row,
+    which needs the job active, whose schedule is running whenever it has a halfway). Recorded at the source and in the suite
+    rather than covered by assertions that could not fail.
+- **THE JOB PLAN FOLLOWS THE RAIL.** `planCurrentStage` puts NOW on Close-out for any job with `deliveredOn` (the money-first rule
+  would otherwise hold it on Midpoint & pickups forever); on a closed job the red midpoint banner stands down and *Midpoint invoice
+  sent* reads *not sent — the job is closed, so the final invoice bills it* with no button.
+- **THE DEAD STATUS BUTTON AND `cycleStatus` ARE DELETED; NO RE-OPEN WAS WIRED** — the task's either/or, taken on the side that
+  adds no new way to move a write-once stamp. `JOB_TRANSITIONS.closed: 'active'` stays in the map with nothing pressing it: a
+  Re-open would leave `deliveredOn` standing on an active job, and what that should mean is a decision, not a button. **A close by
+  mistake needs Anthony.** ⚠ One legacy case, noted and not changed: a job closed before the handover stamp shipped (2026-07-30)
+  carries no `deliveredOn`, so its rail reads *Job active* undone and offers Activate job, which would re-open it. Prelaunch, so
+  dummy data only.
+- **12,165 committed checks on the merged tree** (11,850 on this build before the merge; `tests/job-close-midpoint.test.js` new at
+  256, driving the REAL rail, actions, band, transition, Job Plan stage marker and rendered dashboard, and the real `renderJobPlan`
+  for the banner). Restated, never deleted: `job-timeline` (five states → six, each with a class and a node), `closeout-gate` (its
+  slice was anchored on the comment that sat over the dead button, and a slice from a missing anchor is the file's last character),
+  `job-closeout` and `dashboard-schedule` (a close with no midpoint payment now asks — answered yes, with an assertion that a
+  ratings refusal comes BEFORE the question); three sandboxes lift `roomStatusNormalize` (above).
+- **Revert sweep on two tar copies of the tree: 44 changes, every one red except the two belt-and-braces guards above; baselines
+  11,724 / 0 and 11,850 / 0 before and after on each copy, no needle mismatched.** Biggest: the state walk ignoring `open` and the
+  row helper dropping it 19 each, the midpoint never "not yet" 17, Close job removed and the payment row never open 15 each, the
+  early-close question not asked 12, the not-yet midpoint back to the filled button 9, Close offered on every live row and the
+  locked rooms never counted 8 each; the rest 1–6.
+  - **⚠ FIVE REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** (Close removed, the state walk, the payment row
+    never open, the row helper, the strip's Record button) — each check indexed into a result the revert had emptied, so the file
+    stopped at the first one and read as a handful of failures with the rest unrun. Read defensively now; re-done on the second
+    sweep they fail 15 / 19 / 15 / 19 / 4 with every check running.
+- **Verified in headless Chromium, `tests/browser/step28.js`, 58 checks, 0 failed, 0 page errors**, driving the real dashboard, the
+  real Close button and the real question it asks (Cancel, then OK), the real rail and track, the real Job Plan and the real client
+  list, with today pinned through `_todayStr`: on activation day the band has **no filled button** and the send reads *due around
+  Sep 25, 2026*, with Close job beside it; on the halfway day the send is the filled button again; with every room locked on day two
+  it is due, and the Job Plan's red banner and its band agree; on the audit's job **■ Close job** is on the band, Cancel stamps
+  nothing, OK closes it with today's handover date, and **Send final invoice** is the one filled button, the midpoint payment drawn
+  open in amber `rgb(133, 79, 11)` on the desk track and the phone rail and still recordable from the strip; once the final is paid
+  the band reads Complete and nothing is left open; a job whose midpoint never went out closes from its own band with both midpoint
+  rows open; on the closed job the Job Plan's NOW is Close-out, the banner is gone and the derived line has no button; the client
+  list has no Status button and no `cycleStatus`; overflow 0 at 1440 and 390. **Against the pre-change build it fails 6 and stops
+  at section C**, because the Close button it has to press does not exist. `run.sh`'s default list is 1–28; steps 1–27 re-run on
+  the merged tree as regressions, 0 failed — **1,331 browser checks across the twenty-eight**. `step15` and `step20` restated, not
+  weakened: step 15's close now answers the early-close question (the ratings refusal it tests is unchanged, 43), and step 20's
+  band on activation day reads the work rather than the send (the imperative-step rule it tests is unchanged, 69).
+- Manual **§9** (the status table's *Closed* row; the *Re-open resumes* note replaced by *There is no Re-open, and there was
+  never a working one*), **§9a** (the intro's amber ring, the four table rows, a Close note of seven bullets, and the M8 note with
+  every room locked and the closed Job Plan), **§9a-i** (the halfway note corrected — it said the halfway day had nothing to do with
+  the midpoint invoice, while the amber *past the halfway point and the midpoint invoice has not gone out* flag already tied them),
+  **§11** (the Close-out row; the ratings note lost its re-opening clause) and **§12** (closing moves the light to the final).
+  Playbook **Step 10** (the halfway note), **10a** (locking every room makes the midpoint due), **11** (two notes), **13**
+  (rewritten around Close job, the question and the open rows), *If the job dies instead*, the status table, and **seven** new
+  symptom rows plus one corrected. Both `.md` copies hand-edited; **93 sentences parity-checked**; the three apparent misses are
+  curly against straight quotes, two of them in an older note, verified by eye; `doc-structure` green; rendered at 1440/390
+  with 0 overflow and 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as at HEAD.
+- **Noted, not built, and flagged to Anthony:** (1) the final invoice's own wording presumes the midpoint went out — *25%
+  midpoint — invoiced at project midpoint* and *Outstanding from the deposit and midpoint invoices* — which reads slightly off on a
+  job closed with the midpoint never sent; **the money is right**, only the words. (2) The activation-day band has no filled
+  button; a *Log today's hours* primary was considered and not built. (3) No Re-open. (4) **Home Prep is unchanged**: its second
+  payment is due when the vendor schedule is booked, not on a calendar.
+- **⚠ THE SHAPE TO COPY: when a control lives on one row, walk every state in which the rows in front of it can stay unfinished for
+  a reason the crew does not control.** A client's cheque is exactly such a reason, and the only exit the rail left was a false
+  record of it.
+
 ## ⚠⚠ A FRESH ESTIMATE INHERITED THE LAST CLIENT'S — ONE RESET NOW, AND A NET UNDER IT (FIXED 2026-09-29)
 Workflow audit of 2026-09-28, finding **C1 (Critical)**: a fresh estimate on Build Estimate carried settings from the last
 client's estimate. App-only, no redeploy. `resetEstimateJobState(job)` is the one reset; `tests/estimate-reset.test.js` is the
@@ -8370,11 +8493,15 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/exciting-carson-pv156f`
-  (`claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — two sessions ran concurrently off the 2026-09-28
-  workflow audit: finding C1 here, H4 there. Both are on `main`, and this branch merged theirs on the way through; the merge
-  conflicted on the build stamp, CLAUDE.md and **both sessions' `tests/browser/step26.js`**, resolved as a UNION — theirs keeps
-  step 26 and this one is **step 27**.)
+- Active feature branch: `claude/elegant-wright-nb6ffk`
+  (`claude/exciting-carson-pv156f` and `claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — THREE sessions ran
+  concurrently off the 2026-09-28 workflow audit: C1 (a fresh estimate inheriting the last one's) and H4 (the jobs refresh)
+  there, H3 and M8 (closing a job with the midpoint unpaid, and the midpoint's timing) here. All three are on `main`. This branch
+  took both on the way through by fast-forward, with its own work re-applied on top without a conflict, and the browser steps
+  resolved as a UNION: H4 keeps step 26, C1 step 27, and this one is **step 28**.)
+  (`claude/exciting-carson-pv156f` recorded this about the first two: *two sessions ran concurrently … the merge conflicted on
+  the build stamp, CLAUDE.md and both sessions' `tests/browser/step26.js`, resolved as a UNION — theirs keeps step 26 and this
+  one is step 27*.)
   (`claude/change-order-fixes-ew3m2i` is the previous name.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
@@ -8424,7 +8551,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/exciting-carson-pv156f:main`
+  `git push origin claude/elegant-wright-nb6ffk:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -13570,8 +13697,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h;
-  playbook Step 2 and four symptom rows); see the entry at the top of this file.
+- Last reconciled against the app: **2026-09-29 (second pass)** — both documents, against Close job from activation on, the final
+  after the close with the midpoint unpaid, and the midpoint's timing (manual §9, §9a, §9a-i, §11, §12; playbook Steps 10, 10a,
+  11 and 13, the status table and eight symptom rows); see the entry at the top of this file.
+- Prior pass **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h;
+  playbook Step 2 and four symptom rows).
 - Prior pass **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
   concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows); see the entry at the top of this file.
 - Prior pass **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
