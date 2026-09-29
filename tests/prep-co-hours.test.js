@@ -97,12 +97,14 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate',
                 // Lifted, never stubbed: _coJobBasis reads the rates through the definition the agreements
                 // use, and a stub is exactly what would let the change order and §3.3 state two rates.
-                'agrBillingRates'];
+                'agrBillingRates',
+                // The printed change order's rush / discount line (Q14, 2026-09-29), lifted, never stubbed.
+                'coRateModsLine'];
 function coCtx(est, cos, seed, jobOver) {
   const dom = domStub(seed || {});
   const said = [];
   const c = sandbox({
-    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'PREP_FEE_RATE'],
+    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'PREP_FEE_RATE', 'RUSH_PCT'],
     stubs: {
       document: dom, setTimeout: () => 0,
       jobs: [Object.assign({}, est && est.svc === 'prep' ? PREP_JOB : LAB_JOB, jobOver || {})],
@@ -111,6 +113,9 @@ function coCtx(est, cos, seed, jobOver) {
       currentEstimate: null,
       saveChangeOrders: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
       showFB: (id, kind, msg) => said.push({ id, kind, msg }),
+      // Create and Accept speak on the screen the person is on (2026-09-29, audit H2). The routing
+      // itself is driven for real in change-order-card.test.js; here it is recorded like showFB.
+      _docNotice: (kind, msg, jobId) => said.push({ id: 'doc', kind, msg, jobId }),
       docNames: () => ({ printTitle: 'Havellin Change Order' }),
     },
   });

@@ -1258,7 +1258,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.25 · 6:36pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 12:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8640,12 +8640,9 @@ function standingFlagLines(job) {
 
 function jobHasStandingFlags(job) { return standingFlagLines(job).length > 0; }
 
-// One-line list of what was ticked, for the client-list detail row — which answers
-// "which of my jobs have firearms in them" at a glance and nothing else.
-function houseFlagSummary(job) {
-  var on = activeHouseFlags(job);
-  return on.length ? on.map(function(f) { return f.label; }).join(' · ') : '';
-}
+// ⚠ houseFlagSummary IS DELETED (2026-09-29). It built a one-line list of the ticked flags for the
+// client list's detail row — a row that was never added to the page — and nothing else read it. The
+// flags reach the crew through standingFlagsBlock on the Job Plan, the room and the dashboard.
 
 // ─── The checklist control, shared by Client Intake ('i') and Edit Client ('ec') ──
 // Two forms asking different questions about the same house is the drift this catalogue
@@ -11854,75 +11851,12 @@ function renderJobs() {
     // control that refuses the same blocker back at you is worse than none.
     if (!jobIsSettled(j)) actions += ' <button class="icon-btn del" title="Close out / mark lost" onclick="event.stopPropagation();openCloseoutModal('+j.id+')">✕</button>';
 
-    // Drive button now in dashboard
-
-    // Detail fields
-    var detailFields = [
-      ['Phone', j.phone||'—'], ['Email', j.email||'—'],
-      ['Property address', j.addr||'—'], ['Zip / Market', j.zip||'—'],
-      ['Sqft', j.sqft ? j.sqft + ' sqft' : '—'], ['Property type', j.ptype||'—'],
-      ['Referral source', (j.src||'—') + ((j.refPartnerName||j.referredByName) ? ' — ' + esc(j.refPartnerName||j.referredByName) : '')], ['Site visit by', j.siteVisitBy||'—'], ['Priority', j.priority||'Normal'],
-      ['Walkthrough date', j.walkthrough ? new Date(j.walkthrough+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
-      ['Target start date', j.start ? new Date(j.start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
-      ['Hard target', j.completion ? new Date(j.completion+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
-      ['RE potential', j.re||'—'], ['Premium estate', j.premium?'Yes':'No'],
-      ['Notes', j.notes||'—'],
-      ['House flags', esc(houseFlagSummary(j)) || '—'],
-    ];
-    var detailHtml = '<tr id="detail-'+j.id+'" style="display:none;"><td colspan="9" style="padding:0;">' +
-      '<div style="background:var(--cream);padding:12px 16px;border-top:1px solid var(--border);">' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px 16px;margin-bottom:8px;">';
-    detailFields.forEach(function(f){
-      detailHtml += '<div><div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;">' + f[0] + '</div>' +
-        '<div style="font-size:12px;color:var(--gray-dk);margin-top:1px;">' + f[1] + '</div></div>';
-    });
-    // Add change orders if any exist for this job
-    var jobCOs = (typeof changeOrders !== 'undefined') ? changeOrders.filter(function(co){ return co.jobId===j.id; }) : [];
-    if (jobCOs.length > 0) {
-      detailHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">' +
-        '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Change Orders (' + jobCOs.length + ')</div>';
-      jobCOs.forEach(function(co){
-        var coStatus = co.clientApproved
-          ? '<span style="font-size:10px;background:#e8f5e9;color:#2e6b10;border-radius:3px;padding:1px 5px;font-weight:600;">&#10003; Accepted · ' + co.clientName + '</span>'
-          : '<span style="font-size:10px;background:#fff3e0;color:#8a5000;border-radius:3px;padding:1px 5px;font-weight:600;">&#9679; Pending Client</span>';
-        var coActions = co.clientApproved
-          ? '<button class="icon-btn" onclick="printChangeOrder(' + co.id + ')">PDF</button>'
-          : '<button class="icon-btn" onclick="openCOAcceptModal(' + co.id + ')" style="background:var(--bronze);color:#fff;border-color:var(--bronze);">Get Acceptance</button>' +
-            '<button class="icon-btn" onclick="printChangeOrder(' + co.id + ')">PDF</button>';
-        detailHtml += '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;margin-bottom:6px;gap:8px;">' +
-          '<div style="flex:1;min-width:0;"><strong>CO-' + co.id.toString().slice(-6) + '</strong> · ' + co.description.substring(0,50) + (co.description.length>50?'...':'') +
-            '<div style="margin-top:2px;">' + coStatus + '</div></div>' +
-          '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">' +
-          '<span style="color:' + (coHours(co).total>=0?'var(--bronze)':'var(--ok-tx)') + ';font-weight:600;">' + coHoursLabel(co) + '</span>' +
-          coActions +
-          '</div></div>';
-      });
-      detailHtml += '</div>';
-    }
-    // Add probate fields if applicable
-    if (j.svc === 'probate' && (j.probateCase || j.executor || j.probateAttorney)) {
-      detailHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">' +
-        '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Probate Information</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
-      var pFields = [
-        ['Case number', j.probateCase||'—'],
-        ['Court deadline', j.probateDeadline||'—'],
-        ['Attorney name', j.probateAttyName||'—'],
-        ['Attorney firm', j.probateAttyFirm||'—'],
-        ['Attorney phone', j.probateAttyPhone||'—'],
-        ['Attorney email', j.probateAttyEmail||'—'],
-        ['Executor name', j.executor||'—'],
-        ['Executor phone', j.executorPhone||'—'],
-        ['Executor email', j.executorEmail||'—'],
-        ['Property sale', j.probateSale||'—'],
-      ];
-      pFields.forEach(function(f){
-        detailHtml += '<div><div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;">' + f[0] + '</div>' +
-          '<div style="font-size:12px;color:var(--gray-dk);margin-top:1px;">' + f[1] + '</div></div>';
-      });
-      detailHtml += '</div></div>';
-    }
-    detailHtml += '</div></div></td></tr>';
+    // ⚠⚠ NO DETAIL ROW (deleted 2026-09-29, audit H2). A hidden `<tr id="detail-…">` was built here for
+    // every client — phone, address, house flags, probate details and the job's change orders — and never
+    // added to `html` ("Detail expand suppressed — click row to open Client Dashboard"). Its change-order
+    // block was the ONLY place a change order could be printed or accepted, so it hid a dead end: a change
+    // order raised on the dashboard could never be signed for. Those controls live on the dashboard's
+    // Change Orders card now (coCardActions), and every other field here is on the Client Dashboard.
 
     html += '<tr style="cursor:pointer;" onclick="openClientDashboard(' + j.id + ')">';
     // Name, street and concierge are typed free text — escaped, or a "<" in one takes the row apart.
@@ -11936,7 +11870,6 @@ function renderJobs() {
     html += '<td>' + reCell + '</td>';
     html += '<td style="white-space:nowrap;" onclick="event.stopPropagation()">' + actions + '</td>';
     html += '</tr>';
-    // Detail expand suppressed — click row to open Client Dashboard
   });
   body.innerHTML = html;
   maybeStartJobsWatch();   // keep the list live while anything is Pending Approval
@@ -12576,6 +12509,72 @@ function coReasonLabel(v) {
   return r ? r.l : String(v || '');
 }
 
+// ⚠⚠ THE TWO CONTROLS A CHANGE ORDER NEEDS, ON THE ONE SCREEN THAT SHOWS IT (2026-09-29, audit H2).
+// Until today `printChangeOrder` and `openCOAcceptModal` were called from exactly one place:
+// `renderJobs`' detail row, which was built for every client and never added to the page ("Detail
+// expand suppressed"). So a change order could be raised from the Client Dashboard's + New and then
+// never printed and never accepted — its row read "Awaiting acceptance" with nothing to press. And an
+// unaccepted change order moves nothing: the client got no document to sign, the hours never
+// lengthened the plan or cleared the overrun flags, a fixed-price change was never added to the final,
+// and a vendors-only Home Prep job could never open its hours log. Browser steps 23–25 passed only
+// because they called both functions through page.evaluate — a test reaching past the screen proves
+// the function exists, never that a person can reach it.
+// PDF on every row: the client's copy, before they agree and after. Get Acceptance only while it is
+// unaccepted — `acceptChangeOrder` writes the name and the date unconditionally, so offering it again
+// would let a second name overwrite who agreed and when. DOM-free, like dashUtilityBar, so the rule is
+// tested on its own as well as in the rendered card. The id goes into an onclick, so it is a number or
+// nothing: a record whose id is not one gets no controls rather than a broken call.
+function coCardActions(co) {
+  var id = Number(co && co.id);
+  if (!isFinite(id) || !id) return [];
+  var a = [{ label: 'PDF', call: 'printChangeOrder(' + id + ')' }];
+  if (!co.clientApproved) a.push({ label: 'Get Acceptance', call: 'openCOAcceptModal(' + id + ')', primary: true });
+  return a;
+}
+
+// ⚠⚠ DO A CHANGE ORDER'S HOURS CARRY THE JOB'S EXPEDITED PREMIUM AND PREFERRED-CLIENT DISCOUNT? The
+// answer differs by billing basis, and it is Anthony's (2026-09-29, audit Q14): "an hourly change
+// order's hours carry the job's rush premium and discount like every other hour, and a fixed-price
+// change order is priced at the plain hourly rates. Say so in one line on the printed change order."
+// Both halves are what invoiceHtml already does, so the line states the bill rather than setting it:
+// on an hourly job the hours are logged, `finalRushAmt` is levied on the gross labour those hours are
+// in, and `discountOnLabor` comes off it — every logged hour alike, a change order's included; on a
+// fixed price the change order's price (`coCharge`) is added AFTER both, at the estimate's rate card,
+// and `_rushRate` is 0 there because the premium already sits inside the flat fee.
+// ⚠ IT NAMES ONLY WHAT THE JOB CARRIES, and on a job with neither it returns '' — the standing
+// client-copy rule: a line explaining something that is not there costs rather than earns, and "these
+// hours carry the job's premium and discount" on a job with neither is about nothing. On an hourly job
+// it states the percentages, off the estimate the client was quoted — the same figures its invoice
+// itemises. On a fixed price it names them without figures: the fixed-price estimate never itemises
+// the premium or the discount (the flat fee is presented as one number), and this page must not be
+// the first to. ⚠ A discount offered on a fixed fee after approval is baked into `fixedAmount` and
+// leaves `discountPct` at 0 (applyDiscountRevision); `prevApprovedTotal` is the one trace it leaves.
+// ⚠ HOME PREP DROPS "LIKE EVERY OTHER HOUR". A prep job signed with vendors only has no other hours —
+// the reason the prep page carries its own terms (see printChangeOrder) — so that clause would be the
+// same false sentence one line lower. The rule about the hours is unchanged: the invoice discounts
+// every logged prep hour alike, and a prep estimate is never expedited (calcAll forces it off).
+// The rush test mirrors the invoice's own (`est.rush`, the rate pinned on the estimate), so the line
+// can never name a premium the final does not charge or omit one it does.
+function coRateModsLine(est, fixed, prep) {
+  if (!est) return '';
+  var rush = est.rush ? Math.round((Number(est.rushPct) || RUSH_PCT) * 100) : 0;
+  var disc = Math.round(Number(est.discountPct) || 0);
+  if (fixed) {
+    var discF = disc > 0 || !!est.prevApprovedTotal;
+    if (!rush && !discF) return '';
+    return 'It is priced at the plain hourly rates shown: ' +
+      (rush && discF ? 'the expedited-delivery premium and the preferred-client discount in your fixed project fee do'
+        : rush ? 'the expedited-delivery premium in your fixed project fee does'
+        : 'the preferred-client discount in your fixed project fee does') + ' not apply to it.';
+  }
+  var parts = [];
+  if (rush) parts.push('the ' + rush + '% expedited-delivery premium');
+  if (disc > 0) parts.push('the ' + disc + '% preferred-client discount');
+  if (!parts.length) return '';
+  return (prep ? 'These hours carry ' : 'Like every other hour on this engagement, these hours carry ') +
+    parts.join(' and ') + ' on the final invoice.';
+}
+
 // \u26a0 ONE SENTENCE FOR "THE HOURS HAVE RUN MORE THAN 15% OVER", read by the Client Dashboard's
 // Hours Log card and the Job Plan's hours summary. They are the same fact on two screens, both
 // said "Client must be notified" on every job, and on a fixed price that is false twice over:
@@ -12846,7 +12845,15 @@ function saveChangeOrder() {
 
   document.getElementById('change-order-modal').style.display = 'none';
   renderJobs();
-  showFB('e-fb', 'ok', 'Change Order created (' + coHoursLabel(co) + ') — pending client acceptance. Open the job in Client Dashboard to get client sign-off.');
+  // ⚠⚠ ON THE SCREEN IT WAS RAISED FROM, AND THE CARD REDRAWN (2026-09-29, audit H2). This printed to
+  // `e-fb`, a strip inside the hidden Build Estimate panel, and redrew nothing — so pressing Create on
+  // the Client Dashboard closed the modal onto a Change Orders card still reading "None issued", with
+  // no word anywhere that it had worked. And its sentence sent you to "open the job in Client
+  // Dashboard", the screen you were on. _docNotice sets the notice and then redraws (a notice written
+  // and THEN redrawn is wiped on the same tick — see dashNotice), so the new row, with its PDF and Get
+  // Acceptance, is on screen under the message that names them.
+  _docNotice('ok', 'Change order CO-' + String(co.id).slice(-6) + ' created (' + coHoursLabel(co) + ') — waiting on the client. ' +
+    'On its row under Change Orders, PDF prints it for them to sign and Get Acceptance records their agreement.', jobId);
 }
 
 // ─── AGREEMENT SENT → SIGNED → DEPOSIT ────────────────────────────────────────
@@ -13446,11 +13453,15 @@ function acceptChangeOrder() {
   }
   closeCOAcceptModal();
   renderJobs();
-  showFB('e-fb', 'ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + ').' + (b.fixed
+  // ⚠ On the dashboard, and redrawn (2026-09-29, audit H2) — the Save notice's reason exactly: this went
+  // to the hidden `e-fb`, and nothing repainted the card, the Hours Log bars or the schedule this
+  // acceptance has just moved, so the row went on reading "Awaiting acceptance" beside a Get Acceptance
+  // that had already been pressed.
+  _docNotice('ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + ').' + (b.fixed
     ? ' ' + _coMoney(coPrice(co, b.tcRate, b.psRate)) + ' on the fixed project fee, which is now ' + fmt(b.flat + shift) + ' — added on the final invoice.'
     : b.prep
     ? ' These concierge hours bill on the final invoice at $' + (Number(b.tcRate) || 0).toLocaleString() + ' an hour as they are worked, on top of the site management fee — log them on the Job Plan.'
-    : ' These hours bill on the final invoice as they are worked.'));
+    : ' These hours bill on the final invoice as they are worked.'), co.jobId);
 }
 
 function printChangeOrder(coId) {
@@ -13534,6 +13545,12 @@ function printChangeOrder(coId) {
       'Coordinating the vendors remains covered by that fee. ' +
       'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.';
   }
+
+  // ⚠ Q14 (2026-09-29): whether these hours carry the job's expedited premium and preferred-client
+  // discount — yes like every other hour on an hourly job, no on a fixed price. One line, on all three
+  // arms, and only where the job carries one of them; see coRateModsLine for why it is silent otherwise.
+  var _mods = coRateModsLine(_b.est, !!fx, !!_b.prep);
+  if (_mods) terms += '<div style="margin-top:6px;">' + _mods + '</div>';
 
   var content = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:1rem;">' +
     '<div style="text-align:center;margin-bottom:1.5rem;">' +
@@ -17799,12 +17816,20 @@ function renderClientDashboard(jobId) {
   h += sectionHdr('Change Orders');
   cos.forEach(function(co){
     h += '<div class="doc-r">';
+    // Who accepted it rides on the row: it is the one record of the client's agreement on screen, and
+    // it was the only thing the dead client-list block showed that this card did not.
     h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">Change Order CO-'+String(co.id).slice(-6)+'</div>'
        + '<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+esc(String(co.description||'').slice(0,50))
-       + ' · '+coHoursLabel(co)+' · '+esc(co.createdAt)+'</div></div>';
-    h += '<div style="display:flex;gap:6px;align-items:center;">';
+       + ' · '+coHoursLabel(co)+' · '+esc(co.createdAt)
+       + (co.clientApproved && co.clientName ? ' · accepted by ' + esc(co.clientName) : '')+'</div></div>';
+    h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">';
     h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#3C348922;color:#3C3489;font-weight:500;">'
        + (co.clientApproved ? 'Accepted' : 'Awaiting acceptance') + '</span>';
+    // ⚠⚠ THE ONLY PLACE EITHER CONTROL IS OFFERED (2026-09-29, audit H2) — see coCardActions for the
+    // dead end this closes. Labels are app constants, so they go in raw.
+    coCardActions(co).forEach(function(a){
+      h += '<button class="' + (a.primary ? 'btn-bronze' : 'btn-s') + '" style="font-size:11px;padding:3px 10px;" onclick="' + a.call + '">' + a.label + '</button>';
+    });
     h += '</div></div>';
   });
   h += '<div class="doc-r">';

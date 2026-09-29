@@ -640,7 +640,7 @@ Only **Active** vendors appear in the picker. An assigned vendor's phone is a ta
 
 ### d. Change Orders — Client Dashboard
 
-Scope changed after approval? Do *not* edit the estimate — it's locked. From the job card: **Create Change Order** → description, a reason, and **the extra concierge and specialist hours**. **No manager PIN is involved** — a change order is agreed with the client, not approved internally.
+Scope changed after approval? Do *not* edit the estimate — it's locked. On the client’s dashboard, press **+ New** on the **Change Orders** card → description, a reason, and **the extra concierge and specialist hours** → **Create Change Order**. **No manager PIN is involved** — a change order is agreed with the client, not approved internally.
 
 > **⚠** **A change order carries HOURS. There is no dollar box, and on an ordinary job there is no price on the client's copy.** (Changed 2026-09-11 — it used to ask for a dollar impact. A fixed-price job is different — see the next box.) Type the extra concierge and specialist hours you expect; the screen tells you what that does to the job as you type — *“140.0 hrs on the estimate becomes 180.0 (+28.6%) — Past the 15% threshold”* in amber, or *“+2.9% — inside the 15% the client already agreed to”* in blue. **It will not save with no hours on it.**
 >
@@ -652,12 +652,18 @@ Scope changed after approval? Do *not* edit the estimate — it's locked. From t
 >
 > **Printed a fixed-price change order before 25 Sep? Print it again** — the old one says it creates no charge, and the invoice charges it.
 
-Then two buttons appear on it:
+It lands as its own row on that card, and the row carries its buttons:
 
-1. **PDF** — the printable change order. On an ordinary job: hours on the approved estimate, the scope change, revised estimated hours, and **no dollar figure on it anywhere**. On a fixed-price job: the fee in the agreement, this change order’s price with the hours and rates behind it, and the revised fee.
-2. **Get Acceptance** — the client types their name against *✓ I Accept This Change Order.* Hand them the iPad, or record it yourself off their email or call. On a fixed-price job the screen they sign under shows the price.
+1. **PDF** — the printable change order, on every row, before and after the client agrees. On an ordinary job: hours on the approved estimate, the scope change, revised estimated hours, and **no dollar figure on it anywhere**. On a fixed-price job: the fee in the agreement, this change order’s price with the hours and rates behind it, and the revised fee.
+2. **Get Acceptance** — the client types their name against *✓ I Accept This Change Order.* Hand them the iPad, or record it yourself off their email or call. On a fixed-price job the screen they sign under shows the price. **Only there while it is waiting on the client** — once accepted, the row reads *Accepted* with their name, and keeps its PDF.
 
 > **⚠** **An unaccepted Change Order is never billed.** The final invoice counts accepted change orders and silently ignores the rest. A change order created, printed, agreed on the phone and never marked accepted is work you will do and not charge for. **Take the acceptance at the moment the client agrees.**
+
+> **⚠** **Raised a change order before 29 Sep? The client has never accepted it, because until then there was no button to do it with.** The **PDF** and **Get Acceptance** buttons sat in a hidden row the app never showed, so the card read *Awaiting acceptance* with nothing to press. An unaccepted change order does nothing: it is not on the final invoice, its hours do not lengthen the plan or clear the overrun warnings, and on a Home Prep job it does not open your hours log. **Open the job, press PDF on the row, walk the client through it, and take Get Acceptance** — or record it off their email or call if they already agreed.
+>
+> The message after you press *Create Change Order* or *I Accept This Change Order* now shows on the dashboard, and the row appears straight away. It used to show on a screen you could not see, so pressing Create looked like nothing had happened. **If you pressed it twice because of that, print and accept only one** — a change order cannot be deleted, and the one left unaccepted moves nothing and is never billed.
+
+> **If the client asks whether their rush premium or their discount applies to the extra hours (2026-09-29):** on an hourly job, **yes** — the extra hours are billed like every other hour on the job, premium and discount included, and the printed change order says so in one line. On a fixed-price job, **no** — the change is priced at the plain hourly rates printed on it, and the premium and the discount stay inside their fixed fee; the page says that too. A job with neither prints no line.
 
 > **The second change order starts from where the first left the job (2026-09-25).** Its screen reads *“180.0 hrs on the estimate and 1 accepted change order becomes 200.0”*, and its printed copy carries a *Change orders already accepted* line, so the revised total is the real one. It used to start from the estimate alone and print a total short by every hour the first change order had added.
 
@@ -1237,7 +1243,10 @@ When you do read it: it's an indicative profitability readout with a flag on it,
 | Mark Signed / Record Deposit buttons aren't there | The step before hasn't been marked. They appear one at a time, in order. |
 | Save Hours Entry is greyed out | Either the team isn't confirmed, or the deposit isn't in — the bar says which. |
 | Final invoice won't print, and no PIN is offered | No hours are logged. Go and log them. |
-| A change order isn't on the final invoice | It was never marked accepted. Get Acceptance. |
+| A change order isn't on the final invoice | It was never marked accepted. Open the client, find it on the **Change Orders** card, and press **Get Acceptance** on its row. **Every change order raised before 2026-09-29 is in this state** — until then that button was not on the page. |
+| The Change Orders card says *Awaiting acceptance* and there is nothing to press | The page is older than 2026-09-29, when the buttons sat in a hidden row. Reload: every row carries **PDF**, and **Get Acceptance** until the client accepts. |
+| You pressed *Create Change Order* and nothing seemed to happen | On a page older than 2026-09-29 the message went to a screen you could not see and the card did not redraw — the change order **did** save. Reload and look at the card before raising it again. If there are two, print and accept only one: a change order cannot be deleted, and the one left unaccepted moves nothing and is never billed. |
+| The printed change order says the extra hours carry the rush premium or the discount | Correct on an hourly job (2026-09-29): they are billed like every other hour on the final invoice, premium and discount included. On a fixed-price job it says the opposite — the change is priced at the plain hourly rates printed on it. |
 | The change order form has no box for a dollar amount | Correct — it carries **hours** now (changed 2026-09-11). Type the extra concierge and specialist hours. You are not billing the client for the change order; you are recording their authority for the extra work, and the hours are billed through your timesheet on the final invoice like every other hour. On a fixed-price job they are converted at the estimate’s rates and added to the fee instead. |
 | A change order won’t save | It has no hours on it. A change order with no hours would sit on the timeline and the invoice reading as an agreed change while agreeing to nothing, so the app refuses it. |
 | A change order on a fixed-price job shows a dollar amount | Correct, since 2026-09-25. On a flat fee nothing else charges the added scope — the change order’s price is exactly what the final invoice adds, so the client signs the price, not just the hours. On an ordinary hourly job there is still no price on it. |

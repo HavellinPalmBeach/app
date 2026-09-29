@@ -1,3 +1,83 @@
+## ⚠⚠ A CHANGE ORDER COULD BE CREATED AND NEVER PRINTED OR ACCEPTED — THE CARD CARRIES BOTH NOW (FIXED 2026-09-29)
+Audit finding **H2** off the 2026-09-28 workflow audit, with Anthony's decision on Q14 applied. App-only, no redeploy.
+
+- **⚠⚠ BOTH CONTROLS LIVED IN A ROW THAT WAS NEVER ON THE PAGE.** `openCOAcceptModal` and `printChangeOrder` were called only
+  inside `renderJobs`' `detailHtml` — 70 lines built on every client-list paint and never appended (*"Detail expand
+  suppressed"*). The dashboard's Change Orders card read *Awaiting acceptance* with nothing to press. **Reproduced on the
+  pre-change build in Chromium through the real + New and Create buttons:** after Create the card still read *None issued*;
+  the notice went to `#e-fb` inside the hidden Build Estimate panel (`offsetParent` null) and read *"Open the job in Client
+  Dashboard to get client sign-off"* — on the Client Dashboard; **no element anywhere in the DOM carried either onclick**;
+  after a forced redraw the row read *Awaiting acceptance* beside + New alone; the detail row never reached the DOM.
+  - **What that cost, because an unaccepted change order moves nothing:** the client never had a page to sign; accepted hours
+    never lengthened the plan or cleared the overrun flags (`coAcceptedHours` filters on `clientApproved`); a fixed-price change
+    was never billed (`coCharge` sums accepted ones); a vendors-only Home Prep job never opened its hours log (`jobIsFeeOnly`).
+    **Every change order raised before today is still unaccepted**, and both documents say to open each job and take it.
+- **⚠⚠ STEPS 23–25 WERE GREEN THROUGH IT BECAUSE THEY CALLED BOTH FUNCTIONS THROUGH `page.evaluate`.** A browser step that
+  calls the function instead of pressing the button proves the function, not the path — the same gap `dashboard-actions`
+  records for source checks, one level up. They press the real buttons now: `openDash` opens the dashboard from the client
+  list, and `press` counts the selector at exactly one before clicking. **Against the pre-change build: step23 fails 2 and
+  step24 fails 2 (each stops at the first press of a button that is not there), step25 fails 37, step26 fails 20.**
+- **`coCardActions(co)` IS THE ONE RULE:** PDF on every row, Get Acceptance only while unaccepted, and nothing without a real id
+  (a `NaN` onclick is a control that looks pressable and does nothing). Rendered beside the status pill — Get Acceptance bronze
+  (the primary), PDF outline. **The only live callers of either function are in it**; a test asserts each appears exactly once
+  in comment-stripped source, so a second door cannot be added quietly. The row also names who accepted (escaped — driven with
+  `O'Hara <b>Trust</b>`), the one thing the dead block showed that the card did not.
+- **The two notices moved and the card redraws.** `saveChangeOrder` and `acceptChangeOrder` end in `_docNotice('ok', msg, jobId)`
+  — `#dash-fb` through `_jobBandHost`, then `_dashRedraw` — so the row is on screen the moment Create is pressed. The create
+  notice names the change order and where its two buttons are. **A refusal still prints inside the modal (`co-fb`)**, where the
+  person is; a test drives it.
+- **⚠ THE DETAIL ROW AND `houseFlagSummary` ARE DELETED, NOT LEFT DEAD.** `houseFlagSummary` had no other reader (CLAUDE.md
+  recorded that on 2026-09-10). Every field the row carried is on the Client Dashboard. Three suites lifted the helpers and
+  were restated; restoring the row fails 11 and crashes two suites (their sandboxes no longer lift the helper), loudly.
+- **Q14, DECIDED BY ANTHONY: an hourly change order's hours carry the job's rush premium and discount like every other hour;
+  a fixed-price change order is priced at the plain hourly rates. One line on the printed page says which.**
+  `coRateModsLine(est, fixed, prep)`:
+  - T&M — *"Like every other hour on this engagement, these hours carry the 20% expedited-delivery premium and the 10%
+    preferred-client discount on the final invoice."* Fixed — *"It is priced at the plain hourly rates shown: the
+    expedited-delivery premium and the preferred-client discount in your fixed project fee do not apply to it."*
+  - The premium reads the estimate's pinned `rushPct`, never today's `RUSH_PCT`. On fixed, a discount folded in by *Offer
+    Discount* counts (`prevApprovedTotal`), since `applyDiscountRevision` bakes it into the fee and zeroes `discountPct`.
+  - **⚠ Prep says *"These hours carry …"*, never *"like every other hour"*** — a vendors-only prep job has no other hours, and
+    prep never carries the premium (`calcAll` forces rush off). Found writing the prep case, not by a test.
+  - **A job with neither prints no line** — the standing rule against explaining an absence.
+  - **The line states what the invoice ALREADY does; nothing about billing changed, and it is driven, not asserted:** on a
+    T&M rush + 10% job, 10 accepted concierge hours at $150 collect **$1,620** against **$1,500** on a plain job; on a fixed
+    rush + discount job the final adds exactly the plain **$1,500**.
+  - **Not carried on the acceptance panel** — offered to Anthony as a follow-up rather than widened into this commit.
+- **11,586 committed checks** (+97: `tests/change-order-card.test.js` new at 95, and 2 in `intake-house-flags` asserting
+  `houseFlagSummary` is gone. The new suite covers `coCardActions`, a driven dashboard with one
+  accepted and one pending change order asserting both controls, their onclicks, classes and uniqueness, Create → Accept
+  through the real modals, the Q14 wording on every arm, and the invoice join). `coCardActions` / `coRateModsLine` lifted —
+  never stubbed — into the eight suites that render the card or print the page; `_docNotice` stubbed to record in the two that
+  drive `saveChangeOrder`. **Revert sweep on four tar copies: 20 changes, ALL RED, baseline 11,586 / 0 before and after on every
+  copy, no needle mismatched.** Not rendering the card's controls (the defect) fails 19, Create printing to `#e-fb` again (the
+  other half) 23, dropping Get Acceptance 18, Accept to `#e-fb` 11, no Q14 line 9, the rest 1–5.
+  - **⚠ FOUR REVERTS CRASHED THE NEW SUITE ON THE FIRST SWEEP INSTEAD OF FAILING IT** — index reads on a button list the revert
+    had emptied (`buttons(row)[1].call`). Read defensively now; re-done, all four fail cleanly with every check running.
+- **Verified in headless Chromium, `tests/browser/step26.js` new at 75, 0 failed, 0 page errors**: a Home Editing job with rush
+  and a 10% discount, opened from the client list; + New → Create lands the notice on the dashboard and the row with PDF and a
+  bronze Get Acceptance; PDF prints the T&M line and no `$`; Get Acceptance → Accept, the notice, the row *Accepted* with PDF
+  alone, the Hours Log *incl. +8.0 hrs by change order*; a second pending change order with unique onclicks; a fixed $24,000 rush
+  + discount job printing *+ $2,000* and the fixed line; a plain fixed job printing none; no detail row and no change-order
+  control in the client list; overflow 0 and all three buttons inside the viewport at 1440 and 390.
+  - **⚠ AND THE RUNNER HUNG FOR SEVENTEEN MINUTES ON THE PRE-CHANGE BUILD, WHICH IS ITS OWN DEFECT.** step23 and step24 did not
+    close the browser when they threw, so node stayed alive and `run.sh` never reached the next step. Both close it in the catch
+    now (as 25 and 26 do), steps 23 and 26 set the 8s default action timeout 24 and 25 already used, and `run.sh` gives every
+    step a 600s ceiling that reports *TIMED OUT* rather than stalling. `run.sh`'s default list is 1–26.
+  - **Steps 1–26 re-run as regressions: 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 101 / 73 / 99 / 75, 0 failed — 1,287 browser checks across the twenty-six.** Steps 23, 24 and 25 went 78 → 101, 58 → 73 and 78 → 99 — each press now also asserts its control is
+    on the page exactly once — so 1,153 + 59 + step26's 75 is the 1,287.
+- Manual **§9** (the + New route; the row's buttons; a note on the dead end with what to do about change orders raised before
+  today; the notices; the Q14 note) and playbook **Step 10d** (the same, plus a `.stop` and a note in field language) and **four**
+  symptom rows. Both `.md` copies hand-edited; **28 claims parity-checked, 0 mismatches**; `doc-structure` green; rendered at
+  1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as before.
+  The first `<style>` block is byte-identical at 98,760 bytes; the app diff is 106 insertions against 81 deletions.
+- **⚠ A CHANGE ORDER CANNOT BE DELETED, AND THE DOCUMENTS SAY WHAT THAT MEANS HERE.** Anyone who pressed Create twice on the old
+  build (it looked as though nothing happened) holds a duplicate: print and accept only one — the other moves nothing and is
+  never billed.
+- **⚠ THE SHAPE TO COPY: a control that exists only inside markup nothing appends is not a control.** Grep finds the onclick, the
+  function works when called, and every test that calls it passes — the one question none of them asks is whether a person can
+  reach it. **Count the callers of a user-facing action, and press the button in the browser.**
+
 ## ⚠⚠ THE HOME PREP AGREEMENT STATES THE CONCIERGE RATE — THE CHANGE ORDER RESTATES IT (BUILT 2026-09-25)
 Anthony, the same evening the prep change-order route shipped (the entry below): *"I think we should mention the hourly rates in
 the home prep agreement."* That answers counsel bundle B5's third question, which the build below had left open by printing the
@@ -8196,7 +8276,9 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/change-order-fixes-ew3m2i`
+- Active feature branch: `claude/relaxed-fermi-nopl99`
+  (`claude/change-order-fixes-ew3m2i` is the previous name. It carried the two 2026-09-25 Home Prep change-order
+  builds to `main`; this session was assigned the new name and starts at the same commit.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
@@ -8245,7 +8327,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/change-order-fixes-ew3m2i:main`
+  `git push origin claude/relaxed-fermi-nopl99:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -13391,8 +13473,11 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
-  concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows); see the entry at the top of this file.
+- Last reconciled against the app: **2026-09-29** — both documents, against the change-order card carrying PDF and Get
+  Acceptance, the notices moving to the dashboard, and the one Q14 line on the printed change order (manual §9; playbook
+  Step 10d and four symptom rows); see the entry at the top of this file.
+- Prior pass **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
+  concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows).
 - Prior pass **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
   hours by a change order that prints the rate (manual §6c, §8, §9, §11, §12; playbook Step 10d, the Home Prep short version and
   the symptom table).
