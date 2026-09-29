@@ -455,14 +455,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // A prep job opened straight after another prep job would otherwise inherit the last
     // property's answer and price hours nobody walked — the `_volPreset` leak exactly.
+    // ⚠ Driven through the ONE reset since 2026-09-29 (resetEstimateJobState). This used to drive
+    // resetEstimateExtras, one of four hand-kept copies of the job-switch reset; the copies are what
+    // let the discount and the private note leak onto the next client (tests/estimate-reset.test.js).
     const rDoc = domStub({ 'e-declutter-hrs': '5' });
     const rCtx = sandbox({
-      fns: ['resetEstimateExtras'],
+      fns: ['resetEstimateJobState'],
       vars: ['prepItems'],
-      stubs: { document: rDoc, renderVendors: () => {}, renderPrepItems: () => {} } });
-    rCtx.resetEstimateExtras();
+      stubs: { document: rDoc, renderVendors: () => {}, renderCollections: () => {}, renderVehicles: () => {},
+               clearAllRooms: () => {}, paintVolPreset: () => {}, seedDocScopeFromJob: () => 'full' } });
+    rCtx.prepItems = [{ type: 'Painting', cost: 5000 }];
+    rCtx.resetEstimateJobState({ id: 8, svc: 'prep' });
     eq(rDoc.getElementById('e-declutter-hrs').value, '0',
        'switching job clears the declutter hours');
+    eq(rCtx.prepItems.length, 0, 'with the prep lines they were priced beside');
 
     // ⚠ THE REOPEN IS PINNED AT SOURCE, NOT DRIVEN, AND THE REASON IS RECORDED RATHER THAN
     // GLOSSED: restoreEstimateToUI walks the whole room grid and ends in calcAll, so driving it

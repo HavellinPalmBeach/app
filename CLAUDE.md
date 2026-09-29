@@ -1,3 +1,177 @@
+## ⚠⚠ A FRESH ESTIMATE INHERITED THE LAST CLIENT'S — ONE RESET NOW, AND A NET UNDER IT (FIXED 2026-09-29)
+Workflow audit of 2026-09-28, finding **C1 (Critical)**: a fresh estimate on Build Estimate carried settings from the last
+client's estimate. App-only, no redeploy. `resetEstimateJobState(job)` is the one reset; `tests/estimate-reset.test.js` is the
+net under it.
+
+- **⚠⚠ REPRODUCED ON THE PRE-CHANGE BUILD BEFORE ANYTHING WAS TOUCHED, through the real buttons.** Client A priced with a 10%
+  discount, move styling, a private walkthrough note, a coin collection, a car and a planner date; **← Clients without saving**
+  (the bar keeps the work, by design); client B's Build estimate. B opened with **all of it**:
+
+  | | pre-change | now |
+  |---|---|---|
+  | `#e-discount` | **10** — only `restoreEstimateToUI` ever wrote it, so it survived a job switch AND a Save; the audit watched one 10% ride through five new clients | `0` |
+  | on fixed price | the leak took 10% off B's flat fee (**$18,240 → $16,416** on the house measured here; $2,220 on the audit's) and **printed no discount line** | B's own suggestion |
+  | `#e-move-styling` | ticked (+8 specialist hours on a Home Transition) | off |
+  | `_privateWalkNote` + its box | A's *"the son contests the will"*, saved on B and read in **B's Walkthrough view** | blank |
+  | `#e-prepared-by` | A's concierge, on a job naming nobody | blank |
+  | `collectionsData` / `vehiclesData` | A's coin collection and car, **printed on B's client estimate** | empty |
+  | `#tp-target` | A's date, so the planner advised a crew for A's deadline | blank |
+
+  **⚠ Save was not a clean break either**: `clearEstimateTab` missed the discount, styling, note and walker, so they rode through a
+  Save into the next client.
+- **⚠⚠ FOUR MORE THE AUDIT DID NOT LIST, ALL FOUND IN THE BROWSER WHILE REPRODUCING IT, and one of them defeated a gate.**
+  - **A's $4.2M home value rode onto B and let B save past *"Property value is required"*.** `loadJobIntoEstimate` wrote
+    `e-propval` only `if (job.propVal)`, so a job with none kept the last client's — the one refusal that exists to catch a missing
+    home value was satisfied by another house's. It writes `job.propVal || ''` now. Reverting fails the suite; the browser drives the
+    refusal on B.
+  - **A renamed *Other* row** (A's *Wine cellar*) sat on B's grid and became a room on B's estimate the moment B ticked it —
+    `clearAllRooms` never reset the name box `calcAll` reads. `restoreEstimateToUI` writes a saved estimate's own name back.
+  - **The room-note indicator stayed bronze and read *📝 Walkthrough*** on a room B had never noted — `setRoomState`'s off branch
+    cleared the note and left the button painted. Colour, weight and label all go back now.
+  - **A dictation still running** would append its last words to the NEXT client's same room row or private note (rows are positional).
+    Every open recogniser is `abort()`ed first — **never `stop()`, which still delivers the final result.**
+- **⚠⚠ ONE RESET, CALLED FROM EVERY PATH, AND THE SHAPE IS THE FIX.** The old reset lived in **four** hand-kept copies —
+  `neutralizeEstimateView`, the fresh-build branch of `applyOpenedEstimate`, `clearEstimateTab`, and `resetEstimateExtras` beside
+  them — each a list of the controls somebody remembered. `resetEstimateJobState(job)` is the list now, and `resetEstimateExtras` is
+  **deleted**. Callers: `neutralizeEstimateView` (so every open — `loadJobIntoEstimate` AND `editEstimateForJob`, which now passes the
+  job it is opening), the fresh-build branch, and `clearEstimateTab` with `null` (Save, unbind, Start over).
+  - **Three inputs seed from the JOB, never from blank and never from the last client**: Premium Estate (`job.premium`), the
+    documentation scope (`seedDocScopeFromJob`), and who walked the house (`job.siteVisitBy || job.tc`). A job with no answer gets
+    blank, which is the truth.
+  - **⚠ WHAT IT DELIBERATELY DOES NOT TOUCH:** the job binding (`#e-job`), the four fields `loadJobIntoEstimate` writes off the job
+    record (service, sqft, property value, target start), and the approval state (`loadEstimateForJob` answers that from the store).
+  - **⚠ A SAVED ESTIMATE GETS ALL OF IT BACK** because every open resets first and `restoreEstimateToUI` then writes the record over it —
+    so a field the record lacks comes back BLANK rather than as the last client's. **The planner target is the one input no record
+    carries**, and that is correct: it is a question asked on site, not a term of the estimate. Driven: A reopened after B has every
+    one of its values back, and `tp-target` blank.
+  - **⚠ THE RESUME IS UNTOUCHED.** `openEstimateScreen` on the SAME client still resumes the unsaved work and never comes through the
+    reset — the ← Clients bar's promise. Pinned in both the unit suite and the browser.
+- **⚠⚠ THE NET IS THE RULE, NOT TODAY'S LIST — and it is what makes the next control unable to leak.**
+  `tests/estimate-reset.test.js` derives the **call tree of `calcAll`** from source (it converges at 89 functions and 103 literal ids,
+  plus the dynamic prefixes the room grid and the vendor cards build ids from), adds every control in `#panel-estimate` and the state
+  variables `restoreEstimateToUI` assigns, sets every one to a previous client's value, drives the **real** open path for a different
+  job, and fails on anything that survives. Four exception maps, each **verified rather than trusted**: owned by the job (the five
+  job-record fields, each checked to follow the NEW job), seeded from the job (premium, walked-by), painted from a pin (`e-alpha`,
+  `e-docscope`), populated at load (`new-col-disp`). **Adding a control to Build Estimate and forgetting the reset fails the suite** —
+  which is the thing the four hand-kept copies could never promise.
+- **⚠ START OVER SAYS WHICH OF TWO THINGS IT DOES, because it always did one of two.** On a client with a **saved** estimate it clears
+  the screen and the open restores the saved one; with nothing saved it starts from the intake answers. The question promised *intake
+  answers* either way. It branches on the record now (`estimateHasContent`, so an empty record is correctly not "saved"), names what
+  goes, and the button's tooltip says both.
+- **⚠ NOT CHANGED, AND IT IS ANTHONY'S CALL: the bottom `Reset` button (`resetEstimate()`) is a FIFTH copy of a reset list**, on the
+  same client. It clears the rooms, rush and fixed price, but **unticks Premium Estate even on a premium job**, sets the documentation
+  scope to **full** whatever intake answered, and **leaves** the discount, move styling, private note, collections, vehicles, prep lines,
+  walked-by and planner date. Not C1 (it never crosses clients), so left alone rather than redesigned in passing; the manual says to use
+  Start over. Routing it through `resetEstimateJobState(currentJob)` is one line if Anthony wants it.
+- **Tests.** `tests/estimate-reset.test.js` new at **305**; five suites restated, not deleted — `doc-scope`, `estimate-walkthrough`,
+  `fixed-price`, `prep-declutter`, `prep-fee-billing` each pinned the old three-copy reset by byte sequence or lifted
+  `resetEstimateExtras`; each now drives `resetEstimateJobState` and asserts the requirement. **11,804 committed checks on this branch; 11,907 after merging the concurrent H4 session's suites.** The first `<style>` block is byte-identical at 97,897 bytes / 1,228 lines — no CSS.
+  **Revert sweep on four tar copies: 41 changes, ALL RED, baseline 11,792 / 0 before and after on every copy, no needle
+  mismatched, nothing crashed.** Taking the reset out of Save / unbind fails **42**; the fixed-price flags and clearing the rooms
+  16 each; the α and cost pins 14; the add-a-line boxes 12; the fresh branch's reset and the vendor + prep lists 11 each; the
+  fullness preset 9; the rest 1–7. The one-fail reverts are each the half of a pair the other half would otherwise cover: the
+  walker's site-visit-before-assigned order, drawing the collections table before emptying it, the disposition picker's default,
+  the three call sites passing the job, and restore writing a saved custom name back.
+  - **A second sweep on two fresh copies** covered what changed after the first one's copies were taken: the note button's label
+    (3), Start over collapsed to one question (2), its branch inverted (6), an empty record counted as saved (2), the tooltip (2);
+    11,804 / 0 before and after, with the home-value revert re-run there as a control (3). **⚠ Two of those checks were written
+    first, because nothing asserted the tooltip or the empty-record case** — a sweep over an unasserted line can only come back green.
+  - **⚠ ONE OF MY OWN BROWSER CHECKS COULD NOT FAIL, CAUGHT BEFORE IT RAN.** The collections and vehicles tables render each line as
+    INPUTS, so a `textContent` read passes over a table full of the last client's lines. It reads the input values now, and
+    asserts A's table shows A's lines first, so the check on B is falsifiable.
+- **Verified in headless Chromium, `tests/browser/step27.js`, 90 checks, 0 failed, 0 page errors** (written as step 26 and
+  renumbered on the merge — the concurrent H4 session's took 26 first), driving the real controls (the
+  discount box, the styling box, the note box, the notes modal's Save, the Other row's name box, the + Add buttons, the planner date):
+  A priced; ← Clients and back to A **resumes**; ← Clients then B is **clean on all of it** including the home value, *Other*, and the
+  note button's colour and label; B's client estimate and Walkthrough view carry none of A; B's Save is **refused** on B's own missing
+  home value; on fixed price B's flat fee **is** its suggestion with no discount line; A saved then B — clean again; A reopened —
+  everything back; Start over asks the saved question on A (and restores the saved 10% over an unsaved 12%) and the intake question
+  on B. **Against the pre-change build it fails 39 of 90.** `run.sh`'s default list is 1–27; on the MERGED tree steps 1–26 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 /
+  33 / 61 / 48 / 30 / 15 / 25 / 42 / 32 / 52 / 27 / 58 / 68 / 75 / 33 / 78 / 58 / 78 / 28 (the H4 session's step 26), 0 failed —
+  **1,271 browser checks across the twenty-seven**.
+- Manual **§1** (Start over's two outcomes) and **§5h** (a note: what leaked and the measurements, what a fresh estimate holds now,
+  what has not changed, Start over and the older Reset, and the check for anything priced before today). Playbook **Step 2** (the
+  `.stop` corrected — it said Start over always starts from the intake answers — and a note) and **four** symptom→cause rows. Both
+  `.md` copies hand-edited; `doc-structure` green; **20 claims parity-checked, 0 mismatches** (three
+  apparent misses were the HTML's curly apostrophe against the `.md`'s straight one, verified by normalising rather than assumed);
+  rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as
+  before, since the four rows went into an existing table.
+- **⚠ THE SHAPE TO COPY: a reset written as a list of what to clear is a list of what somebody remembered.** Four copies, each correct
+  about the controls it named, and together they missed seven — including the one (the discount) that moved money on a client document
+  with no line to show it. The net walks what the pricing READS rather than what a person thinks to clear, which is the only list that
+  grows by itself.
+
+## ⚠⚠ THE JOBS REFRESH EMPTIED THE CLIENT LIST UNDER A CLIENT WHOSE OWN SAVE HAD NOT LANDED (FIXED 2026-09-29)
+The 2026-09-28 workflow audit's finding **H4** (High). `refreshJobsFromCloud` replaced `jobs` with the sheet's list whole,
+even while this device's own saves were still queued, and a write takes far longer than a read. Five callers reach it —
+`refreshEstimateFromCloud` (so `editEstimateForJob` and `loadJobIntoEstimate`: every Build estimate), the client-estimate
+load, `approvalWatchTick` (every 12 s while an estimate is submitted) and `jobsWatchTick` (every 15 s while any job is pending).
+App-only, no redeploy.
+
+- **⚠⚠ REPRODUCED ON THE REAL PAGE BEFORE ANYTHING WAS CHANGED**, against a stubbed Apps Script answering writes in 4 s
+  (committing at the END of the window, as a real execution does) and reads in 0.8 s (served from the sheet as it stood when
+  they arrived). Now `tests/browser/step26.js`:
+
+  | | pre-fix build | now |
+  |---|---|---|
+  | Save Client, then the band's **Build estimate** at once | the list **and the local cache go to 0** | the client stays, cached |
+  | a jobs read sent while this device still owed the sheet a write | **1** | **0** |
+  | three rooms scored, **Save** | refused *"Job not found."* — the walkthrough is lost | saved, three rooms |
+  | the Drive folder URL, landing 1.5 s after the save | finds no job — **lost** | on the client |
+  | once every write has landed | **0 clients on this device** until a reload | 1 |
+  | Edit Client 3,000 → 5,200 sq ft, then Build estimate | local record **and the estimate on 3,000** (six rooms: $8,900), sheet 5,200 | **5,200** on the record, the estimate ($15,150) and the cache |
+
+  The sheet had the client the whole time; it was this device that dropped it — which is why it read as data loss.
+- **⚠⚠ THE RULE IS `refreshPlanAndLogFromCloud`'s: THE SHEET IS ONLY AUTHORITATIVE ONCE OUR OWN WRITES HAVE REACHED IT.**
+  It does not ask while `_syncWritesOutstanding()` is true; it checks again when the answer lands; and either way the caller
+  **carries on with the local list** (`cb` always runs), which is the fresher of the two. Every caller already proceeds off
+  `jobs` in its callback, so nothing downstream changed.
+- **⚠⚠ A WRITE QUEUED *AND LANDED* WHILE THE READ WAS OUT IS INVISIBLE TO THE OUTSTANDING CHECK — `_syncWriteSeq` catches it.**
+  Nothing is outstanding by the time the answer arrives, and the answer may still predate the write. `queuedPostSync` bumps the
+  count on every main-sheet write; the refresh notes it before asking and refuses an answer if it moved. **It matters on the
+  `saveJobs()`-only edits** (`toggleProbatePkg` and others), which do not bump `updatedAt`: the stale answer TIES the local
+  record, and a tie goes to the sheet. A test pins `queuedPostSync` as the one road to the main sheet — `postSyncTo` is called
+  by the two senders and nothing else, `postSync` by nothing — because the count is only complete while that holds.
+- **⚠ THE SHEET'S DELETIONS APPLY EVEN WHEN THE ANSWER IS DISCARDED.** `deletedJobs` is the job ledger's answer — ids seen and
+  no longer held — not a snapshot that can be behind our writes, and the server refuses those ids whatever this device sends.
+  They go through `_applyDroppedJobs`, so the refresh now also **says so** (*N clients deleted elsewhere — removed from this
+  device too*) and redraws — the old code removed them silently and purged their records with no word. A refresh that stood
+  down before asking learns them from the next answer, or from the `dropped` list on this device's next write.
+- **⚠ `_mergeCloudJobs` — MEMBERSHIP IS THE SHEET'S; A STRICTLY NEWER LOCAL RECORD IS KEPT; A TIE GOES TO THE SHEET.** A job the
+  sheet does not hold is dropped, as ever: keeping those is how deleted clients came back on 2026-09-08, and the one case that
+  looked like it needed it — a client just created here — is the case standing down covers. A tie goes to the sheet because
+  `_mergeJobRecord` gives the merged record the newest stamp, so once our write lands the sheet's copy IS our write plus the
+  other device's keys. And the refresh now runs `migrateRetiredNames` on the way in, as `loadJobs` always did.
+- **⚠ BELT-AND-BRACES, RECORDED RATHER THAN PINNED: the response-time `_syncWritesOutstanding()`.** Every main-sheet write is
+  counted, so the write count catches every case that check does, and reverting it alone is **green by construction**. It stays
+  because it is the rule the job-plan refresh states; the one extra thing it sees is a failed DIRECTORY write, which costs one
+  skipped refresh and never any data. The first draft of the suite pinned it with a count of the call in the source — a check
+  that could not fail for any reason but the byte sequence — and it came out.
+- **11,592 committed checks** (`tests/jobs-refresh.test.js` new at 103, driving the REAL `saveIntake`, `saveClientEdit` and
+  `toggleProbatePkg` through the REAL outbox and retry queue against a backend whose requests stay OPEN until the test answers
+  them; `sync-retry` lifts `_syncWriteSeq` because it lifts `queuedPostSync`; `deleted-jobs`' pin that the refresh purged records
+  restated, not deleted, to the new route). **Revert sweep on three tar copies: 17 changes, 16 red and the one belt-and-braces
+  green, baseline 11,592 / 0 before and after on every copy, no needle mismatched, nothing crashed** — the old body back (the defect itself) fails **34**, no stand-down before asking **15**, both response-time checks gone 6, the stand-down forgetting its caller 5, the deletions going back to a silent purge 5, the merge keeping local-only jobs 5, and the other ten 1–3 each.
+  - **⚠ ONE REVERT CRASHED THE FILE ON THE FIRST SWEEP** (the stand-down forgetting its callback: my read helper threw when no
+    read was open, so the file stopped with checks unrun). The helper returns false now; re-done it fails 5 with every check
+    running.
+- **Verified in headless Chromium, `tests/browser/step26.js`, 28 checks, 0 failed, 0 page errors**, through the real + Add New
+  Client, the band's real Build estimate button, the real room toggles and Save, and the real Edit Client modal: the client
+  survives, no jobs read goes out while a write is owed (counted inside the page — the backend cannot see a write still in the
+  250 ms outbox, and the first cut of that check passed on the pre-fix build for exactly that reason), Save saves three rooms,
+  the folder URL lands, 5,200 is priced; with nothing queued the refresh asks and takes the other device's newer copy; overflow 0
+  at 1440 and 390. **Against the pre-fix build it fails 12.** `run.sh`'s default list is 1–26; steps 1–25 re-run as regressions, 0 failed — **1,181 browser checks across the twenty-six**.
+- **No document pass.** Neither the manual nor the playbook describes the refresh; the deleted-elsewhere message they do describe
+  now also appears when a refresh catches up, which is what they already say it means.
+- **⚠ FOUND IN PASSING, NOT FIXED: `refreshPlanAndLogFromCloud` checks only BEFORE it asks.** A plan edit queued while its 20 s
+  read is out has its answer replace `jobPlanStore` whole — the change reverts on screen until the next tick. The queued write
+  still carries it (the payload is held by reference, and the server's per-key stamps keep it) unless a SECOND plan edit is
+  queued before the first goes out, whose body is built from the replaced store and supersedes it in the outbox — then the
+  first change is lost. Narrow, and the same three lines port across: note `_syncWriteSeq` before asking, refuse on a move.
+- **⚠ AND THE STARTUP READ HAS THE SAME SHAPE, UNREACHABLE BY A PERSON.** `loadJobs` overwrites the list when its read lands a
+  few seconds after load; a write queued in that window would be dropped the same way, but nobody fills in an intake form in
+  three seconds, and `_pendingWrites` is memory-only, so a reload starts with nothing owed.
+
 ## ⚠⚠ THE HOME PREP AGREEMENT STATES THE CONCIERGE RATE — THE CHANGE ORDER RESTATES IT (BUILT 2026-09-25)
 Anthony, the same evening the prep change-order route shipped (the entry below): *"I think we should mention the hourly rates in
 the home prep agreement."* That answers counsel bundle B5's third question, which the build below had left open by printing the
@@ -8196,7 +8370,12 @@ Do NOT pass `--author` on commits — let the repo config set both author and co
 If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author` and force-push.
 
 ## Branches
-- Active feature branch: `claude/change-order-fixes-ew3m2i`
+- Active feature branch: `claude/exciting-carson-pv156f`
+  (`claude/elegant-edison-x0kgyn` shipped alongside it on 2026-09-29 — two sessions ran concurrently off the 2026-09-28
+  workflow audit: finding C1 here, H4 there. Both are on `main`, and this branch merged theirs on the way through; the merge
+  conflicted on the build stamp, CLAUDE.md and **both sessions' `tests/browser/step26.js`**, resolved as a UNION — theirs keeps
+  step 26 and this one is **step 27**.)
+  (`claude/change-order-fixes-ew3m2i` is the previous name.)
   (`claude/estate-trust-billing-update-7dqkbw` is the previous name. That session pushed the counsel-guide docs
   commit and both 2026-09-25 change-order builds there and to `main`; the conversation then continued in a new
   session, assigned this branch, starting at the same commit. Nothing is split between the two.)
@@ -8245,7 +8424,7 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `claude/field-app-formatting-9eu5ff` and `claude/zen-ride-v4x393`, deleted from the
   remote — don't chase either.)
 - Push to `main` after every commit so GitHub Pages stays current:
-  `git push origin claude/change-order-fixes-ew3m2i:main`
+  `git push origin claude/exciting-carson-pv156f:main`
 - Keep the feature branch in sync with main after each push.
 - **A session may be assigned its own branch, and that assignment wins over the name
   above.** Push to the assigned branch AND to `main` — Pages serves `main`, so skipping
@@ -13391,7 +13570,9 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
+- Last reconciled against the app: **2026-09-29** — both documents, against a fresh estimate starting clean (manual §1 and §5h;
+  playbook Step 2 and four symptom rows); see the entry at the top of this file.
+- Prior pass **2026-09-25 (fourth pass)** — both documents, against the Home Prep agreement stating the
   concierge rate itself (manual §8, §9; playbook Step 10d and two symptom rows); see the entry at the top of this file.
 - Prior pass **2026-09-25 (third pass)** — both documents, against a signed Home Prep job taking concierge
   hours by a change order that prints the rate (manual §6c, §8, §9, §11, §12; playbook Step 10d, the Home Prep short version and
