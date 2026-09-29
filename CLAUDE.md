@@ -115,7 +115,9 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   itself was reverted from both sides on a fourth copy: the fixed-price final taking `main`'s single-argument gap row fails **3**
   (it would print *Outstanding from undefined — carried into undefined* on the client's final), and dropping `main`'s change-order
   row from it fails **1** (`document-reconciliation`'s final-balance rule, on 4 scenarios), so neither half of the union can be
-  lost quietly.
+  lost quietly. `main`'s H5 build merged in after that and touched no line of this build's code: all 31 reverts still find
+  their code on the final tree, needle by needle, and the defect and the transition branch re-run there fail **21** and **65**
+  against 13,586 / 0 before and after, so the results carry.
 - **Verified in headless Chromium, `tests/browser/step37.js`** (written as step 29 and renumbered on both merges — `main`'s
   document-claims build took 29 first and its work-done build 36), **58 checks, 0 failed, 0 page errors**, through the real Close and
   Re-open buttons and their real questions (Cancel, then OK): the question on the close names Re-open; a closed job shows Re-open
@@ -129,7 +131,9 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   default list was 1–29 and steps 1–28 re-ran as regressions, 0 failed — 1,392 browser checks across the twenty-nine. **On the
   merged tree the default list is 1–36, and all thirty-six ran — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 /
   25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 61 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 58, 0 failed —
-  1,816 browser checks across the thirty-six.**
+  1,816 browser checks across the thirty-six.** **After the second merge (`main`'s H5 build, whose own step is 36) the list is
+  1–37 and all thirty-seven ran — the same figures with 14 at step 36 and this build's 58 at step 37, 0 failed — 1,830
+  browser checks across the thirty-seven.**
 - Manual **§9** (the Closed row; the *There is no Re-open* note replaced by an eight-bullet Re-open note; the handover note),
   **§9a** (two table rows, three bullets), **§11** (the ratings clause) and **§12** (the stage paragraph and a six-bullet note on the
   wording). Playbook **Step 11 & 12** (a bullet), **Step 13** (the intro, the `.stop`, the midpoint paragraph, and a new *Closed it by
