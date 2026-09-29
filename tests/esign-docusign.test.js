@@ -494,7 +494,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let posted = null;
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
-            'docState', '_jobTouch', '_actor', 'esignSigner', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp'],
+            'docState', '_jobTouch', '_actor', 'esignSigner', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -560,9 +560,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_stamp',
             'esignSigner', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
             'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline',
-            'jobTimelineNext', 'docDraftedAt', 'paymentSplit', 'unscoredRoomNames',
+            'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
-            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'],
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
              'JT_ROW_DOC', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: {
@@ -649,12 +649,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // broke nothing any test could see. They are load-bearing ONLY for a job already in the
     // broken state, which is every agreement DocuSign has ever sent, so that is the job to drive.
     const c = sandbox({
-      fns: ['isAgreementSent', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'outstandingEnvelopes',
+      fns: ['isAgreementSent', 'docSentAt', 'docKeyFor', 'outstandingEnvelopes',
             'isAgreementSigned', 'agreementSignature', 'recordAgreementSignature', 'applyEsignStatus',
             'docState', '_jobTouch', '_actor', 'esignProviderKey', 'esignJobWatches',
             'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
-            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'],
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
                esignArchiveSigned() {}, ESIGN_PROVIDER_KEY: 'docusign' },
@@ -782,7 +782,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
             'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docKeyFor', 'docSentAt', 'esignAvailable',
-            'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'docDraftStale', 'fmtMoney'],
+            'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmtMoney'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
       stubs: { ESIGN_PROVIDER_KEY: key } });
     const row = { key: 'agreement_sent', state: 'current' };
@@ -1370,7 +1370,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       let posted = null;
       const c = sandbox({
         fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor',
-              'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent'],
+              'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'],
         vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS'],
         stubs: {
           SHEETS_SYNC_URL: 'https://script.example/exec',

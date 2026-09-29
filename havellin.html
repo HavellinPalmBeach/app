@@ -3592,6 +3592,7 @@ body.no-smf .smf-col{display:none;}
       <span style="font-size:18px;font-weight:700;color:var(--gray-dk);">%</span>
       <span style="font-size:11px;color:var(--gray);">0 removes the discount</span>
     </div>
+    <div id="dm-drafts"></div>
     <div id="dm-fb"></div>
     <div style="display:flex;gap:8px;">
       <button class="btn-s" style="flex:1;" onclick="closeDiscountModal()">Cancel</button>
@@ -11109,7 +11110,9 @@ function approvalWatchTick(jobId) {
     // #panel-client-estimate being active, which it will not be once approving is
     // done from the rail — so without this the manager's PIN updates the store and
     // the screen it was typed on goes on showing "waiting on a manager PIN".
-    _dashRedraw(jobId);
+    // ⚠ AS A BACKGROUND REDRAW: the watch fires the moment an estimate is submitted, so this lands a
+    // second or two after the person's own action — and must not take that action's message away.
+    _asBackgroundRedraw(function () { _dashRedraw(jobId); });
     // renderClientEstimate/updateApprovalUI end in applyEstimateLock, which
     // re-arms or disarms this watch based on the freshly-loaded state.
   });
@@ -11610,6 +11613,14 @@ function openDiscountModal() {
   var _dblk = discountOfferBlocker(_dj);
   if (_dblk) { showFB(_dashFbTarget('ce-fb'), 'warn', _dblk); return; }
   _discountModalSays('');
+  // ⚠ A DRAFT MADE AT THE CURRENT PRICE IS NAMED HERE, BEFORE THE DISCOUNT — the moment Anthony asked for
+  // ("flag a previous Gmail draft if a discount is offered"). Its own slot: the refusal strip above it is
+  // cleared on every keystroke in the percentage box, and this has to stay put while somebody decides.
+  var _dd = document.getElementById('dm-drafts');
+  if (_dd) {
+    var _ddMsg = discountDraftWarning(_dj);
+    _dd.innerHTML = _ddMsg ? '<div class="alert a-warn" style="margin:0 0 .75rem;">' + esc(_ddMsg) + '</div>' : '';
+  }
   document.getElementById('dm-original').textContent = '$' + discountPreview(currentEstimate, 0).original.toLocaleString();
   document.getElementById('dm-pct').value = currentEstimate.discountPct > 0 ? currentEstimate.discountPct : 5;
   updateDiscountModal();
@@ -11706,7 +11717,10 @@ function applyDiscountRevision() {
   // print or send and never re-filed the signing packet: Drive kept the Exhibit A at the OLD price
   // while the estimate carried the new one (2026-09-28 audit, M3).
   if (job) revokeAgreementApproval(job, 'discount-revised');
-  var _staleDrafts = job ? staleOutstandingDrafts(job, 'discount-revised') : [];
+  // ⚠⚠ AND A DRAFT MADE AT THE OLD PRICE STOPS BEING THE DRAFT (2026-09-29). Left alone, the band offered
+  // "✓ I've sent it" over it once the manager re-approved, and that tap recorded the old-price packet as
+  // sent. See notePriceChange — the draft is named on the row until a fresh one goes out.
+  var _staleKeys = job ? notePriceChange(job, 'discount') : [];
   // ⚠ A WON job stays won — the revised price waits on the manager as "Won · Pending Re-approval"
   // (estimateEventStatus), not as a client who never said yes.
   if (job) { job.status = estimateEventStatus(job, 'pending'); job.approved = false; job.havellinEst = newHavellinTotal; job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job); }
@@ -11718,16 +11732,13 @@ function applyDiscountRevision() {
   // ⚠ THE CONFIRMATION GOES WHERE THE PERSON IS. `ce-fb` is on the Client Estimate panel, which has
   // had no nav button since 2026-09-11 — so from the dashboard, where Offer discount lives, the one
   // line saying it worked printed onto a screen nobody could see.
-  // \u26a0\u26a0 AND THROUGH THE NOTICE, NEVER showFB, WHEN A BAND IS ON SCREEN (found by browser step 36, 2026-09-29).
-  // `_dashRedraw` rewrites the drilldown, so a line showFB wrote into the old `#dash-fb` was destroyed on the same
-  // tick \u2014 the confirmation, and the warning about a draft still carrying the old price, reached nobody.
-  // `_docNotice` sets the notice the redraw paints. The retired Client Estimate panel keeps its own strip.
-  var _dkind = _staleDrafts.length ? 'warn' : 'ok';
-  var _dmsg = (pct === 0 ? 'Discount removed.' : 'Discount applied.') + ' Manager notified by email \u2014 they will re-approve from their device with their PIN.'
-    + (_staleDrafts.length ? ' A draft made before this still has the old price \u2014 delete it; the timeline offers a fresh one.' : '');
-  if (job && _jobBandHost()) { _docNotice(_dkind, _dmsg, job.id); return; }
-  showFB('ce-fb', _dkind, _dmsg);
-  if (job) _dashRedraw(job.id);
+  // ⚠⚠ AND IT HAS TO SURVIVE THE REDRAW (2026-09-29). It was showFB into the band's strip followed by
+  // _dashRedraw — and the redraw rewrites that strip, so the line was gone on the same tick it was
+  // written: measured, `#dash-fb` read empty straight after Apply. `_docNotice` sets the notice and then
+  // redraws, so the renderer paints it — which now also carries the flagged draft, if there was one.
+  var _dMsg = (pct === 0 ? 'Discount removed.' : 'Discount applied.') + ' Manager notified by email \u2014 they will re-approve from their device with their PIN.';
+  if (_staleKeys.length) _dMsg += ' ' + staleDraftNotice(job, _staleKeys);
+  _docNotice(_staleKeys.length ? 'warn' : 'ok', _dMsg, currentEstimate.jobId);
 }
 
 // ⚠⚠ EXTRACTED IN SLICE 7, BECAUSE THE RAIL'S "EDIT ESTIMATE" DID NOT DO IT AND WAS A DEAD
@@ -11749,9 +11760,10 @@ function revokeEstimateApproval(jobId) {
     job.approved = false;
     delete job.estimateDriveAt; delete job.estimateDriveUrl;
     revokeAgreementApproval(job, 'estimate-edited');
-    // ⚠ AND EVERY DRAFT STILL WAITING TO BE SENT IS NOW AT A PRICE THAT NO LONGER STANDS — see
-    // staleOutstandingDrafts. After the revoke, so its warning is the toast left on screen.
-    staleOutstandingDrafts(job, 'estimate-edited');
+    // The same flag the discount raises, on the other door that changes what a draft says: a Gmail
+    // draft of the estimate or the packet made before this edit is out of date, and the band must
+    // not go on offering to confirm it as sent. Both edit doors come through here, so one line covers them.
+    notePriceChange(job, 'edit');
     job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
   }
   return job;
@@ -14043,8 +14055,8 @@ function openClientDashboard(jobId) {
   // fail OPEN, not closed — 'Offer discount' is offered while `!job.agrSigned`, and the service-type
   // lock keys on `agrSigned || depositReceived` — so a signed-but-unnoticed agreement leaves
   // re-pricing and re-typing unlocked on a job already under contract.
-  try { esignRefresh({ jobId: jobId }, function (n) { if (n) _dashRedraw(jobId); }); } catch (e) {}
-  try { stripeRefresh({ jobId: jobId }, function (n) { if (n) _dashRedraw(jobId); }); } catch (e) {}
+  try { esignRefresh({ jobId: jobId }, function (n) { if (n) _asBackgroundRedraw(function () { _dashRedraw(jobId); }); }); } catch (e) {}
+  try { stripeRefresh({ jobId: jobId }, function (n) { if (n) _asBackgroundRedraw(function () { _dashRedraw(jobId); }); }); } catch (e) {}
 }
 
 function closeClientDashboard() {
@@ -14859,6 +14871,19 @@ function jobSchedule(job, est, todayStr, prog) {
 // inside this function would make the repo's most-driven pure derivation non-deterministic
 // forever. It is optional: with no schedule no row carries a plan and every existing caller
 // behaves byte-identically.
+// The line a document's row carries while it is unsent: its draft waiting on the confirming tap, and any
+// draft a discount or an edit left behind (staleDraftNote). ONE builder for all five rows — they each
+// hand-wrote the drafted sentence, which is five places to forget the stale one. `unsent` is the row's
+// own test, passed in, because the rows do not all ask it the same way (the estimate reads
+// estimateSentDate, the packet isAgreementSent, the invoices their own send stamp).
+function jtDraftLine(job, key, unsent) {
+  if (!unsent) return '';
+  var live = draftOutstanding(job, key);
+  var drafted = live ? 'Drafted — read it, send it, then confirm' : '';
+  var stale = staleDraftNote(job, key, live);
+  return drafted && stale ? drafted + '. ' + stale : (drafted || stale);
+}
+
 function jobTimeline(job, estRec, logs, cos, sched) {
   if (!job) return [];
 
@@ -14973,7 +14998,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   var _closed = !!job.deliveredOn;
   var _midSent = !!docSentAt(job, 'invoice', 'midpoint');
   var _finSent = !!docSentAt(job, 'invoice', 'final');
-  var _midDrafted = !_midSent && !!docDraftedAt(job, 'invoice', 'midpoint');
+  var _midDrafted = !_midSent && draftOutstanding(job, 'invoice:midpoint');
+  var _finDraftLine = jtDraftLine(job, 'invoice:final', !_finSent);
   // ⚠⚠ AND THE MIDPOINT IS NOT DUE ON DAY ONE (M8). The estimate tells the client the second payment is
   // due at the project midpoint, and on activation day the band's one filled button read Send midpoint
   // invoice. Until the calendar halfway — or half the work done, whichever comes first — the invoice is
@@ -15046,7 +15072,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       done: !!job.estimateSentDate && !_sentRaise, at: _sentRaise ? '' : job.estimateSentDate, atKind: 'date',
       todo: _sentRaise ? 'Send the revised estimate to the client' : '',
       sub: (job.estimateSentDate && !_sentRaise) ? ''
-        : (_jtDraftSub(job, 'estimate', '')
+        : (jtDraftLine(job, 'estimate', true)
           || (_sentRaise ? ('Sent at ' + fmtMoney(_sentRaise.was) + ' \u2014 the approved estimate is now '
                             + fmtMoney(_sentRaise.now) + ', so the client needs the revised one') : '')) }),
 
@@ -15079,11 +15105,14 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       by: job.agrSentBy || (job.docState && job.docState.agreement && job.docState.agreement.sentBy) || '',
       // The one piece of agreement history still worth surfacing: the estimate was
       // edited after the packet was prepared, so the Exhibit A the client holds is stale.
-      // ⚠ A STALE DRAFT IS SAID FIRST, because it names the one thing to do before anything else — a draft
-      // at the old price is sitting where it can still be sent (see staleOutstandingDrafts).
+      // ⚠ IT STILL OUTRANKS "Drafted — send it": a nudge to send over a reason not to is the wrong advice.
+      // A draft a price change left behind rides WITH it (2026-09-29) — the withdrawal says what to do in
+      // the app, and the old draft is the thing somebody might still send from Gmail, so both are named.
       sub: isAgreementSent(job) ? ''
-        : (docDraftStale((job.docState || {}).agreement) ? _jtDraftSub(job, 'agreement', '')
-          : (agrApprovalWithdrawn(job) || _jtDraftSub(job, 'agreement', ''))) }),
+        : (agrApprovalWithdrawn(job)
+          ? [agrApprovalWithdrawn(job), staleDraftNote(job, 'agreement', draftOutstanding(job, 'agreement'))]
+              .filter(Boolean).join('. ')
+          : jtDraftLine(job, 'agreement', true)) }),
 
     // ⚠ `by` IS THE SIGNER NOW, NOT THE RECORDER. It read `agrSignedBy`, which holds the
     // Havellin manager who approved the price — so this row named one of ours as having
@@ -15104,7 +15133,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     row({ key: 'deposit_invoiced', group: 'Deposit & start', label: 'Deposit invoice sent',
       done: !!docSentAt(job, 'invoice', 'deposit'), at: docSentAt(job, 'invoice', 'deposit'), atKind: 'iso',
       amount: hav ? split.deposit : null,
-      sub: docSentAt(job, 'invoice', 'deposit') ? '' : _jtDraftSub(job, 'invoice', 'deposit') }),
+      sub: jtDraftLine(job, 'invoice:deposit', !docSentAt(job, 'invoice', 'deposit')) }),
 
     row({ key: 'deposit_received', group: 'Deposit & start', label: 'Deposit received',
       done: funded, amount: hav ? split.deposit : null,
@@ -15139,7 +15168,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       todo: _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point' : '',
       sub: _midSent ? ''
         : _closed ? (midPaid > 0 ? '' : (_finSent || finPaid > 0) ? 'Billed on the final invoice' : 'Not sent \u2014 the final invoice bills it')
-        : _midDrafted ? 'Drafted \u2014 read it, send it, then confirm' : '' }, _sc && _sc.halfway, 'halfway point')),
+        : jtDraftLine(job, 'invoice:midpoint', true) }, _sc && _sc.halfway, 'halfway point')),
 
     row({ key: 'midpoint_received', group: 'Work', label: 'Midpoint payment',
       done: midPaid > 0 || (_closed && finPaid > 0),
@@ -15161,9 +15190,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       done: !!docSentAt(job, 'invoice', 'final'), at: docSentAt(job, 'invoice', 'final'), atKind: 'iso',
       sub: (!docSentAt(job, 'invoice', 'final') && _coHrsUnlogged)
         ? 'A change order added ' + _coOnlyTC.toFixed(1) + ' concierge hours and none are logged \u2014 log them on the Job Plan first, or this final bills the management fee alone'
-          + (docDraftedAt(job, 'invoice', 'final') ? '. Drafted \u2014 read it, send it, then confirm' : '')
-        : (!docSentAt(job, 'invoice', 'final') && docDraftedAt(job, 'invoice', 'final'))
-        ? 'Drafted \u2014 read it, send it, then confirm' : '' }),
+          + (_finDraftLine ? '. ' + _finDraftLine : '')
+        : _finDraftLine }),
 
     row({ key: 'final_paid', group: 'Close-out', label: 'Final payment',
       done: finPaid > 0, amount: hav ? split.final : null,
@@ -15314,60 +15342,167 @@ function docSentAt(job, kind, stage) {
   var st = job.docState[docKeyFor(kind, { stage: stage })];
   return (st && st.sentAt) || '';
 }
-function docDraftedAt(job, kind, stage) {
-  if (!job || !job.docState) return '';
-  var st = job.docState[docKeyFor(kind, { stage: stage })];
-  return (st && st.draftedAt) || '';
-}
+// ⚠ THERE IS NO docDraftedAt ANY MORE (2026-09-29). It answered "was a draft made", and every reader used
+// it as "is there a draft to send" — which a price change can make false while the stamp stands. Whether a
+// draft is live has one definition, draftOutstanding, below.
 
+// ─── A DRAFT A PRICE CHANGE LEFT BEHIND (2026-09-29) ─────────────────────────
+// Anthony: "just flag a previous Gmail draft if a discount is offered." A document sent by email is a
+// DRAFT until a person sends it and taps "I've sent it", and nothing reaches back into a draft once it is
+// made — so a discount, or an edit to the estimate, leaves that draft sitting in a mailbox carrying the
+// price the client is no longer being offered. Measured on the build before this, through the real
+// buttons: a signing packet drafted at $11,750 (deposit $5,875), a 10% discount, the manager's PIN — and
+// the band then offered only "✓ I've sent it" and "↗ Open the packet draft", both over the old-price
+// draft. Pressing the first recorded the $11,750 packet as SENT and stamped a fresh agreement approval
+// over it. The DocuSign send, which builds a new packet at the new price, was not offered at all: a draft
+// on record replaces the send button.
+//
+// ⚠ IT FLAGS; IT NEVER TOUCHES GMAIL. Deleting a draft in somebody's mailbox is for a person to do
+// knowingly, and the draft may be in a colleague's mailbox this device's sign-in cannot see. What the app
+// owns is its own reading of its record: a draft made before the price last moved is no longer THE
+// draft — the confirming tap and the link to it go, Send comes back — and every surface names it, which
+// day and which mailbox, until the document is actually sent.
+//
+// ⚠⚠ THE JOB CARRIES WHEN THE PRICE MOVED, AND STALENESS IS READ OFF IT — NEVER WRITTEN INTO THE DRAFT'S
+// OWN RECORD AT THE DOOR. The first cut did that, and it misses the two-device case: the draft is made on
+// one device, the discount offered on the other's morning copy, which holds no draft to rewrite — and the
+// per-key merge then hands the untouched draft back, live, beside the revoked approval. `priceChangedAt`
+// is a job scalar that rides the discounting device's save, so a draft made before it reads stale
+// wherever the two records meet.
+function notePriceChange(job, why) {
+  if (!job) return [];
+  var was = outstandingDrafts(job);
+  job.priceChangedAt = new Date().toISOString();
+  job.priceChangeWhy = why === 'edit' ? 'edit' : 'discount';
+  return was;   // the drafts this change has just left out of date — for the notice that says so
+}
 // ⚠⚠ A DRAFT IS WAITING ON ITS CONFIRMING TAP WHEN IT IS NEWER THAN THE LAST SEND — not merely when nothing
-// has been sent (2026-09-29). The test was `draftedAt && !sentAt`, so a document drafted a SECOND time — the
-// revised estimate after a raise, the one case the rail now asks for — read as sent the moment it was
-// drafted: no "I've sent it", no draft link, and the date on the row never moved. ⚠ An unreadable stamp
-// reads as sent, which is how the old test read every draft that had a send behind it.
+// has been sent (2026-09-29, the re-acceptance build). The test was `draftedAt && !sentAt`, so a document drafted
+// a SECOND time — the revised estimate after a raise, the one case the rail asks for a second send — read as sent
+// the moment it was drafted: no "I've sent it", no draft link, and the row's date never moved. It is the first
+// half of draftIsStale and draftOutstanding below, so the flag on a price change reaches that second draft too.
+// ⚠ An unreadable stamp reads as sent, which is how the old test read every draft that had a send behind it.
 function docDraftPending(st) {
   if (!st || !st.draftedAt) return false;
   if (!st.sentAt) return true;
   var d = Date.parse(st.draftedAt), s = Date.parse(st.sentAt);
   return !isNaN(d) && !isNaN(s) && d > s;
 }
-
-// ⚠⚠ A DRAFT MADE BEFORE THE PRICE MOVED STILL SAYS THE OLD PRICE, AND IT IS SITTING WHERE IT CAN BE SENT
-// (2026-09-29). Gmail drafts are snapshots — nothing the app does afterwards reaches them — so an estimate,
-// a signing packet or a deposit invoice drafted and then re-priced by an edit or a discount went on waiting
-// in the mailbox at the figure that no longer stands, while the rail asked for the confirming tap on it.
-// Measured on the real functions: a packet drafted, a discount revoking the agreement, the manager
-// re-approving — and the band's one filled button read "I've sent it". Anthony: "warning is fine". So the
-// app deletes nothing in anybody's mailbox (it cannot, and should not try); it marks the draft stale, says
-// so on its row, turns its button into a fresh send and refuses the confirming tap on it.
-// ⚠ `staleAt` must be at or after the draft it condemns, so a fresh draft is never read as stale by a
-// marker left from an older one (docRecordSent also clears it, belt and braces).
-function docDraftStale(st) {
-  if (!docDraftPending(st) || !st.staleAt) return false;
-  var z = Date.parse(st.staleAt), d = Date.parse(st.draftedAt);
-  return !isNaN(z) && !isNaN(d) && z >= d;
+// Both stamps are ISO strings from toISOString, so the comparison is chronological as written.
+function draftIsStale(job, st) {
+  return !!(st && docDraftPending(st) && job && job.priceChangedAt && st.draftedAt < job.priceChangedAt);
+}
+// THE ONE DEFINITION OF A LIVE DRAFT, read by the confirming tap, the link to the draft, the row and the
+// modal: made, not yet recorded as sent, and not overtaken by a price change. DocuSign never leaves one —
+// it writes `sentAt` the moment the envelope goes — so this is the Gmail and mailto routes.
+function draftOutstanding(job, key) {
+  var st = job && job.docState && job.docState[key];
+  return !!(st && docDraftPending(st) && !draftIsStale(job, st));
+}
+function outstandingDrafts(job) {
+  if (!job || !job.docState) return [];
+  return Object.keys(job.docState).filter(function (key) { return draftOutstanding(job, key); });
+}
+// The out-of-date drafts of one document, oldest first: those a later draft replaced (docRecordSent keeps
+// them), then the current one if a price change has overtaken it.
+function staleDraftsOf(job, key) {
+  var st = job && job.docState && job.docState[key];
+  if (!st) return [];
+  // ⚠ A SEND CLOSES A ROUND. Once the document has gone, the drafts it replaced are that round's history —
+  // the rows stopped naming them the moment the send was recorded — so a SECOND round (the revised estimate
+  // after a raise, see docDraftPending) names only the drafts made since, never the ones already dealt with.
+  var list = (Array.isArray(st.staleDrafts) ? st.staleDrafts : []).filter(function (d) {
+    if (!d || !d.draftedAt) return false;
+    if (!st.sentAt) return true;
+    var dm = Date.parse(d.draftedAt), sm = Date.parse(st.sentAt);
+    return !isNaN(dm) && !isNaN(sm) && dm > sm;
+  });
+  if (draftIsStale(job, st)) {
+    list = list.concat([{ draftedAt: st.draftedAt, provider: st.provider || '', mailbox: st.mailbox || '',
+                          why: job.priceChangeWhy || 'discount' }]);
+  }
+  return list;
+}
+// The document a sentence names: 'signing packet', 'estimate', 'deposit invoice'.
+function staleDocName(key) {
+  if (key === 'agreement') return 'signing packet';
+  if (String(key).indexOf('invoice:') === 0) return String(key).slice(8) + ' invoice';
+  return String(key);
+}
+// ⚠ ON THIS DEVICE'S CALENDAR. `draftedAt` is a UTC stamp, and slicing it would name tomorrow for
+// anything drafted after 8pm Eastern.
+function _draftDay(iso) {
+  var d = new Date(iso);
+  return isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function _andJoin(list) {
+  return list.length < 2 ? (list[0] || '') : list.slice(0, -1).join(', ') + ' and ' + list[list.length - 1];
 }
 
-// Marks every draft still waiting on its tap as made-before-the-price-moved. Called where the price moves
-// before the packet goes out — an approved estimate taken back for editing, a discount offered or removed.
-// Through the `docState` accessor, so each mark stamps and merges per key like every other send record.
-// Returns the keys it marked. ⚠ A document already SENT is not touched: it went at the price that stood
-// then, and the rows that ask for a revised one say so from the figures, not from this marker.
-function staleOutstandingDrafts(job, why) {
-  if (!job || !job.docState) return [];
-  var out = [];
-  Object.keys(job.docState).forEach(function (k) {
-    var cur = job.docState[k];
-    if (!docDraftPending(cur) || docDraftStale(cur)) return;
-    var st = docState(job, k);
-    st.staleAt = new Date().toISOString();
-    st.staleWhy = why || 'estimate-edited';
-    out.push(k);
-  });
-  if (out.length) showSyncBadge(out.length === 1
-    ? 'A draft made before this change still has the old price — delete it'
-    : out.length + ' drafts made before this change still have the old price — delete them', true);
-  return out;
+// ⚠ ONE SENTENCE for the row, the notices and the refusal. Five surfaces wording one draft five ways is
+// how they come to disagree about which draft to delete. Plain text — every reader escapes it.
+// `fresh`: a newer draft is outstanding too (or the document is going out right now), so the older one
+// has to be told apart from it. `named`: say which document, for a sentence with no row above it.
+function staleDraftNote(job, key, fresh, named) {
+  var list = staleDraftsOf(job, key);
+  if (!list.length) return '';
+  var uniq = function (a) { return a.filter(function (x, i) { return x && a.indexOf(x) === i; }); };
+  var gmail = list.filter(function (d) { return d.provider === 'gmail'; }).length;
+  var days = uniq(list.map(function (d) { return _draftDay(d.draftedAt); }));
+  var boxes = uniq(list.map(function (d) { return d.provider === 'gmail' ? (d.mailbox || '') : ''; }));
+  var one = list.length === 1;
+  var noun = one ? (gmail ? 'Gmail draft' : 'email')
+                 : (gmail === list.length ? 'Gmail drafts' : (gmail ? 'drafts' : 'emails'));
+  var what = noun + (named ? ' of the ' + staleDocName(key) : '')
+           + (days.length ? ' from ' + _andJoin(days) : '')
+           + (boxes.length ? ' (' + boxes.join(', ') + ')' : '');
+  var why = !one ? 'are out of date'
+    : (list[0].why === 'edit' ? 'was made before the estimate was edited' : 'has the old price');
+  if (fresh) return (gmail ? 'Delete' : 'Discard') + ' the older ' + what + ' — ' + (one ? 'it ' : 'they ') + why;
+  var act = gmail ? (one ? 'delete it, don’t send it' : 'delete them, don’t send them')
+                  : (one ? 'if it was never sent, discard it' : 'if they were never sent, discard them');
+  return 'The ' + what + ' ' + why + ' — ' + act;
+}
+
+// What the discount modal says BEFORE the discount is applied — the moment Anthony named. The draft is
+// still the draft here, so this reads the outstanding record rather than a stale one.
+// ⚠ ON THE PACKET IT ALSO SAYS WHAT TO DO IF IT HAS ALREADY GONE. The app knows a draft was made and not
+// that it was sent; a packet sent from Gmail with the tap forgotten is already in the client's hands, and
+// a price change after that is a change order (priceChangeBlocker) — which the tap is what tells the app.
+function discountDraftWarning(job) {
+  return outstandingDrafts(job).map(function (key) {
+    var st = job.docState[key], day = _draftDay(st.draftedAt);
+    var how = st.provider === 'gmail'
+      ? 'drafted in Gmail' + (day ? ' on ' + day : '') + (st.mailbox ? ' (' + st.mailbox + ')' : '')
+      : 'opened as an email' + (day ? ' on ' + day : '');
+    var name = staleDocName(key);
+    return 'The ' + name + ' was ' + how + ' and has not been confirmed sent. A discount leaves that '
+      + (st.provider === 'gmail' ? 'draft at the old price — delete it' : 'email at the old price — discard it if it was never sent,')
+      + ' and send a fresh ' + (key === 'agreement' ? 'packet' : name) + ' once the manager re-approves.'
+      + (key === 'agreement'
+        ? ' Already sent it? Cancel and tap “I’ve sent it” instead — a price change after the packet goes out is a change order.'
+        : '');
+  }).join(' ');
+}
+
+// What the discount's confirmation adds once it has flagged drafts: which, and what comes next.
+function staleDraftNotice(job, keys) {
+  if (!keys || !keys.length) return '';
+  var one = keys.length === 1;
+  return '⚠ ' + keys.map(function (k) { return staleDraftNote(job, k, false, true) + '.'; }).join(' ')
+    + ' Send ' + (one ? 'a fresh one' : 'fresh ones') + ' once the manager re-approves — and if '
+    + (one ? 'the old one' : 'an old one') + ' already reached the client, tell them a revised one is coming.';
+}
+
+// Why the confirming tap refused. It is only offered over an outstanding draft, so this is a screen
+// painted before the draft was flagged, or before the send was recorded on the other device.
+function noDraftToConfirm(job, key) {
+  var st = (job && job.docState && job.docState[key]) || {};
+  var name = staleDocName(key);
+  if (st.sentAt && !docDraftPending(st)) return 'The ' + name + ' is already recorded as sent.';
+  var stale = staleDraftNote(job, key, false);
+  return 'There is no draft of the ' + name + ' waiting to be confirmed.' + (stale ? ' ' + stale + '.' : '')
+    + ' Send a fresh one from the timeline.';
 }
 
 // ─── THE INVOICE'S FIRST REAL EMAIL ──────────────────────────────────────────
@@ -15688,6 +15823,13 @@ function docSend(spec) {
               ? ' — WITHOUT the PDF. ' + _pdfFailAdviceText(pdfErrKind) + (pdfErr ? ' The server said: ' + pdfErr + '.' : '')
               : ' — a plain email carries NO attachment, so attach a printed copy before sending'))
         + '. ' + (needsTap ? 'Read it, send it, then tap “I’ve sent it”.' : '');
+      // ⚠ A DRAFT A PRICE CHANGE LEFT BEHIND IS NAMED NOW, WHILE THERE ARE TWO. The new one is at the new
+      // price; the old one is still in a mailbox unless somebody deleted it, and the next person to open
+      // the drafts folder has to know which is which. ⚠ READ BEFORE docRecordSent: DocuSign writes
+      // `sentAt` inside it, and a sent document names no stale drafts afterwards.
+      var _stCur = (spec.job.docState && spec.job.docState[spec.key]) || {};
+      var _staleLine = (_stCur.sentAt && !docDraftPending(_stCur)) ? '' : staleDraftNote(spec.job, spec.key, true);
+      if (_staleLine) msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _staleLine + '.';
       docRecordSent(spec, { provider: provider, draftUrl: draftUrl || '', pdfOk: attached, extra: extra || null });
       // ⚠ SENDING FILES IT. A document that has gone to a client is one the firm must be
       // able to produce afterwards, and until Slice 5 only the estimate managed that: the
@@ -15702,7 +15844,7 @@ function docSend(spec) {
       // It still shows in the sync badge, and the rail says which documents are filed.
       docAction(spec.job.id, spec.kind, 'file',
                 spec.stage ? { stage: spec.stage, auto: true } : { auto: true });
-      _docNotice(attached ? 'ok' : 'warn', msg, spec.job.id);
+      _docNotice((attached && !_staleLine) ? 'ok' : 'warn', msg, spec.job.id);
       if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
       showSyncBadge(provider === 'docusign' ? 'Sent for signature ✓' : provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
     });
@@ -16568,13 +16710,23 @@ function docFiledAt(job, kind, stage) {
 // a quiet lie on the one screen Anthony is being asked to trust.
 function docRecordSent(spec, res) {
   var st = docState(spec.job, spec.key);
+  // ⚠ A DRAFT A PRICE CHANGE OVERTOOK IS KEPT BEFORE THE NEW ONE OVERWRITES IT (2026-09-29). It is still
+  // sitting in a mailbox at the old price, and this record is the only thing that remembers it — once the
+  // fresh draft's `draftedAt` replaces it, it no longer reads stale and would vanish from every surface
+  // that tells somebody to delete it.
+  if (draftIsStale(spec.job, st)) {
+    st.staleDrafts = (Array.isArray(st.staleDrafts) ? st.staleDrafts : []).concat([{
+      draftedAt: st.draftedAt, provider: st.provider || '', mailbox: st.mailbox || '',
+      why: spec.job.priceChangeWhy || 'discount' }]);
+  }
   st.draftedAt = new Date().toISOString();
-  // A fresh draft carries the price that stands now, so a marker left on the one it replaces goes.
-  delete st.staleAt; delete st.staleWhy;
   st.draftedBy = _actor(spec.job) || spec.job.tc || '';
   st.provider = res.provider;
   st.draftUrl = res.draftUrl || '';
   st.pdfOk = !!res.pdfOk;
+  // WHOSE drafts folder it is in. Somebody told to delete an out-of-date draft (notePriceChange) may be
+  // on another device, signed in as somebody else — "delete the Gmail draft" is not enough to find it.
+  st.mailbox = (res.provider === 'gmail' && typeof _gmailUserEmail !== 'undefined' && _gmailUserEmail) ? _gmailUserEmail : '';
   // ⚠⚠ THE ENVELOPE ID IS WRITTEN HERE AND NOWHERE ELSE, because this is the one place that
   // already knows a send SUCCEEDED. `outstandingEnvelopes()` has filtered on `st.esign.envelopeId`
   // since Slice 6 and, until this line existed, nothing anywhere wrote one — so it returned `[]`
@@ -16607,11 +16759,14 @@ function docRecordSent(spec, res) {
 function markDocSent(jobId, docKey) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) return;
-  // ⚠⚠ A STALE DRAFT IS REFUSED HERE, AHEAD OF THE LEGACY RECORDERS — `markAgreementSent` stamps the approval
-  // and files the packet on the way through, so asking after it would have filed the new price and recorded
-  // the old one as sent. The rail no longer offers this tap on a stale draft; this is the door behind it.
-  if (docDraftStale(job.docState && job.docState[docKey])) {
-    dashNotice('warn', 'That draft was made before the price changed, so it still has the old figure and cannot be recorded as sent. Delete it, and send a fresh one from the timeline.');
+  // ⚠⚠ IT CONFIRMS AN OUTSTANDING DRAFT OR NOTHING (2026-09-29). The tap exists to say "the draft the app
+  // watched being made has now gone to the client", and it recorded a send over whatever the record held —
+  // so a screen painted before a discount flagged the draft could still record the OLD-price packet as
+  // sent, stamping an agreement approval and filing documents on the way (markAgreementSent). Checked
+  // before any of that runs, where the action is, not only on the button that leads to it.
+  if (!draftOutstanding(job, docKey)) {
+    var _cur = (job.docState && job.docState[docKey]) || {};
+    dashNotice((_cur.sentAt && !docDraftPending(_cur)) ? 'ok' : 'warn', noDraftToConfirm(job, docKey));
     _dashRedraw(jobId);
     return;
   }
@@ -17256,13 +17411,10 @@ function printDocViewer() {
 // Mark Won. So a drafted-but-unsent document asks for the confirming tap instead.
 function _jtSendAction(id, job, kind, stage, what) {
   var key = docKeyFor(kind, stage ? { stage: stage } : null);
-  var st = (job.docState && job.docState[key]) || {};
   var opt = stage ? (",{stage:'" + stage + "'}") : '';
-  // ⚠ A STALE DRAFT GETS THE ORDINARY SEND, NEVER THE CONFIRMING TAP. It still carries the old price, so
-  // "I've sent it" on it would record as sent a document that must not go — see staleOutstandingDrafts. The
-  // button reads exactly as a first send (it names the route, which is the rule for this label) and the row's
-  // own line says what to do about the old draft.
-  if (docDraftPending(st) && !docDraftStale(st)) {
+  // ⚠ A DRAFT A PRICE CHANGE OVERTOOK IS NOT CONFIRMABLE (2026-09-29): the tap would record the old
+  // price as sent. Send comes back instead, and builds a fresh one (draftOutstanding).
+  if (draftOutstanding(job, key)) {
     return { label: '&#10003; I&rsquo;ve sent it', call: 'markDocSent(' + id + ",'" + key + "')" };
   }
   return { label: '&#9993; Send ' + what, call: 'docAction(' + id + ",'" + kind + "','send'" + opt + ')' };
@@ -17315,26 +17467,9 @@ function _jtDriveLink(id, job, kind, stage) {
 function _jtDraftLink(id, job, kind, stage) {
   var key = docKeyFor(kind, stage ? { stage: stage } : null);
   var st = (job.docState && job.docState[key]) || {};
-  if (!st.draftUrl || !docDraftPending(st)) return [];
-  // ⚠ A stale draft is still worth opening — to delete it — and the label says that is what it is for.
-  return [{ label: '&#8599; Open the ' + (docDraftStale(st) ? 'old ' : '') + docWord(kind, stage) + ' draft'
-                 + (docDraftStale(st) ? ' to delete it' : ''),
-            call: 'openDocDraft(' + id + ",'" + key + "')" }];
-}
-
-// The line under a document's row while a draft waits on its tap — the drafted reminder, or, on a draft made
-// before the price moved, what to do about it. ⚠ The mailbox is named only when the draft IS in Gmail: the
-// plain-email route opens a compose window in whatever mail program the device uses.
-function _jtDraftSub(job, kind, stage) {
-  var key = docKeyFor(kind, stage ? { stage: stage } : null);
-  var st = (job && job.docState && job.docState[key]) || null;
-  if (!docDraftPending(st)) return '';
-  if (docDraftStale(st)) {
-    return 'The ' + docWord(kind, stage) + ' draft' + (st.provider === 'gmail' ? ' in Gmail' : '')
-      + ' was made before ' + (st.staleWhy === 'discount-revised' ? 'the discount changed the price' : 'the estimate was edited')
-      + ' \u2014 delete it, and if it already went to the client, tell them the revised one replaces it';
-  }
-  return 'Drafted \u2014 read it, send it, then confirm';
+  // Nor a link to one: opening the old-price draft is the first step to sending it.
+  if (!st.draftUrl || !draftOutstanding(job, key)) return [];
+  return [{ label: '&#8599; Open the ' + docWord(kind, stage) + ' draft', call: 'openDocDraft(' + id + ",'" + key + "')" }];
 }
 
 // ⚠ THE ONE ASSEMBLER OF A DOCUMENT'S NON-PRIMARY LINKS. These three builders were called at
@@ -17625,6 +17760,31 @@ var _dashNotice = null;   // {type:'ok'|'warn'|'err', msg} — survives the redr
 // the same tick it was written. Set the notice, then redraw; the renderer prints
 // it. Same reason the sync chip keeps its state in a variable rather than in the DOM.
 function dashNotice(type, msg) { _dashNotice = { type: type, msg: msg }; }
+
+// ⚠⚠ AND THE MESSAGE ON SCREEN SURVIVES A REDRAW THE APP MAKES ON ITS OWN (2026-09-29). A notice is shown
+// once and cleared, so the NEXT redraw paints none — right when that redraw is the person's next action,
+// wrong when it is the app's. Measured through the real Apply button: a discount submits the estimate,
+// which arms the approval watch, which fires AT ONCE (startApprovalWatch) and redraws when its fetch
+// answers — so the discount's confirmation, and the out-of-date Gmail draft it names, left the screen the
+// moment the answer came back. `_dashShown` is the message now on screen, per surface and job; a redraw
+// run under `_asBackgroundRedraw` paints it again instead of wiping it, and every other redraw clears it
+// exactly as before. A notice never crosses to another job or another surface.
+var _dashShown = null;        // {host: 'dash' | a job-band host, jobId, type, msg}
+var _dashKeepNotice = false;  // true only while a redraw the app makes on its own is running
+function _dashNoticeHtml(host, jobId, mine) {
+  if (!mine) return '';
+  var n = _dashNotice
+    || ((_dashKeepNotice && _dashShown && _dashShown.host === host && _dashShown.jobId === jobId) ? _dashShown : null);
+  _dashNotice = null;   // shown once; a stale one must not reappear on the next redraw the person causes
+  _dashShown = n ? { host: host, jobId: jobId, type: n.type, msg: n.msg } : null;
+  return n ? '<div class="alert ' + ({ok:'a-ok',warn:'a-warn',err:'a-err'}[n.type] || 'a-warn') + '">' + esc(n.msg) + '</div>' : '';
+}
+// Data landing, the approval watch, an arrival check: redraws nobody pressed a button for.
+function _asBackgroundRedraw(fn) {
+  var prev = _dashKeepNotice;
+  _dashKeepNotice = true;
+  try { return fn(); } finally { _dashKeepNotice = prev; }
+}
 
 // The drilldown is a surface all of these actions can now be fired from, and not
 // one of them knew it existed. ONE redraw, one definition — three call sites had
@@ -18147,12 +18307,8 @@ function jobProgressBlockHtml(jobId, host) {
   var work = jtWorkRows(rows);
   // A message a handler set for THIS band is shown once and cleared, exactly as the dashboard
   // does — a stale one must not reappear on the next redraw or on the other tab.
-  var note = '';
   var h = _jobBandHost();
-  if (_dashNotice && h && h.kind === host && h.jobId === jobId) {
-    note = '<div class="alert ' + ({ok:'a-ok',warn:'a-warn',err:'a-err'}[_dashNotice.type] || 'a-warn') + '">' + esc(_dashNotice.msg) + '</div>';
-    _dashNotice = null;
-  }
+  var note = _dashNoticeHtml(host, jobId, !!(h && h.kind === host && h.jobId === jobId));
   return '<div class="card jband" style="margin-bottom:1rem;"><div class="jt">'
     + '<div class="jt-fb" id="jband-fb-' + host + '">' + note + '</div>'
     + band.html
@@ -18475,10 +18631,8 @@ function renderClientDashboard(jobId) {
   // was written into the DOM and seen by nobody, which is exactly what makes a button
   // read as dead. `_dashFbTarget` redirects to this strip; `_dashNotice` survives the
   // innerHTML rewrite that `renderClientDashboard` does on every action.
-  h += '<div class="jt-fb" id="dash-fb">'
-     + (_dashNotice ? '<div class="alert ' + ({ok:'a-ok',warn:'a-warn',err:'a-err'}[_dashNotice.type] || 'a-warn') + '">' + esc(_dashNotice.msg) + '</div>' : '')
-     + '</div>';
-  _dashNotice = null;   // shown once; a stale one must not reappear on the next redraw
+  // Shown once, and cleared — unless this redraw is one the app makes on its own (_dashNoticeHtml).
+  h += '<div class="jt-fb" id="dash-fb">' + _dashNoticeHtml('dash', jobId, true) + '</div>';
 
   h += jtScheduleHtml(_jtSched);
 
@@ -19695,7 +19849,8 @@ function loadJobs() {
 // remember here any more — which is the cold-cache defect closed by construction.
 function _jobsLanded() {
   if (typeof renderJobs === 'function') { try { renderJobs(); } catch(e) {} }
-  if (typeof _dashRedraw === 'function') { try { _dashRedraw(); } catch(e) {} }
+  // The jobs answered; nobody pressed anything — a message on screen stays there (_asBackgroundRedraw).
+  if (typeof _dashRedraw === 'function') { try { _asBackgroundRedraw(function () { _dashRedraw(); }); } catch(e) {} }
   // The referral leaderboard is built from jobs too — measured on a cold cache it
   // rendered ZERO BYTES, so the whole section was absent rather than merely wrong.
   if (typeof refreshReferralsTabIfActive === 'function') refreshReferralsTabIfActive();
@@ -19953,17 +20108,20 @@ function loadEstimateState() {
 // rebuildDropdowns() only, so the message never corrected itself: the tab stayed wrong
 // until you navigated away and back. Same shape as the photo-refs bug of 2026-08-03.
 function _estStoreLanded() {
-  var jp = document.getElementById('panel-job-plan');
-  if (jp && jp.classList.contains('active') && typeof loadJobPlanTab === 'function') loadJobPlanTab();
-  var iv = document.getElementById('panel-inventory');
-  if (iv && iv.classList.contains('active') && typeof renderInventoryTab === 'function') renderInventoryTab();
-  // ⚠ THE CLIENT DASHBOARD IS THE THIRD SURFACE THAT READS THIS STORE AND IT WAS NOT
-  // HERE. Its timeline rail reads estimateStore for four of its rows, so on a cold
-  // cache — a new iPad, cleared data, or Safari evicting storage for a site not
-  // visited in a week — the rail paints "Estimate built" undone on a job that has a
-  // priced estimate, and pins the NEXT band on the wrong step. Exactly the shape of
-  // the 2026-08-24 Job Plan bug: render before the data, never re-render after.
-  _dashRedraw();
+  // The store answered; nobody pressed anything — a message on screen stays there (_asBackgroundRedraw).
+  _asBackgroundRedraw(function () {
+    var jp = document.getElementById('panel-job-plan');
+    if (jp && jp.classList.contains('active') && typeof loadJobPlanTab === 'function') loadJobPlanTab();
+    var iv = document.getElementById('panel-inventory');
+    if (iv && iv.classList.contains('active') && typeof renderInventoryTab === 'function') renderInventoryTab();
+    // ⚠ THE CLIENT DASHBOARD IS THE THIRD SURFACE THAT READS THIS STORE AND IT WAS NOT
+    // HERE. Its timeline rail reads estimateStore for four of its rows, so on a cold
+    // cache — a new iPad, cleared data, or Safari evicting storage for a site not
+    // visited in a week — the rail paints "Estimate built" undone on a job that has a
+    // priced estimate, and pins the NEXT band on the wrong step. Exactly the shape of
+    // the 2026-08-24 Job Plan bug: render before the data, never re-render after.
+    _dashRedraw();
+  });
 }
 
 // The APPROVED estimate for a job, as the client documents attach it — the snapshot inside

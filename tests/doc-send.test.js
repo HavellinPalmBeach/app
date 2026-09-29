@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // Slice 0 refused to draw invoice-sent rows because nothing recorded a send: "a row
     // whose `done` cannot be answered honestly is worse than no row". This is that record.
-    const ctx = sandbox({ fns: ['docState', '_jobTouch', 'docSentAt', 'docDraftedAt', 'docKeyFor'] });
+    const ctx = sandbox({ fns: ['docState', '_jobTouch', 'docSentAt', 'docKeyFor', 'draftOutstanding', 'docDraftPending', 'draftIsStale'] });
     ctx.currentInvStage = 'final';
 
     eq(ctx.docState(null, 'estimate'), null, 'no job, no record');
@@ -67,7 +67,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // ⚠ DRAFTED IS NOT SENT, AND THE WHOLE SLICE TURNS ON IT.
     ctx.docState(job, 'invoice:final').draftedAt = 'F';
-    eq(ctx.docDraftedAt(job, 'invoice', 'final'), 'F', 'a draft is recorded');
+    // Restated 2026-09-29: docDraftedAt is gone — "is there a draft" has one definition, draftOutstanding.
+    ok(ctx.draftOutstanding(job, 'invoice:final'), 'a draft is recorded, and it is outstanding');
     eq(ctx.docSentAt(job, 'invoice', 'final'), '', 'and a draft is not a send');
   }
 
@@ -101,11 +102,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // arrives in Slice 6/8. No screen changes, no second rule to remember.
     const send = noComments(fn('_jtSendAction'));
     lacks(send, 'needsHumanSend', 'the rail reads the RECORD, not the provider');
-    // ⚠ RESTATED 2026-09-29, NOT DELETED. This pinned `st.draftedAt && !st.sentAt`, which read a document
-    // drafted a SECOND time — the revised estimate after a raise — as already sent, so the tap never came
-    // back. The requirement is "exactly while a draft is outstanding", and a draft newer than the last send is
-    // outstanding: one definition, `docDraftPending`, read by the rail and driven here.
-    has(send, 'docDraftPending(st)', 'so it asks for the tap exactly while a draft is outstanding');
+    // ⚠ RESTATED 2026-09-29, not deleted — by BOTH of the sessions that built the stale-draft flag that day, and the
+    // merge keeps both halves. "Outstanding" has one definition, draftOutstanding: a price change since the draft
+    // was made takes the tap away. And the old pin, `st.draftedAt && !st.sentAt`, read a document drafted a SECOND
+    // time — the revised estimate after a raise — as already sent, so the tap never came back: a draft newer than
+    // the last send is outstanding (docDraftPending, the first half of draftOutstanding), driven here.
+    has(send, 'draftOutstanding(job, key)', 'so it asks for the tap exactly while a draft is outstanding');
+    has(noComments(fn('draftOutstanding')), 'docDraftPending(st)',
+      'and outstanding still means drafted and not yet sent — or drafted again since the last send');
     const dp = sandbox({ fns: ['docDraftPending'] }).docDraftPending;
     ok(dp({ draftedAt: '2026-09-29T10:00:00Z' }), 'a draft with nothing sent is outstanding');
     ok(!dp({ draftedAt: '2026-09-29T10:00:00Z', sentAt: '2026-09-29T10:05:00Z' }), 'a draft the send confirmed is not');
@@ -120,7 +124,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the record is written before anything else can fail, and it writes draftedAt');
   {
     const ctx = sandbox({
-      fns: ['docState', '_jobTouch', 'docRecordSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp'],
+      fns: ['docState', '_jobTouch', 'docRecordSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending'],
       stubs: { saveJobs() { ctx.__saved = (ctx.__saved || 0) + 1; },
                syncJobToSheets() { ctx.__synced = (ctx.__synced || 0) + 1; },
                _actor: () => 'Ashley Graziano',
@@ -147,7 +151,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // No actor and no concierge must not write `undefined` onto a client record.
     const bare = sandbox({
-      fns: ['docState', '_jobTouch', 'docRecordSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp'],
+      fns: ['docState', '_jobTouch', 'docRecordSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _actor: () => '',
                DOC_SEND_PROVIDERS: { gmail: { needsHumanSend: true } } },
     });
@@ -178,7 +182,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Driven: an invoice touches neither recorder, because neither has anything to say
     // about it — the invoice's only record IS docState.
     const ctx = sandbox({
-      fns: ['docState', '_jobTouch', 'markDocSent', 'docDraftStale', 'docDraftPending'],
+      fns: ['docState', '_jobTouch', 'markDocSent', 'draftOutstanding', 'draftIsStale', 'noDraftToConfirm', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {},
                _actor: () => 'Anthony Graziano',
                _primeAgreementFor() { ctx.__primedAgr = true; return true; },
@@ -186,7 +190,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                markAgreementSent() { ctx.jobs[0].agrSent = true; },
                markEstimateSent() { ctx.jobs[0].estimateSentDate = 'September 11, 2026'; } },
     });
-    ctx.jobs = [{ id: 5 }];
+    // ⚠ EACH DOCUMENT CARRIES ITS DRAFT, because the tap is only ever offered over one and, since
+    // 2026-09-29, refuses without one (see the stale-draft group below).
+    const DRAFTED = { draftedAt: '2026-09-11T14:00:00.000Z', provider: 'gmail' };
+    ctx.jobs = [{ id: 5, docState: { 'invoice:midpoint': Object.assign({}, DRAFTED),
+                                     estimate: Object.assign({}, DRAFTED), agreement: Object.assign({}, DRAFTED) } }];
     ctx.markDocSent(5, 'invoice:midpoint');
     ok(!ctx.__primedAgr && !ctx.__primedEst, 'an invoice reaches neither recorder');
     ok(!!ctx.jobs[0].docState['invoice:midpoint'].sentAt, 'and its send is recorded');
@@ -200,12 +208,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ A REFUSED AGREEMENT RECORDS NOTHING. Otherwise the rail would read "sent" off a
     // docState the recorder had just declined to back.
     const refuse = sandbox({
-      fns: ['docState', '_jobTouch', 'markDocSent', 'docDraftStale', 'docDraftPending'],
+      fns: ['docState', '_jobTouch', 'markDocSent', 'draftOutstanding', 'draftIsStale', 'noDraftToConfirm', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {}, _actor: () => 'x',
                _primeAgreementFor: () => true, _primeEstimateFor: () => true,
                markAgreementSent() {}, markEstimateSent() {} },
     });
-    refuse.jobs = [{ id: 6 }];
+    // Drafted, so it is the recorder's refusal being tested here and not the missing-draft one.
+    refuse.jobs = [{ id: 6, docState: { agreement: { draftedAt: '2026-09-11T14:00:00.000Z', provider: 'gmail' } } }];
     refuse.markDocSent(6, 'agreement');
     ok(!(refuse.jobs[0].docState && refuse.jobs[0].docState.agreement && refuse.jobs[0].docState.agreement.sentAt),
       'a refused agreement leaves no send record behind');
@@ -213,14 +222,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // An unprimeable job stops before it records anything, rather than recording a send
     // against whichever job the agreement panel was last showing.
     const noprime = sandbox({
-      fns: ['docState', '_jobTouch', 'markDocSent', 'docDraftStale', 'docDraftPending'],
+      fns: ['docState', '_jobTouch', 'markDocSent', 'draftOutstanding', 'draftIsStale', 'noDraftToConfirm', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {}, _actor: () => 'x',
                _primeAgreementFor: () => false, _primeEstimateFor: () => false,
                markAgreementSent() { throw new Error('must not be reached'); }, markEstimateSent() {} },
     });
-    noprime.jobs = [{ id: 7 }];
+    noprime.jobs = [{ id: 7, docState: { agreement: { draftedAt: '2026-09-11T14:00:00.000Z', provider: 'gmail' } } }];
     noprime.markDocSent(7, 'agreement');
-    ok(!noprime.jobs[0].docState || !noprime.jobs[0].docState.agreement,
+    ok(!noprime.jobs[0].docState.agreement.sentAt,
       'a job the panel cannot be primed to records nothing at all');
     noprime.markDocSent(999, 'estimate');
     ok(true, 'and an unknown job id is a no-op rather than a throw');
@@ -299,7 +308,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(s, 'pdfOk: attached', 'the record stores what actually went, not what was built');
     ok(s.indexOf('var attached =') < s.indexOf('pdfOk: attached'),
       'computed before it is recorded');
-    has(s, "_docNotice(attached ? 'ok' : 'warn'", 'and a send with no attachment reads as a warning, not a success');
+    // ⚠ RESTATED 2026-09-29, not deleted: the notice also goes amber when it has to name an out-of-date
+    // draft of the same document (staleDraftNote). The requirement is unchanged — no attachment is never
+    // a success — and it reads the same variable.
+    has(s, "_docNotice((attached && !_staleLine) ? 'ok' : 'warn'", 'and a send with no attachment reads as a warning, not a success');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

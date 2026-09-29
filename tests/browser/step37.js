@@ -1,47 +1,72 @@
-// Step 37 — a raise after Won asks the client again, a draft made before a price change says so, and
-// Edit estimate waits for the manager's PIN (2026-09-29). Anthony's answers to the three things the
-// Edit-estimate build (step 35) left open: "1 yes, 2 warning is fine, 3 hide until PIN".
-// Written as step 36 and renumbered 37 on the merge: the concurrent H5 / P8 session (work done measured
-// against the rooms) took step 36 first.
+// Step 37 — a Gmail draft a price change left behind is named, and is never confirmed as sent (2026-09-29).
 //
-// Drives the REAL page: the real Client Dashboard and its rail, the real Send estimate / I've sent it /
-// Client accepted buttons (only `gmailCreateDraft` is stubbed, so the real docAction → docSend → provider →
-// docRecordSent chain runs), the real Edit estimate, the real Build Estimate Save, the real Submit for
-// approval, the real manager PIN typed into its modal, the real discount pop-up and the real Won modal.
+// Anthony: "just flag a previous Gmail draft if a discount is offered."
 //
-//   A. a won client's estimate edited UP and re-approved: the send is lit again for the revised estimate,
-//      the acceptance reopens, the packet is a preview, the status reads "Won · Awaiting Re-acceptance",
-//      the Job Plan stays open; the revised estimate sent and the new yes recorded through the modal
-//      (which asks about the new figure) brings the packet back — the earlier yes kept beside it
-//   B. a draft made before a discount (and before an edit) says so on its row, its button becomes an
-//      ordinary send, the confirming tap is refused on it, and a fresh draft goes through as normal
-//   C. Edit estimate is withheld on every row while the manager has the estimate, and the door refuses
-//   D. before the client's yes, a raise reopens the send only; a job recorded before today is asked nothing
-//   E. overflow at 1440 and 390 (the Won modal at 390 included); no page errors
+// Measured on the build before this, through the same buttons: a signing packet drafted by email at the
+// old price, a 10% discount, the manager's PIN — and the band then offered only "✓ I've sent it" and the
+// link to that old draft. Pressing the first recorded the old-price packet as SENT. The discount's own
+// confirmation was painted onto a strip the redraw wiped on the same tick.
+//
+// Drives the REAL page: the real Client Dashboard, the real paper-route Send button (Gmail's drafts API
+// is routed, so the real MIME the app builds is read back), the real Offer discount button and pop-up,
+// its Apply button, the real manager PIN modal typed into, and the real "✓ I've sent it" button.
+//
+//   A. a packet drafted by email offers the confirming tap and the link to the draft, as before
+//   B. the pop-up names that draft BEFORE the discount, and keeps it on screen while you type
+//   C. the confirmation after Apply names it too, and survives the redraw
+//   D. after the discount and after the manager's PIN: no confirming tap and no draft link anywhere,
+//      Send is back, the row names the old draft, and a direct markDocSent is refused
+//   E. a fresh send: a second draft at the NEW price, the notice says which to delete, the old one is
+//      kept on record, the tap is back over the new draft and records it
+//   F. the edit door: an estimate drafted by email, then Edit estimate — the row names it the same way
+//   G. overflow at 1440 and 390; no page errors
+//   H. Submit for approval: the notice the same watch used to wipe stays on screen (run before G)
 //
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step37.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
+const SYNC = 'https://script.google.com/macros/s/STEP36/exec';
+const BOX = 'anthony@havellinpalmbeach.com';
 let pass = 0, fail = 0;
 let b = null;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
+// The day a draft is named by, worked out HERE rather than asked of the page: the calendar the browser
+// runs on (timezoneId below), never a slice of the UTC stamp.
+const dayOf = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
+const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 (async () => {
   b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-  const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
+  const p = await ctx.newPage();
   p.setDefaultTimeout(8000);
   const errs = []; p.on('pageerror', e => errs.push(String(e)));
   p.on('dialog', async d => { await d.accept(); });
-  await p.goto(APP); await p.waitForTimeout(1500);
-  await p.evaluate(() => {
-    // Captured rather than sent: a mailto in a headless browser navigates away from the page under test.
-    window.__mails = []; window.sendInternalEmail = function (to, subj) { window.__mails.push({ subj: subj }); };
-    window.__opened = []; window.open = function (u) { window.__opened.push(String(u || '')); return null; };
-    // ⚠ The ONE stub on the send path: Gmail itself. Everything from the band's button to the send record is real.
-    window.__drafts = 0;
-    window.gmailCreateDraft = function (mime, cb) { window.__drafts++; cb(true, { draftId: 'r-' + window.__drafts, messageId: 'm-' + window.__drafts }); };
+  const drafts = [];   // every draft the app asked Gmail to create, raw MIME
+  await p.route('https://gmail.googleapis.com/gmail/v1/users/me/drafts', async (r) => {
+    const body = JSON.parse(r.request().postData() || '{}');
+    const raw = Buffer.from(String(body.message && body.message.raw || '').replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    drafts.push(raw);
+    await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'r-' + drafts.length, message: { id: 'm-' + drafts.length } }) });
   });
+  await p.route(SYNC + '**', async (r) => {
+    let body = {}; try { body = JSON.parse(r.request().postData() || '{}'); } catch (e) {}
+    if (body.action === 'htmlToPdf') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, base64: 'JVBERi0xLjQK' }) });
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, fileUrl: 'https://drive.google.com/file/d/f1/view', fileId: 'f1' }) });
+  });
+  const htmlOf = (raw) => { const out = []; const re = /Content-Type: text\/html; charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n([\s\S]*?)\r\n--/g; let m;
+    while ((m = re.exec(raw))) out.push(Buffer.from(m[1].replace(/\r\n/g, ''), 'base64').toString('utf8')); return out.join(''); };
+
+  await p.goto(APP); await p.waitForTimeout(1500);
+  await p.evaluate(([u, box]) => {
+    SHEETS_SYNC_URL = u;
+    window.gmailAuth = function (cb) { cb('tok-step37'); };
+    _gmailUserEmail = box;
+    // Captured rather than sent: a mailto in a headless browser navigates away from the page under test.
+    window.__mails = []; window.sendInternalEmail = function (to, subj) { window.__mails.push(subj); };
+    window.open = function () { return null; };
+  }, [SYNC, BOX]);
   const future = (() => { const d = new Date(); d.setDate(d.getDate() + 30);
     while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
     return d.toISOString().slice(0, 10); })();
@@ -52,272 +77,213 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
       const pick = (id) => { const e = document.getElementById(id); const o = e && Array.from(e.options).find(x => x.value); if (o) { e.value = o.value; if (e.onchange) e.onchange(); } };
       set('i-svc', 'home_cleanout'); toggleIntakeFields();
-      set('i-fname', 'Pat'); set('i-lname', last); set('i-addr', '1 A St'); set('i-city', 'Palm Beach'); set('i-zip', '33480');
-      set('i-sqft', '3500'); set('i-phone', '(561) 555-0199'); set('i-email', 'c@example.com'); set('i-home-value', '4200000');
+      set('i-fname', 'Tripp'); set('i-lname', last); set('i-addr', '69 Beach Blvd'); set('i-city', 'Palm Beach'); set('i-zip', '33480');
+      set('i-sqft', '3500'); set('i-phone', '(561) 555-0199'); set('i-email', 'tripp@example.com'); set('i-home-value', '4200000');
       pick('i-ptype'); pick('i-src'); set('i-walkthrough', wt);
       const st = new Date(wt); st.setDate(st.getDate() + 7); while (st.getDay() === 0 || st.getDay() === 6) st.setDate(st.getDate() + 1);
       set('i-start', st.toISOString().slice(0, 10)); saveIntake(); return (jobs[0] || {}).id;
     }, [future, last]);
     await p.waitForTimeout(1500); return id;
   }
-  // The real Build Estimate, six rooms in scope; then approved the way the manager's PIN leaves it.
-  // ⚠ NOT saveEstimateState(): it rebuilds the record from the page's approval GLOBALS, which describe whichever
-  // estimate was last open, and would write this one back unapproved (step 35 records the trap).
-  async function build(id, o) {
+  // The real Build Estimate, six rooms in scope; then approved (and optionally won) the way the manager's
+  // PIN and the Won modal leave a job, with the estimate already sent (or not).
+  async function price(id, won, estSent) {
     await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(700);
-    return p.evaluate(([id, o]) => {
+    return p.evaluate(([id, won, estSent]) => {
       const js = document.getElementById('e-job'); js.value = String(id); if (js.onchange) js.onchange();
       for (let i = 0; i < 6; i++) setRoomState('r' + i, 'in');
       document.getElementById('e-discount').value = '0';
       calcAll();
       const e = JSON.parse(JSON.stringify(currentEstimate));
-      if (o.total) e.havellinTotal = o.total;
-      estimateStore[id] = { approved: true, approvedBy: 'Anthony Graziano', estimate: e };
+      estimateStore[id] = { approved: true, approvedBy: 'Anthony Graziano', approvedAt: 'September 20, 2026', estimate: e };
       const job = jobs.find(j => j.id === id);
-      job.approved = true; job.status = 'approved';
-      Object.assign(job, o.job || {});
+      job.approved = true; job.status = won ? 'won' : 'approved';
+      if (won) { job.won = true; job.wonAt = '2026-09-21'; job.wonBy = 'Ashley Jerome'; job.wonMethod = 'email'; }
+      if (estSent) {
+        job.estimateSentDate = 'September 20, 2026';
+        job.docState = { estimate: { draftedAt: '2026-09-20T14:00:00.000Z', sentAt: '2026-09-20T14:05:00.000Z', provider: 'gmail' } };
+      }
       saveJobs(); try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch (x) {}
-      return e.havellinTotal;
-    }, [id, o || {}]);
+      return { total: e.havellinTotal, deposit: paymentSplit(e.havellinTotal).deposit };
+    }, [id, won, estSent]);
   }
-  const text = (sel) => p.evaluate((sel) => { const e = document.querySelector(sel); return e ? e.textContent.replace(/\s+/g, ' ') : ''; }, sel);
-  const fill = async (sel, v) => { try { await p.fill(sel, v); return true; } catch (e) { ok(false, 'could not type into ' + sel); return false; } };
   const dash = async (id) => { await p.evaluate((id) => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(id); }, id); await p.waitForTimeout(500); };
-  const buttons = () => p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view button'))
-    .map(x => ({ t: x.textContent.replace(/\s+/g, ' ').trim(), c: x.getAttribute('onclick') || '' })));
-  // Presses the ONE button on the dashboard carrying exactly this onclick — the count is asserted, so a control
-  // rendered twice (or not at all) is caught rather than pressed blind.
-  const press = async (call, what) => {
-    const n = await p.evaluate((call) => Array.from(document.querySelectorAll('#client-dashboard-view button'))
-      .filter(x => x.getAttribute('onclick') === call).length, call);
-    if (n !== 1) { ok(false, (what || call) + ' — expected one button, found ' + n); return false; }
-    try { await p.click('#client-dashboard-view button[onclick="' + call + '"]'); } catch (e) { ok(false, 'could not press ' + call); return false; }
-    await p.waitForTimeout(500); return true;
-  };
-  const band = () => p.evaluate(() => { const e = document.querySelector('#client-dashboard-view .jt-next'); return e ? e.textContent.replace(/\s+/g, ' ') : ''; });
-  const bandPrimary = () => p.evaluate(() => { const e = document.querySelector('#client-dashboard-view .jt-next .jt-btn-p');
-    return e ? { t: e.textContent.replace(/\s+/g, ' ').trim(), c: e.getAttribute('onclick') || '' } : { t: '', c: '' }; });
-  const rail = () => p.evaluate(() => { const e = document.querySelector('#client-dashboard-view .jt'); return e ? e.textContent.replace(/\s+/g, ' ') : ''; });
-  const chip = () => p.evaluate(() => { const e = document.querySelector('#client-dashboard-view .dash-chips .badge'); return e ? e.textContent.trim() : ''; });
-  const job = (id) => p.evaluate((id) => JSON.parse(JSON.stringify(jobs.find(x => x.id === id) || {})), id);
-  const lit = (id) => p.evaluate((id) => { const j = jobs.find(x => x.id === id), r = estimateStore[id];
-    const n = jobTimelineNext(jobTimeline(j, r, jobLogEntries(id), [])); return n ? n.key : ''; }, id);
-  const money = (x) => p.evaluate((x) => fmtMoney(x), x);
-  const listCell = async (id) => {
-    await p.evaluate(() => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); }); await p.waitForTimeout(250);
-    try { await p.click('button.fb[onclick*="setFilter(\'all\'"]'); } catch (e) {}
-    await p.waitForTimeout(250);
-    return p.evaluate((id) => {
-      const row = Array.from(document.querySelectorAll('#jobs-body tr'))
-        .find(r => (r.getAttribute('onclick') || '').indexOf('(' + id + ')') >= 0 || r.innerHTML.indexOf('(' + id + ')') >= 0);
-      if (!row) return null;
-      const cells = Array.from(row.children).map(c => c.textContent.replace(/\s+/g, ' ').trim());
-      return cells[JOB_LIST_COLS.indexOf('status')] || '';
-    }, id);
-  };
+  const calls = () => p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view button'))
+    .map(x => x.getAttribute('onclick') || ''));
+  const band = () => p.evaluate(() => { const e = document.querySelector('#client-dashboard-view .jt-next'); return e ? e.textContent.replace(/\s+/g, ' ').trim() : '(no band)'; });
+  const fb = () => p.evaluate(() => { const e = document.getElementById('dash-fb'); return { text: e ? e.textContent.replace(/\s+/g, ' ').trim() : '', html: e ? e.innerHTML : '' }; });
+  const rowOf = (id, key) => p.evaluate(([id, key]) => { const j = jobs.find(x => x.id === id);
+    const r = jobTimeline(j, estimateStore[j.id], jobLogs[j.id] || [], []).find(x => x.key === key); return r ? { state: r.state, sub: r.sub || '' } : null; }, [id, key]);
+  const rec = (id, key) => p.evaluate(([id, key]) => JSON.parse(JSON.stringify(((jobs.find(j => j.id === id) || {}).docState || {})[key] || null)), [id, key]);
+  const click = async (sel) => { try { await p.click(sel); return true; } catch (e) { ok(false, 'could not press ' + sel); return false; } };
+  const fill = async (sel, v) => { try { await p.fill(sel, v); return true; } catch (e) { ok(false, 'could not type into ' + sel); return false; } };
   const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  // The real Won modal, answered the way a person does: the method picked, the note typed, the button pressed.
-  const answerWon = async (method, note) => {
-    try { await p.selectOption('#won-method', method); } catch (e) { ok(false, 'could not pick the method'); }
-    await fill('#won-note', note);
-    try { await p.click('#won-modal button[onclick="confirmMarkWon()"]'); } catch (e) { ok(false, 'could not press the Won modal button'); }
-    await p.waitForTimeout(600);
-  };
-  // The real PIN, typed — the modal's own oninput fires checkPin.
-  const pin = async () => { await fill('#pin-input', '3010'); await p.waitForTimeout(700); };
 
-  // ── A. a raise after Won ─────────────────────────────────────────────────
-  console.log('\n## A. a won client’s estimate edited up asks the client again — and the job stays won');
-  const idA = await make('Raise');
-  const P1 = await build(idA);
-  await dash(idA);
-  // The estimate goes out the real way: Send estimate, then I've sent it.
-  ok(await press('docAction(' + idA + ",'estimate','send')", 'Send estimate'), 'the band sends the estimate');
-  ok(await press('markDocSent(' + idA + ",'estimate')", 'I’ve sent it'), 'and the send is confirmed');
-  ok((await job(idA)).estimateSentTotal === P1, '⚠ the send recorded the price that went (' + P1 + ')');
-  // The client says yes, through the real modal.
-  ok(await press('openWonModal(' + idA + ')', 'Client accepted — mark won'), 'the acceptance button');
-  has(await text('#won-modal'), 'Client Accepted the Estimate', 'a first yes reads as one');
-  await answerWon('email', 'Accepted by email');
-  const jA1 = await job(idA);
-  ok(jA1.won === true && jA1.acceptedTotal === P1, '⚠ won, with the price they said yes to recorded (' + P1 + ')');
-  // The estimate edited UP: the real Edit estimate, two more rooms, the real Save, Submit and PIN.
-  await dash(idA);
-  ok(await press('dashEditEstimate(' + idA + ')', 'Edit estimate'), 'Edit estimate before the packet');
-  await p.waitForTimeout(500);
-  ok(await p.evaluate(() => document.getElementById('panel-estimate').classList.contains('active')), 'Build Estimate is open, unlocked');
-  // ⚠ Ticking two more rooms does not raise it: volume is averaged over the rooms scored and applied to the whole
-  // sqft. The house turning out fuller than the walkthrough scored it — the real Packed chip — does.
-  try { await p.click('#volpreset-packed'); } catch (e) { ok(false, 'could not press the Packed chip'); }
-  await p.waitForTimeout(400);
-  const P2 = await p.evaluate(() => { calcAll(); return currentEstimate.havellinTotal; });
-  ok(P2 > P1, 'the house scored fuller raises the price (' + P1 + ' → ' + P2 + ')');
-  try { await p.click('button[onclick="saveEstimateAndPreview()"]'); } catch (e) { ok(false, 'could not press Save'); }
-  await p.waitForTimeout(1200);
-  await dash(idA);
-  ok(await press('dashSubmitEstimate(' + idA + ')', 'Submit for approval'), 'submitted to the manager');
-  ok(await press('dashApproveEstimate(' + idA + ')', 'Manager approval'), 'the rail offers the PIN');
-  await pin();
-  const was = await money(P1), now = await money(P2);
-  const fbA = await text('#dash-fb');
-  has(fbA, 'The client accepted ' + was + ' and the approved estimate is now ' + now, '⚠⚠ the manager is told where the PIN was typed');
-  has(fbA, 'record their acceptance again before the signing packet goes out', 'and what the concierge now owes the client');
-  const tcMail = await p.evaluate(() => { const m = window.__opened.filter(u => /^mailto:/.test(u) && /Estimate%20Approved/.test(u)).pop();
-    return m ? decodeURIComponent(m.split('&body=')[1] || '') : ''; });
-  has(tcMail, 'record their acceptance again before the signing packet goes out', '⚠ the concierge’s email carries the same sentence');
-  const jA2 = await job(idA);
-  ok(jA2.won === true && jA2.status === 'won', '⚠ the job is still WON after the re-approval');
-  await dash(idA);
-  ok((await lit(idA)) === 'estimate_sent', '⚠⚠ the lit step is the send again — the client has the estimate at ' + was);
-  const bpA = await bandPrimary();
-  ok(bpA.t.indexOf('Send revised estimate') >= 0, '⚠ the one filled button sends the REVISED estimate (' + bpA.t + ')');
-  has(await rail(), 'Sent at ' + was + ' — the approved estimate is now ' + now + ', so the client needs the revised one', 'the send row names both figures');
-  has(await rail(), 'Accepted ' + was + ' — the approved estimate is now ' + now + ', so they are asked again', 'and the acceptance row says why it reopened');
-  ok((await chip()) === 'Won · Awaiting Re-acceptance', '⚠⚠ the header reads both facts: Won · Awaiting Re-acceptance (' + (await chip()) + ')');
-  ok((await listCell(idA)) === 'Won · Awaiting Re-acceptance', 'and so does the client list');
-  await dash(idA);
-  ok(!(await buttons()).some(x => /'agreement','send'/.test(x.c)), '⚠ nothing offers to send the packet at the new price');
-  await p.evaluate((id) => docAction(id, 'agreement', 'print'), idA); await p.waitForTimeout(400);
-  has(await text('#dash-fb'), 'before the agreement goes out', '⚠ printing the packet is refused, in the packet’s words');
-  await p.evaluate((id) => docAction(id, 'agreement', 'view'), idA); await p.waitForTimeout(600);
-  ok(await p.evaluate(() => getComputedStyle(document.getElementById('doc-viewer-modal')).display !== 'none'), 'the packet opens in the viewer');
-  has(await text('#doc-viewer-title'), 'PREVIEW', 'the packet may be READ — a preview at the new price');
-  ok(await p.evaluate(() => getComputedStyle(document.getElementById('doc-viewer-print')).display === 'none'), 'with no Print on it');
-  await p.evaluate(() => { if (typeof closeDocViewer === 'function') closeDocViewer(); });
-  // The Job Plan stays open: the job is won.
-  await p.evaluate((id) => openJobPlanFor(id), idA); await p.waitForTimeout(700);
-  const planA = await text('#job-plan-content');
-  lacks(planA, 'has not been won yet', '⚠ the Job Plan stays open — staffing does not wait on the re-acceptance');
-  lacks(planA, 'Job Plan generates once', 'and the raised estimate is approved, so the plan renders');
-  // The revised estimate goes out, the real way.
-  await dash(idA);
-  ok(await press('docAction(' + idA + ",'estimate','send')", 'Send revised estimate'), 'the revised estimate is drafted');
-  ok(await press('markDocSent(' + idA + ",'estimate')", 'I’ve sent it (revised)'), '⚠ a SECOND draft after a send waits on its confirming tap');
-  ok((await job(idA)).estimateSentTotal === P2, 'the send now records the revised price (' + P2 + ')');
-  ok((await lit(idA)) === 'client_accepted', '⚠⚠ and the acceptance is the lit step');
-  ok((await bandPrimary()).t.indexOf('Client accepted the revised price') >= 0, 'the button names the revised price');
-  ok((await buttons()).some(x => x.c === 'openCloseoutModal(' + idA + ')'), 'with Mark lost beside it — a client can say no to a higher price');
-  // The real modal asks about the NEW figure.
-  ok(await press('openWonModal(' + idA + ')', 'Client accepted the revised price'), 'the acceptance modal opens');
-  ok((await text('#won-title')) === 'Client Accepted the Revised Price', '⚠⚠ the modal names what is being accepted');
-  const subA = await text('#won-sub');
-  has(subA, 'They accepted ' + was, 'the figure they accepted');
-  has(subA, now, 'and the one they are being asked about now');
-  has(subA, 'nothing about staffing changes', 'and that the job is already won');
-  ok((await text('#won-go')).indexOf('Record Acceptance') === 0, 'the button records an acceptance, not a win');
-  // The modal at a phone width, while it is open.
+  // ── A. the packet drafted by email ───────────────────────────────────────
+  console.log('\n## A. a signing packet drafted by email, at the old price');
+  const id = await make('Butler');
+  const est0 = await price(id, true, true);
+  await p.evaluate((id) => { window.__id = id; }, id);
+  await dash(id);
+  const paperSel = '#client-dashboard-view button[onclick="docAction(' + id + ",'agreement','send',{via:'paper'})\"]";
+  ok((await calls()).some(c => c === 'docAction(' + id + ",'agreement','send',{via:'paper'})"), 'the packet row offers the paper route');
+  await click(paperSel); await p.waitForTimeout(3000);
+  ok(drafts.length === 1, 'pressing it creates one Gmail draft — ' + drafts.length);
+  const html1 = htmlOf(drafts[0] || '');
+  has(html1, money(est0.deposit), 'the draft names the deposit at the old price');
+  const r1 = await rec(id, 'agreement') || {};
+  ok(!!r1.draftedAt && !r1.sentAt, 'the packet is recorded as drafted, not sent');
+  ok(r1.mailbox === BOX, 'and records whose drafts folder it is in — ' + r1.mailbox);
+  const day1 = r1.draftedAt ? dayOf(r1.draftedAt) : '?';
+  await dash(id);
+  let cs = await calls();
+  ok(cs.indexOf('markDocSent(' + id + ",'agreement')") >= 0, 'the band offers ✓ I’ve sent it over the live draft');
+  ok(cs.indexOf('openDocDraft(' + id + ",'agreement')") >= 0, 'and the link to the draft');
+  has(await band(), 'Drafted — read it, send it, then confirm', 'the band says the draft is waiting');
+
+  // ── B. the pop-up, before the discount ───────────────────────────────────
+  console.log('\n## B. the pop-up names the draft BEFORE the discount');
+  await click('#client-dashboard-view button[onclick="dashOfferDiscount(' + id + ')"]'); await p.waitForTimeout(400);
+  const w0 = await p.evaluate(() => { const e = document.getElementById('dm-drafts'); return { text: e ? e.textContent.replace(/\s+/g, ' ').trim() : '', html: e ? e.innerHTML : '', shown: !!(e && e.offsetParent) }; });
+  ok(w0.shown, 'the warning is on screen in the pop-up');
+  has(w0.html, 'a-warn', 'as a warning');
+  has(w0.text, 'The signing packet was drafted in Gmail on ' + day1 + ' (' + BOX + ') and has not been confirmed sent', 'naming the draft, its day and its mailbox');
+  has(w0.text, 'A discount leaves that draft at the old price — delete it', 'and what the discount does to it');
+  has(w0.text, 'Already sent it? Cancel and tap “I’ve sent it” instead', 'and what to do if it has already gone');
+  await fill('#dm-pct', '10'); await p.evaluate(() => updateDiscountModal()); await p.waitForTimeout(150);
+  has(await p.evaluate(() => (document.getElementById('dm-drafts') || {}).textContent || ''), 'drafted in Gmail on ' + day1,
+      'typing the percentage leaves it on screen — its own slot, not the refusal strip');
+  // Counted, so C can prove the approval watch's own redraw ran: the discount submits the estimate, the
+  // watch fires at once, and its redraw is what used to take the confirmation off the screen.
+  await p.evaluate(() => { window.__renders = 0; window.__rcd = renderClientDashboard;
+    window.renderClientDashboard = function () { window.__renders++; return window.__rcd.apply(this, arguments); }; });
+  await click('#discount-modal .btn-p'); await p.waitForTimeout(800);
+  const renders = await p.evaluate(() => { const n = window.__renders; window.renderClientDashboard = window.__rcd; return n; });
+
+  // ── C. the confirmation after Apply ──────────────────────────────────────
+  console.log('\n## C. the confirmation names it, and survives the redraw');
+  ok(renders >= 2, 'the dashboard was redrawn again after Apply, by the approval watch — ' + renders + ' renders');
+  const f1 = await fb();
+  has(f1.text, 'Discount applied.', 'the discount is confirmed on the dashboard it was pressed from');
+  has(f1.text, '⚠ The Gmail draft of the signing packet from ' + day1 + ' (' + BOX + ') has the old price — delete it, don’t send it.',
+      'and the draft it just left out of date is named');
+  has(f1.text, 'if the old one already reached the client, tell them a revised one is coming', 'with what to tell the client');
+  has(f1.html, 'a-warn', 'as a warning');
+  const j1 = await p.evaluate((id) => { const j = jobs.find(x => x.id === id); return { at: j.priceChangedAt || '', why: j.priceChangeWhy || '' }; }, id);
+  ok(!!j1.at && j1.why === 'discount', 'the job records when the price moved, and why');
+  ok(((await rec(id, 'agreement')) || {}).draftedAt === r1.draftedAt, 'and the draft’s own record is untouched');
+
+  // ── D. no tap, no link, Send is back ─────────────────────────────────────
+  console.log('\n## D. after the discount and after the manager’s PIN');
+  await dash(id);
+  cs = await calls();
+  ok(!cs.some(c => /^markDocSent\(/.test(c)), 'awaiting the manager: no ✓ I’ve sent it anywhere on the dashboard');
+  ok(!cs.some(c => /^openDocDraft\(/.test(c)), 'and no link to the old draft');
+  has((await rowOf(id, 'agreement_sent')).sub, 'The Gmail draft from ' + day1 + ' (' + BOX + ') has the old price — delete it, don’t send it',
+      'the packet row names the old draft while the estimate waits');
+  await click('#client-dashboard-view button[onclick="dashApproveEstimate(' + id + ')"]'); await p.waitForTimeout(300);
+  await fill('#pin-input', '3010'); await p.waitForTimeout(600);
+  const st3 = await p.evaluate((id) => { const r = estimateStore[id]; return { approved: !!r.approved, total: r.estimate.havellinTotal, deposit: paymentSplit(r.estimate.havellinTotal).deposit }; }, id);
+  ok(st3.approved && st3.total < est0.total, 'the manager re-approves at the discounted price — ' + money(st3.total));
+  await dash(id);
+  cs = await calls();
+  ok(!cs.some(c => /^markDocSent\(/.test(c)), '⚠⚠ no ✓ I’ve sent it — it would have recorded the old-price packet as sent');
+  ok(!cs.some(c => /^openDocDraft\(/.test(c)), '⚠ and no link to the old draft');
+  ok(cs.indexOf('docAction(' + id + ",'agreement','send')") >= 0, 'Send for signature is back');
+  ok(cs.indexOf('docAction(' + id + ",'agreement','send',{via:'paper'})") >= 0, 'with the paper route beside it');
+  const bd = await band();
+  has(bd, 'A discount changed the price after this was prepared', 'the band says what to do in the app');
+  has(bd, 'The Gmail draft from ' + day1 + ' (' + BOX + ') has the old price — delete it, don’t send it', '⚠ and names the old draft');
+  lacks(bd, 'Drafted — read it, send it', 'and no longer tells anyone to send it');
+  await p.evaluate((id) => markDocSent(id, 'agreement'), id); await p.waitForTimeout(500);
+  const r3 = (await rec(id, 'agreement')) || {};
+  ok(!r3.sentAt && !(await p.evaluate((id) => isAgreementSent(jobs.find(j => j.id === id)), id)),
+     '⚠⚠ a direct markDocSent is refused — the old-price packet is NOT recorded as sent');
+  has((await fb()).text, 'There is no draft of the signing packet waiting to be confirmed.', 'and it says why');
+
+  // ── E. a fresh send ──────────────────────────────────────────────────────
+  console.log('\n## E. a fresh packet at the new price');
+  await dash(id);
+  await click(paperSel); await p.waitForTimeout(3000);
+  ok(drafts.length === 2, 'a second Gmail draft is created — ' + drafts.length);
+  const html2 = htmlOf(drafts[1] || '');
+  has(html2, money(st3.deposit), 'it names the NEW deposit');
+  lacks(html2, money(est0.deposit), 'and not the old one');
+  has((await fb()).text, '⚠ Delete the older Gmail draft from ' + day1 + ' (' + BOX + ') — it has the old price.',
+      'the send says which draft to delete, while there are two');
+  const r4 = (await rec(id, 'agreement')) || {};
+  ok(Array.isArray(r4.staleDrafts) && r4.staleDrafts.length === 1 && r4.staleDrafts[0].draftedAt === r1.draftedAt,
+     'the old draft is kept on record — it is still in a mailbox');
+  ok(!!r4.draftedAt && r4.draftedAt > j1.at, 'and the fresh draft is stamped after the price moved');
+  await dash(id);
+  cs = await calls();
+  ok(cs.indexOf('markDocSent(' + id + ",'agreement')") >= 0, 'the tap is back — over the NEW draft');
+  ok(cs.indexOf('openDocDraft(' + id + ",'agreement')") >= 0, 'and the link opens the new one');
+  has(await band(), 'Drafted — read it, send it, then confirm. Delete the older Gmail draft from ' + day1 + ' (' + BOX + ') — it has the old price',
+      'the band tells the two drafts apart');
+  await click('#client-dashboard-view button[onclick="markDocSent(' + id + ",'agreement')\"]"); await p.waitForTimeout(1500);
+  ok(await p.evaluate((id) => isAgreementSent(jobs.find(j => j.id === id)), id), 'pressing it records the NEW packet as sent');
+  ok(((await rowOf(id, 'agreement_sent')) || {}).sub === '', 'and the row has nothing left to say');
+
+  // ── F. the edit door ─────────────────────────────────────────────────────
+  console.log('\n## F. an estimate drafted by email, then Edit estimate');
+  const id2 = await make('Ellsworth');
+  await price(id2, false, false);
+  await dash(id2);
+  await click('#client-dashboard-view button[onclick="docAction(' + id2 + ",'estimate','send')\"]"); await p.waitForTimeout(3000);
+  const e1 = (await rec(id2, 'estimate')) || {};
+  ok(!!e1.draftedAt && !e1.sentAt, 'the estimate is drafted by email, not sent');
+  const dayE = e1.draftedAt ? dayOf(e1.draftedAt) : '?';
+  await dash(id2);
+  ok((await calls()).indexOf('markDocSent(' + id2 + ",'estimate')") >= 0, 'the estimate row offers ✓ I’ve sent it');
+  await click('#client-dashboard-view button[onclick="dashEditEstimate(' + id2 + ')"]'); await p.waitForTimeout(800);
+  ok(await p.evaluate((id) => jobs.find(j => j.id === id).priceChangeWhy === 'edit', id2), 'Edit estimate notes the change as an edit');
+  await dash(id2);
+  cs = await calls();
+  ok(!cs.some(c => c === 'markDocSent(' + id2 + ",'estimate')"), 'the estimate draft is no longer confirmable');
+  ok(!cs.some(c => c === 'openDocDraft(' + id2 + ",'estimate')"), 'nor linked');
+  has((await rowOf(id2, 'estimate_sent')).sub, 'The Gmail draft from ' + dayE + ' (' + BOX + ') was made before the estimate was edited — delete it, don’t send it',
+      'and its row says it was made before the edit');
+
+  // ── H. the other notice the watch's redraw took ──────────────────────────
+  // Submitting an estimate starts the same approval watch, which fires at once — so "Submitted for manager
+  // approval" was painted and then taken off the screen by the watch's own redraw a moment later.
+  console.log('\n## H. Submit for approval: its notice survives the watch it starts');
+  const id4 = await make('Hale');
+  await price(id4, false, false);
+  await p.evaluate((id) => { const r = estimateStore[id]; r.approved = false; r.approvedBy = ''; r.approvedAt = '';
+    const j = jobs.find(x => x.id === id); j.approved = false; j.status = 'new'; saveJobs();
+    try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch (x) {} }, id4);
+  await dash(id4);
+  ok((await calls()).indexOf('dashSubmitEstimate(' + id4 + ')') >= 0, 'the band offers Submit for approval');
+  await p.evaluate(() => { window.__renders = 0; window.__rcd = renderClientDashboard;
+    window.renderClientDashboard = function () { window.__renders++; return window.__rcd.apply(this, arguments); }; });
+  await click('#client-dashboard-view button[onclick="dashSubmitEstimate(' + id4 + ')"]'); await p.waitForTimeout(1500);
+  const renders4 = await p.evaluate(() => { const n = window.__renders; window.renderClientDashboard = window.__rcd; return n; });
+  ok(await p.evaluate((id) => !!(estimateStore[id] && estimateStore[id].submitted), id4), 'the estimate is submitted');
+  ok(renders4 >= 2, 'the approval watch redrew the dashboard after the press — ' + renders4 + ' renders');
+  has((await fb()).text, 'Submitted for manager approval', '⚠ and the confirmation is still on screen');
+  await dash(id4);
+  lacks((await fb()).text, 'Submitted for manager approval', 'the next redraw a person causes clears it');
+  await p.evaluate(() => { if (typeof stopApprovalWatch === 'function') stopApprovalWatch(); });
+
+  // ── G. overflow, errors ──────────────────────────────────────────────────
+  console.log('\n## G. overflow and page errors');
+  await dash(id);
+  ok((await overflow()) <= 0, 'the dashboard at 1440px has no horizontal overflow');
+  // A third client with a live packet draft, so the pop-up's warning can be measured on a phone.
+  const id3 = await make('Farrell');
+  await price(id3, true, true);
+  await dash(id3);
+  await click('#client-dashboard-view button[onclick="docAction(' + id3 + ",'agreement','send',{via:'paper'})\"]"); await p.waitForTimeout(3000);
   await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
-  ok(await p.evaluate(() => { const r = document.querySelector('#won-modal .modal-box').getBoundingClientRect(); return r.left >= 0 && r.right <= window.innerWidth + 0.5; }),
-    'the Won modal fits the phone width');
-  await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(300);
-  await answerWon('call', 'Said yes to the revised figure on the phone');
-  const jA3 = await job(idA);
-  ok(jA3.acceptedTotal === P2, '⚠⚠ the price they said yes to is now the approved one (' + P2 + ')');
-  ok(Array.isArray(jA3.priorAcceptances) && jA3.priorAcceptances.length === 1 && jA3.priorAcceptances[0].total === P1
-    && jA3.priorAcceptances[0].method === 'email', '⚠ the earlier yes is kept beside it — figure, method and all');
-  has(await text('#sync-status'), 'Acceptance of the revised price recorded', 'the confirmation says what was recorded');
-  await dash(idA);
-  ok((await chip()) === 'Won', 'the header reads Won again');
-  ok((await lit(idA)) === 'agreement_sent', 'and the packet is the next step');
-  ok((await bandPrimary()).c === 'docAction(' + idA + ",'agreement','send')", 'with its send button back');
-
-  // ── B. a draft made before a price change ────────────────────────────────
-  console.log('\n## B. a draft made before a discount — and before an edit — says so, and is never recorded as sent');
-  const idB = await make('Stale');
-  const PB = await build(idB);
-  await dash(idB);
-  ok(await press('docAction(' + idB + ",'estimate','send')", 'Send estimate'), 'the estimate is drafted');
-  ok((await buttons()).some(x => x.c === 'markDocSent(' + idB + ",'estimate')"), 'and waits on its confirming tap');
-  // A discount before it was ever sent.
-  ok(await press('dashOfferDiscount(' + idB + ')', 'Offer discount'), 'Offer discount');
-  await fill('#dm-pct', '10'); await p.evaluate(() => updateDiscountModal());
-  try { await p.click('#discount-modal .btn-p'); } catch (e) { ok(false, 'could not press Apply'); }
-  await p.waitForTimeout(600);
-  const fbB = await text('#dash-fb');
-  has(fbB, 'A draft made before this still has the old price', '⚠ the discount’s confirmation names the draft still in the mailbox');
-  ok((await job(idB)).docState.estimate.staleWhy === 'discount-revised', 'the draft is marked, with why');
-  await dash(idB);
-  ok(await press('dashApproveEstimate(' + idB + ')', 'Manager approval'), 'the manager re-approves');
-  await pin();
-  await dash(idB);
-  const railB = await rail();
-  has(railB, 'The estimate draft in Gmail was made before the discount changed the price — delete it', '⚠⚠ the row names the stale draft');
-  const bpB = await bandPrimary();
-  ok(bpB.c === 'docAction(' + idB + ",'estimate','send')", '⚠⚠ the one filled button is an ordinary send — never “I’ve sent it” on the old price (' + bpB.t + ')');
-  ok(!(await buttons()).some(x => x.c === 'markDocSent(' + idB + ",'estimate')"), 'the confirming tap is not offered');
-  ok((await buttons()).some(x => /Open the old estimate draft to delete it/.test(x.t)), 'the old draft is offered to delete');
-  await p.evaluate((id) => markDocSent(id, 'estimate'), idB); await p.waitForTimeout(400);
-  has(await text('#dash-fb'), 'made before the price changed', '⚠ the door behind the button refuses it too');
-  ok(!(await job(idB)).estimateSentDate, 'and nothing was recorded as sent');
-  // A fresh draft at the price that stands goes through as normal.
-  ok(await press('docAction(' + idB + ",'estimate','send')", 'Send estimate (fresh)'), 'a fresh draft');
-  const jB = await job(idB);
-  ok(!jB.docState.estimate.staleAt, 'carries no mark');
-  ok(await press('markDocSent(' + idB + ",'estimate')", 'I’ve sent it (fresh)'), 'and its confirming tap is back');
-  ok((await job(idB)).estimateSentTotal < PB, 'the send records the discounted price');
-  // An edit marks a draft the same way.
-  const idE = await make('Edited');
-  await build(idE);
-  await dash(idE);
-  ok(await press('docAction(' + idE + ",'estimate','send')", 'Send estimate'), 'drafted');
-  ok(await press('dashEditEstimate(' + idE + ')', 'Edit estimate'), 'then Edit estimate');
-  await p.waitForTimeout(500);
-  ok((await job(idE)).docState.estimate.staleWhy === 'estimate-edited', '⚠ an edit marks the draft still waiting');
-  has(await text('#sync-status'), 'still has the old price', 'and the warning is the toast left on screen');
-  await dash(idE);
-  has(await rail(), 'made before the estimate was edited', 'the row names the edit');
-
-  // ── C. out for approval ──────────────────────────────────────────────────
-  console.log('\n## C. Edit estimate waits for the PIN');
-  const idC = await make('Pending');
-  await build(idC, { job: { estimateSentDate: 'September 20, 2026' } });
-  await dash(idC);
-  ok(await press('dashOfferDiscount(' + idC + ')', 'Offer discount'), 'a discount sends it to the manager');
-  await fill('#dm-pct', '5'); await p.evaluate(() => updateDiscountModal());
-  try { await p.click('#discount-modal .btn-p'); } catch (e) { ok(false, 'could not press Apply'); }
-  await p.waitForTimeout(600);
-  await dash(idC);
-  ok((await lit(idC)) === 'estimate_approved', 'the manager’s step is lit');
-  const bC = await buttons();
-  ok(!bC.some(x => /dashEditEstimate/.test(x.c)), '⚠⚠ no Edit estimate anywhere on the dashboard while a manager has the estimate');
-  ok(bC.some(x => x.c === 'dashApproveEstimate(' + idC + ')'), 'the PIN is the one next move');
-  await p.evaluate((id) => dashEditEstimate(id), idC); await p.waitForTimeout(400);
-  has(await text('#dash-fb'), 'out for manager approval, so it cannot be edited', '⚠ the door refuses');
-  has(await text('#dash-fb'), 'once a manager approves it or denies it', 'saying when it opens again');
-  ok(await p.evaluate(() => document.getElementById('panel-jobs').classList.contains('active')), 'and Build Estimate was not opened');
-  ok(await p.evaluate((id) => !!(estimateStore[id] && estimateStore[id].submitted), idC), 'the estimate is still with the manager');
-  await dash(idC);
-  ok(await press('dashApproveEstimate(' + idC + ')', 'Manager approval'), 'the PIN');
-  await pin();
-  await dash(idC);
-  ok((await buttons()).some(x => x.c === 'dashEditEstimate(' + idC + ')'), 'once approved, Edit estimate is back');
-
-  // ── D. before the yes, and a job recorded before today ───────────────────
-  console.log('\n## D. before the yes a raise reopens the send only; a job recorded before today is asked nothing');
-  const idD = await make('PreWon');
-  const PD = await build(idD, { job: { estimateSentDate: 'September 18, 2026' } });
-  await p.evaluate(([id, t]) => { const j = jobs.find(x => x.id === id); j.estimateSentTotal = t; saveJobs(); }, [idD, PD - 1500]);
-  await dash(idD);
-  ok((await lit(idD)) === 'estimate_sent', 'the send is lit again');
-  ok((await bandPrimary()).t.indexOf('Send revised estimate') >= 0, 'for the revised estimate');
-  ok((await chip()) === 'Approved — Awaiting Client', 'the status is unchanged — nobody has said yes');
-  lacks(await rail(), 'so they are asked again', 'and the acceptance row asks nothing');
-  const idL = await make('Legacy');
-  await build(idL, { job: { won: true, status: 'won', wonAt: '2026-09-12', wonBy: 'Ashley Jerome', wonMethod: 'email',
-    estimateSentDate: 'September 10, 2026' } });
-  await dash(idL);
-  ok((await chip()) === 'Won', 'a job recorded before today reads Won — there is no figure to compare');
-  ok((await lit(idL)) === 'agreement_sent', 'and the packet is next, as it always was');
-
-  // ── E. overflow, errors ──────────────────────────────────────────────────
-  console.log('\n## E. overflow and page errors');
-  await dash(idB);
-  ok((await overflow()) <= 0, 'the dashboard with a stale draft at 1440px has no horizontal overflow');
-  await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
-  await dash(idB);
-  ok((await overflow()) <= 0, 'nor at 390px');
-  await dash(idD);
-  ok((await overflow()) <= 0, 'the revised-estimate band at 390px has none');
+  await dash(id3);
+  ok((await overflow()) <= 0, 'the dashboard at 390px has no horizontal overflow');
+  await click('#client-dashboard-view button[onclick="dashOfferDiscount(' + id3 + ')"]'); await p.waitForTimeout(400);
+  const m390 = await p.evaluate(() => { const e = document.getElementById('dm-drafts'); const r = e && e.getBoundingClientRect();
+    return { shown: !!(e && e.offsetParent), text: e ? e.textContent : '', right: r ? r.right : 9999, over: document.documentElement.scrollWidth - document.documentElement.clientWidth }; });
+  ok(m390.shown && m390.text.indexOf('drafted in Gmail') >= 0, 'the pop-up’s warning is on screen at 390px');
+  ok(m390.right <= 390 && m390.over <= 0, 'inside the viewport, with no horizontal overflow — right edge ' + Math.round(m390.right));
   ok(errs.length === 0, 'no page errors' + (errs.length ? ' — ' + errs.slice(0, 3).join(' | ') : ''));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed');

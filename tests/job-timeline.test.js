@@ -63,10 +63,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments',
       'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
       // Slice 4: the rail reads where each document has been.
-      'docSentAt', 'docDraftedAt', 'docKeyFor',
+      'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
-      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'
-    ],
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'
+    , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'],
     // The short names the horizontal track uses. A top-level var, so the sandbox has to
     // be told about it — without it `row()` throws and every check in the file is lost.
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],

@@ -47,9 +47,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef',
       'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
       'depositTargetFor', 'agreementReady',
-      'docSentAt', 'docDraftedAt', 'docKeyFor',
+      'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
-      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove'],
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove'],
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
@@ -572,7 +572,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The notice has to survive the innerHTML rewrite the redraw performs, and must not
     // outlive the client it was about.
     has(src, 'var _dashNotice = null;', 'the notice is module state, not DOM state');
-    has(body('renderClientDashboard(jobId)'), '_dashNotice = null;', 'and is cleared once shown');
+    // ⚠ RESTATED 2026-09-29, not deleted: the clear moved into the one painter both surfaces call, which
+    // also keeps a notice on screen through a redraw the app makes on its own (stale-draft.test.js drives it).
+    has(body('renderClientDashboard(jobId)'), "_dashNoticeHtml('dash', jobId, true)", 'the dashboard paints its notice through the one painter');
+    has(body('_dashNoticeHtml(host, jobId, mine)'), '_dashNotice = null;', 'and is cleared once shown');
     has(body('openClientDashboard(jobId)'), '_dashNotice = null;', 'and again when another client is opened');
   }
 

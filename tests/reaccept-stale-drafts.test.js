@@ -11,8 +11,11 @@
 //      priceAboveAcceptance compare each with the approved estimate, and only a RAISE counts. The rail
 //      reopens the send and then the acceptance, agreementReady holds the packet ('reaccept') and the
 //      invoices with it — and the job stays WON the whole time, so staffing and the Job Plan stay open.
-//   2. A Gmail draft is a snapshot. A draft made before an edit or a discount is marked stale; its row
-//      says so, its button becomes an ordinary send, and the confirming tap is refused on it.
+//   2. A Gmail draft is a snapshot. A draft made before an edit or a discount reads stale; its row says so,
+//      its button becomes an ordinary send, and the confirming tap is refused on it. ⚠ That is the concurrent
+//      stale-draft build's design, merged here (notePriceChange stamps the job; stale-draft.test.js drives it).
+//      What this build folds into it is docDraftPending: a draft newer than the last send is still waiting —
+//      the revised estimate's second draft, which the rail in item 1 asks for.
 //   3. Edit estimate is withheld while a manager has the estimate, on the rail and at both doors.
 //
 // Measured on the real functions before any of it was built: accepted at $20,000, edited to $24,100 and
@@ -35,10 +38,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const PRICE_FNS = ['_approvedPriceAbove', 'priceAboveAcceptance', 'priceAboveSent', 'priceRaiseSentence', 'isJobWon', 'fmtMoney']
     .concat(BLK_FNS);
   const SENT_AT = '2026-09-29T10:00:00Z';
-  // ⚠ Draft and mark stamps are fixed in the PAST on purpose: staleOutstandingDrafts stamps `staleAt` with the
-  // real clock, and a draft dated after it would read as fresher than its own mark.
-  const DRAFTED = '2026-08-01T10:00:00Z';
-  const MARKED = '2026-08-01T11:00:00Z';
+  // ⚠ Draft and change stamps are fixed in the PAST on purpose: notePriceChange stamps `priceChangedAt` with the
+  // real clock, and a draft dated after it would read as fresher than the change.
+  const T1 = '2026-08-01T09:00:00Z';        // the estimate's first send
+  const DRAFTED = '2026-08-01T10:00:00Z';   // a draft
+  const SENT = '2026-08-01T10:30:00Z';      // that draft confirmed sent
+  const MARKED = '2026-08-01T11:00:00Z';    // the price moved
+  const T3 = '2026-08-01T12:00:00Z';        // a draft made after the change
+  const HELP = ['docDraftPending', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'staleDraftsOf', 'staleDraftNote',
+    'staleDocName', '_draftDay', '_andJoin'];
 
   const rec = (total, o) => Object.assign({ approved: true, submitted: false, estimate: { havellinTotal: total } }, o || {});
   const wonJob = (o) => Object.assign({ id: 7, name: 'Butler', status: 'won', won: true, wonAt: '2026-09-20',
@@ -214,9 +222,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docPreviewOnly', 'agreementReady', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
-      'depositPaidTotal', 'depositTargetFor', 'docDraftedAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', '_jtDraftSub',
-      'docDraftPending', 'docDraftStale'].concat(PRICE_FNS)),
+      'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
+      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', 'jtDraftLine']
+      .concat(HELP, PRICE_FNS)),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],
@@ -525,112 +533,140 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  group('a draft waits on its tap when it is newer than the last send; it is stale when marked after it was made');
+  // ⚠ ITEM 2 IS MAIN'S DESIGN NOW (the concurrent stale-draft build, merged 2026-09-29): the JOB carries when the
+  // price moved (notePriceChange → priceChangedAt / priceChangeWhy) and a draft made before it reads stale. What
+  // this build folds into it is the SEND-ORDER rule, docDraftPending: a draft newer than the last send is waiting
+  // on its tap. Without it the revised estimate's second draft — the one case the rail asks for a second send —
+  // read as already sent: no "I've sent it", and no price change could ever flag it. These groups drive that
+  // rule through every reader main's design routes through it; stale-draft.test.js covers the rest.
+  group('the send-order rule: a draft newer than the last send waits on its tap — and a price change reaches it');
   {
-    const S = sandbox({ fns: ['docDraftPending', 'docDraftStale'] });
+    const S = sandbox({ fns: HELP });
     eq(S.docDraftPending({ draftedAt: DRAFTED }), true, 'drafted, nothing sent: waiting on its tap');
-    eq(S.docDraftPending({ draftedAt: DRAFTED, sentAt: MARKED }), false, 'confirmed: not waiting');
-    eq(S.docDraftPending({ draftedAt: MARKED, sentAt: DRAFTED }), true,
-      '⚠⚠ a SECOND draft after a send is waiting — the old test read it as sent');
-    eq(S.docDraftPending({ draftedAt: 'rubbish', sentAt: DRAFTED }), false, 'an unreadable stamp behind a send reads as sent, as before');
+    eq(S.docDraftPending({ draftedAt: DRAFTED, sentAt: SENT }), false, 'confirmed: not waiting');
+    eq(S.docDraftPending({ draftedAt: DRAFTED, sentAt: T1 }), true,
+      '⚠⚠ a SECOND draft after a send is waiting — `draftedAt && !sentAt` read it as sent');
+    eq(S.docDraftPending({ draftedAt: 'rubbish', sentAt: T1 }), false, 'an unreadable stamp behind a send reads as sent, as before');
     eq(S.docDraftPending({}), false, 'nothing drafted');
     eq(S.docDraftPending(null), false, 'no record');
-    eq(S.docDraftStale({ draftedAt: DRAFTED, staleAt: MARKED }), true, 'a waiting draft marked after it was made is stale');
-    eq(S.docDraftStale({ draftedAt: DRAFTED, staleAt: DRAFTED }), true, 'marked the same moment counts');
-    eq(S.docDraftStale({ draftedAt: MARKED, staleAt: DRAFTED }), false, '⚠ a FRESH draft after the mark is not stale — a mark never condemns a newer draft');
-    eq(S.docDraftStale({ draftedAt: DRAFTED, sentAt: MARKED, staleAt: '2026-08-01T12:00:00Z' }), false, 'a document already SENT is not a stale draft');
-    eq(S.docDraftStale({ draftedAt: DRAFTED }), false, 'no mark, not stale');
+    const moved = (o) => Object.assign({ id: 7, priceChangedAt: MARKED, priceChangeWhy: 'discount' }, o || {});
+    eq(S.draftIsStale(moved(), { draftedAt: DRAFTED }), true, 'a waiting draft made before the price moved is stale');
+    eq(S.draftIsStale(moved(), { draftedAt: T3 }), false, '⚠ a FRESH draft after the change is not — a change never condemns a newer draft');
+    eq(S.draftIsStale(moved(), { draftedAt: DRAFTED, sentAt: SENT }), false, 'a document already SENT is not a stale draft');
+    eq(S.draftIsStale({ id: 7 }, { draftedAt: DRAFTED }), false, 'no price change, nothing stale');
+    const second = moved({ docState: { estimate: { draftedAt: DRAFTED, sentAt: T1, provider: 'gmail' } } });
+    eq(S.draftIsStale(second, second.docState.estimate), true, '⚠⚠ a SECOND draft made before the price moved is stale too');
+    eq(S.draftOutstanding(second, 'estimate'), false, 'so it is not the draft to confirm');
+    eq(S.outstandingDrafts(second), [], 'and the next change does not count it again');
+    const live = moved({ docState: { estimate: { draftedAt: T3, sentAt: T1, provider: 'gmail' } } });
+    eq(S.draftOutstanding(live, 'estimate'), true, 'a second draft made after the change is the live one');
+    eq(S.outstandingDrafts(live), ['estimate'], 'and is listed for the next change to flag');
   }
 
-  group('staleOutstandingDrafts marks the drafts still waiting, and only those');
+  group('notePriceChange flags the drafts still waiting — the revised estimate’s second draft among them');
   {
-    const said = [];
-    const mk = () => sandbox({ fns: ['staleOutstandingDrafts', 'docDraftPending', 'docDraftStale', 'docState', '_jobTouch'],
-      stubs: { showSyncBadge(m, warn) { said.push({ m, warn }); } } });
-    const S = mk();
+    const S = sandbox({ fns: ['notePriceChange'].concat(HELP) });
     const job = { id: 7, docState: {
-      estimate: { draftedAt: DRAFTED, sentAt: MARKED },
+      estimate: { draftedAt: DRAFTED, sentAt: SENT },
       agreement: { draftedAt: DRAFTED, provider: 'gmail', draftUrl: 'https://mail.google.com/x' },
       'invoice:deposit': { draftedAt: DRAFTED },
       'invoice:final': {},
     } };
-    eq(S.staleOutstandingDrafts(job, 'discount-revised').sort(), ['agreement', 'invoice:deposit'], 'the two drafts still waiting on their tap');
-    ok(!!job.docState.agreement.staleAt, 'marked');
-    eq(job.docState.agreement.staleWhy, 'discount-revised', 'with why');
-    eq(job.docState.estimate.staleAt, undefined, '⚠ a document already SENT is not touched — it went at the price that stood then');
-    eq(job.docState['invoice:final'].staleAt, undefined, 'nor a record with no draft');
-    ok(!!(job.at && job.at['docState:agreement']), 'through the docState accessor, so the mark stamps and merges per key');
-    eq(said.length, 1, 'one badge');
-    has((said[0] || {}).m, '2 drafts made before this change still have the old price', 'counting them');
-    eq((said[0] || {}).warn, true, 'as a warning');
-    said.length = 0;
-    eq(S.staleOutstandingDrafts(job, 'estimate-edited'), [], 'a draft already marked is not marked again');
-    eq(said.length, 0, 'and nothing is said');
-    eq(job.docState.agreement.staleWhy, 'discount-revised', 'the first reason stands');
-    eq(S.staleOutstandingDrafts({ id: 8 }, 'x'), [], 'a job with no documents');
-    mk().staleOutstandingDrafts({ id: 9, docState: { estimate: { draftedAt: DRAFTED } } }, 'estimate-edited');
-    has((said[0] || {}).m, 'A draft made before this change still has the old price', 'one draft, said as one');
+    const before = JSON.stringify(job.docState);
+    eq(S.notePriceChange(job, 'discount').sort(), ['agreement', 'invoice:deposit'], 'it returns the two drafts still waiting on their tap');
+    ok(!!job.priceChangedAt, 'the job carries when the price moved');
+    eq(job.priceChangeWhy, 'discount', 'and why');
+    eq(JSON.stringify(job.docState), before, '⚠ nothing is written into a draft’s own record — staleness is read off the job');
+    eq(S.draftIsStale(job, job.docState.agreement), true, 'the packet draft now reads stale');
+    eq(S.draftIsStale(job, job.docState.estimate), false, '⚠ a document already SENT is not — it went at the price that stood then');
+    eq(S.notePriceChange(job, 'edit'), [], 'a second change finds nothing left to flag');
+    eq(job.priceChangeWhy, 'edit', 'and records the latest reason');
+    eq(S.notePriceChange({ id: 8 }, 'discount'), [], 'a job with no documents');
+    const revised = { id: 9, docState: { estimate: { draftedAt: DRAFTED, sentAt: T1, provider: 'gmail' } } };
+    eq(S.notePriceChange(revised, 'discount'), ['estimate'], '⚠⚠ the revised estimate’s second draft is flagged like any other');
   }
 
-  group('the row: a stale draft is named, its button is an ordinary send, and the old draft is offered only to delete');
+  group('the row: a stale draft is named, its button is an ordinary send, and no link to it is offered');
   {
-    const J = sandbox({ fns: ['_jtSendAction', '_jtDraftLink', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'docKeyFor', 'docWord'],
+    const J = sandbox({ fns: ['_jtSendAction', '_jtDraftLink', 'jtDraftLine', 'docKeyFor', 'docWord'].concat(HELP),
       vars: ['DOC_KIND_WORD', 'currentInvStage'] });
-    const stale = (o) => ({ id: 7, docState: { agreement: Object.assign({ draftedAt: DRAFTED, staleAt: MARKED, staleWhy: 'discount-revised',
-      provider: 'gmail', draftUrl: 'https://mail.google.com/x' }, o || {}) } });
-    const a = J._jtSendAction(7, stale(), 'agreement', '', 'for signature &mdash; DocuSign');
+    const pkt = (o, j) => Object.assign({ id: 7, priceChangedAt: MARKED, priceChangeWhy: 'discount',
+      docState: { agreement: Object.assign({ draftedAt: DRAFTED, provider: 'gmail', draftUrl: 'https://mail.google.com/x' }, o || {}) } }, j || {});
+    const a = J._jtSendAction(7, pkt(), 'agreement', '', 'for signature &mdash; DocuSign');
     eq(a.label, '&#9993; Send for signature &mdash; DocuSign', '⚠⚠ the one filled button is an ordinary send — it read "I’ve sent it"');
     eq(a.call, "docAction(7,'agreement','send')", 'which builds a fresh packet at the price that stands');
-    eq(J._jtSendAction(7, stale({ staleAt: undefined, staleWhy: undefined }), 'agreement', '', 'x').call, "markDocSent(7,'agreement')",
-      'the converse: a draft that is not stale still asks for the confirming tap');
-    eq(J._jtDraftLink(7, stale(), 'agreement', ''),
-      [{ label: '&#8599; Open the old packet draft to delete it', call: "openDocDraft(7,'agreement')" }],
-      'the old draft is still one tap away — to delete it');
-    eq((J._jtDraftLink(7, stale({ staleAt: undefined }), 'agreement', '')[0] || {}).label, '&#8599; Open the packet draft',
+    eq(J._jtSendAction(7, pkt({}, { priceChangedAt: undefined }), 'agreement', '', 'x').call, "markDocSent(7,'agreement')",
+      'the converse: a draft no price change overtook still asks for the confirming tap');
+    eq(J._jtDraftLink(7, pkt(), 'agreement', ''), [], 'no link to the old-price draft — opening it is the first step to sending it');
+    eq((J._jtDraftLink(7, pkt({}, { priceChangedAt: undefined }), 'agreement', '')[0] || {}).label, '&#8599; Open the packet draft',
       'a live draft is simply opened');
-    eq(J._jtDraftLink(7, stale({ sentAt: '2026-08-02T10:00:00Z' }), 'agreement', ''), [], 'and a sent one is not offered at all');
-    eq(J._jtDraftSub(stale(), 'agreement', ''),
-      'The packet draft in Gmail was made before the discount changed the price — delete it, and if it already went to the client, tell them the revised one replaces it',
-      'the row says what happened and what to do');
-    eq(J._jtDraftSub(stale({ staleWhy: 'estimate-edited', provider: 'mailto' }), 'agreement', ''),
-      'The packet draft was made before the estimate was edited — delete it, and if it already went to the client, tell them the revised one replaces it',
-      '⚠ "in Gmail" only when it IS in Gmail, and an edit named as an edit');
-    eq(J._jtDraftSub(stale({ staleAt: undefined }), 'agreement', ''), 'Drafted — read it, send it, then confirm', 'an ordinary draft keeps its line');
-    eq(J._jtDraftSub({ id: 7 }, 'agreement', ''), '', 'nothing drafted, nothing said');
-    has(J._jtDraftSub({ id: 7, docState: { 'invoice:deposit': { draftedAt: DRAFTED, staleAt: MARKED, provider: 'gmail' } } }, 'invoice', 'deposit'),
-      'The deposit invoice draft in Gmail', 'an invoice names its stage');
+    // The fold, on the row: a draft made after the last send waits on its tap and is opened like any other.
+    const second = pkt({ draftedAt: T3, sentAt: T1 });
+    eq(J._jtSendAction(7, second, 'agreement', '', 'x').call, "markDocSent(7,'agreement')",
+      '⚠⚠ a draft made after the last send asks for the tap — it read as already sent');
+    eq((J._jtDraftLink(7, second, 'agreement', '')[0] || {}).call, "openDocDraft(7,'agreement')", 'and its draft is one tap away');
+    eq(J.jtDraftLine(pkt(), 'agreement', true), 'The Gmail draft from Aug 1 has the old price — delete it, don’t send it',
+      'the row says which draft and what to do');
+    eq(J.jtDraftLine(pkt({ provider: 'mailto' }, { priceChangeWhy: 'edit' }), 'agreement', true),
+      'The email from Aug 1 was made before the estimate was edited — if it was never sent, discard it',
+      '⚠ "Gmail" only when it IS in Gmail, and an edit named as an edit');
+    eq(J.jtDraftLine(pkt({ mailbox: 'anthony@havellinpalmbeach.com' }), 'agreement', true),
+      'The Gmail draft from Aug 1 (anthony@havellinpalmbeach.com) has the old price — delete it, don’t send it',
+      'and whose mailbox it sits in');
+    eq(J.jtDraftLine(pkt({}, { priceChangedAt: undefined }), 'agreement', true), 'Drafted — read it, send it, then confirm',
+      'an ordinary draft keeps its line');
+    eq(J.jtDraftLine(second, 'agreement', true), 'Drafted — read it, send it, then confirm', '⚠ and so does a second draft made since the change');
+    eq(J.jtDraftLine({ id: 7 }, 'agreement', true), '', 'nothing drafted, nothing said');
+    eq(J.jtDraftLine(pkt(), 'agreement', false), '', 'and a row that has gone says nothing — its own test is passed in');
   }
   {
-    // On the rail: the packet row names the stale draft ahead of the withdrawn approval.
+    // On the rail: the packet row names the stale draft beside the withdrawn approval, and nothing opens it.
     const R = rail({ estimateSentTotal: 24100, acceptedTotal: 24100, agrApproved: false, agrRevokedBy: 'discount-revised',
-      docState: { agreement: { draftedAt: DRAFTED, staleAt: MARKED, staleWhy: 'discount-revised', provider: 'gmail',
-        draftUrl: 'https://mail.google.com/x' } } });
+      priceChangedAt: MARKED, priceChangeWhy: 'discount',
+      docState: { agreement: { draftedAt: DRAFTED, provider: 'gmail', draftUrl: 'https://mail.google.com/x' } } });
     eq(R.lit, 'agreement_sent', 'the packet is the lit step');
-    has(row(R, 'agreement_sent').sub, 'packet draft in Gmail was made before the discount', '⚠ its row names the stale draft first');
+    has(row(R, 'agreement_sent').sub, 'The Gmail draft from Aug 1 has the old price', '⚠ its row names the stale draft');
     eq((R.acts('agreement_sent').primary || {}).call, "docAction(7,'agreement','send')", 'its button sends a fresh one');
-    ok(((R.acts('agreement_sent').doc || {}).acts || []).some((x) => /to delete it/.test(x.label)), 'and the old draft is offered to delete');
+    eq(R.all.filter((x) => x.row === 'agreement_sent' && /openDocDraft/.test(x.call)).length, 0, 'and nothing opens the old draft');
   }
   {
     // An estimate drafted and then edited before it was ever confirmed sent: the stale line, and an ordinary send.
     const R = rail({ estimateSentDate: '', estimateSentTotal: undefined, status: 'approved', won: undefined, acceptedTotal: undefined,
-      wonAt: undefined, wonBy: undefined, wonMethod: undefined,
-      docState: { estimate: { draftedAt: DRAFTED, staleAt: MARKED, staleWhy: 'estimate-edited', provider: 'gmail',
-        draftUrl: 'https://mail.google.com/e' } } });
+      wonAt: undefined, wonBy: undefined, wonMethod: undefined, priceChangedAt: MARKED, priceChangeWhy: 'edit',
+      docState: { estimate: { draftedAt: DRAFTED, provider: 'gmail', draftUrl: 'https://mail.google.com/e' } } });
     eq(R.lit, 'estimate_sent', 'the send is the lit step');
-    eq(row(R, 'estimate_sent').sub,
-      'The estimate draft in Gmail was made before the estimate was edited — delete it, and if it already went to the client, tell them the revised one replaces it',
+    eq(row(R, 'estimate_sent').sub, 'The Gmail draft from Aug 1 was made before the estimate was edited — delete it, don’t send it',
       '⚠ the estimate row names its stale draft');
     eq((R.acts('estimate_sent').primary || {}).label, '&#9993; Send estimate', 'and its button is an ordinary send, not the confirming tap');
-    // The deposit invoice's row reads the same helper — a draft at the old price named on its own row.
-    const D = rail({ estimateSentTotal: 24100, acceptedTotal: 24100,
-      docState: { 'invoice:deposit': { draftedAt: DRAFTED, staleAt: MARKED, staleWhy: 'discount-revised', provider: 'gmail' } } });
-    eq(row(D, 'deposit_invoiced').sub,
-      'The deposit invoice draft in Gmail was made before the discount changed the price — delete it, and if it already went to the client, tell them the revised one replaces it',
+    // The deposit invoice's row reads the same builder — a draft at the old price named on its own row.
+    const D = rail({ estimateSentTotal: 24100, acceptedTotal: 24100, priceChangedAt: MARKED, priceChangeWhy: 'discount',
+      docState: { 'invoice:deposit': { draftedAt: DRAFTED, provider: 'gmail' } } });
+    eq(row(D, 'deposit_invoiced').sub, 'The Gmail draft from Aug 1 has the old price — delete it, don’t send it',
       '⚠ the deposit invoice row names its stale draft too');
     const L = rail({ estimateSentTotal: 24100, acceptedTotal: 24100,
       docState: { 'invoice:deposit': { draftedAt: MARKED, sentAt: DRAFTED, provider: 'gmail' } } });
     eq(row(L, 'deposit_invoiced').sub, '',
       'once the invoice is sent its row says nothing more — a row reopens from the figures, never from a later draft');
+  }
+  {
+    // ⚠⚠ The fold, on the rail: the revised estimate's second draft. The row reopened from the figures (a raise
+    // after the estimate went), and its draft is newer than the first send — so it waits on its tap and is
+    // opened like any other.
+    const R = rail({ docState: { estimate: { draftedAt: T3, sentAt: T1, provider: 'gmail', draftUrl: 'https://mail.google.com/r' } } });
+    eq(R.lit, 'estimate_sent', 'the revised send is the lit step');
+    eq(row(R, 'estimate_sent').sub, 'Drafted — read it, send it, then confirm',
+      '⚠⚠ its second draft waits on the confirming tap — it read as already sent');
+    eq((R.acts('estimate_sent').primary || {}).call, "markDocSent(7,'estimate')", 'and the one filled button is the tap');
+    ok(R.all.some((x) => x.row === 'estimate_sent' && x.call === "openDocDraft(7,'estimate')"), 'with the draft one tap away');
+    // A discount after that draft reaches it — and the first round's overtaken draft, dealt with when the
+    // estimate first went, is not named again (a send closes a round).
+    const S = rail({ priceChangedAt: '2026-08-01T13:00:00Z', priceChangeWhy: 'discount',
+      docState: { estimate: { draftedAt: T3, sentAt: T1, provider: 'gmail', draftUrl: 'https://mail.google.com/r',
+        staleDrafts: [{ draftedAt: '2026-07-31T10:00:00Z', provider: 'gmail', why: 'discount' }] } } });
+    eq(row(S, 'estimate_sent').sub, 'The Gmail draft from Aug 1 has the old price — delete it, don’t send it',
+      '⚠⚠ the discount reaches the second draft, and only it is named');
+    eq((S.acts('estimate_sent').primary || {}).label, '&#9993; Send revised estimate', 'the button sends the revised estimate afresh');
+    eq(S.all.filter((x) => x.row === 'estimate_sent' && /openDocDraft/.test(x.call)).length, 0, 'and nothing opens the old draft');
   }
   {
     // ⚠ The rail is a function of what it is HANDED. Both callers hand it the store's own record, so this changes no
@@ -646,56 +682,92 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((by.client_accepted || {}).done, true, 'and so does the acceptance');
   }
 
-  group('the door: the confirming tap is refused on a stale draft, before either legacy recorder runs');
+  group('a send closes a round: the drafts it replaced are that round’s history, and the next round names only its own');
+  {
+    const S = sandbox({ fns: HELP });
+    const job = { id: 7, priceChangedAt: '2026-08-01T13:00:00Z', priceChangeWhy: 'discount',
+      docState: { estimate: { draftedAt: T3, sentAt: T1, provider: 'gmail',
+        staleDrafts: [{ draftedAt: '2026-07-31T10:00:00Z', provider: 'gmail', why: 'discount' }] } } };
+    eq(S.staleDraftsOf(job, 'estimate').map((d) => d.draftedAt), [T3], '⚠ the first round’s draft is not named again');
+    eq(S.staleDraftNote(job, 'estimate', false), 'The Gmail draft from Aug 1 has the old price — delete it, don’t send it', 'one draft, one day');
+    job.docState.estimate.sentAt = undefined;
+    eq(S.staleDraftsOf(job, 'estimate').length, 2, 'the converse: with no send behind them, every overtaken draft is named');
+  }
+
+  group('the door: the confirming tap confirms an outstanding draft or nothing — a second draft after a send among them');
   {
     const said = { notices: [], redraw: 0, primed: 0, recorders: 0 };
-    const K = sandbox({ fns: ['markDocSent', 'docDraftPending', 'docDraftStale', 'docState', '_jobTouch'], stubs: {
+    const K = sandbox({ fns: ['markDocSent', 'docState', '_jobTouch', 'noDraftToConfirm'].concat(HELP), stubs: {
       dashNotice(k, m) { said.notices.push({ k, m }); }, _dashRedraw() { said.redraw++; }, saveJobs() {}, syncJobToSheets() {},
       _primeAgreementFor() { said.primed++; return true; }, _primeEstimateFor() { said.primed++; return true; },
       markAgreementSent() { said.recorders++; }, markEstimateSent() { said.recorders++; }, _actor() { return ''; } } });
-    K.jobs = [{ id: 7, tc: 'Ashley Jerome', docState: { agreement: { draftedAt: DRAFTED, staleAt: MARKED, staleWhy: 'estimate-edited' } } }];
+    K.jobs = [{ id: 7, tc: 'Ashley Jerome', priceChangedAt: MARKED, priceChangeWhy: 'edit',
+      docState: { agreement: { draftedAt: DRAFTED, provider: 'gmail' } } }];
     K.markDocSent(7, 'agreement');
     eq(K.jobs[0].docState.agreement.sentAt, undefined, '⚠⚠ a draft at the old price is never recorded as sent');
     eq(said.primed, 0, 'nothing is primed');
     eq(said.recorders, 0, '⚠ and neither legacy recorder ran — markAgreementSent stamps the approval and files the packet on its way through');
     eq(said.notices.length, 1, 'one refusal');
-    has((said.notices[0] || {}).m, 'made before the price changed', 'saying why');
-    has((said.notices[0] || {}).m, 'send a fresh one from the timeline', 'and what to do instead');
-    K.jobs[0].docState.estimate = { draftedAt: DRAFTED };
+    eq((said.notices[0] || {}).k, 'warn', 'as a warning');
+    has((said.notices[0] || {}).m, 'was made before the estimate was edited', 'saying why');
+    has((said.notices[0] || {}).m, 'Send a fresh one from the timeline', 'and what to do instead');
+    K.jobs[0].docState.estimate = { draftedAt: T3 };
     K.markDocSent(7, 'estimate');
-    ok(!!K.jobs[0].docState.estimate.sentAt, 'the converse: a draft that is not stale is recorded as sent');
+    ok(!!K.jobs[0].docState.estimate.sentAt, 'the converse: a draft made after the change is recorded as sent');
     eq(said.recorders, 1, 'through its legacy recorder');
+    // ⚠⚠ The fold at the door: a second draft after a send.
+    K.jobs.push({ id: 8, tc: 'Ashley Jerome', docState: { estimate: { draftedAt: T3, sentAt: T1, provider: 'gmail' } } });
+    said.notices.length = 0;
+    K.markDocSent(8, 'estimate');
+    ok(Date.parse((K.jobs[1].docState.estimate || {}).sentAt) > Date.parse(T3),
+      '⚠⚠ a second draft after a send is recorded — it was refused as "already recorded as sent"');
+    eq(said.recorders, 2, 'through its legacy recorder, like the first');
+    lacks(said.notices.map((x) => x.m).join(' | '), 'already recorded as sent', 'with no refusal');
+    K.jobs.push({ id: 9, tc: 'Ashley Jerome', priceChangedAt: MARKED, priceChangeWhy: 'discount',
+      docState: { estimate: { draftedAt: DRAFTED, sentAt: T1, provider: 'gmail' } } });
+    said.notices.length = 0;
+    K.markDocSent(9, 'estimate');
+    eq((K.jobs[2].docState.estimate || {}).sentAt, T1, 'a second draft the price moved past is refused like a first one — the last send stands');
+    eq((said.notices[0] || {}).k, 'warn', 'as a warning');
+    lacks((said.notices[0] || {}).m, 'already recorded as sent', '⚠ never told it is already sent — the draft waiting is a different one');
+    has((said.notices[0] || {}).m, 'has the old price', 'it names the draft');
   }
   {
-    const D = sandbox({ fns: ['docRecordSent', 'docState', '_jobTouch'], stubs: {
+    // A fresh draft after the change keeps the overtaken SECOND draft on record — before the fold it did not read
+    // stale, so it was overwritten with nothing left to say where it was.
+    const D = sandbox({ fns: ['docRecordSent', 'docState', '_jobTouch'].concat(HELP), stubs: {
       DOC_SEND_PROVIDERS: { gmail: { needsHumanSend: true } }, saveJobs() {}, syncJobToSheets() {},
       _actor() { return 'Anthony Graziano'; }, _stamp() { return 'September 29, 2026'; } } });
-    const job = { id: 7, docState: { agreement: { draftedAt: DRAFTED, staleAt: MARKED, staleWhy: 'discount-revised' } } };
-    D.docRecordSent({ job, key: 'agreement' }, { provider: 'gmail', draftUrl: 'https://mail.google.com/y', pdfOk: true });
-    eq(job.docState.agreement.staleAt, undefined, 'a fresh draft carries the price that stands, so the old mark goes');
-    eq(job.docState.agreement.staleWhy, undefined, 'with its reason');
-    ok(Date.parse(job.docState.agreement.draftedAt) > Date.parse(MARKED), 'the fresh draft is newer than the mark');
+    const job = { id: 7, priceChangedAt: MARKED, priceChangeWhy: 'discount',
+      docState: { estimate: { draftedAt: DRAFTED, sentAt: T1, provider: 'gmail', mailbox: 'ashley@havellinpalmbeach.com' } } };
+    D.docRecordSent({ job, key: 'estimate' }, { provider: 'gmail', draftUrl: 'https://mail.google.com/y', pdfOk: true });
+    const st = job.docState.estimate;
+    eq((st.staleDrafts || []).length, 1, '⚠⚠ the overtaken second draft is kept on record');
+    eq(((st.staleDrafts || [])[0] || {}).mailbox, 'ashley@havellinpalmbeach.com', 'with the mailbox it sits in');
+    ok(Date.parse(st.draftedAt) > Date.parse(MARKED), 'the fresh draft is newer than the change');
+    eq(D.draftOutstanding(job, 'estimate'), true, 'and it is the live draft');
+    eq(D.staleDraftNote(job, 'estimate', true), 'Delete the older Gmail draft from Aug 1 (ashley@havellinpalmbeach.com) — it has the old price',
+      'with the older one named beside it');
   }
 
-  group('the two places the price moves before the packet mark the drafts: an edit and a discount');
+  group('the two places the price moves before the packet flag the drafts: an edit and a discount');
   {
-    const said = [];
-    const R = sandbox({ fns: ['revokeEstimateApproval', 'revokeAgreementApproval', 'staleOutstandingDrafts', 'docDraftPending',
-      'docDraftStale', 'docState', '_jobTouch'], vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt'],
-      stubs: { saveJobs() {}, syncJobToSheets() {}, showSyncBadge(m) { said.push(m); } } });
+    const R = sandbox({ fns: ['revokeEstimateApproval', 'revokeAgreementApproval', 'notePriceChange'].concat(HELP),
+      vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt'],
+      stubs: { saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {} } });
     R.jobs = [{ id: 7, approved: true, agrApproved: true, docState: { agreement: { draftedAt: DRAFTED, provider: 'gmail' } } }];
     R.estimateStore = { 7: { approved: true } };
     R.revokeEstimateApproval(7);
-    eq(R.jobs[0].docState.agreement.staleWhy, 'estimate-edited', 'an approved estimate taken back for editing marks the packet draft');
-    has(said[said.length - 1], 'still has the old price', '⚠ and the warning is the last thing on screen — after the revoke’s own');
+    eq(R.jobs[0].priceChangeWhy, 'edit', 'an approved estimate taken back for editing flags the drafts');
+    eq(R.draftIsStale(R.jobs[0], R.jobs[0].docState.agreement), true, 'and the packet draft reads stale');
   }
   function discBed(docState, onDash) {
     const said = { fb: [], redraws: [], alerts: [] };
     const A = sandbox({
       fns: uniq(['applyDiscountRevision', 'discountPctInput', '_discountModalSays', 'discountPreview', 'estPreDiscountTotal',
-        'discountOnLabor', 'estPrepFeeOnTop', 'revokeAgreementApproval', 'staleOutstandingDrafts', 'docDraftPending', 'docDraftStale',
+        'discountOnLabor', 'estPrepFeeOnTop', 'revokeAgreementApproval', 'notePriceChange', 'staleDraftNotice',
         'docState', '_jobTouch', 'estimateEventStatus', 'isJobWon', 'closeDiscountModal', '_jobBandHost', '_docNotice',
-        'dashNotice', '_dashFbTarget'].concat(BLK_FNS)),
+        'dashNotice', '_dashFbTarget'].concat(HELP, BLK_FNS)),
       vars: ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt',
         'estimateApproved', 'estimateSubmitted', 'discountRevision', '_dashNotice', '_dashboardJobId'],
       stubs: { document: domStub({ 'dm-pct': '5' }), saveJobs() {}, syncJobToSheets() {}, saveEstimateState() {},
@@ -708,31 +780,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     A.currentEstimate = { jobId: 7, tcFee: 12000, psFee: 8000, havellinTotalFull: 20000, rush: false, rushAmt: 0,
       discountPct: 0, discountAmt: 0, havellinTotal: 20000, grandTotal: 20000, fixedPrice: false };
     A.applyDiscountRevision();
-    return { A, said, last: said.fb[said.fb.length - 1] || {}, note: A._dashNotice || {} };
+    return { A, said, note: A._dashNotice || {} };
   }
   {
     const { A, note, said } = discBed({ estimate: { draftedAt: DRAFTED, provider: 'gmail', draftUrl: 'https://x' } }, true);
-    eq(A.jobs[0].docState.estimate.staleWhy, 'discount-revised', 'a discount marks the estimate draft still in the mailbox');
+    eq(A.jobs[0].priceChangeWhy, 'discount', 'a discount flags the drafts on the job');
+    eq(A.draftIsStale(A.jobs[0], A.jobs[0].docState.estimate), true, 'and the estimate draft still in the mailbox reads stale');
     eq(note.type, 'warn', '⚠ the confirmation turns to a warning while a stale draft is out');
-    has(note.msg, 'A draft made before this still has the old price', 'and says so');
-    // ⚠⚠ FOUND BY BROWSER STEP 36: the confirmation was written into #dash-fb with showFB and the redraw straight
-    // after it rewrote the drilldown, so it — and this warning — reached nobody. It is the notice the redraw paints.
+    has(note.msg, 'has the old price', 'and names the draft');
+    // ⚠⚠ FOUND BY THIS BUILD'S BROWSER STEP (and by the concurrent build): the confirmation was written into #dash-fb
+    // with showFB and the redraw straight after it rewrote the drilldown, so it reached nobody.
     eq(said.fb.filter((x) => x.el === 'dash-fb').length, 0, '⚠⚠ nothing is written into the strip the redraw is about to destroy');
     ok(said.redraws.indexOf(7) >= 0, 'the dashboard redraws with the notice on it');
   }
   {
     const { note, said } = discBed(undefined, true);
     eq(note.type, 'ok', 'with nothing drafted the discount confirms as before');
-    has(note.msg, 'Discount applied.', 'on the dashboard, where it now survives the redraw');
+    has(note.msg, 'Discount applied.', 'on the dashboard, where it survives the redraw');
     lacks(note.msg, 'old price', 'and says nothing about drafts');
     eq(said.alerts.length, 0, 'never as an alert while a band is on screen');
   }
   {
-    // The retired Client Estimate panel is the one other door into the pop-up; it keeps its own strip.
-    const { last, note } = discBed({ estimate: { draftedAt: DRAFTED, provider: 'gmail', draftUrl: 'https://x' } }, false);
-    eq(last.el, 'ce-fb', 'with no band on screen the confirmation goes to the Client Estimate strip');
-    has(last.m, 'A draft made before this still has the old price', 'carrying the same warning');
-    eq(note.msg, undefined, 'and sets no dashboard notice for a dashboard nobody is looking at');
+    const { A, note } = discBed({ estimate: { draftedAt: DRAFTED, sentAt: T1, provider: 'gmail', draftUrl: 'https://x' } }, true);
+    eq(A.draftIsStale(A.jobs[0], A.jobs[0].docState.estimate), true, '⚠⚠ the revised estimate’s second draft is flagged by a discount too');
+    eq(note.type, 'warn', 'and the confirmation names it');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -803,13 +874,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  group('the nets: one writer for each figure, and for the mark');
+  group('the nets: one writer for each figure, and for when the price moved');
   {
     const live = src.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
     ok(live.length > src.length * 0.5, 'the comment strip did not eat the file');
     eq((live.match(/\.estimateSentTotal\s*=[^=]/g) || []).length, 1, 'estimateSentTotal has ONE writer — markEstimateSent');
     eq((live.match(/\.acceptedTotal\s*=[^=]/g) || []).length, 1, 'acceptedTotal has ONE writer — confirmMarkWon');
-    eq((live.match(/\.staleAt\s*=[^=]/g) || []).length, 1, 'staleAt has ONE writer — staleOutstandingDrafts');
+    eq((live.match(/\.priceChangedAt\s*=[^=]/g) || []).length, 1, 'priceChangedAt has ONE writer — notePriceChange');
+    // ⚠ The send-order rule has one definition, and every reader of "is a draft waiting" goes through it.
+    ['draftIsStale(job, st)', 'draftOutstanding(job, key)', 'noDraftToConfirm(job, key)'].forEach((sig) => {
+      const from = src.indexOf('function ' + sig);
+      const rest = from < 0 ? '' : src.slice(from + 10);
+      const end = rest.indexOf('\nfunction ');
+      const b = (end < 0 ? rest : rest.slice(0, end)).split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+      ok(b.length > 40, sig + ' was found');
+      has(b, 'docDraftPending(st)', sig + ' asks docDraftPending');
+      lacks(b, '!st.sentAt', sig + ' keeps no private copy of the old "nothing sent" test');
+    });
     // Every reader of "is this estimate waiting on a manager" asks the one rule.
     ['jobTimeline(job, estRec, logs, cos, sched)', 'jobTimelineActions(row, job, estRec)', 'dashEditEstimate(jobId)', 'editEstimateFromCE()']
       .forEach((sig) => {

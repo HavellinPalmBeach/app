@@ -246,7 +246,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Slice 4 made them ONE builder, so the assertion is the builder — driven, not read —
     // plus the fact that no row hand-rolls a second copy. That is the requirement:
     // sameness by construction rather than sameness by coincidence.
-    const ctx = sandbox({ fns: ['_jtDocViews', '_jtSendAction', 'docKeyFor', 'docWord', 'docDraftPending', 'docDraftStale'], vars: ['DOC_KIND_WORD'] });
+    const ctx = sandbox({ fns: ['_jtDocViews', '_jtSendAction', 'docKeyFor', 'docWord', 'draftOutstanding', 'draftIsStale', 'docDraftPending'], vars: ['DOC_KIND_WORD'] });
     [['estimate', ''], ['agreement', ''],
      ['invoice', 'deposit'], ['invoice', 'midpoint'], ['invoice', 'final']].forEach(([kind, stage]) => {
       // ⚠ THE FOURTH ARGUMENT IS `viewOnly` NOW, NOT THE DOCUMENT'S WORD. The word was

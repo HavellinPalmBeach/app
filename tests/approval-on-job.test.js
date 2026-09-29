@@ -107,7 +107,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
   '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
   'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', '_agrApprovedStamp',
   'ensureAgreementApproved', 'agreementReady', 'isJobWon', '_primeAgreementFor', 'loadAgreement',
-  'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docDraftStale', 'docDraftPending'];
+  'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docDraftPending'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT',
   'DECEDENT_SERVICES', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'currentAgrJobId',
   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
@@ -521,7 +521,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { notices: [], alerts: [] };
     const ctx = sandbox({
       fns: AGR_FNS.concat(['_actor', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'docState',
-        '_jobTouch', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'jobPayments']),
+        '_jobTouch', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm']),
       vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS']),
       stubs: {
         document: domStub({}), currentEstimate: null,

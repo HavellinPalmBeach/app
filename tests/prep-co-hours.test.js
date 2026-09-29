@@ -457,9 +457,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const T = (cos) => sandbox({
       fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
-            'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt',
-            'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-            'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateOutForApproval', 'priceAboveSent', '_jtDraftSub', 'docDraftPending', 'docDraftStale', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'].concat(CO),
+            'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
+            'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'docDraftPending', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'].concat(CO),
       vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { changeOrders: cos } });
     const sub = (est, cos, logged, jobOver) => {
