@@ -521,7 +521,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { notices: [], alerts: [] };
     const ctx = sandbox({
       fns: AGR_FNS.concat(['_actor', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'docState',
-        '_jobTouch', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'jobPayments']),
+        '_jobTouch', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm']),
       vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS']),
       stubs: {
         document: domStub({}), currentEstimate: null,

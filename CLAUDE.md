@@ -80,11 +80,27 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
     record the strip offers the stale draft and the next close's primary is *I've sent it* pointing at it. The question names the
     draft and says to delete it in Gmail (the app cannot reach the mailbox); `draftedAt/By/Url/pdfOk/filedAt/filedUrl` come off
     through `docState()`, which stamps `at['docState:invoice:final']` — **writing around it lets the other device's copy of the
-    draft win the per-key merge and bring it back**. A final only filed, never drafted, is left alone. Not voiding fails 11,
+    draft win the per-key merge and bring it back**. A final only filed, never drafted, is left alone. Not voiding fails 19,
     bypassing the accessor 2, voiding a filed-only final 2.
+  - **⚠⚠ AND SINCE THE THIRD MERGE IT IS VOIDED INTO THE STALE-DRAFT HISTORY, NOT MERELY OFF THE RECORD.** `main`'s stale-draft
+    build (the entry below this one) landed while this was being pushed: a draft a price change overtook stays named on its row,
+    from `st.staleDrafts`, until a final actually goes out. A Re-open retires a final on exactly those terms — the draft is still
+    sitting in a mailbox at a figure that no longer applies — so `_reopenTransition` pushes `{draftedAt, provider, mailbox,
+    why:'reopen'}` into that history and `staleDraftNote` gains a third reason, *"was made before the job was re-opened"*. The
+    *Final invoice sent* row then goes on saying *"The Gmail draft from Sep 30 (anthony@…) was made before the job was re-opened —
+    delete it, don't send it"*, and once a fresh final is drafted, *"Drafted — read it, send it, then confirm. Delete the older Gmail
+    draft from Sep 30 (…) — it was made before the job was re-opened"*: two finals in one mailbox are never left for somebody to
+    tell apart. Both are in the revert sweep on the merged tree, below.
+  - **⚠ FOUND WHILE MERGING AND FIXED: the question read the draft's day off the UTC stamp, and said "Gmail" whatever the route.**
+    A final drafted after 8pm Eastern was named on the next day, and a plain email (the mailto fallback) was told to be deleted in
+    Gmail. It reads `_draftDay`, `main`'s one local-calendar reading of a draft stamp, and the route decides the verb: *delete that
+    draft in Gmail (mailbox)* for a Gmail draft, *if that email was never sent, discard it* otherwise. All four are in the revert
+    sweep on the merged tree, below.
+  - The stale-draft suite's net — every reader of a draft stamp is named — carries `_reopenTransition` on its allow-list, with its
+    reason; removing the entry is in the sweep below.
   - **It asks; Cancel changes nothing; OK lands on the Job Plan** (`activateOrCycle` already navigates on a transition to active).
     The question names the day and who closed it, says the timeline returns to the step the job was on, and that hours, payments and
-    anything already sent stay as they are. Cancel ignored fails 2; the question omitting the close 1, the stale draft 2.
+    anything already sent stay as they are. Cancel ignored fails 2; the question omitting the close 1, the stale draft 4.
   - **`Work complete` reads *Re-opened — the earlier close was undone*** while a re-opened job is open. Reverting fails 2.
   - **⚠ THE LEGACY CASE THE H3 ENTRY FLAGGED IS CLOSED BY THE SAME CHANGE.** A job closed before 2026-07-30 carries no
     `deliveredOn`, so its `job_active` row reads undone and offered **Activate job** — a re-open with no question. The Activate
@@ -95,9 +111,14 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
     other device's older copy of the closed job (the status and the cleared stamp follow the newer record; the voided draft follows
     its per-key stamp).
 - **12,340 committed checks on this build; 13,526 after merging the seven builds that landed on `main` alongside it; 13,586
-  after merging `main`'s H5 build (its `work-done-rooms` suite, 60), which landed while this one was being pushed**
+  after merging `main`'s H5 build (its `work-done-rooms` suite, 60), which landed while this one was being pushed; 13,804 after
+  merging `main`'s stale-draft build, which landed while THAT was being pushed** (+204 from it — its `stale-draft` suite at 201 and
+  a check each in three suites it touched — and +14 here: `job-reopen` 154 → 168, the history, the row, the plain email and the
+  evening draft). **At that merge every suite carries ours + theirs − base, checked file by file across all 111, except
+  `job-reopen`, which carries exactly those 14.** ⚠ It made `job-reopen` throw: `main` deleted `docDraftedAt`, which its sandboxes
+  lifted; they lift `draftOutstanding` and the stale-draft helpers now, and the dashboard group `_dashShown` / `_dashKeepNotice`.
   (`tests/job-reopen.test.js` new at 154, driving the real `invoiceHtml`, the real rail, transition and band, the rendered
-  dashboard and the real backend merge). **⚠ The merge made four of `main`'s new suites throw** — `approval-on-job`,
+  dashboard and the real backend merge.) **⚠ The merge made four of `main`'s new suites throw** — `approval-on-job`,
   `change-order-card`, `document-reconciliation`, and `document-claims` through the list it borrows — because `invoiceHtml` now
   reads `docSentAt`; each lifts it (never a stub). And `job-reopen`'s own sandboxes took `main`'s new helpers
   (`estimateEditBlocker`, `priceChangeBlocker`, `discountOfferBlocker`, `docReadOnlyWord`, `docPreviewOnly`, `coCardActions`,
@@ -117,12 +138,18 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   row from it fails **1** (`document-reconciliation`'s final-balance rule, on 4 scenarios), so neither half of the union can be
   lost quietly. `main`'s H5 build merged in after that and touched no line of this build's code: all 31 reverts still find
   their code on the final tree, needle by needle, and the defect and the transition branch re-run there fail **21** and **65**
-  against 13,586 / 0 before and after, so the results carry.
-- **Verified in headless Chromium, `tests/browser/step37.js`** (written as step 29 and renumbered on both merges — `main`'s
-  document-claims build took 29 first and its work-done build 36), **58 checks, 0 failed, 0 page errors**, through the real Close and
+  against 13,586 / 0 before and after, so the results carry. **The stale-draft build merged in last and moved one line of this
+  build's code** (the void, now into the history): all 31 still find their code, the defect, the transition branch, the void and
+  the question's draft clause re-run on a tar copy fail **21**, **75**, **19** and **4**, and the seven integration
+  reverts above are running on that copy at this commit; their counts follow in the next one.
+- **Verified in headless Chromium, `tests/browser/step38.js`** (written as step 29 and renumbered on all three merges — `main`'s
+  document-claims build took 29 first, its work-done build 36 and its stale-draft build 37), **63 checks, 0 failed, 0 page errors**
+  (58 before the third merge), through the real Close and
   Re-open buttons and their real questions (Cancel, then OK): the question on the close names Re-open; a closed job shows Re-open
   beside *Send final invoice*; a final drafted then Re-opened is voided, the job lands on the Job Plan with NOW on *Midpoint & pickups*, the
   band reads *Collect the midpoint payment* with Close back, *Work complete* says re-opened and the ✕ is back on the client list;
+  the final's row then names the retired draft with its day and mailbox, and a fresh final drafted through the real `docRecordSent`
+  after the re-close reads *send this one, delete the older*, the line going once the final is sent;
   a re-close on another day stamps that day and offers a fresh final; once the final is sent there is no Re-open and a direct call
   alerts only; the final in the viewer reads *billed on this invoice* with the $50 short deposit named against *the deposit invoice*
   over the right balance, while a job whose midpoint went out keeps the old wording; a legacy closed job offers Re-open and never
@@ -133,7 +160,9 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   25 / 43 / 32 / 52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 61 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 58, 0 failed —
   1,816 browser checks across the thirty-six.** **After the second merge (`main`'s H5 build, whose own step is 36) the list is
   1–37 and all thirty-seven ran — the same figures with 14 at step 36 and this build's 58 at step 37, 0 failed — 1,830
-  browser checks across the thirty-seven.**
+  browser checks across the thirty-seven.** **After the third merge (`main`'s stale-draft build, whose own step is 37) the list
+  is 1–38 and the run of all thirty-eight is going at this commit; its figures follow in the next one**; against `main` without
+  this build step 38 still fails 5 and stops at section A.
 - Manual **§9** (the Closed row; the *There is no Re-open* note replaced by an eight-bullet Re-open note; the handover note),
   **§9a** (two table rows, three bullets), **§11** (the ratings clause) and **§12** (the stage paragraph and a six-bullet note on the
   wording). Playbook **Step 11 & 12** (a bullet), **Step 13** (the intro, the `.stop`, the midpoint paragraph, and a new *Closed it by
@@ -141,11 +170,152 @@ the filled *Log today's hours* button on activation day was not taken, so it is 
   table — two rows corrected, four new. Both `.md` copies hand-edited; **46 claims parity-checked, 0 mismatches** (one apparent miss
   was two table cells glued by the checker, verified present in both); a stale sweep for seven retired wordings returns **0**;
   `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width, 0 on
-  the phone rule — as at HEAD.
+  the phone rule — as at HEAD. **On the third merge** the manual's Re-open note gained a bullet (the *Final invoice sent* row goes on
+  naming the retired draft) and its draft bullet the day, the mailbox and the plain-email case; §9b's stale-draft note names the
+  re-open reason; the playbook's Step 13 note says the row keeps reminding you, and the symptom table has a new row for it. **58
+  claims parity-checked, 0 mismatches** (the same glued table cells, verified), `doc-structure` green, rendered again with the same
+  figures.
 - **⚠ THE SHAPE TO COPY: a write-once stamp is a rule against EDITING a record, not against UNDOING an act.** Clear it, keep the
   history, and the rule still holds. And **when a document names an earlier document, check that the earlier document exists**: a
   sentence about money outstanding is a claim about which bills went out, and the balance being right under it does not make the
   sentence true.
+
+## ⚠⚠ A GMAIL DRAFT A DISCOUNT LEFT BEHIND COULD BE CONFIRMED AS SENT — IT IS FLAGGED NOW, AND THE DASHBOARD KEEPS ITS MESSAGE (FIXED 2026-09-29)
+Anthony, three items in one line: *"done allow edit after a signing packet has been sent. just flag a previous Gmail draft if a
+discount is offered. the final invoice shouldn't go out until after the mid point, right?"* App-only, **no Apps Script redeploy**.
+
+- **The first was already built and on `main`** (084c00b, c2f1e3d, 46d8f06 — the *Edit estimate goes once the signing packet
+  is out* entry, two below): *Edit estimate* and *Offer discount* both go once the signing packet is out, and Reset's refusal
+  asks the same rule.
+- **The third is a question, answered and put back to him, not built** — the last subsection.
+
+### ⚠⚠ THE DEFECT, REPRODUCED THROUGH THE REAL BUTTONS BEFORE ANYTHING CHANGED
+- A document sent by email is a **draft** until a person sends it and taps *✓ I've sent it*, and nothing reaches back into a draft
+  once it is made. On `main`: a signing packet drafted by email at **$11,750** (deposit $5,875), a 10% discount (**$10,575**,
+  deposit $5,288), the manager's PIN — and the band offered **only** *✓ I've sent it* and *↗ Open the packet draft*, both over the
+  $11,750 draft. **One tap recorded the old-price packet as SENT** and stamped a fresh agreement approval over it. The DocuSign send,
+  which builds a new packet at the new price, was not offered at all: a draft on record replaces the send button (`_jtSendAction`).
+- **⚠ AND THE DISCOUNT'S OWN CONFIRMATION NEVER REACHED THE SCREEN.** `applyDiscountRevision` wrote it with `showFB` into the strip
+  `_dashRedraw` rewrites on the same tick: `#dash-fb` read **empty** straight after Apply.
+
+### The design
+- **`notePriceChange(job, why)` stamps two JOB scalars** — `priceChangedAt` (ISO) and `priceChangeWhy` (`discount` | `edit`) — and
+  returns the drafts it has just left out of date. Called by `applyDiscountRevision` and by `revokeEstimateApproval`, so *Edit
+  estimate* flags an estimate draft the same way.
+- **⚠⚠ STALENESS IS READ OFF THE JOB, NEVER WRITTEN INTO THE DRAFT'S OWN RECORD.** The first cut rewrote the draft at the door, and
+  that misses the two-device case: the draft is made on one device, the discount offered on the other's morning copy, which holds no
+  draft to rewrite — and the per-key `docState` merge hands the untouched draft back, live, beside the revoked approval.
+  `priceChangedAt` rides the discounting device's save, so a draft made before it reads stale wherever the two records meet.
+  `draftIsStale(job, st)` is the comparison; both stamps are ISO, so string order is chronological (R29 below).
+- **`draftOutstanding(job, key)` IS THE ONE DEFINITION OF A LIVE DRAFT** — made, not recorded sent, not overtaken by a price
+  change — read by the confirming tap (`_jtSendAction`), the link (`_jtDraftLink`), the row line (`jtDraftLine`), the packet row,
+  `markDocSent`'s guard, `_midDrafted` and the discount pop-up (`outstandingDrafts`). **`docDraftedAt` is deleted**: it answered
+  *was a draft made* and every reader used it as *is there a draft to send*, which a price change makes false while the stamp stands.
+  A net asserts no function reads a draft stamp outside the named few.
+- **⚠ IT FLAGS; IT NEVER TOUCHES GMAIL.** Deleting mail is for a person to do knowingly, and the draft may be in a colleague's
+  account this device's sign-in cannot see. What the app owns is its reading of its own record: the tap and the link go, *Send* comes
+  back, and every surface names the draft — the day and the mailbox — until the document is actually sent.
+- **ONE SENTENCE, `staleDraftNote(job, key, fresh, named)`**, read by the row, the send's notice and the refusal;
+  `discountDraftWarning` is the pop-up's (before the discount), `staleDraftNotice` the confirmation's (after), `noDraftToConfirm` the
+  refusal's. Five surfaces wording one draft five ways is how they come to disagree about which one to delete. It says *Gmail draft …
+  delete it, don't send it* on the Gmail route and *email … if it was never sent, discard it* on the mailto one, *has the old price*
+  after a discount and *was made before the estimate was edited* after an edit, and tells two drafts apart (*Delete the older Gmail
+  draft from Sep 29 (anthony@…)*) while a fresh one is outstanding. `_draftDay` names the day on this device's calendar, never a
+  slice of the UTC stamp, which names tomorrow after 8pm Eastern (R19).
+- **`docRecordSent` keeps the overtaken draft as `staleDrafts[]` history** when a fresh draft replaces a stale one, and records the
+  **`mailbox`** a Gmail draft was made in. A draft made before today carries no mailbox and is named by its day alone.
+- **⚠ THE PACKET'S POP-UP WARNING ALSO SAYS WHAT TO DO IF IT HAS ALREADY GONE**: *"Already sent it? Cancel and tap 'I've sent it'
+  instead — a price change after the packet goes out is a change order."* The app knows a draft was made, never that it was sent;
+  a packet sent from Gmail with the tap forgotten is in the client's hands, and the tap is what tells `priceChangeBlocker` so.
+- **`markDocSent` refuses without an outstanding draft**, with the reason on the dashboard (`noDraftToConfirm`; *ok* when the
+  document is already recorded sent, *warn* otherwise). Its only caller is the tap, and the tap is only offered over a live draft, so
+  the refusal fires only on a screen painted before the flag or before the other device recorded the send.
+- **The discount's confirmation goes through `_docNotice`**, amber when it names a draft.
+- **⚠ WHAT IT DELIBERATELY DOES NOT DO:** a job with no `priceChangedAt` flags nothing, so **a discount offered before today set no
+  flag** and a draft made before an older discount is named nowhere (both documents say to look in Gmail). DocuSign never leaves a
+  draft — it writes `sentAt` the moment the envelope goes — so this is the Gmail and mailto routes only.
+
+### ⚠⚠ THE CONFIRMATION WAS STILL WIPED, BY THE APPROVAL WATCH — FOUND IN THE BROWSER, NOT BY ANY TEST
+- Routing it through `_docNotice` painted it, and **it was gone a second later**. Instrumented: a discount submits the estimate, which
+  arms the approval watch, and **`startApprovalWatch` fires `approvalWatchTick` at once**; its `refreshEstimateFromCloud` callback
+  redraws the dashboard when the fetch answers. A notice is shown once and cleared, so that second redraw — the app's, not the
+  person's — painted none. **`dashSubmitEstimate`'s *"Submitted for manager approval"* was lost the same way on every device with a
+  sync URL**, and nothing had ever asserted it stayed.
+- **`_dashShown` · `_dashKeepNotice` · `_dashNoticeHtml(host, jobId, mine)` · `_asBackgroundRedraw(fn)`.** `_dashShown` is the
+  message now on screen, per surface and job; a redraw run under `_asBackgroundRedraw` paints it again, and every other redraw clears
+  it exactly as before. **Never across surfaces or jobs.** The flag is restored in a `finally`, so a throw cannot leave every later
+  redraw keeping messages. `renderClientDashboard` and `jobProgressBlockHtml` both paint through the one painter.
+- **The background callers:** `approvalWatchTick`, `_jobsLanded`, `_estStoreLanded`, and `openClientDashboard`'s DocuSign and Stripe
+  arrival checks. **`applyEsignStatus` and `esignArchiveSigned` redraw plainly, deliberately:** the archive sets its own notice first
+  (a new message wins either way), and a recorded signature changes the whole band, which is the moment an older message should go.
+  The only message that can clear is one pressed in the second between opening a client and DocuSign's answer.
+- **A redraw a person causes is never a background one** — `_docNotice`, `dashNotice`, `markDocSent`, `applyDiscountRevision` and
+  opening a client are nets (N13).
+
+### Proof
+- **13,615 committed checks on the merged tree; 13,411 on `main` before this build, P8 included** (+204:
+  `tests/stale-draft.test.js` new at **201**, and three restated assertions that grew a check each; 13,555 on this branch before
+  the merge). About twenty-five suites' sandbox lists lift the new helpers — never stubbed — and five assertions are **restated,
+  not deleted**: `doc-send` (`docDraftedAt` → `draftOutstanding`; `_jtSendAction` asks the one definition; the send notice's
+  ternary; and `markDocSent`'s fixtures now carry a draft, since the tap refuses without one), `document-claims` (the discount's
+  confirmation is the dashboard notice, and nothing writes it onto a strip the redraw wipes) and `dashboard-actions` (the
+  dashboard paints through `_dashNoticeHtml`, which clears once shown).
+- **Revert sweep one, the flag: 34 changes on four tar copies, ALL RED, ZERO GREEN, baseline 13,521 / 0 before and after on every
+  copy, no needle mismatched.** Biggest: `draftIsStale` always false **47**, `draftOutstanding` ignoring staleness **27**, the
+  `markDocSent` guard removed **13**, `priceChangedAt` not an ISO stamp **10**, the discount not noting the change and its
+  confirmation back on `showFB` **9** each; the rest 1–6. ⚠ **R30 (`_midDrafted` back on the raw stamp) was predicted belt-and-braces
+  and fails 1 — on the net** that no function reads a draft stamp outside the named few, not behaviourally: it only matters on a
+  midpoint draft a price change overtook before the halfway point.
+- **Revert sweep two, the kept notice:** **14 changes on four tar copies, ALL RED, ZERO GREEN, baseline 13,554 / 0 before and after on every
+  copy, no needle mismatched.** A notice never cleared once shown fails **8**; the dashboard and the job band back on their own inline
+  paint 3 and 2; the keep ignoring the job, no `finally`, the flag never read and `_dashShown` surviving a plain render 2 each; the keep
+  ignoring the surface, a surface that is not the handlers' consuming the notice, and each of the four background callers redrawing
+  plainly 1 each. ⚠ **Opening a client run as a background redraw failed 1, on the arrival-check count** — which would still read 2
+  with the main paint wrapped and one arrival check unwrapped. A direct assertion was added (the one check above the 13,554); re-done
+  it fails **2**, and that swap fails 1. In the browser, the approval watch redrawing plainly and the keep removed each fail **5** of
+  step 37 — section C's four and H's one. ⚠ **And my waiter matched itself with `pgrep -f`** for twenty minutes after the sweep had
+  finished — the trap the 2026-09-25 entry records. Wait on a pid or on the result file.
+- **Verified in headless Chromium, `tests/browser/step37.js`, 61 checks, 0 failed, 0 page errors**, pressing the real buttons: a
+  paper-route Gmail draft at the old price (Gmail's drafts API routed, the real MIME read back); the pop-up naming it before the
+  discount and while typing; the confirmation after Apply naming it, amber, **and still on screen after the approval watch's own
+  redraw** (render count ≥ 2); `priceChangedAt` on the job with the draft's own record untouched; no tap and no link before or after
+  the PIN, Send and the paper route back, the band naming the withdrawal and the draft, a direct `markDocSent` refused with its
+  reason; a fresh send creating a second draft at the NEW deposit, the notice saying which to delete, the history kept, the tap back
+  over the new draft and recording it, the row then empty; the edit door naming an estimate draft *made before the estimate was
+  edited*; **Submit for approval's notice surviving the watch it starts**; overflow 0 at 1440 and 390, the pop-up's warning inside
+  390. **Against `main` before this build it fails 34 of 63, every check running.** Measured again on `main` after P8 landed:
+  the same 34. `run.sh`'s default list is 1–37 (P8's step 36 landed first, so this one was renumbered 37 on the merge); on the
+  merged tree steps 1–36 re-run as regressions — 59 / 33 / 56 / 47 / 47 / 28 / 45 / 25 / 33 / 61 / 48 / 30 / 15 / 25 / 43 / 32 /
+  52 / 27 / 58 / 69 / 75 / 33 / 101 / 73 / 99 / 28 / 90 / 58 / 62 / 53 / 42 / 53 / 75 / 37 / 43 / 14, 0 failed — **1,830 browser
+  checks across the thirty-seven**. The first `<style>` block is byte-identical to `main`'s at 99,561 bytes — no CSS.
+- Manual **§8** (a note) and **§9b** (two table rows and two notes); playbook **Step 4** and **Step 6** (a `.stop` each) and **four**
+  symptom rows. Both `.md` copies hand-edited; **56 claims parity-checked, 0 mismatches** (one apparent miss was a space the tag
+  stripper put after a parenthesis, verified); `doc-structure` green; rendered at 1440/390 with 0 overflow, 0 page errors; under
+  `print` 51/61 and 17/18 tables full width, 0 on the phone rule — as before.
+- **Closes the document build's flag (2)** — *a Gmail packet draft created before a discount is not updated by the re-file* —
+  struck through in both places it was recorded, with a pointer here.
+
+### Found in passing, not fixed
+- **An estimate recorded sent but never filed offers *📁 File to Drive* once a discount or an edit sends it back for approval**, and
+  the press is refused — the estimate's gate refuses an unapproved one. `_jtDriveLink` reads `sentAt && !filedAt` and nothing else.
+- **After a discount and the manager's re-approval, the packet row still says *"re-approve the estimate and send a fresh packet"***
+  until the first send re-stamps the agreement (`agrApprovalWithdrawn` reads `!job.agrApproved`). Half the sentence is done by then.
+- **The playbook's Step 4 still describes a *✉ Plain email* button** that came off the tab on 2026-09-09 (the app falls back to the
+  plain email by itself). A docs low for P13.
+- *Edit estimate* on an estimate out for approval is already recorded in that Edit-estimate entry.
+
+### The final invoice and the midpoint — answered and asked back, not built
+- **In practice yes**: the final is offered only once the job is closed. But under **Q1** (answered 2026-09-29: *close any time after
+  activation, and the final can go out with the midpoint unpaid*), a job can close before the midpoint invoice was ever **sent**, and
+  the final then bills both shares. **The money is right; the words are not** — the final still reads *25% midpoint — invoiced at
+  project midpoint* and *Outstanding from the deposit and midpoint invoices* (the H3/M8 entry flagged it).
+- Put to Anthony: **(a)** require the midpoint invoice to be sent before the final goes out — in our control, so not the dead end Q1
+  removed, but two invoices on one day for a job that closed early — or **(b)** keep the rule and word the final for a job whose
+  midpoint never went out. **Recommended (b).**
+- **(b) WAS BUILT THE SAME EVENING, in the Re-open build (its entry is directly above this one).** Anthony, answering the H3/M8
+  build's same flag: *"yes to 2 and 3, reword the final and add Re-open"*. The final now names only the invoices that went out,
+  and an unsent midpoint's share reads *25% midpoint — billed on this invoice*. *Kept rather than deleted, per the standing rule
+  that a fixed flag left standing reads as outstanding work.*
 
 ## ⚠⚠ WORK DONE COULD NEVER REACH 100% — IT IS MEASURED AGAINST THE ROOMS NOW (FIXED 2026-09-29, AUDIT H5 / P8)
 Fix pack P8 of the 2026-09-28 workflow audit, built after the other sessions' P1–P7 had merged. Anthony, Q3: *"Room work
@@ -299,7 +469,9 @@ no redeploy.
     the job **7**.
   - Found re-running this build's every-caller searches after the merge, once `main`'s NUL-byte fix made a whole-file search
     trustworthy again. The line itself sat above the byte: what missed it the first time was not looking, not the search.
-- **Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**
+- ~~**Still open from the document build: a Gmail packet draft created before a discount is not updated by the re-file.**~~
+  **FIXED THE SAME DAY** — Anthony: *"just flag a previous Gmail draft if a discount is offered."* It is flagged, never rewritten;
+  see the stale-draft entry near the top of this file. *Kept rather than deleted, per the standing rule.*
 - **⚠ FOUND IN PASSING, NOT FIXED: the rail offers *Edit estimate* while the estimate is OUT FOR APPROVAL.** The document tray
   carries it on the lit *Estimate approved* row, and pressing it opens Build Estimate locked under *Out for Manager Approval* —
   whose banner says it reopens once approved or denied, so it is a detour rather than a trap. Pre-existing and unrelated to the
@@ -957,8 +1129,8 @@ functions before anything was changed.**
   1440/390 with 0 overflow, 0 page errors; under `print` 51/61 and 17/18 tables full width as before. **Counsel bundle B6** added.
 - **⚠ FOUND, NOT BUILT, FLAGGED TO ANTHONY:** ~~(1) *Edit estimate* is still reachable after the packet is sent, so a price can still
   move under Exhibit A by that door;~~ **BUILT THE SAME DAY** — Anthony: *"yes, withdraw Edit estimate once the packet is sent"*;
-  see the entry at the top of this file. (2) a Gmail packet draft created before a discount is not updated by the re-file —
-  **still open**; ~~(3) `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won
+  see the entry at the top of this file. ~~(2) a Gmail packet draft created before a discount is not updated by the re-file~~ —
+  **FIXED THE SAME DAY**: it is flagged, never rewritten (the stale-draft entry near the top of this file); ~~(3) `applyDiscountRevision` still sets `job.status = 'pending'` (pre-existing; `job.won` is untouched, so Won
   survives).~~ **FIXED THE SAME DAY** — a won client re-priced reads *Won · Pending Re-approval* and returns to *Won*; same entry.
   *Kept rather than deleted, per the standing rule that a fixed flag left standing reads as outstanding work.*
 - **⚠ THE SHAPE TO COPY: a document is checked by adding up its own rows.** Every defect here printed the right figure somewhere
@@ -9485,8 +9657,16 @@ If the stop hook fires anyway, run `git commit --amend --no-edit --reset-author`
   `tests/browser/step29.js`, which both sessions had written: `main`'s keeps step 29, this one is renumbered **step 36**, and
   1–36 are the default list. `main` then gained the H5 build while this one was being pushed, and a second merge took it:
   it conflicted only on the build stamp, CLAUDE.md and `tests/browser/step36.js`, which that build had written too — its
-  keeps step 36, this one is **step 37**, and 1–37 are the default list.)
-  (`claude/dazzling-mendel-qns7nm` recorded, before this merge, that it was the active branch, and:)
+  keeps step 36, this one is **step 37**, and 1–37 are the default list. Then the stale-draft build landed on `main` too, and a
+  third merge took it: it conflicted on the build stamp, CLAUDE.md, three suites' pinned lists (resolved as a UNION) and
+  `tests/browser/step37.js`, which that build had written as well — its keeps step 37, this one is **step 38**, and 1–38 are
+  the default list. The Re-open's void now goes into that build's draft history, and its suite's allow-list names it.)
+  (`claude/exciting-carson-pv156f` recorded, before this merge, that it was the active branch, and:)
+  (Back on this branch for the stale-draft build: a Gmail draft a discount or an edit left behind is flagged, and the dashboard
+  keeps its message through a redraw the app makes on its own. Built on `main` after the Edit-estimate / won-status build and
+  the audit's docs merge, both of which it took by fast-forward, and then P8 (H5) from a concurrent session, which had taken
+  step 36 first — this one is **step 37**; 1–37 are the default list.)
+  (`claude/dazzling-mendel-qns7nm` recorded, before this build, that it was the active branch, and:)
   (This session was ASSIGNED it again after `claude/relaxed-fermi-nopl99` had recorded itself as active below; a session's
   assignment wins, so it is promoted. The follow-up here — Edit estimate after the packet, and the won status — was built on
   the H1/M1 tree and merged `main`'s bottom Reset, C2 and H2 builds on the way through; the merge conflicted on the build stamp,
@@ -14753,9 +14933,13 @@ teaching people to ignore it.
 - **Reminder:** after any significant rebuild (new/renamed/removed tabs, rate changes,
   dropdown/option changes, workflow changes), flag to the user that `manual.html` needs
   a reconciliation pass against the current app. Don't let it silently fall out of date.
-- Last reconciled against the app: **2026-09-29 (ninth pass)** — both documents, against Re-open and the final invoice naming only
-  the invoices that went out (manual §9, §9a, §11, §12; playbook Step 11 & 12, Step 13, *If the job dies instead*, the status table
-  and six symptom rows); see its entry near the top of this file.
+- Last reconciled against the app: **2026-09-29 (tenth pass)** — both documents, against Re-open and the final invoice naming only
+  the invoices that went out (manual §9, §9a, §9b, §11, §12; playbook Step 11 & 12, Step 13, *If the job dies instead*, the status
+  table and seven symptom rows), including the retired final draft staying named on its row; see its entry near the top of this file.
+- Prior pass **2026-09-29 (ninth pass)** — both documents, against a Gmail draft a price change left behind
+  being flagged rather than confirmable, and the dashboard keeping its message through a redraw the app makes on its own (manual
+  §8 and §9b; playbook Step 4 and Step 6 and four symptom rows); see its entry near the top of this file. P8's H5 note (manual
+  §9a-i, one playbook row) landed just before it and is recorded in its own entry.
 - Prior pass **2026-09-29 (eighth pass)** — both documents, against Edit estimate going once the signing
   packet is out and a won client reading *Won · Pending Re-approval* while a revised price waits (manual §1, §5, §5c, §8, §9,
   §9a; playbook the two `.stop`s on Build Estimate, the lever table, Step 6, the status table and four symptom rows); see its

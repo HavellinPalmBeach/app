@@ -35,8 +35,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
-    'depositTargetFor', 'docSentAt', 'docDraftedAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
-    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent'];
+    'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
+    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'];
   const EST = () => ({ svc: 'cleanout', days: 6, totTC: 11, totPS: 22, havellinTotal: 20000,
     rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3, tcH: 5, psH: 10 },
             { idx: 1, name: 'Study', vol: 3, cplx: 3, tcH: 6, psH: 12 }] });
@@ -80,7 +80,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
       'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
-      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor']);
+      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor', 'draftOutstanding', 'draftIsStale']);
     const B = sandbox({ fns: DFNS, vars: ['JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
       'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
       stubs: { _todayStr: () => '2026-09-23', Intl: global.Intl } });

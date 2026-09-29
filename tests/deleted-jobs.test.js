@@ -312,7 +312,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     let saves = 0, badges = [], redraws = 0, listRedraws = 0;
     const ctx = sandbox({
-      fns: ['_applyDroppedJobs', '_purgeLocalJobRecords', '_jobsLanded'],
+      fns: ['_applyDroppedJobs', '_purgeLocalJobRecords', '_jobsLanded', '_asBackgroundRedraw'],
+      vars: ['_dashKeepNotice'],
       stubs: {
         // The Win / Loss lists name lost prospects BY NAME. A client deleted on the other device
         // stays on this one's list until something repaints it, so the drop has to reach that

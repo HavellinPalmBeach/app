@@ -73,8 +73,9 @@ function midRow(t) {
 
 // ── the rail, the transition and the band ───────────────────────────────────
 const TL_FNS = ['jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
-  'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docDraftedAt',
-  'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
+  'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt',
+  'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay',
+  '_andJoin', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
   'isAgreementSent', 'jobSchedule', 'jobProgress', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive',
   'coWorkingDays', '_coPaceFix', 'roomStatusNormalize'];
 const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
@@ -360,7 +361,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('RE-OPEN — a final invoice drafted but not sent is voided on the record, and only then');
   {
     const DRAFT = { draftedAt: '2026-09-30T10:00:00Z', draftedBy: 'Anthony Graziano', draftUrl: 'https://mail.google.com/fin',
-      pdfOk: true, filedAt: '2026-09-30T10:01:00Z', filedUrl: 'https://drive.example/fin' };
+      pdfOk: true, filedAt: '2026-09-30T10:01:00Z', filedUrl: 'https://drive.example/fin',
+      provider: 'gmail', mailbox: 'anthony@havellinpalmbeach.com' };
     const j = JOB({ docState: Object.assign({}, JOB().docState, { 'invoice:final': Object.assign({}, DRAFT) }) });
     const s0 = rail(j);
     eq(s0.filled && s0.filled.call, "markDocSent(7,'invoice:final')", 'closed with a final drafted: the band waits on "I\'ve sent it"');
@@ -368,12 +370,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     R.jobs = [j];
     R.activateOrCycle(7);
     const q = asked[0] || '';
-    has(q, 'The final invoice drafted on Sep 30, 2026 billed the job as it stood at the close and no longer applies — delete that draft in Gmail.',
-        '⚠⚠ the question says the draft is stale and to delete it in Gmail');
+    has(q, 'The final invoice drafted on Sep 30 billed the job as it stood at the close and no longer applies — delete that draft in Gmail (anthony@havellinpalmbeach.com).',
+        '⚠⚠ the question says the draft is stale and to delete it in Gmail, naming the mailbox it is in');
     has(q, 'The copy filed to Drive is replaced when the final goes out.', 'and what happens to the Drive copy');
     const st = (j.docState || {})['invoice:final'] || {};
-    ['draftedAt', 'draftedBy', 'draftUrl', 'pdfOk', 'filedAt', 'filedUrl'].forEach((k) =>
+    ['draftedAt', 'draftedBy', 'draftUrl', 'pdfOk', 'filedAt', 'filedUrl', 'provider', 'mailbox'].forEach((k) =>
       ok(!(k in st), '⚠ the stale draft\'s ' + k + ' is off the record'));
+    // ⚠⚠ INTO THE DRAFT HISTORY (2026-09-29, merging main's stale-draft build). The draft is still sitting in a
+    // mailbox after the Re-open; `staleDrafts` is what the final's row and the send path read to go on naming it.
+    const hist = Array.isArray(st.staleDrafts) ? st.staleDrafts : [];
+    eq(hist.length, 1, '⚠⚠ the voided draft is kept in the stale-draft history, not merely deleted');
+    eq(JSON.stringify(hist[0] || {}), JSON.stringify({ draftedAt: '2026-09-30T10:00:00Z', provider: 'gmail',
+      mailbox: 'anthony@havellinpalmbeach.com', why: 'reopen' }), 'with its day, its mailbox and why it went stale');
+    const sR = rail(j);
+    eq((sR.by.final_invoiced || {}).sub,
+      'The Gmail draft from Sep 30 (anthony@havellinpalmbeach.com) was made before the job was re-opened — delete it, don’t send it',
+      '⚠⚠ the final\'s row goes on naming the retired draft after the Re-open');
+    eq((sR.by.final_invoiced || {}).state === 'done', false, 'and the final is not sent');
     ok(((j.at || {})['docState:invoice:final'] || 0) > 0, '⚠ the void is STAMPED, so the other device\'s copy of the draft cannot win it back');
     eq(((j.reopens || [])[0] || {}).finalDraftVoided, '2026-09-30T10:00:00Z', 'and the void is recorded on the re-open');
     eq((j.docState || {})['invoice:midpoint'].sentAt, '2026-09-26T10:00:00Z', 'the midpoint\'s own record is untouched');
@@ -390,6 +403,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s1 = rail(j, '2026-10-02');
     eq(s1.filled && s1.filled.call, "docAction(7,'invoice','send',{stage:'final'})", '⚠⚠ the band sends a FRESH final');
     lacks(s1.every.map((b) => b.call).join(' '), "openDocDraft(7,'invoice:final')", 'and no link to the stale draft survives');
+    has((s1.by.final_invoiced || {}).sub || '', 'was made before the job was re-opened',
+        'the re-closed job\'s final row still names the draft the Re-open retired');
     eq((j.reopens || []).length, 1, 'the earlier re-open stays on the record');
     today = '2026-09-30';
 
@@ -402,6 +417,41 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(filed.status, 'active', 'a final filed but never drafted does not stop the re-open');
     eq(filed.docState['invoice:final'].filedUrl, 'https://drive.example/fin', 'and is not touched — there was no draft to void');
     lacks(asked[0] || '', 'Gmail', 'nor does the question mention one');
+  }
+
+  group('RE-OPEN — a stale final sent as a plain email, and a draft made after 8pm Eastern');
+  {
+    // ⚠ A plain email (the mailto fallback) is not a Gmail draft: there is nothing in Gmail to delete, and the
+    // app cannot know whether the person pressed send. The question says what to do about THAT route.
+    const plain = JOB({ docState: Object.assign({}, JOB().docState, { 'invoice:final':
+      { draftedAt: '2026-09-30T14:00:00Z', draftedBy: 'Ashley Jerome', provider: 'mailto', mailbox: '' } }) });
+    reset(true);
+    R.jobs = [plain];
+    R.activateOrCycle(7);
+    has(asked[0] || '', 'The final invoice drafted on Sep 30 billed the job as it stood at the close and no longer applies — if that email was never sent, discard it.',
+        '⚠ a plain email is told to be discarded if it never went, never "delete it in Gmail"');
+    lacks(asked[0] || '', 'Gmail', 'and Gmail is not named');
+    eq(plain.status, 'active', 'the job re-opens');
+    eq(((plain.docState['invoice:final'].staleDrafts || [])[0] || {}).provider, 'mailto', 'and the history keeps the route');
+    eq((rail(plain).by.final_invoiced || {}).sub,
+      'The email from Sep 30 was made before the job was re-opened — if it was never sent, discard it',
+      'the row says the same thing the question did');
+
+    // ⚠⚠ THE DAY IS THIS DEVICE'S CALENDAR, NOT THE UTC STAMP. 01:30Z on 1 October is 9:30pm on 30 September in
+    // Palm Beach; a slice of the ISO string names the 1st, which is the day after the draft was actually made.
+    const prevTZ = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+    try {
+      const late = JOB({ docState: Object.assign({}, JOB().docState, { 'invoice:final':
+        { draftedAt: '2026-10-01T01:30:00Z', provider: 'gmail', mailbox: 'ashley@havellinpalmbeach.com' } }) });
+      reset(true);
+      R.jobs = [late];
+      R.activateOrCycle(7);
+      has(asked[0] || '', 'The final invoice drafted on Sep 30 billed the job', '⚠⚠ an evening draft is named on the day it was made');
+      lacks(asked[0] || '', 'drafted on Oct 1', 'never the next day off the UTC stamp');
+    } finally {
+      if (prevTZ === undefined) delete process.env.TZ; else process.env.TZ = prevTZ;
+    }
   }
 
   group('RE-OPEN — twice: the history accumulates');
@@ -463,7 +513,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the rendered Client Dashboard: one Re-open on a closed job, one Close once re-opened, nothing twice');
   {
     const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction', 'activeHouseFlags',
-      'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor', 'docDraftedAt',
+      'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
+      'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin',
+      '_dashNoticeHtml',
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney', 'getJobActuals',
       'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon', 'jobActivationBlockers', 'jobPayments',
       'jobTimeline', 'jobTimelineActions', 'jobTimelineNext', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle',
@@ -478,7 +530,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const DVARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK',
       'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY',
-      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT'];
+      'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT',
+      '_dashShown', '_dashKeepNotice'];
     const render = (job) => {
       const dom = domStub({});
       const c = sandbox({ fns: FNS, vars: DVARS, stubs: { document: dom, setTimeout: () => 0, clearTimeout: () => {},
