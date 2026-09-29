@@ -77,7 +77,7 @@ function coCtx(est, cos, seed) {
 // The invoice sandbox, as change-order-billing.test.js builds it.
 function inv(stubs) {
   return sandbox({
-    fns: ['estTolerancePctTxt', 'invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+    fns: ['estTolerancePctTxt', 'invoiceHtml', 'docSentAt', 'docKeyFor', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',

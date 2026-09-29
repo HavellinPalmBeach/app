@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 11:38am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 4:34pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -14733,13 +14733,15 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       sub: midPaid > 0 ? ('$' + Math.round(midPaid).toLocaleString() + ' received')
         : _closed ? (finPaid > 0 ? 'Paid with the final invoice' : 'Unpaid \u2014 the final invoice carries it') : '' }),
 
-    // ⚠ `deliveredOn` — the WRITE-ONCE stamp `applyJobTransition` sets on the first
-    // close, so re-opening and re-closing never moves the date the job was really
-    // handed over. The strip this replaces read `job.completionDate`, which is read
-    // in two places and WRITTEN NOWHERE IN THE FILE, so "Work completed" has been
-    // blank on every job this app has ever had.
+    // ⚠ `deliveredOn` — the stamp `applyJobTransition` sets on a close. Write-once: the only thing that
+    // clears it is a Re-open, which undoes the close outright and keeps it on `job.reopens`. The strip
+    // this replaces read `job.completionDate`, which is read in two places and WRITTEN NOWHERE IN THE
+    // FILE, so "Work completed" has been blank on every job this app has ever had.
+    // ⚠ A RE-OPENED JOB SAYS SO HERE (2026-09-29), until it is closed again — somebody who remembers it
+    // closed would otherwise find it in progress with nothing on the timeline explaining why.
     row(_plan({ key: 'work_complete', group: 'Work', label: 'Work complete',
-      done: !!job.deliveredOn, at: job.deliveredOn || '', atKind: 'date', by: job.deliveredBy || '' },
+      done: !!job.deliveredOn, at: job.deliveredOn || '', atKind: 'date', by: job.deliveredBy || '',
+      sub: (!job.deliveredOn && job.reopens && job.reopens.length) ? 'Re-opened — the earlier close was undone' : '' },
       _sc && _sc.planEnd, 'end')),
 
     row({ key: 'final_invoiced', group: 'Close-out', label: 'Final invoice sent',
@@ -16942,7 +16944,10 @@ function jobTimelineActions(row, job, estRec) {
       // A blocked activation is chased off-app — the fix names the representative and
       // their number. There is nothing to press, and a button that alerts the same
       // blocker back at you is worse than none.
-      if (row.state === 'current') out.primary = { label: '&#9654; Activate job', call: 'activateOrCycle(' + id + ')' };
+      // ⚠ Never on a CLOSED job. The one closed job this row can be lit on is a legacy one, closed before
+      // the handover stamp shipped (2026-07-30) — it carries no `deliveredOn`, so this row reads undone.
+      // Its press would be a re-open, and it is offered as one, below, rather than as "Activate".
+      if (row.state === 'current' && job.status !== 'closed') out.primary = { label: '&#9654; Activate job', call: 'activateOrCycle(' + id + ')' };
       break;
 
     case 'midpoint_invoiced':
@@ -17003,6 +17008,18 @@ function jobTimelineActions(row, job, estRec) {
   // "sent" its invoice), and closing is a question about the job, not about which gap the light is on.
   if (live && job.status === 'active' && row.key !== 'work_complete') {
     out.secondary.push({ label: '&#9632; Close job', call: 'activateOrCycle(' + id + ')' });
+  }
+  // ⚠⚠ RE-OPEN, BESIDE THE LIT STEP OF A CLOSED JOB (2026-09-29). Anthony: *"add Re-open"* — a close made
+  // by mistake needed him to fix it. It sits where Close was pressed, as the undo sits beside the act:
+  // an outline button, never the filled one, because the step the band names (sending the final) is
+  // still the thing to do next on a job that WAS finished. ⚠ THE SAME CALL AS CLOSE, `activateOrCycle`
+  // — the map's `closed: 'active'` is the Re-open, and `applyJobTransition` asks, records and undoes —
+  // so there is one door and the question cannot be reached around. Only one of the two is ever on a
+  // job (Close on an active one, Re-open on a closed one), which keeps every onclick on the page unique.
+  // ⚠ Withheld, not offered-and-refused, once the final invoice has gone out or a final payment is on
+  // file: `jobReopenBlocker` is the one answer, read here and by the transition.
+  if (live && job.status === 'closed' && !jobReopenBlocker(job)) {
+    out.secondary.push({ label: '&#8634; Re-open job', call: 'activateOrCycle(' + id + ')' });
   }
   return out;
 }
@@ -18056,20 +18073,27 @@ function renderClientDashboard(jobId) {
 // ─── STATUS TRANSITIONS ───────────────────────────────────────────────────────
 // ONE map. There used to be two status buttons carrying a copy each, expected to be edited in
 // lockstep, which is a rule no one can keep. ⚠ ONE READER NOW: `activateOrCycle`, pressed from the
-// timeline (Activate job, and Close job from activation on). The client list's Status button was
-// deleted on 2026-09-29 — it had been overwritten on the line after it was built and never rendered.
-// ⚠ `closed: 'active'` STAYS IN THE MAP AND NO CONTROL REACHES IT: a Re-open would leave the write-once
-// `deliveredOn` standing on an active job, and what that should mean is a decision, not a button.
-// ⚠ ONE LEGACY CASE, NOTED AND NOT CHANGED: a job closed before the handover stamp shipped (2026-07-30)
-// carries no `deliveredOn`, so its rail reads Job active undone and offers Activate job — which would
-// reach this entry and re-open it. Prelaunch dummy data only.
+// timeline (Activate job, Close job from activation on, and Re-open job on a closed job). The client
+// list's Status button was deleted on 2026-09-29 — it had been overwritten on the line after it was
+// built and never rendered.
+// ⚠⚠ `closed: 'active'` IS THE RE-OPEN, AND IT UNDOES THE CLOSE (2026-09-29). Anthony, asked whether a
+// job closed by mistake should need him to fix it: *"add Re-open"*. The first cut of H3 left this entry
+// with nothing pressing it because a Re-open that left the write-once `deliveredOn` standing would put a
+// handover date on an active job — every reader of that stamp (the rail's open midpoint rows, the Job
+// Plan's Close-out marker, the lost-button gate, revenue recognition when it is built) would go on
+// saying the work was handed over. So the decision is that a Re-open UNDOES the close: the stamp is
+// cleared, the close it recorded is kept on `job.reopens`, and the next close stamps its own day. It is
+// offered only until the final invoice goes out (`jobReopenBlocker`) — past that the client holds a
+// final bill, and re-opening would put the app out of step with it.
+// ⚠ The legacy case (a job closed before the handover stamp shipped, 2026-07-30, which carries no
+// `deliveredOn`) reaches the same branch and is asked the same question; its rail offers Re-open
+// rather than Activate (see `jobTimelineActions`).
 //
 // `closed` used to cycle back to `new`. A closed job is a delivered job, so a single
 // mis-tap on a phone threw it back to the start of the lifecycle — and once revenue
 // recognition hangs off delivery (UNEARNED_REVENUE_SPEC.md §2b) that same tap would
-// un-recognize it and re-fire the entry on the way forward. Re-open was made to resume at
-// `active`, which is what the button was labelled — and then the button turned out never to render
-// (see above), so that transition is in the map with nothing pressing it.
+// un-recognize it and re-fire the entry on the way forward. Re-open resumes at `active`, never
+// earlier, and it asks before it touches anything.
 //
 // `lost` and `closed_retained` are deliberately absent: they are terminal, and the old
 // `|| 'new'` fallback silently resurrected them as brand-new jobs.
@@ -18086,9 +18110,68 @@ function jobActivationBlockers(j) {
   return blockers;
 }
 
+// ⚠ WHY A CLOSED JOB CANNOT BE RE-OPENED, or '' when it can. One answer, read by the rail (which
+// withholds the button) and by the transition (which refuses), so the button and the rule cannot
+// drift. The line is the final invoice: once it has gone out — or a final payment is on file, which
+// happens when the final is paid by cheque against a printed copy — the client holds a bill that
+// says the job is finished, and a Re-open would put the app and that bill out of step.
+function jobReopenBlocker(j) {
+  if (!j || j.status !== 'closed') return 'Only a closed job can be re-opened.';
+  if (docSentAt(j, 'invoice', 'final')) return 'This job cannot be re-opened: its final invoice has already gone out to the client.';
+  if (stagePaidTotal(j, 'final') > 0) return 'This job cannot be re-opened: a final payment is already recorded against it.';
+  return '';
+}
+
+// ⚠⚠ THE RE-OPEN (2026-09-29). Asked, then recorded, then the close is undone. Returns false having told
+// the person why when it does not happen.
+// ⚠ THE CLOSE IT UNDOES IS KEPT, on `job.reopens`, because the handover stamp is write-once for a reason
+// and clearing it without a trace is exactly what that rule exists to prevent: who closed it and when,
+// who re-opened it and when, and whether a final draft was voided. The stamp itself is cleared, so the
+// rail, the Job Plan and the lost-button gate all read the job as in progress again, and the next close
+// records its own day.
+// ⚠⚠ A FINAL INVOICE DRAFTED BUT NOT SENT IS VOIDED ON THE RECORD. After a close the band's filled button
+// is "Send final invoice", so a mistaken close is quite likely to have drafted one before anybody noticed.
+// That draft billed the job as it stood at the close. Left on the record, the strip would go on offering
+// "Open the final invoice draft", and after the next close the band's primary would be "I've sent it" —
+// pointing at a draft whose figures predate every hour logged since. The Gmail draft itself cannot be
+// deleted from here, so the question says to delete it; the Drive copy filed with it is overwritten by
+// name when the final next goes out, so its link comes off the record too.
+function _reopenTransition(j) {
+  var why = jobReopenBlocker(j);
+  if (why) { alert(why); return false; }
+  var fk = docKeyFor('invoice', { stage: 'final' });
+  var fs = (j.docState && j.docState[fk]) || null;
+  var staleDraft = !!(fs && fs.draftedAt && !fs.sentAt);
+  if (!confirm('Re-open this job?\n\n'
+      + (j.deliveredOn ? 'It was closed on ' + fmtDate2(j.deliveredOn) + (j.deliveredBy ? ' by ' + j.deliveredBy : '') + '. ' : '')
+      + 'Re-opening puts it back to Active' + (j.deliveredOn ? ' and clears that handover date' : '')
+      + ', so the timeline returns to the step the job was on. When it is closed again, that day is recorded as the handover.\n\n'
+      + (staleDraft
+          ? 'The final invoice drafted on ' + fmtDate2(String(fs.draftedAt).slice(0, 10)) + ' billed the job as it stood at the close and no longer applies — delete that draft in Gmail.'
+            + (fs.filedAt ? ' The copy filed to Drive is replaced when the final goes out.' : '') + '\n\n'
+          : '')
+      + 'Nothing else changes: the hours, the payments and anything already sent stay as they are.')) {
+    return false;
+  }
+  j.reopens = (Array.isArray(j.reopens) ? j.reopens : []).concat([{
+    closedOn: j.deliveredOn || '', closedAt: j.deliveredAt || '', closedBy: j.deliveredBy || '',
+    reopenedOn: _todayStr(), reopenedAt: new Date().toISOString(), reopenedBy: _actor(j),
+    finalDraftVoided: staleDraft ? fs.draftedAt : ''
+  }]);
+  delete j.deliveredOn; delete j.deliveredAt; delete j.deliveredBy;
+  if (staleDraft) {
+    // Through the writer's accessor, which stamps the key — or the other device's copy of the draft
+    // record wins the per-key merge and the stale draft comes back.
+    var st = docState(j, fk);
+    ['draftedAt', 'draftedBy', 'draftUrl', 'pdfOk', 'filedAt', 'filedUrl'].forEach(function(k){ delete st[k]; });
+  }
+  j.status = 'active';
+  return true;
+}
+
 // Resolves the next status and applies it, or returns false having already told the user
-// why not. Delivery is stamped WRITE-ONCE on the first close: re-opening and re-closing a
-// job does not move the date it was actually handed over.
+// why not. Delivery is stamped WRITE-ONCE on a close: nothing moves it but a Re-open, which undoes
+// the close outright (and keeps a record of it) rather than editing its date.
 function applyJobTransition(j) {
   var next = JOB_TRANSITIONS[j.status];
   if (!next) {
@@ -18096,6 +18179,9 @@ function applyJobTransition(j) {
       + ' and cannot be re-opened from here. Start a new job if the client comes back.');
     return false;
   }
+  // ⚠ closed → active is the RE-OPEN. It is its own branch, ahead of the activation checks: the job
+  // was activated long ago (`activatedOn` is kept), and the question to ask is about undoing a close.
+  if (j.status === 'closed') return _reopenTransition(j);
   if (next === 'closed') {
     var cb = jobCloseBlockers(j);
     if (cb.length) {
@@ -18104,18 +18190,20 @@ function applyJobTransition(j) {
     }
     // ⚠⚠ CLOSING WITH THE MIDPOINT UNPAID IS ALLOWED AND IS ASKED ONCE (2026-09-29, workflow audit H3).
     // Close job is now an outline button beside every step of an active job, so for the whole working
-    // phase it is one tap on an iPad from a write-once stamp: `deliveredOn` below is never moved, and no
-    // control re-opens a closed job. The question is scoped to exactly the stretch that is new — before
-    // any midpoint payment is recorded. Once one is, the light is on Work complete and Close is its
-    // primary, as it always was, and asking there would be a question on every normal close.
+    // phase it is one tap on an iPad from the handover stamp. The question is scoped to exactly the
+    // stretch that is new — before any midpoint payment is recorded. Once one is, the light is on Work
+    // complete and Close is its primary, as it always was, and asking there would be a question on every
+    // normal close.
     // ⚠ It says what the final does rather than warning off the close: the final bills everything not
     // yet paid against the payments actually received, so nothing is lost by closing now.
+    // ⚠ And it no longer says a closed job cannot be re-opened — Re-open undoes a close until the final
+    // invoice goes out (`jobReopenBlocker`), and the question says exactly that, no more.
     if (!j.deliveredOn && !(stagePaidTotal(j, 'midpoint') > 0)
         && !confirm('Close this job now?\n\n'
           + 'No midpoint payment is recorded. That is fine: the final invoice bills everything not yet '
           + 'paid, the midpoint\'s share included, against the payments actually received.\n\n'
           + 'Closing records today, ' + fmtDate2(_todayStr()) + ', as the day the work was handed over. '
-          + 'That date cannot be changed, and a closed job cannot be re-opened.\n\n'
+          + 'Until the final invoice goes out, Re-open can undo the close.\n\n'
           + 'If the work is not finished, press Cancel.')) {
       return false;
     }
@@ -18177,8 +18265,12 @@ function activateOrCycle(jobId) {
   // (the dashboard, Job Admin & Inv, or the Job Plan itself, which it re-renders — the header strip
   // there reads the start this press just stamped). Closing a job is the other half of this button
   // and stays where it is.
-  // (`status === 'active'` AFTER a successful transition can only mean the job just became active —
-  // applyJobTransition always moves it — so no before/after comparison is needed.)
+  // ⚠ A RE-OPEN LANDS THERE TOO (2026-09-29): it puts a job back in progress, and the Job Plan is where
+  // a job in progress is worked — and the plan's own NOW marker, which a close moved to Close-out, is
+  // redrawn by the landing rather than left reading "closed" beside a band that says otherwise.
+  // (`status === 'active'` AFTER a successful transition can only mean the job just became active,
+  // whether from won or from closed — applyJobTransition always moves it — so no before/after
+  // comparison is needed.)
   if (j.status === 'active' && openJobPlanFor(jobId)) return;
   // Fired from the Job Plan or Job Admin band as well as the dashboard now — repaint whichever
   // is showing, and fall back to the dashboard render it always did.
@@ -29286,8 +29378,24 @@ function invoiceHtml(job, stage) {
   // ⚠ THE BALANCE WAS NEVER WRONG and is deliberately untouched: `finalDue` is
   // `round(totalFinalBasis) - round(received)`, and since the basis is whole dollars that is
   // identical to rounding the true balance once. Only the NOTICE about the gap was wrong.
-  var invoicedBefore = midCumTarget;
+  //
+  // ⚠⚠ WHICH INVOICES CAME BEFORE THIS ONE IS A QUESTION FOR THE RECORD, NOT AN ASSUMPTION
+  // (2026-09-29). Since a job can be closed with its midpoint never sent (workflow audit H3),
+  // the final can be the second bill the client ever receives — and this function went on
+  // printing "Outstanding from the deposit and midpoint invoices" over a midpoint invoice that
+  // did not exist, and "25% midpoint — invoiced at project midpoint" on the fixed-price summary.
+  // The money was right; the account of it was not. So: a midpoint invoice was issued when the
+  // record says it was SENT, or when a midpoint payment is on file (a client who paid it was
+  // plainly asked for it, and a printed copy handed over leaves no send record). Otherwise the
+  // midpoint's share is billed HERE, and only the deposit invoice came before.
+  // ⚠ The SAME record the rail reads — its midpoint row says "Not sent — the final invoice bills
+  // it" on exactly this condition — so the document and the timeline cannot tell two stories.
+  // ⚠ The balance does not move: `finalDue` reads what arrived, never what was invoiced.
+  var _midBilled     = !!docSentAt(job, 'invoice', 'midpoint') || stagePaidTotal(job, 'midpoint') > 0;
+  var invoicedBefore = _midBilled ? midCumTarget : depositAmt;
   var paymentGap     = invoicedBefore - jobPaidTotal(job);
+  var _priorInvoices = _midBilled ? 'the deposit and midpoint invoices' : 'the deposit invoice';
+  var _midHereLbl    = '25% midpoint — billed on this invoice';
 
   // Aliases consumed by the final-invoice body below.
   var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;
@@ -29305,7 +29413,11 @@ function invoiceHtml(job, stage) {
   // model work, and it is the reason the shift is derived at all.
   var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coShift;
   var deposit = depositAmt;
-  var midpoint = midpointAmt;
+  // The midpoint row states what the midpoint invoice ASKED for — which carries forward any
+  // deposit shortfall. When no midpoint invoice went out it states the midpoint's own 25% share
+  // instead, because any deposit shortfall is then named on the gap row below, and printing it
+  // here as well would describe the same dollars twice.
+  var midpoint = _midBilled ? midpointAmt : (midCumTarget - depositAmt);
   // ⚠ THE NAME IS THE BUG. This was `deposit + midpoint` — the two targets — under a row
   // labelled "Subtotal payments received". It is the received figure now, and the document
   // states the invoiced ones on their own rows where they belong.
@@ -29359,14 +29471,19 @@ function invoiceHtml(job, stage) {
   // correct either way, but a client who owes an unpaid midpoint reads a final that is larger
   // than the 25% they expect and has no way to see why; and a client who is AHEAD must be told
   // they are, or the credit looks like an error. Both directions render.
-  function _paymentGapRow(gap){
+  // ⚠ `from` NAMES THE INVOICES THAT CAME BEFORE AND `into` THE FIGURE THE GAP LANDS IN, and every
+  // caller states both (2026-09-29). The sentence was fixed at "the deposit and midpoint invoices …
+  // the balance below", which was false twice: on a final whose midpoint never went out, and on the
+  // MIDPOINT invoice itself, where a short deposit was reported as outstanding from "the deposit and
+  // midpoint invoices" on the very page that is the midpoint invoice.
+  function _paymentGapRow(gap, from, into){
     // ⚠ THE CALLER MUST HAND THIS AN UNROUNDED GAP, or the test below cannot fire: two
     // figures each rounded to the dollar can never differ by less than one. See the note at
     // `paymentGap`, where that is exactly what printed a spurious $1 credit to a client.
     if (Math.abs(gap) < 1) return '';                 // bank rounding is not a debt
     return gap > 0
-      ? '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Outstanding from the deposit and midpoint invoices — carried into the balance below</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(gap) + '</td></tr>'
-      : '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Received ahead of the invoiced schedule — credited in the balance below</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(gap)) + ')</td></tr>';
+      ? '<tr><td colspan="2" style="font-size:12px;color:var(--warn-tx);">Outstanding from ' + from + ' — carried into ' + into + '</td><td class="r" style="color:var(--warn-tx);font-size:12px;">+' + fmt(gap) + '</td></tr>'
+      : '<tr><td colspan="2" style="font-size:12px;color:var(--ok-tx);">Received ahead of the invoiced schedule — credited in ' + into + '</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(Math.abs(gap)) + ')</td></tr>';
   }
 
   // ⚠⚠ THERE IS NO VARIANCE ROW ON THIS DOCUMENT, AND ITS ABSENCE IS THE DECISION.
@@ -29451,9 +29568,9 @@ function invoiceHtml(job, stage) {
     '<table class="pay-tbl">' +
     '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(estHavellinTotal) + '</strong></td></tr>' +
     '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">Based on estimate</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
-    '<tr><td>25% midpoint — fees trued to actuals</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
+    '<tr><td>' + (_midBilled ? '25% midpoint — fees trued to actuals' : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
     '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
-    _paymentGapRow(paymentGap) +
+    _paymentGapRow(paymentGap, _priorInvoices, 'the balance below') +
     '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
     (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
@@ -29493,7 +29610,7 @@ function invoiceHtml(job, stage) {
     : '<div style="margin-top:1rem;"><table class="pay-tbl">' +
         '<tr><td colspan="2" style="color:var(--gray);">50% deposit — invoiced on acceptance</td><td class="r" style="color:var(--gray);">' + fmt(depositAmt) + '</td></tr>' +
         '<tr><td colspan="2" style="color:var(--ok-tx);">Received to date</td><td class="r" style="color:var(--ok-tx);">(' + fmt(receivedDep) + ')</td></tr>' +
-        _paymentGapRow(depositAmt - stagePaidTotal(job, 'deposit')) +
+        _paymentGapRow(depositAmt - stagePaidTotal(job, 'deposit'), 'the deposit invoice', 'the payment due below') +
         _amtDueBox('Midpoint Payment Due Now (25%)', stageAmtDue) +
       '</table>' +
       '<div class="ce-note" style="margin-top:.5rem;">Remaining 25% due upon completion.</div>' +
@@ -29535,9 +29652,9 @@ function invoiceHtml(job, stage) {
       '<tr style="background:var(--tan);"><td colspan="2"><strong>Fixed Project Fee</strong></td><td class="r"><strong>' + fmt(_fixedTotal) + '</strong></td></tr>' +
       (_fxPrepFinal ? '<tr><td colspan="2">Home prep site management fee — on the prep vendors\' actual invoices</td><td class="r">' + fmt(prepFee) + '</td></tr>' : '') +
       '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFeeEst > 0 ? 'Fixed price + prep fee on quotes' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
-      '<tr><td>25% midpoint — invoiced at project midpoint</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + prep fee on actuals' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
+      '<tr><td>' + (_midBilled ? '25% midpoint — invoiced at project midpoint' : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + prep fee on actuals' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
       '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
-      _paymentGapRow(paymentGap) +
+      _paymentGapRow(paymentGap, _priorInvoices, 'the balance below') +
       (jobCOs.length ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>' : '') +
       _amtDueBox('Balance Due Upon Completion', balanceDue) +
       '</table></div>';
@@ -29574,7 +29691,7 @@ function invoiceHtml(job, stage) {
       '<div class="alert a-err" style="line-height:1.6;">' +
       '<div style="font-weight:700;font-size:13px;margin-bottom:.35rem;">Final invoice unavailable — no hours logged</div>' +
       'This job bills labor at the hours actually worked, and none have been recorded. Issuing the final now ' +
-      'would bill $0 of labor against the ' + fmt(invoicedBefore) + ' already invoiced at deposit and midpoint — ' +
+      'would bill $0 of labor against the ' + fmt(invoicedBefore) + ' already invoiced ' + (_midBilled ? 'at deposit and midpoint' : 'at the deposit') + ' — ' +
       'a credit back to the client rather than a balance due.' +
       '</div>' +
       '<div class="ce-section-hdr" style="margin-top:1.25rem;">To generate this invoice</div>' +

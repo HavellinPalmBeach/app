@@ -404,7 +404,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ THE FINAL INVOICE — the fee plus exactly the change-order hours logged');
   {
-    const invFns = ['invoiceHtml', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+    const invFns = ['invoiceHtml', 'docSentAt', 'docKeyFor', 'jobLogEntries', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
       'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
       'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact',

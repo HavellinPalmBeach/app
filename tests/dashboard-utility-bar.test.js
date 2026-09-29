@@ -54,7 +54,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'roomStatusNormalize',
     'workingDaysInclusive', 'approvedEstimateFor',
     'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'sectionHdr', 'stagePaidTotal',
-    'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt'];
+    'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt',
+    // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
+    'jobReopenBlocker'];
   const VARS = ['_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
