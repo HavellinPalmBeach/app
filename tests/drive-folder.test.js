@@ -87,9 +87,13 @@ function run(resp, opts) {
   const timers = [];
   const ctx = sandbox({
     vars: ['_driveFolderInFlight', 'PHOTO_UPLOAD_TIMEOUT_MS'],
+    // _saveJobEdit / _jobTouch are lifted though nothing here calls them today: a change that sends
+    // the failure recorder through them (it must stay bare — see job-edit-stamps) then FAILS that
+    // suite's exemption checks with this file still running, instead of throwing here.
     fns: ['createDriveJobFolder', '_driveFolderFailed', 'createDriveFolderNow', 'driveFolderPending',
           '_backendErrorKind', 'resolveSubfolderId', '_subfolderId', 'fetchSubfolderIds',
-          '_normalizeSubfolders', 'uploadToDrive', '_doPhotoUpload', '_getPhotoRef', '_setPhotoRef'],
+          '_normalizeSubfolders', 'uploadToDrive', '_doPhotoUpload', '_getPhotoRef', '_setPhotoRef',
+          '_saveJobEdit', '_jobTouch'],
     stubs: {
       // _doPhotoUpload arms a watchdog now — "Uploading…" used to have no exit at all.
       // Captured rather than run, so a test can fire it deliberately.
@@ -220,7 +224,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const badges = [];
     const ctx = sandbox({
       fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
-            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar'],
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
       vars: ['_driveFolderInFlight', '_estStoreState'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
@@ -272,7 +276,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const badges = [];
     const ctx = sandbox({
       fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
-            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar'],
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
       vars: ['_driveFolderInFlight', '_estStoreState'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
@@ -328,7 +332,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     let n = 0;
     const ctx = sandbox({
       fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
-            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar'],
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
       vars: ['_driveFolderInFlight', '_estStoreState'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',

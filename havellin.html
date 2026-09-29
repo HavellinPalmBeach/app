@@ -2203,7 +2203,7 @@ body.no-smf .smf-col{display:none;}
 
       <div class="card" style="margin-top:1rem;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-s" onclick="resetEstimate()">Reset</button>
+          <button class="btn-s" onclick="resetEstimate()" title="Clear this screen to a blank estimate for this client. A saved estimate is not changed unless you press Save">Reset</button>
           <button class="btn-p" onclick="saveEstimateAndPreview()">Save &amp; Preview Client Estimate →</button>
         </div>
         <div id="e-fb"></div>
@@ -5256,6 +5256,7 @@ function changeEstimateService() {
   job.svcChangedBy   = (_by && _by.value) || job.tc || '';
   job.svc = next;
   job.svcLabel = SVC_LABELS[next] || next;
+  job.updatedAt = Date.now();   // stamp before the save — see _saveJobEdit
   saveJobs();
   syncJobToSheets(job);
 
@@ -8494,6 +8495,7 @@ function saveIntake() {
     created:new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
   };
   jobs.unshift(job);
+  job.updatedAt = Date.now();
   saveJobs();
   syncJobToSheets(job);
   populateAgrSelect && setTimeout(populateAgrSelect, 100);
@@ -8697,12 +8699,9 @@ function standingFlagLines(job) {
 
 function jobHasStandingFlags(job) { return standingFlagLines(job).length > 0; }
 
-// One-line list of what was ticked, for the client-list detail row — which answers
-// "which of my jobs have firearms in them" at a glance and nothing else.
-function houseFlagSummary(job) {
-  var on = activeHouseFlags(job);
-  return on.length ? on.map(function(f) { return f.label; }).join(' · ') : '';
-}
+// ⚠ houseFlagSummary IS DELETED (2026-09-29). It built a one-line list of the ticked flags for the
+// client list's detail row — a row that was never added to the page — and nothing else read it. The
+// flags reach the crew through standingFlagsBlock on the Job Plan, the room and the dashboard.
 
 // ─── The checklist control, shared by Client Intake ('i') and Edit Client ('ec') ──
 // Two forms asking different questions about the same house is the drift this catalogue
@@ -9486,6 +9485,7 @@ function saveEstimateAndPreview() {
   estimateApproved = false;
   currentEstimate.jobId = jobId;
   currentEstimate.job = job;
+  job.updatedAt = Date.now();
   saveJobs();
   saveEstimateState();   // single atomic write: estimate record + derived job summary + cloud
   syncJobToSheets(job);
@@ -9597,42 +9597,42 @@ function populateJobSelect(forceJobId) {
   else if (cur) sel.value = cur;
 }
 
+// ⚠⚠ THE BOTTOM Reset BUTTON GOES THROUGH THE ONE RESET (2026-09-29, the same day as C1). It was a
+// fifth hand-kept list, and on the client it was pressed for it did worse than forget things: it
+// unticked Premium Estate on a premium job and set the documentation scope to Full whatever intake
+// had answered. Measured on the real page, a premium Estate Settlement contracted at Contents list,
+// six rooms, $22,505: Reset, the same six rooms scored again, $17,700. Premium off took $8,900 and
+// Full put $4,095 back, so the new total still looked like a price. It also kept the discount, the
+// move styling, the private note, the collections, the vehicles, the prep lines, the planner date and
+// a half-typed collection, and asked nothing. It is resetEstimateJobState for the client the screen
+// is bound to now: a blank estimate for THIS client, seeded from their job exactly as a first open is.
+//
+// ⚠ IT IS NOT Start over. Start over discards the screen and opens the client again, so a SAVED
+// estimate comes back. Reset gives a blank estimate and leaves the saved one where it is: nothing is
+// written until Save. With nothing saved the two land in the same place.
+//
+// ⚠ IT ASKS FIRST, because it takes the private note and the lists with the rooms. And it refuses a
+// locked estimate HERE as well as in the disabled button: calcAll would put a blank working copy under
+// an estimate a manager is reviewing, and checkPin approves the working copy.
 function resetEstimate() {
-  var ri = 0;
-  ROOMS.forEach(function(sec) { sec.rooms.forEach(function(r) { var id='r'+ri; setRoomState(id, 'off'); ri++; }); });
-  _volPreset = 'normal'; _volHandSet = {}; paintVolPreset();
-  _estimateDocScope = 'full';
-  document.getElementById('e-prem').checked = false;
-  var _fxR = document.getElementById('e-fixed'); if (_fxR) _fxR.checked = false;
-  var _fxAR = document.getElementById('e-fixed-amount'); if (_fxAR) _fxAR.value = '';
-  var _rshR = document.getElementById('e-rush'); if (_rshR) _rshR.checked = false;
-  var _fxRowR = document.getElementById('fixed-amount-row'); if (_fxRowR) _fxRowR.style.display = 'none';
-  // 'adj-rush' used to be in this list and has no element — getElementById returned null
-  // and the assignment threw, so Reset died here and left everything after it un-reset.
-  // Guarded as well as corrected: a renamed toggle shouldn't be able to break Reset again.
-  ['adj-access','adj-heirs'].forEach(function(id){ var el=document.getElementById(id); if (el) el.checked=false; });
-  document.getElementById('e-pkg').value=0;
-  var coordEl = document.getElementById('e-coord-days'); if(coordEl) coordEl.value=0;
-  var vendorEl = document.getElementById('e-vendor-total'); if(vendorEl) vendorEl.value=0;
-  var stagerEl = document.getElementById('e-stager'); if(stagerEl) stagerEl.value='none';
-  var stagerWrap = document.getElementById('stager-cost-wrap'); if(stagerWrap) stagerWrap.style.display='none';
-  var prepFields = document.getElementById('prep-fields'); if(prepFields) prepFields.style.display='none';
-  var prepNote = document.getElementById('prep-note'); if(prepNote) prepNote.style.display='none';
-  // Reset PS slots to defaults
-  var _crewReset = document.getElementById('ps-crew-size');
-  if (_crewReset) _crewReset.value = '2';
-  _crewUserSet = false;
-  // Same reset for the concierge count and the fixed-fee override: a fresh estimate must
-  // not inherit a previous job's manual choices, which is the whole reason these flags
-  // exist. Missing one leaves the next estimate silently pinned to the last one.
-  var _tcReset = document.getElementById('e-tc-count');
-  if (_tcReset) _tcReset.value = '1';
-  _tc2UserSet = false;
-  _fixedAmountUserSet = false;
-  _fixedAmountBasis = 0;
-  _fixedPrepMovedOut = 0;
-  var _dcR = document.getElementById('e-declutter-hrs'); if (_dcR) _dcR.value = '0';
-  vendors=[]; renderVendors(); calcAll();
+  if (estimateApproved || estimateSubmitted) {
+    showFB('e-fb', 'warn', estimateApproved
+      ? 'This estimate is approved, so it is locked. To rebuild it, press \u270e Edit estimate on the client\u2019s timeline first; that takes it back to a draft.'
+      : 'This estimate is out for manager approval, so it is locked. Reset opens again once it is approved or denied.');
+    return;
+  }
+  var jid = parseInt((document.getElementById('e-job') || {}).value) || 0;
+  var job = jid ? jobs.find(function(j){ return j.id === jid; }) : null;
+  var rec = jid ? estimateStore[jid] : null;
+  var saved = !!(rec && rec.estimate && estimateHasContent(rec.estimate));
+  if (!confirm('Clear this screen and start a blank estimate' + (job ? ' for ' + (job.name || 'this client') : '') + '?\n\n'
+      + 'The rooms, collections, vehicles, vendors, the discount and the private walkthrough note all go. '
+      + (saved ? 'The saved estimate is not changed unless you press Save. Start over reopens it instead.'
+               : 'None of it has been saved.'))) return;
+  window._suppressEstimateAutoSave = true;
+  resetEstimateJobState(job || null);
+  window._suppressEstimateAutoSave = false;
+  showFB('e-fb', 'ok', 'Cleared to a blank estimate.' + (saved ? ' The saved estimate is unchanged until you press Save.' : ''));
 }
 
 // ─── CLIENT ESTIMATE PREVIEW ──────────────────────────────────────────────────
@@ -11263,7 +11263,7 @@ function submitForApproval(opts) {
   if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
   saveEstimateState();
   // Now it's genuinely awaiting manager approval — reflect that on the job.
-  if (subJob) { subJob.status = estimateEventStatus(subJob, 'pending'); subJob.approved = false; saveJobs(); syncJobToSheets(subJob); }
+  if (subJob) { subJob.status = estimateEventStatus(subJob, 'pending'); subJob.approved = false; subJob.updatedAt = Date.now(); saveJobs(); syncJobToSheets(subJob); }
   updateApprovalUI();
 
   notifyManagerForApproval(currentEstimate, null);
@@ -11400,6 +11400,7 @@ function markEstimateSent() {
   if (!job) return;
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   job.estimateSentDate = today;
+  job.updatedAt = Date.now();
   saveJobs();
   syncJobToSheets(job);
   updateApprovalUI();
@@ -11613,7 +11614,7 @@ function applyDiscountRevision() {
   if (job) revokeAgreementApproval(job, 'discount-revised');
   // ⚠ A WON job stays won — the revised price waits on the manager as "Won · Pending Re-approval"
   // (estimateEventStatus), not as a client who never said yes.
-  if (job) { job.status = estimateEventStatus(job, 'pending'); job.approved = false; job.havellinEst = newHavellinTotal; saveJobs(); syncJobToSheets(job); }
+  if (job) { job.status = estimateEventStatus(job, 'pending'); job.approved = false; job.havellinEst = newHavellinTotal; job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job); }
   saveEstimateState();   // single authoritative write (carries the revised totals + approval state)
   closeDiscountModal();
   renderClientEstimate();
@@ -11645,7 +11646,7 @@ function revokeEstimateApproval(jobId) {
     job.approved = false;
     delete job.estimateDriveAt; delete job.estimateDriveUrl;
     revokeAgreementApproval(job, 'estimate-edited');
-    saveJobs(); syncJobToSheets(job);
+    job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
   }
   return job;
 }
@@ -11711,7 +11712,7 @@ function editEstimateFromCE() {
   if (currentEstimate && currentEstimate.jobId) {
     var edJob = revokeEstimateApproval(currentEstimate.jobId);
     var _edNext = edJob ? estimateEventStatus(edJob, edJob.status === 'pending' ? 'new' : edJob.status) : '';
-    if (edJob && _edNext !== edJob.status) { edJob.status = _edNext; saveJobs(); syncJobToSheets(edJob); }
+    if (edJob && _edNext !== edJob.status) { edJob.status = _edNext; edJob.updatedAt = Date.now(); saveJobs(); syncJobToSheets(edJob); }
   }
   saveEstimateState();
   // Go back to estimate tab with this job loaded
@@ -11791,7 +11792,7 @@ function submitDeny() {
     delete currentEstimate.lockedAt; delete currentEstimate.lockedBy;
   }
   var djob = jobs.find(function(j){ return j.id === currentEstimate.jobId; });
-  if (djob) { djob.status = estimateEventStatus(djob, 'new'); djob.approved = false; saveJobs(); syncJobToSheets(djob); }
+  if (djob) { djob.status = estimateEventStatus(djob, 'new'); djob.approved = false; djob.updatedAt = Date.now(); saveJobs(); syncJobToSheets(djob); }
   saveEstimateState();
   closeDenyModal();
   renderClientEstimate();
@@ -11875,7 +11876,7 @@ function checkPin() {
       // ⚠ A re-approval on a WON job returns it to 'won', never to "Approved — Awaiting Client":
       // the client has already said yes (estimateEventStatus, 2026-09-29).
       if (job) { job.status = estimateEventStatus(job, 'approved');
-                 job.approved = true; saveJobs(); }
+                 job.approved = true; job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job); }
     }
     // An approval clears any prior denial marker so the "Denied" banner doesn't linger.
     if (currentEstimate) { delete currentEstimate.denyReason; delete currentEstimate.deniedBy; delete currentEstimate.deniedAt; }
@@ -12137,75 +12138,12 @@ function renderJobs() {
     // control that refuses the same blocker back at you is worse than none.
     if (!jobIsSettled(j)) actions += ' <button class="icon-btn del" title="Close out / mark lost" onclick="event.stopPropagation();openCloseoutModal('+j.id+')">✕</button>';
 
-    // Drive button now in dashboard
-
-    // Detail fields
-    var detailFields = [
-      ['Phone', j.phone||'—'], ['Email', j.email||'—'],
-      ['Property address', j.addr||'—'], ['Zip / Market', j.zip||'—'],
-      ['Sqft', j.sqft ? j.sqft + ' sqft' : '—'], ['Property type', j.ptype||'—'],
-      ['Referral source', (j.src||'—') + ((j.refPartnerName||j.referredByName) ? ' — ' + esc(j.refPartnerName||j.referredByName) : '')], ['Site visit by', j.siteVisitBy||'—'], ['Priority', j.priority||'Normal'],
-      ['Walkthrough date', j.walkthrough ? new Date(j.walkthrough+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
-      ['Target start date', j.start ? new Date(j.start+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
-      ['Hard target', j.completion ? new Date(j.completion+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—'],
-      ['RE potential', j.re||'—'], ['Premium estate', j.premium?'Yes':'No'],
-      ['Notes', j.notes||'—'],
-      ['House flags', esc(houseFlagSummary(j)) || '—'],
-    ];
-    var detailHtml = '<tr id="detail-'+j.id+'" style="display:none;"><td colspan="9" style="padding:0;">' +
-      '<div style="background:var(--cream);padding:12px 16px;border-top:1px solid var(--border);">' +
-      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px 16px;margin-bottom:8px;">';
-    detailFields.forEach(function(f){
-      detailHtml += '<div><div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;">' + f[0] + '</div>' +
-        '<div style="font-size:12px;color:var(--gray-dk);margin-top:1px;">' + f[1] + '</div></div>';
-    });
-    // Add change orders if any exist for this job
-    var jobCOs = (typeof changeOrders !== 'undefined') ? changeOrders.filter(function(co){ return co.jobId===j.id; }) : [];
-    if (jobCOs.length > 0) {
-      detailHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">' +
-        '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Change Orders (' + jobCOs.length + ')</div>';
-      jobCOs.forEach(function(co){
-        var coStatus = co.clientApproved
-          ? '<span style="font-size:10px;background:#e8f5e9;color:#2e6b10;border-radius:3px;padding:1px 5px;font-weight:600;">&#10003; Accepted · ' + co.clientName + '</span>'
-          : '<span style="font-size:10px;background:#fff3e0;color:#8a5000;border-radius:3px;padding:1px 5px;font-weight:600;">&#9679; Pending Client</span>';
-        var coActions = co.clientApproved
-          ? '<button class="icon-btn" onclick="printChangeOrder(' + co.id + ')">PDF</button>'
-          : '<button class="icon-btn" onclick="openCOAcceptModal(' + co.id + ')" style="background:var(--bronze);color:#fff;border-color:var(--bronze);">Get Acceptance</button>' +
-            '<button class="icon-btn" onclick="printChangeOrder(' + co.id + ')">PDF</button>';
-        detailHtml += '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;margin-bottom:6px;gap:8px;">' +
-          '<div style="flex:1;min-width:0;"><strong>CO-' + co.id.toString().slice(-6) + '</strong> · ' + co.description.substring(0,50) + (co.description.length>50?'...':'') +
-            '<div style="margin-top:2px;">' + coStatus + '</div></div>' +
-          '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">' +
-          '<span style="color:' + (coHours(co).total>=0?'var(--bronze)':'var(--ok-tx)') + ';font-weight:600;">' + coHoursLabel(co) + '</span>' +
-          coActions +
-          '</div></div>';
-      });
-      detailHtml += '</div>';
-    }
-    // Add probate fields if applicable
-    if (j.svc === 'probate' && (j.probateCase || j.executor || j.probateAttorney)) {
-      detailHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);">' +
-        '<div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Probate Information</div>' +
-        '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">';
-      var pFields = [
-        ['Case number', j.probateCase||'—'],
-        ['Court deadline', j.probateDeadline||'—'],
-        ['Attorney name', j.probateAttyName||'—'],
-        ['Attorney firm', j.probateAttyFirm||'—'],
-        ['Attorney phone', j.probateAttyPhone||'—'],
-        ['Attorney email', j.probateAttyEmail||'—'],
-        ['Executor name', j.executor||'—'],
-        ['Executor phone', j.executorPhone||'—'],
-        ['Executor email', j.executorEmail||'—'],
-        ['Property sale', j.probateSale||'—'],
-      ];
-      pFields.forEach(function(f){
-        detailHtml += '<div><div style="font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;">' + f[0] + '</div>' +
-          '<div style="font-size:12px;color:var(--gray-dk);margin-top:1px;">' + f[1] + '</div></div>';
-      });
-      detailHtml += '</div></div>';
-    }
-    detailHtml += '</div></div></td></tr>';
+    // ⚠⚠ NO DETAIL ROW (deleted 2026-09-29, audit H2). A hidden `<tr id="detail-…">` was built here for
+    // every client — phone, address, house flags, probate details and the job's change orders — and never
+    // added to `html` ("Detail expand suppressed — click row to open Client Dashboard"). Its change-order
+    // block was the ONLY place a change order could be printed or accepted, so it hid a dead end: a change
+    // order raised on the dashboard could never be signed for. Those controls live on the dashboard's
+    // Change Orders card now (coCardActions), and every other field here is on the Client Dashboard.
 
     html += '<tr style="cursor:pointer;" onclick="openClientDashboard(' + j.id + ')">';
     // Name, street and concierge are typed free text — escaped, or a "<" in one takes the row apart.
@@ -12219,7 +12157,6 @@ function renderJobs() {
     html += '<td>' + reCell + '</td>';
     html += '<td style="white-space:nowrap;" onclick="event.stopPropagation()">' + actions + '</td>';
     html += '</tr>';
-    // Detail expand suppressed — click row to open Client Dashboard
   });
   body.innerHTML = html;
   maybeStartJobsWatch();   // keep the list live while anything is Pending Approval
@@ -12866,6 +12803,72 @@ function coReasonLabel(v) {
   return r ? r.l : String(v || '');
 }
 
+// ⚠⚠ THE TWO CONTROLS A CHANGE ORDER NEEDS, ON THE ONE SCREEN THAT SHOWS IT (2026-09-29, audit H2).
+// Until today `printChangeOrder` and `openCOAcceptModal` were called from exactly one place:
+// `renderJobs`' detail row, which was built for every client and never added to the page ("Detail
+// expand suppressed"). So a change order could be raised from the Client Dashboard's + New and then
+// never printed and never accepted — its row read "Awaiting acceptance" with nothing to press. And an
+// unaccepted change order moves nothing: the client got no document to sign, the hours never
+// lengthened the plan or cleared the overrun flags, a fixed-price change was never added to the final,
+// and a vendors-only Home Prep job could never open its hours log. Browser steps 23–25 passed only
+// because they called both functions through page.evaluate — a test reaching past the screen proves
+// the function exists, never that a person can reach it.
+// PDF on every row: the client's copy, before they agree and after. Get Acceptance only while it is
+// unaccepted — `acceptChangeOrder` writes the name and the date unconditionally, so offering it again
+// would let a second name overwrite who agreed and when. DOM-free, like dashUtilityBar, so the rule is
+// tested on its own as well as in the rendered card. The id goes into an onclick, so it is a number or
+// nothing: a record whose id is not one gets no controls rather than a broken call.
+function coCardActions(co) {
+  var id = Number(co && co.id);
+  if (!isFinite(id) || !id) return [];
+  var a = [{ label: 'PDF', call: 'printChangeOrder(' + id + ')' }];
+  if (!co.clientApproved) a.push({ label: 'Get Acceptance', call: 'openCOAcceptModal(' + id + ')', primary: true });
+  return a;
+}
+
+// ⚠⚠ DO A CHANGE ORDER'S HOURS CARRY THE JOB'S EXPEDITED PREMIUM AND PREFERRED-CLIENT DISCOUNT? The
+// answer differs by billing basis, and it is Anthony's (2026-09-29, audit Q14): "an hourly change
+// order's hours carry the job's rush premium and discount like every other hour, and a fixed-price
+// change order is priced at the plain hourly rates. Say so in one line on the printed change order."
+// Both halves are what invoiceHtml already does, so the line states the bill rather than setting it:
+// on an hourly job the hours are logged, `finalRushAmt` is levied on the gross labour those hours are
+// in, and `discountOnLabor` comes off it — every logged hour alike, a change order's included; on a
+// fixed price the change order's price (`coCharge`) is added AFTER both, at the estimate's rate card,
+// and `_rushRate` is 0 there because the premium already sits inside the flat fee.
+// ⚠ IT NAMES ONLY WHAT THE JOB CARRIES, and on a job with neither it returns '' — the standing
+// client-copy rule: a line explaining something that is not there costs rather than earns, and "these
+// hours carry the job's premium and discount" on a job with neither is about nothing. On an hourly job
+// it states the percentages, off the estimate the client was quoted — the same figures its invoice
+// itemises. On a fixed price it names them without figures: the fixed-price estimate never itemises
+// the premium or the discount (the flat fee is presented as one number), and this page must not be
+// the first to. ⚠ A discount offered on a fixed fee after approval is baked into `fixedAmount` and
+// leaves `discountPct` at 0 (applyDiscountRevision); `prevApprovedTotal` is the one trace it leaves.
+// ⚠ HOME PREP DROPS "LIKE EVERY OTHER HOUR". A prep job signed with vendors only has no other hours —
+// the reason the prep page carries its own terms (see printChangeOrder) — so that clause would be the
+// same false sentence one line lower. The rule about the hours is unchanged: the invoice discounts
+// every logged prep hour alike, and a prep estimate is never expedited (calcAll forces it off).
+// The rush test mirrors the invoice's own (`est.rush`, the rate pinned on the estimate), so the line
+// can never name a premium the final does not charge or omit one it does.
+function coRateModsLine(est, fixed, prep) {
+  if (!est) return '';
+  var rush = est.rush ? Math.round((Number(est.rushPct) || RUSH_PCT) * 100) : 0;
+  var disc = Math.round(Number(est.discountPct) || 0);
+  if (fixed) {
+    var discF = disc > 0 || !!est.prevApprovedTotal;
+    if (!rush && !discF) return '';
+    return 'It is priced at the plain hourly rates shown: ' +
+      (rush && discF ? 'the expedited-delivery premium and the preferred-client discount in your fixed project fee do'
+        : rush ? 'the expedited-delivery premium in your fixed project fee does'
+        : 'the preferred-client discount in your fixed project fee does') + ' not apply to it.';
+  }
+  var parts = [];
+  if (rush) parts.push('the ' + rush + '% expedited-delivery premium');
+  if (disc > 0) parts.push('the ' + disc + '% preferred-client discount');
+  if (!parts.length) return '';
+  return (prep ? 'These hours carry ' : 'Like every other hour on this engagement, these hours carry ') +
+    parts.join(' and ') + ' on the final invoice.';
+}
+
 // \u26a0 ONE SENTENCE FOR "THE HOURS HAVE RUN MORE THAN 15% OVER", read by the Client Dashboard's
 // Hours Log card and the Job Plan's hours summary. They are the same fact on two screens, both
 // said "Client must be notified" on every job, and on a fixed price that is false twice over:
@@ -13136,7 +13139,15 @@ function saveChangeOrder() {
 
   document.getElementById('change-order-modal').style.display = 'none';
   renderJobs();
-  showFB('e-fb', 'ok', 'Change Order created (' + coHoursLabel(co) + ') — pending client acceptance. Open the job in Client Dashboard to get client sign-off.');
+  // ⚠⚠ ON THE SCREEN IT WAS RAISED FROM, AND THE CARD REDRAWN (2026-09-29, audit H2). This printed to
+  // `e-fb`, a strip inside the hidden Build Estimate panel, and redrew nothing — so pressing Create on
+  // the Client Dashboard closed the modal onto a Change Orders card still reading "None issued", with
+  // no word anywhere that it had worked. And its sentence sent you to "open the job in Client
+  // Dashboard", the screen you were on. _docNotice sets the notice and then redraws (a notice written
+  // and THEN redrawn is wiped on the same tick — see dashNotice), so the new row, with its PDF and Get
+  // Acceptance, is on screen under the message that names them.
+  _docNotice('ok', 'Change order CO-' + String(co.id).slice(-6) + ' created (' + coHoursLabel(co) + ') — waiting on the client. ' +
+    'On its row under Change Orders, PDF prints it for them to sign and Get Acceptance records their agreement.', jobId);
 }
 
 // ─── AGREEMENT SENT → SIGNED → DEPOSIT ────────────────────────────────────────
@@ -13196,6 +13207,7 @@ function markAgreementSent() {
   job.agrSent = true;
   job.agrSentBy = _actor(job);
   job.agrSentAt = _stamp();
+  job.updatedAt = Date.now();
   saveJobs(); syncJobToSheets(job);
   updateAgrUI(); renderJobs(); _dashRedraw(job.id);
   showFB(_dashFbTarget('agr-fb'),'ok','Agreement recorded as sent. Record the signature when it comes back.');
@@ -13636,6 +13648,7 @@ function _attachPaymentEvidence(job, payment, file) {
         uploadToDrive(target, name, dataUrl, function(ok, fileUrl) {
           if (ok) {
             payment.evidence = fileUrl || name;
+            _jobTouch(job, 'payments', payment.uid);   // the record changed — see _saveJobEdit
             saveJobs(); syncJobToSheets(job);
             showSyncBadge('Payment evidence filed to Drive ✓');
             if (typeof updateAgrUI === 'function') updateAgrUI();
@@ -13731,16 +13744,21 @@ function acceptChangeOrder() {
     var baseTotal = b.est ? (b.est.havellinTotal || 0) : (b.job.havellinEst || 0);
     b.job.havellinEst = baseTotal + shift;
     b.job.totalEst = b.job.havellinEst;
+    b.job.updatedAt = Date.now();
     saveJobs();
     syncJobToSheets(b.job);
   }
   closeCOAcceptModal();
   renderJobs();
-  showFB('e-fb', 'ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + ').' + (b.fixed
+  // ⚠ On the dashboard, and redrawn (2026-09-29, audit H2) — the Save notice's reason exactly: this went
+  // to the hidden `e-fb`, and nothing repainted the card, the Hours Log bars or the schedule this
+  // acceptance has just moved, so the row went on reading "Awaiting acceptance" beside a Get Acceptance
+  // that had already been pressed.
+  _docNotice('ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + ').' + (b.fixed
     ? ' ' + _coMoney(coPrice(co, b.tcRate, b.psRate)) + ' on the fixed project fee, which is now ' + fmt(b.flat + shift) + ' — added on the final invoice.'
     : b.prep
     ? ' These concierge hours bill on the final invoice at $' + (Number(b.tcRate) || 0).toLocaleString() + ' an hour as they are worked, on top of the site management fee — log them on the Job Plan.'
-    : ' These hours bill on the final invoice as they are worked.'));
+    : ' These hours bill on the final invoice as they are worked.'), co.jobId);
 }
 
 function printChangeOrder(coId) {
@@ -13824,6 +13842,12 @@ function printChangeOrder(coId) {
       'Coordinating the vendors remains covered by that fee. ' +
       'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.';
   }
+
+  // ⚠ Q14 (2026-09-29): whether these hours carry the job's expedited premium and preferred-client
+  // discount — yes like every other hour on an hourly job, no on a fixed price. One line, on all three
+  // arms, and only where the job carries one of them; see coRateModsLine for why it is silent otherwise.
+  var _mods = coRateModsLine(_b.est, !!fx, !!_b.prep);
+  if (_mods) terms += '<div style="margin-top:6px;">' + _mods + '</div>';
 
   var content = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:1rem;">' +
     '<div style="text-align:center;margin-bottom:1.5rem;">' +
@@ -13929,7 +13953,7 @@ function toggleProbatePkg(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   job.probatePkgSent = !job.probatePkgSent;
-  saveJobs();
+  _saveJobEdit(job);
   renderClientDashboard(jobId);
 }
 
@@ -18271,12 +18295,20 @@ function renderClientDashboard(jobId) {
   h += sectionHdr('Change Orders');
   cos.forEach(function(co){
     h += '<div class="doc-r">';
+    // Who accepted it rides on the row: it is the one record of the client's agreement on screen, and
+    // it was the only thing the dead client-list block showed that this card did not.
     h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">Change Order CO-'+String(co.id).slice(-6)+'</div>'
        + '<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+esc(String(co.description||'').slice(0,50))
-       + ' · '+coHoursLabel(co)+' · '+esc(co.createdAt)+'</div></div>';
-    h += '<div style="display:flex;gap:6px;align-items:center;">';
+       + ' · '+coHoursLabel(co)+' · '+esc(co.createdAt)
+       + (co.clientApproved && co.clientName ? ' · accepted by ' + esc(co.clientName) : '')+'</div></div>';
+    h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">';
     h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#3C348922;color:#3C3489;font-weight:500;">'
        + (co.clientApproved ? 'Accepted' : 'Awaiting acceptance') + '</span>';
+    // ⚠⚠ THE ONLY PLACE EITHER CONTROL IS OFFERED (2026-09-29, audit H2) — see coCardActions for the
+    // dead end this closes. Labels are app constants, so they go in raw.
+    coCardActions(co).forEach(function(a){
+      h += '<button class="' + (a.primary ? 'btn-bronze' : 'btn-s') + '" style="font-size:11px;padding:3px 10px;" onclick="' + a.call + '">' + a.label + '</button>';
+    });
     h += '</div></div>';
   });
   h += '<div class="doc-r">';
@@ -18477,7 +18509,7 @@ function activateOrCycle(jobId) {
   var j = jobs.find(function(x){ return x.id===jobId; });
   if (!j) return;
   if (!applyJobTransition(j)) return;
-  saveJobs(); syncJobToSheets(j);
+  j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
   // ⚠⚠ AN ACTIVATION LANDS ON THE JOB PLAN (2026-09-23). Anthony: *"the activate job button on the
   // client dashboard should take you to the job plan."* Activating is starting the job, and the Job
   // Plan is where a started job is worked — so the press that starts it takes you there, on this
@@ -18789,7 +18821,7 @@ function confirmMarkWon() {
   // would otherwise keep showing on the record and in reporting.
   j.status = 'won';
   delete j.lostReason; delete j.lostReasonLabel; delete j.lostNote; delete j.lostAt; delete j.lostEst;
-  saveJobs(); syncJobToSheets(j);
+  j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
   document.getElementById('won-modal').style.display = 'none';
   renderJobs();
   if (typeof renderClientDashboard === 'function' && _dashboardJobId === j.id) renderClientDashboard(j.id);
@@ -18848,7 +18880,7 @@ function confirmMarkLost() {
   j.lostAt = new Date().toISOString();
   // Snapshot the estimate at time of loss so win/loss reporting has the dollar figure.
   j.lostEst = j.havellinEst || 0;
-  saveJobs(); syncJobToSheets(j);
+  j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
   closeCloseoutModal();
   renderJobs();
 }
@@ -19229,6 +19261,31 @@ function _jobTouch(job, kind, key) {
   job.updatedAt = Date.now();
 }
 
+// ⚠⚠ AN EDIT A PERSON MAKES TO A JOB MOVES THE JOB'S CLOCK, OR THE OTHER DEVICE UNDOES IT
+// (2026-09-29, workflow audit C2). saveJobs() fills `updatedAt` only when it is MISSING —
+// deliberately, so it never bumps a job this device did not touch — and the sheet merges a job
+// as one record, keeping the INCOMING copy on a tie (`incT >= curT` in _mergeJobRecord). So a
+// writer that called saveJobs() bare left the job at the stamp it had that morning, and the
+// next save from ANY device holding the morning copy won the tie and wrote it back. Measured on
+// the real writers and the real merge: a confirmed $23,400 painter, a confirmed team and an $850
+// dumpster came off the job, and the final invoice then billed the prep fee on the estimate
+// figure and dropped the dumpster.
+// So this is the one save for a person's edit: stamp FIRST (the device's own store and the
+// wire then agree), then save and sync — the house pairing. `kind`/`key` also stamp the
+// sub-record where one applies; the sheet unions stamps of every kind today, and a per-key
+// merge for these maps (fix pack P11) will read them.
+// ⚠ NEVER CALL IT FROM A WRITE THE APP MAKES ON ITS OWN — a render-time repair, a cached id, a
+// receipt from a backend. A stale device that merely LOOKED at a job would then claim to hold
+// the newest copy of it and win every scalar on it. Those saves stay bare and are named, with
+// the reason, in tests/job-edit-stamps.test.js.
+function _saveJobEdit(job, kind, key) {
+  if (!job) return;
+  if (kind) _jobTouch(job, kind, key);
+  job.updatedAt = Date.now();
+  saveJobs();
+  syncJobToSheets(job);
+}
+
 function saveJobs() {
   // Give every job a modified-time so the Sheet can MERGE saves by id (newest wins)
   // instead of doing a destructive full replace. Only fill when missing, so we never
@@ -19496,7 +19553,7 @@ function saveEstimateState() {
     if (_job && currentEstimate) {
       _job.havellinEst = currentEstimate.havellinTotal;
       _job.totalEst = currentEstimate.grandTotal;
-      saveJobs();
+      _saveJobEdit(_job);   // a person saved this estimate — see _saveJobEdit
     }
     // The in-progress scratch is now superseded by the saved record.
     clearEstimateScratch(jobId);
@@ -21259,6 +21316,7 @@ function setValBasis(jobId, v) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   job.valBasis = v;
+  job.updatedAt = Date.now();
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
   _invRefreshSummary(jobId);
@@ -21363,7 +21421,7 @@ function estateValueDate(job) {
 function setEstateAVD(jobId, on) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  job.avd = !!on; saveJobs();
+  job.avd = !!on; job.updatedAt = Date.now(); saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
@@ -24843,7 +24901,7 @@ function removeAppraiser(jobId, apprId) {
   _jobTouch(job, 'appraisers', apprId);
   // Unlink any items pointing at the removed appraiser.
   (_photoRefs[jobId] || []).forEach(function(r){ if (String(r.apprId) === String(apprId)) { r.apprId = ''; r.apprDoc = ''; } });
-  saveJobs(); savePhotoRefs(jobId);
+  saveJobs(); syncJobToSheets(job); savePhotoRefs(jobId);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
 }
@@ -28643,7 +28701,7 @@ function setCrewTC(jobId, name) {
   if (_crewRefuseDup(crew, 'tc', name)) return;
   // `picked`: somebody chose this concierge on the Job Plan, so the intake default stops
   // following Edit Client (see getJobCrew).
-  crew.tc.name = name; crew.tc.picked = true; saveJobs();
+  crew.tc.name = name; crew.tc.picked = true; _crewSave(jobId);
   _crewRefreshSelects();
 }
 function setCrewTC2(jobId, name) {
@@ -28651,7 +28709,7 @@ function setCrewTC2(jobId, name) {
   if (!crew.tc2) crew.tc2 = { name:'', locked:false };
   if (crew.tc2.locked) return;
   if (_crewRefuseDup(crew, 'tc2', name)) return;
-  crew.tc2.name = name; saveJobs();
+  crew.tc2.name = name; _crewSave(jobId);
   _crewRefreshSelects();
 }
 function setCrewPS(jobId, slot, name) {
@@ -28661,7 +28719,7 @@ function setCrewPS(jobId, slot, name) {
   if (_crewRefuseDup(crew, 'ps' + slot, name)) return;
   crew.ps[slot].name = name;
   crew.ps[slot].costRate = name ? getPSCostRate(name) : crew.ps[slot].costRate;
-  saveJobs();
+  _crewSave(jobId);
   _crewRefreshSelects();
 }
 // ─── JOB TEAM SIGN-OFF ────────────────────────────────────────────────────────
@@ -28744,8 +28802,8 @@ function confirmJobTeam(jobId) {
   crew.confirmed   = true;
   crew.confirmedBy = crew.tc.name;
   crew.confirmedAt = new Date().toISOString();
-  lockAssignedCrew(jobId);   // named slots fix; empty slots stay open for a mid-job add
-  saveJobs();
+  _lockCrewSlots(crew);      // named slots fix; empty slots stay open for a mid-job add
+  _crewSave(jobId);          // ONE save for the sign-off and the locks together
   buildLogTeamRows();
   _repaintPlanGates(jobId);   // the Job team chip at the top turns green now, not on the next redraw
   showFB('log-fb','ok','Job team confirmed. Hours can now be logged for this job.');
@@ -28771,7 +28829,7 @@ function reviseJobTeam(jobId) {
   if (crew.tc && !crewMemberHasHours(jobId, crew.tc.name)) crew.tc.locked = false;
   if (crew.tc2 && !crewMemberHasHours(jobId, crew.tc2.name)) crew.tc2.locked = false;
   (crew.ps || []).forEach(function(p){ if (p && !crewMemberHasHours(jobId, p.name)) p.locked = false; });
-  saveJobs();
+  _crewSave(jobId);
   buildLogTeamRows();
   _repaintPlanGates(jobId);
   showFB('log-fb','warn','Team reopened. Re-confirm it to resume logging hours.');
@@ -28779,12 +28837,32 @@ function reviseJobTeam(jobId) {
 
 // Lock every currently-assigned (named) role; empty slots stay open. Called on
 // the first hours save and on each subsequent save (so a later-filled slot locks).
+// Returns how many slots it locked.
+// ⚠ ONLY A LOCK THAT HAPPENED IS AN EDIT. This runs on EVERY hours save and after the first one
+// there is normally nothing left to lock — stamping then would let a device that merely logged a
+// day's hours (the log is its own store) claim to hold the newest copy of the whole job, and win
+// every other field on it with whatever it loaded that morning. So it stamps, saves and syncs
+// when a slot actually locked, and does nothing at all when none did.
 function lockAssignedCrew(jobId) {
-  var crew = getJobCrew(jobId); if (!crew) return;
-  if (crew.tc.name && !crew.tc.locked) crew.tc.locked = true;
-  if (crew.tc2 && crew.tc2.name && !crew.tc2.locked) crew.tc2.locked = true;
-  crew.ps.forEach(function(p){ if (p.name && !p.locked) p.locked = true; });
-  saveJobs();
+  var crew = getJobCrew(jobId); if (!crew) return 0;
+  var n = _lockCrewSlots(crew);
+  if (n) _crewSave(jobId);
+  return n;
+}
+// The locking itself, with no save. confirmJobTeam locks and then saves the sign-off it has just
+// written in the same object, so it calls this rather than lockAssignedCrew — or one press of
+// Confirm would write the job twice.
+function _lockCrewSlots(crew) {
+  var n = 0;
+  if (crew.tc.name && !crew.tc.locked) { crew.tc.locked = true; n++; }
+  if (crew.tc2 && crew.tc2.name && !crew.tc2.locked) { crew.tc2.locked = true; n++; }
+  crew.ps.forEach(function(p){ if (p.name && !p.locked) { p.locked = true; n++; } });
+  return n;
+}
+// The crew's one save. No key: the team is one object — named slots, their locks and the
+// sign-off — and there is no per-slot merge for a stamp to feed yet (that is fix pack P11).
+function _crewSave(jobId) {
+  _saveJobEdit(jobs.find(function(j){ return j.id === jobId; }));
 }
 
 // Names that may legitimately appear in more than one slot at once, because they stand
@@ -32114,7 +32192,8 @@ function refreshVendorSourcing(jobId) {
 // The ONE place a sourcing slot is addressed for writing. Every setter below goes through
 // it, so none of them has to know whether the estimate line carries an id — and none of
 // them can hold its own opinion of what a slot is called, which is how the readers and the
-// writers would come to key the same record two ways. Returns {job, rec} or null.
+// writers would come to key the same record two ways. Returns {job, rec, bucket, key} or null —
+// the last two are what _saveJobEdit stamps, so the write is stamped under the key it landed on.
 function _srcSlot(jobId, bucket, listKey, i) {
   var job = jobs.find(function(j){ return j.id===jobId; });
   if (!job) return null;
@@ -32131,7 +32210,7 @@ function _srcSlot(jobId, bucket, listKey, i) {
   var key = _srcLineKey(line, i);
   if (!job[bucket]) job[bucket] = {};
   if (!job[bucket][key]) job[bucket][key] = {};
-  return { job: job, rec: job[bucket][key] };
+  return { job: job, rec: job[bucket][key], bucket: bucket, key: key };
 }
 function _svcJob(jobId, i)  { return _srcSlot(jobId, 'vendorSourcing', 'vendors',   i); }
 function _prepJob(jobId, i) { return _srcSlot(jobId, 'prepSourcing',   'prepItems', i); }
@@ -32139,7 +32218,7 @@ function _srcSetVendor(slot, val) {
   var rec = slot.rec, v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
   rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
-  saveJobs();
+  _saveJobEdit(slot.job, slot.bucket, slot.key);
 }
 function setJobVendor(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
@@ -32147,11 +32226,11 @@ function setJobVendor(jobId, i, val) {
 }
 function setJobVendorQuote(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
-  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setJobVendorStatus(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
-  slot.rec.status = val; saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.status = val; _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setPrepVendor(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
@@ -32159,11 +32238,11 @@ function setPrepVendor(jobId, i, val) {
 }
 function setPrepVendorQuote(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
-  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.quote = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setPrepVendorStatus(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
-  slot.rec.status = val; saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.status = val; _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function _collJob(jobId, collId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -32177,11 +32256,11 @@ function setCollVendor(jobId, collId, val) {
   var rec = job.collSourcing[collId], v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
   rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
-  saveJobs(); refreshVendorSourcing(jobId);
+  _saveJobEdit(job, 'collSourcing', collId); refreshVendorSourcing(jobId);
 }
 function setCollFee(jobId, collId, val) {
   var job = _collJob(jobId, collId); if (!job) return;
-  job.collSourcing[collId].fee = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  job.collSourcing[collId].fee = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(job, 'collSourcing', collId); refreshVendorSourcing(jobId);
 }
 function _logiJob(jobId, key) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -32199,15 +32278,15 @@ function setLogisticsVendor(jobId, key, val) {
   var rec = job.logisticsSourcing[key], v = lookupVendorById(val);
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
   rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
-  saveJobs(); refreshVendorSourcing(jobId);
+  _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 function setLogisticsQuote(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
-  job.logisticsSourcing[key].quote = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  job.logisticsSourcing[key].quote = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 function setLogisticsStatus(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
-  job.logisticsSourcing[key].status = val; saveJobs(); refreshVendorSourcing(jobId);
+  job.logisticsSourcing[key].status = val; _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 // Put an end-of-job category on this job (the add menu under the sourcing list). Refuses anything
 // that is not a catalogue key — the value arrives from a <select>, and a stray one must not mint a
@@ -32216,7 +32295,7 @@ function addLogisticsLine(jobId, key) {
   if (!key || !LOGISTICS_CATEGORIES.some(function(c){ return c.key === key; })) return;
   var job = _logiJob(jobId, key); if (!job) return;
   job.logisticsSourcing[key].added = true;
-  saveJobs(); refreshVendorSourcing(jobId);
+  _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 // Take one off. ⚠ A line with a vendor or a quote on it is asked about first: its quote is billed
 // as a third-party actual (getVendorActuals), so removing it takes it off the invoice too.
@@ -32231,7 +32310,8 @@ function removeLogisticsLine(jobId, key) {
       + (rec.vendorName ? rec.vendorName + ' comes off it' : 'It comes off')
       + (hasQuote ? ', and its $' + Number(rec.quote).toLocaleString() + ' quote is no longer billed' : '') + '.')) return;
   delete job.logisticsSourcing[key];
-  saveJobs(); refreshVendorSourcing(jobId);
+  // Stamped although the line is GONE — the same rule removeAppraiser follows (see _jobTouch).
+  _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 
 // ── ACTUAL COORDINATION HOURS (optional, observational) ──────────────────────
@@ -32251,15 +32331,15 @@ function removeLogisticsLine(jobId, key) {
 // exactly as it does today. That is deliberate — it is the disposable half of this change.
 function setJobVendorCoordHrs(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
-  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setPrepVendorCoordHrs(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
-  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  slot.rec.coordHrs = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
 }
 function setLogisticsCoordHrs(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
-  job.logisticsSourcing[key].coordHrs = (val===''?'':(parseFloat(val)||0)); saveJobs(); refreshVendorSourcing(jobId);
+  job.logisticsSourcing[key].coordHrs = (val===''?'':(parseFloat(val)||0)); _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
 }
 
 // The input plus its estimate, for one sourcing row. `est` is the touch-derived figure the
@@ -32438,14 +32518,14 @@ function setVendorRating(jobId, vendorId, n) {
   rec.name = (lookupVendorById(vendorId)||{}).vendor_name || rec.name || '';
   rec.ratedAt = _todayStr();
   delete rec.writtenAt; delete rec.writeErr;
-  saveJobs(); syncJobToSheets(job);
+  _saveJobEdit(job, 'vendorRatings', vendorId);
   _writeVendorScore(job, vendorId);
   _repaintCloseout(jobId);
 }
 function setVendorRatingNote(jobId, vendorId, note) {
   var job = _ratingJob(jobId, vendorId); if (!job) return;
   job.vendorRatings[vendorId].note = note;
-  saveJobs(); syncJobToSheets(job);
+  _saveJobEdit(job, 'vendorRatings', vendorId);
   if (job.vendorRatings[vendorId].rating > 0) _writeVendorScore(job, vendorId);
 }
 function _writeVendorScore(job, vendorId) {
@@ -32627,7 +32707,7 @@ function draftReviewRequest(jobId) {
   if (!to) { _coNotice(jobId, 'warn', 'No client email on this job — add one under Edit Client first.'); return; }
   function record(url, via) {
     job.reviewAsk = { draftedAt: new Date().toISOString(), draftUrl: url || '', via: via, by: _actor(job) || '' };
-    saveJobs(); syncJobToSheets(job);
+    job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
     _repaintCloseout(jobId);
   }
   function viaMailto(why) {
@@ -32650,7 +32730,7 @@ function markReviewRequestSent(jobId) {
   if (!job || !job.reviewAsk || !job.reviewAsk.draftedAt) return;
   job.reviewAsk.sentAt = new Date().toISOString();
   job.reviewAsk.sentBy = _actor(job) || '';
-  saveJobs(); syncJobToSheets(job);
+  job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
   _repaintCloseout(jobId);
 }
 
@@ -35750,7 +35830,7 @@ function createDriveJobFolder(job) {
       // syncJobToSheets bumps it, which is what makes this device's copy win the
       // newest-wins merge — without it another device's untouched copy can overwrite
       // the folder URL that was just created. Same pairing as every other job edit.
-      saveJobs(); syncJobToSheets(j);
+      j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
       showSyncBadge('Drive folders created \u2713');
       openClientDashboard(job.id);
       return;
@@ -35780,7 +35860,7 @@ function createDriveJobFolder(job) {
         if (j && data && data.folderUrl) {
           j.driveFolder = data.folderUrl;
           delete j.driveFolderError;
-          saveJobs(); syncJobToSheets(j);
+          j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
           showSyncBadge('Drive folder created \u2713');
         } else {
           _driveFolderFailed(job, 'the server refused', (data && data.error) || '');
@@ -37597,6 +37677,7 @@ function ensureAgreementApproved(jobId) {
   job.agrApprovedBy = (rec && rec.approvedBy) || job.wonBy || job.tc || '';
   job.agrApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   delete job.agrRevokedBy; delete job.agrRevokedAt;
+  job.updatedAt = Date.now();
   saveJobs(); syncJobToSheets(job);
   agrApproved = true; agrApprovedBy = job.agrApprovedBy; agrApprovedAt = job.agrApprovedAt;
   // ⚠ ONE document is filed, and it is the SIGNING PACKET. The bare agreement was filed
@@ -38748,6 +38829,7 @@ function saveClientEdit(jobId) {
     job.executorAuth     = resolveExecutorAuth(document.getElementById('ec-exec-auth').value);
   }
 
+  job.updatedAt = Date.now();   // stamped before the save too, so this device's own store agrees with the wire
   saveJobs();
   // ⚠ saveJobs() fills updatedAt only when it is MISSING, deliberately, so it never bumps a job
   // this device did not touch — which means an Edit Client save on a job that already has one

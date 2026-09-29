@@ -16,7 +16,7 @@
 //
 // The rule is the one refreshPlanAndLogFromCloud already follows: the sheet is only
 // authoritative once our own writes have reached it. These checks drive the REAL save paths
-// (saveIntake, saveClientEdit, toggleProbatePkg), the REAL outbox and retry queue, and the
+// (saveIntake, saveClientEdit, _driveFolderFailed), the REAL outbox and retry queue, and the
 // REAL refresh, against a backend whose requests stay OPEN until the test answers them — so
 // "a write is still in flight" is a state the test can actually hold, rather than one that
 // resolved on the same tick and proved nothing.
@@ -25,6 +25,7 @@
 const { sandbox, domStub, source } = require('./harness');
 
 const URL = 'https://script.google.com/macros/s/AAA/exec';
+const QUIET = { warn() {}, log() {}, error() {} };
 const clone = (x) => JSON.parse(JSON.stringify(x));
 
 // A synchronous promise the test can hold OPEN — see sync-retry.test.js for why neither a
@@ -334,43 +335,52 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.cache()[0].sqft, '5200', 'and the cache keeps it');
   }
 
+  // The Drive failure notice, and the save helper it must NOT go through. `_saveJobEdit` and
+  // `_jobTouch` are lifted although nothing here calls them: a revert that sends the notice through
+  // the helper — making it stamp, so it no longer ties — then FAILS these groups on the clock
+  // check instead of throwing out of the file with every check after it unrun.
+  const FAIL_FNS = ['_driveFolderFailed', '_saveJobEdit', '_jobTouch'];
+
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ A WRITE QUEUED WHILE THE READ IS IN FLIGHT — the answer is discarded');
   {
-    // toggleProbatePkg saves through saveJobs() alone, which does NOT bump updatedAt — so the
-    // stale answer ties the local record, and a tie goes to the sheet. Only the recheck stops it.
-    const job = { id: 1, name: 'Tripp Butler', svc: 'probate', probatePkgSent: false, updatedAt: 100 };
-    const r = rig({ fns: ['toggleProbatePkg'], local: [job], sheet: [job],
-                    stubs: { renderClientDashboard() {} } });
+    // The write has to be one that does NOT move the job's clock, or the stale answer is simply
+    // older than the local record and the merge keeps it whatever the recheck does. Since 2026-09-29
+    // (C2) every edit a PERSON makes stamps the job — this used the probate-package toggle, which
+    // now does — so it is the Drive failure notice: a save the app makes on its own, deliberately
+    // bare (tests/job-edit-stamps.test.js names it). It ties the local record, a tie goes to the
+    // sheet, and only the recheck stops the stale answer wiping it.
+    const job = { id: 1, name: 'Tripp Butler', svc: 'probate', updatedAt: 100 };
+    const r = rig({ fns: FAIL_FNS, local: [job], sheet: [job], stubs: { console: QUIET } });
     r.refresh();
     eq(r.reads.length, 1, 'nothing was queued, so the sheet is asked');
-    r.c.toggleProbatePkg(1);
-    eq(r.c.jobs[0].probatePkgSent, true, 'a change is made while the read is out');
+    r.c._driveFolderFailed(r.c.jobs[0], 'the server refused', 'Exception: nope');
+    ok(!!r.c.jobs[0].driveFolderError, 'a change is made while the read is out');
+    eq(r.c.jobs[0].updatedAt, 100, '…one that leaves the job\'s clock alone, so the stale answer TIES it');
     r.answer();
-    eq(r.c.jobs[0].probatePkgSent, true, '⚠ the answer predates it and is not applied');
-    eq(r.cache()[0].probatePkgSent, true, 'nor written over the cache');
+    ok(!!r.c.jobs[0].driveFolderError, '⚠ the answer predates it and is not applied');
+    ok(!!(r.cache()[0] || {}).driveFolderError, 'nor written over the cache');
     eq(r.refreshedCount(), 1, 'and the caller still carries on');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ A WRITE QUEUED *AND LANDED* WHILE THE READ IS IN FLIGHT — nothing is outstanding, and the answer still predates it');
   {
-    const job = { id: 1, name: 'Tripp Butler', svc: 'probate', probatePkgSent: false, updatedAt: 100 };
-    const r = rig({ fns: ['toggleProbatePkg'], local: [job], sheet: [job],
-                    stubs: { renderClientDashboard() {} } });
+    const job = { id: 1, name: 'Tripp Butler', svc: 'probate', updatedAt: 100 };
+    const r = rig({ fns: FAIL_FNS, local: [job], sheet: [job], stubs: { console: QUIET } });
     r.refresh();
     eq(r.reads.length, 1, 'the read goes out');
-    r.c.toggleProbatePkg(1);
+    r.c._driveFolderFailed(r.c.jobs[0], 'the server refused', 'Exception: nope');
     r.tick(250);
     r.land();
-    eq(r.sheet.jobs[0].probatePkgSent, true, 'the write has reached the sheet');
+    ok(!!(r.sheet.jobs[0] || {}).driveFolderError, 'the write has reached the sheet');
     ok(!r.c._syncWritesOutstanding(), '⚠ and nothing is outstanding — the outstanding check alone cannot see this');
     r.answer();                                          // served before the write committed
-    eq(r.c.jobs[0].probatePkgSent, true, '⚠⚠ the write count says a write went out since the read was asked, so its answer is not taken');
-    eq(r.cache()[0].probatePkgSent, true, 'and the cache keeps the change');
+    ok(!!r.c.jobs[0].driveFolderError, '⚠⚠ the write count says a write went out since the read was asked, so its answer is not taken');
+    ok(!!(r.cache()[0] || {}).driveFolderError, 'and the cache keeps the change');
     r.refresh();
     r.answer();
-    eq(r.c.jobs[0].probatePkgSent, true, 'the next refresh reads the sheet with the write in it');
+    ok(!!r.c.jobs[0].driveFolderError, 'the next refresh reads the sheet with the write in it');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -392,21 +402,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Discarded: a write went out while the read was in flight. The list is not taken — but the
     // ledger's deletions are not a snapshot that can be behind our writes, so they still apply.
     const b = rig({
-      fns: ['toggleProbatePkg'],
-      local: [{ id: 1, name: 'Tripp Butler', notes: 'mine', probatePkgSent: false, updatedAt: 100 },
+      fns: FAIL_FNS,
+      local: [{ id: 1, name: 'Tripp Butler', notes: 'mine', updatedAt: 100 },
               { id: 4, name: 'Deleted Elsewhere', updatedAt: 100 }],
-      sheet: [{ id: 1, name: 'Tripp Butler', notes: 'theirs', probatePkgSent: false, updatedAt: 100 }], deleted: ['4'],
+      sheet: [{ id: 1, name: 'Tripp Butler', notes: 'theirs', updatedAt: 100 }], deleted: ['4'],
       estimateStore: { 4: { estimate: { svc: 'downsizing' } } },
-      stubs: { renderClientDashboard() {} },
+      stubs: { console: QUIET },
     });
     b.refresh();
-    b.c.toggleProbatePkg(1);
+    b.c._driveFolderFailed(b.c.jobs[0], 'the server refused', '');   // a write that ties — see above
     b.answer();
     eq(b.ids(), [1], '⚠ the deleted client leaves even though the list was not taken');
     ok(!b.c.estimateStore[4], 'with its records');
     ok(b.badges.some((m) => m.indexOf('deleted elsewhere') >= 0), 'and says so');
     eq(b.c.jobs[0].notes, 'mine', 'while the local record is left exactly as it was');
-    eq(b.c.jobs[0].probatePkgSent, true, 'including the change still on its way');
+    ok(!!b.c.jobs[0].driveFolderError, 'including the change still on its way');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

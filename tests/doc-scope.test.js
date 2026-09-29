@@ -132,12 +132,29 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([rs._estimateAlphaPin, rs._estimateDocScope], [null, 'none'], 'a fresh build seeds it from the job instead — a stale scope on a fresh build misprices the next job');
     ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab'].forEach((name) =>
       has(fn(name), 'resetEstimateJobState(', `${name} runs that one reset rather than a copy of its own`));
-    // Asserted against resetEstimate's BODY rather than against two adjacent source lines.
-    // The literal version failed the day the fullness preset gained a second thing to clear
-    // beside it (_volHandSet, 2026-09-10) — a true statement about the requirement should not
-    // break because a line moved. What has to hold is that Reset clears the scope pin at all.
-    has(fn('resetEstimate'), "_estimateDocScope = 'full';", 'resetEstimate clears the scope pin');
-    has(fn('resetEstimate'), "_volPreset = 'normal';", 'and the fullness preset with it');
+    // ⚠ RESTATED 2026-09-29. This pinned `_estimateDocScope = 'full'` inside resetEstimate's own body —
+    // and that line WAS the defect: the bottom Reset button set the scope to Full whatever intake had
+    // answered, so an estate contracted at Contents list re-priced at full documentation the moment
+    // somebody pressed it ($4,095 on the job measured in the browser). What has to hold is that Reset
+    // clears the pins and puts the scope back to the job's own answer — driven through the real
+    // resetEstimate and the real one reset, for the client the screen is bound to.
+    const rr = sandbox({
+      fns: ['resetEstimate', 'resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf', 'docTierDef',
+            'docTierScope', 'svcHasDocStep', 'estimateHasContent'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
+             'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', '_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_volPreset', '_volHandSet'],
+      stubs: { document: domStub({ 'e-job': { value: '5' } }), jobs: [{ id: 5, svc: 'cleanout', docScope: 'none' }],
+               estimateStore: {}, window: {}, estimateApproved: false, estimateSubmitted: false,
+               confirm: () => true, showFB() {},
+               paintVolPreset() {}, renderVendors() {}, renderCollections() {}, renderVehicles() {}, clearAllRooms() {} },
+    });
+    rr._estimateAlphaPin = 0.35; rr._estimateDocScope = 'capture'; rr._volPreset = 'packed'; rr._volHandSet = { r0: true };
+    // Read defensively: a Reset that throws here must fail these checks, not stop the file.
+    let rrThrew = null; try { rr.resetEstimate(); } catch (e) { rrThrew = e; }
+    ok(!rrThrew, 'Reset does not throw' + (rrThrew ? ' — threw ' + rrThrew.message : ''));
+    eq([rr._estimateAlphaPin, rr._estimateDocScope], [null, 'none'],
+       'Reset clears the α pin and puts the scope back to what intake recorded for THIS client (None) — never to Full');
+    eq([rr._volPreset, JSON.stringify(rr._volHandSet)], ['normal', '{}'], 'and the fullness preset with it');
   }
 
   group('the client estimate follows the scope it priced, once, in the stage');

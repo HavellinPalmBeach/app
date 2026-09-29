@@ -14,13 +14,15 @@
 
 const { sandbox, source, fn, domStub } = require('./harness');
 
+// ⚠ The house-flag helpers left this list on 2026-09-29 with the dead detail row that was their only
+// reader here (audit H2): renderJobs no longer reads a house flag at all.
 const LIST_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'jobPayments',
-  'houseFlagSummary', 'activeHouseFlags', 'houseFlagsOf', 'svcLabelOf',
+  'svcLabelOf',
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
   'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'winLossListHtml', '_wlClientCell',
   'isJobWon', 'secCaret', 'fmtDate2', 'setJobSort', 'setFilter', 'jobStatusView'];
-const LIST_VARS = ['currentFilter', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'SVC_LABELS', 'SVC_ORDER', '_jobsWatch',
+const LIST_VARS = ['currentFilter', 'SVC_LABELS', 'SVC_ORDER', '_jobsWatch',
   '_jobsState', '_jobSort', '_wlOpen', 'JOB_SORTS', 'JOB_LIST_COLS', 'JOB_STATUS_ORDER',
   'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS'];
 
