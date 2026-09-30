@@ -3210,7 +3210,8 @@ body.no-smf .smf-col{display:none;}
       <div><label>Additional specialist hours</label>
         <input type="number" step="0.5" id="co-ps-hrs" placeholder="e.g. 16 (negative to reduce)" oninput="updateCOHours()"></div>
     </div>
-    <!-- Home Prep only (Anthony, 2026-09-30): a change order may add a preparation vendor found mid-job. -->
+    <!-- Home Prep, and a labour job whose estimate bundles prep (Anthony, 2026-09-30; P15, P16): a change order may add
+         a preparation vendor found mid-job. Shown by openChangeOrder where coPrepVendorsOn says so. -->
     <div id="co-vendor-wrap" style="display:none;grid-template-columns:3fr 2fr;gap:12px;">
       <div><label>Add a prep vendor</label>
         <select id="co-vendor-type" onchange="updateCOHours()"><!-- filled by openChangeOrder --></select></div>
@@ -4347,7 +4348,9 @@ function weArrangeAppraisals(docScope, job, est) {
   return appraisalDuty(docScope, job, est) !== '';
 }
 // The appraiser lines an estimate carries: vendor lines whose category is an appraiser's (every one of
-// APPRAISER_DIR_CATEGORIES says so, and a line typed by hand as one does too).
+// APPRAISER_DIR_CATEGORIES says so, and a line typed by hand as one does too). ⚠ ONE MATCH: premiumCoversLine (P16)
+// asks this function about a single line, so the line a contract names as an appraiser and the line Premium Estate
+// covers can never be two different lists.
 function estimateAppraiserLines(est) {
   return ((est && est.vendors) || []).filter(function(v){ return !!(v && /apprais/i.test(String(v.type || ''))); });
 }
@@ -6551,6 +6554,8 @@ function scheduleCalcAll() { clearTimeout(_calcAllT); _calcAllT = setTimeout(cal
 // Which card set is currently on screen. null until the first render, so the first calcAll
 // after load always builds the cards for the service actually selected.
 var _vgrpPrepMode = null;
+// Whether the cards were last drawn for a Premium estate (P16): an appraiser line's row says Premium covers its hours.
+var _vgrpPremMode = null;
 function applyEstimateServiceMode(isPrep) {
   // est-vehicles-card joined this list on 2026-08-03. A standalone prep job has no estate
   // assets to schedule — the client still owns the house and everything in it — and it was
@@ -6939,8 +6944,13 @@ function calcAll() {
   // Third-party vendor coordination — the hours that make "no fee, coordination bills
   // hourly" true (see VENDOR_TC_HRS). Off-site only, so it joins coordTC rather than the
   // hands-on pool, exactly like prep coordination. Zero on standalone prep: that engagement
-  // bills no hours at all, and its fee already covers the coordination.
-  var vendorTCHrs = isPrep ? 0 : getVendorTCHrs();
+  // bills no hours at all, and its fee already covers the coordination. On a Premium estate an appraiser line books
+  // none either: the 25 Premium hours cover it (premiumCoversLine, P16), so `prem` goes in.
+  var vendorTCHrs = isPrep ? 0 : getVendorTCHrs(prem);
+  // The vendor cards say, on the appraiser's own row, why it books no hours on a Premium estate, so they are redrawn
+  // when Premium flips. On the transition only, as the prep switch below does: calcAll runs on every keystroke, and
+  // rebuilding the cards each time would destroy the cost field being typed in. The toggle is not a card field.
+  if (_vgrpPremMode !== !!prem) { _vgrpPremMode = !!prem; renderVendorGroupCards(); }
   // Hands-on decluttering on a standalone prep job — the estimator's own observation, typed in
   // the house. Zero on every other service (the accessor refuses outright), and deliberately NOT
   // folded into coordTC beside prepTCHrs / vendorTCHrs: those are off-site vendor coordination
@@ -7635,10 +7645,14 @@ function calcAll() {
       // finishes sooner, so the concierge is on site fewer hours. That's correct, but
       // it must never happen silently — a crew left over from a previous, larger
       // estimate would quietly discount this one.
+      // ⚠ ON A FIXED PRICE THE FEE DOES NOT MOVE WITH THE CREW (Q5; P16 fixed the words): the suggested fee is priced on
+      // the two-specialist plan whatever crew runs the job (_fp2 below), so "the estimate is lower" was false there.
       effClass = 'a-warn';
       effMsg = crewSize + ' PS assigned but only ' + _recommendedPS + ' recommended for this scope — '
         + dailyHrsPerPS + ' hrs/day each over ' + effectiveDays + ' days. The extra specialist shortens the job, '
-        + 'so the concierge is on site less and the estimate is lower than it would be at ' + _recommendedPS + ' PS. '
+        + (isFixed
+            ? 'but the suggested fixed fee stays on the two-specialist plan whatever crew runs it, so it shortens the calendar without lowering the fee. '
+            : 'so the concierge is on site less and the estimate is lower than it would be at ' + _recommendedPS + ' PS. ')
         + 'Drop back to ' + _recommendedPS + ' unless simultaneous handling is genuinely required.';
     } else if (crewSize < _recommendedPS) {
       // A smaller crew than recommended is allowed and is costed as chosen — it just
@@ -7648,7 +7662,9 @@ function calcAll() {
       effClass = 'a-warn';
       effMsg = crewSize + ' PS assigned, ' + _recommendedPS + ' recommended — the job runs '
         + '<strong>' + daysNeeded + ' working days</strong> instead of ' + _natDays
-        + '. Costed at ' + crewSize + ', so the fee is higher and the calendar is longer. '
+        + (isFixed
+            ? '. The suggested fixed fee is priced on the two-specialist plan whatever the crew, so the fee does not move; only the calendar is longer. '
+            : '. Costed at ' + crewSize + ', so the fee is higher and the calendar is longer. ')
         + 'Go back to ' + _recommendedPS + ' unless the smaller crew is a real constraint.';
     } else if (dailyHrsPerPS < 3 && crewSize > 2) {
       effClass = 'a-warn';
@@ -7915,6 +7931,9 @@ function renderVendorGroupCards() {
   // document and in no sourcing list. Fewer cards is also the honest answer to "a Home Prep
   // job should have nothing else to tick".
   var cards = VENDOR_GROUP_CARDS.filter(function(c){ return !isPrepSvc || c.target === 'prep'; });
+  // The Premium toggle, read where calcAll reads it: an appraiser line books no hours on a Premium estate (P16).
+  var _premEl = document.getElementById('e-prem');
+  var _prem = !!(_premEl && _premEl.checked);
   var anyCats = cards.some(function(c){ return vendorGroupCategories(c).length; });
   // ⚠ ASKED OF THE DIRECTORY, NOT OF THE CARDS (2026-09-30). It asked whether any card had categories, and the
   // End-of-Job Logistics card always lists its own, so on every labour job the warning could never show: an
@@ -7946,8 +7965,11 @@ function renderVendorGroupCards() {
       // Prep lines contribute NO concierge hours — their coordination is inside the 30% fee
       // (see prepFeeRate), so a "+8.0 hrs concierge" chip on the prep card would advertise
       // time the estimate does not bill. The card's cost total is what matters there.
-      cardHrs  += isPrep ? 0 : vendorLineHrs(v);
-      return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">' +
+      cardHrs  += isPrep ? 0 : vendorLineHrs(v, _prem);
+      // ⚠ AN APPRAISER ON A PREMIUM ESTATE BOOKS NO HOURS, AND ITS OWN ROW SAYS WHY (P16; premiumCoversLine), so the
+      // card's hours figure falling by two when Premium is ticked is explained where the line is, not left to be found.
+      var _covered = !isPrep && premiumCoversLine(v, _prem);
+      return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:' + (_covered ? '1px' : '4px') + ';">' +
         '<span style="flex:1;min-width:0;font-size:11.5px;">' + esc(v.type) + '</span>' +
         // Money field, not a spinner. A vendor quote is never nudged one dollar at a
         // time, and the arrows ate width the number needed.
@@ -7956,6 +7978,9 @@ function renderVendorGroupCards() {
           'oninput="formatMoneyInput(this);' + (isPrep ? 'updatePrepCost' : 'updateVendorCost') + '(' + idx + ',this.value)">' +
         '<button class="icon-btn del" title="Remove" onclick="' + (isPrep ? 'removePrepItem' : 'removeVendor') + '(' + idx + ')">\u2715</button>' +
       '</div>' +
+      (_covered
+        ? '<div class="vgrp-covered" style="font-size:10px;color:var(--gray);margin:0 0 5px;">No concierge hours &mdash; appraiser coordination is covered by Premium Estate</div>'
+        : '') +
       // Scope note, prep lines only \u2014 what to tell this trade when you ring for a quote.
       // It came off the deleted Home Prep table, and it is the one thing that table had
       // that the card did not; losing it would have made this consolidation a downgrade.
@@ -8187,11 +8212,24 @@ function prepLineTCHrs(type)   { return coordHrsFor(type, 'prep');   }
 // landed repriced it — by about $150 on the audit's job. A line records its hours when it is added
 // (addFromVendorGroup) and an older line when it is next opened with the directory in hand
 // (pinVendorLineHours); only a line with no pin is derived.
-function vendorLineHrs(v) {
+// ⚠⚠ ON A PREMIUM ESTATE AN APPRAISER LINE BOOKS NO COORDINATION HOURS (Anthony, 2026-09-30, P16: "drop the line's
+// hours on premium jobs"). Premium Estate adds a flat 25 concierge hours (labourPools' premiumSpecialtyTC) that already
+// cover specialty and appraiser coordination, and since Q20 an appraiser line books its own 4 touches (2.0 hours) on
+// top of them — the same scheduling priced twice. So the line's hours are dropped while Premium is on, and only then.
+// ⚠ APPLIED AT READ TIME, NEVER WRITTEN: the line keeps its recorded `tcHrs`, so switching Premium off books them
+// again and switching it back drops them, and nothing a device saved has to be repaired. `prem` is the estimate's
+// Premium flag (the `e-prem` toggle on Build Estimate, `est.prem` on a saved estimate), handed in by every caller:
+// a test holds every call of vendorLineHrs to passing it. The appraiser match is estimateAppraiserLines, the contract's,
+// asked about the one line (as appraisalTierNote asks it about a list).
+function premiumCoversLine(v, prem) {
+  return !!prem && estimateAppraiserLines({ vendors: [v] }).length > 0;
+}
+function vendorLineHrs(v, prem) {
+  if (premiumCoversLine(v, prem)) return 0;
   return (v && typeof v.tcHrs === 'number') ? v.tcHrs : vendorLineTCHrs(v && v.type);
 }
-function getVendorTCHrs() {
-  return Math.round(vendors.reduce(function(a, v){ return a + vendorLineHrs(v); }, 0) * 10) / 10;
+function getVendorTCHrs(prem) {
+  return Math.round(vendors.reduce(function(a, v){ return a + vendorLineHrs(v, prem); }, 0) * 10) / 10;
 }
 // Whether the Vendor Directory has loaded any category yet. Asked of the directory itself, not of the cards:
 // the End-of-Job Logistics card always lists its own curated categories, so a card test would answer yes
@@ -8203,12 +8241,19 @@ function vendorDirectoryReady() {
 // each line is derived as it is added. Without it, the lines share out the total the record was SAVED with
 // (`vendorTCHrs`), in proportion to their derived hours, so the estimate reopens at the figure it was quoted
 // at; a record with no total leaves them unpinned.
-function pinVendorLineHours(lines, savedTotal) {
+// ⚠ THE SAVED TOTAL WAS SUMMED THROUGH vendorLineHrs, SO THE SHARE-OUT READS IT THE SAME WAY (P16). On a Premium estate
+// an appraiser line counts nothing towards `vendorTCHrs` (premiumCoversLine), so it takes no share of it: a loose one
+// is pinned at its own derived hours (which Premium then drops at read time, and which come back if Premium goes), and
+// a pinned one is counted at what it books, not at its recorded figure. `prem` is the saved estimate's flag.
+function pinVendorLineHours(lines, savedTotal, prem) {
   var loose = (lines || []).filter(function(v){ return v && typeof v.tcHrs !== 'number'; });
   if (!loose.length) return;
   if (vendorDirectoryReady()) { loose.forEach(function(v){ v.tcHrs = vendorLineTCHrs(v.type); }); return; }
   if (!(Number(savedTotal) >= 0) || savedTotal === '' || savedTotal == null) return;
-  var pinned = (lines || []).reduce(function(a, v){ return a + ((v && typeof v.tcHrs === 'number') ? v.tcHrs : 0); }, 0);
+  loose.forEach(function(v){ if (premiumCoversLine(v, prem)) v.tcHrs = vendorLineTCHrs(v.type); });
+  loose = loose.filter(function(v){ return !premiumCoversLine(v, prem); });
+  if (!loose.length) return;
+  var pinned = (lines || []).reduce(function(a, v){ return a + ((v && typeof v.tcHrs === 'number') ? vendorLineHrs(v, prem) : 0); }, 0);
   var share = Math.max(0, Math.round((Number(savedTotal) - pinned) * 10) / 10);
   var weights = loose.map(function(v){ return vendorLineTCHrs(v.type) || 0; });
   var wSum = weights.reduce(function(a, b){ return a + b; }, 0);
@@ -13321,7 +13366,7 @@ function restoreEstimateToUI(est) {
   // Restore vendors. A line saved before its hours were pinned is pinned now (pinVendorLineHours), from the
   // directory if it has landed and otherwise from the total the record was saved with.
   vendors = est.vendors ? JSON.parse(JSON.stringify(est.vendors)) : [];
-  pinVendorLineHours(vendors, est.vendorTCHrs);
+  pinVendorLineHours(vendors, est.vendorTCHrs, est.prem);
   renderVendors();
 
   // Restore home prep. est.prepEnabled is not read back — the lines decide. One migration
@@ -13461,6 +13506,9 @@ function coBaselineShift(hrs, tcRate, psRate) {
 // and once the client ACCEPTS it the line joins the job's prep lines (jobPrepLines) — booked and quoted on the
 // Job Plan like any other, and billed like any other: the vendor invoices the client directly at cost, and the
 // site management fee applies to what it actually charges. An unaccepted change order adds nothing.
+// ⚠ AND ON A LABOUR JOB WHOSE ESTIMATE BUNDLES PREP (Anthony, 2026-09-30, P16: "yes"): where a change order may add one
+// is coPrepVendorsOn. Everything below is basis-free: the line joins jobPrepLines, the final's fee bills it, and the
+// ±15% baseline moves by its fee (coBaselineMove), on whichever job carries it.
 function coVendorAdds(co) {
   return ((co && co.vendorAdds) || []).filter(function(v){ return v && v.type; });
 }
@@ -13562,6 +13610,34 @@ function coRushPctFor(est) {
 }
 function coPriceTotal(cos, tcRate, psRate) {
   return (cos || []).reduce(function(s, co){ return s + coPrice(co, tcRate, psRate); }, 0);
+}
+
+// ⚠⚠ WHAT ACCEPTED CHANGE ORDERS MOVE THE ±15% BASELINE BY: WHAT THE FINAL BILLS FOR THEM (2026-09-30, P16). ONE rule,
+// read by the final's variance check (invoiceHtml) and by the job's revised estimate (acceptChangeOrder's havellinEst).
+//   fixed price — each change order's signed price (coPrice), exactly what the final adds for it.
+//   hourly      — its hours at the job's rates, plus the expedited premium the final levies on every hour, less the
+//                 preferred-client discount it takes off every hour (discountOnLabor: the labour grossed up by that
+//                 premium). Q14: "an hourly change order's hours carry the job's rush premium and discount like every
+//                 other hour". It moved by the plain-rate value, so on a rush job the baseline moved 20% less than the
+//                 bill, and on a job with a discount it moved more than the bill.
+//   a vendor    — the fee on its estimated cost wherever the final bills that fee on what the vendor actually charges
+//                 (every hourly job, and a fixed price whose prep fee sits on top of the flat fee), with the premium on
+//                 it where the final charges one there (an hourly quote saved before Q9: rushExPrepFee unset).
+// Priced change order by change order and summed, as the final sums the signed prices (see coPrice).
+function coBaselineMove(cos, est, tcRate, psRate) {
+  var fixed = !!(est && est.fixedPrice);
+  var r = (!fixed && est && est.rush) ? (Number(est.rushPct) || RUSH_PCT) : 0;
+  var pct = (!fixed && est) ? (Number(est.discountPct) || 0) : 0;
+  var hrs = (cos || []).reduce(function(s, co){
+    if (fixed) return s + coPrice(co, tcRate, psRate);
+    var g = Math.round(coBaselineShift(coHours(co), tcRate, psRate));
+    return s + g + Math.round(g * r) - discountOnLabor(g, r, pct);
+  }, 0);
+  var vCost = (cos || []).reduce(function(s, co){
+    return s + coVendorAdds(co).reduce(function(a, v){ return a + (Number(v.cost) || 0); }, 0); }, 0);
+  var fee = (vCost && (!fixed || estPrepFeeOnTop(est))) ? Math.round(vCost * prepFeeRate()) : 0;
+  var feeRush = (r && !(est && est.rushExPrepFee)) ? Math.round(fee * r) : 0;
+  return hrs + fee + feeRush;
 }
 
 // The change orders accepted BEFORE this one — the ONE definition of "earlier", read by the
@@ -13781,8 +13857,28 @@ function _coJobBasis(jobId) {
     rushPct: coRushPctFor(est),
     // ⚠ HOME PREP, where a change order is concierge hours at a STATED rate (2026-09-25) — see
     // coPrepReadoutHtml. Read off the estimate first and the job second, like every prep test.
-    prep: ((est && est.svc) || (job && job.svc)) === 'prep'
+    prep: ((est && est.svc) || (job && job.svc)) === 'prep',
+    // ⚠ WHETHER A CHANGE ORDER HERE MAY ADD A PREPARATION VENDOR (coPrepVendorsOn): Home Prep, and since P16 a labour
+    // job whose estimate bundles prep. Every surface that offers, records, prints or accepts one reads this.
+    prepVendors: coPrepVendorsOn(est, job)
   };
+}
+
+// ⚠⚠ WHERE A CHANGE ORDER MAY ADD A PREPARATION VENDOR — ONE RULE (2026-09-30: standalone Home Prep, P15; a labour job
+// whose estimate bundles prep, P16 — Anthony: "yes"). Wherever the job's prep vendors carry the 30% fee on what they
+// actually charge: a Home Prep engagement, and a labour estimate carrying a prep vendor with a cost, hourly, or on a
+// fixed price whose prep fee sits on top of the flat fee (estPrepFeeOnTop). Not an older fixed fee that carries the
+// prep fee INSIDE it (saved before 2026-09-23): nothing on its final bills a fee on actual spend, so a vendor added
+// there would carry a fee the invoice never charges. Read by _coJobBasis, which the modal, the save, the readout, the
+// printed change order and the acceptance all read, so the offer and the record ask the same question.
+// ⚠ "A PREP VENDOR WITH A COST" IS THE AGREEMENT'S OWN TEST (_agrHasPrepVendors), not `est.prepEnabled`: a prep line
+// typed with no cost switches prep on, but the agreement then prints the plain §3.5 ("Contractor adds no fee or markup
+// to third-party vendor invoices") and no fee row, so a vendor added by change order would carry a 30% fee the signed
+// contract disclaims. The fee clause that names "or added by Change Order" is printed exactly where this answers yes.
+function coPrepVendorsOn(est, job) {
+  if (((est && est.svc) || (job && job.svc)) === 'prep') return true;
+  if (!_agrHasPrepVendors(est)) return false;
+  return !est.fixedPrice || estPrepFeeOnTop(est);
 }
 
 function openChangeOrder(jobId) {
@@ -13800,14 +13896,15 @@ function openChangeOrder(jobId) {
   var _psBox = document.getElementById('co-ps-hrs');
   _psBox.disabled = !!b.prep;
   _psBox.placeholder = b.prep ? 'Not used on Home Prep' : 'e.g. 16 (negative to reduce)';
-  // ⚠ THE ADDED-VENDOR BLOCK, HOME PREP ONLY (2026-09-30), and set in BOTH directions on every open for the
-  // same reason as the specialist box. Its categories are the Build Estimate prep card's (the directory's
-  // Property Preparation group), so a vendor added here is the same kind of line the estimate carries.
+  // ⚠ THE ADDED-VENDOR BLOCK (2026-09-30), and set in BOTH directions on every open for the same reason as the
+  // specialist box. Its categories are the Build Estimate prep card's (the directory's Property Preparation group),
+  // so a vendor added here is the same kind of line the estimate carries. On Home Prep, and since P16 on a labour job
+  // whose estimate bundles prep (coPrepVendorsOn): hidden on every other job.
   var _vWrap = document.getElementById('co-vendor-wrap');
-  if (_vWrap) _vWrap.style.display = b.prep ? 'grid' : 'none';
+  if (_vWrap) _vWrap.style.display = b.prepVendors ? 'grid' : 'none';
   var _vSel = document.getElementById('co-vendor-type');
   if (_vSel) {
-    var _cats = b.prep ? vendorGroupCategories('Property Preparation') : [];
+    var _cats = b.prepVendors ? vendorGroupCategories('Property Preparation') : [];
     _vSel.innerHTML = '<option value="">' + (_cats.length ? 'No vendor added' : 'Vendor Directory not loaded') + '</option>' +
       _cats.map(function(c){ return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
     _vSel.value = '';
@@ -13819,7 +13916,7 @@ function openChangeOrder(jobId) {
     return '<option value="' + r.v + '">' + r.l + '</option>';
   }).join('');
   document.getElementById('co-reason').value = 'scope_add';
-  document.getElementById('co-basis-note').innerHTML = coBasisNoteHtml(b.fixed, b.prep ? b : null, b.rushPct);
+  document.getElementById('co-basis-note').innerHTML = coBasisNoteHtml(b.fixed, b.prep ? b : null, b.rushPct, b.prepVendors);
   document.getElementById('co-fb').innerHTML = '';
   updateCOHours();
   document.getElementById('change-order-modal').style.display = 'flex';
@@ -13832,15 +13929,20 @@ function openChangeOrder(jobId) {
 // at a rate the change order itself states — `prep` is the job's basis (`_coJobBasis`), for the rate.
 // `rushPct` is the premium a new change order on this job carries (_coJobBasis), named on a fixed-price
 // rush job so the person raising it knows the price they are about to quote includes it.
-function coBasisNoteHtml(fixed, prep, rushPct) {
+// ⚠ `prepVendors` (P16): the job may add a preparation vendor (coPrepVendorsOn). On Home Prep the note already says so;
+// on a labour job whose estimate bundles prep it gains the same sentence, naming the fee it carries.
+function coBasisNoteHtml(fixed, prep, rushPct, prepVendors) {
   if (prep) return 'On Home Prep a change order adds <strong>concierge hours for hands-on work</strong> &mdash; decluttering, clearing a room the vendors need empty. ' +
     'They are billed as they are worked, at $' + Number(prep.tcRate).toLocaleString() + ' an hour, on the final invoice on top of the ' + Math.round(prepFeeRate() * 100) + '% site management fee, and that rate is printed on the change order the client signs. ' +
     '<strong>Coordinating the vendors is covered by the fee and is never billed as hours</strong>, and the engagement has no specialists, so the hours are concierge hours only. ' +
     'A change order can also <strong>add a preparation vendor</strong> found mid-job: it bills the client directly at cost, and the fee applies to what it actually charges.';
-  return fixed
+  var _vendorTxt = prepVendors
+    ? ' A change order can also <strong>add a preparation vendor</strong> found mid-job, with or without hours: it bills the client directly at cost, and the ' + Math.round(prepFeeRate() * 100) + '% site management fee applies to what it actually charges' + (fixed ? ', on top of the fixed project fee' : '') + '. It books no concierge hours.'
+    : '';
+  return (fixed
     ? 'Estimate the extra hours the added scope will take. <strong>On a fixed price the change order is the charge:</strong> those hours are priced at the job&rsquo;s rates' +
       (rushPct > 0 ? ' plus the ' + Math.round(rushPct * 100) + '% expedited-delivery premium, because this job is expedited' : '') + ', the price is printed on the change order the client signs, and it is added to the fixed project fee on the final invoice &mdash; whatever the work actually takes. <strong>The trigger is a change in scope, never the hours.</strong> Work beyond the agreed scope needs one however small it is; hours running long on the agreed scope never do &mdash; the fixed fee covers them.'
-    : 'Estimate the extra hours the added scope will take. <strong>A change order carries no price and bills nothing on its own</strong> &mdash; the hours are logged as they are worked and reach the client on the final invoice with every other hour. What this does is authorise the scope and move the figure the &plusmn;' + estTolerancePctTxt() + ' check measures against.';
+    : 'Estimate the extra hours the added scope will take. <strong>A change order carries no price and bills nothing on its own</strong> &mdash; the hours are logged as they are worked and reach the client on the final invoice with every other hour. What this does is authorise the scope and move the figure the &plusmn;' + estTolerancePctTxt() + ' check measures against.') + _vendorTxt;
 }
 
 // What the change-order readout says when there is no hours figure to measure against. ⚠ THERE ARE
@@ -13934,9 +14036,12 @@ function updateCOHours() {
   revEl.style.color = addHrs > 0 ? 'var(--bronze)' : (addHrs < 0 ? 'var(--ok-tx)' : '');
 
   var note = document.getElementById('co-hrs-note');
-  // A prep change order may add a vendor and no hours; its readout says what the vendor brings.
-  var _vAdd = b.prep ? coDraftVendorAdd() : null;
+  // A prep change order may add a vendor and no hours; its readout says what the vendor brings. So may one on a labour
+  // job whose estimate bundles prep (P16, coPrepVendorsOn): there the vendor gets its own line under the hours readout.
+  var _vAdd = b.prepVendors ? coDraftVendorAdd() : null;
   if (!addHrs && !_vAdd) { note.innerHTML = ''; return; }
+  var _vNote = (_vAdd && !b.prep) ? '<div class="alert a-info" style="margin-top:6px;">' + coPrepVendorReadout(_vAdd) + '</div>' : '';
+  if (!addHrs && _vNote) { note.innerHTML = _vNote; return; }
   // ⚠ ON A FIXED PRICE THE 15% IS NOT THE TRIGGER AND THE READOUT MUST NOT SAY IT IS. It told a
   // concierge adding a small room to a flat-fee job that the change was "inside the 15% the
   // client already agreed to, so this records the scope rather than changing what they owe" —
@@ -13950,7 +14055,7 @@ function updateCOHours() {
       _coMoney(fx.price) + ' on the fixed project fee</strong>, which ' + (fx.price < 0 ? 'comes down' : 'goes') +
       ' from ' + fmt(fx.flat + fx.prior) + ' to ' + fmt(fx.revised) + '.' +
       (fx.prior ? ' (' + fmt(fx.flat) + ' agreed, ' + (fx.prior > 0 ? 'plus ' : 'less ') + fmt(Math.abs(fx.prior)) + ' of change orders already accepted.)' : '') +
-      ' This is the price printed on the change order and added to the final invoice, whatever the work actually takes.</div>';
+      ' This is the price printed on the change order and added to the final invoice, whatever the work actually takes.</div>' + _vNote;
     return;
   }
   if (b.prep) {
@@ -13959,7 +14064,7 @@ function updateCOHours() {
     return;
   }
   if (!baseHrs) {
-    note.innerHTML = '<div class="alert a-info">' + coNoHoursBaseTxt(b, {tc:tc, ps:ps}) + '</div>';
+    note.innerHTML = '<div class="alert a-info">' + coNoHoursBaseTxt(b, {tc:tc, ps:ps}) + '</div>' + _vNote;
     return;
   }
   var pct = addHrs / baseHrs;
@@ -13971,7 +14076,7 @@ function updateCOHours() {
     (Math.abs(pct) >= EST_TOLERANCE_PCT
       ? ' <strong>Past the ' + estTolerancePctTxt() + ' threshold</strong> — this is exactly the change the client has to agree to in writing before the hours are worked.'
       : ' Inside the ' + estTolerancePctTxt() + ' the client already agreed to, so this records the scope rather than changing what they owe.') +
-    '</div>';
+    '</div>' + _vNote;
 }
 
 function saveChangeOrder() {
@@ -13988,13 +14093,15 @@ function saveChangeOrder() {
   // off in the modal; this is the same rule where the record is written, so it cannot be reached around.
   var _b = _coJobBasis(jobId);
   // ⚠ AND A HOME PREP CHANGE ORDER MAY ADD A VENDOR INSTEAD OF, OR AS WELL AS, CONCIERGE HOURS (2026-09-30).
-  // Read here, where the record is written, and only on Home Prep: the block is hidden on every other job,
-  // and a value left in it from a prep job must not ride onto a labour job's change order.
-  var _vAdd = _b.prep ? coDraftVendorAdd() : null;
+  // Read here, where the record is written, and only where the job may add one (coPrepVendorsOn: Home Prep, and since
+  // P16 a labour job whose estimate bundles prep): the block is hidden on every other job, and a value left in it from
+  // such a job must not ride onto another job's change order.
+  var _vAdd = _b.prepVendors ? coDraftVendorAdd() : null;
+  // A vendor needs its estimated cost on every job that may add one, so the client sees the fee it carries.
+  if (_vAdd && !(_vAdd.cost > 0)) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the added vendor&rsquo;s estimated cost, so the client sees the fee it carries.</div>'; return; }
   if (_b.prep) {
     if (ps) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Home Prep has no specialists &mdash; enter concierge hours only.</div>'; return; }
     if (!tc && !_vAdd) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the additional concierge hours this change is expected to take, or the prep vendor it adds &mdash; or both.</div>'; return; }
-    if (_vAdd && !(_vAdd.cost > 0)) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the added vendor&rsquo;s estimated cost, so the client sees the fee it carries.</div>'; return; }
     var _baseTC = Math.max(0, (_b.tcHrs || 0) + coPriorHours(jobId, null).tc);
     if (tc < 0 && _baseTC + tc < 0) {
       document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">That would take the concierge hours on this job below zero &mdash; there ' +
@@ -14005,9 +14112,10 @@ function saveChangeOrder() {
   // ⚠ A change order with no hours on it authorises nothing and moves nothing. Writing one
   // anyway would put a row on the timeline and the invoice that reads as an agreed change
   // while carrying no agreement about anything — the state this rebuild exists to remove.
-  // (A Home Prep one that adds a vendor carries an agreement about that vendor.)
+  // (One that adds a vendor carries an agreement about that vendor.)
   if (!tc && !ps && !_vAdd) {
-    document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the additional hours this change is expected to take — concierge, specialist or both. Negative to reduce scope.</div>';
+    document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the additional hours this change is expected to take — concierge, specialist or both' +
+      (_b.prepVendors ? ', or the preparation vendor it adds' : '') + '. Negative to reduce scope.</div>';
     return;
   }
 
@@ -14029,7 +14137,8 @@ function saveChangeOrder() {
   // The premium this change order carries, pinned at creation (see coPrice): on a fixed-price rush job
   // only, so every other change order keeps the record it always had.
   if (_b.fixed && _b.rushPct > 0) co.rushPct = _b.rushPct;
-  // The vendor a Home Prep change order adds, with its own line id for the sourcing record (see coVendorAdds).
+  // The vendor the change order adds (Home Prep, or a labour job with bundled prep), with its own line id for the
+  // sourcing record (see coVendorAdds).
   if (_vAdd) co.vendorAdds = [{ type: _vAdd.type, cost: Math.round(_vAdd.cost), lid: _srcLid() }];
 
   changeOrders.push(co);
@@ -14642,6 +14751,16 @@ function openCOAcceptModal(coId) {
   var _prepRate = pb.prep ? (Number(pb.tcRate) || 0) : 0;
   var _prepTC = coHours(co).tc;
   var tone = coHours(co).total >= 0 ? 'var(--bronze)' : 'var(--ok-tx)';
+  // ⚠ AN ADDED VENDOR, NAMED WHERE THE CLIENT AGREES TO IT (2026-09-30): its estimated cost, which it bills them
+  // directly, and the fee on what it actually charges. ONE set of rows and one sentence, on every basis that may add
+  // one (Home Prep, and since P16 a labour job whose estimate bundles prep), so the two panels cannot word it apart.
+  var _vRows = coVendorAdds(co).map(function(v){
+    return '<div style="display:flex;justify-content:space-between;"><span>Added vendor</span><span>' + esc(v.type) + ', est. ' + fmt(Math.round(Number(v.cost) || 0)) + ', billed to you directly</span></div>' +
+      '<div style="display:flex;justify-content:space-between;"><span>' + Math.round(prepFeeRate() * 100) + '% site management fee on it</span><span>about ' + fmt(Math.round((Number(v.cost) || 0) * prepFeeRate())) + ', on its actual invoice</span></div>';
+  }).join('');
+  var _vSentence = coVendorAdds(co).length ? 'The added vendor bills you directly at cost; the ' + Math.round(prepFeeRate() * 100) + '% site management fee is billed on what it actually charges. ' : '';
+  // A change order that adds only a vendor moves no hours and no fixed fee, and on a labour job says neither.
+  var _coHasHrs = !!(coHours(co).tc || coHours(co).ps);
   document.getElementById('coa-summary').innerHTML =
     '<div style="margin-bottom:4px;"><strong>' + esc(co.description) + '</strong></div>' +
     '<div style="color:var(--gray);">Reason: ' + esc(coReasonLabel(co.reason)) + '</div>' +
@@ -14652,33 +14771,39 @@ function openCOAcceptModal(coId) {
           ? '<div style="display:flex;justify-content:space-between;"><span>Rate</span><span>$' + _prepRate.toLocaleString() + ' an hour, billed as worked</span></div>' +
             '<div style="display:flex;justify-content:space-between;"><span>At the estimated hours</span><span>about ' + fmt(Math.round(Math.abs(_prepTC) * _prepRate)) + (_prepTC < 0 ? ' less' : '') + '</span></div>'
           : '') +
-        // ⚠ AN ADDED VENDOR, NAMED WHERE THE CLIENT AGREES TO IT (2026-09-30): its estimated cost, which it bills
-        // them directly, and the fee on what it actually charges.
-        coVendorAdds(co).map(function(v){
-          return '<div style="display:flex;justify-content:space-between;"><span>Added vendor</span><span>' + esc(v.type) + ', est. ' + fmt(Math.round(Number(v.cost) || 0)) + ', billed to you directly</span></div>' +
-            '<div style="display:flex;justify-content:space-between;"><span>' + Math.round(prepFeeRate() * 100) + '% site management fee on it</span><span>about ' + fmt(Math.round((Number(v.cost) || 0) * prepFeeRate())) + ', on its actual invoice</span></div>';
-        }).join('') +
+        _vRows +
         '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
           (_prepTC ? 'Billed on the final invoice for the hours actually worked, at the rate above, on top of the ' + Math.round(prepFeeRate() * 100) + '% site management fee on the prep vendors&rsquo; invoices. ' : '') +
-          (coVendorAdds(co).length ? 'The added vendor bills you directly at cost; the ' + Math.round(prepFeeRate() * 100) + '% site management fee is billed on what it actually charges. ' : '') +
+          _vSentence +
           'Coordinating the vendors stays inside that fee.</div>'
       : fx
-      ? '<div style="display:flex;justify-content:space-between;font-weight:700;color:' + tone + ';">' +
-          '<span>Change to the fixed project fee</span><span>' + _coMoney(fx.price) + '</span></div>' +
-        '<div style="display:flex;justify-content:space-between;">' +
-          '<span>Revised fixed project fee</span><span>' + fmt(fx.revised) + '</span></div>' +
+      ? (_coHasHrs
+          ? '<div style="display:flex;justify-content:space-between;font-weight:700;color:' + tone + ';">' +
+              '<span>Change to the fixed project fee</span><span>' + _coMoney(fx.price) + '</span></div>' +
+            '<div style="display:flex;justify-content:space-between;">' +
+              '<span>Revised fixed project fee</span><span>' + fmt(fx.revised) + '</span></div>'
+          : '') +
+        _vRows +
         '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
-          'Priced at ' + esc(coRateBasisTxt(co, fx.tcRate, fx.psRate)) + '. The amount is added to the fixed project fee on the final invoice and does not change with the hours the work actually takes.</div>'
-      : '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
-          'No charge is created by this change order. These hours are billed on the final invoice as they are actually worked.</div>');
+          (_coHasHrs ? 'Priced at ' + esc(coRateBasisTxt(co, fx.tcRate, fx.psRate)) + '. The amount is added to the fixed project fee on the final invoice and does not change with the hours the work actually takes.' : '') +
+          (_vSentence ? (_coHasHrs ? ' ' : '') + _vSentence + 'It is not part of the fixed project fee.' : '') + '</div>'
+      : _vRows +
+        '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
+          (_vSentence
+            ? (_coHasHrs ? 'These hours are billed on the final invoice as they are actually worked. ' : '') + _vSentence.replace(/ $/, '')
+            : 'No charge is created by this change order. These hours are billed on the final invoice as they are actually worked.') + '</div>');
   var _vTerms = coVendorAdds(co).map(function(v){ return esc(v.type); }).join(', ');
+  var _vClause = _vTerms ? ', and the addition of ' + _vTerms + ' to the preparation vendors, billed to them directly at cost, with the ' + Math.round(prepFeeRate() * 100) + '% site management fee on what it actually charges' : '';
   document.getElementById('coa-terms').innerHTML = (pb.prep && !fx)
     ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope' +
       (_prepTC ? ', the additional concierge hours it is expected to take, and the rate of $' + _prepRate.toLocaleString() + ' an hour at which those hours are billed on the final invoice as they are actually worked' : '') +
-      (_vTerms ? ', and the addition of ' + _vTerms + ' to the preparation vendors, billed to them directly at cost, with the ' + Math.round(prepFeeRate() * 100) + '% site management fee on what it actually charges' : '') + '.'
+      _vClause + '.'
     : fx
-    ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and to the change to the fixed project fee shown above, which is added on the final invoice.'
-    : 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and the additional hours it is expected to take. Those hours are billed on the final invoice as they are actually worked.';
+    ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope' +
+      (_coHasHrs ? ' and to the change to the fixed project fee shown above, which is added on the final invoice' : '') + _vClause + '.'
+    : 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope' +
+      (_coHasHrs ? ' and the additional hours it is expected to take' : '') + _vClause + '.' +
+      (_coHasHrs ? ' Those hours are billed on the final invoice as they are actually worked.' : '');
   document.getElementById('coa-client-name').value = '';
   document.getElementById('coa-fb').innerHTML = '';
   document.getElementById('co-accept-modal').style.display = 'flex';
@@ -14714,7 +14839,10 @@ function acceptChangeOrder() {
   var shift = coPriceTotal(accepted, b.tcRate, b.psRate);
   if (b.job) {
     var baseTotal = b.est ? (b.est.havellinTotal || 0) : (b.job.havellinEst || 0);
-    b.job.havellinEst = baseTotal + shift;
+    // ⚠ THE REVISED ESTIMATE MOVES BY WHAT THE FINAL WILL BILL FOR THEM (P16): coBaselineMove, the rule the final's
+    // ±15% check reads, so the client list's figure and the invoice's baseline are one number. `shift` stays the
+    // fixed-price fee change the notice below states.
+    b.job.havellinEst = baseTotal + coBaselineMove(accepted, b.est, b.tcRate, b.psRate);
     b.job.totalEst = b.job.havellinEst;
     b.job.updatedAt = Date.now();
     saveJobs();
@@ -14726,12 +14854,15 @@ function acceptChangeOrder() {
   // to the hidden `e-fb`, and nothing repainted the card, the Hours Log bars or the schedule this
   // acceptance has just moved, so the row went on reading "Awaiting acceptance" beside a Get Acceptance
   // that had already been pressed.
+  // ⚠ AN ADDED VENDOR IS NAMED ON EVERY BASIS (P16): a labour job with bundled prep may add one too, and a change order
+  // that adds only a vendor says nothing about hours or the fixed fee, which it does not touch.
+  var _accH = coHours(co), _accHrs = !!(_accH.tc || _accH.ps);
+  var _accV = coVendorAdds(co).length ? ' ' + coVendorAdds(co).map(function(v){ return v.type; }).join(', ') + ' now sits with the prep vendors on the Job Plan, to be booked and quoted.' : '';
   _docNotice('ok', 'Change Order accepted by ' + clientName + ' (' + coScopeLabel(co) + ').' + (b.fixed
-    ? ' ' + _coMoney(coPrice(co, b.tcRate, b.psRate)) + ' on the fixed project fee, which is now ' + fmt(b.flat + shift) + ' — added on the final invoice.'
+    ? (_accHrs ? ' ' + _coMoney(coPrice(co, b.tcRate, b.psRate)) + ' on the fixed project fee, which is now ' + fmt(b.flat + shift) + ' — added on the final invoice.' : '')
     : b.prep
-    ? (coHours(co).tc ? ' These concierge hours bill on the final invoice at $' + (Number(b.tcRate) || 0).toLocaleString() + ' an hour as they are worked, on top of the site management fee — log them on the Job Plan.' : '') +
-      (coVendorAdds(co).length ? ' ' + coVendorAdds(co).map(function(v){ return v.type; }).join(', ') + ' now sits with the prep vendors on the Job Plan, to be booked and quoted.' : '')
-    : ' These hours bill on the final invoice as they are worked.'), co.jobId);
+    ? (coHours(co).tc ? ' These concierge hours bill on the final invoice at $' + (Number(b.tcRate) || 0).toLocaleString() + ' an hour as they are worked, on top of the site management fee — log them on the Job Plan.' : '')
+    : (_accHrs ? ' These hours bill on the final invoice as they are worked.' : '')) + _accV, co.jobId);
 }
 
 function printChangeOrder(coId) {
@@ -14786,6 +14917,22 @@ function printChangeOrder(coId) {
       'You are billed for the hours actually worked, at the rates already set out in your agreement, on the final invoice — the same way every other hour on this engagement is billed. ' +
       'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.';
 
+  // ⚠ AN ADDED PREPARATION VENDOR'S ROWS AND ITS TERMS: one builder each, read by the Home Prep arm below and, since
+  // P16, by a labour job whose estimate bundles prep, so the two pages state a vendor's terms in the same words.
+  function _vendorRows(adds) {
+    return adds.map(function(v){
+      var c = Math.round(Number(v.cost) || 0);
+      return '<tr><td style="' + _td + '">Added preparation vendor: <strong>' + esc(v.type) + '</strong><br><span style="color:#6B6B72;font-size:11px;">billed to you directly by the vendor, at cost</span></td><td style="' + _td + 'text-align:right;font-weight:600;">' + fmt(c) + ' estimated</td></tr>' +
+        '<tr><td style="' + _td + '">Site management fee (' + Math.round(prepFeeRate() * 100) + '%) on its actual invoice</td><td style="' + _td + 'text-align:right;">about ' + fmt(Math.round(c * prepFeeRate())) + '</td></tr>';
+    }).join('');
+  }
+  function _vendorTerms(adds) {
+    var cost = adds.reduce(function(a, v){ return a + (Number(v.cost) || 0); }, 0);
+    return (adds.length === 1 ? 'The vendor bills' : 'Each vendor bills') + ' you directly, at cost, and the ' + Math.round(prepFeeRate() * 100) + '% site management fee in your agreement is billed on what ' +
+      (adds.length === 1 ? 'it actually charges' : 'each actually charges') +
+      (cost > 0 ? ' &mdash; about ' + fmt(Math.round(cost * prepFeeRate())) + ' at the estimated ' + fmt(Math.round(cost)) : '') + '. ';
+  }
+
   // ⚠⚠ HOME PREP IS A THIRD DOCUMENT, AND THE T&M SENTENCE ABOVE IS FALSE THERE (2026-09-25). "At the
   // rates already set out in your agreement … the same way every other hour on this engagement is
   // billed": a prep engagement signed with vendors only has no other hours at all. So this page states
@@ -14821,7 +14968,6 @@ function printChangeOrder(coId) {
     // that adds no vendor prints exactly the page above.
     var _pAdds = coVendorAdds(co);
     if (_pAdds.length) {
-      var _pPct = Math.round(prepFeeRate() * 100);
       table = '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
         '<tr style="' + _dark + '"><th style="' + _td + 'text-align:left;">Item</th><th style="' + _td + 'text-align:right;">Estimate</th></tr>' +
         '<tr style="background:#FEF5E7;"><td style="' + _td + '" colspan="2">' + _what + '</td></tr>' +
@@ -14830,31 +14976,57 @@ function printChangeOrder(coId) {
             '<tr><td style="' + _td + '">This change</td><td style="' + _td + 'text-align:right;color:' + _tone + ';font-weight:600;">' + coHoursLabel(co) + ' at $' + _pRate.toLocaleString() + ' an hour, billed as worked</td></tr>' +
             '<tr><td style="' + _td + '">Revised estimated concierge hours</td><td style="' + _td + 'text-align:right;font-weight:600;">' + _pRev.toFixed(1) + ' hrs</td></tr>'
           : '') +
-        _pAdds.map(function(v){
-          var c = Math.round(Number(v.cost) || 0);
-          return '<tr><td style="' + _td + '">Added preparation vendor: <strong>' + esc(v.type) + '</strong><br><span style="color:#6B6B72;font-size:11px;">billed to you directly by the vendor, at cost</span></td><td style="' + _td + 'text-align:right;font-weight:600;">' + fmt(c) + ' estimated</td></tr>' +
-            '<tr><td style="' + _td + '">Site management fee (' + _pPct + '%) on its actual invoice</td><td style="' + _td + 'text-align:right;">about ' + fmt(Math.round(c * prepFeeRate())) + '</td></tr>';
-        }).join('') +
+        _vendorRows(_pAdds) +
         '</table>';
       var _pNames = _pAdds.map(function(v){ return esc(v.type); }).join(', ');
-      var _pCost = _pAdds.reduce(function(a, v){ return a + (Number(v.cost) || 0); }, 0);
       terms = (_pTC
           ? (_pTC > 0
               ? '<strong>This change order adds concierge hours, billed at $' + _pRate.toLocaleString() + ' an hour</strong>, and '
               : '<strong>This change order reduces the concierge hours on this engagement</strong>, and ')
             + 'it adds ' + _pNames + ' to the preparation vendors. You are billed for the hours actually worked, at $' + _pRate.toLocaleString() + ' an hour, on the final invoice. '
           : '<strong>This change order adds ' + _pNames + ' to the preparation vendors.</strong> ') +
-        (_pAdds.length === 1 ? 'The vendor bills' : 'Each vendor bills') + ' you directly, at cost, and the ' + _pPct + '% site management fee in your agreement is billed on what ' +
-        (_pAdds.length === 1 ? 'it actually charges' : 'each actually charges') +
-        (_pCost > 0 ? ' &mdash; about ' + fmt(Math.round(_pCost * prepFeeRate())) + ' at the estimated ' + fmt(Math.round(_pCost)) : '') + '. ' +
+        _vendorTerms(_pAdds) +
         'Coordinating the vendors remains covered by that fee. The other preparation vendors&rsquo; costs are unaffected by this change.';
     }
+  }
+
+  // ⚠⚠ A LABOUR JOB WHOSE ESTIMATE BUNDLES PREP MAY ADD A PREPARATION VENDOR TOO (Anthony, 2026-09-30, P16: "yes"). Its
+  // page takes the Home Prep vendor page's shape: one table of what the change adds (its hours on time and materials,
+  // or its price on the fixed fee, when it carries any; then the vendor), and the vendor's own terms. The "vendor costs
+  // are unaffected" sentence goes, because this change adds one. A change order that adds no vendor prints the page
+  // above, unchanged.
+  var _lAdds = _b.prep ? [] : coVendorAdds(co);
+  if (_lAdds.length) {
+    var _lH = coHours(co), _lHrs = !!(_lH.tc || _lH.ps);
+    var _lNames = _lAdds.map(function(v){ return esc(v.type); }).join(', ');
+    table = '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
+      '<tr style="' + _dark + '"><th style="' + _td + 'text-align:left;">Item</th><th style="' + _td + 'text-align:right;">Estimate</th></tr>' +
+      '<tr style="background:#FEF5E7;"><td style="' + _td + '" colspan="2">' + _what + '</td></tr>' +
+      (!_lHrs ? ''
+        : fx
+        ? '<tr><td style="' + _td + '">Fixed project fee in your agreement' + (fx.prior ? ' and change orders already accepted' : '') + '</td><td style="' + _td + 'text-align:right;">' + fmt(fx.flat + fx.prior) + '</td></tr>' +
+          '<tr><td style="' + _td + '">This change<br><span style="color:#6B6B72;font-size:11px;">' + esc(coRateBasisTxt(co, fx.tcRate, fx.psRate)) + '</span></td><td style="' + _td + 'text-align:right;color:' + _tone + ';font-weight:600;">' + _coMoney(fx.price) + '</td></tr>' +
+          '<tr><td style="' + _td + '">Revised fixed project fee</td><td style="' + _td + 'text-align:right;font-weight:600;">' + fmt(fx.revised) + '</td></tr>'
+        : '<tr><td style="' + _td + '">Hours on the approved estimate' + (_coBasis.priorHrs ? ' and change orders already accepted' : '') + '</td><td style="' + _td + 'text-align:right;">' + Math.max(0, _coBasis.baseHrs + _coBasis.priorHrs).toFixed(1) + ' hrs</td></tr>' +
+          '<tr><td style="' + _td + '">This change</td><td style="' + _td + 'text-align:right;color:' + _tone + ';font-weight:600;">' + coHoursLabel(co) + '</td></tr>' +
+          '<tr><td style="' + _td + '">Revised estimated hours</td><td style="' + _td + 'text-align:right;font-weight:600;">' + Math.max(0, _coBasis.baseHrs + _coBasis.priorHrs + _coBasis.addHrs).toFixed(1) + ' hrs</td></tr>') +
+      _vendorRows(_lAdds) +
+      '</table>';
+    terms = (!_lHrs
+        ? '<strong>This change order adds ' + _lNames + ' to the preparation vendors.</strong> '
+        : fx
+        ? '<strong>This change order adjusts your fixed project fee by the amount above, and adds ' + _lNames + ' to the preparation vendors.</strong> The additional work is priced at the hours and rates shown and added to your fixed project fee on the final invoice; it does not change with the hours the work actually takes. '
+        : '<strong>This change order adds the hours above, and adds ' + _lNames + ' to the preparation vendors.</strong> The hours are an estimate of the additional work: you are billed for the hours actually worked, at the rates already set out in your agreement, on the final invoice &mdash; the same way every other hour on this engagement is billed. ') +
+      _vendorTerms(_lAdds) +
+      (fx ? 'That fee is charged in addition to your fixed project fee and ' : 'That fee ') +
+      'covers coordinating and supervising the preparation work, which is not billed as hours. The other vendors&rsquo; costs are unaffected by this change.';
   }
 
   // ⚠ Q14 (2026-09-29): whether these hours carry the job's expedited premium and preferred-client
   // discount — yes like every other hour on an hourly job, no on a fixed price. One line, on all three
   // arms, and only where the job carries one of them; see coRateModsLine for why it is silent otherwise.
-  var _mods = coRateModsLine(_b.est, !!fx, !!_b.prep, co);
+  // ⚠ It is about HOURS, so a change order that adds only a vendor (Home Prep, or a labour job since P16) carries none.
+  var _mods = (coHours(co).tc || coHours(co).ps) ? coRateModsLine(_b.est, !!fx, !!_b.prep, co) : '';
   if (_mods) terms += '<div style="margin-top:6px;">' + _mods + '</div>';
 
   var content = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:1rem;">' +
@@ -15790,6 +15962,11 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   var _logTC = 0, _logPS = 0;
   (logs || []).forEach(function(e){ ((e && e.members) || []).forEach(function(m){ if (!m) return; if (m.role === 'TC') _logTC += Number(m.hours) || 0; else _logPS += Number(m.hours) || 0; }); });
   var _finAwaitsHrs = finalAwaitsHours(job, est, Math.round(_logTC * 10) / 10 + Math.round(_logPS * 10) / 10);
+  // Crew hours logged with none of the concierge's: the final is likely under-billing (finalCrewOnlyWarn, the rule the
+  // invoice reads). A flag on the final's row, never a refusal (P16). Asked only once the job is closed, as the
+  // no-hours line below is: before then the log is a job in progress.
+  var _finCrewOnly = (job.deliveredOn && !docSentAt(job, 'invoice', 'final'))
+    ? finalCrewOnlyWarn(job, est, Math.round(_logTC * 10) / 10, Math.round(_logPS * 10) / 10) : '';
 
   // A walkthrough that produced a scored house happened, whatever the calendar
   // says — and a date in the past with no estimate behind it did too. Either is
@@ -16071,6 +16248,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
         : (!docSentAt(job, 'invoice', 'final') && _coHrsUnlogged)
         ? 'A change order added ' + _coOnlyTC.toFixed(1) + ' concierge hours and none are logged \u2014 log them on the Job Plan first, or this final bills the management fee alone'
           + (_finDraftLine ? '. ' + _finDraftLine : '')
+        : _finCrewOnly
+        ? _finCrewOnly + (_finDraftLine ? ' ' + _finDraftLine : '')
         : _finDraftLine }),
 
     row({ key: 'final_paid', group: 'Close-out', label: 'Final payment',
@@ -17829,7 +18008,7 @@ var DOC_ACTIONS = {
       if (!d) return 'This job could not be found.';
       // ⚠ TWO DIFFERENT ANSWERS AND THEY MUST STAY APART. `blocked` cannot be unlocked by
       // anyone — nobody can unlock a missing timesheet. `requiresApproval` can, by a PIN.
-      if (d.blocked) return 'No hours have been logged for this job, so the final cannot be issued. Log them on the Job Plan tab first.';
+      if (d.blocked) return INV_FINAL_NO_HOURS_WHY;
       // ⚠⚠ THE APPROVAL IS READ OFF THIS JOB, FOR THIS FIGURE — never a page global. A PIN
       // entered for one job used to unlock every job's final; see invFinalApproval.
       if (d.requiresApproval && !invFinalApproval(spec.job, d.amtDue)) {
@@ -17841,6 +18020,10 @@ var DOC_ACTIONS = {
     }
   }
 };
+
+// Why an hourly final with no hours logged cannot go out: one sentence, read by the invoice's registry blocker and by
+// dashApproveInvoice (P16), so the approval door and the send cannot describe the one refusal two ways.
+var INV_FINAL_NO_HOURS_WHY = 'No hours have been logged for this job, so the final cannot be issued. Log them on the Job Plan tab first.';
 
 var DOC_STAGE_WORD = { deposit: 'Deposit', midpoint: 'Midpoint', final: 'Final' };
 
@@ -17912,6 +18095,24 @@ function finalAwaitsHours(job, est, loggedHrs) {
   return loggedHrs === 0;
 }
 
+// ⚠ CREW HOURS LOGGED WITH NO CONCIERGE HOURS, ON AN HOURLY FINAL: a flag, never a refusal (2026-09-30, P16). Under the
+// working-supervisor model the concierge is on site for every crew hour, so specialist time with none of theirs is
+// almost always somebody logging the crew and forgetting themselves, and the final trues labour to the log, so it
+// under-bills without a word. A genuinely concierge-free day (a subcontracted crew working unattended) is somebody's
+// call, not the app's. The warning was computed by invoiceHtml for the retired Invoices tab's banner (renderInvoice)
+// and shown nowhere since that tab went. ONE rule and one sentence, read by invoiceHtml and by the timeline's final
+// row, which the band shows where the final is sent and approved. Plain text; each reader escapes or styles it.
+// `actTC` / `actPS` are the logged hours, summed and rounded as the invoice sums them; `tcRate` is the invoice's, and
+// a caller without one gets agrBillingRates', the same fallback.
+function finalCrewOnlyWarn(job, est, actTC, actPS, tcRate) {
+  if (est && est.fixedPrice) return '';
+  if (estimateIsFeeOnly(est, job)) return '';
+  if (!(actPS > 0) || actTC !== 0) return '';
+  var rate = Number(tcRate) || agrBillingRates(job, est).tc;
+  return actPS.toFixed(1) + ' crew hours logged with no concierge hours. The concierge is on site for every crew hour, so this final is likely under-billing '
+    + fmt(Math.round((est ? (Number(est.totTC) || 0) : 0) * rate)) + ' of concierge time. Check the log before sending.';
+}
+
 // ⚠ NAMED FOR THE DOCUMENT BEING REFUSED. The packet and the invoices share these refusals, and
 // the invoice's read "…before the agreement can be drawn" — a sentence about the other document,
 // printed on the one a person had just tried to open (2026-09-29). `{doc}` is the document and
@@ -17954,6 +18155,20 @@ function docReadiness(kind, job, estRec) {
     why = why.replace('{was}', fmtMoney(r.was || 0)).replace('{now}', fmtMoney(r.now || 0));
   }
   return why;
+}
+
+// ⚠ WHAT THE DASHBOARD'S "AGREEMENT NOT SIGNED" CHIP SAYS IS MISSING: the next thing actually outstanding (2026-09-30,
+// P16). It read "Approve the agreement, send the signing packet, then record the signature" on every job, and the
+// agreement has no approval step to take: agreementReady is the gate (docReadiness words it), and
+// ensureAgreementApproved stamps the approval itself on the first print, send or file. So: what the record still
+// lacks (the estimate approved, the client's yes, a re-acceptance), then the send, then the signature — the one the
+// provider records itself when an envelope is out. DOM-free, so the rule is tested on its own; the chip reads it.
+function agreementChipFix(job, estRec) {
+  var why = docReadiness('agreement', job, estRec);
+  if (why) return why;
+  if (!isAgreementSent(job)) return 'Send the signing packet from the timeline, then record the signature once the client signs.';
+  if (esignJobWatches(job)) return ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for the client\'s signature and records it when the envelope completes.';
+  return 'The signing packet is out: record the signature on the timeline once the client has signed.';
 }
 
 // An estimate that EXISTS but is not approved: readable on our own screen, and it must not be
@@ -18954,6 +19169,11 @@ function dashApproveInvoice(jobId, stage) {
   if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
   var d = invoiceHtml(job, stage || 'final');
   if (!d) { dashNotice('warn', 'This invoice could not be built.'); _dashRedraw(jobId); return; }
+  // ⚠ BLOCKED IS ASKED FIRST (2026-09-30, P16). A blocked final never `requiresApproval` (nobody can approve a
+  // missing timesheet), so asking that first told a manager an hourly final with no hours logged was "inside the
+  // ±15% tolerance — no approval needed", and the send then refused it. It says what blocks it, in the words the
+  // send's own refusal uses (INV_FINAL_NO_HOURS_WHY).
+  if (d.blocked) { dashNotice('warn', INV_FINAL_NO_HOURS_WHY); _dashRedraw(jobId); return; }
   if (!d.requiresApproval) { dashNotice('ok', 'This invoice is inside the \u00b1' + estTolerancePctTxt() + ' tolerance \u2014 no approval needed.'); _dashRedraw(jobId); return; }
   // Already approved at this figure: say so rather than asking for the PIN a second time.
   var ap = invFinalApproval(job, d.amtDue);
@@ -19405,7 +19625,8 @@ function renderClientDashboard(jobId) {
   // One definition now. `_JT_CHIP_FIX` carries the how-to the chips add on top; the
   // rule itself is never re-inlined here.
   var _JT_CHIP_FIX = {
-    'Service agreement must be signed': {short:'Agreement not signed', fix:'Approve the agreement, send the signing packet, then record the signature'},
+    // ⚠ The fix names what is actually missing (agreementChipFix, P16): the agreement has no approval step.
+    'Service agreement must be signed': {short:'Agreement not signed', fix:agreementChipFix(job, null)},
     'Deposit (50%) must be received': {short:'Deposit not received', fix:'Record the payment once it arrives — work starts on received, not cleared'},
     'Executor authorization must be received': {short:'Executor auth pending', fix:'Contact '+(job.executor||'the authorized representative')+' — '+(job.executorPhone||job.executorEmail||'see the probate card below')}
   };
@@ -31419,7 +31640,8 @@ function invoiceHtml(job, stage) {
   // crew hour, so PS time without TC time means someone logged the crew and forgot
   // themselves. It under-bills silently, so warn — but don't block, since a genuinely
   // TC-free day (a subcontracted crew working unattended) is somebody's call, not ours.
-  var _noTCHours = (stage === 'final') && !_fixed && !_feeOnly && !_noHours && actTC === 0;
+  // ⚠ finalCrewOnlyWarn IS THE RULE AND THE SENTENCE (P16), read here and by the timeline's final row on the dashboard.
+  var _noTCHours = (stage === 'final') ? finalCrewOnlyWarn(job, est, actTC, actPS, tcRate) : '';
   // Expedited-delivery premium (RUSH_PCT). est.havellinTotal already carries it, so the
   // deposit basis needs no addition — but the midpoint and final bases are rebuilt from
   // components and were dropping it outright. A rush job was therefore quoted and
@@ -31550,9 +31772,9 @@ function invoiceHtml(job, stage) {
   // ⚠ AND SO DOES A PREP VENDOR A CHANGE ORDER ADDED (2026-09-30): the fee on it at the estimated cost the client
   // accepted. Without it every accepted vendor read as the job running over and asked for the PIN (a $9,000
   // painter on a $45,000 prep job read +20%). Found by the P13 documentation pass.
-  var coVendorFee = Math.round(jobCOs.reduce(function(a, c){
-    return a + coVendorAdds(c).reduce(function(b, v){ return b + (Number(v.cost) || 0); }, 0); }, 0) * prepFeeRate());
-  var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coShift + coVendorFee;
+  // ⚠⚠ BY WHAT THIS FINAL BILLS FOR THEM, NOT THEIR PLAIN-RATE VALUE (P16): coBaselineMove, the one rule. `coShift` is
+  // still the fixed-price charge above; on an hourly rush job it was also the baseline, which moved 20% less than the bill.
+  var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coBaselineMove(jobCOs, est, tcRate, psRate);
   // ⚠ BUT THE CLIENT'S "ORIGINAL ESTIMATE" ROW IS THE ESTIMATE ALONE, and the change orders are a
   // line of their own beneath it. The row printed estHavellinTotal — the internal baseline above,
   // change orders included — so a $10,962 job with a +10/+10 change order read "Original Estimate
@@ -31669,7 +31891,7 @@ function invoiceHtml(job, stage) {
   // agreed to. an estimate is an estimate, not a guarantee of the final number."*
   //
   // ⚠⚠ THE SECOND HALF IS THE STRUCTURAL ARGUMENT AND IT IS WHY THIS IS NOT MERELY TASTE.
-  // `estHavellinTotal` is `est.havellinTotal + coShift` — AN ACCEPTED CHANGE ORDER MOVES THE
+  // `estHavellinTotal` is `est.havellinTotal + coBaselineMove(…)` — AN ACCEPTED CHANGE ORDER MOVES THE
   // BASELINE. So on a job run the way the agreement describes, authorised scope is inside the
   // estimate by construction and a large positive variance CANNOT reach the final. One that does
   // means the change order was skipped, which is a process failure to fix in the office — not a
@@ -31720,6 +31942,8 @@ function invoiceHtml(job, stage) {
   // hour on this engagement" is false on a job signed with vendors only. The note names the rate the
   // change order stated and where the hours sit on this page.
   var _prepCoJob = ((est && est.svc) || job.svc) === 'prep';
+  var _coVendNote = jobCOs.some(function(c){ return coVendorAdds(c).length; })
+    ? 'A vendor a change order added bills you directly, and the site management fee on what it actually charged is in the fee above.' : '';
   var coSection = (jobCOs.length > 0 ?
     '<div class="ce-section-hdr" style="margin-top:1rem;">Approved Change Orders</div>' +
     '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Change in scope</th><th style="text-align:right;">Additional hours</th>' +
@@ -31737,12 +31961,15 @@ function invoiceHtml(job, stage) {
     '<tr class="subtotal"><td colspan="2">Additional hours authorised</td><td style="text-align:right;">' + coHoursLabel(coHrs) + '</td>' +
       (_fixedBasis ? '<td style="text-align:right;">' + _coMoney(coCharge) + '</td>' : '') + '</tr>' +
     '</tbody></table>' +
+    // ⚠ A VENDOR A CHANGE ORDER ADDED IS NAMED ON EVERY BASIS (P16): a labour job with bundled prep may add one too,
+    // and its fee sits in the fee row above whichever basis the job is on. A change order that adds only a vendor
+    // carries no hours and no price, so the hours sentence is said only where some change order carries hours.
     '<div class="ce-note">' + (_fixedBasis
-      ? 'Each is charged at the price on the change order you accepted and added to the fixed project fee above, because a fixed fee does not otherwise move with the hours worked.'
+      ? ((coHrs.tc || coHrs.ps) ? 'Each is charged at the price on the change order you accepted and added to the fixed project fee above, because a fixed fee does not otherwise move with the hours worked.' + (_coVendNote ? ' ' : '') : '') + _coVendNote
       : _prepCoJob
       ? (coHrs.tc ? 'These concierge hours are billed as they were logged, at $' + tcRate + ' an hour &mdash; they are the concierge (TC) hours in the table above &mdash; in addition to the site management fee. ' : '') +
-        (jobCOs.some(function(c){ return coVendorAdds(c).length; }) ? 'A vendor a change order added bills you directly, and the site management fee on what it actually charged is in the fee above.' : '')
-      : 'These hours are not billed separately. They are worked and logged like every other hour on this engagement and are already included in the figures above.') +
+        _coVendNote
+      : ((coHrs.tc || coHrs.ps) ? 'These hours are not billed separately. They are worked and logged like every other hour on this engagement and are already included in the figures above.' + (_coVendNote ? ' ' : '') : '') + _coVendNote) +
     '</div>' : '');
 
   // The accepted change orders, on ONE line of their own, directly under the figure they change —
@@ -31751,10 +31978,12 @@ function invoiceHtml(job, stage) {
   // billed in the hours above" for one; it names what each part is and where it is billed.
   var _coVendNames = [];
   jobCOs.forEach(function(c){ coVendorAdds(c).forEach(function(v){ if (_coVendNames.indexOf(v.type) < 0) _coVendNames.push(v.type); }); });
-  var _coPayTxt = coCharge ? _coMoney(coCharge)
-    : ([(coHrs.tc || coHrs.ps) ? coHoursLabel(coHrs) + ', billed in the hours above' : '',
+  // ⚠ And on a fixed price too (P16): the signed price where a change order carries hours, then any vendor added.
+  var _coHrsPay = !(coHrs.tc || coHrs.ps) ? ''
+    : _fixedBasis ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above';
+  var _coPayTxt = [_coHrsPay,
         _coVendNames.length ? 'adds ' + _coVendNames.map(esc).join(', ') + ', in the site management fee above' : '']
-       .filter(Boolean).join('; ') || coHoursLabel(coHrs) + ', billed in the hours above');
+       .filter(Boolean).join('; ') || (_fixedBasis ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above');
   var _coPayRow = jobCOs.length
     ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + _coPayTxt + '</td></tr>'
     : '';
@@ -31965,11 +32194,8 @@ function invoiceHtml(job, stage) {
   // same thing as `requiresApproval`: that means "a manager can unlock this", and nobody
   // can unlock a missing timesheet.
   //
-  // Non-blocking beside it: crew hours logged with no concierge hours against them.
-  var _warnBanner = _noTCHours ?
-    '<div class="alert a-warn" style="margin:0 0 1rem;"><strong>' + actPS.toFixed(1) + ' crew hours logged with no concierge hours.</strong> ' +
-    'The concierge is on site for every crew hour, so this final is likely under-billing ' + fmt(Math.round((est ? est.totTC : 0) * tcRate)) +
-    ' of concierge time. Check the log before sending.</div>' : '';
+  // Non-blocking beside it: crew hours logged with no concierge hours against them (finalCrewOnlyWarn's sentence).
+  var _warnBanner = _noTCHours ? '<div class="alert a-warn" style="margin:0 0 1rem;">' + esc(_noTCHours) + '</div>' : '';
 
   // Deposit and midpoint are formulaic from the approved estimate, so no manager PIN.
   // The final needs one only when it diverges from the estimate by more than ±15%
@@ -33966,7 +34192,7 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setJobVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
           (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
-          _coordHrsField('setJobVendorCoordHrs(' + jobId + ',' + i + ',this.value)', vendorLineHrs(v), rec, _noCoord) +
+          _coordHrsField('setJobVendorCoordHrs(' + jobId + ',' + i + ',this.value)', vendorLineHrs(v, est.prem), rec, _noCoord) +
         '</div>' + _vendorRefLine(rec) +
       '</div>';
     }).join('');
@@ -34301,7 +34527,7 @@ function coordHrsRollup(job, est) {
   // estimate never priced — inflating "estimated" with hours nobody ever quoted.
   var estTot = (est.vendorTCHrs != null || est.prepTCHrs != null)
     ? (Number(est.vendorTCHrs || 0) + Number(est.prepTCHrs || 0))
-    : ((est.vendors || []).reduce(function(a, v){ return a + vendorLineHrs(v); }, 0) +
+    : ((est.vendors || []).reduce(function(a, v){ return a + vendorLineHrs(v, est.prem); }, 0) +
        ((est.prepEnabled && est.prepItems) ? est.prepItems : []).reduce(function(a, p){ return a + coordHrsFor(p.type, 'prep'); }, 0));
   estTot = Math.round(estTot * 10) / 10;
   // Recorded side sweeps everything, INCLUDING logistics slots. A hauler booked mid-job is
@@ -38634,9 +38860,13 @@ function probateAgreementHtml(job, est) {
   // the attached Exhibit A actually carries prep vendors — an estate matter usually does not.
   // Without this the table would tell the Personal Representative and the court that Havellin
   // adds no markup, over an estimate charging 30% on the painter. See prepFeeRate.
+  // ⚠ "OR ADDED BY CHANGE ORDER" (Anthony, 2026-09-30, P16: a change order may add a preparation vendor to a labour job
+  // whose estimate bundles prep; counsel bundle B9), on the hourly arm and the fixed arm whose fee sits on top of the
+  // flat fee — the two where coPrepVendorsOn lets a change order add one. Not on an older fee that carries the prep fee
+  // inside the flat fee: no change order can add a vendor there, and its fee could not be inside a figure set before it.
   if (_agrHasPrepVendors(est)) {
     feeRows.push(['Home Sale Preparation Fee', Math.round(prepFeeRate()*100)+'% of prep vendor cost',
-      'General contractor / site management fee on the home sale preparation vendors identified in Exhibit A. Those vendors bill at cost; this fee covers Havellin\'s coordination and site supervision of that work, '
+      'General contractor / site management fee on the home sale preparation vendors identified in Exhibit A' + (_agrPrepInside ? '' : ' or added by Change Order') + '. Those vendors bill at cost; this fee covers Havellin\'s coordination and site supervision of that work, '
       + (_agrPrepOnTop ? 'which is not part of the fixed project fee below: it is charged in addition to it, on what those vendors actually invoice.'
          : _agrPrepInside ? 'which on this engagement is included in the fixed project fee below.'
          : 'which is not additionally billed at the TC rate above.')]);
@@ -38649,7 +38879,7 @@ function probateAgreementHtml(job, est) {
   if (!isFixedAgr && agrPriceAdjustments(est, 'Havellin')) content += pp(agrPriceAdjustments(est, 'Havellin'));
   if (isFixedAgr) {
     content += pp(bb('Fixed Project Fee.')+'  Notwithstanding the hourly rates above, the Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of $'+_agrFlat.toLocaleString())+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates above apply only to Change-Order work authorized beyond that scope.'
-      + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of what the home sale preparation vendors identified in Exhibit A actually invoice (estimated in Exhibit A at $'+_agrPrepEst.toLocaleString()+').' : '')
+      + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of what the home sale preparation vendors identified in Exhibit A or added by Change Order actually invoice (estimated in Exhibit A at $'+_agrPrepEst.toLocaleString()+').' : '')
       // The premium and the discount Exhibit A itemises on the fee (a record saved from 2026-09-30).
       + (agrPriceAdjustments(est, 'Havellin') ? '  ' + agrPriceAdjustments(est, 'Havellin') : ''));
   }
@@ -38766,7 +38996,13 @@ function probateAgreementHtml(job, est) {
   // noun, read from the matter, so the table cannot say PR while §5.2 three inches above says
   // successor trustee.
   var _appr = 'Written ' + (matterDef(job) ? (matterDef(job).onProbate && matterDef(job).trust ? 'PR / trustee' : matterDef(job).trust ? 'trustee' : matterDef(job).onProbate ? 'PR' : 'Client') : 'PR') + ' approval';
-  var _apprWho = matterDef(job) && !matterDef(job).onProbate && matterDef(job).trust ? 'the trustee\'s counsel' : 'the estate attorney';
+  // ⚠⚠ WHO ENGAGES THE APPRAISER WHEN HAVELLIN DOES NOT: THE PARTY §5.2 NAMES, ONE RULE (2026-09-30, P16). The row
+  // below read "Admit an appraiser engaged by counsel … Counsel's instruction … As scheduled by the estate attorney"
+  // off its own `_apprWho`, so on a *neither* matter — no court, no trust, where §5.2 two inches above says
+  // "Professional appraisals are arranged by the Client" — it named counsel and the estate attorney, and on a
+  // trust matter "the trustee's counsel" where §5.2 says "the trustee or their counsel". It asks
+  // _agrOtherAppraisalsBy now, in all three columns, as the listed-appraisals row beside it already did.
+  var _apprParty = _agrOtherAppraisalsBy(job);
   var authRows = [
     ['Document and photograph assets','None required','All assets'],
     ['Sort and stage assets for disposition','Verbal approval','All assets'],
@@ -38777,7 +39013,7 @@ function probateAgreementHtml(job, est) {
       ? ['Arrange professional appraisal',_appr,'Any item with uncertain FMV']
       : appraisalDuty(docScope, job, est) === 'listed'
       ? ['Arrange the appraisals listed in Exhibit A',_appr,'Items in those categories; any other appraiser as scheduled by ' + _agrOtherAppraisalsBy(job)]
-      : ['Admit an appraiser engaged by counsel','Counsel\'s instruction','As scheduled by ' + _apprWho],
+      : ['Admit an appraiser engaged by ' + _apprParty, 'Instruction from ' + _apprParty, 'As scheduled by ' + _apprParty],
     ['Move or deliver items to beneficiaries',_appr + ' + signed receipt from recipient','All items']
   ];
   authRows.forEach(function(r){
@@ -38969,9 +39205,17 @@ function probateAgreementHtml(job, est) {
     'A final invoice stating the portion of the fixed fee earned'+(_agrPrepOnTop ? ' and the Home Sale Preparation Fee owed' : '')+' will be issued within 10 business days of termination',
     'Havellin will provide the Client with all documentation completed through the termination date'
   ]) : [
+    // ⚠⚠ THE HOURLY ARM'S DEPOSIT IS EARNED ON SIGNATURE TOO (Anthony, 2026-09-30, P16: "deposit paid, is lost").
+    // It read "non-refundable if termination occurs after project start", and nothing in this Agreement defines
+    // project start: the fixed arm's defect above, left standing on the hourly one, against an app that records
+    // every paid walkaway as Deposit Retained (confirmMarkLost, Q2). Now the fixed arm's words, and its one exit
+    // (an uncured material breach by Havellin, stated inline for the same reason: §8.2 says nothing about cure),
+    // measured against the hourly arm's own amount owed. The deposit is a floor: hours beyond it are still owed.
+    // Drafted, not reviewed; for the counsel bundle.
     'Havellin will cease all work and secure the property upon receipt of written notice',
     'The Client is responsible for all hours worked and materials used through the termination date',
-    'The deposit is non-refundable if termination occurs after project start',
+    'The deposit is earned in full on signature of this Agreement and is not refundable. It is applied against the hours worked and materials used, and no part of it is returned where it exceeds them',
+    'Where Havellin is in material breach of this Agreement and has not cured that breach within seven (7) days of the Client\'s written notice describing it, Havellin will refund any amount it holds above the hours worked and materials used through the date of that notice',
     'A final invoice reflecting actual hours and materials will be issued within 10 business days of termination',
     'Havellin will provide the Client with all documentation completed through the termination date'
   ];
@@ -39331,7 +39575,9 @@ function agreementHtml(job, est) {
           // CLAUSE THAT BILLS NO TIME — §3.3 is the flat fee there, inclusive of coordination. And
           // the prep fee is charged ON TOP of that flat fee (on a record saved from the 2026-09-23 change on), or
           // inside it on one saved before; each arm says which.
-          ? p(b('3.5 Vendor Coordination and Home Sale Preparation Fee.')+'  Contractor adds no fee or markup to third-party vendor invoices, and the Transition Concierge time spent sourcing, scheduling, and supervising those vendors is '+(isFixedAgr ? 'included in the fixed project fee under Section 3.3' : 'billed as Transition Concierge time under Section 3.3')+'.  Home sale preparation vendors identified in the Estimate are the exception: those are billed to Client at cost, and Contractor charges a General Contractor / Site Management Fee of '+_pctWords(prepFeeRate())+' of those vendor costs'
+          // ⚠ "OR ADDED BY CHANGE ORDER" (P16; counsel bundle B9): a change order may add a preparation vendor to this
+          // engagement (coPrepVendorsOn), except on the older fee that carries the prep fee inside it.
+          ? p(b('3.5 Vendor Coordination and Home Sale Preparation Fee.')+'  Contractor adds no fee or markup to third-party vendor invoices, and the Transition Concierge time spent sourcing, scheduling, and supervising those vendors is '+(isFixedAgr ? 'included in the fixed project fee under Section 3.3' : 'billed as Transition Concierge time under Section 3.3')+'.  Home sale preparation vendors identified in the Estimate'+(_agrPrepInside ? '' : ' or added by Change Order')+' are the exception: those are billed to Client at cost, and Contractor charges a General Contractor / Site Management Fee of '+_pctWords(prepFeeRate())+' of those vendor costs'
               + (_agrPrepOnTop ? ', calculated on what those vendors actually invoice and charged in addition to the fixed project fee.  That fee covers Contractor\'s coordination and site supervision of the preparation work.'
                  : _agrPrepInside ? '.  On this engagement that fee is included in the fixed project fee under Section 3.3.'
                  : '.  That fee covers Contractor\'s coordination and site supervision of the preparation work, which is not additionally billed as Transition Concierge time.'))
@@ -39350,7 +39596,12 @@ function agreementHtml(job, est) {
       : isFixedAgr
       ? p(b('3.8 Changes to Scope.')+'  The fixed price covers the scope of work described in the Estimate. If Client requests, or conditions require, work beyond that scope, Contractor will notify Client in writing before proceeding, and any resulting price adjustment will be documented in a written Change Order signed by both Parties.')
       : p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than '+estTolerancePctTxt()+', Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.'))+
-    p(b('3.9 Payment Method.')+'  Payment may be made by credit/debit card via Contractor\'s secure payment link, or by check or ACH payable to Havellin Palm Beach LLC.')
+    // ⚠⚠ NO CARDS (Anthony, 2026-09-30, P16: "yes" to ACH, wire or check). This offered "credit/debit card via
+    // Contractor's secure payment link" against the standing rule: the payment link is ACH-only (a link that could
+    // take a card is deactivated on creation, STRIPE_PAYMENTS_SPEC) and there is no card surcharge. It names the
+    // three routes Anthony approved and says nothing about cards: an absence is not explained on a client document.
+    // The estate form has no payment-method clause. Drafted, not reviewed; for the counsel bundle.
+    p(b('3.9 Payment Method.')+'  Payment may be made by ACH bank transfer through Contractor\'s secure payment link, by wire transfer, or by check payable to Havellin Palm Beach LLC.')
   );
 
   // ── SECTION 4 ─────────────────────────────────────────────────────────────
@@ -39489,9 +39740,16 @@ function agreementHtml(job, est) {
     // ⚠ THE ONE EXIT IS AN UNCURED MATERIAL BREACH BY US, and here it CAN be cross-referenced:
     // §12.3 already carries the notice-and-seven-days-to-cure mechanism, unlike the estate
     // form's §8.2.
+    // ⚠⚠ AND THE HOURLY ARM NOW KEEPS THE DEPOSIT TOO (Anthony, 2026-09-30, P16: "deposit paid, is lost"). It
+    // applied the deposit to the amounts due and refunded "the unused balance", so a client who signed, paid and
+    // walked away before much work was done got most of the 50% back, while the app records every paid walkaway
+    // as Deposit Retained with the money kept (confirmMarkLost, Q2). Same sentence as the fixed arm, same one
+    // exit (an uncured material breach under §12.3), measured against the hourly arm's own amount owed: the
+    // Services performed and costs incurred under §12.2. The deposit is a floor, never a cap: work beyond it is
+    // still owed. Drafted, not reviewed; for the counsel bundle.
     (isFixedAgr
       ? p(b('12.4 Effect of Termination.')+'  Upon termination, Contractor will cease work, remove its personnel and equipment, and provide a final invoice stating the portion of the fixed project fee earned under Section 12.2'+(_agrPrepOnTop ? ' and the Home Sale Preparation Fee owed under that Section' : '')+'. The deposit is applied against that amount.  '+b('The deposit is earned on signature and is not refundable')+', except where Client terminates under Section 12.3 for a material breach by Contractor that Contractor has failed to cure, in which case Contractor will refund any amount it holds above the portion earned.')
-      : p(b('12.4 Effect of Termination.')+'  Upon termination, Contractor will cease work, remove its personnel and equipment, and provide a final invoice. Any deposit will be applied to amounts due. If the deposit exceeds the amount owed, Contractor will refund the unused balance less any non-cancelable costs.'))
+      : p(b('12.4 Effect of Termination.')+'  Upon termination, Contractor will cease work, remove its personnel and equipment, and provide a final invoice for the Services performed and costs incurred through the termination date under Section 12.2. The deposit is applied against that amount.  '+b('The deposit is earned on signature and is not refundable')+', including where it exceeds that amount, except where Client terminates under Section 12.3 for a material breach by Contractor that Contractor has failed to cure, in which case Contractor will refund any amount it holds above the amount owed.'))
   );
 
   // ── SECTION 13 ────────────────────────────────────────────────────────────

@@ -69,6 +69,13 @@ const COUNSEL_BY_MATTER = {
   trust:   'Professional appraisals are arranged by the trustee or their counsel',
   neither: 'Professional appraisals are arranged by the Client',
 };
+// The same party, as §5.3's row names it (one rule, _agrOtherAppraisalsBy; P16).
+const PARTY_BY_MATTER = {
+  probate: 'the estate attorney',
+  both:    'the estate attorney',
+  trust:   'the trustee or their counsel',
+  neither: 'the Client',
+};
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const scopeOf = (tier) => agrCtx().docTierScope(tier);
@@ -103,7 +110,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           matter + ' / values: §2 states the carve-out rather than leaving it to inference');
       has(doc, COUNSEL_BY_MATTER[matter], matter + ' / values: §5.2 names who arranges them');
       has(doc, 'Havellin will give the appraiser access to the property', matter + ' / values: and what Havellin still does');
-      has(doc, 'Admit an appraiser engaged by counsel', matter + ' / values: §5.3 authorises admitting the appraiser, not engaging one');
+      // ⚠ RESTATED 2026-09-30 (P16): the row names the party §5.2 names (_agrOtherAppraisalsBy), in all three columns.
+      // It read "engaged by counsel … As scheduled by the estate attorney" on a *neither* matter, where §5.2 says the
+      // Client arranges them, and "the trustee's counsel" on a trust matter, where §5.2 says the trustee or their counsel.
+      has(doc, 'Admit an appraiser engaged by ' + PARTY_BY_MATTER[matter], matter + ' / values: §5.3 authorises admitting the appraiser, not engaging one');
+      has(doc, 'Instruction from ' + PARTY_BY_MATTER[matter], matter + ' / values: on that party\'s instruction');
+      has(doc, 'As scheduled by ' + PARTY_BY_MATTER[matter], matter + ' / values: and as that party schedules it');
+      lacks(doc, 'engaged by counsel', matter + ' / values: never a party §5.2 does not name');
       // The values tier is still a VALUED inventory — the fix must not take the inventory half with it.
       has(doc, 'room-by-room asset documentation and inventory', matter + ' / values: §2 still sells the inventory');
     }

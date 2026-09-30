@@ -227,7 +227,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const ctx = sandbox({
         fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
               'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
-              'vendorGroupCategories', 'directoryCategories', 'vendorCats'],
+              'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'],
         vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
                'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
                'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES'],
@@ -288,7 +288,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // 2. A vendor line's coordination hours ride the line, so a slow directory cannot reprice a saved estimate.
     const r2 = run({ svc: 'cleanout', sqft: 3500, rooms: BASE,
-                     fns: ['pinVendorLineHours', 'vendorDirectoryReady', 'directoryCategories', 'vendorCats'] });
+                     fns: ['pinVendorLineHours', 'vendorDirectoryReady', 'directoryCategories', 'vendorCats', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'] });
     r2.ctx.vendorDirectory = [];   // not loaded
     r2.ctx.vendors = [{ type: 'Estate Sale Company', cost: 3000, lid: 'L1', tcHrs: 3.5 }];
     r2.ctx.calcAll();
@@ -395,7 +395,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = sandbox({
       fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
             'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
-            'vendorGroupCategories', 'directoryCategories', 'vendorCats'],
+            'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'],
       vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
              'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
              'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES'],

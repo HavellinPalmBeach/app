@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
-    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'];
+    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn'];
   const EST = () => ({ svc: 'cleanout', days: 6, totTC: 11, totPS: 22, havellinTotal: 20000,
     rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3, tcH: 5, psH: 10 },
             { idx: 1, name: 'Study', vol: 3, cplx: 3, tcH: 6, psH: 12 }] });
@@ -279,7 +279,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#2 — the sourcing list renders the lines on the job, and ADDS the rest one pick at a time');
   {
-    const R = sandbox({ fns: ['renderVendorSourcing', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(LOGI_FNS), vars: ['LOGISTICS_CATEGORIES', 'vendorDirectory', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
+    const R = sandbox({ fns: ['renderVendorSourcing', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'premiumCoversLine', 'estimateAppraiserLines'].concat(LOGI_FNS), vars: ['LOGISTICS_CATEGORIES', 'vendorDirectory', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
       stubs: { vendorDirectory: [{}], dirStaleNotice: () => '', vendorPickerOptions: () => '<option>V</option>',
                vendorCategoriesForSlot: () => [], _selVendorId: () => '', _fldBg: () => '', vendorStatusOptions: () => '',
                _coordHrsField: () => '', coordHrsFor: () => 1, _vendorRefLine: () => '', _srcLineKey: (l, i) => 'L' + i,
