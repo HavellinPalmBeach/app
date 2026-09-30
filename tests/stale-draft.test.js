@@ -312,8 +312,11 @@ function run({ group, ok, eq, has, lacks }) {
 
     const after = rail(discount(wonJob()));
     const sub = after.row('agreement_sent').sub;
-    has(sub, 'A discount changed the price after this was prepared — re-approve the estimate and send a fresh packet',
+    // ⚠ RESTATED 2026-09-30 (audit P14): this fixture's estimate is approved again (the packet's Send is back,
+    // below), so the withdrawal says only what is left to do — it said "re-approve the estimate" here until then.
+    has(sub, 'A discount changed the price after this was prepared — send a fresh packet',
         'the withdrawal still says what to do in the app');
+    lacks(sub, 're-approve', '⚠ and not to re-approve an estimate that is approved again');
     has(sub, 'The Gmail draft from Sep 1 (' + BOX + ') has the old price — delete it, don’t send it',
         '⚠⚠ and the old draft is NAMED — the thing somebody might still send from Gmail');
     ok(sub.indexOf('A discount changed') < sub.indexOf('The Gmail draft'), 'the withdrawal first, then the draft');
@@ -348,8 +351,13 @@ function run({ group, ok, eq, has, lacks }) {
     // No priceChangedAt: this build was not there to note the change, so the draft cannot be read as stale. The
     // withdrawal alone — never "Drafted — send it", which would be advice to send the old-price packet.
     const legacy = wonJob({ agrApproved: false, agrApprovedBy: '', agrRevokedBy: 'estimate-edited' });
-    eq(rail(legacy).row('agreement_sent').sub, 'The estimate was edited after this was prepared — re-approve it and send a fresh packet',
-       'the withdrawal alone, as it always read');
+    // ⚠ RESTATED 2026-09-30 (audit P14): the estimate here is approved again, so the "re-approve it" half went.
+    eq(rail(legacy).row('agreement_sent').sub, 'The estimate was edited after this was prepared — send a fresh packet',
+       'the withdrawal alone');
+    const waiting = wonJob({ agrApproved: false, agrApprovedBy: '', agrRevokedBy: 'estimate-edited', approved: false });
+    eq(rail(waiting, { approved: false, submitted: true }).row('agreement_sent').sub,
+       'The estimate was edited after this was prepared — re-approve it and send a fresh packet',
+       'and, while the estimate waits on the manager, as it always read');
   }
 
   group('Every document row names its own stale draft, and only its own');
@@ -390,8 +398,7 @@ function run({ group, ok, eq, has, lacks }) {
       'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
       'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashNotice', 'notifyManagerForApproval',
       'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'docState', '_jobTouch', '_docNotice'].concat(HELP);
-    const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', 'agrApproved',
-      'agrApprovedBy', 'agrApprovedAt', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
+    const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
       'discountRevision', 'approvedBy', 'approvedAt'];
     const EST = () => ({ jobId: 1, tcFee: 7000, psFee: 4750, havellinTotalFull: 11750, rush: false, rushAmt: 0,
       discountPct: 0, discountAmt: 0, havellinTotal: 11750, grandTotal: 11750, fixedPrice: false });
@@ -458,7 +465,7 @@ function run({ group, ok, eq, has, lacks }) {
     const said = { saved: 0 };
     const ctx = sandbox({
       fns: ['revokeEstimateApproval', 'revokeAgreementApproval', 'notePriceChange', 'outstandingDrafts', 'draftOutstanding', 'docDraftPending', 'draftIsStale'],
-      vars: ['currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', '_packetExported'],
+      vars: ['currentAgrJobId', '_packetExported'],
       stubs: { saveJobs() { said.saved++; }, syncJobToSheets() {}, showSyncBadge() {} },
     });
     ctx._packetExported = {};

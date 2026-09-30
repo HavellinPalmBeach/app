@@ -278,7 +278,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ THE RENDERED ROW SAYS HOW MANY OBJECTS SHARE THE FRAME');
   {
     const rowCtx = sandbox({
-      fns: ['_renderInvRow', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs', '_invPhotoSiblings',
+      fns: ['_renderInvRow', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs', '_invPhotoSiblings',
             '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet'],
       stubs: {
@@ -304,7 +304,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The converse, or the cue is noise on every ordinary row in the manifest.
     const loneCtx = sandbox({
-      fns: ['_renderInvRow', '_invRecipientInput', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource',
+      fns: ['_renderInvRow', '_invRowDomId', '_invRecipientInput', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource',
             '_invDerivedRefs', '_getPhotoRef', '_invItemNo'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet'],
       stubs: {

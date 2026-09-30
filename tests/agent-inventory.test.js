@@ -784,7 +784,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['_renderInvRow', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
+      fns: ['_renderInvRow', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet'],

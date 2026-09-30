@@ -582,6 +582,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pos = EARLIER.map((c) => strip.indexOf(c));
     ok(pos.every((x, i) => i === 0 || x > pos[i - 1]), 'in lifecycle order — estimate, packet, deposit, midpoint');
     eq((strip.match(/<button/g) || []).length, 12, 'four documents, three links each');
+    // ⚠ EACH FILED COPY NAMES ITS DOCUMENT (2026-09-30, audit P14). This strip read "Filed copy" four times
+    // in a row, with nothing saying which document each one opened — the reason View and Print are named.
+    const stripLabels = (strip.match(/<button[^>]*>[^<]*<\/button>/g) || []).map((b) => b.replace(/<[^>]+>/g, '').replace(/^&#\d+;\s*/, ''));
+    eq(stripLabels.filter((l) => /^Filed /.test(l)), ['Filed estimate', 'Filed packet', 'Filed deposit invoice', 'Filed midpoint invoice'],
+       '⚠ each filed copy in the strip names its document');
+    eq(stripLabels.length, new Set(stripLabels).size, 'and no two buttons in the strip read the same');
+    has(tray, 'Filed final invoice', 'the big buttons name the final\'s filed copy the same way');
     FINAL.forEach((c) => lacks(strip, c, '⚠⚠ and the strip does not repeat the final: ' + c));
     eq((fin.match(/'invoice','view',\{stage:'final'\}/g) || []).length, 1, 'the final invoice is on screen exactly once');
     const finClicks = (fin.match(/onclick="([^"]+)"/g) || []);
@@ -698,7 +705,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('job.activatedOn — the write-once anchor the elapsed reading had none of');
   {
-    const t = sandbox({ fns: ['applyJobTransition', 'paymentStageWord', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', 'isJobFunded',
+    const t = sandbox({ fns: ['applyJobTransition', 'paymentStageWord', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', '_handoverBy', 'isJobFunded',
                               'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'isAgreementSigned',
                               'agreementSignature', '_ymdLocal', '_todayStr', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
                               // The Re-open is its own branch of the transition (2026-09-29).
@@ -706,7 +713,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                         vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
                         // ⚠ Closing with no midpoint payment asks first (2026-09-29); this job has none,
                         // and the question is answered yes so the close this check is about happens.
-                        stubs: { agrApprovedBy: '', approvedBy: 'Anthony Graziano', confirm: () => true } });
+                        stubs: { approvedBy: 'Anthony Graziano', confirm: () => true } });
     const j = { id: 7, status: 'won', won: true, agrSigned: true, depositReceived: true,
                 payments: [{ id: 1, stage: 'deposit', amount: 12050 }] };
     ok(t.applyJobTransition(j), 'a won, signed, funded job activates');

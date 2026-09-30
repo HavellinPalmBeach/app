@@ -103,8 +103,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'estTolerancePctTxt', 'esignAnchorsPresent', 'estFixedFee', 'estPrepFeeOnTop',
                  'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'];
-const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'agrApproved',
-                  'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
+const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
                   'ESIGN_REQUIRED_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
 const appCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
 
@@ -499,7 +498,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
         _appsScriptPost: (url, body, cb) => { posted = body; cb(true, { ok: true, envelopeId: 'env-99', status: 'sent' }); },
-        saveJobs() {}, syncJobToSheets() {}, agrApprovedBy: 'Anthony Graziano',
+        saveJobs() {}, syncJobToSheets() {}, 
       },
     });
     // ⚠⚠ NO `agrSent` HERE, AND ITS ABSENCE IS THE WHOLE POINT. This fixture carried
@@ -574,7 +573,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                      signerName: 'Tripp Butler', completedAt: '2026-09-18T15:00:00Z' });
         },
         saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {}, _docNotice() {},
-        esignArchiveSigned() {}, agrApprovedBy: 'Anthony Graziano',
+        esignArchiveSigned() {}, 
         ESIGN_PROVIDER_KEY: 'docusign',
       },
     });
@@ -895,7 +894,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         },
         saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
         _docNotice() {}, resolveSubfolderId() {}, docNames: () => ({ drive: 'a.html' }),
-        agrApprovedBy: 'Anthony Graziano', ESIGN_PROVIDER_KEY: 'docusign',
+        ESIGN_PROVIDER_KEY: 'docusign',
       },
     });
     const job = { id: 5, hvlId: 'HVL-0007', agrSent: true,
@@ -1379,7 +1378,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           docProvider: () => 'docusign',
           docPdfBase64: (spec, h, cb) => cb('JVBERi0='),
           setTimeout: () => 0, clearTimeout() {}, showSyncBadge() {}, open() {}, docAction() {},
-          saveJobs() {}, syncJobToSheets() {}, agrApprovedBy: 'Anthony Graziano',
+          saveJobs() {}, syncJobToSheets() {}, 
         },
       });
       const job = { id: 5, hvlId: 'HVL-0007', name: 'Jane Doe', email: 'jane@x.com' };
@@ -1521,7 +1520,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'AGR_SIG_MANUAL_METHODS'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
-        esignArchiveSigned() {}, agrApprovedBy: 'Anthony Graziano',
+        esignArchiveSigned() {}, 
       },
     });
     eq(c.esignProviderKey(), 'docusign',
@@ -1619,7 +1618,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           _appsScriptPost: (url, body, cb) => { posts.push(body); cb.apply(null, answer(body)); },
           saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
           resolveSubfolderId() {}, docNames: () => ({ drive: 'a.html' }),
-          agrApprovedBy: 'Anthony Graziano',
         },
       });
       return { c, notices, posts };

@@ -53,8 +53,7 @@ const FNS = [
 ];
 const VARS = ['PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
-  'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', 'agrApproved', 'agrApprovedBy',
-  'agrApprovedAt', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES',
+  'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES',
   'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
   'DOC_STAGE_WORD', 'EMAIL_BRAND', 'MAX_DISCOUNT_PCT'];
 
@@ -282,7 +281,9 @@ module.exports = function ({ group, ok, eq }) {
     const balance = rowAmt(fh, /^Balance Due Upon Completion/);
     const billed = e.fixedPrice
       ? (rowAmt(fh, /^Fixed Project Fee/) || 0) + (rowAmt(fh, /^Home prep site management fee/) || 0) + (rowAmt(fh, /^Approved Change Orders/) || 0)
-      : rowAmt(fh, /^Actual Havellin services total/);
+      // A Home Prep final heads the same row "Services total (site management fee on actual vendor spend …)"
+      // since 2026-09-30 (audit P14, Anthony's wording); the figure on it is the same one.
+      : rowAmt(fh, /^(Actual Havellin services total|Services total \(site management fee)/);
     seen('final balance');
     if (balance !== billed - received || fin.amtDue !== balance)
       fail('final balance', L(`balance ${balance} (amtDue ${fin.amtDue}) ≠ billed ${billed} − received ${received}`));

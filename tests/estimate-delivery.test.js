@@ -228,7 +228,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(agrRev, 'job.agrApproved = false', 'approval is withdrawn');
     has(agrRev, "job.agrRevokedBy = why || 'estimate-edited'", 'and why is recorded on the job');
     has(rev, 'syncJobToSheets(job)', 'and it reaches the sheet, so the other device agrees');
-    has(agrRev, 'if (currentAgrJobId === job.id)', 'the live globals are cleared when the tab is showing that job');
+    // ⚠ Restated 2026-09-30 (audit P14): the page-level agrApproved/By/At it used to clear are deleted, and
+    // the Agreement tab's banner reads the job, so the job's own fields are the whole of the clear.
+    has(agrRev, "job.agrApprovedBy = ''; job.agrApprovedAt = ''", 'the approver and date come off the job');
+    lacks(agrRev, 'agrApprovedBy = \'\'; agrApprovedAt', 'and there are no page globals left to clear');
     has(agrRev, 'Agreement approval revoked', 'and the person is told, rather than finding out later');
     has(rev, 'delete job.estimateDriveAt', "the estimate's Drive stamp still clears too");
     has(rev, 'rec.approved = false', 'and the estimate record itself is un-approved');
@@ -289,7 +292,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ui, 'Awaiting Client Acceptance', 'an unaccepted job gets its own badge');
     // Restated 2026-09-29: it read `agrRevokedBy === 'estimate-edited'` inline, so an approval a
     // DISCOUNT withdrew read as one never given. Any withdrawal reads as withdrawn now.
-    has(ui, 'agrApprovalWithdrawn(_agrJ)', 'a revoked approval reads differently from one never given — whatever revoked it');
+    has(ui, 'agrApprovalWithdrawn(_agrJ', 'a revoked approval reads differently from one never given — whatever revoked it');
     lacks(ui, "agrRevokedBy === 'estimate-edited'", 'and no reader keeps its own copy of which revocations count');
     has(ui, 'has not been filed anywhere', 'and the draft on screen is described as a preview');
     lacks(ui, '} else if (!estApproved) {', 'the single estimate-only refusal is gone');

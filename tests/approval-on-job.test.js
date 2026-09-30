@@ -109,7 +109,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
   'ensureAgreementApproved', 'agreementReady', 'isJobWon', '_primeAgreementFor', 'loadAgreement',
   'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docDraftPending'];
 const AGR_VARS = ['DOC_STAGE_WORD', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT',
-  'DECEDENT_SERVICES', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'currentAgrJobId',
+  'DECEDENT_SERVICES', 'currentAgrJobId',
   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
 const AEST = (id) => ({ jobId: id, tcFee: 15000, psFee: 5000, pkgCost: 0, smf: 0, prepFee: 0,
   havellinTotal: 20000, totTC: 100, totPS: 50, tcRate: 150, psRate: 100, discountPct: 0,
@@ -467,7 +467,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       eq(band(A()), 'Anthony Graziano | September 1, 2026', 'before: A names its own approval');
       eq(ctx.ensureAgreementApproved(2), '', 'B is approved through the real stamp');
       eq([ctx.jobs[1].agrApprovedBy, ctx.jobs[1].agrApprovedAt], ['Ashley Jerome', TODAY_LONG], 'fixture: B is approved by Ashley, today');
-      eq([ctx.agrApprovedBy, ctx.agrApprovedAt], ['Ashley Jerome', TODAY_LONG], 'fixture: and the page globals now describe B');
+      // The page globals that then described B are deleted (2026-09-30, audit P14): nothing on the page holds a copy.
+      eq([ctx.agrApprovedBy, ctx.agrApprovedAt], [undefined, undefined], 'and the page keeps no copy of B\'s approval');
       eq(band(A()), 'Anthony Graziano | September 1, 2026', '⚠⚠ after: A STILL names Anthony, September 1 — it used to read Ashley, today');
       eq(band(ctx.agreementHtml(ctx.jobs[1], null)), 'Ashley Jerome | ' + TODAY_LONG, 'and B names its own');
       eq(band(ctx.signingPacketHtml(1)), 'Anthony Graziano | September 1, 2026', '⚠ the signing packet — the HTML converted for DocuSign — carries A\'s approval');
@@ -478,7 +479,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ M1 the other direction: a fresh page, and page globals left pointing elsewhere');
   {
     const ctx = agrCtx('downsizing', 'probate');
-    eq([ctx.agrApproved, ctx.agrApprovedBy], [false, ''], 'fixture: a fresh page — nothing approved on it yet');
+    eq([ctx.agrApproved, ctx.agrApprovedBy], [undefined, undefined], 'fixture: a fresh page — no page-level approval exists (deleted 2026-09-30)');
     eq(band(ctx.agreementHtml(ctx.jobs[0], null)), 'Anthony Graziano | September 1, 2026', '⚠ A is approved and shows it — it used to read NO band on a fresh page');
     ctx.agrApproved = true; ctx.agrApprovedBy = 'Mallory'; ctx.agrApprovedAt = 'January 1, 2020';
     // ⚠ ABSENCE is counted, never read through band(): band() needs "Approved by X on Y", so a band with
@@ -520,7 +521,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function actorCtx() {
     const said = { notices: [], alerts: [] };
     const ctx = sandbox({
-      fns: AGR_FNS.concat(['_actor', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
+      fns: AGR_FNS.concat(['_actor', '_handoverBy', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
         '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending']),
       vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS']),
       stubs: {
@@ -554,7 +555,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = actorCtx();
     const [A, B, C] = ctx.jobs;
     eq(ctx.ensureAgreementApproved(2), '', 'fixture: B is approved through the real stamp');
-    eq([B.agrApprovedBy, ctx.agrApprovedBy], ['Ashley Jerome', 'Ashley Jerome'], 'fixture: B names Ashley, and so does the page global');
+    eq(B.agrApprovedBy, 'Ashley Jerome', 'fixture: B names Ashley');
+    // The page global that also named her is gone (2026-09-30, audit P14): nothing is left to fall back to.
+    eq(ctx.agrApprovedBy, undefined, 'and the page keeps no copy of it');
     eq(C.agrApprovedBy, undefined, 'fixture: C has no agreement approval of its own');
     eq(ctx._actor(C), '', '⚠⚠ C gets NOBODY — it used to get Ashley Jerome, B\'s approver');
     eq(ctx._actor(A), 'Anthony Graziano', 'A still gets its own approver, though the page names Ashley');
@@ -585,13 +588,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = actorCtx();
     const A = ctx.jobs[0];
     ctx.ensureAgreementApproved(2);
-    eq(ctx.agrApprovedBy, 'Ashley Jerome', 'fixture: the page global names B');
+    eq(ctx.jobs[1].agrApprovedBy, 'Ashley Jerome', 'fixture: B was approved last, by Ashley');
     ctx.docRecordSent({ job: A, key: 'agreement' }, { provider: 'docusign', pdfOk: true, extra: { envelopeId: 'env-1' } });
     eq([A.docState.agreement.draftedBy, A.docState.agreement.sentBy], ['Anthony Graziano', 'Anthony Graziano'], 'A\'s agreement is sent by A\'s approver');
     eq(A.agrSentBy, 'Anthony Graziano', 'and the legacy mirror says the same — no correct name is lost');
   }
 
-  group('⚠⚠ _actor driven: activating and closing a job whose own approver is blank names nobody');
+  // ⚠ RESTATED 2026-09-30 (audit P14, Anthony's answer): the activation and close stamps carry the ASSIGNED
+  // CONCIERGE, and only a job with nobody assigned falls back to its own approver — never another job's.
+  group('⚠⚠ activating and closing a job stamps its assigned concierge, never another job\'s approver');
   {
     const ctx = actorCtx();
     const [A, , C] = ctx.jobs;
@@ -599,16 +604,25 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     C.status = 'won';
     ok(ctx.applyJobTransition(C), 'fixture: C activates');
     eq([C.status, !!C.activatedOn], ['active', true], 'fixture: and is stamped');
-    eq(C.activatedBy, '', '⚠⚠ activated by nobody on record — it used to read Ashley Jerome, who approved another job');
+    eq(C.activatedBy, 'Carla Ortiz', '⚠⚠ activated under C\'s own concierge — it used to read Ashley Jerome, who approved another job');
     ok(ctx.applyJobTransition(C), 'fixture: C closes');
     eq([C.status, !!C.deliveredOn], ['closed', true], 'fixture: and is stamped');
-    eq(C.deliveredBy, '', '⚠⚠ delivered by nobody on record — never the page\'s approver');
+    eq(C.deliveredBy, 'Carla Ortiz', '⚠⚠ handed over under C\'s own concierge — never the page\'s approver');
     ok(ctx.applyJobTransition(A), 'fixture: A activates');
-    eq(A.activatedBy, 'Anthony Graziano', 'the converse: A is activated by its own approver');
+    eq(A.activatedBy, 'Anthony Graziano', 'the converse: A is activated under its own concierge');
+    // Nobody assigned: the stamp falls back to what it recorded before — this job's approver, or nobody.
+    const D = { id: 4, name: 'Dogwood', svc: 'downsizing', status: 'won', tc: '' };
+    ok(ctx.applyJobTransition(D), 'fixture: D, with no concierge and no approval, activates');
+    eq(D.activatedBy, '', 'no concierge and no approver: nobody on record');
+    const E = { id: 5, name: 'Elm', svc: 'downsizing', status: 'won', agrApprovedBy: 'Anthony Graziano' };
+    ok(ctx.applyJobTransition(E), 'fixture: E, approved but unassigned, activates');
+    eq(E.activatedBy, 'Anthony Graziano', 'no concierge: its own approver, as before');
     eq(ctx.__said.alerts, [], 'fixture: nothing refused');
   }
 
-  group('⚠⚠ the page-level agreement approval is read by the retired tab\'s banner and by nothing else');
+  // ⚠ RESTATED 2026-09-30 (audit P14): `updateAgrUI` reads the job's own record now and the three globals
+  // are deleted, so the one reader this group used to pin is gone too.
+  group('⚠⚠ the page-level agreement approval is gone, and nothing reads it');
   {
     // A write is not a read: `agrApprovedBy = ...` targets are stripped before looking. What survives is
     // every place the page's copy is TAKEN as the answer, and there must be exactly one — the retired
@@ -622,14 +636,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       }
       return out.sort();
     };
-    eq(readersOf('agrApprovedBy'), ['updateAgrUI'], '⚠⚠ agrApprovedBy: the retired tab\'s banner and nothing else');
-    eq(readersOf('agrApprovedAt'), ['updateAgrUI'], 'agrApprovedAt: the same');
-    eq(readersOf('agrApproved'), [], 'agrApproved: written, and read by nothing');
+    eq(readersOf('agrApprovedBy'), [], '⚠⚠ agrApprovedBy: read by nothing — the retired tab\'s banner reads the job');
+    eq(readersOf('agrApprovedAt'), [], 'agrApprovedAt: the same');
+    eq(readersOf('agrApproved'), [], 'agrApproved: read by nothing');
+    has(stripLine(H.fn('updateAgrUI')), '_agrJ.agrApprovedBy', 'the banner names the approver off the job it paints');
     // ⚠ Not vacuous: outside any function too, and the scan sees the lines it exists for.
     // (The declaration `var agrApprovedBy = ''` is a write, and the lookahead drops it with the others.)
     const readsInFile = (v) => (LIVE.match(new RegExp('(^|[^.\\w$])' + v + '(?![\\w$])(?!\\s*=(?!=))', 'g')) || []).length;
-    eq(readsInFile('agrApprovedBy'), 1, 'one read of agrApprovedBy in the whole app — the banner\'s');
+    eq(readsInFile('agrApprovedBy'), 0, 'no read of agrApprovedBy anywhere in the app');
     eq(readsInFile('agrApproved'), 0, 'and none of agrApproved');
+    ok(readsInFile('_agrJ') > 0, 'fixture: the scan does see bare reads in the live source');
     lacks(stripLine(H.fn('_actor')), 'agrApprovedBy ||', '_actor keeps no fallback to the page');
     ok(bareRead(stripLine("function _actor(job) {\n  return (job && job.agrApprovedBy) || agrApprovedBy || '';\n}"), 'agrApprovedBy'),
       'the scan catches the line this replaced');
@@ -690,7 +706,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const PAGE_APPROVAL = ['invApproved', 'invApprovedBy', 'invApprovedAt', 'agrApproved', 'agrApprovedBy',
     'agrApprovedAt', 'estimateApproved', 'estimateSubmitted', 'approvedBy', 'approvedAt',
     'discountRevision', 'invRequiresApproval', 'invBlocked'];
-  const GONE = ['invApproved', 'invApprovedBy', 'invApprovedAt'];
+  const GONE = ['invApproved', 'invApprovedBy', 'invApprovedAt', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt'];
   // A top-level var whose name says "approv" must be on the list above or named here with its reason.
   const APPROV_EXEMPT = {
     _approvalWatch: 'the estimate approval POLL (a timer handle and a job id) — not an approval',

@@ -168,13 +168,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ #3 — activating AHEAD of the target start asks first, because the stamp is write-once');
   {
     const asked = [];
-    const T = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+    const T = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', '_handoverBy', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
                               'depositPaidTotal', 'isAgreementSigned', 'agreementSignature', 'jobCloseBlockers', 'unratedVendorsForJob',
                               '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
                               // The Re-open is its own branch of the transition (2026-09-29).
                               'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
                         vars: ['JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
-                        stubs: { _todayStr: () => '2026-09-23', fmtDate2: (d) => 'D:' + d, agrApprovedBy: '', approvedBy: 'Anthony Graziano',
+                        stubs: { _todayStr: () => '2026-09-23', fmtDate2: (d) => 'D:' + d, approvedBy: 'Anthony Graziano',
                                  confirm: (m) => { asked.push(m); return T.__answer; } } });
     const READY = (over) => Object.assign({ id: 7, status: 'won', won: true, agrSigned: true, depositReceived: true,
       payments: [{ id: 1, stage: 'deposit', amount: 10000 }] }, over || {});
