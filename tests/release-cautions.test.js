@@ -29,10 +29,13 @@ const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_
              // invAwaitingAppraisal would be testing the stub.
              'invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode', '_invHasAppraisal', '_jobAppraisers',
              'invAppraisalThreshold', 'gateDispute', '_gateYes', 'invIsIntrinsic', 'invCatMeta',
-             'isDecedentJob'];
+             'isDecedentJob',
+             // P16: the request names a firearm's dealer route; the bulk handler asks the one
+             // field-on-this-job rule before it writes.
+             'invDealerRoute', 'invDealerRouteOffered', '_invKeyOnJob', '_invColOnJob'];
 const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-              'DECEDENT_SERVICES'];
+              'DECEDENT_SERVICES', 'INVENTORY_COLUMNS'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler', tc: 'Anthony Graziano' };

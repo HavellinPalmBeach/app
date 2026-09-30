@@ -19,7 +19,9 @@
 const { sandbox, source, fn } = require('./harness');
 
 const FNS = ['invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
-             'invTransportBlocked', 'invTransportReason', 'invTransportable'];
+             'invTransportBlocked', 'invTransportReason', 'invTransportable',
+             // P16: the gate reads a line's dealer route (a firearm going to a named person).
+             'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer'];
 const VARS = ['INV_TRANSPORT_REASONS'];
 
 // A firearm with everything the protocol asks for: authority, serial, named dealer.

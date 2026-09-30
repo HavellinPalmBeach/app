@@ -449,7 +449,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('appraisal worklist: the permanent item number, not the row position');
   {
     const WL_FNS = INV_FNS.concat([
-      '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', '_invRoomName', '_invMoney',
+      '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags',
+      // P16: the gate reads the dealer route, and the flags count only what the import panel still offers.
+      'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
       'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat', 'invMAIVCategory',
       'isDecedentJob', '_gate706',
@@ -745,7 +747,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the column switcher is gone — the groups are the item panel now');
   {
-    const v = sandbox({ fns: ['_invPanelCols', '_invPanelSection', 'invFiduciaryMode', 'isDecedentJob'],
+    const v = sandbox({ fns: ['_invPanelCols', '_invColOnJob', '_invPanelSection', 'invFiduciaryMode', 'isDecedentJob'],
                         vars: ['INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'DECEDENT_SERVICES'] });
     // ⚠ THE PANEL IS PER JOB SINCE 2026-09-21 — this called _invPanelCols() bare and broke
     // correctly. Axis 2 columns come off a living job; everything else is on both.

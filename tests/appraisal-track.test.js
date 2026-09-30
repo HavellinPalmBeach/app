@@ -28,9 +28,13 @@ const noComments = (s) => String(s)
 // predicate would be testing the stub — the lesson this project paid for on `_cePhases`.
 const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', '_invHasAppraisal',
                   '_jobAppraisers', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
-                  'invIsIntrinsic', 'invCatMeta', '_invJob'];
+                  'invIsIntrinsic', 'invCatMeta', '_invJob',
+                  // P16: the documents name a firearm's dealer route, the worklist counts only what the
+                  // import panel still offers, and the bulk handler asks the one field-on-this-job rule.
+                  'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer',
+                  '_importableFromEstimate', '_importedSourceSet', '_invKeyOnJob', '_invColOnJob'];
 const APPR_VARS = ['INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
-                   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES'];
+                   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler' };

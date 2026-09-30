@@ -22375,6 +22375,12 @@ function savePhotoRefs(jobId) {
                namedBy:r.namedBy, agentAt:r.agentAt, agentConf:r.agentConf,
                agentBasis:r.agentBasis, agentNotices:r.agentNotices, crop:r.crop,
                dupOK:r.dupOK,
+               // ⚠ P16 (2026-09-30): the firearm's dealer route, who removed a line at the desk, and
+               // whether a discarded shot's photograph went to the Drive bin. `driveTrashed` was
+               // written by discardShot and never kept, so after a reload Removed items stopped
+               // saying *photo in the Drive bin* and read like a line whose photograph was intact.
+               viaDealer:r.viaDealer, viaDealerBy:r.viaDealerBy, viaDealerAt:r.viaDealerAt,
+               deletedBy:r.deletedBy, driveTrashed:r.driveTrashed,
                clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
@@ -23123,11 +23129,19 @@ var INVENTORY_COLUMNS = [
 // against values nobody enters. ⚠ THE COLUMN IS DROPPED, THE DATA IS NEVER TOUCHED — a job can
 // only be re-typed WITHIN its family (see svcFamilyOptions), so no living job can become an
 // estate and find its track missing, and anything stored stays stored.
+// ⚠ ONE ANSWER TO "IS THIS FIELD ON THIS JOB" (P16, 2026-09-30), read by the panel that shows the field,
+// by the bulk bar that offers to set it, and by the bulk handler that writes it. The bar offered *Set
+// valuation source…* on a living job, where the field is not shown, and wrote a value nobody could see.
+// A key that names no column (reviewed, roomIdx) is not a field this question is about, so it passes.
+function _invColOnJob(job, col) { return !!col && (!col.fid || invFiduciaryMode(job)); }
+function _invKeyOnJob(job, key) {
+  var col = INVENTORY_COLUMNS.filter(function(c){ return c.key === key; })[0];
+  return !col || _invColOnJob(job, col);
+}
 function _invPanelCols(job) {
-  var fid = invFiduciaryMode(job);
   return INVENTORY_COLUMNS.filter(function(c) {
     if (c.hideInTab) return false;
-    if (c.fid && !fid) return false;
+    if (!_invColOnJob(job, c)) return false;
     // seq is the row's identity, fmv and disposition are edited on the row itself. Two
     // inputs bound to one value is how a panel and a row silently disagree.
     return c.key !== 'seq' && c.key !== 'fmv' && c.key !== 'disposition';
@@ -23623,7 +23637,15 @@ var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receip
                          // UI; a merge that dropped it would put the row back into `_slotRefs`,
                          // inflating the room's shot count and offering a Retry for bytes that do
                          // not exist. Same reasoning as sourceCollId two entries up.
-                         'fieldNote', 'groupId', 'derivedFrom'];
+                         'fieldNote', 'groupId', 'derivedFrom',
+                         // ⚠ THE DEALER ROUTE (2026-09-30, P16) IS RELEASE AUTHORITY'S NEIGHBOUR and
+                         // sticks for the same reason authBy does: a newer edit on a device that never
+                         // saw it (a condition, a value) must not silently strand the firearm again.
+                         // A deliberate clear stamps clearedAt, like every sticky field. App-side only:
+                         // saveInventory.gs's copy of this list does not carry it (nor serial, channel,
+                         // fieldNote, groupId, derivedFrom), so the sheet can drop it on a stale save
+                         // until the app's next merge and sync put it back.
+                         'viaDealer', 'viaDealerBy', 'viaDealerAt'];
 function _invHasVal(v) { return v !== undefined && v !== null && v !== ''; }
 // ⚠⚠ "NEVER SAW A VALUE" AND "DELIBERATELY EMPTIED IT" ARE DIFFERENT ANSWERS, and without
 // telling them apart a sticky field could never be cleared at all — you would blank a
@@ -24207,17 +24229,51 @@ function addInventoryManualItem(jobId) {
   _scheduleInventorySync(jobId);
 }
 
-function removeInventoryManualItem(jobId, stableId) {
-  if (!window.confirm('Remove this manual line item?')) return;
-  // Tombstone rather than splice. Splicing made the row simply absent, and absence is
-  // indistinguishable from "the other device has not seen it yet" — so the next merge
-  // put it straight back. The item number is never reused either way; a gap in the
-  // numbering is the visible record that something was removed.
+// A manual line is removed like any other line now; the name stays because the old table's ✕ calls it.
+function removeInventoryManualItem(jobId, stableId) { return invRemoveLine(jobId, stableId); }
+
+// ⚠⚠ REMOVE ONE LINE, WHATEVER KIND IT IS (2026-09-30, P16). Until today a line could come off the
+// desk only if it was typed by hand (Remove line item), or if Agent One had flagged it as a possible
+// duplicate. A photographed line, or one split out of a photograph, had no removal at all: the room's
+// bin takes the PHOTOGRAPH, from the job and from Drive, and with it every line split out of it.
+//
+// ⚠ IT REMOVES THE LINE AND NEVER THE PHOTOGRAPH. Another line may share the image (a split), the file
+// is the record of what was in the room, and an as-found shot is never deleted by anyone — so this
+// refuses anything that is not an inventory line, and it never calls `discardShot`, never asks Drive
+// to trash a file, and leaves detail shots, split lines and held retry bytes exactly as they were.
+// Restore (Removed items) then gives the whole line back, photograph and all.
+//
+// ⚠ A RECORDED REMOVAL: `deletedAt` and `deletedBy`, stamped, through the manifest's tombstone rule
+// (`mergeMediaItems` here, `_mergeMediaItems` on the server: per item on `updatedAt`), so a device
+// that has not seen the removal cannot bring the line back by syncing its older copy. The item
+// number stays spent (`_invAssignItemNos` counts tombstones in its high-water mark).
+function invRemoveLine(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId);
-  if (ref) { ref.deletedAt = Date.now(); _invTouch(ref); _setPhotoRef(jobId, ref); }
-  savePhotoRefs(jobId);
+  if (!ref || ref.deletedAt || ref.label !== 'inventory' || ref.collId) return false;
+  var others = _invPhotoSiblings(jobId, ref).filter(function(r){ return r.stableId !== ref.stableId; });
+  var msg = 'Remove item #' + _invItemNo(ref) + ' — ' + (ref.objectName || '(unnamed)') + '?\n\n'
+    + 'The line comes off the inventory and its number is never given to anything else.';
+  if (!ref.manual) {
+    msg += ' The photograph is not deleted: it stays in Google Drive'
+      + (others.length ? ', and the ' + others.length + ' other line' + (others.length > 1 ? 's' : '')
+          + ' that share it keep it' : '') + '.';
+  }
+  msg += '\n\nRemoved items, at the foot of this tab, gives the line back.';
+  if (!window.confirm(msg)) return false;
+  _invTombstoneLine(jobId, ref);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
+  return true;
+}
+// The one writer of a desk removal: tombstoned, stamped with who, touched so it wins the merge.
+// Tombstone rather than splice: absence is indistinguishable from "the other device has not seen it
+// yet", so a splice is undone by the next merge.
+function _invTombstoneLine(jobId, ref) {
+  ref.deletedAt = Date.now();
+  ref.deletedBy = _invStampBy(_invJob(jobId));
+  _invTouch(ref);
+  _setPhotoRef(jobId, ref);
+  savePhotoRefs(jobId);
 }
 
 // ── Appraisal worklist ────────────────────────────────────────────────────────
@@ -24235,7 +24291,8 @@ function removeInventoryManualItem(jobId, stableId) {
 // `printAppraisalWorklist` would print a Firearms packet on day one, which is a
 // printed instruction to hand over a firearm nobody has authorised releasing.
 // The authority is recorded on the item itself with the fields that already exist —
-// Authorized By + Approval Date — and the named dealer goes in Channel / Recipient.
+// Authorized By + Approval Date — and the named dealer goes in Channel / Recipient (on a line
+// going to a named person, in its dealer route instead: `invDealerRoute`, 2026-09-30).
 // Until both are present the item is withheld from the worklist and the document
 // says so, rather than quietly omitting it.
 function invIsFirearm(ref) { return !!ref && ref.category === 'Firearms'; }
@@ -24247,8 +24304,10 @@ function invReleaseBlocked(ref) { return invIsFirearm(ref) && !invFirearmAuthori
 // ⚠⚠ WHO MAY CARRY IT, WHICH IS A DIFFERENT QUESTION FROM WHO MAY RELEASE IT.
 // `invReleaseBlocked` asks whether the representative has authorised the item leaving at all.
 // This asks the narrower question the 2026-09-13 protocol turns on: may the named Havellin
-// principal put this particular object in a car and drive it to the dealer. Four gates, and
-// the first is categorically different from the other three.
+// principal put this particular object in a car and drive it to the dealer. Five arms, answered
+// in this order: `nfa`, `beneficiary`, `authority`, `serial`, `dealer`. The first two are unlike
+// the other three: no written authority clears either. `nfa` never clears; `beneficiary` clears
+// only when the line records its dealer route (2026-09-30, below).
 //
 // ⚠⚠ `nfa` HAS NO OVERRIDE AND MUST NEVER GROW ONE. A registered NFA item moves estate → dealer
 // on ATF paperwork; the estate carve-out at 27 CFR 479.90a names the executor, administrator or
@@ -24272,23 +24331,106 @@ function invTransportBlocked(ref) {
   // because `dealer` below is satisfied by ANY non-empty channel: the moment that field started
   // routinely holding a recipient's name, a firearm marked Distribute would have read as CLEARED
   // TO CARRY with "Marie Delgado (daughter)" standing in for a licensed dealer.
-  if (ref.disposition === 'Distribute') return 'beneficiary';
+  // ⚠ WHAT CLEARS IT (2026-09-30, P16; Anthony: "sure") IS THE ROUTE, NEVER AN AUTHORITY: the line
+  // records that the firearm goes to its person THROUGH a named licensed dealer (`invDealerRoute`).
+  // Until then nothing could — no disposition means "to a family member through a dealer" — so a
+  // firearm left to a daughter could never be driven to the dealer who would transfer it to her.
+  if (ref.disposition === 'Distribute' && !invDealerRoute(ref)) return 'beneficiary';
   if (!invFirearmAuthorized(ref)) return 'authority';
   if (!String(ref.serial || '').trim()) return 'serial';
-  if (!String(ref.channel || '').trim()) return 'dealer';
+  if (!invTransportDealer(ref)) return 'dealer';
   return '';
+}
+// The dealer a firearm is carried to. ⚠ ON A LINE GOING TO A PERSON, Channel / Recipient HOLDS THE
+// PERSON, so the dealer is the route's: read `channel` there and a recipient's name satisfies the
+// `dealer` arm again, which is the defect the `beneficiary` arm was written against. One answer,
+// read by the gate, the line's panel and the worklist's cleared list.
+function invTransportDealer(ref) {
+  if (!ref) return '';
+  return ref.disposition === 'Distribute' ? invDealerRoute(ref) : String(ref.channel || '').trim();
 }
 // Kept beside the predicate rather than at the render sites: four call sites each writing their
 // own sentence is how the screen and the gate come to disagree about what is wrong.
 var INV_TRANSPORT_REASONS = {
   nfa:       'NFA item — never transported by Havellin. It transfers from the estate to the dealer on ATF paperwork.',
-  beneficiary: 'Going to a named person — never handed over directly. The transfer runs through a licensed dealer, who does the background check and the paperwork. Route it to the dealer and record them here.',
+  beneficiary: 'Going to a named person — never handed over directly. The transfer runs through a licensed dealer, who does the background check and the paperwork. Open the line and record its dealer route: Through a licensed dealer.',
   authority: 'No written authority on file — record Authorized By and Approval Date.',
   serial:    'No serial number recorded — the authorisation names each firearm by serial.',
   dealer:    'No dealer named — record the receiving dealer in Channel / Recipient.'
 };
 function invTransportReason(ref) { return INV_TRANSPORT_REASONS[invTransportBlocked(ref)] || ''; }
 function invTransportable(ref) { return invIsFirearm(ref) && !invTransportBlocked(ref); }
+
+// ⚠⚠ TO A PERSON, THROUGH A LICENSED DEALER (2026-09-30, P16). Anthony, asked whether a firearm left
+// to a family member should have a way through: *"sure"*. The dealer makes the transfer to the person
+// (the background check, the paperwork); Havellin's named principal may carry it to that dealer on
+// the same terms as any other firearm going to one — written authority naming it by serial, the
+// serial on the record, the dealer named — and hands it to nobody else. The person stays in
+// Channel / Recipient, because the line still records WHO ends up with it; the dealer is the route's.
+//
+// ⚠ OFFERED ONLY WHERE IT CAN MEAN SOMETHING: a firearm, going to a named person, and never NFA. An
+// NFA item travels with nobody at Havellin under any authority (the arm above it has no override),
+// so a route on one would be a record inviting the one trip nobody may make. The control asks
+// `invDealerRouteOffered`, and so does the handler behind it, `invSetDealerRoute`.
+//
+// ⚠ THE ROUTE IS THE DEALER'S NAME, RECORDED BY A PERSON WITH WHO AND WHEN (`viaDealerBy`,
+// `viaDealerAt`), and nothing is a route without a dealer in it: the prompt refuses a blank, so
+// "through a dealer" with no dealer cannot be recorded. It is read only while the line reads
+// Distribute and is not NFA; on any other line it is carried and ignored.
+function invDealerRouteOffered(ref) {
+  return invIsFirearm(ref) && ref.disposition === 'Distribute' && !ref.flagNFA;
+}
+function invDealerRoute(ref) {
+  return invDealerRouteOffered(ref) ? String(ref.viaDealer || '').trim() : '';
+}
+// Why the route cannot be recorded on this line, in the words the control and the handler both use.
+function invDealerRouteRefusal(ref) {
+  if (!invIsFirearm(ref)) return 'Only a firearm line takes a dealer route.';
+  if (ref.flagNFA) return 'An NFA item never travels with Havellin, under any authority: the dealer collects it and it transfers on ATF paperwork. There is no route to record.';
+  if (ref.disposition !== 'Distribute') return 'The dealer route is for a firearm going to a named person. Set its disposition to Distribute first; a firearm a dealer buys or consigns names that dealer in Channel / Recipient.';
+  return '';
+}
+// Who a desk record is stamped with: the concierge assigned to the job, the same answer
+// `_invSetReviewed` and the must-find and as-found ticks record. The app has no session identity,
+// and the concierge is who is accountable for the job's record.
+function _invStampBy(job) { return (job && job.tc) || ''; }
+function invSetDealerRoute(jobId, stableId, on) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref || ref.deletedAt) return false;
+  var job = _invJob(jobId);
+  var keys = ['viaDealer', 'viaDealerBy', 'viaDealerAt'];
+  if (on) {
+    var why = invDealerRouteRefusal(ref);
+    if (why) { alert(why); return false; }
+    var who = String(ref.channel || '').trim();
+    var dealer = (window.prompt('Which licensed dealer does this firearm go through'
+      + (who ? ' on its way to ' + who : '') + '?\n\nThe dealer runs the background check and makes the transfer. '
+      + 'Havellin carries it to the dealer and hands it to nobody else.', String(ref.viaDealer || '')) || '').trim();
+    if (!dealer) return false;
+    ref.viaDealer = dealer;
+    ref.viaDealerBy = _invStampBy(job);
+    ref.viaDealerAt = Date.now();
+    if (ref.clearedAt) keys.forEach(function(k){ delete ref.clearedAt[k]; });
+  } else {
+    if (!window.confirm('Take the dealer route off ' + _invNamed(ref) + '?\n\nIt cannot be carried again until the route is recorded.')) return false;
+    // ⚠ A DELIBERATE CLEAR IS STAMPED, or the other device's copy puts the route straight back
+    // (the fields are sticky, like the authority beside them).
+    if (!ref.clearedAt) ref.clearedAt = {};
+    keys.forEach(function(k){ ref[k] = ''; ref.clearedAt[k] = Date.now(); });
+  }
+  _setPhotoRef(jobId, _invTouch(ref));
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return true;
+}
+// The route as a phrase: "to Marie Delgado (daughter), through Palm Beach Arms, a licensed dealer".
+function invDealerRouteText(ref) {
+  var via = invDealerRoute(ref);
+  if (!via) return '';
+  var who = String((ref && ref.channel) || '').trim();
+  return 'to ' + (who || 'the named person') + ', through ' + via + ', a licensed dealer';
+}
 
 // Group every manifest item flagged for a specialist by its appraiser type, so each
 // appraiser can be handed a clean packet of just their items (photos + condition +
@@ -24347,13 +24489,15 @@ function _apprTransport(jobId) {
 
 // Items flagged at the estimate (collections marked appraise/firearms, collector
 // vehicles) that haven't been brought into the manifest yet — so the worklist can
-// nudge the user to add them via the Job Plan.
+// nudge the user to bring them in from Job Admin & Inv → From the Estimate Walkthrough.
+// ⚠ "NOT YET IN THE INVENTORY" IS THE IMPORT PANEL'S OWN ANSWER (P16, 2026-09-30): `_importableFromEstimate`,
+// the list that panel offers. This counted every flagged line on the estimate, imported or not, so the
+// worklist told the desk a collection it had brought in weeks ago was still missing, and sent them to
+// the Job Plan for it, which carries no import (the panel is `_renderInventoryImportPanel`, on the desk).
 function _apprEstimateFlags(jobId) {
-  var rec = estimateStore[jobId];
-  var est = rec && rec.estimate;
-  if (!est) return { collections: 0, vehicles: 0 };
-  var colls = (est.collections || []).filter(function(c){ return c.disp === 'appraise' || c.disp === 'firearms'; }).length;
-  var vehs  = (est.vehicles || []).filter(function(v){ return v.collector; }).length;
+  var imp = _importableFromEstimate(jobId);
+  var colls = imp.collections.filter(function(c){ return c.disp === 'appraise' || c.disp === 'firearms'; }).length;
+  var vehs  = imp.vehicles.filter(function(v){ return v.collector; }).length;
   return { collections: colls, vehicles: vehs };
 }
 
@@ -25251,9 +25395,15 @@ function _invCautionBadges(ref, jobId) {
 // ⚠ THE NOTICE NAMES THE OBJECTS AND THEIR ITEM NUMBERS, never a bare count. A count tells a
 // reader something is wrong; a name tells them which line to stop at. Same rule the withheld-
 // firearms list follows, and the same rule the appraisal worklist was fixed to follow today.
+// ⚠⚠ THROUGH `invReleaseCautions`, THE ONE RULE, AND NEVER `c.test` ALONE (2026-09-30, P16). The notice
+// asked each caution's test directly and skipped the `fid` filter the badge applies, so a living
+// client's Approval Request printed the estate notice — "no independent record of what the property
+// was worth when it left … reported under oath" — above a table whose own rows carried no badge. On a
+// living job the Needs Appraisal tick means the piece is going OUT to a specialist, which the request's
+// *Where it is going* column already says; the family is owed no valuation caution, so it prints none.
 function _invCautionNotices(items, jobId) {
   return INV_RELEASE_CAUTIONS.map(function(c){
-    var hit = (items || []).filter(function(r){ return !!c.test(r, jobId); });
+    var hit = (items || []).filter(function(r){ return invReleaseCautions(r, jobId).indexOf(c) >= 0; });
     if (!hit.length) return '';
     var named = hit.map(function(r){ return esc(_invNamed(r)); }).join(' &middot; ');
     return '<div style="border:1px solid ' + c.tone + ';border-left-width:4px;border-radius:3px;'
@@ -25296,7 +25446,11 @@ function printApprovalRequest(jobId, selectedOnly) {
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
       + (showVal ? '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>' : '')
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.disposition || '—')
-        + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '') + '</td>'
+        + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '')
+        // ⚠ A FIREARM GOING TO A PERSON NAMES ITS ROUTE ON ITS OWN LINE (P16), so the representative
+        // initials the dealer it goes through, not only the person it ends with.
+        + (invDealerRoute(r) ? '<div style="color:#888;font-size:10px;">through ' + esc(invDealerRoute(r)) + ', a licensed dealer</div>' : '')
+        + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">&nbsp;</td>'
       + '</tr>';
   }).join('');
@@ -25318,6 +25472,8 @@ function printApprovalRequest(jobId, selectedOnly) {
   var gunRows = items.filter(invIsFirearm);
   var firearms = gunRows.length;
   var nfaRows  = gunRows.filter(function(r){ return !!r.flagNFA; }).length;
+  // A firearm going to a named person (P16): the note says how that one leaves as well.
+  var toPerson = gunRows.filter(invDealerRouteOffered).length;
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     // ⚠ The third argument is how this avoids _invDocHead's default tail, which states the
     // valuation basis and the date of death — neither of which a living job has.
@@ -25350,6 +25506,8 @@ function printApprovalRequest(jobId, selectedOnly) {
         + 'naming each firearm by serial and the receiving dealer, Havellin&rsquo;s named principal may transport a non-NFA firearm '
         + 'directly to that dealer; title stays with the estate throughout and Havellin neither purchases estate firearms nor '
         + 'takes any share of the proceeds.'
+        + (toPerson ? ' A firearm going to a named person goes to the dealer as well, and the dealer makes the transfer to '
+            + 'that person, with the background check and the paperwork; Havellin never hands a firearm to anyone.' : '')
         + (nfaRows ? ' ' + nfaRows + ' of them ' + (nfaRows > 1 ? 'are' : 'is') + ' flagged <strong>NFA</strong> and '
             + (nfaRows > 1 ? 'are' : 'is') + ' collected by the dealer &mdash; Havellin does not take custody of an NFA item '
             + 'under any authority.' : '')
@@ -25969,7 +26127,9 @@ function printAppraisalWorklist(jobId) {
         + '<a href="' + esc(FIREARMS_PROTOCOL_DOC) + '" target="_blank" rel="noopener">Full protocol &rarr;</a></div>'
         + '<div style="font-size:11px;color:#666;margin-top:6px;">'
         + tr.ready.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)')
-            + ' &middot; <span style="font-family:monospace;">' + esc(r.serial) + '</span>'; }).join('<br>')
+            + ' &middot; <span style="font-family:monospace;">' + esc(r.serial) + '</span>'
+            // Where it is carried: the dealer, and on a line going to a person, the route (P16).
+            + (invDealerRoute(r) ? ' &middot; ' + esc(invDealerRouteText(r)) : ' &middot; to ' + esc(invTransportDealer(r))); }).join('<br>')
         + '</div>';
     }
     if (tr.blocked.length) {
@@ -25986,7 +26146,7 @@ function printAppraisalWorklist(jobId) {
     html += '<div style="margin-top:14px;border:1px solid #A32D2D;border-radius:3px;padding:10px 12px;">'
       + '<div style="font-size:12px;font-weight:700;color:#A32D2D;margin-bottom:4px;">'
       + withheld.length + ' firearm' + (withheld.length > 1 ? 's are' : ' is') + ' awaiting written authority</div>'
-      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until the personal representative has authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the authority on the item — Authorized By and Approval Date, with the dealer in Channel / Recipient — and the item joins this worklist. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
+      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until the personal representative has authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the authority on the item — Authorized By and Approval Date, with the dealer in Channel / Recipient (on a firearm going to a named person, on its dealer route) — and the item joins this worklist. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
       + withheld.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
       + '</div></div>';
@@ -25997,7 +26157,7 @@ function printAppraisalWorklist(jobId) {
     if (f.collections) bits.push(f.collections + ' collection' + (f.collections > 1 ? 's' : '') + ' flagged to appraise');
     if (f.vehicles) bits.push(f.vehicles + ' collector vehicle' + (f.vehicles > 1 ? 's' : ''));
     html += '<div style="margin-top:10px;font-size:11px;color:#8a6d3b;font-style:italic;">Note: ' + bits.join(' and ')
-      + ' from the estimate ' + ((f.collections + f.vehicles) > 1 ? 'are' : 'is') + ' not yet in the inventory — add them on the Job Plan to include them here.</div>';
+      + ' from the estimate ' + ((f.collections + f.vehicles) > 1 ? 'are' : 'is') + ' not yet in the inventory — bring them in on the Job Admin &amp; Inv tab, under From the Estimate Walkthrough, to include them here.</div>';
   }
   html += '</div>';
   _printDocument(html, _invDocName(job, 'Appraisal Worklist'));
@@ -27031,6 +27191,7 @@ function restoreInventoryItem(jobId, stableId) {
     return r.stableId !== ref.stableId && parseInt(r.itemNo, 10) === want;
   });
   delete ref.deletedAt;
+  delete ref.deletedBy;      // the removal's own stamp goes with it (P16)
   _invTouch(ref);            // newer than the tombstone, so the undelete wins the merge
   _setPhotoRef(jobId, ref);
   if (taken) {
@@ -27057,6 +27218,8 @@ function _renderRemovedRows(jobId) {
       + '<span>#' + esc(_invItemNo(r)) + ' &middot; ' + esc(r.objectName || '(unnamed)') + '<span style="color:var(--gray);">' + esc(val)
       + (r.apprDoc ? ' · ' + esc(r.apprDoc) : '')
       + (r.deletedAt ? ' · removed ' + esc(fmtDate2(_ymdLocal(new Date(r.deletedAt)))) : '')
+      // Who removed it, where the removal recorded one (the desk's Remove line and duplicate Remove, P16).
+      + (r.deletedBy ? ' by ' + esc(r.deletedBy) : '')
       + (r.driveTrashed ? ' · <span style="color:var(--bronze);" title="Restore gives the row back. The photograph is in Google Drive\u2019s bin, which holds it for 30 days.">photo in the Drive bin</span>' : '')
       + '</span>'
       + (backAgain ? ' <span style="color:var(--bronze);" title="An item with this name is on the list again — this is the older copy you removed, not a second one.">&middot; already back on the list</span>' : '')
@@ -27073,7 +27236,7 @@ function _renderRemovedRows(jobId) {
     + 'Nothing here is counted, valued or printed anywhere. Restore returns the row under its original item number, '
     + 'or the next free one if that number has since been taken. A row marked <em>photo in the Drive bin</em> was '
     + 'deleted in the field: the row comes back, the photograph has to be restored from Google Drive\u2019s own bin, '
-    + 'which holds it for 30 days.</div>'
+    + 'which holds it for 30 days. Any other row was removed as a line and kept its photograph, so Restore gives both back.</div>'
     + rows + '</div>';
 }
 
@@ -27274,6 +27437,11 @@ function _invBulkApply(jobId, key, value) {
   // The placeholder is not a value. Selecting it must not blank the field on forty items.
   if (key !== 'reviewed' && (value === '' || value == null)) return;
   var job = _invJob(jobId);
+  // ⚠ THE HANDLER ASKS WHAT THE BAR ASKS (P16): a field this job does not show is not written from here.
+  if (!_invKeyOnJob(job, key)) {
+    showSyncBadge('That field is not recorded on this job, so nothing was changed.', true);
+    return;
+  }
   var what = '';
   picked.forEach(function(ref){
     if (key === 'reviewed') {
@@ -27299,8 +27467,9 @@ function _invBulkApply(jobId, key, value) {
   // but that document is read by the representative; this is read by the person who did it,
   // at the moment they did it. Named, never counted — a count cannot be acted on.
   if (key === 'disposition' && INV_RELEASE_DISPOSITIONS.indexOf(value) >= 0) {
+    // Through `invReleaseCautions`, the one rule (P16): a living job is never told a line is "not yet appraised".
     var _swept = INV_RELEASE_CAUTIONS.map(function(c){
-      var hit = picked.filter(function(r){ return !!c.test(r, jobId); });
+      var hit = picked.filter(function(r){ return invReleaseCautions(r, jobId).indexOf(c) >= 0; });
       if (!hit.length) return '';
       return ' \u26a0 ' + hit.length + ' of them ' + (hit.length > 1 ? 'are' : 'is') + ' flagged '
         + c.badge.toLowerCase() + ' \u2014 ' + hit.map(_invNamed).join(', ') + '.';
@@ -27691,10 +27860,8 @@ function agentDropDuplicate(jobId, stableId) {
   // seen it yet", so a splice is undone by the next merge.
   // ⚠ AND NEVER `discardShot`, which TRASHES the photograph in Drive. The frame is real
   // evidence of the room whatever the desk decides about the LINE.
-  ref.deletedAt = Date.now();
-  _invTouch(ref);
-  _setPhotoRef(jobId, ref);
-  savePhotoRefs(jobId);
+  // The desk's one removal writer (P16): tombstoned, stamped with who, saved.
+  _invTombstoneLine(jobId, ref);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
 }
@@ -27759,6 +27926,11 @@ function _renderInvWorkbar(job, all) {
   var jid = job.id;
   var fid = invFiduciaryMode(job);
   var _agNameables = agentShotGroups(jid).length;
+  // Which document is the primary, decided once (see the three arms below) so the standing Approval
+  // Request can tell whether it would be a second copy of the primary.
+  var _primary = (fid && docTierProduces(job, 'inventory') && !docTierProduces(job, 'values')) ? 'contents'
+    : (fid && !invDocContractBlock(job, 'schedule')) ? 'schedule'
+    : fid ? 'approval' : 'record';
   var btn = function(fn, label, title, primary) {
     return '<button class="btn-s" onclick="' + fn + '" title="' + esc(title) + '" style="'
       + (primary ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '') + '">' + label + '</button>';
@@ -27805,17 +27977,19 @@ function _renderInvWorkbar(job, all) {
       // that matters is the written release approval — not a page headed *Estate Inventory
       // — Asset Schedule*, which is a claim to have produced the thing we were contracted
       // not to produce.
-      + (fid && docTierProduces(job, 'inventory') && !docTierProduces(job, 'values')
+      + (_primary === 'contents'
           ? btn('printContentsList(' + jid + ')', 'Contents List', 'The photographed, room-by-room list the agreement promises counsel — description, location and condition, no values', true)
-          : fid && !invDocContractBlock(job, 'schedule')
+          : _primary === 'schedule'
           ? btn('printEstateInventoryReport(' + jid + ')', 'Estate Inventory PDF', 'The client / attorney asset schedule — photo, description, location, quantity, condition, date-of-death FMV and the valuation source stated', true)
-          : fid
+          : _primary === 'approval'
           ? btn('printApprovalRequest(' + jid + ')', 'Approval Request', 'Counsel prepares the inventory on this engagement. The document Havellin issues is the written, itemised release approval — nothing of value leaves the property without it.', true)
           : btn('printContentsRecord(' + jid + ')', 'Contents Record', 'What stayed, what went, where each piece went and who took it — the record the family keeps', true))
       + btn('exportInventoryCSV(' + jid + ')', 'CSV', 'Every column, as a spreadsheet file to attach to an email')
-      + btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
+      // ⚠ ONCE (P16): at the None tier the Approval Request IS the primary, and drawing it again here put
+      // two buttons for one document side by side. No control renders twice.
+      + (_primary === 'approval' ? '' : btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
           ? 'Written, itemised release approval for the representative to sign. Nothing of value leaves the property without it.'
-          : 'Written, itemised list of everything leaving the property, for the client to sign off.')
+          : 'Written, itemised list of everything leaving the property, for the client to sign off.'))
       + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', fid
           ? 'Add an asset with no photo (cash, vehicle, account)'
           : 'Add something with no photo — a vehicle, a rug already rolled, anything in storage')
@@ -27835,8 +28009,10 @@ function _renderInvWorkbar(job, all) {
             ? 'Per-specialist packet of every item flagged for appraisal'
             : 'Per-specialist packet of everything going out to an appraiser, auction house or dealer')
         + (fid ? btn('takeInventorySnapshot(' + jid + ')', 'Snapshot', 'Point-in-time copy of the inventory') : '')
+        // ⚠ BOTH FOLDERS (P16): `_invShareFolders` shares the item shots' folder and the as-found folder,
+        // named here by the one rule that files the shots, `photoSubfolder`. It said one folder.
         + btn('shareInventoryWithCounsel(' + jid + ')', fid ? 'Share w/ Counsel' : 'Share photographs', fid
-            ? 'Read-only access to the Estate Inventory Drive folder'
+            ? 'Read-only access to the ' + photoSubfolder('inventory') + ' and ' + photoSubfolder('before') + ' Drive folders'
             : "Read-only access to this job's photograph folders")
         + btn('unshareInventory(' + jid + ')', 'Revoke', "Revoke an email's access")
         + btn('invToggleRollups()', (_invShowRoll ? 'Hide' : 'Show') + ' summary &amp; rollups', 'Totals, FMV by category, MAIV aggregate')
@@ -27946,6 +28122,13 @@ function _renderInvRow(job, ref) {
   var dispCol = INVENTORY_COLUMNS.filter(function(c){ return c.key === 'disposition'; })[0];
   var warn = [];
   if (invIsFirearm(ref) && invReleaseBlocked(ref)) warn.push('<span title="A firearm moves on written authority only" style="color:#c0392b;font-weight:700;">&#9888; held</span>');
+  // ⚠ A FIREARM GOING TO A PERSON SAYS HOW (P16): through a named licensed dealer, or not yet recorded.
+  // Bronze, never red: red on this strip is a held firearm and keeps that one meaning.
+  if (invDealerRouteOffered(ref)) {
+    warn.push(invDealerRoute(ref)
+      ? '<span title="' + esc(invDealerRouteText(ref)) + '" style="color:var(--gray-dk);">via ' + esc(invDealerRoute(ref)) + '</span>'
+      : '<span title="Going to a named person: a licensed dealer makes the transfer. Open the line (&#9662;) and record the route." style="color:var(--bronze);font-weight:700;">no dealer route</span>');
+  }
   if (invAwaitingAppraisal(ref, jid)) warn.push('<span title="Flagged for a specialist appraisal \u2014 no appraiser engaged yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
   if (ref.flagBequest) warn.push('<span title="Named in a specific bequest" style="color:var(--bronze);">bequest</span>');
   if (ref.flagDisputed) warn.push('<span title="Recorded dispute" style="color:#c0392b;">disputed</span>');
@@ -28086,15 +28269,50 @@ function _renderInvPanel(job, ref) {
         // none of the manual ones: a cash entry or an account has no picture to split. It is
         // here rather than in the row because it is a deliberate act, and here rather than on
         // the camera because you have to know what the four bottles are.
-        + (ref.manual ? '<button class="btn-s" onclick="removeInventoryManualItem(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;">Remove line item</button>'
+        + (ref.manual ? ''
                       : '<button class="btn-s" onclick="invSplitItemClick(' + jid + ',\'' + ref.stableId + '\')" '
                         + 'title="Another object is in this same photograph — add it as its own line, sharing the image">'
                         + '&#10133; Another item in this photo</button>')
+        // ⚠ ONE REMOVE FOR EVERY LINE (P16): typed, photographed or split. It takes the LINE, never
+        // the photograph — the room's 🗑 is the only thing that deletes an image.
+        + '<button class="btn-s" onclick="invRemoveLine(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;" '
+          + 'title="Take this line off the inventory. No photograph is deleted, and Removed items gives the line back.">Remove line</button>'
         + (sibs.length > 1 ? '<span style="font-size:10.5px;color:var(--gray);">This photograph carries '
             + sibs.length + ' lines: ' + sibs.map(function(x){ return esc(_invNamed(x)); }).join(' &middot; ') + '</span>' : '')
       + '</div>'
     + '</div>'
+    + _invFirearmPanelHtml(job, ref)
     + fieldHtml + secs + '</div>';
+}
+
+// ⚠ THE FIREARM BLOCK OF A LINE'S RECORD (P16): whether it may be carried, and on a line going to a
+// named person, its dealer route. It answers from `invTransportBlocked` and the route helpers and
+// never re-derives either, so the panel, the worklist and the gate cannot disagree about a firearm.
+function _invFirearmPanelHtml(job, ref) {
+  if (!invIsFirearm(ref)) return '';
+  var jid = job.id, sid = ref.stableId;
+  var why = invTransportBlocked(ref);
+  var route = invDealerRoute(ref);
+  var status = why
+    ? '<div style="color:#A32D2D;">&#9888; Not cleared to carry: ' + esc(invTransportReason(ref)) + '</div>'
+    : '<div style="color:var(--ok-tx);">&#10003; Cleared to carry. Anthony Graziano alone takes it to '
+      + esc(invTransportDealer(ref)) + ', in a locked case.</div>';
+  var routeHtml = '';
+  if (invDealerRouteOffered(ref)) {
+    var who = String(ref.channel || '').trim();
+    routeHtml = route
+      ? '<div style="margin-top:5px;">&#10003; <strong>' + esc(invDealerRouteText(ref).replace(/^to /, 'To ')) + '</strong>'
+        + ' <span style="color:var(--gray);">recorded' + (ref.viaDealerBy ? ' by ' + esc(ref.viaDealerBy) : '')
+        + (ref.viaDealerAt ? ' on ' + esc(fmtDate2(_ymdLocal(new Date(ref.viaDealerAt)))) : '') + '</span>'
+        + ' <button class="btn-s" onclick="invSetDealerRoute(' + jid + ',\'' + sid + '\',true)">Change dealer</button>'
+        + ' <button class="btn-s" onclick="invSetDealerRoute(' + jid + ',\'' + sid + '\',false)">Take the route off</button></div>'
+      : '<div style="margin-top:5px;">Going to ' + esc(who || 'a named person') + ': a licensed dealer makes the transfer, never Havellin. '
+        + '<button class="btn-s" onclick="invSetDealerRoute(' + jid + ',\'' + sid + '\',true)" '
+        + 'title="Record that this firearm goes to its person through a licensed dealer, and name the dealer">Through a licensed dealer&hellip;</button></div>';
+  }
+  return '<div style="margin-bottom:10px;font-size:11px;line-height:1.5;">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Firearm</div>'
+    + status + routeHtml + '</div>';
 }
 
 // ⚠ EVERY PIECE A SPLIT CHANGES HAS AN ID, SO IT CAN BE REPAINTED WITHOUT THE REST (2026-09-30, audit P14):
@@ -28213,7 +28431,8 @@ function _renderInvBulk(job) {
     + '<strong style="font-size:12px;">' + n + ' selected</strong>'
     + menu('category',    'Set category…', INV_CATEGORIES, _invBulkCommon(picked, 'category'))
     + menu('disposition', 'Set disposition…', _invDispOptions(job, _invBulkCommon(picked, 'disposition')), _invBulkCommon(picked, 'disposition'))
-    + menu('valSource',   'Set valuation source…', INV_VAL_SOURCES, _invBulkCommon(picked, 'valSource'))
+    // Only where the field itself shows (an estate): `_invKeyOnJob` is the panel's own rule.
+    + (_invKeyOnJob(job, 'valSource') ? menu('valSource', 'Set valuation source…', INV_VAL_SOURCES, _invBulkCommon(picked, 'valSource')) : '')
     + menu('roomIdx',     'Move to room…', roomVals, _invBulkRoomCommon(picked))
     // ⚠ A DISTRIBUTION IS DOZENS OF ITEMS TO ONE PERSON — clearing a child's bedroom is forty
     // rows and one name. menu() builds a <select>; a recipient is free text, so it is its own
@@ -28592,11 +28811,14 @@ function _photoStamp(ms) {
 // for the desk to name), 'detail' (linked to a primary shot by groupId, never a line of its
 // own), 'after' (the room cleared).
 //
-// ⚠ THE FIELD HAS FIVE CHIPS AND THE DESK KEEPS SEVEN. Keep, Donate, Sell, Remove, Undecided
-// are the piles a room is sorted into; the manifest's Auction / Consign / Sell are a DESK
-// refinement of a field Sell, Remove is the manifest's Junk, and Hold is a desk flag, never a
-// pile. Undecided maps to '' — the "Not yet decided" bucket the Inventory tab was built to
-// receive — and it is the DEFAULT, so an unsorted shot is never silently filed as Keep.
+// ⚠ THE FIELD HAS SEVEN CHIPS AND THE DESK KEEPS NINE DISPOSITIONS (INV_DISPOSITIONS). Keep, New
+// home, To a person, Donate, Sell, Remove, Undecided are the piles a room is sorted into (New home
+// is the manifest's Move and is offered only where the job has one; To a person is Distribute);
+// the manifest's Auction / Consign / Sell are a DESK refinement of a field Sell, Remove is the
+// manifest's Junk, and Hold is a desk flag, never a pile. Undecided maps to '' — the "Not yet
+// decided" bucket the desk was built to receive — and it is the DEFAULT, so an unsorted shot is
+// never silently filed as Keep. (This said five chips until 2026-09-30; New home and To a person
+// were added on 2026-09-21.)
 // ⚠ `Move` CARRIES needsDest AND IS WITHHELD WHERE THERE IS NO NEW HOME. Offered on a Home
 // Cleanout it would be read as "move it to the garage", which is a staging note and not a
 // destination — and the row would then print on the family's record as having gone somewhere
@@ -29200,10 +29422,27 @@ function _roomShotThumbStyle(jobId, ref) {
   var src = _localShotThumbs[ref.stableId] || (id ? (_invThumbCache(jobId)[id] || '') : '');
   return src ? 'background-image:url(&quot;' + src + '&quot;);' : '';
 }
+// What a detail tile is a close-up OF: its item, by name or shot number, so a person knows which
+// object they are retrying or binning. Escaped here; the caller writes it straight into the tile.
+function _roomDetailTileName(jobId, r) {
+  var par = _getPhotoRef(jobId, r.groupId);
+  if (!par) return 'Detail of an item';
+  return 'Detail of ' + (par.objectName ? esc(par.objectName) : 'Item ' + (par.seq || ''))
+    + (par.deletedAt ? ' (line removed)' : '');
+}
 function _roomShotStripHtml(jobId, roomIdx) {
-  var groups = [['before', 'As found'], ['inventory', 'Items'], ['after', 'After']];
+  // ⚠⚠ A FAILED DETAIL SHOT GETS A TILE (2026-09-30, P16). Detail shots were drawn nowhere here — the
+  // item's tile only counts them (+1 detail) — so one that failed to reach Drive had no Retry and no
+  // bin once the camera moved on, while the room card went on reading "⚠ not saved" for it forever.
+  // Only the FAILED ones are drawn, under their own heading — the room card's own test for its
+  // "⚠ not saved" (`_planRoomListHtml`), so every detail that lights the flag has a tile to clear it;
+  // an uploaded close-up is counted on its item and has nothing to be done to it here. The tile carries
+  // the same Retry and the same bin as any other shot (the bin refuses an as-found shot only, and a
+  // detail is never one).
+  var groups = [['before', 'As found'], ['inventory', 'Items'], ['detail', 'Detail shots not saved'], ['after', 'After']];
   return groups.map(function(g) {
     var refs = _slotRefs(jobId, roomIdx, g[0]);
+    if (g[0] === 'detail') refs = refs.filter(function(r){ return r.status === 'failed'; });
     if (!refs.length) return '';
     var tiles = refs.map(function(r) {
       var det = g[0] === 'inventory' ? _invDetailRefs(jobId, r.stableId) : [];
@@ -29226,7 +29465,8 @@ function _roomShotStripHtml(jobId, roomIdx) {
         + '<button type="button" class="ws-del" title="Delete this photo" aria-label="Delete this photo"'
         + ' onclick="discardShot(' + jobId + ',\'' + r.stableId + '\')">&#128465;&#65039;</button>'
         + '</div>'
-        + '<div class="n">' + (g[0] === 'inventory' ? (r.objectName ? esc(r.objectName) : 'Item ' + r.seq) : g[1] + ' ' + r.seq)
+        + '<div class="n">' + (g[0] === 'inventory' ? (r.objectName ? esc(r.objectName) : 'Item ' + r.seq)
+            : g[0] === 'detail' ? _roomDetailTileName(jobId, r) : g[1] + ' ' + r.seq)
         + (r.needsAppr ? ' <span style="color:var(--bronze);">&#9873;</span>' : '')
         + (g[0] === 'inventory' ? ' \u00b7 ' + (r.disposition ? esc(r.disposition) : 'undecided') : '')
         + (det.length ? ' \u00b7 +' + det.length + ' detail' : '') + '</div>'
@@ -33103,7 +33343,7 @@ function _placeHoursSection() {
 // box is DELETED when it described how the camera flow works ("wide-angle photo of every
 // room") — the flow enforces it — or restated the playbook; that text lives in the playbook
 // now, Step 10. Desk paperwork (financial close, the §733.604 filing list, records) moved to
-// JOB_ADMIN_TASKS on the Inventory tab, which is where the evening's work actually happens.
+// JOB_ADMIN_TASKS on the Job Admin & Inv tab, which is where the evening's work actually happens.
 var PLAN_TASKS = [
   // Phase 0 — before Day 1
   { key:'precall',            phase:'p0', sec:'Pre-job call',
@@ -33174,7 +33414,8 @@ var PLAN_TASKS = [
   // keys survive there unchanged; the review box became a drafted email. See renderCloseoutBody.)
 ];
 
-// Desk paperwork. Rendered at the TOP of the Inventory tab, not on the Job Plan, because that
+// Desk paperwork. Rendered on the Job Admin & Inv tab (the desk), under the client header and the
+// band and above the inventory, not on the Job Plan, because that
 // is the tab the concierge works at the end of the day — Anthony: *"once we're in a job, the
 // job plan is gonna tell us midpoint is reached, and then we're gonna be working to get the
 // inventory done for the end of the job. Going back to the client dashboard is not a logical
@@ -33200,10 +33441,12 @@ var JOB_ADMIN_TASKS = [
   // happen on a probate matter whoever built the schedule; verifying a value we did not state,
   // or attaching a report we were not engaged to obtain, is an instruction nobody can follow.
   //
-  // ⚠ A TRUST MATTER CORRECTLY GETS NONE OF THESE, AND THAT IS NOT THE OMISSION IT LOOKS LIKE:
-  // the trustee's schedule these would verify does not exist yet (step 7 of ESTATE_SCOPE_SPEC),
-  // and a checklist against a document nothing can produce is the box people learn to tick
-  // blind. It is listed as outstanding in both documents rather than guessed at here.
+  // ⚠ A TRUST MATTER CORRECTLY GETS NONE OF THESE: they are the §733.604 court's steps, and a trust
+  // is administered outside the court. What it lacks is its OWN list — the trustee's checklist is not
+  // built. When this was written the schedule such a list would verify did not exist either; the Trust
+  // Schedule (`printTrustSchedule`, step 7 of ESTATE_SCOPE_SPEC) was built later on 2026-09-21, so the
+  // checklist is what remains. It is listed as outstanding in both documents rather than guessed at
+  // here. (Corrected 2026-09-30, P16: this said the schedule "does not exist yet".)
   { key:'ct_inventory',   sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack && c.weValue; }, label:'§733.604 inventory verified — date-of-death FMV on every line' },
   // ⚠ OR the job actually HAS an appraiser on the record. The tier says whose job it was to
   // obtain one; a report that exists has to be attached however it arrived, and a box that
@@ -33471,7 +33714,7 @@ function planDerivedHtml(jobId, job, est, phase) {
   }).join('') + '</div>';
 }
 
-// ═══════════════════════ JOB ADMIN — the top of the Inventory tab ═══════════════════════
+// ═══════════════════════ JOB ADMIN — the desk paperwork on the Job Admin & Inv tab ═══════════════════════
 var _jobAdminOpen = {};
 // Open by default on a prep job — there it is the tab's main business, not a fold above an
 // inventory — and shut by default everywhere else. A choice made by hand wins either way.
@@ -37158,7 +37401,9 @@ function renderJobPlan(jobId, job, est) {
       + [_pend.collections.length ? _pend.collections.length + ' collection' + (_pend.collections.length > 1 ? 's' : '') : '',
          _pend.vehicles.length ? _pend.vehicles.length + ' vehicle' + (_pend.vehicles.length > 1 ? 's' : '') : ''].filter(Boolean).join(' and ')
       + '. They are added deliberately rather than automatically, because the job decides the disposition, not the estimate. '
-      + 'Bring them in from <strong>Inventory &rarr; From the Estimate Walkthrough</strong>.</div>' : '';
+      // ⚠ THE TAB IS "Job Admin & Inv" (P16): there has been no tab called Inventory since the desk was
+      // renamed, and the panel sits below the inventory there.
+      + 'Bring them in on the <strong>Job Admin &amp; Inv</strong> tab, under <strong>From the Estimate Walkthrough</strong>.</div>' : '';
 
   // ── The job, top to bottom, OPEN (2026-09-20). The two tools fold above it; nothing below
   // does. `cur` is the stage the job is in and each card's node reads done / NOW / ahead off it.

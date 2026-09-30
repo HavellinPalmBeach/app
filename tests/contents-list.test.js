@@ -490,10 +490,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
       'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval',
       'invProbateRows', 'matterDef', 'matterTypeOf', 'maivFilingApplies', '_gate706',
+      // P16: the gate reads the dealer route; the share names both photo folders by the filing rule.
+      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'photoSubfolder',
     ]);
     const BVARS = VARS.concat(['INV_WORK_FLAGS', 'INV_DISPOSITIONS', 'INV_GROUP_ORDER',
       'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS', 'MATTER_TYPES', 'INV_UNDECIDED',
-      '_invFilter', '_invShowRoll', '_invOpen', '_invPick', 'INV_VAL_BASES', 'INVENTORY_COLUMNS']);
+      '_invFilter', '_invShowRoll', '_invOpen', '_invPick', 'INV_VAL_BASES', 'INVENTORY_COLUMNS',
+      'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER']);
     const barRig = (job) => {
       const ctx = sandbox({
         fns: BAR, vars: BVARS,

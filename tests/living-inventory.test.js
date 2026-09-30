@@ -70,7 +70,9 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'invReleaseBlocked', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
-  '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef'
+  '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
+  // P16: the dealer route, the one field-on-this-job rule, and the photo folders the share names.
+  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', '_invColOnJob', 'photoSubfolder'
 ];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   '_agRun', 'AGENT_NOTICE_KINDS', 
@@ -81,7 +83,7 @@ const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   'estimateStore', '_invFilter', '_invShowRoll', '_invOpen', '_invPick',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
   'MAIV_OTHER', 'MAIV_BY_CATEGORY',
-  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'
+  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER'
 ];
 
 function rig(job, refs) {
@@ -309,7 +311,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠⚠ FIREARMS STAY WHOLE ON EVERY SERVICE — and Distribute is blocked outright');
+  // ⚠ RESTATED 2026-09-30 (P16; Anthony: "sure" to a way through), NOT WEAKENED. This read "Distribute is
+  // blocked outright", which was the defect: nothing could clear it, so a firearm left to a daughter could
+  // never be driven to the dealer who would transfer it to her. It is held until the line records its
+  // dealer route, and no written authority clears it (asserted below, unchanged). The route itself is
+  // driven in tests/p16-inventory-desk.test.js; one check here keeps the two files telling one story.
+  group('⚠⚠ FIREARMS STAY WHOLE ON EVERY SERVICE — and Distribute is held until its dealer route is recorded');
   {
     const { ctx } = rig(LIVING, []);
     // A gun in a downsizing client's closet is still a gun. The category keys on the OBJECT.
@@ -330,6 +337,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ and no written authority can clear it — same rule as the NFA arm');
     // NFA is still first and still has no override.
     eq(ctx.invTransportBlocked(Object.assign({}, toKid, { flagNFA: true })), 'nfa', 'NFA outranks it');
+    // What clears it is the route, and only the route: to the person, through a named licensed dealer.
+    eq(ctx.invTransportBlocked(Object.assign({}, toKid, { viaDealer: 'Palm Beach Arms (FFL)' })), '',
+       'with its dealer route recorded, the papered firearm may be carried to that dealer');
+    eq(ctx.invTransportBlocked(Object.assign({}, toKid, { viaDealer: 'Palm Beach Arms (FFL)', flagNFA: true })), 'nfa',
+       '⚠ and an NFA item is not, route or no route');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

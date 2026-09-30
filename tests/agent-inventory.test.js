@@ -128,7 +128,9 @@ function rig(refs, over) {
           // exactly what would let the block above the rows and the chip on the row come to
           // disagree about which lines are contested.
           '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_agDupIndex', '_agDupHtml',
-          '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo'],
+          '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo',
+          // P16: the desk's one removal writer, which records who removed the line.
+          '_invTombstoneLine', '_invStampBy', '_invJob'],
     vars: ['_agRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', '_agDupSet',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: Object.assign({
@@ -786,7 +788,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rowRig = (dupSet, over) => sandbox({
       fns: ['_renderInvRow', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
-            '_invNamed', '_invItemNo'],
+            '_invNamed', '_invItemNo',
+            // P16: the row names a firearm's dealer route and the panel carries the firearm block.
+            'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet'],
       stubs: {
         _invInput: () => '', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Entry & Living',
@@ -830,8 +834,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const drop = liveLines(fn('agentDropDuplicate'));
     lacks(drop, 'discardShot', 'it never routes through the shot binner');
     lacks(drop, 'driveTrashed', 'and never marks the photograph trashed');
-    has(drop, 'deletedAt', 'it tombstones');
-    has(drop, '_invTouch', 'and stamps it so the removal wins the merge');
+    // ⚠ RESTATED 2026-09-30 (P16), NOT WEAKENED. These read `deletedAt` and `_invTouch` inline in the
+    // drop; the tombstone now has one writer for every desk removal (`_invTombstoneLine`, which also
+    // records who removed it), so the drop is held to calling it and the writer to both halves. The
+    // behaviour itself is driven above (the line comes off, tombstoned, every value kept).
+    has(drop, '_invTombstoneLine(', 'it tombstones through the desk\'s one removal writer');
+    const tomb = liveLines(fn('_invTombstoneLine'));
+    has(tomb, 'deletedAt', 'which tombstones');
+    has(tomb, '_invTouch', 'and stamps it so the removal wins the merge');
+    lacks(tomb, 'driveTrashed', 'and never marks the photograph trashed either');
 
     has(src, 'dupOK:r.dupOK', 'and dupOK is on the savePhotoRefs whitelist, or it is dropped on every save');
   }

@@ -25,7 +25,10 @@ const FNS = ['_invScheduleSection', '_invTrackDefault',
   'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
   'invAwaitingAppraisal', '_invAwaitingApproval', 'invProbateRows', 'matterDef', 'matterTypeOf',
   'maivFilingApplies', 'invReleaseCautions', '_invCautionBadges', '_invCautionNotices',
-  '_invNamed', '_invDateTime', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames'
+  '_invNamed', '_invDateTime', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames',
+  // P16: the dealer route, the import panel's own list, and the photo folders the share names.
+  'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer',
+  '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder'
 ];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 
@@ -36,7 +39,7 @@ const VARS = [
   'INV_DISPOSITIONS', 'INV_ASSET_TRACKS', 'INV_VAL_BASES', 'INV_UNDECIDED', 'INV_WORK_FLAGS',
   'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS', 'MATTER_TYPES', '_invFilter', '_invShowRoll',
   '_invOpen', '_invPick', 'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'DOC_SCOPES',
-  'INV_VAL_SOURCES', 'EXEMPT_CAP_732_402',
+  'INV_VAL_SOURCES', 'EXEMPT_CAP_732_402', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
 ];
 
 const ESTATE = (over) => Object.assign({
