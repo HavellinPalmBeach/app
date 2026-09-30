@@ -366,6 +366,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.job.houseFlags.access.note, 'Alarm 9900', 'the access answer is corrected');
     eq(r.job.houseFlags.firearms, { on: true, note: 'Rifle in closet' }, '⚠ a hidden row keeps what the record holds');
     eq(r.job.mustFind, 'Grandma\'s ring', 'and so does the hidden must-find answer');
+    // The case that matters: rows edited while visible, then the service switched to Home Prep before
+    // Save. The hidden controls now differ from the record, and the save must not read them.
+    const switched = editAndSave(Object.assign({}, PREP, { svc: 'downsizing' }),
+      { 'ec-svc': 'prep', 'ec-hf-firearms': false, 'ec-hfn-firearms': '', 'ec-mustfind': 'typed before the switch' });
+    eq(switched.job.svc, 'prep', 'the switch to Home Prep saves');
+    eq(switched.job.houseFlags.firearms, { on: true, note: 'Rifle in closet' }, '⚠ a row edited and then hidden by the switch keeps the record');
+    eq(switched.job.mustFind, 'Grandma\'s ring', '⚠ and so does the must-find box the switch hid');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
