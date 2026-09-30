@@ -559,6 +559,8 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry with the
 
 Fixes: M10–M12, estimator lows · Needs: Q5–Q7, Q9, Q10, Q13, Q20
 
+**Re-checked 2026-09-30:** all nine P12 items (six lows, M10, M11, M12) still reproduce. Only M11 waits on an open question (Q7). **M12 needs Q6 put back to Anthony:** `computeEngineV3` already weights volume by room size (`engineRoomWeight`), so "weight by room size" is the current code; the drop comes from light rooms' low default scores pulling a factor applied to the whole square footage, and crew sizing (5,500 → 5,750 sq ft prices $28,400 → $27,450 as the crew goes 2 → 3).
+
 ```text
 Estimator fixes and pricing decisions (2026-09-28 workflow audit, findings M10–M12 and the Build Estimate lows).
 
@@ -599,11 +601,13 @@ Fixes: other lows
 
 ```text
 Small backlog, one commit (2026-09-28 workflow audit, "Other" lows):
-- `showFB` clears its strip on an unconditional 4-second timer, so a second message inside 4 s is wiped by the first message's timer.
+- `showFB` clears its strip on an unconditional 4-second timer, so a second message inside 4 s is wiped by the first message's timer. *(already fixed 2026-09-29, found on re-check 2026-09-30)*
 - The "Filed copy" links in the document strip don't name their document.
 - The Job active step shows no date, though `activatedOn` is stamped.
 - Intake has no sanity check on square footage or room counts (moved from P9; ask Anthony for the limits first — flag, never refuse).
-- Dead code: `houseFlagSummary` and the client list's unused `detailHtml`, if P5 didn't already remove them.
+- Dead code: `houseFlagSummary` and the client list's unused `detailHtml`, if P5 didn't already remove them. *(already gone, re-checked 2026-09-30)*
+- Person-entered names rendered unescaped (found on re-check 2026-09-30): `saveQuickPartner`'s notice (partner), *Estimate loaded for job:* (client), the estimate-denied notice (`djob.tc`), the contractor save and refusal messages, and contractor names in the `value` and text of four dropdowns (a quote mark breaks the option). Wrap each in `esc()`.
+- The Home Prep final heads its total "logged hours + actual fees" (client-facing wording: Anthony picks the label). An unrendered "Service Management Fee (15% — vendor coordination)" label in `invoiceHtml` would be wrong if `SMF_PCT` ever moved off 0.
 - Deleting a contractor has no PIN, unlike vendors and partners.
 - Splitting a photo (`invSplitItemClick`) repaints the whole Job Admin tab: 1.4 s at 3,000 rows. Repaint the affected rows only.
 - Agent One's `AGENT_MAX_TOKENS` is 4,096 with adaptive thinking on, so a dense frame can fail with "cut off". Raise it to about 16,000 (backend; bundle it with P11's redeploy).

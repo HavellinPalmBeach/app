@@ -298,5 +298,6 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
   - Neither agreement has a referral-fee disclosure (Q21: agreed; the wording goes through counsel).
   - A referral partner with no `uid` still keys jobs by sheet row (`referralIdOf` falls back). If `backfillIds()` has never been run in the Referral Partners Apps Script project, running it once from the editor gives every row one; nothing else changes.
   - Intake has no sanity check on square footage or room counts (an audit low P9 left open; it needs Anthony's limits).
-  - Literal "15%" strings in some agreement arms and the invoice PIN banner (harmless while the tolerance is 15%).
+  - Literal "15%" strings in both agreements (`probateAgreementHtml`'s billing clause and list item, `agreementHtml` §3.8); the invoice PIN banner already reads `estTolerancePctTxt()`. Harmless while the tolerance is 15%.
+  - Person-entered names rendered unescaped in a handful of notices and contractor dropdowns (listed under P14 in the tracker, re-checked 2026-09-30).
 - Not yet proven live (Anthony's items in the tracker): a DocuSign sandbox envelope's tab placement (`DS_TAB_Y_OFFSET`) and a Stripe ACH test payment.
