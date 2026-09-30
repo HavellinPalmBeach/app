@@ -440,8 +440,15 @@ function getMediaStore() {
 // and the item walks back onto the next release approval request as though nobody signed.
 // ⚠ SAME LIST AND SAME RULE AS INV_STICKY_FIELDS / invStickyValue IN havellin.html, and
 // tests/media-merge.test.js drives BOTH and asserts they agree. Change one, change the other.
-var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc',
-                         'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId'];
+// ⚠ THE LISTS HAD DRIFTED (found 2026-09-30, P16): the app had grown `serial`, `channel`, `fieldNote`,
+// `groupId` and `derivedFrom`, and P16 added a firearm's dealer route, while this copy still held the
+// first ten. So a device's older copy of an item, saved over a newer one, dropped a firearm's serial,
+// its recipient or its dealer route ON THE SHEET, and the item fell back behind the transport gate
+// until the device that held them merged and synced again. The test now asserts the two lists hold
+// the same names, so a field added to one and not the other fails the suite.
+var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc', 'serial', 'channel',
+                         'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId',
+                         'fieldNote', 'groupId', 'derivedFrom', 'viaDealer', 'viaDealerBy', 'viaDealerAt'];
 function _invHasVal(v) { return v !== undefined && v !== null && v !== ''; }
 // "Never saw a value" and "deliberately emptied it" are different answers: without telling
 // them apart a sticky field could never be cleared at all, because the stale device would

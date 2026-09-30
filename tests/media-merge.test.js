@@ -333,6 +333,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(gmerge([it('a', { updatedAt: 1, authBy: 'Tripp Butler' })],
               [it('a', { updatedAt: 2, authBy: '', clearedAt: { authBy: 9 } })])[0].authBy, '',
        'and honours a deliberate clear');
+
+    // ⚠⚠ THE TWO LISTS HOLD THE SAME NAMES (P16, 2026-09-30). They had drifted: the app had grown serial, channel,
+    // fieldNote, groupId, derivedFrom and a firearm's dealer route while the server kept its first ten, and every
+    // case above still agreed, because none of them carried a field only one list held.
+    const gList = vm.runInContext('INV_STICKY_FIELDS', gctx);
+    eq([...gList].sort(), [...ctx.INV_STICKY_FIELDS].sort(), '⚠⚠ saveInventory.gs holds exactly the app\'s sticky fields');
+    const gun = { category: 'Firearms', disposition: 'Distribute', serial: 'SN-4471', channel: 'Marie Delgado (daughter)',
+                  viaDealer: 'Palm Beach Arms', viaDealerBy: 'Anthony Graziano', viaDealerAt: 5 };
+    const older = [it('g', Object.assign({ updatedAt: 1 }, gun))];
+    const newer = [it('g', { updatedAt: 2, category: 'Firearms', disposition: 'Distribute', condition: 'Good' })];
+    const kept = gmerge(older, newer)[0];
+    eq([kept.serial, kept.channel, kept.viaDealer, kept.viaDealerBy, kept.viaDealerAt],
+       ['SN-4471', 'Marie Delgado (daughter)', 'Palm Beach Arms', 'Anthony Graziano', 5],
+       '⚠⚠ on the server, a newer copy that never saw them keeps the firearm\'s serial, recipient and dealer route');
+    eq(JSON.stringify(gmerge(older, newer)), JSON.stringify(merge(older, newer)), 'exactly as the app does');
+    // And a deployment that lacks this says so: the app asks for 2026-09-30b, and the banner names the consequence.
+    const B = sandbox({ vars: ['BACKEND_FEATURE_COST', 'BACKEND_MIN_VERSION'] });
+    ok(String(B.BACKEND_FEATURE_COST.version || '').indexOf('serial, recipient or dealer route') >= 0,
+       'the stale-backend banner names what an older deployment drops');
+    ok(B.BACKEND_MIN_VERSION >= '2026-09-30b', 'and the app asks for the deployment that carries the list');
   }
 
   // ── The payload the server is actually given ────────────────────────────────

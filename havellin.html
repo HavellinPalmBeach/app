@@ -5630,6 +5630,8 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // than this is named by its version. 2026-09-30b (P16) adds the payment merge that keeps a void or a
 // clear against a stale device that touched the same payment (`_paymentSticky`): without it a voided
 // payment can come back and count again, with nothing on screen saying so.
+// The same redeploy carries saveInventory.gs's sticky list, brought level with the app's (serial, recipient,
+// field note, split links and a firearm's dealer route), so an older copy of an item cannot drop them on the sheet.
 var BACKEND_MIN_VERSION = '2026-09-30b';
 var _backendVersion = null;
 
@@ -5686,7 +5688,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
