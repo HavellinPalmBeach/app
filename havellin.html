@@ -40020,6 +40020,8 @@ function saveClientEdit(jobId) {
   job.svcLabel = svcLabels[svc] || svc;
   // The picker is built from the roster plus the job's own value (conciergeOptionsHtml), so an
   // untouched save writes back exactly what was there — never 'Unassigned' for a name it lacked.
+  // _keep here is belt-and-braces (the select always renders; a revert of it stays green): the
+  // protection is the picker, and edit-client-intake-rules.test.js holds that.
   job.tc    = _keep('tc', job.tc);
   if (!_locked) job.sqft = document.getElementById('ec-sqft').value;
   // Years in home moves the price (tenure), so it is held with the sq ft once approved. Bedrooms and
