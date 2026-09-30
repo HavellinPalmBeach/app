@@ -156,7 +156,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy',
-                 'prepFeeRate', 'estimateIsFeeOnly', 'estDeclutterHrs'].concat(TIER_FNS);
+                 'prepFeeRate', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coPrepVendorsOn'].concat(TIER_FNS);
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'PREP_FEE_RATE'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -539,6 +539,35 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fx, 'on the home sale preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost', 'the fee row, fixed arm');
     has(fx, 'of what the home sale preparation vendors identified in Exhibit A or added by Change Order actually invoice', 'and the Fixed Project Fee paragraph');
     lacks(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 43000, havellinTotal: 43000 })), 'added by Change Order', 'an older inside-fee estate form keeps its words');
+  }
+
+  group('⚠⚠ A3 — the estate form\'s §4.2 change-order form has a row for an added vendor, and stops saying "no charge" (lead)');
+  {
+    // The fee row above says "or added by Change Order", and §4.2 is the form a change order is written on: it had no
+    // row for a vendor, and its hourly Billing row said the change order "does not itself create a charge" — false for
+    // one that adds a vendor carrying the 30% fee. It asks coPrepVendorsOn, the rule the change order modal asks.
+    const c = agrCtx();
+    const es = (e) => text(c.probateAgreementHtml(ESTATE_JOB({ svc: 'cleanout' }), Object.assign({}, EST_ESTATE, { svc: 'cleanout' }, e)));
+    const prepE = { prepEnabled: true, prepItems: [{ type: 'Painting', cost: 10000, lid: 'bp1' }], prepCost: 10000, prepFee: 3000 };
+    const hourly = es(prepE);
+    const f42 = (t) => { const i = t.indexOf('4.2 Change Order Documentation'); return i < 0 ? '' : t.slice(i, t.indexOf('Havellin Authorization', i)); };
+    ok(f42(hourly).length > 100, 'fixture: the hourly estate form prints §4.2');
+    has(f42(hourly), 'Added Preparation Vendor (the vendor and its estimated cost. It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on what it actually invoices.)',
+        '⚠⚠ the form has a row for the vendor, saying who pays it and where its fee is');
+    has(f42(hourly), 'The additional hours are billed as worked, at the hourly rates in Section 3.1. A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on what it actually invoices; this Change Order creates no other charge.',
+        '⚠⚠ the hourly Billing row names the vendor\'s fee');
+    lacks(f42(hourly), 'does not itself create a charge', 'and no longer says the change order creates no charge');
+    const fx = f42(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 40000, prepFeeOnTop: true, havellinTotal: 43000 })));
+    has(fx, 'is charged on what it actually invoices, in addition to the fixed project fee.)', 'on a fixed fee with the prep fee on top, the fee is in addition to it');
+    has(fx, 'Price of This Change', 'beside the fixed arm\'s own rows');
+    lacks(f42(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 43000, havellinTotal: 43000 }))), 'Added Preparation Vendor',
+          'never on an older fixed fee with the prep fee inside it (no change order can add a vendor there)');
+    const plain = f42(es({}));
+    lacks(plain, 'Added Preparation Vendor', 'nor on an estate with no preparation vendors');
+    has(plain, 'The additional hours are billed as worked, at the hourly rates in Section 3.1. This Change Order does not itself create a charge.',
+        'whose hourly Billing row reads exactly as it did');
+    eq(c.coPrepVendorsOn(Object.assign({}, EST_ESTATE, { svc: 'cleanout' }, prepE), ESTATE_JOB({ svc: 'cleanout' })), true,
+       'the form and the modal ask the same rule');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════

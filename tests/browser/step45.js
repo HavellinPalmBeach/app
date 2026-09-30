@@ -154,6 +154,27 @@ const DIR = [
       has(pk, 'Professional appraisals are arranged by the Client.', '§5.2 names the Client …');
       has(pk, 'Admit an appraiser engaged by the Client Instruction from the Client As scheduled by the Client', '⚠⚠ … and so does §5.3\'s row, in all three columns');
       lacks(pk, 'engaged by counsel', 'not counsel in the abstract');
+      // §4.2's blank change order on an estate with no preparation vendor reads as it did (lead, P16).
+      lacks(pk, 'Added Preparation Vendor', '§4.2 has no vendor row where no change order can add one');
+      has(pk, 'The additional hours are billed as worked, at the hourly rates in Section 3.1. This Change Order does not itself create a charge.',
+          'and its Billing row reads as it did');
+    });
+
+    // ── B2. the estate packet with a preparation vendor: §4.2 can record a vendor a change order adds (lead) ──
+    await section('B2. an estate with a preparation vendor: §4.2 has a row for an added vendor and names its fee', async () => {
+      await seed({ id: 4509, name: 'Estate of Iris Lane', svc: 'cleanout', stage: 'won', estate: true, matter: 'probate',
+        est: { svc: 'cleanout', docScope: 'full', docTier: 'values', totTC: 60, totPS: 120, tcRate: 150, psRate: 100, tcFee: 9000, psFee: 12000,
+               prepEnabled: true, prepCost: 8000, prepFee: 2400, prepItems: [{ type: 'Painting', cost: 8000, note: '', lid: 'ep1' }],
+               havellinTotal: 23400, grandTotal: 31400, fixedPrice: false, rushExPrepFee: true } });
+      await toDash(4509);
+      const pk = await printed('#client-dashboard-view button[onclick="docAction(4509,\'agreement\',\'print\')"]', 'the band\'s Print on the estate packet');
+      ok(pk.length > 2000, 'fixture: the packet printed');
+      has(pk, 'Added Preparation Vendor (the vendor and its estimated cost. It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on what it actually invoices.)',
+          '⚠⚠ §4.2 has a row for a vendor a change order adds');
+      has(pk, 'A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on what it actually invoices; this Change Order creates no other charge.',
+          '⚠⚠ and its Billing row names the fee rather than "no charge"');
+      lacks(pk, 'This Change Order does not itself create a charge', 'never the old sentence beside a vendor row');
+      has(pk, 'identified in Exhibit A or added by Change Order', 'the fee row the form points to');
     });
 
     // ── C. a change order adds a vendor to a bundled-prep labour job ─────────

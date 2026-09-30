@@ -39186,6 +39186,16 @@ function probateAgreementHtml(job, est) {
   content += dRow('Description of Change','&nbsp;<br>&nbsp;<br>&nbsp;');
   content += dRow('Additional TC Hours','&nbsp;');
   content += dRow('Additional PS Hours','&nbsp;');
+  // ⚠ A CHANGE ORDER MAY ADD A PREPARATION VENDOR WHERE THIS AGREEMENT CHARGES THE PREP FEE ON THEM (Anthony, 2026-09-30,
+  // P16), and the fee row above says "or added by Change Order", so the form it points to must have somewhere to put
+  // one, and its Billing row must not say the change order creates no charge when the vendor carries the fee. Asked of
+  // `coPrepVendorsOn`, the one rule the change order modal asks, so the form is offered exactly where the app lets one
+  // be raised: never on an older fixed fee with the prep fee inside it.
+  var _coVendorRow = coPrepVendorsOn(est, job);
+  if (_coVendorRow)
+    content += dRow('Added Preparation Vendor', '&nbsp; <span style="color:var(--gray);font-size:10px;">(the vendor and its estimated cost. '
+      + 'It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on what it actually invoices'
+      + (isFixedAgr ? ', in addition to the fixed project fee' : '') + '.)</span>');
   // ⚠⚠ THE FORM FOLLOWS THE BILLING BASIS, LIKE THE CHANGE ORDER THE APP PRINTS (2026-09-25). It
   // carried "Additional Cost Estimate $" and "Revised Total Estimate $" on BOTH bases. On time and
   // materials a change order carries no price — the timesheet bills its hours as they are worked,
@@ -39199,7 +39209,9 @@ function probateAgreementHtml(job, est) {
     content += dRow('Revised Fixed Project Fee','$&nbsp;');
   } else {
     content += dRow('Revised Estimated Hours','&nbsp;');
-    content += dRow('Billing','The additional hours are billed as worked, at the hourly rates in Section 3.1. This Change Order does not itself create a charge.');
+    content += dRow('Billing','The additional hours are billed as worked, at the hourly rates in Section 3.1. ' + (_coVendorRow
+      ? 'A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on what it actually invoices; this Change Order creates no other charge.'
+      : 'This Change Order does not itself create a charge.'));
   }
   content += dRow('Client Approval','Signature: _________________________________ &nbsp;&nbsp; Date: _________________');
   content += dRow('Havellin Authorization','Signature: _________________________________ &nbsp;&nbsp; Date: _________________');
