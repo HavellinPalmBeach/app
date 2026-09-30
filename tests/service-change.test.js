@@ -318,7 +318,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(src, 'function getPrepTCHrs', 'and the function that fed it is deleted, not left dead');
     // The card footer used to advertise those hours; now it advertises the fee.
     const cards = fn('renderVendorGroupCards');
-    has(cards, 'cardHrs  += isPrep ? 0 : vendorLineHrs(v);', 'a prep line adds no hours to its card');
+    // ⚠ RESTATED 2026-09-30 (P16): vendorLineHrs takes the Premium flag (an appraiser line books none on a Premium estate).
+    has(cards, 'cardHrs  += isPrep ? 0 : vendorLineHrs(v, _prem);', 'a prep line adds no hours to its card');
     has(cards, "bits.push(Math.round(prepFeeRate()*100) + '% GC fee", 'the card states the fee instead');
     lacks(cards, 'isPrep && isPrepSvc', 'and no longer gates that on the service being prep');
   }

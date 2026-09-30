@@ -400,8 +400,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(at.length === 1 && lines.slice(Math.max(0, at[0] - 4), at[0] + 1).join('\n').indexOf("'reaccept'") >= 0,
          name + ': and only inside its re-acceptance branch — it decides nothing');
     });
-    eq((src.match(/docReadiness\(/g) || []).length - _printers.length, 6,
-       'the definition, the three registry blockers, the tray and the assembler');
+    // ⚠ RESTATED 2026-09-30 (P16): 7, not 6. The dashboard's "Agreement not signed" chip now words its fix from the
+    // gate (agreementChipFix) instead of the stale "Approve the agreement…". It reads the gate's sentence and decides
+    // nothing on its own, like the three printers above: it returns the gate's own words whenever the gate refuses.
+    eq((src.match(/docReadiness\(/g) || []).length - _printers.length, 7,
+       'the definition, the three registry blockers, the tray, the assembler and the chip\'s fix');
+    {
+      const acf = noComments(fn('agreementChipFix')).split('\n');
+      const at = acf.map((l, i) => (l.indexOf('docReadiness(') >= 0 ? i : -1)).filter((i) => i >= 0);
+      eq(at.length, 1, 'agreementChipFix asks the gate at exactly one site');
+      ok(at.length === 1 && /if \(why\) return why;/.test(acf.slice(at[0], at[0] + 2).join('\n')),
+         'and returns the gate\'s own words when it refuses — it decides nothing');
+    }
     ['estimate', 'agreement', 'invoice'].forEach((k) => {
       const blk = noComments(src.slice(src.indexOf('  ' + k + ': {'), src.indexOf('  ' + k + ': {') + 4000));
       has(blk, 'docReadiness(', `the ${k} blocker asks the shared gate`);
@@ -434,7 +444,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',
       // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
-      'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel'];
+      'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix'];
     const DVARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
@@ -629,7 +639,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'finalAwaitsHours', 'estimateIsFeeOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
             'docDraftOnly', 'docTitle', 'paymentStageWord', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
-            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmtMoney'],
+            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmtMoney', 'finalCrewOnlyWarn'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
     });
     const REC = { estimate: { jobId: 7 }, approved: true };
@@ -805,7 +815,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-            'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'],
+            'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn'],
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
     });

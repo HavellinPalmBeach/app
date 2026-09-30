@@ -145,7 +145,7 @@ function run({ group, ok, eq, has, lacks }) {
   // ═══ 2 · NO "FILE TO DRIVE" THE GATE WOULD REFUSE ═══════════════════════════
   group('2 · File to Drive is not offered on a view-only document — the tray and the gate agree');
   {
-    const R = lift(['jobTimeline', 'jobTimelineNext', 'jobTimelineActions', '_jtDocSecondaries', 'docReadiness', 'docDraftOnly'],
+    const R = lift(['jobTimeline', 'jobTimelineNext', 'jobTimelineActions', '_jtDocSecondaries', 'docReadiness', 'docDraftOnly', 'finalCrewOnlyWarn'],
       ['DOC_ACTIONS', 'jobs', 'estimateStore', 'jobLogs'],
       { jobs: [], estimateStore: {}, jobLogs: {}, Intl: global.Intl, _todayStr: () => '2026-09-30', REQUIRE_WALKTHROUGH_NOTES: false },
       ['DOC_ACTIONS']);
@@ -195,7 +195,7 @@ function run({ group, ok, eq, has, lacks }) {
   // ═══ 3 · THE JOB ACTIVE STEP SHOWS ITS DATE ═════════════════════════════════
   group('3 · the Job active step shows the day it started, on the rail and on the track');
   {
-    const T = lift(['jobTimeline', 'jtRailHtml', 'jtTrackHtml'], ['jobs', 'estimateStore', 'jobLogs'],
+    const T = lift(['jobTimeline', 'jtRailHtml', 'jtTrackHtml', 'finalCrewOnlyWarn'], ['jobs', 'estimateStore', 'jobLogs'],
       { jobs: [], estimateStore: {}, jobLogs: {}, Intl: global.Intl, _todayStr: () => '2026-09-30' });
     const EST = { svc: 'cleanout', havellinTotal: 20000, totTC: 10, totPS: 20, days: 6,
       rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3, note: 'seen' }] };

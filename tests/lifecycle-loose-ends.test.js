@@ -312,7 +312,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
     'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
     'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor',
-    'estFixedFee', 'estPrepFeeOnTop', 'estDeclutterHrs', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines'];
+    'estFixedFee', 'estPrepFeeOnTop', 'estDeclutterHrs', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove'];
   const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
     'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
     'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -506,7 +506,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the final\'s View and Print wait for logged hours — finalAwaitsHours is the one rule');
   {
-    const F = sandbox({ fns: ['finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries'], stubs: { jobLogs: {} } });
+    const F = sandbox({ fns: ['finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries', 'finalCrewOnlyWarn'], stubs: { jobLogs: {} } });
     const job = { id: 1, svc: 'cleanout' };
     eq(F.finalAwaitsHours(job, EST, 0), true, 'an hourly job with nothing logged cannot be priced');
     eq(F.finalAwaitsHours(job, EST, 12), false, '…and can once hours are logged');
@@ -542,7 +542,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
       'workingDaysInclusive', 'coWorkingDays', '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf',
-      'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin'];
+      'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn'];
     const TL_VARS = ['JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS',
       'ESIGN_PROVIDERS', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'EXECUTOR_AUTH_OPTIONS'];

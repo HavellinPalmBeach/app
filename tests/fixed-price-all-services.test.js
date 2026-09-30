@@ -172,9 +172,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fixed, 'refund any amount it holds above the portion earned',
         'and only then is the balance refunded');
 
-    // The T&M form keeps every one of its own bullets.
-    has(tm, 'responsible for all hours worked', 'T&M §8.1 is untouched');
-    has(tm, 'non-refundable if termination occurs after project start', 'including its deposit bullet');
+    // The T&M form keeps its own measure: hours worked, and an hours-and-materials final.
+    // ⚠ RESTATED 2026-09-30 (P16), NOT DELETED. This pinned the hourly arm's deposit bullet — "non-refundable if
+    // termination occurs after project start" — as untouched. Anthony then decided the hourly deposit the same way
+    // as the fixed one ("deposit paid, is lost"): earned on signature and not refundable, with the same one exit.
+    has(tm, 'responsible for all hours worked', 'T&M §8.1 keeps its hours measure');
+    lacks(tm, 'non-refundable if termination occurs after project start', '⚠ the undefined "after project start" is gone from the hourly arm too');
+    has(tm, 'The deposit is earned in full on signature of this Agreement and is not refundable', 'the hourly deposit is earned at signature, as the fixed one is');
+    has(tm, 'Havellin will refund any amount it holds above the hours worked and materials used', 'and returned only on an uncured material breach');
     lacks(tm, 'Seventy-five percent (75%) of the fixed fee', 'and carries no earn-out');
   }
 
@@ -190,7 +195,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(fixed, 'refund the unused balance', '§12.4 no longer promises the unused balance back');
     has(fixed, 'deposit is earned on signature and is not refundable', 'it is earned at signature');
     has(fixed, 'Section 12.3', 'with the cure mechanism cross-referenced');
-    has(tm, 'refund the unused balance', 'and the T&M clause is untouched');
+    // ⚠ RESTATED 2026-09-30 (P16): the T&M clause refunded "the unused balance" of the deposit, and Anthony decided
+    // the hourly deposit is kept like the fixed one ("deposit paid, is lost"). It keeps its own measure of what is owed.
+    lacks(tm, 'refund the unused balance', 'and the T&M clause no longer refunds the deposit either');
+    has(tm, 'deposit is earned on signature and is not refundable', 'it is earned at signature on an hourly engagement too');
+    has(tm, 'for the Services performed and costs incurred through the termination date', 'against the hourly measure of what is owed');
 
     // §12.2 — the same earn-out, against §3.2 (this form's payment schedule).
     lacks(fixed, 'pay Contractor for all Services performed and costs incurred',

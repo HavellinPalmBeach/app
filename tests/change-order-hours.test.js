@@ -266,7 +266,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'dot', 'coWorkingDays', '_coPaceFix', 'coInclTxt', 'esc',
-      'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coScopeLabel', 'coHours', 'coVendorAddsTxt', 'coVendorAdds'].concat(CO);
+      'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coScopeLabel', 'coHours', 'coVendorAddsTxt', 'coVendorAdds', 'finalCrewOnlyWarn', 'agreementChipFix'].concat(CO);
     const VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
@@ -418,7 +418,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['updateCOHours', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'estFixedFee', 'estTolerancePctTxt', 'coNoHoursBaseTxt',
-              'prepFeeRate', 'coPrepReadoutHtml', 'agrBillingRates', 'coRushPct', 'coRushPctFor', 'estFixedLines', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber'].concat(CO),
+              'prepFeeRate', 'coPrepReadoutHtml', 'agrBillingRates', 'coRushPct', 'coRushPctFor', 'estFixedLines', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop'].concat(CO),
         vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE', 'RUSH_PCT'],
         stubs: { document: dom, jobs: [Object.assign({}, JOB, jobOver || {})], changeOrders: cos,
                  estimateStore: est ? { 7: { estimate: Object.assign({}, est), approved: true } } : {}, currentEstimate: null },
@@ -469,7 +469,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
-              'agrBillingRates', 'coRateModsLine', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coVendorAdds'].concat(CO),
+              'agrBillingRates', 'coRateModsLine', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coVendorAdds', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop'].concat(CO),
         vars: ['CO_REASONS', 'RUSH_PCT'],
         stubs: { jobs: [Object.assign({}, JOB)], changeOrders: cos, currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, EST_TM), approved: true } },

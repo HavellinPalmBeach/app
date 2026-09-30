@@ -80,7 +80,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
                  'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
                  'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly',
                  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor',
-                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines'];
+                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
                   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP',
                   'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -247,7 +247,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const reopen = (e) => {
       const dom = domStub({});
       const ctx = sandbox({
-        fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats'],
+        fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'],
         vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'RUSH_PCT', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES'],
         stubs: { document: dom, calcAll: noop, paintEstimateService: noop, svcTypeChanged: noop, toggleRoom: noop,
                  setRoomState: noop, collapseEmptyRoomSections: noop, renderCollections: noop, renderVehicles: noop,

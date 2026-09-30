@@ -76,7 +76,7 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates',
                 'coRateModsLine', 'coRushPct', 'coRushPctFor', 'estFixedLines', 'coScopeLabel', 'coVendorAdds',
                 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid',
-                'vendorGroupCategories', 'directoryCategories', 'vendorCats'];
+                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor'];
 function coCtx(est, cos, seed, dir) {
   const dom = domStub(seed || {});
   const said = [];
@@ -124,7 +124,7 @@ function inv(stubs) {
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
           'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop',
           'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct',
-          'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs'],
+          'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs', 'finalCrewOnlyWarn', 'coBaselineMove'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
            'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'],
@@ -655,7 +655,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const cards = (dir, vendors, svc) => {
       const dom = domStub({});
       const c = sandbox({ fns: ['renderVendorGroupCards', 'vendorDirectoryReady', 'vendorGroupCategories', 'directoryCategories', 'vendorCats',
-                                'vendorGroupOfLine', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'prepFeeRate', 'esc', 'fmt'],
+                                'vendorGroupOfLine', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'prepFeeRate', 'esc', 'fmt', 'premiumCoversLine', 'estimateAppraiserLines'],
                           vars: ['VENDOR_GROUP_CARDS', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'PREP_FEE_RATE', 'COORD_TOUCHES',
                                  'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
                           stubs: { document: dom, vendorDirectory: dir, vendors: vendors, prepItems: [], currentSvc: () => svc || 'cleanout' } });

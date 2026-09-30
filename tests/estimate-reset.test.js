@@ -172,7 +172,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // Reset's approved refusal asks the price-change rule (whether Edit estimate is still there):
             // lifted, never stubbed, so this suite's refusal and the rule cannot come to disagree.
             'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent',
-            'docSentAt', 'docKeyFor', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'volPresetSeedFor', 'estimateOpensFixed', 'isDecedentJob', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats'],
+            'docSentAt', 'docKeyFor', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'volPresetSeedFor', 'estimateOpensFixed', 'isDecedentJob', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'],
       vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
              'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT',
              'TC_ONSITE_ALPHA_DEFAULT', '_activeRecognitions', ...STATE, 'RUSH_PCT', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES'],

@@ -76,7 +76,9 @@ const lacks = (t, n, m) => ok(t.indexOf(n) < 0, m + '  [present: ' + n + ']');
   const CARVE = 'The coordination of professional appraisals is not within this engagement';
   const OURS_52 = 'Havellin will coordinate professional appraisals';
   const OURS_53 = 'Arrange professional appraisal';
-  const THEIRS_53 = 'Admit an appraiser engaged by counsel';
+  // ⚠ RESTATED 2026-09-30 (P16, B14): the row names the party §5.2 names (_agrOtherAppraisalsBy) instead of "counsel" in
+  // the abstract — on this probate matter the estate attorney, as §5.2 says two inches above it.
+  const THEIRS_53 = 'Admit an appraiser engaged by the estate attorney';
   const REC = 'Independent appraisals attached as supporting documentation';
 
   // ── A. Estate Settlement, probate matter, VALUES — counsel arranges the appraisals ──

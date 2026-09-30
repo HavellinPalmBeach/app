@@ -36,7 +36,7 @@ function inv(stubs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -224,7 +224,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A change order with no hours authorises nothing and must not be creatable. Restated 2026-09-30: a Home
     // Prep one may add a vendor instead (`_vAdd`, read on prep only), so the refusal names all three.
     has(sc, 'if (!tc && !ps && !_vAdd)', '⚠ and it refuses a change order carrying no hours (and, on prep, no vendor)');
-    has(sc, 'var _vAdd = _b.prep ? coDraftVendorAdd() : null;', 'the vendor is read on Home Prep only');
+    // ⚠ RESTATED 2026-09-30 (P16): a labour job whose estimate bundles prep may add a vendor too, so the vendor is read
+    // wherever the job may add one (coPrepVendorsOn, carried on the basis as `prepVendors`), not on Home Prep alone.
+    has(sc, 'var _vAdd = _b.prepVendors ? coDraftVendorAdd() : null;', 'the vendor is read only where the job may add one');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
