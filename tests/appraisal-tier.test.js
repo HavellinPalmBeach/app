@@ -31,11 +31,11 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
-                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords'].concat(TIER_FNS);
+                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docTierProduces', '_agrOtherAppraisalsBy'].concat(TIER_FNS);
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT'].concat(TIER_VARS);
 
-const CE_FNS = ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'isDecedentJob'].concat(TIER_FNS);
+const CE_FNS = ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'isDecedentJob', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames'].concat(TIER_FNS);
 const CE_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DECEDENT_SERVICES']
   .concat(TIER_VARS);
 
@@ -173,9 +173,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.weArrangeAppraisals('full', { svc: 'downsizing', docTier: 'appraisals' }), false,
        'a living-client service never has the appraisals, whatever a stray tier says');
     eq(ctx.weArrangeAppraisals('full', null), false, 'no job, no promise');
-    // The other two readers, named so the join cannot quietly go one-sided.
-    has(fn('printCourtInventory'), "docTierProduces(job, 'appraisals')", 'the Court Inventory DRAFT fix asks the tier');
-    has(fn('planTaskCtx'), "weAppraise: docTierProduces(job, 'appraisals')", 'the desk checklist asks the tier');
+    // The other readers, named so the join cannot quietly go one-sided. Restated 2026-09-30 (Q20): they ask
+    // jobAppraisalDuty, the job-level answer — the tier before approval, and the approved estimate's
+    // appraisalDuty after it, so an appraiser priced on the estimate reads the same on the desk as in the
+    // contract. Driven in tests/p15-followups.test.js.
+    has(fn('printCourtInventory'), 'jobAppraisalDuty(job)', 'the Court Inventory DRAFT fix asks the job-level answer');
+    has(fn('printTrustSchedule'), 'jobAppraisalDuty(job)', 'and so does the Trust Schedule\'s');
+    has(fn('planTaskCtx'), "weAppraise: jobAppraisalDuty(job) !== ''", 'the desk checklist asks it too');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -213,12 +217,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the helper is the only door: nothing prints an appraisal promise off the scope alone');
   {
     const live = (name) => fn(name).split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
-    // Each builder that makes the promise must ask the helper, the number of times it promises.
-    eq((live('_agrProbateCompliance').match(/weArrangeAppraisals\(docScope, job\)/g) || []).length, 3,
-       '§5.2 asks the helper on all three matter branches — probate, trust and neither');
-    has(live('_agrScopeServices'), 'weArrangeAppraisals(docScope, job)', '§2 asks it');
-    has(live('probateAgreementHtml'), 'weArrangeAppraisals(docScope, job)', '§5.3 asks it');
-    has(live('_cePhases'), 'weArrangeAppraisals(docScope, job)', 'Exhibit A asks it');
+    // Each builder that makes the promise must ask the helper, the number of times it promises. Restated
+    // 2026-09-30 (Q20): the contract asks appraisalDuty with the estimate it attaches, because an appraiser
+    // priced on Exhibit A is Havellin's to coordinate on any tier ('listed'); Exhibit A asks
+    // weArrangeAppraisals with the estimate it prints.
+    has(live('_agrProbateCompliance'), 'appraisalDuty(docScope, job, est)', '§5.2 asks the helper, with the estimate');
+    eq((live('_agrProbateCompliance').match(/_duty === 'all'/g) || []).length, 3,
+       '§5.2 branches on its answer on all three matter branches — probate, trust and neither');
+    has(live('_agrScopeServices'), 'appraisalDuty(docScope, job, est)', '§2 asks it');
+    has(live('probateAgreementHtml'), 'appraisalDuty(docScope, job, est)', '§5.3 asks it');
+    has(live('_cePhases'), 'weArrangeAppraisals(docScope, job, e)', 'Exhibit A asks it');
     // And none of them still decides it on the scope. The phrase each promise used to hang off.
     for (const name of ['_agrProbateCompliance', '_agrScopeServices']) {
       const body = live(name);
@@ -227,7 +235,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         && /apprais/i.test(lines.slice(i, i + 3).join(' ')));
       eq(bad.length, 0, name + ': no appraisal promise hangs off `docScope === \'full\'` any more');
     }
-    ok(source().indexOf('function weArrangeAppraisals(docScope, job)') !== -1, 'the helper is defined once, where the tier predicate lives');
+    ok(source().indexOf('function weArrangeAppraisals(docScope, job, est)') !== -1, 'the helper is defined once, where the tier predicate lives');
+    ok(source().indexOf('function appraisalDuty(docScope, job, est)') !== -1, 'beside the three-way answer it reads (Q20)');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

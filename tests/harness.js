@@ -428,6 +428,11 @@ function driveCalcAll(opts = {}) {
   }));
   const missed = want.filter((w) => !used.has(w)).map((w) => w.name);
   if (missed.length) throw new Error('driveCalcAll: no room row named ' + missed.join(', '));
+  // ⚠ `opts.job` NEVER REACHED calcAll until 2026-09-30: calcAll reads `jobs`, so its closure lifts
+  // `var jobs = []`, and a lifted var wins over the stub above. Set here, after the lift, and only when
+  // a test asks for a job, so every figure measured without one (calcAll with no client loaded, as
+  // before) is unchanged.
+  if (opts.job) ctx.jobs = [job];
   ctx.calcAll();
   return { ctx, doc, est: ctx.currentEstimate };
 }

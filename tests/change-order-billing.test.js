@@ -36,7 +36,7 @@ function inv(stubs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -221,8 +221,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(sc, 'psHrs: ps,', 'and the specialist hours');
     eq((src.match(/changeOrders\.push\(/g) || []).length, 1,
        '⚠ still exactly one writer of a change order');
-    // A change order with no hours authorises nothing and must not be creatable.
-    has(sc, 'if (!tc && !ps)', '⚠ and it refuses a change order carrying no hours');
+    // A change order with no hours authorises nothing and must not be creatable. Restated 2026-09-30: a Home
+    // Prep one may add a vendor instead (`_vAdd`, read on prep only), so the refusal names all three.
+    has(sc, 'if (!tc && !ps && !_vAdd)', '⚠ and it refuses a change order carrying no hours (and, on prep, no vendor)');
+    has(sc, 'var _vAdd = _b.prep ? coDraftVendorAdd() : null;', 'the vendor is read on Home Prep only');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

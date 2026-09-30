@@ -9,6 +9,21 @@ let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) pass++; else { fail++; console.log('  FAIL ' + m); } };
 const eq = (a, b, m) => ok(JSON.stringify(a) === JSON.stringify(b), m + ' (got ' + JSON.stringify(a) + ')');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
+// ⚠ THE WALKTHROUGH IS DATED FROM THE RUN, NOT WRITTEN IN (2026-09-30). The band offers "Change the walkthrough
+// date" only while the walkthrough row is lit, which is until noon on its date, so a fixed 2026-09-30 failed on
+// every build from that noon on (the browser's clock, UTC here). The page reads the real clock, and faking it
+// would freeze the Date.now() the app mints ids from, so the step picks the next weekday instead (weekends are
+// refused at intake) and a start a week after it. Eastern, as the app reckons its days.
+const ymdEastern = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(d);
+function weekdayFrom(daysAhead) {
+  const d = new Date(Date.now() + daysAhead * 86400000);
+  for (;;) {
+    const ymd = ymdEastern(d), dow = new Date(ymd + 'T12:00:00Z').getUTCDay();
+    if (dow !== 0 && dow !== 6) return ymd;
+    d.setTime(d.getTime() + 86400000);
+  }
+}
+const WALK = weekdayFrom(1), START = weekdayFrom(8);
 
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' }).catch(() => chromium.launch());
@@ -70,13 +85,13 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
   eq(await p.evaluate(() => document.getElementById('i-fname').value), 'Half', 'and what was typed is still on the form');
 
   // A real save.
-  const made = await p.evaluate(() => {
+  const made = await p.evaluate(({ WALK, START }) => {
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
     const pick = (id) => { const el = document.getElementById(id); for (const o of el.options) if (o.value) { el.value = o.value; break; } };
     set('i-svc', 'cleanout'); toggleIntakeFields();
     set('i-fname', 'Tripp'); set('i-lname', 'Butler'); set('i-phone', '(561) 555-0100'); set('i-email', 'tb@example.com');
     set('i-addr', '69 Beach Blvd'); set('i-city', 'Palm Beach'); set('i-zip', '33480'); set('i-sqft', '3500');
-    pick('i-ptype'); pick('i-src'); set('i-start', '2026-10-05'); set('i-walkthrough', '2026-09-30');
+    pick('i-ptype'); pick('i-src'); set('i-start', START); set('i-walkthrough', WALK);
     set('i-executor-fname', 'Jane'); set('i-executor-lname', 'Doe'); pick('i-executor-role');
     set('i-executor-phone', '(561) 555-0101'); set('i-executor-email', 'jane@example.com');
     set('i-date-of-death', '2026-08-14'); set('i-matter-type', 'probate'); set('i-doc-tier', 'values');
@@ -84,7 +99,7 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
     const t0 = Date.now(); saveIntake();
     return { id: (jobs[0] || {}).id, n: jobs.length, ms: Date.now() - t0,
              fb: document.getElementById('i-fb').textContent };
-  });
+  }, { WALK, START });
   ok(made.n === 1 && made.id, 'the client is created through the real Save (' + made.fb + ')');
   st = await state();
   eq(st.active, ['panel-jobs'], '⚠ Save lands on the Client Dashboard AT ONCE — no 800ms timer to race');

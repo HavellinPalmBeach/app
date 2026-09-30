@@ -206,10 +206,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
                  'matterDef', 'matterTypeOf', 'invDocContractBlock',
-                 'docTierProduces', 'docTierOf', 'svcHasDocStep'];
+                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef'];
     const VARS = ['DECEDENT_SERVICES', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-                  'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS'];
+                  'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS', 'DOC_SCOPES'];
     const item = (id, name, fmv, track) => ({ stableId: id, label: 'inventory', jobId: 7,
       objectName: name, category: 'Furniture', fmv: fmv, assetTrack: track, condition: 'Good',
       ts: Number(id.slice(1)) });

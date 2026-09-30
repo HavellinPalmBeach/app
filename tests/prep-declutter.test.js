@@ -33,12 +33,12 @@ const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'est
   '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason',
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
   'agrSection', 'approvedEstimateFor', 'materialsBasisNote', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
-  'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords'];
+  'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf'];
 const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT',
   'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
   'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE',
   'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS',
-  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
+  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'MATTER_TYPES'];
 
 const text = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&')
                              .replace(/&times;/g, 'x').replace(/&mdash;/g, '-')
@@ -90,7 +90,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'tenureMultiplier', 'docScopeDef', 'engineRelFactor', 'roomDefault'],
       vars: ['JOB_STEPS', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF', 'ENGINE_CAREFUL',
              'ENGINE_ROOMLEVEL', 'ENGINE_FLOOR', 'PERROOM_REF', 'ROOMS', 'EXTERIOR_ROOMS',
-             'ROOM_WEIGHT', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ROOM_DEFAULTS'] });
+             'ROOM_WEIGHT', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'] });
     const R = (n, v, c) => ({ name: n, vol: v, cplx: c });
     const four = [R('Living Room', 3, 3), R('Primary Bedroom', 3, 3), R('Dining Room', 3, 3), R('Kitchen', 3, 3)];
     const whole = four.concat([R('Family Room', 3, 3), R('Bedroom 2', 3, 3), R('Bedroom 3', 3, 3),
@@ -265,7 +265,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2',
       'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal',
-      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'];
+      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines'];
     const invVars = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',
       'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
       'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES',
@@ -361,7 +361,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_planTouch',
       // The prep plan opens with the firearms banner since 2026-09-20 (the brief under it no
       // longer repeats the firearms row, so the banner has to be on both plan headers).
-      'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName'];
+      'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'];
     const planVars = ['DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const mkPlan = (dcHrs, loggedTC) => {
       const logs = loggedTC > 0

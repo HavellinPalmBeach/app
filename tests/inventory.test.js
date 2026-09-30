@@ -220,9 +220,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
       'matterDef', 'matterTypeOf', 'invFiduciaryMode',
+      // Who arranges an appraisal, job-level (Q20, 2026-09-30): the tier, or the approved estimate's appraiser lines.
+      'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines',
+      'estimateAppraiserNames', 'docTierProduces', 'docScopeDef',
     ]);
     const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
-                                        'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS']);
+                                        'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES']);
 
     function courtCtx(items) {
       const ctx = sandbox({ fns: COURT_FNS, vars: COURT_VARS });

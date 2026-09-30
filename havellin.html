@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 11:03am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 2:03pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1871,7 +1871,7 @@ body.no-smf .smf-col{display:none;}
         <div class="toggle-wrap" style="margin-top:10px;">
           <div class="toggle-info">
             <div class="toggle-title">Rush order?</div>
-            <div class="toggle-sub">Flat 20% premium on the Havellin services total, shown as its own line</div>
+            <div class="toggle-sub">Flat 20% premium on the Havellin services, never on the home prep fee, shown as its own line</div>
           </div>
           <label class="toggle"><input type="checkbox" id="e-rush" onchange="calcAll()"><span class="slider"></span></label>
         </div>
@@ -3210,6 +3210,13 @@ body.no-smf .smf-col{display:none;}
       <div><label>Additional specialist hours</label>
         <input type="number" step="0.5" id="co-ps-hrs" placeholder="e.g. 16 (negative to reduce)" oninput="updateCOHours()"></div>
     </div>
+    <!-- Home Prep only (Anthony, 2026-09-30): a change order may add a preparation vendor found mid-job. -->
+    <div id="co-vendor-wrap" style="display:none;grid-template-columns:3fr 2fr;gap:12px;">
+      <div><label>Add a prep vendor</label>
+        <select id="co-vendor-type" onchange="updateCOHours()"><!-- filled by openChangeOrder --></select></div>
+      <div><label>Its estimated cost</label>
+        <input type="text" id="co-vendor-cost" inputmode="numeric" placeholder="e.g. $4,500" oninput="formatMoneyInput(this);updateCOHours()"></div>
+    </div>
     <div class="vform"><div class="fld-note" id="co-basis-note" style="font-size:11px;color:var(--gray);margin-top:2px;line-height:1.5;"><!-- written by openChangeOrder: the rule differs on a fixed price --></div></div>
     <div id="co-hrs-note" style="margin-top:6px;"></div>
     <div id="co-fb" style="margin-top:8px;"></div>
@@ -4119,9 +4126,11 @@ function volPresetButtonsHTML() {
 // hrs over ten working days, which no one could actually staff.
 //
 // Under the new model the two columns mean:
-//   [0] OFF-SITE COORDINATION — attorney and heir calls, vendor sourcing, appraiser
+//   [0] OFF-SITE COORDINATION — attorney and heir calls, vendor sourcing, inventory
 //       scheduling, disposition paperwork, pre-mobilization and post-job
-//       reconciliation. Work done away from the property, around the crew days.
+//       reconciliation. Work done away from the property, around the crew days. (An
+//       appraiser's scheduling is its own vendor line since 2026-09-30, Q20; see
+//       DOC_COORD_INVENTORY_SHARE.)
 //   [1] HANDS-ON WORK POOL (W) — the total physical hours the job requires, whoever
 //       performs them. This is NOT the billed PS figure.
 //
@@ -4163,26 +4172,38 @@ var ENGINE_FLOOR = {downsizing:2, downsizing_move:3, home_cleanout:3, cleanout:3
 // a few hundred dollars of a Home Cleanout on the same house; the voice, the written-authority
 // gate and the heavier disposition coefficients all stay.
 //
-//   full     Havellin catalogues AND states an estimated value on every item of consequence,
-//            and coordinates the appraisers. Today's behaviour; the default.
+//   full     Havellin catalogues AND states an estimated value on every item of consequence.
+//            The default. Since 2026-09-30 (Q20) its coordination column is inventory
+//            scheduling only (DOC_COORD_INVENTORY_SHARE); an appraiser is priced by its own
+//            vendor line when one is added.
 //   capture  Havellin photographs, describes and locates each item and hands the LIST to
 //            counsel; counsel's own people value it and arrange any appraisal. Half the
 //            document pool (a starting coefficient, to be tuned on the first real job —
-//            DOC_CAPTURE_POOL_SHARE) and NONE of its coordination, because the appraiser
-//            scheduling that column pays for has moved to counsel.
+//            DOC_CAPTURE_POOL_SHARE) and NONE of its coordination, because the scheduling
+//            that column pays for sits with counsel.
 //   none     Counsel's team does the whole inventory. The step is removed from the engine.
 //
 // Services that price no `document` step (downsizing, home cleanout, prep) ignore the
 // scope entirely — there is nothing to scale — and the control is hidden on them.
 var DOC_SCOPES = [
   {key:'full',    label:'Full — inventory & estimated value',
-   hint:'Havellin catalogues every item of consequence with an estimated value and coordinates the appraisers. The default.'},
+   hint:'Havellin catalogues every item of consequence with an estimated value. An appraiser is priced when you add one under Vendors. The default.'},
   {key:'capture', label:'Capture only — photograph & list; counsel values',
-   hint:'Havellin photographs, describes and locates each item and hands the list to counsel. Counsel’s team values it and arranges any appraisal. Prices half the documentation work and none of the appraiser coordination.'},
+   hint:'Havellin photographs, describes and locates each item and hands the list to counsel. Counsel’s team values it and arranges any appraisal. Prices half the documentation work and none of its scheduling.'},
   {key:'none',    label:'None — counsel handles the inventory',
    hint:'The attorney’s own staff inventory and value the estate. Documentation is priced out entirely; the estate voice, the written-authority gate and the disposition rules stay.'}
 ];
 var DOC_CAPTURE_POOL_SHARE = 0.5;   // starting figure — see the note above; tune on real jobs
+// ⚠⚠ THE `document` STEP'S COORDINATION IS INVENTORY SCHEDULING ONLY, FROM 2026-09-30 (Anthony on Q20: "If
+// we need an appraiser, don't we just add one? It's not mandatory and shouldn't be blocked either."). The
+// column was labelled "Appraiser & inventory scheduling" and both top tiers carried all of it — measured
+// ~5.1 concierge hours (≈ $765) on a 3,500 sq ft Estate Settlement — so the `values` tier priced appraiser
+// scheduling that counsel does at that tier, and a job with an appraiser line on it paid for the appraiser
+// twice (the line books its own 4 touches, 2 hours, through COORD_TOUCHES_BY_GROUP). The appraiser half is
+// gone at full scope; an appraiser is priced by its own line when one is added, on any tier, and no tier
+// requires or refuses one. The share kept is a starting figure, like DOC_CAPTURE_POOL_SHARE: tune it on
+// real jobs. Capture scope still prices none of the column (counsel schedules).
+var DOC_COORD_INVENTORY_SHARE = 0.5;
 var _estimateDocScope = 'full';
 function docScopeDef(key) {
   for (var i = 0; i < DOC_SCOPES.length; i++) if (DOC_SCOPES[i].key === key) return DOC_SCOPES[i];
@@ -4205,13 +4226,14 @@ function activeDocScope() { return docScopeDef(_estimateDocScope) ? _estimateDoc
 // something the agreement cannot promise.
 //
 // ⚠ FOUR TIERS AGAINST THREE SCOPES, AND THE 4→3 IS DELIBERATE RATHER THAN SLOPPY. The top two
-// price identically TODAY, because appraiser coordination already sits inside the `document`
-// step's coordination column and nothing prices it separately. What they do not share is the
-// DOCUMENTATION STANDARD: `appraisals` raises the Strict Mode floor, which turns the appraisal
-// guardrail from an amber nudge into a red block and holds the Court Inventory at DRAFT until
-// every flagged item is appraised or waived. That machinery already exists — this is the tier
-// that names it. ⚠ If appraisal coordination is ever priced on its own, this is where the
-// split goes; do not collapse the two tiers in the meantime.
+// price identically, and since 2026-09-30 (Q20) that is because NEITHER prices appraiser
+// scheduling inside the `document` step: an appraiser is priced by its own vendor line, on any
+// tier, and the step keeps inventory scheduling only (DOC_COORD_INVENTORY_SHARE). What they do not
+// share is the DOCUMENTATION STANDARD: `appraisals` raises the Strict Mode floor, which turns the
+// appraisal guardrail from an amber nudge into a red block and holds the Court Inventory at DRAFT
+// until every flagged item is appraised or waived, and it promises the appraisals (appraisalDuty
+// 'all'); Build Estimate flags it while no appraiser is on the estimate (appraisalTierNote). Do not
+// collapse the two tiers.
 var DOC_TIERS = [
   {key:'contents',   scope:'capture', floor:'',
    produces:{inventory:true,  values:false, appraisals:false},
@@ -4308,8 +4330,48 @@ function docTierProduces(job, what) {
 // job re-tiered to `appraisals` after a capture-only price promise appraisal coordination on
 // an estimate that never priced it; the scope alone is the defect. Every client document that
 // promises Havellin engages the appraisers asks this, and nothing else.
-function weArrangeAppraisals(docScope, job) {
-  return docScope === 'full' && docTierProduces(job, 'appraisals');
+//
+// ⚠⚠ AND, FROM 2026-09-30, AN APPRAISER ON THE ESTIMATE (Anthony on Q20). An appraiser is priced when one is
+// added as a vendor line, on any tier, so the estimate that carries one is quoting Havellin's coordination of
+// it — and the values-tier agreement went on saying in bold that appraisals were "not within this engagement"
+// beside an Exhibit A that listed and priced the appraiser. Three answers, because the second is narrower
+// than the first: 'all' where the tier puts every appraisal with Havellin; 'listed' where the estimate
+// carries appraiser lines on any other tier, so Havellin coordinates those and counsel any other; '' where
+// counsel arranges them all. `est` is the estimate the document prints; without it only the tier answers.
+function appraisalDuty(docScope, job, est) {
+  if (docScope === 'full' && docTierProduces(job, 'appraisals')) return 'all';
+  if (estimateAppraiserLines(est).length) return 'listed';
+  return '';
+}
+function weArrangeAppraisals(docScope, job, est) {
+  return appraisalDuty(docScope, job, est) !== '';
+}
+// The appraiser lines an estimate carries: vendor lines whose category is an appraiser's (every one of
+// APPRAISER_DIR_CATEGORIES says so, and a line typed by hand as one does too).
+function estimateAppraiserLines(est) {
+  return ((est && est.vendors) || []).filter(function(v){ return !!(v && /apprais/i.test(String(v.type || ''))); });
+}
+// The same answer for a job at work, off its APPROVED estimate — what the desk's documents and the close-out
+// list read. Before an estimate is approved the tier answers alone, as it always did there.
+function jobAppraisalDuty(job) {
+  var est = (job && typeof estimateStore !== 'undefined') ? approvedEstimateFor(job.id) : null;
+  if (!est) return docTierProduces(job, 'appraisals') ? 'all' : '';
+  return appraisalDuty(estimateDocScope(est), job, est);
+}
+// Their categories, as a document names them: "Art Appraiser and Jewelry & Watch Appraiser".
+function estimateAppraiserNames(est) {
+  var seen = [];
+  estimateAppraiserLines(est).forEach(function(v){ if (seen.indexOf(v.type) < 0) seen.push(v.type); });
+  if (seen.length <= 1) return seen.join('');
+  if (seen.length === 2) return seen[0] + ' and ' + seen[1];
+  return seen.slice(0, -1).join(', ') + ', and ' + seen[seen.length - 1];
+}
+// ⚠ THE TOP TIER PROMISES APPRAISALS AND NO LONGER PRICES THEIR SCHEDULING BY ITSELF (Q20), so Build Estimate
+// says so while no appraiser is on the estimate. A flag, never a refusal: nothing is mandatory.
+function appraisalTierNote(job, vendorLines) {
+  if (docTierOf(job) !== 'appraisals') return '';
+  if (estimateAppraiserLines({ vendors: vendorLines }).length) return '';
+  return 'This tier promises the specialist appraisals: add each appraiser under Vendors, so its scheduling is priced on its own line.';
 }
 function svcHasDocStep(svc) { return !!(JOB_STEPS[svc] && JOB_STEPS[svc].document); }
 // The step set the engine actually prices: the catalogue entry with `document` scaled or
@@ -4318,10 +4380,12 @@ function svcHasDocStep(svc) { return !!(JOB_STEPS[svc] && JOB_STEPS[svc].documen
 function effectiveJobSteps(svc, scope) {
   var base = JOB_STEPS[svc] || JOB_STEPS.cleanout;
   scope = docScopeDef(scope) ? scope : 'full';
-  if (!base.document || scope === 'full') return base;
+  if (!base.document) return base;
   var out = {};
   for (var k in base) {
     if (k !== 'document') { out[k] = base[k]; continue; }
+    // Full scope keeps the whole hands-on pool and the inventory share of the coordination (Q20).
+    if (scope === 'full') out.document = [base.document[0] * DOC_COORD_INVENTORY_SHARE, base.document[1]];
     if (scope === 'capture') out.document = [0, base.document[1] * DOC_CAPTURE_POOL_SHARE];
     // 'none' — the step is simply absent, exactly as on a service that never priced it.
   }
@@ -4376,7 +4440,9 @@ function paintEstimateDocScope(svc, job) {
   var d = docScopeDef(activeDocScope());
   if (hint && d) {
     var note = _docScopeIntakeNote(job, activeDocScope());
-    hint.innerHTML = esc(d.hint) + (note ? ' <strong>' + esc(note) + '</strong>' : '');
+    var apNote = appraisalTierNote(job, (typeof vendors !== 'undefined') ? vendors : []);
+    hint.innerHTML = esc(d.hint) + (note ? ' <strong>' + esc(note) + '</strong>' : '') +
+      (apNote ? '<div style="color:var(--warn-tx);margin-top:3px;">' + esc(apNote) + '</div>' : '');
   }
 }
 
@@ -4536,7 +4602,7 @@ var STEP_LABELS = {
 };
 var STEP_LABELS_COORD = {
   triage:      'Pre-job planning & family calls',
-  document:    'Appraiser & inventory scheduling',
+  document:    'Inventory scheduling',
   pack:        'Packing logistics & materials',
   disposition: 'Disposition paperwork & buyer coordination',
   legal:       'Legal & court filings'
@@ -7850,12 +7916,19 @@ function renderVendorGroupCards() {
   // job should have nothing else to tick".
   var cards = VENDOR_GROUP_CARDS.filter(function(c){ return !isPrepSvc || c.target === 'prep'; });
   var anyCats = cards.some(function(c){ return vendorGroupCategories(c).length; });
-  if (!anyCats) {
-    wrap.innerHTML = '<div class="alert a-warn" style="margin-top:0;">Vendor Directory not loaded \u2014 add the Vendor Directory URL in \u2699 Settings. '
+  // ⚠ ASKED OF THE DIRECTORY, NOT OF THE CARDS (2026-09-30). It asked whether any card had categories, and the
+  // End-of-Job Logistics card always lists its own, so on every labour job the warning could never show: an
+  // unloaded directory drew the cards with nothing to pick in them and no word why. vendorDirectoryReady is the
+  // question P12 already asks for the same reason. And the warning sits ABOVE the cards rather than instead of
+  // them whenever the estimate carries lines, so a saved estimate reopened on a slow load still shows them.
+  var _dirNote = vendorDirectoryReady() ? '' : '<div class="alert a-warn" style="margin-top:0;">Vendor Directory not loaded \u2014 add the Vendor Directory URL in \u2699 Settings. '
       + 'These lists are built from the directory, so there is nothing to pick until it loads.</div>';
+  var _anyLines = (isPrepSvc ? prepItems : vendors.concat(prepItems)).length > 0;
+  if (!anyCats && !_anyLines && _dirNote) {
+    wrap.innerHTML = _dirNote;
     return;
   }
-  wrap.innerHTML = '<div class="vgrp-grid' + (isPrepSvc ? ' vgrp-solo' : '') + '">' + cards.map(function(card) {
+  wrap.innerHTML = _dirNote + '<div class="vgrp-grid' + (isPrepSvc ? ' vgrp-solo' : '') + '">' + cards.map(function(card) {
     // Index into the FULL list, because addFromVendorGroup resolves the card from it.
     var gi = VENDOR_GROUP_CARDS.indexOf(card);
     var cats  = vendorGroupCategories(card);
@@ -10257,7 +10330,7 @@ function _cePhases(e, job) {
   // ⚠ Who arranges the appraisals is the TIER's answer, not the scope's: `values` and
   // `appraisals` both price at `full`, and reading the scope here is what had Exhibit A promise
   // "appraisals attached" on the tier where counsel arranges them. See weArrangeAppraisals.
-  var weAppraise   = weArrangeAppraisals(docScope, job);
+  var weAppraise   = weArrangeAppraisals(docScope, job, e);
   // VOICE, not pricing — see isDecedentJob. hasDoc is what the client is CHARGED for,
   // isDeceased is who we are WRITING to. They used to coincide exactly; the scope pin is
   // what separates them, and the `isDeceased && !hasDoc` arm below is reachable again.
@@ -10399,7 +10472,12 @@ function _cePhases(e, job) {
       ? 'A room is complete when every item in it is catalogued and photographed, specific bequests and exempt property are set aside and recorded, and the room\'s inventory has been delivered to the representative and counsel.'
       : 'A room is complete when every item in it is catalogued and photographed, specific bequests are set aside, and the room\'s inventory has been delivered to the representative.';
   } else if (isDeceased && captureOnly) {
-    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location and condition. <strong>Valuation is not part of this engagement</strong> — the photographed list goes to you and to counsel, whose office states the values and arranges any appraisal. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, and anything that may carry real value is held in place until counsel has seen it. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location and condition. <strong>Valuation is not part of this engagement</strong> — the photographed list goes to you and to counsel, whose office states the values'
+      // ⚠ AND AN APPRAISER THIS ESTIMATE LISTS IS OURS (Q20, 2026-09-30; appraisalDuty 'listed', the only yes at
+      // capture scope). It said counsel "arranges any appraisal" beside Exhibit A's priced appraiser, against the
+      // agreement's §2 and §5.2. Found by the P13 documentation pass.
+      + (weAppraise ? '; we coordinate the appraisals this estimate lists (' + esc(estimateAppraiserNames(e)) + '), and counsel arranges any other.' : ' and arranges any appraisal.')
+      + ' <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, and anything that may carry real value is held in place until counsel has seen it. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
     sortNeed = 'The list of any items designated to a named person, so they are set aside before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The list comes to you and to counsel. <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = 'A room is complete when every item in it is photographed and listed, specific bequests are set aside, and the room\'s list has been delivered to the representative and counsel.';
   } else if (isDeceased) {
@@ -13376,6 +13454,48 @@ function coBaselineShift(hrs, tcRate, psRate) {
   return (h.tc || 0) * (Number(tcRate) || 0) + (h.ps || 0) * (Number(psRate) || 0);
 }
 
+// ⚠⚠ A HOME PREP CHANGE ORDER CAN ADD A VENDOR (Anthony, 2026-09-30: "yes, add new also, or add TC hours for
+// decluttering"). A painter found mid-job had no way onto a prep engagement: the sourcing list, the budget card
+// and the final invoice's site management fee all read the approved estimate's prep lines, and nothing else. The change
+// order now carries the line (`vendorAdds`: category, estimated cost, its own `lid` for the sourcing record),
+// and once the client ACCEPTS it the line joins the job's prep lines (jobPrepLines) — booked and quoted on the
+// Job Plan like any other, and billed like any other: the vendor invoices the client directly at cost, and the
+// site management fee applies to what it actually charges. An unaccepted change order adds nothing.
+function coVendorAdds(co) {
+  return ((co && co.vendorAdds) || []).filter(function(v){ return v && v.type; });
+}
+// "adds Painting (est. $4,500)" — how an added vendor reads beside the hours.
+function coVendorAddsTxt(co) {
+  var a = coVendorAdds(co);
+  if (!a.length) return '';
+  return 'adds ' + a.map(function(v){ return v.type + ((Number(v.cost) || 0) > 0 ? ' (est. ' + fmt(Math.round(Number(v.cost))) + ')' : ''); }).join(', ');
+}
+// The whole change in one phrase, for the card, the notices and the invoice: its hours, its added vendor, or both.
+function coScopeLabel(co) {
+  var h = coHours(co), v = coVendorAddsTxt(co);
+  if (!v) return coHoursLabel(co);
+  return (h.tc || h.ps) ? coHoursLabel(co) + ' \u00b7 ' + v : v;
+}
+// The prep lines accepted change orders added to a job, each keeping its change order's id.
+function coPrepVendorLines(jobId) {
+  var out = [];
+  ((typeof changeOrders !== 'undefined' && changeOrders) || []).forEach(function(co){
+    if (!co || co.jobId !== jobId || !co.clientApproved) return;
+    coVendorAdds(co).forEach(function(v){
+      if (v.lid) out.push({ type: v.type, cost: Number(v.cost) || 0, lid: v.lid, coId: co.id });
+    });
+  });
+  return out;
+}
+// ⚠ THE PREP LINES A JOB AT WORK CARRIES — ONE LIST, read by the sourcing list and its writers, the budget card,
+// the close-out counts and the invoice's fee: the approved estimate's lines, then the ones accepted change
+// orders added. The client documents that quote the job keep reading `est.prepItems`, which is what was quoted.
+function jobPrepLines(job, est) {
+  // Prep is on where the estimate says so; a standalone Home Prep estimate is prep by definition (calcAll).
+  var base = (est && (est.prepEnabled || est.svc === 'prep') && est.prepItems) ? est.prepItems : [];
+  return base.concat(job && job.id ? coPrepVendorLines(job.id) : []);
+}
+
 // "+2.0 concierge / +4.0 specialist hrs" — how a change order reads everywhere a person
 // sees one. A reduction keeps the minus sign on the figure rather than inside it.
 function coHoursLabel(co) {
@@ -13415,8 +13535,30 @@ function coHoursLabel(co) {
 // order a client signs is exactly what the final invoice adds for it \u2014 at premium rates half an
 // hour is $92.50, and two of those rounded as a total ($185) would disagree with two signed
 // change orders ($93 + $93) by a dollar.
+//
+// ⚠⚠ AND ON A FIXED-PRICE RUSH JOB THE PRICE CARRIES THE PREMIUM (Anthony, 2026-09-30, the Q14 follow-up:
+// "yes"). The job is expedited, so the added scope is too: the plain-rate price times one plus the
+// premium, rounded once, here, like everything else about it. The rate is PINNED ON THE CHANGE ORDER
+// (`rushPct`, set at creation from `_coJobBasis`), never read live off the estimate, so a change order
+// raised before today keeps the plain-rate price its client signed, and a later edit to the estimate can
+// never reprice one already signed. The discount still does not apply (Q14 stands for that half).
 function coPrice(co, tcRate, psRate) {
-  return Math.round(coBaselineShift(coHours(co), tcRate, psRate));
+  return Math.round(coBaselineShift(coHours(co), tcRate, psRate) * (1 + coRushPct(co)));
+}
+// The premium a change order carries: its own pinned rate, or none.
+function coRushPct(co) {
+  var r = Number(co && co.rushPct);
+  return r > 0 ? r : 0;
+}
+// The premium a NEW change order on a job with this estimate carries — the one rule, read by
+// `_coJobBasis` (which pins it on the record) and by the agreement's change-order clause and form, so
+// the contract and the change order cannot state two different things. A fixed price, expedited, on a
+// fee whose premium is a line (estFixedLines); an older fee has its premium inside it and was quoted,
+// agreed and papered with plain-rate change orders, so it keeps them. (`est.fixedPrice` is belt-and-braces:
+// estFixedLines already requires it, and the revert sweep proved removing it here changes nothing. It is
+// kept so the rule reads as it is stated: a fixed price, expedited, with its premium as a line.)
+function coRushPctFor(est) {
+  return (est && est.fixedPrice && est.rush && estFixedLines(est)) ? (Number(est.rushPct) || RUSH_PCT) : 0;
 }
 function coPriceTotal(cos, tcRate, psRate) {
   return (cos || []).reduce(function(s, co){ return s + coPrice(co, tcRate, psRate); }, 0);
@@ -13469,6 +13611,10 @@ function coRateBasisTxt(co, tcRate, psRate) {
   }
   if (h.tc) parts.push(side(h.tc, 'concierge', tcRate));
   if (h.ps) parts.push(side(h.ps, 'specialist', psRate));
+  // The premium a fixed-price rush job's change order carries (coPrice), so the figure can still be
+  // checked by hand: $2,000 of hours plus 20% is the $2,400 printed beside it.
+  var r = coRushPct(co);
+  if (r && parts.length) parts.push('plus the ' + Math.round(r * 100) + '% expedited-delivery premium');
   return parts.join(' \u00b7 ');
 }
 
@@ -13535,16 +13681,24 @@ function coCardActions(co) {
 // every logged prep hour alike, and a prep estimate is never expedited (calcAll forces it off).
 // The rush test mirrors the invoice's own (`est.rush`, the rate pinned on the estimate), so the line
 // can never name a premium the final does not charge or omit one it does.
-function coRateModsLine(est, fixed, prep) {
+// ⚠⚠ AND ON A FIXED-PRICE RUSH JOB THE CHANGE ORDER CARRIES THE PREMIUM (Anthony, 2026-09-30, the Q14
+// follow-up). `co` is the change order itself, because the premium is pinned on it (coRushPct): one raised
+// on such a job says it is priced at the rates plus the premium, and says the discount still does not
+// apply; one raised before today, at plain rates, keeps the sentence it was signed with.
+function coRateModsLine(est, fixed, prep, co) {
   if (!est) return '';
   var rush = est.rush ? Math.round((Number(est.rushPct) || RUSH_PCT) * 100) : 0;
   var disc = Math.round(Number(est.discountPct) || 0);
   if (fixed) {
     var discF = disc > 0 || !!est.prevApprovedTotal;
-    if (!rush && !discF) return '';
+    var coRush = Math.round(coRushPct(co) * 100);
+    if (!rush && !discF && !coRush) return '';
     // "on" the fee where the estimate itemises them as lines on it (estFixedLines, from 2026-09-30), "in" it
     // where an older flat fee carries them inside.
     var _in = estFixedLines(est) ? 'on' : 'in';
+    if (coRush)
+      return 'It is priced at the hourly rates shown plus the ' + coRush + '% expedited-delivery premium, as this engagement is expedited' +
+        (discF ? '; the preferred-client discount ' + _in + ' your fixed project fee does not apply to it.' : '.');
     return 'It is priced at the plain hourly rates shown: ' +
       (rush && discF ? 'the expedited-delivery premium and the preferred-client discount ' + _in + ' your fixed project fee do'
         : rush ? 'the expedited-delivery premium ' + _in + ' your fixed project fee does'
@@ -13622,6 +13776,9 @@ function _coJobBasis(jobId) {
     // fee rides on top of it and a change order does not move that.
     fixed: !!(est && est.fixedPrice),
     flat: estFixedFee(est),
+    // ⚠ THE PREMIUM A NEW CHANGE ORDER ON THIS JOB CARRIES (the Q14 follow-up, 2026-09-30; coRushPctFor).
+    // Pinned onto the change order when it is created; see coPrice.
+    rushPct: coRushPctFor(est),
     // ⚠ HOME PREP, where a change order is concierge hours at a STATED rate (2026-09-25) — see
     // coPrepReadoutHtml. Read off the estimate first and the job second, like every prep test.
     prep: ((est && est.svc) || (job && job.svc)) === 'prep'
@@ -13643,12 +13800,26 @@ function openChangeOrder(jobId) {
   var _psBox = document.getElementById('co-ps-hrs');
   _psBox.disabled = !!b.prep;
   _psBox.placeholder = b.prep ? 'Not used on Home Prep' : 'e.g. 16 (negative to reduce)';
+  // ⚠ THE ADDED-VENDOR BLOCK, HOME PREP ONLY (2026-09-30), and set in BOTH directions on every open for the
+  // same reason as the specialist box. Its categories are the Build Estimate prep card's (the directory's
+  // Property Preparation group), so a vendor added here is the same kind of line the estimate carries.
+  var _vWrap = document.getElementById('co-vendor-wrap');
+  if (_vWrap) _vWrap.style.display = b.prep ? 'grid' : 'none';
+  var _vSel = document.getElementById('co-vendor-type');
+  if (_vSel) {
+    var _cats = b.prep ? vendorGroupCategories('Property Preparation') : [];
+    _vSel.innerHTML = '<option value="">' + (_cats.length ? 'No vendor added' : 'Vendor Directory not loaded') + '</option>' +
+      _cats.map(function(c){ return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
+    _vSel.value = '';
+  }
+  var _vCost = document.getElementById('co-vendor-cost');
+  if (_vCost) _vCost.value = '';
   // Options before the value: a <select> silently rejects a value it has no option for.
   document.getElementById('co-reason').innerHTML = CO_REASONS.map(function(r){
     return '<option value="' + r.v + '">' + r.l + '</option>';
   }).join('');
   document.getElementById('co-reason').value = 'scope_add';
-  document.getElementById('co-basis-note').innerHTML = coBasisNoteHtml(b.fixed, b.prep ? b : null);
+  document.getElementById('co-basis-note').innerHTML = coBasisNoteHtml(b.fixed, b.prep ? b : null, b.rushPct);
   document.getElementById('co-fb').innerHTML = '';
   updateCOHours();
   document.getElementById('change-order-modal').style.display = 'flex';
@@ -13659,12 +13830,16 @@ function openChangeOrder(jobId) {
 // every job, so on a fixed-price one the screen for creating a charge said it created none.
 // ⚠ ON HOME PREP IT IS A THIRD THING (2026-09-25): concierge hours for hands-on work, billed as worked
 // at a rate the change order itself states — `prep` is the job's basis (`_coJobBasis`), for the rate.
-function coBasisNoteHtml(fixed, prep) {
+// `rushPct` is the premium a new change order on this job carries (_coJobBasis), named on a fixed-price
+// rush job so the person raising it knows the price they are about to quote includes it.
+function coBasisNoteHtml(fixed, prep, rushPct) {
   if (prep) return 'On Home Prep a change order adds <strong>concierge hours for hands-on work</strong> &mdash; decluttering, clearing a room the vendors need empty. ' +
     'They are billed as they are worked, at $' + Number(prep.tcRate).toLocaleString() + ' an hour, on the final invoice on top of the ' + Math.round(prepFeeRate() * 100) + '% site management fee, and that rate is printed on the change order the client signs. ' +
-    '<strong>Coordinating the vendors is covered by the fee and is never billed as hours</strong>, and the engagement has no specialists, so this carries concierge hours only.';
+    '<strong>Coordinating the vendors is covered by the fee and is never billed as hours</strong>, and the engagement has no specialists, so the hours are concierge hours only. ' +
+    'A change order can also <strong>add a preparation vendor</strong> found mid-job: it bills the client directly at cost, and the fee applies to what it actually charges.';
   return fixed
-    ? 'Estimate the extra hours the added scope will take. <strong>On a fixed price the change order is the charge:</strong> those hours are priced at the job&rsquo;s rates, the price is printed on the change order the client signs, and it is added to the fixed project fee on the final invoice &mdash; whatever the work actually takes. <strong>The trigger is a change in scope, never the hours.</strong> Work beyond the agreed scope needs one however small it is; hours running long on the agreed scope never do &mdash; the fixed fee covers them.'
+    ? 'Estimate the extra hours the added scope will take. <strong>On a fixed price the change order is the charge:</strong> those hours are priced at the job&rsquo;s rates' +
+      (rushPct > 0 ? ' plus the ' + Math.round(rushPct * 100) + '% expedited-delivery premium, because this job is expedited' : '') + ', the price is printed on the change order the client signs, and it is added to the fixed project fee on the final invoice &mdash; whatever the work actually takes. <strong>The trigger is a change in scope, never the hours.</strong> Work beyond the agreed scope needs one however small it is; hours running long on the agreed scope never do &mdash; the fixed fee covers them.'
     : 'Estimate the extra hours the added scope will take. <strong>A change order carries no price and bills nothing on its own</strong> &mdash; the hours are logged as they are worked and reach the client on the final invoice with every other hour. What this does is authorise the scope and move the figure the &plusmn;' + estTolerancePctTxt() + ' check measures against.';
 }
 
@@ -13710,6 +13885,25 @@ function coPrepReadoutHtml(b, tc, prior) {
       : ' This engagement priced no concierge hours; the rate is the one its agreement states in Section 3.3, and the change order prints it again.');
 }
 
+// The vendor the change-order modal is about to add, or null. The cost is read as money (moneyToNumber).
+function coDraftVendorAdd() {
+  var sel = document.getElementById('co-vendor-type');
+  var type = sel ? String(sel.value || '').trim() : '';
+  if (!type) return null;
+  var costEl = document.getElementById('co-vendor-cost');
+  return { type: type, cost: costEl ? (moneyToNumber(costEl.value) || 0) : 0 };
+}
+// What an added prep vendor brings, in the terms the client is asked to agree to: it bills them directly at
+// cost, and the site management fee applies to its actual invoice — an estimate of it at the stated cost.
+function coPrepVendorReadout(v) {
+  var pct = Math.round(prepFeeRate() * 100);
+  var cost = Math.round(Number(v && v.cost) || 0);
+  return 'Adds <strong>' + esc(v.type) + '</strong> to the preparation vendors. It bills the client directly at cost, and the ' + pct +
+    '% site management fee applies to what it actually charges' +
+    (cost > 0 ? ' &mdash; about ' + fmt(Math.round(cost * prepFeeRate())) + ' at the estimated ' + fmt(cost) + '.' : '.') +
+    ' Once the client accepts, it joins the prep vendors on the Job Plan to be booked and quoted.';
+}
+
 // ⚠ THE 15% IS WHY THIS SCREEN EXISTS, so the readout states it rather than leaving the
 // concierge to work it out. Anthony: "the change order is supposed to trigger when we're
 // gonna run fifteen percent over a job, and that's on the transition concierge and property
@@ -13740,16 +13934,19 @@ function updateCOHours() {
   revEl.style.color = addHrs > 0 ? 'var(--bronze)' : (addHrs < 0 ? 'var(--ok-tx)' : '');
 
   var note = document.getElementById('co-hrs-note');
-  if (!addHrs) { note.innerHTML = ''; return; }
+  // A prep change order may add a vendor and no hours; its readout says what the vendor brings.
+  var _vAdd = b.prep ? coDraftVendorAdd() : null;
+  if (!addHrs && !_vAdd) { note.innerHTML = ''; return; }
   // ⚠ ON A FIXED PRICE THE 15% IS NOT THE TRIGGER AND THE READOUT MUST NOT SAY IT IS. It told a
   // concierge adding a small room to a flat-fee job that the change was "inside the 15% the
   // client already agreed to, so this records the scope rather than changing what they owe" —
   // and then the invoice added the hours to the flat fee at the rate card. What they need here is
   // the figure the client is being asked to agree to, and the fee it leaves.
-  var fx = coFixedTerms(jobId, { tcHrs: tc, psHrs: ps });
+  var fx = coFixedTerms(jobId, { tcHrs: tc, psHrs: ps, rushPct: b.rushPct });
   if (fx) {
     note.innerHTML = '<div class="alert a-info">' + coHoursLabel({tc:tc, ps:ps}) + ' at $' +
-      Number(fx.tcRate).toLocaleString() + ' / $' + Number(fx.psRate).toLocaleString() + ' an hour — <strong>' +
+      Number(fx.tcRate).toLocaleString() + ' / $' + Number(fx.psRate).toLocaleString() + ' an hour' +
+      (b.rushPct ? ' plus the ' + Math.round(b.rushPct * 100) + '% expedited-delivery premium, as this job is expedited' : '') + ' — <strong>' +
       _coMoney(fx.price) + ' on the fixed project fee</strong>, which ' + (fx.price < 0 ? 'comes down' : 'goes') +
       ' from ' + fmt(fx.flat + fx.prior) + ' to ' + fmt(fx.revised) + '.' +
       (fx.prior ? ' (' + fmt(fx.flat) + ' agreed, ' + (fx.prior > 0 ? 'plus ' : 'less ') + fmt(Math.abs(fx.prior)) + ' of change orders already accepted.)' : '') +
@@ -13757,7 +13954,8 @@ function updateCOHours() {
     return;
   }
   if (b.prep) {
-    note.innerHTML = '<div class="alert a-info">' + coPrepReadoutHtml(b, tc, prior) + '</div>';
+    note.innerHTML = '<div class="alert a-info">' + (tc ? coPrepReadoutHtml(b, tc, prior) : '') +
+      (_vAdd ? (tc ? ' ' : '') + coPrepVendorReadout(_vAdd) : '') + '</div>';
     return;
   }
   if (!baseHrs) {
@@ -13789,9 +13987,14 @@ function saveChangeOrder() {
   // ⚠ HOME PREP CARRIES CONCIERGE HOURS ONLY, and cannot go below zero (2026-09-25). The specialist box is
   // off in the modal; this is the same rule where the record is written, so it cannot be reached around.
   var _b = _coJobBasis(jobId);
+  // ⚠ AND A HOME PREP CHANGE ORDER MAY ADD A VENDOR INSTEAD OF, OR AS WELL AS, CONCIERGE HOURS (2026-09-30).
+  // Read here, where the record is written, and only on Home Prep: the block is hidden on every other job,
+  // and a value left in it from a prep job must not ride onto a labour job's change order.
+  var _vAdd = _b.prep ? coDraftVendorAdd() : null;
   if (_b.prep) {
     if (ps) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Home Prep has no specialists &mdash; enter concierge hours only.</div>'; return; }
-    if (!tc) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the additional concierge hours this change is expected to take.</div>'; return; }
+    if (!tc && !_vAdd) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the additional concierge hours this change is expected to take, or the prep vendor it adds &mdash; or both.</div>'; return; }
+    if (_vAdd && !(_vAdd.cost > 0)) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the added vendor&rsquo;s estimated cost, so the client sees the fee it carries.</div>'; return; }
     var _baseTC = Math.max(0, (_b.tcHrs || 0) + coPriorHours(jobId, null).tc);
     if (tc < 0 && _baseTC + tc < 0) {
       document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">That would take the concierge hours on this job below zero &mdash; there ' +
@@ -13802,7 +14005,8 @@ function saveChangeOrder() {
   // ⚠ A change order with no hours on it authorises nothing and moves nothing. Writing one
   // anyway would put a row on the timeline and the invoice that reads as an agreed change
   // while carrying no agreement about anything — the state this rebuild exists to remove.
-  if (!tc && !ps) {
+  // (A Home Prep one that adds a vendor carries an agreement about that vendor.)
+  if (!tc && !ps && !_vAdd) {
     document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Enter the additional hours this change is expected to take — concierge, specialist or both. Negative to reduce scope.</div>';
     return;
   }
@@ -13822,6 +14026,11 @@ function saveChangeOrder() {
     clientName: '',
     clientAcceptedAt: ''
   };
+  // The premium this change order carries, pinned at creation (see coPrice): on a fixed-price rush job
+  // only, so every other change order keeps the record it always had.
+  if (_b.fixed && _b.rushPct > 0) co.rushPct = _b.rushPct;
+  // The vendor a Home Prep change order adds, with its own line id for the sourcing record (see coVendorAdds).
+  if (_vAdd) co.vendorAdds = [{ type: _vAdd.type, cost: Math.round(_vAdd.cost), lid: _srcLid() }];
 
   changeOrders.push(co);
   saveChangeOrders();
@@ -13835,7 +14044,7 @@ function saveChangeOrder() {
   // Dashboard", the screen you were on. _docNotice sets the notice and then redraws (a notice written
   // and THEN redrawn is wiped on the same tick — see dashNotice), so the new row, with its PDF and Get
   // Acceptance, is on screen under the message that names them.
-  _docNotice('ok', 'Change order CO-' + String(co.id).slice(-6) + ' created (' + coHoursLabel(co) + ') — waiting on the client. ' +
+  _docNotice('ok', 'Change order CO-' + String(co.id).slice(-6) + ' created (' + coScopeLabel(co) + ') — waiting on the client. ' +
     'On its row under Change Orders, PDF prints it for them to sign and Get Acceptance records their agreement.', jobId);
 }
 
@@ -14439,10 +14648,20 @@ function openCOAcceptModal(coId) {
     '<div style="margin-top:8px;display:flex;justify-content:space-between;font-weight:700;color:' + tone + ';">' +
       '<span>Additional hours</span><span>' + coHoursLabel(co) + '</span></div>' +
     (pb.prep && !fx
-      ? '<div style="display:flex;justify-content:space-between;"><span>Rate</span><span>$' + _prepRate.toLocaleString() + ' an hour, billed as worked</span></div>' +
-        '<div style="display:flex;justify-content:space-between;"><span>At the estimated hours</span><span>about ' + fmt(Math.round(Math.abs(_prepTC) * _prepRate)) + (_prepTC < 0 ? ' less' : '') + '</span></div>' +
+      ? (_prepTC
+          ? '<div style="display:flex;justify-content:space-between;"><span>Rate</span><span>$' + _prepRate.toLocaleString() + ' an hour, billed as worked</span></div>' +
+            '<div style="display:flex;justify-content:space-between;"><span>At the estimated hours</span><span>about ' + fmt(Math.round(Math.abs(_prepTC) * _prepRate)) + (_prepTC < 0 ? ' less' : '') + '</span></div>'
+          : '') +
+        // ⚠ AN ADDED VENDOR, NAMED WHERE THE CLIENT AGREES TO IT (2026-09-30): its estimated cost, which it bills
+        // them directly, and the fee on what it actually charges.
+        coVendorAdds(co).map(function(v){
+          return '<div style="display:flex;justify-content:space-between;"><span>Added vendor</span><span>' + esc(v.type) + ', est. ' + fmt(Math.round(Number(v.cost) || 0)) + ', billed to you directly</span></div>' +
+            '<div style="display:flex;justify-content:space-between;"><span>' + Math.round(prepFeeRate() * 100) + '% site management fee on it</span><span>about ' + fmt(Math.round((Number(v.cost) || 0) * prepFeeRate())) + ', on its actual invoice</span></div>';
+        }).join('') +
         '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
-          'Billed on the final invoice for the hours actually worked, at the rate above, on top of the ' + Math.round(prepFeeRate() * 100) + '% site management fee on the prep vendors&rsquo; invoices. Coordinating the vendors stays inside that fee.</div>'
+          (_prepTC ? 'Billed on the final invoice for the hours actually worked, at the rate above, on top of the ' + Math.round(prepFeeRate() * 100) + '% site management fee on the prep vendors&rsquo; invoices. ' : '') +
+          (coVendorAdds(co).length ? 'The added vendor bills you directly at cost; the ' + Math.round(prepFeeRate() * 100) + '% site management fee is billed on what it actually charges. ' : '') +
+          'Coordinating the vendors stays inside that fee.</div>'
       : fx
       ? '<div style="display:flex;justify-content:space-between;font-weight:700;color:' + tone + ';">' +
           '<span>Change to the fixed project fee</span><span>' + _coMoney(fx.price) + '</span></div>' +
@@ -14452,8 +14671,11 @@ function openCOAcceptModal(coId) {
           'Priced at ' + esc(coRateBasisTxt(co, fx.tcRate, fx.psRate)) + '. The amount is added to the fixed project fee on the final invoice and does not change with the hours the work actually takes.</div>'
       : '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
           'No charge is created by this change order. These hours are billed on the final invoice as they are actually worked.</div>');
+  var _vTerms = coVendorAdds(co).map(function(v){ return esc(v.type); }).join(', ');
   document.getElementById('coa-terms').innerHTML = (pb.prep && !fx)
-    ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope, the additional concierge hours it is expected to take, and the rate of $' + _prepRate.toLocaleString() + ' an hour at which those hours are billed on the final invoice as they are actually worked.'
+    ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope' +
+      (_prepTC ? ', the additional concierge hours it is expected to take, and the rate of $' + _prepRate.toLocaleString() + ' an hour at which those hours are billed on the final invoice as they are actually worked' : '') +
+      (_vTerms ? ', and the addition of ' + _vTerms + ' to the preparation vendors, billed to them directly at cost, with the ' + Math.round(prepFeeRate() * 100) + '% site management fee on what it actually charges' : '') + '.'
     : fx
     ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and to the change to the fixed project fee shown above, which is added on the final invoice.'
     : 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope and the additional hours it is expected to take. Those hours are billed on the final invoice as they are actually worked.';
@@ -14504,10 +14726,11 @@ function acceptChangeOrder() {
   // to the hidden `e-fb`, and nothing repainted the card, the Hours Log bars or the schedule this
   // acceptance has just moved, so the row went on reading "Awaiting acceptance" beside a Get Acceptance
   // that had already been pressed.
-  _docNotice('ok', 'Change Order accepted by ' + clientName + ' (' + coHoursLabel(co) + ').' + (b.fixed
+  _docNotice('ok', 'Change Order accepted by ' + clientName + ' (' + coScopeLabel(co) + ').' + (b.fixed
     ? ' ' + _coMoney(coPrice(co, b.tcRate, b.psRate)) + ' on the fixed project fee, which is now ' + fmt(b.flat + shift) + ' — added on the final invoice.'
     : b.prep
-    ? ' These concierge hours bill on the final invoice at $' + (Number(b.tcRate) || 0).toLocaleString() + ' an hour as they are worked, on top of the site management fee — log them on the Job Plan.'
+    ? (coHours(co).tc ? ' These concierge hours bill on the final invoice at $' + (Number(b.tcRate) || 0).toLocaleString() + ' an hour as they are worked, on top of the site management fee — log them on the Job Plan.' : '') +
+      (coVendorAdds(co).length ? ' ' + coVendorAdds(co).map(function(v){ return v.type; }).join(', ') + ' now sits with the prep vendors on the Job Plan, to be booked and quoted.' : '')
     : ' These hours bill on the final invoice as they are worked.'), co.jobId);
 }
 
@@ -14591,12 +14814,47 @@ function printChangeOrder(coId) {
       ' in addition to the ' + Math.round(prepFeeRate() * 100) + '% site management fee on the preparation vendors&rsquo; invoices, which this change does not alter. ' +
       'Coordinating the vendors remains covered by that fee. ' +
       'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.';
+    // ⚠⚠ A PREP CHANGE ORDER THAT ADDS A VENDOR (2026-09-30) is priced on a different page: the vendor bills the
+    // client directly and the site management fee applies to what it actually charges, so the page names the
+    // vendor, its estimated cost and the fee at that cost, and drops the "vendor costs are unaffected" line
+    // that would now be false. Hours, if it carries any, keep their rows and their sentence. A change order
+    // that adds no vendor prints exactly the page above.
+    var _pAdds = coVendorAdds(co);
+    if (_pAdds.length) {
+      var _pPct = Math.round(prepFeeRate() * 100);
+      table = '<table style="width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:12px;">' +
+        '<tr style="' + _dark + '"><th style="' + _td + 'text-align:left;">Item</th><th style="' + _td + 'text-align:right;">Estimate</th></tr>' +
+        '<tr style="background:#FEF5E7;"><td style="' + _td + '" colspan="2">' + _what + '</td></tr>' +
+        (_pTC
+          ? '<tr><td style="' + _td + '">Concierge hours on the approved estimate' + (_pPrior ? ' and change orders already accepted' : '') + '</td><td style="' + _td + 'text-align:right;">' + Math.max(0, (_b.tcHrs || 0) + _pPrior).toFixed(1) + ' hrs</td></tr>' +
+            '<tr><td style="' + _td + '">This change</td><td style="' + _td + 'text-align:right;color:' + _tone + ';font-weight:600;">' + coHoursLabel(co) + ' at $' + _pRate.toLocaleString() + ' an hour, billed as worked</td></tr>' +
+            '<tr><td style="' + _td + '">Revised estimated concierge hours</td><td style="' + _td + 'text-align:right;font-weight:600;">' + _pRev.toFixed(1) + ' hrs</td></tr>'
+          : '') +
+        _pAdds.map(function(v){
+          var c = Math.round(Number(v.cost) || 0);
+          return '<tr><td style="' + _td + '">Added preparation vendor: <strong>' + esc(v.type) + '</strong><br><span style="color:#6B6B72;font-size:11px;">billed to you directly by the vendor, at cost</span></td><td style="' + _td + 'text-align:right;font-weight:600;">' + fmt(c) + ' estimated</td></tr>' +
+            '<tr><td style="' + _td + '">Site management fee (' + _pPct + '%) on its actual invoice</td><td style="' + _td + 'text-align:right;">about ' + fmt(Math.round(c * prepFeeRate())) + '</td></tr>';
+        }).join('') +
+        '</table>';
+      var _pNames = _pAdds.map(function(v){ return esc(v.type); }).join(', ');
+      var _pCost = _pAdds.reduce(function(a, v){ return a + (Number(v.cost) || 0); }, 0);
+      terms = (_pTC
+          ? (_pTC > 0
+              ? '<strong>This change order adds concierge hours, billed at $' + _pRate.toLocaleString() + ' an hour</strong>, and '
+              : '<strong>This change order reduces the concierge hours on this engagement</strong>, and ')
+            + 'it adds ' + _pNames + ' to the preparation vendors. You are billed for the hours actually worked, at $' + _pRate.toLocaleString() + ' an hour, on the final invoice. '
+          : '<strong>This change order adds ' + _pNames + ' to the preparation vendors.</strong> ') +
+        (_pAdds.length === 1 ? 'The vendor bills' : 'Each vendor bills') + ' you directly, at cost, and the ' + _pPct + '% site management fee in your agreement is billed on what ' +
+        (_pAdds.length === 1 ? 'it actually charges' : 'each actually charges') +
+        (_pCost > 0 ? ' &mdash; about ' + fmt(Math.round(_pCost * prepFeeRate())) + ' at the estimated ' + fmt(Math.round(_pCost)) : '') + '. ' +
+        'Coordinating the vendors remains covered by that fee. The other preparation vendors&rsquo; costs are unaffected by this change.';
+    }
   }
 
   // ⚠ Q14 (2026-09-29): whether these hours carry the job's expedited premium and preferred-client
   // discount — yes like every other hour on an hourly job, no on a fixed price. One line, on all three
   // arms, and only where the job carries one of them; see coRateModsLine for why it is silent otherwise.
-  var _mods = coRateModsLine(_b.est, !!fx, !!_b.prep);
+  var _mods = coRateModsLine(_b.est, !!fx, !!_b.prep, co);
   if (_mods) terms += '<div style="margin-top:6px;">' + _mods + '</div>';
 
   var content = '<div style="font-family:Arial,sans-serif;max-width:680px;margin:0 auto;padding:1rem;">' +
@@ -19473,7 +19731,7 @@ function renderClientDashboard(jobId) {
     // it was the only thing the dead client-list block showed that this card did not.
     h += '<div><div style="font-size:13px;font-weight:600;color:var(--gray-dk);">Change Order CO-'+String(co.id).slice(-6)+'</div>'
        + '<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+esc(String(co.description||'').slice(0,50))
-       + ' · '+coHoursLabel(co)+' · '+esc(co.createdAt)
+       + ' · '+esc(coScopeLabel(co))+' · '+esc(co.createdAt)
        + (co.clientApproved && co.clientName ? ' · accepted by ' + esc(co.clientName) : '')+'</div></div>';
     h += '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">';
     h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:#3C348922;color:#3C3489;font-weight:500;">'
@@ -25220,8 +25478,12 @@ function printCourtInventory(jobId) {
   // ⚠ WHO FINISHES IT DEPENDS ON THE CONTRACT. At the `appraisals` tier Havellin engages the
   // specialist; at `values` the agreement puts that with counsel, so promising a final copy
   // "once the outstanding items are appraised" would promise somebody else's work as ours.
-  if (formal && guard.length) _draftFix.push(docTierProduces(job, 'appraisals')
+  // ⚠ AND AN APPRAISER ON THE ESTIMATE IS OURS TO SCHEDULE ON ANY TIER (Q20, 2026-09-30) — jobAppraisalDuty.
+  var _apDuty = jobAppraisalDuty(job);
+  if (formal && guard.length) _draftFix.push(_apDuty === 'all'
     ? 'Havellin engages the specialist and a final copy follows the report'
+    : _apDuty === 'listed'
+    ? 'Havellin schedules the appraiser on the estimate where it covers the item (' + esc(estimateAppraiserNames(approvedEstimateFor(job.id))) + '), the estate attorney arranges any other, and a final copy follows the report'
     : 'the estate attorney arranges the appraisal on this engagement');
   if (unvalued.length) _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
   if (unvalued.length) _draftFix.push('a final copy is issued once the outstanding items are valued');
@@ -25364,8 +25626,11 @@ function printTrustSchedule(jobId) {
   }
   if (formal && guard.length) {
     _draftWhy.push(guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal');
-    _draftFix.push(docTierProduces(job, 'appraisals')
+    var _apDutyT = jobAppraisalDuty(job);
+    _draftFix.push(_apDutyT === 'all'
       ? 'Havellin engages the specialist and a final copy follows the report'
+      : _apDutyT === 'listed'
+      ? 'Havellin schedules the appraiser on the estimate where it covers the item (' + esc(estimateAppraiserNames(approvedEstimateFor(job.id))) + '), the trustee or their counsel arranges any other, and a final copy follows the report'
       : 'the trustee or their counsel arranges the appraisal on this engagement');
   }
   if (unvalued.length) {
@@ -26848,6 +27113,7 @@ function _renderDuplicateImportNotice(jobId) {
 var INV_GROUP_ORDER = ['', 'Keep', 'Move', 'Distribute', 'Auction', 'Consign', 'Sell', 'Donate', 'Junk', 'Hold'];
 var INV_UNDECIDED = 'Not yet decided';
 var _invFilter    = { when: 'all', room: '', q: '', flag: '' };
+var _invWhenJob   = 0;    // the job whose desk the when-default was last applied to (see renderInventoryTab)
 var _invOpen      = {};   // stableId -> panel expanded
 var _invFold      = {};   // disposition key -> section collapsed
 var _invPick      = {};   // stableId -> selected for a bulk action
@@ -27963,6 +28229,17 @@ function _renderInvBulk(job) {
     + '</div>';
 }
 
+// The desk's filters, set afresh once per client opened (see the note in renderInventoryTab). Its own
+// function so the rule can be driven without drawing the tab. ⚠ AFRESH MEANS ALL OF THEM (2026-09-30): the
+// filter is one object for the whole tab, so a search, a Needs-you chip or a room chosen on one client carried
+// to the next (the room by its index, so into a different room of a different house), and a Today left by
+// one client opened the next on Today with nothing shot there today. Found by the P13 documentation pass.
+function _invApplyWhenDefault(jobId, all) {
+  if (_invWhenJob === jobId) return;
+  _invWhenJob = jobId;
+  _invFilter = { when: _invCapturedToday(all) ? 'today' : 'all', room: '', q: '', flag: '' };
+}
+
 function renderInventoryTab() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
@@ -27975,7 +28252,11 @@ function renderInventoryTab() {
   var all = _invAssignItemNos(jobId);
   // Default to the day's work when there IS a day's work — that is what the tab is opened
   // for — and to everything otherwise, so a job resumed a week later is not an empty screen.
-  if (_invFilter.when === 'all' && !_invFilter.q && !_invFilter.flag && _invCapturedToday(all)) _invFilter.when = 'today';
+  // ⚠ ONCE, WHEN THE DESK OPENS ON A CLIENT, NEVER ON A REPAINT (2026-09-30). It ran on every render, so on a
+  // day with a capture, pressing All drew Today again: `setInvWhen('all')` set the filter and the render it
+  // called turned it straight back. Found on the real page with P14. A person's choice now stands until they
+  // open another client's desk, which starts clean: Today if anything was shot there today, else All.
+  _invApplyWhenDefault(jobId, all);
   var items = all.filter(function(r){ return _invMatchesFilter(r, job); });
   // ONE PASS, READ PER ROW. See `_agDupIndex` — the grouper must not be called from inside
   // the row loop. It is computed over EVERY row rather than the filtered ones, or a filter
@@ -29995,7 +30276,9 @@ function getVendorActuals(job, est) {
   var vsrc = job.vendorSourcing || {};
   var psrc = job.prepSourcing || {};
   var vendors = est.vendors || [];
-  var prepItems = (est.prepEnabled && est.prepItems) ? est.prepItems : [];
+  // ⚠ The job's prep lines (jobPrepLines): the estimate's, then any a change order the client accepted added —
+  // so the fee on the final covers what those vendors actually charge too (2026-09-30).
+  var prepItems = jobPrepLines(job, est);
 
   function resolve(lines, src) {
     var out = [], total = 0, anyEst = false;
@@ -31264,7 +31547,12 @@ function invoiceHtml(job, stage) {
   // signed for reports to the manager as "job ran over estimate" and trips the PIN — the app
   // treating its own approved change as a variance. This is the half that makes the hours
   // model work, and it is the reason the shift is derived at all.
-  var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coShift;
+  // ⚠ AND SO DOES A PREP VENDOR A CHANGE ORDER ADDED (2026-09-30): the fee on it at the estimated cost the client
+  // accepted. Without it every accepted vendor read as the job running over and asked for the PIN (a $9,000
+  // painter on a $45,000 prep job read +20%). Found by the P13 documentation pass.
+  var coVendorFee = Math.round(jobCOs.reduce(function(a, c){
+    return a + coVendorAdds(c).reduce(function(b, v){ return b + (Number(v.cost) || 0); }, 0); }, 0) * prepFeeRate());
+  var estHavellinTotal = ((est && est.havellinTotal) ? est.havellinTotal : havellinTotalDiscounted) + coShift + coVendorFee;
   // ⚠ BUT THE CLIENT'S "ORIGINAL ESTIMATE" ROW IS THE ESTIMATE ALONE, and the change orders are a
   // line of their own beneath it. The row printed estHavellinTotal — the internal baseline above,
   // change orders included — so a $10,962 job with a +10/+10 change order read "Original Estimate
@@ -31439,6 +31727,10 @@ function invoiceHtml(job, stage) {
     jobCOs.map(function(co) {
       return '<tr><td style="font-family:monospace;font-size:11px;color:var(--bronze);">CO-' + co.id.toString().slice(-6) + '</td><td style="font-size:11.5px;">' + esc(co.description||'Scope change') +
              (co.clientName ? '<br><span style="font-size:10.5px;color:var(--gray);">Accepted by ' + esc(co.clientName) + (co.clientAcceptedAt ? ' on ' + esc(co.clientAcceptedAt) : '') + '</span>' : '') +
+             // A prep vendor it added (2026-09-30): named here. The page prints one fee row for all the prep
+             // vendors and no list of them, so the note points at that row (it said "the preparation vendors
+             // above", a list this invoice never prints; found by the P13 documentation pass).
+             (coVendorAdds(co).length ? '<br><span style="font-size:10.5px;color:var(--gray);">' + esc(coVendorAddsTxt(co).replace(/^adds /, 'Adds ')) + ' &mdash; it bills you directly, and the site management fee on it is in the fee above</span>' : '') +
              '</td><td style="text-align:right;font-weight:600;">' + coHoursLabel(co) + '</td>' +
              (_fixedBasis ? '<td style="text-align:right;font-weight:600;">' + _coMoney(coPrice(co, tcRate, psRate)) + '</td>' : '') + '</tr>';
     }).join('') +
@@ -31448,14 +31740,23 @@ function invoiceHtml(job, stage) {
     '<div class="ce-note">' + (_fixedBasis
       ? 'Each is charged at the price on the change order you accepted and added to the fixed project fee above, because a fixed fee does not otherwise move with the hours worked.'
       : _prepCoJob
-      ? 'These concierge hours are billed as they were logged, at $' + tcRate + ' an hour &mdash; they are the concierge (TC) hours in the table above &mdash; in addition to the site management fee.'
+      ? (coHrs.tc ? 'These concierge hours are billed as they were logged, at $' + tcRate + ' an hour &mdash; they are the concierge (TC) hours in the table above &mdash; in addition to the site management fee. ' : '') +
+        (jobCOs.some(function(c){ return coVendorAdds(c).length; }) ? 'A vendor a change order added bills you directly, and the site management fee on what it actually charged is in the fee above.' : '')
       : 'These hours are not billed separately. They are worked and logged like every other hour on this engagement and are already included in the figures above.') +
     '</div>' : '');
 
   // The accepted change orders, on ONE line of their own, directly under the figure they change —
   // the hours on T&M (already billed in the table above), the signed prices on fixed price.
+  // A Home Prep change order may add a vendor and no hours (2026-09-30), and this row read "no hours change,
+  // billed in the hours above" for one; it names what each part is and where it is billed.
+  var _coVendNames = [];
+  jobCOs.forEach(function(c){ coVendorAdds(c).forEach(function(v){ if (_coVendNames.indexOf(v.type) < 0) _coVendNames.push(v.type); }); });
+  var _coPayTxt = coCharge ? _coMoney(coCharge)
+    : ([(coHrs.tc || coHrs.ps) ? coHoursLabel(coHrs) + ', billed in the hours above' : '',
+        _coVendNames.length ? 'adds ' + _coVendNames.map(esc).join(', ') + ', in the site management fee above' : '']
+       .filter(Boolean).join('; ') || coHoursLabel(coHrs) + ', billed in the hours above');
   var _coPayRow = jobCOs.length
-    ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>'
+    ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + _coPayTxt + '</td></tr>'
     : '';
   // ⚠ WHAT THE TOTAL ON A HOME PREP FINAL IS MADE OF (2026-09-30, audit P14; Anthony approved the wording).
   // It read "logged hours + actual fees" on every hourly final, and a prep job bills the site management
@@ -32580,7 +32881,7 @@ function vendorSourcingProgress(jobId, job, est) {
   var lsrc = (job && job.logisticsSourcing) || {};
   ((est && est.vendors) || []).forEach(function(v, i) { total++; var rec = vsrc[_srcLineKey(v, i)]; if (rec && rec.status === 'Confirmed') done++; });
   ((est && est.collections) || []).forEach(function(c) { total++; var rec = csrc[c.id]; if (rec && rec.vendorId) done++; });
-  ((est && est.prepItems) || []).forEach(function(p, i) { total++; var rec = psrc[_srcLineKey(p, i)]; if (rec && rec.status === 'Confirmed') done++; });
+  jobPrepLines(job, est).forEach(function(p, i) { total++; var rec = psrc[_srcLineKey(p, i)]; if (rec && rec.status === 'Confirmed') done++; });
   if (!(job && job.svc === 'prep')) {
     logisticsLinesFor(job, (est && est.vendors) || []).forEach(function(cat) { total++; if (lsrc[cat.key].status === 'Confirmed') done++; });
   }
@@ -32951,7 +33252,8 @@ function planTaskCtx(job, est) {
            tier: docTierOf(job),
            weInventory: docTierProduces(job, 'inventory'),
            weValue: docTierProduces(job, 'values'),
-           weAppraise: docTierProduces(job, 'appraisals'),
+           // The appraisals are ours to attach where the tier says so or the estimate lists an appraiser (Q20).
+           weAppraise: jobAppraisalDuty(job) !== '',
            hasAppraisers: !!(job && job.appraisers && job.appraisers.length),
            // ⚠ THE TWO AXES, so a `when` predicate has somewhere honest to ask them. Every other
            // field here is a SERVICE question and they are all correct as such — do NOT rewrite
@@ -33122,11 +33424,12 @@ function planDerivedLines(jobId, job, est, phase) {
       out.push({ key: 'change_orders', ok: nAcc === cos.length, label: 'Change orders accepted by the client',
                  detail: nAcc + ' of ' + cos.length + (nAcc < cos.length ? ' — an unaccepted change order is never billed' : '') });
     }
-    if (est.prepEnabled && est.prepItems && est.prepItems.length) {
+    var _pLines = jobPrepLines(job, est);   // with any a change order added (2026-09-30)
+    if (_pLines.length) {
       var psrc = job.prepSourcing || {};
-      var nP = est.prepItems.filter(function(pi, i){ var rec = psrc[_srcLineKey(pi, i)]; return rec && rec.status === 'Confirmed'; }).length;
-      out.push({ key: 'prep_vendors', ok: nP === est.prepItems.length, label: 'Prep vendors confirmed',
-                 detail: nP + ' of ' + est.prepItems.length });
+      var nP = _pLines.filter(function(pi, i){ var rec = psrc[_srcLineKey(pi, i)]; return rec && rec.status === 'Confirmed'; }).length;
+      out.push({ key: 'prep_vendors', ok: nP === _pLines.length, label: 'Prep vendors confirmed',
+                 detail: nP + ' of ' + _pLines.length });
     }
     var fin = !!docSentAt(job, 'invoice', 'final');
     out.push({ key: 'final_invoice_sent', ok: fin, label: 'Final invoice sent',
@@ -33628,7 +33931,7 @@ function logisticsLinesFor(job, svcLines) {
 function renderVendorSourcing(jobId, job, est) {
   var svcLines = est.vendors || [];
   var colls    = est.collections || [];
-  var prepLines = (est.prepEnabled && est.prepItems) ? est.prepItems : [];
+  var prepLines = jobPrepLines(job, est);   // the estimate's, then any an accepted change order added
   var hasPrep = prepLines.some(function(p){ return p.cost > 0; });
   var html = '';
   if (!vendorDirectory.length) {
@@ -33831,7 +34134,9 @@ function _srcSlot(jobId, bucket, listKey, i) {
   // wrong-job hazard this file records. Here the arrays are still aligned with what the
   // reader just drew, and the write that follows lands on the stable key.
   if (est && _srcAdoptLineIds(job, est)) { stored.savedAt = Date.now(); _srcPersistEstimates(); }
-  var line = ((est && est[listKey]) || [])[i];
+  // ⚠ Prep rows are drawn from jobPrepLines (the estimate's lines, then any an accepted change order added), so
+  // the writer reads the same list: row i past the estimate's own is a change order's line, keyed on its lid.
+  var line = (listKey === 'prepItems' ? jobPrepLines(job, est) : ((est && est[listKey]) || []))[i];
   var key = _srcLineKey(line, i);
   if (!job[bucket]) job[bucket] = {};
   if (!job[bucket][key]) job[bucket][key] = {};
@@ -35224,19 +35529,28 @@ function checkDirDeletePin(){
   else hardDeleteReferral(t.id);
 }
 
+// ⚠ THE HISTORY QUESTION, ASKED BY THE ✕ AND AGAIN BEHIND THE PIN (2026-09-30), as the contractor delete asks
+// its own (contractorDeleteBlocker). It was asked on the button only, so a vendor rated while the PIN box was
+// open, or a delete reached by any other door, went straight through. The handler asks what the button asks.
+// History guard: a rated or previously-used vendor is retired, not deleted.
+function vendorDeleteBlocker(v) {
+  if (!v) return 'That vendor is no longer in the directory. Reload it (↻) and try again.';
+  if (vendorPerf(v) != null || parseFloat(v.jobs_rated) > 0)
+    return 'This vendor has job history (a performance rating or completed jobs). To keep your records intact, retire it by setting the status to “Do Not Use” instead of deleting.';
+  return '';
+}
 function requestDeleteVendor(id){
   var v = lookupVendorById(id); if (!v) return;
-  // History guard: a rated or previously-used vendor is retired, not deleted.
-  if (vendorPerf(v) != null || parseFloat(v.jobs_rated) > 0){
-    alert('This vendor has job history (a performance rating or completed jobs). To keep your records intact, retire it by setting the status to “Do Not Use” instead of deleting.');
-    return;
-  }
+  var why = vendorDeleteBlocker(v);
+  if (why) { alert(why); return; }
   _dirDeleteTarget = { kind:'vendor', id:String(id), name: v.vendor_name || 'this vendor' };
   _openDirDeletePin();
 }
 function hardDeleteVendor(id){
   var v = lookupVendorById(id);
   if (!v) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  var _why = vendorDeleteBlocker(v);
+  if (_why) { alert(_why); return; }
   if (v._row == null || String(v._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this vendor, then retry', true); return; }
   if (!VENDOR_SYNC_URL) { showSyncBadge('Set the Vendor Directory URL in Settings first', true); return; }
   showSyncBadge('Deleting…');
@@ -35976,20 +36290,31 @@ function editReferral(id){
 function postReferralWrite(type, payload, cb, onLanded){
   queuedDirectoryWrite('referral', { type: type, payload: payload }, cb, onLanded);
 }
+// ⚠ ASKED BY THE ✕ AND AGAIN BEHIND THE PIN (2026-09-30) — see vendorDeleteBlocker. And refused while the
+// client list is unread: the count is of jobs attributed to the partner, and an unread list counts none, so
+// the guard would wave through the very partner it exists to keep (the contractor delete's rule).
+// History guard: a partner with jobs attributed (the leaderboard) is retired, not deleted.
+function referralDeleteBlocker(p) {
+  if (!p) return 'That partner is no longer in the directory. Reload it (↻) and try again.';
+  if (jobsUnread()) return 'The client list has not loaded, so the referrals attributed to ' + (p.partner_name || 'this partner')
+    + ' cannot be counted yet. Try again once it has.';
+  var stats = referralPartnerStats(p);
+  if (stats && stats.count > 0)
+    return 'This partner has ' + stats.count + ' referral' + (stats.count===1?'':'s') + ' attributed to them. To keep your leaderboard intact, retire them by setting the status to “Do Not Use” instead of deleting.';
+  return '';
+}
 function requestDeleteReferral(id){
   var p = lookupReferralById(id); if (!p) return;
-  // History guard: a partner with jobs attributed (the leaderboard) is retired, not deleted.
-  var stats = referralPartnerStats(p);
-  if (stats && stats.count > 0){
-    alert('This partner has ' + stats.count + ' referral' + (stats.count===1?'':'s') + ' attributed to them. To keep your leaderboard intact, retire them by setting the status to “Do Not Use” instead of deleting.');
-    return;
-  }
+  var why = referralDeleteBlocker(p);
+  if (why) { alert(why); return; }
   _dirDeleteTarget = { kind:'referral', id:String(referralIdOf(p)), name: p.partner_name || 'this partner' };
   _openDirDeletePin();
 }
 function hardDeleteReferral(id){
   var p = lookupReferralById(id);
   if (!p) { showSyncBadge('Reload the directory (↻) and try again', true); return; }
+  var _why = referralDeleteBlocker(p);
+  if (_why) { alert(_why); return; }
   if (p._row == null || String(p._row).trim() === '') { showSyncBadge('Reload the directory (↻) to refresh this partner, then retry', true); return; }
   if (!REFERRAL_SYNC_URL) { showSyncBadge('Set the Referral Partners URL in Settings first', true); return; }
   showSyncBadge('Deleting…');
@@ -36323,7 +36648,8 @@ function openInvoiceFor(jobId, stage) {
 // vendors (partner, status, quote vs budget), a budget/fee rollup, and a light
 // coordination checklist. No completion date is projected — the schedule is vendor-driven.
 function renderPrepJobPlan(jobId, job, est) {
-  var prepLines = (est.prepItems || []).filter(function(p){ return p.cost > 0; });
+  // The estimate's lines and any an accepted change order added (jobPrepLines, 2026-09-30).
+  var prepLines = jobPrepLines(job, est).filter(function(p){ return p.cost > 0; });
   var psrc = job.prepSourcing || {};
   var totalBudget = prepLines.reduce(function(a,p){ return a + (p.cost||0); }, 0);
   var totalQuoted = 0, quotedCount = 0;
@@ -37896,7 +38222,9 @@ function agrPriceAdjustments(est, party) {
   if (rush)
     out.push('At Client\u2019s request this engagement is scheduled on a priority basis, for which an expedited-delivery premium of '
       + _pctWords(rate) + (fixed
-        ? ' of the fixed price is charged in addition to it, as itemized on the Estimate.'
+        // ⚠ AND ON EACH CHANGE ORDER'S PRICE (Anthony, 2026-09-30, the Q14 follow-up): the added scope runs
+        // on the same expedited schedule. coRushPctFor is the rule the change order itself is priced by.
+        ? ' of the fixed price is charged in addition to it, as itemized on the Estimate' + (coRushPctFor(est) ? ', and on the price of any Change Order' : '') + '.'
         : ' of ' + party + '\u2019s fees' + (exPrep ? ', other than the Home Sale Preparation Fee,' : '') + ' is charged, as itemized on the Estimate and applied to the fees actually billed.'));
   if ((est.discountPct || 0) > 0 && (est.discountAmt || 0) > 0)
     out.push('A preferred-client discount of ' + _pctWords(est.discountPct / 100) + (fixed
@@ -37911,21 +38239,30 @@ function agrPriceAdjustments(est, party) {
 // §5.2 was fixed is the four-verbs-one-out-of-step shape this file records more than anything
 // else. All three arms said "authorized by the Personal Representative" — on a trust matter
 // there is not one.
-function _agrScopeServices(docScope, job) {
+// ⚠ `est` IS THE ESTIMATE THE AGREEMENT ATTACHES AS EXHIBIT A (2026-09-30, Q20): an appraiser priced on it is
+// Havellin's to coordinate on any tier, so each arm names the appraisals it lists (appraisalDuty) instead of
+// carving all of them out beside an Exhibit A that prices one. Without it the tier answers alone, as before.
+function _agrScopeServices(docScope, job, est) {
+  var _duty = appraisalDuty(docScope, job, est);
+  var _listed = _duty === 'listed'
+    ? 'Havellin will coordinate the professional appraisals listed in Exhibit A (' + esc(estimateAppraiserNames(est)) + '); any other appraisal remains the responsibility of the Client and the estate attorney. '
+    : '';
   if (docScope === 'none') {
-    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: sorting, staging, and set-aside of all property contents against the inventory prepared by the estate attorney\'s office; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>The inventory and valuation of estate assets are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney; Havellin works from the schedule they provide. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: sorting, staging, and set-aside of all property contents against the inventory prepared by the estate attorney\'s office; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>The inventory and valuation of estate assets are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney; Havellin works from the schedule they provide. ' + _listed + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
   }
   if (docScope === 'capture') {
-    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room photography and listing of property contents (description, location and condition, without valuation); sorting and staging; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>Valuation of estate assets and the coordination of professional appraisals are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room photography and listing of property contents (description, location and condition, without valuation); sorting and staging; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. ' + (_listed
+      ? '<strong>Valuation of estate assets is not within this engagement</strong> and remains the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. ' + _listed
+      : '<strong>Valuation of estate assets and the coordination of professional appraisals are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. ') + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
   }
   // ⚠ Both valued tiers land here. Only `appraisals` puts the appraisers with Havellin — see
   // weArrangeAppraisals — and on `values` the absence is stated rather than left to inference,
   // for the reason the two arms above state theirs: it shifts a responsibility to counsel.
-  var _weAppraise = weArrangeAppraisals(docScope, job);
+  var _weAppraise = _duty === 'all';
   return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; '
     + (_weAppraise ? 'appraisal coordination for all asset categories; ' : '')
     + 'sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. '
-    + (_weAppraise ? '' : '<strong>The coordination of professional appraisals is not within this engagement</strong> and remains the responsibility of the Client and the estate attorney, who receive Havellin\'s list of the items it believes warrant one. ')
+    + (_weAppraise ? '' : _listed ? _listed : '<strong>The coordination of professional appraisals is not within this engagement</strong> and remains the responsibility of the Client and the estate attorney, who receive Havellin\'s list of the items it believes warrant one. ')
     + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
 }
 // ⚠ WHO APPROVES A DISPOSITION IS A FACT ABOUT THE MATTER, NOT ABOUT THE SERVICE SOLD. The
@@ -37967,8 +38304,23 @@ function _agrTrustDeliverable(docScope) {
 // direction and the same one `invProbateRows` takes. Every estate papered before 2026-09-21
 // carries none, and stripping a §733.604 promise off a real probate matter on the strength of a
 // question nobody was asked is the bad failure. A test compares the two, clause for clause.
-function _agrProbateCompliance(docScope, job) {
+// Who arranges an appraisal Havellin does not (Q20, 2026-09-30): the party §5.2 names on each matter branch,
+// one definition, read by §5.2 and by §5.3's row, so the two cannot name different people. They did on a
+// "neither" matter (§5.2 the Client, §5.3 the estate attorney); found by the P13 documentation pass. The
+// branching is §5.2's own: an unanswered matter is read as probate.
+function _agrOtherAppraisalsBy(job) {
   var d = matterDef(job);
+  if (!d || d.onProbate) return 'the estate attorney';
+  return d.trust ? 'the trustee or their counsel' : 'the Client';
+}
+function _agrProbateCompliance(docScope, job, est) {
+  var d = matterDef(job);
+  // Who arranges the appraisals (appraisalDuty, Q20): every one, the ones Exhibit A lists, or none.
+  var _duty = appraisalDuty(docScope, job, est);
+  var _listedTxt = function(deadline, who){
+    return 'Havellin will coordinate the professional appraisals listed in Exhibit A (' + esc(estimateAppraiserNames(est)) + ')' + deadline + '. Any other appraisal is arranged by '
+      + who + '; Havellin will give the appraiser access to the property and be present for the visit on request.';
+  };
   var onProbate = !d || !!d.onProbate;
   var trust = !!(d && d.trust);
   var out = [];
@@ -37978,13 +38330,17 @@ function _agrProbateCompliance(docScope, job) {
       : docScope === 'capture'
       ? 'Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the estate attorney for use in preparing the inventory required under Florida Statute §733.604. Valuation and the court filing are the responsibility of the estate attorney.'
       : 'Havellin will prepare a documented asset inventory suitable for use in the court-required filing under Florida Statute §733.604. The estate attorney is responsible for the actual court filing.');
-    out.push(weArrangeAppraisals(docScope, job)
+    out.push(_duty === 'all'
       ? 'Havellin will coordinate professional appraisals for all required asset categories within the 60-day inventory deadline from Letters of Administration issuance.'
+      : _duty === 'listed'
+      ? _listedTxt(' within the 60-day inventory deadline from Letters of Administration issuance', _agrOtherAppraisalsBy(job))
       : 'Professional appraisals are arranged by the estate attorney. Havellin will give the appraiser access to the property and be present for the visit on request.');
   } else if (trust) {
     out.push(_agrTrustDeliverable(docScope));
-    out.push(weArrangeAppraisals(docScope, job)
+    out.push(_duty === 'all'
       ? 'Havellin will coordinate professional appraisals for all required asset categories.'
+      : _duty === 'listed'
+      ? _listedTxt('', _agrOtherAppraisalsBy(job))
       : 'Professional appraisals are arranged by the trustee or their counsel. Havellin will give the appraiser access to the property and be present for the visit on request.');
   } else {
     // `neither` — no court proceeding and no trust. The section KEEPS ITS NUMBER: §5.2 is cited
@@ -37995,8 +38351,10 @@ function _agrProbateCompliance(docScope, job) {
       : docScope === 'capture'
       ? 'This estate is not being administered through a probate proceeding or a trust, and no statutory inventory is required of it. Havellin will deliver a photographed, room-by-room list of the property contents (description, location and condition) to the Client. Valuation is the Client\'s responsibility.'
       : 'This estate is not being administered through a probate proceeding or a trust, and no statutory inventory is required of it. Havellin will prepare a documented inventory of the property contents, stated at fair market value as of the date of death, for the Client\'s own distribution record.');
-    out.push(weArrangeAppraisals(docScope, job)
+    out.push(_duty === 'all'
       ? 'Havellin will coordinate professional appraisals for all required asset categories.'
+      : _duty === 'listed'
+      ? _listedTxt('', _agrOtherAppraisalsBy(job))
       : 'Professional appraisals are arranged by the Client. Havellin will give the appraiser access to the property and be present for the visit on request.');
   }
   // On a pour-over will both are true at once, so both are stated: the probate clauses above,
@@ -38234,7 +38592,7 @@ function probateAgreementHtml(job, est) {
   content += '</table>';
   // SECTION 2: SCOPE
   content += secHdr(2,'Scope of Services');
-  content += pp(_agrScopeServices(docScope, job));
+  content += pp(_agrScopeServices(docScope, job, est));
   content += pp('All disposition decisions — including sale, auction, donation, or disposal of any item — require written authorization from the ' + _agrApprover(job) + ' or authorized signatory prior to execution. The specific scope, estimated hours, and projected costs are detailed in Exhibit A (attached estimate), which is incorporated into this Agreement by reference.');
   content += subHdr('2.1 Explicit Exclusions');
   content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: legal representation or probate court filings (handled by estate attorney); tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
@@ -38361,7 +38719,8 @@ function probateAgreementHtml(job, est) {
   // fixed price the change order IS the charge: its hours at the §3.1 rates, added to the fixed
   // project fee, which is what these two rows now name.
   if (isFixedAgr) {
-    content += dRow('Price of This Change','$&nbsp; <span style="color:var(--gray);font-size:10px;">(the additional hours at the rates in Section 3.1)</span>');
+    content += dRow('Price of This Change','$&nbsp; <span style="color:var(--gray);font-size:10px;">(the additional hours at the rates in Section 3.1' +
+      (coRushPctFor(est) ? ', plus the ' + _pctWords(coRushPctFor(est)) + ' expedited-delivery premium' : '') + ')</span>');
     content += dRow('Revised Fixed Project Fee','$&nbsp;');
   } else {
     content += dRow('Revised Estimated Hours','&nbsp;');
@@ -38395,7 +38754,7 @@ function probateAgreementHtml(job, est) {
   content += '</ol>';
   content += subHdr(_agrComplianceHeading(job));
   content += pp(_agrComplianceLead(job));
-  var comp = _agrProbateCompliance(docScope, job);
+  var comp = _agrProbateCompliance(docScope, job, est);
   content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
   comp.forEach(function(c){ content += '<li style="margin-bottom:.3rem;">'+c+'</li>'; });
   content += '</ol>';
@@ -38414,8 +38773,10 @@ function probateAgreementHtml(job, est) {
     ['Donate to qualifying 501(c)(3) organizations',_appr,'All donations'],
     ['Arrange sale through third-party channel',_appr,'Any item over $500'],
     ['Dispose / remove to dumpster',_appr,'Any item over $500'],
-    weArrangeAppraisals(docScope, job)
+    appraisalDuty(docScope, job, est) === 'all'
       ? ['Arrange professional appraisal',_appr,'Any item with uncertain FMV']
+      : appraisalDuty(docScope, job, est) === 'listed'
+      ? ['Arrange the appraisals listed in Exhibit A',_appr,'Items in those categories; any other appraiser as scheduled by ' + _agrOtherAppraisalsBy(job)]
       : ['Admit an appraiser engaged by counsel','Counsel\'s instruction','As scheduled by ' + _apprWho],
     ['Move or deliver items to beneficiaries',_appr + ' + signed receipt from recipient','All items']
   ];

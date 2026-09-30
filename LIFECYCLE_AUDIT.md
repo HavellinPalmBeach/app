@@ -1,24 +1,35 @@
 # Client Lifecycle Audit — as-is vs should-be
 
-Drafted 2026-07-30. Decisions recorded 2026-07-30 (§8). **Audit only — no code was changed.**
+Drafted 2026-07-30. Decisions recorded 2026-07-30 (§8). **Audit only — the audit itself changed no code.**
 
-**Status: Waves 1, 2 and 4 are BUILT and live, plus Wave 3 step 1.** All three of the
-firm's hard rules are now enforced in code:
+**Status (2026-09-30): Waves 1, 2 and 4 are BUILT and live, and so are Wave 3 steps 1–3.** All
+three of the firm's hard rules are enforced in code:
 
 | Rule | Enforced by |
 |---|---|
-| No job starts until the 50% deposit is received | `saveLogEntry` refuses unless `isJobFunded()`; hours inputs and the save button are inert |
-| No job plan before the client accepts | `loadJobPlanTab` withholds staffing/hours until `isJobWon()` |
+| No job starts until the 50% deposit is received | `saveLogEntry` refuses unless `isJobFunded()`, and until the job team is confirmed; hours inputs and the save button are inert |
+| No job plan before the client accepts | `loadJobPlanTab` withholds the whole plan, staffing and hours included, until `isJobWon()` |
 | Don't tie up crew on unwon jobs | `confirmJobTeam` refuses an unwon job |
 
-Remaining, and blocked on credentials rather than design: **DocuSign** (→ `contracted` and
-a retained signed PDF), **Stripe** (sets `clearedOn` on cards), **QuickBooks** (the
-reconciler, §6d). Each attaches to `job.payments[]` rather than replacing it, so none is a
-prerequisite for the gates above — that is why Wave 4 shipped ahead of them.
+Activation also refuses without the signed agreement and the deposit, and on a probate matter
+without the Letters (`jobActivationBlockers`).
 
-Still open and NOT code: the retained-deposit clause (§8.6, counsel) and the 30%-vs-50%
-walk-away floor (§5a, pricing policy — the margin panel now discloses deposit coverage
-either way).
+**The integrations, as built (they differ from §7a's plan).** **DocuSign** (2026-09-17) records the
+signature on the agreement's own record (`docState.agreement.sig`, the signer named from the
+envelope) rather than as a `contracted` status, and files the executed agreement and its certificate
+of completion to the Agreement folder; Anthony has sent envelopes through it that worked (reported
+2026-09-30). **Stripe** (2026-09-18) is ACH-only — no cards are accepted — and a settled transfer
+records itself as a cleared `stripe_ach` payment; a live test payment is still owed. **QuickBooks**
+(step 4, the reconciler, §6d) is not built: it waits on the accountant's chart of accounts. Each
+attaches to `job.payments[]` rather than replacing it, so none is a prerequisite for the gates above
+— that is why Wave 4 shipped ahead of them.
+
+Still open and NOT code: the retained-deposit clause (§8.6) — drafted since as *earned on signature
+and not refundable* in the **fixed-fee** arm of both agreements, awaiting counsel
+(`COUNSEL_REVIEW_BUNDLE.md` A1, B2), while the hourly arms still say otherwise (the standard form
+refunds a deposit above the amount owed; the estate form makes it non-refundable only after project
+start); and the 30%-vs-50% walk-away floor (§5a, pricing policy — the margin panel that discloses
+deposit coverage has been hidden on Build Estimate since 2026-08-02, though still computed).
 
 Method: eight parallel readers mapped one lifecycle segment each out of `havellin.html`,
 then every gate they claimed was a *hard* block was handed to a separate agent told to

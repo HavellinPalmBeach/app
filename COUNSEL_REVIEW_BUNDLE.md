@@ -34,7 +34,7 @@ rather than researching from nothing.
 | **2** | the first **trust** matter signing | A5, A6 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, A8, B1, B3, B4, B5, B6, B7, D1, D2, D4, D5 |
+| **5** | general — before launch | A3, A4, A7, A8, A9, B1, B3, B4, B5, B6, B7, B8, B9, D1, D2, D4, D5 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -181,6 +181,35 @@ the hours are worked? (2) On a fixed-price engagement, is pricing the change at 
 enough when the standard form's fixed arm never states those rates — or should the rate card be
 added to that form's fixed arm so the client has seen the rates before signing a change order
 priced from them?
+
+---
+
+### A9. The appraisals Exhibit A lists — §2, §5 and the §5.3 table ⚠ NEW 2026-09-30
+
+**What changed.** Anthony decided (2026-09-30, Q20) that appraiser scheduling is no longer priced into every
+estate quote: an appraiser is priced only when one is added to the estimate as its own line, on any
+documentation tier. So an estimate on the *Inventory with values* or *Contents list* tier, where counsel
+arranges the appraisals, can now list and price an appraiser in Exhibit A, and until today the agreement
+said in bold beside it that the coordination of appraisals was not within the engagement. Where Exhibit A
+lists one (and the tier is not *Inventory + appraisals*, which already puts every appraisal with Havellin):
+
+- **§2 Scope of services** adds *"Havellin will coordinate the professional appraisals listed in Exhibit A
+  (Art Appraiser); any other appraisal remains the responsibility of the Client and the estate attorney."*
+  On the photograph-and-list tier the bold carve-out becomes *"Valuation of estate assets is not within this
+  engagement"*, followed by that sentence.
+- **§5.2** (probate): *"Havellin will coordinate the professional appraisals listed in Exhibit A (Art
+  Appraiser) within the 60-day inventory deadline from Letters of Administration issuance. Any other
+  appraisal is arranged by the estate attorney; Havellin will give the appraiser access to the property and
+  be present for the visit on request."* The trust arm names *"the trustee or their counsel"* and the
+  no-proceeding arm *"the Client"* in place of the attorney, without the deadline.
+- **§5.3 authority table**: the row reads *"Arrange the appraisals listed in Exhibit A"* — *"Items in those
+  categories; any other appraiser as scheduled by"* counsel.
+
+**The question.** (1) Is the split clear on who answers for an appraisal that turns out to be needed but is
+not listed? (2) On probate, does promising the listed appraisals *within the 60-day deadline* take on the
+appraiser's own delay, where the old *"all required asset categories"* promise sat only on the top tier?
+(3) Exhibit A names the appraiser by category (*Art Appraiser*), not by firm: is that enough, or should the
+firm be named once engaged?
 
 ---
 
@@ -352,6 +381,57 @@ to it*: does the clause still read as a fixed price, or should it state the tota
 discount on a fixed fee is taken on the fee less the materials package inside it, which the estimate does not
 itemize on a fixed price: is *"less the moving materials it includes"* clear enough for a client checking the
 figure? (3) Is *"other than the Home Sale Preparation Fee"* enough to exclude that fee from the premium's base?
+
+---
+
+### B8. A change order on an expedited fixed-price job carries the premium — both forms ⚠ NEW 2026-09-30
+
+**What changed.** Anthony decided (2026-09-30, following Q14) that on a fixed-price engagement scheduled on a
+priority basis, a change order's price carries the expedited-delivery premium: the added hours at the rate
+card, plus 20%. The preferred-client discount still does not apply to a change order. The rate is fixed on
+each change order when it is raised, so a change order raised before today, or on a fixed fee signed before
+2026-09-30 (whose premium sat inside the fee), keeps its plain-rate price. Three texts say so:
+
+- **Standard form §3.3**, the fixed-fee premium sentence from B7, now ends *"… of the fixed price is charged in
+  addition to it, as itemized on the Estimate, and on the price of any Change Order."*
+- **Estate form §4.2**, the blank change order from A8, fixed arm: *"Price of This Change $ (the additional
+  hours at the rates in Section 3.1, plus the twenty percent (20%) expedited-delivery premium)"*.
+- **The change order itself**: *"It is priced at the hourly rates shown plus the 20% expedited-delivery
+  premium, as this engagement is expedited; the preferred-client discount on your fixed project fee does not
+  apply to it."*
+
+**The question.** (1) Is the §3.3 sentence enough notice at signing that later change orders carry the
+premium, or should §4 (change orders) say it too? (2) A8 asked whether a fixed-price change order priced from
+a rate card the standard form's fixed arm never states is adequately agreed; does adding a percentage on top
+change that answer? (3) The change order's *Revised fixed project fee* is the fee plus the change order's price,
+which already includes its premium, while the fee's own premium line stays 20% of the original fee. The bill
+adds up (20% of the fee plus 20% of the change), but could a client read the revised fee as the base for a
+second 20%?
+
+---
+
+### B9. A Home Prep change order that adds a preparation vendor ⚠ NEW 2026-09-30
+
+**What changed.** Anthony decided (2026-09-30) that on a Home Sale Preparation engagement a change order may
+add a preparation vendor found mid-job (a painter, say), as well as or instead of concierge hours (B5). The
+client accepts it by typing their name under the change order. The acceptance reads *"… the client confirms
+they have reviewed and agreed to this change in scope, and the addition of Painting to the preparation
+vendors, billed to them directly at cost, with the 30% site management fee on what it actually charges."* The
+printed change order names the vendor and its estimated cost, and says *"The vendor bills you directly, at
+cost, and the 30% site management fee in your agreement is billed on what it actually charges — about $1,350
+at the estimated $4,500. Coordinating the vendors remains covered by that fee. The other preparation vendors'
+costs are unaffected by this change."*
+
+**What the agreement already says.** On a standalone Home Prep engagement §3.5 charges the fee on *"the total
+third-party vendor costs managed under this Agreement"*, and §3.8 has work added after signing quoted and agreed
+in writing before it proceeds, so the agreement's wording did not change. The labour form's fee row for bundled
+prep charges it *"on the home sale preparation vendors identified in Exhibit A"*; a change order cannot add a
+vendor there today (that waits on Anthony), and if it ever can, that row would need *"or added by Change Order"*.
+
+**The question.** (1) Does *"vendor costs managed under this Agreement"* plainly include a vendor the client
+added later by change order? (2) The fee follows the vendor's *actual* invoice, which can exceed the estimate
+the client accepted: should the change order cap it, or require a fresh acceptance above some margin? (3) Is a
+typed name on the screen an adequate agreement to a new third-party engagement the client pays directly?
 
 ---
 

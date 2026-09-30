@@ -18,7 +18,7 @@ const ENGINE_FNS = ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'svcH
   'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor'];
 const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
   'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
-  'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS'];
+  'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'];
 
 const T_FNS  = ['docTierDef', 'docTierOf', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'seedDocScopeFromJob',
                 'docScopeDef', '_docScopeIntakeNote'];

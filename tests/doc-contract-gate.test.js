@@ -25,7 +25,7 @@ const FNS = ['_invScheduleSection', '_invTrackDefault',
   'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
   'invAwaitingAppraisal', '_invAwaitingApproval', 'invProbateRows', 'matterDef', 'matterTypeOf',
   'maivFilingApplies', 'invReleaseCautions', '_invCautionBadges', '_invCautionNotices',
-  '_invNamed', '_invDateTime',
+  '_invNamed', '_invDateTime', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames'
 ];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 
@@ -279,6 +279,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'at the top tier it IS ours, and the fix says so');
     lacks(atAppr, 'the estate attorney arranges the appraisal',
           'the converse, so the two arms cannot collapse');
+
+    // 5. ⚠ AND AN APPRAISER THE APPROVED ESTIMATE LISTS IS OURS ON ANY TIER (Q20, 2026-09-30; jobAppraisalDuty).
+    // At `values` counsel arranges the rest, so the fix names both halves rather than either whole.
+    const whyListed = (job, refs, vendors) => { const r = rig(job, refs);
+      r.ctx.estimateStore[job.id] = { approved: true, estimate: { docScope: 'full', vendors: vendors, rooms: [
+        { idx: 1, name: 'Entry & Living', st: 'in' }, { idx: 4, name: 'Kitchen', st: 'in' }] } };
+      r.ctx.printCourtInventory(job.id);
+      const h = (r.printed[0] || {}).html || '';
+      const i = h.indexOf('This schedule is not ready to be adopted');
+      return i < 0 ? '' : h.slice(i, i + 800).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '); };
+    const listed = whyListed(ESTATE({ docTier: 'values', gate706: 'yes' }), [APPR], [{ type: 'Art Appraiser', cost: 1500 }]);
+    has(listed, 'Havellin schedules the appraiser on the estimate where it covers the item (Art Appraiser), the estate attorney arranges any other, and a final copy follows the report',
+        '⚠⚠ at `values` with an appraiser listed: ours for the listed one, counsel\'s for any other');
+    lacks(listed, 'the estate attorney arranges the appraisal on this engagement', 'not counsel\'s alone beside a priced appraiser');
+    const none = whyListed(ESTATE({ docTier: 'values', gate706: 'yes' }), [APPR], []);
+    has(none, 'the estate attorney arranges the appraisal on this engagement', 'with no appraiser on the estimate, counsel\'s as before');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

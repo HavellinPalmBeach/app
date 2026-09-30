@@ -4,7 +4,7 @@ Five audits and a click-through of three jobs, from + Add New Client to final pa
 
 Status of each fix pack lives in this file: when a session lands a pack, it marks it done here and adds its CLAUDE.md entry.
 
-**Status, 2026-09-30:** P1–P10 have landed on `main`: C1, C2, H1–H9, M1–M8, M13–M16 and nineteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). The P10 low that waited on Anthony (`deliveredBy` / `activatedBy`) is answered and fixed with P14 (the assigned concierge). P11 landed on 2026-09-30 (live once the Apps Script is redeployed, `2026-09-30`), and so did P14; its one open line, sanity checks on square footage and room counts, is decided not to build (Anthony, 2026-09-30: "no sanity check is needed"). P12 landed on 2026-09-30 too (M10–M12 and the six estimator lows fixed and marked below), except Q20, which waits on Anthony's OK on the reading. Still open: P13. Questions still open: the Q14 follow-up, Anthony's OK on the Q20 reading, and the hourly half of Q5 (all P12).
+**Status, 2026-09-30:** P1–P10 have landed on `main`: C1, C2, H1–H9, M1–M8, M13–M16 and nineteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). The P10 low that waited on Anthony (`deliveredBy` / `activatedBy`) is answered and fixed with P14 (the assigned concierge). P11 landed on 2026-09-30 (live once the Apps Script is redeployed, `2026-09-30`), and so did P14; its one open line, sanity checks on square footage and room counts, is decided not to build (Anthony, 2026-09-30: "no sanity check is needed"). P12 landed on 2026-09-30 too (M10–M12 and the six estimator lows fixed and marked below). Anthony answered the last three questions the same day (the hourly half of Q5 stays as it is; the Q14 follow-up and Q20 yes), and P15 built them with the Home Prep change-order vendor and four small items. P13, the documentation pass, landed on 2026-09-30 as well. Every pack has landed and every question is answered; what is left is Anthony's own list below and the items found in passing (under *Known and still open*).
 
 ## TL;DR
 
@@ -323,9 +323,10 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P9** Bring Edit Client up to intake's rules (needs Q4, Q15–Q18)
 - [x] **P10** Lifecycle and payment loose ends (needs Q2, Q12, Q19)
 - [x] **P11** Harden the Apps Script backend (redeploy) — landed 2026-09-30; live once Anthony redeploys `2026-09-30`
-- [ ] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20) — landed 2026-09-30 except Q20 (waits on Anthony's OK on the reading) and the hourly half of Q5 (a question to him)
-- [ ] **P13** Documentation pass (needs the packs above first)
+- [x] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20) — landed 2026-09-30; Q20 and the Q14 follow-up built with P15, and the hourly half of Q5 decided as it is
+- [x] **P13** Documentation pass (needs the packs above first) — landed 2026-09-30
 - [x] **P14** Small backlog — landed 2026-09-30 (the intake sanity checks are decided not to build)
+- [x] **P15** Anthony's answers of 2026-09-30 (Q20, the Q14 follow-up, a vendor on a Home Prep change order, four small items) — landed 2026-09-30
 
 ### P1 · Stop estimates leaking between clients
 
@@ -563,6 +564,8 @@ Fixes: M10–M12, estimator lows · Needs: Q5–Q7, Q9, Q10, Q13, Q20
 
 **Landed 2026-09-30** (Anthony: *"For all the rest, go for it."* Q5–Q7 answered the same day). All nine items fixed: Q6 scores each room against its own default; the fixed fee is priced on the two-specialist plan (Q5); the band is the engine's, at Normal and Full (Q7); the premium never touches the prep fee and is a line on a fixed fee (Q9); estates open on fixed price (Q10); a fixed-price discount is a line, one rule for Build Estimate and Offer discount (Q13); the Estimate Summary shows the final figures (M10); and the six lows. **Not built:** Q20 (waits on Anthony's OK on the reading), and the hourly half of Q5 — an hourly quote still dips at each automatic crew step, because a bigger crew bills fewer concierge hours, and flooring it would bill hours nobody worked; put back to Anthony. Details in `BUILD_HISTORY.md`.
 
+**Completed 2026-09-30 (P15).** Anthony OK'd the Q20 reading and it is built; the hourly half of Q5 stays as it is (*"we don't want jobs stretching over weeks, so we bump up crew size to keep work days down"*).
+
 **Re-checked 2026-09-30:** all nine P12 items (six lows, M10, M11, M12) still reproduce. Only M11 waits on an open question (Q7). **M12 needs Q6 put back to Anthony:** `computeEngineV3` already weights volume by room size (`engineRoomWeight`), so "weight by room size" is the current code; the drop comes from light rooms' low default scores pulling a factor applied to the whole square footage, and crew sizing (5,500 → 5,750 sq ft prices $28,400 → $27,450 as the crew goes 2 → 3).
 
 ```text
@@ -584,6 +587,8 @@ House process (CLAUDE.md): reproduce first, tests plus a revert sweep, a browser
 ### P13 · Documentation pass
 
 Fixes: docs out of date · Needs: the packs above first
+
+**Landed 2026-09-30.** Every item below, and the full pass it asks for: nine readers each audited a region of the manual or the playbook against the code (both files of each pair, and the four spec headers), and every finding was applied or answered, with P15's changes written in. Details in `BUILD_HISTORY.md`; the app defects they found are under *Known and still open*.
 
 ```text
 Documentation pass, after the fix packs above have landed (2026-09-28 workflow audit). Bring manual.html, concierge-guide.html and their .md copies in line with the app:
@@ -618,9 +623,21 @@ Small backlog, one commit (2026-09-28 workflow audit, "Other" lows):
 House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp the build, push.
 ```
 
+### P15 · Anthony's answers of 2026-09-30
+
+Fixes: Q20, the Q14 follow-up, a vendor on a Home Prep change order, and the small items found in passing · Needs: the answers of 2026-09-30
+
+**Landed 2026-09-30.** Anthony: *"1 - I think it's fine … 2. yes. 3. yes, drop build-in appraiser scheduling. 4. yes, add new also, or add TC hours for decluttering. fix the other small items."*
+- **Q5, the hourly half:** kept as it is (see Q5). Recorded as decided in CLAUDE.md.
+- **The Q14 follow-up:** a fixed-price rush job's change order is priced at the rate card plus the 20% premium, pinned on the change order when it is raised (`coRushPct`, `coRushPctFor`); the modal, the readout, the printed page, the standard form's fixed-fee clause and the estate form's blank change order say so. The discount still does not apply.
+- **Q20:** the `document` step's coordination is inventory scheduling only, half the column at full scope (`DOC_COORD_INVENTORY_SHARE`, a starting figure); an appraiser is priced by its own line; who arranges the appraisals is one answer (`appraisalDuty`: all, the ones the estimate lists, or none), read by the agreement, the client estimate, the court and trust schedules and the Job Plan; the *Inventory + appraisals* tier flags an estimate with no appraiser on it. A 3,500 sq ft Estate Settlement moves $19,900 → $19,450.
+- **A vendor on a Home Prep change order:** the modal adds a preparation vendor with its estimated cost, as well as or instead of concierge hours; once accepted it joins the job's prep lines (`jobPrepLines`): the Job Plan's sourcing list and budget, the vendors-confirmed count and the final's 30% fee.
+- **The small items:** the desk's **All** filter stays chosen (applied once per client, `_invApplyWhenDefault`), and each client's desk starts clean; the vendor and partner deletes ask their history question behind the PIN too, and a partner delete waits for the client list; *Vendor Directory not loaded* asks the directory, so it shows on a labour job; browser step 17 no longer reads the clock.
+- **Found by the P13 editors and fixed here, as P15's own work:** the client estimate's capture-scope sentence and §5.3's party on a *neither* matter (Q20); a Home Prep final's notes, its payment-summary line and its ±15% baseline for an added vendor.
+
 ## Questions for Anthony
 
-**Answered 2026-09-29.** The recommendations stand except Q9 and Q20, which Anthony changed, and Q7 and a Q14 follow-up, which are still open. Each answer is under its question.
+**Answered 2026-09-29, and the last three on 2026-09-30.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.
 
 ### Answer these first
 
@@ -639,7 +656,8 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp t
 - **Q5** Should adding crew ever lower the price? Today a 5,750 sq ft house can price below a 5,500 sq ft one.  
   *Recommendation:* No. Floor the fee at the two-specialist plan; rush is how a client pays for speed. *(used by P12)*  
   *Answer (2026-09-29):* Agreed.  
-  *Built (2026-09-30, P12):* the fixed fee suggestion is floored at the two-specialist plan. The hourly quote still follows the crew (a bigger crew bills fewer concierge hours), because a floor there would bill hours nobody works; put back to Anthony as a follow-up.
+  *Built (2026-09-30, P12):* the fixed fee suggestion is floored at the two-specialist plan. The hourly quote still follows the crew (a bigger crew bills fewer concierge hours), because a floor there would bill hours nobody works; put back to Anthony as a follow-up.  
+  *Answer (2026-09-30), the hourly half:* "I think it's fine. We don't want jobs stretching over weeks, so we bump up crew size to keep work days down." Kept as it is: an hourly quote bills the hours worked.
 - **Q6** Should a room scored at its normal default pull the whole-house fullness down? Finishing the walkthrough cut one quote from $18,200 to $17,000.  
   *Recommendation:* No. Weight the average by room size. *(used by P12)*  
   *Answer (2026-09-29):* Agreed.  
@@ -671,7 +689,8 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp t
   *Answer (2026-09-29):* Agreed.
 - **Q14** Change-order hours carry the rush premium and the discount on hourly jobs, and plain rates on fixed-price jobs. Keep that?  
   *Recommendation:* Keep it, and say so on the change order. *(used by P5)*  
-  *Still open (2026-09-29):* Agreed, with one follow-up open: now that rush applies on fixed price, should a fixed-price rush job's change-order hours carry the 20% too? My call: yes.
+  *Answer (2026-09-29):* Agreed, with one follow-up: now that rush applies on fixed price, should a fixed-price rush job's change-order hours carry the 20% too? My call: yes.  
+  *Answer (2026-09-30):* Yes. *Built in P15:* the price is the hours at the rate card plus 20%, pinned on each change order when it is raised; the discount still does not apply, and one raised earlier keeps its plain-rate price.
 - **Q15** Should the referral source and partner be correctable after intake?  
   *Recommendation:* Yes, in Edit Client. *(used by P9)*  
   *Answer (2026-09-29):* Agreed.
@@ -689,7 +708,8 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp t
   *Answer (2026-09-29):* Agreed.
 - **Q20** "Inventory with values" still prices appraiser scheduling (about $765 on a typical estate), though counsel books the appraisers at that tier. Drop it?  
   *Recommendation:* Keep inventory scheduling, drop appraiser scheduling. *(used by P12)*  
-  *Answer (2026-09-29):* "If we need an appraiser, don't we just add one? It's not mandatory and shouldn't be blocked either." So: an appraiser is priced when one is added to the estimate (each appraiser line already books 2 concierge hours, about $300), the documentation line keeps inventory scheduling and drops the built-in appraiser scheduling, and no tier requires or refuses an appraiser. When the estimate carries one, the agreement and the estimate say Havellin coordinates it; today the values-tier agreement says in bold that it does not, and the playbook says "do not offer to". Awaiting your OK on this reading.
+  *Answer (2026-09-29):* "If we need an appraiser, don't we just add one? It's not mandatory and shouldn't be blocked either." So: an appraiser is priced when one is added to the estimate (each appraiser line already books 2 concierge hours, about $300), the documentation line keeps inventory scheduling and drops the built-in appraiser scheduling, and no tier requires or refuses an appraiser. When the estimate carries one, the agreement and the estimate say Havellin coordinates it; today the values-tier agreement says in bold that it does not, and the playbook says "do not offer to". Awaiting your OK on this reading.  
+  *Answer (2026-09-30):* "Yes, drop built-in appraiser scheduling." *Built in P15:* the documentation step keeps half its coordination as inventory scheduling (a starting figure, like the capture share), an appraiser line prices its own 2 hours, and a job whose estimate lists an appraiser is Havellin's to coordinate for that appraisal, on any tier.
 - **Q21** Neither agreement has a referral-fee disclosure. Add one?  
   *Recommendation:* Yes, if you will pay or receive referral fees. Send it to counsel with the bundle. *(counsel bundle)*  
   *Answer (2026-09-29):* Agreed.
@@ -698,8 +718,10 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp t
 
 - [x] **Redeploy the Apps Script.** The repo is at `2026-09-22b`; the last recorded deploy is `22a`. Add `ANTHROPIC_API_KEY` in Script Properties and run `testAgentIdentify()` once. Until then, Agent One (photo naming) can't run. *You report this done (2026-09-29). To confirm: no "out of date" banner when the app loads means the 22b deployment is live, and pressing Name N shots on a job with photos (or running `testAgentIdentify()` in the editor) proves the key.*
 - [ ] **Redeploy quo-sync.gs, then check before pruning.** Deploy the 2026-09-18 fix, fix the duplicate "David Schneider" vendor row, and run `dryRunQuoAll` before any prune.
-- [ ] **Send one DocuSign sandbox envelope end to end.** Check that the opt-out box renders, where the signature boxes land, that no green "Approved for Sending" band is on the PDF, and that the signed PDF and certificate file to Drive. Then move to production.
-- [ ] **Stripe: one test ACH link.** It proves the ACH-only check. Confirm the account's ACH limit covers your largest deposit.
+- [x] **Send one DocuSign sandbox envelope end to end.** Check that the opt-out box renders, where the signature boxes land, that no green "Approved for Sending" band is on the PDF, and that the signed PDF and certificate file to Drive. Then move to production. *You report several that worked (2026-09-30). What remains is the move to production when you are ready.*
+- [ ] **Redeploy the Apps Script at `2026-09-30`.** Copy `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → New version. Until then P11's per-key merges, the unreadable-store refusal, the busy answer and Agent One's larger answer limit are not live; the banner says so.
+- [ ] **Stripe: one test ACH link.** It proves the ACH-only check. Confirm the account's ACH limit covers your largest deposit. *Lower priority (2026-09-30), still to do before the first real deposit.*
+- [ ] **Run `backfillIds()` once in the Referral Partners Apps Script project.** Gives every partner row a permanent id, so re-sorting that sheet can never move a referral.
 - [ ] **Google Cloud: set the Gmail consent screen's audience to Internal.** Otherwise the Gmail draft path stays in Testing mode.
 - [ ] **Run `previewOrphanRecords()` once.** From the Apps Script editor, to see leftover practice records.
 - [ ] **Send the counsel bundle in priority order.** Before the first fixed-fee, trust and firearm jobs. Add the hourly termination wording, the retained-deposit clause, an ACH-return clause and the referral-fee question.
@@ -720,7 +742,8 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp t
 
 ### Known and still open (decisions, not bugs)
 
-- No way to add a new vendor (a painter found mid-job) through a change order. Raised 2026-09-25, not built.
+- ~~No way to add a new vendor (a painter found mid-job) through a change order.~~ Built 2026-09-30 (P15) on Home Prep for Sale. Still open: whether a labour job with bundled prep may do the same.
+- **Found by the P13 documentation pass (2026-09-30), not fixed** (each with its function names in `CLAUDE.md`, Open work). For Anthony: agreement §3.9 still offers card payment; the hourly deposit clauses against keeping every paid walkaway; whether a Premium job with an appraiser line prices appraiser scheduling twice; a firearm going to a named person can never clear transport; the as-found delete refusal; in-person packet records; filing change orders to Drive; Agent One never reading as-found shots; volume 5 forcing complexity 5; the self-attested *Send Package*; Power of Attorney offered for a decedent. Defects: field mode hides Save Estimate; unescaped text on the client card and the preparer's bio; a hand-recorded ACH payment counted twice when Stripe reports it; the Gmail fallback records no send; the filed estimate after Edit estimate; the final's approval message on a no-hours final; and about fifteen smaller ones and stale strings.
 - The hourly agreement's termination wording ("after project start") is vague; it belongs with counsel.
 - The estate guide says no photography is shared without written consent; both agreements carry an opt-out marketing clause.
 - Four literal "15%" strings survive; they are correct while the tolerance is 15%.

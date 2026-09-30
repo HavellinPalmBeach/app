@@ -61,7 +61,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',
   '_invCautionBadges', 'invReleaseCautions', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
   '_invProgressBar', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
-  '_invCautionNotices', '_invPicked', 'invFirearmAuthorized', '_invAwaitingApproval',
+  '_invCautionNotices', '_invPicked', '_invAwaitingApproval',
   '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
   'invProbateRows', 'matterDef', 'matterTypeOf',
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
@@ -70,7 +70,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'invReleaseBlocked', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
-  '_invPanelSection',
+  '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef'
 ];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   '_agRun', 'AGENT_NOTICE_KINDS', 
@@ -80,8 +80,8 @@ const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_TRANSPORT_REASONS', 'INV_UNDECIDED',
   'estimateStore', '_invFilter', '_invShowRoll', '_invOpen', '_invPick',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
-  'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'MAIV_BY_CATEGORY',
-  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
+  'MAIV_OTHER', 'MAIV_BY_CATEGORY',
+  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'
 ];
 
 function rig(job, refs) {

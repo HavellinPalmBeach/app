@@ -348,7 +348,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'an older fixed price, its premium inside the fee, lists no premium line');
 
     // The change order says the premium and the discount are ON the fee, not in it.
-    const C = sandbox({ fns: ['coRateModsLine', 'estFixedLines'], vars: ['RUSH_PCT'] });
+    const C = sandbox({ fns: ['coRateModsLine', 'estFixedLines', 'coRushPct'], vars: ['RUSH_PCT'] });
     has(C.coRateModsLine(REC, true, false), 'the expedited-delivery premium and the preferred-client discount on your fixed project fee do not apply to it',
         'a fixed-price change order names the lines on the fee');
     has(C.coRateModsLine(Object.assign({}, REC, { fixedLines: false }), true, false), 'in your fixed project fee',

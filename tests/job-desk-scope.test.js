@@ -19,10 +19,10 @@ const { sandbox, source, fn, decl } = require('./harness');
 
 const CTX_FNS = ['planTaskCtx', 'jobOnProbateTrack', 'planTasksFor', 'invFiduciaryMode', 'isDecedentJob',
                  'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef',
-                 'docTierOf', 'docTierDef', 'docTierProduces', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep'];
+                 'docTierOf', 'docTierDef', 'docTierProduces', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef'];
 const CTX_VARS = ['PLAN_TASKS', 'JOB_ADMIN_TASKS', 'DECEDENT_SERVICES', 'MATTER_TYPES',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS',
-                  'FIREARMS_PROTOCOL_DOC'];
+                  'FIREARMS_PROTOCOL_DOC', 'DOC_SCOPES'];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
@@ -243,11 +243,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
               '_planTaskDone', 'planDerivedLines', 'planDerivedHtml', 'planTaskSectionsHtml',
               'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
               'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
-              'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', '_jobAdminIsOpen', 'coAcceptedHours', 'coHoursTotal', 'coHours'],
+              'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', '_jobAdminIsOpen', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
         vars: ['DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore',
                'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
                'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
-               'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+               'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
         stubs: { isFormalDoc: () => false, isJobWon: () => true, docSentAt: () => null,
                  jobLogEntries: () => [], isAgreementSigned: () => false, isJobFunded: () => false,
                  depositPaidTotal: () => 0, stagePaidTotal: () => 0, _photoRefs: { 7: [] } },
@@ -292,11 +292,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
             '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
-            'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal', 'coHours'],
+            'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
       vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
              'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
              'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES',
-             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
       stubs: { isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [],
                stagePaidTotal: () => 0, _photoRefs: { 7: [] },
                // A room on the record — since 2026-09-22 a job with NO rooms (Home Prep) is asked no room question.

@@ -142,7 +142,7 @@ module.exports = function ({ group, ok, eq }) {
             'engineIsExterior', 'tenureMultiplier', 'engineRelFactor', 'roomDefault'],
       vars: ['ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'JOB_STEPS', 'DOC_SCOPES', 'ENGINE_VOLF',
              'ENGINE_CPXF', 'ENGINE_K', 'ENGINE_CAREFUL', 'ENGINE_ROOMLEVEL', 'ENGINE_FLOOR',
-             'PERROOM_REF', 'ROOM_DEFAULTS'],
+             'PERROOM_REF', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'],
     });
     // A 3,500 sqft Estate Settlement, three rooms scored neutral, 2 crew, 10 years' tenure.
     const BASE = [{ name: 'Kitchen', vol: 3, cplx: 3 },

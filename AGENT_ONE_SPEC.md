@@ -1,8 +1,15 @@
 # AGENT ONE — BUILD INVENTORY FROM THE PHOTOGRAPHS
 
-**Status: specified, not built (2026-09-22).** Step 2 of the inventory pipeline Anthony scoped on
-2026-09-19. Step 1 (the two-pass field camera) shipped that day; step 3 (Agent Two — Value) is a
-separate build and this spec deliberately does not touch it.
+**Status: built 2026-09-22** (Apps Script `2026-09-22b`, with `ANTHROPIC_API_KEY` in Script
+Properties). This file is the spec it was built from; manual §10a (*Agent One — naming the shots*)
+is the operating description. Step 2 of the inventory pipeline Anthony scoped on 2026-09-19. Step 1
+(the two-pass field camera) shipped that day; step 3 (Agent Two — Value) is a separate build, not
+built, and this spec deliberately does not touch it.
+
+**Since the build (2026-09-30):** the answer limit went from 4,096 to 16,000 tokens (`AGENT_MAX_TOKENS`,
+P11), in effect only once Apps Script `2026-09-30` is deployed, which is still owed; and the
+whole-tab repaint §11 warns about is gone from the desk's split, which now repaints only the rows it
+changed (`_invSplitRepaint`, P14). §11's quota wall still stands.
 
 Anthony, on what the field is for: *"the whole point is that we don't take the time to name objects
 in the field. we just capture per room and the agent names."*

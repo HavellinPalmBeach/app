@@ -66,7 +66,7 @@ const DASH_FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriv
   'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
   'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
   'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'dot', 'coWorkingDays', '_coPaceFix', 'coInclTxt', 'esc',
-  'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'estFixedLines'].concat(CO);
+  'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coScopeLabel', 'coHours', 'coVendorAddsTxt', 'coVendorAdds', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid'].concat(CO);
 const DASH_VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
   '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
   'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
@@ -80,7 +80,7 @@ const CO_FNS = ['_coJobBasis', 'coBaselineShift', '_coMoney', 'fmt', 'coPrice', 
   '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates',
   'coRateModsLine'];
 const NOTICE_FNS = ['_docNotice', 'dashNotice', '_dashRedraw', '_jobBandHost'];
-const CO_VARS = ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE', '_dashboardJobId'];
+const CO_VARS = ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE', '_dashboardJobId', '_srcLidSeq'];
 
 // The whole screen: a dashboard open on job 7, the modals, and the stores behind them.
 function screen(cos, opts) {
@@ -134,7 +134,7 @@ function inv(stubs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -221,6 +221,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const calls = (html.match(/onclick="[^"]*"/g) || []);
     eq(calls.length, new Set(calls).size, 'no control is on the screen twice');
+
+    // ⚠ A change order that adds a preparation vendor names it on its row (2026-09-30; coScopeLabel), where one
+    // that adds no hours read "no hours change".
+    const v = screen([co(0, 0, ID_P, { vendorAdds: [{ type: 'Painting', cost: 4500, lid: 'co-paint' }] })]);
+    v.renderClientDashboard(7);
+    const vrow = coRow(v.__view(), ID_P);
+    has(vrow, 'adds Painting (est. $4,500)', '⚠⚠ the row names the vendor it adds and its estimated cost');
+    lacks(vrow, 'no hours change', 'rather than reading as an empty change');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -321,7 +329,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
-              'agrBillingRates', 'coRateModsLine', 'prepFeeRate', 'coHours', 'coHoursTotal', 'estFixedLines'],
+              'agrBillingRates', 'coRateModsLine', 'prepFeeRate', 'coHours', 'coHoursTotal', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coVendorAdds'],
         vars: ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE'],
         stubs: { jobs: [Object.assign({}, JOB, (extra && extra.job) || {})], changeOrders: [co(10, 0, ID_P)], currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, est), approved: true } },
@@ -376,7 +384,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(printed(Object.assign({}, PREP, { discountPct: 0 }), { job: { svc: 'prep' } }), 'preferred-client',
           'a prep job with no discount prints no line');
 
-    const L = sandbox({ fns: ['coRateModsLine', 'estFixedLines'], vars: ['RUSH_PCT'] });
+    const L = sandbox({ fns: ['coRateModsLine', 'estFixedLines', 'coRushPct'], vars: ['RUSH_PCT'] });
     eq(L.coRateModsLine(null, false), '', 'no estimate, no line');
   }
 

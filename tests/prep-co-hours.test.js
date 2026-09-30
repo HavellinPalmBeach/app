@@ -99,14 +99,16 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 // use, and a stub is exactly what would let the change order and §3.3 state two rates.
                 'agrBillingRates',
                 // The printed change order's rush / discount line (Q14, 2026-09-29), lifted, never stubbed.
-                'coRateModsLine'];
+                'coRateModsLine', 'coRushPct', 'coRushPctFor', 'estFixedLines', 'coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid',
+                // The added-vendor picker (2026-09-30) is the directory's Property Preparation categories.
+                'vendorGroupCategories', 'directoryCategories', 'vendorCats'];
 function coCtx(est, cos, seed, jobOver) {
   const dom = domStub(seed || {});
   const said = [];
   const c = sandbox({
-    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'PREP_FEE_RATE', 'RUSH_PCT'],
+    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'PREP_FEE_RATE', 'RUSH_PCT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', '_srcLidSeq'],
     stubs: {
-      document: dom, setTimeout: () => 0,
+      document: dom, setTimeout: () => 0, vendorDirectory: [],
       jobs: [Object.assign({}, est && est.svc === 'prep' ? PREP_JOB : LAB_JOB, jobOver || {})],
       changeOrders: cos || [],
       estimateStore: est ? { 1: { estimate: Object.assign({}, est), approved: true } } : {},
@@ -169,7 +171,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'chkGrid', 'planChk', '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan', '_planTouch',
       'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody',
       'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
-      'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName'].concat(CO);
+      'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(CO);
     const planVars = ['DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const plan = (est, cos, loggedTC) => {
       try {
@@ -220,10 +222,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const deskFns = ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
       'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
-      'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly'].concat(CO);
+      'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(CO);
     const deskVars = ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES',
-      'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
+      'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'];
     const line = (job, est, cos, logged) => {
       const d = sandbox({ fns: deskFns, vars: deskVars, stubs: {
         isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => TC_LOG(logged || 0),
@@ -416,7 +418,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
       'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact',
       'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal',
-      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'];
+      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines'];
     const invVars = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
       'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -496,10 +498,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection', 'approvedEstimateFor',
       'materialsBasisNote', 'materialsPackageQuoted', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docStandardEffect', 'isFormalDoc', 'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel',
-      'docLevelFloorReason', 'estFixedLines', 'fixedDiscountBasisWords'];
+      'docLevelFloorReason', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf'];
     const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
       'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
-      'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
+      'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'MATTER_TYPES'];
     const A = (cos) => sandbox({ fns: DOC_FNS, vars: DOC_VARS, stubs: {
       jobs: [PREP_JOB], estimateStore: {}, jobLogs: {}, changeOrders: cos || [], contractors: [], currentEstimate: null,
       vendorDirectory: [], jobPlans: {}, _photoRefs: {}, document: domStub({}) } });

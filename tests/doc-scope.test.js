@@ -20,15 +20,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor'];
   const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
     'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
-    'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS'];
+    'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'];
 
   group('effectiveJobSteps — the catalogue is never mutated, only copied');
   {
     const ctx = sandbox({ fns: ENGINE_FNS, vars: ENGINE_VARS });
     const before = JSON.stringify(ctx.JOB_STEPS);
-    ok(ctx.effectiveJobSteps('cleanout', 'full') === ctx.JOB_STEPS.cleanout, 'full is the catalogue entry itself');
-    ok(ctx.effectiveJobSteps('cleanout', undefined) === ctx.JOB_STEPS.cleanout, 'no scope means full — every pre-existing caller prices as before');
-    ok(ctx.effectiveJobSteps('cleanout', 'garbage') === ctx.JOB_STEPS.cleanout, 'an unknown scope falls back to full, not to nothing');
+    // Restated 2026-09-30 (Q20): full scope keeps the whole hands-on pool and the INVENTORY share of the
+    // coordination column (DOC_COORD_INVENTORY_SHARE). The appraiser half of it is priced by an appraiser's
+    // own vendor line now, when one is added, so it is no longer the catalogue entry itself.
+    const full = ctx.effectiveJobSteps('cleanout', 'full');
+    eq(full.document, [ctx.JOB_STEPS.cleanout.document[0] * ctx.DOC_COORD_INVENTORY_SHARE, ctx.JOB_STEPS.cleanout.document[1]],
+       'full keeps the pool and the inventory share of the scheduling');
+    eq(ctx.DOC_COORD_INVENTORY_SHARE, 0.5, 'the starting inventory share is 50% — tune on a real job, not by accident');
+    eq(full.triage, ctx.JOB_STEPS.cleanout.triage, 'the other steps are the catalogue\'s');
+    ok(full !== ctx.JOB_STEPS.cleanout, 'and it is a copy, never the catalogue entry');
+    eq(ctx.effectiveJobSteps('cleanout', undefined), full, 'no scope means full');
+    eq(ctx.effectiveJobSteps('cleanout', 'garbage'), full, 'an unknown scope falls back to full, not to nothing');
 
     const cap = ctx.effectiveJobSteps('cleanout', 'capture');
     eq(cap.document, [0, ctx.JOB_STEPS.cleanout.document[1] * ctx.DOC_CAPTURE_POOL_SHARE], 'capture keeps half the pool and none of the coordination');
@@ -161,7 +169,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
-            'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'],
+            'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'],
       stubs: { isFormalDoc: () => true },
@@ -224,7 +232,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the estate agreement follows the same pin');
   {
     const ctx = sandbox({ fns: ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
-                                'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
+                                'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy'],
                           vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'AGR_NOT_AN_ACCOUNTING', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
     // ⚠ WHO ARRANGES THE APPRAISALS IS THE TIER'S QUESTION, NOT THE SCOPE'S (2026-09-24). `values`
     // and `appraisals` both price at `full`, so these two assertions used to be true of the scope
@@ -270,7 +278,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ SAME BYTE-SEQUENCE PIN, SAME TRUE CHANGE: §2 grew the job so it could stop naming a
     // Personal Representative on a matter that has none. The requirement is that the emit site
     // asks the helper rather than inlining the paragraph.
-    has(src, 'content += pp(_agrScopeServices(docScope, job));', 'the agreement scope reads the helper');
+    has(src, 'content += pp(_agrScopeServices(docScope, job, est));', 'the agreement scope reads the helper, with the estimate it attaches (Q20)');
     // ⚠⚠ AND NO CLAUSE NAMES THE APPROVER BY HAND ANY MORE — the net, not today's five rows.
     // Five cells in §5.3 read "Written PR approval" on a form that issues on matters with no PR,
     // three inches under a §5.2 that now says successor trustee.
@@ -290,7 +298,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The requirement was never the argument list — it is that the emit site ASKS the helper
     // instead of inlining the clauses, and that the heading and lead do too rather than staying
     // hardcoded above a list that has moved underneath them.
-    has(src, 'var comp = _agrProbateCompliance(docScope, job);', 'the compliance list reads the helper');
+    has(src, 'var comp = _agrProbateCompliance(docScope, job, est);', 'the compliance list reads the helper, with the estimate (Q20)');
     has(src, "content += subHdr(_agrComplianceHeading(job));", 'and so does its heading');
     has(src, 'content += pp(_agrComplianceLead(job));', 'and its lead');
     // ⚠⚠ AND THE PROBATE ARM IS BYTE-IDENTICAL TO AN UNANSWERED MATTER, which is the half that

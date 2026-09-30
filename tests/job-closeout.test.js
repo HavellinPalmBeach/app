@@ -309,10 +309,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly',
-            'planTasksFor', 'coAcceptedHours', 'coHoursTotal', 'coHours'],
+            'planTasksFor', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
       vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
              'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
-             'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'JOB_ADMIN_TASKS'],
+             'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'JOB_ADMIN_TASKS', 'DOC_SCOPES'],
       stubs: { isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [], stagePaidTotal: () => 0,
                _photoRefs: { 7: [] } },
     });
@@ -324,6 +324,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const fin = d.planDerivedLines(7, { id: 7, svc: 'prep' }, est, 'admin').find((l) => l.key === 'final_invoice_sent');
     lacks(fin.detail, 'once the hours are in', 'and the invoice line does not wait on hours a fee-only job never logs');
     has(fin.detail, 'Next band', 'it points at the band on the same tab');
+    // ⚠ A VENDOR A CHANGE ORDER ADDED COUNTS once the client accepts it (2026-09-30; jobPrepLines).
+    const pv = (cos, src) => { d.changeOrders = cos;
+      const l = d.planDerivedLines(7, { id: 7, svc: 'prep', prepSourcing: src || {} }, est, 'admin').find((x) => x.key === 'prep_vendors');
+      d.changeOrders = []; return l ? l.detail : ''; };
+    const PAINT_CO = { id: 71, jobId: 7, clientApproved: true, tcHrs: 0, psHrs: 0, vendorAdds: [{ type: 'Staging', cost: 3000, lid: 'co-st' }] };
+    eq(pv([]), '0 of 1', 'fixture: the estimate\'s one prep vendor');
+    eq(pv([PAINT_CO]), '0 of 2', '⚠ an accepted change order\'s vendor is one more to confirm');
+    eq(pv([Object.assign({}, PAINT_CO, { clientApproved: false })]), '0 of 1', 'an unaccepted one adds nothing');
+    eq(pv([PAINT_CO], { La: { status: 'Confirmed' }, 'Lco-st': { status: 'Confirmed' } }), '2 of 2', 'and confirming it on the plan completes the line');
     const dc = Object.assign({}, est, { declutterTCHrs: 5, totTC: 5 });
     ok(d.planDerivedLines(7, { id: 7, svc: 'prep' }, dc, 'admin').some((l) => l.key === 'hours_logged'),
       'a prep job that DID price declutter hours keeps the hours line');

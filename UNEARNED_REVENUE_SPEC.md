@@ -1,10 +1,15 @@
 # Unearned Revenue & QuickBooks Posting Layer — Spec
 
-**Status:** **Steps 0 and 1 of §10 are BUILT** (2026-07-30) — the rush-premium billing defect,
-the status-transition hazard, delivery capture, and payment capture across all three stages.
+**Status (2026-09-30):** **Steps 0 and 1 of §10 are BUILT** (2026-07-30) — the rush-premium billing
+defect, the status-transition hazard, delivery capture, and payment capture across all three stages.
 The QuickBooks posting layer itself (§3, §5, §6 guard, §7) remains **specification only**: it is
-blocked on the September chart-of-accounts build with Laura and on the open decisions in §9, and
-per §10 a posting path must not be built against accounts that do not yet exist.
+blocked on the chart of accounts, which the accountant (Laura) has not yet delivered, and on the open
+decisions in §9, and per §10 a posting path must not be built against accounts that do not yet exist.
+
+⚠ **Read the rest as of `9e37f3f`, and re-verify each section against the code before building from
+it.** The line numbers throughout are from that commit (17,406 lines; `havellin.html` is now about
+41,600). Since then Stripe ACH payments record themselves as cleared `stripe_ach` payments
+(2026-09-18), and the billing moved under §7 and §9d — both restated 2026-09-30.
 
 What changed in the app is listed at each section. Nothing about the QuickBooks integration was
 built, and no GL write path exists.
@@ -400,23 +405,37 @@ cannot reach the payload cannot be misposted from it.
 
 ## 7. Discount and rush premium
 
-`discountPct` is capped 0–30 and applies to **labor only** (`3850-3852`,
-`laborBase = tcFee + psFee`). The invoice basis is already net of it — `_netLabor` (`11311`)
-subtracts it before the bases are built — and `discountAmt` is available at `11317`.
+⚠ **Restated 2026-09-30.** This section described the billing at `9e37f3f`, and three of its facts
+have changed since: the discount cap, the order of the premium and the discount, and how a fixed price
+carries both. Functions are named below rather than lines.
 
-**In fixed-price mode the discount is baked into the flat fee and `discountPct` is forced to 0**
-(`5972-5978`), with a source comment explaining this prevents double application on recompute.
-Respect it. Do not restore a discount value in fixed mode.
+`discountPct` is capped at **15%** (`MAX_DISCOUNT_PCT`; it was 0–30) and applies to **labor only**,
+grossed up by the expedited premium charged on it (`discountOnLabor`) — never materials, fees or
+vendors. The invoice basis is already net of it — `_netLabor` in `invoiceHtml` subtracts it before
+the bases are built — and `discountAmt` is computed beside it.
 
-**Recommendation:** for T&M jobs, post gross labor revenue to the service line and the discount
-separately to **4900** as contra-revenue, preserving visibility of gross and net billing. For
-fixed-price jobs there is no separable discount — post the flat fee net, nothing to 4900.
+**In fixed-price mode it depends on when the estimate was saved.** A fixed fee saved **before
+2026-09-30** carries its discount (and any rush premium) **inside** the flat fee, with `discountPct`
+forced to 0 so a recompute cannot apply it twice. Respect it on those records; do not restore a
+discount value on them. A fixed fee saved **from 2026-09-30** (`estFixedLines`; Anthony on Q9 and
+Q13) is the price of the scope alone: the premium is its own line, 20% of the fee, and the discount
+its own line off the fee less the materials package, grossed up by the premium (`discountOnFixedFee`;
+`_fixedDisc` in `invoiceHtml`).
 
-**The rush premium is absent from both prior documents.** `RUSH_PCT` (20%, `3347`) is charged on
-the Havellin services total *after* the discount (`3861`), so it is neither a discount nor a
-service fee. Once §1a is fixed, it rides the host service line as ordinary revenue — but decide
-that on purpose rather than discovering it in reconciliation. The recognition credit is
-`totalFinalBasis + discountAmt`, and `totalFinalBasis` must contain `rushAmt`.
+**Recommendation:** for T&M jobs, and for fixed-price jobs saved from 2026-09-30, post gross revenue
+to the service line and the discount separately to **4900** as contra-revenue, preserving visibility
+of gross and net billing. For a fixed fee saved before then there is no separable discount — post the
+flat fee net, nothing to 4900.
+
+**The rush premium is absent from both prior documents.** `RUSH_PCT` (20%, pinned on the estimate as
+`rushPct`) is charged **before** the discount since 2026-09-11 — the discount comes off the labour
+grossed up by it — and, on an estimate saved from 2026-09-30 (`rushExPrepFee`, Q9), never on the 30%
+home prep fee. It is neither a discount nor a service fee. With §1a fixed it rides the host service
+line as ordinary revenue — but decide that on purpose rather than discovering it in reconciliation.
+The recognition credit is `totalFinalBasis` plus the discount taken (`discountAmt` on a T&M job,
+`_fixedDisc` on a fixed fee saved from 2026-09-30), and `totalFinalBasis` contains the premium
+(`finalRushAmt`) — and, since 2026-09-30, the premium inside a fixed-price rush change order's price
+(§9d).
 
 ---
 
@@ -450,9 +469,16 @@ and bad-debt matter (6950), not a recognition-timing one. This only becomes live
 basis goes cash, which is already COA §11 Q1 on Laura's list. It is downstream of a question she
 has been asked, not a separate one.
 
-**9d. Change orders — confirmed, not open.** `coTotal` (`11321`) enters only `totalFinalBasis`
-(`11367`). Change orders already flow through the recognition entry and post to the same service
-line as the underlying job. No separate treatment needed.
+**9d. Change orders — confirmed, not open** (restated 2026-09-30; `coTotal` is gone). A change order
+reaches the final invoice one of two ways, both inside the final's recognition entry on the job's own
+service line. On a T&M job it carries hours and no price, and the hours it authorises bill through the
+hours log. On a fixed price its printed price (`coPrice`: its hours at the job's rates, rounded once —
+and since 2026-09-30 times 1.20 when raised on an expedited fee whose premium is its own line, the rate
+pinned on the change order as `rushPct`) is summed as `coCharge` in `invoiceHtml` and added to
+`totalFinalBasis`. Since 2026-09-30 a Home Prep change order can also add a prep vendor; that carries
+no price of its own — once the client accepts, the vendor joins the job's prep lines (`jobPrepLines`),
+bills the client directly at cost, and its 30% site management fee rides the final's prep fee like any
+other prep line (§6). No separate treatment needed.
 
 ### Still open
 

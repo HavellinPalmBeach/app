@@ -12,7 +12,9 @@
 //
 // Plus Q14, Anthony's decision: an hourly change order's hours carry the job's rush premium and discount
 // like every other hour; a fixed-price change order is priced at the plain hourly rates; one line on the
-// printed change order says so — and only on a job that carries one of them.
+// printed change order says so — and only on a job that carries one of them. Restated 2026-09-30 (P15, the
+// Q14 follow-up, Anthony: "yes"): on a fixed-price RUSH job whose premium is a line on the fee, the change
+// order carries the 20% premium too (pinned on it at creation); the discount still never applies.
 //
 // Drives the REAL page: the real intake, the real Build Estimate (the expedite toggle and the discount
 // box typed into), the client's row in the real list, + New on the Change Orders card, the real modal and
@@ -212,7 +214,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   ok(calls.length === new Set(calls).size, 'no control on the dashboard twice (' + calls.length + ')');
 
   // ── F. THE FIXED PRICE ───────────────────────────────────────────────────
-  console.log('\n## F. A fixed price at $24,000, expedited, 10% off — the change order is at the plain rates');
+  console.log('\n## F. A fixed price at $24,000, expedited, 10% off — the change order carries the premium, not the discount');
   const idF = await make('Flat');
   const eF = await build(idF, { rush: true, disc: 10, fixed: 24000 });
   ok(eF.fixedPrice === true && eF.fixedAmount === 24000 && eF.rush === true, 'a $24,000 fixed fee, expedited');
@@ -226,12 +228,16 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   const prF = await p.evaluate(() => window.__prints[0] || null);
   const prFt = prF ? await T(prF.html) : '';
   has(prFt, 'This change order adjusts your fixed project fee by the amount above.', 'the fixed terms');
-  has(prFt, '+ $2,000', 'the price is 8 × $150 + 8 × $100 — the plain rate card');
-  // Restated 2026-09-30 (P12, Q9/Q13): a fee saved from that day carries its premium and discount as lines
-  // ON it (estFixedLines), so the page says "on"; an older fee, with them inside it, still reads "in".
-  has(prFt, 'It is priced at the plain hourly rates shown: the expedited-delivery premium and the preferred-client discount on your fixed project fee do not apply to it.',
-      '⚠⚠ Q14: said in one line on the fixed page');
-  lacks(prFt, '20% expedited', 'with no percentage — the change order names the premium and never prices it');
+  // Restated 2026-09-30 (P15, the Q14 follow-up): 8 × $150 + 8 × $100 = $2,000 at the rate card, plus the
+  // job's 20% premium, rounded once, because the fee's premium is a line on it (estFixedLines). The page
+  // still says "on your fixed project fee", as P12 made it for a fee saved from that day.
+  has(prFt, '+ $2,400', '⚠⚠ the price is the rate card’s $2,000 plus the 20% expedited-delivery premium');
+  lacks(prFt, '+ $2,000', 'and not the plain-rate figure');
+  has(prFt, 'It is priced at the hourly rates shown plus the 20% expedited-delivery premium, as this engagement is expedited; the preferred-client discount on your fixed project fee does not apply to it.',
+      '⚠⚠ Q14 follow-up: said in one line on the fixed page, the discount still excluded');
+  has(prFt, 'plus the 20% expedited-delivery premium', 'and the rate basis names the premium, so the figure can be checked by hand');
+  const pinF = await p.evaluate((id) => (changeOrders.filter(c => c.jobId === id).pop() || {}).rushPct, idF);
+  ok(pinF === 0.2, 'the premium is pinned on the change order itself (' + pinF + ')');
   await p.waitForTimeout(700);
 
   // A plain fixed job with neither prints no line: explaining an absence draws attention to it.

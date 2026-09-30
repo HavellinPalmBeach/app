@@ -25,13 +25,13 @@ const FNS = [
   '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', '_invProgressBar',
   '_agrProbateCompliance', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover',
   '_agrTrustDeliverable', '_agrScopeServices', '_invFileId', '_invNeedsValue', 'invWorkFlags', '_invMissingThumbIds',
-  'weArrangeAppraisals',
+  'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy'
 ];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'MATTER_TYPES', 'INV_ASSET_TRACKS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
-  'EXEMPT_CAP_732_402', 'AGR_NOT_AN_ACCOUNTING', 'INV_CATEGORIES', '_invShowRoll', 'INV_GROUP_ORDER', 'INV_CAT_GLYPH', 'INV_UNDECIDED', 'INV_DISPOSITIONS', 'INV_DEFAULT_CATEGORY',
+  'EXEMPT_CAP_732_402', 'AGR_NOT_AN_ACCOUNTING', 'INV_CATEGORIES', '_invShowRoll', 'INV_GROUP_ORDER', 'INV_CAT_GLYPH', 'INV_UNDECIDED', 'INV_DISPOSITIONS', 'INV_DEFAULT_CATEGORY', 'DOC_SCOPES'
 ];
 
 const ESTATE = {
@@ -273,6 +273,16 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     has(guarded('appraisals'), 'Havellin engages the specialist', 'at the top tier the appraisal is ours');
     has(guarded('values'), 'the trustee or their counsel arranges the appraisal',
         'and at `values` it is the trustee’s — never "the estate attorney", who is not on this matter');
+    // ⚠ AND AN APPRAISER THE APPROVED ESTIMATE LISTS IS OURS ON ANY TIER (Q20, 2026-09-30; jobAppraisalDuty).
+    const listedT = (() => {
+      const r = rig(J({ matterType: 'trust', docTier: 'values', gate706: 'yes' }),
+        [IT('i1', { objectName: 'Sargent portrait', category: 'Art & Décor', fmv: '48000', assetTrack: 'Trust' })]);
+      r.c.estimateStore[7] = { approved: true, estimate: { docScope: 'full', vendors: [{ type: 'Art Appraiser', cost: 1500 }], rooms: [] } };
+      r.c.printTrustSchedule(7);
+      return slice(r.last().html);
+    })();
+    has(listedT, 'Havellin schedules the appraiser on the estimate where it covers the item (Art Appraiser), the trustee or their counsel arranges any other, and a final copy follows the report',
+        '⚠⚠ at `values` with an appraiser listed: ours for the listed one, the trustee’s for any other');
 
     // The wrong-instrument reason promises no final copy, because none is coming.
     const wrong = rig(J({ matterType: 'neither' }), [IT('i1', { fmv: '4000', assetTrack: 'Trust' })]);

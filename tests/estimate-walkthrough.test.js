@@ -272,7 +272,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const ctx = sandbox({
       fns: ['_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
-            'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'],
+            'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames'],
       vars: ['JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'],
       stubs: { isFormalDoc: () => true },
     });

@@ -279,7 +279,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#2 — the sourcing list renders the lines on the job, and ADDS the rest one pick at a time');
   {
-    const R = sandbox({ fns: ['renderVendorSourcing', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats'].concat(LOGI_FNS), vars: ['LOGISTICS_CATEGORIES', 'vendorDirectory', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
+    const R = sandbox({ fns: ['renderVendorSourcing', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(LOGI_FNS), vars: ['LOGISTICS_CATEGORIES', 'vendorDirectory', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
       stubs: { vendorDirectory: [{}], dirStaleNotice: () => '', vendorPickerOptions: () => '<option>V</option>',
                vendorCategoriesForSlot: () => [], _selVendorId: () => '', _fldBg: () => '', vendorStatusOptions: () => '',
                _coordHrsField: () => '', coordHrsFor: () => 1, _vendorRefLine: () => '', _srcLineKey: (l, i) => 'L' + i,
@@ -542,7 +542,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('#6, driven through the real chip row — and repainted IN PLACE when the team or a vendor moves');
   {
     const P = sandbox({ fns: ['planGateChipsHtml', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
-                              'vendorSourcingProgress', '_srcLineKey', 'planVendorsMeta', '_repaintPlanGates'].concat(LOGI_FNS),
+                              'vendorSourcingProgress', '_srcLineKey', 'planVendorsMeta', '_repaintPlanGates', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(LOGI_FNS),
       vars: CREW_VARS.concat(['LOGISTICS_CATEGORIES']),
       stubs: { planDerivedLines: () => [{ key: 'agreement_signed', ok: true, label: 'Agreement signed' }] } });
     const est = { vendors: [{ lid: 'a', type: 'Mover' }], collections: [], prepItems: [] };

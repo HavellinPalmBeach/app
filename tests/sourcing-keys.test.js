@@ -36,7 +36,7 @@ const VEND = () => [{ type: 'Moving Company', cost: 12000 },
 function ctx(extraFns) {
   return sandbox({
     fns: ['_srcLid', '_srcLineKey', '_srcAdoptLineIds', 'getVendorActuals',
-          'prepFeeRate', 'logisticsCatsFor', '_jobTouch'].concat(extraFns || []),
+          'prepFeeRate', 'logisticsCatsFor', '_jobTouch', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(extraFns || []),
     vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq'],
   });
 }
@@ -130,21 +130,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // `psrc[...]` inside renderPrepJobPlan, and the source needle a few groups down does
     // not match its shape — so the card could go back to summing by position with the
     // whole suite passing. It is the concierge's own fee readout, in the field, on money.
-    const plan = (est, job) => sandbox({
+    const plan = (est, job, cos) => sandbox({
       fns: ['renderPrepJobPlan', 'planPhaseWrap', 'secCaret', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
             'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt',
             // The prep plan carries the firearms banner since 2026-09-20.
             'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'planChk', '_planTaskDone', 'esc',
             // The Budget & Fee card reads the accepted change orders' concierge hours since 2026-09-25.
-            'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName'],
+            'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
       vars: ['EST_TOLERANCE_PCT', '_planOpenPhases', 'PREP_FEE_RATE', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'jobPlanStore', 'VENDOR_RATING_WINDOW', 'DECEDENT_SERVICES'],
       stubs: { document: { getElementById: () => null }, esc: (v) => String(v == null ? '' : v),
                standingFlagsBlock: () => '', _sfHost: () => '', planChk: () => '', renderVendorSourcing: () => '',
-               vendorDirectory: [] },
+               vendorDirectory: [], changeOrders: cos || [] },
     }).renderPrepJobPlan(job.id, job, est);
     const money = (html, re) => (html.match(re) || [])[1];
 
-    const est = { prepItems: [{ type: 'Painting', cost: 20000, lid: 'a' },
+    // A standalone Home Prep estimate, as calcAll saves one (svc and prepEnabled ride the snapshot).
+    const est = { svc: 'prep', prepEnabled: true,
+                  prepItems: [{ type: 'Painting', cost: 20000, lid: 'a' },
                               { type: 'Landscaping', cost: 10000, lid: 'b' },
                               { type: 'Cleaning', cost: 5000, lid: 'c' }] };
     const job = { id: 1, name: 'Vickers',
@@ -163,6 +165,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠⚠ the card sums the two lines that remain — it read $27,000 when it summed by position');
     eq(money(h2, FEE), '6,600', '…so the fee is $6,600, not $8,100');
     has(h2, 'Quoted to date (2 of 2 vendors)', 'and it says two vendors, not three');
+
+    // ⚠ A VENDOR A CHANGE ORDER ADDED is on the card once the client accepts it (2026-09-30; jobPrepLines), keyed
+    // on its own line id like every other line.
+    const CO_POOL = { id: 5, jobId: 1, clientApproved: true, tcHrs: 0, psHrs: 0, vendorAdds: [{ type: 'Pool Service', cost: 3000, lid: 'pool' }] };
+    const job3 = Object.assign({}, job, { prepSourcing: Object.assign({}, job.prepSourcing, { Lpool: { quote: 2500 } }) });
+    const h3 = plan(est, job3, [CO_POOL]);
+    has(h3, 'Quoted to date (3 of 3 vendors)', '⚠⚠ the vendor an accepted change order added is on the card, as a third vendor');
+    eq(money(h3, QUOTED), '24,500', 'its quote counts toward the quoted total');
+    eq(money(h3, FEE), '7,350', '…and toward the fee');
+    const h4 = plan(est, job3, [Object.assign({}, CO_POOL, { clientApproved: false })]);
+    has(h4, 'Quoted to date (2 of 2 vendors)', 'an unaccepted change order puts nothing on the card');
+    eq(money(h4, QUOTED), '22,000', 'and nothing in the quoted total');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
