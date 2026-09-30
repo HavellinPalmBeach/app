@@ -1114,6 +1114,8 @@ body.field-mode .nb.active{border-top-color:var(--bronze);border-bottom-color:tr
 body.field-mode .main{padding-bottom:88px;}
 
 /* Desk-only panels. Hidden, still readable by calcAll.
+   ⚠ NEVER #est-save-card, and it sits outside #est-summary-col so this rule cannot reach it: Save Estimate
+   and the #e-fb strip its refusals print to are how a walkthrough scored on a phone gets saved (P16).
    #adj-pricing came OFF this list — see the premium-estate reasoning in the block above.
    Its wrapper stays in the markup: it still groups the toggle with #prem-badge, and it is
    the hook to re-hide it if the call is ever reversed. */
@@ -1598,7 +1600,8 @@ body.no-smf .smf-col{display:none;}
             <input type="date" id="i-date-of-death">
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Every value on this estate is a fair market value <em>at this date</em> — it is what the schedule, the 706 and a trustee’s opening carrying value all state. It is on the death certificate; ask for it on the call.</div>
           </div>
-          <div class="gate-cell"><label>How is this estate being administered?</label>
+          <!-- Required (clientMissingFields, since P9), so it carries the mark every other required label does (P16). -->
+          <div class="gate-cell"><label>How is this estate being administered? <span style="color:#A32D2D;font-weight:700;">*</span></label>
             <select id="i-matter-type" onchange="toggleIntakeFields()">
               <option value="">Select &mdash; ask the attorney</option>
               <option value="probate">Probate &mdash; administered through the court</option>
@@ -1730,14 +1733,17 @@ body.no-smf .smf-col{display:none;}
        which is no use once you have already scrolled past Adjustments looking for it. -->
   <div id="field-banner">
     <strong>Field mode — capture only.</strong> Crew sizing, discount, expedite, fixed price and
-    the calculated totals are hidden here; they're waiting for you on the desk view. Everything
-    you enter is saved in full.
+    the calculated totals are hidden here; they're waiting for you on the desk view.
+    <strong>Save Estimate</strong> is at the foot of this screen and saves everything, the hidden
+    parts included. Until you press it, what you have scored is kept on this device only.
   </div>
   <div id="est-approved-banner" style="display:none;background:#2e2e33;color:#FEF5E7;padding:12px 16px;border-radius:8px;margin-bottom:1rem;align-items:center;gap:12px;">
     <span style="font-size:20px;">&#128274;</span>
     <div>
       <div style="font-weight:700;font-size:13px;">Estimate Approved &amp; Locked</div>
-      <div style="font-size:11px;opacity:.8;margin-top:2px;">This estimate has been approved and cannot be modified. To make changes, create a Change Order from the Client Dashboard.</div>
+      <!-- applyEstimateLock repaints this for the state the estimate is in before it is ever shown; this copy
+           says what its approved arm says, so a reader of the markup is not told the old change-order route. -->
+      <div style="font-size:11px;opacity:.8;margin-top:2px;">This estimate has been approved. To change it, press &#9998; Edit estimate on the client&rsquo;s dashboard; a Change Order is only needed once the signing packet has gone out.</div>
     </div>
   </div>
   <div class="card" style="margin-bottom:1rem;">
@@ -1900,8 +1906,10 @@ body.no-smf .smf-col{display:none;}
         <div class="toggle-info"><div class="toggle-title">Difficult access (stairs, no elevator)?</div><div class="toggle-sub">Adds 15% to the hands-on work pool — lengthens the job, so concierge hours follow</div></div>
         <label class="toggle"><input type="checkbox" id="adj-access" onchange="calcAll()"><span class="slider"></span></label>
       </div>
+      <!-- The subtitle is calcAll's: it repaints it for the service in hand on every recalculation ("about half" on Home
+           Editing and Home Transition, "about a quarter" otherwise, measured; P16). This default is belt and braces. -->
       <div class="toggle-wrap" id="adj-heirs-wrap">
-        <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to off-site coordination hours (about half of total concierge hours)</div></div>
+        <div class="toggle-info"><div class="toggle-title">Multiple decision-makers / heirs?</div><div class="toggle-sub" id="adj-heirs-sub">Adds 20% to off-site coordination hours (about a quarter of total concierge hours)</div></div>
         <label class="toggle"><input type="checkbox" id="adj-heirs" onchange="calcAll()"><span class="slider"></span></label>
       </div>
       <!-- Premium estate is an OBSERVATION, not a commercial decision: the agreement
@@ -1915,7 +1923,8 @@ body.no-smf .smf-col{display:none;}
         <div class="toggle-wrap" style="height:100%;">
           <div class="toggle-info">
             <div class="toggle-title">Premium estate?</div>
-            <div class="toggle-sub">$185 TC / $125 PS rates — rate only, hours unchanged</div>
+            <!-- Not "rate only": labourPools adds 25 concierge hours of specialty coordination (P16; measured +25 on every service). -->
+            <div class="toggle-sub">$185 TC / $125 PS rates, plus 25 concierge hours of specialty coordination</div>
           </div>
           <label class="toggle"><input type="checkbox" id="e-prem" onchange="calcAll()"><span class="slider"></span></label>
         </div>
@@ -2183,17 +2192,23 @@ body.no-smf .smf-col{display:none;}
       </div>
       </div>
 
-      <div class="card" style="margin-top:1rem;">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="btn-s" onclick="resetEstimate()" title="Clear this screen to a blank estimate for this client. A saved estimate is not changed unless you press Save">Reset</button>
-          <!-- "Save Estimate", the name the manual and the playbook give it (2026-09-30, audit low). It read
-               "Save & Preview Client Estimate →" for a preview tab retired on 2026-09-11; the save lands on
-               the client's dashboard. -->
-          <button class="btn-p" onclick="saveEstimateAndPreview()">Save Estimate</button>
-        </div>
-        <div id="e-fb"></div>
-      </div>
     </div>
+
+  <!-- ⚠⚠ THE SAVE CARD IS A SIBLING OF #est-summary-col, NOT ITS LAST CHILD (2026-09-30, P16). Field mode
+       hides that column whole, and Save Estimate and the #e-fb strip under it went with it: a walkthrough
+       scored on a phone could not be saved until Field · exit, every refusal Save prints landed in a hidden
+       strip, and the field banner promised the estimate "saved in full". Out here it renders exactly where it
+       did on a desk (under the summary) and stays on the phone. The same handler and the same refusals. -->
+  <div class="card" id="est-save-card" style="margin-top:1rem;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-s" onclick="resetEstimate()" title="Clear this screen to a blank estimate for this client. A saved estimate is not changed unless you press Save">Reset</button>
+      <!-- "Save Estimate", the name the manual and the playbook give it (2026-09-30, audit low). It read
+           "Save & Preview Client Estimate →" for a preview tab retired on 2026-09-11; the save lands on
+           the client's dashboard. -->
+      <button class="btn-p" onclick="saveEstimateAndPreview()">Save Estimate</button>
+    </div>
+    <div id="e-fb"></div>
+  </div>
 
 </div>
 
@@ -4157,8 +4172,10 @@ var PERROOM_REF = 18;
 var ENGINE_FLOOR = {downsizing:2, downsizing_move:3, home_cleanout:3, cleanout:3, probate:3, contested_probate:4, prep:3};
 
 // ─── DOCUMENTATION SCOPE — with or without the paperwork ─────────────────────
-// The `document` step is a third to two-fifths of an estate ticket (34% Estate Settlement,
-// 39% Probate, 41% Contested on a 3,500 sqft home at Normal), and until 2026-09-04 it was
+// The `document` step is about a third of an estate ticket, more on probate (32% Estate Settlement,
+// 38% Probate, 38% Contested on a 3,500 sqft home at Normal priced at two specialists — re-measured
+// through calcAll on 2026-09-30 after Q20 took the appraiser scheduling out of the step; it read
+// 34/39/41% before, and p16-screens-text.test.js measures it again), and until 2026-09-04 it was
 // hard-wired to the service type. Anthony: "we don't quite know yet if the attorneys are
 // going to want us to do all that work to support their workflow or if they're just going
 // to delegate to a junior associate or paralegal … I want to be flexible in the ability to
@@ -4401,7 +4418,9 @@ function estimateDocScope(e) {
 }
 // The scope a FRESH estimate opens at: the answer recorded at intake, else full. Same
 // shape as the production rate — Settings holds α's default, the job holds this one — and
-// with the same rule: it seeds a new build and never moves an estimate already priced.
+// it seeds a new build. Unlike α, the tier is a CONTRACT TERM, so since 2026-09-30 (P16) an
+// estimate no manager has approved follows a tier changed later (followDocTier, below); an
+// approved one is never moved by it.
 function seedDocScopeFromJob(job) {
   // ⚠ THE TIER FIRST, AND IT ALREADY COVERS A LEGACY JOB — docTierOf migrates a stored docScope
   // on read, so this answers exactly what it used to for every job recorded before the tier
@@ -4409,6 +4428,92 @@ function seedDocScopeFromJob(job) {
   var t = docTierOf(job);
   if (t) return docTierScope(t);
   return (job && docScopeDef(job.docScope)) ? job.docScope : 'full';
+}
+// A tier and a scope as a sentence names them: "Contents list", "Capture only".
+function docTierWord(t)  { var d = docTierDef(t);  return d ? d.label.split(' — ')[0] : ''; }
+function docScopeWord(s) { var d = docScopeDef(s); return d ? d.label.split(' — ')[0] : ''; }
+
+// ⚠⚠ AN ESTIMATE NO MANAGER HAS APPROVED FOLLOWS THE DOCUMENTATION TIER (2026-09-30, P16). The tier is a contract
+// term, what the client is told they will receive, and docScope is its pricing projection; so answering or changing
+// the tier on Edit Client has to reach an estimate that is still a draft. It did not: seedDocScopeFromJob ran on a
+// fresh build only, so the walkthrough Save Estimate had just refused for a blank tier came back from Edit Client
+// still priced at the top of the scale, and saved there. Now:
+//   · the build open on Build Estimate is re-seeded and repriced when Edit Client changes the tier (Save Estimate
+//     keeps it, as it keeps any change on that screen), and again whenever the screen is reopened on a tier that
+//     moved while it was put away (after ✎ Edit estimate, too);
+//   · a saved estimate follows when it is next opened, because it records the tier its scope was decided against
+//     (est.docTier), so a walkthrough override made against the CURRENT tier survives a reopen and only a tier
+//     that has moved since moves the scope;
+//   · Submit refuses a saved estimate still priced against an older tier (estimateTierMoved), so one nobody
+//     reopened cannot go to a manager at the old scope;
+//   · an APPROVED estimate, or one out for approval, is never repriced by the app (CLAUDE.md: a saved estimate is
+//     not repriced on its own): Edit Client's save flags it and names the route (docTierChangeNotice).
+// `_estimateDocTier` is the tier the open build's scope was last decided against, set by the reset and the restore.
+// `fromTier` overrides it for the one caller that knows the tier before a change (saveClientEdit). Returns
+// {from, to, tier} when the scope moved, else null; the tier is recorded either way.
+var _estimateDocTier = '';
+function followDocTier(job, fromTier) {
+  if (!job || estimateApproved || estimateSubmitted) return null;
+  var t = docTierOf(job);
+  if (!t) return null;   // unanswered: nothing to follow, and the contract gate says so beside the total
+  var was = (fromTier === undefined) ? _estimateDocTier : fromTier;
+  if (was === t) return null;
+  var from = activeDocScope();
+  _estimateDocScope = seedDocScopeFromJob(job);
+  _estimateDocTier = t;
+  return (from === activeDocScope()) ? null : { from: from, to: activeDocScope(), tier: t };
+}
+// A SAVED estimate priced against a tier the client record no longer holds, where the new tier prices a different
+// scope: the case Submit refuses. A record from before est.docTier existed answers false — which tier it was
+// decided against is unknown, and the intake note under the scope says so where the two disagree.
+function estimateTierMoved(est, job) {
+  if (!est || !job || typeof est.docTier !== 'string') return false;
+  var t = docTierOf(job);
+  if (!t || t === est.docTier) return false;
+  return seedDocScopeFromJob(job) !== estimateDocScope(est);
+}
+// The line under the Documentation scope while the build on screen has followed a tier that moved after the saved
+// copy was priced. DERIVED from the saved record rather than flagged, so Save (which records the new pricing) is
+// what takes it away, and nothing has to remember to clear it.
+function docTierFollowNote(job, rec, activeScope, activeTier) {
+  var saved = rec && rec.estimate;
+  if (!job || !saved || rec.approved || typeof saved.docTier !== 'string') return '';
+  if (!activeTier || saved.docTier === activeTier || activeScope !== seedDocScopeFromJob(job)) return '';
+  var was = estimateDocScope(saved);
+  if (was === activeScope) return '';
+  return 'The documentation tier on the client record changed to ' + docTierWord(activeTier) + ' after this estimate was saved, '
+    + 'so it follows it here: priced at ' + docScopeWord(activeScope) + ', where the saved copy is at ' + docScopeWord(was)
+    + '. Save Estimate keeps it.';
+}
+// What Edit Client's save does and says when it changed the documentation tier. The build open on Build Estimate
+// (e-job bound to this client) follows at once unless it is locked; a saved copy that is not open follows when it
+// is next opened; an approved one, or one out for approval, is flagged with the route and left as priced.
+// Returns {type, msg} for dashNotice, or null when the new tier prices what the estimate already prices.
+function docTierChangeNotice(job, tierBefore) {
+  var t = docTierOf(job);
+  if (!job || !t || t === tierBefore) return null;
+  var eJob = document.getElementById('e-job');
+  var open = !!(eJob && (parseInt(eJob.value, 10) || 0) === job.id);
+  var rec = (typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null;
+  var locked = !!((rec && rec.approved) || estimateOutForApproval(job, rec) || (open && (estimateApproved || estimateSubmitted)));
+  var seed = seedDocScopeFromJob(job);
+  var head = 'The documentation tier is now ' + docTierWord(t) + ', which prices the ' + docScopeWord(seed) + ' documentation scope. ';
+  if (open && !locked) {
+    var f = followDocTier(job, tierBefore);
+    return f ? { type: 'ok', msg: head + 'The estimate open on Build Estimate follows it: repriced from ' + docScopeWord(f.from)
+      + ' to ' + docScopeWord(f.to) + '. Press Save Estimate there to keep it.' } : null;
+  }
+  var est = rec && rec.estimate;
+  if (!est || estimateDocScope(est) === seed) return null;
+  var was = docScopeWord(estimateDocScope(est));
+  if (locked) {
+    return { type: 'warn', msg: head + 'The ' + ((rec && rec.approved) ? 'approved estimate' : 'estimate out for manager approval')
+      + ' is priced at ' + was + ', and the app does not reprice it on its own. ' + estimateRepriceRoute(job, rec)
+      + (estimateEditBlocker(job) ? '' : ' Reopened for editing, it follows the new tier.') };
+  }
+  return { type: 'warn', msg: head + 'The saved estimate is priced at ' + was + (typeof est.docTier === 'string'
+    ? ': it follows the new tier when it is next opened on Build Estimate, and it cannot be submitted until it has been saved there.'
+    : ': open it on Build Estimate, set its Documentation scope and press Save Estimate.') };
 }
 // When the estimate is priced at a different scope than intake recorded, say so under the
 // dropdown. Not a warning — overriding on the walkthrough is legitimate — but the two
@@ -4441,7 +4546,12 @@ function paintEstimateDocScope(svc, job) {
   if (hint && d) {
     var note = _docScopeIntakeNote(job, activeDocScope());
     var apNote = appraisalTierNote(job, (typeof vendors !== 'undefined') ? vendors : []);
+    // The build followed a tier changed after the saved copy was priced (followDocTier, P16): say so, so a total
+    // that moved on reopening is not a mystery.
+    var folNote = job ? docTierFollowNote(job, (typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null,
+                                          activeDocScope(), _estimateDocTier) : '';
     hint.innerHTML = esc(d.hint) + (note ? ' <strong>' + esc(note) + '</strong>' : '') +
+      (folNote ? '<div style="color:var(--warn-tx);margin-top:3px;">' + esc(folNote) + '</div>' : '') +
       (apNote ? '<div style="color:var(--warn-tx);margin-top:3px;">' + esc(apNote) + '</div>' : '');
   }
 }
@@ -4568,8 +4678,12 @@ function computeEngineV3(sqft, rooms, svc, crew, years, docScope){
   // estate job — so every row understated its own room by 3.7×. Ticking a 2-car
   // garage displayed "2.4 PS" and booked 9.1 person-hours, and nothing on the
   // screen let you feel a quote building as you walked the house. Now the rows
-  // reconcile: once the walkthrough is complete they sum to the billed figures on
-  // the fee lines, so there is no unexplained residual and no caveat to remember.
+  // reconcile with the SPECIALIST line only: once the walkthrough is complete their
+  // PS hours sum to the billed specialist hours, short only of the round-up to whole
+  // hours (96.4 of 97 on a 3,500 sqft Estate Settlement, measured 2026-09-30). The
+  // concierge line never reconciles to the rows and is not meant to — its off-site
+  // coordination, fixed on-site presence and move day belong to no room (the rows
+  // carry 24.4 of that job's 65 concierge hours). p16-screens-text.test.js measures both.
   var poolCoefSum = 0;
   for (var L3 in steps) poolCoefSum += steps[L3][1];
   var poolAll = load * poolCoefSum;
@@ -5289,7 +5403,9 @@ function changeEstimateService() {
   // fields unasked, and it must not become possible by some later edit to the options.
   if (!sameSvcFamily(prev, next)) {
     revert();
-    showFB('e-fb', 'err', 'A living-client job and a decedent job ask different questions at intake — the representative, the date of death, the contact who is not the client. Change that with Edit Client on the client\u2019s dashboard, where those fields are.');
+    // Not "with Edit Client" (P16): Edit Client refuses the same crossing ("Create a new client for this", Q4), so
+    // that sentence sent people to a second refusal. A living client and an estate are different clients.
+    showFB('e-fb', 'err', 'A living client and an estate are different clients: an estate has a representative and a date of death, and its client is the deceased. Create a new client for this with + Add New Client on the dashboard.');
     return;
   }
 
@@ -6588,7 +6704,9 @@ function applyEstimateServiceMode(isPrep) {
   // the six cards and false of Property Preparation, which carries 30% on every engagement
   // now (see prepFeeRate) — and this heading sits directly above that card.
   if (vSub) vSub.innerHTML = isPrep
-    ? 'Billed to the client directly at cost. Havellin’s fee is <strong>' + Math.round(prepFeeRate()*100) + '% of vendor spend</strong> — no hours are billed on a standalone prep engagement.'
+    // Not "no hours are billed" (P16): declutter hours are, on top of the fee, since 2026-09-14. What books no
+    // hours is coordinating these vendors (prepTCHrs), which is what this now says.
+    ? 'Billed to the client directly at cost. Havellin’s fee is <strong>' + Math.round(prepFeeRate()*100) + '% of vendor spend</strong>, and coordinating these vendors books no hours; declutter hours, where the house needs them, are quoted separately and billed as worked.'
     : 'Billed to the client directly at cost. Havellin adds no fee — coordination time bills hourly, and each line below books that time. <strong>Property Preparation is the exception:</strong> those vendors carry the ' + Math.round(prepFeeRate()*100) + '% GC fee instead, and book no concierge hours.';
   // Rebuild the cards when the service crosses into or out of prep, because the card SET
   // changes (six groups vs Property Preparation alone). Guarded on an actual transition
@@ -6846,9 +6964,15 @@ function calcAll() {
   // coordination, so 20% of the off-site half lands as roughly 10% on the total TC line,
   // and a reader checking the summary concludes the app is applying half of what it
   // promised. Name the pool it actually lifts.
+  // ⚠ "About half" was true of Home Editing and Home Transition only (51% and 58% of the concierge hours on a
+  // 3,500 sq ft house at Normal); on Home Cleanout, Estate Settlement and Probate the off-site column is about a
+  // quarter (25%, 25%, 27%). Measured through calcAll on 2026-09-30 (P16); p16-screens-text.test.js measures it
+  // again for every service this toggle is offered on, so a coefficient change cannot leave the words behind.
+  // No figure in hours: the subtitle shows on the phone, where field mode hides the arithmetic.
   if (heirsSubEl) heirsSubEl.textContent = heirsBakedIn
     ? 'Built into contested-probate rates — no separate uplift'
-    : 'Adds 20% to off-site coordination hours (about half of total concierge hours)';
+    : 'Adds 20% to off-site coordination hours (' + ((svcKey === 'downsizing' || svcKey === 'downsizing_move')
+        ? 'about half' : 'about a quarter') + ' of total concierge hours)';
   var heirs = heirsEl ? heirsEl.checked : false;
   // ── ADJUSTMENT ROUTING (working-supervisor model) ──────────────────────────────
   // Difficult access is physical difficulty: it makes the hands-on work take longer,
@@ -7796,7 +7920,9 @@ function calcAll() {
     // What documentation this estimate PRICED — full, capture-only, or none. Pinned here for
     // the same reason as tcAlpha: the client estimate and the agreement read it back, and a
     // reopened quote must reproduce its own figures. See DOC_SCOPES.
-    docScope: activeDocScope()
+    docScope: activeDocScope(),
+    // And the tier that scope was decided against, so a reopened draft follows a tier changed since (P16).
+    docTier: _estimateDocTier
   };
 
   // Re-attach the immutable lock snapshot. Prefer the in-session value (same
@@ -9908,8 +10034,10 @@ function resetEstimateJobState(job) {
   // 2. THE PINS. Each is re-pinned by restoreEstimateToUI from the saved record when the job has one;
   //    otherwise this is a fresh build and prices at the current Settings α and cost card.
   _estimateAlphaPin = null; _estimateCostPin = null;
-  // The documentation scope intake recorded — 'full' for no job, and for a job that never answered.
+  // The documentation scope intake recorded — 'full' for no job, and for a job that never answered — and the tier it
+  // answers to, so a tier changed later on Edit Client is one this build follows (followDocTier, P16).
   _estimateDocScope = seedDocScopeFromJob(job);
+  _estimateDocTier = docTierOf(job);
   // ⚠ The fullness preset SEEDS every room ticked after it is pressed (setRoomState), so carrying it
   // across prices the next property off the last one's answer — tick a room on a fresh job after a
   // packed estate and it opens at default+2.
@@ -9984,7 +10112,13 @@ function estimateOpensFixed(job) {
 }
 
 function saveEstimateAndPreview() {
-  if (estimateApproved) { showFB('e-fb','warn','This estimate is approved and locked. Create a Change Order from the Client Dashboard to modify it.'); return; }
+  // The route the refusal names is the estimate's own (estimateRepriceRoute): ✎ Edit estimate until the packet goes out.
+  if (estimateApproved) {
+    var _lkId = parseInt(document.getElementById('e-job').value) || 0;
+    showFB('e-fb','warn','This estimate is approved and locked. '
+      + estimateRepriceRoute(jobs.find(function(j){ return j.id === _lkId; }), estimateStore[_lkId]));
+    return;
+  }
   var jobId = parseInt(document.getElementById('e-job').value);
   if (!jobId) { showFB('e-fb','warn','Select a job to attach this estimate to.'); return; }
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -10928,7 +11062,7 @@ function clientEstimateHtml(e, job) {
     // above, which spent three lines and a lot of vertical space on four short
     // facts and pushed the actual scope further down the page.
     '<div class="ce-hdr-row ce-ident-row" style="margin-top:.35rem;">' +
-    '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;white-space:nowrap;">' + (job.hvlId||'\u2014') + '</div></div>' +
+    '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;white-space:nowrap;">' + esc(job.hvlId||'\u2014') + '</div></div>' +
     '<div><div class="ce-meta-label">' + (isEstateJob ? 'Estate' : 'Client') + '</div><div class="ce-meta-val">' + (isEstateJob ? 'Estate of ' + esc(job.name||'\u2014') : esc(job.name||'\u2014')) + '</div></div>' +
     '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
     '<div><div class="ce-meta-label">Date</div><div class="ce-meta-val" style="white-space:nowrap;">' + _estDate + '</div></div>' +
@@ -10947,14 +11081,14 @@ function clientEstimateHtml(e, job) {
         '<div class="ce-hdr-row ce-hdr-row-4">' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + esc(job.executor||'—') + (job.executorRole ? ' — ' + esc(job.executorRole) : '') + '</div></div>' +
-        '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + (job.executorPhone||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val">' + (job.executorEmail||'—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + esc(job.executorPhone||'—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val">' + esc(job.executorEmail||'—') + '</div></div>' +
         '</div>'
       // Client and Property moved up into the identity line, so this row carries
       // only what is left rather than repeating them.
       : '<div class="ce-hdr-divider"></div>' +
         '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
-        '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + esc(job.phone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
         '</div>'
     ) +
@@ -10982,21 +11116,24 @@ function clientEstimateHtml(e, job) {
 
     '<div class="ce-hdr-divider"></div>' +
 
+    // ⚠ THE CONCIERGE'S NAME, NUMBERS, EMAIL AND BIO ARE TYPED ON THE CONTRACTORS TAB, and they went onto
+    // this client document unescaped (2026-09-30, P16). The phones are joined with no-break spaces as
+    // characters, so the whole line escapes as one piece and reads exactly as the &nbsp; version did.
     '<div class="ce-hdr-row ce-hdr-row-3">' +
-    '<div style="font-size:12px;color:var(--gray);">Questions about this estimate? Contact <strong style="color:var(--gray-dk);">' + prepName + '</strong>' +
-    ' &nbsp;·&nbsp; ' + conciergePhonesText(preparer, ' &nbsp;·&nbsp; ') +
-    (prepEmail !== '—' ? ' &nbsp;·&nbsp; <a href="mailto:' + prepEmail + '" style="color:var(--bronze);text-decoration:none;">' + prepEmail + '</a>' : '') +
+    '<div style="font-size:12px;color:var(--gray);">Questions about this estimate? Contact <strong style="color:var(--gray-dk);">' + esc(prepName) + '</strong>' +
+    ' &nbsp;·&nbsp; ' + esc(conciergePhonesText(preparer, ' \u00a0\u00b7\u00a0 ')) +
+    (prepEmail !== '—' ? ' &nbsp;·&nbsp; <a href="mailto:' + esc(prepEmail) + '" style="color:var(--bronze);text-decoration:none;">' + esc(prepEmail) + '</a>' : '') +
     '</div>' +
     '</div>' +
 
     (preparer && preparer.bio ?
     '<div style="display:flex;align-items:flex-start;gap:1.2rem;padding:.75rem 0 0;margin-top:.5rem;border-top:1px solid var(--border);">' +
     '<div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:var(--tan);border:2px solid var(--bronze);display:flex;align-items:center;justify-content:center;font-family:\'Cormorant Garamond\',serif;font-size:18px;font-weight:600;color:var(--bronze);">' +
-      (prepName ? prepName.split(' ').map(function(n){return n[0];}).join('') : 'TC') + '</div>' +
+      esc(prepName ? prepName.split(' ').map(function(n){return n[0];}).join('') : 'TC') + '</div>' +
     '<div>' +
     '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:2px;">Your Transition Concierge</div>' +
-    '<div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;">' + prepName + '</div>' +
-    '<div style="font-size:12px;color:var(--gray);line-height:1.55;">' + preparer.bio + '</div>' +
+    '<div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;">' + esc(prepName) + '</div>' +
+    '<div style="font-size:12px;color:var(--gray);line-height:1.55;">' + escLines(preparer.bio) + '</div>' +
     '</div></div>'
     : '') +
 
@@ -11596,7 +11733,8 @@ function applyEstimateLock() {
       } else if (estimateApproved && !_signedLk) {
         _bIcon = '&#9998;'; // pencil
         _bTitle = 'Approved — Locked for Direct Edits';
-        _bText = 'Still negotiable: to revise price or scope, use <strong>Edit Estimate</strong> or <strong>Offer Discount</strong> on the client&rsquo;s timeline (manager re-approval required). A Change Order is only needed once the signing packet has gone out.';
+        // The buttons by the names they carry (P16): "✎ Edit estimate" and "Offer discount", on the dashboard.
+        _bText = 'Still negotiable: to revise price or scope, use <strong>&#9998; Edit estimate</strong> or <strong>Offer discount</strong> on the client&rsquo;s dashboard (manager re-approval required). A Change Order is only needed once the signing packet has gone out.';
       } else {
         _bIcon = '&#128274;'; // lock
         _bTitle = 'Estimate Locked — Under Signed Agreement';
@@ -11820,6 +11958,18 @@ function estimateSubmitBlocker(est, job) {
   if (!est || est.havellinTotal === 0) return { code:'noest', msg:'No estimate to submit.' };
   var contract = estimateContractBlocker(job);
   if (contract) return contract;
+  // ⚠ A DRAFT FOLLOWS THE TIER (followDocTier, P16), AND THIS IS WHERE THAT IS ENFORCED: a saved estimate nobody
+  // reopened since the tier changed on Edit Client would otherwise go to a manager at the old scope. Opening it on
+  // Build Estimate reprices it, and Save Estimate records the new tier, which clears this. The refusal is read on the
+  // dashboard (dashSubmitEstimate), where the way in to a saved draft is the estimate's ✎ Edit estimate, so it names
+  // that — and, like every sentence naming that control, only while the control is offered (estimateEditBlocker).
+  if (estimateTierMoved(est, job)) {
+    var _tierEditBlk = estimateEditBlocker(job);
+    return { code:'tier',
+      msg:'Cannot submit — the documentation tier on this client changed to ' + docTierWord(docTierOf(job))
+        + ' after this estimate was saved, and it is still priced at ' + docScopeWord(estimateDocScope(est)) + '. '
+        + (_tierEditBlk || 'Open it with ✎ Edit estimate on the dashboard (it follows the new tier there), press Save Estimate, then submit it.') };
+  }
   var unscored = unscoredRoomNames(est);
   if (unscored.length > 0) {
     return { code:'unscored',
@@ -12179,6 +12329,22 @@ function estimateOutForApproval(job, estRec) {
 }
 var ESTIMATE_OUT_FOR_APPROVAL_TXT = 'This estimate is out for manager approval, so it cannot be edited. '
   + 'It opens for editing again once a manager approves it or denies it.';
+
+// ⚠⚠ ONE ANSWER TO "HOW DO I CHANGE A PRICE THE APP WILL NOT CHANGE BY ITSELF" (2026-09-30, P16). Build Estimate's
+// save refusal, its locked banner and Edit Client's held-field alert all said "create a Change Order" on an approved
+// estimate — while ✎ Edit estimate, which un-approves it, is the route until the signing packet goes out; a change
+// order is the route only after that (priceChangeBlocker). Each surface wrote its own sentence, and they drifted.
+// The route, in the state the estimate is in: the change-order sentence once the packet is out, the manager's
+// decision while it is out for approval, and ✎ Edit estimate otherwise. Read by every surface that names it.
+// (The sentence is declared after the function on purpose: it is only ever reached through the rule above it.)
+function estimateRepriceRoute(job, estRec) {
+  var blk = estimateEditBlocker(job);
+  if (blk) return blk;
+  if (estimateOutForApproval(job, estRec)) return ESTIMATE_OUT_FOR_APPROVAL_TXT;
+  return ESTIMATE_EDIT_ROUTE_TXT;
+}
+var ESTIMATE_EDIT_ROUTE_TXT = 'To change it, press ✎ Edit estimate on the client’s dashboard: it un-approves the '
+  + 'estimate and reopens it on Build Estimate, and a manager approves the new figure.';
 
 // What the modal's percentage box says, read by the preview AND the write so the two cannot
 // disagree about which numbers are allowed. ⚠ A BLANK IS NOT AN ANSWER AND 0 IS ONE: 0 removes the
@@ -13340,6 +13506,12 @@ function restoreEstimateToUI(est) {
   // control existed has no docScope and was priced FULL — restore it as such rather than
   // letting a stale control on screen restate the quote.
   _estimateDocScope = docScopeDef(est.docScope) ? est.docScope : 'full';
+  // ⚠ AND THE TIER THAT SCOPE WAS DECIDED AGAINST (P16), so an estimate no manager has approved follows a tier that
+  // has moved since (followDocTier, which reads the approval state loadEstimateForJob set; an approved one never
+  // moves). A record from before est.docTier existed is taken to answer to the tier the job holds now: which tier it
+  // was priced against is unknown, and the intake note under the scope says so where the two disagree.
+  _estimateDocTier = (typeof est.docTier === 'string') ? est.docTier : docTierOf(_svcJobR);
+  followDocTier(_svcJobR);
 
   window._suppressEstimateAutoSave = false;
   calcAll(); // one clean save with fully-restored state
@@ -15067,7 +15239,8 @@ function jtScheduleHtml(sched) {
   if (sched.state === 'done') {
     h += I('Started ' + esc(fmtDate2(sched.actualStart || sched.start)));
     if (sched.delivered) h += I('Delivered ' + V(fmtDate2(sched.delivered)));
-    if (sched.endVariance) h += I(sched.endVariance + ' working days against a ' + sched.days + '-day plan');
+    // `endVariance` is the working days the job took (P16: "1 working days" on a one-day job — pluralised now).
+    if (sched.endVariance) h += I(sched.endVariance + ' working day' + (sched.endVariance === 1 ? '' : 's') + ' against a ' + sched.days + '-day plan');
     return h + '</div>';   // flat grey, no flag: history is not an instruction
   }
 
@@ -19440,10 +19613,15 @@ function renderClientDashboard(jobId) {
   // carries `.card div[style*="flex-shrink:0"]{flex-shrink:1!important}` and
   // `.card div{min-width:0}`, so an inline one collapses the circle on the iPad this screen
   // is actually read on.
-  h += '<div class="dash-avatar">'+initials+'</div>';
+  // ⚠⚠ EVERY PERSON-ENTERED FIELD ON THIS CARD IS ESCAPED (2026-09-30, P16). The name, the address, the
+  // concierge, the representative, the phones, the emails and the notes went into innerHTML as typed, so a
+  // note reading "<b>call first</b> & ask for Joan" rendered bold and swallowed the ampersand — and anything
+  // typed into intake could rewrite this screen. Values that are already markup (a dot, a coloured
+  // "Unassigned") are built here, never typed.
+  h += '<div class="dash-avatar">'+esc(initials)+'</div>';
   h += '<div style="min-width:0;">';
-  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);line-height:1.2;">'+(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
-  if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:'')+'</div>';
+  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);line-height:1.2;">'+esc(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
+  if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+esc(job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:''))+'</div>';
   h += '</div>';
   h += '</div>';
 
@@ -19454,8 +19632,9 @@ function renderClientDashboard(jobId) {
   h += '<div class="dash-chips">';
   var _sv = jobStatusView(job);
   h += '<span class="badge" style="'+_bpad+'background:'+statusColors[_sv.key]+';color:white;">'+esc(_sv.label)+'</span>';
-  h += '<span class="badge b-bronze" style="'+_bpad+'">'+svcLabel+'</span>';
-  if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="'+_bpad+'">'+job.priority.charAt(0).toUpperCase()+job.priority.slice(1)+' priority</span>';
+  // (Belt and braces: a catalogue label, or the raw key of a service the catalogue does not know.)
+  h += '<span class="badge b-bronze" style="'+_bpad+'">'+esc(svcLabel)+'</span>';
+  if (job.priority && job.priority!=='normal') h += '<span class="badge b-warn" style="'+_bpad+'">'+esc(job.priority.charAt(0).toUpperCase()+job.priority.slice(1))+' priority</span>';
   if (job.premium) h += '<span class="badge" style="'+_bpad+'background:var(--tan);color:var(--bronze);">Premium estate</span>';
   if (job.re==='yes') {
     var _reProp = parseInt(job.propVal || (est && est.propVal) || 0) || 0;
@@ -19496,26 +19675,26 @@ function renderClientDashboard(jobId) {
   // comments, so writing it out is what makes the test that guards it unable to fail.)
   h += '<div style="margin-top:14px;padding-top:13px;border-top:0.5px solid var(--border);">';
   h += '<div class="d-grid4">';
-  h += field('Job ID', '<span style="font-weight:600;color:var(--bronze);font-family:monospace;">'+(job.hvlId||'—')+'</span>');
-  h += field('Property type', job.ptype||'—');
-  h += field('Approx. sqft', job.sqft ? job.sqft+' sqft' : '—');
-  h += field('Beds / Baths', (job.beds||job.baths) ? ((job.beds||'—')+' bd / '+(job.baths||'—')+' full'+(job.halfBaths?' / '+job.halfBaths+' half':'')+' ba') : '—');
+  h += field('Job ID', '<span style="font-weight:600;color:var(--bronze);font-family:monospace;">'+esc(job.hvlId||'—')+'</span>');
+  h += field('Property type', esc(job.ptype||'—'));
+  h += field('Approx. sqft', job.sqft ? esc(job.sqft)+' sqft' : '—');
+  h += field('Beds / Baths', (job.beds||job.baths) ? esc((job.beds||'—')+' bd / '+(job.baths||'—')+' full'+(job.halfBaths?' / '+job.halfBaths+' half':'')+' ba') : '—');
   h += field('Approx. home value', (job.propVal && job.propVal !== '0') ? ({'500000':'Under $1M','1750000':'$1M – $2.5M','3500000':'$2.5M – $5M','7500000':'$5M – $10M','14000000':'$10M – $20M','27500000':'$20M – $35M','52500000':'$35M – $75M','100000000':'$75M+'}[String(job.propVal)] || formatPropVal(parseInt(job.propVal))) : '—');
-  h += field('Years in home', job.yearsInHome ? job.yearsInHome + ' yrs' : '—');
-  h += field('Referral source', (job.src||'—') + ((job.refPartnerName||job.referredByName) ? ' — ' + esc(job.refPartnerName||job.referredByName) : ''));
-  h += field('Transition Concierge', job.tc||'<span style="color:#A32D2D;">Unassigned</span>');
+  h += field('Years in home', job.yearsInHome ? esc(job.yearsInHome) + ' yrs' : '—');
+  h += field('Referral source', esc(job.src||'—') + ((job.refPartnerName||job.referredByName) ? ' — ' + esc(job.refPartnerName||job.referredByName) : ''));
+  h += field('Transition Concierge', job.tc ? esc(job.tc) : '<span style="color:#A32D2D;">Unassigned</span>');
   if (isEstateDash) {
-    h += field('Rep phone', job.executorPhone||'—');
-    h += field('Rep email', '<span style="font-size:11px;">'+(job.executorEmail||'—')+'</span>');
+    h += field('Rep phone', esc(job.executorPhone||'—'));
+    h += field('Rep email', '<span style="font-size:11px;">'+esc(job.executorEmail||'—')+'</span>');
     // Estate settlement has no dedicated probate card, so fold the rep's name/role
     // and Letters status in here; probate keeps its own detailed card below.
     if (job.svc === 'cleanout' && job.executor) {
-      h += field('Authorized rep', job.executor + (job.executorRole?' · '+job.executorRole:''));
+      h += field('Authorized rep', esc(job.executor + (job.executorRole?' · '+job.executorRole:'')));
       h += field('Letters of Admin', ({received:'Received',pending:'Pending',notneeded:'N/A'}[job.executorAuth]) || '—');
     }
   } else {
-    h += field('Phone', job.phone||'—');
-    h += field('Email', '<span style="font-size:11px;">'+(job.email||'—')+'</span>');
+    h += field('Phone', esc(job.phone||'—'));
+    h += field('Email', '<span style="font-size:11px;">'+esc(job.email||'—')+'</span>');
   }
   // ⚠ ANTHONY ASKED FOR THESE TWO HERE and they bring a defect with them. The old copy read
   // `fmtDate2(job.completion) ? ... : '—'` — and `fmtDate2('')` returns the literal '—', which
@@ -19529,7 +19708,8 @@ function renderClientDashboard(jobId) {
   // Notes — one full-width line along the bottom to save vertical space.
   h += '<div style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border);">';
   h += '<span class="dfl" style="text-transform:uppercase;">Notes</span> ';
-  h += '<span style="font-size:12px;color:var(--gray-dk);">'+(job.notes||'<span style="color:var(--gray);font-style:italic;">None</span>')+'</span>';
+  // escLines: the notes box at intake takes several lines, and the lines the concierge typed stay lines.
+  h += '<span style="font-size:12px;color:var(--gray-dk);">'+(job.notes ? escLines(job.notes) : '<span style="color:var(--gray);font-style:italic;">None</span>')+'</span>';
   h += '</div>';
   // The intake answers, in the same brief the Job Plan prints — this is where the job is
   // prepped, so it is where a missing answer is still cheap to go back and get.
@@ -19557,9 +19737,9 @@ function renderClientDashboard(jobId) {
       : '<button class="btn-s" style="font-size:10px;padding:4px 10px;color:var(--bronze);border-color:var(--bronze);" onclick="event.stopPropagation();toggleProbatePkg('+jobId+')">&#128231; Send Package</button>';
     h += '</div></div>';
     h += '<div class="d-grid4">';
-    h += field('Case number', job.probateCase||'—');
+    h += field('Case number', esc(job.probateCase||'—'));
     h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
-    h += field('Property sale', job.probateSale||'—');
+    h += field('Property sale', esc(job.probateSale||'—'));
     h += field('Authorization', authOk ? '<span style="color:#1D9E75;">'+( job.executorAuth==='notneeded'?'Not required':'Received')+'</span>' : '<span style="color:#A32D2D;font-weight:600;">'+dot('#A32D2D')+'Pending</span>');
     h += '</div>';
     h += '<div class="d-split2" style="gap:0 24px;margin-top:12px;">';
@@ -19567,19 +19747,19 @@ function renderClientDashboard(jobId) {
     h += '<div>';
     h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">Probate Attorney</div>';
     h += '<div class="d-grid2">';
-    h += field('Name', job.probateAttyName||'—');
-    h += field('Firm', job.probateAttyFirm||'—');
-    h += field('Phone', job.probateAttyPhone||'—');
-    h += field('Email', '<span style="font-size:11px;">'+(job.probateAttyEmail||'—')+'</span>');
+    h += field('Name', esc(job.probateAttyName||'—'));
+    h += field('Firm', esc(job.probateAttyFirm||'—'));
+    h += field('Phone', esc(job.probateAttyPhone||'—'));
+    h += field('Email', '<span style="font-size:11px;">'+esc(job.probateAttyEmail||'—')+'</span>');
     h += '</div></div>';
     // Executor
     h += '<div>';
     h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">Executor</div>';
     h += '<div class="d-grid2">';
-    h += field('Name', job.executor||'—');
-    h += field('Phone', job.executorPhone||'—');
-    h += field('Email', '<span style="font-size:11px;">'+(job.executorEmail||'—')+'</span>');
-    h += field('Role', job.executorRole||'—');
+    h += field('Name', esc(job.executor||'—'));
+    h += field('Phone', esc(job.executorPhone||'—'));
+    h += field('Email', '<span style="font-size:11px;">'+esc(job.executorEmail||'—')+'</span>');
+    h += field('Role', esc(job.executorRole||'—'));
     h += field('Authorization', authOk?'<span style="color:#1D9E75;">Received</span>':'<span style="color:#A32D2D;">'+dot('#A32D2D')+'Pending</span>');
     h += '</div></div>';
     h += '</div></div>';
@@ -19809,7 +19989,7 @@ function renderClientDashboard(jobId) {
       entry.members.forEach(function(m){ if(m.role==='TC') tcH+=m.hours; else psH+=m.hours; });
       h += '<div style="font-size:12px;display:grid;grid-template-columns:90px 1fr 70px 70px 70px;gap:6px;padding:6px 0;border-bottom:0.5px solid var(--border);align-items:center;">';
       h += '<span style="color:var(--gray);">'+fmtDate2(entry.date)+'</span>';
-      h += '<span style="color:var(--gray-dk);">'+( entry.activity||'—')+'</span>';
+      h += '<span style="color:var(--gray-dk);">'+esc(entry.activity||'—')+'</span>';
       h += '<span style="text-align:right;font-weight:600;">'+tcH.toFixed(1)+'</span>';
       h += '<span style="text-align:right;font-weight:600;">'+psH.toFixed(1)+'</span>';
       h += '<span style="text-align:right;font-weight:600;">'+(tcH+psH).toFixed(1)+'</span>';
@@ -20652,6 +20832,9 @@ function openEstimateScreen(jobId) {
   var bound = !!(sel && (parseInt(sel.value) || 0) === jobId);
   if (bound && !loading && currentEstimate && currentEstimate.jobId === jobId) {
     _showDashScreen('panel-estimate');
+    // A tier changed on Edit Client while the screen was put away reaches the build now — including after
+    // ✎ Edit estimate, which un-approves the estimate before landing here (followDocTier, P16).
+    followDocTier(jobs.find(function(j){ return j.id === jobId; }));
     calcAll();
     // The lock is re-read on arrival, as the tab did: a manager may have approved (or the rail
     // un-approved) this estimate while the screen was put away.
@@ -20773,6 +20956,12 @@ function fmt(n) { return '$' + Math.round(n).toLocaleString(); }
 // addresses/room names containing & < > " ' don't corrupt or inject into the
 // rendered estimate, agreement, or invoice.
 function esc(s) { return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+// The same, for text typed into a box that takes several lines — a client's notes at intake, a concierge's bio:
+// escaped FIRST, so a typed "<b>" or "&" is shown as typed and never read as markup, and then each line break
+// made a <br>, so the lines somebody meant stay lines (a <br> survives the Drive PDF conversion, where a
+// white-space rule may not). Never the other way round: converting first and escaping after would print the
+// <br> itself (2026-09-30, P16).
+function escLines(s) { return esc(s).replace(/\r\n|\r|\n/g, '<br>'); }
 // Live-format a free-text money field as the user types: digits only, grouped with
 // commas and a leading $ (e.g. "$3,200,000"). Readers must strip non-digits.
 // "$8,000" back to 8000. The group-card cost fields are money-formatted text, so every
@@ -31917,19 +32106,20 @@ function invoiceHtml(job, stage) {
 
   // Contact line + Transition Concierge bio — placed at the top (matching the
   // Service Estimate) so every Havellin document leads with the same branding.
+  // ⚠ Escaped, as the estimate's is: every field here is typed on the Contractors tab (2026-09-30, P16).
   var contactLine =
-    '<div style="font-size:12px;color:var(--gray);text-align:center;">Questions about this invoice? Contact <strong style="color:var(--gray-dk);">' + prepName + '</strong>' +
-    ' &nbsp;·&nbsp; ' + conciergePhonesText(preparer, ' &nbsp;·&nbsp; ') +
-    (prepEmail !== '—' ? ' &nbsp;·&nbsp; <a href="mailto:' + prepEmail + '" style="color:var(--bronze);text-decoration:none;">' + prepEmail + '</a>' : '') +
+    '<div style="font-size:12px;color:var(--gray);text-align:center;">Questions about this invoice? Contact <strong style="color:var(--gray-dk);">' + esc(prepName) + '</strong>' +
+    ' &nbsp;·&nbsp; ' + esc(conciergePhonesText(preparer, ' \u00a0\u00b7\u00a0 ')) +
+    (prepEmail !== '—' ? ' &nbsp;·&nbsp; <a href="mailto:' + esc(prepEmail) + '" style="color:var(--bronze);text-decoration:none;">' + esc(prepEmail) + '</a>' : '') +
     '</div>';
   var bioBlock = (preparer && preparer.bio ?
     '<div style="display:flex;align-items:flex-start;gap:1.2rem;padding:.75rem 0 0;margin-top:.5rem;border-top:1px solid var(--border);">' +
     '<div style="flex-shrink:0;width:44px;height:44px;border-radius:50%;background:var(--tan);border:2px solid var(--bronze);display:flex;align-items:center;justify-content:center;font-family:\'Cormorant Garamond\',serif;font-size:18px;font-weight:600;color:var(--bronze);">' +
-      (prepName ? prepName.split(' ').map(function(n){return n[0];}).join('') : 'TC') + '</div>' +
+      esc(prepName ? prepName.split(' ').map(function(n){return n[0];}).join('') : 'TC') + '</div>' +
     '<div>' +
     '<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:2px;">Your Transition Concierge</div>' +
-    '<div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;">' + prepName + '</div>' +
-    '<div style="font-size:12px;color:var(--gray);line-height:1.55;">' + preparer.bio + '</div>' +
+    '<div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;">' + esc(prepName) + '</div>' +
+    '<div style="font-size:12px;color:var(--gray);line-height:1.55;">' + escLines(preparer.bio) + '</div>' +
     '</div></div>'
     : '');
 
@@ -31943,13 +32133,13 @@ function invoiceHtml(job, stage) {
     approvedStamp +
     '<div class="ce-title">' + stageTitle + '</div>' +
     '<div style="display:flex;justify-content:center;gap:2.5rem;margin:.35rem 0 .75rem;text-align:center;">' +
-    '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + (job.hvlId||'—') + '</div></div>' +
+    '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;">' + esc(job.hvlId||'—') + '</div></div>' +
     '<div><div class="ce-meta-label">Invoice Date</div><div class="ce-meta-val">' + today + '</div></div>' +
     '</div>' +
     '<div class="ce-hdr-row ce-hdr-row-1">' +
     '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
     '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—') + '</div></div>' +
-    '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + (job.phone||'—') + '</div></div>' +
+    '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + esc(job.phone||'—') + '</div></div>' +
     '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(svcLabelOf(job)) + '</div></div>' +
     '</div>' +
     '<div class="ce-divider"></div>' +
@@ -33857,7 +34047,6 @@ function _vendorRefLine(rec) {
   var v = resolveJobVendor(rec) || {};
   var name = v.vendor_name || rec.vendorName || '';
   if (!name) return '';
-  var contact = _vendorContact(v) || rec.contact || '';
   var phone   = v.phone || rec.phone || '';
   var rest = [];
   if (v.license_cert) rest.push(v.license_cert);
@@ -33866,10 +34055,27 @@ function _vendorRefLine(rec) {
   if (v.minimum_job)   rest.push('Min ' + v.minimum_job);
   if (v.lead_time)     rest.push('Lead ' + v.lead_time);
   var head = ['<strong>' + esc(name) + '</strong>'];
-  if (contact) head.push('<strong>' + esc(contact) + '</strong>');
   // Tappable from the job site — this is the number you reach for when an assigned
   // vendor hasn't shown up, so it has to dial rather than just display.
-  if (phone)   head.push('<a href="tel:' + esc(phone) + '" style="color:var(--bronze);text-decoration:none;font-weight:700;">☎ ' + esc(fmtPhoneDisplay(phone)) + '</a>');
+  var tel = function(num, who) {
+    return '<a href="tel:' + esc(num) + '" style="color:var(--bronze);text-decoration:none;font-weight:700;">☎ ' + esc(fmtPhoneDisplay(num) || num) + '</a>'
+      + ' <span style="color:var(--gray);font-weight:400;">' + who + '</span>';
+  };
+  // ⚠⚠ EACH NUMBER BESIDE WHOM IT REACHES (2026-09-30, P16). This printed contact 1's NAME and then the firm's
+  // OFFICE number, so "Andy Ramirez · ☎ (561) 555-0100" read as Andy's line while it rang the switchboard — and
+  // a second contact, or contact 1's own mobile, never appeared at all. The office line is labelled the office;
+  // each contact (vendorContacts, the same slots the Vendors tab card reads) carries their own mobile, or none.
+  if (phone) head.push(tel(phone, 'office'));
+  var people = vendorContacts(v);
+  people.forEach(function(c) {
+    var bits = [];
+    if (c.name) bits.push('<strong>' + esc(c.name) + '</strong>');
+    if (c.mobile) bits.push(tel(c.mobile, c.name ? 'mobile' : 'contact mobile'));
+    if (bits.length) head.push(bits.join(' '));
+  });
+  // A row gone from the directory: the name recorded when the vendor was assigned, which carries no number of its
+  // own (rec.phone is the office line it was assigned with, labelled above).
+  if (!people.length && rec.contact) head.push('<strong>' + esc(rec.contact) + '</strong>');
   return '<div style="font-size:12px;color:var(--gray-dk);margin-top:5px;line-height:1.5;">' +
     head.join(' · ') +
     (rest.length ? ' <span style="color:var(--gray);font-weight:400;">· ' + rest.map(esc).join(' · ') + '</span>' : '') +
@@ -34055,7 +34261,7 @@ function renderVendorSourcing(jobId, job, est) {
     // ⚠ "Prep books no concierge hours" went false on 2026-09-14, when a prep job could quote
     // declutter hours; it is the VENDOR COORDINATION that books none (prepTCHrs), so it says that.
     html += '<div style="font-size:10px;color:var(--gray);margin-top:2px;">Prep vendors are paid directly by the client; '
-      + 'Havellin\'s ' + Math.round(prepFeeRate()*100) + '% GC / Site Management Fee is calculated on these actuals at '
+      + 'Havellin\'s ' + Math.round(prepFeeRate()*100) + '% site management fee is calculated on these actuals at '
       + 'invoicing, on this and every engagement. Coordinating these vendors books no concierge hours (declutter hours, where quoted, are logged separately).</div>';
   }
 
@@ -34236,9 +34442,11 @@ function removeLogisticsLine(jobId, key) {
   var cat = LOGISTICS_CATEGORIES.filter(function(c){ return c.key === key; })[0];
   var label = cat ? cat.label : key;
   var hasQuote = rec.quote != null && rec.quote !== '';
+  // Not "no longer billed" (P16): vendors are pass-through, so Havellin never billed the quote — the client pays the
+  // vendor directly. What the quote does is sit in the vendor costs the invoices list (getVendorActuals).
   if ((rec.vendorName || hasQuote) && !confirm('Remove ' + label + ' from this job?\n\n'
       + (rec.vendorName ? rec.vendorName + ' comes off it' : 'It comes off')
-      + (hasQuote ? ', and its $' + Number(rec.quote).toLocaleString() + ' quote is no longer billed' : '') + '.')) return;
+      + (hasQuote ? ', and its $' + Number(rec.quote).toLocaleString() + ' quote comes off the vendor costs the invoices list' : '') + '.')) return;
   delete job.logisticsSourcing[key];
   // Stamped although the line is GONE — the same rule removeAppraiser follows (see _jobTouch).
   _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
@@ -36457,7 +36665,7 @@ function renderReferralLeaderboard(){
     '</tr>';
   }).join('');
   el.innerHTML = '<div class="card" style="margin-bottom:1rem;overflow-x:auto;">' +
-    '<div class="sec" style="margin-bottom:8px;">Referral Leaderboard <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— jobs attributed to each partner at intake</span></div>' +
+    '<div class="sec" style="margin-bottom:8px;">Referral Leaderboard <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">— jobs attributed to each partner at intake or on Edit Client</span></div>' +
     '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:560px;">' +
       '<thead><tr style="text-align:left;color:var(--gray);font-size:10px;text-transform:uppercase;letter-spacing:.05em;">' +
         '<th style="padding:4px 8px;">#</th><th style="padding:4px 8px;">Partner</th>' +
@@ -36730,7 +36938,7 @@ function renderPrepJobPlan(jobId, job, est) {
              : _dcQuoted.toFixed(1) + ' quoted. Tell the homeowner before going further — the estimate’s terms promise notice at that threshold.') + '</div>' : '') +
     (overBudget ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Quoted total is over the estimated budget. Confirm the change with the homeowner — the ' + Math.round(prepFeeRate()*100) + '% fee follows actual vendor spend.</div>' : '') +
     (allQuoted ? '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">All prep vendors have quotes — the fee shown is final at these quotes.</div>' : '') +
-    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s ' + Math.round(prepFeeRate()*100) + '% GC / Site Management Fee is billed on the actual vendor spend logged here.</div>';
+    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s ' + Math.round(prepFeeRate()*100) + '% site management fee is billed on the actual vendor spend logged here.</div>';
 
   // ⚠ BUDGET & FEE AND SOURCING FOLD (2026-09-22), on planPhaseWrap — the same left-caret bar
   // as Vendors & partners and Hours on the labour plan, and Build Estimate's room sections.
@@ -37504,14 +37712,23 @@ function exportEstimateToDrive(jobId, estSnapshot) {
     var ts = _todayStr();
     var fmt = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
     // Rooms and hours vs vendor spend and fee — see the note on the table below.
+    // ⚠⚠ THE VENDOR LIST IS WHAT A HOME PREP ESTIMATE QUOTES, HOURS OR NOT (2026-09-30, P16). This asked
+    // estimateIsFeeOnly, which goes false the moment a prep estimate carries declutter hours — so that estimate
+    // filed an EMPTY room table (prep scores no rooms) with no vendor list at all, over a total made of the fee
+    // and the hours. The worksheet is the working paper for what was QUOTED, so the estimate-side predicate is
+    // the right family (never jobIsFeeOnly, which answers what the job bills now); the vendor list follows the
+    // service, and the declutter hours are a line under it when there are any.
     var _feeOnlyWs = estimateIsFeeOnly(est, job);
+    var _prepWs = (est.svc === 'prep') || _feeOnlyWs;
+    var _dcWs = estDeclutterHrs(est);
+    // Room names and notes are typed, so escaped (P16); vol and cplx are the engine's whole numbers, escaped as belt and braces.
     var rows = (est.rooms||[]).map(function(r){
-      return '<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">'+r.name+'</td>'
-        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+r.vol+'</td>'
-        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+r.cplx+'</td>'
+      return '<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">'+esc(r.name)+'</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+esc(r.vol)+'</td>'
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:center;">'+esc(r.cplx)+'</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+r.tcH+' TC / '+r.psH+' PS</td>'
         +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+fmt(r.roomDollar)+'</td>'
-        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666;">'+((r.note||'').trim())+'</td></tr>';
+        +'<td style="padding:4px 8px;border-bottom:1px solid #eee;font-size:11px;color:#666;">'+esc((r.note||'').trim())+'</td></tr>';
     }).join('');
     // Coordination & logistics row so the internal record reconciles: room hands-on
     // hours plus this equals the job total.
@@ -37541,20 +37758,21 @@ function exportEstimateToDrive(jobId, estSnapshot) {
       + '<td style="text-align:right;">' + _oTC.toFixed(1) + ' TC / ' + _oPS.toFixed(1) + ' PS</td><td></td>'
       + '<td style="font-size:11px;color:#666;">' + _bdTxt + '</td></tr>';
     var html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
-      +'<title>Estimate – '+(job.hvlId||'')+'</title>'
+      +'<title>Estimate – '+esc(job.hvlId||'')+'</title>'
       +'<style>body{font-family:Arial,sans-serif;padding:24px;color:#333;}h2{margin-bottom:4px;}table{width:100%;border-collapse:collapse;}th{background:#f5f0e8;padding:6px 8px;text-align:left;font-size:12px;}</style>'
       +'</head><body>'
       +'<div style="font-size:11px;font-weight:700;color:#b03030;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;">Internal worksheet — not a client document</div>'
-      +'<h2>Estimate Worksheet — '+(job.name||'')+'</h2>'
-      +'<div style="font-size:13px;color:#888;margin-bottom:16px;">'+(job.hvlId||'')+' · '+ts+'</div>'
+      +'<h2>Estimate Worksheet — '+esc(job.name||'')+'</h2>'
+      +'<div style="font-size:13px;color:#888;margin-bottom:16px;">'+esc(job.hvlId||'')+' · '+ts+'</div>'
       // ⚠ A FEE-ONLY ESTIMATE HAS NO ROOMS AND NO HOURS, so the room table renders as one
       // empty "Job-level work 0.0 TC / 0.0 PS" row and the whole worksheet says nothing.
       // Anthony sent exactly that document on 2026-09-08 — a Home Prep job whose worksheet
       // was a blank table over a $4,560 total, sitting in the client's Estimate folder
       // because the two files shared a filename (see estimateDocNames). Splitting the
       // names stops it reaching the client; this stops it being useless to US. A fee-only
-      // job's working paper is the vendor list the fee is computed on.
-      +(_feeOnlyWs
+      // job's working paper is the vendor list the fee is computed on — and so is a Home Prep job's
+      // with declutter hours, whose hours are a line under the list (_prepWs, above).
+      +(_prepWs
         ? '<table><thead><tr><th>Prep vendor line</th><th>Scope note</th><th>Estimated cost</th></tr></thead><tbody>'
           + ((est.prepItems||[]).map(function(pi){
               return '<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">'+esc(pi.type||'')+'</td>'
@@ -37562,10 +37780,22 @@ function exportEstimateToDrive(jobId, estSnapshot) {
                 +'<td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">'+fmt(pi.cost)+'</td></tr>';
             }).join('') || '<tr><td colspan="3" style="padding:6px 8px;color:#888;font-style:italic;">No prep vendor lines on this estimate</td></tr>')
           + '</tbody></table>'
+          // The declutter hours as the estimate BILLS them: the quoted figure, the whole hours it rounds up to,
+          // and the fee on them, so the footer below adds up to the total it prints.
+          + (_dcWs > 0
+              ? '<div style="margin-top:12px;font-size:13px;"><strong>Declutter hours (Transition Concierge):</strong> '
+                + _dcWs.toFixed(1) + ' quoted' + ((est.totTC || 0) !== _dcWs ? ', billed as ' + (est.totTC || 0) + ' whole hours' : '')
+                + ' &times; ' + fmt(est.tcRate || 0) + '/hr = ' + fmt(est.tcFee || 0) + '</div>'
+              : '')
         : '<table><thead><tr><th>Room</th><th>Vol</th><th>Cplx</th><th>Hours (hands-on)</th><th>$</th><th>Walkthrough note</th></tr></thead><tbody>'+rows+_coordRow+'</tbody></table>')
       +'<div style="margin-top:20px;font-size:14px;">'
-      +(_feeOnlyWs
-        ? '<strong>Vendor spend:</strong> '+fmt(est.prepCost)+' &nbsp;|&nbsp; <strong>Fee rate:</strong> '+Math.round(prepFeeRate()*100)+'% &nbsp;|&nbsp; '
+      +(_prepWs
+        ? '<strong>Vendor spend:</strong> '+fmt(est.prepCost)+' &nbsp;|&nbsp; <strong>Fee rate:</strong> '+Math.round(prepFeeRate()*100)+'% = '+fmt(est.prepFee||0)+' &nbsp;|&nbsp; '
+          + (_dcWs > 0 ? '<strong>Declutter:</strong> '+fmt(est.tcFee||0)+' &nbsp;|&nbsp; ' : '')
+          // Belt and braces: calcAll never puts the premium on a Home Prep estimate (isPrep turns rush off), so this
+          // prints only for a record saved with one; it keeps the footer adding up to whatever total the record holds.
+          + ((est.rushAmt||0) > 0 ? '<strong>Expedited:</strong> '+fmt(est.rushAmt)+' &nbsp;|&nbsp; ' : '')
+          + ((est.discountAmt||0) > 0 ? '<strong>Discount:</strong> &minus;'+fmt(est.discountAmt)+' &nbsp;|&nbsp; ' : '')
         : '<strong>TC:</strong> '+(est.totTC||0)+' hrs &nbsp;|&nbsp; <strong>PS:</strong> '+(est.totPS||0)+' hrs &nbsp;|&nbsp; ')
       +'<strong>Havellin Total:</strong> '+fmt(est.havellinTotal)
       +'</div></body></html>';
@@ -40703,7 +40933,11 @@ function showEditClient(jobId) {
   html += fld('Address', txt('addr', job.addr, '123 Ocean Blvd'), true);
   html += fld('City', txt('city', job.city, 'e.g. Palm Beach'), true);
   html += fld('Zip', txt('zip', job.zip, '33480'), true);
-  html += fld('Notes', txt('notes', job.notes, 'Notes...'), false);
+  // ⚠ A TEXTAREA, AS AT INTAKE (2026-09-30, P16). This was a one-line <input>, and an input's value strips
+  // line breaks — so a note typed over three lines at intake came back as one run-on line the first time
+  // anybody saved a phone-number correction here, and the dashboard (which now keeps the lines, escLines)
+  // had nothing left to keep. Escaped into the element, never into an attribute.
+  html += '<div class="df" style="grid-column:1 / -1;"><div class="dfl">Notes</div><textarea id="ec-notes" rows="3" placeholder="Notes..." style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);resize:vertical;box-sizing:border-box;">'+esc(job.notes||'')+'</textarea></div>';
   html += '</div>';
 
   // ⚠ CORRECTABLE HERE BECAUSE ONLY INTAKE COULD SET THEM (audit M13, Q15). The referral source and
@@ -40822,7 +41056,7 @@ function showEditClient(jobId) {
   // recorded before the tier existed off its stored scope — nothing had to be run on them.
   html += fld('What are we contracted to produce?', '<select id="ec-doc-tier" onchange="ecDocGateChange()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+docTierOptionsHtml(docTierOf(job))+'</select>', false);
   html += '</div>';
-  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Every value on this estate is a fair market value <em>at the date of death</em>. The inventory answer seeds a new estimate\'s Documentation scope; an estimate already priced keeps its own setting \u2014 correcting the tier here never reprices a quote already given. <strong>How it is administered</strong> decides which instrument the documents take \u2014 a probate court schedule or a trustee\'s; it is never guessed, and a job recorded before 2026-09-21 carries no answer at all.</div>';
+  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Every value on this estate is a fair market value <em>at the date of death</em>. The inventory answer prices the estimate\'s Documentation scope: an estimate no manager has approved follows a change made here (the one open on Build Estimate at once, a saved one when it is next opened), and an approved one is never repriced by the app \u2014 the save says how to reprice it. <strong>How it is administered</strong> decides which instrument the documents take \u2014 a probate court schedule or a trustee\'s; it is never guessed, and a job recorded before 2026-09-21 carries no answer at all.</div>';
 
   // ⚠ EDITABLE HERE BECAUSE STRICT MODE WAS A ONE-WAY DOOR. docLevelFloorReason tells the
   // reader to "answer it with the attorney or PR to lift this" — and until now there was
@@ -41028,10 +41262,15 @@ function saveClientEdit(jobId) {
     // Tenure scales the concierge column, so years in home prices the job like the sq ft does (M13).
     if (_v('years-in-home') !== null && String(_v('years-in-home')) !== String(job.yearsInHome || '')) _changed.push('Years in home');
     if (_changed.length) {
+      // ⚠ THE ROUTE IS THE ESTIMATE'S OWN (estimateRepriceRoute, P16). This said "raise a change order" on every
+      // held save, and until the signing packet goes out the route is ✎ Edit estimate — which un-approves the
+      // estimate, after which these fields can be changed here.
+      var _heldEdit = !estimateEditBlocker(job) && !estimateOutForApproval(job, _rec);
       alert(_changed.join(' and ') + ' cannot be changed on this job.\n\n'
-        + 'The estimate has been approved, so these feed a price the client has already been '
-        + 'given. Raise a change order instead — that reprices the job on the record rather '
-        + 'than behind it.\n\nEverything else you edited will still be saved.');
+        + 'The estimate has been approved, so these feed a price a manager has approved, and changing them here '
+        + 'would move the job away from it behind the record. ' + estimateRepriceRoute(job, _rec)
+        + (_heldEdit ? ' Then change them here.' : '')
+        + '\n\nEverything else you edited will still be saved.');
     }
     // Fall through rather than abort: contact-detail edits in the same save are
     // legitimate and must not be lost just because a pricing field was also touched.
@@ -41119,10 +41358,12 @@ function saveClientEdit(jobId) {
   //
   // ⚠ NONE OF THESE IS HELD BY `_locked`, AND THAT IS DELIBERATE. The lock exists for the
   // three inputs that feed the hours engine (service type, sqft, premium), because moving one
-  // silently desynchronises the job from a price the client has accepted. These feed no price:
-  // docScope seeds a NEW estimate and a priced one keeps its own pin, and the gates set how
-  // strictly the estate is documented. Holding them would make a wrong 706 answer permanent
-  // the moment an estimate was approved, which is the one-way door this change exists to close.
+  // silently desynchronises the job from a price the client has accepted. These move no APPROVED
+  // price: an estimate no manager has approved follows the tier (followDocTier, P16), and an
+  // approved one keeps its own pin while the save says how to reprice it (docTierChangeNotice); the
+  // gates set how strictly the estate is documented. Holding them would make a wrong 706 answer
+  // permanent the moment an estimate was approved, which is the one-way door this change exists to close.
+  var _tierBefore = isEstateEdit ? docTierOf(job) : '';
   if (isEstateEdit) {
     // ⚠ THE TIER IS WRITTEN AND THE SCOPE IS MIRRORED FROM IT, never set independently — that
     // is what stops the deliverable the agreement promises drifting from the work the estimate
@@ -41187,8 +41428,14 @@ function saveClientEdit(jobId) {
   // above it, so nothing was lost; but the drilldown never refreshed, which reads exactly
   // like the edit failed to save. renderClientDashboard is the drilldown that hosts the
   // Edit Client button in the first place (see its render at the button's call site).
-  if (_stillMissing.length && typeof dashNotice === 'function')
-    dashNotice('warn', 'Saved. Still missing on this client: ' + _stillMissing.join(', ') + '.');
+  // ⚠ A CHANGED DOCUMENTATION TIER MOVES AN ESTIMATE NO MANAGER HAS APPROVED AND FLAGS ONE THAT IS (P16) —
+  // docTierChangeNotice re-seeds the build open on Build Estimate (the calcAll at the foot of this function
+  // reprices it) and says what happened, before the redraw that shows the notice.
+  var _tierNote = (isEstateEdit && docTierOf(job) !== _tierBefore) ? docTierChangeNotice(job, _tierBefore) : null;
+  if ((_stillMissing.length || _tierNote) && typeof dashNotice === 'function')
+    dashNotice((_stillMissing.length || _tierNote.type === 'warn') ? 'warn' : 'ok',
+      (_stillMissing.length ? 'Saved. Still missing on this client: ' + _stillMissing.join(', ') + '.' : 'Saved.')
+      + (_tierNote ? ' ' + _tierNote.msg : ''));
   if (typeof renderClientDashboard === 'function') renderClientDashboard(jobId);
   if (typeof renderJobs === 'function') renderJobs();   // client list may show a new name
 
@@ -41617,7 +41864,7 @@ function setFieldMode(on) {
     tog.innerHTML = on ? 'Field &middot; exit' : '&#128241; Field';
     tog.title = on
       ? 'Leave field mode and bring back all six tabs'
-      : 'Field mode — three tabs, bottom bar, built for a phone. Everything still saves in full.';
+      : 'Field mode — three tabs, bottom bar, built for a phone. Save Estimate still saves everything.';
   }
 
   // Entering field mode from a tab field mode HIDES would strand you: an empty main area

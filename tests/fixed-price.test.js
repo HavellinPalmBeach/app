@@ -35,7 +35,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
                  'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
                  'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
                  'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-                 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines'];
+                 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
                   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
                   'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -214,8 +214,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // path. There is one reset now (resetEstimateJobState) and every path runs it, so the requirement
     // is driven against that: the basis goes to zero with the flag, on every job switch.
     {
-      const rs = sandbox({ fns: ['resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob'],
-        vars: ['_tc2UserSet', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'DECEDENT_SERVICES'],
+      const rs = sandbox({ fns: ['resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
+        vars: ['_tc2UserSet', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'DECEDENT_SERVICES', 'JOB_STEPS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', '_estimateDocTier'],
         stubs: { document: domStub(), seedDocScopeFromJob: () => 'full', paintVolPreset() {}, renderVendors() {},
                  renderCollections() {}, renderVehicles() {}, clearAllRooms() {} } });
       rs._tc2UserSet = true; rs._fixedAmountUserSet = true; rs._fixedAmountBasis = 21600;
@@ -245,9 +245,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         // The fresh branch runs the ONE reset (2026-09-29), so it is lifted rather than stubbed: a stub
         // of it would let this group pass with nothing cleared at all.
-        fns: ['applyOpenedEstimate', 'resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob'],
+        fns: ['applyOpenedEstimate', 'resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
         vars: ['_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_crewUserSet', '_tc2UserSet',
-               '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'estimateApproved', 'approvedBy', 'approvedAt', 'DECEDENT_SERVICES'],
+               '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'estimateApproved', 'approvedBy', 'approvedAt', 'DECEDENT_SERVICES',
+               'JOB_STEPS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', '_estimateDocTier'],
         stubs: { document: dom, currentEstimate: saved ? { jobId: 2, fixedPrice: true } : null,
                  loadEstimateForJob: () => !!saved, estimateHasContent: () => !!saved,
                  restoreEstimateToUI: (e) => restored.push(e), loadEstimateScratch: () => null,

@@ -172,7 +172,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // Reset's approved refusal asks the price-change rule (whether Edit estimate is still there):
             // lifted, never stubbed, so this suite's refusal and the rule cannot come to disagree.
             'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent',
-            'docSentAt', 'docKeyFor', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'volPresetSeedFor', 'estimateOpensFixed', 'isDecedentJob', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats'],
+            'docSentAt', 'docKeyFor', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'volPresetSeedFor', 'estimateOpensFixed', 'isDecedentJob', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'estimateDocScope', 'docTierWord', 'docScopeWord'],
       vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
              'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT',
              'TC_ONSITE_ALPHA_DEFAULT', '_activeRecognitions', ...STATE, 'RUSH_PCT', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES'],
@@ -253,7 +253,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(v('fixed-amount-row').style.display, ctx.estimateOpensFixed(jobFor || null) ? 'flex' : 'none',
        `${label}: the fixed-fee amount row is hidden again (shown, for an estate, beside the fixed-price box)`);
     STATE.forEach((n) => {
-      const want = n === '_estimateDocScope' ? ctx.seedDocScopeFromJob(jobFor || null) : INIT[n];
+      // ⚠ `_estimateDocTier` joined the net on 2026-09-30 (P16): the restore puts back the tier a saved estimate's
+      // scope was decided against, so the reset takes it away — to the job's own tier, the one a fresh build's
+      // scope is seeded from, exactly as `_estimateDocScope` goes to that tier's scope rather than to a constant.
+      const want = n === '_estimateDocScope' ? ctx.seedDocScopeFromJob(jobFor || null)
+        : n === '_estimateDocTier' ? ctx.docTierOf(jobFor || null) : INIT[n];
       eq(JSON.parse(JSON.stringify(ctx[n])), want, `${label}: ${n} is back to ${JSON.stringify(want)}`);
     });
   }
@@ -765,7 +769,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const calls = [];
       const dom = domStub({ 'e-job': { value: String(bound) }, 'est-loading-bar': { style: { display: loading ? 'block' : 'none' } },
                             'e-discount': { value: '10' } });
-      const c = sandbox({ fns: ['openEstimateScreen'],
+      const c = sandbox({ fns: ['openEstimateScreen', 'followDocTier'],
         stubs: { document: dom, currentEstimate: currentJob ? { jobId: currentJob } : null,
                  _showDashScreen() {}, calcAll: () => calls.push('calcAll'), applyEstimateLock() {},
                  editEstimateForJob: (id) => calls.push('open:' + id), resetEstimateJobState: () => calls.push('reset'),
