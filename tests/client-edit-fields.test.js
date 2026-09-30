@@ -47,10 +47,10 @@ const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'save
                 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
-                'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef'];
+                'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows'];
 const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD',
-                 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES'];
+                 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES'];
 
 const MOVE = { id: 7, hvlId: 'HVL-0007', name: 'Tripp Butler', fname: 'Tripp', lname: 'Butler',
                svc: 'downsizing_move', propVal: '3200000', destAddr: '9 Palm Way',
@@ -409,8 +409,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const said = [];
       const cc = sandbox({
         fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef',
-              'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob'],
-        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
+              'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked'],
+        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
         stubs: { document: d, jobs: [], showFB: (el, k, m) => said.push({ k, m }),
                  saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
                  clearIntakeForm() {}, populateAgrSelect: null, showPanel() {},

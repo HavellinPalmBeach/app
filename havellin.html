@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 7:48pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 9:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1382,7 +1382,7 @@ body.no-smf .smf-col{display:none;}
         <div><label>Phone <span id="i-phone-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-phone" oninput="formatPhone(this)" maxlength="14"></div>
         <div><label>Email <span id="i-email-req" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-email"></div>
       </div>
-      <label>Property address <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-addr" placeholder="123 Ocean Blvd, Palm Beach FL">
+      <label>Property address <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-addr" placeholder="123 Ocean Blvd, Palm Beach FL" onchange="paintAddressMatch()">
       <div class="row">
         <div>
           <label>City <span style="color:#A32D2D;font-weight:700;">*</span></label>
@@ -1390,30 +1390,16 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div>
           <label>Zip <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <input type="text" id="i-zip" placeholder="e.g. 33480" maxlength="5">
+          <input type="text" id="i-zip" placeholder="e.g. 33480" maxlength="5" onchange="paintAddressMatch()">
         </div>
       </div>
+      <!-- jobsAtAddress (Q16): a client already on file at this street address is named here. A warning, never a refusal. -->
+      <div id="i-addr-match" style="display:none;"></div>
       <div class="row">
         <div>
           <label>Referral source <span style="color:#A32D2D;font-weight:700;">*</span></label>
-          <select id="i-src" onchange="onReferralSourceChange()">
-            <option value="">Select source</option>
-            <option>Allied vendor</option>
-            <option>Country club / golf community</option>
-            <option>Direct mail</option>
-            <option>Estate attorney</option>
-            <option>Existing client referral</option>
-            <option>Family</option>
-            <option>Friend</option>
-            <option>Google / SEO</option>
-            <option>Realtor</option>
-            <option>Senior living community</option>
-            <option>Social media</option>
-            <option>Trust officer</option>
-            <option>Wealth manager</option>
-            <option>Website</option>
-            <option>Other</option>
-          </select>
+          <!-- Built from REFERRAL_SOURCES by buildReferralSourceOptions(): Edit Client offers the same list. -->
+          <select id="i-src" onchange="onReferralSourceChange('i')"></select>
         </div>
         <div id="i-referredby-wrap" style="display:none;">
           <label>Referred by <span style="font-weight:400;color:var(--gray);">(name)</span></label>
@@ -1475,11 +1461,13 @@ body.no-smf .smf-col{display:none;}
       <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ballpark $ value — informs the Premium Estate rate decision and the real-estate referral angle.</div>
       <div class="row">
         <div>
-          <label>Walkthrough / site visit date <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <!-- Not required: the call often ends before a walkthrough is booked, and the dashboard's
+               "Set the walkthrough date" step asks for it later. The asterisk promised a check saveIntake never made. -->
+          <label>Walkthrough / site visit date <span style="font-weight:400;color:var(--gray);">(if booked)</span></label>
           <input type="date" id="i-walkthrough" onchange="updateIntakeDateMins()" style="width:100%;">
         </div>
         <div>
-          <label>Site visit conducted by <span style="color:#A32D2D;font-weight:700;">*</span></label>
+          <label>Site visit conducted by <span style="font-weight:400;color:var(--gray);">(if known)</span></label>
           <select id="i-site-visit-by" style="width:100%;">
             <option value="">Select TC</option>
           </select>
@@ -1495,6 +1483,8 @@ body.no-smf .smf-col{display:none;}
           <input type="date" id="i-completion" onchange="updateIntakeDateMins()" style="width:100%;">
         </div>
       </div>
+      <!-- dateChainConflicts, painted by paintDateChainFlag: a date out of order is kept and named here (audit H9). -->
+      <div id="i-date-flag" style="display:none;font-size:11px;color:var(--err-tx);font-weight:600;margin:-4px 0 8px;line-height:1.5;"></div>
       <div class="row">
         <div>
           <label>Priority</label>
@@ -1567,21 +1557,9 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div class="row">
           <div class="gate-cell"><label>Role / Authority <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <select id="i-executor-role">
-              <option value="">Select role</option>
-              <option value="Estate Attorney">Estate Attorney</option>
-              <option value="Executor">Executor</option>
-              <option value="Family Member">Family Member</option>
-              <option value="Personal Representative">Personal Representative</option>
-              <option value="Power of Attorney">Power of Attorney</option>
-              <option value="Trustee">Trustee</option>
-              <optgroup label="Court-appointed (contested)">
-                <option value="Administrator ad litem">Administrator ad litem (733.308)</option>
-                <option value="Curator">Curator (Fla. Stat. 733.501)</option>
-                <option value="Guardian ad litem">Guardian ad litem (Rule 5.120)</option>
-              </optgroup>
-              <option value="Other">Other</option>
-            </select>
+            <!-- Built from EXECUTOR_ROLES by buildExecutorRoleOptions() at load; Edit Client builds
+                 its own from the same list, so the two forms cannot offer different roles. -->
+            <select id="i-executor-role"></select>
           </div>
           <!-- Built from EXECUTOR_AUTH_OPTIONS by buildExecutorAuthOptions() at load, and
                Edit Client builds its own from the same list. This <select> ships EMPTY on
@@ -8250,12 +8228,38 @@ function isWeekend(dateStr) {
   return d.getDay() === 0 || d.getDay() === 6;
 }
 
-// ⚠ ONE WEEKEND / MIN-CHAIN RULE, SHARED BY INTAKE AND EDIT CLIENT. These dates became
+// ⚠ ONE WEEKEND / DATE-CHAIN RULE, SHARED BY INTAKE AND EDIT CLIENT. These dates became
 // editable in two places the day the schedule strip made them prominent, and a second copy of
 // "no weekends, and the chain runs walkthrough → start → completion" is how the two forms come
 // to disagree about what is a legal date.
-// ⚠ EVERY ELEMENT ACCESS IS GUARDED: `ec-walkthrough` does not exist — the walkthrough date is
-// an intake field, and Edit Client carries only the two targets.
+// ⚠⚠ A DATE OUT OF ORDER IS KEPT AND FLAGGED, NEVER CLEARED (audit H9, Q18). This used to blank
+// the hard target the moment the start moved past it, and the start the moment the walkthrough
+// moved past it, saying nothing — so a closing date typed at intake vanished because somebody
+// nudged the start a week, and a save wrote it away. A hard target is a fact about the client's
+// world (a closing, a court date) the app has no standing to delete; a start after it is exactly
+// the thing somebody needs to see. dateChainConflicts is the one statement of the chain, DOM-free;
+// the form paints it red under the dates and saves both. The weekend refusals stay: a weekend date
+// is never a legal choice, and it is refused at the moment it is picked.
+function dateChainConflicts(d) {
+  d = d || {};
+  var wt = d.walkthrough || '', st = d.start || '', co = d.completion || '';
+  var out = [];
+  if (wt && st && st < wt) out.push('The target start (' + st + ') is before the walkthrough (' + wt + '). Move one of them.');
+  if (st && co && co < st) out.push('The target start (' + st + ') is after the hard target (' + co + '). The work cannot start after the date it has to be finished by: move the start, or agree a new date with the client.');
+  return out;
+}
+function dateChainFlagHtml(d) {
+  var c = dateChainConflicts(d);
+  return c.length ? c.map(function(m){ return '<div>\u26a0 ' + esc(m) + '</div>'; }).join('') : '';
+}
+function paintDateChainFlag(prefix) {
+  var v = function(id){ var el = document.getElementById(prefix + '-' + id); return el ? el.value || '' : ''; };
+  var flag = document.getElementById(prefix + '-date-flag');
+  if (!flag) return;
+  var html = dateChainFlagHtml({ walkthrough: v('walkthrough'), start: v('start'), completion: v('completion') });
+  flag.innerHTML = html;
+  flag.style.display = html ? 'block' : 'none';
+}
 // This is the one function in this area that is NOT DOM-free, and deliberately: it IS a form
 // behaviour. Nothing derives from it.
 function dateChainGuard(prefix, fbId) {
@@ -8267,21 +8271,14 @@ function dateChainGuard(prefix, fbId) {
   if (wtEl && wtEl.value && isWeekend(wtEl.value)) {
     wtEl.value = '';
     say('Walkthroughs cannot be scheduled on weekends. Please select a weekday.');
-    return;
-  }
-  if (wtEl && wtEl.value && st) {
-    st.min = wtEl.value;
-    if (st.value && st.value < wtEl.value) st.value = '';
   }
   if (st && st.value && isWeekend(st.value)) {
     st.value = '';
     say('Start date cannot be a weekend. Please select a weekday.');
-    return;
   }
-  if (st && st.value && co) {
-    co.min = st.value;
-    if (co.value && co.value < st.value) co.value = '';
-  }
+  // The picker opens on the walkthrough, but a start already before it is left alone (see above).
+  if (st) st.min = (wtEl && wtEl.value) || '';
+  paintDateChainFlag(prefix);
 }
 
 function updateIntakeDateMins() { return dateChainGuard('i', 'i-fb'); }
@@ -8352,8 +8349,8 @@ function toggleIntakeFields() {
   var asksHouse = intakeAsksHouseContents(svc);
   var hfFind = document.getElementById('i-house-find');
   if (hfFind) hfFind.style.display = asksHouse ? '' : 'none';
-  var hfTicks = document.getElementById('i-house-ticks');
-  if (hfTicks) hfTicks.style.display = asksHouse ? '' : 'none';
+  // The tick list stays; its rows follow the service (Q17: Home Prep is asked access & security).
+  showHouseFlagRows('i', svc);
   var dlBlock = document.getElementById('i-doclevel-block');
   if (dlBlock) dlBlock.style.display = (svc === 'prep') ? 'none' : '';
   var sfLbl = document.getElementById('i-safety-label');
@@ -8376,17 +8373,76 @@ function toggleIntakeFields() {
   if (emailReq) emailReq.style.display = isEstate ? 'none' : 'inline';
   // Deceased clients have no phone/email — block those fields entirely and route
   // contact collection to the authorized representative below.
+  // ⚠ WHAT WAS TYPED IS PUT ASIDE, NOT WIPED (intake lows): picking an estate service by mistake
+  // and switching back used to cost the living client's phone and email. The value waits in
+  // dataset.stash while the field is blocked (so the estate never saves it) and comes back.
+  // ⚠ NO EXAMPLE PLACEHOLDER ON THE LIVING SIDE: "(561) 555-0100" and "client@email.com" were set
+  // here at runtime, where the markup tripwire could not see them, and read as values on file.
   var phoneEl = document.getElementById('i-phone');
   var emailEl = document.getElementById('i-email');
   [phoneEl, emailEl].forEach(function(el){
     if (!el) return;
+    var ds = el.dataset || (el.dataset = {});
     el.disabled = isEstate;
-    if (isEstate) { el.value = ''; el.placeholder = 'N/A — deceased; use the representative’s contact'; el.style.opacity = '0.5'; }
-    else { el.style.opacity = ''; }
+    if (isEstate) {
+      if (el.value) ds.stash = el.value;
+      el.value = ''; el.placeholder = 'N/A — deceased; use the representative’s contact'; el.style.opacity = '0.5';
+    } else {
+      if (!el.value && ds.stash) el.value = ds.stash;
+      delete ds.stash;
+      el.placeholder = ''; el.style.opacity = '';
+    }
   });
-  if (phoneEl && !isEstate) phoneEl.placeholder = '(561) 555-0100';
-  if (emailEl && !isEstate) emailEl.placeholder = 'client@email.com';
   if (typeof onDocGateChange === 'function') onDocGateChange();
+}
+
+// ⚠⚠ ONE REQUIRED-FIELD RULE FOR BOTH CLIENT FORMS (audit intake lows). Edit Client marked the
+// same fields with the same asterisks and checked only the name, so a save could blank the address,
+// the representative or the case number that intake had refused to go without. DOM-free: each form
+// reads its own controls into a job-shaped draft and asks this.
+// The concierge is deliberately NOT required. Intake often happens a fortnight before work starts
+// and nobody knows who is free that far out; staffing belongs to the Job Plan, where the crew is
+// named and signed off (confirmJobTeam), and that sign-off is what gates hours logging.
+// On an estate the client is the deceased, so no phone or email is asked for them; the
+// representative's are. Date of death is required on all three decedent services (every value on
+// the schedule is stated at it); the matter type has no default (guessing probate puts a §733.604
+// court schedule in front of a successor trustee). The attorney and the case number are required on
+// the Probate services and merely offered on an Estate Settlement, which often never opens probate.
+function clientMissingFields(d) {
+  d = d || {};
+  var t = function (k) { return String(d[k] == null ? '' : d[k]).trim(); };
+  var isEstate = isDecedentJob(null, d.svc);
+  var m = [];
+  if (!t('fname')) m.push('First name');
+  if (!t('lname')) m.push('Last name');
+  if (!isEstate && !t('phone')) m.push('Phone');
+  if (!isEstate && !t('email')) m.push('Email');
+  if (!t('addr')) m.push('Property address');
+  if (!t('city')) m.push('City');
+  if (!t('zip')) m.push('Zip');
+  if (!t('sqft')) m.push('Approx. sqft');
+  if (!t('ptype')) m.push('Property type');
+  if (!t('src')) m.push('Referral source');
+  if (!t('svc')) m.push('Service type');
+  if (!t('start')) m.push('Target start date');
+  if (isEstate) {
+    if (!t('executorFname')) m.push('Authorized rep first name');
+    if (!t('executorLname')) m.push('Authorized rep last name');
+    if (!t('executorRole'))  m.push('Authorized rep role');
+    if (!t('executorPhone')) m.push('Authorized rep phone');
+    if (!t('executorEmail')) m.push('Authorized rep email');
+    if (!t('deathDate'))     m.push('Date of death');
+    if (!t('matterType'))    m.push('How this estate is being administered');
+  }
+  if (d.svc === 'probate' || d.svc === 'contested_probate') {
+    if (!t('probateCase'))      m.push('Probate case number');
+    if (!t('probateAttyFname')) m.push('Attorney first name');
+    if (!t('probateAttyLname')) m.push('Attorney last name');
+    if (!t('probateAttyFirm'))  m.push('Attorney firm');
+    if (!t('probateAttyPhone')) m.push('Attorney phone');
+    if (!t('probateAttyEmail')) m.push('Attorney email');
+  }
+  return m;
 }
 
 function saveIntake() {
@@ -8415,79 +8471,38 @@ function saveIntake() {
   var destCity = (document.getElementById('i-dest-city')||{}).value ? document.getElementById('i-dest-city').value.trim() : '';
   var destSqft = (document.getElementById('i-dest-sqft')||{}).value ? document.getElementById('i-dest-sqft').value.trim() : '';
 
-  var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
-  var missing = [];
-  if (!fname) missing.push('First name');
-  if (!lname) missing.push('Last name');
-  if (!isEstate && !phone) missing.push('Phone');
-  if (!isEstate && !email) missing.push('Email');
-  if (!addr) missing.push('Property address');
-  if (!city) missing.push('City');
-  if (!zip) missing.push('Zip');
-  if (!sqft) missing.push('Approx. sqft');
-  if (!ptype) missing.push('Property type');
-  if (!src) missing.push('Referral source');
-  if (!svc) missing.push('Service type');
-  // The concierge is deliberately NOT required here. Intake often happens a fortnight
-  // before work starts, and nobody knows who is free that far out. Staffing belongs to
-  // the Job Plan, where the whole crew is named and signed off before work begins —
-  // and that sign-off is what actually gates hours logging (see confirmJobTeam).
-  if (!start) missing.push('Target start date');
-
-  // Authorized rep required for estate + probate
-  if (isEstate) {
-    if (!document.getElementById('i-executor-fname').value.trim()) missing.push('Authorized rep first name');
-    if (!document.getElementById('i-executor-lname').value.trim()) missing.push('Authorized rep last name');
-    if (!document.getElementById('i-executor-role').value) missing.push('Authorized rep role');
-    if (!document.getElementById('i-executor-phone').value.trim()) missing.push('Authorized rep phone');
-    if (!document.getElementById('i-executor-email').value.trim()) missing.push('Authorized rep email');
-    // ⚠ REQUIRED ON ALL THREE DECEDENT SERVICES, NOT ONLY PROBATE. It used to sit in the
-    // probate branch below, on a field the form did not even render outside probate, so every
-    // Estate Settlement ever created carries deathDate '' — and estateValueDate returns ''
-    // with it, which is the date every value on that estate's schedule is stated AT. There is
-    // no honest default to invent for it and it is on the death certificate.
-    if (!document.getElementById('i-date-of-death').value) missing.push('Date of death');
-    // ⚠ REQUIRED, AND DELIBERATELY WITHOUT A DEFAULT — unlike the scope question beside it,
-    // which opens at Full because doing the most is a defensible assumption. There is no
-    // defensible assumption about probate versus trust: guessing probate is precisely what
-    // puts a §733.604 court schedule in front of a successor trustee, and here that guess
-    // would be wrong on most Palm Beach estates. Ask the attorney.
-    if (!(document.getElementById('i-matter-type')||{}).value) missing.push('How this estate is being administered');
-  }
-
-  // Additional mandatory fields for probate. The attorney is required HERE and merely offered
-  // on an Estate Settlement, which frequently never opens probate and has no attorney of
-  // record to name; toggleIntakeFields hides the asterisks to match rather than marking five
-  // fields required that this save accepts blank.
-  if (svc === 'probate' || svc === 'contested_probate') {
-    var probateMissing = [];
-    if (!document.getElementById('i-probate-case').value.trim()) probateMissing.push('Probate case number');
-    if (!document.getElementById('i-probate-atty-fname').value.trim()) probateMissing.push('Attorney first name');
-    if (!document.getElementById('i-probate-atty-lname').value.trim()) probateMissing.push('Attorney last name');
-    if (!document.getElementById('i-probate-atty-firm').value.trim()) probateMissing.push('Attorney firm');
-    if (!document.getElementById('i-probate-atty-phone').value.trim()) probateMissing.push('Attorney phone');
-    if (!document.getElementById('i-probate-atty-email').value.trim()) probateMissing.push('Attorney email');
-    if (probateMissing.length > 0) {
-      missing = missing.concat(probateMissing);
-    }
-  }
+  var isEstate = isDecedentJob(null, svc);
+  var _iv = function(id){ var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  // The one required-field rule, shared with Edit Client (clientMissingFields; its notes say why
+  // each field is required and why the concierge is not).
+  var missing = clientMissingFields({
+    fname: fname, lname: lname, phone: phone, email: email, addr: addr, city: city, zip: zip,
+    sqft: sqft, ptype: ptype, src: src, svc: svc, start: start,
+    executorFname: _iv('i-executor-fname'), executorLname: _iv('i-executor-lname'),
+    executorRole: _iv('i-executor-role'), executorPhone: _iv('i-executor-phone'),
+    executorEmail: _iv('i-executor-email'), deathDate: _iv('i-date-of-death'),
+    matterType: _iv('i-matter-type'), probateCase: _iv('i-probate-case'),
+    probateAttyFname: _iv('i-probate-atty-fname'), probateAttyLname: _iv('i-probate-atty-lname'),
+    probateAttyFirm: _iv('i-probate-atty-firm'), probateAttyPhone: _iv('i-probate-atty-phone'),
+    probateAttyEmail: _iv('i-probate-atty-email')
+  });
 
   if (missing.length > 0) {
     showFB('i-fb','warn','Please complete: ' + missing.join(', ') + '.');
     return;
   }
   var svcLabels = SVC_LABELS;
+  var _ref = readReferralInputs('i');
   var job = {
     id:Date.now(), hvlId:generateHvlId(), name:name, fname:fname, lname:lname,
-    phone:document.getElementById('i-phone').value,
-    email:document.getElementById('i-email').value,
+    phone:isEstate ? '' : document.getElementById('i-phone').value,
+    email:isEstate ? '' : document.getElementById('i-email').value,
     addr:document.getElementById('i-addr').value,
     city:city,
     zip:document.getElementById('i-zip').value,
-    src:document.getElementById('i-src').value,
-    refPartnerId: document.getElementById('i-refpartner') ? document.getElementById('i-refpartner').value : '',
-    refPartnerName: (document.getElementById('i-refpartner') && document.getElementById('i-refpartner').value && typeof lookupReferralById === 'function' && lookupReferralById(document.getElementById('i-refpartner').value)) ? lookupReferralById(document.getElementById('i-refpartner').value).partner_name : '',
-    referredByName: document.getElementById('i-referredby') ? document.getElementById('i-referredby').value.trim() : '',
+    // Read as the form SHOWS them (readReferralInputs, audit M16): a partner picked and then hidden
+    // by changing the source is not saved, and the partner is keyed by its uid.
+    src:_ref.src, refPartnerId:_ref.refPartnerId, refPartnerName:_ref.refPartnerName, referredByName:_ref.referredByName,
     notes:document.getElementById('i-notes').value,
     // The two intake-call questions and the ticked checklist. These ride the job record
     // as JSON (the Jobs sheet stores JSON.stringify(job) in its Data column, so a nested
@@ -8498,7 +8513,7 @@ function saveIntake() {
     // onto a job whose screen never showed it.
     mustFind:    intakeAsksHouseContents(svc) ? ((document.getElementById('i-mustfind')||{}).value||'') : '',
     safetyNotes: (document.getElementById('i-safety')||{}).value||'',
-    houseFlags:  intakeAsksHouseContents(svc) ? readHouseFlagInputs('i') : houseFlagsOf(null),
+    houseFlags:  readHouseFlagInputs('i', svc, null),
     destAddr:destAddr, destCity:destCity, destSqft:destSqft,
     probateCase: document.getElementById('i-probate-case') ? document.getElementById('i-probate-case').value : '',
     probateDeadline: document.getElementById('i-probate-deadline') ? document.getElementById('i-probate-deadline').value : '',
@@ -8643,7 +8658,9 @@ var HOUSE_FLAGS = [
   { key:'sentimental', label:'Sentimental must-finds',
     detail:'Photos, letters, specific heirlooms.',
     ask:'Name them.' },
-  { key:'access', label:'Access & security',
+  // prep:true — asked on Home Prep for Sale too (Q17): vendors go through the house, so the alarm,
+  // the keys and who else comes and goes matter there; what is IN the house does not.
+  { key:'access', label:'Access & security', prep:true,
     detail:'Alarm system and codes, cameras, smart locks, who else has keys (caregivers, cleaners, family), gated or HOA.',
     ask:'Codes, contact, anything we need to disarm.' }
 ];
@@ -8763,11 +8780,15 @@ function jobHasStandingFlags(job) { return standingFlagLines(job).length > 0; }
 // ─── The checklist control, shared by Client Intake ('i') and Edit Client ('ec') ──
 // Two forms asking different questions about the same house is the drift this catalogue
 // exists to prevent, so both build their rows from here rather than from markup.
-function houseFlagInputsHtml(prefix, job) {
+// Is this row asked on this service? Every row on every service but Home Prep, which asks only the
+// rows marked prep:true (Q17). One rule for both forms' rendering and both saves.
+function houseFlagAsked(f, svc) { return svc !== 'prep' || !!(f && f.prep); }
+// svc, when given, hides the rows that service is not asked (showHouseFlagRows repaints on a switch).
+function houseFlagInputsHtml(prefix, job, svc) {
   var st = houseFlagsOf(job);
   return '<div class="hf-list">' + HOUSE_FLAGS.map(function(f) {
     var on = st[f.key].on;
-    return '<div class="' + _houseFlagRowClass(f, on) + '" id="' + prefix + '-hfr-' + f.key + '">' +
+    return '<div class="' + _houseFlagRowClass(f, on) + '" id="' + prefix + '-hfr-' + f.key + '"' + (svc && !houseFlagAsked(f, svc) ? ' style="display:none;"' : '') + '>' +
       '<label class="hf-tick">' +
         '<input type="checkbox" id="' + prefix + '-hf-' + f.key + '"' + (on ? ' checked' : '') +
           ' onchange="onHouseFlagToggle(\'' + prefix + '\',\'' + f.key + '\')">' +
@@ -8804,9 +8825,19 @@ function onHouseFlagToggle(prefix, key) {
   if (on) { var t = document.getElementById(prefix + '-hfn-' + key); if (t) t.focus(); }
 }
 
-function readHouseFlagInputs(prefix) {
-  var out = {};
+function showHouseFlagRows(prefix, svc) {
   HOUSE_FLAGS.forEach(function(f) {
+    var row = document.getElementById(prefix + '-hfr-' + f.key);
+    if (row) row.style.display = houseFlagAsked(f, svc) ? '' : 'none';
+  });
+}
+// ⚠ A ROW THE SERVICE DOES NOT ASK IS NOT READ OFF THE FORM (Q17): it is hidden, and a hidden
+// tick may be left over from before a service switch. It keeps what `prior` (the job being
+// edited) recorded, or nothing on a new client — never written back from a control nobody saw.
+function readHouseFlagInputs(prefix, svc, prior) {
+  var out = {}, was = houseFlagsOf(prior || null);
+  HOUSE_FLAGS.forEach(function(f) {
+    if (svc && !houseFlagAsked(f, svc)) { out[f.key] = was[f.key]; return; }
     var box = document.getElementById(prefix + '-hf-' + f.key);
     var txt = document.getElementById(prefix + '-hfn-' + f.key);
     out[f.key] = { on: !!(box && box.checked), note: (txt ? String(txt.value) : '').trim() };
@@ -8884,6 +8915,63 @@ function resolveExecutorAuth(v) {
 function buildExecutorAuthOptions() {
   var el = document.getElementById('i-executor-auth');
   if (el) el.innerHTML = executorAuthOptionsHtml('pending');
+}
+
+// ⚠⚠ WHO THE REPRESENTATIVE IS — one list, both forms (audit H7, 2026-09-30). Edit Client kept
+// its own seven roles and lacked the three court-appointed ones intake offers, and its select
+// only marks an EXACT match, so opening a Curator's job and pressing Save for any reason wrote
+// the role back blank. `group` is the optgroup a role renders under.
+var EXECUTOR_ROLES = [
+  { v: 'Estate Attorney',         l: 'Estate Attorney' },
+  { v: 'Executor',                l: 'Executor' },
+  { v: 'Family Member',           l: 'Family Member' },
+  { v: 'Personal Representative', l: 'Personal Representative' },
+  { v: 'Power of Attorney',       l: 'Power of Attorney' },
+  { v: 'Trustee',                 l: 'Trustee' },
+  { v: 'Administrator ad litem',  l: 'Administrator ad litem (733.308)',       group: 'Court-appointed (contested)' },
+  { v: 'Curator',                 l: 'Curator (Fla. Stat. 733.501)',           group: 'Court-appointed (contested)' },
+  { v: 'Guardian ad litem',       l: 'Guardian ad litem (Rule 5.120)',         group: 'Court-appointed (contested)' },
+  { v: 'Other',                   l: 'Other' }
+];
+// ⚠ A VALUE THE CATALOGUE DOES NOT KNOW IS STILL OFFERED, SELECTED. A role recorded before a
+// rename, or typed somewhere we no longer offer, must survive an untouched save — a form that
+// cannot display a value writes it back blank, which is the defect this exists to close.
+function executorRoleOptionsHtml(selected) {
+  var sel = selected || '';
+  var o = function (r) { return '<option value="' + esc(r.v) + '"' + (r.v === sel ? ' selected' : '') + '>' + esc(r.l) + '</option>'; };
+  var out = '<option value="">Select role</option>';
+  var known = EXECUTOR_ROLES.some(function (r) { return r.v === sel; });
+  if (sel && !known) out += '<option value="' + esc(sel) + '" selected>' + esc(sel) + ' (as recorded)</option>';
+  var groups = {};
+  EXECUTOR_ROLES.forEach(function (r) {
+    if (!r.group) { if (r.v !== 'Other') out += o(r); return; }
+    if (!groups[r.group]) { groups[r.group] = true;
+      out += '<optgroup label="' + esc(r.group) + '">' + EXECUTOR_ROLES.filter(function (x) { return x.group === r.group; }).map(o).join('') + '</optgroup>'; }
+  });
+  EXECUTOR_ROLES.forEach(function (r) { if (r.v === 'Other') out += o(r); });
+  return out;
+}
+function buildExecutorRoleOptions() {
+  var el = document.getElementById('i-executor-role');
+  if (el) el.innerHTML = executorRoleOptionsHtml('');
+}
+// ⚠⚠ THE CONCIERGE LIST IS THE ROSTER, NOT A TYPED COPY OF IT (audit H7). Edit Client listed three
+// names by hand — one of them a property specialist — so a job assigned to any other active
+// concierge opened on "Unassigned" and a save for any reason unassigned it; the job's contact then
+// fell back to the managing partner on every client email. The job's CURRENT value is always
+// offered, matched with samePerson, so a concierge who has since left the roster is not erased by
+// somebody correcting a phone number.
+function conciergeOptionsHtml(current) {
+  var cur = current || '';
+  var list = (typeof getAllActiveTC === 'function') ? getAllActiveTC() : [];
+  var have = false;
+  var out = '<option value="">Unassigned</option>' + list.map(function (c) {
+    var on = !!cur && samePerson(c.name, cur);
+    if (on) have = true;
+    return '<option value="' + esc(c.name) + '"' + (on ? ' selected' : '') + '>' + esc(c.name) + '</option>';
+  }).join('');
+  if (cur && !have) out += '<option value="' + esc(cur) + '" selected>' + esc(cur) + ' (not on the active roster)</option>';
+  return out;
 }
 
 // The standing job flags, rendered for the Job Plan header — what the crew has open in
@@ -9061,6 +9149,41 @@ var INTAKE_FIELDS = [
   'i-dest-addr', 'i-dest-city', 'i-dest-sqft'
 ];
 
+// ⚠ WARN, NEVER BLOCK, WHEN A NEW CLIENT MATCHES A STREET ADDRESS ALREADY ON FILE (Q16). The
+// same house comes back — a second service, a family member calling again, a lost lead revived —
+// and each is legitimate, but a duplicate record splits the history. The street is compared with
+// the city and suite dropped, case, punctuation and the common suffixes normalised; zips must agree
+// where both are recorded. DOM-free; the intake form names the matches under the address.
+var _ADDR_ABBR = { street:'st', avenue:'ave', boulevard:'blvd', road:'rd', drive:'dr', lane:'ln', court:'ct',
+  place:'pl', terrace:'ter', circle:'cir', highway:'hwy', parkway:'pkwy', north:'n', south:'s', east:'e', west:'w' };
+function normStreetAddr(addr) {
+  var first = String(addr || '').split(',')[0].toLowerCase();
+  first = first.replace(/\b(apt|unit|suite|ste)\b.*$/, '').replace(/#.*$/, '');
+  return first.replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(Boolean)
+    .map(function(w){ return _ADDR_ABBR[w] || w; }).join(' ');
+}
+function jobsAtAddress(addr, zip, exceptId) {
+  var k = normStreetAddr(addr);
+  if (!k) return [];
+  var z = String(zip || '').trim();
+  return (jobs || []).filter(function(j){
+    if (!j || j.id === exceptId) return false;
+    if (normStreetAddr(j.addr) !== k) return false;
+    var jz = String(j.zip || '').trim();
+    return !z || !jz || jz === z;
+  });
+}
+function paintAddressMatch() {
+  var box = document.getElementById('i-addr-match');
+  if (!box) return;
+  var m = jobsAtAddress((document.getElementById('i-addr') || {}).value, (document.getElementById('i-zip') || {}).value, null);
+  if (!m.length) { box.innerHTML = ''; box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = '<div class="alert a-warn" style="font-size:11px;margin:4px 0 8px;">Already on file at this address: '
+    + m.map(function(j){ return '<strong>' + esc(j.name || '') + '</strong> (' + esc(svcLabelOf(j)) + ', ' + esc(jobStatusView(j).label || '') + ')'; }).join('; ')
+    + '. If this is the same client, open them from the dashboard instead. A second job at the same house is fine; saving goes ahead either way.</div>';
+}
+
 // Reset the intake form to its blank state.
 function resetIntakeFields() {
   INTAKE_FIELDS.forEach(function(id) {
@@ -9072,12 +9195,24 @@ function resetIntakeFields() {
   // the next client's crew brief.
   clearHouseFlagInputs('i');
   var pd = document.getElementById('i-probate-deadline'); if (pd) delete pd.dataset.userEdited;
+  // ⚠ WHAT THE LAST CLIENT LEFT ON THE CONTROLS THEMSELVES, not in their values (audit M14 and the
+  // intake lows): the documentation level's borrowed hand-set answer (dataset.preGate, which gave a
+  // hand-picked Strict back to the next client), the start picker's minimum from the last walkthrough,
+  // and a phone or email put aside by an estate switch.
+  var dl = document.getElementById('i-doclevel'); if (dl && dl.dataset) delete dl.dataset.preGate;
+  ['i-start', 'i-completion'].forEach(function(id){ var e = document.getElementById(id); if (e) e.min = ''; });
+  ['i-phone', 'i-email'].forEach(function(id){ var e = document.getElementById(id); if (e && e.dataset) delete e.dataset.stash; });
   var dfb = document.getElementById('i-deadline-fb'); if (dfb) dfb.textContent = '';
   var fb = document.getElementById('i-fb'); if (fb) fb.innerHTML = '';
   // Re-collapse the conditional blocks (probate, authorized rep, downsizing
   // destination) and re-enable the phone/email fields off the now-blank service type,
   // rather than hiding one section by hand and leaving the rest showing.
   if (typeof toggleIntakeFields === 'function') toggleIntakeFields();
+  // The referral follow-ups (partner picker, referred-by) collapse off the now-blank source, and the
+  // date and address flags off the now-blank fields.
+  onReferralSourceChange('i');
+  paintDateChainFlag('i');
+  paintAddressMatch();
 }
 
 // Called after a successful save, and by the Clear button. Same job, one implementation.
@@ -9198,7 +9333,7 @@ function applyOpenedEstimate(jobId, job, status) {
     restoreEstimateToUI(currentEstimate);
     updateApprovalUI();
     if (status === 'offline') {
-      showFB('e-fb','warn','Offline — showing the last estimate saved on this device for "' + job.name + '". It may be out of date. Reconnect and reopen to load the current saved version before editing or sending.');
+      showFB('e-fb','warn','Offline — showing the last estimate saved on this device for "' + esc(job.name||'') + '". It may be out of date. Reconnect and reopen to load the current saved version before editing or sending.');
     } else {
       showFB('e-fb','ok','Estimate loaded for job: ' + job.name);
     }
@@ -9226,10 +9361,10 @@ function applyOpenedEstimate(jobId, job, status) {
       approvedAt = scratch.approvedAt || '';
       restoreEstimateToUI(currentEstimate);
       updateApprovalUI();
-      showFB('e-fb','warn','Offline — restored an unsaved draft for "' + job.name + '" from this device. It has not been saved to the cloud. Save once your connection returns.');
+      showFB('e-fb','warn','Offline — restored an unsaved draft for "' + esc(job.name||'') + '" from this device. It has not been saved to the cloud. Save once your connection returns.');
       return;
     }
-    showFB('e-fb','warn','Offline — couldn’t reach the cloud and no estimate for "' + job.name + '" is stored on this device. Reconnect before building so you don’t overwrite a saved version you can’t see.');
+    showFB('e-fb','warn','Offline — couldn’t reach the cloud and no estimate for "' + esc(job.name||'') + '" is stored on this device. Reconnect before building so you don’t overwrite a saved version you can’t see.');
   }
   // No saved estimate — a FRESH BUILD for this client. Every per-job input goes back to where a
   // fresh build for THIS job starts, through the one list (resetEstimateJobState), so this new
@@ -9648,7 +9783,7 @@ function populateJobSelect(forceJobId) {
   sel.innerHTML = '<option value="">Select job</option>';
   jobs.forEach(function(j) {
     if (j.id !== cur && j.id !== keep && estimateTabHidesJob(j)) return;
-    sel.innerHTML += '<option value="'+j.id+'">'+j.name+(j.addr?' — '+j.addr.split(',')[0]:'')+'</option>';
+    sel.innerHTML += '<option value="'+j.id+'">'+esc(j.name||'')+(j.addr?' — '+esc(j.addr.split(',')[0]):'')+'</option>';
   });
   if (keep) sel.value = keep;
   else if (cur) sel.value = cur;
@@ -16255,14 +16390,8 @@ function esignJobWatches(job) {
 // ⚠ AND NO ROLE SUFFIX — `expectedSignerName` appends "(Trustee)" for the recorder's prefill,
 // which is right on our own screen and wrong as a recipient name on a legal envelope.
 function esignSigner(job) {
-  if (!job) return { name: '', email: '' };
-  if (job.email && job.email.trim())
-    return { name: (job.name || '').trim(), email: job.email.trim() };
-  if (job.executorEmail && job.executorEmail.trim())
-    return { name: (job.executor || '').trim(), email: job.executorEmail.trim() };
-  if (job.probateAttyEmail && job.probateAttyEmail.trim())
-    return { name: (job.probateAttyName || '').trim(), email: job.probateAttyEmail.trim() };
-  return { name: '', email: '' };
+  var r = clientRecipient(job);
+  return { name: r.name, email: r.email };
 }
 
 // The record itself. Returns null when nothing is signed — a caller asking "who signed
@@ -20580,25 +20709,30 @@ function updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotal, prem, di
 
 // --- MAILTO HELPERS ---
 function mailtoBody(lines) { return encodeURIComponent(lines.join('\n')); }
-// Pick the best recipient for client-facing email. On estate/probate jobs the
-// named client may be deceased (no client email), so fall back to the
-// authorized representative (executor), then the attorney.
-function bestClientEmail(job) {
-  if (!job) return '';
-  return (job.email && job.email.trim())
-      || (job.executorEmail && job.executorEmail.trim())
-      || (job.probateAttyEmail && job.probateAttyEmail.trim())
-      || '';
+// ⚠⚠ THE ONE LADDER FOR WHO A CLIENT DOCUMENT GOES TO: the client, then the authorized
+// representative, then counsel — each rung a person with an email, name and address from the
+// same rung. bestClientEmail (the To: line), bestClientGreetingName ("Hi Tripp") and esignSigner
+// (the DocuSign recipient) all read it, so the three can never name different people.
+// ⚠ ON A DECEDENT JOB THE CLIENT RUNG IS SKIPPED (audit H8). The client there is the deceased;
+// the ladder used to take job.email first whenever one was on the record, and one was whenever a
+// living client's job had been re-typed to an estate service, or someone filled the field Edit
+// Client used to show (marked required) — so a signature request could go out in a dead person's
+// name. isDecedentJob is the rule for whom documents address, so it is the rule here too.
+function clientRecipient(job) {
+  var none = { name: '', fname: '', email: '', who: '' };
+  if (!job) return none;
+  var t = function (v) { return String(v || '').trim(); };
+  if (!isDecedentJob(job) && t(job.email))
+    return { name: t(job.name), fname: t(job.fname) || firstName(job.name), email: t(job.email), who: 'client' };
+  if (t(job.executorEmail))
+    return { name: t(job.executor), fname: t(job.executorFname) || firstName(job.executor), email: t(job.executorEmail), who: 'representative' };
+  if (t(job.probateAttyEmail))
+    return { name: t(job.probateAttyName), fname: t(job.probateAttyFname) || firstName(job.probateAttyName), email: t(job.probateAttyEmail), who: 'attorney' };
+  return none;
 }
-// First name of whoever the email is actually going to, so the greeting matches
-// the recipient (the executor or attorney on an estate job, not the deceased).
-function bestClientGreetingName(job) {
-  if (!job) return 'there';
-  if (job.email && job.email.trim()) return job.fname || firstName(job.name);
-  if (job.executorEmail && job.executorEmail.trim()) return job.executorFname || firstName(job.executor);
-  if (job.probateAttyEmail && job.probateAttyEmail.trim()) return job.probateAttyFname || firstName(job.probateAttyName);
-  return 'there';
-}
+function bestClientEmail(job) { return clientRecipient(job).email; }
+// First name of whoever the email is actually going to, so the greeting matches the recipient.
+function bestClientGreetingName(job) { return clientRecipient(job).fname || 'there'; }
 // The assigned Transition Concierge's contact, for the email signature ("from").
 // Falls back to the firm's managing partner if the job has no TC assigned or
 // the assigned name has no matching contractor record.
@@ -34769,8 +34903,36 @@ function referralPhoneIsMainLine(p) {
 function isReferralPhoneKey(key) { return REFERRAL_PHONE_KEYS.indexOf(key) !== -1; }
 function _setR(id, val){ var el = document.getElementById(id); if (el) el.value = (val==null?'':val); }
 function _getR(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; }
-function referralIdOf(p){ return p._row!=null ? String(p._row) : ''; }
-function lookupReferralById(row){ return referralDirectory.find(function(p){ return String(p._row)===String(row); }); }
+// ⚠⚠ A PARTNER IS IDENTIFIED BY ITS uid, NOT ITS SHEET ROW (audit M16). job.refPartnerId held the
+// row number, so sorting or filtering-and-sorting the Referral Partners sheet re-pointed every
+// job's attribution at whoever now sat on that row, and the leaderboard credited them. The backend
+// has minted a uid on every add since the CRM-sync foundation (backfillIds() gave the older rows
+// one). The row is still what the backend writes to (updatePartner, deletePartner), so the tab
+// looks a partner up by id and then posts p._row; only the key a JOB stores changed. A row without
+// a uid yet falls back to its row, as before.
+function referralIdOf(p){
+  if (!p) return '';
+  if (p.uid != null && String(p.uid).trim() !== '') return String(p.uid).trim();
+  return p._row!=null ? String(p._row) : '';
+}
+function lookupReferralById(id){
+  var k = String(id == null ? '' : id).trim(); if (!k) return undefined;
+  return referralDirectory.find(function(p){ return p.uid != null && String(p.uid).trim() === k; })
+      || referralDirectory.find(function(p){ return (p.uid == null || String(p.uid).trim() === '') && String(p._row) === k; })
+      || referralDirectory.find(function(p){ return String(p._row) === k; });
+}
+// The one test for "this job was referred by this partner", read by the leaderboard, dormancy and
+// the delete guard. A job saved before M16 holds a ROW number; it still counts, but only while the
+// name it recorded agrees with the partner now on that row — a re-sorted sheet puts someone else
+// there, and crediting them is exactly the defect.
+function jobRefersToPartner(j, p){
+  var id = String((j && j.refPartnerId) || '').trim();
+  if (!id || !p) return false;
+  if (p.uid != null && String(p.uid).trim() !== '' && id === String(p.uid).trim()) return true;
+  if (p._row == null || id !== String(p._row)) return false;
+  var rec = String((j && j.refPartnerName) || '').trim();
+  return !rec || rec === String(p.partner_name || '').trim();
+}
 function isActivePartner(p){ return String(p.status||'')==='Active Partner'; }
 function setReferralDirStatus(msg, isErr){ var el = document.getElementById('referral-dir-status'); if (!el) return; el.textContent = msg; el.style.color = isErr ? 'var(--err-tx)' : 'var(--gray)'; }
 
@@ -35053,7 +35215,7 @@ function fmtPhoneDisplay(s){
 // action row (status select + log + edit) so buttons never jump around.
 function referralCardHtml(p){
   var idAttr = esc(String(referralIdOf(p))).replace(/'/g, "\\'");
-  var _rst = referralPartnerStats(p._row);
+  var _rst = referralPartnerStats(p);
   var _dorm = referralDormancy(p);
 
   var roleBits = [];
@@ -35197,7 +35359,7 @@ function postReferralWrite(type, payload, cb, onLanded){
 function requestDeleteReferral(id){
   var p = lookupReferralById(id); if (!p) return;
   // History guard: a partner with jobs attributed (the leaderboard) is retired, not deleted.
-  var stats = referralPartnerStats(p._row);
+  var stats = referralPartnerStats(p);
   if (stats && stats.count > 0){
     alert('This partner has ' + stats.count + ' referral' + (stats.count===1?'':'s') + ' attributed to them. To keep your leaderboard intact, retire them by setting the status to “Do Not Use” instead of deleting.');
     return;
@@ -35255,7 +35417,7 @@ function saveReferral(){
   } else {
     postReferralWrite('addPartner', { fields: fields }, function(ok, d){
       if (!ok) { if (st){ st.textContent = 'Failed: ' + (d.error||'write error'); st.style.color = 'var(--err-tx)'; } return; }
-      var rec = {}; Object.keys(fields).forEach(function(k){ rec[k] = fields[k]; }); if (d._row != null) rec._row = d._row;
+      var rec = {}; Object.keys(fields).forEach(function(k){ rec[k] = fields[k]; }); if (d._row != null) rec._row = d._row; if (d.uid) rec.uid = d.uid;
       referralDirectory.push(rec);
       try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
       if (st){ st.textContent = 'Added ✓'; st.style.color = 'var(--ok-tx)'; }
@@ -35309,7 +35471,7 @@ function referralDormancy(p){
   var st = String(p.status||'');
   if (st === '' || st === 'Identified' || st === 'Do Not Use') return { dormant:false, days:null };
   var cDays = _daysSinceISODate(p.last_contacted);
-  var js = jobs.filter(function(j){ return String(j.refPartnerId||'') === String(p._row); });
+  var js = jobs.filter(function(j){ return jobRefersToPartner(j, p); });
   var lastJobId = js.reduce(function(a,j){ return Math.max(a, j.id||0); }, 0);
   var rDays = lastJobId ? Math.floor((Date.now() - lastJobId) / 86400000) : null;
   var days = null;
@@ -35320,10 +35482,9 @@ function referralDormancy(p){
 }
 
 // ── Attribution: aggregate the jobs linked to a partner at intake (job.refPartnerId).
-function referralPartnerStats(partnerRow){
-  var key = String(partnerRow||'');
-  if (!key) return { count:0, won:0, pipeline:0, wonRev:0, last:'' };
-  var js = jobs.filter(function(j){ return String(j.refPartnerId||'') === key; });
+function referralPartnerStats(p){
+  if (!p || !referralIdOf(p)) return { count:0, won:0, pipeline:0, wonRev:0, last:'' };
+  var js = jobs.filter(function(j){ return jobRefersToPartner(j, p); });
   var won = js.filter(isJobWon);
   var pipeline = js.filter(function(j){ return j.status!=='lost'; }).reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
   var wonRev = won.reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
@@ -35332,7 +35493,7 @@ function referralPartnerStats(partnerRow){
 }
 function renderReferralLeaderboard(){
   var el = document.getElementById('referrals-leaderboard'); if (!el) return;
-  var rows = referralDirectory.map(function(p){ return { p:p, s:referralPartnerStats(p._row) }; })
+  var rows = referralDirectory.map(function(p){ return { p:p, s:referralPartnerStats(p) }; })
     .filter(function(r){ return r.s.count > 0; })
     .sort(function(a,b){ return (b.s.wonRev - a.s.wonRev) || (b.s.count - a.s.count); });
   if (!rows.length) { el.innerHTML = ''; return; }
@@ -35362,19 +35523,92 @@ function renderReferralLeaderboard(){
     '</table></div>';
 }
 
-// Intake: reveal the named-partner picker for person-type referral sources, and keep
-// it populated from the active directory.
-function onReferralSourceChange(){
-  var src = document.getElementById('i-src');
+// ── Referral sources: ONE catalogue for Client Intake and Edit Client (audit M13, Q15). Intake's
+// list was markup and the pro/personal lists lived inside the change handler, so a second form
+// would have been a third copy. `kind` decides which follow-up the form shows: 'pro' sources are
+// directory partner types (the strings match partner_type exactly, so the picker filters on them),
+// 'personal' ones ask for a name.
+var REFERRAL_SOURCES = [
+  { v:'Allied vendor', kind:'pro' }, { v:'Country club / golf community', kind:'pro' },
+  { v:'Direct mail' }, { v:'Estate attorney', kind:'pro' },
+  { v:'Existing client referral', kind:'personal' }, { v:'Family', kind:'personal' },
+  { v:'Friend', kind:'personal' }, { v:'Google / SEO' }, { v:'Realtor', kind:'pro' },
+  { v:'Senior living community', kind:'pro' }, { v:'Social media' }, { v:'Trust officer', kind:'pro' },
+  { v:'Wealth manager', kind:'pro' }, { v:'Website' }, { v:'Other' }
+];
+function referralSourceKind(src){
+  var k = String(src || '').trim();
+  var d = REFERRAL_SOURCES.find(function(r){ return r.v === k; });
+  return (d && d.kind) || '';
+}
+// A value the list does not hold (an older label) is kept and marked, never dropped: a <select>
+// silently rejects a value it has no option for, and the save would then write it back blank.
+function referralSourceOptionsHtml(selected){
+  var cur = String(selected || '');
+  var known = REFERRAL_SOURCES.some(function(r){ return r.v === cur; });
+  return '<option value="">Select source</option>'
+    + (cur && !known ? '<option value="' + esc(cur) + '" selected>' + esc(cur) + ' (as recorded)</option>' : '')
+    + REFERRAL_SOURCES.map(function(r){
+        return '<option value="' + esc(r.v) + '"' + (r.v === cur ? ' selected' : '') + '>' + esc(r.v) + '</option>';
+      }).join('');
+}
+function buildReferralSourceOptions(){ var el = document.getElementById('i-src'); if (el) el.innerHTML = referralSourceOptionsHtml(''); }
+// The named-partner options for a source: that type's partners (Do Not Use left out), by name.
+// currentId is the job's partner. It is selected when listed (a pre-M16 row id is matched to its
+// partner and re-keyed to the uid, so the next save moves the job onto the stable id); a partner
+// the directory does not list under this source — not loaded yet, retired, or re-typed on the
+// sheet — is kept as "(as recorded)" rather than silently cleared.
+function referralPartnerOptionsHtml(src, currentId, currentName){
+  var s0 = String(src || '').trim();
+  var list = referralDirectory.filter(function(p){
+    if (String(p.status||'') === 'Do Not Use') return false;
+    return s0 ? String(p.partner_type||'').trim() === s0 : true;
+  }).slice().sort(function(a,b){ return String(a.partner_name||'').localeCompare(String(b.partner_name||'')); });
+  var cid = String(currentId || '').trim();
+  var probe = { refPartnerId: cid, refPartnerName: currentName || '' };
+  var hit = cid ? list.find(function(p){ return jobRefersToPartner(probe, p); }) : null;
+  var none = s0 ? '— none / not a named ' + s0.toLowerCase() + ' —' : '— none / not a named partner —';
+  var html = '<option value="">' + esc(none) + '</option>';
+  if (cid && !hit) {
+    var known = lookupReferralById(cid);
+    var nm = (known && jobRefersToPartner(probe, known) && known.partner_name) || currentName || 'Partner on record';
+    html += '<option value="' + esc(cid) + '" selected>' + esc(nm) + ' (as recorded)</option>';
+  }
+  return html + list.map(function(p){
+    var id = referralIdOf(p);
+    return '<option value="' + esc(id) + '"' + (hit === p ? ' selected' : '') + '>' + esc(p.partner_name||'') + '</option>';
+  }).join('');
+}
+// Reveal the follow-up the source asks for. prefix is 'i' (Client Intake) or 'ec' (Edit Client).
+// A new source is a new question, so the partner picked under the old one is let go.
+function onReferralSourceChange(prefix){
+  prefix = prefix || 'i';
+  var src = document.getElementById(prefix + '-src');
   if (!src) return;
-  var pWrap = document.getElementById('i-refpartner-wrap');
-  var rbWrap = document.getElementById('i-referredby-wrap');
-  var pro = ['Estate attorney','Trust officer','Wealth manager','Realtor','Country club / golf community','Senior living community','Allied vendor'];
-  var personal = ['Family','Friend','Existing client referral'];
-  var isPro = pro.indexOf(src.value) >= 0;
-  if (pWrap) pWrap.style.display = isPro ? 'block' : 'none';
-  if (rbWrap) rbWrap.style.display = personal.indexOf(src.value) >= 0 ? 'block' : 'none';
-  if (isPro) { populateReferralPicker(); if (!referralDirectory.length && REFERRAL_SYNC_URL) loadReferralDirectory(); }
+  var kind = referralSourceKind(src.value);
+  var pWrap = document.getElementById(prefix + '-refpartner-wrap');
+  var rbWrap = document.getElementById(prefix + '-referredby-wrap');
+  if (pWrap) pWrap.style.display = kind === 'pro' ? 'block' : 'none';
+  if (rbWrap) rbWrap.style.display = kind === 'personal' ? 'block' : 'none';
+  var sel = document.getElementById(prefix + '-refpartner');
+  if (sel) sel.value = '';
+  if (kind === 'pro') { populateReferralPicker(prefix); if (!referralDirectory.length && REFERRAL_SYNC_URL) loadReferralDirectory(); }
+}
+// What the form's referral fields say, read the way the form SHOWS them (audit M16): a partner
+// whose picker is hidden was not chosen, and a name typed under a personal source is kept only
+// while that source is picked. The one reader for Client Intake's save and Edit Client's.
+function readReferralInputs(prefix){
+  var v = function(id){ var el = document.getElementById(prefix + '-' + id); return el ? String(el.value || '').trim() : ''; };
+  var src = v('src'), kind = referralSourceKind(src);
+  var pid = kind === 'pro' ? v('refpartner') : '';
+  var p = pid ? lookupReferralById(pid) : null;
+  var pname = '';
+  if (pid) {
+    if (p) pname = p.partner_name || '';
+    else { var sel = document.getElementById(prefix + '-refpartner'); pname = (sel && sel.dataset && sel.dataset.curName) || ''; }
+  }
+  return { src: src, refPartnerId: p ? referralIdOf(p) : pid, refPartnerName: pname,
+           referredByName: kind === 'personal' ? v('referredby') : '' };
 }
 // ─── QUICK-ADD A REFERRAL PARTNER FROM INTAKE ────────────────────────────────
 // partner_type is taken from the referral source already chosen on the form rather than
@@ -35425,6 +35659,7 @@ function saveQuickPartner() {
     }
     var rec = {}; Object.keys(fields).forEach(function(k){ rec[k] = fields[k]; });
     if (d && d._row != null) rec._row = d._row;
+    if (d && d.uid) rec.uid = d.uid;   // the job keys on it (referralIdOf, audit M16)
     referralDirectory.push(rec);
     try { localStorage.setItem('hav_referral_dir', JSON.stringify(referralDirectory)); } catch(e) {}
     document.getElementById('qp-modal').style.display = 'none';
@@ -35436,24 +35671,17 @@ function saveQuickPartner() {
   });
 }
 
-function populateReferralPicker(){
-  var sel = document.getElementById('i-refpartner'); if (!sel) return;
-  // Scope the named-partner list to the referral source chosen above: an "Estate
-  // attorney" source only lists estate attorneys, etc. Source labels and partner_type
-  // use identical strings for the professional types, so it's an exact-type match.
-  var srcEl = document.getElementById('i-src');
+// Rebuild a partner picker from the directory, keeping what it holds. No prefix refreshes every
+// picker on screen (the directory landed or changed): intake's and, while it is open, Edit Client's.
+function populateReferralPicker(prefix){
+  if (!prefix) { populateReferralPicker('i'); if (document.getElementById('ec-refpartner')) populateReferralPicker('ec'); return; }
+  var sel = document.getElementById(prefix + '-refpartner'); if (!sel) return;
+  var srcEl = document.getElementById(prefix + '-src');
   var src = srcEl ? String(srcEl.value || '').trim() : '';
   var cur = sel.value;
-  var list = referralDirectory.filter(function(p){
-    if (String(p.status||'') === 'Do Not Use') return false;
-    return src ? String(p.partner_type||'').trim() === src : true;
-  }).slice().sort(function(a,b){ return String(a.partner_name||'').localeCompare(String(b.partner_name||'')); });
-  var none = src ? '— none / not a named ' + src.toLowerCase() + ' —' : '— none / not a named partner —';
-  sel.innerHTML = '<option value="">' + esc(none) + '</option>' + list.map(function(p){
-    var id = referralIdOf(p); var lbl = esc(p.partner_name||'');
-    return '<option value="' + esc(id) + '">' + lbl + '</option>';
-  }).join('');
-  if (cur) sel.value = cur;
+  // The options carry `selected` themselves: a pre-M16 row id comes back selected under its uid,
+  // and writing the old value back would find no option and blank the picker.
+  sel.innerHTML = referralPartnerOptionsHtml(src, cur, (sel.dataset && sel.dataset.curName) || '');
 }
 
 // ⚠ THIS WOULD HAVE BECOME A DEAD BUTTON IN SLICE 7. It deep-linked into the Invoices tab
@@ -36673,6 +36901,13 @@ function _driveFolderFailed(job, why, serverErr) {
 var _driveFolderInFlight = {};
 function driveFolderPending(jobId) { return !!_driveFolderInFlight[jobId]; }
 
+// ⚠⚠ THE ANSWER REPAINTS THE CLIENT ONLY IF THEY ARE STILL ON SCREEN (audit M15). Each arm used to
+// call openClientDashboard, which NAVIGATES: the folder lands seconds after intake, by which time the
+// person has often moved on (a second intake, another client, the Job Plan), and was yanked back to
+// the new client's dashboard. _dashRedraw repaints only the surface already showing this job, and as a
+// background redraw, so a notice on screen stays.
+function _driveFolderLanded(jobId) { _asBackgroundRedraw(function(){ _dashRedraw(jobId); }); }
+
 function createDriveJobFolder(job) {
   if (!SHEETS_SYNC_URL) { _driveFolderFailed(job, 'no Google Sheets URL is configured on this device (Settings \u2192 Cloud)'); return; }
   // Guard: never create a second folder for a job that already has one. The server
@@ -36712,7 +36947,7 @@ function createDriveJobFolder(job) {
       // the folder URL that was just created. Same pairing as every other job edit.
       j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
       showSyncBadge('Drive folders created \u2713');
-      openClientDashboard(job.id);
+      _driveFolderLanded(job.id);
       return;
     }
     // ⚠ A WELL-FORMED {ok:false} IS NOT A NETWORK ERROR AND NEVER REACHED THE .catch.
@@ -36724,7 +36959,7 @@ function createDriveJobFolder(job) {
     _driveFolderFailed(job, _backendErrorKind(err, true, { action: 'createFolder' }) === 'stale'
       ? 'the Apps Script deployment does not know this action \u2014 redeploy it (Deploy \u2192 Manage deployments \u2192 New version)'
       : 'the server refused', err);
-    openClientDashboard(job.id);
+    _driveFolderLanded(job.id);
   })
   .catch(function(){
     // Fallback to legacy GET for older Apps Script deployments
@@ -36745,12 +36980,12 @@ function createDriveJobFolder(job) {
         } else {
           _driveFolderFailed(job, 'the server refused', (data && data.error) || '');
         }
-        openClientDashboard(job.id);
+        _driveFolderLanded(job.id);
       })
       .catch(function(){
         _settled();
         _driveFolderFailed(job, 'the Apps Script could not be reached');
-        openClientDashboard(job.id);
+        _driveFolderLanded(job.id);
       });
   });
 }
@@ -39376,14 +39611,14 @@ function showEditClient(jobId) {
     return '<input type="'+type+'" id="ec-'+id+'" value="'+(val||'').replace(/"/g,'&quot;')+'" placeholder="'+(ph||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">';
   }
   function tel(id, val, ph) {
-    return '<input type="tel" id="ec-'+id+'" value="'+(val||'').replace(/"/g,'&quot;')+'" placeholder="'+(ph||'(561) 000-0000')+'" oninput="formatPhone(this)" maxlength="14" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">';
+    return '<input type="tel" id="ec-'+id+'" value="'+(val||'').replace(/"/g,'&quot;')+'" placeholder="'+(ph||'')+'" oninput="formatPhone(this)" maxlength="14" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">';
   }
 
   var html = '<div style="background:white;border-radius:8px;width:100%;max-width:720px;overflow:hidden;">';
   // Header
   html += '<div style="background:var(--gray-dk);color:var(--cream);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">';
   html += '<div><div style="font-family:\'Cormorant Garamond\',serif;font-size:16px;font-weight:500;">Edit Client Information</div>';
-  html += '<div style="font-size:10px;color:var(--tan);margin-top:2px;letter-spacing:.06em;">'+job.name+' &nbsp;·&nbsp; '+job.hvlId+'</div></div>';
+  html += '<div style="font-size:10px;color:var(--tan);margin-top:2px;letter-spacing:.06em;">'+esc(job.name||'')+' &nbsp;·&nbsp; '+esc(job.hvlId||'')+'</div></div>';
   html += '<button onclick="document.getElementById(\'edit-client-modal\').style.display=\'none\';" style="background:none;border:none;color:var(--cream);font-size:18px;cursor:pointer;padding:0 4px;">&times;</button>';
   html += '</div>';
   // Body
@@ -39394,12 +39629,32 @@ function showEditClient(jobId) {
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('First Name', txt('fname', job.fname, 'First name'), true);
   html += fld('Last Name', txt('lname', job.lname, 'Last name'), true);
-  html += fld('Phone', tel('phone', job.phone), true);
-  html += fld('Email', txt('email', job.email, 'client@email.com', 'email'), true);
+  // ⚠⚠ ON AN ESTATE JOB THE CLIENT IS THE DECEASED (audit H8). This used to ask for their phone and
+  // email, marked required — and esignSigner took the client email first, so a signature request
+  // could go out under a dead person's name. Not rendered at all here; the representative's are
+  // below. A value already on the record is kept, never written back blank (the save skips a
+  // control it did not render).
+  if (isEstate) {
+    html += '<div class="df" style="grid-column:1 / -1;"><div style="font-size:10.5px;color:var(--gray);">No phone or email for the deceased \u2014 the authorized representative\u2019s are below, and every document goes to them.</div></div>';
+  } else {
+    html += fld('Phone', tel('phone', job.phone), true);
+    html += fld('Email', txt('email', job.email, '', 'email'), true);
+  }
   html += fld('Address', txt('addr', job.addr, '123 Ocean Blvd'), true);
   html += fld('City', txt('city', job.city, 'e.g. Palm Beach'), true);
   html += fld('Zip', txt('zip', job.zip, '33480'), true);
   html += fld('Notes', txt('notes', job.notes, 'Notes...'), false);
+  html += '</div>';
+
+  // ⚠ CORRECTABLE HERE BECAUSE ONLY INTAKE COULD SET THEM (audit M13, Q15). The referral source and
+  // partner drive the Referral Partners leaderboard; a mis-picked partner could never be fixed and
+  // its attribution stood forever. Same catalogue and the same picker rules as intake.
+  var _srcKind = referralSourceKind(job.src);
+  html += '<div class="sec" style="margin-top:14px;">Referral</div>';
+  html += '<div class="d-grid2" style="gap:8px 20px;">';
+  html += fld('Referral Source', '<select id="ec-src" onchange="onReferralSourceChange(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+referralSourceOptionsHtml(job.src||'')+'</select>', true);
+  html += '<div id="ec-referredby-wrap" style="display:'+(_srcKind==='personal'?'block':'none')+';">'+fld('Referred By', txt('referredby', job.referredByName, 'e.g. John Smith'), false)+'</div>';
+  html += '<div id="ec-refpartner-wrap" style="grid-column:1 / -1;display:'+(_srcKind==='pro'?'block':'none')+';">'+fld('Referral Partner', '<select id="ec-refpartner" data-cur-name="'+esc(job.refPartnerName||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+referralPartnerOptionsHtml(job.src||'', job.refPartnerId||'', job.refPartnerName||'')+'</select>', false)+'</div>';
   html += '</div>';
 
   // What's in the house. Built from HOUSE_FLAGS, exactly as Client Intake is, so the two
@@ -39408,18 +39663,36 @@ function showEditClient(jobId) {
   // list and a rename missed it.
   html += '<div class="sec" style="margin-top:14px;">What&rsquo;s In The House</div>';
   html += '<div style="font-size:10.5px;color:var(--gray);margin-bottom:8px;line-height:1.5;">Asked on the intake call. Everything here prints on the Job Plan as standing job flags &mdash; correct it the moment the client tells you something new.</div>';
-  html += '<div class="df" style="margin-bottom:8px;"><div class="dfl">Anything we need to find?</div>' +
+  // Home Prep is not asked the must-find question or the contents rows (Q17), exactly as intake; they
+  // are hidden, and the save keeps what the record holds for them rather than reading hidden controls.
+  html += '<div class="df" id="ec-house-find" style="margin-bottom:8px;'+(intakeAsksHouseContents(job.svc)?'':'display:none;')+'"><div class="dfl">Anything we need to find?</div>' +
     '<textarea id="ec-mustfind" rows="2" placeholder="One line per item: what it is, and where they think it might be." style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);resize:vertical;box-sizing:border-box;">'+esc(job.mustFind||'')+'</textarea></div>';
   html += '<div class="df" style="margin-bottom:8px;"><div class="dfl">Safety / special handling?</div>' +
     '<textarea id="ec-safety" rows="2" placeholder="Pets, mould, hoarding, stairs, sharps, chemicals, a difficult family member." style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);resize:vertical;box-sizing:border-box;">'+esc(job.safetyNotes||'')+'</textarea></div>';
-  html += houseFlagInputsHtml('ec', job);
+  html += houseFlagInputsHtml('ec', job, job.svc);
 
   // Job Details
   html += '<div class="sec" style="margin-top:14px;">Job Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'downsizing',l:SVC_LABELS.downsizing},{v:'downsizing_move',l:SVC_LABELS.downsizing_move},{v:'home_cleanout',l:'Home Cleanout'},{v:'cleanout',l:'Estate Settlement'},{v:'probate',l:'Probate Estate Settlement'},{v:'contested_probate',l:'Contested Probate Estate Settlement'},{v:'prep',l:'Home Prep for Sale'}], job.svc)+'</select>', true);
-  html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><option value="">Unassigned</option>'+sel([{v:'Anthony Graziano',l:'Anthony Graziano'},{v:'Ashley Jerome',l:'Ashley Jerome'},{v:'Anthony Graziano Jr',l:'Anthony Graziano Jr'}], job.tc)+'</select>', true);
+  // ⚠⚠ ONLY THIS JOB'S OWN FAMILY IS OFFERED (audit H8, Q4). A living client re-typed to an estate
+  // service kept their own phone and email, and an estate re-typed to a living one kept its
+  // representative and printed "Estate of …" on the estimate — the fields are for a different
+  // person. Crossing is a different client; Build Estimate already follows the same rule, and
+  // saveClientEdit refuses it too, so the list cannot be reached around.
+  var _svcOpts = svcFamilyOptions(job.svc);
+  if (!_svcOpts.length) _svcOpts = [job.svc];
+  html += fld('Service Type', '<select id="ec-svc" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel(_svcOpts.map(function(k){ return { v:k, l:esc(SVC_LABELS[k]||k) }; }), job.svc)+'</select>'
+    + '<div style="font-size:10px;color:var(--gray);margin-top:2px;">'+(isEstate ? 'Estate services only. A living client is a different client \u2014 use + Add New Client.' : 'Living-client services only. An estate is a different client \u2014 use + Add New Client.')+'</div>', true);
+  // Built from the roster (conciergeOptionsHtml), never typed here — see its note. Optional, as at intake.
+  html += fld('Assigned TC', '<select id="ec-tc" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+conciergeOptionsHtml(job.tc)+'</select>', false);
   html += fld('Approx. Sqft', txt('sqft', job.sqft, 'e.g. 4500', 'number'), true);
+  // ⚠ YEARS IN HOME MOVES THE PRICE (tenure scales the concierge column: 4 → 40 years took one estimate
+  // from $17,450 to $18,200), so like the sq ft it is held once the estimate is approved. Bedrooms and
+  // baths feed only the walkthrough's coverage badge and are not held. Main house only, as at intake.
+  html += fld('Years in Home', txt('years-in-home', job.yearsInHome, 'e.g. 12', 'number'), false);
+  html += fld('Bedrooms <span style="font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(main house)</span>', txt('beds', job.beds, 'e.g. 4', 'number'), false);
+  html += fld('Full Baths', txt('baths', job.baths, 'e.g. 4', 'number'), false);
+  html += fld('Half Baths', txt('half-baths', job.halfBaths, 'e.g. 2', 'number'), false);
   html += fld('Property Type', '<select id="ec-ptype" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select type'},{v:'Apartment',l:'Apartment'},{v:'Town Home',l:'Town Home'},{v:'Patio Home',l:'Patio Home'},{v:'Single Family Home',l:'Single Family Home'},{v:'Estate',l:'Estate'}], job.ptype)+'</select>', true);
   // ⚠⚠ CORRECTABLE HERE BECAUSE THE ESTIMATE REFUSES TO SAVE WITHOUT IT. Property value is
   // optional at intake and a hard refusal on every estimate save, and until 2026-09-22 that
@@ -39448,6 +39721,8 @@ function showEditClient(jobId) {
   html += fld('Walkthrough', '<input type="date" id="ec-walkthrough" value="'+(job.walkthrough||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   html += fld('Target Start', '<input type="date" id="ec-start" value="'+(job.start||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
   html += fld('Hard Target', '<input type="date" id="ec-completion" value="'+(job.completion||'')+'" onchange="dateChainGuard(\'ec\')" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
+  var _dflag = dateChainFlagHtml(job);
+  html += '<div id="ec-date-flag" style="grid-column:1 / -1;display:'+(_dflag?'block':'none')+';font-size:11px;color:var(--err-tx);font-weight:600;line-height:1.5;">'+_dflag+'</div>';
   html += '</div>';
 
   // ⚠⚠ THE MOVE DESTINATION, FOR THE SAME REASON THE HOME VALUE IS HERE: the new home's square
@@ -39513,16 +39788,16 @@ function showEditClient(jobId) {
   html += fld('Last Name', txt('atty-lname', job.probateAttyLname || (job.probateAttyName ? job.probateAttyName.split(' ').slice(1).join(' ') : ''), 'Last name'), 'probate');
   html += fld('Firm', txt('atty-firm', job.probateAttyFirm, 'Law firm name'), 'probate');
   html += fld('Phone', tel('atty-phone', job.probateAttyPhone), 'probate');
-  html += fld('Email', txt('atty-email', job.probateAttyEmail, 'attorney@lawfirm.com', 'email'), 'probate');
+  html += fld('Email', txt('atty-email', job.probateAttyEmail, '', 'email'), 'probate');
   html += '</div>';
 
   html += '<div class="sec" style="margin-top:14px;">Authorized Representative</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('First Name', txt('exec-fname', job.executorFname || (job.executor ? job.executor.split(' ')[0] : ''), 'First name'), true);
   html += fld('Last Name', txt('exec-lname', job.executorLname || (job.executor ? job.executor.split(' ').slice(1).join(' ') : ''), 'Last name'), true);
-  html += fld('Role / Authority', '<select id="ec-exec-role" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select role'},{v:'Executor',l:'Executor'},{v:'Personal Representative',l:'Personal Representative'},{v:'Power of Attorney',l:'Power of Attorney'},{v:'Estate Attorney',l:'Estate Attorney'},{v:'Family Member',l:'Family Member'},{v:'Trustee',l:'Trustee'},{v:'Other',l:'Other'}], job.executorRole||'')+'</select>', true);
+  html += fld('Role / Authority', '<select id="ec-exec-role" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+executorRoleOptionsHtml(job.executorRole||'')+'</select>', true);
   html += fld('Phone', tel('exec-phone', job.executorPhone), true);
-  html += fld('Email', txt('exec-email', job.executorEmail, 'rep@email.com', 'email'), true);
+  html += fld('Email', txt('exec-email', job.executorEmail, '', 'email'), true);
   html += fld('Letters of Administration', '<select id="ec-exec-auth" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+executorAuthOptionsHtml(job.executorAuth)+'</select>', false);
   html += '</div>';
   html += '</div>'; // end estate block
@@ -39589,6 +39864,10 @@ function ecToggleProbate() {
   if (af) af.style.display = ecIsEstateSvc(svcVal) ? 'block' : 'none';
   var df = document.getElementById('ec-dest-fields');
   if (df) df.style.display = ecIsMoveSvc(svcVal) ? 'block' : 'none';
+  // Home Prep ↔ another living service: the house questions follow, as on intake (Q17).
+  var hf = document.getElementById('ec-house-find');
+  if (hf) hf.style.display = intakeAsksHouseContents(svcVal) ? '' : 'none';
+  showHouseFlagRows('ec', svcVal);
   // The estate attorney is required on probate and merely offered on an Estate Settlement,
   // which frequently never opens probate at all. Matched by CLASS so a sixth attorney field
   // cannot be added and quietly left marked wrong — the same net Client Intake uses.
@@ -39620,10 +39899,52 @@ function saveClientEdit(jobId) {
 
   var fname = (document.getElementById('ec-fname').value||'').trim();
   var lname = (document.getElementById('ec-lname').value||'').trim();
-  if (!fname || !lname) { alert('First and last name are required.'); return; }
+  var _v = function(id){ var el = document.getElementById('ec-' + id); return el ? String(el.value || '') : null; };
+  // A control the modal did not render reads null, and null means "keep what the record holds" —
+  // never "blank it" (audit H7: a save must not erase what the form could not show).
+  var _keep = function(id, cur){ var x = _v(id); return x === null ? (cur || '') : x; };
 
   var svc = document.getElementById('ec-svc').value;
   var svcLabels = SVC_LABELS;
+
+  // ⚠⚠ A LIVING CLIENT AND AN ESTATE ARE DIFFERENT CLIENTS (audit H8, Q4). The picker offers only
+  // this job's family; this is the same rule where the record is written, so nothing reaches round it.
+  if (svc !== job.svc && !sameSvcFamily(svc, job.svc)) {
+    alert('Create a new client for this.\n\n' + (isDecedentJob(job)
+      ? 'This job is an estate: the client on it is the deceased, and its contacts are the representative\u2019s. A living client is a different person.'
+      : 'This job is for a living client: an estate is a different client, with a representative and a date of death.')
+      + ' Use + Add New Client on the dashboard.');
+    return;
+  }
+
+  // ⚠ THE SAME REQUIRED FIELDS AS INTAKE (clientMissingFields). The asterisks here were decoration:
+  // only the name was checked, so a save could blank the address or the representative. A field the
+  // modal does not render is judged on what the record holds.
+  // ⚠ IT REFUSES A SAVE THAT WOULD BLANK A REQUIRED FIELD, AND ONLY NAMES ONE THAT WAS ALREADY BLANK.
+  // A job made before a field became required (or before this check) must stay correctable — a phone
+  // number fixed on an estate whose matter type nobody has asked the attorney yet — so what the
+  // record already lacked is said after the save, not made the price of it. Flag and explain.
+  var _estateNow = isDecedentJob(null, svc);
+  var _missing = clientMissingFields({
+    fname: fname, lname: lname, phone: _keep('phone', job.phone), email: _keep('email', job.email),
+    addr: _v('addr'), city: _v('city'), zip: _v('zip'),
+    sqft: _v('sqft'), ptype: _v('ptype'), src: _keep('src', job.src), svc: svc,
+    start: _keep('start', job.start),
+    executorFname: _estateNow ? _v('exec-fname') : '', executorLname: _estateNow ? _v('exec-lname') : '',
+    executorRole: _estateNow ? _v('exec-role') : '', executorPhone: _estateNow ? _v('exec-phone') : '',
+    executorEmail: _estateNow ? _v('exec-email') : '', deathDate: _estateNow ? _v('date-of-death') : '',
+    // An unrecognised value is discarded by the save below, so it is judged as the blank it becomes.
+    matterType: _estateNow ? (function(x){ return MATTER_TYPES[x] ? x : ''; })(_keep('matter-type', matterTypeOf(job))) : '',
+    probateCase: _keep('probate-case', job.probateCase),
+    probateAttyFname: _estateNow ? _v('atty-fname') : '', probateAttyLname: _estateNow ? _v('atty-lname') : '',
+    probateAttyFirm: _estateNow ? _v('atty-firm') : '', probateAttyPhone: _estateNow ? _v('atty-phone') : '',
+    probateAttyEmail: _estateNow ? _v('atty-email') : ''
+  });
+  // Judged through the resolver: a stored matter type matterTypeOf will not read is no answer.
+  var _missingBefore = clientMissingFields(Object.assign({}, job, { matterType: matterTypeOf(job) }));
+  var _blanked = _missing.filter(function(m){ return _missingBefore.indexOf(m) < 0; });
+  if (_blanked.length) { alert('Please complete: ' + _blanked.join(', ') + '.\n\nThese are required, and this save would have cleared them. Nothing has been saved.'); return; }
+  var _stillMissing = _missing;
 
   // Pricing inputs are frozen once the estimate is approved. Service type, square
   // footage and the premium flag all feed the hours engine, so changing them here
@@ -39644,6 +39965,8 @@ function saveClientEdit(jobId) {
     // hours anywhere: propValMultiplier scales the internal reference band and nothing else.
     if (String((document.getElementById('ec-dest-sqft')||{}).value || '') !== String(job.destSqft || '')) _changed.push('New home sq ft');
     if ((document.getElementById('ec-premium').value === 'yes') !== !!job.premium) _changed.push('Premium service');
+    // Tenure scales the concierge column, so years in home prices the job like the sq ft does (M13).
+    if (_v('years-in-home') !== null && String(_v('years-in-home')) !== String(job.yearsInHome || '')) _changed.push('Years in home');
     if (_changed.length) {
       alert(_changed.join(' and ') + ' cannot be changed on this job.\n\n'
         + 'The estimate has been approved, so these feed a price the client has already been '
@@ -39659,8 +39982,9 @@ function saveClientEdit(jobId) {
   job.fname = fname;
   job.lname = lname;
   job.name  = fname + ' ' + lname;
-  job.phone = document.getElementById('ec-phone').value;
-  job.email = document.getElementById('ec-email').value;
+  // Not rendered on an estate job (the client is the deceased), so kept as recorded there.
+  job.phone = _keep('phone', job.phone);
+  job.email = _keep('email', job.email);
   job.addr  = document.getElementById('ec-addr').value;
   job.city  = document.getElementById('ec-city').value;
   job.zip   = document.getElementById('ec-zip').value;
@@ -39688,13 +40012,28 @@ function saveClientEdit(jobId) {
     if (_stale.length) alert('The dates on this job have changed.\n\n' + _staleTxt.charAt(0).toUpperCase() + _staleTxt.slice(1)
       + (_stale.length > 1 ? ' state' : ' states') + ' the old dates. Agree the new dates with the client, and re-send the estimate if it has not been accepted yet.');
   }
-  job.mustFind    = (document.getElementById('ec-mustfind')||{}).value||'';
-  job.safetyNotes = (document.getElementById('ec-safety')||{}).value||'';
-  job.houseFlags  = readHouseFlagInputs('ec');
+  // Home Prep hides the must-find box (Q17): it keeps what the record holds, like every hidden row.
+  if (intakeAsksHouseContents(svc)) job.mustFind = _keep('mustfind', job.mustFind);
+  job.safetyNotes = _keep('safety', job.safetyNotes);
+  job.houseFlags  = readHouseFlagInputs('ec', svc, job);
   job.svc   = svc;
   job.svcLabel = svcLabels[svc] || svc;
-  job.tc    = document.getElementById('ec-tc').value;
+  // The picker is built from the roster plus the job's own value (conciergeOptionsHtml), so an
+  // untouched save writes back exactly what was there — never 'Unassigned' for a name it lacked.
+  job.tc    = _keep('tc', job.tc);
   if (!_locked) job.sqft = document.getElementById('ec-sqft').value;
+  // Years in home moves the price (tenure), so it is held with the sq ft once approved. Bedrooms and
+  // baths feed only the walkthrough's coverage badge.
+  if (!_locked) job.yearsInHome = _keep('years-in-home', job.yearsInHome);
+  job.beds      = _keep('beds', job.beds);
+  job.baths     = _keep('baths', job.baths);
+  job.halfBaths = _keep('half-baths', job.halfBaths);
+  // The referral, read the way the modal SHOWS it (readReferralInputs, audit M13/M16, Q15).
+  if (_v('src') !== null) {
+    var _ref = readReferralInputs('ec');
+    job.src = _ref.src; job.refPartnerId = _ref.refPartnerId;
+    job.refPartnerName = _ref.refPartnerName; job.referredByName = _ref.referredByName;
+  }
   job.ptype = document.getElementById('ec-ptype').value;
   job.priority = document.getElementById('ec-priority').value;
   job.re    = document.getElementById('ec-re').value;
@@ -39762,7 +40101,7 @@ function saveClientEdit(jobId) {
     job.executorFname    = execFname;
     job.executorLname    = execLname;
     job.executor         = (execFname + ' ' + execLname).trim();
-    job.executorRole     = document.getElementById('ec-exec-role').value;
+    job.executorRole     = _keep('exec-role', job.executorRole);   // the catalogue plus the recorded value (executorRoleOptionsHtml)
     job.executorPhone    = document.getElementById('ec-exec-phone').value;
     job.executorEmail    = document.getElementById('ec-exec-email').value;
     job.executorAuth     = resolveExecutorAuth(document.getElementById('ec-exec-auth').value);
@@ -39782,6 +40121,8 @@ function saveClientEdit(jobId) {
   // above it, so nothing was lost; but the drilldown never refreshed, which reads exactly
   // like the edit failed to save. renderClientDashboard is the drilldown that hosts the
   // Edit Client button in the first place (see its render at the button's call site).
+  if (_stillMissing.length && typeof dashNotice === 'function')
+    dashNotice('warn', 'Saved. Still missing on this client: ' + _stillMissing.join(', ') + '.');
   if (typeof renderClientDashboard === 'function') renderClientDashboard(jobId);
   if (typeof renderJobs === 'function') renderJobs();   // client list may show a new name
 
@@ -40173,6 +40514,8 @@ populateIntakeTCDropdown();
 buildHouseFlagInputs();
 buildDocTierOptions();
 buildExecutorAuthOptions();
+buildExecutorRoleOptions();
+buildReferralSourceOptions();
 // Force Client Intake date fields to use the calendar picker only — block manual
 // keyboard entry so you can't type a malformed or impossible date.
 (function(){

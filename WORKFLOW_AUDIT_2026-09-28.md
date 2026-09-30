@@ -4,7 +4,7 @@ Five audits and a click-through of three jobs, from + Add New Client to final pa
 
 Status of each fix pack lives in this file: when a session lands a pack, it marks it done here and adds its CLAUDE.md entry.
 
-**Status, 2026-09-29:** P1–P8 and P10 have landed on `main`: C1, C2, H1, H2, H3, H4, H5, H6, M1–M8 and thirteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). One P10 low is a decision for Anthony (`deliveredBy` / `activatedBy`, under the lows). Still open: P9 and P11–P14 (H7–H9, M9–M16 and the remaining lows). Questions still open: Q7, the Q14 follow-up and Anthony's OK on the Q20 reading, all three for P12 only.
+**Status, 2026-09-30:** P1–P10 have landed on `main`: C1, C2, H1–H9, M1–M8, M13–M16 and nineteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). One P10 low is a decision for Anthony (`deliveredBy` / `activatedBy`, under the lows), and one P9 low (sanity checks on square footage and room counts) waits on his limits. Still open: P11–P14 (M9–M12 and the remaining lows). Questions still open: Q7, the Q14 follow-up and Anthony's OK on the Q20 reading, all three for P12 only.
 
 ## TL;DR
 
@@ -103,7 +103,7 @@ Every rush estimate and invoice says "A second Transition Concierge and an expan
 
 **Fix:** P6 (Make the client documents match the estimate)
 
-#### H7 · Edit Client · Saving Edit Client erases fields it can't display.
+#### H7 · Edit Client · Saving Edit Client erases fields it can't display. — **Fixed 2026-09-30**
 
 Its concierge list is hard-coded (and includes Anthony Jr, a specialist), and its representative-role list lacks the three ad litem roles intake offers. Any save, even one to fix a date, writes them back blank: a directory concierge is removed (the job's contact falls back to Anthony) and an ad litem role is lost.
 
@@ -111,7 +111,7 @@ Its concierge list is hard-coded (and includes Anthony Jr, a specialist), and it
 
 **Fix:** P9 (Bring Edit Client up to intake's rules)
 
-#### H8 · Edit Client · Switching between a living and an estate service keeps the wrong person's data.
+#### H8 · Edit Client · Switching between a living and an estate service keeps the wrong person's data. — **Fixed 2026-09-30**
 
 Edit Client allows the switch and keeps everything. A living client re-typed to an estate service keeps their own email, and Edit Client even marks phone and email required on estate jobs. DocuSign's signer lookup takes the client email first, so the signature request can go out under the deceased's name. The other way round, a job that kept its representative reads "Estate of …" on the client estimate.
 
@@ -119,7 +119,7 @@ Edit Client allows the switch and keeps everything. A living client re-typed to 
 
 **Fix:** P9 (Bring Edit Client up to intake's rules)
 
-#### H9 · Intake & Edit Client · Moving a date silently deletes the closing date or the start date.
+#### H9 · Intake & Edit Client · Moving a date silently deletes the closing date or the start date. — **Fixed 2026-09-30**
 
 If the start moves past the hard target, the hard target is erased; if the start falls before the walkthrough, the start is erased. There is no message. The erased date is the one the schedule uses to flag a job that will miss a closing.
 
@@ -225,7 +225,7 @@ Scoring the rooms the coverage badge asks for dropped one quote from $18,200 to 
 
 **Fix:** P12 (Estimator fixes and pricing decisions)
 
-#### M13 · Edit Client · Some intake answers can never be corrected.
+#### M13 · Edit Client · Some intake answers can never be corrected. — **Fixed 2026-09-30**
 
 Years in home (it moves the price: 4 → 40 years took $17,450 to $18,200), bed and bath counts, the referral source and partner, and the Letters date have no Edit Client field.
 
@@ -233,7 +233,7 @@ Years in home (it moves the price: 4 → 40 years took $17,450 to $18,200), bed 
 
 **Fix:** P9 (Bring Edit Client up to intake's rules)
 
-#### M14 · Intake · A hand-set documentation level can come back on the next intake.
+#### M14 · Intake · A hand-set documentation level can come back on the next intake. — **Fixed 2026-09-30**
 
 When a gate forces Formal, the form remembers the level it overrode so it can hand it back. That memory survives the reset after Save Client, so the next client's form can come back to the previous client's level.
 
@@ -241,7 +241,7 @@ When a gate forces Formal, the form remembers the level it overrode so it can ha
 
 **Fix:** P9 (Bring Edit Client up to intake's rules)
 
-#### M15 · Intake · Save Client can pull you back to the new client when its Drive folder lands.
+#### M15 · Intake · Save Client can pull you back to the new client when its Drive folder lands. — **Fixed 2026-09-30**
 
 Seconds after Save Client, the folder callback reopens that client's dashboard and makes it the current client for the Job Plan, even if you have moved on to another client.
 
@@ -249,7 +249,7 @@ Seconds after Save Client, the folder callback reopens that client's dashboard a
 
 **Fix:** P9 (Bring Edit Client up to intake's rules)
 
-#### M16 · Intake · Referral attribution can record a partner you didn't pick.
+#### M16 · Intake · Referral attribution can record a partner you didn't pick. — **Fixed 2026-09-30**
 
 A partner chosen and then hidden (by changing the source) is still saved, and partners are identified by sheet row, so re-sorting the sheet re-points them.
 
@@ -279,13 +279,13 @@ A partner chosen and then hidden (by changing the source) is still saved, and pa
 
 **Intake & Edit Client** (fix: P9)
 
-- Edit Client's required asterisks aren't enforced.
-- The example placeholders ((561) 555-0100, client@email.com) are back, set at runtime where the markup test can't see them.
-- The intake reset carries date minimums and the referral block to the next client.
-- No sanity checks on square footage or room counts.
-- The client name is unescaped in two headers.
-- A service switch wipes phone and email.
-- Home Prep's Edit Client shows the house checklist its intake skips.
+- Edit Client's required asterisks aren't enforced. *(fixed 2026-09-30: both forms ask one rule; Edit Client refuses a save that would clear a required field and names older gaps after saving)*
+- The example placeholders ((561) 555-0100, client@email.com) are back, set at runtime where the markup test can't see them. *(fixed 2026-09-30, and the tripwire now reads runtime placeholders)*
+- The intake reset carries date minimums and the referral block to the next client. *(fixed 2026-09-30)*
+- No sanity checks on square footage or room counts. *(left open by P9, 2026-09-30: it needs Anthony's limits; moved to P14)*
+- The client name is unescaped in two headers. *(fixed 2026-09-30)*
+- A service switch wipes phone and email. *(fixed 2026-09-30: put aside and restored)*
+- Home Prep's Edit Client shows the house checklist its intake skips. *(fixed 2026-09-30: both forms ask access & security and safety on prep, per Q17)*
 
 **Job Plan & lifecycle** (fix: P10)
 
@@ -320,7 +320,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P6** Make the client documents match the estimate (needs Q8, Q11)
 - [x] **P7** Let a finished job close with the midpoint unpaid (needs Q1)
 - [x] **P8** Measure work done against the rooms (needs Q3)
-- [ ] **P9** Bring Edit Client up to intake's rules (needs Q4, Q15–Q18)
+- [x] **P9** Bring Edit Client up to intake's rules (needs Q4, Q15–Q18)
 - [x] **P10** Lifecycle and payment loose ends (needs Q2, Q12, Q19)
 - [ ] **P11** Harden the Apps Script backend (redeploy)
 - [ ] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20)
@@ -497,6 +497,8 @@ House process (CLAUDE.md): reproduce first, tests plus a revert sweep, a browser
 
 Fixes: H7, H8, H9, M13–M16, intake lows · Needs: Q4, Q15–Q18
 
+**Landed 2026-09-30.** H7, H8, H9, M13–M16, Q4 and Q15–Q18 applied, and six of the seven intake lows; the seventh (square footage and room-count sanity checks) needs limits from Anthony and moves to P14. Two additions the prompt did not name: intake's walkthrough date and site-visit asterisks came off (the save never required them, and the dashboard asks for the walkthrough later), and Edit Client refuses only a save that would clear a required field, naming older gaps after the save, so a legacy client stays correctable. See `BUILD_HISTORY.md`.
+
 ```text
 Bring Edit Client up to Client Intake's rules (2026-09-28 workflow audit, findings H7, H8, H9, M13–M16 and the intake lows).
 
@@ -600,6 +602,7 @@ Small backlog, one commit (2026-09-28 workflow audit, "Other" lows):
 - `showFB` clears its strip on an unconditional 4-second timer, so a second message inside 4 s is wiped by the first message's timer.
 - The "Filed copy" links in the document strip don't name their document.
 - The Job active step shows no date, though `activatedOn` is stamped.
+- Intake has no sanity check on square footage or room counts (moved from P9; ask Anthony for the limits first — flag, never refuse).
 - Dead code: `houseFlagSummary` and the client list's unused `detailHtml`, if P5 didn't already remove them.
 - Deleting a contractor has no PIN, unlike vendors and partners.
 - Splitting a photo (`invSplitItemClick`) repaints the whole Job Admin tab: 1.4 s at 3,000 rows. Repaint the affected rows only.

@@ -216,7 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const save = src.slice(src.indexOf('function saveIntake'), src.indexOf('function saveIntake') + 12000);
     has(save, "mustFind:", 'saveIntake stores the must-find answer');
     has(save, "safetyNotes:", 'saveIntake stores the safety answer');
-    has(save, "readHouseFlagInputs('i')", 'and the checklist, read through the shared reader');
+    has(save, "readHouseFlagInputs('i', svc, null)", 'and the checklist, read through the shared reader');
 
     // The reset leak. INTAKE_FIELDS does `.value = ''`, which does NOTHING to a checkbox,
     // so without this the next client created in the same session inherits the last
@@ -229,8 +229,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ec = src.slice(src.indexOf('function saveClientEdit'), src.indexOf('function saveClientEdit') + 9000);
     has(ec, 'job.mustFind', 'Edit Client saves the must-find answer');
     has(ec, 'job.safetyNotes', 'Edit Client saves the safety answer');
-    has(ec, "readHouseFlagInputs('ec')", 'Edit Client saves the checklist');
-    has(src, "houseFlagInputsHtml('ec', job)", 'and renders it from the catalogue, not from its own list');
+    has(ec, "readHouseFlagInputs('ec', svc, job)", 'Edit Client saves the checklist (a row its service hides keeps the record)');
+    has(src, "houseFlagInputsHtml('ec', job, job.svc)", 'and renders it from the catalogue, not from its own list');
 
     // The Job Plan — BOTH headers. A Home Prep job runs vendors through the same house;
     // an alarm code and a loaded gun safe do not care which service was sold.

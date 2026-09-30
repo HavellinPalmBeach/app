@@ -740,11 +740,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['isWeekend(', '.min =', 'showFB('].forEach((n) =>
       lacks(ub, n, `intake re-implements nothing (${n})`));
 
-    const G = sandbox({ fns: ['dateChainGuard', 'isWeekend'] });
+    const G = sandbox({ fns: ['dateChainGuard', 'isWeekend', 'paintDateChainFlag', 'dateChainConflicts', 'dateChainFlagHtml', 'esc'] });
     const el = (v) => ({ value: v, min: '' });
-    // ⚠ EVERY ELEMENT ACCESS IS GUARDED: `ec-walkthrough` DOES NOT EXIST — the walkthrough date
-    // is an intake field and Edit Client carries only the two targets. An unguarded read is a
-    // TypeError on the form somebody is trying to save.
+    // ⚠ EVERY ELEMENT ACCESS IS GUARDED: a form may carry only some of the three dates (this rig
+    // has no walkthrough and no flag element). An unguarded read is a TypeError on the form
+    // somebody is trying to save.
     const ec = { 'ec-start': el('2026-09-19'), 'ec-completion': el('2026-10-01') };  // a Saturday
     let said = '';
     G.document = { getElementById: (id) => ec[id] || null };
@@ -753,11 +753,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ec['ec-start'].value, '', '⚠ a weekend start is cleared on Edit Client, with no walkthrough field present');
     has(said, 'weekend', 'and it says why, through alert when the form has no feedback strip');
 
-    const ec2 = { 'ec-start': el('2026-09-21'), 'ec-completion': el('2026-09-14') };
+    // ⚠⚠ AUDIT H9 / Q18: A DATE OUT OF ORDER IS KEPT AND FLAGGED, NEVER CLEARED. This used to blank
+    // the hard target the moment the start moved past it, and the start the moment the walkthrough
+    // moved past it, silently — a closing date typed at intake vanished and the save wrote it away.
+    const flag = { innerHTML: '', style: {} };
+    const ec2 = { 'ec-walkthrough': el('2026-09-24'), 'ec-start': el('2026-09-21'),
+                  'ec-completion': el('2026-09-14'), 'ec-date-flag': flag };
+    said = '';
     G.document = { getElementById: (id) => ec2[id] || null };
     G.dateChainGuard('ec');
-    eq(ec2['ec-completion'].min, '2026-09-21', 'the hard target cannot precede the start');
-    eq(ec2['ec-completion'].value, '', 'and one that already did is cleared');
+    eq(ec2['ec-completion'].value, '2026-09-14', '⚠⚠ a hard target before the start is KEPT');
+    eq(ec2['ec-start'].value, '2026-09-21', '⚠⚠ and a start before the walkthrough is kept');
+    eq(said, '', 'neither is refused — no alert');
+    has(flag.innerHTML, 'is after the hard target (2026-09-14)', 'the start past the closing is named in the flag');
+    has(flag.innerHTML, 'is before the walkthrough (2026-09-24)', 'and the start before the walkthrough');
+    eq(flag.style.display, 'block', 'and the flag is on screen');
+    ec2['ec-completion'].value = '2026-10-30'; ec2['ec-walkthrough'].value = '2026-09-15';
+    G.dateChainGuard('ec');
+    eq(flag.innerHTML, '', 'put right, the flag clears');
+    eq(flag.style.display, 'none', 'and hides');
+    eq(ec2['ec-start'].min, '2026-09-15', 'the start picker still opens on the walkthrough');
+    // The chain itself, DOM-free — the rule the Edit Client render also paints on open.
+    eq(G.dateChainConflicts({ walkthrough: '2026-09-14', start: '2026-09-21', completion: '2026-10-01' }), [],
+       'an ordered chain has no conflicts');
+    eq(G.dateChainConflicts({ start: '2026-09-21', completion: '' }), [], 'a blank hard target is no conflict');
+    eq(G.dateChainConflicts({ walkthrough: '2026-09-22', start: '2026-09-21', completion: '2026-09-20' }).length, 2,
+       'both conflicts at once are both named');
 
     // ⚠ IT FLAGS AND EXPLAINS; IT NEVER REFUSES. The client estimate states the target start and
     // the agreement states an Estimated Start Date, so moving it after either went out makes a

@@ -173,8 +173,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const said = [], landed = [], timers = [];
     const c = sandbox({
-      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef'],
-      vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
+      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked'],
+      vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: d, jobs: [], showFB: (el, k, m) => said.push({ el, k, m }),
                saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
                clearIntakeForm() {}, populateAgrSelect: null, showPanel() {},
@@ -208,8 +208,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const landed3 = [];
     const c3 = sandbox({
-      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'esc'],
-      vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
+      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'esc', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked'],
+      vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: d3, jobs: [], showFB() {}, saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
                clearIntakeForm() {}, populateAgrSelect: null, showPanel() {}, generateHvlId: () => 'HVL-0009',
                readHouseFlagInputs: () => ({}), lookupReferralById: () => null, setTimeout() {},
@@ -225,8 +225,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d2 = domStub({ 'i-svc': 'downsizing', 'i-fname': 'Tripp' });
     const landed2 = [];
     const c2 = sandbox({
-      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef'],
-      vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS'],
+      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked'],
+      vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: d2, jobs: [], showFB() {}, saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
                clearIntakeForm() {}, populateAgrSelect: null, showPanel() {}, generateHvlId: () => 'HVL-0008',
                readHouseFlagInputs: () => ({}), lookupReferralById: () => null, setTimeout() {},

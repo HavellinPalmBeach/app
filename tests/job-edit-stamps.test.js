@@ -433,13 +433,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const EC_FNS = ['saveClientEdit', 'courtRecordShown', 'jobOnProbateTrack', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
       'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'readHouseFlagInputs',
-      'isDecedentJob', 'matterTypeOf', 'invFiduciaryMode', 'matterDef', 'saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch'];
+      'isDecedentJob', 'matterTypeOf', 'invFiduciaryMode', 'matterDef', 'saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 'sameSvcFamily', 'svcFamily', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'houseFlagAsked', 'houseFlagsOf', 'intakeAsksHouseContents'];
     const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
-      'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'MATTER_TYPES', 'DOC_SCOPES'];
+      'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'referralDirectory'];
     const srv = server();
     srv.saveAllJobsToSheet([morningJob(), otherJob()]);
     const posted = [];
-    const d = domStub({ 'ec-svc': 'downsizing', 'ec-fname': 'Tripp', 'ec-lname': 'Butler', 'ec-sqft': '',
+    const d = domStub({ 'ec-svc': 'downsizing', 'ec-fname': 'Tripp', 'ec-lname': 'Butler', 'ec-sqft': '', 'ec-email': 'tripp@example.com',
                         'ec-premium': 'no', 'ec-hf-firearms': true, 'ec-hfn-firearms': 'Two pistols in the bedroom safe' });
     const A = sandbox({ fns: EC_FNS, vars: EC_VARS,
       stubs: { document: d, jobs: [morningJob(), otherJob()], estimateStore: {}, SHEETS_SYNC_URL: 'https://sheets',

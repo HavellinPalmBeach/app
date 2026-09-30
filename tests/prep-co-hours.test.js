@@ -169,8 +169,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'chkGrid', 'planChk', '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan', '_planTouch',
       'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody',
       'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
-      'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coHoursLabel', '_coMoney', 'fmt'].concat(CO);
-    const planVars = ['PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
+      'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName'].concat(CO);
+    const planVars = ['DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const plan = (est, cos, loggedTC) => {
       try {
         const c = sandbox({ fns: planFns, vars: planVars, stubs: {

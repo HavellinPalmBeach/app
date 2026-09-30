@@ -86,11 +86,11 @@ function run(resp, opts) {
   const warns = [];
   const timers = [];
   const ctx = sandbox({
-    vars: ['_driveFolderInFlight', 'PHOTO_UPLOAD_TIMEOUT_MS'],
+    vars: ['_dashKeepNotice', '_driveFolderInFlight', 'PHOTO_UPLOAD_TIMEOUT_MS'],
     // _saveJobEdit / _jobTouch are lifted though nothing here calls them today: a change that sends
     // the failure recorder through them (it must stay bare — see job-edit-stamps) then FAILS that
     // suite's exemption checks with this file still running, instead of throwing here.
-    fns: ['createDriveJobFolder', '_driveFolderFailed', 'createDriveFolderNow', 'driveFolderPending',
+    fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', '_driveFolderFailed', 'createDriveFolderNow', 'driveFolderPending',
           '_backendErrorKind', 'resolveSubfolderId', '_subfolderId', 'fetchSubfolderIds',
           '_normalizeSubfolders', 'uploadToDrive', '_doPhotoUpload', '_getPhotoRef', '_setPhotoRef',
           '_saveJobEdit', '_jobTouch'],
@@ -102,7 +102,7 @@ function run(resp, opts) {
       SHEETS_SYNC_URL: opts.noUrl ? '' : 'https://script.google.com/macros/s/AAA/exec',
       DRIVE_FOLDER_ID: '',
       showSyncBadge: (m) => badges.push(String(m)),
-      openClientDashboard: () => {},
+      openClientDashboard: () => {}, _dashRedraw: () => false,
       saveJobs: () => {},
       syncJobToSheets: () => {},
       savePhotoRefs: () => {},
@@ -223,14 +223,14 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     let creates = 0;
     const badges = [];
     const ctx = sandbox({
-      fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
+      fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
             '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
-      vars: ['_driveFolderInFlight', '_estStoreState'],
+      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
         DRIVE_FOLDER_ID: '',
         showSyncBadge: (m) => badges.push(String(m)),
-        openClientDashboard: () => {},
+        openClientDashboard: () => {}, _dashRedraw: () => false,
         saveJobs: () => {}, syncJobToSheets: () => {},
         estimateStore: {},
         console: { warn() {}, log() {}, error() {} },
@@ -275,14 +275,14 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const d = deferred();
     const badges = [];
     const ctx = sandbox({
-      fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
+      fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
             '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
-      vars: ['_driveFolderInFlight', '_estStoreState'],
+      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
         DRIVE_FOLDER_ID: '',
         showSyncBadge: (m) => badges.push(String(m)),
-        openClientDashboard: () => {}, saveJobs: () => {}, syncJobToSheets: () => {},
+        openClientDashboard: () => {}, _dashRedraw: () => false, saveJobs: () => {}, syncJobToSheets: () => {},
         estimateStore: {},
         console: { warn() {}, log() {}, error() {} },
         fetch: () => d.handle,
@@ -331,14 +331,14 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const badges = [];
     let n = 0;
     const ctx = sandbox({
-      fns: ['createDriveJobFolder', 'createDriveFolderNow', 'driveFolderPending',
+      fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
             '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
-      vars: ['_driveFolderInFlight', '_estStoreState'],
+      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
         DRIVE_FOLDER_ID: '',
         showSyncBadge: (m) => badges.push(String(m)),
-        openClientDashboard: () => {}, saveJobs: () => {}, syncJobToSheets: () => {},
+        openClientDashboard: () => {}, _dashRedraw: () => false, saveJobs: () => {}, syncJobToSheets: () => {},
         estimateStore: {},
         console: { warn() {}, log() {}, error() {} },
         // First call is the POST and it REJECTS, exactly as an older deployment does.

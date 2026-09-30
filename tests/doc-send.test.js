@@ -628,5 +628,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const kept = tags.filter((t) => /\bplaceholder="/.test(t)).length;
     ok(kept > 10, 'genuine hint placeholders are untouched (' + kept + ' remain)');
     has(src, 'placeholder="e.g. 214"', "the extension keeps its 'e.g.' hint, which cannot read as a value");
+
+    // ⚠ AND THE SAME RULE AT RUNTIME (audit P9, intake lows). The markup scan above cannot see a
+    // placeholder a script sets: "(561) 555-0100" and "client@email.com" came back through
+    // toggleIntakeFields, and "(561) 000-0000" through Edit Client's tel() default, and every
+    // check above stayed green. Three runtime shapes: `.placeholder = '…'`, a `ph || '…'` default
+    // spliced into markup, and the placeholder argument of Edit Client's txt()/tel() builders.
+    const rt = [];
+    const grab = (re) => { let m; while ((m = re.exec(src))) rt.push(m[1]); };
+    grab(/\.placeholder\s*=\s*'([^']*)'/g);
+    grab(/placeholder="'\s*\+\s*\(\s*\w+\s*\|\|\s*'([^']*)'\s*\)/g);
+    grab(/\btxt\('[\w-]+',\s*[^,()]+(?:\([^()]*\))?[^,]*,\s*'([^']*)'/g);
+    ok(rt.length > 15, 'the runtime placeholders really were scanned (' + rt.length + ')');
+    eq(rt.filter((p) => VALUE_SHAPED.test(p.trim())), [],
+       '⚠⚠ no script sets a placeholder that is itself a valid phone number or email address');
   }
 };

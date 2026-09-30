@@ -27,25 +27,34 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
             'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
-            'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob', 'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
-      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+            'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob', 'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked'],
+      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: d },
     });
     d.querySelectorAll = () => [];
     c.toggleIntakeFields();
     const g = (id) => d.getElementById(id).style.display;
-    return { find: g('i-house-find'), ticks: g('i-house-ticks'), level: g('i-doclevel-block') };
+    const rows = {};
+    c.HOUSE_FLAGS.forEach((f) => { rows[f.key] = g('i-hfr-' + f.key); });
+    return { find: g('i-house-find'), level: g('i-doclevel-block'), rows };
   };
 
-  group('a prep intake hides the house-contents questions and the documentation level');
+  // ⚠ Q17 (Anthony, 2026-09-29): Home Prep intake asks the ACCESS & SECURITY row and the safety
+  // question — vendors go through the house — but not the must-find question or the contents rows.
+  // Until P9 it hid the whole tick list, access included.
+  group('a prep intake hides the must-find question, the contents rows and the documentation level — and asks access & security');
   {
     const p = run('prep');
     eq(p.find, 'none', 'must-find question hidden on prep');
-    eq(p.ticks, 'none', 'tick list hidden on prep');
     eq(p.level, 'none', 'documentation level hidden on prep');
+    eq(p.rows.access, '', '⚠ the access & security row is asked on prep (Q17)');
+    const hidden = Object.keys(p.rows).filter((k) => k !== 'access');
+    ok(hidden.length >= 6, 'the contents rows were measured (' + hidden.length + ')');
+    eq(hidden.filter((k) => p.rows[k] !== 'none'), [], 'every contents row is hidden on prep');
     ['downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', 'probate', 'contested_probate'].forEach((svc) => {
       const r = run(svc);
-      eq([r.find, r.ticks, r.level], ['', '', ''], svc + ' still shows all three');
+      eq([r.find, r.level], ['', ''], svc + ' still shows the must-find question and the level');
+      eq(Object.keys(r.rows).filter((k) => r.rows[k] !== ''), [], svc + ' shows every row');
     });
   }
 
@@ -63,7 +72,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const save = fnSrc('saveIntake');
     has(save, "intakeAsksHouseContents(svc) ? ((document.getElementById('i-mustfind')", 'mustFind gated on the service');
-    has(save, "intakeAsksHouseContents(svc) ? readHouseFlagInputs('i') : houseFlagsOf(null)", 'houseFlags gated — all off on prep');
+    has(save, "readHouseFlagInputs('i', svc, null)", 'houseFlags read per the service: a row prep is not asked is saved off');
     has(save, "docLevel:(svc === 'prep') ? ''", 'docLevel blank on prep');
     lacks(save, "safetyNotes: intakeAsks", 'safety is saved on every service');
     const c = sandbox({ fns: ['houseFlagsOf'], vars: ['HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'] });

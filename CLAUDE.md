@@ -67,7 +67,7 @@ The recurring lessons, each learned from a defect that shipped.
 ### The harness
 - Booting the whole file in jsdom times out. `tests/harness.js` lifts `function NAME(` blocks and top-level `var`s out of `havellin.html` (and the `.gs` files) by source text and runs them in a `vm` sandbox, `sandbox({fns, vars, stubs})`, so the code under test is the real code.
 - A lifted function overrides a stub of the same name. Lift the real rule rather than stubbing it: a stub is how the two ends of one rule drift apart without any test noticing.
-- `domStub(seed)` runs screen code: elements are minted on demand and remembered, so a test can read the screen back. It parses no markup and knows nothing of display; seed what the browser would hold, and prove the join in a browser.
+- `domStub(seed)` runs screen code: elements are minted on demand and remembered, so a test can read the screen back. Minting means no id is ever absent: to test a save that treats an unrendered control differently from a cleared one, wrap `getElementById` to answer null for ids the rendered markup lacks (see `edit-client-intake-rules.test.js`). It parses no markup and knows nothing of display; seed what the browser would hold, and prove the join in a browser.
 - `driveCalcAll(opts)` runs the real pricing engine. Build pricing tests on it, never on seeded rooms that happen to sum to the totals.
 - `group(name, fn)` runs its body; a file that runs zero checks fails; `run.js` prints each file's count.
 
@@ -86,14 +86,14 @@ The recurring lessons, each learned from a defect that shipped.
 - Work on a copy: `tar` the tree without `.git` into the scratchpad (a copy of only `havellin.html` and `tests/` gives a false baseline, since suites read the `.gs` files and the documents). Never run a suite against a file a sweep is mutating.
 - Per change: snapshot, apply the revert, assert the needle matched the expected number of times and the replacement landed, run, restore in a `finally`. Never restore with `git checkout`: it discards every uncommitted change (one sweep reported fifteen green reverts over code it had erased).
 - The baseline is 0 failed before and after. After an interrupted sweep, check the tree first: a non-zero baseline invalidates every result.
-- Run the sweep with `python3 -u` writing to a file (a `| tail` pipe buffers the output and swallows the exit code). Wait on a pid or the result file, never `pgrep -f` a string your own waiter contains.
+- Run the sweep with `python3 -u` writing to a file (a `| tail` pipe buffers the output and swallows the exit code). Wait on a pid or the result file, never `pgrep -f` (or `pkill -f`) a string your own shell's command line contains: it matches, and kills, the shell.
 
 ### Browser checks
 - `playwright` is deliberately not a repo dependency: install it outside the repo (`npm install --prefix <dir> playwright`; the environment skips the browser download) and run `NODE_PATH=<dir>/node_modules npm run test:browser`, or `tests/browser/run.sh 12 40` for chosen steps. Steps launch `/opt/pw-browsers/chromium`.
 - Each step drives the real page, prints `N passed, M failed`, closes its browser in its `catch`, and runs under a ten-minute ceiling. A new behaviour gets a new step; rerun the older steps as regressions.
 - Press the control: `page.evaluate` on a handler proves the handler, not that a person can reach it.
 - Measure horizontal overflow at 1440 and 390 px, zero page errors, and print media for documents.
-- Traps: the option is `viewport`, not `viewportSize`; `innerText` applies `text-transform` (use `textContent`); `document.body.innerHTML` contains the app's whole script, so read a container; populate a record and open its detail view before measuring (an empty state proves nothing); Save Client lands on the new client's dashboard, so reopen what you meant to measure; simulate offline by aborting requests to a configured URL, not by leaving the URL unset.
+- Traps: the option is `viewport`, not `viewportSize`; `innerText` applies `text-transform` (use `textContent`); `document.body.innerHTML` contains the app's whole script, so read a container; populate a record and open its detail view before measuring (an empty state proves nothing); Save Client lands on the new client's dashboard, so reopen what you meant to measure; simulate offline by aborting requests to a configured URL, not by leaving the URL unset; `offsetParent` is always null inside a `position:fixed` modal, so test visibility with `checkVisibility()`.
 
 ## Documentation
 - `manual.html` is the system-of-record reference: setup, backends, the engine, every screen. `concierge-guide.html` is the playbook: one job from intake to final invoice, what to press, what the app will refuse, and a symptom-to-cause table. Keep the split: no Apps Script URLs or engine formulas in the playbook.
@@ -101,7 +101,7 @@ The recurring lessons, each learned from a defect that shipped.
 - `tests/doc-structure.test.js` checks what the nesting means (headings in the page column, no note inside a note); a tag count passes a stray close that cancels a missing one.
 - Each document's phone block is `@media screen and (max-width:820px)`: Chrome lays Letter out at about 739 px, so an unscoped phone rule cuts off printed tables. Keep `break-inside:avoid` on notes and tables, never on lists that can outrun a page.
 - A behaviour change updates every sentence that described the old behaviour, including any that said something could not be done. Say what changed rather than silently rewriting.
-- Last reconciled with the app: 2026-09-29 (P10). Audit pack P13 is the full pass still owed.
+- Last reconciled with the app: 2026-09-30 (P9). Audit pack P13 is the full pass still owed.
 
 ## Architecture
 ### Screens
@@ -111,6 +111,7 @@ The recurring lessons, each learned from a defect that shipped.
 - `renderClientDashboard` rewrites the drilldown with `innerHTML` on every redraw, including the 15-second remote tick. Notices go through `_docNotice` (painted once, kept through background redraws via `_asBackgroundRedraw`); the document viewer lives outside it.
 - The timeline (`jobTimeline`, DOM-free) derives each milestone from the record that owns it, never from `job.status`, which estimate events overwrite. Exactly one row is lit (current or blocked), and a blocked row prints its reason and its fix on screen (a tooltip is unreachable on an iPad). The band names the step as an imperative (`JT_NEXT`), carries exactly one filled button, and a tray with the current document; the strip at the foot is the archive of earlier documents. The utility bar holds only what is not a step: Edit Client, Walkthrough, Drive. No control renders twice. On a desk the same rows draw as a two-leg track that breaks at Agreement signed.
 - Dashboard handlers call functions written for the old tabs, which read tab globals. Every `dash*` handler primes first (`_primeEstimateFor`, `_primeAgreementFor`) and refuses if it cannot; without that a PIN approves another client's estimate. `_jobBandHost()` says which screen owns the band.
+- Client Intake and Edit Client ask one set of rules. Required fields are `clientMissingFields` (DOM-free), asked by both saves; Edit Client refuses only a save that would clear a required field and names older gaps after saving (`dashNotice`). Edit Client never writes back a control it did not render (the element is absent, so the save keeps the record's value), and every picker is its catalogue plus the job's current value marked as recorded: `conciergeOptionsHtml` (the active roster), `executorRoleOptionsHtml` (`EXECUTOR_ROLES`, which also builds intake's select), `referralSourceOptionsHtml` (`REFERRAL_SOURCES`), `referralPartnerOptionsHtml`. The referral fields are read as the form shows them (`readReferralInputs`: a hidden partner is not saved). Dates out of order are kept and flagged in red, never cleared (`dateChainConflicts`, painted by `paintDateChainFlag`; Q18); weekends are refused as picked. A street address already on file is named at intake, never refused (`jobsAtAddress`, Q16). An estate switch puts the typed phone and email aside (`dataset.stash`) rather than wiping them, and the reset clears what the last client left on the controls (the documentation level's `preGate`, the date minimums, the stash, the referral block).
 - Job Plan and Job Admin & Inv share the selected client (`setCurrentJob` / `adoptCurrentJob`; session state, never saved). `openJobPlanFor(jobId, fold)` opens a plan from elsewhere.
 - Client list: six filters (All, Active, Pending Approval, Unassigned TC, Closed, Lost), every column sortable (service in catalogue order, blanks last), and the Win / Loss row painted by `renderJobs`, with Won and Lost lists. A settled job has no ✕.
 - CSS is one stylesheet, the first `<style>` block, with one phone block at `max-width:820px`. Grid children need `min-width:0`; wide tables go in `.tbl-scroll`. The global `input,select,textarea{width:100%}` makes a bare checkbox full width and an `auto` flex basis fill its row.
@@ -156,7 +157,7 @@ The recurring lessons, each learned from a defect that shipped.
 - QuickBooks: not built, waiting on the accountant's chart of accounts. Deposits are a liability until the work is done; vendor money is pass-through and never touches Havellin's books (never pay a vendor and rebill).
 
 ### Drive
-- A client's folder and subfolders are made at intake by `createDriveJobFolder`, its only automatic call. While it is in flight the dashboard reads "Creating Drive folder…" (`driveFolderPending`, never saved); a failure is recorded on the job and the dashboard offers Create Drive folder. It is not queued for automatic retry, because older deployments duplicated folders.
+- A client's folder and subfolders are made at intake by `createDriveJobFolder`, its only automatic call. Its answer repaints the client only if they are still on screen (`_driveFolderLanded`, a background redraw); it never navigates. While it is in flight the dashboard reads "Creating Drive folder…" (`driveFolderPending`, never saved); a failure is recorded on the job and the dashboard offers Create Drive folder. It is not queued for automatic retry, because older deployments duplicated folders.
 - Item shots file to `Estate Inventory` and as-found shots to `As-Found Record` (`photoSubfolder`; an alias keeps older folders working). Sharing with counsel covers both.
 - Thumbnails come through the server (`getDriveThumbnails`, size-checked), never from `drive.google.com` in the browser (named-viewer sharing, cross-site cookies, Safari).
 
@@ -175,7 +176,8 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
 | `contested_probate` | Contested Probate | deceased |
 - Keys are stored on every record and never change; labels come from `SVC_LABELS` (read through `svcLabelOf`), and every other copy must agree with it.
 - `isDecedentJob` is a pure service lookup, and it decides whom every document addresses (the owner or the representative) and which agreement form issues. Never add fallbacks on a date of death or a representative: those fields exist only on decedent services, and a power of attorney acts for a living person. A deceased owner's house is an Estate Settlement, never a Home Cleanout.
-- The service can change on the walkthrough within its family only (`svcFamily`): living to living, decedent to decedent. Across families is a different client; use Edit Client.
+- The service can change on the walkthrough and in Edit Client within its family only (`svcFamily`): living to living, decedent to decedent. Across families is a different client (+ Add New Client); both pickers offer only the family and Edit Client's save refuses with "Create a new client for this" (Q4).
+- On a decedent job the client is the deceased: Edit Client shows no phone or email for them, and every email, greeting and DocuSign recipient comes from `clientRecipient` (client, then representative, then counsel), which skips the client rung on a decedent job.
 - Home Transition leads; cleanouts and estate work are the volume; Home Prep for Sale is the realtor product and stays standalone; Home Editing stays quotable and is not promoted. Removing a service is a data migration, not a marketing call.
 
 ### Lifecycle
@@ -186,7 +188,7 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
 - The signature is `docState.agreement.sig`: `signedBy` is the client, `recordedBy` whoever entered it. `isAgreementSent` and `isAgreementSigned` read the record first; `job.agrSent` and `job.agrSigned` are mirrors.
 - A raise after the client saw a price asks again: `estimateSentTotal` and `acceptedTotal` record what they received and accepted; a raise reopens the send, then the acceptance, and the packet waits. A discount asks nothing. The old yes moves into `priorAcceptances`.
 - Edit estimate and Offer discount go once the packet is out (`priceChangeBlocker`: sent means a change order, signed means locked) and while the estimate is out for approval (`estimateOutForApproval`). Change orders are always open.
-- After approval, Edit Client holds the inputs that price the hours (service type, square footage, Premium, the destination's square footage); everything else stays correctable, the 706 and dispute answers included.
+- After approval, Edit Client holds the inputs that price the hours (service type, square footage, years in home, Premium, the destination's square footage); everything else stays correctable, the 706 and dispute answers included.
 - Close job is offered beside every lit step of an active job; with no midpoint payment it asks first, and it needs every vendor used rated (`jobCloseBlockers`). Re-open (`_reopenTransition`) works until the final invoice is sent or paid (`jobReopenBlocker`); it clears the handover stamp and keeps the undone close in `job.reopens`. Otherwise `deliveredOn`, `activatedOn` and `lostAt` are write-once.
 - A settled job (delivered, or final paid: `jobIsSettled`) cannot be marked lost. A client who paid part and walked away closes as Deposit Retained, with the amount named (`closeoutRetainedTotal`).
 - Every date the app stamps is the local calendar day (`_todayStr`). Never slice `toISOString()`, which rolls to tomorrow at 8 pm Eastern; a test forbids it in live code.
@@ -227,6 +229,7 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
 
 ### Job Plan and hours
 - Two folded tools on top (Vendors & partners; Hours & daily close), then the job as a thread with a NOW marker: Before Day 1, In the house, Midpoint & pickups, Move day (Home Transition only), Close-out. The task keys `p0` to `p4` are internal; screens never show phase numbers.
+- Intake's house questions: every service asks both questions and all seven rows except Home Prep, which asks the safety question and the rows marked `prep:true` (access & security; Q17). `houseFlagAsked` is the rule for both forms; a row the service does not ask is not read off the form (`readHouseFlagInputs(prefix, svc, prior)` keeps the record's value).
 - The header carries the firearms banner (the only red), the intake brief (`HOUSE_FLAGS`, with must-find ticks recording who and when) and the schedule strip.
 - `jobSchedule` is clock-free (today is an argument) and counts from the activation date once the job starts, from the target start before. Progress is two figures, work done against the rooms (`workPct`) and hours logged against the authorised budget; the pace verdict waits for a crew-day of hours and a fifth of the work.
 - One person, one slot (the setters refuse a duplicate); the concierge follows intake until someone picks one; the confirmed team is its own chip. End-of-job logistics vendors are offered, not placed.
@@ -237,6 +240,7 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
 ### People and directories
 - A person's name is the person key everywhere (`job.tc`, approvals, rosters, hour logs). Compare with `samePerson`; stored names are normalised on load (`migrateRetiredNames`) and never written back. "Sr" is retired; Anthony Graziano Jr is a different person with their own rate and mailbox.
 - Vendors: one row per firm, categories separated by `;` (`vendorCats`), one `category_group`, the office line plus up to two named contacts (`vendorContacts`). A job refers to a vendor by name (`resolveJobVendor`), because rows move; sourcing records key on the estimate line's id (`_srcLineKey`), never its position. A new vendor under an existing name is refused, and Save is one press, one row.
+- A job keys its referral partner on `referralIdOf` (the directory `uid`; the sheet row only for a row with none), and `jobRefersToPartner` is the one test for attribution (a pre-P9 row id counts only while the name it recorded matches the partner on that row). Re-sorting the sheet must never move a referral.
 - Referral partners: one row per person (their own line, cell, the firm's switchboard with extension, an assistant). A number typed Main with no office line is flagged as a switchboard.
 - Contractors sort by name. The office line (`HAVELLIN_OFFICE_PHONE`) is the firm's; a contractor's phone is a personal mobile, and `NON_MOBILE_NUMBERS` keeps firm numbers from printing as anyone's mobile.
 
@@ -281,7 +285,7 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
 - `grep -c` exits 1 on zero matches, which ends an `&&` chain.
 
 ## Open work
-- `WORKFLOW_AUDIT_2026-09-28.md` is the tracker. Open: P9 (Edit Client up to intake's rules), P11 (backend hardening, including per-key merges for sourcing and the crew; needs a redeploy), P12 (estimator and pricing decisions; waits on Q7, the Q14 follow-up and Anthony's OK on the Q20 reading), P13 (the full documentation pass, last), P14 (small backlog). Anthony's own items, O1 to O9, are listed there.
+- `WORKFLOW_AUDIT_2026-09-28.md` is the tracker. Open: P11 (backend hardening, including per-key merges for sourcing and the crew; needs a redeploy), P12 (estimator and pricing decisions; waits on Q7, the Q14 follow-up and Anthony's OK on the Q20 reading), P13 (the full documentation pass, last), P14 (small backlog). Anthony's own items, O1 to O9, are listed there.
 - Waiting on Anthony: which name `deliveredBy` and `activatedBy` should carry (today, the estimate's approver); whether a Home Prep change order may add a new vendor; whether estate estimates should default to fixed price, as the counsel guide now implies.
 - Known, not fixed:
   - Opening a client on a stale device can take the whole job: the DocuSign and Stripe arrival checks write `checkedAt` through `docState()`, which stamps the record. Stamp only that key, or fix it in P11.
@@ -292,5 +296,7 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
   - The page-level `agrApproved*` globals are one change from dead (point `updateAgrUI` at the job).
   - Splitting a photo repaints the whole tab (1.4 s at 3,000 rows).
   - Neither agreement has a referral-fee disclosure (Q21: agreed; the wording goes through counsel).
+  - A referral partner with no `uid` still keys jobs by sheet row (`referralIdOf` falls back). If `backfillIds()` has never been run in the Referral Partners Apps Script project, running it once from the editor gives every row one; nothing else changes.
+  - Intake has no sanity check on square footage or room counts (an audit low P9 left open; it needs Anthony's limits).
   - Literal "15%" strings in some agreement arms and the invoice PIN banner (harmless while the tolerance is 15%).
 - Not yet proven live (Anthony's items in the tracker): a DocuSign sandbox envelope's tab placement (`DS_TAB_Y_OFFSET`) and a Stripe ACH test payment.

@@ -334,7 +334,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The matter type has been REQUIRED at intake since step 2, so a job created through the
     // form today cannot reach here with it blank. This gate is what covers a legacy record and
     // a job re-typed onto an estate service on the walkthrough.
-    has(src, "missing.push('How this estate is being administered')",
+    has(src, "m.push('How this estate is being administered')",
        'intake still refuses a blank matter type in its own right');
     // ⚠ AND THE TIER IS STILL DELIBERATELY OPTIONAL AT INTAKE. Step 3 recorded why: on the
     // first call the attorney may genuinely not have decided, and a guess printed onto an

@@ -24,7 +24,7 @@ const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')
 const CARD_FNS = ['renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
   '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
   'bestClientEmail', '_coFmt', '_localDateOf', '_ymdLocal', 'renderVendorScorecard', 'computeVendorAvg', 'planChk',
-  '_planTaskDone', 'chkGrid', 'jobCloseBlockers'];
+  '_planTaskDone', 'chkGrid', 'jobCloseBlockers', 'clientRecipient', 'isDecedentJob', 'firstName'];
 
 // A prep job: four trades sourced, three confirmed (one twice — the same firm on two lines), one
 // still at "Quote requested"; a hauler confirmed at the end; and a collection partner assigned.
@@ -50,7 +50,7 @@ const JOB = () => ({
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const card = (extra) => sandbox({
     fns: CARD_FNS.concat(extra || []),
-    vars: ['CLOSEOUT_TASK_KEYS', 'VENDOR_RATING_WINDOW'],
+    vars: ['CLOSEOUT_TASK_KEYS', 'VENDOR_RATING_WINDOW', 'DECEDENT_SERVICES'],
     stubs: { vendorDirectory: VENDORS, jobPlanStore: {}, jobs: [] },
   });
 
@@ -186,7 +186,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const t = sandbox({
       fns: ['draftReviewRequest', 'markReviewRequestSent', 'buildReviewEmailText', 'buildReviewEmailHtml',
             'reviewEmailSubject', '_reviewPlace', '_reviewMailtoUrl', 'bestClientEmail', 'bestClientGreetingName',
-            'firstName', 'isDecedentJob', '_emHtml', '_planTaskDone', 'conciergePhonesText', 'conciergePhones'],
+            'firstName', 'isDecedentJob', '_emHtml', '_planTaskDone', 'conciergePhonesText', 'conciergePhones', 'clientRecipient'],
       vars: ['GOOGLE_REVIEW_URL', 'EMAIL_BRAND', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         jobPlanStore: {}, saveJobs() {}, syncJobToSheets() {}, _repaintCloseout() {}, _actor: () => 'Ashley Jerome',

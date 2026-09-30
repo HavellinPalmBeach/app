@@ -183,14 +183,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
     'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
-    'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'inventoryDeadlineFrom', '_ymdLocal'];
+    'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'inventoryDeadlineFrom', '_ymdLocal', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows'];
   const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
-    'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES'];
+    'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES'];
   const ESTATE = { id: 7, hvlId: 'HVL-0007', name: 'Butler Estate', fname: 'Tripp', lname: 'Butler', svc: 'cleanout',
     matterType: 'probate', executor: 'Tripp Butler', deathDate: '2026-06-01', sqft: '3500', propVal: '2000000' };
   function editClient(job, seed) {
     const d = domStub(Object.assign({ 'ec-svc': job.svc, 'ec-matter-type': job.matterType || '', 'ec-fname': 'Tripp', 'ec-lname': 'Butler',
-      'ec-sqft': job.sqft || '', 'ec-premium': 'no' }, seed || {}));
+      'ec-sqft': job.sqft || '', 'ec-premium': 'no', 'ec-date-of-death': job.deathDate || '' }, seed || {}));
     const c = sandbox({ fns: EC_FNS, vars: EC_VARS,
       stubs: { document: d, jobs: [JSON.parse(JSON.stringify(job))], estimateStore: {},
                saveJobs() {}, syncJobToSheets() {}, renderClientDashboard() {}, renderJobs() {}, alert() {} } });
@@ -248,9 +248,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({ fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode',
         'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docTierOf', 'docTierDef',
         'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
-        'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc'],
+        'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-               'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+               'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
         stubs: { document: d } });
       c.toggleIntakeFields();
       return d.getElementById('probate-fields').style.display;

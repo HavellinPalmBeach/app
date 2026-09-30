@@ -120,7 +120,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef'], vars: ['EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS'],
+        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked'], vars: ['EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
         stubs: {
           document: d, jobs: [],
           showFB: (el, kind, msg) => said.push({ kind, msg }),
@@ -157,11 +157,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                     '_houseFlagRowClass', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706',
                     'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                     'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf',
-                    'matterDef', 'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef'];
+                    'matterDef', 'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs'];
     const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                      'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
-                     'DOC_SCOPES'];
+                     'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES'];
     const JOB = { id: 7, hvlId: 'HVL-0007', name: 'Tripp Butler', fname: 'Tripp', lname: 'Butler',
                   svc: 'cleanout', deathDate: '2026-08-14', gate706: 'no', matterType: 'trust' };
 
@@ -190,8 +190,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       return cc.jobs[0].matterType;
     };
     eq(write('probate'), 'probate', 'a real answer is saved');
-    eq(write(''), '', 'a blank clears it');
-    eq(write('bogus'), '', 'and a value that is not one of the four is discarded, not stored');
+    // ⚠ P9: the matter type is required (an asterisk intake enforces), and Edit Client now refuses a
+    // save that would blank a required field that was answered. The record keeps its answer.
+    eq(write(''), 'trust', 'a blank does not clear an answered matter type — the save is refused');
+    eq(write('bogus'), 'trust', 'and a value that is not one of the four is not stored — it reads as a blank, so it is refused too');
   }
 
   group('the Court Inventory stops being signed on a matter with no probate in it');
