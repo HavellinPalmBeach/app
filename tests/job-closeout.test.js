@@ -186,7 +186,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const t = sandbox({
       fns: ['draftReviewRequest', 'markReviewRequestSent', 'buildReviewEmailText', 'buildReviewEmailHtml',
             'reviewEmailSubject', '_reviewPlace', '_reviewMailtoUrl', 'bestClientEmail', 'bestClientGreetingName',
-            'firstName', 'isDecedentJob', '_emHtml', '_planTaskDone', 'conciergePhonesText', 'conciergePhones', 'clientRecipient'],
+            'firstName', 'isDecedentJob', '_emHtml', '_planTaskDone', 'conciergePhonesText', 'conciergePhones', 'clientRecipient', '_stampChangedKeys', '_jobTouch'],
       vars: ['GOOGLE_REVIEW_URL', 'EMAIL_BRAND', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         jobPlanStore: {}, saveJobs() {}, syncJobToSheets() {}, _repaintCloseout() {}, _actor: () => 'Ashley Jerome',

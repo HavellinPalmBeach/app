@@ -86,7 +86,7 @@ const EC_FNS = ['saveClientEdit', 'courtRecordShown', 'jobOnProbateTrack', 'ecTo
   'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor',
   'gateDispute', '_gateYes', '_gate706', 'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel',
   'docStandardEffect', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
-  'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'sameSvcFamily', 'svcFamily', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'houseFlagAsked', 'intakeAsksHouseContents', 'showHouseFlagRows'];
+  'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'sameSvcFamily', 'svcFamily', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'houseFlagAsked', 'intakeAsksHouseContents', 'showHouseFlagRows', '_stampChangedKeys', '_jobTouch'];
 const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC',
   'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'referralDirectory'];

@@ -445,7 +445,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // missing crew. That is exactly how this group first passed with nothing refused at all.
     const S = sandbox({ fns: ['setCrewTC', 'setCrewTC2', 'setCrewPS', '_crewRefuseDup', '_crewRefreshSelects', 'crewSlotHolding',
                               'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
-                              '_crewSave', '_saveJobEdit', '_jobTouch'],
+                              '_crewSave', '_saveJobEdit', '_jobTouch', '_stampChangedKeys', '_crewSnap'],
       vars: CREW_VARS,
       stubs: { document: dom, getJobCrew: () => crew, saveJobs: () => saves.push(1), syncJobToSheets: () => {},
                showFB: (id, kind, msg) => said.push({ id, kind, msg }), getPSCostRate: () => 60,
@@ -494,7 +494,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // lockAssignedCrew is lifted too, although confirm no longer calls it — so a confirm that goes
     // back to locking through it (a second save) FAILS the one-save check here instead of throwing.
     const K = sandbox({ fns: ['confirmJobTeam', 'plannedTC2', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
-                              '_lockCrewSlots', '_crewSave', '_saveJobEdit', '_jobTouch', 'lockAssignedCrew'], vars: CREW_VARS,
+                              '_lockCrewSlots', '_crewSave', '_saveJobEdit', '_jobTouch', 'lockAssignedCrew', '_stampChangedKeys', '_crewSnap'], vars: CREW_VARS,
       stubs: { getJobCrew: () => crew, isJobWon: () => true, unfilledPlannedPS: () => [], plannedPSCount: () => 2,
                showFB: (id, kind, msg) => said.push({ kind, msg }), confirm: () => true,
                saveJobs: () => { saves++; }, syncJobToSheets: () => {}, buildLogTeamRows: () => {}, _repaintPlanGates: () => {} } });

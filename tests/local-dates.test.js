@@ -175,7 +175,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
      ['openSignatureModal', 'on.value = _todayStr()'],
      ['clearLogEntry', "getElementById('log-date').value = _todayStr()"],
      ['recordAgreementSignature', 'sig.signedOn || _todayStr()'],
-     ['applyEsignStatus', 'signedOn: _localDateOf(status.completedAt)'],
+     ['applyEsignStatus', 'signedOn: _localDateOf(status.completedAt)', 'docStateBare', '_saveArrivalCheck'],
      ['exportInventoryCSV', "'_Inventory_' + _todayStr()"],
      ['logVendorContact', 'var today = _todayStr()'],
      ['logReferralContact', 'var today = _todayStr()'],

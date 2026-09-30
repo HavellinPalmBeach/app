@@ -193,7 +193,7 @@ Right after activation, the filled button bills the midpoint, while the estimate
 
 **Fix:** P7 (Let a finished job close with the midpoint unpaid)
 
-#### M9 · Backend · A corrupt store blob empties that store on the next save; lock timeouts write unlocked.
+#### M9 · Backend · A corrupt store blob empties that store on the next save; lock timeouts write unlocked. — **Fixed 2026-09-30** (needs the 2026-09-30 redeploy)
 
 If a stored blob fails to parse, the server reads it as empty and the next save writes back only what that save carried, which is every other job's estimates, plans or logs gone. Nine save paths carry on without the lock after a 20-second timeout. Unlikely, but the damage is total.
 
@@ -299,7 +299,7 @@ A partner chosen and then hidden (by changing the source) is still saved, and pa
 
 **Other** (fix: P14)
 
-- The stale-backend banner doesn't list every action the app calls (fixed in P11).
+- The stale-backend banner doesn't list every action the app calls. *(fixed 2026-09-30 in P11: it lists every action and type the app posts, and names a deployment older than 2026-09-30 by version)*
 - A feedback message can be wiped by an earlier message's 4-second timer. *(fixed 2026-09-29)*
 - Filed copy links don't name their document.
 - The Job active step shows no date.
@@ -322,7 +322,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P8** Measure work done against the rooms (needs Q3)
 - [x] **P9** Bring Edit Client up to intake's rules (needs Q4, Q15–Q18)
 - [x] **P10** Lifecycle and payment loose ends (needs Q2, Q12, Q19)
-- [ ] **P11** Harden the Apps Script backend (redeploy)
+- [x] **P11** Harden the Apps Script backend (redeploy) — landed 2026-09-30; live once Anthony redeploys `2026-09-30`
 - [ ] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20)
 - [ ] **P13** Documentation pass (needs the packs above first)
 - [ ] **P14** Small backlog
@@ -542,6 +542,8 @@ House process (CLAUDE.md): reproduce first, tests plus a revert sweep, a browser
 
 Fixes: M9, C2 follow-up
 
+**Landed 2026-09-30** (`BACKEND_VERSION 2026-09-30`; nothing server-side is live until the redeploy). All four steps, plus two app-only fixes the 2026-09-30 re-check found still open: the DocuSign and Stripe arrival checks no longer claim the job when they learn nothing new, and the Job Plan refresh refuses an answer that raced a new write. Agent One's token limit (a P14 line) rode this redeploy. See `BUILD_HISTORY.md`.
+
 ```text
 Harden apps-script/main-sync.gs (2026-09-28 workflow audit, finding M9 plus the per-key follow-up from P2). This needs a redeploy: bump `BACKEND_VERSION`, and the app's `BACKEND_NEEDS`.
 
@@ -610,7 +612,7 @@ Small backlog, one commit (2026-09-28 workflow audit, "Other" lows):
 - The Home Prep final heads its total "logged hours + actual fees" (client-facing wording: Anthony picks the label). An unrendered "Service Management Fee (15% — vendor coordination)" label in `invoiceHtml` would be wrong if `SMF_PCT` ever moved off 0.
 - Deleting a contractor has no PIN, unlike vendors and partners.
 - Splitting a photo (`invSplitItemClick`) repaints the whole Job Admin tab: 1.4 s at 3,000 rows. Repaint the affected rows only.
-- Agent One's `AGENT_MAX_TOKENS` is 4,096 with adaptive thinking on, so a dense frame can fail with "cut off". Raise it to about 16,000 (backend; bundle it with P11's redeploy).
+- Agent One's `AGENT_MAX_TOKENS` is 4,096 with adaptive thinking on, so a dense frame can fail with "cut off". Raise it to about 16,000 (backend; bundle it with P11's redeploy). *(fixed 2026-09-30 in P11)*
 House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp the build, push.
 ```
 

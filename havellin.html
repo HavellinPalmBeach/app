@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 10:13pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 9:35am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5507,8 +5507,20 @@ var CONTRACTOR_TC_NAME = 'Contractor — TC';
 // NO banner, the folder was never created, and the first symptom was a crew in the
 // entryway watching every photograph fail. List what the app CALLS, not what was most
 // recently added.
-var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile', 'agentIdentify'];  // actions this build calls
-var BACKEND_NEEDS_TYPES = ['saveMedia'];                  // and post types
+// ⚠ EVERY ACTION AND TYPE THE APP POSTS (P11, 2026-09-30). The list held six actions and one type
+// while the app also posted uploadHtml, getSubfolders, the two sharing actions, DocuSign, Stripe and
+// every store save, so a deployment missing any of those drew no banner. A test now derives what the
+// app posts from its own source and requires each one here, with its consequence below.
+var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile', 'agentIdentify',
+  'uploadHtml', 'getSubfolders', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
+  'stripeLink', 'stripeStatus'];                          // actions this build calls
+var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', 'saveAllEstimates', 'saveAllJobPlans',
+  'saveAllChangeOrders', 'saveAllLogs', 'saveAllContractors', 'deleteContractor', 'deleteJob'];   // and post types
+// ⚠ AND WHAT NO ACTION NAME CAN REVEAL: server behaviour this build relies on. P11's per-key merge
+// of the sourcing, crew, ratings, review and checklist maps, the refusal to write over an unreadable
+// store tab, and the busy answer to a lock timeout change no action or type, so a deployment older
+// than this is named by its version.
+var BACKEND_MIN_VERSION = '2026-09-30';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -5520,10 +5532,14 @@ function checkBackendVersion() {
       // possible answer rather than as an error — it is exactly what we are looking for.
       var known = (d && d.ok && d.version) ? d : null;
       _backendVersion = known ? known.version : 'before 2026-09-09';
-      var have = known ? (known.actions || []).concat(known.types || []) : [];
+      // A deployment too old to answer the probe cannot say what it lacks, so it is named as such
+      // rather than charged with every feature on the list (most of which it does have).
+      if (!known) { _showBackendStaleBanner(_backendVersion, ['preVersion', 'version']); return; }
+      var have = (known.actions || []).concat(known.types || []);
       var missing = BACKEND_NEEDS.concat(BACKEND_NEEDS_TYPES).filter(function(a){
         return have.indexOf(a) < 0;
       });
+      if (String(known.version) < BACKEND_MIN_VERSION) missing.push('version');
       if (missing.length) _showBackendStaleBanner(_backendVersion, missing);
     })
     .catch(function(){ /* offline — say nothing rather than accuse the deployment */ });
@@ -5539,7 +5555,27 @@ var BACKEND_FEATURE_COST = {
   createFolder:  'new clients get no Google Drive folder at all',
   uploadFile:    'photographs taken on a job cannot be filed to Drive',
   trashFile:     'a photo deleted in the field still stays in the client\u2019s Drive folder',
-  agentIdentify: 'the desk cannot name the day\u2019s shots automatically \u2014 every line has to be typed by hand'
+  agentIdentify: 'the desk cannot name the day\u2019s shots automatically \u2014 every line has to be typed by hand',
+  getSubfolders: 'photographs and documents cannot find the client\u2019s Drive subfolders',
+  shareFolder:   'sharing the inventory folders with counsel does nothing',
+  unshareFolder: 'taking counsel\u2019s access to the inventory folders away does nothing',
+  esignSend:     'agreements cannot be sent for signature through DocuSign',
+  esignStatus:   'a DocuSign envelope the client has signed is never noticed',
+  esignArchive:  'the executed agreement and its certificate are never filed to Drive',
+  stripeLink:    'no bank-transfer payment link can be made for an invoice',
+  stripeStatus:  'a bank transfer that has settled is never recorded',
+  saveInventory: 'the client\u2019s inventory workbook in Drive is never written',
+  job:           'a single client\u2019s edits never reach the sheet',
+  saveAllJobs:   'client records never reach the sheet',
+  saveAllEstimates: 'estimates never reach the sheet',
+  saveAllJobPlans:  'job plans (rooms, tasks, notes) never reach the sheet',
+  saveAllChangeOrders: 'change orders never reach the sheet',
+  saveAllLogs:   'logged hours never reach the sheet',
+  saveAllContractors: 'the contractor list never reaches the sheet',
+  deleteContractor: 'a contractor removed here comes back from the other device',
+  deleteJob:     'a client deleted here comes back from the other device',
+  version:       'two people editing different parts of one job (a vendor quote here, the team there) can still undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
 function _showBackendStaleBanner(version, missing) {
@@ -15585,6 +15621,25 @@ function docState(job, docKey) {
   _jobTouch(job, 'docState', docKey);
   return job.docState[docKey];
 }
+// ⚠⚠ THE SAME RECORD, WRITTEN WITHOUT CLAIMING IT — for the DocuSign and Stripe ARRIVAL CHECKS only
+// (fixed 2026-09-30, P11). Those checks run when somebody opens a client, and when the answer is
+// "still out" / "nothing new" all they learn is a checkedAt. Written through docState() that stamped
+// the job's clock, so a device holding the morning's copy that merely OPENED a client took the whole
+// job on the next sync: every scalar, A's Job Plan edits and quotes included (measured in
+// job-edit-stamps.test.js). Written bare, the check lands only where it should: the sheet breaks a tie
+// on the docState key toward the incoming copy, so a device whose copy of that key is current records
+// its checkedAt, and one whose copy is stale loses the key to the newer one and moves nothing else.
+// A check that DOES learn something (a completed envelope, a settled payment) records it through the
+// same stamped path a person's entry takes — recordAgreementSignature, _saveJobEdit.
+function docStateBare(job, docKey) {
+  if (!job) return null;
+  if (!job.docState) job.docState = {};
+  if (!job.docState[docKey]) job.docState[docKey] = {};
+  return job.docState[docKey];
+}
+// The save for an arrival check that learned nothing new: the job store, bare (see docStateBare).
+// Named so tests/job-edit-stamps.test.js can hold it to staying bare.
+function _saveArrivalCheck() { saveJobs(); }
 
 // Read-only: has this document been SENT? ⚠ `draftedAt` is not `sentAt` — see
 // DOC_SEND_PROVIDERS.needsHumanSend for why that distinction is the honest one.
@@ -16533,13 +16588,15 @@ function recordAgreementSignature(jobId, sig) {
 function applyEsignStatus(jobId, status) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) return 'nojob';
-  var st = docState(job, 'agreement');
+  // Bare: "still out" is a write the app makes on its own (docStateBare). A completed envelope is
+  // recorded below by recordAgreementSignature, which stamps the key like a hand entry.
+  var st = docStateBare(job, 'agreement');
   st.esign = {
     envelopeId: (status && status.envelopeId) || (st.esign && st.esign.envelopeId) || '',
     status: (status && status.status) || '',
     checkedAt: new Date().toISOString()
   };
-  if (!status || status.status !== 'completed') { saveJobs(); syncJobToSheets(job); return ''; }
+  if (!status || status.status !== 'completed') { _saveArrivalCheck(); return ''; }
   // ⚠ THE PROVIDER NAMES THE SIGNER. That is the entire point of routing signatures through
   // one — it knows who authenticated and when, which a person typing into a box does not.
   var blk = recordAgreementSignature(jobId, {
@@ -16813,7 +16870,8 @@ function stripeRefresh(opts, cb) {
 function applyStripePayments(jobId, key, stage, d) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) return 0;
-  var st = docState(job, key);
+  // Bare unless a payment lands (docStateBare): a check that finds nothing new claims nothing.
+  var st = docStateBare(job, key);
   st.stripe = st.stripe || {};
   st.stripe.checkedAt = new Date().toISOString();
 
@@ -16829,7 +16887,11 @@ function applyStripePayments(jobId, key, stage, d) {
     added++; landed += (p.amount || 0);
   });
 
-  saveJobs(); syncJobToSheets(job);
+  if (!added) { _saveArrivalCheck(); return 0; }
+  // A settled payment is a new fact, recorded the way a person's hand entry is: the payment's own
+  // key was stamped in _stripeRecordPayment, and the job's clock moves so its mirrors
+  // (depositReceived, read by the activation gate) reach the other devices.
+  _saveJobEdit(job);
   if (added) {
     _docNotice('ok', fmt(landed) + ' received by bank transfer on ' + (job.name || 'this job')
                + ' (' + paymentStageLabel(job, stage) + ') — recorded automatically from Stripe.', jobId);
@@ -20185,6 +20247,24 @@ function _jobTouch(job, kind, key) {
   // The record-level clock has to move as well, or a stale device's newer updatedAt still
   // wins every SCALAR on the job while this key merges correctly underneath it.
   job.updatedAt = Date.now();
+}
+
+// Stamp every key of a keyed job map that a person's edit changed, added or removed — and none it
+// did not (P11, 2026-09-30). For writers that rebuild a whole map or object (the crew, the review
+// ask, the house checklist): the sheet merges these key by key, so stamping a key this device only
+// carried along would let its stale copy of that key beat another device's newer one. `before` and
+// `after` are plain {key: value} objects; values compare as JSON.
+function _stampChangedKeys(job, kind, before, after) {
+  if (!job) return 0;
+  var a = before || {}, b = after || {}, keys = {}, k, n = 0;
+  for (k in a) keys[k] = 1;
+  for (k in b) keys[k] = 1;
+  for (k in keys) {
+    if (JSON.stringify(a[k] === undefined ? null : a[k]) !== JSON.stringify(b[k] === undefined ? null : b[k])) {
+      _jobTouch(job, kind, k); n++;
+    }
+  }
+  return n;
 }
 
 // ⚠⚠ AN EDIT A PERSON MAKES TO A JOB MOVES THE JOB'S CLOCK, OR THE OTHER DEVICE UNDOES IT
@@ -29407,6 +29487,11 @@ function _srcAdoptLineIds(job, est) {
       if (rec === undefined) return;
       src['L' + line.lid] = rec;
       delete src[String(i)];
+      // ⚠ THE REMOVAL IS STAMPED (P11, 2026-09-30). These maps merge key by key on the sheet now, and
+      // there absence alone is never a removal: an unstamped delete comes straight back from any copy
+      // still holding the index key, as an orphan record the close-out vendor list would count.
+      // Only reached from _srcSlot, on a person's first write, which saves stamped right after.
+      _jobTouch(job, pair[1], String(i));
     });
   });
   return moved;
@@ -29635,27 +29720,30 @@ function _crewRefreshSelects() {
 function setCrewTC(jobId, name) {
   var crew = getJobCrew(jobId); if (!crew || crew.tc.locked) return;
   if (_crewRefuseDup(crew, 'tc', name)) return;
+  var before = _crewSnap(crew);
   // `picked`: somebody chose this concierge on the Job Plan, so the intake default stops
   // following Edit Client (see getJobCrew).
-  crew.tc.name = name; crew.tc.picked = true; _crewSave(jobId);
+  crew.tc.name = name; crew.tc.picked = true; _crewSave(jobId, before);
   _crewRefreshSelects();
 }
 function setCrewTC2(jobId, name) {
   var crew = getJobCrew(jobId); if (!crew) return;
+  var before = _crewSnap(crew);
   if (!crew.tc2) crew.tc2 = { name:'', locked:false };
   if (crew.tc2.locked) return;
   if (_crewRefuseDup(crew, 'tc2', name)) return;
-  crew.tc2.name = name; _crewSave(jobId);
+  crew.tc2.name = name; _crewSave(jobId, before);
   _crewRefreshSelects();
 }
 function setCrewPS(jobId, slot, name) {
   var crew = getJobCrew(jobId); if (!crew) return;
+  var before = _crewSnap(crew);
   while (crew.ps.length <= slot) crew.ps.push({ name:'', tier:'', costRate:0, locked:false });
   if (crew.ps[slot].locked) return;
   if (_crewRefuseDup(crew, 'ps' + slot, name)) return;
   crew.ps[slot].name = name;
   crew.ps[slot].costRate = name ? getPSCostRate(name) : crew.ps[slot].costRate;
-  _crewSave(jobId);
+  _crewSave(jobId, before);
   _crewRefreshSelects();
 }
 // ─── JOB TEAM SIGN-OFF ────────────────────────────────────────────────────────
@@ -29757,11 +29845,12 @@ function confirmJobTeam(jobId) {
       + 'Those hours will cost at the placeholder contractor rate, not a named person\'s rate, '
       + 'so margin on this job is an estimate until they are named.\n\nConfirm the team anyway?')) return;
 
+  var before = _crewSnap(crew);
   crew.confirmed   = true;
   crew.confirmedBy = crew.tc.name;
   crew.confirmedAt = new Date().toISOString();
   _lockCrewSlots(crew);      // named slots fix; empty slots stay open for a mid-job add
-  _crewSave(jobId);          // ONE save for the sign-off and the locks together
+  _crewSave(jobId, before);  // ONE save for the sign-off and the locks together
   buildLogTeamRows();
   _repaintPlanGates(jobId);   // the Job team chip at the top turns green now, not on the next redraw
   showFB('log-fb','ok','Job team confirmed. Hours can now be logged for this job.');
@@ -29783,11 +29872,12 @@ function reviseJobTeam(jobId) {
           : 'No hours logged yet, so the whole team becomes editable.')
       + '\n\nHours cannot be logged again until the team is re-confirmed.')) return;
 
+  var before = _crewSnap(crew);
   crew.confirmed = false;
   if (crew.tc && !crewMemberHasHours(jobId, crew.tc.name)) crew.tc.locked = false;
   if (crew.tc2 && !crewMemberHasHours(jobId, crew.tc2.name)) crew.tc2.locked = false;
   (crew.ps || []).forEach(function(p){ if (p && !crewMemberHasHours(jobId, p.name)) p.locked = false; });
-  _crewSave(jobId);
+  _crewSave(jobId, before);
   buildLogTeamRows();
   _repaintPlanGates(jobId);
   showFB('log-fb','warn','Team reopened. Re-confirm it to resume logging hours.');
@@ -29803,8 +29893,9 @@ function reviseJobTeam(jobId) {
 // when a slot actually locked, and does nothing at all when none did.
 function lockAssignedCrew(jobId) {
   var crew = getJobCrew(jobId); if (!crew) return 0;
+  var before = _crewSnap(crew);
   var n = _lockCrewSlots(crew);
-  if (n) _crewSave(jobId);
+  if (n) _crewSave(jobId, before);
   return n;
 }
 // The locking itself, with no save. confirmJobTeam locks and then saves the sign-off it has just
@@ -29819,9 +29910,15 @@ function _lockCrewSlots(crew) {
 }
 // The crew's one save. No key: the team is one object — named slots, their locks and the
 // sign-off — and there is no per-slot merge for a stamp to feed yet (that is fix pack P11).
-function _crewSave(jobId) {
-  _saveJobEdit(jobs.find(function(j){ return j.id === jobId; }));
+// `before` is the crew as the writer found it (_crewSnap): the parts the edit changed are stamped,
+// so the sheet merges the crew part by part (tc, tc2, ps, the sign-off) instead of letting a device
+// that touched one part carry its stale copy of the others (P11, 2026-09-30).
+function _crewSave(jobId, before) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (job && before) _stampChangedKeys(job, 'crew', before, job.crew);
+  _saveJobEdit(job);
 }
+function _crewSnap(crew) { return crew ? JSON.parse(JSON.stringify(crew)) : null; }
 
 // Names that may legitimately appear in more than one slot at once, because they stand
 // for "somebody we haven't named yet" rather than a person. Everyone else is a real
@@ -31422,6 +31519,15 @@ function _planTabBusy() {
 function refreshPlanAndLogFromCloud(jobId, cb) {
   if (!SHEETS_SYNC_URL || !jobId) { if (cb) cb(false); return; }
   if (_syncWritesOutstanding()) { if (cb) cb(false); return; }
+  // ⚠⚠ ASKED AGAIN WHEN THE ANSWER LANDS (fixed 2026-09-30, P11), the rule refreshJobsFromCloud
+  // follows. The check above runs before the request goes out; a room locked or an hour logged WHILE
+  // it was out queues a write, and the answer (read before that write reached the sheet) then replaced
+  // the store and reverted it. Measured: a note typed during the fetch went back to the sheet's older
+  // text in jobPlanStore while the screen, told nothing had changed, kept showing the edit the store
+  // had lost. An answer is applied only if no write is outstanding and none was queued since it left.
+  var seq = _syncWriteSeq;
+  var skipped = false;
+  var superseded = function() { return (skipped = skipped || _syncWritesOutstanding() || _syncWriteSeq !== seq); };
   var sig = function() {
     return JSON.stringify((typeof jobPlanStore === 'object' && jobPlanStore[jobId]) || null)
          + '|' + JSON.stringify((typeof jobLogs === 'object' && jobLogs[jobId]) || null);
@@ -31431,12 +31537,16 @@ function refreshPlanAndLogFromCloud(jobId, cb) {
   var finish = function() {
     if (++done < 2) return;
     if (fail) { if (cb) cb(false); return; }
+    // A skipped answer changed nothing here: the store differs from `before` only by the person's own
+    // edit, which is already on screen, so there is nothing to redraw. The next tick asks again.
+    if (skipped) { if (cb) cb(false); return; }
     if (cb) cb(sig() !== before);
   };
   fetch(SHEETS_SYNC_URL + '?action=loadJobPlans')
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data && data.jobPlans && typeof data.jobPlans === 'object' && !data.error) {
+        if (superseded()) return;
         jobPlanStore = migrateRetiredNames(data.jobPlans);
         try { localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
       }
@@ -31447,6 +31557,7 @@ function refreshPlanAndLogFromCloud(jobId, cb) {
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data && data.logs && typeof data.logs === 'object' && !data.error) {
+        if (superseded()) return;
         jobLogs = migrateRetiredNames(data.logs);
         try { localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
       }
@@ -33718,7 +33829,10 @@ function draftReviewRequest(jobId) {
   var to = bestClientEmail(job);
   if (!to) { _coNotice(jobId, 'warn', 'No client email on this job — add one under Edit Client first.'); return; }
   function record(url, via) {
+    var before = job.reviewAsk || {};
     job.reviewAsk = { draftedAt: new Date().toISOString(), draftUrl: url || '', via: via, by: _actor(job) || '' };
+    // Field by field on the sheet (P11): stamp what this draft changed, including a sentAt it drops.
+    _stampChangedKeys(job, 'reviewAsk', before, job.reviewAsk);
     job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
     _repaintCloseout(jobId);
   }
@@ -33742,6 +33856,7 @@ function markReviewRequestSent(jobId) {
   if (!job || !job.reviewAsk || !job.reviewAsk.draftedAt) return;
   job.reviewAsk.sentAt = new Date().toISOString();
   job.reviewAsk.sentBy = _actor(job) || '';
+  _jobTouch(job, 'reviewAsk', 'sentAt'); _jobTouch(job, 'reviewAsk', 'sentBy');   // field by field on the sheet (P11)
   job.updatedAt = Date.now(); saveJobs(); syncJobToSheets(job);
   _repaintCloseout(jobId);
 }
@@ -40022,7 +40137,11 @@ function saveClientEdit(jobId) {
   // Home Prep hides the must-find box (Q17): it keeps what the record holds, like every hidden row.
   if (intakeAsksHouseContents(svc)) job.mustFind = _keep('mustfind', job.mustFind);
   job.safetyNotes = _keep('safety', job.safetyNotes);
+  // Row by row on the sheet (P11): only the rows this save changed are stamped, compared in their
+  // normalised form, so an untouched row never claims to be newer than another device's tick.
+  var _hfBefore = houseFlagsOf(job);
   job.houseFlags  = readHouseFlagInputs('ec', svc, job);
+  _stampChangedKeys(job, 'houseFlags', _hfBefore, houseFlagsOf(job));
   job.svc   = svc;
   job.svcLabel = svcLabels[svc] || svc;
   // The picker is built from the roster plus the job's own value (conciergeOptionsHtml), so an

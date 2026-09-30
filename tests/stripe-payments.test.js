@@ -458,7 +458,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const RB_FNS = ['applyStripePayments', 'paymentStageLabel', 'paymentStageWord', '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_stripeDue', 'outstandingPayments',
                   'stripeRefresh', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
                   'depositClearedTotal', 'isJobFunded', 'depositTargetFor', '_photoUid',
-                  '_jobTouch', 'docState', 'fmt'];
+                  '_jobTouch', 'docState', 'fmt', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit'];
 
   function rbCtx(jobsSeed) {
     const notices = [];
@@ -535,7 +535,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // merged away by the other device's next save — the defect the 2026-09-12 job merge closed.
     ok(!!p.uid, 'the payment carries a uid');
     ok(job.at && job.at['payments:' + p.uid], '⚠ and _jobTouch stamped it, so a stale device cannot erase it');
-    ok(job.at['docState:invoice:deposit'], 'and the docState key is stamped too');
+    // ⚠ P11 (2026-09-30): the invoice's docState record gained only a check time, so it is written bare
+    // (docStateBare) and claims nothing; the payment's own key above carries the new fact.
+    ok(!(job.at && job.at['docState:invoice:deposit']), 'the docState key is NOT stamped: a check time claims nothing (P11)');
+    ok(job.updatedAt > 0, 'while the job\'s clock moves with the payment, like a hand entry');
 
     // It says so, once, naming the money and the stage.
     eq(ctx.__notices.length, 1, 'it speaks exactly once');

@@ -529,7 +529,7 @@ function saveMediaStore(payload) {
   try {
     if (!payload || payload.jobId == null) return { ok: false, success: false, error: 'No jobId' };
     var lock = LockService.getScriptLock();
-    try { lock.waitLock(20000); } catch (e) {}
+    _lockOrBusy(lock);   // see main-sync.gs: a save that cannot get the lock does not write
     try {
       var key = String(payload.jobId);
       // A manifest for a job the sheet has seen and no longer holds (see JOB LEDGER in

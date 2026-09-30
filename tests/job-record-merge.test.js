@@ -92,7 +92,7 @@ function server() {
   const ctx = {
     console,
     Logger: { log() {} },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
     SpreadsheetApp: { openById: () => ({
       getSheetByName: (n) => sheets[n] || null,
       insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; },
@@ -114,7 +114,7 @@ function server() {
   vm.createContext(ctx);
   const names = ['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet',
     '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord',
-    'saveLogStore', 'getLogStore'];
+    'saveLogStore', 'getLogStore', '_lockOrBusy'];
   vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'),
     gsVar('JOB_LIST_KEY'), ...names.map(gsFn)].join('\n\n'), ctx, { filename: 'main-sync.gs (extracted)' });
   return ctx;
@@ -476,7 +476,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const ctx = sandbox({
         fns: ['refreshPlanAndLogFromCloud', 'planWatchTick', 'maybeStartPlanWatch',
               'stopPlanWatch', '_planTabBusy', '_syncWritesOutstanding'],
-        vars: ['_planWatch', 'PLAN_WATCH_MS'],
+        vars: ['_planWatch', 'PLAN_WATCH_MS', '_syncWriteSeq'],
         stubs: {
           document: doc,
           SHEETS_SYNC_URL: 'https://example/exec',
@@ -492,10 +492,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             const body = /loadJobPlans/.test(url) ? { jobPlans: state.plans } : { logs: state.logs };
             // `movesTo` models the person picking another client while this is in flight.
             if (state.movesTo) state.sel = state.movesTo;
+            // `editDuring` models a person's edit made while the request is out: the local store
+            // changes and a write is queued ('queued', still outstanding when the answer lands) or
+            // queued and already landed ('landed', only the counter shows it).
+            // ONCE, on the first request: re-applying it on the second would restore the edit after a
+            // stale answer had already replaced the store, and hide that answer's missing check.
+            if (state.editDuring && state.ctx && !state.edited) {
+              state.edited = true;
+              state.ctx.jobPlanStore[7] = { rooms: { 3: { status: 'cleared' } } };
+              state.ctx.jobLogs[7] = [{ id: 'logged-during', members: [{ role: 'TC', hours: 2 }] }];
+              state.ctx._syncWriteSeq++;
+              if (state.editDuring === 'queued') state.ctx._outbox.saveAllJobPlans = {};
+            }
             return P({ json: () => body });
           },
         },
       });
+      state.ctx = ctx;
       return { ctx, state };
     }
 
@@ -535,6 +548,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // ⚠ AND IT MUST NOT REDRAW A JOB THE PERSON HAS ALREADY MOVED OFF. The fetch is not
     // instant; the selector can change under it.
+    // ⚠⚠ AND IT ASKS AGAIN WHEN THE ANSWER LANDS (P11, 2026-09-30): an edit made while the request was
+    // out queued a write; the answer predates it and must not be applied over it.
+    ['queued', 'landed'].forEach((how) => {
+      r = rig({ editDuring: how });
+      r.ctx.planWatchTick();
+      ok(r.state.calls > 0, how + ': the request went out');
+      eq(r.ctx.jobPlanStore[7].rooms[3].status, 'cleared', '⚠⚠ ' + how + ': the edit made during the fetch survives the answer');
+      eq(((r.ctx.jobLogs[7] || [])[0] || {}).id, 'logged-during', '⚠⚠ ' + how + ': and so do the hours logged during it (the log answer asks too)');
+      ok(!r.state.redraws, how + ': and nothing redraws over it');
+    });
+
     r = rig({ movesTo: '9' });
     r.ctx.planWatchTick();
     ok(r.state.calls > 0, 'the request goes out against the job that was on screen');

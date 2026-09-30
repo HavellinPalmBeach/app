@@ -27,7 +27,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const box = (stubs) => sandbox({
     fns: ['agreementSignature', 'isAgreementSigned', 'recordAgreementSignature', 'expectedSignerName',
-          'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'applyEsignStatus', '_localDateOf', '_ymdLocal', 'outstandingEnvelopes', '_actor', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
+          'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'applyEsignStatus', '_localDateOf', '_ymdLocal', 'outstandingEnvelopes', '_actor', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docStateBare', '_saveArrivalCheck'],
     vars: ['AGR_SIG_METHODS', 'AGR_SIG_MANUAL_METHODS', 'ESIGN_PROVIDERS'],
     stubs: Object.assign({
       saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},

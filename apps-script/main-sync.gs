@@ -43,7 +43,7 @@
 // a TRUST estate's; and before -22a it prints a Total Estimated FMV, an Items Awaiting
 // Valuation count and an FMV BY CATEGORY rollup on an estate CONTRACTED AT `contents` or
 // `none`, where the agreement says counsel does the valuing.
-var BACKEND_VERSION = '2026-09-22b';
+var BACKEND_VERSION = '2026-09-30';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -506,7 +506,29 @@ function _readStoreBlob(sheetName, empty) {
     json += String(v);
   }
   if (!json) return empty;
-  try { return JSON.parse(json); } catch (e) { return empty; }
+  // ⚠⚠ UNREADABLE IS NOT EMPTY (P11, 2026-09-30, audit M9). This returned the caller's empty value
+  // when the JSON would not parse, and every save merges INTO what it reads: the next save of that
+  // store then wrote back only what that one save carried, and every other job's estimates, plans,
+  // hours or change orders were gone. It throws instead, so the read and the write both refuse, the
+  // tab is left exactly as it is, and the app's retry holds the unsent write until someone restores
+  // the tab from the spreadsheet's version history.
+  try { return JSON.parse(json); }
+  catch (e) {
+    throw new Error('STORE_UNREADABLE: the ' + sheetName + ' tab holds data that is not valid JSON ('
+      + json.length + ' characters), so nothing was read from it or written to it. Restore the tab from '
+      + 'File > Version history in the spreadsheet; the app sends its waiting saves again by itself.');
+  }
+}
+
+// ⚠⚠ A SAVE THAT CANNOT GET THE LOCK DOES NOT WRITE (P11, 2026-09-30, audit M9). Nine save paths did
+// `try { lock.waitLock(20000); } catch (e) {}` and went on to read-merge-write the store WITHOUT the
+// lock after a timeout, which is exactly the interleaving the lock exists to stop: two saves read the
+// same blob and the second write erases the first. It throws `busy` instead; doPost answers
+// {ok:false, error}, and the app's outbox holds the write and sends it again.
+function _lockOrBusy(lock) {
+  if (!lock.tryLock(20000)) {
+    throw new Error('busy: another save held the sheet for 20 seconds, so this one was not written; the app sends it again by itself.');
+  }
 }
 
 // Merge two {key: entry} stores. Per key keep the entry with the newer savedAt;
@@ -836,7 +858,16 @@ var JOB_KEYED_LISTS = ['payments', 'appraisers', 'invSnapshots'];
 // line — ticked in the house, corrected at the desk, which is exactly the two-device shape
 // docState has. The app stamps every tick AND every untick (an untick with no stamp would
 // read as absence, and absence alone is never a removal).
-var JOB_KEYED_MAPS  = ['docState', 'mustFound'];
+// ⚠⚠ AND THE MAPS TWO PEOPLE EDIT AT ONCE (P11, 2026-09-30, the C2 follow-up). Vendor quotes and
+// statuses (four sourcing buckets), the job team, vendor ratings, the review ask and the house
+// checklist all used to ride the WHOLE record, so a device that saved ANY part of a job on its morning
+// copy put back its stale copy of every one of these: a confirmed $23,400 painter, a confirmed team
+// and an $850 dumpster came off one job that way. The app stamps each key it changes
+// (`_saveJobEdit(job, kind, key)`, `_stampChangedKeys`), including removals, so each merges alone.
+// The crew merges by its top-level parts (tc, tc2, ps, the sign-off fields); the review ask and the
+// checklist by field and by row.
+var JOB_KEYED_MAPS  = ['docState', 'mustFound', 'vendorSourcing', 'prepSourcing', 'logisticsSourcing',
+                       'collSourcing', 'crew', 'vendorRatings', 'reviewAsk', 'houseFlags'];
 // Per-list identity. ⚠ `payments` used to be minted `max(id)+1` PER DEVICE, so two people
 // each recording a payment both produced the same id and union-by-id would fuse two real
 // payments into one. The app mints a uid now; `id` stays the fallback so a payment written
@@ -942,7 +973,7 @@ function _mergeJobRecord(cur, inc) {
 function saveEstimateStore(incoming) {
   if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
+  _lockOrBusy(lock);
   try {
     var ctx = _jobRefusalCtx();
     var dropped = _stripRefusedJobKeys(incoming, ctx);
@@ -1041,7 +1072,7 @@ function _mergePlanStore(existing, incoming) {
 function saveJobPlanStore(incoming) {
   if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
+  _lockOrBusy(lock);
   try {
     var ctx = _jobRefusalCtx();
     var dropped = _stripRefusedJobKeys(incoming, ctx);
@@ -1064,7 +1095,7 @@ function getJobPlanStore() {
 function saveChangeOrderStore(incoming) {
   if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
+  _lockOrBusy(lock);
   try {
     // Change orders are keyed by their own id but belong to a job; refuse the ones whose job
     // the sheet has seen and no longer holds, the same way the job-keyed stores do.
@@ -1117,7 +1148,7 @@ function getChangeOrderStore() {
 function saveLogStore(incoming) {
   if (!incoming) return { dropped: [] };
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
+  _lockOrBusy(lock);
   try {
     var ctx = _jobRefusalCtx();
     var dropped = _stripRefusedJobKeys(incoming, ctx);
@@ -1190,7 +1221,7 @@ function getContractorStore() {
 function saveContractorStore(incoming) {
   if (!incoming) return;
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
+  _lockOrBusy(lock);
   try {
     var cur = getContractorStore();
     _writeStoreBlob('ContractorStore', {
@@ -1203,7 +1234,7 @@ function saveContractorStore(incoming) {
 function deleteContractorFromStore(id) {
   if (!id) return;
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
+  _lockOrBusy(lock);
   try {
     var cur = getContractorStore();
     cur.added = (cur.added || []).filter(function(c) { return c && String(c.id) !== String(id); });
@@ -1246,7 +1277,7 @@ function saveAllJobsToSheet(jobsArr) {
   var result = { dropped: [] };
   if (!jobsArr || !jobsArr.length) return result;
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
+  _lockOrBusy(lock);
   try {
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var sheet = ss.getSheetByName('Jobs');
@@ -1303,7 +1334,7 @@ function saveJobToSheet(job) {
   var result = { dropped: [] };
   if (!job || job.id == null) return result;
   var lock = LockService.getScriptLock();
-  try { lock.waitLock(20000); } catch (e) {}
+  _lockOrBusy(lock);
   try {
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var sheet = ss.getSheetByName('Jobs');
@@ -2648,7 +2679,9 @@ var AGENT_MODEL        = 'claude-opus-5';
 // what keeps a call inside UrlFetchApp's timeout. Sweep low/medium/high on one real room and
 // measure naming quality against cost before changing it — do not tune it by argument.
 var AGENT_EFFORT       = 'medium';
-var AGENT_MAX_TOKENS   = 4096;   // thinking counts against this; a naming answer needs ~400
+var AGENT_MAX_TOKENS   = 16000;  // thinking counts against this; a naming answer needs ~400. Was 4,096: with adaptive
+                                 // thinking a dense frame could stop at the cap and fail as 'cut off' (P11, 2026-09-30).
+                                 // 16,000 is the documented ceiling for a non-streaming request; it caps, it does not spend.
 var AGENT_PARALLEL     = 8;      // fetchAll width — request bodies carry base64, so not 50
 var AGENT_MAX_SHOTS    = 80;     // hard cap on one invocation whatever the caller asks for
 var AGENT_TIME_BUDGET  = 240000; // 4 min of Apps Script's 6, leaving margin to answer

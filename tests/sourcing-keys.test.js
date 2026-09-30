@@ -36,7 +36,7 @@ const VEND = () => [{ type: 'Moving Company', cost: 12000 },
 function ctx(extraFns) {
   return sandbox({
     fns: ['_srcLid', '_srcLineKey', '_srcAdoptLineIds', 'getVendorActuals',
-          'prepFeeRate', 'logisticsCatsFor'].concat(extraFns || []),
+          'prepFeeRate', 'logisticsCatsFor', '_jobTouch'].concat(extraFns || []),
     vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq'],
   });
 }

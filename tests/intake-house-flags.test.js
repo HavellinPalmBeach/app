@@ -226,7 +226,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(src, "'i-mustfind', 'i-safety'", 'both textareas are on the shared INTAKE_FIELDS list');
 
     // Edit Client — same catalogue, and it writes back all three.
-    const ec = src.slice(src.indexOf('function saveClientEdit'), src.indexOf('function saveClientEdit') + 9000);
+    const ec = src.slice(src.indexOf('function saveClientEdit'), src.indexOf('function saveClientEdit') + 20000);
     has(ec, 'job.mustFind', 'Edit Client saves the must-find answer');
     has(ec, 'job.safetyNotes', 'Edit Client saves the safety answer');
     has(ec, "readHouseFlagInputs('ec', svc, job)", 'Edit Client saves the checklist (a row its service hides keeps the record)');

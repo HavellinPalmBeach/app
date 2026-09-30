@@ -83,7 +83,7 @@ function server() {
   const sheets = { Jobs: fakeSheet('Jobs', HDR) };
   const ctx = {
     console, Logger: { log() {} },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
     SpreadsheetApp: { openById: () => ({
       getSheetByName: (n) => sheets[n] || null,
       insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; },
@@ -95,7 +95,7 @@ function server() {
   };
   vm.createContext(ctx);
   const names = ['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet',
-    '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord'];
+    '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_lockOrBusy'];
   vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'),
     gsVar('JOB_LIST_KEY'), ...names.map(gsFn)].join('\n\n'), ctx, { filename: 'main-sync.gs (extracted)' });
   // Land a device's wire, in the order its outbox would send it.
@@ -143,7 +143,8 @@ const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 
   'unfilledPlannedPS', 'plannedPSCount', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'isJobWon', 'jobLogEntries',
   'setVendorRating', 'setVendorRatingNote', '_ratingJob', '_writeVendorScore', 'computeVendorAvg',
   'draftReviewRequest', 'markReviewRequestSent', 'toggleProbatePkg', 'setValBasis', 'setEstateAVD',
-  '_attachPaymentEvidence', '_driveFolderFailed', 'fetchSubfolderIds', '_normalizeSubfolders', 'applyEsignStatus', 'docState'];
+  '_attachPaymentEvidence', '_driveFolderFailed', 'fetchSubfolderIds', '_normalizeSubfolders', 'applyEsignStatus', 'docState',
+  'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap'];
 const DEVICE_VARS = ['SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq', 'VENDOR_CONTACT_SLOTS',
   'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PERSON_NAME_ALIASES', 'VENDOR_RATING_WINDOW'];
 
@@ -274,11 +275,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['setJobVendorCoordHrs', null, (A) => A.setJobVendorCoordHrs(7, 0, '3.5'), (j) => (j.vendorSourcing || {})[V] && j.vendorSourcing[V].coordHrs === 3.5],
       ['setPrepVendorCoordHrs', null, (A) => A.setPrepVendorCoordHrs(7, 0, '2'), (j) => (j.prepSourcing || {})[K] && j.prepSourcing[K].coordHrs === 2],
       ['setLogisticsCoordHrs', null, (A) => A.setLogisticsCoordHrs(7, 'dumpster', '1'), (j) => (j.logisticsSourcing || {}).dumpster && j.logisticsSourcing.dumpster.coordHrs === 1],
-      ['setCrewTC', null, (A) => A.setCrewTC(7, 'Anthony Graziano'), (j) => j.crew && j.crew.tc.name === 'Anthony Graziano' && j.crew.tc.picked === true],
-      ['setCrewTC2', null, (A) => A.setCrewTC2(7, 'Bob Smith'), (j) => j.crew && j.crew.tc2 && j.crew.tc2.name === 'Bob Smith'],
+      ['setCrewTC', null, (A) => A.setCrewTC(7, 'Anthony Graziano'), (j) => j.crew && j.crew.tc.name === 'Anthony Graziano' && j.crew.tc.picked === true, '_crewSnap', '_crewSave', '_stampChangedKeys', '_jobTouch'],
+      ['setCrewTC2', null, (A) => A.setCrewTC2(7, 'Bob Smith'), (j) => j.crew && j.crew.tc2 && j.crew.tc2.name === 'Bob Smith', '_crewSnap', '_crewSave', '_stampChangedKeys', '_jobTouch'],
       ['setCrewPS', null, (A) => A.setCrewPS(7, 0, 'Anthony Graziano Jr'), (j) => j.crew && j.crew.ps[0].name === 'Anthony Graziano Jr'],
       ['confirmJobTeam', null, (A) => { A.setCrewPS(7, 0, 'Anthony Graziano Jr'); A.setCrewPS(7, 1, 'Contractor TBD'); A.confirmJobTeam(7); },
-        (j) => j.crew && j.crew.confirmed === true && j.crew.tc.locked === true],
+        (j) => j.crew && j.crew.confirmed === true && j.crew.tc.locked === true, '_crewSnap', '_crewSave', '_stampChangedKeys', '_jobTouch'],
       // The morning copy has a CONFIRMED team; A re-opens it; B's tie would re-confirm it
       // under A, and hours would be logged against a team somebody had just unlocked.
       ['reviseJobTeam', { crew: { tc: { name: 'Ashley Jerome', locked: true }, tc2: { name: '', locked: false },
@@ -345,10 +346,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     A.removeLogisticsLine(7, 'dumpster');
     ok(!('dumpster' in (A.jobs[0].logisticsSourcing || {})), 'the line is removed…');
     ok((A.jobs[0].at || {})['logisticsSourcing:dumpster'] > MORNING, '…and its stamp stays: a stamp with no value left behind it IS the removal');
-    // The crew has no key yet — one object, and no per-slot merge for a stamp to feed (P11).
-    const before = Object.keys(A.jobs[0].at || {}).length;
+    // P11 (2026-09-30): the crew merges by its top-level parts. A concierge change stamps crew:tc and
+    // nothing else — no part it did not change, so its stale copy of the others claims nothing.
+    const before = Object.keys(A.jobs[0].at || {});
     A.setCrewTC(7, 'Anthony Graziano');
-    eq(Object.keys(A.jobs[0].at || {}).length, before, 'a crew edit stamps the record and invents no key');
+    const added = Object.keys(A.jobs[0].at || {}).filter((k) => before.indexOf(k) < 0);
+    eq(added, ['crew:tc'], 'a concierge change stamps crew:tc, and only that part');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -433,7 +436,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const EC_FNS = ['saveClientEdit', 'courtRecordShown', 'jobOnProbateTrack', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
       'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'readHouseFlagInputs',
-      'isDecedentJob', 'matterTypeOf', 'invFiduciaryMode', 'matterDef', 'saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 'sameSvcFamily', 'svcFamily', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'houseFlagAsked', 'houseFlagsOf', 'intakeAsksHouseContents'];
+      'isDecedentJob', 'matterTypeOf', 'invFiduciaryMode', 'matterDef', 'saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 'sameSvcFamily', 'svcFamily', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'houseFlagAsked', 'houseFlagsOf', 'intakeAsksHouseContents', '_stampChangedKeys'];
     const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'referralDirectory'];
     const srv = server();
@@ -500,28 +503,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  group('THE BOUNDARY — measured, not a requirement: a stale device making its OWN edit still wins wholesale');
+  group('THE BOUNDARY, CLOSED BY P11 — a stale device making its OWN edit no longer wins the other maps wholesale');
   {
-    // This change stops the tie. It does NOT stop a real edit made on a morning copy: B
-    // stamps its own edit later than A's, and the sheet takes B's whole record, sourcing and
-    // all. That is fix pack P11 (a per-key merge for these maps), which needs a backend
-    // redeploy. The sub-record stamps this change writes are what P11 will read. When P11
-    // lands this assertion flips — update it and the CLAUDE.md entry together.
+    // Until P11 (2026-09-30) a real edit made on a morning copy took the whole job: B stamped its own
+    // edit later than A's, and the sheet took B's whole record, sourcing and all. The sourcing, crew,
+    // ratings, review and checklist maps now merge key by key on the stamps the writers leave (this
+    // needs the backend redeploy; the harness runs the current main-sync.gs).
     const r = twoDevices(null, (A) => A.setPrepVendorQuote(7, 0, '23400'),
       (B) => B.setLogisticsQuote(7, 'junk', '650'));
-    const kept = get(r.after, 'prepSourcing', 'Lp1', 'quote') === 23400;
-    ok(!kept, 'P11 RESIDUAL: B\'s own later edit on its morning copy still takes the whole job — A\'s quote is gone');
-    ok(!!get(r.after, 'at', 'prepSourcing:Lp1'), '…while A\'s per-key stamp is still on the record, ready for a per-key merge');
+    eq(get(r.after, 'prepSourcing', 'Lp1', 'quote'), 23400, '⚠⚠ FIXED (P11): A\'s quote survives B\'s own later edit on its morning copy');
+    eq(get(r.after, 'logisticsSourcing', 'junk', 'quote'), 650, '…and so does B\'s own edit');
+    ok(!!get(r.after, 'at', 'prepSourcing:Lp1'), '…each on its own stamp');
 
-    // ⚠ AND THE SAME DOOR OPENS WITH NOBODY PRESSING ANYTHING (found 2026-09-29, measured, NOT fixed
-    // here). The DocuSign and Stripe arrival checks run when a client is opened. On a device holding
-    // the morning copy they write checkedAt through docState — which stamps the RECORD — and sync it,
-    // so a stale device merely opening a client with an outstanding envelope or payment link takes the
-    // whole job, A's Job Plan edits included. It is the inverse of what this change fixes (an automatic
-    // write that claims to be newest, not a person's edit that failed to) and it sits on the DocuSign
-    // rate-limit path, so it is left for its own change: stamp only the docState key on an answer that
-    // changes nothing else (app-only), or P11. When it is fixed this assertion flips — update it and
-    // the CLAUDE.md entry together.
+    // The same across maps: a team confirmed on one device and a quote typed on the other's morning copy.
+    const t = twoDevices(null, (A) => { A.setCrewTC(7, 'Anthony Graziano'); },
+      (B) => B.setPrepVendorQuote(7, 0, '19000'));
+    eq(get(t.after, 'crew', 'tc', 'name'), 'Anthony Graziano', '⚠ a concierge picked on one device survives a quote typed on the other\'s morning copy');
+    eq(get(t.after, 'prepSourcing', 'Lp1', 'quote'), 19000, '…and the quote lands too');
+
+    // ⚠⚠ AND THE SAME DOOR USED TO OPEN WITH NOBODY PRESSING ANYTHING (found 2026-09-29, FIXED 2026-09-30,
+    // P11). The DocuSign and Stripe arrival checks run when a client is opened. On a device holding the
+    // morning copy they wrote checkedAt through docState, which stamped the RECORD, and synced it, so a
+    // stale device merely opening a client with an outstanding envelope or payment link took the whole
+    // job, A's Job Plan edits included. A check that learns nothing new is now written bare
+    // (docStateBare + _saveArrivalCheck): the job's clock does not move, so the stale copy loses.
     const POLL = { agrSent: true, docState: { agreement: { sentAt: '2026-09-28',
       esign: { provider: 'docusign', envelopeId: 'env-1', status: 'sent' } } } };
     const srv = server();
@@ -530,13 +535,49 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     pa.setPrepVendorQuote(7, 0, '23400');
     srv.land(pa.__send());
     eq(get(srv.job(7), 'prepSourcing', 'Lp1', 'quote'), 23400, 'A\'s quote reached the sheet');
+    const aClock = get(srv.job(7), 'updatedAt');
     const pb = device([morningJob(POLL), otherJob()],
       { isAgreementSigned: () => false, recordAgreementSignature: () => '', esignArchiveSigned() {} });
     pb.applyEsignStatus(7, { status: 'sent' });      // DocuSign answers "still out" to the stale laptop
+    eq(get(localJob(pb, 7), 'updatedAt'), MORNING, '⚠ the stale device\'s check does not move the job\'s clock');
+    ok(!!get(localJob(pb, 7), 'docState', 'agreement', 'esign', 'checkedAt'), '…and keeps the check time on this device, which is what paces its next check');
     srv.land(pb.__send());
     const polled = srv.job(7);
-    ok(!get(polled, 'prepSourcing', 'Lp1'), 'ARRIVAL-POLL RESIDUAL: the stale device\'s DocuSign check took the job — A\'s quote is gone');
-    ok(!!get(polled, 'docState', 'agreement', 'esign', 'checkedAt'), '…though all it carried that was new was a checkedAt, which merges per key on its own');
+    eq(get(polled, 'prepSourcing', 'Lp1', 'quote'), 23400, '⚠⚠ FIXED: the stale device\'s DocuSign check no longer takes the job — A\'s quote survives');
+    eq(get(polled, 'updatedAt'), aClock, '…and the job keeps the clock A\'s edit gave it');
+
+    // A device whose copy is CURRENT still records its check: the sheet breaks the docState tie its way.
+    const pc = device([clone(srv.job(7)), otherJob()],
+      { isAgreementSigned: () => false, recordAgreementSignature: () => '', esignArchiveSigned() {} });
+    pc.applyEsignStatus(7, { status: 'sent' });
+    srv.land(pc.__send());
+    ok(!!get(srv.job(7), 'docState', 'agreement', 'esign', 'checkedAt'), 'a current device\'s check time reaches the sheet, so the other devices pace their checks by it');
+    eq(get(srv.job(7), 'prepSourcing', 'Lp1', 'quote'), 23400, 'and nothing else on the job moves');
+    eq(get(srv.job(7), 'updatedAt'), aClock, 'including its clock');
+
+    // Stripe, the same: a check that finds no new payment is bare.
+    const SPOLL = { docState: { 'invoice-deposit': { stripe: { linkId: 'plink_1', url: 'https://buy' } } } };
+    const srv2 = server();
+    srv2.saveAllJobsToSheet([morningJob(SPOLL), otherJob()]);
+    const sa = device([morningJob(SPOLL), otherJob()]);
+    sa.setPrepVendorQuote(7, 0, '23400');
+    srv2.land(sa.__send());
+    const sb = device([morningJob(SPOLL), otherJob()], { _docNotice() {}, renderJobs() {}, fmt: (n) => '$' + n,
+      paymentStageLabel: () => 'deposit', isJobFunded: () => true, _photoUid: () => 'u-pi-1' });
+    eq(sb.applyStripePayments(7, 'invoice-deposit', 'deposit', { payments: [] }), 0, 'Stripe answers "nothing yet" to the stale laptop');
+    eq(get(localJob(sb, 7), 'updatedAt'), MORNING, '⚠ …and the job\'s clock does not move');
+    srv2.land(sb.__send());
+    eq(get(srv2.job(7), 'prepSourcing', 'Lp1', 'quote'), 23400, '⚠⚠ FIXED: the stale device\'s Stripe check no longer takes the job');
+    // A payment that DOES land is recorded the way a hand entry is: its own key stamped, the clock moved.
+    const sc = device([clone(srv2.job(7)), otherJob()], { _docNotice() {}, renderJobs() {}, fmt: (n) => '$' + n,
+      paymentStageLabel: () => 'deposit', isJobFunded: () => true, _photoUid: () => 'u-pi-1' });
+    eq(sc.applyStripePayments(7, 'invoice-deposit', 'deposit',
+      { payments: [{ piId: 'pi_1', status: 'succeeded', amount: 4575, createdAt: '2026-09-29T15:00:00Z' }] }), 1, 'a settled payment is recorded');
+    srv2.land(sc.__send());
+    eq((get(srv2.job(7), 'payments') || []).map((x) => x.stripePiId), ['pi_1'], 'it reaches the sheet');
+    ok(!!get(srv2.job(7), 'at', 'payments:u-pi-1'), 'stamped on its own key');
+    ok(get(srv2.job(7), 'updatedAt') > get(srv2.job(7), 'at', 'prepSourcing:Lp1') - 1, 'and with the job\'s clock moved, so its deposit mirror travels');
+    eq(get(srv2.job(7), 'depositReceived'), true, 'the deposit mirror is on the sheet');
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -555,6 +596,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fetchSubfolderIds: 'a cache of Drive subfolder ids, refetched whenever it is missing',
       _driveFolderFailed: 'a failure notice kept for the next person to open the client; the retry is a person\'s press',
       hardDeleteJob: 'not an edit — the job leaves the array, and the deletion rides deleteJob and the sheet\'s ledger',
+      _saveArrivalCheck: 'a DocuSign or Stripe check that learned nothing new — a stamped save let a stale device that merely opened a client take the whole job (P11)',
     };
     const src = source();
 

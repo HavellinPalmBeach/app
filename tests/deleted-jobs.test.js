@@ -94,7 +94,7 @@ function server(opts = {}) {
   const ctx = {
     console,
     Logger: { log: (s) => log.push(String(s)) },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
     SpreadsheetApp: {
       openById: () => ({
         getName: () => 'fake',
@@ -123,7 +123,7 @@ function server(opts = {}) {
     // A job plan merges PER KEY now (see _mergePlanRecord) — two people work one plan.
     '_planStamp', '_mergePlanRecord', '_mergePlanStore',
     'saveJobPlanStore', 'getJobPlanStore', 'saveLogStore', 'getLogStore', 'saveChangeOrderStore',
-    'getChangeOrderStore', 'resetAllJobDataConfirm', 'allowJobRestoreConfirm', 'previewDeletedJobs'];
+    'getChangeOrderStore', 'resetAllJobDataConfirm', 'allowJobRestoreConfirm', 'previewDeletedJobs', '_lockOrBusy'];
   const code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'),
     gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'),
     gsVar(GS, 'JOB_KEYED_LISTS'), gsVar(GS, 'JOB_KEYED_MAPS'), gsVar(GS, 'JOB_LIST_KEY'), ...names.map((n) => gsFn(GS, n)),

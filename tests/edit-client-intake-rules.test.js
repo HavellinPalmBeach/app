@@ -67,7 +67,7 @@ const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'save
   'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById',
   'svcFamilyOptions', 'svcFamily', 'sameSvcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName',
   'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked',
-  'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', 'onReferralSourceChange', 'populateReferralPicker'];
+  'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', 'onReferralSourceChange', 'populateReferralPicker', '_stampChangedKeys', '_jobTouch'];
 const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
   'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES'];
@@ -381,6 +381,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(switched.job.svc, 'prep', 'the switch to Home Prep saves');
     eq(switched.job.houseFlags.firearms, { on: true, note: 'Rifle in closet' }, '⚠ a row edited and then hidden by the switch keeps the record');
     eq(switched.job.mustFind, 'Grandma\'s ring', '⚠ and so does the must-find box the switch hid');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('P11 — Edit Client stamps only the checklist rows it changed, so the sheet merges them row by row');
+  {
+    const r = editAndSave(LIVING, { 'ec-hf-firearms': true, 'ec-hfn-firearms': 'Rifle, hall closet' });
+    const at = r.job.at || {};
+    ok(at['houseFlags:firearms'] > 0, '⚠ the row ticked is stamped');
+    eq(Object.keys(at).filter((k) => /^houseFlags:/.test(k)), ['houseFlags:firearms'], '⚠⚠ and no other row claims to be newer');
+    const same = editAndSave(LIVING);
+    eq(Object.keys(same.job.at || {}).filter((k) => /^houseFlags:/.test(k)), [], 'an untouched save stamps no row at all');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
