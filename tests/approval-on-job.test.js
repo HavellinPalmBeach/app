@@ -35,7 +35,7 @@ const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', '
   '_srcLineKey', 'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate',
   'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc',
   'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
-  'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal',
+  'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'paymentCounts', 'jobPaidTotal',
   'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'docReadiness', 'agreementReady',
   'isJobWon', 'resolvePin', 'checkInvPin', 'dashApproveInvoice', 'openInvPinModal', 'invFinalApproval',
   'invFinalApprovalRecord', 'invFinalApprovalStaleTxt', 'recordInvFinalApproval', 'docState',
@@ -272,8 +272,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const gsVar = (name) => { const m = GS.match(new RegExp('(^|\\n)(var\\s+' + name + '\\s*=[^;]*;)')); if (!m) throw new Error('not in .gs: var ' + name); return m[2]; };
     const S = { Date };
     vm.createContext(S);
-    vm.runInContext([gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'), gsVar('JOB_LIST_KEY'),
-      ...['_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord'].map(gsFn)].join('\n\n'), S);
+    vm.runInContext([gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'), gsVar('JOB_LIST_KEY'), gsVar('JOB_PAYMENT_STICKY'),
+      ...['_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_paymentSticky'].map(gsFn)].join('\n\n'), S);
 
     const morning = clone(JOB(2, 'Birch'));
     morning.updatedAt = Date.now() - 10 * 3600e3;
@@ -522,7 +522,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { notices: [], alerts: [] };
     const ctx = sandbox({
       fns: AGR_FNS.concat(['_actor', '_handoverBy', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
-        '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending']),
+        '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'paymentCounts', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending']),
       vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS']),
       stubs: {
         document: domStub({}), currentEstimate: null,

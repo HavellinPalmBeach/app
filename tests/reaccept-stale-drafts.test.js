@@ -221,7 +221,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'estimateSubmitBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
       'docPreviewOnly', 'agreementReady', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
-      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
       'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
       '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', 'jtDraftLine',
       // P10 (merged here): the final's row waits for logged hours.
@@ -451,7 +451,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d = domStub({});
     const U = sandbox({
       fns: uniq(['updateAgrUI', 'agreementReady', 'agrApprovalBlocker', 'agrApprovalWithdrawn', 'docReadiness', 'isJobFunded',
-        'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor'].concat(PRICE_FNS)),
+        'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'depositTargetFor'].concat(PRICE_FNS)),
       vars: ['DOC_READY_WHY', 'currentAgrJobId'],
       stubs: { document: d },
     });
@@ -520,13 +520,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(told, ['approved'], 'and the concierge is emailed');
   }
   {
+    // ⚠ RESTATED 2026-09-30 (P16, B17): the decision email is a Gmail draft through sendInternalEmail now, not a
+    // mailto: of its own, so the lines are read where they are handed over. The route itself (the draft, and the
+    // mailto fallback with its From-address warning) is driven in tests/p16-payments-integrations.test.js.
     const opened = [];
     const N = sandbox({ fns: uniq(['notifyTCOfDecision', 'firstName'].concat(PRICE_FNS)), stubs: {
       assignedTCContact() { return { name: 'Ashley Jerome', email: 'ashley@havellinpalmbeach.com' }; },
-      window: { open(u) { opened.push(u); } } } });
+      sendInternalEmail(to, subject, lines) { opened.push({ to, subject, text: lines.join('\n') }); } } });
     N.estimateStore = { 7: rec(24100) };
     N.notifyTCOfDecision(wonJob(), { havellinTotal: 24100 }, 'approved', '');
-    const bodyOf = (u) => decodeURIComponent(String(u || '').split('&body=')[1] || '');
+    eq((opened[0] || {}).to, 'ashley@havellinpalmbeach.com', 'addressed to the concierge');
+    const bodyOf = (m) => String((m && m.text) || '');
     has(bodyOf(opened[0]), 'The client accepted $20,000 and the approved estimate is now $24,100', 'the concierge reads the same sentence');
     has(bodyOf(opened[0]), 'open Butler from the Client Dashboard', 'and is sent to a screen that exists');
     lacks(bodyOf(opened[0]), 'Client Estimate tab', 'never the retired tab');

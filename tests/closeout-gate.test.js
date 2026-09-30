@@ -32,7 +32,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 // exactly what would let the list this suite reads drift from the one a person sees.
 // ⚠ The house-flag helpers left this list on 2026-09-29 with the dead detail row that was their only
 // reader here (audit H2): renderJobs no longer reads a house flag at all.
-const RENDER_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'jobPayments',
+const RENDER_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'jobPayments',
   'svcLabelOf',
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
@@ -65,7 +65,7 @@ function openModal(j) {
   const doc = domStub({});
   const alerts = [];
   const ctx = sandbox({
-    fns: ['openCloseoutModal', 'closeoutRetainedTotal', 'jobPaidTotal', 'jobIsSettled', 'stagePaidTotal', 'jobPayments'],
+    fns: ['openCloseoutModal', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobIsSettled', 'stagePaidTotal', 'jobPayments'],
     stubs: { document: doc, alert: (m) => alerts.push(String(m)) },
   });
   ctx.jobs = [j];
@@ -77,7 +77,7 @@ function openModal(j) {
 // ── the predicate ────────────────────────────────────────────────────────────
 group('jobIsSettled — what counts as the end of an engagement');
 {
-  const ctx = sandbox({ fns: ['jobIsSettled', 'stagePaidTotal', 'jobPayments'] });
+  const ctx = sandbox({ fns: ['jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'jobPayments'] });
   const settled = ctx.jobIsSettled;
 
   eq(settled(job()), false, 'an ordinary active job is not settled');
@@ -189,7 +189,7 @@ group('⚠ WHAT THE GATE MUST NOT REACH');
   // button away would remove the only route to that correction. They are not `settled` —
   // neither carries a delivery stamp or a final payment — and a test says so rather than
   // leaving it to a later tidy-up.
-  const ctx = sandbox({ fns: ['jobIsSettled', 'stagePaidTotal', 'jobPayments'] });
+  const ctx = sandbox({ fns: ['jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'jobPayments'] });
   eq(ctx.jobIsSettled(job({ status: 'lost', won: false, lostReason: 'price' })), false,
     'a lost job is not settled — the reason must stay amendable');
   eq(ctx.jobIsSettled(job({ status: 'closed_retained', depositReceived: true,

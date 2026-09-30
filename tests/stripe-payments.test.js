@@ -89,10 +89,10 @@ function gsCtx({ props = { STRIPE_SECRET_KEY: 'sk' + '_test_zzz' }, fetch = null
   return ctx;
 }
 
-const FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPayments', 'stagePaidTotal', 'jobPaidTotal', 'depositPaidTotal',
+const FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'jobPaidTotal', 'depositPaidTotal',
              'depositClearedTotal', 'isJobFunded', 'depositTargetFor', 'paymentMethodLabel',
              'updateDepModalHints', 'currentDepStage', '_photoUid', 'fmt'];
-const VARS = ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', 'PAYMENT_METHODS_CLEAR_ON_RECEIPT', '_photoUidSeq',
+const VARS = ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', 'PAYMENT_METHODS_CLEAR_ON_RECEIPT', 'PAYMENT_METHODS_RECORDABLE', '_photoUidSeq',
               'LARGE_DEPOSIT_THRESHOLD'];
 
 // The $25,715 estate job this project already uses as its worked example. 50% is $12,858 —
@@ -150,7 +150,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ ACH DOES NOT CLEAR ON RECEIPT AND A CARD DOES — the defect, both directions');
   {
     eq(record('stripe_ach').pay.clearedOn, null, 'ACH: not final on receipt');
-    eq(record('stripe').pay.clearedOn, '2026-09-18', 'card: final on receipt, unchanged');
+    // ⚠ RESTATED 2026-09-30 (P16): a card is REFUSED now, not recorded and cleared — Anthony: no card payments.
+    // The refusal and the recorder without Card are driven in tests/p16-payments-integrations.test.js.
+    eq(record('stripe').pay, undefined, 'card: refused where it is written (P16)');
     eq(record('wire').pay.clearedOn, '2026-09-18', 'wire: final on receipt, unchanged');
     eq(record('cash').pay.clearedOn, '2026-09-18', 'cash: final on receipt, unchanged');
     eq(record('check').pay.clearedOn, null, 'cheque: unchanged, still uncleared');
@@ -162,13 +164,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const { ctx } = build({});
     const L = ctx.PAYMENT_METHODS_CLEAR_ON_RECEIPT;
     ok(L.indexOf('stripe_ach') < 0, '⚠ stripe_ach is ABSENT and must never be added');
-    ok(L.indexOf('stripe') >= 0 && L.indexOf('wire') >= 0 && L.indexOf('cash') >= 0,
-       'card, wire and cash are on it');
+    // ⚠ RESTATED 2026-09-30 (P16): the card came off with the Card option; wire and cash stay.
+    ok(L.indexOf('stripe') < 0 && L.indexOf('wire') >= 0 && L.indexOf('cash') >= 0,
+       'wire and cash are on it, and a card no longer is');
     ok(L.indexOf('check') < 0 && L.indexOf('cashiers_check') < 0, 'neither cheque is');
     // The rule used to be an inline || chain, which is how the next rail gets classified by
     // whoever happens to be editing saveDeposit rather than by a decision.
-    lacks(fn('saveDeposit').replace(/\/\/[^\n]*/g, ''),
-          "method === 'stripe'", 'saveDeposit keeps no inline copy of the rule');
+    // ⚠ RESTATED 2026-09-30 (P16): saveDeposit now names `stripe` once — to choose the words of its REFUSAL of a
+    // card, which is not the clears-on-receipt rule. What this guards is that the clear still comes off the list
+    // alone and no inline chain of methods decides it.
+    const sd = fn('saveDeposit').replace(/\/\/[^\n]*/g, '');
+    has(sd, 'var clearsOnReceipt = (PAYMENT_METHODS_CLEAR_ON_RECEIPT.indexOf(method) >= 0);', 'the clear is decided by the list');
+    has(sd, 'clearedOn: clearsOnReceipt ? date : null', 'and only by it');
+    // (`method === 'check'` stays: that is the large-cheque POLICY EXCEPTION, a different rule.)
+    ok(!/method === '(wire|cash|stripe_ach)'/.test(sd) && !/\|\|\s*method ===/.test(sd),
+       'saveDeposit keeps no inline copy of the rule');
+    eq((sd.match(/method === 'stripe'/g) || []).length, 1, 'the one mention of a card is the refusal');
   }
 
   group('a recorded ACH payment says it is uncleared, on screen and in the record');
@@ -186,8 +197,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Nothing migrates, deliberately: every `stripe` payment predating this really was a card,
     // and rewriting history to say otherwise would assert an uncleared state that never existed.
     const { ctx } = build({});
-    ok(ctx.PAYMENT_METHODS_CLEAR_ON_RECEIPT.indexOf('stripe') >= 0,
-       'legacy stripe still clears on receipt');
+    // ⚠ RESTATED 2026-09-30 (P16): the list is read only when a payment is WRITTEN, and a card is off it — so
+    // what keeps a legacy card record's meaning is its own stored clearedOn, which nothing rewrites.
+    const legacyJob = { id: 1, payments: [{ id: 1, uid: 'u-card', stage: 'deposit', amount: DEPOSIT, method: 'stripe',
+      receivedOn: '2026-09-02', clearedOn: '2026-09-02' }] };
+    eq(ctx.depositClearedTotal(legacyJob), DEPOSIT, 'legacy card money still reads cleared, as it was recorded');
     ok(ctx.paymentMethodLabel('stripe') !== 'stripe', 'and still renders a human label');
   }
 
@@ -233,7 +247,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const src = require('fs').readFileSync(require('path')
       .join(__dirname, '..', 'havellin.html'), 'utf8');
     has(src, '<option value="stripe_ach">', 'the deposit modal offers it');
-    has(src, '<option value="stripe">', 'and still offers a card');
+    // ⚠ RESTATED 2026-09-30 (P16): Anthony, no card payments — the recorder no longer offers one.
+    lacks(src, '<option value="stripe">', 'and no longer offers a card');
     const opt = src.slice(src.indexOf('<option value="stripe_ach">'));
     has(opt.slice(0, 60), 'ACH', 'named so a concierge knows which rail it is');
   }
@@ -455,8 +470,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ─── THE APP SIDE OF THE READ-BACK ───────────────────────────────────────────
   // A sandbox holding the real recorder over the real payment helpers, so the record that
   // comes out is the one `isJobFunded`, the rail and the invoice all read.
-  const RB_FNS = ['applyStripePayments', 'paymentStageLabel', 'paymentStageWord', '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_stripeDue', 'outstandingPayments',
-                  'stripeRefresh', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
+  const RB_FNS = ['applyStripePayments', '_stripeHandMatch', '_handAchAwaitingStripe', '_paymentKey', 'paymentSummaryText', 'paymentMethodLabel', 'paymentStageLabel', 'paymentStageWord', '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_stripeDue', 'outstandingPayments',
+                  'stripeRefresh', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal',
                   'depositClearedTotal', 'isJobFunded', 'depositTargetFor', '_photoUid',
                   '_jobTouch', 'docState', 'fmt', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit'];
 
@@ -469,6 +484,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       stubs: {
         jobs: jobsSeed,
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/x/exec',
+        // The day a check ran — the clock is never read in a test. `_stripeRecordPayment` dates the clear by it (P16).
+        _todayStr: () => '2026-09-26',
         saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
         _docNotice: (t, m, j) => notices.push({ t, m, j }),
         _appsScriptPost: (url, body, cb) => { posts.push(body); (ctx.__answer || ((b, c) => c(true, { ok: true, payments: [] })))(body, cb); },
@@ -525,7 +542,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // client authorised it. This record exists only because Stripe reported the intent
     // `succeeded` — the money has genuinely settled. That is the one moment an ACH payment is
     // cleared, and it is the whole reason read-back is worth building.
-    eq(p.clearedOn, '2026-09-22', '⚠⚠ and it IS cleared, because Stripe said succeeded');
+    // ⚠ RESTATED 2026-09-30 (P16, B15): cleared on the day a check SAW `succeeded` (the stubbed today, the 26th),
+    // never the intent's own date — that is when the client authorised the debit, days before it settled.
+    eq(p.clearedOn, '2026-09-26', '⚠⚠ and it IS cleared, because Stripe said succeeded — on the day the app saw it');
     eq(ctx.depositClearedTotal(job), DEPOSIT, 'so it counts as cleared money');
     ok(ctx.isJobFunded(job), 'and the job is funded');
     eq(job.depositReceivedBy, 'Stripe', 'the legacy mirror names Stripe too');
@@ -757,10 +776,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(ctx.isJobFunded(job), 'and the job is funded');
     eq(ctx.jobPayments(job)[0].method, 'stripe_ach', 'as a bank transfer');
     eq(ctx.jobPayments(job)[0].payer, 'Tripp Butler', 'naming the payer Stripe reported');
-    eq(ctx.jobPayments(job)[0].clearedOn, '2026-09-13',
-      'and cleared on the day Stripe says the money moved, because it said succeeded');
-    eq(ctx.jobPayments(job)[0].receivedOn, ctx.jobPayments(job)[0].clearedOn,
-      '⚠ received and cleared are the same day here — an intent that settled did both at once');
+    // ⚠ RESTATED 2026-09-30 (P16, B15): the day the app saw it settle, not the intent's creation.
+    eq(ctx.jobPayments(job)[0].clearedOn, '2026-09-26',
+      'and cleared on the day the app saw Stripe report it settled');
+    ok(ctx.jobPayments(job)[0].receivedOn < ctx.jobPayments(job)[0].clearedOn,
+      '⚠ received on the day it was authorised, cleared on the day it was seen settled (P16, B15)');
   }
 
   group('⚠ NO STRIPE SECRET IS IN THE REPO');

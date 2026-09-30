@@ -37,7 +37,9 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   await p.goto(APP); await p.waitForTimeout(1500);
   await p.evaluate(() => {
     // Captured rather than sent: a mailto in a headless browser navigates away from the page under test.
-    window.__mails = []; window.sendInternalEmail = function (to, subj) { window.__mails.push({ subj: subj }); };
+    // ⚠ Since P16 (2026-09-30) the manager's decision to the concierge goes through sendInternalEmail too
+    // (notifyTCOfDecision opened a mailto of its own), so the body is kept here to read it back below.
+    window.__mails = []; window.sendInternalEmail = function (to, subj, lines) { window.__mails.push({ to: to, subj: subj, body: (lines || []).join('\n') }); };
     window.__opened = []; window.open = function (u) { window.__opened.push(String(u || '')); return null; };
     // ⚠ The ONE stub on the send path: Gmail itself. Everything from the band's button to the send record is real.
     window.__drafts = 0;
@@ -163,8 +165,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   const fbA = await text('#dash-fb');
   has(fbA, 'The client accepted ' + was + ' and the approved estimate is now ' + now, '⚠⚠ the manager is told where the PIN was typed');
   has(fbA, 'record their acceptance again before the signing packet goes out', 'and what the concierge now owes the client');
-  const tcMail = await p.evaluate(() => { const m = window.__opened.filter(u => /^mailto:/.test(u) && /Estimate%20Approved/.test(u)).pop();
-    return m ? decodeURIComponent(m.split('&body=')[1] || '') : ''; });
+  const tcMail = await p.evaluate(() => { const m = window.__mails.filter(x => /Estimate Approved/.test(x.subj)).pop();
+    return m ? m.body : ''; });
+  ok(!(await p.evaluate(() => window.__opened.some(u => /^mailto:/.test(u) && /Estimate%20Approved/.test(u)))),
+    'the decision no longer opens a mailto of its own (P16: it drafts through sendInternalEmail)');
   has(tcMail, 'record their acceptance again before the signing packet goes out', '⚠ the concierge’s email carries the same sentence');
   const jA2 = await job(idA);
   ok(jA2.won === true && jA2.status === 'won', '⚠ the job is still WON after the re-approval');

@@ -169,8 +169,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The merge rule itself, on the real function: A's copy carries its own stamped vendor line and
     // concierge; B's later whole record carries its stamped checklist row and stale copies of the rest.
     const S = vm.createContext({ console });
-    vm.runInContext([gsVar(GS, 'JOB_KEYED_LISTS'), gsVar(GS, 'JOB_KEYED_MAPS'), gsVar(GS, 'JOB_LIST_KEY'),
-      gsFn(GS, '_jobStamp'), gsFn(GS, '_jobListKey'), gsFn(GS, '_mergeJobKeyed'), gsFn(GS, '_mergeJobRecord')].join('\n\n'), S);
+    vm.runInContext([gsVar(GS, 'JOB_KEYED_LISTS'), gsVar(GS, 'JOB_KEYED_MAPS'), gsVar(GS, 'JOB_LIST_KEY'), gsVar(GS, 'JOB_PAYMENT_STICKY'),
+      gsFn(GS, '_jobStamp'), gsFn(GS, '_jobListKey'), gsFn(GS, '_mergeJobKeyed'), gsFn(GS, '_mergeJobRecord'), gsFn(GS, '_paymentSticky')].join('\n\n'), S);
     ['vendorSourcing', 'prepSourcing', 'logisticsSourcing', 'collSourcing', 'crew', 'vendorRatings', 'reviewAsk', 'houseFlags']
       .forEach((k) => ok(S.JOB_KEYED_MAPS.indexOf(k) >= 0, k + ' merges key by key'));
     const MORNING = 1000;
@@ -241,8 +241,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(j.at['vendorSourcing:0'] > 0, '⚠ and the index key it left is stamped as removed');
     // Drive the server merge with it: the sheet still holds the index key.
     const S = vm.createContext({ console });
-    vm.runInContext([gsVar(GS, 'JOB_KEYED_LISTS'), gsVar(GS, 'JOB_KEYED_MAPS'), gsVar(GS, 'JOB_LIST_KEY'),
-      gsFn(GS, '_jobStamp'), gsFn(GS, '_jobListKey'), gsFn(GS, '_mergeJobKeyed'), gsFn(GS, '_mergeJobRecord')].join('\n\n'), S);
+    vm.runInContext([gsVar(GS, 'JOB_KEYED_LISTS'), gsVar(GS, 'JOB_KEYED_MAPS'), gsVar(GS, 'JOB_LIST_KEY'), gsVar(GS, 'JOB_PAYMENT_STICKY'),
+      gsFn(GS, '_jobStamp'), gsFn(GS, '_jobListKey'), gsFn(GS, '_mergeJobKeyed'), gsFn(GS, '_mergeJobRecord'), gsFn(GS, '_paymentSticky')].join('\n\n'), S);
     const merged = S._mergeJobRecord({ id: 7, updatedAt: 1, at: {}, vendorSourcing: { 0: { vendorName: 'Junk Kings', status: 'Confirmed' } } },
       Object.assign({}, j, { updatedAt: 5 }));
     eq(Object.keys(merged.vendorSourcing), [newKey], '⚠⚠ the orphan index key does not come back to be counted at close-out');

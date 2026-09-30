@@ -35,10 +35,15 @@ function run(gmail, fire) {
   const badges = [];
   const mimes = [];   // the SPEC handed to buildMimeMessage
   const raw = [];     // the MIME string it produced
+  // ⚠ RESTATED 2026-09-30 (P16, B20): sendInternalEmail's own "Gmail is not set up" branch is gone — it could not run
+  // (the client id is baked in and Settings falls back to it). So 'off' drives the REAL Gmail path with a blank id:
+  // gmailAuth refuses in its own words, naming Settings, and the one fallback runs. The same assertions hold.
+  const off = gmail === 'off';
   const ctx = sandbox({
-    fns: FNS,
-    vars: VARS,
+    fns: off ? FNS.concat(['gmailCreateDraft', 'gmailAuth']) : FNS,
+    vars: off ? VARS.concat(['GMAIL_SCOPE', '_gmailToken', '_gmailTokenExp', '_gmailTokenClient']) : VARS,
     stubs: {
+      gmailResolveUser: (t, cb) => cb(),
       window: { open: (u) => { opened.push(String(u)); return null; } },
       showSyncBadge: (m, isErr) => badges.push({ msg: String(m), err: !!isErr }),
       gmailCreateDraft: (mime, cb) => {

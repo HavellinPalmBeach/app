@@ -79,7 +79,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const t = sandbox({
       fns: ['applyJobTransition', 'paymentStageWord', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobActivationBlockers', 'jobCloseBlockers', 'unratedVendorsForJob',
             '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_handoverBy', '_todayStr',
-            'stagePaidTotal', 'jobPayments',
+            'stagePaidTotal', 'paymentCounts', 'jobPayments',
             // The Re-open is its own branch of the transition (2026-09-29).
             'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
       vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'DECEDENT_SERVICES'],

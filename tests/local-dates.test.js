@@ -175,7 +175,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
      ['openSignatureModal', 'on.value = _todayStr()'],
      ['clearLogEntry', "getElementById('log-date').value = _todayStr()"],
      ['recordAgreementSignature', 'sig.signedOn || _todayStr()'],
-     ['applyEsignStatus', 'signedOn: _localDateOf(status.completedAt)', 'docStateBare', '_saveArrivalCheck'],
+     // ⚠ RESTATED 2026-09-30 (P16, B16): the day is the SIGNER'S (their signedAt), the envelope's completion only
+     // as the fallback — both through the local helper.
+     ['applyEsignStatus', 'signedOn: _localDateOf(status.signedAt) || _localDateOf(status.completedAt)', 'docStateBare', '_saveArrivalCheck'],
      ['exportInventoryCSV', "'_Inventory_' + _todayStr()"],
      ['logVendorContact', 'var today = _todayStr()'],
      ['logReferralContact', 'var today = _todayStr()'],
