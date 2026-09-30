@@ -102,9 +102,9 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'estTolerancePctTxt', 'esignAnchorsPresent', 'estFixedFee', 'estPrepFeeOnTop',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
-                  'ESIGN_REQUIRED_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
+                  'ESIGN_REQUIRED_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT'];
 const appCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
 
 const EST = { jobId: 1, tcFee: 18500, psFee: 12500, pkgCost: 1500, pkgLabel: 'Estate Premium — $1,500',

@@ -139,10 +139,10 @@ module.exports = function ({ group, ok, eq }) {
     // the end. So drive the real engine and read what the job actually costs.
     const eng = sandbox({
       fns: ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'engineRoomWeight',
-            'engineIsExterior', 'tenureMultiplier'],
+            'engineIsExterior', 'tenureMultiplier', 'engineRelFactor', 'roomDefault'],
       vars: ['ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'JOB_STEPS', 'DOC_SCOPES', 'ENGINE_VOLF',
              'ENGINE_CPXF', 'ENGINE_K', 'ENGINE_CAREFUL', 'ENGINE_ROOMLEVEL', 'ENGINE_FLOOR',
-             'PERROOM_REF'],
+             'PERROOM_REF', 'ROOM_DEFAULTS'],
     });
     // A 3,500 sqft Estate Settlement, three rooms scored neutral, 2 crew, 10 years' tenure.
     const BASE = [{ name: 'Kitchen', vol: 3, cplx: 3 },

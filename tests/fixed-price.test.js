@@ -35,7 +35,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
                  'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
                  'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
                  'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-                 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop'];
+                 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
                   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
                   'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -201,18 +201,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Restated 2026-09-24: a fixed fee saved before then carries the prep fee inside it, and the
     // restore moves that out (tests/prep-fee-billing.test.js drives it). Its suggestion was taken
     // with the fee inside, so it is not read back — the current one differs by construction.
-    has(rs, '_fixedAmountBasis = (est.fixedPrice && !_legacyPrepInside) ? Math.round(est.fixedSuggested || 0) : 0;',
+    // Restated 2026-09-30: nor is it for a fee saved before its premium and discount became lines (P12, Q9/Q13):
+    // the restore restates that fee (fixedFeeForCharge), so its old suggestion no longer describes it.
+    has(rs, '_fixedAmountBasis = (est.fixedPrice && !_legacyPrepInside && !_legacyLines) ? Math.round(est.fixedSuggested || 0) : 0;',
         'the restore reads it back');
     has(rs, '_fixedAmountUserSet = !!est.fixedPrice;', 'a saved fee is hand-set — it was agreed, not prefilled');
     has(rs, 'Math.round(est.fixedAmount || est.havellinTotal || 0)', 'the flat fee reads fixedAmount first');
-    has(rs, '_fxAmtSet(_restoredFlat - _fixedPrepMovedOut);', 'and written back formatted');
+    has(rs, 'var _flatNow = _restoredFlat - _fixedPrepMovedOut;', 'the flat fee net of any prep fee moved out');
+    has(rs, 'if (fxAmtEl) _fxAmtSet(_feeNow);', 'and written back formatted (restated only for an older record with lines inside)');
     // A record saved before today has no fixedSuggested: the basis reads 0, and 0 never claims a move.
     // ⚠ RESTATED 2026-09-29: this counted three byte-identical copies of these lines, one per reset
     // path. There is one reset now (resetEstimateJobState) and every path runs it, so the requirement
     // is driven against that: the basis goes to zero with the flag, on every job switch.
     {
-      const rs = sandbox({ fns: ['resetEstimateJobState'],
-        vars: ['_tc2UserSet', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut'],
+      const rs = sandbox({ fns: ['resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob'],
+        vars: ['_tc2UserSet', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'DECEDENT_SERVICES'],
         stubs: { document: domStub(), seedDocScopeFromJob: () => 'full', paintVolPreset() {}, renderVendors() {},
                  renderCollections() {}, renderVehicles() {}, clearAllRooms() {} } });
       rs._tc2UserSet = true; rs._fixedAmountUserSet = true; rs._fixedAmountBasis = 21600;
@@ -242,9 +245,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         // The fresh branch runs the ONE reset (2026-09-29), so it is lifted rather than stubbed: a stub
         // of it would let this group pass with nothing cleared at all.
-        fns: ['applyOpenedEstimate', 'resetEstimateJobState'],
+        fns: ['applyOpenedEstimate', 'resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob'],
         vars: ['_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_crewUserSet', '_tc2UserSet',
-               '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'estimateApproved', 'approvedBy', 'approvedAt'],
+               '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'estimateApproved', 'approvedBy', 'approvedAt', 'DECEDENT_SERVICES'],
         stubs: { document: dom, currentEstimate: saved ? { jobId: 2, fixedPrice: true } : null,
                  loadEstimateForJob: () => !!saved, estimateHasContent: () => !!saved,
                  restoreEstimateToUI: (e) => restored.push(e), loadEstimateScratch: () => null,

@@ -56,8 +56,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           'the old estimate/final rush sentence survives nowhere');
     lacks(live, 'Compressing the project calendar at your request', 'nor the advance invoices’ version');
     eq((liveBody('clientEstimateHtml(e, job)').match(/rushScopeLine\(e\)/g) || []).length, 1, 'the estimate’s rush row reads the helper');
-    eq((liveBody('invoiceHtml(job, stage)').match(/rushScopeLine\(est\)/g) || []).length, 2,
-       'both invoice rush rows (final and advance) read it');
+    // Three since 2026-09-30: a fixed price itemises its premium too (estFixedLines), on the same helper.
+    eq((liveBody('invoiceHtml(job, stage)').match(/rushScopeLine\(est\)/g) || []).length, 3,
+       'every invoice rush row (hourly final, advance, and the fixed-price line) reads it');
     has(liveBody('calcAll()'), 'psRecommended: isPrep ? 0 : _recommendedPS',
         'the snapshot records the recommended crew, so the claim can be tested off the record');
   }
@@ -86,7 +87,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw',
     'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
     'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashOfferDiscount', 'dashNotice', '_primeEstimateFor',
-    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'discountDraftWarning', 'docDraftPending'];
+    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'discountDraftWarning', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords'];
   const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt', '_dashShown', '_dashKeepNotice'];
   // An hourly estimate: labour 20,000, a 10% discount, no rush — agreed at 18,000.
@@ -373,7 +374,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'approvedEstimateFor', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docScopeDef', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'samePerson',
-      'canonPersonName'],
+      'canonPersonName', 'estFixedLines', 'fixedDiscountBasisWords'],
     vars: ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DECEDENT_SERVICES', 'DOC_SCOPES',
       'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', '_PCT_WORDS', 'ESIGN_ANCHORS',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',

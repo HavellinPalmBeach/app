@@ -86,7 +86,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const src = APP();
 
     // Stamped onto the snapshot beside tcAlpha, or there is nothing to restore.
-    has(src, 'costRates:{ founderTC:COST_RATES.founderTC', 'the snapshot records the cost card');
+    // Restated 2026-09-30 (P12 low): the snapshot records the card the estimate is PINNED to, not today's
+    // Settings — re-saving a reopened estimate kept replacing its rates. Driven in tests/estimator-p12.test.js.
+    has(src, 'var _cr = activeCostRates();', 'the snapshot records the cost card it is pinned to');
+    has(src, 'founderTC:_cr.founderTC, contractorTC:_cr.contractorTC', 'field by field');
     has(src, "hoursModel:'v4-working-supervisor', tcAlpha:_sup.alpha",
         'alongside the production rate it was priced under');
 

@@ -4,7 +4,7 @@ Five audits and a click-through of three jobs, from + Add New Client to final pa
 
 Status of each fix pack lives in this file: when a session lands a pack, it marks it done here and adds its CLAUDE.md entry.
 
-**Status, 2026-09-30:** P1–P10 have landed on `main`: C1, C2, H1–H9, M1–M8, M13–M16 and nineteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). The P10 low that waited on Anthony (`deliveredBy` / `activatedBy`) is answered and fixed with P14 (the assigned concierge). P11 landed on 2026-09-30 (live once the Apps Script is redeployed, `2026-09-30`), and so did P14; its one open line, sanity checks on square footage and room counts, is decided not to build (Anthony, 2026-09-30: "no sanity check is needed"). Still open: P12 and P13 (M10–M12 and the estimator lows). Questions still open: the Q14 follow-up and Anthony's OK on the Q20 reading, both for P12 only (Q5–Q7 answered 2026-09-30).
+**Status, 2026-09-30:** P1–P10 have landed on `main`: C1, C2, H1–H9, M1–M8, M13–M16 and nineteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). The P10 low that waited on Anthony (`deliveredBy` / `activatedBy`) is answered and fixed with P14 (the assigned concierge). P11 landed on 2026-09-30 (live once the Apps Script is redeployed, `2026-09-30`), and so did P14; its one open line, sanity checks on square footage and room counts, is decided not to build (Anthony, 2026-09-30: "no sanity check is needed"). P12 landed on 2026-09-30 too (M10–M12 and the six estimator lows fixed and marked below), except Q20, which waits on Anthony's OK on the reading. Still open: P13. Questions still open: the Q14 follow-up, Anthony's OK on the Q20 reading, and the hourly half of Q5 (all P12).
 
 ## TL;DR
 
@@ -201,7 +201,7 @@ If a stored blob fails to parse, the server reads it as empty and the next save 
 
 **Fix:** P11 (Harden the Apps Script backend (redeploy))
 
-#### M10 · Build Estimate · On fixed price, the Estimate Summary panel shows the hourly totals.
+#### M10 · Build Estimate · On fixed price, the Estimate Summary panel shows the hourly totals. — **Fixed 2026-09-30**
 
 A $21,840 fixed quote shows "Total project estimate $18,200"; with bundled prep, $79,150 against the document's $82,480. Internal only.
 
@@ -209,7 +209,7 @@ A $21,840 fixed quote shows "Total project estimate $18,200"; with bundled prep,
 
 **Fix:** P12 (Estimator fixes and pricing decisions)
 
-#### M11 · Build Estimate · The reference bands mislead in both directions.
+#### M11 · Build Estimate · The reference bands mislead in both directions. — **Fixed 2026-09-30**
 
 Estate Settlement reads "Above range" at 3,500 sq ft on default scores, and 9 of 24 normally-scored test houses read "Below range — review scores", which invites scoring up. The day ranges run 2 to 6 times the engine's plans, and the range grows 15–85% on homes over $5M although property value never moves the price.
 
@@ -217,7 +217,7 @@ Estate Settlement reads "Above range" at 3,500 sq ft on default scores, and 9 of
 
 **Fix:** P12 (Estimator fixes and pricing decisions)
 
-#### M12 · Pricing design · The price can fall as the walkthrough gets more complete or the house gets bigger.
+#### M12 · Pricing design · The price can fall as the walkthrough gets more complete or the house gets bigger. — **Fixed 2026-09-30** (the fixed fee; the hourly quote's crew step is a question to Anthony)
 
 Scoring the rooms the coverage badge asks for dropped one quote from $18,200 to $17,000. With automatic crew sizing, 5,750 sq ft priced below 5,500. Forcing six specialists cut 14.6%.
 
@@ -261,12 +261,12 @@ A partner chosen and then hidden (by changing the source) is still saved, and pa
 
 **Build Estimate** (fix: P12)
 
-- Re-saving a reopened estimate replaces its pinned cost rates with today's Settings (margin panel only).
-- A saved estimate reprices by about $150 when the Vendor Directory hasn't loaded.
-- The unscored-room gate can never fire: a blank or 0 is priced as 3, and 9 or 2.5 is saved as typed.
-- Standalone Home Prep lets you tick Fixed price, then ignores it.
-- The two ways to discount a fixed fee disagree once a materials package is on the job (about $180).
-- The Save button still reads "Save & Preview Client Estimate →".
+- Re-saving a reopened estimate replaces its pinned cost rates with today's Settings (margin panel only). *(fixed 2026-09-30)*
+- A saved estimate reprices by about $150 when the Vendor Directory hasn't loaded. *(fixed 2026-09-30)*
+- The unscored-room gate can never fire: a blank or 0 is priced as 3, and 9 or 2.5 is saved as typed. *(fixed 2026-09-30)*
+- Standalone Home Prep lets you tick Fixed price, then ignores it. *(fixed 2026-09-30)*
+- The two ways to discount a fixed fee disagree once a materials package is on the job (about $180). *(fixed 2026-09-30)*
+- The Save button still reads "Save & Preview Client Estimate →". *(fixed 2026-09-30)*
 
 **Client documents** (fix: P6)
 
@@ -323,7 +323,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P9** Bring Edit Client up to intake's rules (needs Q4, Q15–Q18)
 - [x] **P10** Lifecycle and payment loose ends (needs Q2, Q12, Q19)
 - [x] **P11** Harden the Apps Script backend (redeploy) — landed 2026-09-30; live once Anthony redeploys `2026-09-30`
-- [ ] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20)
+- [ ] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20) — landed 2026-09-30 except Q20 (waits on Anthony's OK on the reading) and the hourly half of Q5 (a question to him)
 - [ ] **P13** Documentation pass (needs the packs above first)
 - [x] **P14** Small backlog — landed 2026-09-30 (the intake sanity checks are decided not to build)
 
@@ -561,6 +561,8 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry with the
 
 Fixes: M10–M12, estimator lows · Needs: Q5–Q7, Q9, Q10, Q13, Q20
 
+**Landed 2026-09-30** (Anthony: *"For all the rest, go for it."* Q5–Q7 answered the same day). All nine items fixed: Q6 scores each room against its own default; the fixed fee is priced on the two-specialist plan (Q5); the band is the engine's, at Normal and Full (Q7); the premium never touches the prep fee and is a line on a fixed fee (Q9); estates open on fixed price (Q10); a fixed-price discount is a line, one rule for Build Estimate and Offer discount (Q13); the Estimate Summary shows the final figures (M10); and the six lows. **Not built:** Q20 (waits on Anthony's OK on the reading), and the hourly half of Q5 — an hourly quote still dips at each automatic crew step, because a bigger crew bills fewer concierge hours, and flooring it would bill hours nobody worked; put back to Anthony. Details in `BUILD_HISTORY.md`.
+
 **Re-checked 2026-09-30:** all nine P12 items (six lows, M10, M11, M12) still reproduce. Only M11 waits on an open question (Q7). **M12 needs Q6 put back to Anthony:** `computeEngineV3` already weights volume by room size (`engineRoomWeight`), so "weight by room size" is the current code; the drop comes from light rooms' low default scores pulling a factor applied to the whole square footage, and crew sizing (5,500 → 5,750 sq ft prices $28,400 → $27,450 as the crew goes 2 → 3).
 
 ```text
@@ -636,13 +638,16 @@ House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp t
   *Answer (2026-09-29):* Agreed.
 - **Q5** Should adding crew ever lower the price? Today a 5,750 sq ft house can price below a 5,500 sq ft one.  
   *Recommendation:* No. Floor the fee at the two-specialist plan; rush is how a client pays for speed. *(used by P12)*  
-  *Answer (2026-09-29):* Agreed.
+  *Answer (2026-09-29):* Agreed.  
+  *Built (2026-09-30, P12):* the fixed fee suggestion is floored at the two-specialist plan. The hourly quote still follows the crew (a bigger crew bills fewer concierge hours), because a floor there would bill hours nobody works; put back to Anthony as a follow-up.
 - **Q6** Should a room scored at its normal default pull the whole-house fullness down? Finishing the walkthrough cut one quote from $18,200 to $17,000.  
   *Recommendation:* No. Weight the average by room size. *(used by P12)*  
-  *Answer (2026-09-29):* Agreed.
+  *Answer (2026-09-29):* Agreed.  
+  *Answer (2026-09-30, restated):* a room left at its default doesn't pull the house average down, and a bigger house never prices lower. *Built in P12:* each room's scores are measured against that room's own default, so ticking a room and leaving it at its default changes nothing.
 - **Q7** The reference bands no longer match the engine. Rebuild them from the engine, or keep them and drop the "review scores" nudge?  
   *Recommendation:* Rebuild them. *(used by P12)*  
-  *Still open (2026-09-29):* Open. You asked what the bands are. They are a hand-typed table from before the current pricing engine, internal only: of 24 normally-scored test houses, 9 read "Below range — review scores" and one reads "Above range" (M11). My call now: replace the hand-typed table with a range the engine works out for this house (its sq ft and service at Normal and at Full scoring), worded neutrally so it never tells anyone to score up. Or delete the box.
+  *Answer (2026-09-30):* Rebuild them from the engine, as recommended below ("go for it"). Built in P12: this house at Normal and at Full, worded neutrally, no property-value multiplier.
+  *Was open (2026-09-29):* You asked what the bands are. They are a hand-typed table from before the current pricing engine, internal only: of 24 normally-scored test houses, 9 read "Below range — review scores" and one reads "Above range" (M11). My call now: replace the hand-typed table with a range the engine works out for this house (its sq ft and service at Normal and at Full scoring), worded neutrally so it never tells anyone to score up. Or delete the box.
 - **Q8** Should the agreement's fee clause name the 20% rush premium and the preferred-client discount? Today they appear only in Exhibit A, and on hourly jobs the premium lands on every hour above the stated rates.  
   *Recommendation:* Yes, one sentence each. It matters most on probate. *(used by P6)*  
   *Answer (2026-09-29):* Agreed.

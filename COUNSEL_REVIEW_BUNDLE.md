@@ -34,7 +34,7 @@ rather than researching from nothing.
 | **2** | the first **trust** matter signing | A5, A6 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, A8, B1, B3, B4, B5, B6, D1, D2, D4, D5 |
+| **5** | general — before launch | A3, A4, A7, A8, B1, B3, B4, B5, B6, B7, D1, D2, D4, D5 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -300,8 +300,9 @@ carries, and nothing when it carries none:
   the labor fees actually billed."* (The bracketed words appear only on a rush job.)
 
 The estate form says *Havellin* where this form says *Contractor*. The percentage is the one the
-estimate was priced at, spelled out. On a **fixed fee** neither sentence appears: both
-adjustments are inside the fee the fixed-fee clause already states.
+estimate was priced at, spelled out. On a **fixed fee** saved before 2026-09-30 neither sentence
+appears: both adjustments are inside the fee the fixed-fee clause already states. From 2026-09-30 a fixed
+fee carries them as lines, and the fixed-fee clause names them (B7).
 
 **Why.** The estimate (Exhibit A) itemizes both as rows of their own, and neither form mentioned
 either: a signed contract silent on two lines of the exhibit it incorporates by reference. On the
@@ -324,6 +325,33 @@ hourly job the premium and the discount both follow the hours actually worked, i
 added by a change order. Is that stated clearly enough for a client who reads the percentage
 against the estimate's total? (4) Does *"none is billed"* on materials stop Havellin billing a
 package the job turns out to need, or does a change order cover it?
+
+---
+
+### B7. The premium and the discount on a FIXED fee, and the premium off the prep fee — both forms ⚠ NEW 2026-09-30
+
+**What changed.** Anthony decided (2026-09-30) that on a fixed price the expedited-delivery premium and the
+preferred-client discount are no longer folded into the flat fee: the fee is the price of the scope and the
+two print as their own lines under it on the estimate and the invoices. So where the estimate carries them,
+each form's fixed-fee clause (§3.3 on the standard form, the *Fixed Project Fee* paragraph on the estate form)
+now adds one sentence each:
+
+- *"At Client's request this engagement is scheduled on a priority basis, for which an expedited-delivery
+  premium of twenty percent (20%) of the fixed price is charged in addition to it, as itemized on the
+  Estimate."*
+- *"A preferred-client discount of ten percent (10%) applies to the fixed project fee[, less the moving
+  materials it includes][, and the expedited-delivery premium charged on it], as itemized on the Estimate."*
+  (Each bracket appears only when it applies.)
+
+He also decided the premium is never charged on the 30% Home Sale Preparation Fee. On an **hourly**
+engagement that carries the fee, B6's premium sentence now reads *"…of Contractor's fees, other than the Home
+Sale Preparation Fee, is charged…"*. A contract signed before 2026-09-30 is billed as it was quoted.
+
+**The question.** (1) The fixed-fee clause calls the fee *firm* and then states a premium charged *in addition
+to it*: does the clause still read as a fixed price, or should it state the total the client pays? (2) The
+discount on a fixed fee is taken on the fee less the materials package inside it, which the estimate does not
+itemize on a fixed price: is *"less the moving materials it includes"* clear enough for a client checking the
+figure? (3) Is *"other than the Home Sale Preparation Fee"* enough to exclude that fee from the premium's base?
 
 ---
 

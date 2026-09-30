@@ -66,11 +66,11 @@ const DASH_FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriv
   'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
   'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
   'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'dot', 'coWorkingDays', '_coPaceFix', 'coInclTxt', 'esc',
-  'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove'].concat(CO);
+  'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'estFixedLines'].concat(CO);
 const DASH_VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
   '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
   'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
-  'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice'];
+  'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice', 'RUSH_PCT'];
 
 // The change-order modal, acceptance and print functions (prep-co-hours.test.js's list), plus the real
 // notice chain: _docNotice → dashNotice → _dashRedraw → the lifted renderClientDashboard.
@@ -134,7 +134,7 @@ function inv(stubs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -321,7 +321,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
-              'agrBillingRates', 'coRateModsLine', 'prepFeeRate', 'coHours', 'coHoursTotal'],
+              'agrBillingRates', 'coRateModsLine', 'prepFeeRate', 'coHours', 'coHoursTotal', 'estFixedLines'],
         vars: ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE'],
         stubs: { jobs: [Object.assign({}, JOB, (extra && extra.job) || {})], changeOrders: [co(10, 0, ID_P)], currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, est), approved: true } },
@@ -376,7 +376,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(printed(Object.assign({}, PREP, { discountPct: 0 }), { job: { svc: 'prep' } }), 'preferred-client',
           'a prep job with no discount prints no line');
 
-    const L = sandbox({ fns: ['coRateModsLine'], vars: ['RUSH_PCT'] });
+    const L = sandbox({ fns: ['coRateModsLine', 'estFixedLines'], vars: ['RUSH_PCT'] });
     eq(L.coRateModsLine(null, false), '', 'no estimate, no line');
   }
 

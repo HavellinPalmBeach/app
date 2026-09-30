@@ -47,7 +47,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['roomDefault', 'volPresetShift', 'volPresetSeed', 'volPresetLabel',
             'applyVolPreset', 'paintVolPreset', 'roomState', 'setRoomState', 'cycleRoom',
-            'onVolInput'],
+            'onVolInput', 'volPresetSeedFor', 'clampRoomScoreInput', 'roomScoreOf'],
       vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', '_volHandSet', '_volPreset'],
       stubs: {
         document,
@@ -214,7 +214,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     {
       const nv = sandbox({
         fns: ['neutralizeEstimateView', 'resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf',
-              'docTierDef', 'docTierScope', 'svcHasDocStep', 'paintVolPreset'],
+              'docTierDef', 'docTierScope', 'svcHasDocStep', 'paintVolPreset', 'estimateOpensFixed', 'isDecedentJob'],
         vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
                'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'VOL_PRESETS', '_volPreset', '_volHandSet', '_estimateAlphaPin'],
         stubs: { document: domStub(), window: {}, renderVendors() {}, renderCollections() {}, renderVehicles() {}, clearAllRooms() {} },

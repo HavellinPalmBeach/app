@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 10:00am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 10:56am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2088,6 +2088,8 @@ body.no-smf .smf-col{display:none;}
         <!-- Divider dropped: it separated the hours table from the fee table, and with the
              hours table hidden it sat directly under the section rule as a second line. -->
         <table class="stbl">
+          <!-- On a fixed price the fee replaces the three fee rows under it (calcAll hides them): audit M10. -->
+          <tr id="s-fixed-row" style="display:none;"><td class="muted">Fixed project fee</td><td class="num" id="s-fixed-fee">$0</td></tr>
           <tr id="s-tc-fee-row"><td class="muted" id="tc-fee-label">Transition Concierge fee (0 hrs × $125)</td><td class="num" id="s-tc-fee">$0</td></tr>
           <tr id="s-ps-fee-row"><td class="muted" id="ps-fee-label">PS fee (0 hrs × $100)</td><td class="num" id="s-ps-fee">$0</td></tr>
           <tr id="s-pkg-row"><td class="muted">Moving materials package</td><td class="num" id="s-pkg">$0</td></tr>
@@ -2095,9 +2097,11 @@ body.no-smf .smf-col{display:none;}
           <!-- The coordination-hours lines live in the hours table above, where hours belong;
                a "2.0 hrs" row inside a table of dollar amounts read as a charge. -->
           <tr id="s-prep-fee-row" style="display:none;"><td class="muted">Home Prep GC / Site Mgmt Fee</td><td class="num" id="s-prep-fee">$0</td></tr>
-          <tr class="total-row" id="s-havellin-row"><td>Havellin services total</td><td class="num big" id="s-havellin">$0</td></tr>
-          <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
+          <!-- Services before the premium and the discount, which follow it in the order the documents print
+               them: the premium first, the discount off the result (audit M10). -->
+          <tr class="total-row" id="s-havellin-row"><td>Services subtotal</td><td class="num big" id="s-havellin">$0</td></tr>
           <tr id="s-rush-row" style="display:none;"><td style="color:var(--bronze);font-weight:600;" id="s-rush-label">Expedited delivery (20%)</td><td class="num" id="s-rush-amt" style="color:var(--bronze);font-weight:600;">$0</td></tr>
+          <tr id="s-discount-row" style="display:none;"><td style="color:var(--ok-tx);font-weight:600;" id="s-discount-label">Preferred Client Discount (0%)</td><td class="num" id="s-discount-amt" style="color:var(--ok-tx);font-weight:600;">-$0</td></tr>
           <tr id="s-vendor-row"><td class="muted">Est. third-party vendors (at cost)</td><td class="num" id="s-vendor">$0</td></tr>
           <tr id="s-prep-cost-row" style="display:none;"><td class="muted">Home Prep vendors (at cost)</td><td class="num" id="s-prep-cost">$0</td></tr>
           <tr class="total-row" id="s-grand-row" style="background:var(--tan);"><td style="padding:10px;border-radius:4px 0 0 4px;font-size:15px;">Total project estimate</td><td class="num big" style="padding:10px;border-radius:0 4px 4px 0;font-size:22px;color:var(--bronze);" id="s-total">$0</td></tr>
@@ -2182,7 +2186,10 @@ body.no-smf .smf-col{display:none;}
       <div class="card" style="margin-top:1rem;">
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn-s" onclick="resetEstimate()" title="Clear this screen to a blank estimate for this client. A saved estimate is not changed unless you press Save">Reset</button>
-          <button class="btn-p" onclick="saveEstimateAndPreview()">Save &amp; Preview Client Estimate →</button>
+          <!-- "Save Estimate", the name the manual and the playbook give it (2026-09-30, audit low). It read
+               "Save & Preview Client Estimate →" for a preview tab retired on 2026-09-11; the save lands on
+               the client's dashboard. -->
+          <button class="btn-p" onclick="saveEstimateAndPreview()">Save Estimate</button>
         </div>
         <div id="e-fb"></div>
       </div>
@@ -3862,54 +3869,8 @@ var ROOMS = [
   ]}
 ];
 
-var PRICING_REF = {
-  downsizing:{label:'Home Editing',sizes:[
-    {l:'Condo / apartment (2,000–3,000 sqft)',min:6000,max:11000,days:'3–5 days'},
-    {l:'Home (2,000–4,000 sqft) ',min:8000,max:16000,days:'5–9 days'},
-    {l:'Estate (4,000–6,000 sqft) ',min:14000,max:25000,days:'8–14 days'},
-    {l:'Trophy estate (6,000+ sqft) ',min:22000,max:45000,days:'12–22 days'}
-  ]},
-  downsizing_move:{label:'Home Transition',sizes:[
-    {l:'Condo / apartment (<2,000 sqft)',min:7000,max:13000,days:'4–7 days'},
-    {l:'Home (2,000–4,000 sqft)',min:12000,max:22000,days:'6–11 days'},
-    {l:'Estate (4,000–6,000 sqft)',min:18000,max:35000,days:'9–17 days'},
-    {l:'Trophy estate (6,000+ sqft)',min:30000,max:60000,days:'14–26 days'}
-  ]},
-  home_cleanout:{label:'Home Cleanout',sizes:[
-    {l:'Condo / apartment (2,000–3,000 sqft)',min:6000,max:11000,days:'3–5 days'},
-    {l:'Home (2,000–4,000 sqft) ',min:8000,max:16000,days:'5–9 days'},
-    {l:'Estate (4,000–6,000 sqft) ',min:14000,max:26000,days:'8–14 days'},
-    {l:'Trophy estate (6,000–10,000 sqft) ',min:22000,max:50000,days:'12–24 days'},
-    {l:'Ultra estate (10,000+ sqft / $30M+)',min:40000,max:120000,days:'20–45 days'}
-  ]},
-  cleanout:{label:'Estate Settlement',sizes:[
-    {l:'Condo / apartment (2,000–3,000 sqft)',min:6000,max:11000,days:'3–5 days'},
-    {l:'Home (2,000–4,000 sqft) ',min:8000,max:16000,days:'5–9 days'},
-    {l:'Estate (4,000–6,000 sqft) ',min:14000,max:26000,days:'8–14 days'},
-    {l:'Trophy estate (6,000–10,000 sqft) ',min:22000,max:50000,days:'12–24 days'},
-    {l:'Ultra estate (10,000+ sqft / $30M+)',min:40000,max:120000,days:'20–45 days'}
-  ]},
-  probate:{label:'Probate',sizes:[
-    {l:'Condo / apartment (<2,000 sqft)',min:7000,max:13000,days:'4–7 days'},
-    {l:'Home (2,000–4,000 sqft)',min:12000,max:22000,days:'6–11 days'},
-    {l:'Estate (4,000–6,000 sqft)',min:18000,max:35000,days:'9–17 days'},
-    {l:'Trophy estate (6,000–10,000 sqft)',min:30000,max:65000,days:'14–28 days'},
-    {l:'Ultra estate (10,000+ sqft / $30M+)',min:55000,max:150000,days:'24–50 days'}
-  ]},
-  contested_probate:{label:'Contested Probate',sizes:[
-    {l:'Condo / apartment (<2,000 sqft)',min:10000,max:18000,days:'5–9 days'},
-    {l:'Home (2,000–4,000 sqft)',min:17000,max:32000,days:'8–15 days'},
-    {l:'Estate (4,000–6,000 sqft)',min:26000,max:50000,days:'12–24 days'},
-    {l:'Trophy estate (6,000–10,000 sqft)',min:43000,max:95000,days:'18–40 days'},
-    {l:'Ultra estate (10,000+ sqft / $30M+)',min:80000,max:220000,days:'30–70 days'}
-  ]},
-  prep:{label:'Home Sale Preparation',sizes:[
-    {l:'Condo / apartment (<2,000 sqft)',min:4000,max:8000,days:'3–6 days'},
-    {l:'Home (2,000–4,000 sqft)',min:7000,max:14000,days:'5–9 days'},
-    {l:'Estate (4,000–6,000 sqft)',min:12000,max:24000,days:'7–13 days'},
-    {l:'Trophy estate (6,000+ sqft)',min:20000,max:45000,days:'11–22 days'}
-  ]}
-};
+// PRICING_REF, the hand-typed band table, is gone (2026-09-30, audit M11): the Pricing Reference Check prices
+// this house with the engine at Normal and at Full instead — see referenceBand.
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRICING ENGINE v3 — square-footage backbone + room-score modulation + work-steps
@@ -3942,7 +3903,7 @@ function svcLabelOf(job) {
 }
 
 var ENGINE_K = 0.0123;                                   // content-load units per under-air sqft
-var ENGINE_VOLF = {1:0.55, 2:0.78, 3:1.0, 4:1.35, 5:1.70}; // volume slider -> load scale (widened: a packed room bites harder, a sparse one drops further; 3 = neutral anchor)
+var ENGINE_VOLF = {1:0.55, 2:0.78, 3:1.0, 4:1.35, 5:1.70}; // volume slider -> load scale (widened: a packed room bites harder, a sparse one drops further); read against each room's own default, which is the neutral anchor (engineRelFactor)
 var ENGINE_CPXF = {1:0.78, 2:0.89, 3:1.0, 4:1.18, 5:1.35}; // complexity slider -> careful-work scale (widened to match)
 
 // Per-room content weight (relative). Interior rooms modulate the sqft baseline;
@@ -3997,6 +3958,14 @@ var EXTERIOR_ROOMS = {
   'Additional Outbuilding Room':1
 };
 function engineRoomWeight(name){ return ROOM_WEIGHT[name] !== undefined ? ROOM_WEIGHT[name] : 2.0; }
+// A score read against the room's own starting score: 1.0 at the default, above it when scored
+// fuller or more careful than normal for that room, below it when scored lighter. See the note in
+// computeEngineV3. An unreadable score counts as the default (neutral), never as a 3.
+function engineRelFactor(table, score, dflt) {
+  var d = table[dflt] || 1.0;
+  var v = table[score];
+  return (v || d) / d;
+}
 function engineIsExterior(name){ return !!EXTERIOR_ROOMS[name]; }
 
 // Starting volume/complexity scores when a room is first ticked. Most rooms start at
@@ -4062,7 +4031,12 @@ var _volHandSet = {};
 // ONE definition, read by applyVolPreset and by setRoomState. Two copies of this shift
 // is precisely how the two paths came to disagree about the same house.
 function volPresetSeed(name) {
-  return Math.max(1, Math.min(5, roomDefault(name).vol + volPresetShift(_volPreset)));
+  return volPresetSeedFor(name, _volPreset);
+}
+// The same seed under a named preset rather than the active one — the reference band prices the house at
+// Normal and at Full whatever preset the walkthrough is using (referenceBand).
+function volPresetSeedFor(name, key) {
+  return Math.max(1, Math.min(5, roomDefault(name).vol + volPresetShift(key)));
 }
 
 function volPresetLabel(key) {
@@ -4445,11 +4419,26 @@ function computeEngineV3(sqft, rooms, svc, crew, years, docScope){
   var steps = effectiveJobSteps(svc, docScope);
   var iW=0, iVolW=0, allW=0, allCpxW=0, extLoad=0;
   var rb = [];   // per-room bookkeeping
+  // ⚠⚠ A ROOM IS SCORED AGAINST ITS OWN DEFAULT, NOT AGAINST 3 (2026-09-30, audit M12, Anthony on Q6:
+  // "a room left at its default doesn't pull the house average down"). The two factors below are
+  // averages applied to the WHOLE house, and ROOM_DEFAULTS opens a foyer, a powder room or a laundry at
+  // 1 because 1 is normal for that room. Read against the table's absolute 3, each of those normal
+  // rooms counted as nearly half-empty (0.55), so the more of the walkthrough the estimator finished,
+  // the emptier the house looked: measured on the real calcAll at 3,500 sq ft, scoring the six baths,
+  // laundry and foyer the coverage badge asks for at their defaults cut every service's quote, 1.4%
+  // (contested probate) to 8% (Estate Settlement, $19,900 to $18,300). Now a room at its default is
+  // exactly neutral (1.0), so ticking rooms at their defaults never moves the price; a score above a
+  // room's default raises the house and one below lowers it, as an observation should.
+  // ⚠ EXTERIOR VOLUME STAYS ABSOLUTE. An outbuilding or a garage is not averaged into anything: its
+  // load is added on top (extLoad), so a light cabana bath at 1 adds a little load and never subtracts,
+  // and its weight was calibrated as absolute load. Complexity is averaged over every room, exterior
+  // included, so complexity is relative everywhere.
   rooms.forEach(function(rm){
     var w = engineRoomWeight(rm.name);
-    var volF = ENGINE_VOLF[rm.vol] || 1.0;
-    var cpxF = ENGINE_CPXF[rm.cplx] || 1.0;
+    var def = roomDefault(rm.name);
     var ext = engineIsExterior(rm.name);
+    var volF = ext ? (ENGINE_VOLF[rm.vol] || 1.0) : engineRelFactor(ENGINE_VOLF, rm.vol, def.vol);
+    var cpxF = engineRelFactor(ENGINE_CPXF, rm.cplx, def.cplx);
     if (ext) { var el = w*volF; extLoad += el; rb.push({ext:true, raw:el}); }
     else { iW += w; iVolW += w*volF; rb.push({ext:false, raw:w*volF}); }
     allW += w; allCpxW += w*cpxF;
@@ -4783,6 +4772,29 @@ function roomCoverage(scoredNames, excludedNames) {
 // the client estimate and the job plan — that zero is the record of a decision, not a gap.
 // Any gate reading it as "unscored" has the scope toggle's three states collapsed to two.
 // Don't re-inline this test; three copies is what produced the deadlock.
+// A room score as the estimate reads it: a whole number from 1 to 5, or null for a box left blank, a 0 or
+// anything unreadable (unscored). A typed 9 is a 5 and a 2.5 a 3. ONE reading, used by calcAll's pass over
+// the rooms and by the two score inputs (clampRoomScoreInput), so the screen and the record agree.
+function roomScoreOf(raw) {
+  var t = String(raw == null ? '' : raw).trim();
+  if (t === '') return null;
+  var n = parseFloat(t);
+  if (!isFinite(n) || n <= 0) return null;
+  return Math.max(1, Math.min(5, Math.round(n)));
+}
+// Brings a typed score into range as it is typed (the inputs' min/max only guide the spinner). A blank or a
+// 0 is left as it is, for the unscored gate to name, rather than turned into a score nobody gave.
+function clampRoomScoreInput(el) {
+  if (!el) return;
+  var t = String(el.value == null ? '' : el.value).trim();
+  var v = roomScoreOf(t);
+  if (v != null && String(v) !== t) el.value = String(v);
+}
+function onCplxInput(id) {
+  clampRoomScoreInput(document.getElementById('cplx-' + id));
+  calcAll();
+}
+
 function unscoredRoomNames(est) {
   return (((est && est.rooms) || [])
     .filter(function(r){ return !r.excluded && (!(r.vol >= 1) || !(r.cplx >= 1)); })
@@ -4872,8 +4884,8 @@ function buildRoomTable() {
         '<td>' + (r.custom ?
           '<input type="text" id="name-'+id+'" value="'+r.name+'" style="width:140px;font-size:11px;" oninput="calcAll()">' :
           '<span class="rname dim" id="name-'+id+'">' + r.name + '</span>') + '</td>' +
-        '<td><input type="number" id="vol-'+id+'" min="1" max="5" value="" disabled oninput="onVolInput(\''+id+'\')"></td>' +
-        '<td><input type="number" id="cplx-'+id+'" min="1" max="5" value="" disabled oninput="calcAll()"></td>' +
+        '<td><input type="number" id="vol-'+id+'" min="1" max="5" step="1" value="" disabled oninput="onVolInput(\''+id+'\')"></td>' +
+        '<td><input type="number" id="cplx-'+id+'" min="1" max="5" step="1" value="" disabled oninput="onCplxInput(\''+id+'\')"></td>' +
         '<td style="text-align:center;"><input type="checkbox" id="spcl-'+id+'" disabled onchange="calcAll()"></td>' +
         '<td class="calc" id="tc-'+id+'" style="text-align:center;font-size:12px;">—</td>' +
         '<td class="calc" id="ps-'+id+'" style="text-align:center;font-size:12px;">—</td>' +
@@ -5094,6 +5106,7 @@ function onVolInput(id) {
   // no later fullness preset may overwrite it. This is the ONLY site that sets the flag —
   // the estimator's own keystroke — which is what keeps "hand-scored" meaning what it says.
   _volHandSet[id] = true;
+  clampRoomScoreInput(vol);
   if (vol && cplx && parseInt(vol.value, 10) === 5) cplx.value = 5;
   calcAll();
 }
@@ -5295,18 +5308,6 @@ function collectionsHours() {
   return {tc: Math.round(tc*10)/10, onsite: Math.round(onsite*10)/10, ps: Math.round(ps*10)/10};
 }
 
-// TC hour multiplier based on property value
-function propValMultiplier(propVal) {
-  if (propVal <= 0)         return 1.0;   // unknown
-  if (propVal < 1000000)    return 0.90;  // Under $1M  — modest home, lower complexity
-  if (propVal < 2500000)    return 1.0;   // $1M–$2.5M  — entry / golf community
-  if (propVal < 5000000)    return 1.0;   // $2.5M–$5M  — entry tier
-  if (propVal < 10000000)   return 1.15;  // $5M–$10M
-  if (propVal < 20000000)   return 1.30;  // $10M–$20M
-  if (propVal < 35000000)   return 1.50;  // $20M–$35M
-  if (propVal < 75000000)   return 1.65;  // $35M–$75M
-  return 1.85;  // $75M+ — ultra estate tier
-}
 
 // ─── TODAY, IN LOCAL CALENDAR TERMS ──────────────────────────────────────────
 // ⚠ LOCAL CALENDAR, NOT toISOString(). `new Date().toISOString().slice(0,10)` is UTC, so in
@@ -5822,6 +5823,73 @@ function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS, fixedOnsit
   };
 }
 
+// ─── FROM ENGINE HOURS TO BILLED HOURS: ONE CHAIN, TWO READERS (2026-09-30, P12) ─────────────────
+// calcAll prices the estimate on these three and the reference band prices the same house at Normal and
+// at Full on them (referenceBand), so the band can never price a house differently from the estimate it
+// sits beside — the defect the hand-typed table it replaced had in both directions (audit M11). Pure:
+// every input arrives in `k`. The rounding is the estimate's own, step for step: each pool to the tenth,
+// the billed hours up to the whole hour, then priced.
+//
+// labourPools — the engine's two columns plus the collections, the adjustments and the off-site adders,
+// as the work pool the crew and the concierge clear and the concierge's off-site coordination. The
+// collections' on-site presence is held out of coordination (it belongs to the crew days); difficult
+// access lifts the work pool only and multiple heirs the coordination only (the note in calcAll).
+function labourPools(eng, k) {
+  var col = k.colHrs || { tc: 0, onsite: 0, ps: 0 };
+  var colOnsiteTC = col.onsite || 0;
+  var baseTCHrs = Math.round((eng.totTC + col.tc - colOnsiteTC) * 10) / 10;
+  var basePSHrs = Math.round((eng.totPS + col.ps) * 10) / 10;
+  var adjPS = k.access ? Math.round(basePSHrs * 0.15 * 10) / 10 : 0;   // work-pool uplift
+  var adjTC = k.heirs  ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;   // coordination uplift
+  var premiumSpecialtyTC = k.prem ? 25 : 0;
+  var workPool = Math.round((basePSHrs + adjPS) * 10) / 10;
+  var coordTC  = Math.round((baseTCHrs + adjTC + premiumSpecialtyTC) * 10) / 10;
+  if (k.isPrep) { baseTCHrs = 0; basePSHrs = 0; workPool = 0; coordTC = 0; colOnsiteTC = 0; }
+  coordTC = Math.round((coordTC + (k.prepTCHrs || 0) + (k.vendorTCHrs || 0) + (k.destTC || 0)) * 10) / 10;
+  return { baseTCHrs: baseTCHrs, basePSHrs: basePSHrs, adjPS: adjPS, adjTC: adjTC,
+           premiumSpecialtyTC: premiumSpecialtyTC, workPool: workPool, coordTC: coordTC, colOnsiteTC: colOnsiteTC };
+}
+// labourBilled — a crew solve (computeWorkingSupervisor) as billed hours and fees. Rounded UP to the whole
+// hour: the estimator computes to the tenth, but that implies a precision the walkthrough can't deliver and
+// invites a client to debate six-minute increments, and the fees are taken off the rounded hours so hours ×
+// rate reconciles on every document. Standalone prep bills its declutter hours and nothing else.
+function labourBilled(sup, k) {
+  var tc = k.isPrep ? (k.declutterTCHrs || 0) : sup.tcHrs;
+  var ps = k.isPrep ? 0 : Math.round((sup.psHrs + (k.destPS || 0)) * 10) / 10;
+  var totTC = Math.ceil(tc), totPS = Math.ceil(ps);
+  return { totTC: totTC, totPS: totPS, tcFee: Math.round(totTC * k.tcRate), psFee: Math.round(totPS * k.psRate) };
+}
+// planDays — the working days a solve takes: the crew days, then the move-management destination day on
+// top of them, floored at the service's mobilization minimum. Prep has no day count of its own.
+function planDays(sup, destPS, crewSize, svcKey, isPrep) {
+  if (isPrep) return 0;
+  var floor = ENGINE_FLOOR[svcKey] || 2;
+  return Math.max(sup.days, destPS > 0 ? sup.days + Math.ceil(destPS / (crewSize * PRODUCTIVE_HRS_PER_DAY)) : 0, floor);
+}
+
+// ⚠⚠ THE REFERENCE BAND IS THIS HOUSE, PRICED BY THE ENGINE AT NORMAL AND AT FULL (2026-09-30, audit M11;
+// Anthony on Q7: rebuild it from the engine). It was a hand-typed table from before the engine: Estate
+// Settlement reused Home Cleanout's rows and read "Above range" at 3,500 sq ft on default scores; 9 of 24
+// normally-scored test houses read "Below range — review scores", an invitation to score up; the day
+// ranges ran 2 to 6 times the engine's plans; and a property-value multiplier widened the range 15–85% on
+// homes over $5M although property value never moves the price. Now the same rooms, complexity,
+// adjustments, vendors and crew are priced with every room's volume at the Normal preset and then at the
+// Full one (volPresetSeedFor), so the only thing that moves between the two figures is how full the house
+// is. `inp`: sqft, rooms [{name, cplx}], svc, years, docScope, poolsK and billedK (as calcAll passes them),
+// forcedPS (0 = the engine's own crew), extras (the materials package, the coordination fee, the prep fee).
+function referenceBand(inp) {
+  function at(key) {
+    var rooms = (inp.rooms || []).map(function(r){ return { name: r.name, vol: volPresetSeedFor(r.name, key), cplx: r.cplx }; });
+    var eng = computeEngineV3(inp.sqft, rooms, inp.svc, 2, inp.years, inp.docScope);
+    var pools = labourPools(eng, inp.poolsK);
+    var sup = computeWorkingSupervisor(pools.workPool, pools.coordTC, inp.svc, inp.forcedPS || 0, pools.colOnsiteTC);
+    var b = labourBilled(sup, inp.billedK);
+    return { services: b.tcFee + b.psFee + (inp.extras || 0),
+             days: planDays(sup, inp.billedK.destPS || 0, sup.requiredPS, inp.svc, false), crew: sup.requiredPS };
+  }
+  return { normal: at('normal'), full: at('full') };
+}
+
 // ─── BILLING BASIS ────────────────────────────────────────────────────────
 // Every engagement bills time-and-materials by default, and the concierge may quote a firm
 // flat fee instead on ANY of them. There is no service-keyed exclusion, and there must not
@@ -6122,6 +6190,13 @@ function rushCrewAdded(e) {
   return { tc2: !!(e.needsTC2 || e.preparedBy2), ps: (rec >= 2 && n > rec) ? n : 0 };
 }
 
+// What the premium is charged on, in words, for the estimator's badge and the documents' rows: the fee on
+// a fixed price, the services on an hourly job, and never the home prep fee (Q9).
+function rushBaseWords(isFixed, prepFee) {
+  if (isFixed) return 'of the fixed project fee';
+  return (prepFee > 0) ? 'of Havellin services, not the home prep fee' : 'of Havellin services';
+}
+
 // What the expedited-delivery premium is, in the one sentence the estimate and all three
 // invoices print under it. Priority scheduling always; a second concierge or an expanded crew
 // only when rushCrewAdded says the estimate has one.
@@ -6227,6 +6302,53 @@ function discountOnLabor(laborGross, rushRate, pct) {
   return Math.round(base * pct / 100);
 }
 
+// ⚠⚠ THE PREFERRED-CLIENT DISCOUNT ON A FIXED FEE (2026-09-30, audit low; Anthony's discount rule applied
+// to a flat fee). The fee is the labour plus the moving-materials package (and the contingency on both), so
+// the labour share is the fee less the package, and the discount comes off that share grossed up by the
+// premium charged on it — `discountOnLabor`, the same arithmetic as an hourly job. It used to be two rules:
+// Build Estimate took the percentage off the hourly labour and marked it up by the contingency, and Offer
+// discount took it off the whole flat fee, package included, so the two disagreed by about $180 on a job
+// with a $1,500 package at 10%. ONE DEFINITION, read by estimateFigures, discountPreview and invoiceHtml.
+function discountOnFixedFee(fee, pkgCost, rushRate, pct) {
+  return discountOnLabor(Math.max(0, Math.round(fee || 0) - Math.round(pkgCost || 0)), rushRate, pct);
+}
+
+// What a fixed-price discount is applied to, in the words every document prints beside it (the estimate's
+// row, the invoices, the agreements and the Offer discount modal), so no page describes another base.
+function fixedDiscountBasisWords(pkgCost, rushRate) {
+  return 'the fixed project fee' + ((pkgCost || 0) > 0 ? ', less the moving materials it includes' : '')
+    + ((rushRate || 0) > 0 ? ', and the expedited-delivery premium charged on it' : '');
+}
+
+// ⚠⚠ WHAT A CLIENT IS CHARGED FOR HAVELLIN'S SERVICES, ONE DEFINITION FOR BOTH BASES (2026-09-30, P12).
+// Returns { subtotal, rushAmt, discountAmt, servicesTotal }: the services before the premium and the
+// discount (the prep fee included), the premium, the discount, and what the client pays Havellin.
+//   hourly — the labour, the materials package, the coordination fee and the prep fee; the premium on
+//            all of it but the prep fee; the discount off the labour grossed up by the premium.
+//   fixed  — the fee and the prep fee on top; the premium on the fee; the discount off the fee less the
+//            materials package, grossed up by the premium (discountOnFixedFee).
+// ⚠ THE PREP FEE CARRIES NO PREMIUM ON EITHER BASIS (Anthony, Q9: "rush speeds up our crew, not the
+// painter"). The premium comes first and the discount off the result (the note at the discount in calcAll).
+function estimateFigures(o) {
+  o = o || {};
+  var r = o.rushRate || 0, pct = o.discountPct || 0;
+  var prepFee = Math.round(o.prepFee || 0);
+  var subtotal, rushAmt, discountAmt;
+  if (o.fixed) {
+    var fee = Math.round(o.fee || 0);
+    subtotal = fee + prepFee;
+    rushAmt = r ? Math.round(fee * r) : 0;
+    discountAmt = discountOnFixedFee(fee, o.pkg, r, pct);
+  } else {
+    var labour = Math.round(o.labour || 0);
+    subtotal = labour + Math.round(o.pkg || 0) + Math.round(o.smf || 0) + prepFee;
+    rushAmt = r ? Math.round((subtotal - prepFee) * r) : 0;
+    discountAmt = discountOnLabor(labour, r, pct);
+  }
+  return { subtotal: subtotal, rushAmt: rushAmt, discountAmt: discountAmt,
+           servicesTotal: subtotal + rushAmt - discountAmt };
+}
+
 // True once the estimator picks a crew size by hand. Until then the dropdown tracks the
 // engine's recommendation up and down; afterwards it is left alone and the crew badge
 // warns if it sits above what the scope needs.
@@ -6313,6 +6435,13 @@ var _fixedAmountBasis = 0;
 // leaves the total exactly where the client saw it, and this says so on the fixed panel.
 // Session state for the estimate on screen; cleared with the rest of the fixed-fee state.
 var _fixedPrepMovedOut = 0;
+// ⚠⚠ THE PREMIUM AND THE DISCOUNT MOVED OUT OF A FIXED FEE SAVED BEFORE 2026-09-30 (null = none). Those
+// records carry both INSIDE `fixedAmount` (see estFixedLines), and this tab re-prices anything it opens
+// under the current rule — both as lines on the fee — so without the restatement a re-save would charge
+// the premium twice and give the discount twice. restoreEstimateToUI sets the fee to the one that charges
+// the old total with its lines (fixedFeeForCharge) and records { was, fee } here; the fixed panel says so.
+// Session state for the estimate on screen; cleared with the rest of the fixed-fee state.
+var _fixedLinesRestated = null;
 function markFixedAmountEdited(el) {
   if (el) formatMoneyInput(el);
   _fixedAmountUserSet = true;
@@ -6412,6 +6541,15 @@ function applyEstimateServiceMode(isPrep) {
   var pCostRow = document.getElementById('s-prep-cost-row');
   var pFeeRow  = document.getElementById('s-prep-fee-row');
   if (havRow) havRow.style.display = isPrep ? 'none' : '';
+  // ⚠ THE FIXED-PRICE TOGGLE GOES ON STANDALONE PREP (2026-09-30, audit low). calcAll's note on the billing
+  // basis says the control is hidden there, and it was not: the box could be ticked and was then ignored
+  // (isFixed is forced off on prep), so the screen offered a choice the estimate did not honour. The fee
+  // row goes with it, whatever the box last held.
+  var fxWrap = document.getElementById('fixed-toggle-wrap');
+  if (fxWrap) fxWrap.style.display = isPrep ? 'none' : '';
+  var fxAmtRow = document.getElementById('fixed-amount-row');
+  var fxBox = document.getElementById('e-fixed');
+  if (fxAmtRow) fxAmtRow.style.display = (!isPrep && fxBox && fxBox.checked) ? 'flex' : 'none';
   if (pCostRow && pFeeRow && grandRow && pCostRow.parentNode) {
     if (isPrep) pCostRow.parentNode.insertBefore(pCostRow, pFeeRow);   // vendors before fee
     else        grandRow.parentNode.insertBefore(pCostRow, grandRow);  // restore: vendors before grand total
@@ -6462,7 +6600,6 @@ function calcAll() {
   // Crew efficiency badge — fires after totPS is calculated
   // (placed here so crewSize is available for daysNeeded calc below)
   var propVal = parseInt(document.getElementById('e-propval').value) || 0;
-  var propMult = propValMultiplier(propVal);
 
   var _tcPill = document.getElementById('tc-rate-pill'); if (_tcPill) _tcPill.textContent = '$' + tcRate;
   var _psPill = document.getElementById('ps-rate-pill'); if (_psPill) _psPill.textContent = '$' + psRate;
@@ -6507,16 +6644,23 @@ function calcAll() {
       var id = 'r' + ri;
       var st = roomState(id);
       if (st === 'in') {
-        var vol = parseFloat(document.getElementById('vol-'+id).value) || 3;
-        var cplx = parseFloat(document.getElementById('cplx-'+id).value) || 3;
-        var spcl = document.getElementById('spcl-'+id).checked;
         var nameEl = document.getElementById('name-'+id);
         var roomName = nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent;
+        // ⚠ ONE READING OF A SCORE (roomScoreOf, 2026-09-30, audit low). `parseFloat(…) || 3` priced a blank or
+        // a 0 as a 3 and SAVED it as a 3, so the unscored-room gate could never fire, and saved 9 or 2.5 as
+        // typed. An unscored box prices at the room's own default, which is neutral (engineRelFactor), and
+        // rides the snapshot as null, so Save and Submit name the room (unscoredRoomNames).
+        var _rdef = roomDefault(roomName);
+        var volScore = roomScoreOf(document.getElementById('vol-'+id).value);
+        var cplxScore = roomScoreOf(document.getElementById('cplx-'+id).value);
+        var vol = volScore == null ? _rdef.vol : volScore;
+        var cplx = cplxScore == null ? _rdef.cplx : cplxScore;
+        var spcl = document.getElementById('spcl-'+id).checked;
         var note = document.getElementById('note-'+id).value;
         // Special-items flag = extra-careful handling → bump this room's complexity (capped at 5)
         var effCpx = Math.min(5, cplx + (spcl ? 1 : 0));
         engineRooms.push({name: roomName, vol: vol, cplx: effCpx});
-        roomMeta.push({id:id, ri:ri, name:roomName, vol:vol, cplx:cplx, spcl:spcl, note:note, section:sec.section,
+        roomMeta.push({id:id, ri:ri, name:roomName, vol:volScore, cplx:cplxScore, spcl:spcl, note:note, section:sec.section,
           volSet: !!_volHandSet[id]});
         totalVol += vol; includedRoomCount++;
       } else if (st === 'excl') {
@@ -6577,9 +6721,7 @@ function calcAll() {
   // Keeping them out also means the heirs uplift below scales coordination only, which
   // is what "more calls, more sign-offs" is supposed to mean.
   var colHrs = collectionsHours();
-  var colOnsiteTC = colHrs.onsite;
-  baseTCHrs = Math.round((baseTCHrs + colHrs.tc - colOnsiteTC) * 10) / 10;
-  basePSHrs = Math.round((basePSHrs + colHrs.ps) * 10) / 10;
+  // Folded in by labourPools, below, once the vendor and destination hours are known.
 
   // Service type multiplier badge
   var svcBadgeEl = document.getElementById('svc-mult-badge');
@@ -6650,16 +6792,11 @@ function calcAll() {
   // calls, more sign-offs, no extra boxes), so it lifts OFF-SITE COORDINATION only.
   // Premium-estate specialty coordination (auction house, appraiser, wine/art
   // logistics) is a flat +25 coordination hours, unscaled by either uplift.
-  var adjPS = access ? Math.round(basePSHrs * 0.15 * 10) / 10 : 0;   // work-pool uplift
-  var adjTC = heirs  ? Math.round(baseTCHrs * 0.20 * 10) / 10 : 0;   // coordination uplift
-  var premiumSpecialtyTC = prem ? 25 : 0;
-  var workPool = Math.round((basePSHrs + adjPS) * 10) / 10;
-  var coordTC  = Math.round((baseTCHrs + adjTC + premiumSpecialtyTC) * 10) / 10;
+  // Applied by labourPools, below — the one chain the reference band prices the same house on.
   // Billed hours — assigned by the working-supervisor solve further down, once the
   // destination and home-prep hours are folded in and the crew size is known.
   var totTC = 0, totPS = 0;
   var days = eng.days;
-  var crewDays = Math.round(basePSHrs / (8 * crewSize) * 10) / 10;
 
   // Timeline — projected completion is derived from the engine (max of concierge
   // time, specialist-crew time, and the logistics/mobilization floor)
@@ -6744,12 +6881,16 @@ function calcAll() {
   // that the 30% fee already pays for, and this is on-site labour it does not. See
   // getDeclutterTCHrs for why it is an input rather than a derivation.
   var declutterTCHrs = isPrep ? getDeclutterTCHrs() : 0;
-  if (isPrep) { baseTCHrs = 0; basePSHrs = 0; workPool = 0; coordTC = 0; colOnsiteTC = 0; }
   // Fold vendor + bundled-prep coordination and the move-management destination hours in.
   // All sit OUTSIDE the origin-property work pool: coordination is off-site vendor
   // management, and move day happens at the new home. destPS is crew work at the
   // destination, billed straight through rather than shared with the concierge.
-  coordTC = Math.round((coordTC + prepTCHrs + vendorTCHrs + destTC) * 10) / 10;
+  // One chain, labourPools, which the reference band reads too (referenceBand).
+  var _pools = labourPools(eng, { colHrs: colHrs, access: access, heirs: heirs, prem: prem, isPrep: isPrep,
+                                  prepTCHrs: prepTCHrs, vendorTCHrs: vendorTCHrs, destTC: destTC });
+  baseTCHrs = _pools.baseTCHrs; basePSHrs = _pools.basePSHrs;
+  var adjPS = _pools.adjPS, adjTC = _pools.adjTC, premiumSpecialtyTC = _pools.premiumSpecialtyTC;
+  var workPool = _pools.workPool, coordTC = _pools.coordTC, colOnsiteTC = _pools.colOnsiteTC;
 
   // ─── WORKING-SUPERVISOR SOLVE ──────────────────────────────────────────────
   // Size the crew to the working-day target, then split the hands-on work pool
@@ -6794,8 +6935,7 @@ function calcAll() {
   // correctly everywhere needed no second money path. A parallel "prep labour" total added
   // alongside havellinTotal is how the estimate and the invoice come to disagree — the defect
   // this file records more often than any other.
-  totTC = isPrep ? declutterTCHrs : _sup.tcHrs;
-  totPS = isPrep ? 0 : Math.round((_sup.psHrs + destPS) * 10) / 10;
+  var _billK = { isPrep: isPrep, declutterTCHrs: declutterTCHrs, destPS: destPS, tcRate: tcRate, psRate: psRate };
   // Share of the hands-on pool each side carries. The per-room breakdown is split by
   // the same ratio as the job totals, so the two always reconcile.
   var _psShare = _sup.requiredPS / (_sup.requiredPS + _sup.alpha);
@@ -6835,10 +6975,9 @@ function calcAll() {
   // invites clients to debate six-minute increments. Rounding up bakes in a
   // small buffer and presents a cleaner number. Fees are recomputed off the
   // rounded hours so hours × rate always reconciles on the client estimate.
-  totTC = Math.ceil(totTC);
-  totPS = Math.ceil(totPS);
-  tcFee = Math.round(totTC * tcRate);
-  psFee = Math.round(totPS * psRate);
+  // labourBilled carries the rounding (the note on it); the reference band bills through it too.
+  var _billed = labourBilled(_sup, _billK);
+  totTC = _billed.totTC; totPS = _billed.totPS; tcFee = _billed.tcFee; psFee = _billed.psFee;
 
   // The "+ Project coordination & logistics" strip that used to sit under the room grid
   // is GONE (2026-08-03). It named the largest block of work on an estate job — mostly
@@ -6869,14 +7008,12 @@ function calcAll() {
     var _crewSel = document.getElementById('ps-crew-size');
     if (_crewSel) _crewSel.value = String(Math.min(6, Math.max(2, _recommendedPS)));
     curPS = getScheduledPSCount();
-    crewDays = Math.round(basePSHrs / (8 * Math.max(1, curPS)) * 10) / 10;
   }
   // The chosen crew, full stop — see the _actualPS note above. Was
   // Math.max(curPS, crew.requiredPS), the second half of the undisclosed floor.
   crewSize = curPS;
   // The destination (move-in) day is additive on top of the origin-property calendar.
-  var _mobFloor  = ENGINE_FLOOR[svcKey] || 2;
-  daysNeeded = isPrep ? 0 : Math.max(crew.days, destPS > 0 ? crew.days + Math.ceil(destPS / (crewSize * PRODUCTIVE_HRS_PER_DAY)) : 0, _mobFloor);
+  daysNeeded = planDays(crew, destPS, crewSize, svcKey, isPrep);
   days = daysNeeded;
   crew.tcDays = daysNeeded;
   crew.overTarget = daysNeeded > TARGET_DAYS;
@@ -7000,23 +7137,93 @@ function calcAll() {
   // fixed price is: its whole staffing column is hidden, so the toggle isn't reachable there.
   var isRush = document.getElementById('e-rush') ? document.getElementById('e-rush').checked : false;
   if (isPrep) isRush = false;
-  var rushAmt = isRush ? Math.round(havellinTotal * RUSH_PCT) : 0;
+  // The hourly figures, from the one definition every document reads (estimateFigures). ⚠ The premium is
+  // charged on the services LESS the 30% home prep fee (Anthony, Q9: "rush speeds up our crew, not the
+  // painter"); it used to be levied on the fee too, $2,700 on a $45,000 prep package.
+  var _hrFig = estimateFigures({ labour: tcFee + psFee, pkg: pkgCost, smf: smf, prepFee: prepFee,
+                                 rushRate: isRush ? RUSH_PCT : 0, discountPct: discountPct });
+  var rushAmt = _hrFig.rushAmt;
   var laborBase = tcFee + psFee;  // the discount base is labour, premium included — never materials, SMF or the prep fee
-  var discountAmt = discountOnLabor(laborBase, isRush ? RUSH_PCT : 0, discountPct);
+  var discountAmt = _hrFig.discountAmt;
   // The same discount with the premium held out, for the two INTERNAL benchmark readouts
   // below — the pricing reference band and the blended-rate badge. Both answer "what is this
   // job costing for a house this size / an hour of our time", and an expedited-delivery
   // surcharge is neither; holding the premium out of the total while leaving its share of the
   // discount in would understate both. Never shown to a client and never billed.
   var discountExRush = discountOnLabor(laborBase, 0, discountPct);
-  var havellinTotalDiscounted = havellinTotal + rushAmt - discountAmt;
+  var havellinTotalDiscounted = _hrFig.servicesTotal;
   var grandTotal = havellinTotalDiscounted + vendorCost + (prepEnabled ? prepCost : 0);
+
+  // Billing basis. T&M is the default on every engagement and the concierge may quote a
+  // firm flat fee instead on any of them. The service-keyed refusal that used to live here
+  // (isTMOnly — probate and contested probate, the toggle disabled and a stale checked box
+  // cleared with a notice) came off on 2026-09-20; the BILLING BASIS note above
+  // fixedPriceBuffer records why, and the short version is that hours are logged on every
+  // job now, so a flat fee on a probate matter can still be tied back to the record.
+  //
+  // ⚠ PREP IS STILL EXCLUDED AND IT IS NOT THE SAME KIND OF RULE, so do not collapse the
+  // two. Home Prep books no hours at all — computeEngineV3 zeroes them — and earns
+  // prepFeeRate() of vendor spend, so there is no hourly basis for a flat fee to replace
+  // and the toggle would price nothing. The whole control is hidden on prep rather than
+  // disabled-with-a-reason, because on that engagement the question does not arise.
+  var _fxEl = document.getElementById('e-fixed');
+  // ⚠ NOTHING RE-ENABLES THE BOX HERE, DELIBERATELY. The first cut of this replaced the
+  // old `_fxEl.disabled = _tmOnly` with `_fxEl.disabled = false`, which looks like tidying
+  // and is not: applyEstimateLock disables every input in #panel-estimate on a SUBMITTED or
+  // APPROVED estimate, and calcAll runs after it — so that line would have handed the
+  // billing basis back to anyone looking at an estimate a manager is reviewing, and left
+  // the data-lock-restore bookkeeping inconsistent as well. Nothing disables this box any
+  // more except the lock, so nothing here should speak to it. Same for the wrapper's
+  // opacity, which only the retired probate arm ever dimmed.
+  var _fxSub = document.getElementById('fixed-toggle-sub');
+  if (_fxSub) _fxSub.textContent = 'Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.';
+  var isFixed = _fxEl ? _fxEl.checked : false;
+  if (isPrep) isFixed = false;
+  // The suggested fee, computed here rather than inside the panel block below, because
+  // the field TRACKS it until the manager types a number and so has to be resolved before
+  // fixedAmount is read. Probate / contested keep their own reference buffer.
+  var _fpBuf  = fixedPriceBuffer(svcKey);
+  // ⚠ THE PREP FEE IS HELD OUT OF THE BASIS — see estFixedFee for the whole defect. The fixed fee covers
+  // labour and materials; the 30% is billed ON TOP of it, on the vendors' actual invoices, and the
+  // contingency is labour-hour risk that a percentage of pass-through vendor spend does not carry.
+  // ⚠⚠ PRICED ON THE TWO-SPECIALIST PLAN, WHATEVER CREW RUNS THE JOB (2026-09-30, audit M12; Anthony on
+  // Q5: "extra crew never lowers the fee below the two-specialist plan; rush is how a client pays for
+  // speed"). A bigger crew finishes sooner, so the concierge is on site fewer hours and the hourly figure
+  // falls: the automatic crew step alone took a 5,250 sq ft Estate Settlement below a 5,000 sq ft one,
+  // and forcing six specialists cut 14.6%. A flat fee is a price, not a count of hours, so it is set off
+  // the plan the job would run at two specialists (`_fp2`, the same solve at a forced crew of 2, billed
+  // through labourBilled) and the crew stays Havellin's call.
+  // The hours, the schedule and the Job Plan budgets still follow the crew actually chosen.
+  var _fp2 = (!isPrep && _sup.requiredPS > 2)
+    ? labourBilled(computeWorkingSupervisor(workPool, coordTC, svcKey, 2, colOnsiteTC), _billK) : null;
+  var _fpServices = Math.max(tcFee + psFee, _fp2 ? _fp2.tcFee + _fp2.psFee : 0) + pkgCost + smf;
+  // ⚠⚠ THE FEE IS THE PRICE OF THE SCOPE, NOTHING ELSE (2026-09-30, Anthony on Q9 and Q13). It used to
+  // carry the expedited premium and the preferred-client discount inside it, so no fixed-price document
+  // could show either, and a fee typed by hand ignored the rush tick entirely. Both are their own lines
+  // now, charged on whatever fee is quoted (estimateFigures), so ticking rush always raises the price.
+  var _fpFee  = Math.round(_fpServices * (1 + _fpBuf));
+  window._fixedPriceSuggested = _fpFee;
+  if (isFixed && !_fixedAmountUserSet && _fpFee > 0) {
+    // Not typed by hand yet, so it is still a prefill — keep it current with the estimate
+    // instead of freezing it at whatever the total was when the toggle was flipped.
+    if (_fxAmtGet() !== _fpFee) _fxAmtSet(_fpFee);
+  }
+  var fixedAmount = isFixed ? _fxAmtGet() : 0;
+  // ⚠⚠ WHAT THE CLIENT IS CHARGED, ON THE BASIS CHOSEN — the one set of figures the Estimate Summary,
+  // the badges, the margin panel and the snapshot read (audit M10: on a fixed price the summary printed
+  // the hourly totals, "Total project estimate $18,200" over a $21,840 quote). The hourly figures above
+  // stay what they are: the basis the fixed-price panel and the internal readouts measure against.
+  var fig = isFixed
+    ? estimateFigures({ fixed: true, fee: fixedAmount, pkg: pkgCost, prepFee: prepFee,
+                        rushRate: isRush ? RUSH_PCT : 0, discountPct: discountPct })
+    : _hrFig;
+  var clientGrandTotal = fig.servicesTotal + vendorCost + (prepEnabled ? prepCost : 0);
 
   // Update discount badge
   var discBadge = document.getElementById('discount-badge');
   if (discBadge) {
     if (discountPct > 0) {
-      discBadge.innerHTML = '<div style="background:var(--ok-bg);border-radius:4px;padding:5px 10px;font-size:12px;color:var(--ok-tx);font-weight:600;">&#10003; Preferred Client Discount active — saving client ' + fmt(discountAmt) + '</div>';
+      discBadge.innerHTML = '<div style="background:var(--ok-bg);border-radius:4px;padding:5px 10px;font-size:12px;color:var(--ok-tx);font-weight:600;">&#10003; Preferred Client Discount active — saving client ' + fmt(fig.discountAmt) + '</div>';
     } else {
       discBadge.innerHTML = '';
     }
@@ -7113,33 +7320,41 @@ function calcAll() {
   // except standalone Home Prep. A row reading "Vendor SMF (15%) $0" on a quote that
   // charges no such fee is worse than no row at all.
   var sSmfRow = document.getElementById('s-smf-row');
-  if (sSmfRow) sSmfRow.style.display = smf > 0 ? '' : 'none';
+  if (sSmfRow) sSmfRow.style.display = (!isFixed && smf > 0) ? '' : 'none';
+  // ⚠ ON A FIXED PRICE THE FEE ROWS GIVE WAY TO THE FEE (audit M10). They summed to the hourly basis while
+  // the total under them printed the hourly figure too, so a $21,840 fixed quote read "Total project
+  // estimate $18,200". The hourly basis is still on the fixed-price panel below, labelled as the basis.
+  ['s-tc-fee-row', 's-ps-fee-row', 's-pkg-row'].forEach(function(id){
+    var _r = document.getElementById(id); if (_r) _r.style.display = isFixed ? 'none' : '';
+  });
+  var sFixedRow = document.getElementById('s-fixed-row');
+  if (sFixedRow) { sFixedRow.style.display = isFixed ? '' : 'none'; document.getElementById('s-fixed-fee').textContent = '$' + fixedAmount.toLocaleString(); }
   var sPrepFeeRow = document.getElementById('s-prep-fee-row');
   var sPrepCostRow = document.getElementById('s-prep-cost-row');
   if (sPrepFeeRow) { sPrepFeeRow.style.display = prepEnabled && prepFee > 0 ? '' : 'none'; document.getElementById('s-prep-fee').textContent = '$'+prepFee.toLocaleString(); }
   if (sPrepCostRow) { sPrepCostRow.style.display = prepEnabled && prepCost > 0 ? '' : 'none'; document.getElementById('s-prep-cost').textContent = '$'+prepCost.toLocaleString(); }
-  document.getElementById('s-havellin').textContent = '$' + havellinTotal.toLocaleString();
+  document.getElementById('s-havellin').textContent = '$' + fig.subtotal.toLocaleString();
   document.getElementById('s-vendor').textContent = '$' + vendorCost.toLocaleString();
-  document.getElementById('s-total').textContent = '$' + Math.round(grandTotal).toLocaleString();
+  document.getElementById('s-total').textContent = '$' + Math.round(clientGrandTotal).toLocaleString();
 
   // Show/hide discount row in estimate summary
   var sDiscRow = document.getElementById('s-discount-row');
   if (sDiscRow) {
-    sDiscRow.style.display = (discountPct > 0 && discountAmt > 0) ? '' : 'none';
+    sDiscRow.style.display = (discountPct > 0 && fig.discountAmt > 0) ? '' : 'none';
     var sDiscLbl = document.getElementById('s-discount-label');
     var sDiscAmt = document.getElementById('s-discount-amt');
     if (sDiscLbl) sDiscLbl.textContent = 'Preferred Client Discount (' + discountPct + '%)';
-    if (sDiscAmt) sDiscAmt.textContent = '- $' + Math.round(discountAmt).toLocaleString();
+    if (sDiscAmt) sDiscAmt.textContent = '- $' + Math.round(fig.discountAmt).toLocaleString();
   }
 
   // Expedited-delivery premium row + badge
   var sRushRow = document.getElementById('s-rush-row');
   if (sRushRow) {
-    sRushRow.style.display = rushAmt > 0 ? '' : 'none';
+    sRushRow.style.display = fig.rushAmt > 0 ? '' : 'none';
     var sRushLbl = document.getElementById('s-rush-label');
     var sRushAmt = document.getElementById('s-rush-amt');
     if (sRushLbl) sRushLbl.textContent = 'Expedited delivery (' + Math.round(RUSH_PCT * 100) + '%)';
-    if (sRushAmt) sRushAmt.textContent = '+ $' + rushAmt.toLocaleString();
+    if (sRushAmt) sRushAmt.textContent = '+ $' + fig.rushAmt.toLocaleString();
   }
   // Rush badge — states the COMPRESSION being charged for, not just the money. The
   // premium is defensible when the crew was scaled up to pull a date in; it is not when
@@ -7151,75 +7366,31 @@ function calcAll() {
   var _rushEndFmt = (isRush && jobStartStr && daysNeeded > 0)
     ? _tlDate(addWorkingDays(jobStartStr, daysNeeded), true) : '';
   if (rushBadge) {
-    if (rushAmt <= 0) {
+    if (fig.rushAmt <= 0) {
       rushBadge.innerHTML = '';
     } else if (_compressed) {
       rushBadge.innerHTML = '<div class="alert a-ok" style="margin-top:6px;font-size:11px;">'
         + '<strong>Expedited — ' + daysNeeded + ' working days instead of ' + _natDaysRef + '</strong>'
         + (_rushEndFmt ? ', done <strong>' + _rushEndFmt + '</strong>' : '')
-        + '. Premium of ' + fmt(rushAmt) + ' (' + Math.round(RUSH_PCT * 100) + '% of Havellin services).</div>';
+        + '. Premium of ' + fmt(fig.rushAmt) + ' (' + Math.round(RUSH_PCT * 100) + '% ' + rushBaseWords(isFixed, prepFee) + ').</div>';
     } else {
       rushBadge.innerHTML = '<div class="alert a-warn" style="margin-top:6px;font-size:11px;">'
         + '<strong>Rush is on, but nothing is compressed.</strong> This job runs ' + daysNeeded
         + ' working days at ' + crewSize + ' specialist' + (crewSize === 1 ? '' : 's')
         + ' — the same schedule it would run without the premium'
         + (_rushEndFmt ? ', finishing ' + _rushEndFmt : '') + '. '
-        + 'You are adding ' + fmt(rushAmt) + ' for no change in delivery. Raise the crew to pull the date in, or untick this.</div>';
+        + 'You are adding ' + fmt(fig.rushAmt) + ' for no change in delivery. Raise the crew to pull the date in, or untick this.</div>';
     }
   }
   // The premium lands on the summary above the price levers, but the toggle now lives up
   // in Schedule & Crew — so say so here rather than leaving the line unexplained.
   var _rushMirror = document.getElementById('rush-mirror');
   if (_rushMirror) {
-    _rushMirror.innerHTML = rushAmt > 0
-      ? '<div style="font-size:11px;color:var(--bronze);">Expedited delivery is on — <strong>+' + fmt(rushAmt) + '</strong>. Set it under <em>Schedule &amp; Crew</em> at the top.</div>'
+    _rushMirror.innerHTML = fig.rushAmt > 0
+      ? '<div style="font-size:11px;color:var(--bronze);">Expedited delivery is on — <strong>+' + fmt(fig.rushAmt) + '</strong>. Set it under <em>Schedule &amp; Crew</em> at the top.</div>'
       : '';
   }
 
-  // Billing basis. T&M is the default on every engagement and the concierge may quote a
-  // firm flat fee instead on any of them. The service-keyed refusal that used to live here
-  // (isTMOnly — probate and contested probate, the toggle disabled and a stale checked box
-  // cleared with a notice) came off on 2026-09-20; the BILLING BASIS note above
-  // fixedPriceBuffer records why, and the short version is that hours are logged on every
-  // job now, so a flat fee on a probate matter can still be tied back to the record.
-  //
-  // ⚠ PREP IS STILL EXCLUDED AND IT IS NOT THE SAME KIND OF RULE, so do not collapse the
-  // two. Home Prep books no hours at all — computeEngineV3 zeroes them — and earns
-  // prepFeeRate() of vendor spend, so there is no hourly basis for a flat fee to replace
-  // and the toggle would price nothing. The whole control is hidden on prep rather than
-  // disabled-with-a-reason, because on that engagement the question does not arise.
-  var _fxEl = document.getElementById('e-fixed');
-  // ⚠ NOTHING RE-ENABLES THE BOX HERE, DELIBERATELY. The first cut of this replaced the
-  // old `_fxEl.disabled = _tmOnly` with `_fxEl.disabled = false`, which looks like tidying
-  // and is not: applyEstimateLock disables every input in #panel-estimate on a SUBMITTED or
-  // APPROVED estimate, and calcAll runs after it — so that line would have handed the
-  // billing basis back to anyone looking at an estimate a manager is reviewing, and left
-  // the data-lock-restore bookkeeping inconsistent as well. Nothing disables this box any
-  // more except the lock, so nothing here should speak to it. Same for the wrapper's
-  // opacity, which only the retired probate arm ever dimmed.
-  var _fxSub = document.getElementById('fixed-toggle-sub');
-  if (_fxSub) _fxSub.textContent = 'Bill a firm flat fee instead of hourly TC/PS. The client estimate shows the fee and scope, not hours. Vendor costs stay pass-through at cost.';
-  var isFixed = _fxEl ? _fxEl.checked : false;
-  if (isPrep) isFixed = false;
-  // The suggested fee, computed here rather than inside the panel block below, because
-  // the field TRACKS it until the manager types a number and so has to be resolved before
-  // fixedAmount is read. Probate / contested keep their own reference buffer.
-  var _fpBuf  = fixedPriceBuffer(svcKey);
-  // ⚠ THE PREP FEE IS HELD OUT OF THE BASIS, and so is the expedited premium's share of it — see
-  // estFixedFee for the whole defect. The fixed fee covers labour and materials; the 30% is billed
-  // ON TOP of it, on the vendors' actual invoices, and the contingency is labour-hour risk that a
-  // percentage of pass-through vendor spend does not carry. With no prep on the job `_fpBasis` IS
-  // havellinTotalDiscounted, so nothing without prep vendors moves by a dollar.
-  var _fpServices = havellinTotal - prepFee;
-  var _fpBasis = _fpServices + (isRush ? Math.round(_fpServices * RUSH_PCT) : 0) - discountAmt;
-  var _fpFee  = Math.round(_fpBasis * (1 + _fpBuf));
-  window._fixedPriceSuggested = _fpFee;
-  if (isFixed && !_fixedAmountUserSet && _fpFee > 0) {
-    // Not typed by hand yet, so it is still a prefill — keep it current with the estimate
-    // instead of freezing it at whatever the total was when the toggle was flipped.
-    if (_fxAmtGet() !== _fpFee) _fxAmtSet(_fpFee);
-  }
-  var fixedAmount = isFixed ? _fxAmtGet() : 0;
   // Cleared here and repopulated only by the fixed-price branch below, so neither can
   // survive the toggle being switched off.
   var _fpDriftClear = document.getElementById('fixed-price-drift');
@@ -7231,16 +7402,23 @@ function calcAll() {
   var fpLabel = document.getElementById('fixed-price-label');
   var fpVal   = document.getElementById('fixed-price-val');
   var fpNote  = document.getElementById('fixed-price-note');
-  if (fpPanel && havellinTotalDiscounted > 0 && !isPrep) {
+  if (fpPanel && _fpServices > 0 && !isPrep) {
     fpPanel.style.display = 'block';
     // Probate and contested probate used to take a separate arm here that read
     // 'Time & materials — billed on actual logged hours' and offered the flat figure as an
     // internal reference only. Fixed price is available on every service since 2026-09-20,
     // so there is one arm: the suggested fee, on whatever contingency this matter type
     // carries.
-    // The expedited premium is already inside havellinTotalDiscounted, so it carries
-    // into the suggested fixed fee without being applied a second time here.
     var buf = _fpBuf, fpFee = _fpFee;
+    // Said when the crew is larger than two, because the basis then differs from the fee rows the
+    // estimator can see on the hourly summary (the two-specialist floor, `_fp2`).
+    var _fp2Note = (_sup.requiredPS > 2)
+      ? ' Priced as the job would run with two specialists: the ' + _sup.requiredPS + '-specialist crew finishes sooner and bills fewer concierge hours, and that saving is not passed into the fee.'
+      : '';
+    // The premium and the discount are charged on the fee as their own lines (estimateFigures), so the
+    // panel says so rather than leaving a manager to wonder whether the suggestion already carries them.
+    var _fpLinesNote = (isRush ? ' The ' + Math.round(RUSH_PCT * 100) + '% expedited-delivery premium is charged on top of the fee, as its own line.' : '')
+      + (discountPct > 0 ? ' The ' + discountPct + '% preferred-client discount comes off it as its own line.' : '');
     // Said on the panel because the figure no longer contains it: a manager comparing the fixed
     // fee against the estimate total would otherwise read the missing 30% as a mistake.
     var _fpPrepNote = prepFee > 0
@@ -7249,13 +7427,13 @@ function calcAll() {
     if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services' + (prepFee > 0 ? ' excluding the prep fee' : '') + ' × ' + Math.round(buf * 100) + '% contingency';
     if (fpVal)   fpVal.textContent   = '$' + fpFee.toLocaleString();
     if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
-      + (isRush ? ' Includes the ' + Math.round(RUSH_PCT * 100) + '% expedited-delivery premium.' : '') + _fpPrepNote;
+      + _fp2Note + _fpLinesNote + _fpPrepNote;
     // When fixed-price mode is ON, the panel reflects the CHOSEN flat fee (the number
     // the client will actually see) plus the margin vs. the hourly basis.
     if (isFixed) {
       // Measured against the same basis the suggestion is built on — the prep fee held out —
       // or a fee sitting exactly on its suggestion would read as below the hourly basis.
-      var _hrlyRef = Math.round(_fpBasis);
+      var _hrlyRef = Math.round(_fpServices);
       var _delta = fixedAmount - _hrlyRef;
       // Keep the contingency named in the ON state too. It used to read only "Fixed price
       // for this quote", which dropped the one fact that explains where the number came
@@ -7275,12 +7453,13 @@ function calcAll() {
       // contingency; once the manager has typed a figure it is whatever they chose, and the
       // note says so without calling it wrong.
       if (fpNote)  fpNote.innerHTML    = 'This flat fee replaces hourly billing on the client estimate, agreement, and invoices. '
-        + 'Underlying hourly basis <strong>$' + _hrlyRef.toLocaleString() + '</strong>; the fee sits $' + Math.abs(_delta).toLocaleString()
+        + 'Underlying hourly basis' + (_sup.requiredPS > 2 ? ' at two specialists' : '') + ' <strong>$' + _hrlyRef.toLocaleString() + '</strong>; the fee sits $' + Math.abs(_delta).toLocaleString()
         + ' (' + (_effPct >= 0 ? '+' : '') + _effPct + '%) ' + (_delta >= 0 ? 'above' : 'below') + ' it'
         + (_fixedAmountUserSet ? ' — your figure, against a suggested $' + _fpFee.toLocaleString() + ' (' + Math.round(_fpBuf * 100) + '% contingency). '
                                : ' — that gap is the contingency, already included. ')
         + 'Vendor costs remain pass-through at cost.' + _fpPrepNote
         + fixedPrepMovedNote(_fixedPrepMovedOut)
+        + fixedLinesRestatedNote(_fixedLinesRestated, fig.servicesTotal - prepFee)
         + (_fixedAmountUserSet ? '' : ' <em>Tracking the estimate — type a figure, or round it, to set the fee by hand.</em>');
       // The chips: the suggestion rounded down to a clean figure, and the suggestion itself
       // once the fee has left it. Whichever the field already holds is not offered.
@@ -7348,11 +7527,22 @@ function calcAll() {
     var _mp = document.getElementById('margin-panel');
     if (_mp) _mp.innerHTML = '<div style="font-size:11px;color:var(--gray);">Fee-only service — Havellin\'s margin is the full ' + Math.round(prepFeeRate()*100) + '% GC fee (third-party vendors billed to the client at cost).</div>';
   } else {
-    // Compared against typical fee ranges for the property size, so the expedited premium
-    // is held out — it is a delivery-speed surcharge, not evidence the job is overpriced
-    // for the house, and including it would flag every rush job as above range.
-    updateRefBox(havellinTotal - discountExRush);
-    updateMarginPanel(totTC, totPS, tcRate, psRate, havellinTotalDiscounted, prem, discountAmt, discountPct, crewSize);
+    // This house at Normal and at Full, on the chain the estimate itself is priced on (referenceBand), against
+    // the Services subtotal: before the premium, which is a delivery-speed charge, and before any discount.
+    updateRefBox((includedRoomCount > 0 && sqftVal > 0) ? {
+      label: SVC_LABELS[svcKey] || svcKey,
+      band: referenceBand({ sqft: sqftVal, svc: svcKey, years: yearsInHomeVal, docScope: activeDocScope(),
+        rooms: engineRooms.map(function(r){ return { name: r.name, cplx: r.cplx }; }),
+        poolsK: { colHrs: colHrs, access: access, heirs: heirs, prem: prem, isPrep: false,
+                  prepTCHrs: prepTCHrs, vendorTCHrs: vendorTCHrs, destTC: destTC },
+        billedK: _billK, forcedPS: _crewUserSet ? _actualPS : 0, extras: pkgCost + smf + prepFee }),
+      current: havellinTotal, currentDays: daysNeeded, fixed: isFixed
+    } : { why: !(sqftVal > 0)
+        ? 'Set the square footage with Edit Client to see this house priced at Normal and at Full.'
+        : 'Tick the rooms in scope to see this house priced at Normal and at Full.' });
+    // Against what the client is charged on the basis chosen: on a fixed price that is the fee with its
+    // premium and discount, not the hourly figure the fee replaced (audit M10's other half).
+    updateMarginPanel(totTC, totPS, tcRate, psRate, fig.servicesTotal, prem, fig.discountAmt, discountPct, crewSize);
   }
 
   // The "N specialist(s) scheduled" line was removed 2026-08-02: it restated the crew
@@ -7434,7 +7624,7 @@ function calcAll() {
   } : null;
   currentEstimate = {
     tcRate:tcRate, psRate:psRate, nps:crewSize, prem:prem,
-    propVal:propVal, propMult:propMult, avgVol:Math.round(totalVol/(includedRoomCount||1)*10)/10, psRatio:0,
+    propVal:propVal, avgVol:Math.round(totalVol/(includedRoomCount||1)*10)/10, psRatio:0,
     sqft:sqftVal, sqftMult:sqftMult,
     baseTCHrs:baseTCHrs, basePSHrs:basePSHrs, vcHrs:vcHrs,
     adjTC:adjTC, adjPS:adjPS, totTC:totTC, totPS:totPS, days:days,
@@ -7444,8 +7634,12 @@ function calcAll() {
     hoursModel:'v4-working-supervisor', tcAlpha:_sup.alpha,
     // The cost side of the same promise. Without this the margin panel on a reopened
     // estimate is priced against today's Settings, not the day it was quoted.
-    costRates:{ founderTC:COST_RATES.founderTC, contractorTC:COST_RATES.contractorTC,
-                psStandard:COST_RATES.psStandard, psSenior:COST_RATES.psSenior },
+    // ⚠ THE PIN, NOT TODAY'S SETTINGS (2026-09-30, audit low): this read COST_RATES, so re-saving a reopened
+    // estimate replaced the rates it was priced at with whatever Settings held that day. activeCostRates is
+    // the pin restoreEstimateToUI set (or the Settings card on a fresh build), the one the margin panel reads.
+    costRates:(function(){ var _cr = activeCostRates();
+                return { founderTC:_cr.founderTC, contractorTC:_cr.contractorTC,
+                         psStandard:_cr.psStandard, psSenior:_cr.psSenior }; })(),
     // What the hours are made of, already scaled to the billed totals. Stored rather than
     // re-derived so the Drive working paper and a reopened estimate say exactly what the
     // Estimate Summary said at the time — the step coefficients can move between builds.
@@ -7461,22 +7655,29 @@ function calcAll() {
     // fee alone is `fixedAmount`, read through estFixedFee. Until 2026-09-23 the prep fee was
     // folded INSIDE the flat fee while every document said it was separate; see estFixedFee.
     // The hourly-derived number is preserved as hourlyHavellinTotal for internal margin.
-    havellinTotal: isFixed ? fixedAmount + prepFee : Math.round(havellinTotalDiscounted),
+    // ⚠ From 2026-09-30 a fixed price carries its premium and discount as their own lines, so the total is
+    // the fee, plus the premium, less the discount, plus the prep fee — estimateFigures, as the summary shows.
+    havellinTotal: Math.round(fig.servicesTotal),
     hourlyHavellinTotal: Math.round(havellinTotalDiscounted),
     fixedPrice: isFixed,
     fixedAmount: fixedAmount,
     // Tells a fixed-price record saved from the 2026-09-23 change on (prep fee on top of the flat fee) from one
     // saved before (prep fee inside it). Stamped on every snapshot; only estPrepFeeOnTop reads it.
     prepFeeOnTop: true,
+    // ⚠ Tells a fixed-price record whose premium and discount are their own lines (saved from 2026-09-30) from
+    // one whose flat fee carries them inside (saved before). Stamped on every snapshot; estFixedLines reads it.
+    fixedLines: true,
+    // ⚠ Tells a record whose premium leaves the 30% prep fee out (Q9, from 2026-09-30) from one saved before,
+    // whose premium was charged on it. Stamped on every snapshot; invoiceHtml reads it so an older quote
+    // is billed as it was quoted.
+    rushExPrepFee: true,
     // The suggested fee the figure was set against, so a reopened estimate can still tell
     // whether the basis has moved since (restoreEstimateToUI reads it back).
     fixedSuggested: isFixed ? (_fixedAmountUserSet ? (_fixedAmountBasis || _fpFee) : _fpFee) : 0,
-    discountAmt:Math.round(discountAmt),
+    discountAmt:Math.round(fig.discountAmt),
     discountPct:discountPct,
-    rush:isRush, rushPct:RUSH_PCT, rushAmt:rushAmt,
-    grandTotal: isFixed
-      ? Math.round(fixedAmount + prepFee + vendorCost + (prepEnabled ? prepCost : 0))
-      : Math.round(grandTotal),
+    rush:isRush, rushPct:RUSH_PCT, rushAmt:fig.rushAmt,
+    grandTotal: Math.round(clientGrandTotal),
     vendors:JSON.parse(JSON.stringify(vendors)),
     collections:JSON.parse(JSON.stringify(collectionsData)),
     vehicles:JSON.parse(JSON.stringify(vehiclesData)),
@@ -7487,7 +7688,7 @@ function calcAll() {
     svcType: svcType,
     targetDate: '',
     discountPct: discountPct,
-    discountAmt: Math.round(discountAmt),
+    discountAmt: Math.round(fig.discountAmt),
     preparedBy: document.getElementById('e-prepared-by') ? document.getElementById('e-prepared-by').value : '',
     // Kept in the shape older records use so every reader stays valid; a new estimate
     // never names the second concierge, it only records that the scope needs one.
@@ -7559,54 +7760,38 @@ function calcAll() {
   scheduleEstimateScratch();
 }
 
-function updateRefBox(havellinTotal) {
-  var svc = document.getElementById('e-svc').value;
-  var svcKey = svc;
-  var ref = PRICING_REF[svcKey];
-  if (!ref) { document.getElementById('ref-box').innerHTML = '<div style="font-size:11px;color:var(--gray)">—</div>'; return; }
-
-  // Scale reference range by property value multiplier so benchmark tracks with actual quote
-  var propMult = 1.0;
-  var propValEl = document.getElementById('e-propval');
-  if (propValEl && propValEl.value) propMult = propValMultiplier(parseInt(propValEl.value)||0);
-
-  var estDays = currentEstimate ? currentEstimate.days : 0;
-  var sqft = parseFloat(document.getElementById('e-sqft') ? document.getElementById('e-sqft').value : 0) || 0;
-  var best;
-  if (sqft > 0) {
-    var idx;
-    if (sqft < 2000)  idx = 0;
-    else if (sqft < 4000)  idx = Math.min(1, ref.sizes.length-1);
-    else if (sqft < 6000)  idx = Math.min(2, ref.sizes.length-1);
-    else if (sqft < 10000) idx = Math.min(3, ref.sizes.length-1);
-    else idx = ref.sizes.length-1;
-    best = ref.sizes[idx];
-  } else {
-    // Fallback to days when sqft not captured at intake
-    if (estDays < 5)       best = ref.sizes[0];
-    else if (estDays < 10) best = ref.sizes[Math.min(1, ref.sizes.length-1)];
-    else if (estDays < 22) best = ref.sizes[Math.min(2, ref.sizes.length-1)];
-    else if (estDays < 35) best = ref.sizes[Math.min(3, ref.sizes.length-1)];
-    else                   best = ref.sizes[ref.sizes.length-1];
+// ⚠⚠ THE PRICING REFERENCE CHECK (2026-09-30, audit M11; Anthony on Q7): where this estimate sits against the
+// same house priced by the engine at Normal and at Full (referenceBand). NEUTRAL ON PURPOSE: it states where
+// the scoring put the house and never tells anyone to score up or down — the hand-typed table it replaced
+// printed "Below range — review scores" on 9 of 24 normally-scored test houses. Compared on the services
+// before the premium and any discount (the Services subtotal), the figure the scoring moves. On a fixed
+// price that is the hourly basis the fee was set from, and the row says so.
+// `o`: { band, label, current, currentDays, fixed } or { why } when there is nothing to price yet.
+function updateRefBox(o) {
+  var box = document.getElementById('ref-box');
+  if (!box) return;
+  if (!o || !o.band) {
+    box.innerHTML = '<div style="font-size:11px;color:var(--gray);">' + esc((o && o.why) || '\u2014') + '</div>';
+    return;
   }
-  if (!best) best = ref.sizes[0];
-
-  // Apply property value multiplier to the reference range
-  var scaledMin = Math.round(best.min * propMult);
-  var scaledMax = Math.round(best.max * propMult);
-
-  var inRange = havellinTotal >= scaledMin && havellinTotal <= scaledMax;
-  var above = havellinTotal > scaledMax;
-  var pct = scaledMax > scaledMin ? Math.min(100, Math.max(0, ((havellinTotal - scaledMin) / (scaledMax - scaledMin)) * 100)) : 50;
-  var badge = inRange ? '<span class="badge b-ok">Within range</span>' : (above ? '<span class="badge b-warn">Above range — premium job</span>' : '<span class="badge b-warn">Below range — review scores</span>');
-  var multLabel = propMult > 1.0 ? ' <span style="font-size:10px;color:var(--bronze);">(' + propMult.toFixed(2) + '× property multiplier applied)</span>' : '';
-
-  document.getElementById('ref-box').innerHTML =
-    '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">' + ref.label + ' — ' + best.l + multLabel + '</div>' +
-    '<div style="font-size:17px;font-family:Cormorant Garamond,serif;font-weight:500;">' + fmt(scaledMin) + ' – ' + fmt(scaledMax) + '</div>' +
-    '<div style="font-size:11px;color:var(--gray);margin-top:2px;">Typical: ' + best.days + '</div>' +
-    '<div class="range-bar"><span style="font-size:10px;color:var(--gray)">' + fmt(scaledMin) + '</span><div class="rline"><div class="rfill" style="width:' + pct + '%"></div></div><span style="font-size:10px;color:var(--gray)">' + fmt(scaledMax) + '</span></div>' +
-    '<div style="margin-top:6px;">' + badge + '</div>';
+  var n = o.band.normal, f = o.band.full, x = Math.round(o.current || 0);
+  var lo = Math.min(n.services, f.services), hi = Math.max(n.services, f.services);
+  var where = x === n.services ? 'Scored at Normal.'
+            : x === f.services ? 'Scored at Full.'
+            : x < lo ? 'Scored lighter than Normal.'
+            : x > hi ? 'Scored fuller than Full.'
+            : 'Scored between Normal and Full.';
+  var pct = hi > lo ? Math.min(100, Math.max(0, (x - lo) / (hi - lo) * 100)) : 50;
+  var dd = function(d){ return d + ' working day' + (d === 1 ? '' : 's'); };
+  box.innerHTML =
+    '<div style="font-size:11px;color:var(--gray);margin-bottom:6px;">' + esc(o.label) + ' \u2014 this house priced with every room at Normal, then at Full: the same rooms, complexity, adjustments and vendors, and the crew sized the same way.</div>' +
+    '<table class="stbl">' +
+      '<tr><td class="muted">At Normal</td><td class="num">' + fmt(n.services) + ' \u00b7 ' + dd(n.days) + '</td></tr>' +
+      '<tr><td class="muted">At Full</td><td class="num">' + fmt(f.services) + ' \u00b7 ' + dd(f.days) + '</td></tr>' +
+      '<tr class="total-row"><td>This estimate' + (o.fixed ? ', hourly basis' : '') + '</td><td class="num">' + fmt(x) + ' \u00b7 ' + dd(o.currentDays) + '</td></tr>' +
+    '</table>' +
+    '<div class="range-bar"><span style="font-size:10px;color:var(--gray)">' + fmt(lo) + '</span><div class="rline"><div class="rfill" style="width:' + pct + '%"></div></div><span style="font-size:10px;color:var(--gray)">' + fmt(hi) + '</span></div>' +
+    '<div style="margin-top:6px;font-size:11px;color:var(--gray-dk);">' + where + '</div>';
 }
 
 // ─── VENDORS ──────────────────────────────────────────────────────────────────
@@ -7688,7 +7873,7 @@ function renderVendorGroupCards() {
       // Prep lines contribute NO concierge hours — their coordination is inside the 30% fee
       // (see prepFeeRate), so a "+8.0 hrs concierge" chip on the prep card would advertise
       // time the estimate does not bill. The card's cost total is what matters there.
-      cardHrs  += isPrep ? 0 : vendorLineTCHrs(v.type);
+      cardHrs  += isPrep ? 0 : vendorLineHrs(v);
       return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">' +
         '<span style="flex:1;min-width:0;font-size:11.5px;">' + esc(v.type) + '</span>' +
         // Money field, not a spinner. A vendor quote is never nudged one dollar at a
@@ -7773,7 +7958,7 @@ function addFromVendorGroup(gi) {
   // Stamped at birth so a quote recorded against this line survives another line being
   // removed from the estimate later. See _srcLineKey.
   if (card.target === 'prep') { prepItems.push({type: sel.value, cost: cost, lid: _srcLid()}); renderPrepItems(); }
-  else                        { vendors.push({type: sel.value, cost: cost, lid: _srcLid()});   renderVendors();   }
+  else                        { vendors.push({type: sel.value, cost: cost, lid: _srcLid(), tcHrs: vendorLineTCHrs(sel.value)}); renderVendors(); }
   sel.value = ''; if (cst) cst.value = '';
   calcAll();
 }
@@ -7923,8 +8108,43 @@ function coordHrsFor(cat, kind) {
 }
 function vendorLineTCHrs(type) { return coordHrsFor(type, 'vendor'); }
 function prepLineTCHrs(type)   { return coordHrsFor(type, 'prep');   }
+// ⚠ A LINE'S COORDINATION HOURS ARE PINNED ON THE LINE (2026-09-30, audit low). They were re-derived from the
+// Vendor Directory on every recompute, and a category the directory has not placed yet (it loads a moment
+// after the page) fell to the FIRST card's touch count, so opening a saved estimate before the directory
+// landed repriced it — by about $150 on the audit's job. A line records its hours when it is added
+// (addFromVendorGroup) and an older line when it is next opened with the directory in hand
+// (pinVendorLineHours); only a line with no pin is derived.
+function vendorLineHrs(v) {
+  return (v && typeof v.tcHrs === 'number') ? v.tcHrs : vendorLineTCHrs(v && v.type);
+}
 function getVendorTCHrs() {
-  return Math.round(vendors.reduce(function(a, v){ return a + vendorLineTCHrs(v.type); }, 0) * 10) / 10;
+  return Math.round(vendors.reduce(function(a, v){ return a + vendorLineHrs(v); }, 0) * 10) / 10;
+}
+// Whether the Vendor Directory has loaded any category yet. Asked of the directory itself, not of the cards:
+// the End-of-Job Logistics card always lists its own curated categories, so a card test would answer yes
+// before a single row had arrived.
+function vendorDirectoryReady() {
+  return directoryCategories().length > 0;
+}
+// Pins the hours of every line that has none, on a saved estimate being opened. With the directory in hand
+// each line is derived as it is added. Without it, the lines share out the total the record was SAVED with
+// (`vendorTCHrs`), in proportion to their derived hours, so the estimate reopens at the figure it was quoted
+// at; a record with no total leaves them unpinned.
+function pinVendorLineHours(lines, savedTotal) {
+  var loose = (lines || []).filter(function(v){ return v && typeof v.tcHrs !== 'number'; });
+  if (!loose.length) return;
+  if (vendorDirectoryReady()) { loose.forEach(function(v){ v.tcHrs = vendorLineTCHrs(v.type); }); return; }
+  if (!(Number(savedTotal) >= 0) || savedTotal === '' || savedTotal == null) return;
+  var pinned = (lines || []).reduce(function(a, v){ return a + ((v && typeof v.tcHrs === 'number') ? v.tcHrs : 0); }, 0);
+  var share = Math.max(0, Math.round((Number(savedTotal) - pinned) * 10) / 10);
+  var weights = loose.map(function(v){ return vendorLineTCHrs(v.type) || 0; });
+  var wSum = weights.reduce(function(a, b){ return a + b; }, 0);
+  var given = 0;
+  loose.forEach(function(v, i){
+    if (i === loose.length - 1) { v.tcHrs = Math.round((share - given) * 10) / 10; return; }
+    var h = wSum > 0 ? Math.round(share * weights[i] / wSum * 10) / 10 : Math.round(share / loose.length * 10) / 10;
+    v.tcHrs = h; given += h;
+  });
 }
 // Collection vendors (appraisers, FFLs, etc.) are entered per collection; their fees roll
 // into the third-party total and the 15% SMF alongside the vendor table.
@@ -8034,6 +8254,14 @@ function estFixedFee(est) {
 function estPrepFeeOnTop(est) {
   return !!(est && est.fixedPrice && est.prepFeeOnTop);
 }
+// ⚠ A FIXED PRICE SAVED FROM 2026-09-30 CARRIES ITS EXPEDITED PREMIUM AND ITS PREFERRED-CLIENT DISCOUNT AS
+// LINES ON THE FEE (estimateFigures; Anthony on Q9 and Q13), so `fixedAmount` is the fee alone and the
+// estimate, the agreement and the invoices each print the premium and the discount under it. A record saved
+// before carries both INSIDE `fixedAmount` and shows neither; reading it the new way would charge the
+// premium twice. Every reader asks this, never the flag directly.
+function estFixedLines(est) {
+  return !!(est && est.fixedPrice && est.fixedLines);
+}
 
 // The sentence the fixed-price panel adds when reopening moved the prep fee OUT of a flat fee
 // saved before the 2026-09-23 change (see _fixedPrepMovedOut). Its own function so it can be driven:
@@ -8044,6 +8272,28 @@ function fixedPrepMovedNote(moved) {
     ? ' <strong>This fee was saved under the old rule, with the prep fee inside it:</strong> $' + moved.toLocaleString()
       + ' has been moved out of the flat fee and sits on top of it now, so the client\'s total is unchanged. Re-send the estimate if the client has seen the old split.'
     : '';
+}
+
+// The fee that charges `total` once the premium and the discount are lines on it (estimateFigures' fixed
+// arm, the prep fee aside): the smallest whole-dollar fee whose charge reaches `total`. The charge never
+// falls as the fee rises (the discount is at most 15% of it), so a bisection finds it; rounding can leave
+// the new charge a dollar above the old, which the panel's note states rather than hides.
+function fixedFeeForCharge(total, pkgCost, rushRate, pct) {
+  total = Math.round(total || 0);
+  if (total <= 0 || (!(rushRate > 0) && !(pct > 0))) return total;
+  var charge = function(f){ return f + (rushRate ? Math.round(f * rushRate) : 0) - discountOnFixedFee(f, pkgCost, rushRate, pct); };
+  var lo = 0, hi = total * 2 + 10;
+  while (lo < hi) { var mid = Math.floor((lo + hi) / 2); if (charge(mid) >= total) hi = mid; else lo = mid + 1; }
+  return lo;
+}
+// The sentence the fixed-price panel adds when reopening restated a fee saved before 2026-09-30 (see
+// _fixedLinesRestated). `charge` is what the fee charges now with its lines, the prep fee aside.
+function fixedLinesRestatedNote(r, charge) {
+  if (!r) return '';
+  return ' <strong>This fee was saved under the old rule, with the expedited premium and the discount inside it:</strong> it has been restated from $'
+    + r.was.toLocaleString() + ' to $' + r.fee.toLocaleString() + ' so both can print as their own lines, and the fee with its lines comes to $'
+    + Math.round(charge || 0).toLocaleString() + (Math.round(charge || 0) === r.was ? ', the same as before.' : '.')
+    + ' Re-send the estimate if the client has seen the old figures.';
 }
 
 // ─── DECLUTTER HOURS ON A PREP JOB ────────────────────────────────────────────
@@ -9597,10 +9847,16 @@ function resetEstimateJobState(job) {
   var rush = el('e-rush'); if (rush) rush.checked = false;
   // ⚠⚠ The billing basis (2026-09-25): an estimate taken to fixed price and left unsaved handed its
   // tick to the next client's fresh build, which then quoted a flat fee nobody chose.
-  var fx = el('e-fixed'); if (fx) fx.checked = false;
+  // ⚠ AN ESTATE OPENS ON FIXED PRICE (2026-09-30, Anthony on Q10: Estate Settlement, Probate and Contested
+  // Probate). The estate guide on the website promises a representative a fixed fee, and every new estimate
+  // opened hourly, so the promise depended on somebody remembering the tick. It is only where a fresh build
+  // STARTS: the box stays the estimator's to change, and a saved estimate comes back on its own basis
+  // (restoreEstimateToUI). The fee field is left blank, so it tracks the suggestion until a figure is typed.
+  var _fxOn = estimateOpensFixed(job);
+  var fx = el('e-fixed'); if (fx) fx.checked = _fxOn;
   var fxA = el('e-fixed-amount'); if (fxA) fxA.value = '';
-  var fxRow = el('fixed-amount-row'); if (fxRow) fxRow.style.display = 'none';
-  _fixedAmountUserSet = false; _fixedAmountBasis = 0; _fixedPrepMovedOut = 0;
+  var fxRow = el('fixed-amount-row'); if (fxRow) fxRow.style.display = _fxOn ? 'flex' : 'none';
+  _fixedAmountUserSet = false; _fixedAmountBasis = 0; _fixedPrepMovedOut = 0; _fixedLinesRestated = null;
   // The preferred-client discount — the worst of the seven, because nothing but restoreEstimateToUI
   // ever wrote this box, and on a fixed-price job it is taken off the flat fee with no line saying so.
   var disc = el('e-discount'); if (disc) disc.value = '0';
@@ -9648,6 +9904,12 @@ function resetEstimateJobState(job) {
 }
 
 
+// Whether a fresh build for this job opens on fixed price: the estate services (Q10), which is exactly the
+// decedent family, so the one predicate answers it (isDecedentJob). Null (the screen unbound) opens hourly.
+function estimateOpensFixed(job) {
+  return !!(job && isDecedentJob(job));
+}
+
 function saveEstimateAndPreview() {
   if (estimateApproved) { showFB('e-fb','warn','This estimate is approved and locked. Create a Change Order from the Client Dashboard to modify it.'); return; }
   var jobId = parseInt(document.getElementById('e-job').value);
@@ -9692,12 +9954,9 @@ function saveEstimateAndPreview() {
       return;
     }
   }
-  var svc = document.getElementById('e-svc').value;
-  var ref = PRICING_REF[svc];
-  // Home Prep for Sale is fee-based (30% of vendor costs), so no size-band benchmark
-  // applies — treat it as in-range so the jobs list never flags it "out of range".
-  var inRange = isPrepEst ? true : false;
-  if (!isPrepEst && ref) ref.sizes.forEach(function(s){ if (currentEstimate.havellinTotal>=s.min && currentEstimate.havellinTotal<=s.max) inRange=true; });
+  // `job.inRange` is no longer written (2026-09-30, audit M11): it recorded whether the total fell inside ANY
+  // row of the retired hand-typed band table, and the client list's ✓ / ! read it. The Pricing Reference
+  // Check prices this house at Normal and at Full instead, on Build Estimate, where the scoring is.
   job.havellinEst = currentEstimate.havellinTotal;
   job.totalEst = currentEstimate.grandTotal;
   // Reset to TC Review state on each new save. Saving an estimate does NOT mean
@@ -9707,7 +9966,6 @@ function saveEstimateAndPreview() {
   estimateSubmitted = false;
   estimateApproved = false;
   approvedBy = ''; approvedAt = '';
-  job.inRange = inRange;
   job.status = estimateEventStatus(job, (job.status === 'pending' || !job.status || job.status === 'new') ? 'new' : job.status);
   job.approved = false;
   estimateApproved = false;
@@ -10746,6 +11004,12 @@ function clientEstimateHtml(e, job) {
   // so show the on-site rows NET of destination — otherwise the destination labor is
   // displayed twice and the line items don't reconcile to the Havellin Services Total.
   var _isMove = (e.svc === 'downsizing_move' && (e.destTC||0) > 0);
+  // Whether this record prints its premium and discount as rows: every hourly estimate, and a fixed price
+  // saved from 2026-09-30 (estFixedLines). And the subtotal those rows are taken from, before either.
+  var _ceLines = !e.fixedPrice || estFixedLines(e);
+  var _ceSubtotal = e.fixedPrice
+    ? estFixedFee(e) + (estPrepFeeOnTop(e) ? Math.round(e.prepFee || 0) : 0)
+    : (e.havellinTotalFull || (e.havellinTotal + e.discountAmt - (e.rushAmt || 0)));
   var _destTcFee = _isMove ? Math.round((e.destTC||0) * e.tcRate) : 0;
   var _destPsFee = _isMove ? Math.round((e.destPS||0) * e.psRate) : 0;
   var _onsiteTcHrs = Math.ceil(e.totTC||0) - (_isMove ? (e.destTC||0) : 0);
@@ -10806,30 +11070,40 @@ function clientEstimateHtml(e, job) {
       ''
     )) +
     // The 30% prep fee, inside the table whose total counts it — ABOVE the subtotal, the
-    // expedited premium and the discount, because the premium is charged on the services total
-    // it is part of (see calcAll's `rushAmt`). See `_prepFeeRowHtml`.
+    // expedited premium and the discount, as a line of the services. The premium is not charged on it
+    // on a record saved from 2026-09-30 (Q9), so there the premium's row names its base (rushBaseWords);
+    // with no prep fee the base is the subtotal printed above it and the row says only the rate.
+    // See `_prepFeeRowHtml`.
     _prepFeeRowHtml +
     '</tbody>' +
-    (!e.fixedPrice && e.discountPct > 0 ?
-      '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(e.havellinTotalFull || (e.havellinTotal + e.discountAmt - (e.rushAmt || 0))) + '</td></tr>'
+    (_ceLines && e.discountPct > 0 ?
+      '<tr style="border-top:1px solid #ddd;"><td colspan="3" style="padding-top:6px;color:var(--gray-dk);">Subtotal (before discount)</td><td class="r" style="padding-top:6px;">' + fmt(_ceSubtotal) + '</td></tr>'
       : '') +
     // Expedited delivery, itemized so the client can see exactly what the premium is and
-    // what it buys. Suppressed on a fixed-price quote, where the flat fee is presented as
-    // a single figure and the premium is already inside it — itemizing there would read as
-    // an addition on top of a number described as firm.
+    // what it buys. ⚠ ON A FIXED PRICE TOO, SINCE 2026-09-30 (Anthony, Q9): it was suppressed there, the
+    // premium sitting inside a fee presented as one figure, so no fixed-price document showed it and a fee
+    // typed by hand did not follow the rush tick. The fee is now the price of the scope and the premium is
+    // charged on it as this line. A fixed price saved before then still carries it inside (estFixedLines).
     //
     // ⚠ IT PRINTS ABOVE THE DISCOUNT, AND THAT IS THE ARITHMETIC RATHER THAN THE TYPOGRAPHY.
     // The premium is charged on the services subtotal and the discount is taken off the
     // result. Printed the other way round — subtotal, discount, then premium — a client
     // reads the 20% as having been applied to the already-discounted figure, which is the
     // rule the app followed until 2026-09-11 and no longer does.
-    (!e.fixedPrice && e.rushAmt > 0
-      ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(e) + '</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
+    (_ceLines && e.rushAmt > 0
+      ? '<tr style="color:var(--bronze);"><td colspan="2"><strong>Expedited Delivery (' + Math.round((e.rushPct || 0.20) * 100) + '%' + ((e.rushExPrepFee && (e.prepFee || 0) > 0) ? ' ' + rushBaseWords(!!e.fixedPrice, e.prepFee) : '') + ')</strong><br><span style="font-size:11px;">' + rushScopeLine(e) + '</span></td><td></td><td class="r" style="color:var(--bronze);font-weight:700;">+ ' + fmt(e.rushAmt) + '</td></tr>'
       : '') +
-    (!e.fixedPrice && e.discountPct > 0
-      ? '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">Applied to Havellin labor fees' + (e.rushAmt > 0 ? ', including the expedited-delivery premium charged on them,' : '') + ' as a valued client benefit</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
+    // ⚠ And the discount (Anthony, Q13: "so the client sees the concession"). A fixed-price discount used
+    // to be folded into the fee and never shown; on a fixed price it is applied to the fee less the
+    // moving materials in it (discountOnFixedFee), and the row says so.
+    (_ceLines && e.discountPct > 0
+      ? '<tr style="color:var(--ok-tx);"><td colspan="2"><strong>Preferred Client Discount (' + e.discountPct + '%)</strong><br><span style="font-size:11px;">'
+        + (e.fixedPrice
+            ? 'Applied to ' + fixedDiscountBasisWords(e.pkgCost, e.rush ? (e.rushPct || RUSH_PCT) : 0) + ', as a valued client benefit'
+            : 'Applied to Havellin labor fees' + (e.rushAmt > 0 ? ', including the expedited-delivery premium charged on them,' : '') + ' as a valued client benefit')
+        + '</span></td><td></td><td class="r" style="color:var(--ok-tx);font-weight:700;">- ' + fmt(e.discountAmt) + '</td></tr>'
       : '') +
-    '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (!e.fixedPrice && e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
+    '<tr class="subtotal"><td colspan="3"><strong>Havellin Services Total</strong>' + (_ceLines && e.discountPct > 0 ? ' <span style="font-size:11px;font-weight:400;">(includes ' + e.discountPct + '% preferred client discount)</span>' : '') + '</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
     '</table>' +
     (e.fixedPrice
       // Leads with the change-order mechanic, which is the part not stated anywhere else on
@@ -11690,6 +11964,9 @@ function markEstimateSent() {
 // collapsing them double-counts. Tested in both directions.
 function estPreDiscountTotal(est) {
   if (!est) return 0;
+  // A fixed price saved from 2026-09-30 is the fee, its premium and the prep fee on top, before the
+  // discount — the same meaning as the hourly arms below (estimateFigures' subtotal plus the premium).
+  if (estFixedLines(est)) return estFixedFee(est) + Math.round(est.rushAmt || 0) + (estPrepFeeOnTop(est) ? Math.round(est.prepFee || 0) : 0);
   if (est.fixedPrice) return Math.round(est.fixedAmount || est.havellinTotal || 0);
   if (est.havellinTotalFull) return Math.round(est.havellinTotalFull) + Math.round(est.rushAmt || 0);
   return Math.round((est.havellinTotal || 0) + (est.discountAmt || 0));
@@ -11698,6 +11975,18 @@ function estPreDiscountTotal(est) {
 function discountPreview(est, pct) {
   if (!est) return { original: 0, discount: 0, revised: 0, fixed: false };
   pct = Math.min(MAX_DISCOUNT_PCT, Math.max(0, pct || 0));
+  // ⚠⚠ A FIXED PRICE SAVED FROM 2026-09-30 TAKES ITS DISCOUNT AS A LINE (Anthony, Q13), on the one rule
+  // Build Estimate uses (discountOnFixedFee): the fee less the moving materials in it, grossed up by the
+  // premium. The arm below it baked a percentage of the WHOLE fee into `fixedAmount`, so the modal and
+  // Build Estimate disagreed by about $180 on a job with a $1,500 materials package. It stays for a record
+  // saved before, whose fee has no line to carry a discount.
+  if (estFixedLines(est)) {
+    var _fxR = est.rush ? (est.rushPct || RUSH_PCT) : 0;
+    var _fxOrig = estPreDiscountTotal(est);
+    var _fxD = discountOnFixedFee(estFixedFee(est), est.pkgCost, _fxR, pct);
+    return { original: _fxOrig, discount: _fxD, revised: _fxOrig - _fxD, fixed: true, lines: true,
+             basis: 'Discount on ' + fixedDiscountBasisWords(est.pkgCost, _fxR) };
+  }
   if (est.fixedPrice) {
     var baseFixed = Math.round(est.fixedAmount || est.havellinTotal || 0);
     var dFixed = Math.round(baseFixed * pct / 100);
@@ -11893,10 +12182,10 @@ function applyDiscountRevision() {
   // Same helper the modal previews with, so what the manager saw is what gets applied.
   var p = discountPreview(currentEstimate, pct);
   if (pct === 0) {
-    // A fixed fee carries its discount INSIDE the fee (see discountPreview) — the pre-discount fee
-    // is not kept, so there is nothing separate to take off, and "removing" it here would re-submit
-    // an unchanged price for approval.
-    if (p.fixed) { _discountModalSays('A fixed fee carries any discount inside the fee itself, so there is nothing separate to remove \u2014 change the fee on Build Estimate.'); return; }
+    // A fixed fee saved before 2026-09-30 carries its discount INSIDE the fee (see discountPreview) —
+    // the pre-discount fee is not kept, so there is nothing separate to take off, and "removing" it here
+    // would re-submit an unchanged price for approval. One saved since has it as a line, removable.
+    if (p.fixed && !p.lines) { _discountModalSays('A fixed fee carries any discount inside the fee itself, so there is nothing separate to remove \u2014 change the fee on Build Estimate.'); return; }
     if (!((currentEstimate.discountPct || 0) > 0)) { _discountModalSays('This estimate has no discount to remove.'); return; }
   }
   var baseTotal = p.original;
@@ -11904,12 +12193,17 @@ function applyDiscountRevision() {
   var newHavellinTotal = p.revised;
   // Store previous approved total for the re-approval banner
   currentEstimate.prevApprovedTotal = currentEstimate.havellinTotal;
-  if (p.fixed) {
+  if (p.fixed && !p.lines) {
     // Baked into the flat fee — see discountPreview. discountPct stays 0 so a later
     // recompute can't apply it a second time on top of the reduced fee.
     currentEstimate.fixedAmount = newHavellinTotal;
     currentEstimate.discountPct = 0;
     currentEstimate.discountAmt = 0;
+  } else if (p.lines) {
+    // A line on the fee (estFixedLines): the fee stays the price of the scope and the discount rides
+    // beside it, so the estimate, the agreement and the invoices each print it.
+    currentEstimate.discountPct = pct;
+    currentEstimate.discountAmt = newDiscountAmt;
   } else {
     currentEstimate.discountPct = pct;
     currentEstimate.discountAmt = newDiscountAmt;
@@ -11928,7 +12222,7 @@ function applyDiscountRevision() {
   // fixedAmount. Writing the revised flat fee straight into havellinTotal would drop the 30% off
   // the job the moment a manager offered a discount on the labour.
   currentEstimate.havellinTotal = newHavellinTotal
-    + ((p.fixed && estPrepFeeOnTop(currentEstimate)) ? Math.round(currentEstimate.prepFee || 0) : 0);
+    + ((p.fixed && !p.lines && estPrepFeeOnTop(currentEstimate)) ? Math.round(currentEstimate.prepFee || 0) : 0);
   // Recalculate grandTotal (havellinTotal + non-labor costs unchanged)
   var nonLabor = (currentEstimate.grandTotal || 0) - ((currentEstimate.prevApprovedTotal || 0));
   currentEstimate.grandTotal = currentEstimate.havellinTotal + nonLabor;
@@ -12491,7 +12785,9 @@ function renderJobs() {
   filtered.forEach(function(j) {
     var parts = j.tc ? j.tc.split(' ') : [];
     var init = parts.length>=2 ? parts[0][0]+parts[parts.length-1][0] : (j.tc?j.tc.slice(0,2):'—');
-    var havCell = j.havellinEst ? fmt(j.havellinEst)+' '+(j.inRange?'<span class="badge b-ok">✓</span>':'<span class="badge b-warn">!</span>') : '<span style="color:var(--gray)">Pending</span>';
+    // The ✓ / ! beside the figure read `job.inRange`, the retired band table's verdict (audit M11); a figure
+    // flagged "!" for sitting outside a table that did not describe the house was an invitation to re-score.
+    var havCell = j.havellinEst ? fmt(j.havellinEst) : '<span style="color:var(--gray)">Pending</span>';
     var totCell = j.totalEst ? fmt(j.totalEst) : '—';
     var reCell = j.re==='yes'?'<span class="badge b-bronze" title="RE Transaction Potential" style="font-size:13px;">★</span>':(j.re==='no'?'—':'<span style="color:var(--gray)">?</span>');
     var prio = j.priority&&j.priority!=='normal'&&pbadge[j.priority]?pbadge[j.priority]:'';
@@ -12633,7 +12929,7 @@ function editEstimateForJob(jobId) {
       var _when = function(ms){ return ms ? new Date(ms).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}) : 'never'; };
       showFB('e-fb','warn','Showing this device’s copy — it is newer than the cloud. Saved here ' + _when(_cb.localAt)
         + '; the sheet last has ' + _when(_cb.cloudAt) + '. A previous save did not reach the cloud. '
-        + 'Hit Save & Preview again, and if it fails a second time tell Anthony before building on it.');
+        + 'Press Save Estimate again, and if it fails a second time tell Anthony before building on it.');
       window._estCloudBehind = null;
     }
     // Reset approval unless already approved
@@ -12737,7 +13033,15 @@ function restoreEstimateToUI(est) {
   var _legacyPrepInside = !!(est.fixedPrice && !est.prepFeeOnTop && (est.prepFee || 0) > 0);
   var _restoredFlat = est.fixedPrice ? Math.round(est.fixedAmount || est.havellinTotal || 0) : 0;
   _fixedPrepMovedOut = _legacyPrepInside ? Math.min(_restoredFlat, Math.round(est.prepFee)) : 0;
-  if (fxAmtEl) _fxAmtSet(_restoredFlat - _fixedPrepMovedOut);
+  // ⚠⚠ AND A FIXED FEE SAVED BEFORE 2026-09-30 HAS ITS PREMIUM AND DISCOUNT INSIDE IT — see
+  // _fixedLinesRestated. The fee is restated to the one that charges the same total once both are lines.
+  var _flatNow = _restoredFlat - _fixedPrepMovedOut;
+  var _legacyLines = !!(est.fixedPrice && !est.fixedLines && (est.rush || (est.discountPct || 0) > 0));
+  var _feeNow = _legacyLines
+    ? fixedFeeForCharge(_flatNow, est.pkgCost, est.rush ? (est.rushPct || RUSH_PCT) : 0, est.discountPct || 0)
+    : _flatNow;
+  _fixedLinesRestated = (_legacyLines && _feeNow !== _flatNow) ? { was: _flatNow, fee: _feeNow } : null;
+  if (fxAmtEl) _fxAmtSet(_feeNow);
   if (fxRow) fxRow.style.display = est.fixedPrice ? 'flex' : 'none';
   // A saved flat fee is a price that was agreed, not a prefill — hold it, and let the
   // drift warning say so if the suggestion has moved since it was set. A record from before
@@ -12745,7 +13049,7 @@ function restoreEstimateToUI(est) {
   // prep fee was just moved out: its suggestion was taken with the fee inside, so the current
   // one differs by construction and the warning would report a move the rooms never made.
   _fixedAmountUserSet = !!est.fixedPrice;
-  _fixedAmountBasis = (est.fixedPrice && !_legacyPrepInside) ? Math.round(est.fixedSuggested || 0) : 0;
+  _fixedAmountBasis = (est.fixedPrice && !_legacyPrepInside && !_legacyLines) ? Math.round(est.fixedSuggested || 0) : 0;
 
   // Restore the hours-affecting adjustment toggles from the saved estimate. Without
   // this, the recompute on open drops the +15% difficult-access / +20% multiple-heirs
@@ -12932,8 +13236,10 @@ function restoreEstimateToUI(est) {
   vehiclesData = est.vehicles ? JSON.parse(JSON.stringify(est.vehicles)) : [];
   renderVehicles();
 
-  // Restore vendors
+  // Restore vendors. A line saved before its hours were pinned is pinned now (pinVendorLineHours), from the
+  // directory if it has landed and otherwise from the total the record was saved with.
   vendors = est.vendors ? JSON.parse(JSON.stringify(est.vendors)) : [];
+  pinVendorLineHours(vendors, est.vendorTCHrs);
   renderVendors();
 
   // Restore home prep. est.prepEnabled is not read back — the lines decide. One migration
@@ -13209,15 +13515,16 @@ function coCardActions(co) {
 // on an hourly job the hours are logged, `finalRushAmt` is levied on the gross labour those hours are
 // in, and `discountOnLabor` comes off it — every logged hour alike, a change order's included; on a
 // fixed price the change order's price (`coCharge`) is added AFTER both, at the estimate's rate card,
-// and `_rushRate` is 0 there because the premium already sits inside the flat fee.
+// and the premium is a line on the fee alone (estFixedLines, from 2026-09-30) or, on an older fee, inside it.
 // ⚠ IT NAMES ONLY WHAT THE JOB CARRIES, and on a job with neither it returns '' — the standing
 // client-copy rule: a line explaining something that is not there costs rather than earns, and "these
 // hours carry the job's premium and discount" on a job with neither is about nothing. On an hourly job
 // it states the percentages, off the estimate the client was quoted — the same figures its invoice
-// itemises. On a fixed price it names them without figures: the fixed-price estimate never itemises
-// the premium or the discount (the flat fee is presented as one number), and this page must not be
-// the first to. ⚠ A discount offered on a fixed fee after approval is baked into `fixedAmount` and
-// leaves `discountPct` at 0 (applyDiscountRevision); `prevApprovedTotal` is the one trace it leaves.
+// itemises. On a fixed price it names them without figures: a fee saved before 2026-09-30 carries them
+// inside it and its estimate never itemised them, so this page must not be the first to; a fee saved
+// since prints them as lines on it (estFixedLines), hence "on" rather than "in". ⚠ On such an older
+// fee a discount offered after approval is baked into `fixedAmount` and leaves `discountPct` at 0
+// (applyDiscountRevision); `prevApprovedTotal` is the one trace it leaves.
 // ⚠ HOME PREP DROPS "LIKE EVERY OTHER HOUR". A prep job signed with vendors only has no other hours —
 // the reason the prep page carries its own terms (see printChangeOrder) — so that clause would be the
 // same false sentence one line lower. The rule about the hours is unchanged: the invoice discounts
@@ -13231,10 +13538,13 @@ function coRateModsLine(est, fixed, prep) {
   if (fixed) {
     var discF = disc > 0 || !!est.prevApprovedTotal;
     if (!rush && !discF) return '';
+    // "on" the fee where the estimate itemises them as lines on it (estFixedLines, from 2026-09-30), "in" it
+    // where an older flat fee carries them inside.
+    var _in = estFixedLines(est) ? 'on' : 'in';
     return 'It is priced at the plain hourly rates shown: ' +
-      (rush && discF ? 'the expedited-delivery premium and the preferred-client discount in your fixed project fee do'
-        : rush ? 'the expedited-delivery premium in your fixed project fee does'
-        : 'the preferred-client discount in your fixed project fee does') + ' not apply to it.';
+      (rush && discF ? 'the expedited-delivery premium and the preferred-client discount ' + _in + ' your fixed project fee do'
+        : rush ? 'the expedited-delivery premium ' + _in + ' your fixed project fee does'
+        : 'the preferred-client discount ' + _in + ' your fixed project fee does') + ' not apply to it.';
   }
   var parts = [];
   if (rush) parts.push('the ' + rush + '% expedited-delivery premium');
@@ -21277,7 +21587,8 @@ function gmailResolveUser(token, cb) {
 // Email-safe money/escape helpers. Kept local so this block has no dependency on the
 // document renderers.
 function _emHtml(x) { return esc(String(x == null ? '' : x)); }
-function _emMoney(n) { return '$' + Math.round(n || 0).toLocaleString(); }
+// A credit prints as "−$500", never "$-500" (a fixed-price discount is a negative line, estimateHavellinLines).
+function _emMoney(n) { var r = Math.round(n || 0); return (r < 0 ? '\u2212$' : '$') + Math.abs(r).toLocaleString(); }
 
 // Brand tokens, resolved to literals. var(--bronze) does not survive an email client.
 var EMAIL_BRAND = { bronze:'#A67C45', bronzeLt:'#C9A06A', bronzeDk:'#7a5a2e', cream:'#FEF5E7',
@@ -21293,6 +21604,12 @@ function estimateHavellinLines(e, feeOnly) {
     var out = [['Fixed Project Fee', estFixedFee(e)]];
     if (estPrepFeeOnTop(e) && (e.prepFee || 0) > 0)
       out.push(['Home Prep Site Management Fee (' + Math.round(prepFeeRate() * 100) + '%)', Math.round(e.prepFee)]);
+    // The premium and the discount the estimate itemises on the fee (a record saved from 2026-09-30), so the
+    // email's lines add up to the total it states. The discount is a negative amount (_emMoney signs it).
+    if (estFixedLines(e) && (e.rushAmt || 0) > 0)
+      out.push(['Expedited Delivery (' + Math.round((e.rushPct || RUSH_PCT) * 100) + '%)', Math.round(e.rushAmt)]);
+    if (estFixedLines(e) && (e.discountPct || 0) > 0 && (e.discountAmt || 0) > 0)
+      out.push(['Preferred Client Discount (' + e.discountPct + '%)', -Math.round(e.discountAmt)]);
     return out;
   }
   return [[feeOnly ? 'Havellin Management Fee' : 'Havellin Services', (e && e.havellinTotal) || 0]];
@@ -21488,7 +21805,7 @@ function buildEstimateMailto(e, job) {
   var to = encodeURIComponent(bestClientEmail(job));
   var tc = assignedTCContact(job);
   var subject = encodeURIComponent('Havellin Palm Beach - Service Estimate for ' + (job.name||'Your Property'));
-  var money = function(n){ return '$' + Math.round(n||0).toLocaleString(); };
+  var money = _emMoney;
   // Mirror the estimate document's "Total Estimated Project Cost" breakdown so
   // the email reflects ALL projected costs — Havellin services plus pass-through
   // third-party and home-prep vendor estimates — not just the Havellin fee.
@@ -30728,7 +31045,9 @@ function invoiceHtml(job, stage) {
   // lines below until the base changed. The RATE is pinned to the saved estimate the way
   // α is, so moving RUSH_PCT can never reprice a live job; fixed price carries the premium
   // inside the flat fee already, hence the guard.
-  var _rushRate = (!_fixedBasis && est && est.rush) ? (est.rushPct || RUSH_PCT) : 0;
+  // ⚠ A FIXED PRICE SAVED FROM 2026-09-30 CARRIES ITS PREMIUM AS A LINE ON THE FEE (estFixedLines), so the
+  // rate applies there too; an older fixed price has it inside the fee and must not be charged it again.
+  var _rushRate = (est && est.rush && (!_fixedBasis || estFixedLines(est))) ? (est.rushPct || RUSH_PCT) : 0;
   function _netLabor(g){ return g - discountOnLabor(g, _rushRate, discountPct); }
   var materials  = pkgCost;
   var estLaborNet = _netLabor(est ? ((est.tcFee||0)+(est.psFee||0)) : (tcFee + psFee));
@@ -30772,6 +31091,12 @@ function invoiceHtml(job, stage) {
   // adding the fee to it would bill the client twice for the same work.
   var _fixedTotal = _fixed ? estFixedFee(est) : 0;
   var _fixedPrepOnTop = _fixed && estPrepFeeOnTop(est);
+  // ⚠⚠ THE PREMIUM AND THE DISCOUNT ON A FIXED FEE, as the estimate the client accepted itemised them
+  // (estimateFigures; Anthony on Q9 and Q13). Only on a record saved from 2026-09-30: an older flat fee
+  // carries both inside it, and adding either here would charge or credit it twice.
+  var _fixedLines = _fixed && estFixedLines(est);
+  var _fixedRush = _fixedLines ? Math.round(_fixedTotal * _rushRate) : 0;
+  var _fixedDisc = _fixedLines ? discountOnFixedFee(_fixedTotal, pkgCost, _rushRate, discountPct) : 0;
 
   // An hourly final bills labor at the logged hours and nothing else. With no hours
   // logged that resolves to $0 labor, so the "actual" total lands BELOW the deposit +
@@ -30821,18 +31146,21 @@ function invoiceHtml(job, stage) {
   // the premium is computed BEFORE coTotal is added rather than levied on top of it.
   // (_rushRate is resolved at the top of this function, above the discount — see the note
   // there for why it cannot be declared here any more.)
-  var _midServices   = _fixed ? _fixedTotal + (_fixedPrepOnTop ? prepFee : 0) : (estLaborNet + materials + smf + prepFee);
-  var _finalServices = _fixed ? _fixedTotal + (_fixedPrepOnTop ? prepFee : 0) : (actLaborNet + materials + smf + prepFee);
+  var _midServices   = _fixed ? _fixedTotal - _fixedDisc + (_fixedPrepOnTop ? prepFee : 0) : (estLaborNet + materials + smf + prepFee);
+  var _finalServices = _fixed ? _fixedTotal - _fixedDisc + (_fixedPrepOnTop ? prepFee : 0) : (actLaborNet + materials + smf + prepFee);
   // ⚠ THE PREMIUM IS LEVIED ON THE GROSS SERVICES AND THE DISCOUNT COMES OFF AFTERWARDS,
   // matching calcAll — see the ordering note there. Charging it on the NET figure, which is
   // what these two lines used to do, makes a preferred-client discount quietly reduce the
   // expedited-delivery charge as well as the fee.
-  var _midGross      = _fixed ? _fixedTotal : ((est ? ((est.tcFee || 0) + (est.psFee || 0)) : (tcFee + psFee)) + materials + smf + prepFee);
-  var _finalGross    = _fixed ? _fixedTotal : (tcFee + psFee + materials + smf + prepFee);
+  // ⚠ AND NEVER ON THE 30% PREP FEE, on a record saved from 2026-09-30 (Anthony, Q9: rush speeds up our
+  // crew, not the painter). An older hourly quote charged the premium on it and is billed as it was quoted.
+  var _rushPrepFee   = (est && est.rushExPrepFee) ? 0 : 1;
+  var _midGross      = _fixed ? _fixedTotal : ((est ? ((est.tcFee || 0) + (est.psFee || 0)) : (tcFee + psFee)) + materials + smf + prepFee * _rushPrepFee);
+  var _finalGross    = _fixed ? _fixedTotal : (tcFee + psFee + materials + smf + prepFee * _rushPrepFee);
   var midRushAmt     = Math.round(_midGross * _rushRate);
   var finalRushAmt   = Math.round(_finalGross * _rushRate);
 
-  var totalDepositBasis = _fixed ? _fixedTotal + (_fixedPrepOnTop ? prepFeeEst : 0)
+  var totalDepositBasis = _fixed ? _fixedTotal + _fixedRush - _fixedDisc + (_fixedPrepOnTop ? prepFeeEst : 0)
                         : ((est && est.havellinTotal) ? est.havellinTotal
                           : (estLaborNet + materials + smfEst + prepFeeEst + ((est && est.rushAmt) || 0)));
   var totalMidBasis     = _midServices + midRushAmt;
@@ -31082,7 +31410,7 @@ function invoiceHtml(job, stage) {
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (' + Math.round(SMF_PCT*100) + '% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
-    (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
+    (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%' + ((!_rushPrepFee && prepFee > 0) ? ' ' + rushBaseWords(false, prepFee) : '') + ')</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor' + (_rushRate > 0 ? ' and the expedited-delivery premium charged on it' : '') + ')</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
@@ -31159,7 +31487,7 @@ function invoiceHtml(job, stage) {
     (materials > 0 ? '<tr><td>Moving materials — ' + pkgLabel + '</td><td style="text-align:right;">' + fmt(materials) + '</td></tr>' : '') +
     (advSmf > 0 ? '<tr><td>Service Management Fee (' + Math.round(SMF_PCT*100) + '% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
     (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
-    (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
+    (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%' + ((!_rushPrepFee && advPrep > 0) ? ' ' + rushBaseWords(false, advPrep) : '') + ')</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
     '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">' + (stage === 'midpoint'
@@ -31206,12 +31534,19 @@ function invoiceHtml(job, stage) {
     var _fxPrepLbl = 'Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)';
     var _fxPrepFinal = (_fixedPrepOnTop && prepFee > 0)
       ? '<tr><td>' + _fxPrepLbl + (act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '';
+    // The premium and the discount, as the accepted estimate itemised them (a record saved from 2026-09-30;
+    // an older fee carries both inside it and shows neither). Under the prep fee, as the estimate prints them.
+    var _fxLineRows = (_fixedRush > 0
+        ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(_fixedRush) + '</td></tr>' : '')
+      + (_fixedDisc > 0
+        ? '<tr style="color:var(--ok-tx);"><td>Preferred Client Discount (' + discountPct + '% on ' + fixedDiscountBasisWords(pkgCost, _rushRate) + ')</td><td style="text-align:right;font-weight:700;">− ' + fmt(_fixedDisc) + '</td></tr>' : '');
     finalServices =
       '<div class="ce-section-hdr">Havellin Services — Fixed Price</div>' +
       '<table class="ce-tbl"><tbody>' +
       '<tr><td>Fixed project fee — full scope of work per agreement</td><td style="text-align:right;font-weight:600;">' + fmt(_fixedTotal) + '</td></tr>' +
       _fxPrepFinal +
-      '<tr class="subtotal"><td>Havellin Services Total</td><td style="text-align:right;">' + fmt(_finalServices) + '</td></tr>' +
+      _fxLineRows +
+      '<tr class="subtotal"><td>Havellin Services Total</td><td style="text-align:right;">' + fmt(_finalServices + finalRushAmt) + '</td></tr>' +
       '</table>' +
       '<div class="ce-note">This engagement is billed at the agreed fixed price; charges do not vary with the hours worked.'
       + (_fxPrepFinal ? ' The home prep site management fee is not part of the fixed price and is charged on what the prep vendors actually billed.' : '') + '</div>';
@@ -31219,6 +31554,8 @@ function invoiceHtml(job, stage) {
       '<table class="pay-tbl">' +
       '<tr style="background:var(--tan);"><td colspan="2"><strong>Fixed Project Fee</strong></td><td class="r"><strong>' + fmt(_fixedTotal) + '</strong></td></tr>' +
       (_fxPrepFinal ? '<tr><td colspan="2">Home prep site management fee — on the prep vendors\' actual invoices</td><td class="r">' + fmt(prepFee) + '</td></tr>' : '') +
+      (_fixedRush > 0 ? '<tr><td colspan="2">Expedited delivery (' + Math.round(_rushRate * 100) + '% of the fixed project fee)</td><td class="r">+' + fmt(_fixedRush) + '</td></tr>' : '') +
+      (_fixedDisc > 0 ? '<tr><td colspan="2">Preferred client discount (' + discountPct + '%)</td><td class="r">(' + fmt(_fixedDisc) + ')</td></tr>' : '') +
       _coPayRow +
       '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFeeEst > 0 ? 'Fixed price + prep fee on quotes' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
       '<tr><td>' + (_midBilled ? '25% ' + _mw.noun + ' — invoiced ' + _mw.due : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + prep fee on actuals' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
@@ -31236,6 +31573,7 @@ function invoiceHtml(job, stage) {
       '<table class="ce-tbl"><tbody>' +
       '<tr><td>Fixed project fee — full scope of work per agreement</td><td style="text-align:right;">' + fmt(_fixedTotal) + '</td></tr>' +
       _fxPrepAdv +
+      _fxLineRows +
       '<tr class="subtotal"><td>Havellin Services Total</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
       '</table>' +
       '<div class="ce-note">This engagement is billed at the agreed fixed price.'
@@ -33321,7 +33659,7 @@ function renderVendorSourcing(jobId, job, est) {
           '<span style="font-size:12px;color:var(--gray);">Quote $</span>' +
           '<input type="number" value="' + esc(String(quote)) + '" min="0" onchange="setJobVendorQuote(' + jobId + ',' + i + ',this.value)" style="width:90px;font-size:12px;' + (over?'color:var(--err-tx);font-weight:600;':'') + _fldBg(quote !== '') + '">' +
           (over ? '<span style="font-size:10px;color:var(--err-tx);">over budget</span>' : '') +
-          _coordHrsField('setJobVendorCoordHrs(' + jobId + ',' + i + ',this.value)', coordHrsFor(v.type, 'vendor'), rec, _noCoord) +
+          _coordHrsField('setJobVendorCoordHrs(' + jobId + ',' + i + ',this.value)', vendorLineHrs(v), rec, _noCoord) +
         '</div>' + _vendorRefLine(rec) +
       '</div>';
     }).join('');
@@ -33654,7 +33992,7 @@ function coordHrsRollup(job, est) {
   // estimate never priced — inflating "estimated" with hours nobody ever quoted.
   var estTot = (est.vendorTCHrs != null || est.prepTCHrs != null)
     ? (Number(est.vendorTCHrs || 0) + Number(est.prepTCHrs || 0))
-    : ((est.vendors || []).reduce(function(a, v){ return a + coordHrsFor(v.type, 'vendor'); }, 0) +
+    : ((est.vendors || []).reduce(function(a, v){ return a + vendorLineHrs(v); }, 0) +
        ((est.prepEnabled && est.prepItems) ? est.prepItems : []).reduce(function(a, p){ return a + coordHrsFor(p.type, 'prep'); }, 0));
   estTot = Math.round(estTot * 10) / 10;
   // Recorded side sweeps everything, INCLUDING logistics slots. A hauler booked mid-job is
@@ -37535,23 +37873,33 @@ function _pctWords(rate) {
 // neither agreement's fee clause mentioned either: a signed contract silent on two lines of the
 // exhibit it incorporates by reference. One sentence each, and only when the estimate carries one.
 //
-// ⚠ HOURLY ENGAGEMENTS ONLY. On a fixed fee both are inside the figure the fixed-fee clause already
-// states — the estimate prints neither row there (clientEstimateHtml) and invoiceHtml charges no
-// premium on top of a flat fee — so naming them would describe a charge that does not exist. The
-// rates are read off the saved estimate (rushPct is pinned the way α is), never off RUSH_PCT alone.
+// ⚠ ON A FIXED FEE, ONLY WHERE THE ESTIMATE ITEMISES THEM (a record saved from 2026-09-30, estFixedLines;
+// Anthony on Q9 and Q13). There the fee is the price of the scope and the premium and the discount are
+// lines on it, so the fixed-fee clause names both. On an older fixed fee both are inside the figure the
+// clause already states, and naming them would describe a charge that does not exist. The rates are read
+// off the saved estimate (rushPct is pinned the way α is), never off RUSH_PCT alone.
+// ⚠ AND THE PREMIUM IS NOT CHARGED ON THE HOME SALE PREPARATION FEE on a record saved from 2026-09-30 (Q9),
+// so the hourly sentence says so where the engagement carries that fee.
 // `party` is how the form names Havellin: "Contractor" on the standard form, "Havellin" on the
 // estate form. DRAFTED, NOT REVIEWED — in COUNSEL_REVIEW_BUNDLE.md.
 function agrPriceAdjustments(est, party) {
-  if (!est || est.fixedPrice) return '';
+  if (!est || (est.fixedPrice && !estFixedLines(est))) return '';
+  var fixed = !!est.fixedPrice;
   var out = [];
+  var rate = est.rushPct || RUSH_PCT;
   var rush = !!(est.rush && (est.rushAmt || 0) > 0);
+  var exPrep = !!(est.rushExPrepFee && (est.prepFee || 0) > 0);
   if (rush)
     out.push('At Client\u2019s request this engagement is scheduled on a priority basis, for which an expedited-delivery premium of '
-      + _pctWords(est.rushPct || RUSH_PCT) + ' of ' + party + '\u2019s fees is charged, as itemized on the Estimate and applied to the fees actually billed.');
+      + _pctWords(rate) + (fixed
+        ? ' of the fixed price is charged in addition to it, as itemized on the Estimate.'
+        : ' of ' + party + '\u2019s fees' + (exPrep ? ', other than the Home Sale Preparation Fee,' : '') + ' is charged, as itemized on the Estimate and applied to the fees actually billed.'));
   if ((est.discountPct || 0) > 0 && (est.discountAmt || 0) > 0)
-    out.push('A preferred-client discount of ' + _pctWords(est.discountPct / 100) + ' applies to ' + party + '\u2019s labor fees'
-      + (rush ? ' and to the expedited-delivery premium charged on them' : '')
-      + ', as itemized on the Estimate and applied to the labor fees actually billed.');
+    out.push('A preferred-client discount of ' + _pctWords(est.discountPct / 100) + (fixed
+      ? ' applies to ' + fixedDiscountBasisWords(est.pkgCost, rush ? rate : 0) + ', as itemized on the Estimate.'
+      : ' applies to ' + party + '\u2019s labor fees'
+        + (rush ? ' and to the expedited-delivery premium charged on them' : '')
+        + ', as itemized on the Estimate and applied to the labor fees actually billed.'));
   return out.join('  ');
 }
 
@@ -37939,7 +38287,9 @@ function probateAgreementHtml(job, est) {
   if (!isFixedAgr && agrPriceAdjustments(est, 'Havellin')) content += pp(agrPriceAdjustments(est, 'Havellin'));
   if (isFixedAgr) {
     content += pp(bb('Fixed Project Fee.')+'  Notwithstanding the hourly rates above, the Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of $'+_agrFlat.toLocaleString())+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates above apply only to Change-Order work authorized beyond that scope.'
-      + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of what the home sale preparation vendors identified in Exhibit A actually invoice (estimated in Exhibit A at $'+_agrPrepEst.toLocaleString()+').' : ''));
+      + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of what the home sale preparation vendors identified in Exhibit A actually invoice (estimated in Exhibit A at $'+_agrPrepEst.toLocaleString()+').' : '')
+      // The premium and the discount Exhibit A itemises on the fee (a record saved from 2026-09-30).
+      + (agrPriceAdjustments(est, 'Havellin') ? '  ' + agrPriceAdjustments(est, 'Havellin') : ''));
   }
   content += subHdr('3.2 Project Estimate');
   content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and third-party vendor costs based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
@@ -38591,7 +38941,8 @@ function agreementHtml(job, est) {
         : p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the management fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Hands-on work Client asks for after signing, such as decluttering, is billed only if Client signs a Change Order under Section 3.8 stating the Transition Concierge hours; those hours are then billed as worked at Contractor\'s Transition Concierge rate of '+b('$'+tcRate+'/hour')+', in addition to the management fee. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'))
       : isFixedAgr
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b('$'+_agrFlat.toLocaleString())+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.'
-          + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in Section 3.5, which covers the coordination and site supervision of the home sale preparation vendors, is not part of the fixed project fee and is charged in addition to it.' : ''))
+          + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in Section 3.5, which covers the coordination and site supervision of the home sale preparation vendors, is not part of the fixed project fee and is charged in addition to it.' : '')
+          + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : ''))
       : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'
           + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : '')))+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
@@ -40306,7 +40657,7 @@ function saveClientEdit(jobId) {
     // reason only one of them is here. destSqft sizes move day directly (destTC = 8 + sqft*0.002,
     // destPS = sqft*0.009 in computeEngineV3), so moving it after approval desynchronises the job
     // from a number the client accepted — the same failure sqft is held for. propVal books no
-    // hours anywhere: propValMultiplier scales the internal reference band and nothing else.
+    // hours anywhere, and since 2026-09-30 it no longer scales the reference band either (audit M11).
     if (String((document.getElementById('ec-dest-sqft')||{}).value || '') !== String(job.destSqft || '')) _changed.push('New home sq ft');
     if ((document.getElementById('ec-premium').value === 'yes') !== !!job.premium) _changed.push('Premium service');
     // Tenure scales the concierge column, so years in home prices the job like the sq ft does (M13).

@@ -55,7 +55,7 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 // Lifted, never stubbed: _coJobBasis reads its rates through the agreements' one definition.
                 'agrBillingRates',
                 // The printed change order's rush / discount line (Q14, 2026-09-29), lifted, never stubbed.
-                'coRateModsLine'];
+                'coRateModsLine', 'estFixedLines'];
 
 function coCtx(est, cos, seed) {
   const dom = domStub(seed || {});
@@ -88,7 +88,7 @@ function inv(stubs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',

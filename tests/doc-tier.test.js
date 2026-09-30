@@ -15,7 +15,7 @@ const { sandbox, domStub, source } = require('./harness');
 // The engine lists, lifted verbatim from tests/doc-scope.test.js — the point of this group
 // is that the tier changes NO pricing, so it has to drive the same engine that suite does.
 const ENGINE_FNS = ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'svcHasDocStep',
-  'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault'];
+  'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor'];
 const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
   'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
   'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS'];

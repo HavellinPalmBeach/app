@@ -46,10 +46,10 @@ const FNS = [
   'invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
   'coHoursLabel', '_coMoney', 'getVendorActuals', '_srcLineKey', '_invVendorFeeSentence', 'vendorGroupOfLine',
   'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'vendorCats', 'vendorPrimaryCat',
-  'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor',
+  'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estimateFigures',
   // the invoice emails, all three parts
   'buildInvoiceEmailText', 'buildInvoiceEmailHtml', 'buildInvoiceMailto', 'invoiceBalanceWords', '_emMoney',
-  '_emHtml', 'bestClientGreetingName', 'firstName', 'bestClientEmail', 'mailtoBody', 'mailtoSignoff', 'invoiceEmailSubject', 'clientRecipient'
+  '_emHtml', 'bestClientGreetingName', 'firstName', 'bestClientEmail', 'mailtoBody', 'mailtoSignoff', 'invoiceEmailSubject', 'clientRecipient', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'discountOnFixedFee'
 ];
 const VARS = ['PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
@@ -140,7 +140,7 @@ const rowsMatching = (html, re) => {
   return out;
 };
 
-module.exports = function ({ group, ok, eq }) {
+module.exports = function ({ group, ok, eq, has }) {
   const ctx = sandbox({ fns: FNS, vars: VARS, stubs: {
     jobs: [], jobLogs: {}, estimateStore: {}, changeOrders: [], contractors: [], currentEstimate: null,
     currentInvStage: 'final', vendorDirectory: [], jobPlans: {}, _photoRefs: {}, document: domStub({}) } });
@@ -167,6 +167,19 @@ module.exports = function ({ group, ok, eq }) {
     const vendors = o.vendors || [];
     const vendorCost = vendors.reduce((a, v) => a + (v.cost || 0), 0);
     const fixed = !isPrep && !!o.fixedAmount;
+    // ⚠ `o.current`: a record saved under the 2026-09-30 rules (P12), priced by the REAL estimateFigures as
+    // calcAll prices it — the premium and the discount as lines on a fixed fee (fixedLines), and the premium
+    // never on the 30% prep fee (rushExPrepFee). Without it the record is the older shape, which the documents
+    // must go on billing exactly as it was quoted.
+    const fig = o.current ? (fixed
+      ? ctx.estimateFigures({ fixed: true, fee: o.fixedAmount, pkg: pkgCost, prepFee, rushRate: rush ? 0.20 : 0, discountPct })
+      : ctx.estimateFigures({ labour: tcFee + psFee, pkg: pkgCost, smf: 0, prepFee, rushRate: rush ? 0.20 : 0, discountPct })) : null;
+    if (fig) {
+      const svcTotal = fig.servicesTotal;
+      return Object.assign(buildEst(Object.assign({}, o, { current: false })), {
+        fixedLines: true, rushExPrepFee: true, rushAmt: fig.rushAmt, discountAmt: fig.discountAmt, havellinTotal: svcTotal,
+        grandTotal: svcTotal + (isPrep ? 0 : vendorCost) + (prepEnabled ? prepCost : 0) });
+    }
     return {
       jobId: 1, svc: o.svc, totTC, totPS, tcFee, psFee, tcRate, psRate, pkgCost, pkgLabel, smf: 0,
       prepItems, prepEnabled, prepCost, prepFee, prepTCHrs: 0, declutterTCHrs: isPrep ? totTC : 0,
@@ -279,8 +292,11 @@ module.exports = function ({ group, ok, eq }) {
       fail('final original estimate', L(`Original Estimate ${rowAmt(fh, /^Original Estimate/)} ≠ estimate ${e.havellinTotal}`));
     const received = -rowAmt(fh, /^Payments received to date/);
     const balance = rowAmt(fh, /^Balance Due Upon Completion/);
+    // A fixed price saved from 2026-09-30 carries its premium and its discount as payment-summary lines too
+    // (lower-case "delivery" / "client", which the services table above them does not use).
     const billed = e.fixedPrice
       ? (rowAmt(fh, /^Fixed Project Fee/) || 0) + (rowAmt(fh, /^Home prep site management fee/) || 0) + (rowAmt(fh, /^Approved Change Orders/) || 0)
+        + (rowAmt(fh, /^Expedited delivery \(/) || 0) + (rowAmt(fh, /^Preferred client discount/) || 0)
       // A Home Prep final heads the same row "Services total (site management fee on actual vendor spend …)"
       // since 2026-09-30 (audit P14, Anthony's wording); the figure on it is the same one.
       : rowAmt(fh, /^(Actual Havellin services total|Services total \(site management fee)/);
@@ -316,7 +332,7 @@ module.exports = function ({ group, ok, eq }) {
     //    "expanded crew" unless it staffs more specialists than recommended. The rush line is the
     //    only place either can appear, so on a rush job that staffs them the estimate MUST say so.
     const c = ctx.rushCrewAdded(e);
-    const rushPrinted = !e.fixedPrice && e.rushAmt > 0;
+    const rushPrinted = (!e.fixedPrice || e.fixedLines) && e.rushAmt > 0;
     seen('crew claims match the estimate');
     Object.keys(docs).forEach((k) => {
       const t = text(docs[k]);
@@ -333,8 +349,10 @@ module.exports = function ({ group, ok, eq }) {
     const at = text(docs.agreement);
     const namesRush = /expedited-delivery premium of twenty percent \(20%\)/.test(at);
     const namesDisc = /preferred-client discount of/.test(at);
-    const wantRush = !e.fixedPrice && e.rush && e.rushAmt > 0;
-    const wantDisc = !e.fixedPrice && e.discountPct > 0 && e.discountAmt > 0;
+    // On a fixed price saved from 2026-09-30 both are lines on the fee, and the fixed-fee clause names them.
+    const lines = !e.fixedPrice || !!e.fixedLines;
+    const wantRush = lines && e.rush && e.rushAmt > 0;
+    const wantDisc = lines && e.discountPct > 0 && e.discountAmt > 0;
     seen('agreement names the price adjustments');
     if (namesRush !== wantRush) fail('agreement names the price adjustments', L(`rush named ${namesRush}, priced ${wantRush}`));
     if (namesDisc !== wantDisc) fail('agreement names the price adjustments', L(`discount named ${namesDisc}, priced ${wantDisc}`));
@@ -372,6 +390,44 @@ module.exports = function ({ group, ok, eq }) {
       checkScenario(`bundled prep ${fixed ? 'fixed' : 'T&M'} rush=${rush} disc=${disc} prep=${pc}`, e, JOB('downsizing_move'),
         logsFor({ tcHrs: [40], psHrs: [15, 15] }), [], { asQuoted: true });
     }))));
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠⚠ the 2026-09-30 rules (P12) — a fixed fee itemises its premium and discount, and the premium leaves the prep fee out');
+  {
+    // Anthony, Q9 and Q13: on a fixed price the premium prints under the fee as its own line and the discount
+    // as its own line; on both bases the premium is never charged on the 30% prep fee. Every document must
+    // still add up and bill the schedule the client signed — the same rules, on records priced the new way.
+    const before = scenarios;
+    ['downsizing', 'cleanout'].forEach((svc) => [false, true].forEach((fixed) => [false, true].forEach((rush) =>
+      [0, 5, 15].forEach((disc) => [false, true].forEach((premium) => [0, 1, 2, 3].forEach((k) => {
+        const totTC = 80 + k / 10;
+        const e = buildEst({ current: true, svc, totTC, totPS: 60, pkgCost: k % 2 ? 750 : 0, rush, discountPct: disc, premium,
+          fixedAmount: fixed ? 24000 + k : 0, vendors: k === 2 ? [{ type: 'Junk Removal', name: 'Junk Kings', cost: 1200 }] : [] });
+        checkScenario(`P12 ${svc} ${fixed ? 'fixed' : 'T&M'} rush=${rush} disc=${disc} premium=${premium} k=${k}`, e, JOB(svc, { premium }),
+          logsFor({ tcHrs: [totTC], psHrs: [30, 30] }), [], { asQuoted: true });
+      }))))));
+    [false, true].forEach((fixed) => [false, true].forEach((rush) => [0, 10].forEach((disc) => [8000, 8001, 8003].forEach((pc) => {
+      const e = buildEst({ current: true, svc: 'downsizing_move', totTC: 40, totPS: 30, pkgCost: 500, rush, discountPct: disc,
+        prepItems: [{ type: 'Painting', cost: pc }, { type: 'Cleaning', cost: 1500 }], fixedAmount: fixed ? 18000 : 0 });
+      const r = checkScenario(`P12 bundled prep ${fixed ? 'fixed' : 'T&M'} rush=${rush} disc=${disc} prep=${pc}`, e, JOB('downsizing_move'),
+        logsFor({ tcHrs: [40], psHrs: [15, 15] }), [], { asQuoted: true });
+      if (rush) {
+        const base = fixed ? e.fixedAmount : (e.tcFee + e.psFee + e.pkgCost);
+        eq(e.rushAmt, Math.round(base * 0.20), `P12 bundled prep ${fixed ? 'fixed' : 'T&M'} prep=${pc}: the premium is 20% of ${fixed ? 'the fee' : 'the services'}, never of the prep fee`);
+        eq(rowAmt(r.docs.estimate, /^Expedited Delivery/), e.rushAmt, '…and the estimate prints that premium');
+        // With a prep fee in the table above it, the premium's row names its base — the reader can see a
+        // subtotal it is NOT 20% of.
+        const est1 = (rowsMatching(r.docs.estimate, /^Expedited Delivery/)[0] || {}).label || '';
+        has(est1, fixed ? '20% of the fixed project fee' : '20% of Havellin services, not the home prep fee',
+            `P12 bundled prep ${fixed ? 'fixed' : 'T&M'} prep=${pc}: the estimate's premium row names its base`);
+        if (!fixed) {
+          const fin1 = (rowsMatching(r.docs.final, /^Expedited Delivery/)[0] || {}).label || '';
+          has(fin1, 'not the home prep fee', `P12 bundled prep T&M prep=${pc}: and so does the final invoice's`);
+        }
+      }
+    }))));
+    eq(scenarios - before, 216, 'the P12 matrix ran every one of its 216 scenarios through the fourteen rules');
   }
 
   group('standalone Home Prep — with and without declutter hours, with and without a discount');

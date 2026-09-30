@@ -33,7 +33,7 @@ const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'est
   '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason',
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
   'agrSection', 'approvedEstimateFor', 'materialsBasisNote', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
-  'weArrangeAppraisals', 'docTierProduces'];
+  'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords'];
 const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT',
   'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
   'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE',
@@ -87,10 +87,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const e = sandbox({
       fns: ['computeEngineV3', 'effectiveJobSteps', 'engineRoomWeight', 'engineIsExterior',
-            'tenureMultiplier', 'docScopeDef'],
+            'tenureMultiplier', 'docScopeDef', 'engineRelFactor', 'roomDefault'],
       vars: ['JOB_STEPS', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF', 'ENGINE_CAREFUL',
              'ENGINE_ROOMLEVEL', 'ENGINE_FLOOR', 'PERROOM_REF', 'ROOMS', 'EXTERIOR_ROOMS',
-             'ROOM_WEIGHT', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE'] });
+             'ROOM_WEIGHT', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ROOM_DEFAULTS'] });
     const R = (n, v, c) => ({ name: n, vol: v, cplx: c });
     const four = [R('Living Room', 3, 3), R('Primary Bedroom', 3, 3), R('Dining Room', 3, 3), R('Kitchen', 3, 3)];
     const whole = four.concat([R('Family Room', 3, 3), R('Bedroom 2', 3, 3), R('Bedroom 3', 3, 3),
@@ -265,7 +265,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2',
       'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal',
-      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop'];
+      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'];
     const invVars = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',
       'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
       'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES',
@@ -460,8 +460,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // let the discount and the private note leak onto the next client (tests/estimate-reset.test.js).
     const rDoc = domStub({ 'e-declutter-hrs': '5' });
     const rCtx = sandbox({
-      fns: ['resetEstimateJobState'],
-      vars: ['prepItems'],
+      fns: ['resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob'],
+      vars: ['prepItems', 'DECEDENT_SERVICES'],
       stubs: { document: rDoc, renderVendors: () => {}, renderCollections: () => {}, renderVehicles: () => {},
                clearAllRooms: () => {}, paintVolPreset: () => {}, seedDocScopeFromJob: () => 'full' } });
     rCtx.prepItems = [{ type: 'Painting', cost: 5000 }];
@@ -531,13 +531,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ca = fn('calcAll');
     has(ca, 'var prepTCHrs = 0;', 'prepTCHrs — vendor coordination — is still hard zero');
     has(ca, 'var declutterTCHrs = isPrep ? getDeclutterTCHrs() : 0;', 'declutter hours are their own variable');
-    has(ca, 'totTC = isPrep ? declutterTCHrs : _sup.tcHrs;', 'and enter through totTC');
+    // Restated 2026-09-30 (P12): the billed hours come from labourBilled, the chain the reference band shares.
+    has(fn('labourBilled'), 'var tc = k.isPrep ? (k.declutterTCHrs || 0) : sup.tcHrs;', 'and enter through totTC (labourBilled)');
+    has(ca, 'declutterTCHrs: declutterTCHrs', 'calcAll hands them to it');
     // ⚠ NOT folded into coordTC. That line carries off-site vendor coordination, which the 30%
     // fee already pays for; adding hands-on hours to it would bill them as coordination and
     // resurrect the double charge that took SMF_PCT to zero.
     lacks(ca, '+ declutterTCHrs + vendorTCHrs', 'and never join coordTC beside prepTCHrs/vendorTCHrs');
     const src = source();
-    ok(src.indexOf('declutterTCHrs') < src.indexOf('totTC = isPrep ? declutterTCHrs'),
+    ok(ca.indexOf('var declutterTCHrs') >= 0 && ca.indexOf('var declutterTCHrs') < ca.indexOf('declutterTCHrs: declutterTCHrs'),
        'declutterTCHrs is declared before it is read');
   }
 };

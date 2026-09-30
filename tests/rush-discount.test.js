@@ -25,7 +25,7 @@
 // had put a discount on a rush job. That is why this file exists: every case below drives
 // the real arithmetic and asserts what the engagement COLLECTS.
 
-const { sandbox, source, fn } = require('./harness');
+const { sandbox, source, fn, driveCalcAll } = require('./harness');
 
 // ── the estimator's own arithmetic, stated once so the tests read as arithmetic ──────
 const SERVICES = 19940;                        // tcFee 12000 + psFee 6000 + materials 1940
@@ -52,7 +52,7 @@ const EST = {
 };
 const est = (over) => Object.assign({}, EST, over || {});
 
-const DISCOUNT_FNS = ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor'];
+const DISCOUNT_FNS = ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'estFixedLines', 'estFixedFee', 'estPrepFeeOnTop', 'discountOnFixedFee', 'fixedDiscountBasisWords'];
 const DISCOUNT_VARS = ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'];
 
 // ── the real client estimate, so the document a client reads is what is asserted ─────
@@ -66,7 +66,7 @@ const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'ru
                 'estWorkingDays', 'estFixedFee', 'estPrepFeeOnTop',
                 // Who arranges the appraisals is the tier's answer (weArrangeAppraisals). This sandbox
                 // carries no JOB_STEPS, so the scope is never `full` here and the chain is never reached.
-                'weArrangeAppraisals'];
+                'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };
@@ -86,7 +86,7 @@ function invCtx(e, logs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -369,12 +369,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The estimator and the invoice must not each carry their own opinion of the order.
     const calc = noComments(fn('calcAll'));
-    has(calc, 'Math.round(havellinTotal * RUSH_PCT)',
-        'the estimator charges the premium on the full services total');
+    // Restated 2026-09-30 (P12): the estimator's figures come from estimateFigures, one definition for both
+    // bases, and the premium leaves the 30% prep fee out (Q9). Driven rather than read.
+    const F = sandbox({ fns: ['estimateFigures', 'discountOnLabor', 'discountOnFixedFee'], vars: [] });
+    const f0 = F.estimateFigures({ labour: 100000, pkg: 0, smf: 0, prepFee: 0, rushRate: 0.20, discountPct: 10 });
+    eq([f0.rushAmt, f0.discountAmt, f0.servicesTotal], [20000, 12000, 108000],
+       'the estimator charges the premium on the services total, and the discount comes off the result');
+    const f1 = F.estimateFigures({ labour: 100000, pkg: 500, smf: 0, prepFee: 3000, rushRate: 0.20, discountPct: 0 });
+    eq(f1.rushAmt, 20100, '⚠ on the services LESS the prep fee (Q9): 20% of $100,500, not of $103,500');
     lacks(calc, '(havellinTotal - discountAmt) * RUSH_PCT',
           '⚠ and never on the discounted one — that expression IS the defect');
-    has(calc, 'havellinTotal + rushAmt - discountAmt',
-        'and the discount comes off the result');
+    has(calc, 'rushRate: isRush ? RUSH_PCT : 0, discountPct: discountPct', 'calcAll hands the rate and the percentage to it');
 
     const invBody = noComments(fn('invoiceHtml', 'jobLogEntries'));
     has(invBody, 'Math.round(_midGross * _rushRate)', 'the invoice bills the midpoint premium on gross');
@@ -391,8 +396,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // discounting bare labour — came back GREEN against every other check in this file,
     // because nothing in the suite drives calcAll (it reads three dozen DOM elements, and the
     // established pattern here is to pin it at source). The driven proof is the browser run.
-    has(calc, 'var discountAmt = discountOnLabor(laborBase, isRush ? RUSH_PCT : 0, discountPct)',
-        "⚠⚠ the estimator grosses the labour up by THIS job's rush rate, not by a constant");
+    // ⚠⚠ And driven: reverting the rate to a bare 0 (the estimator discounting bare labour) came back green
+    // against every source check here once; the real calcAll with rush and 10% must gross the labour up.
+    const rd = driveCalcAll({ svc: 'cleanout', sqft: 3500, rooms: ['Living Room', 'Kitchen', 'Primary Suite'],
+                              seed: { 'e-rush': { checked: true }, 'e-discount': '10' } });
+    const re0 = rd.est || {};
+    eq(re0.discountAmt, rd.ctx.discountOnLabor((re0.tcFee || 0) + (re0.psFee || 0), 0.20, 10),
+       "⚠⚠ the estimator grosses the labour up by THIS job's rush rate, not by a constant");
+    has(noComments(fn('estimateFigures')), 'discountAmt = discountOnLabor(labour, r, pct);', 'through the one definition');
     has(noComments(fn('discountPreview')), 'discountOnLabor(laborBase,', 'so does the modal');
     has(invBody, 'discountOnLabor(g, _rushRate, discountPct)', 'and so does the invoice');
     lacks(calc, 'Math.round(laborBase * discountPct / 100)',
@@ -409,8 +420,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // total while leaving its share of the discount in would understate both. Never billed.
     has(calc, 'var discountExRush = discountOnLabor(laborBase, 0, discountPct)',
         'the ex-premium discount is derived from the same definition, at a rate of zero');
-    has(calc, 'updateRefBox(havellinTotal - discountExRush)',
-        'the reference band compares the job without the expedite');
+    // Restated 2026-09-30 (audit M11): the band compares the Services subtotal, before the premium AND the
+    // discount, since both endpoints are this house priced by the engine before either.
+    has(calc, 'current: havellinTotal, currentDays: daysNeeded',
+        'the reference band compares the job without the expedite or the discount');
     has(calc, 'tcFee + psFee - discountExRush', 'and so does the blended-rate badge');
     lacks(calc, 'updateRefBox(havellinTotalDiscounted - rushAmt)',
           '⚠ subtracting the premium back out of the discounted total leaves the premium\'s '

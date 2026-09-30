@@ -20,7 +20,7 @@
 //   · a fixed-price record saved BEFORE today carries the fee inside its flat fee, so it adds
 //     nothing, prints no second line, and says the fee is included — or it would bill it twice.
 
-const { sandbox, source, fn, domStub } = require('./harness');
+const { sandbox, source, fn, domStub, driveCalcAll } = require('./harness');
 
 const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 const text = (h) => h.replace(/<\/td>/g, ' </td>').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&')
@@ -67,7 +67,7 @@ const LEGACY = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20000,
 const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases',
                 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor', 'prepFeeRate', 'estWorkingDays', 'estFixedFee',
-                'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals'];
+                'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const JOB = { id: 1, svc: 'downsizing_move', name: 'Pat Transition', address: '1 A St' };
@@ -80,7 +80,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
                  'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
                  'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly',
                  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor',
-                 'estFixedFee', 'estPrepFeeOnTop'];
+                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
                   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP',
                   'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -110,10 +110,10 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', '_PCT_WORDS',
-                  'PREP_FEE_RATE', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
+                  'PREP_FEE_RATE', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT'];
 const agr = (job, e) => text(sandbox({ fns: AGR_FNS, vars: AGR_VARS,
   stubs: { estimateStore: {}, currentEstimate: null } }).agreementHtml(job, e));
 const LIVING = { id: 1, hvlId: 'HVL-0009', name: 'Pat Transition', svc: 'downsizing_move',
@@ -184,14 +184,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('calcAll prices the flat fee without the prep fee and saves the fee on top of it');
   {
-    const body = noComments(fn('calcAll'));
-    has(body, 'var _fpServices = havellinTotal - prepFee;', '⚠ the suggestion\'s basis excludes the prep fee');
-    has(body, 'var _fpFee  = Math.round(_fpBasis * (1 + _fpBuf));', '— so the contingency is never charged on it');
-    has(body, 'havellinTotal: isFixed ? fixedAmount + prepFee : Math.round(havellinTotalDiscounted)',
-        'the saved total is the flat fee PLUS the prep fee');
-    has(body, 'prepFeeOnTop: true', 'and the record says so, which is what tells today\'s records from older ones');
-    has(body, 'Math.round(fixedAmount + prepFee + vendorCost + (prepEnabled ? prepCost : 0))',
-        'the grand total counts the fee once, beside the vendors at cost');
+    // Driven on the real calcAll (restated 2026-09-30, P12: these were source checks on lines the fixed-price
+    // lines rework replaced). A fixed-price Home Transition with a $10,000 prep package.
+    const r = driveCalcAll({ svc: 'downsizing_move', sqft: 3500, rooms: ['Living Room', 'Kitchen', 'Primary Suite'],
+                             seed: { 'e-fixed': { checked: true } } });
+    r.ctx.prepItems = [{ type: 'Painting', cost: 10000, lid: 'L1' }];
+    r.ctx.calcAll();
+    const e = r.ctx.currentEstimate || {};
+    const prepFee = Math.round(10000 * r.ctx.prepFeeRate());
+    eq(e.fixedPrice, true, 'the estimate is on a fixed price');
+    eq(e.prepFee, prepFee, 'the prep fee is 30% of the prep package');
+    const services = (e.tcFee || 0) + (e.psFee || 0) + (e.pkgCost || 0) + (e.smf || 0);
+    eq(e.fixedSuggested, Math.round(services * (1 + r.ctx.fixedPriceBuffer(e.svc))),
+       '⚠ the suggestion is the services WITHOUT the prep fee, marked up by the contingency — so the contingency is never charged on it');
+    eq(e.fixedAmount, e.fixedSuggested, 'and the fee field tracks it until a figure is typed');
+    eq(e.havellinTotal, e.fixedAmount + prepFee, 'the saved total is the flat fee PLUS the prep fee');
+    eq(e.prepFeeOnTop, true, 'and the record says so, which is what tells today\'s records from older ones');
+    eq(e.grandTotal, e.fixedAmount + prepFee + (e.vendorCost || 0) + (e.prepCost || 0),
+       'the grand total counts the fee once, beside the vendors at cost');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -200,7 +210,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pct = { value: 10 };
     const a = sandbox({
       fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
-            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending'],
+            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords'],
       vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
@@ -214,7 +224,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a.currentEstimate.havellinTotal, 18225, '⚠ and the $225 prep fee is still on top — not dropped by the discount');
     const b = sandbox({
       fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
-            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending'],
+            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords'],
       vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
@@ -237,8 +247,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const reopen = (e) => {
       const dom = domStub({});
       const ctx = sandbox({
-        fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber'],
-        vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut'],
+        fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats'],
+        vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'RUSH_PCT', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES'],
         stubs: { document: dom, calcAll: noop, paintEstimateService: noop, svcTypeChanged: noop, toggleRoom: noop,
                  setRoomState: noop, collapseEmptyRoomSections: noop, renderCollections: noop, renderVehicles: noop,
                  renderVendors: noop, renderPrepItems: noop, paintVolPreset: noop, docScopeDef: () => null,
@@ -274,7 +284,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ RESTATED 2026-09-29: this counted three byte-identical copies, one per reset path. There is one
     // reset now (resetEstimateJobState) and every path runs it — driven against that.
     {
-      const rs = sandbox({ fns: ['resetEstimateJobState'], vars: ['_fixedAmountBasis', '_fixedPrepMovedOut'],
+      const rs = sandbox({ fns: ['resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob'], vars: ['_fixedAmountBasis', '_fixedPrepMovedOut', 'DECEDENT_SERVICES'],
         stubs: { document: domStub(), seedDocScopeFromJob: () => 'full', paintVolPreset() {}, renderVendors() {},
                  renderCollections() {}, renderVehicles() {}, clearAllRooms() {} } });
       rs._fixedPrepMovedOut = 225;
@@ -419,7 +429,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('the emails state the flat fee and the prep fee as two lines');
   {
-    const c = sandbox({ fns: ['estimateHavellinLines', 'estFixedFee', 'estPrepFeeOnTop', 'prepFeeRate'], vars: ['PREP_FEE_RATE'] });
+    const c = sandbox({ fns: ['estimateHavellinLines', 'estFixedFee', 'estPrepFeeOnTop', 'prepFeeRate', 'estFixedLines'], vars: ['PREP_FEE_RATE', 'RUSH_PCT'] });
     eq(JSON.stringify(c.estimateHavellinLines(FIXED, false)),
        JSON.stringify([['Fixed Project Fee', 20000], ['Home Prep Site Management Fee (30%)', 225]]),
        '⚠ fixed: two lines — a single "Fixed Project Fee" over their sum would state a flat fee no document agrees with');

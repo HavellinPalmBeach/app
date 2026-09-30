@@ -17,7 +17,7 @@ const { sandbox, source, fn, domStub } = require('./harness');
 module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ENGINE_FNS = ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'svcHasDocStep',
-    'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault'];
+    'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor'];
   const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
     'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
     'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS'];
@@ -119,7 +119,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // scope pin goes with the α pin on every job switch and every unbind, and a fresh build seeds it
     // from the job it is for — never left at the last estimate's.
     const rs = sandbox({
-      fns: ['resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep'],
+      fns: ['resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'estimateOpensFixed', 'isDecedentJob'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
              'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', '_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope'],
       stubs: { document: domStub(), paintVolPreset() {}, renderVendors() {}, renderCollections() {}, renderVehicles() {}, clearAllRooms() {} },
@@ -140,7 +140,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // resetEstimate and the real one reset, for the client the screen is bound to.
     const rr = sandbox({
       fns: ['resetEstimate', 'resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf', 'docTierDef',
-            'docTierScope', 'svcHasDocStep', 'estimateHasContent', 'clearEstimateScratch'],
+            'docTierScope', 'svcHasDocStep', 'estimateHasContent', 'clearEstimateScratch', 'estimateOpensFixed', 'isDecedentJob'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
              'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', '_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_volPreset', '_volHandSet'],
       stubs: { document: domStub({ 'e-job': { value: '5' } }), jobs: [{ id: 5, svc: 'cleanout', docScope: 'none' }],

@@ -469,7 +469,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
-              'agrBillingRates', 'coRateModsLine'].concat(CO),
+              'agrBillingRates', 'coRateModsLine', 'estFixedLines'].concat(CO),
         vars: ['CO_REASONS', 'RUSH_PCT'],
         stubs: { jobs: [Object.assign({}, JOB)], changeOrders: cos, currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, EST_TM), approved: true } },
@@ -506,8 +506,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
       '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger',
       '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
-      'docTierOf', 'docTierDef'];
-    const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
+      'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords'];
+    const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT'];
     const A = sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
     const PROB = { id: 7, hvlId: 'HVL-0007', name: 'Margaret Doe', svc: 'probate', executor: 'Tripp Butler',
                    addr: '69 Beach Blvd', city: 'Palm Beach', zip: '33480', deathDate: '2026-01-15', docLevel: 'formal' };

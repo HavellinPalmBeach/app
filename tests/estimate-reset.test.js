@@ -172,10 +172,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // Reset's approved refusal asks the price-change rule (whether Edit estimate is still there):
             // lifted, never stubbed, so this suite's refusal and the rule cannot come to disagree.
             'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent',
-            'docSentAt', 'docKeyFor'],
+            'docSentAt', 'docKeyFor', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'volPresetSeedFor', 'estimateOpensFixed', 'isDecedentJob', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats'],
       vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
              'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT',
-             'TC_ONSITE_ALPHA_DEFAULT', '_activeRecognitions', ...STATE],
+             'TC_ONSITE_ALPHA_DEFAULT', '_activeRecognitions', ...STATE, 'RUSH_PCT', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES'],
       stubs: {
         document: dom, jobs: jobs.map((j) => Object.assign({}, j)), estimateStore: store,
         currentEstimate: current, estimateApproved: false, estimateSubmitted: false, discountRevision: false,
@@ -235,7 +235,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     NET.forEach((c) => {
       if (EXCEPTED.has(c.id)) return;
       const got = c.checkbox ? v(c.id).checked : v(c.id).value;
-      eq(got, c.def, `${label}: #${c.id} is back to the value it ships at${TREE.ids.has(c.id) ? ' (calcAll reads it)' : ''}`);
+      // ⚠ An estate opens on fixed price (Anthony, Q10, 2026-09-30): for the billing basis "where a fresh build
+      // starts" is the job's answer (estimateOpensFixed), not the markup's.
+      const want = c.id === 'e-fixed' ? ctx.estimateOpensFixed(jobFor || null) : c.def;
+      eq(got, want, `${label}: #${c.id} is back to the value it ships at${TREE.ids.has(c.id) ? ' (calcAll reads it)' : ''}`);
     });
     // the dynamic controls
     const survivors = ROWS.filter((r) => ctx.roomState(r.id) !== 'off' || v('vol-' + r.id).value !== '' || v('cplx-' + r.id).value !== ''
@@ -247,7 +250,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        `${label}: every renamed "Other" row reads its own name again — A's wine cellar is not a room on B's grid`);
     eq(v('e-private-note').value, '', `${label}: the private walkthrough note box is empty`);
     eq(v('pnote-mic-status').textContent, '', `${label}: and its dictation status line with it`);
-    eq(v('fixed-amount-row').style.display, 'none', `${label}: the fixed-fee amount row is hidden again`);
+    eq(v('fixed-amount-row').style.display, ctx.estimateOpensFixed(jobFor || null) ? 'flex' : 'none',
+       `${label}: the fixed-fee amount row is hidden again (shown, for an estate, beside the fixed-price box)`);
     STATE.forEach((n) => {
       const want = n === '_estimateDocScope' ? ctx.seedDocScopeFromJob(jobFor || null) : INIT[n];
       eq(JSON.parse(JSON.stringify(ctx[n])), want, `${label}: ${n} is back to ${JSON.stringify(want)}`);
@@ -588,7 +592,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         { idx: Number(customRow.id.slice(1)), section: customRow.section, name: 'Alpha wine cellar', vol: 5, cplx: 5, spcl: false, note: '' },
       ],
       prem: true, pkgCost: 750, discountPct: 10, rush: true,
-      fixedPrice: true, fixedAmount: 21000, fixedSuggested: 21600, prepFeeOnTop: true,
+      // A record under today's rules: the premium and the discount are lines on the fee (fixedLines), so the
+      // fee comes back as saved. An older record is restated on reopen (tests/estimator-p12.test.js).
+      fixedPrice: true, fixedAmount: 21000, fixedSuggested: 21600, prepFeeOnTop: true, fixedLines: true, rushExPrepFee: true,
       access: true, heirs: true, preparedBy: 'Ashley Jerome', needsTC2: true, psSlots: [1, 2, 3, 4],
       privateNote: 'The son contests the will.', moveStyling: true, volPreset: 'packed', docScope: 'capture',
       tcAlpha: 0.4, costRates: { founderTC: 100, contractorTC: 60, psStandard: 30, psSenior: 35 },

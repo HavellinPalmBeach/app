@@ -397,7 +397,7 @@ function run({ group, ok, eq, has, lacks }) {
       'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw',
       'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
       'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashNotice', 'notifyManagerForApproval',
-      'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'docState', '_jobTouch', '_docNotice'].concat(HELP);
+      'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'docState', '_jobTouch', '_docNotice', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords'].concat(HELP);
     const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
       'discountRevision', 'approvedBy', 'approvedAt'];
     const EST = () => ({ jobId: 1, tcFee: 7000, psFee: 4750, havellinTotalFull: 11750, rush: false, rushAmt: 0,

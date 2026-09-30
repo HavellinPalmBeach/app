@@ -10,15 +10,17 @@
 const { sandbox, source, fn } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
-  const ctx = sandbox({ fns: ['svcLabelOf', 'isDecedentJob'], vars: ['SVC_LABELS', 'PRICING_REF', 'DECEDENT_SERVICES'] });
+  const ctx = sandbox({ fns: ['svcLabelOf', 'isDecedentJob'], vars: ['SVC_LABELS', 'DECEDENT_SERVICES'] });
   const src = source();
 
   group('the catalogue carries the new names on the old keys');
   {
     eq(ctx.SVC_LABELS.downsizing, 'Home Editing', 'downsizing → Home Editing');
     eq(ctx.SVC_LABELS.downsizing_move, 'Home Transition', 'downsizing_move → Home Transition');
-    eq(ctx.PRICING_REF.downsizing.label, ctx.SVC_LABELS.downsizing, 'the reference band names the service the same way');
-    eq(ctx.PRICING_REF.downsizing_move.label, ctx.SVC_LABELS.downsizing_move, 'both of them');
+    // The reference band's own label table (PRICING_REF) is gone (2026-09-30, audit M11): the band is built by
+    // the engine and names the service from the catalogue, so there is no second copy of the names to agree.
+    has(fn('calcAll'), 'label: SVC_LABELS[svcKey] || svcKey', 'the reference band names the service from the catalogue');
+    lacks(src, 'var PRICING_REF', 'and the hand-typed table with its own copy of the names is gone');
     ok(!ctx.isDecedentJob({ svc: 'downsizing' }) && !ctx.isDecedentJob({ svc: 'downsizing_move' }),
        'both are still living-client work — the rename moved no key and no predicate');
   }

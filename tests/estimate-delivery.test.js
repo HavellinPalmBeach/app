@@ -317,8 +317,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'buildEstimateEmailText', 'estimateEmailSubject',
             'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             // Both emails state the vendor-fee rule through the one shared sentence (2026-09-10).
-            'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines'],
-      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
+            'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'RUSH_PCT'],
       stubs: {
         assignedTCContact: () => ({ name: 'Ashley Graziano', phone: '(561) 370-4700', email: 'ashley@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -380,8 +380,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A phase list that throws must not take the email down with it.
     const ctx2 = sandbox({
       fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
-            'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines'],
-      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE'],
+            'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'RUSH_PCT'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
         bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',

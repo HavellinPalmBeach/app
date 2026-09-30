@@ -767,7 +767,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { fb: [], redraws: [], alerts: [] };
     const A = sandbox({
       fns: uniq(['applyDiscountRevision', 'discountPctInput', '_discountModalSays', 'discountPreview', 'estPreDiscountTotal',
-        'discountOnLabor', 'estPrepFeeOnTop', 'revokeAgreementApproval', 'notePriceChange', 'staleDraftNotice',
+        'discountOnLabor', 'estPrepFeeOnTop', 'estFixedLines', 'estFixedFee', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'revokeAgreementApproval', 'notePriceChange', 'staleDraftNotice',
         'docState', '_jobTouch', 'estimateEventStatus', 'isJobWon', 'closeDiscountModal', '_jobBandHost', '_docNotice',
         'dashNotice', '_dashFbTarget'].concat(HELP, BLK_FNS)),
       vars: ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_packetExported', 'currentAgrJobId', 'estimateApproved', 'estimateSubmitted', 'discountRevision', '_dashNotice', '_dashboardJobId'],

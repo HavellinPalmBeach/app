@@ -254,7 +254,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(src, "cost: parseFloat(c && c.value) || 0, lid: _srcLid()", 'addVendor stamps one');
     has(src, "prepItems.push({type: sel.value, cost: cost, lid: _srcLid()})",
        'and so does the prep card');
-    has(src, "vendors.push({type: sel.value, cost: cost, lid: _srcLid()})",
+    has(src, "vendors.push({type: sel.value, cost: cost, lid: _srcLid(), tcHrs: vendorLineTCHrs(sel.value)})",
        'and the vendor card');
   }
 };
