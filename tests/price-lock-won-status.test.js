@@ -136,7 +136,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { notices: [], nav: [], redraw: 0, badges: [] };
     const E = sandbox({
       fns: ['dashEditEstimate', 'revokeEstimateApproval', 'revokeAgreementApproval', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'docDraftPending', 'estimateOutForApproval'].concat(BLK_FNS),
-      vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'estimateApproved',
+      vars: ['_packetExported', 'currentAgrJobId', 'estimateApproved',
         'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
       stubs: {
         _primeEstimateFor(id) { E.currentEstimate = Object.assign({ jobId: id, lockedRooms: [1] }, (E.estimateStore[id] || {}).estimate || {}); return true; },
@@ -193,7 +193,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const C = sandbox({
       fns: ['editEstimateFromCE', 'revokeEstimateApproval', 'revokeAgreementApproval', 'estimateEventStatus', 'isJobWon',
         '_dashFbTarget', '_jobBandHost', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'docDraftPending', 'estimateOutForApproval'].concat(BLK_FNS),
-      vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', 'estimateApproved',
+      vars: ['_packetExported', 'currentAgrJobId', 'estimateApproved',
         'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt', '_dashboardJobId', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, saveEstimateState() {}, showSyncBadge() {},
@@ -399,8 +399,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'docTierOf', 'docTierDef', 'buildLockSnapshot', 'submitDeny', 'isJobWon', '_jobStatusCell', 'jobStatusView',
     'estimateEventStatus', 'submitForApproval', 'estimateSubmitBlocker', 'estimateNoteGaps', 'editEstimateFromCE',
     'revokeEstimateApproval', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'estimateOutForApproval', 'priceRaiseSentence', 'priceAboveSent', 'fmtMoney'].concat(BLK_FNS);
-  const ST_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', 'agrApproved',
-    'agrApprovedBy', 'agrApprovedAt', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
+  const ST_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt', 'MANAGER_PINS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT',
     'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', '_dashShown', '_dashKeepNotice', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];
   function lifeBed(jobO) {

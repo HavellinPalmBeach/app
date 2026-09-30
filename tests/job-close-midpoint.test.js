@@ -46,7 +46,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'fmtDate2',
     // The transition behind every Close button, and the one handler both buttons call.
     'applyJobTransition', 'activateOrCycle', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob',
-    'lookupVendorById', 'vendorIdOf', '_actor', 'estimateEditBlocker', 'priceChangeBlocker', 'agreementSignature', 'isAgreementSent', 'docKeyFor', 'draftOutstanding', 'docDraftPending', 'draftIsStale',
+    'lookupVendorById', 'vendorIdOf', '_actor', '_handoverBy', 'estimateEditBlocker', 'priceChangeBlocker', 'agreementSignature', 'isAgreementSent', 'docKeyFor', 'draftOutstanding', 'docDraftPending', 'draftIsStale',
     // The Re-open (2026-09-29): the same door, its own branch. Lifted, never stubbed — a stub of "can this job
     // be re-opened" is exactly what would let the rail's button and the transition's refusal disagree.
     'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch']);
@@ -58,7 +58,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const asked = [];
   let answer = true;
   const R = sandbox({ fns: RAIL_FNS, vars: VARS, stubs: {
-    Intl: global.Intl, _todayStr: () => '2026-09-30', agrApprovedBy: '', vendorDirectory: [],
+    Intl: global.Intl, _todayStr: () => '2026-09-30', vendorDirectory: [],
     saveJobs() {}, syncJobToSheets() {}, openJobPlanFor() { return false; }, _dashRedraw() { return true; },
     renderClientDashboard() {}, alert() {},
     confirm(m) { asked.push(m); return answer; },

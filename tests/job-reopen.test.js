@@ -90,7 +90,7 @@ const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimeline
   // The REAL date formatter: the question names the handover day, and a passthrough would hide its format.
   'fmtDate2',
   'applyJobTransition', 'activateOrCycle', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob',
-  'lookupVendorById', 'vendorIdOf', '_actor',
+  'lookupVendorById', 'vendorIdOf', '_actor', '_handoverBy',
   // Lifted, never stubbed — the button, the refusal and the undo are one rule read three ways.
   'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch',
   // The two readers of the handover stamp outside the rail.
@@ -105,7 +105,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const asked = [], said = [], landed = [];
   let answer = true, today = '2026-09-30';
   const R = sandbox({ fns: RAIL_FNS, vars: VARS, stubs: {
-    Intl: global.Intl, _todayStr: () => today, agrApprovedBy: '', vendorDirectory: [],
+    Intl: global.Intl, _todayStr: () => today, vendorDirectory: [],
     saveJobs() {}, syncJobToSheets(j) { if (j) j.updatedAt = Date.now(); },
     openJobPlanFor(id) { landed.push(id); return true; }, _dashRedraw() { return true; }, renderClientDashboard() {},
     alert(m) { said.push(m); }, confirm(m) { asked.push(m); return answer; },

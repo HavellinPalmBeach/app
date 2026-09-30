@@ -112,7 +112,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate',
                  'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
-                  'agrApproved', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', '_PCT_WORDS',
+                  'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', '_PCT_WORDS',
                   'PREP_FEE_RATE', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
 const agr = (job, e) => text(sandbox({ fns: AGR_FNS, vars: AGR_VARS,
   stubs: { estimateStore: {}, currentEstimate: null } }).agreementHtml(job, e));

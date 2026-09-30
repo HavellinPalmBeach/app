@@ -499,8 +499,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docLevelFloorReason'];
     const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
       'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
-      'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', 'agrApproved', 'agrApprovedBy',
-      'agrApprovedAt', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
+      'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'];
     const A = (cos) => sandbox({ fns: DOC_FNS, vars: DOC_VARS, stubs: {
       jobs: [PREP_JOB], estimateStore: {}, jobLogs: {}, changeOrders: cos || [], contractors: [], currentEstimate: null,
       vendorDirectory: [], jobPlans: {}, _photoRefs: {}, document: domStub({}) } });

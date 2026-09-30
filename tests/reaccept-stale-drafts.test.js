@@ -418,7 +418,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const D = sandbox({
       fns: uniq(['ensureAgreementApproved', 'approveAgreementNow', 'stripePaymentLink', 'agreementReady', 'docReadiness', 'docState',
         '_jobTouch'].concat(PRICE_FNS)),
-      vars: ['DOC_READY_WHY', 'PAYMENT_STAGES', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt'],
+      vars: ['DOC_READY_WHY', 'PAYMENT_STAGES', 'currentAgrJobId'],
       stubs: {
         _primeAgreementFor() { said.primes++; return true; }, setTimeout() { said.timers++; }, saveJobs() {}, syncJobToSheets() {},
         showFB(el, k, m) { said.fb.push({ el, k, m }); }, _dashFbTarget(id) { return id; }, renderAgreement() {}, _dashRedraw() {},
@@ -452,7 +452,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const U = sandbox({
       fns: uniq(['updateAgrUI', 'agreementReady', 'agrApprovalBlocker', 'agrApprovalWithdrawn', 'docReadiness', 'isJobFunded',
         'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor'].concat(PRICE_FNS)),
-      vars: ['DOC_READY_WHY', 'currentAgrJobId', 'agrApprovedBy', 'agrApprovedAt'],
+      vars: ['DOC_READY_WHY', 'currentAgrJobId'],
       stubs: { document: d },
     });
     U.jobs = [wonJob()]; U.estimateStore = { 7: rec(24100) }; U.currentAgrJobId = 7;
@@ -755,7 +755,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the two places the price moves before the packet flag the drafts: an edit and a discount');
   {
     const R = sandbox({ fns: ['revokeEstimateApproval', 'revokeAgreementApproval', 'notePriceChange'].concat(HELP),
-      vars: ['_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt'],
+      vars: ['_packetExported', 'currentAgrJobId'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {} } });
     R.jobs = [{ id: 7, approved: true, agrApproved: true, docState: { agreement: { draftedAt: DRAFTED, provider: 'gmail' } } }];
     R.estimateStore = { 7: { approved: true } };
@@ -770,8 +770,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'discountOnLabor', 'estPrepFeeOnTop', 'revokeAgreementApproval', 'notePriceChange', 'staleDraftNotice',
         'docState', '_jobTouch', 'estimateEventStatus', 'isJobWon', 'closeDiscountModal', '_jobBandHost', '_docNotice',
         'dashNotice', '_dashFbTarget'].concat(HELP, BLK_FNS)),
-      vars: ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_packetExported', 'currentAgrJobId', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt',
-        'estimateApproved', 'estimateSubmitted', 'discountRevision', '_dashNotice', '_dashboardJobId'],
+      vars: ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_packetExported', 'currentAgrJobId', 'estimateApproved', 'estimateSubmitted', 'discountRevision', '_dashNotice', '_dashboardJobId'],
       stubs: { document: domStub({ 'dm-pct': '5' }), saveJobs() {}, syncJobToSheets() {}, saveEstimateState() {},
         renderClientEstimate() {}, updateApprovalUI() {}, _dashRedraw(id) { said.redraws.push(id); }, notifyManagerForApproval() {},
         showSyncBadge() {}, showFB(el, k, m) { said.fb.push({ el, k, m }); }, alert(m) { said.alerts.push(m); } },

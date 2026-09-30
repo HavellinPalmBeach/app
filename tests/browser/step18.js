@@ -88,16 +88,17 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
   eq(r.lbl, 'Complete', 'and says so');
   ok(r.steps.length === 16 && r.steps.every((s) => s.done), 'every node on the track is done (' + r.steps.length + ')');
   eq(r.head, 'Last sent — Invoice — Final', '⚠⚠ the big buttons are the final invoice — the most current stage');
-  eq(r.big.map((t) => t.replace(/^\S+\s/, '')), ['View final invoice', 'Print final invoice', 'Filed copy'],
-     'View · Print · Filed copy, as big buttons');
+  // ⚠ RESTATED 2026-09-30 (audit P14): the filed copy names its document, like View and Print beside it.
+  eq(r.big.map((t) => t.replace(/^\S+\s/, '')), ['View final invoice', 'Print final invoice', 'Filed final invoice'],
+     'View · Print · Filed, as big buttons, each naming the final invoice');
   ok(r.bigCls.every((c) => /\bjt-btn\b/.test(c)), 'drawn as the band\'s own buttons, not strip links');
   ok(r.bigCalls.every((c) => /final/.test(c)), 'every one of them acts on the final invoice');
   // ⚠ RESTATED 2026-09-29 (audit P10 low): a finished HOME PREP job, and Home Prep's middle invoice is its second
   // invoice on every surface — the strip read "midpoint" beside a band and an invoice that do not.
   eq(r.strip.map((t) => t.replace(/^\S+\s/, '')),
-     ['View estimate', 'Print estimate', 'Filed copy', 'View packet', 'Print packet', 'Filed copy',
-      'View deposit invoice', 'Print deposit invoice', 'Filed copy',
-      'View second invoice', 'Print second invoice', 'Filed copy'],
+     ['View estimate', 'Print estimate', 'Filed estimate', 'View packet', 'Print packet', 'Filed packet',
+      'View deposit invoice', 'Print deposit invoice', 'Filed deposit invoice',
+      'View second invoice', 'Print second invoice', 'Filed second invoice'],
      'the strip is the four documents before it, in lifecycle order');
   ok(r.stripCalls.every((c) => !/final/.test(c)), '⚠ and does not repeat the final invoice');
   eq(r.dupes, 0, '⚠⚠ no control on the dashboard renders twice');

@@ -546,7 +546,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const TL_VARS = ['JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS',
       'ESIGN_PROVIDERS', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'EXECUTOR_AUTH_OPTIONS'];
-    const R = sandbox({ fns: TL_FNS, vars: TL_VARS, stubs: { Intl: global.Intl, _todayStr: () => '2026-09-29', agrApprovedBy: '' } });
+    const R = sandbox({ fns: TL_FNS, vars: TL_VARS, stubs: { Intl: global.Intl, _todayStr: () => '2026-09-29' } });
     const rows = (job, est) => { const rec = { estimate: est, approved: true }; R.estimateStore = { [job.id]: rec }; R.jobs = [job];
       const by = {}; R.jobTimeline(job, rec, [], [], null).forEach((r) => { by[r.key] = r; }); return by; };
 

@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 9:35am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 10:00am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3684,7 +3684,7 @@ body.no-smf .smf-col{display:none;}
   </div>
 </div>
 
-<!-- PIN MODAL FOR VENDOR / REFERRAL-PARTNER DELETION -->
+<!-- PIN MODAL FOR VENDOR / REFERRAL-PARTNER / CONTRACTOR DELETION -->
 <div class="modal-overlay" id="dir-delete-pin-modal" style="display:none;">
   <div class="modal-box">
     <div class="modal-title">Confirm Deletion</div>
@@ -9371,7 +9371,7 @@ function applyOpenedEstimate(jobId, job, status) {
     if (status === 'offline') {
       showFB('e-fb','warn','Offline — showing the last estimate saved on this device for "' + esc(job.name||'') + '". It may be out of date. Reconnect and reopen to load the current saved version before editing or sending.');
     } else {
-      showFB('e-fb','ok','Estimate loaded for job: ' + job.name);
+      showFB('e-fb','ok','Estimate loaded for job: ' + esc(job.name || ''));
     }
     return;
   }
@@ -12009,7 +12009,6 @@ function revokeAgreementApproval(job, why) {
   job.agrApprovedBy = ''; job.agrApprovedAt = '';
   job.agrRevokedBy = why || 'estimate-edited';
   job.agrRevokedAt = new Date().toISOString();
-  if (currentAgrJobId === job.id) { agrApproved = false; agrApprovedBy = ''; agrApprovedAt = ''; }
   if (typeof _packetExported !== 'undefined') delete _packetExported[job.id];
   showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
   return true;
@@ -12019,11 +12018,21 @@ function revokeAgreementApproval(job, why) {
 // the rail's "Signing packet sent" row and the Agreement tab's banner, so a DISCOUNT that withdrew
 // the approval explains itself the way an edited estimate always has. Both read
 // `agrRevokedBy === 'estimate-edited'` until 2026-09-29, so a discount revoked the approval silently.
-function agrApprovalWithdrawn(job) {
+//
+// \u26a0 ONCE THE ESTIMATE IS APPROVED AGAIN, ONLY HALF OF IT IS STILL TRUE (2026-09-30, audit P14). The
+// withdrawal is cleared by `ensureAgreementApproved` on the packet's first print, send or file, so between
+// the manager's PIN and that press this went on saying "re-approve the estimate" over an estimate the row
+// above it showed approved. It reads the estimate's approval the way `jobTimeline`'s own row does (the
+// record, or the job's mirror of it), and once that is back it says the one thing left to do.
+function agrApprovalWithdrawn(job, estRec) {
   if (!job || job.agrApproved || !job.agrRevokedBy) return '';
-  return job.agrRevokedBy === 'discount-revised'
-    ? 'A discount changed the price after this was prepared \u2014 re-approve the estimate and send a fresh packet'
-    : 'The estimate was edited after this was prepared \u2014 re-approve it and send a fresh packet';
+  var rec = estRec || ((typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null);
+  var again = !!((rec && rec.approved) || job.approved);
+  var why = job.agrRevokedBy === 'discount-revised'
+    ? 'A discount changed the price after this was prepared'
+    : 'The estimate was edited after this was prepared';
+  return why + ' \u2014 ' + (again ? 'send a fresh packet'
+    : (job.agrRevokedBy === 'discount-revised' ? 're-approve the estimate and send a fresh packet' : 're-approve it and send a fresh packet'));
 }
 
 function editEstimateFromCE() {
@@ -12151,7 +12160,7 @@ function submitDeny() {
   renderClientEstimate();
   updateApprovalUI();
   notifyTCOfDecision(djob, currentEstimate, 'denied', reason);
-  showFB('ce-fb','warn','Estimate denied and sent back to ' + (djob && djob.tc ? djob.tc : 'the TC') + '. They’ve been emailed the reason.');
+  showFB('ce-fb','warn','Estimate denied and sent back to ' + (djob && djob.tc ? esc(djob.tc) : 'the TC') + '. They’ve been emailed the reason.');
 }
 
 // Snapshot an immutable copy of each included room's walkthrough data at lock
@@ -13561,7 +13570,7 @@ function _stamp() {
 // Who is acting. There is no session identity in the app, so the agreement's approver is
 // the best available attribution — it is a real, PIN-resolved person (see resolvePin).
 //
-// ⚠⚠ THIS JOB'S APPROVER OR NOBODY — NEVER THE PAGE GLOBAL `agrApprovedBy`. That variable is
+// ⚠⚠ THIS JOB'S APPROVER OR NOBODY — NEVER A PAGE GLOBAL. `agrApprovedBy` (deleted 2026-09-30) was
 // whichever job `loadAgreement` or `ensureAgreementApproved` touched LAST, so falling back to it
 // stamped another client's approver on this one: an estimate drafted or sent before this job's
 // agreement is approved (`draftedBy`, `sentBy`), and an activation, a close or a review ask on a
@@ -13570,9 +13579,20 @@ function _stamp() {
 // no job at all (`_actor(null)`). The same defect as finding M1 on the agreement's band
 // (2026-09-29), on internal attribution rather than a client document. A blank is the honest
 // answer here — the callers that have a better one (`|| job.tc`) now reach it, and the global only
-// ever holds some job's `agrApprovedBy`, so no correct name is lost.
+// ever held some job's `agrApprovedBy`, so no correct name was lost.
 function _actor(job) {
   return (job && job.agrApprovedBy) || '';
+}
+
+// ⚠ WHOSE JOB IT WAS, ON THE TWO STAMPS THAT MARK ITS START AND ITS HANDOVER (2026-09-30, audit P14;
+// Anthony's answer to the question P10 left open). `activatedBy` and `deliveredBy` recorded `_actor`, the
+// manager who approved the PRICE, so every activation and every close on a job Carla ran read as the
+// approver's. Anthony: *the assigned concierge.* With no concierge assigned, the stamp falls back to what
+// it recorded before. ONLY these two stamps: `_actor`'s other callers (a document drafted or sent, a
+// payment or signature recorded, the review ask, a re-open) keep the approver.
+function _handoverBy(job) {
+  var tc = (job && job.tc) ? String(job.tc).trim() : '';
+  return tc || _actor(job);
 }
 
 function markAgreementSent() {
@@ -15382,8 +15402,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       // A draft a price change left behind rides WITH it (2026-09-29) — the withdrawal says what to do in
       // the app, and the old draft is the thing somebody might still send from Gmail, so both are named.
       sub: isAgreementSent(job) ? ''
-        : (agrApprovalWithdrawn(job)
-          ? [agrApprovalWithdrawn(job), staleDraftNote(job, 'agreement', draftOutstanding(job, 'agreement'))]
+        : (agrApprovalWithdrawn(job, estRec)
+          ? [agrApprovalWithdrawn(job, estRec), staleDraftNote(job, 'agreement', draftOutstanding(job, 'agreement'))]
               .filter(Boolean).join('. ')
           : jtDraftLine(job, 'agreement', true)) }),
 
@@ -15417,8 +15437,13 @@ function jobTimeline(job, estRec, logs, cos, sched) {
         ? ('Part paid — $' + Math.round(depPaid).toLocaleString() + ' of $' + Math.round(depTgt).toLocaleString())
         : '' }),
 
+    // ⚠ THE DAY IT STARTED, AND WHOSE JOB IT IS (2026-09-30, audit P14). `applyJobTransition` has stamped
+    // `activatedOn` write-once since 2026-09-23 and the schedule strip counts from it, but this row carried
+    // no `at`, so the one step every later date is measured from was the only done step with no date on it.
+    // Carried the way Work complete carries `deliveredOn`: a local yyyy-mm-dd, and the name the stamp records.
     row(_plan({ key: 'job_active', group: 'Deposit & start', label: 'Job active',
       done: (job.status === 'active' || !!job.deliveredOn),
+      at: job.activatedOn || '', atKind: 'date', by: job.activatedBy || '',
       blockedWhy: authBlocker, blockedFix: authBlocker
         ? ('Contact ' + (job.executor || 'the authorized representative')
           + (job.executorPhone ? ' on ' + job.executorPhone : (job.executorEmail ? ' at ' + job.executorEmail : ''))
@@ -17812,15 +17837,26 @@ function _jtDocViews(id, kind, stage, viewOnly, job) {
 //
 // ⚠ AND A DOCUMENT THAT WENT OUT AND WAS NOT FILED IS THE CASE THAT MATTERS. It is the
 // one the firm cannot produce later, so it gets a button rather than silence.
-function _jtDriveLink(id, job, kind, stage) {
+//
+// ⚠ THE LABEL NAMES THE DOCUMENT (2026-09-30, audit P14), for the reason `_jtDocViews` gives: the
+// strip at the foot of the dashboard has no row context, so four bare "Filed copy" buttons sat side
+// by side on a finished job with nothing saying which document each opened. Same word, same namer.
+//
+// ⚠ NO "FILE" WHILE THE DOCUMENT IS VIEW-ONLY (2026-09-30, audit P14). `viewOnly` is the tray's own
+// answer (an estimate back out for approval, a packet still a preview). An estimate sent, never
+// filed, then sent back for approval by a discount or an edit offered File here, and the estimate's
+// blocker refused the press — the "withheld, not offered-and-refused" rule `_jtDocViews` follows for
+// Print. A copy already filed is still offered: opening it changes nothing.
+function _jtDriveLink(id, job, kind, stage, viewOnly) {
   var key = docKeyFor(kind, stage ? { stage: stage } : null);
   var st = (job.docState && job.docState[key]) || {};
   var opt = stage ? (",{stage:'" + stage + "'}") : '';
+  var word = docWord(kind, stage, job);
   if (st.filedAt && st.filedUrl) {
-    return [{ label: '&#128193; Filed copy', call: "openDocFiled(" + id + ",'" + key + "')" }];
+    return [{ label: '&#128193; Filed ' + word, call: "openDocFiled(" + id + ",'" + key + "')" }];
   }
-  if (st.sentAt && !st.filedAt) {
-    return [{ label: '&#128193; File to Drive', call: 'docAction(' + id + ",'" + kind + "','file'" + opt + ')' }];
+  if (st.sentAt && !st.filedAt && !viewOnly) {
+    return [{ label: '&#128193; File ' + word + ' to Drive', call: 'docAction(' + id + ",'" + kind + "','file'" + opt + ')' }];
   }
   return [];
 }
@@ -17856,7 +17892,7 @@ function _jtDocSecondaries(id, job, estRec, rowKey) {
     ? [] : _jtDocViews(id, d.kind, d.stage, viewOnly, job);
   return draft
     .concat(views,
-            _jtDriveLink(id, job, d.kind, d.stage));
+            _jtDriveLink(id, job, d.kind, d.stage, viewOnly));
 }
 
 function jobTimelineActions(row, job, estRec) {
@@ -18242,10 +18278,10 @@ function _primeEstimateFor(jobId) {
 }
 
 // The agreement side has no equivalent global to set by hand: `loadAgreement()` is
-// what assigns `currentAgrJobId` AND restores agrApproved/By/At off the job record,
-// and it reads `#agr-job`. So point the select and run the real loader rather than
-// duplicating what it does — a second copy of that restore is how `agrApproved`
-// would drift from `job.agrApproved`.
+// what assigns `currentAgrJobId`, and it reads `#agr-job`. So point the select and run
+// the real loader rather than duplicating what it does. (It also restored page-level
+// agrApproved/By/At off the job until 2026-09-30; those are gone and every reader reads
+// the job — a second copy of that restore is how a mirror drifts from `job.agrApproved`.)
 function _primeAgreementFor(jobId) {
   var sel = document.getElementById('agr-job');
   if (!sel) return false;
@@ -19402,7 +19438,7 @@ function applyJobTransition(j) {
   if (next === 'active' && !j.activatedOn) {
     j.activatedOn = _todayStr();
     j.activatedAt = new Date().toISOString();
-    j.activatedBy = _actor(j);
+    j.activatedBy = _handoverBy(j);
   }
   if (next === 'closed' && !j.deliveredOn) {
     // ⚠ `_todayStr()`, not toISOString — see its comment. `deliveredAt` keeps the full ISO
@@ -19410,7 +19446,7 @@ function applyJobTransition(j) {
     // one the person closing the job is living in.
     j.deliveredOn = _todayStr();
     j.deliveredAt = new Date().toISOString();
-    j.deliveredBy = _actor(j);
+    j.deliveredBy = _handoverBy(j);
   }
   j.status = next;
   return true;
@@ -20186,6 +20222,9 @@ function formatPropVal(v) {
   if (v >= 1000000) return '$' + (v/1000000).toFixed(1) + 'M';
   return '$' + Math.round(v/1000).toLocaleString() + 'K';
 }
+// ⚠ `msg` IS HTML — callers bold a name with <strong> — so every person-entered string in it goes through
+// `esc()` at the call site (2026-09-30, audit P14: a contractor saved as O'Hara <b>& rendered bold here, and
+// the same name broke every <option value="…"> it was written into).
 function showFB(elId, type, msg) {
   var cls = {ok:'a-ok',warn:'a-warn',err:'a-err',info:'a-info'}[type]||'a-warn';
   // Guarded: this is called from functions that are now reachable from more than one
@@ -22657,10 +22696,11 @@ function _invEnsureThumbs(jobId) {
     });
 }
 // Paint into the existing DOM rather than re-rendering the tab: a re-render mid-review
-// would drop focus out of whatever value was being typed.
-function _invPaintThumbs(jobId) {
+// would drop focus out of whatever value was being typed. `root` (optional) paints only inside
+// one element — the rows a split has just drawn (`_invSplitRepaint`).
+function _invPaintThumbs(jobId, root) {
   var cache = _invThumbCache(jobId);
-  Array.prototype.forEach.call(document.querySelectorAll('[data-thumb-id]'), function(el) {
+  Array.prototype.forEach.call((root || document).querySelectorAll('[data-thumb-id]'), function(el) {
     var id = el.getAttribute('data-thumb-id');
     if (!id || !cache[id]) return;
     el.style.backgroundImage = 'url("' + cache[id] + '")';
@@ -22832,7 +22872,101 @@ function invSplitItem(jobId, stableId) {
 function invSplitItemClick(jobId, stableId) {
   var out = invSplitItem(jobId, stableId);
   if (typeof out === 'string') { alert(out); return; }
-  renderInventoryTab();
+  if (!_invSplitRepaint(jobId, out)) renderInventoryTab();
+}
+
+// Put `html` on screen where item `at` of `ids` (DOM ids, in the order the full render draws them) belongs:
+// after the nearest one before it that is drawn, else before the nearest one after it. False when none is.
+function _invInsertBeside(html, ids, at) {
+  for (var i = at - 1; i >= 0; i--) {
+    var p = document.getElementById(ids[i]);
+    if (p) { p.insertAdjacentHTML('afterend', html); return true; }
+  }
+  for (var k = at + 1; k < ids.length; k++) {
+    var n = document.getElementById(ids[k]);
+    if (n) { n.insertAdjacentHTML('beforebegin', html); return true; }
+  }
+  return false;
+}
+
+// ⚠⚠ A SPLIT REPAINTS WHAT IT CHANGED, NOT THE TAB (2026-09-30, audit P14). This called `renderInventoryTab`,
+// which rebuilds every row through innerHTML — measured at 1,420 ms on 3,000 rows — and throws away whatever
+// is half-typed further down the list. A split changes exactly:
+//   · the new line, drawn where the full render draws it: its disposition's group (Not yet decided), its
+//     photograph's room, after the lines already split off that frame;
+//   · that group's heading (count, value, progress) and its room's count;
+//   · every line sharing the photograph, which reads "1 of N" and, open, lists the lines in the frame;
+//   · the counts over the whole list: the workbar (review bar, Name N shots), the Needs you chips, the
+//     summary and the appraisal guardrail.
+// Nothing else on the tab reads the line list: the filter row reads only which rooms are present, and the
+// new line is in its photograph's room. The new line takes its permanent number here, as a render would.
+// A group or a room the new line is the first of is drawn and put beside its neighbours. What cannot be
+// placed falls back to the full render rather than guessing: another client on the tab, a prep job (no
+// list), or a list filtered to nothing. A test holds the result, byte for byte, to what the full render draws.
+function _invSplitRepaint(jobId, ref) {
+  var sel = document.getElementById('inv-job');
+  var cont = document.getElementById('inventory-content');
+  if (!ref || !sel || !cont || (parseInt(sel.value) || 0) !== jobId) return false;
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job || job.svc === 'prep') return false;
+  var all = _invAssignItemNos(jobId);
+  var items = all.filter(function(r){ return _invMatchesFilter(r, job); });
+  var groups = _invGroupItems(job, items);
+  // Filtered to nothing: the body is the "Clear them to see all N items" card, whose N just moved, and there
+  // are no rows on screen to keep — the full render is both correct and cheap.
+  if (!groups.length) return false;
+  var isNew = function(r){ return r.stableId === ref.stableId; };
+  var painted = [];
+  var gi = -1;
+  groups.forEach(function(g, i){ if (gi < 0 && g.items.some(isNew)) gi = i; });
+  // No group holds it: the filters hide it, exactly as they would on a full render.
+  if (gi >= 0) {
+    var g = groups[gi];
+    if (!document.getElementById(_invGroupDomId(g.key))) {
+      if (!_invInsertBeside(_renderInvGroup(job, g), groups.map(function(x){ return _invGroupDomId(x.key); }), gi)) return false;
+      painted.push(_invGroupDomId(g.key));
+    } else {
+      var head = document.getElementById(_invGroupHeadDomId(g.key));
+      if (!head) return false;
+      if (!_invFold[g.key]) {   // a folded group draws no rooms: its heading is all there is to repaint
+        var ri = -1;
+        g.rooms.forEach(function(rm, i){ if (ri < 0 && rm.items.some(isNew)) ri = i; });
+        var rm = g.rooms[ri];
+        if (!document.getElementById(_invRoomDomId(g.key, rm.key))) {
+          if (!_invInsertBeside(_renderInvRoomBlock(job, g, rm), g.rooms.map(function(x){ return _invRoomDomId(g.key, x.key); }), ri)) return false;
+          painted.push(_invRoomDomId(g.key, rm.key));
+        } else {
+          var at = -1;
+          rm.items.forEach(function(r, i){ if (isNew(r)) at = i; });
+          if (!_invInsertBeside(_renderInvRow(job, ref), rm.items.map(function(r){ return _invRowDomId(r.stableId); }), at)) return false;
+          painted.push(_invRowDomId(ref.stableId));
+          var rh = document.getElementById(_invRoomHeadDomId(g.key, rm.key));
+          if (rh) rh.outerHTML = _renderInvRoomHead(g, rm);
+        }
+      }
+      head.outerHTML = _renderInvGroupHead(job, g);
+    }
+  }
+  _invPhotoSiblings(jobId, ref).forEach(function(r){
+    if (isNew(r)) return;
+    var el = document.getElementById(_invRowDomId(r.stableId));
+    if (!el) return;   // filtered out, or in a folded group
+    el.outerHTML = _renderInvRow(job, r);
+    painted.push(_invRowDomId(r.stableId));
+  });
+  var wb = document.getElementById('inv-workbar');
+  if (wb) wb.outerHTML = _renderInvWorkbar(job, all);
+  _invRefreshFlagStrip(jobId);
+  _invRefreshSummary(jobId);
+  // Belt and braces, said so: a new line has no value and the default category, so it cannot enter the
+  // appraisal guardrail today, and removing this changes nothing a test can see. It is repainted so a future
+  // default (a category that always wants an appraiser) cannot leave the panel disagreeing with the rows.
+  _invRefreshGuardrail(jobId);
+  // Only inside what was just drawn — a cost, not a behaviour: painting every thumbnail on the page again
+  // gives the same picture and costs 3,000 style writes.
+  painted.forEach(function(id){ var el = document.getElementById(id); if (el) _invPaintThumbs(jobId, el); });
+  _invEnsureThumbs(jobId);
+  return true;
 }
 
 function _jobInvRefs(jobId) {
@@ -27042,7 +27176,8 @@ function _renderInvWorkbar(job, all) {
     return '<button class="btn-s" onclick="' + fn + '" title="' + esc(title) + '" style="'
       + (primary ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '') + '">' + label + '</button>';
   };
-  return '<div class="card" style="margin-bottom:1rem;">'
+  // The id is for `_invSplitRepaint`: the review count and the Name N shots button read the whole list.
+  return '<div class="card" id="inv-workbar" style="margin-bottom:1rem;">'
     + '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">'
       + '<div style="min-width:0;">'
         + '<div class="sec" style="margin:0;border-bottom:none;padding-bottom:0;">Inventory Review</div>'
@@ -27256,7 +27391,7 @@ function _renderInvRow(job, ref) {
     + (sibs.length > 1 ? ' &middot; <span title="This photograph carries ' + sibs.length
         + ' inventory lines" style="color:var(--bronze);">&#128279; 1 of ' + sibs.length
         + ' in this photo</span>' : '');
-  return '<div style="border-bottom:1px solid var(--border);background:' + (picked ? 'var(--cream)' : 'transparent') + ';">'
+  return '<div id="' + esc(_invRowDomId(sid)) + '" style="border-bottom:1px solid var(--border);background:' + (picked ? 'var(--cream)' : 'transparent') + ';">'
     + '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;">'
       + '<input type="checkbox"' + (picked ? ' checked' : '') + ' onchange="_invTogglePick(\'' + sid + '\',this)" '
         + 'style="width:14px;height:14px;flex:0 0 auto;cursor:pointer;accent-color:var(--gray-dk);" title="Select for a bulk change">'
@@ -27375,19 +27510,20 @@ function _renderInvPanel(job, ref) {
     + fieldHtml + secs + '</div>';
 }
 
-function _renderInvGroup(job, g) {
+// ⚠ EVERY PIECE A SPLIT CHANGES HAS AN ID, SO IT CAN BE REPAINTED WITHOUT THE REST (2026-09-30, audit P14):
+// the group card, its heading (count, value, progress), each room block and its count, and each row. See
+// `_invSplitRepaint`. The group key is a disposition, which can be text somebody typed into the sheet, so
+// ids are written through esc() and looked up with the raw string — getElementById needs no escaping.
+function _invRowDomId(sid) { return 'inv-row-' + sid; }
+function _invGroupDomId(key) { return 'inv-grp-' + key; }
+function _invGroupHeadDomId(key) { return 'inv-grph-' + key; }
+function _invRoomDomId(gkey, rk) { return 'inv-rm-' + rk + '|' + gkey; }
+function _invRoomHeadDomId(gkey, rk) { return 'inv-rmh-' + rk + '|' + gkey; }
+
+function _renderInvGroupHead(job, g) {
   var folded = !!_invFold[g.key];
   var st = { done: g.reviewed, total: g.items.length, complete: g.reviewed === g.items.length };
-  var undecided = (g.key === '');
-  var body = folded ? '' : g.rooms.map(function(rm){
-    return '<div style="margin-top:2px;">'
-      + '<div style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;padding:6px 4px 2px;">'
-        + esc(rm.name) + ' <span style="font-weight:400;">&middot; ' + rm.items.length + '</span></div>'
-      + rm.items.map(function(r){ return _renderInvRow(job, r); }).join('')
-      + '</div>';
-  }).join('');
-  return '<div class="card" style="margin-bottom:10px;' + (undecided ? 'border-left:3px solid var(--bronze);' : '') + '">'
-    + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">'
+  return '<div id="' + esc(_invGroupHeadDomId(g.key)) + '" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px;">'
       + '<button class="icon-btn" onclick="_invToggleFold(\'' + esc(g.key) + '\')" title="Collapse">' + (folded ? '&#9656;' : '&#9662;') + '</button>'
       + '<div class="sec" style="margin:0;border-bottom:none;padding-bottom:0;flex:1;min-width:0;">' + esc(g.label)
         + ' <span style="font-weight:400;color:var(--gray);font-size:11px;text-transform:none;letter-spacing:0;">'
@@ -27395,7 +27531,24 @@ function _renderInvGroup(job, g) {
         + (g.fmv ? ' &middot; ' + _money(g.fmv) : '') + '</span></div>'
       + _invProgressBar(st, 90)
       + '<button class="btn-s" onclick="_invPickGroup(' + job.id + ',\'' + esc(g.key) + '\',true)" style="font-size:10px;">Select all</button>'
-    + '</div>'
+    + '</div>';
+}
+function _renderInvRoomHead(g, rm) {
+  return '<div id="' + esc(_invRoomHeadDomId(g.key, rm.key)) + '" style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;padding:6px 4px 2px;">'
+    + esc(rm.name) + ' <span style="font-weight:400;">&middot; ' + rm.items.length + '</span></div>';
+}
+function _renderInvRoomBlock(job, g, rm) {
+  return '<div id="' + esc(_invRoomDomId(g.key, rm.key)) + '" style="margin-top:2px;">'
+    + _renderInvRoomHead(g, rm)
+    + rm.items.map(function(r){ return _renderInvRow(job, r); }).join('')
+    + '</div>';
+}
+function _renderInvGroup(job, g) {
+  var folded = !!_invFold[g.key];
+  var undecided = (g.key === '');
+  var body = folded ? '' : g.rooms.map(function(rm){ return _renderInvRoomBlock(job, g, rm); }).join('');
+  return '<div class="card" id="' + esc(_invGroupDomId(g.key)) + '" style="margin-bottom:10px;' + (undecided ? 'border-left:3px solid var(--bronze);' : '') + '">'
+    + _renderInvGroupHead(job, g)
     + (undecided ? '<div style="font-size:10.5px;color:var(--gray);margin:0 0 6px 4px;">No disposition chosen yet in the field. This is the list to work down.</div>' : '')
     + body + '</div>';
 }
@@ -29435,7 +29588,7 @@ var jobLogs = {}; // keyed by job.id
 // three page globals did to two jobs at once.
 var currentInvJobId = null;
 var currentInvStage = 'final'; // 'deposit' | 'midpoint' | 'final'
-var invRequiresApproval = false; // set per-render: only a final outside ±15% needs PIN
+var invRequiresApproval = false; // set per-render: only a final outside ±EST_TOLERANCE_PCT (estTolerancePctTxt) needs a PIN
 var invBlocked = false;          // set per-render: an hourly final with no hours logged
 
 // ⚠⚠ A SOURCING RECORD IS KEYED BY THE ESTIMATE LINE, NOT BY ITS POSITION.
@@ -29514,8 +29667,8 @@ function _srcPersistEstimates() {
 // Resolve actual vendor / prep costs from the Job Plan sourcing (vendorSourcing /
 // prepSourcing), falling back to the estimate amount per line when no actual quote
 // has been logged yet. Each line carries isEstimate so the invoice can tag stale
-// numbers. Fees are recomputed on the resolved totals: 15% SMF on third-party
-// vendors, 30% GC / Site Management Fee on home-prep vendors.
+// numbers. Fees are recomputed on the resolved totals: SMF_PCT on third-party
+// vendors (0 since 2026-08-02), prepFeeRate() on home-prep vendors.
 function getVendorActuals(job, est) {
   job = job || {}; est = est || {};
   var vsrc = job.vendorSourcing || {};
@@ -29542,7 +29695,7 @@ function getVendorActuals(job, est) {
   var pr = resolve(prepItems, psrc);
 
   // End-of-job logistics vendors are added at job time (no estimate budget); their
-  // actual quotes are third-party costs subject to the 15% SMF.
+  // actual quotes are third-party costs subject to the SMF (SMF_PCT, 0 today).
   var lsrc = job.logisticsSourcing || {};
   if (typeof logisticsCatsFor === 'function') {
     // Only count logistics categories not already covered by an estimate vendor.
@@ -30002,9 +30155,9 @@ function _logCrewTaken(crew, exceptKey) {
 // built before the one-slot rule) still renders and can be seen and corrected.
 function _logOptList(names, sel, taken) {
   var html = names.filter(function(n){ return n === sel || taken.indexOf(n) < 0; })
-    .map(function(n){ return '<option' + (n===sel?' selected':'') + '>' + n + '</option>'; }).join('');
+    .map(function(n){ return '<option' + (n===sel?' selected':'') + '>' + esc(n) + '</option>'; }).join('');
   // Preserve a previously-assigned name that's no longer in the active list.
-  if (sel && names.indexOf(sel) < 0 && !isCrewPlaceholder(sel)) html += '<option selected>' + sel + '</option>';
+  if (sel && names.indexOf(sel) < 0 && !isCrewPlaceholder(sel)) html += '<option selected>' + esc(sel) + '</option>';
   return html;
 }
 // kind: 'tc' | 'tc2' | 'ps' (with `slot`, 0-based). `teamOK` decides only the empty option's
@@ -30927,7 +31080,7 @@ function invoiceHtml(job, stage) {
     '<thead><tr><th>Team Member</th><th style="text-align:center;">Role</th><th style="text-align:center;">Hours</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Amount</th></tr></thead>' +
     '<tbody>' + teamRows + '</tbody>' +
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
-    (smf > 0 ? '<tr><td colspan="4">Service Management Fee (15% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
+    (smf > 0 ? '<tr><td colspan="4">Service Management Fee (' + Math.round(SMF_PCT*100) + '% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
     (finalRushAmt > 0 ? '<tr style="color:var(--bronze);"><td colspan="4"><strong>Expedited Delivery (' + Math.round(_rushRate * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(finalRushAmt) + '</td></tr>' : '') +
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor' + (_rushRate > 0 ? ' and the expedited-delivery premium charged on it' : '') + ')</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
@@ -30972,6 +31125,13 @@ function invoiceHtml(job, stage) {
   var _coPayRow = jobCOs.length
     ? '<tr><td colspan="2" style="font-size:12px;color:var(--bronze);">Approved Change Orders (' + jobCOs.length + ')</td><td class="r" style="color:var(--bronze);font-size:12px;">' + (coCharge ? _coMoney(coCharge) : coHoursLabel(coHrs) + ', billed in the hours above') + '</td></tr>'
     : '';
+  // ⚠ WHAT THE TOTAL ON A HOME PREP FINAL IS MADE OF (2026-09-30, audit P14; Anthony approved the wording).
+  // It read "logged hours + actual fees" on every hourly final, and a prep job bills the site management
+  // fee on what the vendors actually charged plus only the concierge hours logged, often none at all. So
+  // prep says exactly that, and drops the hours when none were logged. Every other service keeps its heading.
+  var _finTotalLbl = _prepCoJob
+    ? 'Services total (site management fee on actual vendor spend' + ((actTC + actPS) > 0 ? ' + logged concierge hours' : '') + ')'
+    : 'Actual Havellin services total (logged hours + actual fees)';
   var finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
     '<table class="pay-tbl">' +
     '<tr style="background:var(--tan);"><td colspan="2"><strong>Original Estimate (basis for advance payments)</strong></td><td class="r"><strong>' + fmt(origEstimateTotal) + '</strong></td></tr>' +
@@ -30980,7 +31140,7 @@ function invoiceHtml(job, stage) {
     '<tr><td>' + (_midBilled ? '25% ' + _mw.noun + ' — fees trued to actuals' : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">Deposit + actual fees</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
     '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
     _paymentGapRow(paymentGap, _priorInvoices, 'the balance below') +
-    '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">Actual Havellin services total (logged hours + actual fees)</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
+    '<tr style="border-top:2px solid var(--border-md);"><td colspan="2">' + _finTotalLbl + '</td><td class="r"><strong>' + fmt(havellinTotalDiscounted) + '</strong></td></tr>' +
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +
     '</div>';
@@ -30997,7 +31157,7 @@ function invoiceHtml(job, stage) {
     '<table class="ce-tbl"><tbody>' +
     '<tr><td>Havellin labor (estimate' + (discountPct > 0 ? ', net of ' + discountPct + '% discount' : '') + ')</td><td style="text-align:right;">' + fmt(estLaborNet) + '</td></tr>' +
     (materials > 0 ? '<tr><td>Moving materials — ' + pkgLabel + '</td><td style="text-align:right;">' + fmt(materials) + '</td></tr>' : '') +
-    (advSmf > 0 ? '<tr><td>Service Management Fee (15% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
+    (advSmf > 0 ? '<tr><td>Service Management Fee (' + Math.round(SMF_PCT*100) + '% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
     (advPrep > 0 ? '<tr><td>Home Prep for Sale — GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
     (advRush > 0 ? '<tr style="color:var(--bronze);"><td><strong>Expedited Delivery (' + Math.round(((est && est.rushPct) || RUSH_PCT) * 100) + '%)</strong><br><span style="font-size:11px;">' + rushScopeLine(est) + '</span></td><td style="text-align:right;font-weight:700;">+ ' + fmt(advRush) + '</td></tr>' : '') +
     '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
@@ -31026,7 +31186,7 @@ function invoiceHtml(job, stage) {
 
   // Third-party vendor costs (movers, hauling, etc.) are billed to the client directly
   // by each vendor — they are NOT charged on Havellin's invoice. Havellin's coordination
-  // fee (the 15% SMF, and 30% prep GC fee) stays in the services section above.
+  // fee (the SMF at SMF_PCT, and the prep GC fee at prepFeeRate()) stays in the services section above.
   var _fxFeeMode = _fixed ? (_fixedPrepOnTop ? 'fixed' : 'fixed-inside') : '';
   var vendorNote = (vendorCost > 0 || act.prep.length)
     ? '<div class="ce-note" style="margin-top:1rem;">Third-party vendor costs (movers, hauling, donation, cleaning, etc.) are billed to you directly by each vendor and are not included on this invoice. '
@@ -34692,12 +34852,13 @@ document.addEventListener('keydown', function(e){
   });
 });
 
-// ─── Directory delete (vendors + referral partners) ────────────────────────────
+// ─── Directory delete (vendors, referral partners and, since 2026-09-30, contractors) ──
 // PIN-gated permanent deletion, reusing the manager-PIN pattern the client delete uses.
 // Reserved for bulk-import errors / defunct records — real records with history
 // (a rated/used vendor, a partner with attributed referrals) are steered to "Do Not
-// Use" instead, so a delete can never orphan a rating or the referral leaderboard.
-var _dirDeleteTarget = null; // { kind:'vendor'|'referral', id, name }
+// Use" instead, so a delete can never orphan a rating or the referral leaderboard; a
+// contractor named on any job is steered to Inactive (contractorDeleteBlocker).
+var _dirDeleteTarget = null; // { kind:'vendor'|'referral'|'contractor', id, name }
 function _openDirDeletePin(){
   var sub = document.getElementById('dir-delete-sub');
   if (sub) sub.innerHTML = 'Permanently delete <strong>' + esc(_dirDeleteTarget.name) + '</strong> from the directory <em>and</em> the spreadsheet. This can’t be undone. Enter the manager PIN to confirm.';
@@ -34716,7 +34877,9 @@ function checkDirDeletePin(){
   document.getElementById('dir-delete-pin-modal').style.display = 'none';
   var t = _dirDeleteTarget; _dirDeleteTarget = null;
   if (!t) return;
-  if (t.kind === 'vendor') hardDeleteVendor(t.id); else hardDeleteReferral(t.id);
+  if (t.kind === 'vendor') hardDeleteVendor(t.id);
+  else if (t.kind === 'contractor') hardDeleteContractor(t.id);
+  else hardDeleteReferral(t.id);
 }
 
 function requestDeleteVendor(id){
@@ -35781,7 +35944,7 @@ function saveQuickPartner() {
     populateReferralPicker();
     var sel = document.getElementById('i-refpartner');
     if (sel) sel.value = referralIdOf(rec);
-    showFB('i-fb','ok', fields.partner_name + ' added to Referral Partners and selected.');
+    showFB('i-fb','ok', esc(fields.partner_name) + ' added to Referral Partners and selected.');
     if (typeof renderReferralsTab === 'function') renderReferralsTab();
   });
 }
@@ -37147,7 +37310,7 @@ function populateIntakeTCDropdown() {
   if (!sel) return;
   var cur = sel.value;
   sel.innerHTML = '<option value="">Unassigned</option>';
-  tcList.forEach(function(c){ sel.innerHTML += '<option value="'+c.name+'">'+c.name+'</option>'; });
+  tcList.forEach(function(c){ sel.innerHTML += '<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>'; });
   if (cur) sel.value = cur;
 }
 
@@ -37320,19 +37483,16 @@ function loadSettings() {
 }
 
 // ─── AGREEMENT ────────────────────────────────────────────────────────────────
-var agrApproved = false;
-var agrApprovedBy = '';
-var agrApprovedAt = '';
+// ⚠ NO PAGE-LEVEL `agrApproved` / `agrApprovedBy` / `agrApprovedAt` ANY MORE (2026-09-30, audit P14). They
+// described whichever job the Agreement tab loaded LAST, and every reader has been moved onto the job's own
+// record (`job.agrApproved`, `job.agrApprovedBy`, `job.agrApprovedAt`): the band (M1), `_actor`, and finally
+// `updateAgrUI`. Do not bring them back — see `invApproved` beside `jobLogs` for the same lesson on invoices.
 var currentAgrJobId = null;
 
 function loadAgreement() {
   var jobId = parseInt(document.getElementById('agr-job').value);
   currentAgrJobId = jobId || null;
   var job = jobs.find(function(j){ return j.id === jobId; });
-  // Restore persisted agreement approval from the job record (was a volatile global before)
-  agrApproved   = job ? !!job.agrApproved : false;
-  agrApprovedBy = job ? (job.agrApprovedBy || '') : '';
-  agrApprovedAt = job ? (job.agrApprovedAt || '') : '';
   if (!job) {
     document.getElementById('agr-page-content').innerHTML = '<div class="tab-empty">Select a job with an approved estimate to generate the agreement.</div>';
     updateAgrUI();
@@ -37785,7 +37945,7 @@ function probateAgreementHtml(job, est) {
   content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and third-party vendor costs based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
   content += pp(isFixedAgr
     ? bb('IMPORTANT:')+'  This engagement is billed at the fixed price stated above'+(_agrPrepOnTop ? ', together with the Home Sale Preparation Fee on the preparation vendors\' actual invoices' : '')+', not on actual hours. Any work beyond the scope described in Exhibit A requires a signed Change Order before Havellin proceeds; the fixed price does not otherwise change.'
-    : bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. If actual hours are projected to exceed the estimate by more than 15%, Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
+    : bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. If actual hours are projected to exceed the estimate by more than '+estTolerancePctTxt()+', Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
   content += subHdr('3.3 Payment Schedule');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.6rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Payment</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Amount</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Timing &amp; Trigger</th></tr></thead><tbody>';
@@ -37825,7 +37985,7 @@ function probateAgreementHtml(job, est) {
     // fixed price up to probate is what surfaced it.
     (isFixedAgr
       ? 'Any work requested by the Client, or required by conditions at the property, beyond the scope of work described in Exhibit A'
-      : 'Actual hours projected to exceed estimate by more than 15%'),
+      : 'Actual hours projected to exceed estimate by more than ' + estTolerancePctTxt()),
     'Discovery of contested assets, disputes among beneficiaries, or legal holds requiring work stoppage',
     'Multi-state property requiring ancillary probate coordination not identified at intake'
   ];
@@ -38473,7 +38633,7 @@ function agreementHtml(job, est) {
       ? p(b('3.8 Changes to Scope.')+'  Contractor\'s fee follows the third-party vendor costs actually incurred, so a change in the vendor work to be done changes that part of the fee only through those costs. Contractor will review each vendor\'s quote with Client before that vendor is booked, and any work added after that is quoted and agreed with Client in writing before it proceeds.  Hands-on work Contractor is asked to do after signing is documented in a written Change Order signed by both Parties.'+(_agrDcHrs > 0 ? '  If the decluttering described in Section 3.3 is reasonably projected to exceed the hours stated in the Estimate by more than '+estTolerancePctTxt()+', Contractor will notify Client in writing before proceeding.' : '')+'')
       : isFixedAgr
       ? p(b('3.8 Changes to Scope.')+'  The fixed price covers the scope of work described in the Estimate. If Client requests, or conditions require, work beyond that scope, Contractor will notify Client in writing before proceeding, and any resulting price adjustment will be documented in a written Change Order signed by both Parties.')
-      : p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than 15%, Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.'))+
+      : p(b('3.8 Adjustment to Estimate.')+'  If actual conditions require additional work reasonably projected to exceed the Estimate by more than '+estTolerancePctTxt()+', Contractor will notify Client in writing before proceeding. Any approved change will be documented in a written Change Order signed by both Parties.'))+
     p(b('3.9 Payment Method.')+'  Payment may be made by credit/debit card via Contractor\'s secure payment link, or by check or ACH payable to Havellin Palm Beach LLC.')
   );
 
@@ -38794,7 +38954,7 @@ function updateAgrUI() {
         + (_agrJ.agrSentAt ? ' — ' + esc(_agrJ.agrSentAt) : '')
         + '<div style="font-size:11px;color:var(--gray);margin-top:2px;">Record the signature when the client returns it.</div>';
     } else {
-      _prog = '<strong>Agreement approved</strong> — '+esc(agrApprovedBy)+' · '+esc(agrApprovedAt)
+      _prog = '<strong>Agreement approved</strong> — '+esc(_agrJ.agrApprovedBy || '')+' · '+esc(_agrJ.agrApprovedAt || '')
         + '<div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Print/Save PDF or email to the client, then mark it sent.</div>';
     }
     banner.innerHTML = '<div class="approval-banner approved" style="margin-bottom:1rem;"><div>' + _prog + '</div></div>';
@@ -38804,7 +38964,9 @@ function updateAgrUI() {
     // folder and unlocks sending. Two reasons, named separately, because they need different
     // things done about them.
     var _b = agrApprovalBlocker(currentAgrJobId);
-    var _rev = !!agrApprovalWithdrawn(_agrJ);
+    // The record is handed in for symmetry with the timeline; this branch only runs while the estimate is
+    // unapproved, where the store's answer is the same, so it is belt and braces here.
+    var _rev = !!agrApprovalWithdrawn(_agrJ, estimateStore[currentAgrJobId]);
     btnApprove.style.display='none'; btnStripe.style.display='none'; btnPdf.style.display='none'; if (btnPacket) btnPacket.style.display='none'; if (btnEmail) btnEmail.style.display='none';
     if (_b === 'estimate') {
       badge.innerHTML = '<span class="badge b-pending">Estimate Not Approved</span>';
@@ -38916,14 +39078,14 @@ function ensureAgreementApproved(jobId) {
   // Attribution without a PIN: the manager who approved the PRICE is the named person
   // who signed off on everything this document says. `_actor` reads this — and, since
   // 2026-09-29, nothing else — for agrSentBy, a document's draftedBy and sentBy, a payment's
-  // and a signature's recordedBy, depositReceivedBy, activatedBy, deliveredBy and the review
-  // ask, so it must never be blank.
+  // and a signature's recordedBy, depositReceivedBy, a re-open and the review ask, so it must
+  // never be blank. (activatedBy and deliveredBy read the assigned concierge first since
+  // 2026-09-30 — `_handoverBy` — and fall back to this only on a job with nobody assigned.)
   job.agrApprovedBy = (rec && rec.approvedBy) || job.wonBy || job.tc || '';
   job.agrApprovedAt = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   delete job.agrRevokedBy; delete job.agrRevokedAt;
   job.updatedAt = Date.now();
   saveJobs(); syncJobToSheets(job);
-  agrApproved = true; agrApprovedBy = job.agrApprovedBy; agrApprovedAt = job.agrApprovedAt;
   // ⚠ ONE document is filed, and it is the SIGNING PACKET. The bare agreement was filed
   // here too until 2026-09-11 and is not any more — see exportSigningPacketToDrive.
   //
@@ -39321,7 +39483,7 @@ function saveContractor() {
              || contractors.find(function(c){ return c.id === editId; });
     if (_prev && !samePerson(_prev.name, name)) {
       if (!confirm('This will rename ' + _prev.name + ' to ' + name + ' and overwrite their rate, contact details and notes.\n\nPress Cancel if you meant to add ' + name + ' as a new person.')) {
-        showFB('c-fb','warn','Nothing saved. Close this card and press + Add Contractor to enter ' + name + ' as a new person.');
+        showFB('c-fb','warn','Nothing saved. Close this card and press + Add Contractor to enter ' + esc(name) + ' as a new person.');
         return;
       }
     }
@@ -39338,12 +39500,12 @@ function saveContractor() {
     document.getElementById('add-contractor-card').dataset.editId = '';
     var saveBtn = document.getElementById('add-contractor-card').querySelector('.btn-p');
     if (saveBtn) saveBtn.textContent = 'Save Contractor';
-    showFB('c-fb','ok', name + ' updated.');
+    showFB('c-fb','ok', esc(name) + ' updated.');
   } else {
     // New contractor
     newData.id = 'c' + Date.now();
     contractors.push(newData);
-    showFB('c-fb','ok', name + ' added.');
+    showFB('c-fb','ok', esc(name) + ' added.');
   }
   saveContractors();
   document.getElementById('add-contractor-card').style.display = 'none';
@@ -39351,16 +39513,73 @@ function saveContractor() {
   rebuildDropdowns();
 }
 
+// ⚠⚠ DELETING A CONTRACTOR TAKES THE MANAGER PIN, AND ONE WITH HISTORY IS RETIRED, NOT DELETED (2026-09-30,
+// audit P14). The ✕ was a bare confirm(), unlike the vendor and partner deletes beside it. And a person's NAME
+// is this app's person key (see PERSON NAMES): the jobs that name them keep the name, but the directory row is
+// where their mobile, email and cost rate live, so the estimate and invoice footers that look the preparer up
+// by name lose the contact line, and the margin panel falls back to the founder rate for their hours. So:
+//   · the jobs that name the person — the concierge assigned, the site visit, the estimate's preparer, a crew
+//     slot, an hours entry — are counted by `contractorJobRefs`, and any at all refuses the delete with the
+//     way out (Inactive: off every staffing dropdown, still on every job that names them);
+//   · an unread client list refuses too, because an empty one proves nothing (see jobsUnread);
+//   · the PIN is the directory's (`_openDirDeletePin` / `checkDirDeletePin`), and the check runs AGAIN in the
+//     handler behind the PIN, `hardDeleteContractor`: the jobs can land, or another device can staff the person,
+//     between the ✕ and the fourth digit.
+function contractorJobRefs(name) {
+  if (name == null || !String(name).trim()) return [];
+  var named = function (v) { return v != null && String(v).trim() !== '' && samePerson(v, name); };
+  return (jobs || []).filter(function (j) {
+    if (!j) return false;
+    if (named(j.tc) || named(j.siteVisitBy)) return true;
+    var cr = j.crew;
+    if (cr && ((cr.tc && named(cr.tc.name)) || (cr.tc2 && named(cr.tc2.name))
+        || (Array.isArray(cr.ps) && cr.ps.some(function (p) { return p && named(p.name); })))) return true;
+    var rec = (typeof estimateStore !== 'undefined' && estimateStore) ? estimateStore[j.id] : null;
+    var e = rec && rec.estimate;
+    if (e && (named(e.preparedBy) || named(e.preparedBy2)
+        || (Array.isArray(e.psSlots) && e.psSlots.some(function (s) { return s && named(s.type); })))) return true;
+    return jobLogEntries(j.id).some(function (en) {
+      return ((en && en.members) || []).some(function (m) { return m && named(m.name); });
+    });
+  });
+}
+// '' when this contractor may be deleted, or the sentence saying why not. DOM-free; asked by the ✕ and by the
+// delete itself.
+function contractorDeleteBlocker(c) {
+  if (!c) return 'That contractor is no longer in the directory. Reload the page and try again.';
+  if (jobsUnread()) return 'The client list has not loaded, so the jobs that name ' + (c.name || 'this contractor')
+    + ' cannot be checked yet. Try again once it has.';
+  var refs = contractorJobRefs(c.name);
+  if (!refs.length) return '';
+  var names = refs.slice(0, 3).map(function (j) { return j.name || ('Job ' + j.id); });
+  return (c.name || 'This contractor') + ' is named on ' + refs.length + ' job' + (refs.length === 1 ? '' : 's')
+    + ' (' + names.join(', ') + (refs.length > 3 ? ' and ' + (refs.length - 3) + ' more' : '') + ') — as the concierge, '
+    + 'on a crew, on an estimate or in the hours log. To keep those records intact, retire them instead: set their '
+    + 'status to Inactive (Full edit → Status). Inactive contractors leave every staffing dropdown and stay on '
+    + 'every job that names them.';
+}
 function deleteContractor(id) {
-  if (!confirm('Remove this contractor?')) return;
-  contractors = contractors.filter(function(c){ return c.id !== id; });
+  // The built-in team has no ✕ and is not in `contractors`, so it cannot be reached from here.
+  var c = contractors.find(function(x){ return String(x.id) === String(id); });
+  if (!c) return;
+  var why = contractorDeleteBlocker(c);
+  if (why) { alert(why); return; }
+  _dirDeleteTarget = { kind: 'contractor', id: String(id), name: c.name || 'this contractor' };
+  _openDirDeletePin();
+}
+function hardDeleteContractor(id) {
+  var c = contractors.find(function(x){ return String(x.id) === String(id); });
+  // ⚠ ASKED AGAIN BEHIND THE PIN — the handler asks the same question as the button.
+  var why = contractorDeleteBlocker(c);
+  if (why) { alert(why); return; }
+  contractors = contractors.filter(function(x){ return String(x.id) !== String(id); });
   saveContractors();
   // The Sheet MERGES contractor pushes by id and never drops a record missing from the
   // payload, and it's the source of truth on load — so removals must also fire an
   // explicit deleteContractor or the row would reappear on the next device sync. Mirrors
   // the deleteJob flow.
   if (typeof postSyncBadge === 'function' && SHEETS_SYNC_URL) {
-    postSyncBadge({ type: 'deleteContractor', payload: { id: id } }, 'Contractor removed from cloud ✓', 'Removed locally — also delete it on another device');
+    postSyncBadge({ type: 'deleteContractor', payload: { id: c.id } }, 'Contractor removed from cloud ✓', 'Removed locally — also delete it on another device');
   }
   renderContractors();
   rebuildDropdowns();
@@ -39540,13 +39759,16 @@ function getAllActivePS() {
 function rebuildDropdowns() {
   var tcList = getAllActiveTC();
   var psList = getAllActivePS();
+  // ⚠ A NAME IS TEXT, IN THE ATTRIBUTE AND IN THE LABEL (2026-09-30, audit P14). Written raw, a double quote
+  // in a name closed `value="…"` early, so the option's value was a fragment of the name and the select
+  // could not hold the person it listed; a `<` or `&` did the same to the label.
 
   // Rebuild TC dropdown in intake
   var intakeTC = document.getElementById('i-tc');
   if (intakeTC) {
     var curVal = intakeTC.value;
     intakeTC.innerHTML = '<option value="">Unassigned</option>';
-    tcList.forEach(function(c){ intakeTC.innerHTML += '<option value="'+c.name+'">'+c.name+'</option>'; });
+    tcList.forEach(function(c){ intakeTC.innerHTML += '<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>'; });
     if (curVal) intakeTC.value = curVal;
   }
   // Rebuild site visit by dropdown
@@ -39554,7 +39776,7 @@ function rebuildDropdowns() {
   if (siteVisitSel) {
     var curSV = siteVisitSel.value;
     siteVisitSel.innerHTML = '<option value="">Select TC</option>';
-    tcList.forEach(function(c){ siteVisitSel.innerHTML += '<option value="'+c.name+'">'+c.name+'</option>'; });
+    tcList.forEach(function(c){ siteVisitSel.innerHTML += '<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>'; });
     if (curSV) siteVisitSel.value = curSV;
   }
   // Rebuild estimate prepared by dropdown
@@ -39562,7 +39784,7 @@ function rebuildDropdowns() {
   if (prepBySel) {
     var curPB = prepBySel.value;
     prepBySel.innerHTML = '<option value="">Select TC</option>';
-    tcList.forEach(function(c){ prepBySel.innerHTML += '<option value="'+c.name+'">'+c.name+'</option>'; });
+    tcList.forEach(function(c){ prepBySel.innerHTML += '<option value="'+esc(c.name)+'">'+esc(c.name)+'</option>'; });
     if (curPB) prepBySel.value = curPB;
   }
   // The second concierge is a flag on the estimate now, not a person, so there is no

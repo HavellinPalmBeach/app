@@ -261,7 +261,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('the rail answers it, and offers the retry where it matters');
   {
-    const ctx = sandbox({ fns: ['_jtDriveLink', 'docKeyFor', 'docWord'], vars: ['DOC_KIND_WORD', 'DOC_READY_WHY'] });
+    const ctx = sandbox({ fns: ['_jtDriveLink', 'docKeyFor', 'docWord', 'paymentStageWord'], vars: ['DOC_KIND_WORD', 'DOC_READY_WHY', 'DOC_STAGE_WORD'] });
     const j = (o) => ({ id: 7, docState: { estimate: o } });
     eq(ctx._jtDriveLink(7, j({}), 'estimate', '').length, 0, 'nothing sent, nothing offered');
     eq(ctx._jtDriveLink(7, j({ filedAt: 't', filedUrl: 'https://drive/x' }), 'estimate', '')[0].call,
@@ -271,7 +271,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const gap = ctx._jtDriveLink(7, j({ sentAt: 't' }), 'estimate', '');
     eq(gap.length, 1, 'sent but unfiled offers a retry');
     has(gap[0].call, "'estimate','file'", 'through the one action');
-    has(gap[0].label, 'File to Drive', 'and says what it will do');
+    has(gap[0].label, 'File estimate to Drive', 'and says what it will do, naming the document');
     // An unsent, unfiled document is not a gap — it has not gone anywhere yet.
     eq(ctx._jtDriveLink(7, j({ draftedAt: 't' }), 'estimate', '').length, 0,
       'a draft that has not been sent is not a retention gap');

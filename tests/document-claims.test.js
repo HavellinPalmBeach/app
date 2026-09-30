@@ -87,8 +87,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
     'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashOfferDiscount', 'dashNotice', '_primeEstimateFor',
     'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'discountDraftWarning', 'docDraftPending'];
-  const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', 'agrApproved',
-    'agrApprovedBy', 'agrApprovedAt', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
+  const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt', '_dashShown', '_dashKeepNotice'];
   // An hourly estimate: labour 20,000, a 10% discount, no rush — agreed at 18,000.
   const EST = (o) => Object.assign({ jobId: 1, tcFee: 12000, psFee: 8000, havellinTotalFull: 20000, rush: false, rushAmt: 0,
@@ -376,7 +375,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'matterTypeOf', 'invFiduciaryMode', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'samePerson',
       'canonPersonName'],
     vars: ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DECEDENT_SERVICES', 'DOC_SCOPES',
-      'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'agrApproved', 'agrApprovedBy', 'agrApprovedAt', '_PCT_WORDS', 'ESIGN_ANCHORS',
+      'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', '_PCT_WORDS', 'ESIGN_ANCHORS',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
       'PERSON_NAME_ALIASES', 'MAX_DISCOUNT_PCT'],
     stubs: { jobs: [], estimateStore: {}, contractors: [] },

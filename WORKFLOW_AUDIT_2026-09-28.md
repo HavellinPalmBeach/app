@@ -4,7 +4,7 @@ Five audits and a click-through of three jobs, from + Add New Client to final pa
 
 Status of each fix pack lives in this file: when a session lands a pack, it marks it done here and adds its CLAUDE.md entry.
 
-**Status, 2026-09-30:** P1–P10 have landed on `main`: C1, C2, H1–H9, M1–M8, M13–M16 and nineteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). One P10 low is a decision for Anthony (`deliveredBy` / `activatedBy`, under the lows), and one P9 low (sanity checks on square footage and room counts) waits on his limits. Still open: P11–P14 (M9–M12 and the remaining lows). Questions still open: Q7, the Q14 follow-up and Anthony's OK on the Q20 reading, all three for P12 only.
+**Status, 2026-09-30:** P1–P10 have landed on `main`: C1, C2, H1–H9, M1–M8, M13–M16 and nineteen lows are fixed and marked below, plus Anthony's follow-up to P7 (the final invoice names only the invoices that went out, and a closed job can be re-opened; see H3). The P10 low that waited on Anthony (`deliveredBy` / `activatedBy`) is answered and fixed with P14 (the assigned concierge). P11 landed on 2026-09-30 (live once the Apps Script is redeployed, `2026-09-30`), and so did P14; its one open line, sanity checks on square footage and room counts, is decided not to build (Anthony, 2026-09-30: "no sanity check is needed"). Still open: P12 and P13 (M10–M12 and the estimator lows). Questions still open: the Q14 follow-up and Anthony's OK on the Q20 reading, both for P12 only (Q5–Q7 answered 2026-09-30).
 
 ## TL;DR
 
@@ -282,7 +282,7 @@ A partner chosen and then hidden (by changing the source) is still saved, and pa
 - Edit Client's required asterisks aren't enforced. *(fixed 2026-09-30: both forms ask one rule; Edit Client refuses a save that would clear a required field and names older gaps after saving)*
 - The example placeholders ((561) 555-0100, client@email.com) are back, set at runtime where the markup test can't see them. *(fixed 2026-09-30, and the tripwire now reads runtime placeholders)*
 - The intake reset carries date minimums and the referral block to the next client. *(fixed 2026-09-30)*
-- No sanity checks on square footage or room counts. *(left open by P9, 2026-09-30: it needs Anthony's limits; moved to P14)*
+- No sanity checks on square footage or room counts. *(left open by P9, 2026-09-30, and moved to P14; decided not to build: Anthony, 2026-09-30, "no sanity check is needed")*
 - The client name is unescaped in two headers. *(fixed 2026-09-30)*
 - A service switch wipes phone and email. *(fixed 2026-09-30: put aside and restored)*
 - Home Prep's Edit Client shows the house checklist its intake skips. *(fixed 2026-09-30: both forms ask access & security and safety on prep, per Q17)*
@@ -295,17 +295,17 @@ A partner chosen and then hidden (by changing the source) is still saved, and pa
 - A closed job's plan marks Before Day 1 as NOW. *(fixed 2026-09-29)*
 - Home Prep's second payment is called the "midpoint invoice", while its estimate says it is due when the vendor schedule is booked. *(fixed 2026-09-29)*
 - A won job reads "Approved — Awaiting Client" in the client list after a re-approval. *(fixed 2026-09-29)*
-- `deliveredBy` and `activatedBy` record the estimate's approver, not whoever pressed the button. *(left for Anthony, 2026-09-29: which name should a handover carry — the approver, the assigned concierge, or a name asked at the press?)*
+- `deliveredBy` and `activatedBy` record the estimate's approver, not whoever pressed the button. *(left for Anthony, 2026-09-29: which name should a handover carry — the approver, the assigned concierge, or a name asked at the press?)* *(fixed 2026-09-30, P14: Anthony's answer, the assigned concierge; the approver only when nobody is assigned)*
 
 **Other** (fix: P14)
 
 - The stale-backend banner doesn't list every action the app calls. *(fixed 2026-09-30 in P11: it lists every action and type the app posts, and names a deployment older than 2026-09-30 by version)*
 - A feedback message can be wiped by an earlier message's 4-second timer. *(fixed 2026-09-29)*
-- Filed copy links don't name their document.
-- The Job active step shows no date.
+- Filed copy links don't name their document. *(fixed 2026-09-30)*
+- The Job active step shows no date. *(fixed 2026-09-30)*
 - Dead code: `houseFlagSummary` and the client list's detail row. *(fixed 2026-09-29)*
-- Deleting a contractor has no PIN.
-- Splitting a photo repaints the whole tab: 1.4 s at 3,000 rows.
+- Deleting a contractor has no PIN. *(fixed 2026-09-30: the manager PIN, and a contractor named on any job is retired rather than deleted)*
+- Splitting a photo repaints the whole tab: 1.4 s at 3,000 rows. *(fixed 2026-09-30: the split repaints its rows in place)*
 - Agent One's 4,096-token limit is tight with thinking on.
 
 ## Fix prompts
@@ -325,7 +325,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P11** Harden the Apps Script backend (redeploy) — landed 2026-09-30; live once Anthony redeploys `2026-09-30`
 - [ ] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20)
 - [ ] **P13** Documentation pass (needs the packs above first)
-- [ ] **P14** Small backlog
+- [x] **P14** Small backlog — landed 2026-09-30 (the intake sanity checks are decided not to build)
 
 ### P1 · Stop estimates leaking between clients
 
@@ -604,14 +604,14 @@ Fixes: other lows
 ```text
 Small backlog, one commit (2026-09-28 workflow audit, "Other" lows):
 - `showFB` clears its strip on an unconditional 4-second timer, so a second message inside 4 s is wiped by the first message's timer. *(already fixed 2026-09-29, found on re-check 2026-09-30)*
-- The "Filed copy" links in the document strip don't name their document.
-- The Job active step shows no date, though `activatedOn` is stamped.
-- Intake has no sanity check on square footage or room counts (moved from P9; ask Anthony for the limits first — flag, never refuse).
+- The "Filed copy" links in the document strip don't name their document. *(fixed 2026-09-30)*
+- The Job active step shows no date, though `activatedOn` is stamped. *(fixed 2026-09-30)*
+- Intake has no sanity check on square footage or room counts (moved from P9; ask Anthony for the limits first — flag, never refuse). *(decided not to build: Anthony, 2026-09-30, "no sanity check is needed")*
 - Dead code: `houseFlagSummary` and the client list's unused `detailHtml`, if P5 didn't already remove them. *(already gone, re-checked 2026-09-30)*
-- Person-entered names rendered unescaped (found on re-check 2026-09-30): `saveQuickPartner`'s notice (partner), *Estimate loaded for job:* (client), the estimate-denied notice (`djob.tc`), the contractor save and refusal messages, and contractor names in the `value` and text of four dropdowns (a quote mark breaks the option). Wrap each in `esc()`.
-- The Home Prep final heads its total "logged hours + actual fees" (client-facing wording: Anthony picks the label). An unrendered "Service Management Fee (15% — vendor coordination)" label in `invoiceHtml` would be wrong if `SMF_PCT` ever moved off 0.
-- Deleting a contractor has no PIN, unlike vendors and partners.
-- Splitting a photo (`invSplitItemClick`) repaints the whole Job Admin tab: 1.4 s at 3,000 rows. Repaint the affected rows only.
+- Person-entered names rendered unescaped (found on re-check 2026-09-30): `saveQuickPartner`'s notice (partner), *Estimate loaded for job:* (client), the estimate-denied notice (`djob.tc`), the contractor save and refusal messages, and contractor names in the `value` and text of four dropdowns (a quote mark breaks the option). Wrap each in `esc()`. *(fixed 2026-09-30, and the Job Plan team selects' labels with them)*
+- The Home Prep final heads its total "logged hours + actual fees" (client-facing wording: Anthony picks the label). An unrendered "Service Management Fee (15% — vendor coordination)" label in `invoiceHtml` would be wrong if `SMF_PCT` ever moved off 0. *(fixed 2026-09-30: Anthony's wording, "Services total (site management fee on actual vendor spend + logged concierge hours)", without the hours when none are logged; the SMF label reads `SMF_PCT`)*
+- Deleting a contractor has no PIN, unlike vendors and partners. *(fixed 2026-09-30)*
+- Splitting a photo (`invSplitItemClick`) repaints the whole Job Admin tab: 1.4 s at 3,000 rows. Repaint the affected rows only. *(fixed 2026-09-30)*
 - Agent One's `AGENT_MAX_TOKENS` is 4,096 with adaptive thinking on, so a dense frame can fail with "cut off". Raise it to about 16,000 (backend; bundle it with P11's redeploy). *(fixed 2026-09-30 in P11)*
 House process (CLAUDE.md): tests plus a revert sweep, a CLAUDE.md entry, stamp the build, push.
 ```

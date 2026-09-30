@@ -31,7 +31,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     vars: ['AGR_SIG_METHODS', 'AGR_SIG_MANUAL_METHODS', 'ESIGN_PROVIDERS'],
     stubs: Object.assign({
       saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
-      ESIGN_PROVIDER_KEY: 'manual', agrApprovedBy: '',
+      ESIGN_PROVIDER_KEY: 'manual', 
     }, stubs || {}),
   });
 

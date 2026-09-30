@@ -204,8 +204,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   await p.evaluate((id) => { window.print = function () {}; docAction(id, 'agreement', 'print'); }, idB); await p.waitForTimeout(1200); await hookPrint();
   const bRec = await p.evaluate((id) => { const j = jobs.find(x => x.id === id); return [j.agrApprovedBy, j.agrApprovedAt]; }, idB);
   ok(bRec[0] === 'Ashley Jerome' && bRec[1] === TODAY_LONG, 'B is approved by Ashley, today, through the real stamp: ' + bRec.join(' / '));
-  const pg = await p.evaluate(() => [agrApprovedBy, agrApprovedAt]);
-  ok(pg[0] === 'Ashley Jerome', 'fixture: the page globals now describe B');
+  // ⚠ RESTATED 2026-09-30 (audit P14): the page globals that then described B are deleted, so nothing on the
+  // page can hold another job's approval for a band to read.
+  const pg = await p.evaluate(() => [typeof agrApproved, typeof agrApprovedBy, typeof agrApprovedAt]);
+  ok(pg.every((t) => t === 'undefined'), 'the page keeps no copy of B\'s approval (' + pg.join(', ') + ')');
   const aStd = await p.evaluate((id) => agreementHtml(jobs.find(j => j.id === id), null), idA);
   ok(bandOf(aStd) === 'Anthony Graziano | September 1, 2026', '⚠⚠ A\'s agreement STILL names Anthony, September 1 (' + bandOf(aStd) + ') — it used to read Ashley, today');
   const aPacket = await p.evaluate((id) => signingPacketHtml(id), idA);

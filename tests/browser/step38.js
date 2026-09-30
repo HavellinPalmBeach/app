@@ -103,7 +103,9 @@ let b;
   eq(dialogs.length, 1, 'pressing Re-open asks once');
   const q0 = (dialogs[0] || {}).msg || '';
   has(q0, 'Re-open this job?', 'the question says what it is');
-  has(q0, 'It was closed on Sep 30, 2026 by Anthony Graziano.', 'names the close it would undo');
+  // ⚠ RESTATED 2026-09-30 (audit P14, Anthony's answer): the close carries the job's assigned concierge, Ashley
+  // here, and no longer the manager who approved the price.
+  has(q0, 'It was closed on Sep 30, 2026 by Ashley Jerome.', 'names the close it would undo, under the job\'s concierge');
   has(q0, 'clears that handover date', 'says the handover date goes');
   eq(await job(7201), before, '⚠ Cancel leaves the job exactly as it was');
   eq(await p.evaluate(() => document.querySelector('.panel.active').id), 'panel-jobs', 'and goes nowhere');
@@ -128,7 +130,7 @@ let b;
   eq(j1.status, 'active', 'OK: the job is active again');
   ok(!('deliveredOn' in j1), '⚠⚠ the handover stamp is cleared');
   eq((j1.reopens || []).map((e) => [e.closedOn, e.closedBy, e.reopenedOn, e.finalDraftVoided]),
-     [['2026-09-30', 'Anthony Graziano', '2026-09-30', '2026-09-30T16:00:00Z']], 'the close it undid is kept on the record, with the voided draft');
+     [['2026-09-30', 'Ashley Jerome', '2026-09-30', '2026-09-30T16:00:00Z']], 'the close it undid is kept on the record, with the voided draft');
   eq(Object.keys(j1.docState['invoice:final']), ['staleDrafts'], 'the stale draft is off the record — kept only in the draft history');
   eq(j1.docState['invoice:final'].staleDrafts, [{ draftedAt: '2026-09-30T16:00:00Z', provider: 'gmail',
     mailbox: 'anthony@havellinpalmbeach.com', why: 'reopen' }], '⚠⚠ which remembers the day, the mailbox and why it went stale');
