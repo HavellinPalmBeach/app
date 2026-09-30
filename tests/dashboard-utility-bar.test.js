@@ -53,11 +53,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
     'roomStatusNormalize',
     'workingDaysInclusive', 'approvedEstimateFor',
-    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
+    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts',
     'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',
     // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
-    'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix'];
-  const VARS = ['_driveFolderInFlight', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
+    'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix',
+    // A closed-retained job names what it kept (the payments list group below renders one).
+    'closeoutRetainedTotal', 'jobPaidTotal'];
+  const VARS = ['_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',
@@ -388,6 +390,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dupes = [...new Set(clicks.filter((v, i) => clicks.indexOf(v) !== i))];
     eq(dupes, [], c.label + ': no control appears twice on one screen');
   });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  group('⚠ THE PAYMENTS LIST IS ON THE RENDERED DASHBOARD, on every state that has a payment (2026-09-30, P16)');
+
+  // Mark cleared and Void live on this list and nowhere else, so a dashboard that stops printing it leaves a
+  // bounced cheque counting with no way to take it back. Rendered through the real renderer, as the net above.
+  {
+    const cheque = { id: 1, stage: 'deposit', amount: 12050, method: 'check', receivedOn: '2026-09-10', clearedOn: null };
+    [
+      { label: 'signed and funded', over: { agrApproved: true, agrSent: true, agrSigned: true, agrSignedAt: 'Sep 10, 2026',
+        depositReceived: true, status: 'active', payments: [cheque] } },
+      { label: 'closed', over: { status: 'closed', deliveredOn: '2026-09-30', agrSigned: true, depositReceived: true, payments: [cheque] } },
+      { label: 'closed, deposit retained', over: { status: 'closed_retained', agrSigned: true, depositReceived: true, payments: [cheque] } },
+    ].forEach((c) => {
+      const page = render(c.over);
+      has(page, 'Payments recorded', c.label + ': the payments list is on the page');
+      has(page, 'markPaymentCleared(7,\'1\')', c.label + ': with Mark cleared on the uncleared cheque');
+      has(page, 'openVoidPayment(7,\'1\')', c.label + ': and Void');
+    });
+    const voided = render({ status: 'active', agrSigned: true, payments: [Object.assign({}, cheque,
+      { voidedAt: '2026-09-29T15:00:00.000Z', voidedBy: 'Anthony Graziano', voidReason: 'returned unpaid' })] });
+    has(voided, 'jt-pay void', 'a voided payment stays on the list, marked void');
+    has(voided, 'returned unpaid', 'with its reason');
+    lacks(voided, 'openVoidPayment(', 'and nothing to press on it');
+    lacks(render({ status: 'new', won: false, approved: false }, null), 'Payments recorded', 'a client with no payment has no list');
+  }
 
   // ───────────────────────────────────────────────────────────────────────────
   group('Edit client appears exactly once, and the quick strip no longer carries it');

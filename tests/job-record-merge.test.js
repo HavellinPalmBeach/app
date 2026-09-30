@@ -113,10 +113,10 @@ function server() {
   };
   vm.createContext(ctx);
   const names = ['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet',
-    '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord',
+    '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_paymentSticky',
     'saveLogStore', 'getLogStore', '_lockOrBusy'];
   vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'),
-    gsVar('JOB_LIST_KEY'), ...names.map(gsFn)].join('\n\n'), ctx, { filename: 'main-sync.gs (extracted)' });
+    gsVar('JOB_LIST_KEY'), gsVar('JOB_PAYMENT_STICKY'), ...names.map(gsFn)].join('\n\n'), ctx, { filename: 'main-sync.gs (extracted)' });
   return ctx;
 }
 

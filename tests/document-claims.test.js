@@ -128,7 +128,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(job.agrApprovedBy, '', 'and the approver cleared, so the re-approval re-stamps');
     ok(!('1' in ctx._packetExported),
        '⚠⚠ and the packet’s filing guard is cleared, so re-approval RE-FILES Drive the same day by the same manager');
-    ok(said.badges.some((m) => /Agreement approval revoked/.test(m)), 'the revocation says so');
+    // ⚠ RESTATED 2026-09-30 (P16): "withdrawn", with the step that restores it — see revokeAgreementApproval.
+    ok(said.badges.some((m) => /Agreement approval withdrawn/.test(m)), 'the revocation says so');
     // ⚠ RESTATED 2026-09-29, not deleted: the confirmation is the dashboard's NOTICE now. It was a showFB
     // written a moment before _dashRedraw rewrote the strip it was written into — measured in a browser,
     // #dash-fb read empty straight after Apply — so the person pressing it never saw it at all.
@@ -220,7 +221,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'estimateSubmitBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
       'docPreviewOnly', 'agreementReady', 'isJobWon', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
-      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
+      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
       'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews',
       '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn'],

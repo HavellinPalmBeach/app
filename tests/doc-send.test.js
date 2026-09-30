@@ -291,7 +291,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // a button that reports an error — and it says the attachment is missing, because
     // RFC 6068 cannot carry one.
     has(s, "if (provider === 'gmail')", 'a failed Gmail draft falls back');
-    has(s, 'it carries NO attachment', 'and the notice says so rather than letting the body claim one');
+    // ⚠ RESTATED 2026-09-30 (P16, B6): the fallback is recorded now, through the same tail as the mailto route, so
+    // it says what that route says; the separate sentence it used to print went with the separate path.
+    has(s, "recordSend('mailto', null, '', null, 'Gmail draft failed — ' + err + '. ')", 'the fallback records and speaks as the mailto route');
+    has(s, 'a plain email carries NO attachment', 'and the notice says so rather than letting the body claim one');
     has(s, "_docNotice('err'", 'while a failed fallback is reported as an error');
 
     // ⚠⚠ WHETHER AN ATTACHMENT IS POSSIBLE IS A PROPERTY OF THE PROVIDER, NEVER OF

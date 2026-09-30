@@ -35,7 +35,7 @@ const { sandbox, source, fn, domStub } = require('./harness');
 // stagePaidTotal is lifted though the report never calls it: a build that counts a retained job's
 // deposit stage alone reaches for it, and a sandbox without it would crash on that revert rather
 // than fail it — the other four suites lifting closeoutRetainedTotal already carry it.
-const WL_FNS = ['jobsUnread', 'jobsUnreadNotice', 'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'closeoutRetainedTotal', 'jobPaidTotal', 'stagePaidTotal', 'jobPayments',
+const WL_FNS = ['jobsUnread', 'jobsUnreadNotice', 'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'stagePaidTotal', 'jobPayments',
   'winLossListHtml', '_wlClientCell', '_jobStatusCell', 'toggleWinLossList', 'isJobWon', 'secCaret',
   'esc', 'fmtDate2', 'svcLabelOf', 'jobStatusView', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'];
 const WL_VARS = ['SVC_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS', '_wlOpen'];

@@ -232,7 +232,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the Agreement tab's banner reads the job, so the job's own fields are the whole of the clear.
     has(agrRev, "job.agrApprovedBy = ''; job.agrApprovedAt = ''", 'the approver and date come off the job');
     lacks(agrRev, 'agrApprovedBy = \'\'; agrApprovedAt', 'and there are no page globals left to clear');
-    has(agrRev, 'Agreement approval revoked', 'and the person is told, rather than finding out later');
+    // ⚠ RESTATED 2026-09-30 (P16): the badge said "revoked — re-approve it once the estimate is settled", and the
+    // agreement has no approval step to redo. It says withdrawn, and names the step that restores it.
+    has(agrRev, 'Agreement approval withdrawn', 'and the person is told, rather than finding out later');
     has(rev, 'delete job.estimateDriveAt', "the estimate's Drive stamp still clears too");
     has(rev, 'rec.approved = false', 'and the estimate record itself is un-approved');
 
@@ -573,7 +575,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fn('docProvider'), "gmailConfigured() ? 'gmail' : 'mailto'",
       'and an unconfigured Gmail falls to it rather than erroring');
     has(fn('docSend'), 'DOC_SEND_PROVIDERS.mailto', 'as does a failed Gmail draft');
-    has(fn('docSend'), 'it carries NO attachment', 'and the notice says the attachment is not there');
+    // ⚠ RESTATED 2026-09-30 (P16, B6): the failed-Gmail fallback now goes through the mailto route's own record
+    // and notice, whose sentence is this one (the fallback's old separate wording is gone with its separate path).
+    has(fn('docSend'), 'a plain email carries NO attachment, so attach a printed copy before sending', 'and the notice says the attachment is not there');
     // Reached in code, never offered as a choice: two email buttons side by side invites
     // sending the plain one by mistake, which loses the attachment.
     lacks(src, "onclick=\"buildEstimateMailto", 'nothing offers the plain path as a button');

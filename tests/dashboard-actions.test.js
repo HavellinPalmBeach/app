@@ -45,7 +45,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // stub of it is exactly what would let the submit gate and the save gate drift apart.
       'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef',
-      'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'depositPaidTotal',
+      'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal',
       'depositTargetFor', 'agreementReady',
       'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
@@ -95,7 +95,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['dashApproveEstimate(jobId)',    '_primeEstimateFor(jobId)',  'openPinModal'],
       ['dashDenyEstimate(jobId)',       '_primeEstimateFor(jobId)',  'openDenyModal'],
       ['dashOfferDiscount(jobId)',      '_primeEstimateFor(jobId)',  'openDiscountModal'],
-      ['dashMarkEstimateSent(jobId)',   '_primeEstimateFor(jobId)',  'markEstimateSent'],
+      // ⚠ RESTATED 2026-09-30 (P16): the estimate's "recorded as sent" handler had no caller and is gone. Its one
+      // route, a send by plain email, now records a draft and is confirmed by markDocSent, which primes the same
+      // way (_primeEstimateFor before markEstimateSent) — held below with the other door.
+      ['markDocSent(jobId, docKey)',    '_primeEstimateFor(jobId)',  'markEstimateSent'],
       ['dashMarkAgreementSent(jobId)',  '_primeAgreementFor(jobId)', 'markAgreementSent'],
       ['dashMarkAgreementSigned(jobId)', '_primeAgreementFor(jobId)', 'markAgreementSigned'],
       ['dashRecordPayment(jobId, stage)', '_primeAgreementFor(jobId)', 'openDepositModal'],

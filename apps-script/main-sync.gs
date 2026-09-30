@@ -43,7 +43,10 @@
 // a TRUST estate's; and before -22a it prints a Total Estimated FMV, an Items Awaiting
 // Valuation count and an FMV BY CATEGORY rollup on an estate CONTRACTED AT `contents` or
 // `none`, where the agreement says counsel does the valuing.
-var BACKEND_VERSION = '2026-09-30';
+// ⚠ 2026-09-30b (P16): a payment keeps a void, a clear, its Stripe intent and its cheque photo from either
+// copy when the sheet merges a job (_paymentSticky) — the app's BACKEND_MIN_VERSION names it, because no
+// action name can — and the editor-only folder sweep runs from the Run menu with no argument.
+var BACKEND_VERSION = '2026-09-30b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -874,6 +877,35 @@ var JOB_KEYED_MAPS  = ['docState', 'mustFound', 'vendorSourcing', 'prepSourcing'
 // before this deployment still has a key, exactly as _srcLineKey keeps its index fallback.
 var JOB_LIST_KEY = { payments: 'uid', appraisers: 'id', invSnapshots: 'ts' };
 
+// ⚠⚠ WHAT A PAYMENT KEEPS ONCE EITHER COPY HAS IT (2026-09-30b, P16). A payment merges as one value on its
+// `payments:<uid>` stamp, and the stamp alone lets a device that had NOT seen a void — an iPad offline in
+// the field, a laptop that had not reloaded — write the payment back live by touching it later on its
+// older copy (marking it cleared, attaching the cheque photo): its stamp is newer, so its copy won and the
+// void was gone, with nothing on either screen saying so. The app has no un-void and no un-clear, so each
+// group below, once set on either side, survives a copy that lacks it — the rule INV_STICKY_FIELDS already
+// applies to the inventory manifest. The winning copy's own values are never overwritten, only filled.
+//   voidedAt …   a void: the payment stays on the record and counts toward nothing
+//   clearedOn …  the bank (or Stripe) confirmed it
+//   stripePiId … the Stripe intent the payment is; the app never records an intent twice
+//   evidence     the Drive link to the cheque photograph
+var JOB_PAYMENT_STICKY = [['voidedAt', 'voidedBy', 'voidReason'], ['clearedOn', 'clearedBy'],
+                          ['stripePiId', 'stripeMatchedAt'], ['evidence']];
+
+function _paymentSticky(chosen, other) {
+  if (!chosen || !other || chosen === other) return chosen;
+  var blank = function (v) { return v === undefined || v === null || v === ''; };
+  var out = null;
+  for (var g = 0; g < JOB_PAYMENT_STICKY.length; g++) {
+    var grp = JOB_PAYMENT_STICKY[g];
+    if (!blank(chosen[grp[0]]) || blank(other[grp[0]])) continue;
+    if (!out) { out = {}; for (var f in chosen) out[f] = chosen[f]; }
+    for (var j = 0; j < grp.length; j++) {
+      if (!blank(other[grp[j]])) out[grp[j]] = other[grp[j]];
+    }
+  }
+  return out || chosen;
+}
+
 function _jobStamp(job, kind, key) {
   var at = job && job.at;
   var v = at && at[kind + ':' + key];
@@ -941,7 +973,19 @@ function _mergeJobRecord(cur, inc) {
     var m = _mergeJobKeyed(cur, inc, kind, a, b, incIsNewer);
     var order = m.__order; delete m.__order;
     var list = [];
-    for (i = 0; i < order.length; i++) if (Object.prototype.hasOwnProperty.call(m, order[i])) list.push(m[order[i]]);
+    for (i = 0; i < order.length; i++) {
+      var k2 = order[i];
+      if (!Object.prototype.hasOwnProperty.call(m, k2)) continue;
+      var v = m[k2];
+      // A payment both sides hold keeps a void, a clear, its Stripe intent and its photo from the copy
+      // that lost the stamp (see JOB_PAYMENT_STICKY). The both-sides test is belt and braces, and states the
+      // intent: _paymentSticky also hands back the chosen copy untouched when the other side has none, so the
+      // revert sweep cannot tell the two apart (2026-09-30b).
+      if (kind === 'payments' && Object.prototype.hasOwnProperty.call(a, k2) && Object.prototype.hasOwnProperty.call(b, k2)) {
+        v = _paymentSticky(v, v === a[k2] ? b[k2] : a[k2]);
+      }
+      list.push(v);
+    }
     out[kind] = list;
   });
 
@@ -1571,32 +1615,99 @@ function uploadHtmlToDrive(folderId, filename, html) {
   }
 }
 
-// Report what a job folder is actually holding, and collapse duplicate names down to the
-// newest copy. Run from the editor with a folder id when a folder looks wrong.
+// Report the duplicate PDFs the job folders are holding, then collapse each name down to its newest
+// copy. Run from the editor when a folder looks wrong: previewFolderDuplicates first, read the log,
+// then dedupeFolderConfirm.
 //
 // Deliberately NOT reachable over HTTP and split preview/confirm, the same shape as
 // previewReset / resetAllJobDataConfirm — this trashes files, and a destructive action must
 // not be one malformed URL away.
+//
+// ⚠⚠ THE RUN MENU PASSES NO ARGUMENT, AND BOTH OF THESE NEEDED ONE (fixed 2026-09-30b, P16). They took a
+// folder id, so pressing Run threw on `getFolderById(undefined)` before reading anything. With no argument
+// they now sweep every folder under ROOT_FOLDER_ID — each job folder and every subfolder in it; an id,
+// passed from a one-line wrapper, sweeps that folder and everything under it instead.
+// ⚠ PDFs ONLY. The duplicates this exists for are the documents the app files under a stable name (the
+// Shared-Drive re-file defect of 2026-09-09: "save to drive creates dupes endlessly"). A photograph is never
+// swept by name: cheque photos are named by a payment id that two devices can both mint, so two different
+// cheques can share a name, and trashing one would lose the only copy of that evidence.
+// ⚠ Both sides are listed — DriveApp and the advanced Drive service with supportsAllDrives — for the reason
+// _filesNamedInFolder gives: on a Shared Drive DriveApp's own listing can come back short. Trashed, never
+// deleted (trashDriveFile tries both sources too); Drive keeps them for 30 days.
+function _folderDuplicatePlan(folderId) {
+  var start = DriveApp.getFolderById(folderId || ROOT_FOLDER_ID);
+  var plan = [], folders = 0, pdfs = 0;
+  var walk = function (folder, path) {
+    folders++;
+    var byName = _pdfsByNameInFolder(folder);
+    Object.keys(byName).sort().forEach(function (name) {
+      var list = byName[name];
+      pdfs += list.length;
+      if (list.length < 2) return;
+      list.sort(function (a, b) { return b.getLastUpdated() - a.getLastUpdated(); });  // newest first: kept
+      plan.push({ path: path, name: name, keep: list[0], trash: list.slice(1) });
+    });
+    var sub = folder.getFolders();
+    while (sub.hasNext()) { var s = sub.next(); walk(s, path + ' / ' + s.getName()); }
+  };
+  walk(start, start.getName());
+  return { plan: plan, folders: folders, pdfs: pdfs, root: start.getName() };
+}
+
+// Every PDF directly in `folder`, grouped by name, from both sources and unioned by id.
+function _pdfsByNameInFolder(folder) {
+  var byId = {}, byName = {};
+  var add = function (f) {
+    if (!f || byId[f.getId()]) return;
+    if (String(f.getMimeType ? f.getMimeType() : '') !== 'application/pdf') return;
+    byId[f.getId()] = 1;
+    (byName[f.getName()] = byName[f.getName()] || []).push(f);
+  };
+  try {
+    var it = folder.getFiles();
+    while (it.hasNext()) add(it.next());
+  } catch (e) { Logger.log('_pdfsByNameInFolder DriveApp: ' + e); }
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.list) {
+      var q = "'" + folder.getId() + "' in parents and mimeType = 'application/pdf' and trashed = false";
+      var token = null;
+      do {
+        var opt = { q: q, maxResults: 100, supportsAllDrives: true, includeItemsFromAllDrives: true };
+        if (token) opt.pageToken = token;
+        var res = Drive.Files.list(opt) || {};
+        var items = res.items || res.files || [];
+        for (var i = 0; i < items.length; i++) { try { add(DriveApp.getFileById(items[i].id)); } catch (e2) {} }
+        token = res.nextPageToken || null;
+      } while (token);
+    }
+  } catch (e3) { Logger.log('_pdfsByNameInFolder Drive API: ' + e3); }
+  return byName;
+}
+
 function previewFolderDuplicates(folderId) {
-  var folder = DriveApp.getFolderById(folderId);
-  var seen = {}, it = folder.getFiles(), n = 0;
-  while (it.hasNext()) { var f = it.next(); (seen[f.getName()] = seen[f.getName()] || []).push(f); n++; }
-  Logger.log('Folder "%s" holds %s files (DriveApp view).', folder.getName(), n);
-  Object.keys(seen).sort().forEach(function(name){
-    Logger.log('  %s x%s%s', name, seen[name].length, seen[name].length > 1 ? '   <-- DUPLICATE' : '');
+  var r = _folderDuplicatePlan(folderId);
+  var extra = 0;
+  r.plan.forEach(function (d) { extra += d.trash.length; });
+  Logger.log('Swept %s folder(s) under "%s": %s PDF(s), %s name(s) held more than once, %s extra cop(ies).',
+             r.folders, r.root, r.pdfs, r.plan.length, extra);
+  r.plan.forEach(function (d) {
+    Logger.log('  %s / %s x%s   <-- DUPLICATE (keeps the newest, updated %s)', d.path, d.name, d.trash.length + 1, d.keep.getLastUpdated());
   });
-  return seen;
+  if (!r.plan.length) Logger.log('Nothing to do.');
+  else Logger.log('Run dedupeFolderConfirm to trash the %s extra cop(ies). Nothing has been changed yet.', extra);
+  return r.plan;
 }
 
 function dedupeFolderConfirm(folderId) {
-  var seen = previewFolderDuplicates(folderId), removed = 0;
-  Object.keys(seen).forEach(function(name){
-    var list = seen[name];
-    if (list.length < 2) return;
-    list.sort(function(a, b){ return b.getLastUpdated() - a.getLastUpdated(); });  // newest first
-    for (var i = 1; i < list.length; i++) { list[i].setTrashed(true); removed++; }
+  var plan = _folderDuplicatePlan(folderId).plan, removed = 0, failed = 0;
+  plan.forEach(function (d) {
+    d.trash.forEach(function (f) {
+      var t = trashDriveFile(f.getId());
+      if (t && t.ok) removed++; else { failed++; Logger.log('  could not trash %s / %s: %s', d.path, d.name, t && t.error); }
+    });
   });
-  Logger.log('Trashed %s duplicate file(s). They are recoverable from Drive trash for 30 days.', removed);
+  Logger.log('Trashed %s duplicate file(s)%s. They are recoverable from Drive trash for 30 days.',
+             removed, failed ? ' (' + failed + ' could not be trashed; see above)' : '');
   return removed;
 }
 
@@ -1675,8 +1786,11 @@ function unshareFolder(folderId, email) {
 // paid six weeks for — see DEPLOYMENT IDENTITY at the top of this file.
 //
 // ⚠⚠ EVERY SECRET IS IN SCRIPT PROPERTIES AND NONE IS IN THIS FILE. This repo is public and
-// havellin.html is served from GitHub Pages, so a private key in either is not a key. Same
-// place QUO_API_KEY lives. Set these five (Project Settings ▸ Script Properties):
+// havellin.html is served from GitHub Pages, so a private key in either is not a key. These go in
+// THIS project's Script Properties — the jobs backend, beside STRIPE_SECRET_KEY and ANTHROPIC_API_KEY.
+// (Not "where QUO_API_KEY lives", as this line said until 2026-09-30: quo-sync.gs runs in the Referral
+// Partners project, and its key is in that project's properties.) Set these five (Project Settings ▸
+// Script Properties):
 //     DS_INTEGRATION_KEY  the app's client id — a GUID, semi-public like any OAuth client id
 //     DS_USER_ID          the user the integration impersonates (API Username on Apps & Keys)
 //     DS_ACCOUNT_ID       API Account ID

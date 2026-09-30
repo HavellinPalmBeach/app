@@ -379,6 +379,21 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-ghost{font-size:11px;padding:0;border:0;background:none;color:var(--bronze);cursor:pointer;font-family:inherit;text-decoration:underline;}
 /* One strip for the out-of-sequence actions, serving both layouts. */
 .jt-quick{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border);}
+/* The payments recorded on the job (2026-09-30), each with its state, Mark cleared while it is uncleared
+   and Void while it counts. A void stays on the list, struck through, with its reason. */
+.jt-pays{margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border);}
+.jt-pays-hd{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:4px;}
+.jt-pay{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 12px;padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px;min-width:0;}
+.jt-pay:last-child{border-bottom:0;}
+.jt-pay-what{flex:1 1 280px;min-width:0;color:var(--gray-dk);overflow-wrap:anywhere;}
+.jt-pay-amt{font-weight:600;}
+.jt-pay-st{font-size:11px;color:var(--gray);min-width:0;overflow-wrap:anywhere;}
+.jt-pay-st.clr{color:var(--ok-tx);}
+.jt-pay-st.unclr{color:var(--warn-tx);font-weight:600;}
+.jt-pay-st.voided{color:var(--err-tx);}
+.jt-pay.void .jt-pay-amt{text-decoration:line-through;font-weight:400;color:var(--gray);}
+.jt-pay-acts{display:flex;gap:14px;}
+.jt-ghost-d{color:var(--err-tx);}
 /* A PLANNED date on a rail row. ⚠ Its own element and its own class, never the meta join —
    every `at` on this rail is something that HAPPENED, and a projection sharing that slot is
    indistinguishable from a record. The renderer always prints the word "Planned" in front of it
@@ -2612,13 +2627,14 @@ body.no-smf .smf-col{display:none;}
     </div>
 
     <label>Method</label>
+    <!-- Exactly PAYMENT_METHODS_RECORDABLE, in its order (a test holds the two together). No Card since
+         2026-09-30: Havellin takes no card payments, and saveDeposit refuses one whatever this offers. -->
     <select id="dep-method" onchange="updateDepModalHints()">
       <option value="">Select method</option>
       <option value="check">Personal cheque</option>
       <option value="cashiers_check">Cashier's cheque</option>
       <option value="wire">Wire transfer</option>
       <option value="stripe_ach">Bank transfer (ACH)</option>
-      <option value="stripe">Card</option>
       <option value="cash">Cash</option>
     </select>
 
@@ -2642,6 +2658,28 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;gap:8px;margin-top:1rem;">
       <button class="btn-s" style="flex:1;" onclick="document.getElementById('deposit-modal').style.display='none'">Cancel</button>
       <button class="btn-p" id="dep-save-btn" style="flex:1;" onclick="saveDeposit()">Record Deposit →</button>
+    </div>
+  </div>
+</div>
+
+<!-- VOID A PAYMENT (2026-09-30, P16). Opened from Void on the dashboard's payments list. The payment is
+     never deleted: it stays on the job with who voided it, when and why, and counts toward nothing
+     (paymentCounts). The dialog says what the void does to the money before anything is written. -->
+<div class="modal-overlay" id="pay-void-modal" style="display:none;">
+  <div class="modal-box" style="width:440px;">
+    <div class="modal-title">Void this payment</div>
+    <div class="modal-sub" id="pv-summary"></div>
+    <div id="pv-effect" style="margin-top:8px;"></div>
+    <label>Why is it being voided?</label>
+    <input type="text" id="pv-reason" placeholder="e.g. cheque returned unpaid, or recorded twice">
+    <input type="hidden" id="pv-job"><input type="hidden" id="pv-key">
+    <div style="font-size:10px;color:var(--gray);margin-top:3px;">
+      The payment stays on the record, marked void with this reason. It is not deleted.
+    </div>
+    <div id="pv-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeVoidPayment()">Cancel</button>
+      <button class="btn-p" id="pv-save-btn" style="flex:1;" onclick="confirmVoidPayment()">Void payment</button>
     </div>
   </div>
 </div>
@@ -5589,8 +5627,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // ⚠ AND WHAT NO ACTION NAME CAN REVEAL: server behaviour this build relies on. P11's per-key merge
 // of the sourcing, crew, ratings, review and checklist maps, the refusal to write over an unreadable
 // store tab, and the busy answer to a lock timeout change no action or type, so a deployment older
-// than this is named by its version.
-var BACKEND_MIN_VERSION = '2026-09-30';
+// than this is named by its version. 2026-09-30b (P16) adds the payment merge that keeps a void or a
+// clear against a stale device that touched the same payment (`_paymentSticky`): without it a voided
+// payment can come back and count again, with nothing on screen saying so.
+var BACKEND_MIN_VERSION = '2026-09-30b';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -5644,7 +5684,9 @@ var BACKEND_FEATURE_COST = {
   saveAllContractors: 'the contractor list never reaches the sheet',
   deleteContractor: 'a contractor removed here comes back from the other device',
   deleteJob:     'a client deleted here comes back from the other device',
-  version:       'two people editing different parts of one job (a vendor quote here, the team there) can still undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
+  // which vintage the older one belongs to (the banner's title prints the version that answered).
+  version:       'a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -11975,10 +12017,11 @@ function sendInternalEmail(to, subject, bodyLines) {
       + (why ? ' \u2014 ' + why : '')
       + '. \u26A0 CHECK THE FROM ADDRESS before you send \u2014 this may not be your Havellin mailbox.', true);
   };
-  if (typeof gmailConfigured !== 'function' || !gmailConfigured()) {
-    fallback('Gmail is not set up on this device (\u2699 Settings)');
-    return;
-  }
+  // (There is no "Gmail is not set up" branch any more, 2026-09-30, P16: it could not run. The client id is
+  // baked in and Settings falls back to it on save and on load, so `gmailConfigured()` is always true, and
+  // `gmailConfigured` is a declared function. Every real failure (no sign-in library, a closed popup, a
+  // Gmail error, and a blank id if one ever arrived) comes back through gmailCreateDraft below with its
+  // own words, and takes the same fallback.)
   // The html part carries the same lines, because buildMimeMessage always emits a
   // multipart/alternative — handing it an empty html body is what makes a client that
   // prefers html render a blank message over a perfectly good text part.
@@ -12406,6 +12449,16 @@ function revokeEstimateApproval(jobId) {
   if (job) {
     job.approved = false;
     delete job.estimateDriveAt; delete job.estimateDriveUrl;
+    // ⚠⚠ AND THE FILING RECORD THE RAIL READS (2026-09-30, P16). Only the legacy pair above was dropped, so
+    // "📁 Filed estimate" went on opening the pre-edit copy as though it were this estimate. `docState()`
+    // stamps the key: docState merges key by key, so this device's copy of the estimate's record — now
+    // without the filing — beats a stale device's copy that still has it, rather than being merged back.
+    // The Drive file itself stays where it is; re-filing the approved edit overwrites it by name.
+    var _estSt = job.docState && job.docState.estimate;
+    if (_estSt && (_estSt.filedAt || _estSt.filedUrl)) {
+      var _st = docState(job, 'estimate');
+      delete _st.filedAt; delete _st.filedUrl;
+    }
     revokeAgreementApproval(job, 'estimate-edited');
     // The same flag the discount raises, on the other door that changes what a draft says: a Gmail
     // draft of the estimate or the packet made before this edit is out of date, and the band must
@@ -12431,7 +12484,10 @@ function revokeAgreementApproval(job, why) {
   job.agrRevokedBy = why || 'estimate-edited';
   job.agrRevokedAt = new Date().toISOString();
   if (typeof _packetExported !== 'undefined') delete _packetExported[job.id];
-  showSyncBadge('Agreement approval revoked — re-approve it once the estimate is settled', true);
+  // ⚠ NOT "re-approve it" (2026-09-30, P16): the agreement has no approval step to redo. Its approval is
+  // stamped again by the first print, send or file of a fresh packet (ensureAgreementApproved), which the
+  // estimate's own approval unlocks — so that is what the badge says to do.
+  showSyncBadge('Agreement approval withdrawn — once the estimate is approved again, send the client a fresh signing packet', true);
   return true;
 }
 
@@ -12510,8 +12566,12 @@ function closePinModal() {
 }
 
 // Email the assigned TC when the manager approves or denies their submitted
-// estimate. Mirrors notifyManagerForApproval — a pre-filled mailto opens on the
+// estimate. Mirrors notifyManagerForApproval: a Gmail draft in the Havellin mailbox signed in on the
 // manager's device, addressed to the TC on the job.
+// ⚠ THROUGH sendInternalEmail, NOT A mailto: OF ITS OWN (2026-09-30, P16). It still opened `mailto:` a week
+// after the approval request moved to a Gmail draft (2026-09-22), so the decision left from whatever mail
+// program the manager's machine defaulted to — the personal-iCloud defect that move fixed, one email later.
+// One routing rule for every internal email, with its mailto fallback and its From-address warning.
 function notifyTCOfDecision(job, est, decision, reason) {
   if (!job) return;
   var tc = assignedTCContact(job);
@@ -12538,8 +12598,7 @@ function notifyTCOfDecision(job, est, decision, reason) {
   lines.push('Open the Havellin app and open ' + client + ' from the Client Dashboard' + (approved ? '.' : ' to revise the estimate and resubmit it for approval.'));
   lines.push('');
   lines.push('Havellin Palm Beach');
-  var mailto = 'mailto:' + tc.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(lines.join('\n'));
-  window.open(mailto, '_blank');
+  sendInternalEmail(tc.email, subject, lines);
 }
 
 function openDenyModal() {
@@ -14379,12 +14438,19 @@ function paymentStageLabel(job, stage) {
 // used to be an inline `||` chain at the one write site and the next rail added to it
 // would have been classified by whoever happened to be editing `saveDeposit`.
 //
-// ⚠⚠ `stripe_ach` IS DELIBERATELY ABSENT AND MUST NEVER BE ADDED. A card authorises
-// instantly; an ACH debit does NOT. It takes ~4 business days to settle, `R01`
+// ⚠⚠ `stripe_ach` IS DELIBERATELY ABSENT AND MUST NEVER BE ADDED. A wire is final when it
+// lands; an ACH debit is NOT. It takes ~4 business days to settle, `R01`
 // (insufficient funds) returns inside ~2, and the unauthorised codes `R05`/`R07`/`R10`
 // carry a SIXTY-CALENDAR-DAY window on consumer accounts which under NACHA rules cannot
 // be re-presented. So an ACH deposit stamped cleared on receipt is the app asserting
 // money has landed when it has not, on the record that says what the firm is owed.
+//
+// ⚠⚠ AND NO CARD, SINCE 2026-09-30 (P16). `stripe` (Card) was on this list — a card authorises at
+// once — and on the recorder. Havellin takes no card payments (Anthony, 2026-09-18: "No cards at
+// all"; 2026-09-30: take Card off the recorder), so the recorder no longer offers it and
+// `saveDeposit` refuses it (PAYMENT_METHODS_RECORDABLE). ⚠ A PAYMENT RECORDED AS A CARD BEFORE THEN
+// KEEPS WHAT IT WAS RECORDED WITH: this list is read only when a payment is WRITTEN, so a legacy
+// card record keeps its stored `clearedOn`, and `paymentMethodLabel` still names it "Card".
 //
 // ⚠ THIS DOES NOT GATE STARTING THE JOB, AND MUST NOT BE MADE TO. `isJobFunded` reads
 // `depositPaidTotal` — recorded AMOUNTS — and never consults `clearedOn`; work starts on
@@ -14393,15 +14459,44 @@ function paymentStageLabel(job, stage) {
 // *"we obviously can't wait 2 months to start a job ... that seems unlikely to me, so a
 // risk worth taking."* Correct, and it is not waitable in any case — the residual is an
 // agreement clause for counsel, not a gate here. All this list decides is whether the
-// payment reads `uncleared` on screen until it genuinely settles.
-var PAYMENT_METHODS_CLEAR_ON_RECEIPT = ['wire', 'stripe', 'cash'];
+// payment reads `uncleared` on screen until it genuinely settles — or until somebody marks it
+// cleared (markPaymentCleared, 2026-09-30), or Stripe confirms a bank transfer recorded by hand.
+var PAYMENT_METHODS_CLEAR_ON_RECEIPT = ['wire', 'cash'];
+
+// The methods a person may record, in the recorder's order — its <select> offers exactly these and a
+// test holds the two together. ⚠ `saveDeposit` REFUSES ANYTHING ELSE, whatever the control offered: a
+// screen painted by an older build, or a value set some other way, still cannot write a card payment
+// (the handler asks the same question as the button). `stripe` stays a known METHOD for the records
+// written before 2026-09-30, and nothing else.
+var PAYMENT_METHODS_RECORDABLE = ['check', 'cashiers_check', 'wire', 'stripe_ach', 'cash'];
+
+// ⚠⚠ THE ONE ANSWER TO "DOES THIS PAYMENT COUNT?" (2026-09-30, P16). A payment recorded in error, or a
+// cheque that bounced, is VOIDED, never deleted: the record stays on the job with who voided it, when and
+// why (`voidedAt`, `voidedBy`, `voidReason`), and it counts toward nothing. Every total asks this —
+// stagePaidTotal, jobPaidTotal and depositClearedTotal, and through them isJobFunded, the invoices'
+// received rows and balance, the recorder's prefill, closeoutRetainedTotal, jobIsSettled, the rail and
+// the Stripe link's balance — and a test counts its readers, so a new total cannot quietly add a void back.
+function paymentCounts(p) { return !!p && !p.voidedAt; }
+
+// The key the sheet merges a payment on: its `uid`, or for one written before uids existed the per-device
+// `id` — the same fallback `_jobListKey` makes in main-sync.gs. Every edit to a payment stamps
+// `payments:<this key>`, or the other device's next save merges the edit away.
+function _paymentKey(p) {
+  if (!p) return '';
+  var k = (p.uid !== undefined && p.uid !== null && p.uid !== '') ? p.uid : p.id;
+  return (k === undefined || k === null || k === '') ? '' : String(k);
+}
+function _jobPaymentByKey(job, key) {
+  if (!job || key === undefined || key === null || key === '') return null;
+  return jobPayments(job).filter(function (p) { return _paymentKey(p) === String(key); })[0] || null;
+}
 
 // Paid on ONE stage. Every payment record carries a stage, and until now every record
 // was written with `stage: 'deposit'` hardcoded — so midpoint and final money was
 // invoiced and then never captured anywhere. See UNEARNED_REVENUE_SPEC.md §2a.
 function stagePaidTotal(job, stage) {
   return jobPayments(job)
-    .filter(function(p){ return p.stage === stage; })
+    .filter(function(p){ return paymentCounts(p) && p.stage === stage; })
     .reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
 }
 
@@ -14409,7 +14504,7 @@ function stagePaidTotal(job, stage) {
 // unearned-revenue liability at delivery — never a stage target, which is what was
 // billed rather than what arrived.
 function jobPaidTotal(job) {
-  return jobPayments(job).reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
+  return jobPayments(job).filter(paymentCounts).reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
 }
 
 function depositPaidTotal(job) { return stagePaidTotal(job, 'deposit'); }
@@ -14456,7 +14551,7 @@ function isJobFunded(job) {
 // cleared (§6c), so this is for exposure reporting rather than gating.
 function depositClearedTotal(job) {
   return jobPayments(job)
-    .filter(function(p){ return p.stage === 'deposit' && p.clearedOn; })
+    .filter(function(p){ return paymentCounts(p) && p.stage === 'deposit' && p.clearedOn; })
     .reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
 }
 
@@ -14558,16 +14653,21 @@ function onDepStageChange() {
 
   // Show what has already come in AT THIS STAGE, so a second entry is made in full
   // knowledge of the first rather than duplicating it.
+  // ⚠ A VOIDED PAYMENT IS LISTED, STRUCK THROUGH (2026-09-30): it is still on the record, and a person
+  // re-recording a bounced cheque should see the one it replaces — but it is not money, so it is never
+  // "uncleared" and none of the figures above count it (paymentCounts).
   var prior = document.getElementById('dep-prior');
   var list = jobPayments(job).filter(function(p){ return p.stage === stage; });
   prior.innerHTML = list.length
     ? '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">Already recorded at this stage:</div>'
       + list.map(function(p){
+          var live = paymentCounts(p);
           return '<div style="font-size:11px;padding:4px 8px;background:var(--tan);border-radius:3px;margin-bottom:3px;">'
-            + '<strong>' + fmt(p.amount) + '</strong> · ' + esc(paymentMethodLabel(p.method))
+            + (live ? '<strong>' + fmt(p.amount) + '</strong>' : '<s>' + fmt(p.amount) + '</s>') + ' · ' + esc(paymentMethodLabel(p.method))
             + (p.receivedOn ? ' · ' + esc(p.receivedOn) : '')
             + (p.payer ? ' · ' + esc(p.payer) : '')
-            + (p.clearedOn ? '' : ' <span style="color:var(--warn-tx);font-weight:600;">uncleared</span>')
+            + (!live ? ' <span style="color:var(--err-tx);font-weight:600;">void</span>'
+               : (p.clearedOn ? '' : ' <span style="color:var(--warn-tx);font-weight:600;">uncleared</span>'))
             + (p.reconstructed ? ' <span style="color:var(--warn-tx);">(amount inferred — predates payment records)</span>' : '')
             + '</div>';
         }).join('')
@@ -14619,6 +14719,14 @@ function saveDeposit() {
   if (amount <= 0) { showFB('dep-fb','warn','Enter the amount received.'); return; }
   if (!date)       { showFB('dep-fb','warn','Enter the date it was received.'); return; }
   if (!method)     { showFB('dep-fb','warn','Select how it was paid.'); return; }
+  // ⚠ ENFORCED WHERE THE PAYMENT IS WRITTEN, NOT ONLY IN WHAT THE SELECT OFFERS (2026-09-30, P16). A card
+  // is not a method Havellin takes, so it is refused here whatever put it in the field.
+  if (PAYMENT_METHODS_RECORDABLE.indexOf(method) < 0) {
+    showFB('dep-fb','warn', method === 'stripe'
+      ? 'Card payments are not accepted. Record how the money actually came in: bank transfer (ACH), wire, cheque or cash.'
+      : 'Select how it was paid.');
+    return;
+  }
 
   var stage = currentDepStage();
   var isDep = (stage === 'deposit');
@@ -14728,6 +14836,160 @@ function _attachPaymentEvidence(job, payment, file) {
     });
   };
   reader.readAsDataURL(file);
+}
+
+// ─── A PAYMENT AFTER IT IS RECORDED: CLEARED, OR VOID (2026-09-30, P16) ─────────
+// ⚠⚠ UNTIL THIS, A PAYMENT COULD BE WRITTEN AND NEVER TOUCHED AGAIN. A cheque read `uncleared` for the
+// life of the job however long ago the bank confirmed it, and a cheque that bounced, or a payment typed
+// twice, went on counting toward the deposit, the invoices' received rows and the final's balance, with
+// no control anywhere to take it back. Both are on the dashboard's payments list now, beside each payment.
+//
+// ⚠ BOTH ARE A PERSON'S EDIT: stamped on the payment's own key and synced (`_saveJobEdit(job, 'payments',
+// key)`), so the sheet merges them key by key; and the sheet keeps a void and a clear even against a
+// stale device that later touched the same payment on its older copy (`_paymentSticky`, main-sync.gs).
+// ⚠ A VOID IS A RECORDED ACT, NEVER A DELETION. The record stays, with who, when and why; `paymentCounts`
+// is what takes it out of every total.
+
+// "$5,000 personal cheque on the deposit, received Sep 28, 2026, from Pressly Family Trust" — the one
+// description the list, the void dialog, the cleared question and their notices share. Plain text.
+function paymentSummaryText(job, p) {
+  if (!p) return '';
+  var how = p.method ? paymentMethodLabel(p.method) : 'payment';   // a reconstructed legacy deposit has none
+  return fmt(parseFloat(p.amount) || 0) + ' ' + how.charAt(0).toLowerCase() + how.slice(1)   // "bank transfer (ACH)"
+    + ' on the ' + paymentStageWord(job, p.stage).noun
+    + (p.receivedOn ? ', received ' + fmtDate2(_localDateOf(p.receivedOn)) : '')
+    + (p.payer ? ', from ' + p.payer : '');
+}
+
+// What voiding `p` does to the money, measured by the real rules on a copy of the job without it — never
+// by re-deriving a total here, which would be a second copy of the funding rule. DOM-free; worded so it
+// reads the same in the dialog before the void and in the notice after it. Plain text.
+function paymentVoidEffect(job, p) {
+  if (!job || !paymentCounts(p)) return '';
+  var without = {};
+  for (var k in job) without[k] = job[k];
+  without.payments = jobPayments(job).filter(function (x) { return x !== p; });
+  var noun = paymentStageWord(job, p.stage).noun;
+  var tgt = p.stage === 'deposit' ? depositTargetFor(job) : 0;
+  var out = [fmt(parseFloat(p.amount) || 0) + ' comes off the ' + noun + ', leaving ' + fmt(stagePaidTotal(without, p.stage))
+    + (tgt ? ' of the ' + fmt(tgt) + ' due' : '') + ' recorded against it.'];
+  if (isJobFunded(job) && !isJobFunded(without)) {
+    out.push('The job is no longer funded: hours cannot be logged on it until the deposit is recorded again.');
+  }
+  if (jobIsSettled(job) && !jobIsSettled(without)) out.push('The final payment reads unpaid again.');
+  if (job.status === 'closed_retained') {
+    out.push('The amount this closed job records as retained becomes ' + fmt(closeoutRetainedTotal(without)) + '.');
+  }
+  out.push('Received on the job in all: ' + fmt(jobPaidTotal(without)) + '.');
+  return out.join(' ');
+}
+
+// The bank has confirmed a payment recorded as uncleared. Today's date, and who (`_actor`, as a payment's
+// `recordedBy`: the app has no sign-in). Refuses a void and an already-cleared payment, whatever the screen
+// offered. Moves no money: received totals and the funding gate never read `clearedOn`.
+function markPaymentCleared(jobId, key) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var p = _jobPaymentByKey(job, key);
+  if (!job || !p) { dashNotice('warn', 'That payment is no longer on this job.'); _dashRedraw(jobId); return; }
+  if (!paymentCounts(p)) { dashNotice('warn', 'That payment is void, so there is nothing to clear.'); _dashRedraw(jobId); return; }
+  if (p.clearedOn) {
+    dashNotice('ok', 'That payment is already recorded as cleared (' + fmtDate2(_localDateOf(p.clearedOn)) + ').');
+    _dashRedraw(jobId); return;
+  }
+  if (!confirm('Mark the ' + paymentSummaryText(job, p) + ' as cleared today?\n\n'
+      + 'Do this once the bank shows the money as final. It changes no total: the job was funded on the money received.')) return;
+  p.clearedOn = _todayStr();
+  p.clearedBy = _actor(job);
+  _saveJobEdit(job, 'payments', key);
+  dashNotice('ok', 'Marked cleared ' + fmtDate2(p.clearedOn) + ': ' + paymentSummaryText(job, p) + '.');
+  _dashRedraw(jobId);
+}
+
+function openVoidPayment(jobId, key) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var p = _jobPaymentByKey(job, key);
+  if (!job || !p) { dashNotice('warn', 'That payment is no longer on this job.'); _dashRedraw(jobId); return; }
+  if (!paymentCounts(p)) { dashNotice('warn', 'That payment is already void.'); _dashRedraw(jobId); return; }
+  document.getElementById('pv-job').value = String(jobId);
+  document.getElementById('pv-key').value = String(key);
+  document.getElementById('pv-summary').textContent = paymentSummaryText(job, p) + '.';
+  document.getElementById('pv-effect').innerHTML = '<div class="alert a-warn" style="font-size:11px;"><strong>What this changes:</strong> '
+    + esc(paymentVoidEffect(job, p)) + '</div>';
+  document.getElementById('pv-reason').value = '';
+  document.getElementById('pv-fb').innerHTML = '';
+  document.getElementById('pay-void-modal').style.display = 'flex';
+}
+function closeVoidPayment() {
+  var m = document.getElementById('pay-void-modal');
+  if (m) m.style.display = 'none';
+}
+// ⚠ EVERY TEST THE DIALOG'S OPENER MADE IS MADE AGAIN HERE, where the record is written: the payment may
+// have been voided on the other device while the dialog stood open.
+function confirmVoidPayment() {
+  var jobId = parseInt(document.getElementById('pv-job').value) || 0;
+  var key = document.getElementById('pv-key').value;
+  var reason = (document.getElementById('pv-reason').value || '').trim();
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var p = _jobPaymentByKey(job, key);
+  if (!job || !p) { showFB('pv-fb', 'warn', 'That payment is no longer on this job.'); return; }
+  if (!paymentCounts(p)) { showFB('pv-fb', 'warn', 'That payment is already void.'); return; }
+  if (!reason) { showFB('pv-fb', 'warn', 'Say why it is being voided; the record keeps the reason.'); return; }
+  var effect = paymentVoidEffect(job, p);   // measured before the write, on the figures it changes
+  p.voidedAt = new Date().toISOString();
+  p.voidedBy = _actor(job);
+  p.voidReason = reason;
+  // The derived mirror `jobActivationBlockers` and six other readers still take — a consequence of the
+  // payments, never something anybody sets, exactly as saveDeposit keeps it. And the day the rail prints on
+  // "Deposit received" (`depositReceivedAt`): the latest deposit payment that still counts, as saveDeposit and
+  // _stripeRecordPayment write it, or none — never the day of the payment just voided.
+  if (p.stage === 'deposit') {
+    job.depositReceived = isJobFunded(job);
+    var _dep = jobPayments(job).filter(function (x) { return paymentCounts(x) && x.stage === 'deposit'; });
+    job.depositReceivedAt = _dep.length ? (_dep[_dep.length - 1].receivedOn || '') : '';
+  }
+  _saveJobEdit(job, 'payments', key);
+  closeVoidPayment();
+  renderJobs();
+  dashNotice('warn', 'Voided: ' + paymentSummaryText(job, p) + '. Reason: ' + reason + '. ' + effect);
+  _dashRedraw(jobId);
+}
+
+// The job's payments, oldest first, each with its state and the one or two things a person can still do to
+// it: Mark cleared while it counts and is uncleared, Void while it counts. A void stays on the list, struck
+// through, with its reason. DOM-free markup; the dashboard's Timeline & Payments card prints it under the
+// rail, on every state of the job, closed and retained included, because a payment can need either at any
+// point in the job's life.
+function jobPaymentsListHtml(job) {
+  if (!job) return '';
+  var list = jobPayments(job);
+  if (!list.length) return '';
+  var rows = list.map(function (p) {
+    var key = _paymentKey(p), live = paymentCounts(p);
+    // A key goes into an onclick; one the app did not mint gets no controls rather than a broken one.
+    var safe = /^[A-Za-z0-9_.-]+$/.test(key);
+    var st = !live
+      ? 'Void' + (p.voidedAt ? ' ' + fmtDate2(_localDateOf(p.voidedAt)) : '') + (p.voidedBy ? ' · ' + esc(p.voidedBy) : '')
+        + (p.voidReason ? ' — ' + esc(p.voidReason) : '')
+      : p.clearedOn
+        ? 'Cleared ' + fmtDate2(_localDateOf(p.clearedOn)) + (p.clearedBy === 'Stripe' ? ' — Stripe reported it settled' : (p.clearedBy ? ' · ' + esc(p.clearedBy) : ''))
+        : 'Uncleared';
+    var acts = '';
+    if (live && safe && !p.clearedOn) acts += '<button class="jt-ghost" onclick="markPaymentCleared(' + job.id + ",'" + key + "')\">&#10003; Mark cleared</button>";
+    if (live && safe) acts += '<button class="jt-ghost jt-ghost-d" onclick="openVoidPayment(' + job.id + ",'" + key + "')\">Void</button>";
+    return '<div class="jt-pay' + (live ? '' : ' void') + '">'
+      + '<span class="jt-pay-what"><span class="jt-pay-amt">' + fmt(parseFloat(p.amount) || 0) + '</span> · '
+      + esc(paymentStageLabel(job, p.stage)) + (p.method ? ' · ' + esc(paymentMethodLabel(p.method)) : '')
+      + (p.receivedOn ? ' · received ' + fmtDate2(_localDateOf(p.receivedOn)) : '')
+      + (p.payer ? ' · ' + esc(p.payer) : '')
+      // A deposit migrated from before payment records (jobPayments) was never observed: its amount is the 50%
+      // target, and the list says so, as the recorder does, rather than printing it as money somebody counted.
+      + (p.reconstructed ? ' · amount inferred — predates payment records' : '')
+      + (p.recordedBy === 'Stripe' ? ' · recorded by Stripe' : '') + '</span>'
+      + '<span class="jt-pay-st' + (!live ? ' voided' : p.clearedOn ? ' clr' : ' unclr') + '">' + st + '</span>'
+      + (acts ? '<span class="jt-pay-acts">' + acts + '</span>' : '')
+      + '</div>';
+  });
+  return '<div class="jt-pays" id="jt-pays-' + job.id + '"><div class="jt-pays-hd">Payments recorded</div>' + rows.join('') + '</div>';
 }
 
 function closeChangeOrder() {
@@ -15908,7 +16170,11 @@ function jobSchedule(job, est, todayStr, prog) {
 function jtDraftLine(job, key, unsent) {
   if (!unsent) return '';
   var live = draftOutstanding(job, key);
-  var drafted = live ? 'Drafted — read it, send it, then confirm' : '';
+  // ⚠ A PLAIN EMAIL THE APP OPENED IS NOT A DRAFT IT WATCHED BEING MADE (2026-09-30, P16) — the mailto route
+  // and the Gmail fallback, which now records itself. The line says what the app did and asks for the same tap.
+  var drafted = !live ? ''
+    : (job.docState[key].provider === 'mailto' ? 'Opened as a plain email — send it from your mail app, then confirm'
+                                               : 'Drafted — read it, send it, then confirm');
   var stale = staleDraftNote(job, key, live);
   return drafted && stale ? drafted + '. ' + stale : (drafted || stale);
 }
@@ -16163,9 +16429,10 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     row({ key: 'agreement_signed', group: 'Agreement', label: 'Agreement signed',
       done: isAgreementSigned(job), at: (_jtSig && _jtSig.signedOn) || '', atKind: 'date',
       by: (_jtSig && _jtSig.signedBy) || '',
+      // An e-signature names the address the provider authenticated (2026-09-30), beside how it came back.
       sub: _jtSig
         ? (_jtSig.legacy ? 'Signed before the signature record — who signed it is not on file'
-           : ((AGR_SIG_METHODS[_jtSig.how] || {}).label || ''))
+           : [((AGR_SIG_METHODS[_jtSig.how] || {}).label || ''), _jtSig.signerEmail || ''].filter(Boolean).join(' · '))
         : (esignJobWatches(job) ? ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for it' : '') }),
 
     // ⚠ THESE THREE WERE DELIBERATELY ABSENT UNTIL NOW. Slice 0: "a row whose `done`
@@ -16871,18 +17138,29 @@ function docSend(spec) {
       if (!ok) {
         // Gmail failed: fall back rather than stopping. A compose window that opens beats
         // a button that reports an error.
+        // ⚠⚠ AND THE FALLBACK IS RECORDED AS WHAT IT IS (2026-09-30, P16). It opened a plain email and
+        // recorded nothing, so the document read as never sent: the rail kept offering Send, "I've sent it"
+        // never appeared, and a send made from the mail app could not be confirmed (the estimate's old
+        // "recorded as sent" handler had no caller; it is gone). Now it goes through the same tail
+        // as the mailto route itself: `draftedAt` with provider `mailto` (the app opened a mail app; it saw
+        // nothing sent, so never `sentAt`), the document filed, and the rail offers "I've sent it".
         if (provider === 'gmail') {
-          var fb = DOC_SEND_PROVIDERS.mailto;
-          fb.send(spec, null, function (ok2) {
-            _docNotice(ok2 ? 'warn' : 'err',
-              ok2 ? ('Gmail draft failed — ' + err + '. Opened a plain email instead; it carries NO attachment, so attach a printed copy.')
-                  : ('Could not send — ' + err + '.'), spec.job.id);
+          DOC_SEND_PROVIDERS.mailto.send(spec, null, function (ok2) {
+            if (!ok2) { _docNotice('err', 'Could not send — ' + err + '.', spec.job.id); return; }
+            recordSend('mailto', null, '', null, 'Gmail draft failed — ' + err + '. ');
           });
           return;
         }
         _docNotice('err', 'Could not send — ' + err + '.', spec.job.id);
         return;
       }
+      recordSend(provider, pdf, draftUrl, extra, '');
+    });
+
+    // What a send that went (or an email that opened) records and says. ⚠ Its parameters SHADOW the outer
+    // `provider` and `pdf` on purpose: on the Gmail fallback they are the mailto route and no PDF, so every
+    // line below describes the route that actually ran and not the one that failed.
+    function recordSend(provider, pdf, draftUrl, extra, lead) {
       var needsTap = DOC_SEND_PROVIDERS[provider].needsHumanSend;
       // ⚠ NAMING THE MAILBOX IS NOT DECORATION. The draft link can only open Google
       // account 0, which in a browser signed in to several is whichever signed in first —
@@ -16907,6 +17185,7 @@ function docSend(spec) {
               ? ' — WITHOUT the PDF. ' + _pdfFailAdviceText(pdfErrKind) + (pdfErr ? ' The server said: ' + pdfErr + '.' : '')
               : ' — a plain email carries NO attachment, so attach a printed copy before sending'))
         + '. ' + (needsTap ? 'Read it, send it, then tap “I’ve sent it”.' : '');
+      msg = lead + msg;
       // ⚠ A DRAFT A PRICE CHANGE LEFT BEHIND IS NAMED NOW, WHILE THERE ARE TWO. The new one is at the new
       // price; the old one is still in a mailbox unless somebody deleted it, and the next person to open
       // the drafts folder has to know which is which. ⚠ READ BEFORE docRecordSent: DocuSign writes
@@ -16931,7 +17210,7 @@ function docSend(spec) {
       _docNotice((attached && !_staleLine) ? 'ok' : 'warn', msg, spec.job.id);
       if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
       showSyncBadge(provider === 'docusign' ? 'Sent for signature ✓' : provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
-    });
+    }
   });
   return true;
 }
@@ -17285,6 +17564,9 @@ function recordAgreementSignature(jobId, sig) {
   st.sig = {
     how: sig.how || '',
     signedBy: sig.signedBy || '',
+    // The address the provider authenticated the signer at (DocuSign's routing order 1); blank on a
+    // signature recorded by hand, where nobody authenticated anything.
+    signerEmail: sig.signerEmail || '',
     signedOn: sig.signedOn || _todayStr(),
     note: sig.note || '',
     // ⚠ THE FALLBACK IS `manual`, NOT THE FIRM'S PROVIDER, AND THAT MATTERS NOW THAT DOCUSIGN IS
@@ -17375,10 +17657,17 @@ function applyEsignStatus(jobId, status) {
   if (!status || status.status !== 'completed') { _saveArrivalCheck(); return ''; }
   // ⚠ THE PROVIDER NAMES THE SIGNER. That is the entire point of routing signatures through
   // one — it knows who authenticated and when, which a person typing into a box does not.
+  // ⚠⚠ AND THE DAY IS THE SIGNER'S, NOT THE ENVELOPE'S (2026-09-30, P16). `completedAt` is when the LAST
+  // recipient finished — Anthony's countersignature, often days after the client's — so the record said the
+  // client signed on the day Havellin did. The backend has always returned the client's own `signedAt`
+  // (routing order 1) and the address DocuSign authenticated (`signerEmail`), and both were dropped here.
+  // The day is the local calendar day it happened here (_localDateOf), never an ISO slice: a client signing
+  // at 9:30pm Eastern is stamped 01:30Z the next day. `completedAt` is the fallback for an answer without one.
   var blk = recordAgreementSignature(jobId, {
     how: 'esign',
     signedBy: status.signerName || '',
-    signedOn: _localDateOf(status.completedAt),
+    signerEmail: status.signerEmail || '',
+    signedOn: _localDateOf(status.signedAt) || _localDateOf(status.completedAt),
     provider: esignProviderKey(),
     envelopeId: st.esign.envelopeId,
     recordedBy: ESIGN_PROVIDERS[esignProviderKey()].label
@@ -17507,10 +17796,15 @@ function esignArchiveSigned(jobId) {
   if (!st.esign || !st.esign.envelopeId || st.esign.filedAt) return;
   if (!SHEETS_SYNC_URL) return;
 
+  // ⚠ NOTHING RETRIES THIS, so neither failure below may say "re-open this client" (2026-09-30, P16; they both
+  // did). It runs once, on the transition into `completed`; after that the envelope is no longer outstanding
+  // and no check comes back to it. The executed copy is safe in DocuSign either way, so each says where it is
+  // and who files it by hand.
   resolveSubfolderId(job, 'Agreement', function (folderId) {
     if (!folderId) {
       _docNotice('warn', 'The agreement is signed, but this client has no Agreement folder in Drive, '
-                 + 'so the executed copy could not be filed. Create the Drive folder, then re-open this client.', jobId);
+                 + 'so the executed copy could not be filed. It is safe in DocuSign: create the Drive folder, then '
+                 + 'download the signed agreement and its certificate of completion from DocuSign and save them there.', jobId);
       return;
     }
     _appsScriptPost(SHEETS_SYNC_URL, {
@@ -17520,7 +17814,8 @@ function esignArchiveSigned(jobId) {
       if (!ok || !d || !d.ok) {
         _docNotice('warn', 'The agreement is signed, but the executed copy could not be retrieved from '
                    + 'DocuSign — ' + ((d && (d.error || d.message)) || 'no answer from the server')
-                   + '. It is still in DocuSign; re-open this client to try again.', jobId);
+                   + '. It is still in DocuSign: download the signed agreement and its certificate of completion '
+                   + 'there and save them to this client’s Agreement folder in Drive.', jobId);
         return;
       }
       var st2 = docState(job, 'agreement');
@@ -17591,7 +17886,11 @@ function outstandingPayments() {
       if (!st.stripe || !st.stripe.linkId) return;
       var stage = key.indexOf('invoice:') === 0 ? key.slice(8) : '';
       if (PAYMENT_STAGES.indexOf(stage) === -1) return;
-      if (stage === 'deposit' && isJobFunded(j)) return;   // the deposit is in; stop asking
+      // The deposit is in; stop asking — ⚠ unless a bank transfer recorded BY HAND on it is still waiting
+      // for Stripe to confirm it (2026-09-30, P16). Recording the ACH when the client says "I've paid" funds
+      // the job, and a funded deposit used to drop off here, so that payment read uncleared for good.
+      if (stage === 'deposit' && isJobFunded(j)
+          && !jobPayments(j).some(function (p) { return _handAchAwaitingStripe(p) && p.stage === 'deposit' && !p.clearedOn; })) return;
       out.push({ jobId: j.id, hvlId: j.hvlId || '', key: key, stage: stage, linkId: st.stripe.linkId });
     });
   });
@@ -17651,34 +17950,93 @@ function applyStripePayments(jobId, key, stage, d) {
   st.stripe = st.stripe || {};
   st.stripe.checkedAt = new Date().toISOString();
 
+  // Every intent already on the record, a VOIDED payment's included: a person who voided a Stripe payment
+  // (a transfer returned after it settled) meant it, and re-recording the intent on the next check would
+  // undo the void by automation. ⚠ The one exception is an intent attached to a hand record that had
+  // ALREADY been voided when it was attached — a device that had not yet seen the void matched the money
+  // to it, and the sheet kept the void (_paymentSticky). That void was about a hand entry nobody had
+  // matched to Stripe, not about this money, so the intent is recorded afresh on its own record.
   var seen = {};
-  jobPayments(job).forEach(function (p) { if (p.stripePiId) seen[p.stripePiId] = true; });
+  jobPayments(job).forEach(function (p) {
+    if (!p.stripePiId) return;
+    if (p.voidedAt && p.stripeMatchedAt && p.voidedAt < p.stripeMatchedAt) return;
+    seen[p.stripePiId] = true;
+  });
 
-  var added = 0, landed = 0;
+  var added = 0, landed = 0, matched = [];
   (d.payments || []).forEach(function (p) {
     if (!p || p.status !== 'succeeded' || !p.piId) return;
     if (seen[p.piId]) return;
     seen[p.piId] = true;
+    // ⚠⚠ THE SAME MONEY RECORDED BY HAND FIRST IS NOT RECORDED TWICE (2026-09-30, P16). Somebody told "I've
+    // paid by the link" records a bank transfer at that stage; four days later Stripe reports the transfer
+    // settled and it was written again beside it, so the stage and every total counted it twice. The hand
+    // record takes the intent and is marked cleared — the one fact the hand entry could not know.
+    var hand = _stripeHandMatch(job, stage, p);
+    if (hand) {
+      hand.stripePiId = p.piId;
+      hand.stripeMatchedAt = new Date().toISOString();
+      if (!hand.reference) hand.reference = p.piId;
+      if (!hand.payer && p.payer) hand.payer = p.payer;
+      var wasClear = !!hand.clearedOn;
+      // The day the app saw it settled — see _stripeRecordPayment for why never the intent's own date.
+      if (!wasClear) { hand.clearedOn = _todayStr(); hand.clearedBy = 'Stripe'; }
+      _jobTouch(job, 'payments', _paymentKey(hand));
+      matched.push({ p: hand, wasClear: wasClear });
+      return;
+    }
     _stripeRecordPayment(job, stage, p);
     added++; landed += (p.amount || 0);
   });
 
-  if (!added) { _saveArrivalCheck(); return 0; }
+  if (!added && !matched.length) { _saveArrivalCheck(); return 0; }
   // A settled payment is a new fact, recorded the way a person's hand entry is: the payment's own
-  // key was stamped in _stripeRecordPayment, and the job's clock moves so its mirrors
-  // (depositReceived, read by the activation gate) reach the other devices.
+  // key was stamped (in _stripeRecordPayment, or above for a hand record it confirmed), and the job's
+  // clock moves so its mirrors (depositReceived, read by the activation gate) reach the other devices.
   _saveJobEdit(job);
+  // ONE notice, because a second would replace the first on the strip.
+  var said = [];
   if (added) {
-    _docNotice('ok', fmt(landed) + ' received by bank transfer on ' + (job.name || 'this job')
-               + ' (' + paymentStageLabel(job, stage) + ') — recorded automatically from Stripe.', jobId);
-    renderJobs();
+    said.push(fmt(landed) + ' received by bank transfer on ' + (job.name || 'this job')
+              + ' (' + paymentStageLabel(job, stage) + ') — recorded automatically from Stripe.');
   }
-  return added;
+  matched.forEach(function (m) {
+    said.push('Stripe confirms the ' + paymentSummaryText(job, m.p) + ' — recorded by hand, so it is not recorded twice'
+              + (m.wasClear ? '.' : '; now marked cleared.'));
+  });
+  _docNotice('ok', said.join(' '), jobId);
+  renderJobs();
+  return added + matched.length;
 }
 
-// ⚠ THIS IS THE ONE PLACE A STRIPE PAYMENT BECOMES A PAYMENT RECORD, and it writes the same
+// A bank transfer somebody recorded by hand that no Stripe intent has been attached to yet, and that still
+// counts: what a settled intent may turn out to be. One definition, read by the matcher below and by
+// `outstandingPayments`, which keeps a funded deposit's link under watch while one is waiting.
+function _handAchAwaitingStripe(p) {
+  return paymentCounts(p) && p.method === 'stripe_ach' && !p.stripePiId;
+}
+
+// The hand record a settled intent is, if there is one: same stage, the same amount to the cent, awaiting
+// Stripe. Uncleared first, then one a person marked cleared; oldest first within each. A reference that
+// names a DIFFERENT intent is another payment, never this one. Anything less exact is left alone and the
+// intent is recorded on its own — two payments of one size at one stage are possible, and the notice names
+// the match so a person can see which record took it.
+function _stripeHandMatch(job, stage, p) {
+  var cents = function (v) { return Math.round((parseFloat(v) || 0) * 100); };
+  var want = cents(p && p.amount);
+  if (!want) return null;
+  var cands = jobPayments(job).filter(function (x) {
+    if (!_handAchAwaitingStripe(x) || x.stage !== stage || cents(x.amount) !== want) return false;
+    var ref = String(x.reference || '').trim();
+    return !(/^pi_/.test(ref) && ref !== p.piId);
+  });
+  return cands.filter(function (x) { return !x.clearedOn; })[0] || cands[0] || null;
+}
+
+// ⚠ THIS IS THE ONE PLACE A STRIPE PAYMENT BECOMES A NEW PAYMENT RECORD, and it writes the same
 // shape `saveDeposit` writes by hand — same fields, same `uid` minting, same `_jobTouch`. A
 // second payment shape is how the hand-entered and the automatic records come to disagree.
+// (Money already recorded by hand is not a new record: applyStripePayments attaches the intent to it.)
 function _stripeRecordPayment(job, stage, p) {
   var list = jobPayments(job);
   var payment = {
@@ -17687,8 +18045,8 @@ function _stripeRecordPayment(job, stage, p) {
     stage: stage,
     amount: p.amount,
     receivedOn: _localDateOf(p.createdAt) || _todayStr(),
-    // ⚠ `stripe_ach`, NOT `stripe`. A card is final on receipt and this is not — see
-    // PAYMENT_METHODS_CLEAR_ON_RECEIPT. Recording it as a card would stamp clearedOn at once.
+    // ⚠ `stripe_ach`: a bank transfer, which is what it is. (Before 2026-09-30 the warning here was about
+    // `stripe`, the card method, which cleared on receipt; the app takes no cards now.)
     method: 'stripe_ach',
     reference: p.piId,
     payer: p.payer || '',
@@ -17699,7 +18057,14 @@ function _stripeRecordPayment(job, stage, p) {
     // that the client authorised it. This record only exists because STRIPE REPORTED THE
     // INTENT `succeeded` — the money has genuinely settled. That is the one moment an ACH
     // payment is cleared, and it is why read-back is worth building at all.
-    clearedOn: _localDateOf(p.createdAt) || _todayStr(),
+    // ⚠⚠ DATED THE DAY THE APP SAW IT SETTLED, NOT THE INTENT'S DATE (2026-09-30, P16). `createdAt` is when
+    // the intent was created — the client authorising the debit, about four business days BEFORE the money
+    // arrived — so stamping it here said the money cleared before it had. The backend returns no settlement
+    // date (stripePaymentsForLink sends sessionId, piId, status, amount, payer and createdAt), so the honest
+    // date is the day a check saw `succeeded`: on or after the day it settled, never before. `receivedOn`
+    // keeps the authorisation date, which is what a person recording it by hand would have written.
+    clearedOn: _todayStr(),
+    clearedBy: 'Stripe',
     policyException: false,
     stripePiId: p.piId,
     evidence: null,
@@ -19223,12 +19588,9 @@ function dashOfferDiscount(jobId) {
   openDiscountModal();
 }
 
-function dashMarkEstimateSent(jobId) {
-  if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
-  markEstimateSent();
-  dashNotice('ok', 'Estimate recorded as sent.');
-  _dashRedraw(jobId);
-}
+// (The estimate's own "recorded as sent" handler is gone, 2026-09-30, P16: it had no caller. A send by
+// plain email — the mailto route, or the Gmail fallback — records its draft now, and "I've sent it"
+// (markDocSent) confirms it through markEstimateSent like every other send.)
 
 // ⚠ NEITHER OF THESE RE-CHECKS THE GATE, DELIBERATELY. `markAgreementSent` already
 // refuses without `agrApproved` and `markAgreementSigned` without `agrSent`, and both
@@ -19915,6 +20277,9 @@ function renderClientDashboard(jobId) {
     _qa.forEach(function(a){ h += '<button class="jt-ghost" onclick="' + a.call + '">' + a.label + '</button>'; });
     h += '</div>';
   }
+  // The payments themselves, under the rail on every state of the job (2026-09-30, P16): Mark cleared and
+  // Void live here, beside the payment they act on, because the row that recorded it is not lit for long.
+  h += jobPaymentsListHtml(job);
   h += '</div>';   // close .jt
   h += '</div>';  // close card
   // (Estimate total and the deposit/midpoint/final amounts now live on the timeline
@@ -21855,11 +22220,13 @@ function emailAgreementToClient() { docAction(currentAgrJobId, 'agreement', 'sen
 // code change.
 var GMAIL_CLIENT_ID_DEFAULT = '49539205067-fe71rejrm6v1mvku30s70pv5aq7454cs.apps.googleusercontent.com';
 var GMAIL_CLIENT_ID = GMAIL_CLIENT_ID_DEFAULT;
-// gmail.compose creates a draft and CANNOT send. `userinfo.email` is added only so the
-// deep link can name the mailbox: /mail/u/0/ is whichever Google account signed in FIRST in
-// that browser, so on anyone with a personal Gmail open the draft link landed in the wrong
-// account and the draft looked missing. Gmail accepts an address in that slot. userinfo.email
-// is a non-sensitive scope and does not affect verification.
+// gmail.compose creates a draft and CANNOT send. `userinfo.email` is added only so the app can
+// NAME the mailbox the draft is in — on screen, in the send notice and the sync badge, and on the
+// document's record (`docState[key].mailbox`) — because the draft link is always /mail/u/0/, which
+// is whichever Google account signed in FIRST in that browser. The address never goes in the link:
+// both spellings of that were tried and both dead-ended (see gmailDraftUrl). (This comment said until
+// 2026-09-30 that the link names the mailbox; it has not since 2026-09-09.) userinfo.email is a
+// non-sensitive scope and does not affect verification.
 var GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/userinfo.email';
 var _gmailUserEmail = '';
 // In memory only, and deliberately never in localStorage. It is a bearer token on the
@@ -22025,8 +22392,8 @@ function gmailDraftUrl(messageId) {
   return 'https://mail.google.com/mail/u/0/#drafts?compose=' + encodeURIComponent(messageId || '');
 }
 
-// Resolve which mailbox the token belongs to, so the draft link opens there. Best effort:
-// a failure just falls back to /u/0/, which is what it did before.
+// Resolve which mailbox the token belongs to, so the notice can name where the draft is (the link
+// itself is always /u/0/ — see gmailDraftUrl). Best effort: a failure leaves the mailbox unnamed.
 function gmailResolveUser(token, cb) {
   if (_gmailUserEmail) { cb(); return; }
   fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { 'Authorization': 'Bearer ' + token } })
@@ -40158,7 +40525,7 @@ function updateAgrUI() {
     var _dPaid = _agrJ ? depositPaidTotal(_agrJ) : 0;
     var _dTarget = _agrJ ? depositTargetFor(_agrJ) : 0;
     if (_paid) {
-      var _pays = jobPayments(_agrJ).filter(function(p){ return p.stage === 'deposit'; });
+      var _pays = jobPayments(_agrJ).filter(function(p){ return paymentCounts(p) && p.stage === 'deposit'; });
       var _uncleared = _dPaid - depositClearedTotal(_agrJ);
       var _exception = _pays.some(function(p){ return p.policyException; });
       _prog = '<strong>Deposit received</strong> — ' + fmt(_dPaid)
@@ -40167,6 +40534,7 @@ function updateAgrUI() {
         + (_uncleared > 0 ? ' <span style="color:var(--warn-tx);font-weight:600;">· ' + fmt(_uncleared) + ' uncleared</span>' : '')
         + (_exception ? ' <span style="color:var(--warn-tx);font-weight:600;">· policy exception</span>' : '')
         + '<div style="font-size:11px;color:var(--ok-tx);margin-top:2px;">Work can begin. Invoicing has advanced past the deposit stage.'
+        // A card payment has no paper to photograph; only records written before 2026-09-30 can be one.
         + (_pays.some(function(p){ return !p.evidence && p.method !== 'stripe'; })
             ? ' <span style="color:var(--warn-tx);">No photo on file for at least one payment.</span>' : '')
         + '</div>';
@@ -40276,15 +40644,16 @@ function agreementReady(job, estRec) {
   return '';
 }
 
-// Stamps the approval and files the agreement + signing packet to Drive, once. Returns
-// '' when the agreement may be acted on, or the blocker code.
+// Stamps the approval on the job and files the SIGNING PACKET to Drive, once per approval (the
+// bare agreement has not been filed since 2026-09-11). Returns '' when the agreement may be acted
+// on, or the blocker code.
 //
-// ⚠ IT PRIMES THE AGREEMENT PANEL FIRST AND REFUSES IF IT CANNOT. `exportAgreementToDrive`
-// reads `#agr-page-content` — whatever `loadAgreement()` last rendered — so firing this
-// from the dashboard with another job loaded would file THAT client's agreement into THIS
-// client's Drive folder. Same wrong-job class as the priming in Slice 1, with a worse
-// blast radius: a document in the wrong estate's folder is not something the app can
-// notice afterwards.
+// ⚠ IT STILL POINTS THE AGREEMENT TAB AT THIS JOB FIRST, AND REFUSES IF IT CANNOT — though nothing
+// it files reads that panel any more. This comment used to say the filer scraped `#agr-page-content`,
+// so a wrong-job prime would file another client's agreement; that stopped when the builders went
+// pure (Slice 2) and filing went through `docAction`/`docFile`, which build the packet from the job
+// (corrected 2026-09-30). What the prime still does is keep the retired tab's `currentAgrJobId`, which
+// its own handlers (`approveAgreementNow`, `renderAgreement`) read, on the job being approved.
 function ensureAgreementApproved(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var blk = agreementReady(job, null);
