@@ -30,11 +30,11 @@ rather than researching from nothing.
 
 | | Blocks | Items |
 |---|---|---|
-| **1** | the first engagement signing on a **fixed fee** | A1, A2, B2 |
+| **1** | the first engagement signing: on a **fixed fee**, and since 2026-09-30 on an **hourly** one too (the deposit) | A1, A2, B2 |
 | **2** | the first **trust** matter signing | A5, A6 |
-| **3** | the first **firearm** encountered on a job | C1, C2, C3, C5 |
+| **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, A8, A9, B1, B3, B4, B5, B6, B7, B8, B9, D1, D2, D4, D5 |
+| **5** | general — before launch | A3, A4, A7, A8, A9, B1, B3, B4, B5, B6, B7, B8, B9, B10, D1, D2, D4, D5 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -75,6 +75,19 @@ is **earned on the preparation work completed or committed**, not in the flat fe
 *committed* clear enough to collect on a vendor booked but not yet performed, and does a
 percentage-of-vendor-spend fee owed on termination raise any issue the flat fee's earn-out
 does not?
+
+**Added 2026-09-30 (P16) — the hourly arm, on Anthony's answer.** Anthony: *"deposit paid, is lost."* The
+estate form's hourly §8.1 said only *"The deposit is non-refundable if termination occurs after project start"*,
+and *project start* is defined nowhere. It now reads, as two bullets: *"The deposit is earned in full on
+signature of this Agreement and is not refundable. It is applied against the hours worked and materials used,
+and no part of it is returned where it exceeds them"* and *"Where Havellin is in material breach of this
+Agreement and has not cured that breach within seven (7) days of the Client's written notice describing it,
+Havellin will refund any amount it holds above the hours worked and materials used through the date of that
+notice."* **The question:** on an hourly engagement the deposit is half the estimate, so a client who stops in
+the first week forfeits far more than the work done. Is that enforceable as a retainer earned on signature, or
+is it tested as liquidated damages the way the fixed-fee earn-out might be? And the app also keeps a midpoint
+payment on an hourly walkaway (it closes the job as *Deposit Retained*), which neither form calls earned:
+should the clause say what happens to a payment above the deposit and the work done?
 
 ### A2. "For cause" — the definition, and an asymmetry between the two forms ⚠ PRIORITY 1
 
@@ -211,6 +224,21 @@ appraiser's own delay, where the old *"all required asset categories"* promise s
 (3) Exhibit A names the appraiser by category (*Art Appraiser*), not by firm: is that enough, or should the
 firm be named once engaged?
 
+**Added 2026-09-30 (P16) — §5.3's row for an appraiser Havellin does not arrange.** Where Havellin arranges
+none (no appraiser in Exhibit A, on any tier but *Inventory + appraisals*), §5.3 carries a row that admits
+somebody else's appraiser. It read *"Admit an appraiser engaged by counsel"* / *"Counsel's instruction"* /
+*"As scheduled by the estate attorney"* (*"the trustee's counsel"* on a trust-only matter) whatever §5.2
+said, and on a matter with neither probate nor a trust §5.2 names the Client. It now names the party §5.2
+names, in all three columns:
+
+| Matter type | Action | Approval Required | Threshold |
+|---|---|---|---|
+| Probate, both, or not answered | Admit an appraiser engaged by the estate attorney | Instruction from the estate attorney | As scheduled by the estate attorney |
+| Trust only | Admit an appraiser engaged by the trustee or their counsel | Instruction from the trustee or their counsel | As scheduled by the trustee or their counsel |
+| Neither | Admit an appraiser engaged by the Client | Instruction from the Client | As scheduled by the Client |
+
+**The question.** (4) Does each row name the right party for its matter type?
+
 ---
 
 ## B. Standard (living-client) services agreement
@@ -235,6 +263,17 @@ It previously read *"if the deposit exceeds the amount owed, Contractor will ref
 balance"*, which on a flat fee stopped early handed most of the 50% back.
 
 **The question.** Same as A1, on the living-client form.
+
+**Added 2026-09-30 (P16) — the hourly arm too.** The hourly §12.4 read *"Upon termination, Contractor will cease
+work, remove its personnel and equipment, and provide a final invoice. Any deposit will be applied to amounts due.
+If the deposit exceeds the amount owed, Contractor will refund the unused balance less any non-cancelable
+costs."* On Anthony's answer (*"deposit paid, is lost"*) it now reads *"Upon termination, Contractor will
+cease work, remove its personnel and equipment, and provide a final invoice for the Services performed and costs
+incurred through the termination date under Section 12.2. The deposit is applied against that amount. **The
+deposit is earned on signature and is not refundable**, including where it exceeds that amount, except where
+Client terminates under Section 12.3 for a material breach by Contractor that Contractor has failed to cure, in
+which case Contractor will refund any amount it holds above the amount owed."* **The question:** A1's hourly
+question, on the living-client form.
 
 ### B3. Marketing — opt-out rather than opt-in
 
@@ -425,13 +464,52 @@ costs are unaffected by this change."*
 **What the agreement already says.** On a standalone Home Prep engagement §3.5 charges the fee on *"the total
 third-party vendor costs managed under this Agreement"*, and §3.8 has work added after signing quoted and agreed
 in writing before it proceeds, so the agreement's wording did not change. The labour form's fee row for bundled
-prep charges it *"on the home sale preparation vendors identified in Exhibit A"*; a change order cannot add a
-vendor there today (that waits on Anthony), and if it ever can, that row would need *"or added by Change Order"*.
+prep charged it *"on the home sale preparation vendors identified in Exhibit A"*; since P16 a change order can add a
+vendor there too, and the row says so (below).
 
 **The question.** (1) Does *"vendor costs managed under this Agreement"* plainly include a vendor the client
 added later by change order? (2) The fee follows the vendor's *actual* invoice, which can exceed the estimate
 the client accepted: should the change order cap it, or require a fresh acceptance above some margin? (3) Is a
 typed name on the screen an adequate agreement to a new third-party engagement the client pays directly?
+
+**Added 2026-09-30 (P16) — a vendor added by change order on a labour job with bundled prep.** Anthony: *"yes"*.
+Where the estimate carries a costed preparation vendor (on an hourly quote, or a fixed fee with the prep fee on top
+of it; never an older fixed fee with the prep fee inside it), a change order may add one, with or without hours.
+
+- Standard §3.5: *"Home sale preparation vendors identified in the Estimate or added by Change Order are the
+  exception"*.
+- The estate form's fee row: *"General contractor / site management fee on the home sale preparation vendors
+  identified in Exhibit A or added by Change Order. Those vendors bill at cost…"*; its Fixed Project Fee
+  paragraph: *"…of what the home sale preparation vendors identified in Exhibit A or added by Change Order actually
+  invoice…"*.
+- The estate form's §4.2 change-order form gains a row, *"Added Preparation Vendor (the vendor and its estimated
+  cost. It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on what it
+  actually invoices[, in addition to the fixed project fee].)"*, and its hourly Billing row, which said *"This Change
+  Order does not itself create a charge"*, reads *"The additional hours are billed as worked, at the hourly rates in
+  Section 3.1. A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale
+  Preparation Fee is charged on what it actually invoices; this Change Order creates no other charge."*
+- The acceptance on a labour job: *"…agreed to this change in scope[ and the additional hours it is expected to
+  take], and the addition of Painting to the preparation vendors, billed to them directly at cost, with the 30% site
+  management fee on what it actually charges.[ Those hours are billed on the final invoice as they are actually
+  worked.]"* (on a fixed price, *"[and to the change to the fixed project fee shown above, which is added on the
+  final invoice]"*).
+- The printed change order: *"The vendor bills you directly, at cost, and the 30% site management fee in your
+  agreement is billed on what it actually charges — about $X at the estimated $Y. That fee[ is charged in addition to
+  your fixed project fee and] covers coordinating and supervising the preparation work, which is not billed as
+  hours. The other vendors' costs are unaffected by this change."*
+
+Change orders with no vendor keep their wording. **The question:** B9's three questions, on the labour forms.
+
+### B10. §3.9 — no card payments ⚠ NEW 2026-09-30
+
+**What changed.** §3.9 read *"Payment may be made by credit/debit card via Contractor's secure payment link, or by
+check or ACH payable to Havellin Palm Beach LLC."*, against the firm's rule that it takes no card payments (the
+Stripe links are ACH-only, and the payment recorder no longer offers Card). On Anthony's answer it reads *"Payment
+may be made by ACH bank transfer through Contractor's secure payment link, by wire transfer, or by check payable to
+Havellin Palm Beach LLC."* The estate form has no payment-method clause.
+
+**The question.** Should the clause say anything about an ACH payment returned after it was recorded, or about who
+bears a wire's fees?
 
 ---
 
@@ -499,6 +577,30 @@ something the crew does**, the screening question under `18 U.S.C. §922(g)` and
 The protocol's six stages, seven "nevers", NFA recognition check and client-facing claim
 language were drafted from secondary summaries. **The operative text needs verifying before
 the protocol is adopted.**
+
+### C6. A firearm going to a named person, through a licensed dealer ⚠ NEW 2026-09-30 · PRIORITY 3
+
+**What changed.** A firearm the representative directs to a family member could never clear the transport gate:
+the protocol hands a firearm to nobody but a licensed dealer, and nothing recorded a transfer *to* a person
+*through* one. Anthony (2026-09-30): *"sure"*. The line keeps its disposition (*To a person*, the person in
+Channel / Recipient) and records a **dealer route**: the licensed dealer it goes through, who runs the background
+check and makes the transfer. With the route, written authority naming the firearm by serial and the serial on the
+record, the named principal may carry it to that dealer exactly as C1 describes; an NFA item is offered no route.
+The protocol (revised 30 Sep 2026) says so at Stage 3 (*"For a firearm going to a named person, it names that
+person as well: the dealer makes the transfer to them"*, and a new bullet on recording the route), Stage 5 (the
+dealer's record lists which items are *"held for transfer to a named person (the dealer runs the background check;
+the person collects from the dealer, never from us)"*), Stage 6, and Never 05 (*"The dealer performs the transfer:
+a firearm the representative directs to a named person goes to the dealer like any other, and the person collects
+it there."*). The release approval request the representative signs adds *"A firearm going to a named person goes
+to the dealer as well, and the dealer makes the transfer to that person, with the background check and the
+paperwork; Havellin never hands a firearm to anyone."* and prints *"through <dealer>, a licensed dealer"* on the
+firearm's line. **Proposed, not applied** (client copy): in *What we say to clients*, *"…transports non-NFA firearms
+directly to that dealer for purchase or consignment"* would become *"…for purchase, consignment, or transfer to a
+person the representative names."*
+
+**The question.** (1) Does C1's chain hold where the dealer acts as the transfer agent for an heir rather than as
+buyer or consignee? (2) Is a dealer transfer required for a distribution to an heir, or only the firm's chosen
+practice? (3) Should the client-facing sentence change as proposed?
 
 ---
 

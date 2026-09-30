@@ -7,9 +7,10 @@ is the operating description. Step 2 of the inventory pipeline Anthony scoped on
 built, and this spec deliberately does not touch it.
 
 **Since the build (2026-09-30):** the answer limit went from 4,096 to 16,000 tokens (`AGENT_MAX_TOKENS`,
-P11), in effect only once Apps Script `2026-09-30` is deployed, which is still owed; and the
-whole-tab repaint §11 warns about is gone from the desk's split, which now repaints only the rows it
-changed (`_invSplitRepaint`, P14). §11's quota wall still stands.
+P11), live since Anthony deployed Apps Script `2026-09-30`; and the whole-tab repaint §11 warns about
+is gone from the desk's split, which now repaints only the rows it changed (`_invSplitRepaint`, P14).
+§11's quota wall still stands. **§6's sweep of the as-found frames was never built, and Anthony has
+decided it will not be (2026-09-30):** Agent One looks only at the detailed inventory photographs.
 
 Anthony, on what the field is for: *"the whole point is that we don't take the time to name objects
 in the field. we just capture per room and the agent names."*
@@ -233,6 +234,14 @@ Apps Script's ceiling is a **6-minute execution limit**, and a vision call runs 
 ---
 
 ## 6 · THE MUST-FIND SWEEP
+
+**Decided (Anthony, 2026-09-30): the item and detail shots only, never the as-found pass.** *"I think
+agent one should only look [at] detailed inventory photos, not as-found."* What was built reads the
+must-find answers against the unnamed Items-pass shots it is sent to name, with their detail shots
+(`agentShotGroups`), and the manual says in so many words that a safe visible only in an as-found wide
+shot is not caught: the desk reads the as-found set against the must-find list itself. The first
+bullet below is the design as written on 2026-09-22 and is kept for the record; it was not built and
+is not to be.
 
 ⚠ **This is the highest-stakes thing in the build and nothing in the app does it today.**
 

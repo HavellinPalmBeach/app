@@ -193,7 +193,7 @@ Right after activation, the filled button bills the midpoint, while the estimate
 
 **Fix:** P7 (Let a finished job close with the midpoint unpaid)
 
-#### M9 · Backend · A corrupt store blob empties that store on the next save; lock timeouts write unlocked. — **Fixed 2026-09-30** (needs the 2026-09-30 redeploy)
+#### M9 · Backend · A corrupt store blob empties that store on the next save; lock timeouts write unlocked. — **Fixed 2026-09-30** (live since Anthony redeployed `2026-09-30` the same day)
 
 If a stored blob fails to parse, the server reads it as empty and the next save writes back only what that save carried, which is every other job's estimates, plans or logs gone. Nine save paths carry on without the lock after a 20-second timeout. Unlikely, but the damage is total.
 
@@ -322,11 +322,12 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P8** Measure work done against the rooms (needs Q3)
 - [x] **P9** Bring Edit Client up to intake's rules (needs Q4, Q15–Q18)
 - [x] **P10** Lifecycle and payment loose ends (needs Q2, Q12, Q19)
-- [x] **P11** Harden the Apps Script backend (redeploy) — landed 2026-09-30; live once Anthony redeploys `2026-09-30`
+- [x] **P11** Harden the Apps Script backend (redeploy) — landed 2026-09-30; live since Anthony redeployed `2026-09-30`
 - [x] **P12** Estimator fixes and pricing decisions (needs Q5–Q7, Q9, Q10, Q13, Q20) — landed 2026-09-30; Q20 and the Q14 follow-up built with P15, and the hourly half of Q5 decided as it is
 - [x] **P13** Documentation pass (needs the packs above first) — landed 2026-09-30
 - [x] **P14** Small backlog — landed 2026-09-30 (the intake sanity checks are decided not to build)
 - [x] **P15** Anthony's answers of 2026-09-30 (Q20, the Q14 follow-up, a vendor on a Home Prep change order, four small items) — landed 2026-09-30
+- [x] **P16** Anthony's answers of 2026-09-30, round 2 (no cards, the hourly deposit, a vendor by change order on bundled prep, Premium's appraiser hours, a firearm to a person through a dealer), and the known-bug list — landed 2026-09-30; its backend half is live once Anthony redeploys `2026-09-30b`
 
 ### P1 · Stop estimates leaking between clients
 
@@ -635,6 +636,19 @@ Fixes: Q20, the Q14 follow-up, a vendor on a Home Prep change order, and the sma
 - **The small items:** the desk's **All** filter stays chosen (applied once per client, `_invApplyWhenDefault`), and each client's desk starts clean; the vendor and partner deletes ask their history question behind the PIN too, and a partner delete waits for the client list; *Vendor Directory not loaded* asks the directory, so it shows on a labour job; browser step 17 no longer reads the clock.
 - **Found by the P13 editors and fixed here, as P15's own work:** the client estimate's capture-scope sentence and §5.3's party on a *neither* matter (Q20); a Home Prep final's notes, its payment-summary line and its ±15% baseline for an added vendor.
 
+### P16 · Anthony's answers of 2026-09-30, round 2, and the known-bug list
+
+Fixes: the seven answers below and CLAUDE.md's *Known, not fixed* list · Needs: the answers of 2026-09-30 (round 2)
+
+**Landed 2026-09-30.** Anthony: *"1. yes. 2. deposit paid, is lost. 3. yes. 4. drop the lines hours on premium jobs. 5. sure. 6. yes. 7. I think agent one should only look detailed inventory photos, not as-found. fix the 20 bugs also. I've done apps script and backfillIDs."* Built in four workstreams, merged and verified together.
+- **1 · No cards.** The standard agreement's §3.9 names ACH through the payment link, wire or check; the payment recorder no longer offers Card, and the handler refuses one (a card record from before still reads "Card").
+- **2 · The hourly deposit is earned on signature.** The standard form's hourly §12.4 and the estate form's hourly §8.1 keep the deposit, refunding only above what is owed after Havellin's uncured material breach (counsel bundle A1, B2).
+- **3 · A vendor by change order on bundled prep.** A labour job whose estimate carries a costed preparation vendor may add one by change order (`coPrepVendorsOn`), through the dialog, the acceptance, the printed change order, the final's fee and the ±15% baseline; both forms' fee clauses and the estate form's §4.2 change-order form say so (counsel bundle B9).
+- **4 · Premium's appraiser hours.** On a Premium Estate an appraiser line books no coordination hours (`premiumCoversLine`); a Premium Estate Settlement with an appraiser moves $27,345 → $26,975 hourly.
+- **5 · A firearm to a person, through a dealer.** A Distribute firearm records its dealer route (`invSetDealerRoute`), which clears the beneficiary arm; authority and serial are still required, and an NFA item is offered none. The protocol, revised, is in the counsel bundle (C6).
+- **6 · As-found shots stay non-deletable,** and **7 · Agent One stays on the item and detail shots:** recorded as decided (CLAUDE.md, AGENT_ONE_SPEC §6); nothing built.
+- **The known bugs.** Payments: Mark cleared and Void as recorded acts, one `paymentCounts` predicate, a Stripe settlement matched to the transfer recorded by hand, the settled day as the cleared day. Documents: the plain-email fallback recorded, Edit estimate removing the filed link, the signer's own day and email, the decision email as a Gmail draft. Invoices: Manager approval asks the no-hours block first; the rush baseline moves by what the final bills; the crew-only warning is shown again. The estate form's §5.3 row names §5.2's party. The desk: a living client's request prints no estate caution, failed detail shots have tiles, the valuation source only where it shows, the Approval Request once, and Remove line. Apps Script `2026-09-30b`: the payment merge keeps a void or a clear, the folder sweep runs from the Run menu, and `saveInventory.gs`'s sticky list matches the app's.
+
 ## Questions for Anthony
 
 **Answered 2026-09-29, and the last three on 2026-09-30.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.
@@ -719,12 +733,13 @@ Fixes: Q20, the Q14 follow-up, a vendor on a Home Prep change order, and the sma
 - [x] **Redeploy the Apps Script.** The repo is at `2026-09-22b`; the last recorded deploy is `22a`. Add `ANTHROPIC_API_KEY` in Script Properties and run `testAgentIdentify()` once. Until then, Agent One (photo naming) can't run. *You report this done (2026-09-29). To confirm: no "out of date" banner when the app loads means the 22b deployment is live, and pressing Name N shots on a job with photos (or running `testAgentIdentify()` in the editor) proves the key.*
 - [ ] **Redeploy quo-sync.gs, then check before pruning.** Deploy the 2026-09-18 fix, fix the duplicate "David Schneider" vendor row, and run `dryRunQuoAll` before any prune.
 - [x] **Send one DocuSign sandbox envelope end to end.** Check that the opt-out box renders, where the signature boxes land, that no green "Approved for Sending" band is on the PDF, and that the signed PDF and certificate file to Drive. Then move to production. *You report several that worked (2026-09-30). What remains is the move to production when you are ready.*
-- [ ] **Redeploy the Apps Script at `2026-09-30`.** Copy `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → New version. Until then P11's per-key merges, the unreadable-store refusal, the busy answer and Agent One's larger answer limit are not live; the banner says so.
+- [x] **Redeploy the Apps Script at `2026-09-30`.** *Done (Anthony, 2026-09-30).* Copy `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → New version. Until then P11's per-key merges, the unreadable-store refusal, the busy answer and Agent One's larger answer limit are not live; the banner says so.
+- [ ] **Redeploy the Apps Script at `2026-09-30b`** (P16). Paste `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → edit → New version. Every device shows the out-of-date banner until it is done. Until then a payment voided or marked cleared can come back from a device that had not reloaded; an older copy of an inventory item can drop a firearm's serial, recipient or dealer route on the sheet; and `previewFolderDuplicates` / `dedupeFolderConfirm` still need a folder id.
 - [ ] **Stripe: one test ACH link.** It proves the ACH-only check. Confirm the account's ACH limit covers your largest deposit. *Lower priority (2026-09-30), still to do before the first real deposit.*
-- [ ] **Run `backfillIds()` once in the Referral Partners Apps Script project.** Gives every partner row a permanent id, so re-sorting that sheet can never move a referral.
+- [x] **Run `backfillIds()` once in the Referral Partners Apps Script project.** *Done (Anthony, 2026-09-30).* Gives every partner row a permanent id, so re-sorting that sheet can never move a referral.
 - [ ] **Google Cloud: set the Gmail consent screen's audience to Internal.** Otherwise the Gmail draft path stays in Testing mode.
 - [ ] **Run `previewOrphanRecords()` once.** From the Apps Script editor, to see leftover practice records.
-- [ ] **Send the counsel bundle in priority order.** Before the first fixed-fee, trust and firearm jobs. Add the hourly termination wording, the retained-deposit clause, an ACH-return clause and the referral-fee question.
+- [ ] **Send the counsel bundle in priority order.** Before the first fixed-fee, trust and firearm jobs. The hourly termination wording and the retained deposit are drafted now (A1, B2, P16); the ACH-return question is B10, and the referral-fee question is still to add.
 - [ ] **Bind the insurance and the bond.** Before the first real client document goes out; every document already says Insured & Bonded.
 - [ ] **Update the two Drive documents.** Re-import the updated estate guide into its Google Doc, and retire the "NEEDS REWRITE" probate package.
 
