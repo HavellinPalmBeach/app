@@ -402,8 +402,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The intake answer never restates a priced estimate: the restore path reads the
     // snapshot's own pin, and only the fresh-build path reads the job.
     has(src, "_estimateDocScope = docScopeDef(est.docScope) ? est.docScope : 'full';", 'a saved estimate restores its OWN scope, never intake\'s');
-    // The one read is inside resetEstimateJobState, which runs on every open before the fetch and again
-    // on a fresh build — and a saved estimate's own scope is restored over it (driven in estimate-reset).
-    eq((src.match(/seedDocScopeFromJob\(/g) || []).length, 2, 'the seed is read in exactly one place besides its definition — the one reset');
+    // ⚠ RESTATED 2026-09-30 (P16, B13). This counted every `seedDocScopeFromJob(` in the file and wanted two —
+    // the definition and resetEstimateJobState — because the intake answer only ever seeded a fresh build. Since
+    // P16 an estimate no manager has approved FOLLOWS a tier changed later on Edit Client (followDocTier), so the
+    // seed has read-only readers too (estimateTierMoved, docTierFollowNote, docTierChangeNotice). What survives
+    // is a rule about WRITES: the seed sets the open build's scope in exactly two places — the reset (a fresh
+    // build) and followDocTier (a draft following a moved tier) — and the second stands down on an approved
+    // estimate or one out for approval (driven end to end in p16-screens-text.test.js).
+    const liveSrc = src.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+    ok(liveSrc.length > src.length * 0.5, 'the comment-stripped source is still most of the file');
+    eq((liveSrc.match(/_estimateDocScope = seedDocScopeFromJob\(/g) || []).length, 2,
+       'the seed WRITES the scope in exactly two places — the one reset and the follow rule');
+    has(fn('followDocTier'), 'if (!job || estimateApproved || estimateSubmitted) return null;',
+       'and the follow rule never moves an approved estimate, or one out for approval');
   }
 };

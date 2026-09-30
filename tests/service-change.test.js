@@ -228,10 +228,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(job.svc, 'prep', 'a living job is not re-typed as an estate matter here');
     eq(r.sel.value, 'prep', 'the picker reverts');
     eq(r.fb[0].kind, 'err', 'and it is an error, not a warning');
-    // ⚠ IT NAMES EDIT CLIENT NOW (2026-09-23). It pointed at Client Intake, which only CREATES
-    // clients and is no longer even a tab — the refusal-names-a-form-that-cannot-reach-this-client
-    // defect CLAUDE.md records twice. Edit Client carries the decedent fields and the service type.
-    has(r.fb[0].msg, 'Edit Client', 'pointing at the form that asks those questions');
+    // ⚠ RESTATED 2026-09-30 (P16). It named Edit Client from 2026-09-23 — but Edit Client refuses the same
+    // crossing ("Create a new client for this", Q4), so the refusal sent people to a second refusal. A living
+    // client and an estate are different clients, and the route is + Add New Client, in the words Edit Client
+    // uses. Client Intake is still never named (it is not a tab, and the button is what a person presses).
+    has(r.fb[0].msg, 'Create a new client for this', 'saying what Edit Client says about the same crossing');
+    has(r.fb[0].msg, '+ Add New Client', 'and pointing at the button that makes a new client');
+    lacks(r.fb[0].msg, 'Edit Client', 'never at Edit Client, which refuses the same change');
     lacks(r.fb[0].msg, 'Client Intake', 'and not at a form that cannot reach an existing client');
 
     // The hard lock.

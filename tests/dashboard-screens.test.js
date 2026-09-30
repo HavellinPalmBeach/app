@@ -245,7 +245,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                           'est-loading-bar': { style: { display: o.loading ? 'block' : 'none' } } });
       const log = [];
       const c = sandbox({
-        fns: ['openEstimateScreen'],
+        fns: ['openEstimateScreen', 'followDocTier'],
         stubs: { document: d, currentEstimate: o.cur === undefined ? null : o.cur,
                  _showDashScreen: (id) => log.push('show:' + id), calcAll: () => log.push('calc'),
                  applyEstimateLock: () => log.push('lock'), editEstimateForJob: (id) => log.push('open:' + id) },
