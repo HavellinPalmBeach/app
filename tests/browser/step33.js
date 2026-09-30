@@ -227,9 +227,11 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   const prFt = prF ? await T(prF.html) : '';
   has(prFt, 'This change order adjusts your fixed project fee by the amount above.', 'the fixed terms');
   has(prFt, '+ $2,000', 'the price is 8 × $150 + 8 × $100 — the plain rate card');
-  has(prFt, 'It is priced at the plain hourly rates shown: the expedited-delivery premium and the preferred-client discount in your fixed project fee do not apply to it.',
+  // Restated 2026-09-30 (P12, Q9/Q13): a fee saved from that day carries its premium and discount as lines
+  // ON it (estFixedLines), so the page says "on"; an older fee, with them inside it, still reads "in".
+  has(prFt, 'It is priced at the plain hourly rates shown: the expedited-delivery premium and the preferred-client discount on your fixed project fee do not apply to it.',
       '⚠⚠ Q14: said in one line on the fixed page');
-  lacks(prFt, '20% expedited', 'with no percentage — the fixed-price estimate never itemised the premium');
+  lacks(prFt, '20% expedited', 'with no percentage — the change order names the premium and never prices it');
   await p.waitForTimeout(700);
 
   // A plain fixed job with neither prints no line: explaining an absence draws attention to it.

@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 10:56am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.30 · 11:03am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -12202,6 +12202,10 @@ function applyDiscountRevision() {
   } else if (p.lines) {
     // A line on the fee (estFixedLines): the fee stays the price of the scope and the discount rides
     // beside it, so the estimate, the agreement and the invoices each print it.
+    // ⚠ Belt and braces (revert sweep, 2026-09-30): today the hourly arm below would write the same two
+    // fields for this record (the snapshot always carries `havellinTotalFull`, so its fill never fires),
+    // and disabling this arm changes nothing a test can see. It is its own arm so the hourly bookkeeping
+    // below can change without reaching a fixed fee.
     currentEstimate.discountPct = pct;
     currentEstimate.discountAmt = newDiscountAmt;
   } else {

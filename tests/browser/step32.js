@@ -67,7 +67,8 @@ function fakeSheet(name, header) {
 }
 const S = {
   console, Logger: { log() {} }, Date,
-  LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+  // tryLock since P11 (2026-09-30): every save asks _lockOrBusy, which refuses to write without the lock.
+  LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
   // The deleted-job ledger has its own suite; it is not what this step is about.
   _jobRefusal: () => null, _presentJobIds: () => ({}), getJobLedger: () => ({ seen: {}, since: 0 }), _ledgerMarkSeen: () => {},
 };
@@ -76,7 +77,7 @@ S.SpreadsheetApp = { openById: () => ({ getSheetByName: (n) => SHEETS[n] || null
 vm.createContext(S);
 vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'), gsVar('JOB_LIST_KEY'),
   gsVar('BACKEND_VERSION'), gsVar('BACKEND_ACTIONS'), gsVar('BACKEND_TYPES'),
-  ...['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord'].map(gsFn)
+  ...['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_lockOrBusy'].map(gsFn)
 ].join('\n\n'), S, { filename: 'main-sync.gs (extracted)' });
 const sheetJob = (id) => S.getJobsFromSheet().find((j) => j.id === id) || null;
 // The other stores are whole blobs the app reads back; nothing here is about how they merge.
