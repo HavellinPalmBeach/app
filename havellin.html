@@ -1268,7 +1268,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 9:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.09.29 · 10:13pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -39593,8 +39593,15 @@ function showEditClient(jobId) {
     document.body.appendChild(m);
   }
 
+  // ⚠ A RECORDED VALUE THE LIST DOES NOT CARRY IS KEPT AND MARKED, never dropped (audit H7). A <select>
+  // silently rejects a value it has no option for, so a property type saved under an older label
+  // ("Single Family") opened on "Select type" and the save wrote it back blank — and, since P9, refused
+  // the whole save for clearing a required field. Every select built here goes through this.
   function sel(opts, val) {
-    return opts.map(function(o){ return '<option value="'+o.v+'"'+(o.v===val?' selected':'')+'>'+o.l+'</option>'; }).join('');
+    var cur = (val == null) ? '' : String(val);
+    var known = !cur || opts.some(function(o){ return o.v === cur; });
+    return opts.map(function(o){ return '<option value="'+o.v+'"'+(o.v===cur?' selected':'')+'>'+o.l+'</option>'; }).join('')
+      + (known ? '' : '<option value="'+esc(cur)+'" selected>'+esc(cur)+' (as recorded)</option>');
   }
   // req: true = always required, 'probate' = required only while the service is a probate
   // one (the estate attorney), falsy = optional. The conditional mark carries a class rather

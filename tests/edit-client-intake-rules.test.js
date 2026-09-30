@@ -164,6 +164,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const legacyRow = editAndSave(Object.assign({}, LIVING, { refPartnerId: '6' }));
     eq(legacyRow.job.refPartnerId, 'u-bob', 'a pre-M16 row id is matched to its partner and re-keyed to the uid on the next save');
 
+    // Browser step 26 found this one: a property type saved under an older label.
+    const oldPtype = editAndSave(Object.assign({}, LIVING, { ptype: 'Single Family' }), { 'ec-sqft': '5200' });
+    eq([oldPtype.job.ptype, oldPtype.job.sqft], ['Single Family', '5200'],
+       '⚠ a property type the list no longer carries is kept, and the edit beside it saves');
+    has(oldPtype.html, 'Single Family (as recorded)', 'and it is shown as recorded');
+    const oldPri = editAndSave(Object.assign({}, LIVING, { priority: 'rush' }));
+    eq(oldPri.job.priority, 'rush', 'so is any other select\'s unlisted value (priority)');
+
     const gone = editAndSave(Object.assign({}, LIVING, { tc: 'Dana Former' }));
     eq(gone.job.tc, 'Dana Former', '⚠ a concierge no longer on the roster is kept, not written back as Unassigned');
     has(gone.html, 'Dana Former (not on the active roster)', 'and named as such');
