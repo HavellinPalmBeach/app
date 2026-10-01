@@ -498,6 +498,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     inZone(() => y.C.saveRefund());
     eq(y.job.payments.length, 3, 'accepted, it is recorded as entered');
     eq(inZone(() => y.C.walkawaySettlement(y.job)).due, 0, 'and nothing is due');
+    // P17 merge: the amount is kept to the cent, as saveDeposit keeps a payment's (roundCents).
+    const ct = closed(); ready(ct); fill(ct, { 'rf-amount': '100.005', 'rf-date': '2026-10-01', 'rf-method': 'check' });
+    inZone(() => ct.C.saveRefund());
+    eq((ct.job.payments[2] || {}).amount, 100.01, '⚠ a refund typed past the cent is recorded to the cent, as a payment is');
   }
 
   group('7 · a refund recorded in error is voided with a reason, never deleted, and every figure goes back');

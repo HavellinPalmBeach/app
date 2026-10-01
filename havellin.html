@@ -15403,7 +15403,9 @@ function refundMethodLabel(m) {
 }
 function walkawaySettlement(job) {
   if (!job) return null;
-  var c = roundCents;   // the one cents rule (P17 merge): it had its own Math.round(v * 100) / 100, which rounds 1.005 down
+  // The one cents rule (P17 merge): this had its own Math.round(v * 100) / 100, which rounds 1.005 down. Belt-and-braces:
+  // every input here is already to the cent, so a revert stays green; it keeps the second copy of the rule out.
+  var c = roundCents;
   var received = c(jobPaidTotal(job)), refunded = c(jobRefundedTotal(job)), held = c(received - refunded);
   var out = { basis: 'unknown', received: received, refunded: refunded, held: held,
               deposit: 0, work: 0, earned: 0, due: 0, retained: held };
@@ -15490,7 +15492,7 @@ function saveRefund() {
   var s = walkawaySettlement(job);
   var blk = refundBlocker(job, s);
   if (blk) { showFB('rf-fb', 'warn', blk); return; }
-  var amount = parseFloat(document.getElementById('rf-amount').value) || 0;
+  var amount = roundCents(parseFloat(document.getElementById('rf-amount').value) || 0);   // to the cent, as saveDeposit keeps a payment (P17)
   var date = document.getElementById('rf-date').value;
   var method = document.getElementById('rf-method').value;
   var reference = (document.getElementById('rf-reference').value || '').trim();

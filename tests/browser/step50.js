@@ -331,13 +331,15 @@ const SYNC = 'https://script.google.com/macros/s/STEP50/exec';
       has(list, 'Payments and refunds recorded', 'the list heads itself for both');
       has(list, 'Refund · Cheque · #2201 · to Ellsworth Family Trust', 'and lists the refund');
       const term = await p.evaluate(() => { const r = Array.from(document.querySelectorAll('#client-dashboard-view .jt-row')).find((x) => /deposit retained/i.test(x.textContent)); return r ? r.textContent.replace(/\s+/g, ' ') : ''; });
-      has(term, '$' + Math.round(earned).toLocaleString() + ' retained', '⚠⚠ the rail\'s Deposit Retained row now reads what the job kept');
+      // RESTATED 2026-10-01 (P17 merge): the retained figure is to the cent since W1, so it is read through the page's own fmt
+      // ($6,006.25 on the merged build), never '$' + Math.round(…), which printed $6,006 here; likewise Win / Loss below.
+      has(term, await money(earned) + ' retained', '⚠⚠ the rail\'s Deposit Retained row now reads what the job kept');
       // Win / Loss counts what was kept.
       await p.evaluate(() => { const nb = document.querySelector('.nb[onclick*="\'jobs\'"]'); if (nb) nb.click(); }); await p.waitForTimeout(400);
       await press('#wl-tile-won', 'the Won tile');
       const wl = await p.evaluate((id) => { const r = document.querySelector('#wl-list-won tr[onclick="openClientDashboard(' + id + ')"]');
         return r ? Array.from(r.children).map((c) => c.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : ''; }, idB);
-      has(wl, '$' + Math.round(earned).toLocaleString() + 'retained', 'Win / Loss counts the retained figure after the refund');
+      has(wl, await money(earned) + 'retained', 'Win / Loss counts the retained figure after the refund');
       await press('#wl-tile-won', 'the Won tile, to close it');
       await settle();
       const sr = ((sheetJob(idB) || {}).payments || []).find((x) => x.stage === 'refund') || {};
