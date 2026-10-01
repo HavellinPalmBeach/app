@@ -88,7 +88,9 @@ function coCtx(est, cos, seed, dir) {
       jobs: [job], changeOrders: cos || [],
       estimateStore: est ? { 1: { estimate: Object.assign({}, est), approved: true } } : {},
       currentEstimate: null,
-      saveChangeOrders: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
+      saveChangeOrders: () => {},
+      // Accepting files the accepted copy to Drive (P17); that filing is driven in p17-documents-drive.test.js.
+      fileChangeOrder: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
       showFB: (id, kind, msg) => said.push({ id, kind, msg }),
       _docNotice: (kind, msg, jobId) => said.push({ id: 'doc', kind, msg, jobId }),
       docNames: () => ({ printTitle: 'Havellin Change Order' }),

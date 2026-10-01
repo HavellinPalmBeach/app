@@ -977,9 +977,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('B26 · the deployment says it is 2026-09-30b, and the app names what an older one leaves broken');
   {
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1];
-    eq(bv, '2026-09-30b', 'BACKEND_VERSION is bumped with the .gs change');
+    // RESTATED 2026-10-01 (P17): esignArchive files by name now (_fileBlobByName), and File signed copy relies on it, so the
+    // deployment and the app's minimum both move on to 2026-10-01; this pack's merge is still in that deployment.
+    ok(bv >= '2026-09-30b', 'BACKEND_VERSION is at or past this pack\'s .gs change (' + bv + ')');
     const B = sandbox({ vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_FEATURE_COST', 'BACKEND_MIN_VERSION'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-09-30b', '⚠ the app relies on the new merge, so it asks for it');
+    ok(B.BACKEND_MIN_VERSION >= '2026-09-30b', '⚠ the app relies on the new merge, so it asks for at least it (' + B.BACKEND_MIN_VERSION + ')');
     const shown = [];
     const C = sandbox({ fns: ['checkBackendVersion'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion'],
       stubs: { SHEETS_SYNC_URL: 'https://sheets', _showBackendStaleBanner: (v, m) => shown.push({ v, m }),
@@ -995,8 +997,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('stale text · esignArchiveSigned and revokeAgreementApproval say what really happens');
   {
     const notices = [];
-    const mk = (folderId, answer) => sandbox({ fns: ['esignArchiveSigned', 'docState', '_jobTouch'],
-      stubs: { SHEETS_SYNC_URL: 'https://x', jobs: [{ id: 1, docState: { agreement: { esign: { envelopeId: 'env1' } } } }],
+    // RESTATED 2026-10-01 (P17): the archive files only an agreement executed in DocuSign whose copy is missing
+    // (esignSignedCopyGaps), so the fixture is one: signed through the envelope, nothing filed yet.
+    const mk = (folderId, answer) => sandbox({ fns: ['esignArchiveSigned', 'docState', '_jobTouch', 'esignSignedCopyGaps', 'agreementSignature',
+                                                     'docStateBare', '_saveArrivalCheck'], vars: ['ESIGN_RECHECK_MINS', '_esignFiling'],
+      stubs: { SHEETS_SYNC_URL: 'https://x', jobs: [{ id: 1, docState: { agreement: { esign: { envelopeId: 'env1' },
+        sig: { how: 'esign', signedBy: 'Tripp Butler', signedOn: '2026-09-22', envelopeId: 'env1' } } } }],
         resolveSubfolderId: (job, sub, cb) => cb(folderId), _appsScriptPost: (u, b, cb) => cb(answer.ok, answer.d),
         docNames: () => ({ drive: 'Agreement – HVL-1.pdf' }), _docNotice: (t, m) => notices.push(String(m)), saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {} } });
     mk(null, {}).esignArchiveSigned(1);
@@ -1004,7 +1010,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(notices.length, 2, 'both failures speak');
     notices.forEach((m, i) => {
       lacks(m, 're-open this client', '⚠ nothing retries it, so neither failure says to re-open the client (' + i + ')');
-      has(m, 'download the signed agreement and its certificate of completion', 'each says what to do instead (' + i + ')');
+      // RESTATED 2026-10-01 (P17): what to do instead is the File signed copy button (Anthony's answer 4), not a download by hand.
+      has(m, 'press File signed copy on the timeline', 'each says what to do instead (' + i + ')');
+      lacks(m, 'download', 'and no longer sends anyone to DocuSign to download it (' + i + ')');
     });
     has(notices[1], 'HTTP 500', 'in the server\'s words');
 

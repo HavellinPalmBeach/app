@@ -5748,7 +5748,9 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // payment can come back and count again, with nothing on screen saying so.
 // The same redeploy carries saveInventory.gs's sticky list, brought level with the app's (serial, recipient,
 // field note, split links and a firearm's dealer route), so an older copy of an item cannot drop them on the sheet.
-var BACKEND_MIN_VERSION = '2026-09-30b';
+// 2026-10-01 (P17): esignArchive files by name (_fileBlobByName), and File signed copy relies on it — on an older
+// deployment a second filing of one envelope adds a second executed agreement to the Agreement folder.
+var BACKEND_MIN_VERSION = '2026-10-01';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -5804,7 +5806,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -13958,11 +13960,17 @@ function coReasonLabel(v) {
 // would let a second name overwrite who agreed and when. DOM-free, like dashUtilityBar, so the rule is
 // tested on its own as well as in the rendered card. The id goes into an onclick, so it is a number or
 // nothing: a record whose id is not one gets no controls rather than a broken call.
+// ⚠ AND ONCE ACCEPTED, ITS COPY IN DRIVE (Anthony, 2026-10-01, P17): the accepted change order is filed to the
+// client's Change Orders folder on acceptance (fileChangeOrder), so the row offers the filed copy, or File to Drive
+// while it is not there — a filing that failed, or a change order accepted before filing existed. Never before
+// acceptance: an unaccepted change order is a proposal, and the folder holds what the client agreed to.
 function coCardActions(co) {
   var id = Number(co && co.id);
   if (!isFinite(id) || !id) return [];
   var a = [{ label: 'PDF', call: 'printChangeOrder(' + id + ')' }];
   if (!co.clientApproved) a.push({ label: 'Get Acceptance', call: 'openCOAcceptModal(' + id + ')', primary: true });
+  else if (co.filedAt && co.filedUrl) a.push({ label: '&#128193; Filed copy', call: 'openChangeOrderFiled(' + id + ')' });
+  else a.push({ label: '&#128193; File to Drive', call: 'fileChangeOrder(' + id + ')' });
   return a;
 }
 
@@ -15286,6 +15294,10 @@ function acceptChangeOrder() {
   }
   closeCOAcceptModal();
   renderJobs();
+  // ⚠ THE ACCEPTED COPY GOES TO DRIVE NOW (Anthony, 2026-10-01, P17): the page the client just agreed to, with their
+  // name and the date, into the client's Change Orders folder. It reports through the sync badge, so the notice below
+  // stays the one that says what the acceptance moved; a failure leaves File to Drive on the change order's row.
+  fileChangeOrder(co.id, { auto: true });
   // ⚠ On the dashboard, and redrawn (2026-09-29, audit H2) — the Save notice's reason exactly: this went
   // to the hidden `e-fb`, and nothing repainted the card, the Hours Log bars or the schedule this
   // acceptance has just moved, so the row went on reading "Awaiting acceptance" beside a Get Acceptance
@@ -15301,7 +15313,7 @@ function acceptChangeOrder() {
     : (_accHrs ? ' These hours bill on the final invoice as they are worked.' : '')) + _accV, co.jobId);
 }
 
-function printChangeOrder(coId) {
+function printChangeOrder(coId, opt) {
   var co = changeOrders.find(function(c){ return c.id===coId; });
   if (!co) return;
   var job = jobs.find(function(j){ return j.id===co.jobId; });
@@ -15502,8 +15514,75 @@ function printChangeOrder(coId) {
   // document, and would throw inside its own timeout if no panel happened to be active.
   // _printDocument is the ONE print path and exists for exactly this; six printers were
   // routed through it on 2026-08-24 and this one was missed.
+  // ⚠ ONE PAGE, TWO DESTINATIONS (2026-10-01, P17): fileChangeOrder asks for the page itself (`opt.asHtml`) and files it
+  // to the client's Change Orders folder, so the accepted copy in Drive is byte for byte the page the client prints.
+  if (opt && opt.asHtml) return { html: content, title: docNames(job, 'changeorder', { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle };
   return _printDocument(content, docNames(job, 'changeorder',
     { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle);
+}
+
+// ─── FILING AN ACCEPTED CHANGE ORDER (Anthony, 2026-10-01, P17) ───────────────
+// "File each change order to the client's Drive Change Orders folder when the client accepts it." The folder has
+// been made at intake since the job folders existed and nothing ever wrote to it. What is filed is the accepted
+// copy: the printed change order with the client's typed name and the date (printChangeOrder's own page). The Drive
+// name comes from docNames and carries no date, so a re-file replaces the copy rather than adding beside it.
+// ⚠ NEVER BEFORE ACCEPTANCE, AND REFUSED IN THE HANDLER, not only withheld on the card: an unaccepted change order is a
+// proposal, and the folder is the record of what the client agreed to.
+// `opt.auto` is the filing acceptChangeOrder makes on its own: it reports through the sync badge rather than over the
+// acceptance notice, and its failure leaves File to Drive on the row. The record is a person's act (the acceptance or
+// the press), so it moves the change order's clock — the store merges whole records on `updatedAt`, and a filing left
+// on the old stamp would lose to any device still holding the accepted copy.
+var _coFiling = {};   // change orders whose upload is out right now, on this page — never saved
+function fileChangeOrder(coId, opt) {
+  var auto = !!(opt && opt.auto);
+  var co = (changeOrders || []).find(function (c) { return c.id === coId; });
+  var job = co ? jobs.find(function (j) { return j.id === co.jobId; }) : null;
+  var say = function (type, msg) {
+    if (auto) { if (type !== 'ok') showSyncBadge(msg, true); return; }
+    _docNotice(type, msg, co ? co.jobId : 0);
+  };
+  if (!co || !job) { say('warn', 'This change order could not be found.'); return false; }
+  if (!co.clientApproved) { say('warn', 'A change order is filed to Drive once the client has accepted it — get their acceptance first.'); return false; }
+  if (_coFiling[coId]) { say('warn', 'This change order is being filed now — give it a moment.'); return false; }
+  if (!SHEETS_SYNC_URL) { say('warn', 'This device has no Apps Script URL in Settings, so it cannot file to Drive.'); return false; }
+  var page = printChangeOrder(coId, { asHtml: true });
+  if (!page || !page.html) { say('warn', 'There is nothing to file on this change order yet.'); return false; }
+  var coNo = 'CO-' + String(co.id).slice(-6);
+  var doc = _exportDoc('Change Order ' + coNo + ' – ' + (job.hvlId || ''), page.html, '');
+  _coFiling[coId] = true;
+  resolveSubfolderId(job, 'Change Orders', function (folderId) {
+    // The job root when an older folder has no Change Orders subfolder — the fallback docFile takes, for its reason.
+    var target = folderId || _jobRootFolderId(job);
+    if (!target) {
+      delete _coFiling[coId];
+      say('warn', 'This client has no Drive folder yet, so ' + coNo + ' could not be filed. Create the Drive folder, then press File to Drive on the change order.');
+      return;
+    }
+    uploadHtmlToDrive(target, docNames(job, 'changeorder', { coNo: coNo }).drive, doc, function (ok, fileUrl, meta) {
+      delete _coFiling[coId];
+      if (!ok) {
+        // No repaint: nothing was recorded, so the row already offers File to Drive.
+        say('err', coNo + ' was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the change order to try again.');
+        return;
+      }
+      // The store may have been replaced by a load while the upload was out: write to the record held now.
+      var c2 = (changeOrders || []).find(function (c) { return c.id === coId; }) || co;
+      c2.filedAt = new Date().toISOString();
+      c2.filedUrl = fileUrl || c2.filedUrl || '';
+      c2.filedId = (meta && meta.fileId) || c2.filedId || '';
+      c2.updatedAt = Date.now();
+      saveChangeOrders();
+      if (auto) { showSyncBadge(coNo + ' filed to Drive ✓'); _asBackgroundRedraw(function () { _dashRedraw(co.jobId); }); }
+      else say('ok', coNo + ' filed to the client’s Change Orders folder in Drive.');
+    });
+  });
+  return true;
+}
+// The accepted copy in the client's Change Orders folder.
+function openChangeOrderFiled(coId) {
+  var co = (changeOrders || []).find(function (c) { return c.id === coId; });
+  if (!co || !co.filedUrl) { dashNotice('warn', 'No Drive link was recorded for this change order.'); _dashRedraw(co ? co.jobId : 0); return; }
+  try { window.open(co.filedUrl, '_blank'); } catch (e) {}
 }
 
 function openClientDashboard(jobId) {
@@ -15565,12 +15644,462 @@ function jobsWatchTick() {
   });
 }
 
-function toggleProbatePkg(jobId) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-  job.probatePkgSent = !job.probatePkgSent;
-  _saveJobEdit(job);
-  renderClientDashboard(jobId);
+// ═══════════════ THE PROBATE PACKAGE (Anthony, 2026-10-01, P17) ═══════════════
+// It replaces `toggleProbatePkg`, the Probate card's 📧 Send Package, which sent nothing: it flipped a self-attested
+// flag (`job.probatePkgSent`) and read "✓ Package Sent" until pressed again. Anthony (answer 11): one Gmail draft from
+// the Havellin mailbox to the estate attorney, copying the personal representative and agreements@, carrying the Court
+// Inventory or the Trust Schedule (whichever the matter uses), the Estate Inventory Report and the appraisals (the
+// Appraisal Worklist, with links to the filed appraisal reports), and links to the photograph folders with the signed
+// release approvals and the custody log. Sendable anytime: a document with gaps prints DRAFT, IN PROGRESS or a floor,
+// never FINAL, by each printer's own rule. Recorded like any document send.
+//
+// ⚠⚠ ITS OWN PATH, NOT A FOURTH KIND IN DOC_ACTIONS, AND THAT IS WHAT KEEPS ONE PATH FOR EACH VERB. A registry kind
+// is one page, one PDF and one Drive file, addressed to the client, behind docReadiness (an approved estimate and the
+// client's yes). The package is three of the desk's own documents and a record, addressed to counsel, sendable from
+// the first photograph; as a kind it would have needed a second shape for each of those inside the code every client
+// document runs through. So it reuses each verb's one implementation instead: every page is its printer's own page
+// (`opt.asHtml`), every PDF comes from docPdfBase64, every file goes through uploadHtmlToDrive, the message through
+// buildMimeMessage and gmailCreateDraft, and the send is recorded by docRecordSent and confirmed by markDocSent on
+// `docState` — so the draft rules (draftOutstanding, staleDraftNote, "I've sent it") are the client documents' own.
+// ⚠ AN OLD `probatePkgSent` IS HISTORY, NEVER A SEND: nothing went behind it, so the card names it as a mark made by hand.
+var PROBATE_PKG_KEY = 'probatePackage';
+var PROBATE_PKG_TITLES = { court: 'Court Inventory', trustee: 'Trust Schedule', schedule: 'Estate Inventory Report',
+                           contents: 'Contents List', worklist: 'Appraisal Worklist' };
+var PROBATE_PKG_RECORD_TITLE = 'Release Approvals and Chain of Custody';
+// Up to nine Apps Script calls run one after another (two folder shares, the record, and a filing and a PDF for each
+// document) before Gmail is asked, so the watchdog is longer than docSend's 45 seconds.
+var PROBATE_PKG_WATCHDOG_MS = 180000;
+
+// What the package carries, by rule. The instrument follows the matter: the Court Inventory where the estate is
+// administered through probate (jobOnProbateTrack, the one definition: an unanswered matter falls back to a Probate
+// service), the Trust Schedule where a trust holds property, both on a pour-over will. The inventory document is the
+// desk's own primary (invPrimaryDoc), and the tier decides what is ours to issue (invDocContractBlock): no valued
+// schedule on a contents engagement, where the Contents List goes instead, and no inventory document at tier none.
+// The Appraisal Worklist goes at every tier.
+function probatePackageDocs(job) {
+  if (!job || !invFiduciaryMode(job)) return [];
+  var out = [], d = matterDef(job);
+  if (jobOnProbateTrack(job) && !invDocContractBlock(job, 'court')) out.push('court');
+  if (d && d.trust && !invDocContractBlock(job, 'trustee')) out.push('trustee');
+  var p = invPrimaryDoc(job);
+  if (p === 'schedule' || p === 'contents') out.push(p);
+  out.push('worklist');
+  return out;
+}
+// One document's page, from its own printer: {html, title} or {why}.
+function probatePackagePage(jobId, key) {
+  var o = { asHtml: true };
+  var r = key === 'court' ? printCourtInventory(jobId, o)
+        : key === 'trustee' ? printTrustSchedule(jobId, o)
+        : key === 'schedule' ? printEstateInventoryReport(jobId, o)
+        : key === 'contents' ? printContentsList(jobId, o)
+        : key === 'worklist' ? printAppraisalWorklist(jobId, o) : null;
+  return (r && (r.html || r.why)) ? r : { why: 'it could not be built on this device' };
+}
+// ⚠ REFUSED BY NAME, everything missing at once: the attorney's email (Anthony's one condition), and the two things
+// the package cannot be built without — the Drive folder it files into and links to, and the Apps Script that turns
+// each page into a PDF. Asked by the card and again by the send.
+// ⚠ AND ONLY WHERE THE CARD IS: the row sits on the Probate card, which is drawn on an estate administered through
+// probate (jobOnProbateTrack), so the handler asks the card's question too. A matter with no court in it (a trust, or
+// neither) has no Probate card and no package; the Trust Schedule rides in it on a pour-over will.
+function probatePackageBlocker(job) {
+  if (!job) return 'This job could not be found.';
+  if (!jobOnProbateTrack(job)) return 'The probate package goes from the Probate card, on an estate administered through probate, and this estate is not one.';
+  var miss = [];
+  if (!String(job.probateAttyEmail || '').trim()) miss.push('the estate attorney’s email (Edit Client, under Estate Attorney)');
+  if (!job.driveFolder) miss.push('the client’s Drive folder (Create Drive folder, on this dashboard)');
+  if (!SHEETS_SYNC_URL) miss.push('the Apps Script URL in Settings');
+  return miss.length ? 'The probate package cannot be sent yet: it needs ' + _andJoin(miss) + '.' : '';
+}
+// To the estate attorney; the personal representative and agreements@ copied.
+function probatePackageRecipients(job) {
+  var to = String((job && job.probateAttyEmail) || '').trim();
+  var cc = [], pr = String((job && job.executorEmail) || '').trim();
+  if (pr && pr.toLowerCase() !== to.toLowerCase()) cc.push(pr);
+  cc.push(DEPT_EMAILS.agreements);
+  return { to: to, cc: cc };
+}
+// ⚠ WHEN A PACKAGE DRAFT IS OUT OF DATE: the inventory it was built from changed after it was made (any line or
+// appraisal report touched, by the per-item `updatedAt` the manifest merges on, or removed, by `deletedAt`), or the
+// documents the package owes are no longer the ones it was built to carry (the matter or the tier moved). Read off the
+// manifest and the job wherever they meet, never written into the draft's record, for the two-device reason
+// notePriceChange gives. A device that has not loaded this job's manifest sees no inventory change and claims none.
+function probatePackageMovedSince(job, st) {
+  var at = Date.parse((st && st.draftedAt) || '');
+  if (!job || isNaN(at)) return false;
+  var rows = (typeof _photoRefs !== 'undefined' && _photoRefs[job.id]) || [];
+  var moved = rows.some(function (r) {
+    if (!r || (r.label !== 'inventory' && r.label !== 'appraisal')) return false;
+    return Math.max(Number(r.updatedAt || r.ts) || 0, Number(r.deletedAt) || 0) > at;
+  });
+  if (moved) return true;
+  return ((st.pkg && st.pkg.owed) || []).join(',') !== probatePackageDocs(job).join(',');
+}
+// The appraisal reports and offers filed to the estate's Drive folder (Upload Appraisal / Offer, on the Job Plan):
+// uploaded and not removed. Linked, never attached — they are already in Drive.
+function probatePackageReports(job) {
+  return ((typeof _photoRefs !== 'undefined' && job && _photoRefs[job.id]) || []).filter(function (r) {
+    return r && r.label === 'appraisal' && !r.deletedAt && r.status === 'uploaded' && !!r.driveFileUrl;
+  }).map(function (r) { return { name: r.objectName || r.filename || 'Appraisal report', url: r.driveFileUrl }; });
+}
+
+// ⚠ THE SIGNED RELEASE APPROVALS AND THE CUSTODY LOG, AS ONE FILED RECORD. The package links to both and neither existed
+// as a document: a signed approval comes back on paper and is recorded on each line it covers (`authBy`, `approvalDate`,
+// by invRecordApproval), and the custody log lives on each line too (custodyEvents). This lists what the inventory
+// holds, by item number, so the one link opens a page counsel can check line by line. It states what was recorded and
+// nothing the app did not see. Filed with the package into the Estate Inventory folder.
+function probatePackageRecordHtml(jobId) {
+  var job = _invJob(jobId);
+  if (!job) return '';
+  var items = _invAssignItemNos(jobId);
+  var byNo = function (a, b) { return (parseInt(a.itemNo, 10) || 0) - (parseInt(b.itemNo, 10) || 0); };
+  var td = 'padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top;';
+  var th = 'padding:2px 6px;';
+  var approved = items.filter(function (r) { return r.authBy || r.approvalDate; }).sort(function (a, b) {
+    return String(a.approvalDate || '').localeCompare(String(b.approvalDate || '')) || byNo(a, b);
+  });
+  var held = items.filter(function (r) { return custodyEvents(r).length; }).sort(byNo);
+  var head = function (t) {
+    return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + t + '</div>';
+  };
+  var none = '<div style="font-size:11px;color:#888;font-style:italic;">None recorded yet.</div>';
+  var apprTable = !approved.length ? none
+    : '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+      + '<th style="' + th + '">Item #</th><th style="' + th + '">Item</th><th style="' + th + '">Disposition</th>'
+      + '<th style="' + th + '">Approved by</th><th style="' + th + '">Date of the signed approval</th></tr></thead><tbody>'
+      + approved.map(function (r) {
+          return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+            + '<td style="' + td + '">' + esc(r.objectName || '—') + '</td>'
+            + '<td style="' + td + '">' + esc(r.disposition || '—')
+              + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '') + '</td>'
+            + '<td style="' + td + '">' + esc(r.authBy || '—') + '</td>'
+            + '<td style="' + td + '">' + (r.approvalDate ? esc(fmtDate2(r.approvalDate)) : '—') + '</td></tr>';
+        }).join('') + '</tbody></table>';
+  var custTable = !held.length ? none
+    : '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+      + '<th style="' + th + '">Item #</th><th style="' + th + '">Item</th><th style="' + th + '">Date</th><th style="' + th + '">Event</th>'
+      + '<th style="' + th + '">Party</th><th style="' + th + '">Method</th><th style="' + th + '">Receipt / reference</th></tr></thead><tbody>'
+      + held.map(function (r) {
+          return custodyEvents(r).map(function (e, i) {
+            return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + (i ? '' : esc(_invItemNo(r))) + '</td>'
+              + '<td style="' + td + '">' + (i ? '' : esc(r.objectName || '—')) + '</td>'
+              + '<td style="' + td + '">' + (e.date ? esc(fmtDate2(e.date)) : '—') + '</td>'
+              + '<td style="' + td + '">' + esc(e.action || '') + '</td>'
+              + '<td style="' + td + '">' + esc(e.party || '') + '</td>'
+              + '<td style="' + td + '">' + esc(e.method || '') + '</td>'
+              + '<td style="' + td + '">' + esc(e.receipt || '') + '</td></tr>';
+          }).join('');
+        }).join('') + '</tbody></table>';
+  return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, PROBATE_PKG_RECORD_TITLE, 'Written release approvals and custody events recorded on the inventory')
+    + head('Release approvals')
+    + '<div style="font-size:10.5px;color:#666;margin-bottom:4px;">Who signed the written release approval for each item, and the date it was signed, as recorded from the signed approval returned to Havellin.</div>'
+    + apprTable
+    + head('Chain of custody')
+    + custTable
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Item numbers are the ones every inventory document cites.</div>'
+    + '</div>';
+}
+
+// ─── THE EMAIL ───────────────────────────────────────────────────────────────
+// `ctx`: {job, attached:[{title}], inDrive:[{label, url}], unshared:[label], scope:'', asOf:''}. ⚠ THE ONE ABSENCE
+// STATED is the one that shifts a responsibility to counsel (the client-copy rule): on a contents engagement the values
+// are theirs, and at tier none the inventory is. A document the inventory cannot yet produce is the sender's to know
+// (the notice), not the attorney's.
+function probatePackageSubject(job) {
+  var street = String((job && job.addr) || '').split(',')[0].trim();
+  return 'Havellin Palm Beach — Inventory Package for ' + (street || (job && job.name) || 'the estate');
+}
+function _pkgGreeting(job) {
+  var n = String((job && (job.probateAttyFname || job.probateAttyName)) || '').trim();
+  return n ? firstName(n) : 'Counsel';
+}
+function _pkgEstateLine(job) {
+  var where = [job.addr, job.city].filter(Boolean).join(', ');
+  return (job.name ? 'the Estate of ' + job.name : 'the estate') + (where ? ', ' + where : '');
+}
+function probatePackageScopeLine(job) {
+  var p = invPrimaryDoc(job);
+  if (p === 'contents') return 'Valuing the property is not part of Havellin’s engagement on this estate, so the Contents List is attached in place of a valued schedule.';
+  if (p === 'approval') return 'On this estate the inventory and the filing are your office’s; Havellin’s records of the property are below.';
+  return '';
+}
+function buildProbatePackageEmailText(ctx) {
+  var job = ctx.job, L = ['Dear ' + _pkgGreeting(job) + ',', ''];
+  if (ctx.attached.length) {
+    L.push('Attached are Havellin’s inventory documents for ' + _pkgEstateLine(job) + ', as they stand on ' + ctx.asOf + ':');
+    ctx.attached.forEach(function (d) { L.push('  - ' + d.title); });
+    L.push('');
+  }
+  if (ctx.scope) { L.push(ctx.scope); L.push(''); }
+  if (ctx.inDrive.length || ctx.unshared.length) {
+    L.push(ctx.attached.length ? 'In the estate’s Google Drive folder:'
+                               : 'Havellin’s inventory records for ' + _pkgEstateLine(job) + ', as they stand on ' + ctx.asOf + ', are in the estate’s Google Drive folder:');
+    ctx.inDrive.forEach(function (l) { L.push('  - ' + l.label + ': ' + l.url); });
+    ctx.unshared.forEach(function (label) { L.push('  - ' + label + ': not yet shared with you'); });
+    L.push('');
+  }
+  L.push('If you need anything further for the filing, reply here and we will send it.');
+  return L.join('\n');
+}
+function buildProbatePackageEmailHtml(ctx) {
+  var B = EMAIL_BRAND, job = ctx.job;
+  var p = function (t, last) { return '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 ' + (last ? '26' : '14') + 'px;">' + t + '</p>'; };
+  var cap = function (t) { return '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';margin:4px 0 8px;">' + t + '</div>'; };
+  var li = function (t) { return '<li style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">' + t + '</li>'; };
+  var ul = function (items) { return '<ul style="margin:0 0 18px;padding-left:20px;">' + items.join('') + '</ul>'; };
+  var street = String(job.addr || '').split(',')[0].trim();
+  return '' +
+  '<div style="margin:0;padding:0;background:#f4f1ea;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">' +
+  '<tr><td align="center" style="padding:24px 12px;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ' + B.line + ';">' +
+  '<tr><td style="background:' + B.ink + ';padding:26px 22px;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:23px;letter-spacing:.16em;color:#ffffff;text-transform:uppercase;">Havellin</div>' +
+    '<div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:' + B.bronzeLt + ';margin-top:5px;">Palm Beach</div>' +
+  '</td></tr>' +
+  '<tr><td style="padding:28px 22px 0;font-family:Helvetica,Arial,sans-serif;">' +
+    '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Inventory Package</div>' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
+      _emHtml(street || job.name || 'The estate') + '</div>' +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + (job.name ? 'Estate of ' + _emHtml(job.name) : '') +
+      (job.probateCase ? (job.name ? ' &nbsp;&middot;&nbsp; ' : '') + 'Case ' + _emHtml(job.probateCase) : '') + '</div>' +
+    '<div style="height:1px;background:' + B.line + ';margin:22px 0;"></div>' +
+    p('Dear ' + _emHtml(_pkgGreeting(job)) + ',') +
+    (ctx.attached.length
+      ? p('Attached are Havellin&rsquo;s inventory documents for ' + _emHtml(_pkgEstateLine(job)) + ', as they stand on ' + _emHtml(ctx.asOf) + ':')
+        + ul(ctx.attached.map(function (d) { return li(_emHtml(d.title)); }))
+      : '') +
+    (ctx.scope ? p(_emHtml(ctx.scope)) : '') +
+    ((ctx.inDrive.length || ctx.unshared.length)
+      ? (ctx.attached.length ? cap('In the estate&rsquo;s Google Drive folder')
+                             : p('Havellin&rsquo;s inventory records for ' + _emHtml(_pkgEstateLine(job)) + ', as they stand on ' + _emHtml(ctx.asOf) + ', are in the estate&rsquo;s Google Drive folder:'))
+        + ul(ctx.inDrive.map(function (l) { return li('<a href="' + _emHtml(l.url) + '" style="color:' + B.bronzeDk + ';">' + _emHtml(l.label) + '</a>'); })
+             .concat(ctx.unshared.map(function (label) { return li(_emHtml(label) + ' &mdash; not yet shared with you'); })))
+      : '') +
+    '<div style="height:1px;background:' + B.line + ';margin:26px 0 20px;"></div>' +
+    // No signature block — Gmail appends the sender's own. See buildInvoiceEmailHtml.
+    p('If you need anything further for the filing, reply here and we will send it.', true) +
+  '</td></tr>' +
+  '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
+    '<div style="font-size:10px;line-height:1.9;letter-spacing:.06em;text-transform:uppercase;color:' + B.gray + ';text-align:center;">' +
+      'Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>' +
+      '515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401<br>' +
+      'Insured &amp; Bonded' +
+    '</div>' +
+  '</td></tr>' +
+  '</table></td></tr></table></div>';
+}
+// The plain-email fallback (a Gmail draft that failed). It cannot carry an attachment, so every document is linked from
+// Drive in its body instead, and it signs itself, as every mailto does (mailtoSignoff).
+function probatePackageMailto(ctx, rcpt) {
+  var body = buildProbatePackageEmailText(ctx).split('\n').concat(mailtoSignoff(assignedTCContact(ctx.job)));
+  return 'mailto:' + encodeURIComponent(rcpt.to) + '?cc=' + encodeURIComponent(rcpt.cc.join(','))
+    + '&subject=' + encodeURIComponent(probatePackageSubject(ctx.job)) + '&body=' + mailtoBody(body);
+}
+
+// ─── THE SEND ────────────────────────────────────────────────────────────────
+// Both folders, shared view-only with the attorney through the desk's own sharing action (_invShareFolders' rule:
+// the Estate Inventory and As-Found Record folders, one entry where an older job's two names are one folder). A folder
+// that could not be shared comes back unshared, and the email names it as not yet shared rather than linking a page
+// that would refuse them.
+function _pkgShareFolders(job, email, cb) {
+  resolveSubfolderId(job, PHOTO_SUBFOLDER, function (inv) {
+    resolveSubfolderId(job, AS_FOUND_SUBFOLDER, function (af) {
+      var list = [];
+      if (af && af !== inv) list.push({ label: 'As-Found Record photographs', id: af });
+      if (inv) list.push({ label: (af && af !== inv) ? 'Estate Inventory photographs' : 'Photographs', id: inv });
+      var i = 0;
+      (function next() {
+        if (i >= list.length) { cb(list); return; }
+        var f = list[i++];
+        f.url = 'https://drive.google.com/drive/folders/' + encodeURIComponent(f.id);
+        _invShareEach([f.id], 'shareFolder', email, function (okCount, err) {
+          f.shared = okCount > 0; f.error = f.shared ? '' : (err || 'unknown error');
+          next();
+        });
+      })();
+    });
+  });
+}
+// Each page filed to the Estate Inventory folder under its undated name (so a later package replaces it), one at a time.
+function _pkgFileAll(job, folderId, list, cb) {
+  var out = {}, i = 0;
+  (function next() {
+    if (i >= list.length) { cb(out); return; }
+    var d = list[i++];
+    uploadHtmlToDrive(folderId, _invDocDriveName(job, d.title), _exportDoc(d.title + ' – ' + (job.hvlId || ''), d.html, ''),
+      function (ok, url, meta) {
+        out[d.key] = ok ? { ok: true, url: url || '' } : { ok: false, error: (meta && meta.error) || 'no answer from the server' };
+        next();
+      });
+  })();
+}
+// Each page as a PDF, through the one PDF builder, one at a time.
+function _pkgPdfAll(job, pages, cb) {
+  var atts = [], fails = [], i = 0;
+  (function next() {
+    if (i >= pages.length) { cb(atts, fails); return; }
+    var pg = pages[i++];
+    docPdfBase64({ cfg: { label: pg.title, pdfCss: '' }, job: job }, pg.html, function (b64, err) {
+      if (b64) atts.push({ key: pg.key, title: pg.title, name: pg.name, base64: b64 });
+      else fails.push({ key: pg.key, title: pg.title, why: err || 'the PDF could not be built' });
+      next();
+    });
+  })();
+}
+
+// The Probate card's Send probate package. ⚠ THE MANIFEST IS READ FROM THE SHEET FIRST: an inventory this device has
+// not loaded is unread, not empty, and a package built from it would carry an empty schedule — the rule the workbook
+// write already follows (_invCloudSeen). Then the folders are shared, every page and the record are filed, each page
+// becomes a PDF, and the draft is made; a Gmail failure falls back to a plain email with the filed copies linked.
+// One send at a time, app-wide (_docBusy), with a watchdog, because a draft may exist when an answer never comes.
+function sendProbatePackage(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var why = probatePackageBlocker(job);
+  if (why) { _docNotice('warn', why, jobId); return false; }
+  if (_docBusy) { _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
+  _docBusy = { jobId: jobId, docKey: PROBATE_PKG_KEY };
+  var over = false;
+  var watchdog = setTimeout(function () {
+    if (over) return;
+    over = true; _docBusy = null;
+    _docNotice('warn', 'The probate package took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send again.', jobId);
+  }, PROBATE_PKG_WATCHDOG_MS);
+  var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; };
+  var step = function (label) { if (!over) _dashSendState(PROBATE_PKG_KEY, label); };
+  var rcpt = probatePackageRecipients(job);
+
+  step('Reading the inventory…');
+  _invEnsureLoaded(jobId);
+  refreshPhotoRefs(jobId, function () {
+    if (over) return;
+    if (!_invCloudSeen[jobId]) {
+      finish();
+      _docNotice('warn', 'The inventory could not be read from the sheet, so the package would go out without it. Check the connection, then press Send probate package again.', jobId);
+      return;
+    }
+    var owed = probatePackageDocs(job);
+    var pages = [], left = [];
+    owed.forEach(function (k) {
+      var r = probatePackagePage(jobId, k);
+      if (r.html) pages.push({ key: k, title: PROBATE_PKG_TITLES[k], html: r.html, name: r.title + '.pdf' });
+      else left.push({ title: PROBATE_PKG_TITLES[k], why: r.why || '' });
+    });
+    var record = { key: 'record', title: PROBATE_PKG_RECORD_TITLE, html: probatePackageRecordHtml(jobId) };
+    step('Sharing the photograph folders with ' + rcpt.to + '…');
+    _pkgShareFolders(job, rcpt.to, function (folders) {
+      if (over) return;
+      step('Filing the documents to Drive…');
+      resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
+        _pkgFileAll(job, folderId || _jobRootFolderId(job), [record].concat(pages), function (filed) {
+          if (over) return;
+          step('Building the PDFs…');
+          _pkgPdfAll(job, pages, function (atts, pdfFails) {
+            if (over) return;
+            step('Creating the draft…');
+            var unfiled = [record].concat(pages).filter(function (d) { return !filed[d.key] || !filed[d.key].ok; });
+            var drive = function (withPages) {
+              var out = [];
+              // A page that is not attached is linked from Drive instead, where it was filed.
+              pages.forEach(function (pg) {
+                var a = atts.some(function (x) { return x.key === pg.key; });
+                if ((withPages || !a) && filed[pg.key] && filed[pg.key].ok) out.push({ label: pg.title, url: filed[pg.key].url });
+              });
+              probatePackageReports(job).forEach(function (r) { out.push({ label: 'Appraisal report or offer — ' + r.name, url: r.url }); });
+              folders.forEach(function (f) { if (f.shared) out.push({ label: f.label, url: f.url }); });
+              if (filed.record && filed.record.ok) out.push({ label: 'Release approvals and chain of custody', url: filed.record.url });
+              return out;
+            };
+            var ctx = { job: job, asOf: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+                        scope: probatePackageScopeLine(job), attached: atts, inDrive: drive(false),
+                        unshared: folders.filter(function (f) { return !f.shared; }).map(function (f) { return f.label; }) };
+            var mime = buildMimeMessage({ to: rcpt.to, cc: rcpt.cc.join(', '), subject: probatePackageSubject(job),
+              text: buildProbatePackageEmailText(ctx), html: buildProbatePackageEmailHtml(ctx),
+              attachments: atts.map(function (a) { return { name: a.name, base64: a.base64 }; }) });
+            var tail = function (provider, draftUrl, lead) {
+              if (over) return;
+              finish();
+              var gmail = provider === 'gmail';
+              var pkg = { owed: owed, docs: gmail ? atts.map(function (a) { return a.key; }) : [], to: rcpt.to, cc: rcpt.cc };
+              docRecordSent({ job: job, key: PROBATE_PKG_KEY }, { provider: provider, draftUrl: draftUrl || '',
+                pdfOk: gmail && atts.length === pages.length && !!pages.length, pkg: pkg });
+              var bits = [lead + (gmail ? 'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox') : 'Email opened')
+                + ' for ' + rcpt.to + ', copied to ' + rcpt.cc.join(' and ')
+                + (gmail ? (atts.length ? ', with the ' + _andJoin(atts.map(function (a) { return a.title; })) + ' attached' : ', with nothing attached')
+                         : ' — a plain email carries NO attachment, so the documents are linked from Drive in its body')
+                + '. Read it, send it, then tap “I’ve sent it”.'];
+              left.forEach(function (d) { bits.push('Not in the package: the ' + d.title + ' — ' + d.why); });
+              if (gmail) pdfFails.forEach(function (d) { bits.push('The ' + d.title + ' could not be made into a PDF, so it is linked from Drive instead of attached — ' + d.why); });
+              folders.forEach(function (f) {
+                if (!f.shared) bits.push('The ' + f.label + ' folder could not be shared with ' + rcpt.to + ' (' + f.error + '), so the draft says it is not yet shared: share it from Job Admin & Inv (Share w/ Counsel) when it can be.');
+              });
+              if (unfiled.length) bits.push('Not filed to Drive: the ' + _andJoin(unfiled.map(function (d) { return d.title; })) + '.');
+              var clean = gmail && atts.length === pages.length && !left.length && !unfiled.length && folders.every(function (f) { return f.shared; });
+              _docNotice(clean ? 'ok' : 'warn', bits.join(' '), jobId);
+              if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
+              showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
+            };
+            gmailCreateDraft(mime, function (ok, d) {
+              if (over) return;
+              if (ok) { tail('gmail', gmailDraftUrl(d.messageId || d.draftId), ''); return; }
+              // ⚠ A FAILED DRAFT FALLS BACK TO A PLAIN EMAIL, the rule every client document follows (docSend), and is
+              // recorded as what it is: an email opened, with the documents linked from Drive since it can carry none.
+              var plain = { job: job, asOf: ctx.asOf, scope: ctx.scope, attached: [], inDrive: drive(true), unshared: ctx.unshared };
+              DOC_SEND_PROVIDERS.mailto.send({ cfg: { mailto: function () { return probatePackageMailto(plain, rcpt); } } }, null, function (ok2) {
+                if (!ok2) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + '.', jobId); return; }
+                tail('mailto', '', 'Gmail draft failed — ' + ((d && d.error) || 'unknown') + '. ');
+              });
+            });
+          });
+        });
+      });
+    });
+  });
+  return true;
+}
+
+// The Probate card's package row: what it carries and to whom before it goes, the draft waiting on its confirming tap,
+// or who sent it and when. ⚠ THE CONFIRMING TAP AND THE DRAFT LINK ARE THE CLIENT DOCUMENTS' OWN (markDocSent,
+// openDocDraft), offered on the same rule (draftOutstanding). DOM-free markup; every person-entered value is escaped.
+function probatePackageCardHtml(job) {
+  if (!job) return '';
+  var id = job.id, K = PROBATE_PKG_KEY;
+  var st = (job.docState && job.docState[K]) || null;
+  var live = draftOutstanding(job, K);
+  var day = function (iso) { return _draftDay(iso); };
+  var btn = function (call, label, primary) {
+    return '<button class="' + (primary ? 'btn-bronze' : 'btn-s') + '" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();' + call + '">' + label + '</button>';
+  };
+  var lines = [], btns = '';
+  if (live) {
+    btns = btn('markDocSent(' + id + ",'" + K + "')", '&#10003; I&rsquo;ve sent it', true)
+      + (st.draftUrl ? btn('openDocDraft(' + id + ",'" + K + "')", '&#8599; Open the draft') : '');
+    // When, who, which mailbox and to whom, then the draft's own line (jtDraftLine, the rail's wording for every document).
+    lines.push(esc([day(st.draftedAt), st.draftedBy || '', st.mailbox || '', (st.pkg && st.pkg.to) ? 'to ' + st.pkg.to : '']
+      .filter(Boolean).join(' · ')));
+    lines.push(esc(jtDraftLine(job, K, true)));
+  } else {
+    btns = btn('sendProbatePackage(' + id + ')', '&#128231; Send probate package');
+    if (st && st.sentAt) {
+      lines.push(esc('Sent ' + day(st.sentAt) + (st.sentBy ? ' by ' + st.sentBy : '') + ((st.pkg && st.pkg.to) ? ', to ' + st.pkg.to : '')));
+    } else if (job.probatePkgSent) {
+      lines.push('Marked sent by hand before 2026-10-01 &mdash; nothing was sent from the app, so it holds no record of what went or to whom.');
+    }
+    var stale = st ? staleDraftNote(job, K, false) : '';
+    if (stale) lines.push(esc(stale));
+    var blk = probatePackageBlocker(job);
+    if (blk) lines.push('<span style="color:#A32D2D;">' + esc(blk) + '</span>');
+    else lines.push(esc('Carries the ' + _andJoin(probatePackageDocs(job).map(function (k) { return PROBATE_PKG_TITLES[k]; }))
+      + ', with links to the photographs and the release and custody record, to ' + job.probateAttyEmail + '.'));
+  }
+  return '<div class="pkg-row" id="pkg-row-' + id + '" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+    + '<div style="min-width:0;flex:1 1 260px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:3px;">Probate package</div>'
+    + lines.map(function (l) { return '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.5;">' + l + '</div>'; }).join('')
+    + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + btns + '</div>'
+    + '</div>';
 }
 
 // Kept as the name the action-bar button uses; it is `dashSubmitEstimate` now, which
@@ -16913,7 +17442,12 @@ function docDraftPending(st) {
   return !isNaN(d) && !isNaN(s) && d > s;
 }
 // Both stamps are ISO strings from toISOString, so the comparison is chronological as written.
+// ⚠ THE PROBATE PACKAGE'S DRAFT CARRIES NO PRICE AND IS OVERTAKEN BY THE INVENTORY INSTEAD (2026-10-01, P17). Its record
+// says so itself (`st.pkg`, written by docRecordSent from the send), so this rule asks the record and never the key:
+// an inventory changed since the draft was made, or a different set of documents now owed, makes that draft out of
+// date (probatePackageMovedSince); a discount never does.
 function draftIsStale(job, st) {
+  if (st && st.pkg) return !!(docDraftPending(st) && job && probatePackageMovedSince(job, st));
   return !!(st && docDraftPending(st) && job && job.priceChangedAt && st.draftedAt < job.priceChangedAt);
 }
 // THE ONE DEFINITION OF A LIVE DRAFT, read by the confirming tap, the link to the draft, the row and the
@@ -16923,9 +17457,11 @@ function draftOutstanding(job, key) {
   var st = job && job.docState && job.docState[key];
   return !!(st && docDraftPending(st) && !draftIsStale(job, st));
 }
+// ⚠ The drafts a PRICE change overtakes, which is all its two readers ask (notePriceChange, discountDraftWarning): the
+// probate package's carries no price, so a discount neither flags it nor warns about it (2026-10-01, P17).
 function outstandingDrafts(job) {
   if (!job || !job.docState) return [];
-  return Object.keys(job.docState).filter(function (key) { return draftOutstanding(job, key); });
+  return Object.keys(job.docState).filter(function (key) { return draftOutstanding(job, key) && !job.docState[key].pkg; });
 }
 // The out-of-date drafts of one document, oldest first: those a later draft replaced (docRecordSent keeps
 // them) or a Re-open retired (_reopenTransition keeps a final drafted at the close), then the current one if a
@@ -16944,7 +17480,7 @@ function staleDraftsOf(job, key) {
   });
   if (draftIsStale(job, st)) {
     list = list.concat([{ draftedAt: st.draftedAt, provider: st.provider || '', mailbox: st.mailbox || '',
-                          why: job.priceChangeWhy || 'discount' }]);
+                          why: st.pkg ? 'inventory' : (job.priceChangeWhy || 'discount') }]);
   }
   return list;
 }
@@ -16983,7 +17519,8 @@ function staleDraftNote(job, key, fresh, named) {
            + (boxes.length ? ' (' + boxes.join(', ') + ')' : '');
   var why = !one ? 'are out of date'
     : (list[0].why === 'edit' ? 'was made before the estimate was edited'
-      : list[0].why === 'reopen' ? 'was made before the job was re-opened' : 'has the old price');
+      : list[0].why === 'reopen' ? 'was made before the job was re-opened'
+      : list[0].why === 'inventory' ? 'was made before the inventory changed' : 'has the old price');
   if (fresh) return (gmail ? 'Delete' : 'Discard') + ' the older ' + what + ' — ' + (one ? 'it ' : 'they ') + why;
   var act = gmail ? (one ? 'delete it, don’t send it' : 'delete them, don’t send them')
                   : (one ? 'if it was never sent, discard it' : 'if they were never sent, discard them');
@@ -17024,11 +17561,11 @@ function staleDraftNotice(job, keys) {
 // painted before the draft was flagged, or before the send was recorded on the other device.
 function noDraftToConfirm(job, key) {
   var st = (job && job.docState && job.docState[key]) || {};
-  var name = staleDocName(key);
+  var name = st.pkg ? 'probate package' : staleDocName(key);
   if (st.sentAt && !docDraftPending(st)) return 'The ' + name + ' is already recorded as sent.';
   var stale = staleDraftNote(job, key, false);
   return 'There is no draft of the ' + name + ' waiting to be confirmed.' + (stale ? ' ' + stale + '.' : '')
-    + ' Send a fresh one from the timeline.';
+    + ' Send a fresh one from the ' + (st.pkg ? 'Probate card' : 'timeline') + '.';
 }
 
 // ─── THE INVOICE'S FIRST REAL EMAIL ──────────────────────────────────────────
@@ -17848,7 +18385,8 @@ function applyEsignStatus(jobId, status) {
     recordedBy: ESIGN_PROVIDERS[esignProviderKey()].label
   });
   if (!blk) {
-    // ⚠ THE EXECUTED COPY IS RETRIEVED HERE AND NOWHERE ELSE — one transition, one fetch, ever.
+    // ⚠ THE EXECUTED COPY IS RETRIEVED HERE, ON THE TRANSITION, AND OTHERWISE ONLY WHEN SOMEBODY PRESSES FILE SIGNED
+    // COPY (2026-10-01, P17) — the same path, never a timer or a refresh.
     try { esignArchiveSigned(jobId); } catch (e) {}
     _dashRedraw(jobId); renderJobs();
   }
@@ -17895,9 +18433,13 @@ var ESIGN_RECHECK_MINS = 20;   // DocuSign's 15-minute floor plus their own sugg
 // nothing inside the window is the same silence wearing a control's face. Anything unparseable, or
 // a stamp from a device whose clock runs ahead, reads as due — the safe direction, and byte for
 // byte what the old expression did.
-function esignNextCheckAt(st) {
-  if (!st || !st.esign || !st.esign.checkedAt) return 0;
-  var age = Date.now() - new Date(st.esign.checkedAt).getTime();
+// ⚠ `field` IS THE STAMP TO MEASURE FROM (2026-10-01, P17): `checkedAt` for the status check, and `fileAskedAt` for
+// File signed copy, which fetches the envelope's documents — DocuSign counts those under the same 15-minute rule. One
+// floor, one arithmetic, so the two presses cannot come to disagree about how often DocuSign may be asked.
+function esignNextCheckAt(st, field) {
+  var at = st && st.esign && st.esign[field || 'checkedAt'];
+  if (!at) return 0;
+  var age = Date.now() - new Date(at).getTime();
   if (!(age >= 0 && age < ESIGN_RECHECK_MINS * 60000)) return 0;   // 0 = may ask now
   return Date.now() + (ESIGN_RECHECK_MINS * 60000 - age);
 }
@@ -17952,10 +18494,6 @@ function esignRefresh(opts, cb) {
   })();
 }
 
-// ⚠ FIRED ONCE, ON THE TRANSITION INTO `completed`, AND NEVER AGAIN. DocuSign counts document
-// retrieval as a unique-resource request under the same 15-minute rule, and warns that
-// list-then-get-each trips the polling check even when polling was not intended. `filedAt` is the
-// gate; a later refresh cannot refetch.
 // The recorder answers in codes; a person reading a notice needs the consequence. An unknown code
 // prints raw rather than being swallowed — it is searchable, and a blank is not.
 function _esignRecordBlockerText(blk) {
@@ -17964,50 +18502,125 @@ function _esignRecordBlockerText(blk) {
   return blk;
 }
 
+// ─── THE EXECUTED COPY IN DRIVE (2026-10-01, P17) ────────────────────────────
+// Anthony, 2026-10-01 (answer 4): a "File signed copy" button on the Agreement signed row, shown only when the
+// executed agreement or its certificate failed to file; one press fetches both and files them. Until today the
+// filing ran once, on the transition into `completed`, nothing retried it, and its failure notices sent the reader
+// to DocuSign to download both by hand.
+// What DocuSign holds that Drive does not, read off what the filing recorded (`esign.filedUrl` for the executed
+// agreement, `esign.certUrl` for the certificate of completion). ⚠ ONLY AN AGREEMENT EXECUTED IN DOCUSIGN HAS
+// ANYTHING TO FETCH: a wet signature has no envelope, and an envelope still out holds nothing executed yet.
+// DOM-free, so the row's button and the handler behind it ask one question.
+function esignSignedCopyGaps(job) {
+  var st = (job && job.docState && job.docState.agreement) || null;
+  if (!st || !st.esign || !st.esign.envelopeId) return [];
+  var sig = agreementSignature(job);
+  if (!sig || sig.how !== 'esign') return [];
+  var out = [];
+  if (!st.esign.filedUrl) out.push('agreement');
+  if (!st.esign.certUrl) out.push('certificate');
+  return out;
+}
+// Jobs whose executed copy is being fetched and filed right now, on this page. Never saved: it says only that a
+// request is out, so the button cannot send a second one on top of it.
+var _esignFiling = {};
+
+// ⚠ THE ONE PATH THAT FILES THE EXECUTED COPY, for the arrival check and for the button alike.
+// It runs on the transition into `completed` (applyEsignStatus) and when somebody presses File signed copy, and
+// NEVER on a timer or a refresh: DocuSign counts document retrieval as a unique-resource request under the same
+// 15-minute rule as the status check, and warns that list-then-get-each trips the polling check even when polling
+// was not intended. The request is stamped (`fileAskedAt`, bare, like the status check's `checkedAt`), so a press
+// inside that window is refused with the time it may ask again (dashFileSignedCopy).
+// ⚠ A SECOND FILING REPLACES THE FIRST. The backend files both documents by name (_fileBlobByName in main-sync.gs,
+// 2026-10-01): a press after a certificate that did not come back updates the executed agreement in place and adds
+// the certificate beside it, never a second "… - SIGNED". What came back is recorded the way the arrival path always
+// recorded it, and a filing already recorded is never cleared by a later answer that lacks it.
 function esignArchiveSigned(jobId) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) return;
-  var st = docState(job, 'agreement');
-  if (!st.esign || !st.esign.envelopeId || st.esign.filedAt) return;
-  if (!SHEETS_SYNC_URL) return;
+  if (!esignSignedCopyGaps(job).length) return;   // nothing DocuSign holds that Drive does not
+  if (_esignFiling[jobId] || !SHEETS_SYNC_URL) return;
+  var envelopeId = job.docState.agreement.esign.envelopeId;
+  _esignFiling[jobId] = true;
 
-  // ⚠ NOTHING RETRIES THIS, so neither failure below may say "re-open this client" (2026-09-30, P16; they both
-  // did). It runs once, on the transition into `completed`; after that the envelope is no longer outstanding
-  // and no check comes back to it. The executed copy is safe in DocuSign either way, so each says where it is
-  // and who files it by hand.
   resolveSubfolderId(job, 'Agreement', function (folderId) {
     if (!folderId) {
+      delete _esignFiling[jobId];
       _docNotice('warn', 'The agreement is signed, but this client has no Agreement folder in Drive, '
                  + 'so the executed copy could not be filed. It is safe in DocuSign: create the Drive folder, then '
-                 + 'download the signed agreement and its certificate of completion from DocuSign and save them there.', jobId);
+                 + 'press File signed copy on the timeline.', jobId);
       return;
     }
+    // Bare: when DocuSign was last asked is bookkeeping for the floor, not a change anybody made to the job.
+    docStateBare(job, 'agreement').esign.fileAskedAt = new Date().toISOString();
+    _saveArrivalCheck();
     _appsScriptPost(SHEETS_SYNC_URL, {
-      action: 'esignArchive', envelopeId: st.esign.envelopeId, folderId: folderId,
+      action: 'esignArchive', envelopeId: envelopeId, folderId: folderId,
       baseName: docNames(job, 'agreement').drive.replace(/\.[a-z]+$/i, '')
     }, function (ok, d) {
+      delete _esignFiling[jobId];
+      var again = new Date(Date.now() + ESIGN_RECHECK_MINS * 60000)
+        .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       if (!ok || !d || !d.ok) {
         _docNotice('warn', 'The agreement is signed, but the executed copy could not be retrieved from '
                    + 'DocuSign — ' + ((d && (d.error || d.message)) || 'no answer from the server')
-                   + '. It is still in DocuSign: download the signed agreement and its certificate of completion '
-                   + 'there and save them to this client’s Agreement folder in Drive.', jobId);
+                   + '. It is still in DocuSign: press File signed copy on the timeline to try again, from ' + again + '.', jobId);
         return;
       }
-      var st2 = docState(job, 'agreement');
+      var j2 = jobs.find(function (j) { return j.id === jobId; }) || job;
+      // Stamped: what was filed is a fact the app learned, recorded like the hand entry it replaces.
+      var st2 = docState(j2, 'agreement');
+      if (!st2.esign) st2.esign = { envelopeId: envelopeId };
       st2.esign.filedAt = new Date().toISOString();
-      st2.esign.filedUrl = d.signedUrl || '';
-      st2.esign.certUrl = d.certUrl || '';
-      saveJobs(); syncJobToSheets(job);
+      st2.esign.filedUrl = d.signedUrl || st2.esign.filedUrl || '';
+      st2.esign.certUrl = d.certUrl || st2.esign.certUrl || '';
+      saveJobs(); syncJobToSheets(j2);
       // ⚠ A MISSING CERTIFICATE IS SAID OUT LOUD. On a probate matter it is the audit trail of who
       // bound the estate, and losing it quietly is how somebody finds out two years later.
-      _docNotice(d.certUrl ? 'ok' : 'warn',
-        d.certUrl ? 'Signed agreement and certificate of completion filed to Drive.'
+      _docNotice(st2.esign.certUrl ? 'ok' : 'warn',
+        st2.esign.certUrl ? 'Signed agreement and certificate of completion filed to Drive.'
                   : 'Signed agreement filed to Drive, but the certificate of completion could not be '
-                    + 'retrieved' + (d.certError ? ' (' + d.certError + ')' : '') + '. Download it from DocuSign by hand.',
+                    + 'retrieved' + (d.certError ? ' (' + d.certError + ')' : '') + '. Press File signed copy on the timeline to try again, from ' + again + '.',
         jobId);
-      _dashRedraw(jobId);
+      // (No redraw after it: _docNotice has just redrawn to paint this, and a second, ordinary redraw clears a notice
+      // that is shown once — this line used to wipe "filed to Drive" the moment it was painted. Found 2026-10-01, P17.)
     });
   });
+}
+
+// The button's handler. ⚠ EVERY REFUSAL NAMES ITSELF: nothing left to file, a request already out, DocuSign's
+// floor (with the time it lifts), no Apps Script URL. A press that quietly did nothing would be the silence the
+// Check DocuSign button was built to end (dashCheckEsign).
+function dashFileSignedCopy(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { dashNotice('warn', 'Could not open this job.'); _dashRedraw(jobId); return; }
+  var label = ESIGN_PROVIDERS.docusign.label;
+  if (!esignSignedCopyGaps(job).length) {
+    var _st = (job.docState && job.docState.agreement) || {};
+    dashNotice('ok', (_st.esign && _st.esign.filedUrl)
+      ? 'The signed agreement and its certificate of completion are both filed to Drive.'
+      : 'There is no agreement executed in ' + label + ' on this job, so there is nothing to fetch.');
+    _dashRedraw(jobId); return;
+  }
+  if (_esignFiling[jobId]) {
+    dashNotice('warn', 'The signed copy is being fetched from ' + label + ' now — give it a moment.');
+    _dashRedraw(jobId); return;
+  }
+  var wait = esignNextCheckAt(job.docState.agreement, 'fileAskedAt');
+  if (wait) {
+    dashNotice('warn', label + ' allows one request for the same agreement every ' + ESIGN_RECHECK_MINS
+      + ' minutes, and asking more often puts the firm’s API access at risk — so this one is held until '
+      + new Date(wait).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      + '. The executed copy is safe in ' + label + ' meanwhile.');
+    _dashRedraw(jobId); return;
+  }
+  if (!SHEETS_SYNC_URL) {
+    dashNotice('warn', 'This device has no Apps Script URL in Settings, so it cannot reach ' + label + '.');
+    _dashRedraw(jobId); return;
+  }
+  dashNotice('ok', 'Fetching the signed agreement and its certificate of completion from ' + label + '…');
+  _dashRedraw(jobId);
+  esignArchiveSigned(jobId);
 }
 
 // Agreements out for signature and not yet back — what a poll would ask about. DOM-free, so
@@ -18342,8 +18955,11 @@ function docRecordSent(spec, res) {
   if (draftIsStale(spec.job, st)) {
     st.staleDrafts = (Array.isArray(st.staleDrafts) ? st.staleDrafts : []).concat([{
       draftedAt: st.draftedAt, provider: st.provider || '', mailbox: st.mailbox || '',
-      why: spec.job.priceChangeWhy || 'discount' }]);
+      why: st.pkg ? 'inventory' : (spec.job.priceChangeWhy || 'discount') }]);
   }
+  // The probate package says what it carried and to whom (2026-10-01, P17), which is also what marks its draft as one
+  // the inventory overtakes rather than a price (draftIsStale).
+  if (res.pkg) st.pkg = res.pkg;
   st.draftedAt = new Date().toISOString();
   st.draftedBy = _actor(spec.job) || spec.job.tc || '';
   st.provider = res.provider;
@@ -19376,6 +19992,10 @@ function jobTimelineActions(row, job, estRec) {
       // cannot know on its own: that a person has just watched the envelope complete.
       else if (live) out.primary = { label: '&#8635; Check ' + ESIGN_PROVIDERS[esignProviderKey()].label + ' now',
                                      call: 'dashCheckEsign(' + id + ')' };
+      // ⚠ FILE SIGNED COPY (Anthony, 2026-10-01, P17): offered only while the executed agreement or its certificate of
+      // completion is not in Drive (esignSignedCopyGaps), and gone once both are. The row is done by then, so the
+      // button lands in the strip under the timeline with the row's other out-of-sequence actions.
+      if (esignSignedCopyGaps(job).length) out.secondary.push({ label: '&#128193; File signed copy', call: 'dashFileSignedCopy(' + id + ')' });
       break;
 
     case 'deposit_invoiced':
@@ -20316,10 +20936,8 @@ function renderClientDashboard(jobId) {
     h += '<div style="display:flex;align-items:center;gap:12px;">';
     h += '<span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:'+(authOk?'#1D9E75':'#A32D2D')+'">';
     h += dot(authOk?'#1D9E75':'#A32D2D')+(authOk?'Authorization received':'Authorization pending — blocker')+'</span>';
-    var pkgSent = job.probatePkgSent;
-    h += pkgSent
-      ? '<span style="font-size:11px;font-weight:600;color:#1D9E75;cursor:pointer;" onclick="event.stopPropagation();toggleProbatePkg('+jobId+')" title="Click to mark unsent">&#10003; Package Sent</span>'
-      : '<button class="btn-s" style="font-size:10px;padding:4px 10px;color:var(--bronze);border-color:var(--bronze);" onclick="event.stopPropagation();toggleProbatePkg('+jobId+')">&#128231; Send Package</button>';
+    // (The 📧 Send Package toggle that sat here sent nothing; the real send is the package row at the foot of this card,
+    // 2026-10-01, P17 — see probatePackageCardHtml.)
     h += '</div></div>';
     h += '<div class="d-grid4">';
     h += field('Case number', esc(job.probateCase||'—'));
@@ -20347,7 +20965,10 @@ function renderClientDashboard(jobId) {
     h += field('Role', esc(job.executorRole||'—'));
     h += field('Authorization', authOk?'<span style="color:#1D9E75;">Received</span>':'<span style="color:#A32D2D;">'+dot('#A32D2D')+'Pending</span>');
     h += '</div></div>';
-    h += '</div></div>';
+    h += '</div>';
+    // The probate package: its one send, and who sent it when (2026-10-01, P17).
+    h += probatePackageCardHtml(job);
+    h += '</div>';
   }
 
   // Payment/estimate figures — rendered inside the Timeline & Payments card below,
@@ -22488,9 +23109,13 @@ function _b64Wrap(str) {
   return btoa(unescape(encodeURIComponent(str))).replace(/(.{76})/g, '$1\r\n');
 }
 
-// multipart/mixed( multipart/alternative(text, html), application/pdf )
+// multipart/mixed( multipart/alternative(text, html), application/pdf … )
 // The alternative part is what makes the plain-text fallback work; nesting it inside mixed
 // is what keeps the attachment from replacing the body in older clients.
+// ⚠ ANY NUMBER OF PDFs (2026-10-01, P17): `attachments` is a list of {name, base64}, one part each, for the probate
+// package's three documents. `pdfBase64`/`pdfName` stay the one-document form every client document uses, and come
+// out byte for byte as they did: that one is simply the first part. Every part's base64 is wrapped with CRLF, the rule
+// above, and a part with no bytes is left out rather than sent as an empty attachment.
 function buildMimeMessage(o) {
   var alt = 'ALT-' + Date.now().toString(36);
   var mix = 'MIX-' + Date.now().toString(36);
@@ -22515,15 +23140,17 @@ function buildMimeMessage(o) {
   L.push('');
   L.push(_b64Wrap(o.html || ''));
   L.push('--' + alt + '--');
-  if (o.pdfBase64) {
+  var parts = (o.pdfBase64 ? [{ name: o.pdfName, base64: o.pdfBase64 }] : []).concat(o.attachments || []);
+  parts.forEach(function (a) {
+    if (!a || !a.base64) return;
     L.push('--' + mix);
-    L.push('Content-Type: application/pdf; name="' + o.pdfName + '"');
-    L.push('Content-Disposition: attachment; filename="' + o.pdfName + '"');
+    L.push('Content-Type: application/pdf; name="' + a.name + '"');
+    L.push('Content-Disposition: attachment; filename="' + a.name + '"');
     L.push('Content-Transfer-Encoding: base64');
     L.push('');
     // Apps Script hands back unwrapped base64; MIME wants lines of at most 76 chars.
-    L.push(String(o.pdfBase64).replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n'));
-  }
+    L.push(String(a.base64).replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n'));
+  });
   L.push('--' + mix + '--');
   return L.join('\r\n');
 }
@@ -25524,6 +26151,12 @@ function _invDocName(job, title) {
   var stamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
   return 'Havellin ' + title + (street ? ' - ' + street : '') + ' - ' + stamp;
 }
+// The same document's copy in Drive, filed by the probate package (2026-10-01, P17): the title with NO date, because Drive
+// overwrites by name, so sending the package again replaces each copy rather than adding a dated one beside it — the
+// asymmetry docNames keeps for the client documents, kept here for these without joining them to that registry.
+function _invDocDriveName(job, title) {
+  return ((job && job.hvlId) || 'HVL') + ' - Havellin ' + title + '.html';
+}
 function _invDocHead(job, title, extra) {
   var basis = resolveValBasis(job);
   var vdate = estateValueDate(job);
@@ -25739,11 +26372,12 @@ function _clFlags(r, job, jobId) {
   return out;
 }
 
-function printContentsList(jobId) {
+function printContentsList(jobId, opt) {
   var rec = contentsList(jobId);
   var job = rec.job;
   if (!job || !document.getElementById('print-target')) return;
   if (!rec.total) {
+    if (opt && opt.asHtml) return { why: 'Nothing has been photographed or listed on this job yet, so there is no contents list to produce.' };
     alert('Nothing has been photographed or listed on this job yet, so there is no contents list to produce.');
     return;
   }
@@ -25857,6 +26491,8 @@ function printContentsList(jobId) {
       + 'recorded location. Tangible personal property only. ' + whoValues + ' '
       + 'Photographs are reference-numbered to the line items above and retained for seven years.'
     + '</div></div>';
+  // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Contents List') };
   _printDocument(html, _invDocName(job, 'Contents List'));
 }
 
@@ -25867,16 +26503,16 @@ function printContentsList(jobId) {
 // showing which categories are flagged for formal valuation, which appraiser is engaged
 // for each, and expected turnaround. Homestead, exempt, and non-probate property
 // identified and carved out."  — havellinpalmbeach.com. Every clause is a requirement.
-function printEstateInventoryReport(jobId) {
+function printEstateInventoryReport(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   // ⚠ THE SAME PREDICATE THE STRIP READS, so the document cannot be reached around the
   // withheld button. `docAction`'s rule: a gate beside the action cannot be bypassed by
   // reaching the action another way.
   var _blocked = invDocContractBlock(job, 'schedule');
-  if (_blocked) { alert(_blocked); return; }
+  if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
   var all = _invAssignItemNos(jobId);
-  if (!all.length) { alert('There is nothing in the inventory to report yet.'); return; }
+  if (!all.length) { if (opt && opt.asHtml) return { why: 'There is nothing in the inventory to report yet.' }; alert('There is nothing in the inventory to report yet.'); return; }
 
   // Carved out, not omitted: exempt, homestead and non-probate property is reported in
   // its own schedule so a reader can see both that it exists and that it sits outside
@@ -26008,6 +26644,8 @@ function printEstateInventoryReport(jobId) {
       + 'separately in the personal representative&rsquo;s filing, prepared with counsel. Photographs are reference-numbered '
       + 'to the line items above and retained for seven years.</div>'
     + '</div>';
+  // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Estate Inventory') };
   _printDocument(html, _invDocName(job, 'Estate Inventory'));
 }
 
@@ -26355,10 +26993,10 @@ function _invScheduleSection(title, list) {
   return { html: h, total: total };
 }
 
-function printCourtInventory(jobId) {
+function printCourtInventory(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var _blocked = invDocContractBlock(job, 'court');
-  if (_blocked) { alert(_blocked); return; }
+  if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
   var items = _invAssignItemNos(jobId);
@@ -26506,6 +27144,9 @@ function printCourtInventory(jobId) {
         ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be adopted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; ' + esc(_draftFix.join('; ')) + '.</div>'
         : '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>')
     + '</div>';
+  // ⚠ THE PROBATE PACKAGE ASKS FOR THE PAGE ITSELF (`opt.asHtml`, 2026-10-01, P17), so what counsel receives is byte for
+  // byte what the desk prints, and every refusal above comes back as the same sentence instead of an alert.
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Court Inventory') };
   _printDocument(html, _invDocName(job, 'Court Inventory'));
 }
 
@@ -26532,12 +27173,12 @@ function printCourtInventory(jobId) {
 // a trust valuation date. What differs is the instrument, the citation, who signs, and the line
 // above. The table itself is `_invScheduleSection`, shared with the probate schedule so the two
 // cannot drift about how a row reads or what a subtotal counts.
-function printTrustSchedule(jobId) {
+function printTrustSchedule(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   // Same gate, same predicate, same sentence as the other two valued schedules: this one states
   // a carrying value on every line, so it is ours only where the agreement says we state values.
   var _blocked = invDocContractBlock(job, 'trustee');
-  if (_blocked) { alert(_blocked); return; }
+  if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
   var items = _invAssignItemNos(jobId);
@@ -26641,6 +27282,8 @@ function printTrustSchedule(jobId) {
         // signature line is the same class of claim the $0 FINAL was.
         : '<div style="margin-top:18px;font-size:11px;">Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Successor Trustee</span></div>')
     + '</div>';
+  // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Trust Schedule') };
   _printDocument(html, _invDocName(job, 'Trust Schedule'));
 }
 
@@ -26822,7 +27465,7 @@ function _maivWorklistBlock(job, items, maiv) {
     + '</div>';
 }
 
-function printAppraisalWorklist(jobId) {
+function printAppraisalWorklist(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
@@ -26939,6 +27582,8 @@ function printAppraisalWorklist(jobId) {
       + ' from the estimate ' + ((f.collections + f.vehicles) > 1 ? 'are' : 'is') + ' not yet in the inventory — bring them in on the Job Admin &amp; Inv tab, under From the Estimate Walkthrough, to include them here.</div>';
   }
   html += '</div>';
+  // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Appraisal Worklist') };
   _printDocument(html, _invDocName(job, 'Appraisal Worklist'));
 }
 
@@ -28700,6 +29345,17 @@ function _agDupHtml(jobId, all) {
     + '</div>';
 }
 
+// ⚠ WHICH INVENTORY DOCUMENT THIS ENGAGEMENT PRODUCES — the work bar's primary (see its three arms) and, since
+// 2026-10-01 (P17), the inventory document the probate package carries. One rule, two readers: 'contents' (the
+// Contents List, where the inventory is ours and the values are counsel's), 'schedule' (the Estate Inventory Report),
+// 'approval' (tier none: counsel inventories, and the release approval is what Havellin issues), 'record' (a living job).
+function invPrimaryDoc(job) {
+  var fid = invFiduciaryMode(job);
+  return (fid && docTierProduces(job, 'inventory') && !docTierProduces(job, 'values')) ? 'contents'
+    : (fid && !invDocContractBlock(job, 'schedule')) ? 'schedule'
+    : fid ? 'approval' : 'record';
+}
+
 function _renderInvWorkbar(job, all) {
   var st = _invReviewStats(all);
   var jid = job.id;
@@ -28707,9 +29363,7 @@ function _renderInvWorkbar(job, all) {
   var _agNameables = agentShotGroups(jid).length;
   // Which document is the primary, decided once (see the three arms below) so the standing Approval
   // Request can tell whether it would be a second copy of the primary.
-  var _primary = (fid && docTierProduces(job, 'inventory') && !docTierProduces(job, 'values')) ? 'contents'
-    : (fid && !invDocContractBlock(job, 'schedule')) ? 'schedule'
-    : fid ? 'approval' : 'record';
+  var _primary = invPrimaryDoc(job);
   var btn = function(fn, label, title, primary) {
     return '<button class="btn-s" onclick="' + fn + '" title="' + esc(title) + '" style="'
       + (primary ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : '') + '">' + label + '</button>';

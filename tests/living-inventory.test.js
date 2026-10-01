@@ -55,7 +55,7 @@ const ITEM = (id, over) => Object.assign({
 const PRINT_FNS = [ 'invDocContractBlock',
   'printContentsRecord', 'dispositionRecord', 'printApprovalRequest', 'printCourtInventory',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  'printDispositionLedger', '_renderInvWorkbar', '_invReviewStats', '_invProgressStamp',
+  'printDispositionLedger', '_renderInvWorkbar', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
   '_jobHasDestination', 'invFiduciaryMode', 'isDecedentJob', '_invJob', '_jobInvRefs',
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',

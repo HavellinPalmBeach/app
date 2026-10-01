@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
   const ctx = sandbox({
-    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
       // The document tray: `jobTimelineActions` builds the step's document from the ONE
       // row→document map, behind the ONE readiness gate, rather than five ungated concats.
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', 'isJobWon',

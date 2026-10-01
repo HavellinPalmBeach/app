@@ -778,7 +778,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // a one-off."* Right, and the global version was a live defect for about an hour — see the
     // stranded-paper-job group below.
     const rail = (key) => sandbox({
-      fns: ['jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+      fns: ['jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
             'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docKeyFor', 'docSentAt', 'esignAvailable',
             'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmtMoney'],
@@ -1001,7 +1001,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                        gsFn('_dsAccessToken'), gsFn('_dsB64Url'), gsFn('dsConsentUrl'),
                        gsVar('DS_AUTH_HOST_DEMO'), gsVar('DS_AUTH_HOST_PROD'), gsVar('DS_JWT_SCOPES'),
                        gsVar('DS_TOKEN_TTL_SEC'), gsFn('_dsSigningKey'), gsVar('DS_RSA_ALG_ID'),
-                       gsFn('_dsDerLen'), gsFn('_dsFetchBlob'), gsFn('esignArchiveEnvelope')].join('\n'), ctx);
+                       gsFn('_dsDerLen'), gsFn('_dsFetchBlob'), gsFn('_filesNamedInFolder'), gsFn('_fileBlobByName'),
+                       gsFn('esignArchiveEnvelope')].join('\n'), ctx);
       return ctx;
     };
 
@@ -1034,9 +1035,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(arch, '_dsApi(', '⚠⚠ and the archive never routes a PDF through the JSON helper');
     ok(!/getContentText\(\)[^;]*getBlob/.test(blobFn), 'the bytes are never round-tripped through text');
 
-    // once, ever — gated on filedAt
+    // once, ever — gated on what is filed
+    // RESTATED 2026-10-01 (P17): the gate is "is anything DocuSign holds still missing from Drive" (esignSignedCopyGaps,
+    // which reads the recorded filedUrl and certUrl), so a copy already filed is never fetched again — by a refresh or by
+    // the File signed copy button, which goes through this same function. Driven in p17-documents-drive.test.js.
     const gate = noComments(fn('esignArchiveSigned'));
-    has(gate, 'st.esign.filedAt', '⚠⚠ gated on filedAt, so a later refresh cannot refetch');
+    has(gate, 'if (!esignSignedCopyGaps(job).length) return;', '⚠⚠ gated on what is still unfiled, so a later refresh cannot refetch a filed copy');
+    has(noComments(fn('esignSignedCopyGaps')), 'st.esign.filedUrl', 'and that reads the record the filing writes');
     has(noComments(fn('applyEsignStatus')), 'esignArchiveSigned',
         '⚠ and it fires from the completion transition rather than from every check');
   }

@@ -430,7 +430,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // that asked for these two fields to move here. A stub that does not match the real source
     // is worse than no stub — this repo has now paid for that twice.
     const DFNS = ['renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
+      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
@@ -636,7 +636,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the document in play right now — and "done" is not "sent"');
   {
     const D = sandbox({
-      fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'finalAwaitsHours', 'estimateIsFeeOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
+      fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'finalAwaitsHours', 'estimateIsFeeOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
             'docDraftOnly', 'docTitle', 'paymentStageWord', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
             'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmtMoney', 'finalCrewOnlyWarn'],

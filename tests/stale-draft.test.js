@@ -260,7 +260,7 @@ function run({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // The rail — the fixture shape document-claims.test.js uses.
   const RAIL = sandbox({
-    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker',
       'estimateSubmitBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
       'docPreviewOnly', 'agreementReady', 'isJobWon', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
@@ -683,6 +683,11 @@ function run({ group, ok, eq, has, lacks }) {
       _reopenTransition: 'the Re-open, retiring a final drafted at the close',
       // A different record entirely: job.reviewAsk, the Google-review email at the close.
       closeoutState: 'reviewAsk', renderCloseoutBody: 'reviewAsk', draftReviewRequest: 'reviewAsk', markReviewRequestSent: 'reviewAsk',
+      // The probate package (2026-10-01, P17): its draft is overtaken by the inventory, not a price — this is that half
+      // of the rule, asked by draftIsStale and nothing else …
+      probatePackageMovedSince: 'the rule, for the probate package',
+      // … and its card prints when the draft was made. The tap and the draft link on it read draftOutstanding.
+      probatePackageCardHtml: 'the probate package card\'s who-and-when line',
     };
     const names = [...new Set([...src.matchAll(/(^|\n)function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[2]))];
     const readers = names.filter((n) => { let b; try { b = fn(n); } catch (e) { return false; } return /draftedAt/.test(live(b)); });
