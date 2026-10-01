@@ -43,7 +43,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
     'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
     'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-    'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
+    'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'paymentSummaryText', 'paymentMethodLabel', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
     // The document tray: the step's document comes from the ONE row→document map, behind the
     // ONE readiness gate, so these lift with anything that drives the rail or a document verb.
     'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
@@ -53,13 +53,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
     'roomStatusNormalize',
     'workingDaysInclusive', 'approvedEstimateFor',
-    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts',
+    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
     'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',
     // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
     'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix', 'escLines',
     // A closed-retained job names what it kept (the payments list group below renders one).
     'closeoutRetainedTotal', 'jobPaidTotal'];
-  const VARS = ['_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
+  const VARS = ['_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'DEPOSIT_VOID_STEP', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',
@@ -91,7 +91,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     };
     if (driveRoot !== undefined) stubs.DRIVE_FOLDER_ID = driveRoot;
     const c = sandbox({ fns: FNS, vars: VARS, stubs });
-    c.renderClientDashboard(7);
+    // Read defensively (P17): a render that throws fails here as one check, and the rest of the file still runs.
+    try { c.renderClientDashboard(7); } catch (e) { ok(false, 'renderClientDashboard threw: ' + (e && e.message)); return ''; }
     return dom.getElementById('client-dashboard-view').innerHTML;
   }
 

@@ -117,7 +117,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
   'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop',
   'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct',
   'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs',
-  'coBaselineMove', 'finalCrewOnlyWarn', 'agrBillingRates', 'paymentCounts', 'escLines'];
+  'coBaselineMove', 'finalCrewOnlyWarn', 'agrBillingRates', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'escLines'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
   'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'INV_FINAL_NO_HOURS_WHY'];
@@ -269,7 +269,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const job = Object.assign({}, BP_JOB, { status: 'active', won: true, havellinEst: 22940,
                                             payments: [{ uid: 'd', stage: 'deposit', amount: 11470, date: '2026-09-01', method: 'wire' }] });
     const dom = domStub({ 'closeout-reason': 'client_changed_mind', 'closeout-note': '' });
-    const c = sandbox({ fns: ['confirmMarkLost', 'closeoutRetainedTotal', 'jobPaidTotal', 'jobPayments', 'closeCloseoutModal', 'paymentCounts'],
+    const c = sandbox({ fns: ['confirmMarkLost', 'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobPaidTotal', 'jobPayments', 'closeCloseoutModal', 'paymentCounts', 'paymentLive', 'isRefundRecord'],
                         vars: ['LOSS_REASONS'],
                         stubs: { document: dom, jobs: [job], closeoutJobId: 1, saveJobs: () => said.push('save'),
                                  syncJobToSheets: () => {}, renderJobs: () => {} } });
@@ -771,13 +771,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(d.blocked === false, 'and it is a flag, never a refusal');
     // … and the timeline's final row carries it on the dashboard, where the final is sent and approved.
     const TL = sandbox({
-      fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs',
         'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
         'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'isDecedentJob', 'invFiduciaryMode', 'matterTypeOf', 'isJobWon', 'isJobFunded',
         'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',
         'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote',
         'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent',
-        'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts'],
+        'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts', 'paymentLive', 'isRefundRecord'],
       vars: ['JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'DECEDENT_SERVICES', 'DOC_STAGE_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false, SHEETS_SYNC_URL: '' } });
     // A job closed with every step before the final recorded, so the final is the one lit step (checked below).

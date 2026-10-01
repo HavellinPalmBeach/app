@@ -35,7 +35,7 @@ const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', '
   '_srcLineKey', 'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate',
   'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc',
   'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
-  'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'paymentCounts', 'jobPaidTotal',
+  'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPaidTotal',
   'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'docReadiness', 'agreementReady',
   'isJobWon', 'resolvePin', 'checkInvPin', 'dashApproveInvoice', 'openInvPinModal', 'invFinalApproval',
   'invFinalApprovalRecord', 'invFinalApprovalStaleTxt', 'recordInvFinalApproval', 'docState',
@@ -522,7 +522,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { notices: [], alerts: [] };
     const ctx = sandbox({
       fns: AGR_FNS.concat(['_actor', '_handoverBy', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
-        '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'paymentCounts', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending']),
+        '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending']),
       vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS']),
       stubs: {
         document: domStub({}), currentEstimate: null,

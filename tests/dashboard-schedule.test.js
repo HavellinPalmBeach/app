@@ -429,8 +429,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // no hard target: an error-coloured warning nobody can act on, visible in the screenshot
     // that asked for these two fields to move here. A stub that does not match the real source
     // is worse than no stub — this repo has now paid for that twice.
-    const DFNS = ['renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
+    const DFNS = ['renderClientDashboard', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'fmtMoney',
+      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
@@ -438,7 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // checks the room's hours, for the every-room-locked midpoint, so it reaches this on every fixture.
       'roomStatusNormalize',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
-      'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
+      'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
@@ -716,7 +716,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('job.activatedOn — the write-once anchor the elapsed reading had none of');
   {
     const t = sandbox({ fns: ['applyJobTransition', 'paymentStageWord', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', '_handoverBy', 'isJobFunded',
-                              'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'isAgreementSigned',
+                              'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'isAgreementSigned',
                               'agreementSignature', '_ymdLocal', '_todayStr', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
                               // The Re-open is its own branch of the transition (2026-09-29).
                               'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
@@ -812,8 +812,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the rail carries PLANNED dates, and they can never be read as actuals');
   {
     const R = sandbox({
-      fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
-            'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'depositTargetFor',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
+            'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
             'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn'],
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],

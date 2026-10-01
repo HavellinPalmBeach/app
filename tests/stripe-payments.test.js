@@ -89,7 +89,7 @@ function gsCtx({ props = { STRIPE_SECRET_KEY: 'sk' + '_test_zzz' }, fetch = null
   return ctx;
 }
 
-const FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'jobPaidTotal', 'depositPaidTotal',
+const FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPaidTotal', 'depositPaidTotal',
              'depositClearedTotal', 'isJobFunded', 'depositTargetFor', 'paymentMethodLabel',
              'updateDepModalHints', 'currentDepStage', '_photoUid', 'fmt'];
 const VARS = ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', 'PAYMENT_METHODS_CLEAR_ON_RECEIPT', 'PAYMENT_METHODS_RECORDABLE', '_photoUidSeq',
@@ -471,7 +471,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // A sandbox holding the real recorder over the real payment helpers, so the record that
   // comes out is the one `isJobFunded`, the rail and the invoice all read.
   const RB_FNS = ['applyStripePayments', '_stripeHandMatch', '_handAchAwaitingStripe', '_paymentKey', 'paymentSummaryText', 'paymentMethodLabel', 'paymentStageLabel', 'paymentStageWord', '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_stripeDue', 'outstandingPayments',
-                  'stripeRefresh', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal',
+                  'stripeRefresh', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
                   'depositClearedTotal', 'isJobFunded', 'depositTargetFor', '_photoUid',
                   '_jobTouch', 'docState', 'fmt', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit'];
 

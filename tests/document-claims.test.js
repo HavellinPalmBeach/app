@@ -217,11 +217,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // The rail — the same fixture shape as dashboard-actions.test.js.
   const RAIL = sandbox({
-    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker',
       'estimateSubmitBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
       'docPreviewOnly', 'agreementReady', 'isJobWon', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
-      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
+      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews',
       '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn'],

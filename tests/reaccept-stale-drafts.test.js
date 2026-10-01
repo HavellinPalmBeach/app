@@ -217,11 +217,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // The rail — the real jobTimeline and jobTimelineActions, the fixture shape price-lock-won-status uses.
   const RAIL = sandbox({
-    fns: uniq(['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord',
+    fns: uniq(['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord',
       'estimateSubmitBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
       'docPreviewOnly', 'agreementReady', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
-      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
+      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
       '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', 'jtDraftLine',
       // P10 (merged here): the final's row waits for logged hours.
@@ -451,7 +451,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d = domStub({});
     const U = sandbox({
       fns: uniq(['updateAgrUI', 'agreementReady', 'agrApprovalBlocker', 'agrApprovalWithdrawn', 'docReadiness', 'isJobFunded',
-        'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'depositTargetFor'].concat(PRICE_FNS)),
+        'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor'].concat(PRICE_FNS)),
       vars: ['DOC_READY_WHY', 'currentAgrJobId'],
       stubs: { document: d },
     });

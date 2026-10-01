@@ -79,11 +79,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // exactly what the strip at the foot of the rail does (it collects the doc acts of every row
   // but the lit one), so "no row offers it" is "neither the tray nor the strip offers it".
   const RAIL = sandbox({
-    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord',
       'estimateSubmitBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
       'docPreviewOnly', 'agreementReady', 'isJobWon', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
-      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
+      'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
       '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn'].concat(BLK_FNS),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',

@@ -394,6 +394,16 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-pay.void .jt-pay-amt{text-decoration:line-through;font-weight:400;color:var(--gray);}
 .jt-pay-acts{display:flex;gap:14px;}
 .jt-ghost-d{color:var(--err-tx);}
+/* A refund on the list (2026-10-01, P17): money that went back, in the neutral grey of a record, never a payment's green. */
+.jt-pay-st.rfd{color:var(--gray-dk);}
+/* An hourly walkaway's settlement on the Deposit Retained card, and in the close-out dialog: received, earned, refunded,
+   due back. Label left, figure right; the label takes the slack and wraps, so nothing overflows at 390px. */
+.jt-settle{margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border);}
+.jt-settle-row{display:flex;justify-content:space-between;align-items:baseline;gap:2px 12px;padding:3px 0;font-size:12px;color:var(--gray-dk);min-width:0;}
+.jt-settle-row span:first-child{flex:1 1 auto;min-width:0;overflow-wrap:anywhere;}
+.jt-settle-row span:last-child{white-space:nowrap;font-weight:600;}
+.jt-settle-due{color:var(--warn-tx);}
+.jt-settle-note{font-size:11px;color:var(--gray);margin-top:4px;}
 /* A PLANNED date on a rail row. ⚠ Its own element and its own class, never the meta join —
    every `at` on this rail is something that HAPPENED, and a projection sharing that slot is
    indistinguishable from a record. The renderer always prints the word "Planned" in front of it
@@ -2682,7 +2692,7 @@ body.no-smf .smf-col{display:none;}
      (paymentCounts). The dialog says what the void does to the money before anything is written. -->
 <div class="modal-overlay" id="pay-void-modal" style="display:none;">
   <div class="modal-box" style="width:440px;">
-    <div class="modal-title">Void this payment</div>
+    <div class="modal-title" id="pv-title">Void this payment</div>
     <div class="modal-sub" id="pv-summary"></div>
     <div id="pv-effect" style="margin-top:8px;"></div>
     <label>Why is it being voided?</label>
@@ -2695,6 +2705,47 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;gap:8px;margin-top:1rem;">
       <button class="btn-s" style="flex:1;" onclick="closeVoidPayment()">Cancel</button>
       <button class="btn-p" id="pv-save-btn" style="flex:1;" onclick="confirmVoidPayment()">Void payment</button>
+    </div>
+  </div>
+</div>
+
+<!-- RECORD A REFUND (2026-10-01, P17). Opened from Record refund on an hourly walkaway's settlement (the Closed — Deposit
+     Retained card). The refund is its own record on the job's payments list, beside the payments it does not change; one
+     recorded in error is voided with a reason, never deleted (saveRefund, refundBlocker). -->
+<div class="modal-overlay" id="refund-modal" style="display:none;">
+  <div class="modal-box" style="width:440px;">
+    <div class="modal-title">Record a refund</div>
+    <div class="modal-sub" id="rf-summary"></div>
+    <div class="grid2" style="gap:10px;">
+      <div>
+        <label>Amount refunded</label>
+        <input type="number" id="rf-amount" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div>
+        <label style="margin-top:0;">Date sent</label>
+        <input type="date" id="rf-date">
+      </div>
+    </div>
+    <label>Method</label>
+    <!-- Exactly REFUND_METHODS, in its order (a test holds the two together); saveRefund refuses anything else. -->
+    <select id="rf-method">
+      <option value="">Select method</option>
+      <option value="check">Cheque</option>
+      <option value="wire">Wire transfer</option>
+      <option value="ach">Bank transfer (ACH)</option>
+    </select>
+    <label>Reference <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— cheque no. or wire confirmation</span></label>
+    <input type="text" id="rf-reference" placeholder="e.g. cheque #2201">
+    <label>Paid to <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— the client, trust or estate account it went back to</span></label>
+    <input type="text" id="rf-payee" placeholder="e.g. Pressly Family Trust">
+    <input type="hidden" id="rf-job">
+    <div style="font-size:10px;color:var(--gray);margin-top:3px;">
+      The refund is recorded on the payments list. It is never deleted: one recorded in error is voided, with the reason.
+    </div>
+    <div id="rf-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeRefundModal()">Cancel</button>
+      <button class="btn-p" id="rf-save-btn" style="flex:1;" onclick="saveRefund()">Record refund &#8594;</button>
     </div>
   </div>
 </div>
@@ -6180,8 +6231,9 @@ function referenceBand(inp) {
 // DO NOT ADD "SAFETY NET" FALLBACKS ON job.deathDate OR job.executor. Both were here
 // and both came out. Neither is reachable — intake only shows those fields on the three
 // services above, which already return true — and the executor one is WRONG as a death
-// signal: the role list offers Power of Attorney and Family Member, and a POA acts for
-// a LIVING person (it terminates on death). If the representative block is ever offered
+// signal: the role list offers Family Member (and offered Power of Attorney until 2026-10-01,
+// which older records still carry), and a POA acts for a LIVING person (it terminates on
+// death). If the representative block is ever offered
 // on a living-client service, that fallback would silently start calling those jobs
 // decedent jobs.
 //
@@ -9495,12 +9547,15 @@ function buildExecutorAuthOptions() {
 // its own seven roles and lacked the three court-appointed ones intake offers, and its select
 // only marks an EXACT match, so opening a Curator's job and pressing Save for any reason wrote
 // the role back blank. `group` is the optgroup a role renders under.
+// ⚠ NO POWER OF ATTORNEY, SINCE 2026-10-01 (P17; Anthony). This is who acts for an ESTATE, and a power of attorney
+// ends at the principal's death, so it is not a decedent's representative. A record that already carries the role
+// keeps it: Edit Client offers it "(as recorded)" (executorRoleOptionsHtml, below) and an untouched save writes it
+// back unchanged, and every document goes on printing what is recorded.
 var EXECUTOR_ROLES = [
   { v: 'Estate Attorney',         l: 'Estate Attorney' },
   { v: 'Executor',                l: 'Executor' },
   { v: 'Family Member',           l: 'Family Member' },
   { v: 'Personal Representative', l: 'Personal Representative' },
-  { v: 'Power of Attorney',       l: 'Power of Attorney' },
   { v: 'Trustee',                 l: 'Trustee' },
   { v: 'Administrator ad litem',  l: 'Administrator ad litem (733.308)',       group: 'Court-appointed (contested)' },
   { v: 'Curator',                 l: 'Curator (Fla. Stat. 733.501)',           group: 'Court-appointed (contested)' },
@@ -14650,7 +14705,24 @@ var PAYMENT_METHODS_RECORDABLE = ['check', 'cashiers_check', 'wire', 'stripe_ach
 // stagePaidTotal, jobPaidTotal and depositClearedTotal, and through them isJobFunded, the invoices'
 // received rows and balance, the recorder's prefill, closeoutRetainedTotal, jobIsSettled, the rail and
 // the Stripe link's balance — and a test counts its readers, so a new total cannot quietly add a void back.
-function paymentCounts(p) { return !!p && !p.voidedAt; }
+// ⚠⚠ AND A REFUND IS NOT A PAYMENT (2026-10-01, P17). Money Havellin sends BACK — the excess on an hourly walkaway
+// (walkawaySettlement) — is recorded on the same list, as its own record with its own uid (stage 'refund'), so it
+// rides the sheet's existing per-uid payment merge and its sticky void with no redeploy, and is voided, never deleted,
+// exactly as a payment is. It is never money received, so this predicate leaves it out of every total above; the money
+// that went back has its own predicate and its own total (refundCounts, jobRefundedTotal), and the retained figure nets it.
+function paymentCounts(p) { return paymentLive(p) && !isRefundRecord(p); }
+// A record on the payments list that has not been voided: a payment or a refund. What the void and its dialog ask —
+// "is there anything left to void?" — never a money question.
+function paymentLive(p) { return !!p && !p.voidedAt; }
+
+// The refund: money paid back to the client, recorded by saveRefund with `stage: 'refund'`. The stage is the discriminator
+// because every existing reader of the list already filters on a stage — the stage totals, the recorder's prior list, the
+// deposit mirror, the Stripe matcher — so none of them can mistake a refund for a payment at a billing stage. Not in
+// PAYMENT_STAGES, so the payment recorder can never write one. A stored key, spelled as 'deposit' and 'midpoint' are.
+function isRefundRecord(p) { return !!p && p.stage === 'refund'; }
+// ⚠ THE ONE ANSWER TO "DOES THIS REFUND COUNT?", and the only predicate jobRefundedTotal asks: a voided refund (recorded
+// in error) has paid nothing back.
+function refundCounts(p) { return paymentLive(p) && isRefundRecord(p); }
 
 // The key the sheet merges a payment on: its `uid`, or for one written before uids existed the per-device
 // `id` — the same fallback `_jobListKey` makes in main-sync.gs. Every edit to a payment stamps
@@ -14681,6 +14753,12 @@ function jobPaidTotal(job) {
   return jobPayments(job).filter(paymentCounts).reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
 }
 
+// Everything paid BACK on the job: the refunds that count (2026-10-01, P17). Read by the retained figure
+// (closeoutRetainedTotal) and the walkaway settlement; nothing that totals money received reads it.
+function jobRefundedTotal(job) {
+  return jobPayments(job).filter(refundCounts).reduce(function(s,p){ return s + (parseFloat(p.amount) || 0); }, 0);
+}
+
 function depositPaidTotal(job) { return stagePaidTotal(job, 'deposit'); }
 
 // ⚠ THE END OF AN ENGAGEMENT, AND IT IS WHAT WITHDRAWS THE MARK-LOST CONTROL.
@@ -14705,8 +14783,12 @@ function jobIsSettled(job) {
 // appeared nowhere on any screen, Win / Loss included. The money is the fact; how much of the deposit
 // it covered is not the question. Read by the modal, the save, the rail's terminal row and Win / Loss,
 // so the four cannot come to name the kept amount two ways.
+// ⚠⚠ LESS WHAT HAS BEEN REFUNDED (2026-10-01, P17). An hourly walkaway owes back what it paid above the deposit or the
+// work done (walkawaySettlement), and once that refund is recorded (saveRefund) the job no longer holds it: this figure,
+// and every reader of it, nets it. It stays a WITNESSED figure — money received less money recorded as sent back — and
+// never an estimate of what will be refunded: until the refund is recorded the card names it as due, beside this.
 function closeoutRetainedTotal(job) {
-  return job ? Math.round(jobPaidTotal(job)) : 0;
+  return job ? Math.round(jobPaidTotal(job) - jobRefundedTotal(job)) : 0;
 }
 
 // The gate the whole job hangs off. True when deposit payments meet the 50% target;
@@ -14719,6 +14801,41 @@ function isJobFunded(job) {
   var paid = depositPaidTotal(job);
   if (!target) return paid > 0;
   return paid >= target * 0.99;
+}
+
+// ⚠⚠ A DEPOSIT A VOID UN-FUNDED (2026-10-01, P17). Anthony, on a deposit voided on an active job: "flag it on the timeline
+// (a red/blocked step 'Deposit voided: record the replacement payment' until one is recorded); the job stays active;
+// nothing rewinds." Voiding the cheque that funded a running job (P16's confirmVoidPayment) stops the hours — the funding
+// gate turns false — and the timeline only went back to "Collect the deposit", as if the job had never been paid.
+// ⚠ DERIVED FROM THE RECORD THAT OWNS IT, THE PAYMENTS, NEVER FROM `job.status` OR THE ACTIVATION STAMP, which stay where
+// they were (`activatedOn` is write-once): the deposit is unfunded now, AND the voided deposit payments, counted back in,
+// would fund it — so the void is what took it below its target. A payment typed twice and voided leaves the deposit
+// funded and raises nothing; a short deposit that was never whole is "part paid", not this. It holds until a payment that
+// counts restores the deposit (isJobFunded), whatever else is recorded meanwhile. Read by jobTimeline's deposit row, and
+// by paymentVoidEffect, which says before the void that the timeline will show it. DOM-free; plain text.
+var DEPOSIT_VOID_STEP = 'Deposit voided: record the replacement payment';
+function depositVoidFlag(job) {
+  if (!job || isJobFunded(job)) return null;
+  var voids = jobPayments(job).filter(function (p) { return p && p.stage === 'deposit' && p.voidedAt; });
+  if (!voids.length) return null;
+  // The job as it would read with the voided deposit payments counted back in — a what-if built FROM the accessor, as
+  // paymentVoidEffect's is, so the funding rule is asked rather than restated.
+  var asIf = {};
+  for (var k in job) asIf[k] = job[k];
+  asIf.payments = jobPayments(job).map(function (p) { return voids.indexOf(p) >= 0 ? Object.assign({}, p, { voidedAt: null }) : p; });
+  if (!isJobFunded(asIf)) return null;
+  // The void that did it: the latest (ISO stamps compare as written).
+  var last = voids.reduce(function (a, p) { return String(p.voidedAt) > String(a.voidedAt) ? p : a; }, voids[0]);
+  var paid = depositPaidTotal(job), tgt = depositTargetFor(job);
+  return {
+    payment: last,
+    step: DEPOSIT_VOID_STEP,
+    why: 'The ' + paymentSummaryText(job, last) + ' was voided'
+      + (last.voidedAt ? ' on ' + fmtDate2(_localDateOf(last.voidedAt)) : '')
+      + (last.voidReason ? ': ' + last.voidReason : '') + '. Hours cannot be logged until the deposit is recorded again.'
+      + (paid > 0 && tgt ? ' ' + fmt(paid) + ' of the ' + fmt(tgt) + ' deposit is recorded.' : ''),
+    fix: 'Press ✓ Record payment when the replacement arrives. Nothing else on the job is undone.'
+  };
 }
 
 // Deposit money that has actually cleared the bank. Work starts on received, not
@@ -15026,8 +15143,14 @@ function _attachPaymentEvidence(job, payment, file) {
 
 // "$5,000 personal cheque on the deposit, received Sep 28, 2026, from Pressly Family Trust" — the one
 // description the list, the void dialog, the cleared question and their notices share. Plain text.
+// A refund (P17) reads as what it is: "$4,075 refund by cheque, sent Oct 3, 2026, to Pressly Family Trust".
 function paymentSummaryText(job, p) {
   if (!p) return '';
+  if (isRefundRecord(p)) {
+    return fmt(parseFloat(p.amount) || 0) + ' refund' + (p.method ? ' by ' + refundMethodLabel(p.method).toLowerCase() : '')
+      + (p.refundedOn ? ', sent ' + fmtDate2(_localDateOf(p.refundedOn)) : '')
+      + (p.payee ? ', to ' + p.payee : '');
+  }
   var how = p.method ? paymentMethodLabel(p.method) : 'payment';   // a reconstructed legacy deposit has none
   return fmt(parseFloat(p.amount) || 0) + ' ' + how.charAt(0).toLowerCase() + how.slice(1)   // "bank transfer (ACH)"
     + ' on the ' + paymentStageWord(job, p.stage).noun
@@ -15035,36 +15158,52 @@ function paymentSummaryText(job, p) {
     + (p.payer ? ', from ' + p.payer : '');
 }
 
-// What voiding `p` does to the money, measured by the real rules on a copy of the job without it — never
+// What voiding `p` does to the money, measured by the real rules on a copy of the job as it will be — never
 // by re-deriving a total here, which would be a second copy of the funding rule. DOM-free; worded so it
 // reads the same in the dialog before the void and in the notice after it. Plain text.
+// ⚠ THE COPY HOLDS `p` VOIDED, AS confirmVoidPayment LEAVES IT, NOT REMOVED (2026-10-01, P17): every total reads the same
+// either way, and the flag the timeline raises (depositVoidFlag) is a fact about a VOIDED deposit payment, so the dialog
+// can say what the timeline will show only by asking the rule the timeline asks, of the record the void will leave.
 function paymentVoidEffect(job, p) {
-  if (!job || !paymentCounts(p)) return '';
-  var without = {};
-  for (var k in job) without[k] = job[k];
-  without.payments = jobPayments(job).filter(function (x) { return x !== p; });
+  if (!job || !paymentLive(p)) return '';
+  var after = {};
+  for (var k in job) after[k] = job[k];
+  after.payments = jobPayments(job).map(function (x) { return x === p ? Object.assign({}, x, { voidedAt: new Date().toISOString() }) : x; });
+  // A refund recorded in error (P17): the money it says went back did not, so what the job holds goes back up.
+  if (isRefundRecord(p)) {
+    var sA = walkawaySettlement(after);
+    return [fmt(parseFloat(p.amount) || 0) + ' comes off what has been refunded on this job.',
+      'The amount it records as retained becomes ' + fmt(closeoutRetainedTotal(after)) + '.']
+      .concat((sA && sA.basis === 'hourly') ? ['The refund due becomes ' + fmt(sA.due) + '.'] : []).join(' ');
+  }
   var noun = paymentStageWord(job, p.stage).noun;
   var tgt = p.stage === 'deposit' ? depositTargetFor(job) : 0;
-  var out = [fmt(parseFloat(p.amount) || 0) + ' comes off the ' + noun + ', leaving ' + fmt(stagePaidTotal(without, p.stage))
+  var out = [fmt(parseFloat(p.amount) || 0) + ' comes off the ' + noun + ', leaving ' + fmt(stagePaidTotal(after, p.stage))
     + (tgt ? ' of the ' + fmt(tgt) + ' due' : '') + ' recorded against it.'];
-  if (isJobFunded(job) && !isJobFunded(without)) {
+  if (isJobFunded(job) && !isJobFunded(after)) {
     out.push('The job is no longer funded: hours cannot be logged on it until the deposit is recorded again.');
   }
-  if (jobIsSettled(job) && !jobIsSettled(without)) out.push('The final payment reads unpaid again.');
-  if (job.status === 'closed_retained') {
-    out.push('The amount this closed job records as retained becomes ' + fmt(closeoutRetainedTotal(without)) + '.');
+  // Anthony (P17): "flag it on the timeline … the job stays active; nothing rewinds". Said here first, in the timeline's words.
+  if (depositVoidFlag(after)) {
+    out.push('The timeline will show “' + DEPOSIT_VOID_STEP + '” until a payment that counts restores the deposit; nothing else on the job is undone.');
   }
-  out.push('Received on the job in all: ' + fmt(jobPaidTotal(without)) + '.');
+  if (jobIsSettled(job) && !jobIsSettled(after)) out.push('The final payment reads unpaid again.');
+  if (job.status === 'closed_retained') {
+    out.push('The amount this closed job records as retained becomes ' + fmt(closeoutRetainedTotal(after)) + '.');
+  }
+  out.push('Received on the job in all: ' + fmt(jobPaidTotal(after)) + '.');
   return out.join(' ');
 }
 
 // The bank has confirmed a payment recorded as uncleared. Today's date, and who (`_actor`, as a payment's
 // `recordedBy`: the app has no sign-in). Refuses a void and an already-cleared payment, whatever the screen
 // offered. Moves no money: received totals and the funding gate never read `clearedOn`.
+// A refund has no clearing to record (P17): it is money Havellin sent, recorded when it went.
 function markPaymentCleared(jobId, key) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   var p = _jobPaymentByKey(job, key);
   if (!job || !p) { dashNotice('warn', 'That payment is no longer on this job.'); _dashRedraw(jobId); return; }
+  if (isRefundRecord(p)) { dashNotice('warn', 'That is a refund Havellin sent, so there is nothing to clear.'); _dashRedraw(jobId); return; }
   if (!paymentCounts(p)) { dashNotice('warn', 'That payment is void, so there is nothing to clear.'); _dashRedraw(jobId); return; }
   if (p.clearedOn) {
     dashNotice('ok', 'That payment is already recorded as cleared (' + fmtDate2(_localDateOf(p.clearedOn)) + ').');
@@ -15079,11 +15218,15 @@ function markPaymentCleared(jobId, key) {
   _dashRedraw(jobId);
 }
 
+// ⚠ ONE DIALOG VOIDS A PAYMENT OR A REFUND (P17): the same recorded act, a reason required, the effect stated first.
 function openVoidPayment(jobId, key) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   var p = _jobPaymentByKey(job, key);
   if (!job || !p) { dashNotice('warn', 'That payment is no longer on this job.'); _dashRedraw(jobId); return; }
-  if (!paymentCounts(p)) { dashNotice('warn', 'That payment is already void.'); _dashRedraw(jobId); return; }
+  var noun = isRefundRecord(p) ? 'refund' : 'payment';
+  if (!paymentLive(p)) { dashNotice('warn', 'That ' + noun + ' is already void.'); _dashRedraw(jobId); return; }
+  var _pvT = document.getElementById('pv-title'); if (_pvT) _pvT.textContent = 'Void this ' + noun;
+  var _pvB = document.getElementById('pv-save-btn'); if (_pvB) _pvB.textContent = 'Void ' + noun;
   document.getElementById('pv-job').value = String(jobId);
   document.getElementById('pv-key').value = String(key);
   document.getElementById('pv-summary').textContent = paymentSummaryText(job, p) + '.';
@@ -15106,7 +15249,7 @@ function confirmVoidPayment() {
   var job = jobs.find(function (j) { return j.id === jobId; });
   var p = _jobPaymentByKey(job, key);
   if (!job || !p) { showFB('pv-fb', 'warn', 'That payment is no longer on this job.'); return; }
-  if (!paymentCounts(p)) { showFB('pv-fb', 'warn', 'That payment is already void.'); return; }
+  if (!paymentLive(p)) { showFB('pv-fb', 'warn', 'That ' + (isRefundRecord(p) ? 'refund' : 'payment') + ' is already void.'); return; }
   if (!reason) { showFB('pv-fb', 'warn', 'Say why it is being voided; the record keeps the reason.'); return; }
   var effect = paymentVoidEffect(job, p);   // measured before the write, on the figures it changes
   p.voidedAt = new Date().toISOString();
@@ -15133,37 +15276,189 @@ function confirmVoidPayment() {
 // through, with its reason. DOM-free markup; the dashboard's Timeline & Payments card prints it under the
 // rail, on every state of the job, closed and retained included, because a payment can need either at any
 // point in the job's life.
+// ⚠ A REFUND IS LISTED TOO (2026-10-01, P17), as money that went back: its method, reference, payee and the day it was
+// sent, and Void while it counts — never Mark cleared, and never under a billing stage's name.
 function jobPaymentsListHtml(job) {
   if (!job) return '';
   var list = jobPayments(job);
   if (!list.length) return '';
+  var anyRefund = false;
   var rows = list.map(function (p) {
-    var key = _paymentKey(p), live = paymentCounts(p);
+    var key = _paymentKey(p), refund = isRefundRecord(p), live = paymentLive(p);
+    if (refund) anyRefund = true;
     // A key goes into an onclick; one the app did not mint gets no controls rather than a broken one.
     var safe = /^[A-Za-z0-9_.-]+$/.test(key);
     var st = !live
       ? 'Void' + (p.voidedAt ? ' ' + fmtDate2(_localDateOf(p.voidedAt)) : '') + (p.voidedBy ? ' · ' + esc(p.voidedBy) : '')
         + (p.voidReason ? ' — ' + esc(p.voidReason) : '')
+      : refund
+        ? 'Refund sent' + (p.refundedOn ? ' ' + fmtDate2(_localDateOf(p.refundedOn)) : '') + (p.recordedBy ? ' · ' + esc(p.recordedBy) : '')
       : p.clearedOn
         ? 'Cleared ' + fmtDate2(_localDateOf(p.clearedOn)) + (p.clearedBy === 'Stripe' ? ' — Stripe reported it settled' : (p.clearedBy ? ' · ' + esc(p.clearedBy) : ''))
         : 'Uncleared';
     var acts = '';
-    if (live && safe && !p.clearedOn) acts += '<button class="jt-ghost" onclick="markPaymentCleared(' + job.id + ",'" + key + "')\">&#10003; Mark cleared</button>";
+    if (live && safe && !refund && !p.clearedOn) acts += '<button class="jt-ghost" onclick="markPaymentCleared(' + job.id + ",'" + key + "')\">&#10003; Mark cleared</button>";
     if (live && safe) acts += '<button class="jt-ghost jt-ghost-d" onclick="openVoidPayment(' + job.id + ",'" + key + "')\">Void</button>";
-    return '<div class="jt-pay' + (live ? '' : ' void') + '">'
-      + '<span class="jt-pay-what"><span class="jt-pay-amt">' + fmt(parseFloat(p.amount) || 0) + '</span> · '
-      + esc(paymentStageLabel(job, p.stage)) + (p.method ? ' · ' + esc(paymentMethodLabel(p.method)) : '')
-      + (p.receivedOn ? ' · received ' + fmtDate2(_localDateOf(p.receivedOn)) : '')
-      + (p.payer ? ' · ' + esc(p.payer) : '')
-      // A deposit migrated from before payment records (jobPayments) was never observed: its amount is the 50%
-      // target, and the list says so, as the recorder does, rather than printing it as money somebody counted.
-      + (p.reconstructed ? ' · amount inferred — predates payment records' : '')
-      + (p.recordedBy === 'Stripe' ? ' · recorded by Stripe' : '') + '</span>'
-      + '<span class="jt-pay-st' + (!live ? ' voided' : p.clearedOn ? ' clr' : ' unclr') + '">' + st + '</span>'
+    var what = refund
+      ? 'Refund' + (p.method ? ' · ' + esc(refundMethodLabel(p.method)) : '') + (p.reference ? ' · ' + esc(p.reference) : '')
+        + (p.payee ? ' · to ' + esc(p.payee) : '')
+      : esc(paymentStageLabel(job, p.stage)) + (p.method ? ' · ' + esc(paymentMethodLabel(p.method)) : '')
+        + (p.receivedOn ? ' · received ' + fmtDate2(_localDateOf(p.receivedOn)) : '')
+        + (p.payer ? ' · ' + esc(p.payer) : '')
+        // A deposit migrated from before payment records (jobPayments) was never observed: its amount is the 50%
+        // target, and the list says so, as the recorder does, rather than printing it as money somebody counted.
+        + (p.reconstructed ? ' · amount inferred — predates payment records' : '')
+        + (p.recordedBy === 'Stripe' ? ' · recorded by Stripe' : '');
+    return '<div class="jt-pay' + (refund ? ' refund' : '') + (live ? '' : ' void') + '">'
+      + '<span class="jt-pay-what"><span class="jt-pay-amt">' + fmt(parseFloat(p.amount) || 0) + '</span> · ' + what + '</span>'
+      + '<span class="jt-pay-st' + (!live ? ' voided' : refund ? ' rfd' : p.clearedOn ? ' clr' : ' unclr') + '">' + st + '</span>'
       + (acts ? '<span class="jt-pay-acts">' + acts + '</span>' : '')
       + '</div>';
   });
-  return '<div class="jt-pays" id="jt-pays-' + job.id + '"><div class="jt-pays-hd">Payments recorded</div>' + rows.join('') + '</div>';
+  return '<div class="jt-pays" id="jt-pays-' + job.id + '"><div class="jt-pays-hd">' + (anyRefund ? 'Payments and refunds recorded' : 'Payments recorded')
+    + '</div>' + rows.join('') + '</div>';
+}
+
+// ─── AN HOURLY WALKAWAY: WHAT IT EARNED, AND WHAT GOES BACK (2026-10-01, P17) ───────────────────────────────────────────
+// Anthony: "refund the excess. Keep the deposit plus the work done (hours and materials); show and record any refund due
+// above that (the agreements already say so)." Both hourly arms (standard §12.2 and §12.4, estate §8.1) make the deposit
+// earned on signature and apply it against the hours worked and materials used: a client who walks away owes the deposit
+// or the work done, whichever is more, and anything Havellin holds above that is theirs. Until this, closeoutRetainedTotal
+// kept every payment, so a midpoint larger than the work done was kept by the app and called earned by neither form.
+// ⚠ THE WORK DONE IS WHAT THE FINAL INVOICE BILLS, read off it (`servicesTotal`: logged hours at the job's rates, the
+// materials, the fees, with the rush premium and the discount as the final applies them), never re-derived here — a
+// second copy of that sum is how a refund and the final come to disagree. The deposit is the one this job asks for
+// (depositTargetFor, the funding rule's figure), or what was paid toward it where no target is known.
+// ⚠ FIXED PRICE KEEPS ITS STAGE EARN-OUT, unchanged: everything held is kept, and nothing is computed as due.
+// ⚠ AN UNREAD ESTIMATE IS NOT AN ANSWER: with no estimate record on this device (a cold cache, or none at all) the basis
+// and the deposit cannot be known, so the settlement says `unknown` and nothing prints a figure or offers a refund.
+// DOM-free (it reads the stores invoiceHtml reads). Money to the cent; printed only through fmt.
+var REFUND_METHODS = [{ v: 'check', l: 'Cheque' }, { v: 'wire', l: 'Wire transfer' }, { v: 'ach', l: 'Bank transfer (ACH)' }];
+function refundMethodLabel(m) {
+  var r = REFUND_METHODS.filter(function (x) { return x.v === m; })[0];
+  return r ? r.l : (m || '—');
+}
+function walkawaySettlement(job) {
+  if (!job) return null;
+  var c = function (v) { return Math.round((Number(v) || 0) * 100) / 100; };
+  var received = c(jobPaidTotal(job)), refunded = c(jobRefundedTotal(job)), held = c(received - refunded);
+  var out = { basis: 'unknown', received: received, refunded: refunded, held: held,
+              deposit: 0, work: 0, earned: 0, due: 0, retained: held };
+  var rec = (typeof estimateStore !== 'undefined' && estimateStore) ? estimateStore[job.id] : null;
+  var est = rec && rec.estimate;
+  if (!est) return out;
+  if (est.fixedPrice) { out.basis = 'fixed'; out.earned = held; return out; }
+  out.basis = 'hourly';
+  out.deposit = c(depositTargetFor(job) || depositPaidTotal(job));
+  var inv = null;
+  try { inv = invoiceHtml(job, 'final'); } catch (e) { inv = null; }
+  if (!inv) { out.basis = 'unknown'; return out; }
+  out.work = c(inv.servicesTotal);
+  out.earned = Math.max(out.deposit, out.work);
+  out.due = Math.max(0, c(held - out.earned));
+  out.retained = c(held - out.due);
+  return out;
+}
+
+// ⚠ THE ONE QUESTION "MAY A REFUND BE RECORDED HERE?", asked by the Record refund button and again by saveRefund where the
+// record is written. '' when it may; otherwise the sentence that says why not. Only a job closed out as a walkaway with
+// money kept (Closed — Deposit Retained), on an hourly basis, with something due back.
+function refundBlocker(job, s) {
+  if (!job) return 'This job could not be found.';
+  if (job.status !== 'closed_retained') return 'A refund is recorded once the job has been closed out with the deposit retained.';
+  s = s || walkawaySettlement(job);
+  if (!s || s.basis === 'unknown') return 'What this job earned cannot be worked out on this device yet: its estimate has not loaded. Reload, then try again.';
+  if (s.basis === 'fixed') return 'A fixed-price job keeps its stage earn-out under the agreement, so there is no refund to work out.';
+  if (!(s.due > 0)) return 'Nothing is due back on this job: it holds no more than it has earned.';
+  return '';
+}
+
+// The settlement on the Deposit Retained card: what came in, what the job earned and how, anything refunded, what is still
+// due back, and the one control that records the refund. Hourly walkaways only; '' otherwise. DOM-free markup.
+function walkawaySettlementHtml(job) {
+  if (!job || job.status !== 'closed_retained') return '';
+  var s = walkawaySettlement(job);
+  if (!s || s.basis !== 'hourly') return '';
+  var row = function (l, v, cls) {
+    return '<div class="jt-settle-row' + (cls ? ' ' + cls : '') + '"><span>' + l + '</span><span>' + v + '</span></div>';
+  };
+  var h = '<div class="jt-settle" id="jt-settle-' + job.id + '"><div class="jt-pays-hd">Walkaway settlement</div>';
+  h += row('Received', fmt(s.received));
+  h += row('Earned: the deposit (' + fmt(s.deposit) + ') or the work done (' + fmt(s.work) + '), whichever is more', fmt(s.earned));
+  if (s.refunded > 0) h += row('Refunded', '(' + fmt(s.refunded) + ')');
+  h += row('Refund due', fmt(s.due), s.due > 0 ? 'jt-settle-due' : '');
+  h += '<div class="jt-settle-note">The work done is what the final invoice bills: the hours logged at the job’s rates, with the materials and fees.</div>';
+  if (!refundBlocker(job, s)) {
+    h += '<div class="jt-acts"><button class="jt-btn" onclick="openRefundModal(' + job.id + ')">Record refund</button></div>';
+  }
+  return h + '</div>';
+}
+
+function openRefundModal(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var s = walkawaySettlement(job);
+  var blk = refundBlocker(job, s);
+  if (blk) { dashNotice('warn', blk); _dashRedraw(jobId); return; }
+  document.getElementById('rf-job').value = String(jobId);
+  document.getElementById('rf-summary').textContent = 'Received ' + fmt(s.received) + (s.refunded > 0 ? ', ' + fmt(s.refunded) + ' already refunded' : '')
+    + '. Earned ' + fmt(s.earned) + ': the deposit (' + fmt(s.deposit) + ') or the work done (' + fmt(s.work) + '), whichever is more. Due back: '
+    + fmt(s.due) + '.';
+  document.getElementById('rf-amount').value = String(s.due);
+  document.getElementById('rf-date').value = _todayStr();
+  document.getElementById('rf-method').value = '';
+  document.getElementById('rf-reference').value = '';
+  document.getElementById('rf-payee').value = '';
+  document.getElementById('rf-fb').innerHTML = '';
+  document.getElementById('refund-modal').style.display = 'flex';
+}
+function closeRefundModal() {
+  var m = document.getElementById('refund-modal');
+  if (m) m.style.display = 'none';
+}
+
+// ⚠⚠ THE REFUND IS A RECORDED ACT, NEVER A DELETION AND NEVER AN EDIT TO A PAYMENT. The payments stay exactly as received;
+// the refund is a record of its own beside them (amount, the day it went, how, the reference, to whom, who recorded it),
+// stamped on its own key like a payment (`payments:<uid>`), so the sheet merges it alone and keeps a later void of it.
+// Everything the button asked is asked again here, where the record is written (refundBlocker); a refund larger than
+// what is due is asked about, and one larger than the job holds is refused (nobody can send back money never received).
+function saveRefund() {
+  var jobId = parseInt(document.getElementById('rf-job').value) || 0;
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var s = walkawaySettlement(job);
+  var blk = refundBlocker(job, s);
+  if (blk) { showFB('rf-fb', 'warn', blk); return; }
+  var amount = parseFloat(document.getElementById('rf-amount').value) || 0;
+  var date = document.getElementById('rf-date').value;
+  var method = document.getElementById('rf-method').value;
+  var reference = (document.getElementById('rf-reference').value || '').trim();
+  var payee = (document.getElementById('rf-payee').value || '').trim();
+  if (amount <= 0) { showFB('rf-fb', 'warn', 'Enter the amount refunded.'); return; }
+  if (!date) { showFB('rf-fb', 'warn', 'Enter the date the refund was sent.'); return; }
+  if (!REFUND_METHODS.some(function (m) { return m.v === method; })) { showFB('rf-fb', 'warn', 'Select how the refund was sent.'); return; }
+  if (amount > s.held + 0.005) { showFB('rf-fb', 'warn', fmt(amount) + ' is more than the ' + fmt(s.held) + ' this job holds.'); return; }
+  if (amount > s.due + 0.005 && !confirm(fmt(amount) + ' is more than the ' + fmt(s.due) + ' due back on this job.\n\n'
+      + 'Record it anyway? The job then keeps less than it has earned.')) return;
+  var list = jobPayments(job);
+  var refund = {
+    id: (list.reduce(function (m, x) { return Math.max(m, x.id || 0); }, 0) + 1),
+    uid: _photoUid(),
+    stage: 'refund',        // isRefundRecord's key: never a billing stage
+    amount: amount,
+    refundedOn: date,
+    method: method,
+    reference: reference,
+    payee: payee,
+    recordedBy: _actor(job),   // as a payment's recordedBy is (saveDeposit): the app has no sign-in
+    recordedAt: new Date().toISOString()
+  };
+  list.push(refund);
+  _saveJobEdit(job, 'payments', refund.uid);   // or the other device's save merges it away
+  closeRefundModal();
+  renderJobs();
+  var s2 = walkawaySettlement(job);
+  dashNotice('ok', 'Refund recorded: ' + paymentSummaryText(job, refund) + '. The job now retains ' + fmt(closeoutRetainedTotal(job))
+    + (s2 && s2.due > 0 ? '; ' + fmt(s2.due) + ' is still due back.' : '.'));
+  _dashRedraw(jobId);
 }
 
 function closeChangeOrder() {
@@ -16380,6 +16675,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   var _sentRaise = estRec ? priceAboveSent(job, estRec) : null;
   var _accRaise = estRec ? priceAboveAcceptance(job, estRec) : null;
   var funded = isJobFunded(job);
+  var _depVoid = depositVoidFlag(job);   // a void took the deposit below its target (P17); null while it is funded
   var _jtSig = agreementSignature(job);   // null until something is actually signed
   var depPaid = depositPaidTotal(job);
   var depTgt = depositTargetFor(job);
@@ -16591,7 +16887,9 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       // ⚠ IT STILL OUTRANKS "Drafted — send it": a nudge to send over a reason not to is the wrong advice.
       // A draft a price change left behind rides WITH it (2026-09-29) — the withdrawal says what to do in
       // the app, and the old draft is the thing somebody might still send from Gmail, so both are named.
-      sub: isAgreementSent(job) ? ''
+      // Once sent, the one route worth naming is the one no email or envelope records (2026-10-01, P17).
+      sub: isAgreementSent(job)
+        ? (agreementHandedOverInPerson(job) ? 'Handed over in person' : '')
         : (agrApprovalWithdrawn(job, estRec)
           ? [agrApprovalWithdrawn(job, estRec), staleDraftNote(job, 'agreement', draftOutstanding(job, 'agreement'))]
               .filter(Boolean).join('. ')
@@ -16619,14 +16917,22 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       amount: hav ? split.deposit : null,
       sub: jtDraftLine(job, 'invoice:deposit', !docSentAt(job, 'invoice', 'deposit')) }),
 
+    // ⚠ A DEPOSIT A VOID UN-FUNDED IS A BLOCKED STEP, NOT A FRESH "COLLECT THE DEPOSIT" (2026-10-01, P17). The job keeps
+    // every stamp it had — Job active stays done, `activatedOn` is write-once — and this row takes the light (it is the
+    // earliest gap on any job whose deposit invoice went out) in red, saying what happened and what to do, on screen.
+    // depositVoidFlag reads the payments alone. Where an earlier row holds the light (a deposit invoice never recorded as
+    // sent), the rail still names the void on this row's own line.
     row({ key: 'deposit_received', group: 'Deposit & start', label: 'Deposit received',
       done: funded, amount: hav ? split.deposit : null,
       at: job.depositReceivedAt || '', atKind: 'date',
+      todo: _depVoid ? _depVoid.step : '',
       // A short payment must read as short rather than as unpaid — that is the
       // whole reason payments are a list and not a boolean.
-      sub: (!funded && depPaid > 0 && depTgt)
+      sub: _depVoid ? _depVoid.step
+        : (!funded && depPaid > 0 && depTgt)
         ? ('Part paid — $' + Math.round(depPaid).toLocaleString() + ' of $' + Math.round(depTgt).toLocaleString())
-        : '' }),
+        : '',
+      blockedWhy: _depVoid ? _depVoid.why : '', blockedFix: _depVoid ? _depVoid.fix : '' }),
 
     // ⚠ THE DAY IT STARTED, AND WHOSE JOB IT IS (2026-09-30, audit P14). `applyJobTransition` has stamped
     // `activatedOn` write-once since 2026-09-23 and the schedule strip counts from it, but this row carried
@@ -17712,6 +18018,14 @@ function isAgreementSigned(job) { return !!agreementSignature(job); }
 function isAgreementSent(job) {
   if (!job) return false;
   return !!(job.agrSent || docSentAt(job, 'agreement'));
+}
+
+// Was the send on record the packet handed over in person (dashMarkAgreementSent, 2026-10-01, P17)? ⚠ ONLY WHILE IT IS
+// STILL THE SEND ON RECORD: the route carries the `sentAt` it was recorded with, so any later send through another writer
+// (an envelope, a confirmed email) rewrites `sentAt` and this answers no, without that writer having to know the route.
+function agreementHandedOverInPerson(job) {
+  var st = job && job.docState && job.docState.agreement;
+  return !!(st && st.sentHow === 'in_person' && st.sentAt && st.sentHowAt === st.sentAt);
 }
 
 // Who the signature is expected FROM, so the recorder prefills a name rather than asking
@@ -19354,6 +19668,12 @@ function jobTimelineActions(row, job, estRec) {
           out.secondary.push({ label: '&#128196; Send as PDF to sign by hand',
                                call: 'docAction(' + id + ",'agreement','send',{via:'paper'})" });
         }
+        // ⚠⚠ THE PACKET HANDED OVER ACROSS A TABLE (2026-10-01, P17; Anthony: "add 'Handed over in person' on the
+        // send step (records who and when; the timeline moves to awaiting signature)"). A printed packet given to the
+        // client left no send record unless a Gmail draft had been made for it, so this row stayed lit on "Send the
+        // signing packet" with the packet already in the client's hands. Offered exactly where the send is, beside
+        // the two routes that email it; its handler asks the send's own gate (markAgreementSent → agreementReady).
+        out.secondary.push({ label: '&#129309; Handed over in person', call: 'dashMarkAgreementSent(' + id + ')' });
       }
       break;
 
@@ -19772,9 +20092,34 @@ function dashOfferDiscount(jobId) {
 // now print that refusal — and their confirmation — onto the drilldown's own strip.
 // A second copy of the rule in the caller is the two-copies-drift defect this file has
 // paid for repeatedly, and the copy here would be the one nobody remembers to update.
+//
+// ⚠⚠ "HANDED OVER IN PERSON" (2026-10-01, P17). This handler had no caller since the Agreement tab went; it is now the
+// band's in-person route on the Signing packet sent step, and it records the send THE WAY EVERY OTHER SEND IS RECORDED:
+// on the document record (`docState.agreement`: `sentAt`, `sentBy`, and `sentHow: 'in_person'`, stamped as a person's
+// edit), so `isAgreementSent` reads true from the record and the timeline moves to awaiting the signature.
+// `markAgreementSent` runs first: it is the send's gate (agreementReady, through ensureAgreementApproved, which also
+// stamps the approval and files the packet on a first commit) and the writer of the legacy `agrSent` mirror. Asked
+// first, because a tap on the wrong button would otherwise record a contract as delivered. Who: the same attribution
+// as "I've sent it" (`_actor`, then the concierge); the app cannot know who stood at the table.
 function dashMarkAgreementSent(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
+  // A send already on the record is not recorded twice — a second press, or a screen painted before the first.
+  if (isAgreementSent(job)) { dashNotice('ok', 'The signing packet is already recorded as sent. Record the signature when it comes back.'); _dashRedraw(jobId); return; }
+  if (!confirm('Record the signing packet as handed to ' + (clientRecipient(job).name || 'the client') + ' in person today?\n\n'
+      + 'Do this once they have the printed packet (the agreement with the estimate as Exhibit A) in hand. '
+      + 'The timeline then waits for the signature.')) return;
   if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
   markAgreementSent();
+  if (!isAgreementSent(job)) return;   // the gate refused, and markAgreementSent has already said why
+  var st = docState(job, 'agreement');
+  st.sentAt = new Date().toISOString();
+  st.sentBy = _actor(job) || job.tc || '';
+  st.sentHow = 'in_person';
+  st.sentHowAt = st.sentAt;   // which send the route describes — see agreementHandedOverInPerson
+  _saveJobEdit(job);          // a person's edit: the job's clock moves (docState() above stamped docState:agreement)
+  dashNotice('ok', 'Recorded as handed over in person' + (st.sentBy ? ' by ' + st.sentBy : '') + '. Record the signature when it comes back.');
+  _dashRedraw(jobId);
 }
 
 function dashMarkAgreementSigned(jobId) {
@@ -20459,6 +20804,9 @@ function renderClientDashboard(jobId) {
     _qa.forEach(function(a){ h += '<button class="jt-ghost" onclick="' + a.call + '">' + a.label + '</button>'; });
     h += '</div>';
   }
+  // An hourly walkaway's settlement — received, earned, any refund, what is due back, and Record refund — on the
+  // Deposit Retained card, above the payments it is worked from (2026-10-01, P17). '' on every other job.
+  h += walkawaySettlementHtml(job);
   // The payments themselves, under the rail on every state of the job (2026-09-30, P16): Mark cleared and
   // Void live here, beside the payment they act on, because the row that recorded it is not lit for long.
   h += jobPaymentsListHtml(job);
@@ -21185,14 +21533,35 @@ function openCloseoutModal(id) {
   // abandoned. Reporting them as one number would understate the win rate and overstate
   // lost revenue at the same time, in opposite directions.
   var _kept = closeoutRetainedTotal(j);
+  // ⚠ AN HOURLY JOB KEEPS THE DEPOSIT OR THE WORK DONE, WHICHEVER IS MORE, AND SAYS WHAT GOES BACK (2026-10-01, P17;
+  // Anthony: "refund the excess"). The settlement is shown here, before the close, with the figures it rests on; the refund
+  // itself is recorded on the card once it has gone (saveRefund). A fixed price keeps its stage earn-out: unchanged.
+  var _st = _kept > 0 ? walkawaySettlement(j) : null;
+  var _hourly = !!(_st && _st.basis === 'hourly');
   if (sub) sub.innerHTML = _kept > 0
     ? 'Close out <strong>' + esc(j.name||'this client') + '</strong>. <strong>' + fmt(_kept) + '</strong> has already been '
-      + 'received on this job, so this is recorded as <strong>closed — deposit retained</strong>, with the '
-      + fmt(_kept) + ' kept, not as a loss. The record is archived, never erased.'
+      + 'received on this job, so this is recorded as <strong>closed — deposit retained</strong>, '
+      + (_hourly
+          ? 'not as a loss. On an hourly job the client owes the deposit or the work done, whichever is more:'
+            + '<div class="jt-settle" style="margin:8px 0 6px;">'
+            + '<div class="jt-settle-row"><span>Received</span><span>' + fmt(_st.received) + '</span></div>'
+            + (_st.refunded > 0 ? '<div class="jt-settle-row"><span>Refunded</span><span>(' + fmt(_st.refunded) + ')</span></div>' : '')
+            + '<div class="jt-settle-row"><span>Earned: the deposit (' + fmt(_st.deposit) + ') or the work done (' + fmt(_st.work) + ')</span><span>' + fmt(_st.earned) + '</span></div>'
+            + '<div class="jt-settle-row' + (_st.due > 0 ? ' jt-settle-due' : '') + '"><span>Refund due</span><span>' + fmt(_st.due) + '</span></div>'
+            + '</div>'
+            + 'The work done is what the final invoice bills: the hours logged at the job’s rates, with the materials and fees.'
+            + (_st.due > 0 ? ' Record the refund on the client’s card once it has been sent.' : '')
+          : (_st && _st.basis === 'unknown')
+          // An unread estimate is not an answer: nothing here may say what was earned, or that nothing is owed back.
+          ? 'not as a loss. What it has earned cannot be worked out until its estimate loads on this device; the client’s card shows it, and any refund due, once it has.'
+          : 'with the ' + fmt(_kept) + ' kept, not as a loss.')
+      + ' The record is archived, never erased.'
     : 'Mark <strong>' + esc(j.name||'this client') + '</strong> as Lost with a reason. The record is '
       + 'archived — never erased — so we keep a win/loss history.';
   var _btn = document.querySelector('#closeout-modal button[onclick="confirmMarkLost()"]');
-  if (_btn) _btn.textContent = _kept > 0 ? 'Close — Retain ' + fmt(_kept) : 'Mark as Lost';
+  if (_btn) _btn.textContent = !(_kept > 0) ? 'Mark as Lost'
+    : (_hourly && _st.due > 0) ? 'Close — Retain ' + fmt(_st.retained) + ' · refund ' + fmt(_st.due)
+    : 'Close — Retain ' + fmt(_kept);
   var rs = document.getElementById('closeout-reason'); if (rs) rs.value = j.lostReason || '';
   var nt = document.getElementById('closeout-note'); if (nt) nt.value = j.lostNote || '';
   var fb = document.getElementById('closeout-fb'); if (fb) fb.innerHTML = '';
@@ -33003,6 +33372,10 @@ function invoiceHtml(job, stage) {
   return {
     html: html,
     stage: stage,
+    // The services total this final bills before any payment comes off it — the figure its balance is computed from, read
+    // back off that balance so the two cannot come to differ. What an hourly walkaway earned for the work done is THIS
+    // figure (walkawaySettlement, 2026-10-01, P17).
+    servicesTotal: finalDue + receivedAll,
     blocked: _noHours,
     requiresApproval: !_noHours && (stage === 'final') && (_variancePct > EST_TOLERANCE_PCT),
     variancePct: _variancePct,

@@ -65,14 +65,14 @@ function inZone(body) {
 // ─── THE PAYMENT SANDBOX ─────────────────────────────────────────────────────
 // The real recorder, the real totals, the real list, the real cleared and void handlers, and the real
 // _saveJobEdit / _jobTouch pair, so what is stamped is what the app stamps.
-const PAY_FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPayments', 'paymentCounts', '_paymentKey',
+const PAY_FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPayments', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey',
   '_jobPaymentByKey', 'stagePaidTotal', 'jobPaidTotal', 'depositPaidTotal', 'depositClearedTotal', 'isJobFunded',
   'depositTargetFor', 'paymentMethodLabel', 'updateDepModalHints', 'currentDepStage', '_photoUid', 'fmt',
-  'closeoutRetainedTotal', 'jobIsSettled', 'markPaymentCleared', 'openVoidPayment', 'closeVoidPayment',
-  'confirmVoidPayment', 'paymentVoidEffect', 'paymentSummaryText', 'jobPaymentsListHtml', '_jobTouch', '_saveJobEdit',
+  'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobIsSettled', 'markPaymentCleared', 'openVoidPayment', 'closeVoidPayment',
+  'confirmVoidPayment', 'paymentVoidEffect', 'depositVoidFlag', 'walkawaySettlement', 'paymentSummaryText', 'jobPaymentsListHtml', '_jobTouch', '_saveJobEdit',
   '_todayStr', '_ymdLocal', '_localDateOf', 'fmtDate2', 'esc'];
 const PAY_VARS = ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', 'PAYMENT_METHODS_CLEAR_ON_RECEIPT',
-  'PAYMENT_METHODS_RECORDABLE', '_photoUidSeq', 'LARGE_DEPOSIT_THRESHOLD'];
+  'PAYMENT_METHODS_RECORDABLE', '_photoUidSeq', 'LARGE_DEPOSIT_THRESHOLD', 'DEPOSIT_VOID_STEP'];
 const TOTAL = 25715, DEPOSIT = 12858;   // the estate this project always works: 50% is $12,858
 
 function payBox(opts) {
@@ -312,7 +312,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has((b.seen.notices.pop() || {}).msg, 'already void', 'and the dialog will not open on one');
 
     // The recorder's own list at that stage keeps it, struck through, and never "uncleared".
-    const prior = sandbox({ fns: ['onDepStageChange', 'paymentCounts', 'jobPayments', 'stagePaidTotal', 'depositTargetFor', 'paymentStageWord',
+    const prior = sandbox({ fns: ['onDepStageChange', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments', 'stagePaidTotal', 'depositTargetFor', 'paymentStageWord',
       'paymentMethodLabel', 'currentDepStage', 'fmt', 'esc'], vars: ['DOC_STAGE_WORD', 'PAYMENT_STAGES'],
       stubs: { document: b.doc, _agrJob: () => b.job, estimateStore: { 1: { estimate: { havellinTotal: TOTAL } } },
         updateDepModalHints() {}, invoiceHtml: () => null } });
@@ -363,7 +363,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs',
       'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat',
-      'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'paymentCounts', 'discountOnLabor', 'estFixedFee',
+      'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'discountOnLabor', 'estFixedFee',
       'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds',
       'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'agrBillingRates', 'estDeclutterHrs', 'escLines'];
     const IVARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
@@ -401,28 +401,42 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Two kinds of reader: those that SUM or GATE (they must ask paymentCounts), and those that deal in records
     // by design (mint an id, look one up, list voids, dedupe Stripe intents, build a what-if copy).
     // (confirmVoidPayment re-derives the deposit's day from the deposit payments that still count.)
+    // ⚠ RESTATED 2026-10-01 (P17): a REFUND rides this list now — an hourly walkaway's excess, recorded by saveRefund as its
+    // own record (stage 'refund') — so there is a third kind of reader: the one total of money paid BACK, which asks
+    // refundCounts. The money-received sums still ask paymentCounts, which leaves a refund out as surely as a void. Three
+    // record-level readers are new: saveRefund (mints the id), depositVoidFlag (a what-if that counts a voided deposit back
+    // in, to ask the funding rule whether the void is what un-funded it), and paymentVoidEffect's copy now holds the payment
+    // VOIDED rather than removed, so it can ask that same flag (see p17-payments-lifecycle.test.js).
     const SUMS = ['confirmVoidPayment', 'depositClearedTotal', 'jobPaidTotal', 'stagePaidTotal', 'updateAgrUI'];
-    const RECORDS = ['_jobPaymentByKey', '_stripeHandMatch', '_stripeRecordPayment', 'applyStripePayments', 'jobPaymentsListHtml',
-      'onDepStageChange', 'outstandingPayments', 'paymentVoidEffect', 'saveDeposit'];
-    eq(callersOf('jobPayments'), SUMS.concat(RECORDS).sort(),
+    const REFUND_SUMS = ['jobRefundedTotal'];
+    const RECORDS = ['_jobPaymentByKey', '_stripeHandMatch', '_stripeRecordPayment', 'applyStripePayments', 'depositVoidFlag',
+      'jobPaymentsListHtml', 'onDepStageChange', 'outstandingPayments', 'paymentVoidEffect', 'saveDeposit', 'saveRefund'];
+    eq(callersOf('jobPayments'), SUMS.concat(REFUND_SUMS, RECORDS).sort(),
        '⚠⚠ these, and only these, read the payment list — a new reader must be classified here');
     SUMS.forEach((f) => has(live(fn(f)), 'paymentCounts', f + ' sums only what counts'));
+    REFUND_SUMS.forEach((f) => has(live(fn(f)), 'refundCounts', f + ' sums only the refunds that count'));
     // The two record-level readers that still ask a money question do it through the one predicate.
     has(live(fn('_stripeHandMatch')), '_handAchAwaitingStripe(x)', '_stripeHandMatch matches only a payment that counts');
     has(live(fn('outstandingPayments')), '_handAchAwaitingStripe(p)', 'and outstandingPayments watches only for one');
     has(live(fn('_handAchAwaitingStripe')), 'paymentCounts(p)', 'through paymentCounts');
-    eq(callersOf('paymentCounts'), ['_handAchAwaitingStripe', 'confirmVoidPayment', 'depositClearedTotal', 'jobPaidTotal', 'jobPaymentsListHtml',
-      'markPaymentCleared', 'onDepStageChange', 'openVoidPayment', 'paymentVoidEffect', 'stagePaidTotal', 'updateAgrUI'],
+    // ⚠ RESTATED 2026-10-01 (P17): jobPaymentsListHtml, openVoidPayment and paymentVoidEffect ask paymentLive now. "Is there
+    // anything left to void?" is asked of a refund as well as a payment, and is not a money question; markPaymentCleared
+    // still asks paymentCounts, after refusing a refund by name.
+    eq(callersOf('paymentCounts'), ['_handAchAwaitingStripe', 'confirmVoidPayment', 'depositClearedTotal', 'jobPaidTotal',
+      'markPaymentCleared', 'onDepStageChange', 'stagePaidTotal', 'updateAgrUI'],
       'and paymentCounts has exactly these readers');
-    eq(live(fn('paymentCounts')).replace(/\s+/g, ' '), 'function paymentCounts(p) { return !!p && !p.voidedAt; }', 'the predicate itself: a void does not count');
-    // Nothing reads a job's array around the accessor. The three lines allowed are jobPayments itself, the what-if
-    // copy paymentVoidEffect builds FROM the accessor, and Stripe's answer (`d.payments`), which is not a job.
+    // ⚠ RESTATED 2026-10-01 (P17): a void does not count, and neither does a refund — money that went back is not money received.
+    eq(live(fn('paymentCounts')).replace(/\s+/g, ' '), 'function paymentCounts(p) { return paymentLive(p) && !isRefundRecord(p); }',
+       'the predicate itself: a void does not count, nor does a refund');
+    eq(live(fn('paymentLive')).replace(/\s+/g, ' '), 'function paymentLive(p) { return !!p && !p.voidedAt; }', 'and a record is live until it is voided');
+    // Nothing reads a job's array around the accessor. The lines allowed are jobPayments itself, the what-if copies built
+    // FROM the accessor (paymentVoidEffect's and, since P17, depositVoidFlag's), and Stripe's answer (`d.payments`).
     const ALLOWED = [/job\.payments = out;/, /Array\.isArray\(job\.payments\)\) return job\.payments;/,
-      /without\.payments = jobPayments\(job\)\.filter/, /\(d\.payments \|\| \[\]\)\.forEach/];
+      /after\.payments = jobPayments\(job\)\.map/, /asIf\.payments = jobPayments\(job\)\.map/, /\(d\.payments \|\| \[\]\)\.forEach/];
     const direct = src.split('\n').filter((l) => !l.trim().startsWith('//') && /\b[A-Za-z_$]+\.payments\b/.test(l)
       && !ALLOWED.some((re) => re.test(l)));
     eq(direct.map((l) => l.trim().slice(0, 90)), [], 'no live line reads a job\'s .payments except through jobPayments');
-    eq(ALLOWED.map((re) => src.split('\n').filter((l) => re.test(l)).length), [1, 1, 1, 1], 'and each allowed line is there exactly once');
+    eq(ALLOWED.map((re) => src.split('\n').filter((l) => re.test(l)).length), [1, 1, 1, 1, 1], 'and each allowed line is there exactly once');
     // The totals everything else reads are the three that filter — each reader of them is covered.
     ['isJobFunded', 'closeoutRetainedTotal', 'jobIsSettled', 'depositPaidTotal'].forEach((f) =>
       ok(/stagePaidTotal\(|jobPaidTotal\(|depositPaidTotal\(/.test(live(fn(f))), f + ' reads a filtered total'));
@@ -523,7 +537,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ─── STRIPE ─────────────────────────────────────────────────────────────────
   const RB_FNS = ['applyStripePayments', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentStageLabel', 'paymentStageWord',
     '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_todayStr', '_stripeDue', 'outstandingPayments', 'stripeRefresh', 'jobPayments',
-    'paymentCounts', '_paymentKey', 'stagePaidTotal', 'depositPaidTotal', 'depositClearedTotal', 'isJobFunded', 'depositTargetFor',
+    'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey', 'stagePaidTotal', 'depositPaidTotal', 'depositClearedTotal', 'isJobFunded', 'depositTargetFor',
     '_photoUid', '_jobTouch', 'fmt', 'fmtDate2', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit', 'paymentSummaryText', 'paymentMethodLabel',
     'jobPaymentsListHtml', 'esc'];
   function rb(jobsSeed, at) {
@@ -728,10 +742,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The rail says it: the Agreement signed row names the address beside how it came back.
     const R = sandbox({
-      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'agreementSignature', 'isAgreementSigned',
         'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
         'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
-        'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding',
+        'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding',
         'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', '_localDateOf', '_ymdLocal', 'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'estDeclutterHrs'],
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual', REQUIRE_WALKTHROUGH_NOTES: false } });

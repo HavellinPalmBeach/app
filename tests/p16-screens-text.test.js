@@ -226,18 +226,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
       'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
-      'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly',
+      'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly',
       'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays',
       'jobProgress', 'roomStatusNormalize', 'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker',
       'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay',
       '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance',
-      '_approvedPriceAbove', 'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'esc', 'dot', 'paymentCounts', 'finalCrewOnlyWarn', 'agreementChipFix', 'jobPaymentsListHtml'];
+      '_approvedPriceAbove', 'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'esc', 'dot', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'agreementChipFix', 'jobPaymentsListHtml'];
     const VARS = ['_driveFolderInFlight', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS',
       'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
@@ -363,7 +363,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'esc', 'escLines', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments',
       'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee',
-      'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove'];
+      'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'coBaselineMove'];
     const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
       'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];

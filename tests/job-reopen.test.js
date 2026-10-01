@@ -36,7 +36,7 @@ const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentStageWord', 'final
   'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
   'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
   'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs',
-  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove'];
+  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'coBaselineMove'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
   'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -74,8 +74,8 @@ function midRow(t) {
 }
 
 // ── the rail, the transition and the band ───────────────────────────────────
-const TL_FNS = ['jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
-  'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt',
+const TL_FNS = ['jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
+  'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor', 'docSentAt',
   'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay',
   '_andJoin', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
   'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
@@ -525,10 +525,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_dashNoticeHtml',
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney', 'getJobActuals',
       'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon', 'jobActivationBlockers', 'jobPayments',
-      'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'jobTimelineNext', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle',
+      'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'jobTimelineNext', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle',
       'docWord', '_jtDocSecondaries', 'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays',
       'addWorkingDays', '_ymdLocal', 'jobProgress', 'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'standingFlagLines',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt',
       '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'fmtDate2',

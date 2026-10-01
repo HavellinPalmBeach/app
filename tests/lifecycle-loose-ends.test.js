@@ -32,8 +32,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // M4 — A CLIENT WHO PAID AND WALKED IS CLOSED — DEPOSIT RETAINED, WITH THE AMOUNT NAMED
   // ═══════════════════════════════════════════════════════════════════════════
-  const CLOSE_FNS = ['openCloseoutModal', 'confirmMarkLost', 'closeCloseoutModal', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts',
-    'jobPayments', 'stagePaidTotal', 'jobIsSettled', 'fmt', 'depositTargetFor'];
+  const CLOSE_FNS = ['openCloseoutModal', 'walkawaySettlement', 'confirmMarkLost', 'closeCloseoutModal', 'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobPaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
+    'jobPayments', 'stagePaidTotal', 'jobIsSettled', 'fmt', 'depositTargetFor', 'depositPaidTotal'];
   function closeOut(job, reason, note) {
     const d = domStub({ 'closeout-reason': reason || '', 'closeout-note': note || '' });
     const btn = { textContent: 'Mark as Lost' };
@@ -95,7 +95,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ M4 — Win / Loss counts what a retained job KEPT, and the list says so');
   {
-    const W = sandbox({ fns: ['winLossFigures', 'isJobWon', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobPayments', 'winLossListHtml',
+    const W = sandbox({ fns: ['winLossFigures', 'isJobWon', 'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobPaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments', 'winLossListHtml',
       '_wlClientCell', '_jobStatusCell', 'fmtDate2', 'jobStatusView', 'svcLabelOf', 'depositTargetFor', 'stagePaidTotal'],
       vars: ['WON_METHOD_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'SVC_LABELS', 'LOSS_REASONS'] });
     W.jobs = [
@@ -311,7 +311,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson',
     'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
     'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
-    'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'paymentCounts',
+    'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'paymentCounts', 'paymentLive', 'isRefundRecord',
     'estFixedFee', 'estPrepFeeOnTop', 'estDeclutterHrs', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove'];
   const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
     'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -535,10 +535,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the rail, driven: the retained row names what was kept; Home Prep names its second payment');
   {
     const TL_FNS = ['estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending',
-      'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries',
+      'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries',
       'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
-      'resolveExecutorAuth', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'jobPaidTotal',
-      'closeoutRetainedTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
+      'resolveExecutorAuth', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'jobPaidTotal',
+      'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
       'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
       'workingDaysInclusive', 'coWorkingDays', '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf',

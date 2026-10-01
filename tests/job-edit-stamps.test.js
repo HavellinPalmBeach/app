@@ -144,7 +144,7 @@ const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 
   'setVendorRating', 'setVendorRatingNote', '_ratingJob', '_writeVendorScore', 'computeVendorAvg',
   'draftReviewRequest', 'markReviewRequestSent', 'toggleProbatePkg', 'setValBasis', 'setEstateAVD',
   '_attachPaymentEvidence', '_driveFolderFailed', 'fetchSubfolderIds', '_normalizeSubfolders', 'applyEsignStatus', 'docState',
-  'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentCounts', '_paymentKey', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'];
+  'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'];
 const DEVICE_VARS = ['SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq', 'VENDOR_CONTACT_SLOTS',
   'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PERSON_NAME_ALIASES', 'VENDOR_RATING_WINDOW'];
 

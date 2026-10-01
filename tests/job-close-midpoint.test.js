@@ -32,8 +32,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
   const noComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
-  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
-    'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal',
+  const TL_FNS = ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+    'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent',
     'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'coWorkingDays',
@@ -454,7 +454,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ─────────────────────────────────────────────────────────────────────────────
   group('the Job Plan marks a closed job as in Close-out, whatever the midpoint says');
   {
-    const c = sandbox({ fns: ['planCurrentStage', '_planRooms', '_planRoomStatus', 'roomStatusNormalize', 'stagePaidTotal', 'paymentCounts', 'jobPayments'],
+    const c = sandbox({ fns: ['planCurrentStage', '_planRooms', '_planRoomStatus', 'roomStatusNormalize', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments'],
       vars: ['jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'] });
     c.estimateStore[7] = { estimate: EST() };
     c.jobPlanStore[7] = { rooms: { 0: { status: 'cleared' }, 1: { status: 'cleared' } } };
@@ -522,12 +522,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
+      'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
       'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'sectionHdr', 'stagePaidTotal', 'paymentCounts',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'fmtDate2', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',

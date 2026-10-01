@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
   const ctx = sandbox({
-    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'estimateSubmitBlocker',
       // The document tray: `jobTimelineActions` builds the step's document from the ONE
       // row→document map, behind the ONE readiness gate, rather than five ungated concats.
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', 'isJobWon',
@@ -45,7 +45,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // stub of it is exactly what would let the submit gate and the save gate drift apart.
       'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef',
-      'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal',
+      'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
       'depositTargetFor', 'agreementReady',
       'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.

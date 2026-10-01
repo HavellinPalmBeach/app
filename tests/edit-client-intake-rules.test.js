@@ -143,7 +143,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const roles = sandbox({ vars: ['EXECUTOR_ROLES'] }).EXECUTOR_ROLES.map((r) => r.v);
     ['Administrator ad litem', 'Curator', 'Guardian ad litem'].forEach((r) =>
       ok(roles.indexOf(r) >= 0, 'the one role catalogue carries ' + r));
-    roles.concat(['Conservator (typed on an old record)']).forEach((role) => {
+    // ⚠ RESTATED 2026-10-01 (P17): Power of Attorney left the catalogue (a power of attorney ends at death, so it is not
+    // a decedent's representative), which took one role out of this loop. A record that already carries it is exactly the
+    // "older value" this net exists for, so it is opened and saved untouched here as one, with the typed role below.
+    roles.concat(['Conservator (typed on an old record)', 'Power of Attorney']).forEach((role) => {
       const job = Object.assign({}, ESTATE, { executorRole: role });
       const r = editAndSave(job);
       eq(pick(r.job), pick(job), '⚠⚠ an untouched save changes nothing — role "' + role + '"');

@@ -122,7 +122,7 @@ function inv(stubs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'paymentCounts', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop',
+          'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop',
           'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct',
           'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
