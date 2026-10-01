@@ -276,7 +276,8 @@ let b = null;
   // Restated (see the header): the hours ARE billed now, at the concierge rate, on top of the fee.
   has(prep.r, '+6.0 concierge hrs at $' + prep.rate + ' an hour', 'it names the hours and the rate they are billed at');
   has(prep.r, 'billed as they are worked on the final invoice', 'and that they are billed on the final as worked');
-  has(prep.r, 'on top of the ' + prep.fee + '% site management fee', 'on top of the site management fee, read from the rate');
+  // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; the readout said "site management fee".
+  has(prep.r, 'on top of the ' + prep.fee + '% Home Sale Preparation Fee', 'on top of the Home Sale Preparation Fee, read from the rate');
   // Restated again the same day: the prep agreement's §3.3 states the concierge rate now (Anthony: "mention
   // the hourly rates in the home prep agreement"), so the readout says where the rate comes from.
   has(prep.r, 'priced no concierge hours; the rate is the one its agreement states in Section 3.3', 'and where the rate comes from — the agreement');

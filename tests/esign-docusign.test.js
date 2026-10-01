@@ -102,7 +102,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'estTolerancePctTxt', 'esignAnchorsPresent', 'estFixedFee', 'estPrepFeeOnTop',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
                   'ESIGN_REQUIRED_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT'];
 const appCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -561,7 +561,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline',
             'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
-            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'clientRecipient', 'firstName', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn'],
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'clientRecipient', 'firstName', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
              'JT_ROW_DOC', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: {
@@ -653,7 +653,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'docState', '_jobTouch', '_actor', 'esignProviderKey', 'esignJobWatches',
             'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
-            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn'],
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
                esignArchiveSigned() {}, ESIGN_PROVIDER_KEY: 'docusign' },
@@ -781,7 +781,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
             'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docKeyFor', 'docSentAt', 'esignAvailable',
-            'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmtMoney'],
+            'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
       stubs: { ESIGN_PROVIDER_KEY: key } });
     const row = { key: 'agreement_sent', state: 'current' };

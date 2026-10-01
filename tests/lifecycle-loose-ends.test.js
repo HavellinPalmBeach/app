@@ -33,7 +33,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // M4 — A CLIENT WHO PAID AND WALKED IS CLOSED — DEPOSIT RETAINED, WITH THE AMOUNT NAMED
   // ═══════════════════════════════════════════════════════════════════════════
   const CLOSE_FNS = ['openCloseoutModal', 'confirmMarkLost', 'closeCloseoutModal', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts',
-    'jobPayments', 'stagePaidTotal', 'jobIsSettled', 'fmt', 'depositTargetFor'];
+    'jobPayments', 'stagePaidTotal', 'jobIsSettled', 'fmt', 'depositTargetFor', 'roundCents', 'paymentSplit'];
   function closeOut(job, reason, note) {
     const d = domStub({ 'closeout-reason': reason || '', 'closeout-note': note || '' });
     const btn = { textContent: 'Mark as Lost' };
@@ -96,7 +96,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ M4 — Win / Loss counts what a retained job KEPT, and the list says so');
   {
     const W = sandbox({ fns: ['winLossFigures', 'isJobWon', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobPayments', 'winLossListHtml',
-      '_wlClientCell', '_jobStatusCell', 'fmtDate2', 'jobStatusView', 'svcLabelOf', 'depositTargetFor', 'stagePaidTotal'],
+      '_wlClientCell', '_jobStatusCell', 'fmtDate2', 'jobStatusView', 'svcLabelOf', 'depositTargetFor', 'stagePaidTotal', 'roundCents', 'fmt', 'paymentSplit'],
       vars: ['WON_METHOD_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'SVC_LABELS', 'LOSS_REASONS'] });
     W.jobs = [
       { id: 1, name: 'Butler', status: 'active', won: true, havellinEst: 20000, payments: [p('deposit', 10000)] },
@@ -183,7 +183,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
     'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
-    'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'inventoryDeadlineFrom', '_ymdLocal', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor'];
+    'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'inventoryDeadlineFrom', '_ymdLocal', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt'];
   const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
     'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];
   const ESTATE = { id: 7, hvlId: 'HVL-0007', name: 'Butler Estate', fname: 'Tripp', lname: 'Butler', svc: 'cleanout',
@@ -248,7 +248,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({ fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode',
         'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docTierOf', 'docTierDef',
         'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
-        'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked'],
+        'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
         stubs: { document: d } });
@@ -268,7 +268,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coAcceptedHours',
-            'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
+            'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
       vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
              'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS',
              'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
@@ -312,7 +312,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
     'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
     'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'paymentCounts',
-    'estFixedFee', 'estPrepFeeOnTop', 'estDeclutterHrs', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove'];
+    'estFixedFee', 'estPrepFeeOnTop', 'estDeclutterHrs', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
   const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
     'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
     'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -331,7 +331,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function recorder(job, stage, est, logs) {
     const d = domStub({ 'dep-stage': stage, 'dep-method': '' });
     const c = sandbox({ fns: INV_FNS.concat(['onDepStageChange', '_agrJob', 'currentDepStage', 'depositTargetFor', 'updateDepModalHints',
-      'paymentMethodLabel']), vars: INV_VARS.concat(['PAYMENT_STAGES', 'LARGE_DEPOSIT_THRESHOLD']),
+      'paymentMethodLabel', 'roundCents', 'fmt', 'paymentSplit']), vars: INV_VARS.concat(['PAYMENT_STAGES', 'LARGE_DEPOSIT_THRESHOLD']),
       stubs: { document: d, jobs: [job], _jobBandHost: () => ({ jobId: 1 }),
                jobLogs: { 1: logs === undefined ? LOGS : logs }, estimateStore: { 1: { estimate: est || EST, approved: true } },
                changeOrders: [], contractors: [], currentEstimate: null, vendorDirectory: [], jobPlans: {} } });
@@ -373,7 +373,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function achLink(job, stage, stripeSt) {
     const posts = [], notices = [];
     if (stripeSt) job.docState = { ['invoice:' + stage]: { stripe: stripeSt } };
-    const c = sandbox({ fns: INV_FNS.concat(['stripePaymentLink', '_stripeShowLink', 'docState', 'paymentStageLabel']),
+    const c = sandbox({ fns: INV_FNS.concat(['stripePaymentLink', '_stripeShowLink', 'docState', 'paymentStageLabel', 'roundCents', 'fmt']),
       vars: INV_VARS.concat(['PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS']),
       stubs: { jobs: [job], SHEETS_SYNC_URL: 'https://script.example/exec', ensureAgreementApproved: () => '',
                _appsScriptPost: (url, body) => posts.push(body), _docNotice: (kind, msg) => notices.push({ kind, msg }),
@@ -506,7 +506,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the final\'s View and Print wait for logged hours — finalAwaitsHours is the one rule');
   {
-    const F = sandbox({ fns: ['finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries', 'finalCrewOnlyWarn'], stubs: { jobLogs: {} } });
+    const F = sandbox({ fns: ['finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt'], stubs: { jobLogs: {} } });
     const job = { id: 1, svc: 'cleanout' };
     eq(F.finalAwaitsHours(job, EST, 0), true, 'an hourly job with nothing logged cannot be priced');
     eq(F.finalAwaitsHours(job, EST, 12), false, '…and can once hours are logged');
@@ -542,7 +542,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
       'workingDaysInclusive', 'coWorkingDays', '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf',
-      'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn'];
+      'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt'];
     const TL_VARS = ['JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS',
       'ESIGN_PROVIDERS', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'EXECUTOR_AUTH_OPTIONS'];

@@ -37,7 +37,7 @@ const RENDER_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'paym
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
   'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'closeoutRetainedTotal', 'jobPaidTotal', 'winLossListHtml', '_wlClientCell',
-  'isJobWon', 'secCaret', 'fmtDate2', 'jobStatusView', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'];
+  'isJobWon', 'secCaret', 'fmtDate2', 'jobStatusView', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'];
 const RENDER_VARS = ['currentFilter', 'SVC_LABELS', '_jobsWatch',
   '_jobsState', '_jobSort', '_wlOpen', 'JOB_SORTS', 'JOB_LIST_COLS', 'JOB_STATUS_ORDER',
   'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS'];
@@ -65,7 +65,7 @@ function openModal(j) {
   const doc = domStub({});
   const alerts = [];
   const ctx = sandbox({
-    fns: ['openCloseoutModal', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobIsSettled', 'stagePaidTotal', 'jobPayments'],
+    fns: ['openCloseoutModal', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobIsSettled', 'stagePaidTotal', 'jobPayments', 'roundCents', 'fmt'],
     stubs: { document: doc, alert: (m) => alerts.push(String(m)) },
   });
   ctx.jobs = [j];
@@ -77,7 +77,7 @@ function openModal(j) {
 // ── the predicate ────────────────────────────────────────────────────────────
 group('jobIsSettled — what counts as the end of an engagement');
 {
-  const ctx = sandbox({ fns: ['jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'jobPayments'] });
+  const ctx = sandbox({ fns: ['jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'jobPayments', 'roundCents'] });
   const settled = ctx.jobIsSettled;
 
   eq(settled(job()), false, 'an ordinary active job is not settled');
@@ -189,7 +189,7 @@ group('⚠ WHAT THE GATE MUST NOT REACH');
   // button away would remove the only route to that correction. They are not `settled` —
   // neither carries a delivery stamp or a final payment — and a test says so rather than
   // leaving it to a later tidy-up.
-  const ctx = sandbox({ fns: ['jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'jobPayments'] });
+  const ctx = sandbox({ fns: ['jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'jobPayments', 'roundCents'] });
   eq(ctx.jobIsSettled(job({ status: 'lost', won: false, lostReason: 'price' })), false,
     'a lost job is not settled — the reason must stay amendable');
   eq(ctx.jobIsSettled(job({ status: 'closed_retained', depositReceived: true,

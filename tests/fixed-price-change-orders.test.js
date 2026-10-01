@@ -55,7 +55,7 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 // Lifted, never stubbed: _coJobBasis reads its rates through the agreements' one definition.
                 'agrBillingRates',
                 // The printed change order's rush / discount line (Q14, 2026-09-29), lifted, never stubbed.
-                'coRateModsLine', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor'];
+                'coRateModsLine', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'roundCents', 'fmtHrs'];
 
 function coCtx(est, cos, seed) {
   const dom = domStub(seed || {});
@@ -88,7 +88,7 @@ function inv(stubs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -129,11 +129,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = coCtx(EST_FX, []);
     eq(c.coPrice({ tcHrs: 20, psHrs: 20 }, 150, 100), 5000, 'hours at the job’s own rates');
     eq(c.coPrice({ tcHrs: -10, psHrs: 0 }, 150, 100), -1500, 'a reduction prices negative');
-    eq(c.coPrice({ tcHrs: 0.5 }, 185, 125), 93, 'half an hour at the premium concierge rate rounds once, to $93');
-    // ⚠⚠ THE CASE THE PER-ORDER SUM EXISTS FOR. Two signed change orders each read $93, so the
-    // invoice must add $186 — rounding the pooled hours would add $185 and disagree with both.
-    eq(c.coPriceTotal([{ tcHrs: 0.5 }, { tcHrs: 0.5 }], 185, 125), 186,
-       '⚠⚠ two half-hours at $185 sum to $186 — what the two signed change orders say — not $185');
+    // ⚠ RESTATED 2026-10-01 (P17): a change order's price is taken to the cent (roundCents), so half an hour at $185 is
+    // $92.50, where the whole-dollar rule made it $93. The per-order sum stays the rule — the invoice adds exactly the
+    // prices signed — and with cents the sum and the pooled hours now agree: two half-hours are $185.
+    eq(c.coPrice({ tcHrs: 0.5 }, 185, 125), 92.5, 'half an hour at the premium concierge rate is $92.50, to the cent');
+    // ⚠⚠ THE CASE THE PER-ORDER SUM EXISTED FOR. Two signed change orders each read $92.50, so the invoice adds $185.
+    eq(c.coPriceTotal([{ tcHrs: 0.5 }, { tcHrs: 0.5 }], 185, 125), 185,
+       '⚠⚠ two half-hours at $185 sum to $185 — what the two signed change orders say ($92.50 each)');
     eq(c.coPriceTotal([], 150, 100), 0, 'none sums to nothing');
 
     eq(c.coRateBasisTxt({ tcHrs: 20, psHrs: 20 }, 150, 100),
@@ -315,11 +317,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const cos = [accepted(0.5, 0, 50), accepted(0.5, 0, 60)];
     const p = coCtx(est, cos);
     p.printChangeOrder(50);
-    has(p.__printed, '+ $93', 'change order #1 is signed at $93');
+    // RESTATED 2026-10-01 (P17; measured on the printed change orders and the final): $92.50 each, $26,185 in all, where
+    // the whole-dollar rule printed $93 each and collected $26,186.
+    has(p.__printed, '+ $92.50', 'change order #1 is signed at $92.50');
     p.printChangeOrder(60);
-    has(p.__printed, '+ $93', 'and #2 at $93');
+    has(p.__printed, '+ $92.50', 'and #2 at $92.50');
     const d = finalDoc(est, cos, 80, 60);
-    eq(d._collected, 26186, '⚠⚠ the engagement collects the flat fee plus exactly the two signed prices — $26,186, not $26,185');
+    eq(d._collected, 26185, '⚠⚠ the engagement collects the flat fee plus exactly the two signed prices — $26,185');
     has(d.html, 'Each is charged at the price on the change order you accepted', 'the invoice says where the charge comes from');
     lacks(d.html, 'the rates in your agreement', '⚠ not the living-client agreement’s rates, which its fixed arm never states');
     // ⚠ Anchored on the change-order table's own header: the invoice's services table carries an
@@ -351,7 +355,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const logs = { 1: [{ date: '2026-09-20', members: [{ name: 'A', role: 'TC', hours: 100 }, { name: 'C', role: 'PS', hours: 70 }] }] };
     function summary(est) {
       const dom = domStub({});
-      const S = sandbox({ fns: ['updateLogSummary', 'jobLogEntries', 'hoursOverText', 'estTolerancePctTxt', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel'],
+      const S = sandbox({ fns: ['updateLogSummary', 'jobLogEntries', 'hoursOverText', 'estTolerancePctTxt', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', 'fmtHrs'],
                           vars: ['EST_TOLERANCE_PCT'],
                           stubs: { document: dom, jobs: [Object.assign({}, JOB)], jobLogs: logs,
                                    estimateStore: { 1: { estimate: est } } } });
@@ -377,7 +381,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const FNS = ['coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt',   // the card's label for a change order (2026-09-30)
                  '_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
-      'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
+      'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
@@ -391,7 +395,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'dot', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coInclTxt',
       // Lifted, never stubbed: the band's change-order-hours sub asks estimateIsFeeOnly once an accepted
       // change order exists, so a sandbox without it throws rather than failing when that filter is broken.
-      'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix'];
+      'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs'];
     const VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
@@ -436,7 +440,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ 7 · THE JOB PLAN PROJECTION — a margin warning on a fixed price, never a STOP');
   {
-    const P = sandbox({ fns: ['projBandHtml', 'estTolerancePctTxt', 'planHoursRuleTxt'], vars: ['EST_TOLERANCE_PCT'] });
+    const P = sandbox({ fns: ['projBandHtml', 'estTolerancePctTxt', 'planHoursRuleTxt', 'fmtHrs'], vars: ['EST_TOLERANCE_PCT'] });
     const fr = P.projBandHtml('red', 'TC', 120, 92, 80, 0.5, true);
     has(fr, 'more than 15% over the estimate', 'fixed red: over the line');
     has(fr, 'comes out of the margin', 'fixed red: the margin');
@@ -461,7 +465,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     function proj(fixed) {
       const dom = domStub({});
       const C = sandbox({
-        fns: ['renderProjection', 'computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize', 'projBandHtml', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'coAcceptedHours', 'coHoursTotal'],
+        fns: ['renderProjection', 'computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize', 'projBandHtml', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'coAcceptedHours', 'coHoursTotal', 'fmtHrs'],
         vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'jobPlanStore', 'estimateStore', 'currentEstimate',
                'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT'],
         stubs: { document: dom, saveJobPlan: () => {},

@@ -52,7 +52,7 @@ const EST = {
 };
 const est = (over) => Object.assign({}, EST, over || {});
 
-const DISCOUNT_FNS = ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'estFixedLines', 'estFixedFee', 'estPrepFeeOnTop', 'discountOnFixedFee', 'fixedDiscountBasisWords'];
+const DISCOUNT_FNS = ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'estFixedLines', 'estFixedFee', 'estPrepFeeOnTop', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'roundCents'];
 const DISCOUNT_VARS = ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'];
 
 // ── the real client estimate, so the document a client reads is what is asserted ─────
@@ -66,7 +66,7 @@ const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'ru
                 'estWorkingDays', 'estFixedFee', 'estPrepFeeOnTop',
                 // Who arranges the appraisals is the tier's answer (weArrangeAppraisals). This sandbox
                 // carries no JOB_STEPS, so the scope is never `full` here and the chain is never reached.
-                'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'escLines'];
+                'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'escLines', 'roundCents', 'fmtHrs'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };
@@ -86,7 +86,7 @@ function invCtx(e, logs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -189,7 +189,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // revision added the premium on top of it again.
     const pct = { value: 10 };
     const a = sandbox({
-      fns: DISCOUNT_FNS.concat(['applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending']),
+      fns: DISCOUNT_FNS.concat(['applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'roundCents']),
       vars: DISCOUNT_VARS,
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
@@ -371,7 +371,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const calc = noComments(fn('calcAll'));
     // Restated 2026-09-30 (P12): the estimator's figures come from estimateFigures, one definition for both
     // bases, and the premium leaves the 30% prep fee out (Q9). Driven rather than read.
-    const F = sandbox({ fns: ['estimateFigures', 'discountOnLabor', 'discountOnFixedFee'], vars: [] });
+    const F = sandbox({ fns: ['estimateFigures', 'discountOnLabor', 'discountOnFixedFee', 'roundCents'], vars: [] });
     const f0 = F.estimateFigures({ labour: 100000, pkg: 0, smf: 0, prepFee: 0, rushRate: 0.20, discountPct: 10 });
     eq([f0.rushAmt, f0.discountAmt, f0.servicesTotal], [20000, 12000, 108000],
        'the estimator charges the premium on the services total, and the discount comes off the result');
@@ -382,8 +382,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(calc, 'rushRate: isRush ? RUSH_PCT : 0, discountPct: discountPct', 'calcAll hands the rate and the percentage to it');
 
     const invBody = noComments(fn('invoiceHtml', 'jobLogEntries'));
-    has(invBody, 'Math.round(_midGross * _rushRate)', 'the invoice bills the midpoint premium on gross');
-    has(invBody, 'Math.round(_finalGross * _rushRate)', 'and the final premium on gross');
+    // RESTATED 2026-10-01 (P17, Anthony's answer 6): the premiums are carried to the cent (roundCents); they were Math.round, to the dollar.
+    has(invBody, 'roundCents(_midGross * _rushRate)', 'the invoice bills the midpoint premium on gross');
+    has(invBody, 'roundCents(_finalGross * _rushRate)', 'and the final premium on gross');
     lacks(invBody, 'Math.round(_midServices * _rushRate)',
           '⚠ never on the net figure — the two surfaces cannot disagree about the order');
     lacks(invBody, 'Math.round(_finalServices * _rushRate)', 'on either stage');
@@ -432,8 +433,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The base is labour plus its premium — never materials, the vendor SMF or the prep fee.
     has(noComments(fn('discountPreview')), '(est.tcFee || 0) + (est.psFee || 0)',
         'the modal discounts labour');
-    has(calc, 'var laborBase = tcFee + psFee', 'the estimator discounts labour');
-    has(invBody, 'var laborBase = tcFee + psFee;', 'and so does the invoice');
+    // RESTATED 2026-10-01 (P17, answer 6): the estimator's labour base is summed to the cent, as the invoice's is.
+    has(calc, 'var laborBase = roundCents(tcFee + psFee)', 'the estimator discounts labour');
+    // RESTATED 2026-10-01 (P17, answer 6): the invoice's labour base is summed to the cent.
+    has(invBody, 'var laborBase = roundCents(tcFee + psFee);', 'and so does the invoice');
 
     // estPreDiscountTotal is the one definition — a second copy is how they drift.
     const uses = (src.match(/estPreDiscountTotal\(/g) || []).length;

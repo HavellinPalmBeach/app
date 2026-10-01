@@ -54,7 +54,7 @@ const CO = ['coAcceptedHours', 'coHoursTotal', 'coHours'];
 // card is precisely what would let this suite pass while the screen offers nothing.
 const DASH_FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
   'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
-  'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
+  'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field',
   'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
   'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobTimelineActions', 'docReadOnlyWord',
   'discountOfferBlocker', 'jobTimelineNext',
@@ -66,7 +66,7 @@ const DASH_FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriv
   'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
   'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
   'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'dot', 'coWorkingDays', '_coPaceFix', 'coInclTxt', 'esc',
-  'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coScopeLabel', 'coHours', 'coVendorAddsTxt', 'coVendorAdds', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix'].concat(CO);
+  'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coScopeLabel', 'coHours', 'coVendorAddsTxt', 'coVendorAdds', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs'].concat(CO);
 const DASH_VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
   '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
   'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
@@ -78,7 +78,7 @@ const CO_FNS = ['_coJobBasis', 'coBaselineShift', '_coMoney', 'fmt', 'coPrice', 
   'coRateBasisTxt', 'coReasonLabel', 'estFixedFee', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder',
   'openCOAcceptModal', 'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', 'saveChangeOrder',
   '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates',
-  'coRateModsLine', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'coVendorAdds'];
+  'coRateModsLine', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'coVendorAdds', 'roundCents', 'isQuarterHours', 'fmtHrs'];
 const NOTICE_FNS = ['_docNotice', 'dashNotice', '_dashRedraw', '_jobBandHost'];
 const CO_VARS = ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE', '_dashboardJobId', '_srcLidSeq'];
 
@@ -134,7 +134,7 @@ function inv(stubs) {
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove'],
+          'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -330,7 +330,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
-              'agrBillingRates', 'coRateModsLine', 'prepFeeRate', 'coHours', 'coHoursTotal', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coVendorAdds', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop'],
+              'agrBillingRates', 'coRateModsLine', 'prepFeeRate', 'coHours', 'coHoursTotal', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coVendorAdds', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'roundCents', 'fmtHrs'],
         vars: ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE'],
         stubs: { jobs: [Object.assign({}, JOB, (extra && extra.job) || {})], changeOrders: [co(10, 0, ID_P)], currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, est), approved: true } },

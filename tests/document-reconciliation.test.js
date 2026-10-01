@@ -49,7 +49,7 @@ const FNS = [
   'stagePaidTotal', 'paymentCounts', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estimateFigures',
   // the invoice emails, all three parts
   'buildInvoiceEmailText', 'buildInvoiceEmailHtml', 'buildInvoiceMailto', 'invoiceBalanceWords', '_emMoney',
-  '_emHtml', 'bestClientGreetingName', 'firstName', 'bestClientEmail', 'mailtoBody', 'mailtoSignoff', 'invoiceEmailSubject', 'clientRecipient', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'discountOnFixedFee', 'coRushPct', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', '_agrOtherAppraisalsBy', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'coPrepVendorsOn'
+  '_emHtml', 'bestClientGreetingName', 'firstName', 'bestClientEmail', 'mailtoBody', 'mailtoSignoff', 'invoiceEmailSubject', 'clientRecipient', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'discountOnFixedFee', 'coRushPct', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', '_agrOtherAppraisalsBy', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'
 ];
 const VARS = ['PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
@@ -66,13 +66,17 @@ const text = (h) => decode(String(h).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, '
 // The amount on a row is the LAST money figure in the LAST cell that carries one. A rate
 // ("$150/hr", "$150 / hour") is not an amount. "($15,255)" is money received or credited, and
 // "Credit: $2,741" is a balance the client is owed — both read as negative.
+// ⚠ RESTATED 2026-10-01 (P17, Anthony's answer 6): money prints its cents whenever it has any ("$971.25"), so
+// both readers take them, and every sum and comparison below is made in whole cents (C) — a float sum of
+// cent figures carries noise below a cent. Until P17 every figure was a whole dollar and read with parseInt.
+const C = (n) => Math.round(Number(n) * 100);
 function lastMoney(cells) {
   for (let i = cells.length - 1; i >= 0; i--) {
     const c = cells[i];
-    const ms = [...c.matchAll(/(\(\s*)?([+\-−]\s*)?\$([\d,]+)(?!\s*\/\s*h)(?![\d,])/g)];
+    const ms = [...c.matchAll(/(\(\s*)?([+\-−]\s*)?\$([\d,]+(?:\.\d\d)?)(?!\.\d)(?!\s*\/\s*h)(?![\d,])/g)];
     if (!ms.length) continue;
     const m = ms[ms.length - 1];
-    let v = parseInt(m[3].replace(/,/g, ''), 10);
+    let v = parseFloat(m[3].replace(/,/g, ''));
     if (m[2] && /[-−]/.test(m[2])) v = -v;
     if (m[1]) v = -v;
     if (/Credit:/.test(c)) v = -Math.abs(v);
@@ -82,8 +86,8 @@ function lastMoney(cells) {
 }
 // The FIRST money figure in a cell — an agreement's schedule reads "$13,201 (50% of fixed price …)".
 function firstMoney(cell) {
-  const m = String(cell || '').match(/\$([\d,]+)(?![\d,])/);
-  return m ? parseInt(m[1].replace(/,/g, ''), 10) : null;
+  const m = String(cell || '').match(/\$([\d,]+(?:\.\d\d)?)(?!\.\d)(?![\d,])/);
+  return m ? parseFloat(m[1].replace(/,/g, '')) : null;
 }
 function tables(html) {
   const out = [];
@@ -112,20 +116,20 @@ function tableFailures(html, docName) {
   const bad = [];
   let compared = 0;
   tables(html).forEach((t, ti) => {
-    let sum = 0, items = 0;
+    let sum = 0, items = 0;   // in cents (P17)
     t.rows.forEach((r) => {
       if (r.amt === null) return;
       if (isTotalRow(r)) {
-        if (items > 0) { compared++; if (r.amt !== sum) bad.push(`${docName} table ${ti} "${r.label}" ${r.amt} ≠ rows ${sum}`); }
+        if (items > 0) { compared++; if (C(r.amt) !== sum) bad.push(`${docName} table ${ti} "${r.label}" ${r.amt} ≠ rows ${sum / 100}`); }
         sum = 0; items = 0;
         return;
       }
       if (isCheckpoint(r)) {
         compared++;
-        if (r.amt !== sum) bad.push(`${docName} table ${ti} "${r.label}" ${r.amt} ≠ rows ${sum}`);
+        if (C(r.amt) !== sum) bad.push(`${docName} table ${ti} "${r.label}" ${r.amt} ≠ rows ${sum / 100}`);
         return;
       }
-      if (t.cls.indexOf('ce-tbl') >= 0) { sum += r.amt; items++; }
+      if (t.cls.indexOf('ce-tbl') >= 0) { sum += C(r.amt); items++; }
     });
   });
   return { bad, compared };
@@ -147,23 +151,27 @@ module.exports = function ({ group, ok, eq, has }) {
 
   const PKG = { 500: 'Estate Basic — $500', 750: 'Estate Standard — $750', 1500: 'Estate Premium — $1,500' };
   // calcAll's arithmetic, term for term — see the note at the top.
+  // ⚠ RESTATED 2026-10-01 (P17, answer 6): to the cent, as calcAll now prices (roundCents on every figure and every
+  // sum of them, where Math.round took each to the dollar). The older record shape below (no P12 flags) is priced
+  // the same way, so the matrix still asks whether documents bill such a record as it was quoted.
+  const RC = (n) => ctx.roundCents(n);
   function buildEst(o) {
     const premium = !!o.premium, tcRate = premium ? 185 : 150, psRate = premium ? 125 : 100;
     const isPrep = o.svc === 'prep';
     const totTC = o.totTC, totPS = isPrep ? 0 : o.totPS;
-    const tcFee = Math.round(totTC * tcRate), psFee = Math.round(totPS * psRate);
+    const tcFee = RC(totTC * tcRate), psFee = RC(totPS * psRate);
     const pkgCost = isPrep ? 0 : (o.pkgCost || 0);
     const pkgLabel = pkgCost ? PKG[pkgCost] : 'None — $0';
     const prepItems = o.prepItems || [];
     const prepCost = prepItems.reduce((a, p) => a + p.cost, 0);
     const prepEnabled = isPrep || prepItems.length > 0;
-    const prepFee = prepEnabled ? Math.round(prepCost * ctx.prepFeeRate()) : 0;
-    const full = tcFee + psFee + pkgCost + prepFee;
+    const prepFee = prepEnabled ? RC(prepCost * ctx.prepFeeRate()) : 0;
+    const full = RC(tcFee + psFee + pkgCost + prepFee);
     const rush = !isPrep && !!o.rush;
-    const rushAmt = rush ? Math.round(full * 0.20) : 0;
+    const rushAmt = rush ? RC(full * 0.20) : 0;
     const discountPct = o.discountPct || 0;
-    const discountAmt = ctx.discountOnLabor(tcFee + psFee, rush ? 0.20 : 0, discountPct);
-    const hourly = Math.round(full + rushAmt - discountAmt);
+    const discountAmt = ctx.discountOnLabor(RC(tcFee + psFee), rush ? 0.20 : 0, discountPct);
+    const hourly = RC(full + rushAmt - discountAmt);
     const vendors = o.vendors || [];
     const vendorCost = vendors.reduce((a, v) => a + (v.cost || 0), 0);
     const fixed = !isPrep && !!o.fixedAmount;
@@ -178,15 +186,15 @@ module.exports = function ({ group, ok, eq, has }) {
       const svcTotal = fig.servicesTotal;
       return Object.assign(buildEst(Object.assign({}, o, { current: false })), {
         fixedLines: true, rushExPrepFee: true, rushAmt: fig.rushAmt, discountAmt: fig.discountAmt, havellinTotal: svcTotal,
-        grandTotal: svcTotal + (isPrep ? 0 : vendorCost) + (prepEnabled ? prepCost : 0) });
+        grandTotal: RC(svcTotal + (isPrep ? 0 : vendorCost) + (prepEnabled ? prepCost : 0)) });
     }
     return {
       jobId: 1, svc: o.svc, totTC, totPS, tcFee, psFee, tcRate, psRate, pkgCost, pkgLabel, smf: 0,
       prepItems, prepEnabled, prepCost, prepFee, prepTCHrs: 0, declutterTCHrs: isPrep ? totTC : 0,
-      havellinTotalFull: full, havellinTotal: fixed ? o.fixedAmount + prepFee : hourly, hourlyHavellinTotal: hourly,
+      havellinTotalFull: full, havellinTotal: fixed ? RC(o.fixedAmount + prepFee) : hourly, hourlyHavellinTotal: hourly,
       fixedPrice: fixed, fixedAmount: fixed ? o.fixedAmount : 0, prepFeeOnTop: true,
-      discountAmt: Math.round(discountAmt), discountPct, rush, rushPct: 0.20, rushAmt,
-      grandTotal: (fixed ? o.fixedAmount + prepFee : hourly) + (isPrep ? 0 : vendorCost) + (prepEnabled ? prepCost : 0),
+      discountAmt: RC(discountAmt), discountPct, rush, rushPct: 0.20, rushAmt,
+      grandTotal: RC((fixed ? o.fixedAmount + prepFee : hourly) + (isPrep ? 0 : vendorCost) + (prepEnabled ? prepCost : 0)),
       vendors, vendorCost, needsTC2: !!o.tc2, tcCount: o.tc2 ? 2 : 1, psCount: o.psCount || 2,
       psRecommended: o.legacyCrew ? undefined : (isPrep ? 0 : (o.psRec || 2)),
       preparedBy: 'Anthony Graziano', rooms: [], docScope: 'full',
@@ -249,7 +257,7 @@ module.exports = function ({ group, ok, eq, has }) {
     // 2. The estimate states its own total, and its schedule is paymentSplit of it.
     const est = docs.estimate;
     const hst = rowAmt(est, /^Havellin Services Total/);
-    seen('estimate total'); if (hst !== e.havellinTotal) fail('estimate total', L(`printed ${hst}, record ${e.havellinTotal}`));
+    seen('estimate total'); if (C(hst) !== C(e.havellinTotal)) fail('estimate total', L(`printed ${hst}, record ${e.havellinTotal}`));
     const split = ctx.paymentSplit(e.havellinTotal);
     const sched = tables(est).filter((t) => t.cls === 'pay-tbl').flatMap((t) => t.rows.filter((r) => r.amt !== null).map((r) => r.amt));
     seen('estimate schedule'); if (JSON.stringify(sched) !== JSON.stringify([split.deposit, split.midpoint, split.final]))
@@ -258,7 +266,7 @@ module.exports = function ({ group, ok, eq, has }) {
     const grand = rowAmt(est, /^Total Estimated Project Cost/);
     const sections = [/^Estimated Third-Party Total/, /Prep Vendor Total/].map((re) => rowAmt(est, re) || 0);
     seen('estimate grand total');
-    if (grand !== null && grand !== hst + sections[0] + sections[1])
+    if (grand !== null && C(grand) !== C(hst) + C(sections[0]) + C(sections[1]))
       fail('estimate grand total', L(`grand ${grand} ≠ services ${hst} + sections ${sections}`));
 
     // 3. The agreement's schedule is the same paymentSplit — the client signs the numbers the
@@ -281,27 +289,28 @@ module.exports = function ({ group, ok, eq, has }) {
     // ⚠ A Home Prep job's middle payment is its SECOND payment on every document since 2026-09-29 (audit
     // P10): the agreement and the estimate already named it by what triggers it (the vendor schedule
     // booked), and an invoice headed "Midpoint" was the one document calling it something else.
-    if (mid.amtDue !== ms.deposit + ms.midpoint - dep.amtDue || rowAmt(docs.midpoint, /^(Midpoint|Second) Payment Due Now/) !== mid.amtDue)
+    if (C(mid.amtDue) !== C(ms.deposit) + C(ms.midpoint) - C(dep.amtDue) || C(rowAmt(docs.midpoint, /^(Midpoint|Second) Payment Due Now/)) !== C(mid.amtDue))
       fail('midpoint invoice', L(`midpoint ${mid.amtDue} on ${midTotal} after ${dep.amtDue}`));
 
     // 5. The final's payment summary: the estimate as the estimate, and a balance that is its own
     //    arithmetic — the services it bills, plus any priced change order, less what was received.
     const fh = docs.final;
     seen('final original estimate');
-    if (!e.fixedPrice && rowAmt(fh, /^Original Estimate/) !== e.havellinTotal)
+    if (!e.fixedPrice && C(rowAmt(fh, /^Original Estimate/)) !== C(e.havellinTotal))
       fail('final original estimate', L(`Original Estimate ${rowAmt(fh, /^Original Estimate/)} ≠ estimate ${e.havellinTotal}`));
     const received = -rowAmt(fh, /^Payments received to date/);
     const balance = rowAmt(fh, /^Balance Due Upon Completion/);
     // A fixed price saved from 2026-09-30 carries its premium and its discount as payment-summary lines too
     // (lower-case "delivery" / "client", which the services table above them does not use).
     const billed = e.fixedPrice
-      ? (rowAmt(fh, /^Fixed Project Fee/) || 0) + (rowAmt(fh, /^Home prep site management fee/) || 0) + (rowAmt(fh, /^Approved Change Orders/) || 0)
-        + (rowAmt(fh, /^Expedited delivery \(/) || 0) + (rowAmt(fh, /^Preferred client discount/) || 0)
-      // A Home Prep final heads the same row "Services total (site management fee on actual vendor spend …)"
-      // since 2026-09-30 (audit P14, Anthony's wording); the figure on it is the same one.
-      : rowAmt(fh, /^(Actual Havellin services total|Services total \(site management fee)/);
+      ? ((C(rowAmt(fh, /^Fixed Project Fee/) || 0) + C(rowAmt(fh, /^Home Sale Preparation Fee — on the prep/) || 0) + C(rowAmt(fh, /^Approved Change Orders/) || 0)
+        + C(rowAmt(fh, /^Expedited delivery \(/) || 0) + C(rowAmt(fh, /^Preferred client discount/) || 0)) / 100)
+      // A Home Prep final heads the same row "Services total (Home Sale Preparation Fee on actual vendor spend …)"
+      // (audit P14, Anthony's wording; RESTATED 2026-10-01, P17, answer 5: it read "site management fee", and the
+      // fixed final's prep row read "Home prep site management fee"); the figure on it is the same one.
+      : rowAmt(fh, /^(Actual Havellin services total|Services total \(Home Sale Preparation Fee)/);
     seen('final balance');
-    if (balance !== billed - received || fin.amtDue !== balance)
+    if (C(balance) !== C(billed) - C(received) || C(fin.amtDue) !== C(balance))
       fail('final balance', L(`balance ${balance} (amtDue ${fin.amtDue}) ≠ billed ${billed} − received ${received}`));
 
     // 6. With the job run exactly as quoted and each invoice paid, the three invoices ARE the signed
@@ -369,17 +378,25 @@ module.exports = function ({ group, ok, eq, has }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('the matrix: two labour services × hourly and fixed × rush × discount × premium × every residue mod 4');
   {
-    // totTC 80.0 / 80.1 / 80.2 / 80.3 moves the concierge fee by $15 a step, so the Havellin total
-    // lands on every residue mod 4 — the swap only ever showed on totals ≡ 3.
+    // totTC 80.0 / 80.1 / 80.2 / 80.3 moved the concierge fee by $15 a step, so the Havellin total
+    // landed on every residue mod 4 — the swap only ever showed on totals ≡ 3.
+    // ⚠ RESTATED 2026-10-01 (P17, answer 6): the engine bills quarter hours and money is carried to the cent, so the
+    // steps are quarter hours (80 / 80.25 / 80.5 / 80.75: $37.50 a step, $46.25 at the Premium rate) and a fixed fee
+    // steps by a quarter dollar ($24,000.00 / .25 / .50 / .75): the residues that decide a split are now cents mod 4.
+    const residues = {};
     ['downsizing', 'cleanout'].forEach((svc) => [false, true].forEach((fixed) => [false, true].forEach((rush) =>
       [0, 5, 15].forEach((disc) => [false, true].forEach((premium) => [0, 1, 2, 3].forEach((k) => {
-        const totTC = 80 + k / 10;
+        const totTC = 80 + k / 4;
         const e = buildEst({ svc, totTC, totPS: 60, pkgCost: k % 2 ? 750 : 0, rush, discountPct: disc, premium,
-          fixedAmount: fixed ? 24000 + k : 0, vendors: k === 2 ? [{ type: 'Junk Removal', name: 'Junk Kings', cost: 1200 }] : [] });
+          fixedAmount: fixed ? 24000 + k / 4 : 0, vendors: k === 2 ? [{ type: 'Junk Removal', name: 'Junk Kings', cost: 1200 }] : [] });
+        const rk = (fixed ? 'fixed' : 'hourly') + ' ' + (premium ? 'premium' : 'standard');
+        (residues[rk] = residues[rk] || new Set()).add(C(e.havellinTotal) % 4);
         const job = JOB(svc, { premium });
         checkScenario(`${svc} ${fixed ? 'fixed' : 'T&M'} rush=${rush} disc=${disc} premium=${premium} k=${k}`, e, job,
           logsFor({ tcHrs: [totTC], psHrs: [30, 30] }), [], { asQuoted: true });
       }))))));
+    // The comment above is measured, not asserted: on each basis and rate card the totals land on every residue.
+    Object.keys(residues).forEach((rk) => eq([...residues[rk]].sort(), [0, 1, 2, 3], `the ${rk} totals land on every residue of cents mod 4`));
   }
 
   group('bundled Home Prep on a labour job — the fee inside the services table, hourly and fixed');
@@ -401,9 +418,9 @@ module.exports = function ({ group, ok, eq, has }) {
     const before = scenarios;
     ['downsizing', 'cleanout'].forEach((svc) => [false, true].forEach((fixed) => [false, true].forEach((rush) =>
       [0, 5, 15].forEach((disc) => [false, true].forEach((premium) => [0, 1, 2, 3].forEach((k) => {
-        const totTC = 80 + k / 10;
+        const totTC = 80 + k / 4;   // RESTATED (P17): quarter hours and quarter dollars, as the matrix above
         const e = buildEst({ current: true, svc, totTC, totPS: 60, pkgCost: k % 2 ? 750 : 0, rush, discountPct: disc, premium,
-          fixedAmount: fixed ? 24000 + k : 0, vendors: k === 2 ? [{ type: 'Junk Removal', name: 'Junk Kings', cost: 1200 }] : [] });
+          fixedAmount: fixed ? 24000 + k / 4 : 0, vendors: k === 2 ? [{ type: 'Junk Removal', name: 'Junk Kings', cost: 1200 }] : [] });
         checkScenario(`P12 ${svc} ${fixed ? 'fixed' : 'T&M'} rush=${rush} disc=${disc} premium=${premium} k=${k}`, e, JOB(svc, { premium }),
           logsFor({ tcHrs: [totTC], psHrs: [30, 30] }), [], { asQuoted: true });
       }))))));
@@ -414,7 +431,7 @@ module.exports = function ({ group, ok, eq, has }) {
         logsFor({ tcHrs: [40], psHrs: [15, 15] }), [], { asQuoted: true });
       if (rush) {
         const base = fixed ? e.fixedAmount : (e.tcFee + e.psFee + e.pkgCost);
-        eq(e.rushAmt, Math.round(base * 0.20), `P12 bundled prep ${fixed ? 'fixed' : 'T&M'} prep=${pc}: the premium is 20% of ${fixed ? 'the fee' : 'the services'}, never of the prep fee`);
+        eq(e.rushAmt, ctx.roundCents(base * 0.20), `P12 bundled prep ${fixed ? 'fixed' : 'T&M'} prep=${pc}: the premium is 20% of ${fixed ? 'the fee' : 'the services'}, never of the prep fee`);
         eq(rowAmt(r.docs.estimate, /^Expedited Delivery/), e.rushAmt, '…and the estimate prints that premium');
         // With a prep fee in the table above it, the premium's row names its base — the reader can see a
         // subtotal it is NOT 20% of.
@@ -434,7 +451,8 @@ module.exports = function ({ group, ok, eq, has }) {
   {
     // ⚠ The prep estimate printed NO discount row, so a discounted declutter job's fee and hours
     // added up to more than the total printed under them (2026-09-28 audit, low).
-    [0, 5, 5.1, 5.2, 5.3].forEach((dc) => [0, 10].forEach((disc) => [9500, 9501].forEach((pc) => {
+    // RESTATED 2026-10-01 (P17, answer 6): declutter hours are quarter hours (the box refuses 5.1); 5.5 is the brief's case.
+    [0, 5, 5.25, 5.5, 5.75].forEach((dc) => [0, 10].forEach((disc) => [9500, 9501].forEach((pc) => {
       const e = buildEst({ svc: 'prep', totTC: dc, prepItems: [{ type: 'Painting', cost: pc - 1500 }, { type: 'Cleaning', cost: 1500 }], discountPct: disc });
       checkScenario(`prep declutter=${dc} disc=${disc} vendors=${pc}`, e, JOB('prep'),
         dc > 0 ? [{ date: '2026-09-01', activity: 'declutter', members: [{ name: 'Ashley Jerome', role: 'TC', hours: dc }] }] : [],
@@ -458,16 +476,17 @@ module.exports = function ({ group, ok, eq, has }) {
     ok(oi >= 0 && /^Approved Change Orders \(1\)/.test(labels[oi + 1] || ''),
        'and the accepted change order is the very next line, on its own');
     eq(r.inv.deposit.d.amtDue, 5481, 'the deposit is half the estimate');
-    eq(r.inv.midpoint.d.amtDue, 2741, 'the midpoint a quarter of it');
+    // RESTATED 2026-10-01 (P17, answer 6): a quarter of $10,962 is $2,740.50 to the cent (it was rounded to $2,741).
+    eq(r.inv.midpoint.d.amtDue, 2740.5, 'the midpoint a quarter of it');
 
     // A fixed fee prices the change order, and the payment summary carries that price once, as a
     // line of its own under the fee, reaching the balance.
-    [24000, 24001, 24002, 24003].forEach((fx) => {
+    [24000, 24000.25, 24000.5, 24000.75].forEach((fx) => {   // RESTATED (P17): quarter dollars, every cent residue mod 4
       const ef = buildEst({ svc: 'cleanout', totTC: 80, totPS: 60, fixedAmount: fx });
       checkScenario(`M2 fixed ${fx} +10/+10`, ef, JOB('cleanout'), [], CO, {});
     });
     // And the same change order on every residue of an hourly total.
-    [47, 47.1, 47.2, 47.3].forEach((tc) => {
+    [47, 47.25, 47.5, 47.75].forEach((tc) => {   // RESTATED (P17): quarter hours, as the engine bills
       const et = buildEst({ svc: 'downsizing', totTC: tc, totPS: 39.12, rush: true, discountPct: 5 });
       checkScenario(`M2 T&M ${tc} rush + discount +10/+10`, et, JOB('downsizing'),
         logsFor({ tcHrs: [tc + 10], psHrs: [49.12] }), CO, {});
@@ -479,7 +498,7 @@ module.exports = function ({ group, ok, eq, has }) {
     // The job came in well under what the deposit and the midpoint already collected, so the final
     // is a credit. The audit's email read "Balance due: $-2,741 … Payment is due within 7 calendar days".
     [0, 1, 2, 3].forEach((k) => [false, true].forEach((rush) => {
-      const totTC = 80 + k / 10;
+      const totTC = 80 + k / 4;   // RESTATED (P17): quarter hours
       const e = buildEst({ svc: 'downsizing', totTC, totPS: 60, rush, discountPct: rush ? 5 : 0 });
       const under = checkScenario(`credit k=${k} rush=${rush}`, e, JOB('downsizing'),
         logsFor({ tcHrs: [30], psHrs: [10, 10] }), [], {});

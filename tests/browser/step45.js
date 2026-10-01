@@ -193,7 +193,8 @@ const DIR = [
       has(await txt('#co-fb'), 'Enter the added vendor’s estimated cost, so the client sees the fee it carries.', '⚠ refused by name without a cost');
       ok(!(await coOf(4503)), 'and nothing is recorded');
       await p.fill('#co-vendor-cost', '9000'); await p.waitForTimeout(250);
-      has(await txt('#co-hrs-note'), 'the 30% site management fee applies to what it actually charges — about $2,700 at the estimated $9,000', 'the readout names the fee');
+      // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; this read "site management fee".
+      has(await txt('#co-hrs-note'), 'the 30% Home Sale Preparation Fee applies to what it actually charges — about $2,700 at the estimated $9,000', 'the readout names the fee');
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create');
       const co = await coOf(4503);
       eq(co && co.vendorAdds && co.vendorAdds.map((v) => [v.type, v.cost]), [['Landscaper', 9000]], '⚠⚠ the change order records the landscaper');
@@ -224,7 +225,7 @@ const DIR = [
       });
       await toDash(4503);
       const fin = await viewed('#client-dashboard-view button[onclick="docAction(4503,\'invoice\',\'view\',{stage:\'final\'})"]', 'the band\'s View final invoice');
-      has(fin, 'Adds Landscaper (est. $9,000) — it bills you directly, and the site management fee on it is in the fee above', 'the final names the added vendor');
+      has(fin, 'Adds Landscaper (est. $9,000) — it bills you directly, and the Home Sale Preparation Fee on it is in the fee above', 'the final names the added vendor');
       has(fin, '$5,700', '⚠⚠ and bills the fee on both prep vendors: 30% of $19,000');
       dialogs.length = 0;
       await press('#client-dashboard-view button[onclick="dashApproveInvoice(4503,\'final\')"]', 'Manager approval on the final');
@@ -272,7 +273,10 @@ const DIR = [
     });
 
     // ── F. Premium and the appraiser line on Build Estimate ──────────────────
-    await section('F. Build Estimate: on a Premium estate an appraiser line books no hours, and its row says why', async () => {
+    // ⚠⚠ RESTATED 2026-10-01 (P17, Anthony's answer 1): Premium is the rates only, its 25 hours are gone, and an appraiser line books
+    // its own 2.0 hours on a Premium estate as on any other. This section pinned P16's rule (no hours on Premium, a "covered by
+    // Premium Estate" note on the row, +25 − 2 concierge hours when Premium went on); it drives the same controls under the new one.
+    await section('F. Build Estimate: on a Premium estate an appraiser line books its own hours, and Premium moves no hours', async () => {
       await p.evaluate(() => {
         jobs = jobs.filter((j) => j.id !== 4507);
         jobs.unshift({ id: 4507, hvlId: 'HVL-2609-P457', name: 'Estate of Ada Premium', fname: 'Ada', lname: 'Premium', svc: 'cleanout', sqft: '3500',
@@ -297,22 +301,22 @@ const DIR = [
       await press('label.toggle:has(#e-prem)', 'the Premium estate toggle');
       ok(await p.evaluate(() => document.getElementById('e-prem').checked), 'Premium is on');
       const prem = await p.evaluate(() => [currentEstimate.vendorTCHrs, currentEstimate.totTC, currentEstimate.havellinTotal, currentEstimate.prem]);
-      eq(prem[0], 0, '⚠⚠ on Premium the appraiser line books no hours');
-      eq(prem[1], std[1] - 2 + 25, 'the concierge hours: Premium\'s 25, less the appraiser\'s 2 it now covers (' + std[1] + ' → ' + prem[1] + ')');
-      has(await txt('#vendor-group-cards'), 'No concierge hours — appraiser coordination is covered by Premium Estate', '⚠ and the appraiser\'s row says why');
-      ok(await shown('#vendor-group-cards .vgrp-covered'), 'on screen');
-      // Remove the appraiser: a Premium estate prices the same either way.
+      eq(prem[0], 2, '⚠⚠ on Premium the appraiser line books its 2.0 hours too');
+      eq(prem[1], std[1], 'the concierge hours do not move: Premium adds none of its own (' + std[1] + ' → ' + prem[1] + ')');
+      lacks(await txt('#vendor-group-cards'), 'covered by Premium Estate', '⚠ and the appraiser\'s row says nothing of Premium');
+      ok(!(await shown('#vendor-group-cards .vgrp-covered')), 'no covered note on screen');
+      // Remove the appraiser: on a Premium estate it takes its two hours at $185 with it.
       const withArt = prem[2];
       await p.evaluate(() => { const i = vendors.findIndex((v) => v.type === 'Art Appraiser'); removeVendor(i); });
       await p.waitForTimeout(200);
-      eq(await p.evaluate(() => currentEstimate.havellinTotal), withArt, '⚠⚠ with Premium on, the appraiser line moves the price not at all ($' + withArt + ')');
+      eq(Math.round((withArt - await p.evaluate(() => currentEstimate.havellinTotal)) * 100), 37000, '⚠⚠ with Premium on, the appraiser line is worth its 2.0 hours at $185 ($' + withArt + ')');
       await press('button[onclick="addFromVendorGroup(' + gi + ')"]', 'the card\'s + with nothing chosen (no line)');
       await p.selectOption('#vgrp-cat-' + gi, 'Art Appraiser');
       await p.fill('#vgrp-cost-' + gi, '1500');
       await press('button[onclick="addFromVendorGroup(' + gi + ')"]', 'add the appraiser again');
       await press('label.toggle:has(#e-prem)', 'Premium off again');
-      eq(await p.evaluate(() => currentEstimate.vendorTCHrs), 2, 'switched off: the appraiser books its 2.0 hours again');
-      lacks(await txt('#vendor-group-cards'), 'covered by Premium Estate', 'and the note goes');
+      eq(await p.evaluate(() => currentEstimate.vendorTCHrs), 2, 'switched off: the appraiser still books its 2.0 hours, at $150');
+      lacks(await txt('#vendor-group-cards'), 'covered by Premium Estate', 'and there is no note either way');
     });
 
     // ── G. the crew badge on a fixed price ───────────────────────────────────

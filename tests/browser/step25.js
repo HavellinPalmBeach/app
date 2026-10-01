@@ -231,12 +231,13 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   has(await text('#ls-co-note'), '+8.0 concierge hrs from 1 accepted change order', 'and says where they came from');
   const d0 = await desk(idP);
   ok(!!d0 && d0.ok === false, 'the desk card gains an open hours line');
-  has(d0 ? d0.detail : '', 'a change order added hours; log them before the final goes out, or it bills the management fee alone',
+  // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is named the Home Sale Preparation Fee; these read "the management fee".
+  has(d0 ? d0.detail : '', 'a change order added hours; log them before the final goes out, or it bills the Home Sale Preparation Fee alone',
       '⚠ saying what an empty log will do');
   const s0 = await finalSub(idP);
   has(s0, 'A change order added 8.0 concierge hours and none are logged', '⚠⚠ the final-invoice step says it too');
   await p.evaluate((id) => openClientDashboard(id), idP); await p.waitForTimeout(500);
-  has(await text('#client-dashboard-view'), 'none are logged — log them on the Job Plan first, or this final bills the management fee alone',
+  has(await text('#client-dashboard-view'), 'none are logged — log them on the Job Plan first, or this final bills the Home Sale Preparation Fee alone',
       'and the dashboard’s timeline prints it');
 
   // ── E. HOURS LOGGED THROUGH THE REAL FORM ───────────────────────────────
@@ -293,7 +294,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   has(agr, 'No Transition Concierge or Property Specialist hours are billed on this engagement', '§3.3 still states the engagement as signed');
   has(agr, 'is billed only if Client signs a Change Order under Section 3.8 stating the Transition Concierge hours',
       '⚠⚠ and the one route to hours');
-  has(agr, "billed as worked at Contractor's Transition Concierge rate of $150/hour, in addition to the management fee",
+  has(agr, "billed as worked at Contractor's Transition Concierge rate of $150/hour, in addition to the Home Sale Preparation Fee",
       '⚠⚠ at the concierge rate, in the contract before anyone signs (2026-09-25)');
   lacks(agr, 'Property Specialist services are billed at', 'the concierge rate only — the form bills no specialist hours');
   const agrRate = (/Transition Concierge rate of \$(\d+)\/hour/.exec(agr) || [])[1];

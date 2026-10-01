@@ -28,7 +28,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(agr, '3.5 Vendor Coordination.', 'the standard form states the no-fee rule under the same clause number');
     has(agr, 'Contractor adds no fee or markup to third-party vendor invoices', 'in plain words');
     has(agr, 'billed as Transition Concierge time under Section 3.3', 'and says where the coordination time IS billed — hourly or inside the fixed fee, §3.3 is both');
-    has(agr, "3.5 Management Fee.", 'standalone Home Prep keeps its own clause');
+    // ⚠ RESTATED 2026-10-01 (P17): the fee is named "Home Sale Preparation Fee" on every form (Anthony's answer 5); the
+    // clause was headed "3.5 Management Fee.".
+    has(agr, "3.5 Home Sale Preparation Fee.", 'standalone Home Prep keeps its own clause');
     // The rate is spelled by _pctWords(prepFeeRate()) since 2026-09-10 rather than typed into
     // the clause, so the requirement is what this asserts: the fee stated in the contract comes
     // from the same constant the estimate and the invoice charge on. Asserting the rendered
@@ -66,7 +68,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                    '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
                    'estimateDocScope', 'svcHasDocStep', 'fmt', 'esc', 'paymentSplit',
                    'conciergePhones', 'assignedTCContact', 'samePerson', 'canonPersonName',
-                   'svcLabelOf', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrSection', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docTierProduces', '_agrOtherAppraisalsBy', 'coPrepVendorsOn'];
+                   'svcLabelOf', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrSection', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docTierProduces', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
   const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'PREP_FEE_RATE', 'SVC_LABELS', 'DECEDENT_SERVICES', '_PCT_WORDS',
                     'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
                     'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'JOB_STEPS', 'ESIGN_ANCHORS', 'RUSH_PCT'];
@@ -107,7 +109,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(prep, '3.3 Basis of Fee.', 'it states the basis that is actually charged');
     has(prep, 'No Transition Concierge or Property Specialist hours are billed on this engagement',
       '…and says so in as many words');
-    has(prep, 'management fee stated in Section 1.2 and Section 3.5',
+    // RESTATED 2026-10-01 (P17): "the management fee stated in…" is "the Home Sale Preparation Fee stated in…".
+    has(prep, 'Home Sale Preparation Fee stated in Section 1.2 and Section 3.5',
       '…pointing at the clause that does state the fee');
 
     // ⚠ A CHANGE ORDER CARRIES HOURS AND NOTHING ELSE since the 2026-09-11 rebuild, so the

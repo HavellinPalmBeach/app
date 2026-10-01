@@ -47,8 +47,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // estimate_approved" and the band actually RENDERING a submit button are two
       // different claims, and this defect lived precisely in the gap between them.
       'jobStageDoc', 'docReadiness', 'docTitle', 'docDraftOnly', 'docWord',
-      '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', '_jtDraftLink', '_jtDocViews', '_jtDriveLink', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove'
-    , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn'],
+      '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', '_jtDraftLink', '_jtDocViews', '_jtDriveLink', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove'
+    , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
     vars: ['JT_SHORT', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
            'JT_ROW_DOC', 'DOC_ACTIONS', 'DOC_KIND_WORD'],
   });

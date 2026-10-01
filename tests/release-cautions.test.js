@@ -32,7 +32,7 @@ const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_
              'isDecedentJob',
              // P16: the request names a firearm's dealer route; the bulk handler asks the one
              // field-on-this-job rule before it writes.
-             'invDealerRoute', 'invDealerRouteOffered', '_invKeyOnJob', '_invColOnJob'];
+             'invDealerRoute', 'invDealerRouteOffered', '_invKeyOnJob', '_invColOnJob', 'roundCents', 'fmt'];
 const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS'];

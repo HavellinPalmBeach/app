@@ -283,7 +283,8 @@ const PARTNERS = [{ uid: 'p-dana', partner_name: 'Dana Broker', partner_type: 'R
       has(await txt('#co-fb'), 'Enter the added vendor’s estimated cost, so the client sees the fee it carries.', '⚠ a vendor with no cost is refused, by name');
       ok(!(await coOf(4404)), 'and nothing is recorded');
       await p.fill('#co-vendor-cost', '4500'); await p.waitForTimeout(200);
-      has(await txt('#co-hrs-note'), 'the 30% site management fee applies to what it actually charges — about $1,350 at the estimated $4,500',
+      // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; this read "site management fee".
+      has(await txt('#co-hrs-note'), 'the 30% Home Sale Preparation Fee applies to what it actually charges — about $1,350 at the estimated $4,500',
           'the readout names the fee at the estimated cost');
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create');
       const co = await coOf(4404);

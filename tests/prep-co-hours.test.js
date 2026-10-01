@@ -101,7 +101,7 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 // The printed change order's rush / discount line (Q14, 2026-09-29), lifted, never stubbed.
                 'coRateModsLine', 'coRushPct', 'coRushPctFor', 'estFixedLines', 'coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid',
                 // The added-vendor picker (2026-09-30) is the directory's Property Preparation categories.
-                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor'];
+                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'roundCents', 'isQuarterHours', 'fmtHrs'];
 function coCtx(est, cos, seed, jobOver) {
   const dom = domStub(seed || {});
   const said = [];
@@ -171,7 +171,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'chkGrid', 'planChk', '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan', '_planTouch',
       'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody',
       'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
-      'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(CO);
+      'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'].concat(CO);
     const planVars = ['DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const plan = (est, cos, loggedTC) => {
       try {
@@ -222,7 +222,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const deskFns = ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
       'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
-      'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(CO);
+      'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'].concat(CO);
     const deskVars = ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'];
@@ -236,7 +236,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!line(PREP_JOB, prepEst(0), [co(8)], 0), 'a draft change order adds none either');
     const empty = line(PREP_JOB, prepEst(0), [accepted(8)], 0);
     ok(!!empty && empty.ok === false, '⚠⚠ an accepted change order brings the hours line in, open');
-    eq(empty ? empty.detail : '', 'none yet — a change order added hours; log them before the final goes out, or it bills the management fee alone',
+    // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is named the Home Sale Preparation Fee here; it read "the management fee".
+    eq(empty ? empty.detail : '', 'none yet — a change order added hours; log them before the final goes out, or it bills the Home Sale Preparation Fee alone',
        '⚠ and it says what an empty log does HERE — not the refusal a quoted-hours job gets');
     const logged = line(PREP_JOB, prepEst(0), [accepted(8)], 8);
     ok(!!logged && logged.ok === true, 'logged, it goes green');
@@ -259,7 +260,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const summary = (est, cos) => {
       const dom = domStub({});
-      const S = sandbox({ fns: ['updateLogSummary', 'jobLogEntries', 'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel'].concat(CO),
+      const S = sandbox({ fns: ['updateLogSummary', 'jobLogEntries', 'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'fmtHrs'].concat(CO),
         vars: ['EST_TOLERANCE_PCT'],
         stubs: { document: dom, jobs: [Object.assign({}, PREP_JOB)], jobLogs: { 1: TC_LOG(3) }, changeOrders: cos,
                  estimateStore: est ? { 1: { estimate: Object.assign({}, est) } } : {} } });
@@ -284,7 +285,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const note = p.__dom.getElementById('co-basis-note').innerHTML;
     has(note, 'concierge hours for hands-on work', 'the note says what a prep change order is');
     has(note, 'at $150 an hour', 'names the rate');
-    has(note, 'on top of the 30% site management fee', 'on top of the fee, read from prepFeeRate');
+    // RESTATED 2026-10-01 (P17, answer 5): it read "site management fee".
+    has(note, 'on top of the 30% Home Sale Preparation Fee', 'on top of the fee, read from prepFeeRate');
     has(note, 'that rate is printed on the change order the client signs', 'and that the client sees it in writing');
     has(note, 'Coordinating the vendors is covered by the fee and is never billed as hours', '⚠ the old double-charge rule survives');
     lacks(note, 'carries no price and bills nothing', 'not the T&M sentence');
@@ -303,7 +305,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = read(prepEst(0), [], 8);
     has(r, '+8.0 concierge hrs at $150 an hour', 'the readout states the hours and the rate');
     has(r, 'about $1,200 at the estimated hours, billed as they are worked on the final invoice', 'what that comes to, and how it bills');
-    has(r, 'on top of the 30% site management fee on the prep vendors’ invoices', 'on top of the fee');
+    // RESTATED 2026-10-01 (P17, answer 5): it read "site management fee".
+    has(r, 'on top of the 30% Home Sale Preparation Fee on the prep vendors’ invoices', 'on top of the fee');
     has(r, 'This engagement priced no concierge hours; the rate is the one its agreement states in Section 3.3, and the change order prints it again',
         '⚠ a vendors-only job is told where the rate comes from — the agreement, restated on the change order');
     lacks(r, 'so the rate is printed on the change order', '⚠ never the old reason, which was true only while §3.3 stated no rate');
@@ -362,7 +365,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s = text(p.__dom.getElementById('coa-summary').innerHTML);
     has(s, 'Rate $150 an hour, billed as worked', '⚠⚠ the panel the client types their name under states the rate');
     has(s, 'At the estimated hours about $1,200', 'and what the hours come to');
-    has(s, 'on top of the 30% site management fee', 'on top of the fee');
+    // RESTATED 2026-10-01 (P17, answer 5): it read "site management fee".
+    has(s, 'on top of the 30% Home Sale Preparation Fee', 'on top of the fee');
     lacks(s, 'No charge is created', '⚠ not the T&M sentence — here the hours ARE a new charge');
     has(p.__dom.getElementById('coa-summary').innerHTML, 'Clear the &lt;garage&gt; for the painters', 'the description is escaped');
     const terms = p.__dom.getElementById('coa-terms').innerHTML;
@@ -392,7 +396,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(d, 'Rate for these hours $150 an hour, billed as worked', '⚠⚠ the rate is on the page the client signs');
     has(d, 'This change order adds concierge hours, billed at $150 an hour.', 'the sentence that makes the page honest');
     has(d, 'at the estimated hours, about $1,200', 'what they come to');
-    has(d, 'in addition to the 30% site management fee on the preparation vendors’ invoices, which this change does not alter',
+    // RESTATED 2026-10-01 (P17, answer 5): the page the client signs read "site management fee".
+    has(d, 'in addition to the 30% Home Sale Preparation Fee on the preparation vendors’ invoices, which this change does not alter',
         'on top of the fee, which does not move');
     has(d, 'Coordinating the vendors remains covered by that fee.', 'vendor coordination is never billed as hours');
     lacks(d, 'does not itself create a charge', '⚠⚠ never the T&M sentence, which would tell this client the opposite');
@@ -418,7 +423,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
       'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact',
       'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'paymentCounts',
-      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove'];
+      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
     const invVars = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
       'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -447,7 +452,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const unlogged = walk(prepEst(0), [accepted(8)], 0);
     ok(!unlogged.blocked, '⚠⚠ an unlogged change order does NOT block the final — no change order can be withdrawn, so a refusal could never lift');
-    eq(unlogged._collected, 13500, 'it bills the management fee alone, which the band and the desk card both say beforehand');
+    eq(unlogged._collected, 13500, 'it bills the Home Sale Preparation Fee alone, which the band and the desk card both say beforehand');
     const big = walk(prepEst(0), [accepted(20)], 0);
     ok(!big.blocked && big.requiresApproval, '⚠ but a big enough gap still trips the ±15% manager PIN — a manager looks before it goes');
     ok(walk(prepEst(5), [accepted(3)], 0).blocked, 'a prep job that QUOTED hours is still refused with an empty log — the desk card says so');
@@ -462,7 +467,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const T = (cos) => sandbox({
       fns: ['agrApprovalWithdrawn', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
             'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-            'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending', 'estimateOutForApproval', 'priceAboveSent', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn'].concat(CO),
+            'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending', 'estimateOutForApproval', 'priceAboveSent', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'].concat(CO),
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { changeOrders: cos } });
     const sub = (est, cos, logged, jobOver) => {
@@ -473,7 +478,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     };
     const w = sub(prepEst(0), [accepted(8)], 0);
     has(w, 'A change order added 8.0 concierge hours and none are logged', '⚠⚠ the step names the hours nobody logged');
-    has(w, 'or this final bills the management fee alone', 'and what sending it now would do');
+    // RESTATED 2026-10-01 (P17, answer 5): it read "the management fee".
+    has(w, 'or this final bills the Home Sale Preparation Fee alone', 'and what sending it now would do');
     eq(sub(prepEst(0), [accepted(8)], 8), '', 'once any are logged the step says nothing');
     eq(sub(prepEst(0), [co(8)], 0), '', 'a draft change order raises nothing');
     eq(sub(prepEst(0), [], 0), '', 'nor does a vendors-only job with no change order');
@@ -498,7 +504,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection', 'approvedEstimateFor',
       'materialsBasisNote', 'materialsPackageQuoted', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docStandardEffect', 'isFormalDoc', 'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel',
-      'docLevelFloorReason', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf', 'coPrepVendorsOn'];
+      'docLevelFloorReason', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
     const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
       'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
       'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'MATTER_TYPES'];
@@ -513,7 +519,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // (Two needles, not one: the figure is bold, and text() leaves a space where the </strong> was.)
     has(fee, "billed as worked at Contractor's Transition Concierge rate of $150/hour",
         '⚠⚠ at a rate the contract itself states, before anyone signs');
-    has(fee, '/hour , in addition to the management fee', '…and on top of the fee, not inside it');
+    // RESTATED 2026-10-01 (P17, answer 5): the fee-only §3.3 read "the management fee"; §3.3 and §3.5 now name it.
+    has(fee, '/hour , in addition to the Home Sale Preparation Fee', '…and on top of the fee, not inside it');
     lacks(fee, 'that states the Transition Concierge hours and the hourly rate',
           'the retired wording, which left the rate for the change order to set, is gone');
     has(fee, 'Hands-on work Contractor is asked to do after signing is documented in a written Change Order signed by both Parties',

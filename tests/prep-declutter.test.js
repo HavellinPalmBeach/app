@@ -33,7 +33,7 @@ const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'est
   '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason',
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
   'agrSection', 'approvedEstimateFor', 'materialsBasisNote', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
-  'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf', 'escLines', 'coPrepVendorsOn'];
+  'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf', 'escLines', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
 const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT',
   'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
   'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE',
@@ -87,7 +87,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const e = sandbox({
       fns: ['computeEngineV3', 'effectiveJobSteps', 'engineRoomWeight', 'engineIsExterior',
-            'tenureMultiplier', 'docScopeDef', 'engineRelFactor', 'roomDefault'],
+            'tenureMultiplier', 'docScopeDef', 'engineRelFactor', 'roomDefault', 'roundQuarter'],
       vars: ['JOB_STEPS', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF', 'ENGINE_CAREFUL',
              'ENGINE_ROOMLEVEL', 'ENGINE_FLOOR', 'PERROOM_REF', 'ROOMS', 'EXTERIOR_ROOMS',
              'ROOM_WEIGHT', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'] });
@@ -113,7 +113,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the accessor refuses on every service but prep — the stale-field leak guard');
   {
     const mk = (svc, val) => {
-      const ctx = sandbox({ fns: ['getDeclutterTCHrs', 'currentSvc'], vars: ['DECLUTTER_MAX_HRS'],
+      const ctx = sandbox({ fns: ['getDeclutterTCHrs', 'currentSvc', 'roundQuarter'], vars: ['DECLUTTER_MAX_HRS'],
         stubs: { document: domStub({ 'e-svc': svc, 'e-declutter-hrs': val }) } });
       return ctx.getDeclutterTCHrs();
     };
@@ -184,7 +184,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(tW, 'It is not billed hourly', 'with hours that sentence is gone');
     has(tW, 'Havellin is paid on two bases', 'and the Terms name both bases');
     has(tW, 'concierge hours at $150/hour', 'the hourly one at the rate the estimate priced');
-    has(tW, '30% management fee on actual vendor spend', 'and the fee one');
+    // RESTATED 2026-10-01 (P17, Anthony's answer 5): the Terms name the Home Sale Preparation Fee; they read "management fee".
+    has(tW, '30% Home Sale Preparation Fee on actual vendor spend', 'and the fee one');
     has(tW, 'exceed the estimate by more than 15%', 'the notice threshold reaches prep for the first time');
     // ⚠ THE PLAIN T&M ARM IS WRONG ON PREP AND MUST NOT BE WHAT IT FALLS THROUGH TO. It promises
     // that vendor coordination bills hourly — on the one engagement where the 30% fee covers
@@ -212,8 +213,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(tW, 'Due at project midpoint', 'and never "project midpoint", which does not exist on prep');
     has(tW, 'Due at show-ready handover', 'the final milestone is the handover either way');
     // the caption has to name what the percentage is charged on
-    has(tN, 'Management fee only', 'no hours: the caption says management fee only');
-    has(tW, 'Management fee + concierge hours', 'with hours it names both');
+    // RESTATED 2026-10-01 (P17, answer 5): the captions read "Management fee only" and "Management fee + concierge hours".
+    has(tN, 'Home Sale Preparation Fee only', 'no hours: the caption says the fee only');
+    has(tW, 'Home Sale Preparation Fee + concierge hours', 'with hours it names both');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -265,7 +267,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2',
       'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'paymentCounts',
-      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove'];
+      'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
     const invVars = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',
       'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
       'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES',
@@ -361,7 +363,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_planTouch',
       // The prep plan opens with the firearms banner since 2026-09-20 (the brief under it no
       // longer repeats the firearms row, so the banner has to be on both plan headers).
-      'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'];
+      'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'];
     const planVars = ['DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const mkPlan = (dcHrs, loggedTC) => {
       const logs = loggedTC > 0
@@ -422,7 +424,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and the fee row. Pinned as a real function so a rename cannot leave the stub standing in for
     // something that no longer exists.
     ok(typeof fn('renderVendorGroupCards') === 'string', 'renderVendorGroupCards is real (stubbed here only)');
-    const modeFns = ['applyEstimateServiceMode', 'getDeclutterTCHrs', 'currentSvc', 'prepFeeRate'];
+    const modeFns = ['applyEstimateServiceMode', 'getDeclutterTCHrs', 'currentSvc', 'prepFeeRate', 'roundCents', 'roundQuarter', 'isQuarterHours', 'fmtHrs', 'fmt', 'declutterHoursRefusal'];
     const modeVars = ['DECLUTTER_MAX_HRS', 'PREP_FEE_RATE', '_vgrpPrepMode'];
     const mode = (svc, hrs) => {
       const doc = domStub({ 'e-svc': svc, 'e-declutter-hrs': hrs });
@@ -520,9 +522,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // "30% fee $14,250" off havellinTotal — which carries the declutter hours as well as the fee
     // — so it labelled the concierge labour as part of the management fee on the one line that
     // confirms what was just saved. It names the fee and the hours separately now.
-    has(save, "'% fee $' + (currentEstimate.prepFee || 0).toLocaleString()",
+    // RESTATED 2026-10-01 (P17, answers 5 and 6): the summary names the Home Sale Preparation Fee and prints money through fmt (cents when
+    // present); it read "'% fee $' + (currentEstimate.prepFee || 0).toLocaleString()" and "' declutter hrs · total $'".
+    has(save, "'% Home Sale Preparation Fee ' + fmt(currentEstimate.prepFee || 0)",
         'the save summary prices the FEE off prepFee, not off the total the hours moved');
-    has(save, "' declutter hrs \u00b7 total $'", 'and names the hours and the combined total separately');
+    has(save, "' declutter hrs \u00b7 total ' + fmt(currentEstimate.havellinTotal)", 'and names the hours and the combined total separately');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

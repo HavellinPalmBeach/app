@@ -132,7 +132,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         // (`agreementReady` stays STUBBED in these sandboxes — this suite is about the FILING
         // path, and lifting the real one would make every case turn on the win state instead.)
         'docReadiness', 'docDraftOnly',
-            'docKeyFor', 'docNames', 'paymentStageWord', 'docSpec', 'approvedEstimateFor', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent'],
+            'docKeyFor', 'docNames', 'paymentStageWord', 'docSpec', 'approvedEstimateFor', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'roundCents'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {},
@@ -205,7 +205,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // An unresolved subfolder falls back to the job root rather than dropping the document.
     const fb = sandbox({
       fns: ['docAction', 'docFile', 'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'paymentStageWord', 'docSpec', 'approvedEstimateFor',
-        'docReadiness', 'docDraftOnly', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt'],
+        'docReadiness', 'docDraftOnly', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'roundCents'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: Object.assign({}, {
         saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, _docNotice() {},
@@ -343,7 +343,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         // path, and lifting the real one would make every case turn on the win state instead.)
         'docReadiness', 'docDraftOnly',
             'docRecordFiled', 'docState', '_jobTouch', 'docFiledAt', 'docKeyFor', 'docNames', 'paymentStageWord', 'docSpec',
-            'approvedEstimateFor', 'agreementReady', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'fmtMoney'],
+            'approvedEstimateFor', 'agreementReady', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'fmt', 'roundCents'],
       vars: ['EST_TOLERANCE_PCT', 'DOC_ACTIONS', 'DOC_STAGE_WORD', 'DOC_READY_WHY'],
       stubs: {
         setTimeout: (f) => f(),

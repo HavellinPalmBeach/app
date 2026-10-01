@@ -9,7 +9,8 @@
 //       (coPrepVendorsOn), offered, saved, read out, accepted, printed, joined to jobPrepLines, billed on the final and
 //       kept out of the ±15% variance; both forms' fee clauses say "or added by Change Order" (counsel bundle B9).
 //   A4  Premium Estate's 25 hours already cover appraiser coordination → "drop the line's hours on premium jobs"
-//       (premiumCoversLine, read at read time by every sum of vendor-line hours).
+//       (premiumCoversLine, read at read time by every sum of vendor-line hours). ⚠ REVERSED BY P17 (2026-10-01): the 25
+//       hours went instead and every line books its own hours; the A4 groups below are restated to that rule.
 //   B8  dashApproveInvoice asks `blocked` before `requiresApproval`.
 //   B9  the ±15% baseline moves by what the final bills for a change order (coBaselineMove).
 //   B14 the estate form's §5.3 counsel row names the party §5.2 names (_agrOtherAppraisalsBy).
@@ -71,7 +72,7 @@ const CO_FNS = ['_coJobBasis', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrep
                 'acceptChangeOrder', 'printChangeOrder', 'saveChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt',
                 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates', 'coRateModsLine', 'coRushPct', 'coRushPctFor', 'estFixedLines',
                 'coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid',
-                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coBaselineMove', 'discountOnLabor'];
+                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coBaselineMove', 'discountOnLabor', 'roundCents', 'isQuarterHours', 'fmtHrs'];
 function coCtx(est, job, cos, seed) {
   const dom = domStub(seed || {});
   const said = [];
@@ -117,7 +118,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
   'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop',
   'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct',
   'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs',
-  'coBaselineMove', 'finalCrewOnlyWarn', 'agrBillingRates', 'paymentCounts', 'escLines'];
+  'coBaselineMove', 'finalCrewOnlyWarn', 'agrBillingRates', 'paymentCounts', 'escLines', 'roundCents', 'fmtHrs'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
   'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'INV_FINAL_NO_HOURS_WHY'];
@@ -156,7 +157,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy',
-                 'prepFeeRate', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coPrepVendorsOn'].concat(TIER_FNS);
+                 'prepFeeRate', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'].concat(TIER_FNS);
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'PREP_FEE_RATE'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -269,7 +270,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const job = Object.assign({}, BP_JOB, { status: 'active', won: true, havellinEst: 22940,
                                             payments: [{ uid: 'd', stage: 'deposit', amount: 11470, date: '2026-09-01', method: 'wire' }] });
     const dom = domStub({ 'closeout-reason': 'client_changed_mind', 'closeout-note': '' });
-    const c = sandbox({ fns: ['confirmMarkLost', 'closeoutRetainedTotal', 'jobPaidTotal', 'jobPayments', 'closeCloseoutModal', 'paymentCounts'],
+    const c = sandbox({ fns: ['confirmMarkLost', 'closeoutRetainedTotal', 'jobPaidTotal', 'jobPayments', 'closeCloseoutModal', 'paymentCounts', 'roundCents'],
                         vars: ['LOSS_REASONS'],
                         stubs: { document: dom, jobs: [job], closeoutJobId: 1, saveJobs: () => said.push('save'),
                                  syncJobToSheets: () => {}, renderJobs: () => {} } });
@@ -316,7 +317,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(m.__dom.getElementById('co-ps-hrs').disabled, false, 'the specialist box stays open: it is a labour job');
     const note = text(m.__dom.getElementById('co-basis-note').innerHTML);
     has(note, 'A change order carries no price and bills nothing on its own', 'the hourly note keeps its rule');
-    has(note, 'A change order can also add a preparation vendor found mid-job, with or without hours: it bills the client directly at cost, and the 30% site management fee applies to what it actually charges. It books no concierge hours.',
+    // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee's one name is the Home Sale Preparation Fee, in this group and the
+    // A3 groups below (they read "site management fee"; the estate fee row read "General contractor / site management fee").
+    has(note, 'A change order can also add a preparation vendor found mid-job, with or without hours: it bills the client directly at cost, and the 30% Home Sale Preparation Fee applies to what it actually charges. It books no concierge hours.',
         'and says a vendor can be added, and on what terms');
     const f = coCtx(EST_BPF, BP_JOB, [], { 'co-jobid': '1' });
     f.openChangeOrder(1);
@@ -366,7 +369,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const only = coCtx(EST_BP, BP_JOB, [], { 'co-jobid': '1', 'co-vendor-type': 'Landscaper', 'co-vendor-cost': '$9,000' });
     only.updateCOHours();
     const t1 = text(only.__dom.getElementById('co-hrs-note').innerHTML);
-    has(t1, 'Adds Landscaper to the preparation vendors. It bills the client directly at cost, and the 30% site management fee applies to what it actually charges — about $2,700 at the estimated $9,000.',
+    has(t1, 'Adds Landscaper to the preparation vendors. It bills the client directly at cost, and the 30% Home Sale Preparation Fee applies to what it actually charges — about $2,700 at the estimated $9,000.',
         'a vendor alone reads out, with its fee at the estimate');
     lacks(t1, 'hrs on the estimate', 'and no hours readout');
     const both = coCtx(EST_BP, BP_JOB, [], { 'co-jobid': '1', 'co-tc-hrs': '4', 'co-ps-hrs': '8', 'co-vendor-type': 'Painting', 'co-vendor-cost': '4500' });
@@ -391,10 +394,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     a.openCOAcceptModal(100);
     const s = text(a.__dom.getElementById('coa-summary').innerHTML);
     has(s, 'Added vendor Landscaper, est. $9,000, billed to you directly', 'the panel names the vendor');
-    has(s, '30% site management fee on it about $2,700, on its actual invoice', 'and the fee on it');
+    has(s, '30% Home Sale Preparation Fee on it about $2,700, on its actual invoice', 'and the fee on it');
     lacks(s, 'No charge is created by this change order', '⚠ never "no charge", which a vendor\'s fee would make false');
     has(text(a.__dom.getElementById('coa-terms').innerHTML),
-        'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope, and the addition of Landscaper to the preparation vendors, billed to them directly at cost, with the 30% site management fee on what it actually charges.',
+        'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope, and the addition of Landscaper to the preparation vendors, billed to them directly at cost, with the 30% Home Sale Preparation Fee on what it actually charges.',
         'and the client agrees to it in words');
     const h = coCtx(EST_BP, BP_JOB, [co({ tcHrs: 4, psHrs: 8, vendorAdds: [LANDSCAPER] })], { 'coa-co-id': '100' });
     h.openCOAcceptModal(100);
@@ -442,8 +445,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const v = P(EST_BP, co({ vendorAdds: [LANDSCAPER] }));
     has(v, 'This change order adds Landscaper to the preparation vendors.', '⚠⚠ the page says what it adds');
     has(v, 'Added preparation vendor: Landscaper billed to you directly by the vendor, at cost $9,000 estimated', 'the table names the vendor and its estimate');
-    has(v, 'Site management fee (30%) on its actual invoice about $2,700', 'and the fee on it');
-    has(v, 'The vendor bills you directly, at cost, and the 30% site management fee in your agreement is billed on what it actually charges — about $2,700 at the estimated $9,000.',
+    has(v, 'Home Sale Preparation Fee (30%) on its actual invoice about $2,700', 'and the fee on it');
+    has(v, 'The vendor bills you directly, at cost, and the 30% Home Sale Preparation Fee in your agreement is billed on what it actually charges — about $2,700 at the estimated $9,000.',
         'the terms, in the Home Prep page\'s words');
     has(v, 'That fee covers coordinating and supervising the preparation work, which is not billed as hours.', 'as §3.5 says it');
     lacks(v, 'Third-party vendor costs are unaffected', '⚠ not the line this change makes false');
@@ -482,10 +485,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a1._collected - a0._collected, 2700, '⚠⚠ the hourly final collects the fee on the added vendor: 30% of $9,000');
     eq(a1.overUnder, 0, '⚠⚠ and the baseline moved by exactly that fee: no variance');
     ok(a1.requiresApproval === false, 'so the accepted vendor never sends the final to a manager');
-    has(text(a1.html), 'Adds Landscaper (est. $9,000) — it bills you directly, and the site management fee on it is in the fee above', 'the change-order row names it');
-    has(text(a1.html), 'A vendor a change order added bills you directly, and the site management fee on what it actually charged is in the fee above.', 'the section note says where its fee is');
+    has(text(a1.html), 'Adds Landscaper (est. $9,000) — it bills you directly, and the Home Sale Preparation Fee on it is in the fee above', 'the change-order row names it');
+    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on what it actually charged is in the fee above.', 'the section note says where its fee is');
     lacks(text(a1.html), 'These hours are not billed separately', 'and says nothing of hours it did not add');
-    has(text(a1.html), 'adds Landscaper, in the site management fee above', 'the payment summary names it');
+    has(text(a1.html), 'adds Landscaper, in the Home Sale Preparation Fee above', 'the payment summary names it');
     const quoted = finalDoc(EST_BP, Object.assign({}, BP_JOB, { prepSourcing: { 'Lco-land': { quote: 12000 } } }), COS, { tc: 80, ps: 60 });
     eq(quoted._collected - a0._collected, 3600, 'on its actual quote once one is recorded: 30% of $12,000');
     // The fixed price with the fee on top.
@@ -493,12 +496,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const f1 = finalDoc(EST_BPF, BP_JOB, COS, { tc: 80, ps: 60 });
     eq(f1._collected - f0._collected, 2700, 'the fixed-price final collects the fee on it too, on top of the flat fee');
     eq(f1.overUnder, 0, 'with no variance');
-    has(text(f1.html), 'adds Landscaper, in the site management fee above', 'and names it in the payment summary');
+    has(text(f1.html), 'adds Landscaper, in the Home Sale Preparation Fee above', 'and names it in the payment summary');
     const fh = finalDoc(EST_BPF, BP_JOB, [accepted({ tcHrs: 4, vendorAdds: [LANDSCAPER] })], { tc: 80, ps: 60 });
-    has(text(fh.html), '+ $600; adds Landscaper, in the site management fee above', 'with hours: the signed price, then the vendor');
+    has(text(fh.html), '+ $600; adds Landscaper, in the Home Sale Preparation Fee above', 'with hours: the signed price, then the vendor');
     // The change-order section's note on the fixed final: where the vendor's fee is, and a price sentence only for a
     // change order that carries a price (a vendor-only one carries none).
-    has(text(f1.html), 'A vendor a change order added bills you directly, and the site management fee on what it actually charged is in the fee above.',
+    has(text(f1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on what it actually charged is in the fee above.',
         '⚠ the fixed final\'s change-order note says where the added vendor\'s fee is');
     lacks(text(f1.html), 'Each is charged at the price on the change order you accepted', 'and claims no price for a change order that carries none');
     has(text(fh.html), 'because a fixed fee does not otherwise move with the hours worked. A vendor a change order added bills you directly',
@@ -508,7 +511,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'logisticsLinesFor', 'logisticsCatsFor', 'logisticsLineOn', '_fldBg', 'vendorPickerOptions', '_selVendorId', 'resolveJobVendor',
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
-      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineTCHrs'];
+      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'estimateAppraiserLines', 'vendorLineTCHrs', 'roundCents', 'fmtHrs'];
     const sourcing = (cos) => String(sandbox({ fns: SRC_FNS, vars: ['LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES'],
       stubs: { changeOrders: cos, jobs: [BP_JOB], estimateStore: {}, document: domStub({}), contractors: [],
                vendorDirectory: [{ vendor_name: 'Green Thumb Landscaping', category_group: 'Property Preparation', category: 'Landscaper', status: 'Active', _row: 3 }] } })
@@ -533,7 +536,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(st(EST_BPI), 'added by Change Order', 'where no change order can add one');
     const es = (e) => text(c.probateAgreementHtml(ESTATE_JOB({ svc: 'cleanout' }), Object.assign({}, EST_ESTATE, { svc: 'cleanout' }, e)));
     const prepE = { prepEnabled: true, prepItems: [{ type: 'Painting', cost: 10000, lid: 'bp1' }], prepCost: 10000, prepFee: 3000 };
-    has(es(prepE), 'General contractor / site management fee on the home sale preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost',
+    has(es(prepE), 'Charged on the home sale preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost',
         '⚠⚠ the estate fee row, hourly arm');
     const fx = es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 40000, prepFeeOnTop: true, havellinTotal: 43000 }));
     has(fx, 'on the home sale preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost', 'the fee row, fixed arm');
@@ -571,7 +574,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ A4 — on a Premium estate an appraiser line books no hours: measured through calcAll');
+  // ⚠⚠ RESTATED 2026-10-01 (P17; Anthony's answer 1): the three A4 groups pinned P16's rule, that an appraiser line books no
+  // hours on a Premium estate because Premium's flat 25 specialty hours covered it (premiumCoversLine). P17 removed the 25
+  // hours and reversed the rule: Premium is the higher rates only, and every vendor line books its own coordination hours on
+  // every job. Each group below asserts the same surfaces under the new rule, re-measured through the real engine
+  // (p17-pricing-billing.test.js measures the figures as the hand-back reports them).
+  group('⚠⚠ A4 (reversed, P17) — on a Premium estate an appraiser line books its own hours: measured through calcAll');
   {
     const run = (prem, withArt, fixed, svc) => {
       const seed = { 'e-prem': !!prem };
@@ -581,100 +589,98 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       return r;
     };
     const E = (r) => r.ctx.currentEstimate || {};
-    // Standard: the line books its 2.0 hours (Q20).
+    const C = (n) => Math.round(n * 100) / 100;
+    // Standard: the line books its 2.0 hours (Q20), as before.
     const s0 = E(run(false, false)), s1 = E(run(false, true));
     eq(s1.vendorTCHrs, 2, 'a standard estate: the appraiser books its 2.0 hours');
     eq(s1.totTC - s0.totTC, 2, 'two concierge hours on the estimate');
-    eq(s1.havellinTotal - s0.havellinTotal, 300, '$300 at the standard rate (3,500 sq ft Estate Settlement, $18,000 → $18,300)');
-    // Premium: none.
+    eq(C(s1.havellinTotal - s0.havellinTotal), 300, '$300 at the standard rate (3,500 sq ft Estate Settlement, $' + s0.havellinTotal + ' → $' + s1.havellinTotal + ')');
+    // Premium: the same two hours, at the Premium rate.
     const p0 = E(run(true, false)), p1r = run(true, true), p1 = E(p1r);
-    eq(p1.vendorTCHrs, 0, '⚠⚠ Premium: the appraiser line books no coordination hours');
-    eq([p1.totTC, p1.havellinTotal], [p0.totTC, p0.havellinTotal], '⚠⚠ so adding the appraiser moves a Premium hourly quote not at all ($' + p0.havellinTotal + ')');
+    eq(p1.vendorTCHrs, 2, '⚠⚠ Premium: the appraiser line books its 2.0 coordination hours, as on any job');
+    eq([p1.totTC - p0.totTC, C(p1.havellinTotal - p0.havellinTotal)], [2, 370], '⚠⚠ so adding the appraiser adds two hours at $185 to a Premium hourly quote ($' + p0.havellinTotal + ' → $' + p1.havellinTotal + ')');
     eq(p1.prem, true, 'fixture: the estimate is Premium');
-    eq((p1.vendors || [])[0] && p1.vendors[0].tcHrs, 2, 'the line keeps its recorded 2.0 hours in the snapshot — the rule is applied at read time');
+    eq((p1.vendors || [])[0] && p1.vendors[0].tcHrs, 2, 'the line keeps its recorded 2.0 hours in the snapshot');
+    eq([p0.totTC, p0.totPS], [s0.totTC, s0.totPS], '⚠⚠ and Premium itself adds no hours: the same hours as the standard estate, at the higher rates');
+    eq(p0.havellinTotal, C(p0.totTC * 185 + p0.totPS * 125), 'priced at $185 / $125 and nothing else');
     const pf0 = E(run(true, false, true)), pf1 = E(run(true, true, true));
-    eq(pf1.fixedAmount, pf0.fixedAmount, 'a Premium fixed-price suggestion does not move either ($' + pf0.fixedAmount + ')');
+    eq(C(pf1.fixedAmount - pf0.fixedAmount), C(370 * 1.2), 'a Premium fixed-price suggestion carries it too, with its contingency ($' + pf0.fixedAmount + ' → $' + pf1.fixedAmount + ')');
     const pp0 = E(run(true, false, false, 'probate')), pp1 = E(run(true, true, false, 'probate'));
-    eq(pp1.havellinTotal, pp0.havellinTotal, 'and a Premium Probate ($' + pp0.havellinTotal + ')');
-    // Both ways: switch Premium off on the same page and the line's hours come back.
+    eq(C(pp1.havellinTotal - pp0.havellinTotal), 370, 'and a Premium Probate ($' + pp0.havellinTotal + ' → $' + pp1.havellinTotal + ')');
+    // Switching Premium off and on changes the rate, never the line's hours.
     p1r.doc.getElementById('e-prem').checked = false;
     p1r.ctx.calcAll();
-    eq(E(p1r).vendorTCHrs, 2, '⚠ switching Premium off books the appraiser\'s hours again');
-    eq(E(p1r).totTC, s1.totTC, 'to the standard figure');
+    eq(E(p1r).vendorTCHrs, 2, '⚠ switching Premium off leaves the appraiser\'s hours where they were');
+    eq(E(p1r).totTC, s1.totTC, 'the standard figure, which is the Premium figure in hours');
     p1r.doc.getElementById('e-prem').checked = true;
     p1r.ctx.calcAll();
-    eq(E(p1r).vendorTCHrs, 0, 'and switching it back drops them again');
-    // Another vendor on a Premium estate keeps its hours.
+    eq(E(p1r).vendorTCHrs, 2, 'and switching it back on drops nothing');
+    // Every vendor on a Premium estate keeps its hours, the appraiser included.
     const oth = run(true, false);
     oth.ctx.vendors = [Object.assign({}, ART), { type: 'Auction House', cost: 2000, lid: 'ah', tcHrs: 3 }];
     oth.ctx.calcAll();
-    eq(E(oth).vendorTCHrs, 3, 'only the appraiser is covered: an auction house on the same Premium estate books its 3.0');
-    // The reference band prices the same rule: identical with and without the appraiser on a Premium estate.
+    eq(E(oth).vendorTCHrs, 5, 'nothing is covered: an auction house and an appraiser on a Premium estate book 3.0 + 2.0');
+    // The reference band prices the same rule: the appraiser moves it on either estate, as it moves the estimate.
     const bandOf = (r) => String(r.doc.getElementById('ref-box').innerHTML || '');
-    ok(bandOf(p1r).length > 0 && bandOf(run(true, true)) === bandOf(run(true, false)), 'the Pricing Reference Check does not move either');
-    ok(bandOf(run(false, true)) !== bandOf(run(false, false)), 'while on a standard estate the appraiser moves it, as it moves the estimate');
+    ok(bandOf(p1r).length > 0 && bandOf(run(true, true)) !== bandOf(run(true, false)), 'the Pricing Reference Check moves with the appraiser on a Premium estate');
+    ok(bandOf(run(false, true)) !== bandOf(run(false, false)), 'and on a standard one');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ A4 — the appraiser\'s own row on Build Estimate says why it books no hours, and the card total follows');
+  group('⚠⚠ A4 (reversed, P17) — the appraiser\'s row on Build Estimate carries no Premium note, and the card books every line');
   {
     const r = driveCalcAll({ svc: 'cleanout', sqft: 3500, rooms: BASE, seed: { 'e-prem': true } });
     r.ctx.vendors = [Object.assign({}, ART), { type: 'Auction House', cost: 2000, lid: 'ah', tcHrs: 3 }];
     r.ctx.renderVendorGroupCards();
     r.ctx.calcAll();
     const cards = () => String(r.doc.getElementById('vendor-group-cards').innerHTML || '');
-    has(cards(), 'No concierge hours &mdash; appraiser coordination is covered by Premium Estate', '⚠⚠ the appraiser\'s row says Premium covers it');
-    eq((cards().match(/covered by Premium Estate/g) || []).length, 1, 'on the appraiser alone');
-    ok(/\+3\.0 hrs concierge/.test(cards()) && !/\+5\.0 hrs concierge/.test(cards()), 'the card books the auction house\'s 3.0, not 5.0');
-    // Toggling Premium repaints the cards (the transition guard), both ways.
+    has(cards(), 'Art Appraiser', 'fixture: the card draws the appraiser line');
+    lacks(cards(), 'covered by Premium Estate', '⚠⚠ the appraiser\'s row says nothing about Premium: nothing covers its hours');
+    ok(/\+5\.0 hrs concierge/.test(cards()) && !/\+3\.0 hrs concierge/.test(cards()), 'the card books both lines\' hours, 5.0, on a Premium estate');
     r.doc.getElementById('e-prem').checked = false;
+    r.ctx.renderVendorGroupCards();
     r.ctx.calcAll();
-    lacks(cards(), 'covered by Premium Estate', 'switched off: the note goes');
-    ok(/\+5\.0 hrs concierge/.test(cards()), 'and the card books both lines\' hours');
-    r.doc.getElementById('e-prem').checked = true;
-    r.ctx.calcAll();
-    has(cards(), 'covered by Premium Estate', 'switched back on: it returns');
+    ok(/\+5\.0 hrs concierge/.test(cards()), 'and the same 5.0 on a standard one');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠ A4 — every sum of vendor-line hours reads the rule: the saved-total share-out and the Job Plan');
+  group('⚠ A4 (reversed, P17) — every sum of vendor-line hours books every line: the saved-total share-out and the Job Plan');
   {
     const r = driveCalcAll({ svc: 'cleanout', sqft: 3500, rooms: BASE,
-                             fns: ['pinVendorLineHours', 'vendorDirectoryReady', 'directoryCategories', 'vendorCats', 'coordHrsRollup'] });
+                             fns: ['pinVendorLineHours', 'vendorDirectoryReady', 'directoryCategories', 'vendorCats', 'coordHrsRollup', 'fmtHrs'] });
     const P = r.ctx;
     P.vendorDirectory = [];   // not loaded: the lines share the saved total
     const lines = [{ type: 'Art Appraiser' }, { type: 'Estate Sale Company' }];
-    P.pinVendorLineHours(lines, 4, true);
-    eq(lines[1].tcHrs, 4, '⚠ on a Premium estate the saved total goes to the lines that book hours — the appraiser counts none of it');
-    eq(lines[0].tcHrs, P.vendorLineTCHrs('Art Appraiser'), 'and the appraiser is pinned at its own hours, which come back if Premium goes');
-    const std = [{ type: 'Art Appraiser' }, { type: 'Estate Sale Company' }];
-    P.pinVendorLineHours(std, 4, false);
-    eq(Math.round((std[0].tcHrs + std[1].tcHrs) * 10) / 10, 4, 'a standard estate shares it across both, as before');
-    // The Job Plan's coordination rollup falls back to the lines through the same rule.
+    P.pinVendorLineHours(lines, 4);
+    // The appraiser's 2.0 (its group's 4 touches) and an estate sale company's 1.5 (3 touches since P17) weight the share.
+    eq([lines[0].tcHrs, lines[1].tcHrs], [2.3, 1.7], '⚠ the saved total is shared across both lines, the appraiser included, in proportion to their hours');
+    eq(Math.round((lines[0].tcHrs + lines[1].tcHrs) * 10) / 10, 4, 'and the shares add up to the total the estimate was saved with');
+    // The Job Plan's coordination rollup falls back to the lines the same way on any estate.
     const rollJob = { id: 1, svc: 'cleanout', vendorSourcing: { La: { coordHrs: 1 } } };
     const roll = (prem) => text(P.coordHrsRollup(rollJob, { svc: 'cleanout', prem, vendors: [Object.assign({}, ART, { lid: 'a' })] }));
-    has(roll(true), 'Coordination time: estimated 0.0 hrs', 'the Job Plan\'s coordination rollup estimates no hours for a Premium appraiser');
-    has(roll(false), 'Coordination time: estimated 2.0 hrs', 'and 2.0 on a standard one');
+    has(roll(true), 'Coordination time: estimated 2.0 hrs', 'the Job Plan\'s coordination rollup estimates the appraiser\'s 2.0 hours on a Premium estate');
+    has(roll(false), 'Coordination time: estimated 2.0 hrs', 'and on a standard one');
     // The Job Plan's sourcing card prints each line's estimated coordination beside the hours recorded for it.
     const SRC = ['renderVendorSourcing', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', '_srcLineKey', 'esc', 'fmt', 'dirStaleNotice',
       'logisticsLinesFor', 'logisticsCatsFor', 'logisticsLineOn', '_fldBg', 'vendorPickerOptions', '_selVendorId', 'resolveJobVendor',
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
-      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineTCHrs', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories'];
+      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'estimateAppraiserLines', 'vendorLineTCHrs', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'roundCents', 'fmtHrs'];
     const srcCard = (prem) => text(sandbox({ fns: SRC, vars: ['LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES', 'COORD_TOUCHES_DEFAULT'],
       stubs: { changeOrders: [], jobs: [{ id: 1, svc: 'cleanout' }], estimateStore: {}, document: domStub({}), contractors: [], vendorDirectory: [] } })
       .renderVendorSourcing(1, { id: 1, svc: 'cleanout' }, { svc: 'cleanout', prem, vendors: [Object.assign({}, ART)], prepItems: [], collections: [] }));
     has(srcCard(true), 'Art Appraiser', 'fixture: the sourcing card draws the appraiser line');
-    has(srcCard(true), 'est 0.0', '⚠ the sourcing card estimates no coordination for it on a Premium estate');
-    has(srcCard(false), 'est 2.0', 'and its 2.0 hours on a standard one');
-    // Every call of vendorLineHrs passes the Premium flag: a caller that forgets books the hours silently.
+    has(srcCard(true), 'est 2.0', '⚠ the sourcing card estimates its 2.0 hours on a Premium estate');
+    has(srcCard(false), 'est 2.0', 'and on a standard one');
+    // No caller hands vendorLineHrs a Premium flag any more: the line's hours are the line's, on every job.
     const live = noComments(src);
     const calls = live.match(/vendorLineHrs\(([^()]|\([^()]*\))*\)/g) || [];
-    const uses = calls.filter((x) => !/^vendorLineHrs\(v, prem\) \{/.test(x));
+    const uses = calls.filter((x) => !/^vendorLineHrs\(v\) \{/.test(x));
     ok(uses.length >= 5, 'fixture: the callers are found (' + uses.length + ')');
-    eq(uses.filter((x) => !/,/.test(x)), [], '⚠⚠ every call of vendorLineHrs hands it the Premium flag');
-    eq((live.match(/: getVendorTCHrs\(prem\);/g) || []).length, 1, 'calcAll sums the lines with it');
-    has(live, 'pinVendorLineHours(vendors, est.vendorTCHrs, est.prem);', 'and the reopen share-out reads the saved estimate\'s flag');
+    eq(uses.filter((x) => /,/.test(x)), [], '⚠⚠ no call of vendorLineHrs passes a second argument');
+    eq((live.match(/: getVendorTCHrs\(\);/g) || []).length, 1, 'calcAll sums the lines with no flag');
+    has(live, 'pinVendorLineHours(vendors, est.vendorTCHrs);', 'and the reopen share-out reads only the saved total');
+    lacks(live, 'premiumCoversLine', 'and the predicate is gone');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -705,11 +711,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // An hourly rush job with a 10% discount: 80 TC @150 + 60 PS @100, $1,940 package, premium 20% (not on the prep fee).
     // havellinTotal as calcAll gives it: 19,940 + 3,988 − discountOnLabor(18,000, 0.2, 10) = 2,160 → 21,768.
     const ER = Object.assign({}, EST_LAB, { rush: true, rushPct: 0.2, rushExPrepFee: true, discountPct: 10, havellinTotal: 21768 });
-    const D = sandbox({ fns: ['discountOnLabor'] });
+    const D = sandbox({ fns: ['discountOnLabor', 'roundCents'] });
     eq(ER.havellinTotal, 19940 + 3988 - D.discountOnLabor(18000, 0.2, 10), 'fixture: the estimate carries calcAll\'s arithmetic');
     const CO40 = [accepted({ tcHrs: 40, psHrs: 40 })];
     const M = sandbox({ fns: ['coBaselineMove', 'coPrice', 'coRushPct', 'coBaselineShift', 'coHours', 'discountOnLabor', 'coVendorAdds',
-                              'estPrepFeeOnTop', 'prepFeeRate'], vars: ['RUSH_PCT', 'PREP_FEE_RATE'] });
+                              'estPrepFeeOnTop', 'prepFeeRate', 'roundCents'], vars: ['RUSH_PCT', 'PREP_FEE_RATE'] });
     eq(M.coBaselineMove(CO40, ER, 150, 100), 10000 + 2000 - 1200, '⚠⚠ $10,000 of hours carry the 20% premium and the 10% discount, as the final bills them: $10,800');
     eq(M.coBaselineMove(CO40, EST_LAB, 150, 100), 10000, 'on a job with neither, the plain value');
     // Driven: log exactly the estimate plus the change order's hours, and the final lands on its baseline.
@@ -756,7 +762,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
   group('⚠⚠ B25 — crew hours with no concierge hours: one rule, flagged where the final is sent and approved');
   {
-    const W = sandbox({ fns: ['finalCrewOnlyWarn', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrBillingRates', 'fmt'] });
+    const W = sandbox({ fns: ['finalCrewOnlyWarn', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrBillingRates', 'fmt', 'roundCents', 'fmtHrs'] });
     const w = W.finalCrewOnlyWarn(BP_JOB, EST_LAB, 0, 60);
     eq(w, '60.0 crew hours logged with no concierge hours. The concierge is on site for every crew hour, so this final is likely under-billing $12,000 of concierge time. Check the log before sending.',
        'crew hours with none of the concierge\'s: the sentence, with the concierge time the estimate priced');
@@ -777,7 +783,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',
         'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote',
         'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent',
-        'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts'],
+        'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts', 'roundCents', 'fmtHrs'],
       vars: ['JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'DECEDENT_SERVICES', 'DOC_STAGE_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false, SHEETS_SYNC_URL: '' } });
     // A job closed with every step before the final recorded, so the final is the one lit step (checked below).
@@ -830,8 +836,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ Stale text — the "Agreement not signed" chip names what is actually missing');
   {
     const G = sandbox({ fns: ['agreementChipFix', 'docReadiness', 'agreementReady', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove',
-                              'fmtMoney', 'isAgreementSent', 'isAgreementSigned', 'agreementSignature', 'docSentAt', 'docKeyFor', 'esignJobWatches',
-                              'esignProviderKey', 'esignAvailable'],
+                              'fmt', 'isAgreementSent', 'isAgreementSigned', 'agreementSignature', 'docSentAt', 'docKeyFor', 'esignJobWatches',
+                              'esignProviderKey', 'esignAvailable', 'roundCents'],
                         vars: ['DOC_READY_WHY', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY'], stubs: { estimateStore: {}, SHEETS_SYNC_URL: '' } });
     const EST = { estimate: { havellinTotal: 20000 }, approved: true };
     const J = (over) => Object.assign({ id: 1, name: 'Harper', svc: 'downsizing_move', status: 'won', won: true, acceptedTotal: 20000 }, over || {});

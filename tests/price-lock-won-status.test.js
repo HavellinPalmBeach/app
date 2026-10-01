@@ -85,7 +85,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts',
       'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn'].concat(BLK_FNS),
+      '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'].concat(BLK_FNS),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],
@@ -230,7 +230,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function uiBed(jobO, noJob) {
     const d = domStub({});
     const U = sandbox({
-      fns: ['updateApprovalUI'].concat(BLK_FNS),
+      fns: ['updateApprovalUI', 'roundCents', 'fmt'].concat(BLK_FNS),
       vars: ['estimateApproved', 'estimateSubmitted', 'discountRevision', 'approvedBy', 'approvedAt'],
       stubs: {
         document: d, applyEstimateLock() {}, _paintDriveEstBtn() {}, buildEstimateMailto() { return 'mailto:x'; },
@@ -398,7 +398,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'unscoredRoomNames', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'svcHasDocStep', 'matterTypeOf',
     'docTierOf', 'docTierDef', 'buildLockSnapshot', 'submitDeny', 'isJobWon', '_jobStatusCell', 'jobStatusView',
     'estimateEventStatus', 'submitForApproval', 'estimateSubmitBlocker', 'estimateNoteGaps', 'editEstimateFromCE',
-    'revokeEstimateApproval', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'estimateOutForApproval', 'priceRaiseSentence', 'priceAboveSent', 'fmtMoney', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord'].concat(BLK_FNS);
+    'revokeEstimateApproval', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'estimateOutForApproval', 'priceRaiseSentence', 'priceAboveSent', 'fmt', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'roundCents', 'roundQuarter', 'isQuarterHours', 'fmtHrs', 'declutterHoursRefusal'].concat(BLK_FNS);
   const ST_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt', 'MANAGER_PINS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT',
     'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', '_dashShown', '_dashKeepNotice', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];
@@ -463,7 +463,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('jobStatusView: ONE reading of the status, and a won job never reads as a pre-won phase');
   {
-    const V = sandbox({ fns: ['jobStatusView', 'isJobWon', '_jobStatusCell', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'], vars: ['JOB_STATUS_LABELS', 'JOB_STATUS_DOT'] });
+    const V = sandbox({ fns: ['jobStatusView', 'isJobWon', '_jobStatusCell', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'], vars: ['JOB_STATUS_LABELS', 'JOB_STATUS_DOT'] });
     const v = (j) => V.jobStatusView(j);
     eq(v({ status: 'pending', won: true }).label, 'Won · Pending Re-approval', 'won + pending: both facts');
     eq(v({ status: 'pending', won: true }).key, 'pending', '⚠ keyed pending, so the manager’s Pending Approval filter still finds it');
@@ -482,7 +482,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
   {
     // The Status sort reads the same view.
-    const s = sandbox({ fns: ['sortJobsForList', 'svcLabelOf', 'jobStatusView', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'],
+    const s = sandbox({ fns: ['sortJobsForList', 'svcLabelOf', 'jobStatusView', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'],
       vars: ['SVC_LABELS', 'SVC_ORDER', 'JOB_STATUS_ORDER', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'JOB_SORTS'] });
     const list = [{ id: 1, status: 'approved', won: true, name: 'A' }, { id: 2, status: 'approved', name: 'B' },
       { id: 3, status: 'active', won: true, name: 'C' }];

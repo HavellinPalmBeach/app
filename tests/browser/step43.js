@@ -299,11 +299,12 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       };
       const withHrs = await viewFinal(4306);
       has(withHrs, 'Fiona Grant', 'fixture: the viewer holds this job\'s final');
-      has(withHrs, 'Services total (site management fee on actual vendor spend + logged concierge hours)', '⚠⚠ with concierge hours logged: the fee and the hours');
+      // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; this read "site management fee".
+      has(withHrs, 'Services total (Home Sale Preparation Fee on actual vendor spend + logged concierge hours)', '⚠⚠ with concierge hours logged: the fee and the hours');
       lacks(withHrs, 'logged hours + actual fees', 'not the hourly heading');
       const feeOnly = await viewFinal(4307);
       has(feeOnly, 'Gus Hale', 'fixture: and this one\'s');
-      has(feeOnly, 'Services total (site management fee on actual vendor spend)', '⚠⚠ with none logged: the fee alone');
+      has(feeOnly, 'Services total (Home Sale Preparation Fee on actual vendor spend)', '⚠⚠ with none logged: the fee alone');
       lacks(feeOnly, 'concierge hours)', 'and no hours claimed');
       const hourly = await viewFinal(4301);
       has(hourly, 'Actual Havellin services total (logged hours + actual fees)', 'an Estate Settlement final keeps its heading');

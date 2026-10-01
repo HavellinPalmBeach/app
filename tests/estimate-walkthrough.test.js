@@ -320,9 +320,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ SINCE 2026-09-24 THE FEE IS NOT UNDER THIS NOTE: it is a line inside the Havellin Services
     // table, which is the total it counts in. A note that mentioned the fee without saying where it
     // is would send the reader looking for a line that is not in this section.
-    has(withFee, "30% fee on this work is the site management line in Havellin Services above",
+    // RESTATED 2026-10-01 (P17): the line is named for the Home Sale Preparation Fee (it read "the site management line").
+    has(withFee, "30% fee on this work is the Home Sale Preparation Fee line in Havellin Services above",
         'and it says where the fee line is');
-    lacks(plain, 'site management line', 'a third-party-only job is not told about a prep fee');
+    lacks(plain, 'Home Sale Preparation Fee line', 'a third-party-only job is not told about a prep fee');
     lacks(fn('vendorEstimateNote'), "'30%'", 'the rate is never a literal in the sentence');
     has(fn('vendorEstimateNote'), 'Math.round(prepFeeRate() * 100)', 'it reads prepFeeRate');
 

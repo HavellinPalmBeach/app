@@ -144,7 +144,10 @@ const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 
   'setVendorRating', 'setVendorRatingNote', '_ratingJob', '_writeVendorScore', 'computeVendorAvg',
   'draftReviewRequest', 'markReviewRequestSent', 'toggleProbatePkg', 'setValBasis', 'setEstateAVD',
   '_attachPaymentEvidence', '_driveFolderFailed', 'fetchSubfolderIds', '_normalizeSubfolders', 'applyEsignStatus', 'docState',
-  'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentCounts', '_paymentKey', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'];
+  'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentCounts', '_paymentKey', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'isQuarterHours', '_coordHrsRefusal',
+  // P17: the real money formatter, since removeLogisticsLine now prints its quote through it; the two Stripe devices
+  // below stubbed it as '$' + n and read nothing it printed, so their stubs went rather than shadow it.
+  'fmt'];
 const DEVICE_VARS = ['SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq', 'VENDOR_CONTACT_SLOTS',
   'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PERSON_NAME_ALIASES', 'VENDOR_RATING_WINDOW'];
 
@@ -562,14 +565,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const sa = device([morningJob(SPOLL), otherJob()]);
     sa.setPrepVendorQuote(7, 0, '23400');
     srv2.land(sa.__send());
-    const sb = device([morningJob(SPOLL), otherJob()], { _docNotice() {}, renderJobs() {}, fmt: (n) => '$' + n,
+    const sb = device([morningJob(SPOLL), otherJob()], { _docNotice() {}, renderJobs() {},
       paymentStageLabel: () => 'deposit', isJobFunded: () => true, _photoUid: () => 'u-pi-1' });
     eq(sb.applyStripePayments(7, 'invoice-deposit', 'deposit', { payments: [] }), 0, 'Stripe answers "nothing yet" to the stale laptop');
     eq(get(localJob(sb, 7), 'updatedAt'), MORNING, '⚠ …and the job\'s clock does not move');
     srv2.land(sb.__send());
     eq(get(srv2.job(7), 'prepSourcing', 'Lp1', 'quote'), 23400, '⚠⚠ FIXED: the stale device\'s Stripe check no longer takes the job');
     // A payment that DOES land is recorded the way a hand entry is: its own key stamped, the clock moved.
-    const sc = device([clone(srv2.job(7)), otherJob()], { _docNotice() {}, renderJobs() {}, fmt: (n) => '$' + n,
+    const sc = device([clone(srv2.job(7)), otherJob()], { _docNotice() {}, renderJobs() {},
       paymentStageLabel: () => 'deposit', isJobFunded: () => true, _photoUid: () => 'u-pi-1' });
     eq(sc.applyStripePayments(7, 'invoice-deposit', 'deposit',
       { payments: [{ piId: 'pi_1', status: 'succeeded', amount: 4575, createdAt: '2026-09-29T15:00:00Z' }] }), 1, 'a settled payment is recorded');

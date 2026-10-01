@@ -76,7 +76,7 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates',
                 'coRateModsLine', 'coRushPct', 'coRushPctFor', 'estFixedLines', 'coScopeLabel', 'coVendorAdds',
                 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid',
-                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor'];
+                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'roundCents', 'isQuarterHours', 'fmtHrs'];
 function coCtx(est, cos, seed, dir) {
   const dom = domStub(seed || {});
   const said = [];
@@ -124,7 +124,7 @@ function inv(stubs) {
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
           'stagePaidTotal', 'paymentCounts', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop',
           'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct',
-          'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove'],
+          'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'],
     vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
            'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'],
@@ -160,7 +160,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
-                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy', 'coPrepVendorsOn'].concat(TIER_FNS);
+                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'].concat(TIER_FNS);
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -478,7 +478,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     p.printChangeOrder(100);
     const d = text(p.__printed);
     has(d, 'This change order adds Painting to the preparation vendors.', '⚠ the printed page says what it adds');
-    has(d, 'The vendor bills you directly, at cost, and the 30% site management fee in your agreement is billed on what it actually charges — about $1,350 at the estimated $4,500.',
+    // RESTATED 2026-10-01 (P17): the fee's one name is the Home Sale Preparation Fee (it read "site management fee"), here and below.
+    has(d, 'The vendor bills you directly, at cost, and the 30% Home Sale Preparation Fee in your agreement is billed on what it actually charges — about $1,350 at the estimated $4,500.',
         'and on what terms');
     lacks(d, 'Third-party vendor costs are unaffected', '⚠ and not the line that would now be false');
     has(d, 'Added preparation vendor: Painting', 'the table names the vendor');
@@ -521,11 +522,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const quoted = Object.assign({}, PREP_JOB, { prepSourcing: { 'Lco-paint': { quote: 5000 } } });
     const a2 = finalDoc(est, quoted, cos);
     eq(a2._collected - a0._collected, 1500, '…and on its actual quote once one is recorded: 30% of $5,000');
-    has(text(a1.html), 'Adds Painting (est. $4,500) — it bills you directly, and the site management fee on it is in the fee above', 'the change-order row names it, and where its fee is');
+    has(text(a1.html), 'Adds Painting (est. $4,500) — it bills you directly, and the Home Sale Preparation Fee on it is in the fee above', 'the change-order row names it, and where its fee is');
     lacks(text(a1.html), 'preparation vendors above', '⚠ and never points at a vendor list this invoice does not print');
-    has(text(a1.html), 'A vendor a change order added bills you directly, and the site management fee on what it actually charged is in the fee above.',
+    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on what it actually charged is in the fee above.',
         'the section\'s note says where its fee is, too');
-    has(text(a1.html), 'adds Painting, in the site management fee above', '⚠ the payment summary names the vendor — it read "no hours change, billed in the hours above"');
+    has(text(a1.html), 'adds Painting, in the Home Sale Preparation Fee above', '⚠ the payment summary names the vendor — it read "no hours change, billed in the hours above"');
     lacks(text(a1.html), 'no hours change, billed in the hours above', 'not that');
     // The ±15% baseline moves with the accepted vendor, at its estimated cost: an accepted $4,500 painter is authorised scope.
     eq(a1.requiresApproval, a0.requiresApproval, 'an accepted vendor alone does not send the final to a manager');
@@ -549,7 +550,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'logisticsLinesFor', 'logisticsCatsFor', 'logisticsLineOn', '_fldBg', 'vendorPickerOptions', '_selVendorId', 'resolveJobVendor',
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
-      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorContacts', 'fmtPhoneDisplay'];
+      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorContacts', 'fmtPhoneDisplay', 'roundCents', 'fmtHrs'];
     const sourcing = (cos) => sandbox({ fns: SRC_FNS, vars: ['LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES'],
       stubs: { changeOrders: cos, jobs: [PREP_JOB], estimateStore: {}, document: domStub({}), contractors: [],
                vendorDirectory: [{ vendor_name: 'Brushworks Painting', category_group: 'Property Preparation', category: 'Painting', status: 'Active', _row: 3 }] } })
@@ -655,7 +656,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const cards = (dir, vendors, svc) => {
       const dom = domStub({});
       const c = sandbox({ fns: ['renderVendorGroupCards', 'vendorDirectoryReady', 'vendorGroupCategories', 'directoryCategories', 'vendorCats',
-                                'vendorGroupOfLine', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'prepFeeRate', 'esc', 'fmt', 'premiumCoversLine', 'estimateAppraiserLines'],
+                                'vendorGroupOfLine', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'prepFeeRate', 'esc', 'fmt', 'estimateAppraiserLines', 'roundCents'],
                           vars: ['VENDOR_GROUP_CARDS', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'PREP_FEE_RATE', 'COORD_TOUCHES',
                                  'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
                           stubs: { document: dom, vendorDirectory: dir, vendors: vendors, prepItems: [], currentSvc: () => svc || 'cleanout' } });

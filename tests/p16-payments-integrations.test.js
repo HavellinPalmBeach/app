@@ -70,10 +70,12 @@ const PAY_FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPay
   'depositTargetFor', 'paymentMethodLabel', 'updateDepModalHints', 'currentDepStage', '_photoUid', 'fmt',
   'closeoutRetainedTotal', 'jobIsSettled', 'markPaymentCleared', 'openVoidPayment', 'closeVoidPayment',
   'confirmVoidPayment', 'paymentVoidEffect', 'paymentSummaryText', 'jobPaymentsListHtml', '_jobTouch', '_saveJobEdit',
-  '_todayStr', '_ymdLocal', '_localDateOf', 'fmtDate2', 'esc'];
+  '_todayStr', '_ymdLocal', '_localDateOf', 'fmtDate2', 'esc', 'roundCents', 'paymentSplit'];
 const PAY_VARS = ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', 'PAYMENT_METHODS_CLEAR_ON_RECEIPT',
   'PAYMENT_METHODS_RECORDABLE', '_photoUidSeq', 'LARGE_DEPOSIT_THRESHOLD'];
-const TOTAL = 25715, DEPOSIT = 12858;   // the estate this project always works: 50% is $12,858
+// RESTATED 2026-10-01 (P17): money is carried to the cent, so the 50% deposit of $25,715 is $12,857.50 (paymentSplit,
+// which depositTargetFor now asks); the whole-dollar rule made it $12,857.50. Every '$12,857.50' below read '$12,857.50'.
+const TOTAL = 25715, DEPOSIT = 12857.5;   // the estate this project always works: 50% is $12,857.50
 
 function payBox(opts) {
   const o = opts || {};
@@ -170,11 +172,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // jobPayments: nobody counted that money, and the list must not print it as though somebody had.
     const legacy = payBox({ job: { payments: undefined, depositReceived: true, depositReceivedAt: '2026-08-20' } });
     const lg = inZone(() => legacy.ctx.jobPaymentsListHtml(legacy.job));
-    has(lg, '>$12,858</span> · Deposit (50%) · received Aug 20, 2026 · amount inferred — predates payment records',
+    has(lg, '>$12,857.50</span> · Deposit (50%) · received Aug 20, 2026 · amount inferred — predates payment records',
         'a migrated deposit says its amount was inferred, as the recorder does');
     lacks(lg, ' · — ', 'and prints no blank method');
     has(lg, 'openVoidPayment(1,\'1\')', 'and it can still be voided, keyed on its id, if the inference was wrong');
-    eq(legacy.ctx.paymentSummaryText(legacy.job, legacy.job.payments[0]), '$12,858 payment on the deposit, received Aug 20, 2026',
+    eq(legacy.ctx.paymentSummaryText(legacy.job, legacy.job.payments[0]), '$12,857.50 payment on the deposit, received Aug 20, 2026',
        'and the dialogs call it a payment, never "—"');
 
     // Person-entered text on the list is text: the payer and a void's reason are escaped (the list is innerHTML).
@@ -213,7 +215,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // recording's own stamp would pass the check below whether or not the clear stamps anything.
     b.job.at['payments:' + key] = 1;
     inZone(() => b.ctx.markPaymentCleared(1, key));
-    has(b.seen.confirms[0] || '', '$12,858 personal cheque on the deposit, received Sep 28, 2026, from Pressly Family Trust',
+    has(b.seen.confirms[0] || '', '$12,857.50 personal cheque on the deposit, received Sep 28, 2026, from Pressly Family Trust',
         'it asks first, naming the payment');
     eq(b.pay.clearedOn, '2026-09-30', '⚠⚠ cleared today, on the local calendar');
     eq(b.pay.clearedBy, 'Anthony Graziano', 'attributed as a payment\'s recordedBy is (_actor)');
@@ -247,16 +249,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const b = record('check');
     const key = b.ctx._paymentKey(b.pay);
-    ok(b.ctx.isJobFunded(b.job) && b.job.depositReceived === true, 'fixture: a $12,858 cheque funds the job');
+    ok(b.ctx.isJobFunded(b.job) && b.job.depositReceived === true, 'fixture: a $12,857.50 cheque funds the job');
     let lh = inZone(() => b.ctx.jobPaymentsListHtml(b.job));
     has(lh, 'openVoidPayment(1,\'' + key + '\')', 'the list offers Void on it');
 
     inZone(() => b.ctx.openVoidPayment(1, key));
     const D = (id) => b.doc.getElementById(id);
     eq(D('pay-void-modal').style.display, 'flex', 'the Void dialog opens');
-    has(D('pv-summary').textContent, '$12,858 personal cheque on the deposit', 'naming the payment');
+    has(D('pv-summary').textContent, '$12,857.50 personal cheque on the deposit', 'naming the payment');
     const eff = D('pv-effect').innerHTML;
-    has(eff, '$12,858 comes off the deposit, leaving $0 of the $12,858 due recorded against it.',
+    has(eff, '$12,857.50 comes off the deposit, leaving $0 of the $12,857.50 due recorded against it.',
         '⚠⚠ it says what the void does to the money BEFORE anything is written');
     has(eff, 'The job is no longer funded: hours cannot be logged on it until the deposit is recorded again.',
         '⚠ including the consequence a person would not guess');
@@ -290,7 +292,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(b.job.depositReceived, false, 'and the derived mirror the activation gate reads follows it');
     eq(b.job.depositReceivedAt, '', '⚠ and the day the rail prints on "Deposit received" no longer names the voided cheque');
     const n = b.seen.notices.pop() || {};
-    has(n.msg, 'Voided: $12,858 personal cheque on the deposit', 'the notice names the payment');
+    has(n.msg, 'Voided: $12,857.50 personal cheque on the deposit', 'the notice names the payment');
     has(n.msg, 'Reason: Cheque returned unpaid.', 'the reason');
     has(n.msg, 'The job is no longer funded', '⚠ and what it did to the money');
     eq(n.type, 'warn', 'as a warning, since money moved');
@@ -313,13 +315,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The recorder's own list at that stage keeps it, struck through, and never "uncleared".
     const prior = sandbox({ fns: ['onDepStageChange', 'paymentCounts', 'jobPayments', 'stagePaidTotal', 'depositTargetFor', 'paymentStageWord',
-      'paymentMethodLabel', 'currentDepStage', 'fmt', 'esc'], vars: ['DOC_STAGE_WORD', 'PAYMENT_STAGES'],
+      'paymentMethodLabel', 'currentDepStage', 'fmt', 'esc', 'roundCents', 'paymentSplit'], vars: ['DOC_STAGE_WORD', 'PAYMENT_STAGES'],
       stubs: { document: b.doc, _agrJob: () => b.job, estimateStore: { 1: { estimate: { havellinTotal: TOTAL } } },
         updateDepModalHints() {}, invoiceHtml: () => null } });
     b.doc.getElementById('dep-stage').value = 'deposit';
     prior.onDepStageChange();
     const pr = b.doc.getElementById('dep-prior').innerHTML;
-    has(pr, '<s>$12,858</s>', 'the recorder lists the void, struck through');
+    has(pr, '<s>$12,857.50</s>', 'the recorder lists the void, struck through');
     has(pr, '>void<', 'marked void');
     lacks(pr, 'uncleared', 'never as uncleared money');
     eq(b.doc.getElementById('dep-amount').value, DEPOSIT, '⚠ and it prefills the whole deposit again: the void is not money received');
@@ -344,7 +346,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const two = payBox({ job: { depositReceived: true, depositReceivedAt: '2026-09-28', payments: [
       { id: 1, uid: 't1', stage: 'deposit', amount: DEPOSIT, method: 'wire', receivedOn: '2026-09-20', clearedOn: '2026-09-20' },
       { id: 2, uid: 't2', stage: 'deposit', amount: DEPOSIT, method: 'wire', receivedOn: '2026-09-28', clearedOn: '2026-09-28' }] } });
-    has(two.ctx.paymentVoidEffect(two.job, two.job.payments[1]), 'leaving $12,858 of the $12,858 due recorded against it',
+    has(two.ctx.paymentVoidEffect(two.job, two.job.payments[1]), 'leaving $12,857.50 of the $12,857.50 due recorded against it',
         'fixture: the dialog says the deposit is still whole');
     inZone(() => two.ctx.openVoidPayment(1, 't2'));
     two.doc.getElementById('pv-reason').value = 'Recorded twice';
@@ -365,7 +367,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat',
       'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'paymentCounts', 'discountOnLabor', 'estFixedFee',
       'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds',
-      'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'agrBillingRates', 'estDeclutterHrs', 'escLines'];
+      'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'agrBillingRates', 'estDeclutterHrs', 'escLines', 'roundCents', 'fmtHrs'];
     const IVARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
       'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -525,7 +527,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_todayStr', '_stripeDue', 'outstandingPayments', 'stripeRefresh', 'jobPayments',
     'paymentCounts', '_paymentKey', 'stagePaidTotal', 'depositPaidTotal', 'depositClearedTotal', 'isJobFunded', 'depositTargetFor',
     '_photoUid', '_jobTouch', 'fmt', 'fmtDate2', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit', 'paymentSummaryText', 'paymentMethodLabel',
-    'jobPaymentsListHtml', 'esc'];
+    'jobPaymentsListHtml', 'esc', 'roundCents', 'paymentSplit'];
   function rb(jobsSeed, at) {
     const notices = [];
     const ctx = sandbox({ fns: RB_FNS, vars: ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', '_photoUidSeq', 'STRIPE_RECHECK_MINS'],
@@ -732,7 +734,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
         'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
         'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding',
-        'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', '_localDateOf', '_ymdLocal', 'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'estDeclutterHrs'],
+        'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', '_localDateOf', '_ymdLocal', 'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'estDeclutterHrs', 'roundCents', 'fmtHrs'],
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual', REQUIRE_WALKTHROUGH_NOTES: false } });
     const rj = Object.assign({ name: 'Butler', created: 'Sep 8, 2026', svc: 'cleanout', status: 'won', walkthrough: '2020-01-01', approved: true, won: true,
@@ -846,7 +848,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const run = (gmailOk) => {
       const opened = [], badges = [], mimes = [];
-      const N = sandbox({ fns: ['notifyTCOfDecision', 'firstName', 'sendInternalEmail', 'buildMimeMessage', '_mimeHeader', '_b64Wrap', 'gmailDraftUrl', 'esc'],
+      const N = sandbox({ fns: ['notifyTCOfDecision', 'firstName', 'sendInternalEmail', 'buildMimeMessage', '_mimeHeader', '_b64Wrap', 'gmailDraftUrl', 'esc', 'roundCents', 'fmt'],
         vars: ['_gmailUserEmail'],
         stubs: { window: { open: (u) => { opened.push(String(u)); return null; } }, showSyncBadge: (m, e) => badges.push({ m: String(m), e: !!e }),
           assignedTCContact: () => ({ name: 'Ashley Jerome', email: 'ashley@havellinpalmbeach.com' }), priceRaiseSentence: () => '', estimateStore: {},

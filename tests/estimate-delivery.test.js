@@ -126,9 +126,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // TRUE change — routing the rate through prepFeeRate(), which is the whole requirement.
     // A test that names a behaviour should pin the line that IMPLEMENTS it. The rate is a
     // constant with ONE definition; a document restating the digits is a second copy.
-    has(ce, "management fee on actual vendor spend</strong>",
+    // RESTATED 2026-10-01 (P17): the fee is named the Home Sale Preparation Fee everywhere a client reads it.
+    has(ce, "Home Sale Preparation Fee on actual vendor spend</strong>",
        'prep states the fee it actually charges');
-    has(ce, "Math.round(prepFeeRate()*100) + '% management fee on actual vendor spend",
+    has(ce, "Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on actual vendor spend",
        '⚠ …and reads the rate rather than printing a 30 the day the rate moves');
     has(ce, 'It is not billed hourly.', 'and says plainly that it is not hourly');
     has(ce, 'it is re-quoted and agreed with you in writing', 'scope changes are a re-quote, not an hours change order');
@@ -161,7 +162,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ce = fn('clientEstimateHtml');
     has(ce, 'Due once the vendor schedule is booked', 'prep bills against the booking, not a project midpoint');
     has(ce, 'Due at show-ready handover', 'and against handover');
-    has(ce, 'Management fee only', 'labelled as the fee rather than "Havellin services"');
+    // RESTATED 2026-10-01 (P17): "Management fee only" is "Home Sale Preparation Fee only".
+    has(ce, 'Home Sale Preparation Fee only', 'labelled as the fee rather than "Havellin services"');
     // The hourly schedule survives untouched for everything else.
     has(ce, 'Due at project midpoint', 'an hourly job still bills at the midpoint');
   }
@@ -170,7 +172,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group("agreement approval waits for the client's yes, not just for our own");
   {
     const blocker = fn('agrApprovalBlocker');
-    const ctx = sandbox({ fns: ['agrApprovalBlocker', 'isJobWon', 'agreementReady', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'] });
+    const ctx = sandbox({ fns: ['agrApprovalBlocker', 'isJobWon', 'agreementReady', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'] });
     ctx.jobs.length = 0;
     ctx.jobs.push({ id: 1, status: 'approved' });          // estimate approved, not won
     ctx.jobs.push({ id: 2, status: 'won', won: true });
@@ -319,7 +321,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'buildEstimateEmailText', 'estimateEmailSubject',
             'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             // Both emails state the vendor-fee rule through the one shared sentence (2026-09-10).
-            'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines'],
+            'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines', 'roundCents', 'fmt'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'RUSH_PCT'],
       stubs: {
         assignedTCContact: () => ({ name: 'Ashley Graziano', phone: '(561) 370-4700', email: 'ashley@havellinpalmbeach.com' }),
@@ -364,7 +366,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Fee-only: the email must not promise hours either.
     const prep = { svc: 'prep', havellinTotal: 9000, prepEnabled: true, prepCost: 30000, grandTotal: 39000, totTC: 0, totPS: 0, rooms: [] };
     const phtml = ctx.buildEstimateEmailHtml(prep, { ...job, svc: 'prep' });
-    has(phtml, 'Havellin Management Fee', 'a prep email names the fee');
+    // RESTATED 2026-10-01 (P17): the email's line was "Havellin Management Fee".
+    has(phtml, 'Home Sale Preparation Fee', 'a prep email names the fee');
     has(phtml, '30% of what the vendors actually invoice', 'and states the basis');
     lacks(phtml, 'hours actually worked', 'and never mentions hours');
 
@@ -382,7 +385,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A phase list that throws must not take the email down with it.
     const ctx2 = sandbox({
       fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
-            'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines'],
+            'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines', 'roundCents', 'fmt'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'RUSH_PCT'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
@@ -857,7 +860,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['buildAgreementEmailHtml', 'buildAgreementEmailText', 'agreementEmailSubject',
-            'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
+            'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'Anthony Graziano', phone: '(561) 370-4700', email: 'anthony@havellinpalmbeach.com' }),
@@ -870,7 +873,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const html = ctx.buildAgreementEmailHtml(job);
     has(html, 'Exhibit A', 'it names the exhibit, so the client knows what is attached');
     has(html, '$9,325', 'the 50% deposit');
-    has(html, '$4,663', 'and a 25% instalment');
+    // ⚠ RESTATED 2026-10-01 (P17; measured off the rendered email): the split is to the cent, so a quarter of $18,650
+    // is $4,662.50 on both later instalments, where the whole-dollar split printed $4,663 and $4,662.
+    has(html, '$4,662.50', 'and a 25% instalment');
     has(html, 'HVL-0007', 'the reference');
     lacks(html, 'Warm regards', 'and carries no signature of its own — Gmail adds the sender\'s');
     lacks(html, 'var(--', 'no CSS variables, which no mail client resolves');
@@ -884,7 +889,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A job with no approved estimate must not print a $0 schedule.
     const ctx2 = sandbox({
-      fns: ['buildAgreementEmailHtml', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText'],
+      fns: ['buildAgreementEmailHtml', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
