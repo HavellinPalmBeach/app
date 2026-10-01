@@ -37,7 +37,7 @@ const { sandbox, source, fn, domStub } = require('./harness');
 // than fail it — the other four suites lifting closeoutRetainedTotal already carry it.
 const WL_FNS = ['jobsUnread', 'jobsUnreadNotice', 'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobPaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'stagePaidTotal', 'jobPayments',
   'winLossListHtml', '_wlClientCell', '_jobStatusCell', 'toggleWinLossList', 'isJobWon', 'secCaret',
-  'esc', 'fmtDate2', 'svcLabelOf', 'jobStatusView', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor'];
+  'esc', 'fmtDate2', 'svcLabelOf', 'jobStatusView', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt'];
 const WL_VARS = ['SVC_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS', '_wlOpen'];
 
 const JOBS = [

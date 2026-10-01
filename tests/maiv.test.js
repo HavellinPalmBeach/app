@@ -21,7 +21,7 @@ const FNS = [
   // come apart on the one document that states both.
   'invLotArticleValue', 'invLotSplitState', 'invLotSplitSentence', 'invLotsToSplit',
   'invLotsUntestable', '_lotSplitWorklistBlock', '_invItemNo', 'esc',
-  '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull', '_vehicleLineName',
+  '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull', '_vehicleLineName', 'roundCents', 'fmt'
 ];
 const VARS = [
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -334,7 +334,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(isNaN(ctx.invLotArticleValue({ qty: '1', fmv: '800' })), 'a single article implies nothing');
     ok(isNaN(ctx.invLotArticleValue({ qty: '4', fmv: '' })), 'and an unvalued lot implies nothing');
 
-    has(ctx.invLotSplitSentence({ qty: '6', fmv: '5000' }), '6 items at $5,000 averages $833 an article',
+    // RESTATED 2026-10-01 (P17): the average prints to the cent ($5,000 over six is $833.33); it printed $833.
+    has(ctx.invLotSplitSentence({ qty: '6', fmv: '5000' }), '6 items at $5,000 averages $833.33 an article',
         'the sentence states the arithmetic rather than asserting a verdict');
     has(ctx.invLotSplitSentence({ qty: '6', fmv: '' }), 'no value recorded',
         'and says so when there is nothing to divide');
@@ -434,7 +435,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // is where the lot is born and where the mode selector sits one tap from the number.
     const dctx = sandbox({
       fns: ['_impLotHintHtml', 'invLotSplitState', 'invLotSplitSentence', 'invLotArticleValue',
-            'maivFilingApplies', '_gate706', 'isDecedentJob', '_numOrBlank', '_invMoney', 'esc'],
+            'maivFilingApplies', '_gate706', 'isDecedentJob', '_numOrBlank', '_invMoney', 'esc', 'roundCents', 'fmt'],
       vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES'],
       stubs: {
         jobs: [{ id: 1, svc: 'cleanout' }],
@@ -446,7 +447,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const over = dctx._impLotHintHtml(1, 'c1', 'lot', 6);
     has(over, 'above the $100', 'six articles at $5,000 warns at the moment the lot is chosen');
-    has(over, 'averages $833 an article', 'with the arithmetic on screen');
+    has(over, 'averages $833.33 an article', 'with the arithmetic on screen');   // RESTATED (P17): to the cent
     has(over, 'Itemize it', 'and names the fix, which is the control immediately beside it');
 
     // ⚠ IT READS OUT, IT NEVER REFUSES — the collection value here is a walkthrough estimate
@@ -475,7 +476,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['_renderInventoryImportPanel', '_impLotHintHtml', '_impLotHint', 'invLotSplitState',
             'invLotSplitSentence', 'invLotArticleValue', 'maivFilingApplies', '_gate706',
             'isDecedentJob', '_numOrBlank', '_invMoney', 'esc', '_importableFromEstimate',
-            '_importedSourceSet', '_guessCategory', '_vehicleLineName', 'fmtColVal', '_jobInvRefs'],
+            '_importedSourceSet', '_guessCategory', '_vehicleLineName', 'fmtColVal', '_jobInvRefs', 'roundCents', 'fmt'],
       vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES', 'INV_CATEGORIES', 'INV_TAXONOMY'],
       stubs: {
         jobs: [{ id: 1, svc: 'cleanout' }],
@@ -489,7 +490,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const panel = pctx._renderInventoryImportPanel(1);
     has(panel, 'imp-hint-c1', 'the real panel emits a readout row for the collection');
     has(panel, 'above the $100', 'carrying the warning, rendered rather than merely available');
-    has(panel, 'averages $833 an article', 'with the arithmetic already on the page');
+    has(panel, 'averages $833.33 an article', 'with the arithmetic already on the page');   // RESTATED (P17): to the cent
     has(panel, 'inside the $100', 'and the confirmation on the lot that is fine');
     // ⚠ AND IT HAS TO RE-READ LIVE, or the number is right once and wrong the moment somebody
     // changes the count — which is the one thing they are there to do.
@@ -501,7 +502,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['_renderInventoryImportPanel', '_impLotHintHtml', '_impLotHint', 'invLotSplitState',
             'invLotSplitSentence', 'invLotArticleValue', 'maivFilingApplies', '_gate706',
             'isDecedentJob', '_numOrBlank', '_invMoney', 'esc', '_importableFromEstimate',
-            '_importedSourceSet', '_guessCategory', '_vehicleLineName', 'fmtColVal', '_jobInvRefs'],
+            '_importedSourceSet', '_guessCategory', '_vehicleLineName', 'fmtColVal', '_jobInvRefs', 'roundCents', 'fmt'],
       vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES', 'INV_CATEGORIES', 'INV_TAXONOMY'],
       stubs: {
         jobs: [{ id: 1, svc: 'cleanout', gate706: 'no' }],

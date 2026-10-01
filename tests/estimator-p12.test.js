@@ -23,12 +23,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const SVCS = ['downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', 'probate', 'contested_probate'];
   const run = (o) => driveCalcAll(o);
   const est = (r) => (r && r.ctx && r.ctx.currentEstimate) || {};
-  // "$18,300", "+ $4,000", "- $2,220" → the signed number.
-  const money = (t) => { const m = String(t || '').match(/([+\-−])?\s*\$\s*([\d,]+)/); if (!m) return null;
-                         const v = parseInt(m[2].replace(/,/g, ''), 10); return (m[1] && /[-−]/.test(m[1])) ? -v : v; };
+  // "$18,300", "+ $4,000", "- $2,220", "$2,797.20" → the signed number.
+  // ⚠ RESTATED 2026-10-01 (P17): money prints its cents whenever there are any, so both readers take them.
+  const money = (t) => { const m = String(t || '').match(/([+\-−])?\s*\$\s*([\d,]+(?:\.\d\d)?)/); if (!m) return null;
+                         const v = parseFloat(m[2].replace(/,/g, '')); return (m[1] && /[-−]/.test(m[1])) ? -v : v; };
   const bandFigure = (html, label) => {
-    const m = String(html).match(new RegExp(label + '</td><td class="num">\\$([\\d,]+) · (\\d+) working day'));
-    return m ? { services: parseInt(m[1].replace(/,/g, ''), 10), days: parseInt(m[2], 10) } : null;
+    const m = String(html).match(new RegExp(label + '</td><td class="num">\\$([\\d,]+(?:\\.\\d\\d)?) · (\\d+) working day'));
+    return m ? { services: parseFloat(m[1].replace(/,/g, '')), days: parseInt(m[2], 10) } : null;
   };
   const PKG1500 = { 'e-pkg': { value: '1500', options: [{ text: 'Estate Premium — $1,500', value: '1500' }], selectedIndex: 0 } };
 
@@ -157,16 +158,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.ctx.prepItems = [{ type: 'Painting', cost: 10000, lid: 'L1' }];
     r.ctx.calcAll();
     const e = est(r);
-    const prepFee = Math.round(10000 * r.ctx.prepFeeRate());
+    // ⚠ RESTATED 2026-10-01 (P17): the figures below are taken to the cent by the app's own rule (roundCents), where
+    // they were Math.round to the dollar; on this house each lands on the same figure either way.
+    const C2 = r.ctx.roundCents;
+    const prepFee = C2(10000 * r.ctx.prepFeeRate());
     eq([e.fixedLines, e.rushExPrepFee], [true, true], 'the record says it was priced under these rules');
     eq(e.fixedAmount, e.fixedSuggested, 'the fee tracks the suggestion until a figure is typed');
-    eq(e.fixedSuggested, Math.round((e.tcFee + e.psFee + 1500) * (1 + r.ctx.fixedPriceBuffer('cleanout'))),
+    eq(e.fixedSuggested, C2((e.tcFee + e.psFee + 1500) * (1 + r.ctx.fixedPriceBuffer('cleanout'))),
        '⚠ the suggestion is the price of the scope: the services and the contingency, with no premium and no discount inside it');
-    eq(e.rushAmt, Math.round(e.fixedAmount * 0.20), 'the premium is 20% of the fee, and nothing of the prep fee');
+    eq(e.rushAmt, C2(e.fixedAmount * 0.20), 'the premium is 20% of the fee, and nothing of the prep fee');
     eq(e.discountAmt, r.ctx.discountOnLabor(e.fixedAmount - 1500, 0.20, 10),
        'the discount is 10% of the fee less the materials package, grossed up by the premium on it');
-    eq(e.havellinTotal, e.fixedAmount + e.rushAmt - e.discountAmt + prepFee, 'the services total: the fee, plus the premium, less the discount, plus the prep fee');
-    eq(e.grandTotal, e.havellinTotal + (e.vendorCost || 0) + e.prepCost, 'and the grand total adds the vendors at cost');
+    eq(e.havellinTotal, C2(e.fixedAmount + e.rushAmt - e.discountAmt + prepFee), 'the services total: the fee, plus the premium, less the discount, plus the prep fee');
+    eq(e.grandTotal, C2(e.havellinTotal + (e.vendorCost || 0) + e.prepCost), 'and the grand total adds the vendors at cost');
 
     // M10 — the Estimate Summary shows those figures, not the hourly ones.
     const T = (id) => r.doc.getElementById(id).textContent;
@@ -174,14 +178,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(money(T('s-fixed-fee')), e.fixedAmount, 'M10: the summary opens with the fixed fee');
     eq(D('s-fixed-row'), '', '…on a row of its own');
     eq(['s-tc-fee-row', 's-ps-fee-row', 's-pkg-row'].map(D), ['none', 'none', 'none'], 'and the hourly fee rows it replaced are hidden');
-    eq(money(T('s-havellin')), e.fixedAmount + prepFee, 'the Services subtotal is the fee and the prep fee');
+    eq(money(T('s-havellin')), C2(e.fixedAmount + prepFee), 'the Services subtotal is the fee and the prep fee');
     eq(money(T('s-rush-amt')), e.rushAmt, 'the premium row is the premium on the fee');
     eq(money(T('s-discount-amt')), -e.discountAmt, 'the discount row is the discount on it');
     eq(money(T('s-total')), e.grandTotal, 'and "Total project estimate" is the figure the client is quoted ($' + e.grandTotal + ')');
 
     // The internal margin panel measures the price the client is quoted, on a fixed price the fee.
-    const dep = (html) => { const m = String(html).match(/50% deposit \(\$([\d,]+)\)/); return m ? parseInt(m[1].replace(/,/g, ''), 10) : null; };
-    eq(dep(r.doc.getElementById('margin-panel').innerHTML), Math.round(e.havellinTotal * 0.5),
+    // RESTATED 2026-10-01 (P17): read with its cents, and measured against the split's own deposit (paymentSplit), which
+    // the panel now asks rather than halving the total itself: $14,987.40 of a $29,974.80 total on this house (measured;
+    // before P17 the same house priced at whole hours and dollars, $30,331, and the panel printed $15,166).
+    const dep = (html) => { const m = String(html).match(/50% deposit \(\$([\d,]+(?:\.\d\d)?)\)/); return m ? parseFloat(m[1].replace(/,/g, '')) : null; };
+    eq(dep(r.doc.getElementById('margin-panel').innerHTML), r.ctx.paymentSplit(e.havellinTotal).deposit,
        'M10: the margin panel\'s deposit is half the fixed-price total, not half the hourly one');
 
     // A fee typed by hand still carries the premium: ticking rush always raises the price.
@@ -200,7 +207,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The two ways to discount a fixed fee agree (audit low: about $180 apart with a $1,500 package).
     const D2 = sandbox({ fns: ['discountPreview', 'estPreDiscountTotal', 'estFixedLines', 'estFixedFee', 'estPrepFeeOnTop',
-                               'discountOnFixedFee', 'discountOnLabor', 'fixedDiscountBasisWords'],
+                               'discountOnFixedFee', 'discountOnLabor', 'fixedDiscountBasisWords', 'roundCents'],
                          vars: ['RUSH_PCT', 'MAX_DISCOUNT_PCT'] });
     const pv = D2.discountPreview(typed, 10);
     eq(pv.discount, typed.discountAmt, 'Offer discount previews exactly the discount Build Estimate prices');
@@ -214,9 +221,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     h.ctx.prepItems = [{ type: 'Painting', cost: 10000, lid: 'L1' }];
     h.ctx.calcAll();
     const he = est(h);
-    eq(he.rushAmt, Math.round((he.tcFee + he.psFee + he.pkgCost) * 0.20),
-       '⚠ on an hourly job the premium is 20% of the services, not of the prep fee ($' + he.rushAmt + ', not $' + Math.round(he.havellinTotalFull * 0.20) + ')');
-    eq(he.havellinTotal, he.havellinTotalFull + he.rushAmt, 'and the total is the services plus that premium');
+    eq(he.rushAmt, h.ctx.roundCents((he.tcFee + he.psFee + he.pkgCost) * 0.20),
+       '⚠ on an hourly job the premium is 20% of the services, not of the prep fee ($' + he.rushAmt + ', not $' + h.ctx.roundCents(he.havellinTotalFull * 0.20) + ')');
+    eq(he.havellinTotal, h.ctx.roundCents(he.havellinTotalFull + he.rushAmt), 'and the total is the services plus that premium');
   }
 
   // ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -227,7 +234,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const ctx = sandbox({
         fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
               'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
-              'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'],
+              'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'estimateAppraiserLines', 'vendorLineHrs', 'roundCents', 'fmt'],
         vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
                'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
                'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES', 'DOC_SCOPES'],
@@ -244,16 +251,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                   discountPct: 10, pkgCost: 1500, fixedSuggested: 24000 };
     const c = reopen(LEG);
     const fee = c._fxAmtGet();
-    const charge = fee + Math.round(fee * 0.20) - c.discountOnFixedFee(fee, 1500, 0.20, 10);
+    // ⚠ RESTATED 2026-10-01 (P17): the restated fee is found to the cent and the premium is taken to the cent, so its
+    // charge reaches the old $24,000 to within a cent, where it was "to the dollar".
+    const charge = c.roundCents(fee + c.roundCents(fee * 0.20) - c.discountOnFixedFee(fee, 1500, 0.20, 10));
     ok(fee < 24000, `the fee is restated below the old figure ($${fee}), so the premium and the discount can print as lines`);
-    ok(charge >= 24000 && charge - 24000 <= 1, `and with its lines it charges the old $24,000 (to the dollar: $${charge})`);
+    ok(charge >= 24000 && charge - 24000 <= 0.01, `and with its lines it charges the old $24,000 (to the cent: $${charge})`);
     eq(c._fixedLinesRestated, { was: 24000, fee }, 'the reopen records the restatement for the fixed panel');
     eq(c._fixedAmountBasis, 0, 'and its old suggestion is not read back (it was taken with the lines inside)');
     const now = reopen(Object.assign({}, LEG, { fixedLines: true, fixedAmount: 20000 }));
     eq([now._fxAmtGet(), now._fixedLinesRestated], [20000, null], 'a fee saved under today\'s rules comes back as saved');
     const plain = reopen(Object.assign({}, LEG, { rush: false, discountPct: 0 }));
     eq([plain._fxAmtGet(), plain._fixedLinesRestated], [24000, null], 'and an older fee with neither premium nor discount has nothing to restate');
-    const N = sandbox({ fns: ['fixedLinesRestatedNote'] });
+    const N = sandbox({ fns: ['fixedLinesRestatedNote', 'roundCents', 'fmt'] });
     has(N.fixedLinesRestatedNote({ was: 24000, fee: 21819 }, 24000), 'restated from $24,000 to $21,819', 'the panel names the restatement');
     has(N.fixedLinesRestatedNote({ was: 24000, fee: 21819 }, 24000), 'the same as before', 'and that the total did not move');
     has(N.fixedLinesRestatedNote({ was: 24000, fee: 21820 }, 24001), 'comes to $24,001.', 'or by how much it did');
@@ -288,7 +297,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // 2. A vendor line's coordination hours ride the line, so a slow directory cannot reprice a saved estimate.
     const r2 = run({ svc: 'cleanout', sqft: 3500, rooms: BASE,
-                     fns: ['pinVendorLineHours', 'vendorDirectoryReady', 'directoryCategories', 'vendorCats', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'] });
+                     fns: ['pinVendorLineHours', 'vendorDirectoryReady', 'directoryCategories', 'vendorCats', 'estimateAppraiserLines', 'vendorLineHrs'] });
     r2.ctx.vendorDirectory = [];   // not loaded
     r2.ctx.vendors = [{ type: 'Estate Sale Company', cost: 3000, lid: 'L1', tcHrs: 3.5 }];
     r2.ctx.calcAll();
@@ -337,10 +346,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const REC = { fixedPrice: true, fixedLines: true, prepFeeOnTop: true, fixedAmount: 20000, rush: true, rushPct: 0.20,
                   rushAmt: 4000, discountPct: 10, discountAmt: 2070, pkgCost: 1500, prepFee: 3000, havellinTotal: 24930 };
     // The estimate emails: their lines add up to the Havellin total they state.
-    const M = sandbox({ fns: ['estimateHavellinLines', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'prepFeeRate', '_emMoney'],
+    const M = sandbox({ fns: ['estimateHavellinLines', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'prepFeeRate', '_emMoney', 'roundCents', 'fmt'],
                         vars: ['PREP_FEE_RATE', 'RUSH_PCT'] });
     const lines = M.estimateHavellinLines(REC, false);
-    eq(lines.map((l) => l[0]), ['Fixed Project Fee', 'Home Prep Site Management Fee (30%)', 'Expedited Delivery (20%)', 'Preferred Client Discount (10%)'],
+    // RESTATED 2026-10-01 (P17): the prep fee's line is the Home Sale Preparation Fee (it read "Home Prep Site Management Fee").
+    eq(lines.map((l) => l[0]), ['Fixed Project Fee', 'Home Sale Preparation Fee (30%)', 'Expedited Delivery (20%)', 'Preferred Client Discount (10%)'],
        'the estimate emails list the fee, the prep fee, the premium and the discount');
     eq(lines.reduce((a, l) => a + l[1], 0), REC.havellinTotal, 'and those lines add up to the total the email states');
     eq([M._emMoney(-2070), M._emMoney(4000)], ['\u2212$2,070', '$4,000'], 'a credit line prints as −$2,070, never $-2,070');
@@ -363,7 +373,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'revokeAgreementApproval', 'notePriceChange', 'docState', '_jobTouch', 'estimateEventStatus', 'isJobWon', 'closeDiscountModal',
             'staleDraftNotice', '_docNotice', 'dashNotice', '_dashFbTarget', '_jobBandHost',
             'docDraftPending', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'staleDraftsOf', 'staleDraftNote',
-            'staleDocName', '_draftDay', '_andJoin'],
+            'staleDocName', '_draftDay', '_andJoin', 'roundCents'],
       vars: ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_packetExported', 'currentAgrJobId', 'estimateApproved', 'estimateSubmitted',
              'discountRevision', '_dashNotice', '_dashboardJobId'],
       stubs: { document: domStub({ 'dm-pct': '10' }), saveJobs() {}, syncJobToSheets() {}, saveEstimateState() {}, renderClientEstimate() {},
@@ -387,7 +397,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                         stubs: { document: domStub({ 'vol-r1': '9', 'cplx-r1': '2', 'vol-r2': '3', 'cplx-r2': '2.5' }), calcAll() {}, _volHandSet: {} } });
     V.onVolInput('r1');
     eq(V.document.getElementById('vol-r1').value, '5', 'a 9 typed as a volume becomes a 5 as it is typed');
-    eq(String(V.document.getElementById('cplx-r1').value), '5', 'and a 5 still lifts the complexity to 5, as it always has');
+    // ⚠ RESTATED 2026-10-01 (P17, Anthony's answer 10): a volume of 5 no longer writes the complexity. It set it to 5.
+    eq(String(V.document.getElementById('cplx-r1').value), '2', 'and a 5 leaves the complexity the estimator typed alone');
     V.onCplxInput('r2');
     eq(V.document.getElementById('cplx-r2').value, '3', 'a 2.5 typed as a complexity becomes a 3');
     // A saved estimate reopened before the directory lands keeps its vendor hours.
@@ -395,7 +406,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = sandbox({
       fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
             'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
-            'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'],
+            'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'estimateAppraiserLines', 'vendorLineHrs', 'roundCents', 'fmt'],
       vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
              'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
              'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES', 'DOC_SCOPES'],

@@ -127,7 +127,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // The Won modal: "the client said yes on a call tonight".
       const els = {};
       const doc = { getElementById: (id) => (els[id] = els[id] || { value: 'x', innerHTML: '', style: {} }) };
-      const W = sandbox({ fns: ['openWonModal', '_todayStr', '_ymdLocal', '_approvedPriceAbove', 'priceAboveAcceptance', 'priceAboveSent', 'priceRaiseSentence', 'isJobWon', 'fmtMoney'], vars: ['WON_MODAL_COPY'],
+      const W = sandbox({ fns: ['openWonModal', '_todayStr', '_ymdLocal', '_approvedPriceAbove', 'priceAboveAcceptance', 'priceAboveSent', 'priceRaiseSentence', 'isJobWon', 'fmt', 'roundCents'], vars: ['WON_MODAL_COPY'],
         stubs: { Date: Clock, document: doc, jobs: [{ id: 7 }], estimateStore: { 7: { approved: true } } } });
       W.openWonModal(7);
       eq(els['won-date'].value, '2026-09-29', '⚠⚠ the Won modal opens on the day the client said yes, not tomorrow');

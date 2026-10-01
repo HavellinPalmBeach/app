@@ -36,7 +36,7 @@ const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentStageWord', 'final
   'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
   'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
   'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs',
-  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'coBaselineMove'];
+  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
   'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -83,10 +83,10 @@ const TL_FNS = ['jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson',
   // The re-acceptance build (2026-09-29, merged here): the rail asks whether a raise reopens the send or the
   // acceptance, withholds Edit estimate while a manager has it, and reads a draft newer than the last send as
   // outstanding. Lifted, never stubbed.
-  'estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending', 'finalCrewOnlyWarn'];
-const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'esignSignedCopyGaps', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
+  'estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt'];
+const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'esignSignedCopyGaps',
   'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-  'agreementReady', 'jtRailHtml', 'jtTrackHtml', '_jtAtFmt', '_jtStateCls', 'fmtMoney',
+  'agreementReady', 'jtRailHtml', 'jtTrackHtml', '_jtAtFmt', '_jtStateCls', 'fmt',
   // The REAL date formatter: the question names the handover day, and a passthrough would hide its format.
   'fmtDate2',
   'applyJobTransition', 'activateOrCycle', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob',
@@ -94,7 +94,7 @@ const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'esignSigned
   // Lifted, never stubbed — the button, the refusal and the undo are one rule read three ways.
   'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch',
   // The two readers of the handover stamp outside the rail.
-  'jobIsSettled', 'planCurrentStage', '_planRooms', '_planRoomStatus', 'docReadOnlyWord', 'docPreviewOnly', 'estimateEditBlocker', 'priceChangeBlocker', 'discountOfferBlocker']);
+  'jobIsSettled', 'planCurrentStage', '_planRooms', '_planRoomStatus', 'docReadOnlyWord', 'docPreviewOnly', 'estimateEditBlocker', 'priceChangeBlocker', 'discountOfferBlocker', 'roundCents']);
 const VARS = ['DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_READY_WHY',
   'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
   'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'JOB_TRANSITIONS', 'jobPlanStore'];
@@ -255,7 +255,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body, "var _midBilled     = !!docSentAt(job, 'invoice', 'midpoint') || stagePaidTotal(job, 'midpoint') > 0;",
         'a midpoint invoice was issued when it was sent, or when a midpoint payment is on file');
     has(body, 'var invoicedBefore = _midBilled ? midCumTarget : depositAmt;', 'the gap is measured against what was invoiced');
-    has(body, 'var finalDue     = Math.round(totalFinalBasis) - receivedAll;', '⚠ and the balance still reads only what arrived');
+    // RESTATED 2026-10-01 (P17): the balance is taken to the cent (roundCents), where it rounded the basis to the dollar.
+    has(body, 'var finalDue     = roundCents(totalFinalBasis - receivedAll);', '⚠ and the balance still reads only what arrived');
     eq((body.match(/_paymentGapRow\(/g) || []).length, 4, 'one gap renderer: its definition and three callers');
     ok(!/_paymentGapRow\([^,()]+\)/.test(body), '⚠ every caller names where the gap came from and where it lands');
   }
@@ -523,7 +524,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin',
       '_dashNoticeHtml',
-      'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney', 'getJobActuals',
+      'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'getJobActuals',
       'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon', 'jobActivationBlockers', 'jobPayments',
       'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'esignSignedCopyGaps', 'jobTimelineNext', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'docWord', '_jtDocSecondaries', 'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays',
@@ -535,7 +536,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobReopenBlocker', 'jobStatusView', 'agrApprovalWithdrawn', 'docReadOnlyWord', 'discountOfferBlocker',
       'docPreviewOnly', 'coCardActions', 'estimateEditBlocker', 'priceChangeBlocker',
       // The re-acceptance build, merged here: the same five the rail sandbox above lifts.
-      'estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix'];
+      'estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs'];
     const DVARS = ['DECEDENT_SERVICES', 'MATTER_TYPES', '_driveFolderInFlight', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'PAYMENT_STAGE_LABELS',
       'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY',

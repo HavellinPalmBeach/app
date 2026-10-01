@@ -84,7 +84,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The rows, drawn through the real buildLogTeamRows into a stub screen.
     const seedDom = () => domStub({ 'log-job': { value: '21' } });
     const mk = (dom, crew) => sandbox({
-      fns: ['buildLogTeamRows', 'rebuildLogDropdowns'].concat(OPTS_FNS),
+      fns: ['buildLogTeamRows', 'rebuildLogDropdowns', 'roundCents'].concat(OPTS_FNS),
       vars: OPTS_VARS.concat(['_logExtraPSSlots']),
       stubs: {
         document: dom, jobs: [{ id: 21, status: 'active' }], estimateStore: { 21: { estimate: { psCount: 2 } } },
@@ -196,7 +196,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let crew = crewOf({ confirmed: true });
     let funded = true;
     const c = sandbox({
-      fns: ['saveLogEntry', 'isCrewPlaceholder'], vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'jobLogs'],
+      fns: ['saveLogEntry', 'isCrewPlaceholder', 'roundCents', 'isQuarterHours'], vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'jobLogs'],
       stubs: {
         document: dom, jobs: [{ id: 21, status: 'active', payments: [{ stage: 'deposit', amount: 11500 }] }],
         getJobCrew: () => crew, isJobFunded: () => funded, depositTargetFor: () => 11500, depositPaidTotal: () => 0, fmt: (n) => '$' + n,

@@ -377,7 +377,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['referralCardHtml', 'referralPhoneIsMainLine', 'fmtPhoneDisplay', 'referralIdOf',
-            'fmtVendorDate', 'referralSearchBlob'],
+            'fmtVendorDate', 'referralSearchBlob', 'roundCents', 'fmt'],
       stubs: {
         referralPartnerStats: () => ({ count: 0, won: 0, wonRev: 0 }),
         referralDormancy: () => ({ dormant: false, days: 1 }),
@@ -415,7 +415,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ a switchboard in the direct-line field is named on the card, never dialled silently');
   {
     const ctx = sandbox({
-      fns: ['referralCardHtml', 'referralPhoneIsMainLine', 'fmtPhoneDisplay', 'referralIdOf', 'fmtVendorDate'],
+      fns: ['referralCardHtml', 'referralPhoneIsMainLine', 'fmtPhoneDisplay', 'referralIdOf', 'fmtVendorDate', 'roundCents', 'fmt'],
       stubs: {
         referralPartnerStats: () => ({ count: 0, won: 0, wonRev: 0 }),
         referralDormancy: () => ({ dormant: false, days: 1 }),

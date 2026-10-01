@@ -17,7 +17,7 @@ const { sandbox, source, fn, domStub } = require('./harness');
 module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ENGINE_FNS = ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'svcHasDocStep',
-    'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor'];
+    'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor', 'roundQuarter'];
   const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
     'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
     'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'];

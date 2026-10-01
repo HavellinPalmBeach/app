@@ -15,7 +15,7 @@ const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docLevelFloorReason',
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
   'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'isDecedentJob', 'invFiduciaryMode', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
-  'docStandardEffect'
+  'docStandardEffect', 'roundCents', 'fmt'
 ];
 const VARS = [
   'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',

@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
-    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn'];
+    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'];
   const EST = () => ({ svc: 'cleanout', days: 6, totTC: 11, totPS: 22, havellinTotal: 20000,
     rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3, tcH: 5, psH: 10 },
             { idx: 1, name: 'Study', vol: 3, cplx: 3, tcH: 6, psH: 12 }] });
@@ -80,7 +80,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
       'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
-      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor', 'draftOutstanding', 'draftIsStale', 'docDraftPending']);
+      '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmt', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor', 'draftOutstanding', 'draftIsStale', 'docDraftPending', 'roundCents']);
     const B = sandbox({ fns: DFNS, vars: ['DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
       'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
       stubs: { _todayStr: () => '2026-09-23', Intl: global.Intl } });
@@ -172,7 +172,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                               'depositPaidTotal', 'isAgreementSigned', 'agreementSignature', 'jobCloseBlockers', 'unratedVendorsForJob',
                               '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
                               // The Re-open is its own branch of the transition (2026-09-29).
-                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch'],
+                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents'],
                         vars: ['JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
                         stubs: { _todayStr: () => '2026-09-23', fmtDate2: (d) => 'D:' + d, approvedBy: 'Anthony Graziano',
                                  confirm: (m) => { asked.push(m); return T.__answer; } } });
@@ -279,7 +279,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#2 — the sourcing list renders the lines on the job, and ADDS the rest one pick at a time');
   {
-    const R = sandbox({ fns: ['renderVendorSourcing', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'premiumCoversLine', 'estimateAppraiserLines'].concat(LOGI_FNS), vars: ['LOGISTICS_CATEGORIES', 'vendorDirectory', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
+    const R = sandbox({ fns: ['renderVendorSourcing', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'estimateAppraiserLines', 'roundCents', 'fmt'].concat(LOGI_FNS), vars: ['LOGISTICS_CATEGORIES', 'vendorDirectory', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
       stubs: { vendorDirectory: [{}], dirStaleNotice: () => '', vendorPickerOptions: () => '<option>V</option>',
                vendorCategoriesForSlot: () => [], _selVendorId: () => '', _fldBg: () => '', vendorStatusOptions: () => '',
                _coordHrsField: () => '', coordHrsFor: () => 1, _vendorRefLine: () => '', _srcLineKey: (l, i) => 'L' + i,
@@ -320,7 +320,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const saved = []; const asked = []; const refreshed = [];
     // _saveJobEdit and _jobTouch are LIFTED, never stubbed — they are the stamp this change exists for.
-    const W = sandbox({ fns: ['addLogisticsLine', 'removeLogisticsLine', '_logiJob', 'setLogisticsVendor', '_saveJobEdit', '_jobTouch'],
+    const W = sandbox({ fns: ['addLogisticsLine', 'removeLogisticsLine', '_logiJob', 'setLogisticsVendor', '_saveJobEdit', '_jobTouch', 'roundCents', 'fmt'],
       vars: ['LOGISTICS_CATEGORIES'],
       stubs: { saveJobs: () => saved.push(1), syncJobToSheets: () => {}, refreshVendorSourcing: (id) => refreshed.push(id),
                lookupVendorById: () => null, vendorIdOf: () => '', _vendorContact: () => '',

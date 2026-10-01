@@ -91,7 +91,7 @@ function gsCtx({ props = { STRIPE_SECRET_KEY: 'sk' + '_test_zzz' }, fetch = null
 
 const FNS = ['saveDeposit', 'paymentStageLabel', 'paymentStageWord', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPaidTotal', 'depositPaidTotal',
              'depositClearedTotal', 'isJobFunded', 'depositTargetFor', 'paymentMethodLabel',
-             'updateDepModalHints', 'currentDepStage', '_photoUid', 'fmt'];
+             'updateDepModalHints', 'currentDepStage', '_photoUid', 'fmt', 'roundCents', 'paymentSplit'];
 const VARS = ['DOC_STAGE_WORD', 'PAYMENT_STAGES', 'PAYMENT_STAGE_LABELS', 'PAYMENT_METHODS_CLEAR_ON_RECEIPT', 'PAYMENT_METHODS_RECORDABLE', '_photoUidSeq',
               'LARGE_DEPOSIT_THRESHOLD'];
 
@@ -473,7 +473,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const RB_FNS = ['applyStripePayments', '_stripeHandMatch', '_handAchAwaitingStripe', '_paymentKey', 'paymentSummaryText', 'paymentMethodLabel', 'paymentStageLabel', 'paymentStageWord', '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_stripeDue', 'outstandingPayments',
                   'stripeRefresh', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
                   'depositClearedTotal', 'isJobFunded', 'depositTargetFor', '_photoUid',
-                  '_jobTouch', 'docState', 'fmt', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit'];
+                  '_jobTouch', 'docState', 'fmt', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit', 'roundCents', 'paymentSplit'];
 
   function rbCtx(jobsSeed) {
     const notices = [];

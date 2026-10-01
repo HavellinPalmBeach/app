@@ -36,7 +36,7 @@ const VEND = () => [{ type: 'Moving Company', cost: 12000 },
 function ctx(extraFns) {
   return sandbox({
     fns: ['_srcLid', '_srcLineKey', '_srcAdoptLineIds', 'getVendorActuals',
-          'prepFeeRate', 'logisticsCatsFor', '_jobTouch', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(extraFns || []),
+          'prepFeeRate', 'logisticsCatsFor', '_jobTouch', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents'].concat(extraFns || []),
     vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq'],
   });
 }
@@ -136,7 +136,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // The prep plan carries the firearms banner since 2026-09-20.
             'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'planChk', '_planTaskDone', 'esc',
             // The Budget & Fee card reads the accepted change orders' concierge hours since 2026-09-25.
-            'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
+            'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'],
       vars: ['EST_TOLERANCE_PCT', '_planOpenPhases', 'PREP_FEE_RATE', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'jobPlanStore', 'VENDOR_RATING_WINDOW', 'DECEDENT_SERVICES'],
       stubs: { document: { getElementById: () => null }, esc: (v) => String(v == null ? '' : v),
                standingFlagsBlock: () => '', _sfHost: () => '', planChk: () => '', renderVendorSourcing: () => '',
@@ -152,8 +152,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const job = { id: 1, name: 'Vickers',
                   prepSourcing: { La: { quote: 18000 }, Lb: { quote: 9000 }, Lc: { quote: 4000 } } };
 
-    const QUOTED = /Quoted to date \(\d+ of \d+ vendors\)<\/td><td class="num"[^>]*>\$([\d,]+)/;
-    const FEE = /fee \(on quoted actuals\)<\/td><td class="num">\$([\d,]+)/;
+    // RESTATED 2026-10-01 (P17, Anthony's answers 5 and 6): the fee row reads "Home Sale Preparation Fee (30%, on quoted actuals)" (it read
+    // "Havellin 30% fee (on quoted actuals)"), and money prints its cents when it has any, so both readers take them.
+    const QUOTED = /Quoted to date \(\d+ of \d+ vendors\)<\/td><td class="num"[^>]*>\$([\d,]+(?:\.\d\d)?)/;
+    const FEE = /Home Sale Preparation Fee \(\d+%, on quoted actuals\)<\/td><td class="num">\$([\d,]+(?:\.\d\d)?)/;
 
     const h1 = plan(est, job);
     eq(money(h1, QUOTED), '31,000', 'three quotes sum to $31,000');

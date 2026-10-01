@@ -35,7 +35,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
                  'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
                  'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
                  'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-                 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'coBaselineMove'];
+                 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
                   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
                   'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -63,7 +63,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('fixedFeeRounded — down, to a clean figure, never above the suggestion');
   {
-    const c = sandbox({ fns: ['fixedFeeRounded'] });
+    const c = sandbox({ fns: ['fixedFeeRounded', 'roundCents'] });
     eq(c.fixedFeeRounded(25275), 25000, "Anthony's example: $25,275 rounds to $25,000");
     eq(c.fixedFeeRounded(21600), 21000, '$21,600 → $21,000 — the nearest thousand below, above $20,000');
     eq(c.fixedFeeRounded(25900), 25000, '⚠ down, never up: $25,900 → $25,000, not $26,000 — the suggestion already carries the contingency');
@@ -81,11 +81,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('the field is money, and every reader goes through moneyToNumber');
   {
-    has(src, 'inputmode="numeric" id="e-fixed-amount"', 'a text field with a numeric keyboard');
+    // RESTATED 2026-10-01 (P17, Anthony's answer 6): money is carried to the cent and formatMoneyInput keeps a typed
+    // cents part, so the field asks a phone for the keypad with a decimal point; it asked for "numeric", which has none.
+    has(src, 'inputmode="decimal" id="e-fixed-amount"', 'a text field with a decimal keypad');
     lacks(src, 'type="number" id="e-fixed-amount"', '⚠ not a number input — a number input cannot show $25,275, which is the awkward number');
     has(src, 'oninput="markFixedAmountEdited(this)"', 'typing marks the fee as hand-set and formats it');
     const dom = domStub({ 'e-fixed-amount': { value: '$25,275' } });
-    const c = sandbox({ fns: ['_fxAmtGet', '_fxAmtSet', 'moneyToNumber'], stubs: { document: dom } });
+    const c = sandbox({ fns: ['_fxAmtGet', '_fxAmtSet', 'moneyToNumber', 'roundCents', 'fmt'], stubs: { document: dom } });
     eq(c._fxAmtGet(), 25275, 'the reader parses the money string');
     c._fxAmtSet(21000);
     eq(dom.getElementById('e-fixed-amount').value, '$21,000', 'the writer formats it');
@@ -111,7 +113,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const calls = [];
     const c = sandbox({
       fns: ['markFixedAmountEdited', 'resetFixedToSuggested', 'useRoundedFixedFee', 'keepFixedFee', 'toggleFixedPrice',
-            'fixedFeeRounded', '_fxAmtGet', '_fxAmtSet', 'moneyToNumber', 'formatMoneyInput'],
+            'fixedFeeRounded', '_fxAmtGet', '_fxAmtSet', 'moneyToNumber', 'formatMoneyInput', 'roundCents', 'fmt'],
       vars: ['_fixedAmountUserSet', '_fixedAmountBasis'],
       stubs: { document: dom, calcAll: () => calls.push('calc'), showFB: () => {} },
     });
@@ -177,14 +179,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           '⚠ never on the markup drifting from the contingency — that expression read a rounded fee as an error');
     lacks(calc, 'The estimate has moved since you set it —', 'the sentence that was false on a round-down is gone');
     has(calc, 'The estimate has moved since you set this fee: the suggested fee was', 'the new one names both figures');
-    has(calc, 'onclick="keepFixedFee()">Keep $', 'with Keep beside Use');
-    has(calc, 'onclick="resetFixedToSuggested()">Use $', 'and Use still there');
-    has(calc, 'onclick="useRoundedFixedFee()">Round to $', 'the Round chip');
-    has(calc, 'onclick="resetFixedToSuggested()">Suggested $', 'and the Suggested chip');
+    // RESTATED 2026-10-01 (P17): each figure on these chips is printed by fmt (cents when there are any); they read
+    // `…>Keep $' + fixedAmount.toLocaleString()` and the like.
+    has(calc, 'onclick="keepFixedFee()">Keep \' + fmt(fixedAmount)', 'with Keep beside Use');
+    has(calc, 'onclick="resetFixedToSuggested()">Use \' + fmt(_fpFee)', 'and Use still there');
+    has(calc, 'onclick="useRoundedFixedFee()">Round to \' + fmt(_fpRound)', 'the Round chip');
+    has(calc, 'onclick="resetFixedToSuggested()">Suggested \' + fmt(_fpFee)', 'and the Suggested chip');
     has(calc, 'if (_fpRound > 0 && _fpRound !== _fpFee && fixedAmount !== _fpRound)', 'Round is withheld when the field already holds it, or the suggestion is already round');
     has(calc, 'if (_fpFee > 0 && fixedAmount !== _fpFee)', 'Suggested is withheld when the field already holds it');
     has(calc, "if (_fpChipsEl) _fpChipsEl.innerHTML = '';", 'chips are cleared with the drift, so neither survives the toggle going off');
-    has(calc, "your figure, against a suggested $", 'a hand-set fee is described as the manager\'s figure, not as the contingency');
+    has(calc, "your figure, against a suggested ' + fmt(_fpFee)", 'a hand-set fee is described as the manager\'s figure, not as the contingency');   // RESTATED (P17): via fmt
     lacks(calc, "' (' + (_effPct >= 0 ? '+' : '') + _effPct + '%) ' + (_delta >= 0 ? 'above' : 'below') + ' it — that gap is the contingency, already included. '",
           'and the unconditional "that gap is the contingency" is gone — it was false the moment a figure was typed');
     // The old warning's whole mechanism must not come back under another name.
@@ -203,11 +207,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // with the fee inside, so it is not read back — the current one differs by construction.
     // Restated 2026-09-30: nor is it for a fee saved before its premium and discount became lines (P12, Q9/Q13):
     // the restore restates that fee (fixedFeeForCharge), so its old suggestion no longer describes it.
-    has(rs, '_fixedAmountBasis = (est.fixedPrice && !_legacyPrepInside && !_legacyLines) ? Math.round(est.fixedSuggested || 0) : 0;',
+    // RESTATED 2026-10-01 (P17): the restore reads these figures to the cent (roundCents), where it rounded to the dollar.
+    has(rs, '_fixedAmountBasis = (est.fixedPrice && !_legacyPrepInside && !_legacyLines) ? roundCents(est.fixedSuggested || 0) : 0;',
         'the restore reads it back');
     has(rs, '_fixedAmountUserSet = !!est.fixedPrice;', 'a saved fee is hand-set — it was agreed, not prefilled');
-    has(rs, 'Math.round(est.fixedAmount || est.havellinTotal || 0)', 'the flat fee reads fixedAmount first');
-    has(rs, 'var _flatNow = _restoredFlat - _fixedPrepMovedOut;', 'the flat fee net of any prep fee moved out');
+    has(rs, 'roundCents(est.fixedAmount || est.havellinTotal || 0)', 'the flat fee reads fixedAmount first');
+    has(rs, 'var _flatNow = roundCents(_restoredFlat - _fixedPrepMovedOut);', 'the flat fee net of any prep fee moved out');
     has(rs, 'if (fxAmtEl) _fxAmtSet(_feeNow);', 'and written back formatted (restated only for an older record with lines inside)');
     // A record saved before today has no fixedSuggested: the basis reads 0, and 0 never claims a move.
     // ⚠ RESTATED 2026-09-29: this counted three byte-identical copies of these lines, one per reset

@@ -26,7 +26,7 @@ const FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invo
              'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
              'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
              'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
-             'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'coBaselineMove'];
+             'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];
 const VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
               'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
               'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -230,7 +230,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const body = fn('invoiceHtml', 'jobLogEntries').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
     has(body, "stagePaidTotal(job, 'deposit')", 'the deposit received is read from the record');
     has(body, 'jobPaidTotal(job)', 'and the total received from the record');
-    has(body, 'var finalDue     = Math.round(totalFinalBasis) - receivedAll;',
+    // RESTATED 2026-10-01 (P17): the final is carried to the cent (roundCents), where it was rounded to the whole dollar.
+    has(body, 'var finalDue     = roundCents(totalFinalBasis - receivedAll);',
         'the final reconciles against what arrived');
     lacks(body, 'Math.round(totalFinalBasis) - depositAmt - midpointAmt',
           '⚠ never against the two stage targets — that expression IS the defect');

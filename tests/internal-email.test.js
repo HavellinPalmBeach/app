@@ -25,7 +25,7 @@ const { sandbox, source } = require('./harness');
 
 const FNS = ['sendInternalEmail', 'notifyDept', 'notifyManagerForApproval',
              'buildMimeMessage', '_mimeHeader', '_b64Wrap', '_b64url',
-             'gmailConfigured', 'gmailDraftUrl', 'esc'];
+             'gmailConfigured', 'gmailDraftUrl', 'esc', 'roundCents', 'fmt'];
 const VARS = ['DEPT_EMAILS', 'MANAGER_APPROVAL_EMAIL', 'GMAIL_CLIENT_ID_DEFAULT', 'GMAIL_CLIENT_ID', '_gmailUserEmail'];
 
 // Drive the REAL functions. `gmail` decides what the draft call does: 'ok', 'fail', or

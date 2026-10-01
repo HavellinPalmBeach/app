@@ -146,10 +146,13 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   }, idM);
   const iOrig = m2.rows.findIndex(r => /^Original Estimate/.test(r));
   ok(iOrig >= 0, 'the payment summary has its Original Estimate row');
-  has(m2.rows[iOrig] || '', '$' + m2.total.toLocaleString(), '⚠⚠ it prints the estimate alone ($' + m2.total.toLocaleString() + ')');
+  // RESTATED 2026-10-01 (P17, Anthony's answer 6): money prints its cents whenever there are any ("$12,012.50"; "$900" stays "$900"),
+  // so the expected figures are written that way, never rounded to the dollar or printed with toLocaleString's one decimal.
+  const cents$ = (n) => { const c = Math.round(Number(n) * 100); const r = Math.abs(c) % 100; return '$' + Math.floor(Math.abs(c) / 100).toLocaleString('en-US') + (r ? '.' + String(r).padStart(2, '0') : ''); };
+  has(m2.rows[iOrig] || '', cents$(m2.total), '⚠⚠ it prints the estimate alone (' + cents$(m2.total) + ')');
   has(m2.rows[iOrig + 1] || '', 'Approved Change Orders (1)', 'with the change order on the line directly beneath it');
   has(m2.rows[iOrig + 1] || '', '+10.0 concierge', 'stated in hours');
-  has(m2.rows.join(' | '), '$' + m2.split.deposit.toLocaleString(), 'the deposit shown is half of the figure above it');
+  has(m2.rows.join(' | '), cents$(m2.split.deposit), 'the deposit shown is half of the figure above it');
 
   // ── C. M3 — the pop-up ───────────────────────────────────────────────────
   console.log('\n## C. M3 — the discount pop-up removes a discount with 0, refuses a blank, and revokes the agreement');
@@ -171,14 +174,14 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   ok(still.pct === 10 && still.agr === true, 'and nothing changed — the discount and the agreement are untouched');
   await fill('#dm-pct', '0'); await p.evaluate(() => updateDiscountModal());
   const pre = eD.havellinTotal + eD.discountAmt;
-  ok((await text('#dm-revised')) === '$' + pre.toLocaleString(), '0 previews the total with the discount taken off ($' + pre.toLocaleString() + ')');
+  ok((await text('#dm-revised')) === cents$(pre), '0 previews the total with the discount taken off (' + cents$(pre) + ')');
   await click('#discount-modal .btn-p'); await p.waitForTimeout(400);
   const after = await p.evaluate((id) => { const job = jobs.find(j => j.id === id), rec = estimateStore[id];
     return { pct: rec.estimate.discountPct, amt: rec.estimate.discountAmt, total: rec.estimate.havellinTotal, approved: rec.approved,
              agr: job.agrApproved, why: job.agrRevokedBy, modal: document.getElementById('discount-modal').style.display,
              mail: (window.__mails[0] || {}).text || '' }; }, idD);
   ok(after.pct === 0 && after.amt === 0, '⚠⚠ 0 REMOVED the discount (it used to become 1%)');
-  ok(after.total === pre, 'the total is back to $' + pre.toLocaleString());
+  ok(Math.round(after.total * 100) === Math.round(pre * 100), 'the total is back to ' + cents$(pre));
   ok(after.approved === false, 'and the estimate goes back to the manager');
   ok(after.agr === false && after.why === 'discount-revised', '⚠⚠ the agreement’s approval is withdrawn, naming why');
   ok(after.modal !== 'flex', 'the pop-up closes');

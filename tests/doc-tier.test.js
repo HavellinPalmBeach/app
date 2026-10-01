@@ -15,7 +15,7 @@ const { sandbox, domStub, source } = require('./harness');
 // The engine lists, lifted verbatim from tests/doc-scope.test.js — the point of this group
 // is that the tier changes NO pricing, so it has to drive the same engine that suite does.
 const ENGINE_FNS = ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'svcHasDocStep',
-  'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor'];
+  'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor', 'roundQuarter'];
 const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
   'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
   'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'];
@@ -168,7 +168,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['onDocGateChange', 'docLevelFloor', 'docLevelFloorReason', 'resolveDocLevel',
               'gateDispute', '_gateYes', '_gate706', 'isDecedentJob', 'invAppraisalThreshold',
               'isFormalDoc', 'docStandardEffect', 'docTierOf', 'docTierDef',
-              'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc'],
+              'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'roundCents', 'fmt'],
         vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                'DOC_TIERS',
                'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
@@ -205,7 +205,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706',
       'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
       'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
-      'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor'];
+      'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt'];
     const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD',
       'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];

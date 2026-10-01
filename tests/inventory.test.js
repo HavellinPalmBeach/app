@@ -222,7 +222,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'matterDef', 'matterTypeOf', 'invFiduciaryMode',
       // Who arranges an appraisal, job-level (Q20, 2026-09-30): the tier, or the approved estimate's appraiser lines.
       'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines',
-      'estimateAppraiserNames', 'docTierProduces', 'docScopeDef',
+      'estimateAppraiserNames', 'docTierProduces', 'docScopeDef', 'roundCents', 'fmt'
     ]);
     const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
                                         'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES']);
@@ -405,7 +405,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
-            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', '_gate706', 'isDecedentJob'],
+            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', '_gate706', 'isDecedentJob', 'roundCents', 'fmt'],
       vars: ['INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
              'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     });
@@ -454,7 +454,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
       'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat', 'invMAIVCategory',
-      'isDecedentJob', '_gate706',
+      'isDecedentJob', '_gate706', 'roundCents', 'fmt'
     ]);
     const WL_VARS = INV_VARS.concat([
       'INV_TRANSPORT_REASONS',
@@ -534,7 +534,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // it.itemNo || (i + 1) — a snapshot row taken before item numbers existed carries
     // none, and a position printed in that column reads as a number that was issued.
-    const snapFns = ['printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime'];
+    const snapFns = ['printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime', 'roundCents', 'fmt'];
     const sctx = sandbox({ fns: snapFns, vars: [] });
     sctx.jobs.push({ id: 1, name: 'Estate of Doe', hvlId: 'HVL-1001', invSnapshots: [{
       ts: 1757000000000, label: 'At filing', count: 2, totalFMV: 5100,

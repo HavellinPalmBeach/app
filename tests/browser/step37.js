@@ -35,7 +35,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
 // The day a draft is named by, worked out HERE rather than asked of the page: the calendar the browser
 // runs on (timezoneId below), never a slice of the UTC stamp.
 const dayOf = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'America/New_York' });
-const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
+// RESTATED 2026-10-01 (P17, Anthony's answer 6): money prints its cents whenever there are any ("$12,012.50"; "$900" stays "$900"),
+// so the expected figures are written that way, never rounded to the dollar or printed with toLocaleString's one decimal.
+const money = (n) => { const c = Math.round(Number(n) * 100); const r = Math.abs(c) % 100;
+  return (c < 0 ? '-' : '') + '$' + Math.floor(Math.abs(c) / 100).toLocaleString('en-US') + (r ? '.' + String(r).padStart(2, '0') : ''); };
 (async () => {
   b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });

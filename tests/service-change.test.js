@@ -31,7 +31,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     fns: ['svcLabelOf', 'isDecedentJob', 'svcFamily', 'svcFamilyOptions', 'sameSvcFamily',
           'fixedPriceBuffer', '_svcChangeConsequences', 'prepFeeRate', 'getVendorActuals', '_srcLineKey',
           'vendorFeeNote', '_invVendorFeeSentence',
-          '_agrHasPrepVendors', '_pctWords', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
+          '_agrHasPrepVendors', '_pctWords', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents'],
     vars: ['SVC_LABELS', 'DECEDENT_SERVICES', 'SVC_ORDER', 'PREP_FEE_RATE', 'SMF_PCT', '_PCT_WORDS'],
   });
 
@@ -321,9 +321,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(src, 'function getPrepTCHrs', 'and the function that fed it is deleted, not left dead');
     // The card footer used to advertise those hours; now it advertises the fee.
     const cards = fn('renderVendorGroupCards');
-    // ⚠ RESTATED 2026-09-30 (P16): vendorLineHrs takes the Premium flag (an appraiser line books none on a Premium estate).
-    has(cards, 'cardHrs  += isPrep ? 0 : vendorLineHrs(v, _prem);', 'a prep line adds no hours to its card');
-    has(cards, "bits.push(Math.round(prepFeeRate()*100) + '% GC fee", 'the card states the fee instead');
+    // ⚠ RESTATED 2026-10-01 (P17, Anthony's answer 1): vendorLineHrs takes no Premium flag again — Premium is the rates only,
+    // and every line books its own hours (P16 passed `_prem`, and an appraiser line booked none on a Premium estate).
+    // And the card names the Home Sale Preparation Fee (answer 5; it read "% GC fee").
+    has(cards, 'cardHrs  += isPrep ? 0 : vendorLineHrs(v);', 'a prep line adds no hours to its card');
+    has(cards, "bits.push(Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee ", 'the card states the fee instead');
     lacks(cards, 'isPrep && isPrepSvc', 'and no longer gates that on the service being prep');
   }
 
@@ -332,7 +334,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const va = fn('getVendorActuals');
     lacks(va, 'pr.total * 0.30', 'no second hardcoded 30 in the invoice path');
     lacks(va, 'standalonePrep', 'and no second copy of the engagement test');
-    has(va, 'prepFee: Math.round(pr.total * prepFeeRate())', 'it reads the one function');
+    // RESTATED 2026-10-01 (P17, answer 6): the fee is carried to the cent (roundCents; it was Math.round, to the dollar).
+    has(va, 'prepFee: roundCents(pr.total * prepFeeRate())', 'it reads the one function');
 
     // Driven for real: a BUNDLED prep job must now produce a fee. It produced 0 before.
     const job = { id: 7, svc: 'downsizing', prepSourcing: {}, vendorSourcing: {}, logisticsSourcing: {} };
@@ -385,7 +388,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ce = fn('clientEstimateHtml');
     has(ce, "Math.round(prepFeeRate()*100) + '% of vendor cost", 'the fee row reads the constant');
-    const row = ce.indexOf('General contracting &amp; site management of the home prep vendors');
+    // RESTATED 2026-10-01 (P17, answer 5): the row names the Home Sale Preparation Fee (it read "General contracting &amp; site
+    // management of the home prep vendors").
+    const row = ce.indexOf('Home Sale Preparation Fee on the home prep vendors listed below');
     const tbody = ce.indexOf("_prepFeeRowHtml +");
     ok(row > 0 && tbody > 0, 'the fee row exists and is placed into the services table');
     lacks(ce, 'Home Prep for Sale — GC / Site Management Fee (30%)',
@@ -442,7 +447,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     n = ctx.vendorFeeNote(prep);
     has(n, 'no markup to their invoices', 'prep alone: the vendor invoice is still not marked up');
     has(n, 'separate 30%', 'AND the 30% is named — this is the claim that would otherwise be false');
-    has(n, 'general contracting and site management fee', 'in the words the fee line uses');
+    // RESTATED 2026-10-01 (P17, answer 5): it read "general contracting and site management fee".
+    has(n, 'Home Sale Preparation Fee shown above', 'in the words the fee line uses');
 
     n = ctx.vendorFeeNote(both);
     has(n, 'adds no markup to their work', 'both: the general vendors keep their line');
@@ -482,7 +488,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the invoice says which line IS the fee, and it exists');
   {
-    eq(ctx._invVendorFeeSentence(0, 13500).indexOf('30% general contracting') > 0, true,
+    // RESTATED 2026-10-01 (P17, answer 5): the line is the 30% Home Sale Preparation Fee (it read "30% general contracting").
+    eq(ctx._invVendorFeeSentence(0, 13500).indexOf('30% Home Sale Preparation Fee') > 0, true,
        'with a prep fee, it points at the 30% line');
     has(ctx._invVendorFeeSentence(0, 13500), 'no fee is charged on any other vendor',
         'and says what is NOT charged, rather than leaving it open');
@@ -500,7 +507,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(inv, '_invVendorFeeSentence(smf, prepFee, _fxFeeMode)', 'the invoice note reads the function, told the billing basis');
     lacks(inv, "Havellin\\'s coordination fee is the Service Management Fee shown above.</div>",
           'the old unconditional sentence is gone');
-    has(inv, "GC / Site Management Fee (' + Math.round(prepFeeRate()*100) + '%)",
+    // RESTATED 2026-10-01 (P17, answer 5): the row read "GC / Site Management Fee (30%)".
+    has(inv, "Home Sale Preparation Fee (' + Math.round(prepFeeRate()*100) + '%)",
         'and the fee row reads the rate rather than a literal 30');
   }
 
@@ -535,9 +543,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       lacks(src, f + ': ' + f, f + ' is not stamped on the estimate snapshot');
     });
     lacks(src, 'GC / Site Management Fee</td>', 'and the invoice row they gated is gone');
-    has(fn('calcAll'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
+    // RESTATED 2026-10-01 (P17, answer 6): both sums are carried to the cent (roundCents), term for term.
+    has(fn('calcAll'), 'var havellinTotal = roundCents(tcFee + psFee + pkgCost + smf + prepFee);',
         'the services total adds only the five fees that exist');
-    has(fn('invoiceHtml', 'jobLogEntries'), 'var havellinTotal = tcFee + psFee + pkgCost + smf + prepFee;',
+    has(fn('invoiceHtml', 'jobLogEntries'), 'var havellinTotal = roundCents(tcFee + psFee + pkgCost + smf + prepFee);',
         'and the invoice agrees with it, term for term');
   }
 

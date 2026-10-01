@@ -92,7 +92,9 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   ok(panel.visible, 'the import panel carries a readout row for every collection');
   ok(panel.offsetOK, 'and it is actually on screen, not in a hidden container');
   ok(/above the \$100/.test(panel.c1 || ''), 'the $5,000 six-piece lot warns: above the $100 cap');
-  ok(/averages \$833 an article/.test(panel.c1 || ''), 'with the arithmetic in front of the person choosing');
+  // RESTATED 2026-10-01 (P17, Anthony's answer 6): money prints its cents whenever there are any, so the average of a
+  // $5,000 lot of six reads $833.33 (it printed $833, the figure taken to the dollar). maiv.test.js restates it too.
+  ok(/averages \$833\.33 an article/.test(panel.c1 || ''), 'with the arithmetic in front of the person choosing');
   ok(/Itemize it/.test(panel.c1 || ''), 'and names the fix, which is the selector immediately beside it');
   ok(/inside the \$100/.test(panel.c2 || ''), 'the 40-piece $800 lot is confirmed INSIDE the cap, not left silent');
   ok(/cannot be tested/.test(panel.c3 || ''), 'the unpriced collection says the cap cannot be tested');

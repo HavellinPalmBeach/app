@@ -41,7 +41,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // lifted verbatim from havellin.html — nothing is stubbed that the page itself has.
   const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
     'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
-    'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
+    'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field',
     'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
     'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext', 'depositVoidFlag', 'paymentSummaryText', 'paymentMethodLabel', 'agreementHandedOverInPerson',
     // The document tray: the step's document comes from the ONE row→document map, behind the
@@ -58,8 +58,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
     'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix', 'escLines',
     // A closed-retained job names what it kept (the payments list group below renders one).
-    'closeoutRetainedTotal', 'jobPaidTotal'];
-  const VARS = ['_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'DEPOSIT_VOID_STEP', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
+    'closeoutRetainedTotal', 'jobPaidTotal', 'roundCents', 'fmtHrs'];
+  const VARS = ['_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'DEPOSIT_VOID_STEP',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',

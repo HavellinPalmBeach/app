@@ -8,7 +8,7 @@ const { sandbox, fn, source } = require('./harness');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
-  const ctx = sandbox({ fns: ['buildSigningPacketHtml', 'approvedEstimateFor', 'estFixedFee', 'estPrepFeeOnTop'] });
+  const ctx = sandbox({ fns: ['buildSigningPacketHtml', 'approvedEstimateFor', 'estFixedFee', 'estPrepFeeOnTop', 'roundCents'] });
   const src = source();
 
   group('approvedEstimateFor — the snapshot, and only while approved');

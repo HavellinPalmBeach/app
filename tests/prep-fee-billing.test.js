@@ -67,7 +67,7 @@ const LEGACY = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20000,
 const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases',
                 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor', 'prepFeeRate', 'estWorkingDays', 'estFixedFee',
-                'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'escLines'];
+                'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'escLines', 'roundCents', 'fmtHrs'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const JOB = { id: 1, svc: 'downsizing_move', name: 'Pat Transition', address: '1 A St' };
@@ -80,7 +80,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
                  'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
                  'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly',
                  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'paymentCounts', 'paymentLive', 'isRefundRecord',
-                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove'];
+                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
 const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
                   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP',
                   'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -110,7 +110,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', '_PCT_WORDS',
                   'PREP_FEE_RATE', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT'];
@@ -127,7 +127,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('estFixedFee / estPrepFeeOnTop — the flat fee is fixedAmount, and the marker says where the fee sits');
   {
-    const c = sandbox({ fns: ['estFixedFee', 'estPrepFeeOnTop'] });
+    const c = sandbox({ fns: ['estFixedFee', 'estPrepFeeOnTop', 'roundCents'] });
     eq(c.estFixedFee(FIXED), 20000, '⚠ the flat fee alone — NOT the $20,225 total the prep fee rides on');
     eq(c.estFixedFee(LEGACY), 20000, 'a record saved before today reads the same field');
     eq(c.estFixedFee(est({ fixedPrice: true, havellinTotal: 18000 })), 18000,
@@ -144,13 +144,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const tm = servicesTable(ceDoc(BASE));
     eq(tm.total, 14325, 'the Havellin Services Total is the snapshot total');
     eq(tm.sum, tm.total, '⚠⚠ T&M: the rows add up to their own total — they came to $14,100 over a $14,325 total');
-    ok(tm.rows.some((r) => /General contracting & site management of the home prep vendors/.test(r.label) && r.v === 225),
+    // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee row is the Home Sale Preparation Fee; it read "General contracting & site
+    // management of the home prep vendors", and the band above it "Home Prep for Sale — Site Management".
+    ok(tm.rows.some((r) => /Home Sale Preparation Fee on the home prep vendors/.test(r.label) && r.v === 225),
        'the $225 is a row in the table that counts it');
     const t = text(ceDoc(BASE));
-    ok(t.indexOf('Home Prep for Sale — Site Management') < t.indexOf('Havellin Services Total'),
+    // (The band's old name read -1 once it was renamed, which is "above" anything: the restated check asks that the band is there.)
+    ok(t.indexOf('Home Prep for Sale — Home Sale Preparation Fee') >= 0 && t.indexOf('Home Prep for Sale — Home Sale Preparation Fee') < t.indexOf('Havellin Services Total'),
        'and it sits above the total, not under the prep vendors below it');
     lacks(t, 'Havellin GC / Site Management Fee', 'the old fee subtotal under the prep vendors is gone');
-    has(t, "fee on this work is the site management line in Havellin Services above",
+    has(t, "fee on this work is the Home Sale Preparation Fee line in Havellin Services above",
         'the prep section says where the fee is, so nobody hunts for it under the vendors');
 
     const fx = servicesTable(ceDoc(FIXED));
@@ -158,12 +161,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(fx.sum, fx.total, '⚠ fixed: the rows add up');
     ok(fx.rows.some((r) => /^Fixed Project Fee/.test(r.label) && r.v === 20000),
        '⚠ the fixed row states the flat fee alone — never the sum the prep fee rides on');
-    ok(fx.rows.some((r) => /General contracting/.test(r.label) && r.v === 225), 'the prep fee is its own row under it');
+    // RESTATED 2026-10-01 (P17, answer 5): the row's label is the Home Sale Preparation Fee.
+    ok(fx.rows.some((r) => /Home Sale Preparation Fee on the home prep vendors/.test(r.label) && r.v === 225), 'the prep fee is its own row under it');
 
     const lg = servicesTable(ceDoc(LEGACY));
     eq(lg.total, 20000, 'a record saved before today: the flat fee is the whole Havellin total');
     eq(lg.sum, lg.total, 'and its one row adds up to it');
-    ok(!lg.rows.some((r) => /General contracting/.test(r.label)), '⚠ no second fee row — the fee is inside the flat fee there');
+    // RESTATED 2026-10-01 (P17, answer 5): asked by the row's new name (the old one is absent everywhere, so it could no longer fail).
+    ok(!lg.rows.some((r) => /Home Sale Preparation Fee/.test(r.label)), '⚠ no second fee row — the fee is inside the flat fee there');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -173,12 +178,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'The fixed project fee is firm for the scope of work described', 'the Terms name the fixed project fee, not the services total');
     has(t, 'which is not part of the fixed fee and is charged on what those vendors actually bill',
         'and carve the prep fee out of it');
-    has(t, 'apart from the home prep vendors, whose site management fee is the next line', 'the fixed row\'s blurb carves them out too');
+    // RESTATED 2026-10-01 (P17, answer 5): it read "whose site management fee is the next line".
+    has(t, 'apart from the home prep vendors, whose Home Sale Preparation Fee is the next line', 'the fixed row\'s blurb carves them out too');
     has(t, 'charged on what these vendors actually bill rather than on these estimates', 'the prep section says the fee trues up');
     const l = text(ceDoc(LEGACY));
     lacks(l, 'which is not part of the fixed fee', 'a record saved before today claims no carve-out — its flat fee carries the fee');
     has(l, 'Moving materials and all vendor coordination are included', 'and its blurb still says all coordination is included');
-    lacks(l, 'site management line in Havellin Services above', 'nor points at a line it does not print');
+    lacks(l, 'Home Sale Preparation Fee line in Havellin Services above', 'nor points at a line it does not print');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -210,7 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pct = { value: 10 };
     const a = sandbox({
       fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
-            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords'],
+            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'roundCents'],
       vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
@@ -224,7 +230,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a.currentEstimate.havellinTotal, 18225, '⚠ and the $225 prep fee is still on top — not dropped by the discount');
     const b = sandbox({
       fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
-            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords'],
+            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'roundCents'],
       vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
@@ -247,7 +253,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const reopen = (e) => {
       const dom = domStub({});
       const ctx = sandbox({
-        fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'premiumCoversLine', 'estimateAppraiserLines', 'vendorLineHrs'],
+        fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'estimateAppraiserLines', 'vendorLineHrs', 'roundCents', 'fmt'],
         vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'RUSH_PCT', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES', 'DOC_SCOPES'],
         stubs: { document: dom, calcAll: noop, paintEstimateService: noop, svcTypeChanged: noop, toggleRoom: noop,
                  setRoomState: noop, collapseEmptyRoomSections: noop, renderCollections: noop, renderVehicles: noop,
@@ -274,7 +280,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(reopen(BASE).moved, 0, 'and an hourly estimate has no flat fee to move anything out of');
 
     // ⚠ Driven, not grepped: a sentence switched off beside the call still sits in the source.
-    const nc = sandbox({ fns: ['fixedPrepMovedNote'] });
+    const nc = sandbox({ fns: ['fixedPrepMovedNote', 'roundCents', 'fmt'] });
     has(nc.fixedPrepMovedNote(225), 'This fee was saved under the old rule, with the prep fee inside it:</strong> $225',
         'the fixed panel names what was moved');
     has(nc.fixedPrepMovedNote(225), "so the client's total is unchanged", 'and that the total is unchanged');
@@ -299,31 +305,36 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE FIXED-PRICE INVOICES BILL THE PREP FEE ON TOP, ON QUOTES THEN ON ACTUALS');
   {
     const dep = invoice(FIXED, 'deposit');
-    eq(dep.amtDue, 10113, 'deposit = 50% of the $20,000 flat fee + the $225 fee on the quotes');
+    // RESTATED 2026-10-01 (P17, answer 6): money to the cent. Half of $20,225 is $10,112.50 (it was rounded to $10,113); the client
+    // pays that, so the payment fixtures below carry it, and the midpoint and final follow: $5,146.25 and $5,086.25 (were $5,146 and $5,086).
+    eq(dep.amtDue, 10112.5, 'deposit = 50% of the $20,000 flat fee + the $225 fee on the quotes');
     has(dep.t, 'Fixed project fee — full scope of work per agreement $20,000', 'the deposit states the flat fee');
-    has(dep.t, 'Home Prep for Sale — GC / Site Management Fee (30%) $225', 'and itemises the prep fee on the quotes');
+    // RESTATED 2026-10-01 (P17, answer 5): the row read "Home Prep for Sale — GC / Site Management Fee (30%)".
+    has(dep.t, 'Home Sale Preparation Fee (30%) $225', 'and itemises the prep fee on the quotes');
     has(dep.t, 'Havellin Services Total $20,225', 'with a total that adds up');
     has(dep.t, "shown here on the prep vendors' quotes and trued to their actual invoices", 'and says it trues up');
 
-    const received = [pay('deposit', 10113)];
+    const received = [pay('deposit', 10112.5)];
     const mid = invoice(FIXED, 'midpoint', received, actuals());
-    eq(mid.amtDue, Math.round(0.75 * (20000 + 345)) - 10113,
+    eq(mid.amtDue, Math.round((0.75 * (20000 + 345) - 10112.5) * 100) / 100,
        '⚠ midpoint = 75% of the flat fee + the fee on the ACTUAL $900 painter bill ($345), less the deposit');
-    ok(/GC \/ Site Management Fee \(30%\) est\. \$345/.test(mid.t),
+    ok(/Home Sale Preparation Fee \(30%\) est\. \$345/.test(mid.t),
        'the midpoint bills $345, tagged est. while two prep lines are still on their quotes');
 
     const fin = invoice(FIXED, 'final', received.concat([pay('midpoint', mid.amtDue)]), actuals());
-    eq(fin.amtDue, 20345 - 10113 - mid.amtDue, '⚠⚠ the final closes out flat fee + actual prep fee exactly');
+    eq(fin.amtDue, Math.round((20345 - 10112.5 - mid.amtDue) * 100) / 100, '⚠⚠ the final closes out flat fee + actual prep fee exactly');
+    eq([mid.amtDue, fin.amtDue], [5146.25, 5086.25], 'the two figures, to the cent');
     has(fin.t, 'Havellin Services Total $20,345', 'final services total = flat + actual prep fee');
     // ⚠ The total alone cannot see the row going missing — the table would print a $20,000 flat fee over a
     //   $20,345 total, which is the exact screen Anthony reported. Read the table and make it add up.
-    ok(/Home Prep for Sale — GC \/ Site Management Fee \(30%\)( est\.)? \$345/.test(fin.t),
+    // RESTATED 2026-10-01 (P17, answer 5): the row, the payment summary and the vendor note name the Home Sale Preparation Fee.
+    ok(/Home Sale Preparation Fee \(30%\)( est\.)? \$345/.test(fin.t),
        '⚠⚠ the final itemises the fee on the actual invoices inside the services table');
-    const iFee = fin.t.indexOf('GC / Site Management Fee (30%)');
+    const iFee = fin.t.indexOf('Home Sale Preparation Fee (30%)');
     ok(iFee >= 0 && iFee < fin.t.indexOf('Havellin Services Total $20,345'),
        'above the services total it is part of (a missing row reads -1, which is not "above")');
-    has(fin.t, "Home prep site management fee — on the prep vendors' actual invoices $345", 'the payment summary names the fee');
-    has(fin.t, "Havellin's fee on the home preparation vendors is the 30% general contracting and site management fee shown above",
+    has(fin.t, "Home Sale Preparation Fee — on the prep vendors' actual invoices $345", 'the payment summary names the fee');
+    has(fin.t, "Havellin's fee on the home preparation vendors is the 30% Home Sale Preparation Fee shown above",
         'the vendor note points at a line that is on the page');
     lacks(fin.t, 'billed in the hours above', 'no hours claim on a fixed-price invoice');
     ok(!fin.blocked, 'a fixed final is never blocked for hours — the timesheet is empty here');
@@ -331,22 +342,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ The record saved before today: the fee is inside the flat fee, so it adds nothing.
     const ldep = invoice(LEGACY, 'deposit');
     eq(ldep.amtDue, 10000, '⚠⚠ a record saved before today: 50% of the flat fee alone — the fee is never billed twice');
-    lacks(ldep.t, 'GC / Site Management Fee (30%)', 'and no separate fee line');
+    // RESTATED 2026-10-01 (P17, answer 5): asked by the line's new name.
+    lacks(ldep.t, 'Home Sale Preparation Fee (30%)', 'and no separate fee line');
     const lfin = invoice(LEGACY, 'final', [pay('deposit', 10000), pay('midpoint', 5000)], actuals());
     eq(lfin.amtDue, 5000, 'its final closes out the flat fee and nothing more');
     has(lfin.t, 'fee on the home preparation vendors is included in the fixed project fee', 'and says the fee is inside it');
 
     // The hourly invoice is untouched.
     const tm = invoice(BASE, 'deposit');
-    eq(tm.amtDue, Math.round(0.5 * 14325), 'an hourly deposit is 50% of the estimate total, prep fee included, as before');
+    // RESTATED 2026-10-01 (P17, answer 6): half of $14,325 is $7,162.50, to the cent (it was rounded to $7,163).
+    eq(tm.amtDue, 7162.5, 'an hourly deposit is 50% of the estimate total, prep fee included, as before');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
   group('_invVendorFeeSentence — the billing basis decides which of three sentences is true');
   {
     const c = sandbox({ fns: ['_invVendorFeeSentence', 'prepFeeRate'], vars: ['PREP_FEE_RATE'] });
-    has(c._invVendorFeeSentence(0, 225, ''), 'fee shown above', 'hourly: the fee line is on the page');
-    has(c._invVendorFeeSentence(0, 225, 'fixed'), 'fee shown above', 'fixed, fee on top: so is it');
+    // RESTATED 2026-10-01 (P17, answer 5): the sentence names the Home Sale Preparation Fee (it read "general contracting and site
+    // management fee shown above").
+    has(c._invVendorFeeSentence(0, 225, ''), 'Home Sale Preparation Fee shown above', 'hourly: the fee line is on the page');
+    has(c._invVendorFeeSentence(0, 225, 'fixed'), 'Home Sale Preparation Fee shown above', 'fixed, fee on top: so is it');
     has(c._invVendorFeeSentence(0, 225, 'fixed-inside'), 'is included in the fixed project fee',
         'fixed, fee inside: there is no line to point at');
     has(c._invVendorFeeSentence(0, 0, ''), 'billed in the hours above', 'hourly with no prep: the hours carry the coordination');
@@ -366,7 +381,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(a, 'is included in the fixed project fee under Section 3.3', '⚠ §3.5: coordination is inside the flat fee, not billed as time');
     has(a, 'calculated on what those vendors actually invoice and charged in addition to the fixed project fee', '§3.5 states the fee on top');
     has(a, 'at its estimated amount of $225', '§3.2 says the schedule carries the estimated fee');
-    has(a, 'Deposit (50%) $10,113', 'the schedule splits flat + estimated fee — the same figure the deposit invoice asks for');
+    // RESTATED 2026-10-01 (P17, answer 6): to the cent, as the deposit invoice asks (it read $10,113).
+    has(a, 'Deposit (50%) $10,112.50', 'the schedule splits flat + estimated fee — the same figure the deposit invoice asks for');
     has(a, 'is earned as the preparation work is performed', '§12.2 earns the prep fee on the vendor work');
     has(a, 'at thirty percent (30%) of those vendors\' invoices', 'at the rate, spelled from the one constant');
     has(a, 'and the Home Sale Preparation Fee owed under that Section', '§12.4 invoices it on termination');
@@ -407,7 +423,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(a, '(estimated in Exhibit A at $225)', 'with its estimated amount');
     has(a, 'together with the Home Sale Preparation Fee on the preparation vendors\' actual invoices', '§3.2 IMPORTANT names it');
     has(a, '(50% of fixed price + est. prep fee)', 'the payment rows name both parts');
-    has(a, '$15,113 (50% of fixed price + est. prep fee)', 'and split the same figure the deposit invoice asks for');
+    // RESTATED 2026-10-01 (P17, answer 6): half of $30,225 to the cent (it read $15,113).
+    has(a, '$15,112.50 (50% of fixed price + est. prep fee)', 'and split the same figure the deposit invoice asks for');
     has(a, 'completes the fixed price and the Home Sale Preparation Fee on actual vendor invoices', 'the final payment says the fee trues up');
     has(a, 'The payment amounts above include the Home Sale Preparation Fee at its estimated amount of $225',
         'the estate schedule says its amounts carry the estimated fee');
@@ -429,15 +446,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('the emails state the flat fee and the prep fee as two lines');
   {
-    const c = sandbox({ fns: ['estimateHavellinLines', 'estFixedFee', 'estPrepFeeOnTop', 'prepFeeRate', 'estFixedLines'], vars: ['PREP_FEE_RATE', 'RUSH_PCT'] });
+    const c = sandbox({ fns: ['estimateHavellinLines', 'estFixedFee', 'estPrepFeeOnTop', 'prepFeeRate', 'estFixedLines', 'roundCents'], vars: ['PREP_FEE_RATE', 'RUSH_PCT'] });
     eq(JSON.stringify(c.estimateHavellinLines(FIXED, false)),
-       JSON.stringify([['Fixed Project Fee', 20000], ['Home Prep Site Management Fee (30%)', 225]]),
+       // RESTATED 2026-10-01 (P17, answer 5): the email's line read "Home Prep Site Management Fee (30%)".
+       JSON.stringify([['Fixed Project Fee', 20000], ['Home Sale Preparation Fee (30%)', 225]]),
        '⚠ fixed: two lines — a single "Fixed Project Fee" over their sum would state a flat fee no document agrees with');
     eq(JSON.stringify(c.estimateHavellinLines(LEGACY, false)), JSON.stringify([['Fixed Project Fee', 20000]]),
        'a record saved before today: one line, the whole flat fee');
     eq(JSON.stringify(c.estimateHavellinLines(BASE, false)), JSON.stringify([['Havellin Services', 14325]]),
        'hourly: the services total, as before');
-    eq(c.estimateHavellinLines(BASE, true)[0][0], 'Havellin Management Fee', 'a fee-only engagement keeps its own label');
+    // RESTATED 2026-10-01 (P17, answer 5): the fee-only label read "Havellin Management Fee".
+    eq(c.estimateHavellinLines(BASE, true)[0][0], 'Home Sale Preparation Fee', 'a fee-only engagement keeps its own label');
     const m = fn('buildEstimateMailto'), t = fn('buildEstimateEmailText'), h = fn('buildEstimateEmailHtml');
     [m, t, h].forEach((b, i) => has(b, 'estimateHavellinLines(', ['mailto', 'text', 'html'][i] + ' email reads the shared lines'));
     has(h, 'The fixed project fee above is firm', 'the HTML email calls only the flat fee firm');

@@ -402,7 +402,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       { id: 2, uid: 'u-mid', stage: 'midpoint', amount: mid, method: 'check', receivedOn: '2026-09-28', clearedOn: null }];
     const s = inZone(() => w.C.walkawaySettlement(w.job));
     ok(s.due > 0, 'fixture: a refund is due (' + s.due + ')');
-    eq(w.C.closeoutRetainedTotal(w.job), Math.round(s.received), 'before the refund goes back the job holds everything received');
+    // RESTATED 2026-10-01 (P17 merge): the retained figure is to the cent since W1 (roundCents), so it holds the $14,381.25
+    // received, not the $14,381 this read when closeoutRetainedTotal rounded to the dollar; likewise twice below.
+    eq(w.C.closeoutRetainedTotal(w.job), s.received, 'before the refund goes back the job holds everything received');
     // The card: the settlement and the one control.
     const card = inZone(() => w.C.walkawaySettlementHtml(w.job));
     has(card, 'Walkaway settlement', 'the Deposit Retained card carries the settlement');
@@ -432,15 +434,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Every total reads it — and none of the money-received totals counts it.
     eq(w.C.jobPaidTotal(w.job), s.received, 'received is still what came in');
     eq(w.C.jobRefundedTotal(w.job), s.due, 'refunded is what went back');
-    eq(w.C.closeoutRetainedTotal(w.job), Math.round(s.earned), '⚠⚠ the retained figure is now what the job earned');
+    eq(w.C.closeoutRetainedTotal(w.job), s.earned, '⚠⚠ the retained figure is now what the job earned');   // to the cent (P17 merge)
     const s2 = inZone(() => w.C.walkawaySettlement(w.job));
     eq([s2.refunded, s2.due, s2.retained], [s.due, 0, s.earned], 'the settlement reads it: nothing more is due');
     eq([w.C.stagePaidTotal(w.job, 'deposit'), w.C.isJobFunded(w.job)], [dep, true], 'the deposit and the funding gate never see it');
     eq([w.C.paymentCounts(r), w.C.refundCounts(r)], [false, true], 'paymentCounts leaves it out; refundCounts counts it');
     const wl = w.C.winLossFigures();
-    eq(wl.wonRev, Math.round(s.earned), '⚠ Win / Loss counts what was kept');
+    eq(wl.wonRev, s.earned, '⚠ Win / Loss counts what was kept');
     const term = inZone(() => w.C.jobTimeline(w.job, w.C.estimateStore[7], [], []))[0];
-    has(term.sub, '$' + Math.round(s.earned).toLocaleString() + ' retained', 'and the rail\'s Deposit Retained row says it');
+    has(term.sub, w.C.fmt(s.earned) + ' retained', 'and the rail\'s Deposit Retained row says it');
     // The card and the list after.
     const card2 = text(inZone(() => w.C.walkawaySettlementHtml(w.job)));
     has(card2, 'Refunded (' + w.C.fmt(s.due) + ')', 'the card shows the refund');
@@ -515,13 +517,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ and it names the refund as what it is: how, when and to whom it went (paymentSummaryText)');
     const eff = text(w.doc.getElementById('pv-effect').innerHTML);
     has(eff, 'comes off what has been refunded', 'the effect is stated first');
-    has(eff, 'retained becomes ' + w.C.fmt(Math.round(s.received)), 'the retained figure goes back up');
+    has(eff, 'retained becomes ' + w.C.fmt(s.received) + '.', 'the retained figure goes back up');
     has(eff, 'The refund due becomes ' + w.C.fmt(s.due), 'and the refund is due again');
     w.doc.__seed('pv-reason', 'Cheque not sent: recorded early');
     inZone(() => w.C.confirmVoidPayment());
     eq(w.job.payments.length, 3, '⚠ the refund stays on the record');
     ok(!!w.job.payments[2].voidedAt && w.job.payments[2].voidReason === 'Cheque not sent: recorded early', 'void, with why');
-    eq([w.C.jobRefundedTotal(w.job), w.C.closeoutRetainedTotal(w.job)], [0, Math.round(s.received)], 'nothing is refunded and the job holds it all again');
+    eq([w.C.jobRefundedTotal(w.job), w.C.closeoutRetainedTotal(w.job)], [0, s.received], 'nothing is refunded and the job holds it all again');
     eq(inZone(() => w.C.walkawaySettlement(w.job)).due, s.due, 'so the refund is due again');
     lacks(inZone(() => w.C.jobPaymentsListHtml(w.job)), "openVoidPayment(7,'u-rf')", 'a void refund offers nothing more');
   }

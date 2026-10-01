@@ -8,12 +8,19 @@
 // estimate on Build Estimate, and overflow at 1440 / 390.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step21.js [/abs/path/to/havellin.html]
+//
+// RESTATED 2026-10-01 (P17): the fee is the Home Sale Preparation Fee on every document (Anthony's answer 5; the rows,
+// the notes and the email line read "site management" / "GC / Site Management Fee" / "Home Prep Site Management Fee"), and money
+// is carried to the cent (answer 6): on the $20,225 fixed job the deposit is $10,112.50 and the midpoint $5,146.25, where they
+// were rounded to $10,113 and $5,146; the suggested fee carries its cents too. Each figure below is worked out in whole cents.
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const has = (t, n, m) => ok(t.indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const lacks = (t, n, m) => ok(t.indexOf(n) < 0, m + '  [present: ' + n + ']');
+const CT = (n) => Math.round(Number(n) * 100);
+const money = (n) => { const c = CT(n); const r = Math.abs(c) % 100; return '$' + Math.floor(Math.abs(c) / 100).toLocaleString('en-US') + (r ? '.' + String(r).padStart(2, '0') : ''); };
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
@@ -82,7 +89,7 @@ const lacks = (t, n, m) => ok(t.indexOf(n) < 0, m + '  [present: ' + n + ']');
         }
       });
       const t = d.textContent.replace(/\s+/g, ' ');
-      const iSvc = t.indexOf('Havellin Services Total'), iPrep = t.indexOf('Home Prep for Sale — Site Management');
+      const iSvc = t.indexOf('Havellin Services Total'), iPrep = t.indexOf('Home Prep for Sale — Home Sale Preparation Fee');
       const prepBand = t.indexOf('Home Prep', iSvc + 10);
       return { rowsSum, total, rows, text: t, feeRowInSvc: iPrep >= 0 && iPrep < iSvc };
     }, [id, snap]);
@@ -97,8 +104,8 @@ const lacks = (t, n, m) => ok(t.indexOf(n) < 0, m + '  [present: ' + n + ']');
   console.log('   rows', JSON.stringify(ceA.rows), 'total', ceA.total);
   ok(ceA.rowsSum === ceA.total, 'T&M: the services rows add up to the Havellin Services Total (' + ceA.rowsSum + ' vs ' + ceA.total + ')');
   ok(ceA.total === A.snap.havellinTotal, 'and that total is the snapshot total');
-  ok(ceA.feeRowInSvc, 'the site-management row sits above the services total');
-  has(ceA.text, 'site management line in Havellin Services above', 'the prep section says where the fee is');
+  ok(ceA.feeRowInSvc, 'the Home Sale Preparation Fee row sits above the services total');
+  has(ceA.text, 'Home Sale Preparation Fee line in Havellin Services above', 'the prep section says where the fee is');
   lacks(ceA.text, 'Havellin GC / Site Management Fee (30% of prep vendors)', 'the old below-the-total fee row is gone');
 
   // ── B. Same kind of job, FIXED PRICE ─────────────────────────────────────
@@ -112,13 +119,13 @@ const lacks = (t, n, m) => ok(t.indexOf(n) < 0, m + '  [present: ' + n + ']');
   ok(sB.prepFeeOnTop === true, 'the record carries the on-top marker');
   ok(sB.havellinTotal === 20000 + sB.prepFee, 'the Havellin total is the flat fee plus the prep fee');
   ok(sB.grandTotal === 20000 + sB.prepFee + (sB.vendorCost || 0) + (sB.prepCost || 0), 'the grand total adds the vendors at cost');
-  const suggExpect = await p.evaluate((s) => Math.round((s.havellinTotalFull ? (s.havellinTotalFull - s.prepFee) : 0) * (1 + fixedPriceBuffer(s.svc))), B0.snap);
+  const suggExpect = await p.evaluate((s) => Math.round((s.havellinTotalFull ? (s.havellinTotalFull - s.prepFee) : 0) * (1 + fixedPriceBuffer(s.svc)) * 100) / 100, B0.snap);
   ok(B0.sugg === suggExpect, 'the suggested fee excludes the prep fee (' + B0.sugg + ' vs ' + suggExpect + ')');
   const ceB = await ceCheck(idB, sB);
   console.log('   rows', JSON.stringify(ceB.rows), 'total', ceB.total);
   ok(ceB.rowsSum === ceB.total, 'fixed: the rows add up (' + ceB.rowsSum + ' vs ' + ceB.total + ')');
   ok(ceB.rows.some(r => /Fixed Project Fee/.test(r[0]) && r[1] === 20000), 'the fixed row states the flat fee alone');
-  ok(ceB.rows.some(r => /General contracting/.test(r[0]) && r[1] === sB.prepFee), 'the prep fee is its own row');
+  ok(ceB.rows.some(r => /Home Sale Preparation Fee on the home prep vendors/.test(r[0]) && r[1] === sB.prepFee), 'the prep fee is its own row');
   has(ceB.text, 'which is not part of the fixed fee and is charged on what those vendors actually bill', 'the fixed Terms say the fee is outside the flat fee');
   has(ceB.text, 'apart from the home prep vendors', 'the fixed-fee blurb carves the prep vendors out');
 
@@ -135,8 +142,8 @@ const lacks = (t, n, m) => ok(t.indexOf(n) < 0, m + '  [present: ' + n + ']');
   has(agrB, 'and the Home Sale Preparation Fee owed under that Section', '§12.4 invoices it on termination');
   has(agrB, 'deposit is earned on signature and is not refundable', 'the deposit stays non-refundable');
   lacks(agrB, 'billed as Transition Concierge time under Section 3.3', 'no clause bills coordination as hours on a fixed fee');
-  const depExp = Math.round(0.5 * sB.havellinTotal);
-  has(agrB, '$' + depExp.toLocaleString(), 'the agreement deposit is 50% of flat + est. prep fee ($' + depExp + ')');
+  const depExp = Math.round(CT(sB.havellinTotal) / 2) / 100;
+  has(agrB, money(depExp), 'the agreement deposit is 50% of flat + est. prep fee (' + money(depExp) + ')');
 
   // Invoices across the three stages, with the painter's actual quote above the estimate
   const inv = await p.evaluate(([id, e]) => {
@@ -156,24 +163,24 @@ const lacks = (t, n, m) => ok(t.indexOf(n) < 0, m + '  [present: ' + n + ']');
   }, [idB, sB]);
   const prepAct = Math.round((900 + 150 + 100) * 0.30); // 345
   console.log('   deposit', inv.dep.amt, 'midpoint', inv.mid.amt, 'final', inv.fin.amt, 'prepFee actual', prepAct);
-  ok(inv.dep.amt === Math.round(0.5 * (20000 + sB.prepFee)), 'deposit = 50% of flat + prep fee on the quotes');
+  ok(CT(inv.dep.amt) === Math.round(CT(20000 + sB.prepFee) / 2), 'deposit = 50% of flat + prep fee on the quotes, to the cent (' + inv.dep.amt + ')');
   has(inv.dep.t, 'Fixed project fee — full scope of work per agreement $20,000', 'deposit invoice states the flat fee');
-  has(inv.dep.t, 'Home Prep for Sale — GC / Site Management Fee (30%) $' + sB.prepFee, 'deposit invoice itemises the prep fee on the quotes');
+  has(inv.dep.t, 'Home Sale Preparation Fee (30%) ' + money(sB.prepFee), 'deposit invoice itemises the prep fee on the quotes');
   has(inv.dep.t, 'shown here on the prep vendors\' quotes and trued to their actual invoices', 'and says it trues up');
-  ok(inv.mid.amt === Math.round(0.75 * (20000 + prepAct)) - inv.dep.amt, 'midpoint = 75% of flat + ACTUAL prep fee, less the deposit received');
+  ok(CT(inv.mid.amt) === Math.round(CT(20000 + prepAct) * 3 / 4) - CT(inv.dep.amt), 'midpoint = 75% of flat + ACTUAL prep fee, less the deposit received, to the cent (' + inv.mid.amt + ')');
   // Two of the three prep lines are still on their estimates, so the line carries the est. tag.
-  ok(/GC \/ Site Management Fee \(30%\) est\. \$345/.test(inv.mid.t), 'midpoint invoice bills the prep fee on the actual painter quote, tagged est. while two lines still are');
-  ok(inv.fin.amt === (20000 + prepAct) - inv.dep.amt - inv.mid.amt, 'final closes out flat + actual prep fee exactly (' + inv.fin.amt + ')');
+  ok(/Home Sale Preparation Fee \(30%\) est\. \$345/.test(inv.mid.t), 'midpoint invoice bills the prep fee on the actual painter quote, tagged est. while two lines still are');
+  ok(CT(inv.fin.amt) === CT(20000 + prepAct) - CT(inv.dep.amt) - CT(inv.mid.amt), 'final closes out flat + actual prep fee exactly (' + inv.fin.amt + ')');
   has(inv.fin.t, 'Havellin Services Total $' + (20000 + prepAct).toLocaleString(), 'final services total = flat + actual prep fee');
-  has(inv.fin.t, 'Home prep site management fee — on the prep vendors\' actual invoices $' + prepAct, 'payment summary names the prep fee');
-  has(inv.fin.t, 'Havellin\'s fee on the home preparation vendors is the 30% general contracting and site management fee shown above', 'the vendor note points at a line that is there');
+  has(inv.fin.t, 'Home Sale Preparation Fee — on the prep vendors\' actual invoices $' + prepAct, 'payment summary names the prep fee');
+  has(inv.fin.t, 'Havellin\'s fee on the home preparation vendors is the 30% Home Sale Preparation Fee shown above', 'the vendor note points at a line that is there');
   ok(!inv.fin.blocked, 'a fixed final is never blocked for hours');
   lacks(inv.fin.t, 'billed in the hours above', 'no hours claim on a fixed-price invoice');
 
   // Emails
   const em = await p.evaluate(([id, e]) => { const job = jobs.find(j => j.id === id); return { txt: buildEstimateEmailText(e, job), html: buildEstimateEmailHtml(e, job) }; }, [idB, sB]);
   has(em.txt, 'Fixed Project Fee: $20,000', 'text email states the flat fee');
-  has(em.txt, 'Home Prep Site Management Fee (30%): $' + sB.prepFee, 'and the prep fee as its own line');
+  has(em.txt, 'Home Sale Preparation Fee (30%): ' + money(sB.prepFee), 'and the prep fee as its own line');
   has(em.html, 'The fixed project fee above is firm', 'HTML email: only the flat fee is called firm');
   has(em.html, 'charged on what those vendors actually bill', 'and the prep fee follows the bills');
 
@@ -209,13 +216,13 @@ const lacks = (t, n, m) => ok(t.indexOf(n) < 0, m + '  [present: ' + n + ']');
     return { dep: dep.amtDue, depT: T(dep.html), finT: T(fin.html), fin: fin.amtDue, agr: a };
   }, [idB, L]);
   ok(legacy.dep === Math.round(0.5 * L.fixedAmount), 'legacy deposit is 50% of the flat fee alone — never the fee twice');
-  lacks(legacy.depT, 'GC / Site Management Fee (30%)', 'no separate prep line on a legacy record');
+  lacks(legacy.depT, 'Home Sale Preparation Fee (30%)', 'no separate prep line on a legacy record');
   has(legacy.finT, 'fee on the home preparation vendors is included in the fixed project fee', 'the legacy vendor note says the fee is inside');
   has(legacy.agr, 'On this engagement that fee is included in the fixed project fee under Section 3.3', 'legacy §3.5 says so too');
   lacks(legacy.agr, 'charged in addition to the fixed price', 'no second charge claimed on a legacy record');
   const ceL = await ceCheck(idB, L);
   ok(ceL.rowsSum === ceL.total, 'legacy estimate rows add up (' + ceL.rowsSum + ' vs ' + ceL.total + ')');
-  lacks(ceL.text, 'Home Prep for Sale — Site Management', 'legacy estimate prints no separate fee row');
+  lacks(ceL.text, 'Home Prep for Sale — Home Sale Preparation Fee', 'legacy estimate prints no separate fee row');
 
   // ── F. Reopening a fixed fee saved before the change ─────────────────────
   const idR = await make('downsizing_move', 'Reopen');

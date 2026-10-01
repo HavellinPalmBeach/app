@@ -105,7 +105,7 @@ const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'save
   'svcFamilyOptions', 'svcFamily', 'sameSvcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson',
   'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked',
   'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', 'onReferralSourceChange', 'populateReferralPicker',
-  '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier'].concat(TIER_FNS, ROUTE_FNS);
+  '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'roundCents', 'fmt'].concat(TIER_FNS, ROUTE_FNS);
 const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
   'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES',
   'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT',
@@ -196,7 +196,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d = domStub({ 'e-job': '7', 'e-propval': '1500000' });
     const said = [];
     const S = attempt(() => sandbox({ fns: ['saveEstimateAndPreview', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob',
-      'matterTypeOf', 'matterDef', 'unscoredRoomNames', 'estimateRepriceRoute', 'roomScoreOf'].concat(TIER_FNS, ROUTE_FNS),
+      'matterTypeOf', 'matterDef', 'unscoredRoomNames', 'estimateRepriceRoute', 'roomScoreOf', 'roundCents', 'roundQuarter', 'isQuarterHours', 'fmtHrs', 'fmt', 'declutterHoursRefusal'].concat(TIER_FNS, ROUTE_FNS),
       vars: ['ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'].concat(TIER_VARS),
       stubs: { document: d, jobs: [{ id: 7, svc: 'downsizing', name: 'Pat' }], estimateStore: {}, estimateApproved: false,
         currentEstimate: { svc: 'downsizing', havellinTotal: 0, rooms: [] }, showFB: (id, k, m) => said.push({ id, k, m }) } }));
@@ -223,7 +223,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
-      'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
+      'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmt',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
       'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
       'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'depositVoidFlag', 'agreementHandedOverInPerson',
@@ -238,7 +238,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay',
       '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance',
       '_approvedPriceAbove', 'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'esc', 'dot', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'agreementChipFix', 'jobPaymentsListHtml',
-      'probatePackageCardHtml', 'probatePackageBlocker'];
+      'probatePackageCardHtml', 'probatePackageBlocker', 'roundCents', 'fmtHrs'];
     const VARS = ['_driveFolderInFlight', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS',
       'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
@@ -319,7 +319,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'svcHasDocStep', 'fmtCEDate', '_pctWords', 'docTierOf', 'docTierDef', 'docTierScope', 'approvedEstimateFor', 'estFixedFee',
       'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords',
       'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'matterDef', 'matterTypeOf',
-      'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'docScopeDef', 'addWorkingDays', '_ymdLocal'];
+      'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'docScopeDef', 'addWorkingDays', '_ymdLocal', 'roundCents', 'fmtHrs'];
     const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE',
       'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES'];
@@ -330,7 +330,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       discountAmt: 0, fixedPrice: false, rush: false, days: 5, rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }], vendors: [],
       collections: [], vehicles: [], prepItems: [], preparedBy: ZED.name, docScope: 'full' };
     const STOP = ['jobs', 'estimateStore', 'jobLogs', 'changeOrders', 'contractors', 'currentEstimate', 'vendorDirectory', 'jobPlans', '_photoRefs', 'jobPlanStore'];
-    const ce = attempt(() => closureLift(['clientEstimateHtml'], STOP, { jobs: [JOB], estimateStore: {}, jobLogs: {}, changeOrders: [],
+    const ce = attempt(() => closureLift(['clientEstimateHtml', 'roundCents', 'fmtHrs', 'fmt', 'paymentSplit'], STOP, { jobs: [JOB], estimateStore: {}, jobLogs: {}, changeOrders: [],
       contractors: [ZED], currentEstimate: null, vendorDirectory: [], jobPlans: {}, jobPlanStore: {}, _photoRefs: {}, document: domStub({}) })
       .clientEstimateHtml(EST, JOB));
     ok(ce.ok, 'the client estimate renders' + (ce.ok ? '' : ' — ' + ce.err));
@@ -364,7 +364,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'esc', 'escLines', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments',
       'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee',
-      'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'coBaselineMove'];
+      'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];
     const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
       'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
@@ -481,7 +481,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         const c = sandbox({
           fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
                 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
-                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier'].concat(TIER_FNS),
+                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'roundCents', 'fmt'].concat(TIER_FNS),
           vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
                  'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory',
                  'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES', '_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS),
@@ -652,7 +652,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(R.estimateRepriceRoute({ id: 1, status: 'pending' }, { submitted: true }), R.ESTIMATE_OUT_FOR_APPROVAL_TXT, 'out for approval: the manager');
     // Build Estimate's save refusal on an approved estimate.
     const said = [];
-    const S = sandbox({ fns: ['saveEstimateAndPreview'].concat(ROUTE_FNS), vars: ['ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
+    const S = sandbox({ fns: ['saveEstimateAndPreview', 'roundCents', 'roundQuarter', 'isQuarterHours', 'fmtHrs', 'fmt', 'declutterHoursRefusal'].concat(ROUTE_FNS), vars: ['ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
       stubs: { document: domStub({ 'e-job': '7' }), jobs: [{ id: 7, approved: true }], estimateStore: { 7: { approved: true } },
                estimateApproved: true, showFB: (id, k, m) => said.push(m) } });
     S.saveEstimateAndPreview();
@@ -735,7 +735,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const worksheet = (est, job) => {
       let out = null;
-      const r = attempt(() => sandbox({ fns: ['exportEstimateToDrive', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'estimateDocNames', '_todayStr', '_ymdLocal'],
+      const r = attempt(() => sandbox({ fns: ['exportEstimateToDrive', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'estimateDocNames', '_todayStr', '_ymdLocal', 'roundCents', 'fmtHrs'],
         vars: ['PREP_FEE_RATE'], stubs: { jobs: [job], resolveSubfolderId: (j, name, cb) => cb('F1'),
           uploadHtmlToDrive: (folder, name, html) => { out = { name, html }; }, showSyncBadge() {} } }).exportEstimateToDrive(job.id, est));
       return r.ok ? out : { html: 'THREW ' + r.err };
@@ -749,23 +749,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(b.ok, 'the prep estimate is built by the real engine' + (b.ok ? '' : ' — ' + b.err));
     const est = b.ok ? b.val : {};
     const job = { id: 7, hvlId: 'HVL-0007', name: 'Marston', svc: 'prep' };
-    eq([est.declutterTCHrs, est.totTC, est.tcFee, est.prepFee, est.discountAmt, est.havellinTotal], [5.5, 6, 900, 6000, 90, 6810],
-       'fixture: 5.5 quoted hours bill as 6 whole hours ($900), the fee is $6,000, the discount $90, the total $6,810');
+    // ⚠⚠ RESTATED 2026-10-01 (P17; measured through the real engine): billed hours are the quoted quarter hours, so 5.5 hours
+    // bill as 5.5 ($825), where they were rounded up to 6 whole hours ($900); the discount is $82.50 and the total $6,742.50
+    // (it was $90 and $6,810). The worksheet's "billed as" clause is said only where the record bills other hours than it
+    // quoted — a record saved before today, whose 5.5 billed as 6.
+    eq([est.declutterTCHrs, est.totTC, est.tcFee, est.prepFee, est.discountAmt, est.havellinTotal], [5.5, 5.5, 825, 6000, 82.5, 6742.5],
+       'fixture: 5.5 quoted hours bill as 5.5 ($825), the fee is $6,000, the discount $82.50, the total $6,742.50');
     const w = worksheet(est, job) || { html: '' };
     has(w.name, 'Estimate Worksheet (INTERNAL)', 'it files as the internal worksheet');
     has(w.html, '<th>Prep vendor line</th>', '⚠⚠ it files the vendor list the estimate quoted');
     has(w.html, 'Painting &lt;b&gt;x&lt;/b&gt;', 'with each line (escaped)');
     lacks(w.html, '<th>Room</th>', '⚠⚠ and no empty room table');
-    has(text(w.html), 'Declutter hours (Transition Concierge): 5.5 quoted, billed as 6 whole hours x $150/hr = $900', '⚠ the declutter hours as they bill');
+    has(text(w.html), 'Declutter hours (Transition Concierge): 5.5 quoted x $150/hr = $825', '⚠ the declutter hours as they bill');
+    lacks(text(w.html), 'billed as', 'no "billed as" when the quarter hours quoted are the hours billed');
+    const wOld = worksheet(Object.assign({}, est, { totTC: 6, tcFee: 900, discountAmt: 90, havellinTotal: 6810 }), job) || { html: '' };
+    has(text(wOld.html), 'Declutter hours (Transition Concierge): 5.5 quoted, billed as 6.0 hours x $150/hr = $900', 'a record saved before today still says it billed 6 hours');
     const foot = text(w.html.slice(w.html.lastIndexOf('<div style="margin-top:20px;font-size:14px;">')));
     has(foot, 'Fee rate: 30% = $6,000', 'the footer states the fee');
-    has(foot, 'Declutter: $900', 'the hours');
-    has(foot, 'Discount: -$90', 'the discount');
-    has(foot, 'Havellin Total: $6,810', 'and the total');
-    const n = (s) => Number(String(s).replace(/[^0-9]/g, ''));
-    const fee = n((/Fee rate: 30% = (\$[\d,]+)/.exec(foot) || [])[1]), dc = n((/Declutter: (\$[\d,]+)/.exec(foot) || [])[1]),
-          di = n((/Discount: -(\$[\d,]+)/.exec(foot) || [])[1]), tot = n((/Havellin Total: (\$[\d,]+)/.exec(foot) || [])[1]);
-    eq(fee + dc - di, tot, '⚠ the footer adds up to its own total: fee + declutter − discount');
+    has(foot, 'Declutter: $825', 'the hours');
+    has(foot, 'Discount: -$82.50', 'the discount');
+    has(foot, 'Havellin Total: $6,742.50', 'and the total');
+    // RESTATED (P17): read with the cents, and added in cents.
+    const n = (s) => Math.round(Number(String(s).replace(/[^0-9.]/g, '')) * 100);
+    const fee = n((/Fee rate: 30% = (\$[\d,]+(?:\.\d\d)?)/.exec(foot) || [])[1]), dc = n((/Declutter: (\$[\d,]+(?:\.\d\d)?)/.exec(foot) || [])[1]),
+          di = n((/Discount: -(\$[\d,]+(?:\.\d\d)?)/.exec(foot) || [])[1]), tot = n((/Havellin Total: (\$[\d,]+(?:\.\d\d)?)/.exec(foot) || [])[1]);
+    eq(fee + dc - di, tot, '⚠ the footer adds up to its own total, to the cent: fee + declutter − discount');
 
     // Fee-only (no hours): the list, no hours line. A labour job: the room table, as before.
     const b0 = attempt(() => { const d = driveCalcAll({ svc: 'prep', sqft: 3500, rooms: [] }); d.ctx.prepItems.push({ type: 'Staging', cost: 10000 }); d.ctx.calcAll(); return d.ctx.currentEstimate; });
@@ -795,14 +803,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const SVCS = ['downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', 'probate', 'contested_probate'];
     const ROOMS = ['Living Room', 'Kitchen', 'Primary Suite', 'Primary Bath', 'Bedroom 2', 'Bathroom 2', 'Dining Room', 'Office 1'];
     const sub = divBlock(src, src.indexOf('<div id="adj-pricing">'));
-    has(sub, '$185 TC / $125 PS rates, plus 25 concierge hours of specialty coordination', 'the Premium toggle says it adds hours');
-    lacks(sub, 'hours unchanged', '⚠ and no longer says it does not');
+    // ⚠⚠ RESTATED 2026-10-01 (P17, Anthony's answer 1): Premium is the rates only. The toggle said it added 25 concierge hours
+    // of specialty coordination, and the engine did; both are gone, and the toggle says the coordination comes from the lines.
+    has(sub, '$185 TC / $125 PS rates only. Coordination comes from the vendor lines you add, as on every job.', 'the Premium toggle says it is the rates only');
+    lacks(sub, '25 concierge hours', '⚠ and no longer promises the 25 hours');
     SVCS.forEach((svc) => {
       const a = attempt(() => driveCalcAll({ svc, rooms: ROOMS }).est);
       const b = attempt(() => driveCalcAll({ svc, rooms: ROOMS, seed: { 'e-prem': true } }).est);
       ok(a.ok && b.ok, svc + ': both builds run');
       if (a.ok && b.ok) {
-        eq(b.val.totTC - a.val.totTC, 25, '⚠ ' + svc + ': Premium adds the 25 concierge hours the toggle names (' + a.val.totTC + ' → ' + b.val.totTC + ')');
+        eq(b.val.totTC - a.val.totTC, 0, '⚠ ' + svc + ': Premium adds no concierge hours (' + a.val.totTC + ' → ' + b.val.totTC + '); it added 25 until P17');
         eq([b.val.tcRate, b.val.psRate], [185, 125], svc + ': at the rates it names');
       }
     });
@@ -840,7 +850,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // removeLogisticsLine: vendors are pass-through, so the quote was never billed.
     let msg = '';
     const job = { id: 4, logisticsSourcing: { dumpster: { vendorName: 'Acme', quote: 1200, added: true } } };
-    sandbox({ fns: ['removeLogisticsLine'], vars: ['LOGISTICS_CATEGORIES'],
+    sandbox({ fns: ['removeLogisticsLine', 'roundCents', 'fmt'], vars: ['LOGISTICS_CATEGORIES'],
       stubs: { jobs: [job], confirm: (m) => { msg = m; return false; }, _saveJobEdit() {}, refreshVendorSourcing() {} } }).removeLogisticsLine(4, 'dumpster');
     has(msg, 'Acme comes off it, and its $1,200 quote comes off the vendor costs the invoices list.', '⚠ the confirm says what the quote does');
     lacks(msg, 'no longer billed', 'not that Havellin stops billing what it never billed');
@@ -848,7 +858,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The referral leaderboard: attribution is set at intake and corrected on Edit Client (Q15).
     const dom = domStub({});
-    sandbox({ fns: ['renderReferralLeaderboard', 'referralPartnerStats', 'referralIdOf', 'jobRefersToPartner', 'isJobWon', 'esc'],
+    sandbox({ fns: ['renderReferralLeaderboard', 'referralPartnerStats', 'referralIdOf', 'jobRefersToPartner', 'isJobWon', 'esc', 'roundCents', 'fmt'],
       stubs: { document: dom, referralDirectory: [{ uid: 'u-ann', partner_name: 'Ann Lowe', partner_type: 'Estate attorney' }],
                jobs: [{ id: 1, refPartnerId: 'u-ann', status: 'won', won: true, havellinEst: 20000 }] } }).renderReferralLeaderboard();
     has(dom.getElementById('referrals-leaderboard').innerHTML, 'jobs attributed to each partner at intake or on Edit Client', 'the leaderboard says where attribution is set');
@@ -869,13 +879,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'logisticsLinesFor', 'logisticsCatsFor', 'logisticsLineOn', '_fldBg', 'vendorPickerOptions', '_selVendorId', 'resolveJobVendor',
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
-      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorContacts', 'fmtPhoneDisplay'];
+      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorContacts', 'fmtPhoneDisplay', 'roundCents', 'fmtHrs'];
     const s = attempt(() => sandbox({ fns: SRC_FNS, vars: ['LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale',
       'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES', 'VENDOR_CONTACT_SLOTS'],
       stubs: { changeOrders: [], jobs: [PREP_JOB], estimateStore: {}, document: domStub({}), contractors: [], vendorDirectory: [] } })
       .renderVendorSourcing(1, PREP_JOB, { svc: 'prep', prepEnabled: true, prepItems: [{ type: 'Staging', cost: 3000, lid: 'st' }], vendors: [] }));
     ok(s.ok, 'the prep sourcing card renders' + (s.ok ? '' : ' — ' + s.err));
-    has(text(s.ok ? s.val : ''), 'Havellin\'s 30% site management fee is calculated on these actuals', '⚠ the sourcing card names the site management fee');
+    // RESTATED 2026-10-01 (P17, Anthony's answer 5): the cards name the Home Sale Preparation Fee; they said "site management fee".
+    has(text(s.ok ? s.val : ''), 'Havellin\'s 30% Home Sale Preparation Fee is calculated on these actuals', '⚠ the sourcing card names the Home Sale Preparation Fee');
     lacks(s.ok ? s.val : '', 'GC / Site', 'not a GC fee');
 
     const planFns = ['renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2', 'chkGrid', 'planChk',
@@ -883,7 +894,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
       '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard',
       'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob',
-      'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'];
+      'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'];
     const EST = { jobId: 1, svc: 'prep', prepEnabled: true, prepCost: 3000, prepFee: 900, declutterTCHrs: 0, tcRate: 150,
       prepItems: [{ type: 'Staging', cost: 3000, lid: 'st' }], vendors: [] };
     const p = attempt(() => sandbox({ fns: planFns, vars: ['DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
@@ -891,7 +902,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                estimateStore: { 1: { estimate: EST } }, _photoRefs: {}, standingFlagsBlock: () => '', _sfHost: () => '',
                renderVendorSourcing: () => '', document: domStub({}) } }).renderPrepJobPlan(1, PREP_JOB, EST));
     ok(p.ok, 'the prep plan renders' + (p.ok ? '' : ' — ' + p.err));
-    has(text(p.ok ? p.val : ''), 'Havellin’s 30% site management fee is billed on the actual vendor spend logged here', '⚠ the budget card names the site management fee');
+    has(text(p.ok ? p.val : ''), 'Havellin’s 30% Home Sale Preparation Fee is billed on the actual vendor spend logged here', '⚠ the budget card names the Home Sale Preparation Fee');
     lacks(p.ok ? p.val : '', 'GC / Site', 'not a GC fee');
 
     // The vendor card's subtitle on a Home Prep estimate: declutter hours ARE billed.
@@ -925,14 +936,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // computeEngineV3: the rows reconcile with the specialist line, and not with the concierge's.
     const ec = live(fn('computeEngineV3')) === fn('computeEngineV3') ? '' : fn('computeEngineV3');
-    const nums = /\((\d+\.\d) of (\d+) on a 3,500 sqft Estate Settlement/.exec(ec);
-    const tcs = /\(the rows\s*\n?\s*\/\/\s*carry (\d+\.\d) of that job's (\d+) concierge hours\)|carry (\d+\.\d) of that job's (\d+) concierge hours/.exec(ec);
+    // RESTATED 2026-10-01 (P17): the billed figures are quarter hours now, so the comment's billed totals may carry a decimal.
+    const nums = /\((\d+\.\d) of (\d+(?:\.\d+)?) on a 3,500 sqft Estate Settlement/.exec(ec);
+    const tcs = /\(the rows\s*\n?\s*\/\/\s*carry (\d+\.\d) of that job's (\d+(?:\.\d+)?) concierge hours\)|carry (\d+\.\d) of that job's (\d+(?:\.\d+)?) concierge hours/.exec(ec);
     ok(!!nums && !!tcs, 'the computeEngineV3 comment states both reconciliations');
     const e = attempt(() => driveCalcAll({ svc: 'cleanout', sqft: 3500, rooms: ROOMS }).est);
     if (e.ok && nums && tcs) {
       const rPS = e.val.rooms.reduce((a, r) => a + (r.psH || 0), 0), rTC = e.val.rooms.reduce((a, r) => a + (r.tcH || 0), 0);
       eq([rPS.toFixed(1), String(e.val.totPS)], [nums[1], nums[2]], '⚠ the rows\' specialist hours are what the comment says, against the billed line');
-      ok(e.val.totPS - rPS < 1, 'short only of the round-up to whole hours');
+      ok(Math.abs(e.val.totPS - rPS) < 1, 'short only of the rounding to the quarter hour (P17; the round-up to whole hours before)');
       eq([rTC.toFixed(1), String(e.val.totTC)], [tcs[1] || tcs[3], tcs[2] || tcs[4]], 'and the rows carry the share of the concierge line it says');
       ok(rTC < e.val.totTC / 2, 'which never reconciles — off-site coordination and presence belong to no room');
     }

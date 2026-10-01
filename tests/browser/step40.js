@@ -105,7 +105,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   const job = (id) => p.evaluate((id) => JSON.parse(JSON.stringify(jobs.find(x => x.id === id) || {})), id);
   const lit = (id) => p.evaluate((id) => { const j = jobs.find(x => x.id === id), r = estimateStore[id];
     const n = jobTimelineNext(jobTimeline(j, r, jobLogEntries(id), [])); return n ? n.key : ''; }, id);
-  const money = (x) => p.evaluate((x) => fmtMoney(x), x);
+  // RESTATED 2026-10-01 (P17): fmt is the one money formatter; its whole-dollar twin fmtMoney is deleted.
+  const money = (x) => p.evaluate((x) => fmt(x), x);
   const listCell = async (id) => {
     await p.evaluate(() => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); }); await p.waitForTimeout(250);
     try { await p.click('button.fb[onclick*="setFilter(\'all\'"]'); } catch (e) {}

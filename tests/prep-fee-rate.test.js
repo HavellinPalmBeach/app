@@ -94,7 +94,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['estTolerancePctTxt', 'prepFeeRate', 'buildPrepEstimateBody', 'proposedPlanRow', 'fmt', 'esc',
               'paymentSplit', 'estimateIsFeeOnly', 'estDeclutterHrs', 'clientJobPlanSection', '_cePhases',
               'materialsBasisNote', 'materialsPackageQuoted', 'vendorEstimateNote', 'vendorFeeNote', '_pctWords',
-              'conciergePhones', 'conciergePhonesText', 'prepLineTCHrs', 'coordHrsFor', 'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames'],
+              'conciergePhones', 'conciergePhonesText', 'prepLineTCHrs', 'coordHrsFor', 'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'roundCents', 'fmtHrs'],
         vars: ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'COORD_TOUCHES',
                'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
@@ -115,8 +115,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The narrative paragraph, which is prose the client reads first.
     const n30 = at(0.30, (c) => c.proposedPlanRow(EST).narrative);
     const n35 = at(0.35, (c) => c.proposedPlanRow(EST).narrative);
-    has(n30, 'a 30% management fee on that vendor spend', 'the narrative states the fee');
-    has(n35, 'a 35% management fee on that vendor spend', '⚠ …and states the real one');
+    // RESTATED 2026-10-01 (P17, Anthony's answer 5): the narrative names the Home Sale Preparation Fee; it read "a 30% management fee".
+    has(n30, 'a 30% Home Sale Preparation Fee on that vendor spend', 'the narrative states the fee');
+    has(n35, 'a 35% Home Sale Preparation Fee on that vendor spend', '⚠ …and states the real one');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -127,7 +128,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // QUOTE the old arithmetic to be worth reading. Both needles below matched that comment
     // on the first run — this file already records the same trip four times.
     const body = noComments(fn('renderPrepJobPlan'));
-    has(body, 'Math.round(totalQuoted * prepFeeRate())',
+    // RESTATED 2026-10-01 (P17, answer 6): the fee is carried to the cent (roundCents), where it was rounded to the dollar.
+    has(body, 'roundCents(totalQuoted * prepFeeRate())',
       '⚠⚠ the Budget & Fee card computes off the one rate');
     lacks(body, 'totalQuoted * 0.30',
       '⚠⚠ …and never off a hardcoded 0.30 — prose can be read, arithmetic cannot');

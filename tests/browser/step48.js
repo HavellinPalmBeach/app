@@ -399,8 +399,10 @@ const PARTNERS = [{ uid: 'u-ann', partner_name: 'Ann Lowe', partner_type: 'Estat
       has(w, '<th>Prep vendor line</th>', '⚠⚠ it files the vendor list the estimate quoted');
       has(w, 'Painting', 'with the painter');
       lacks(w, '<th>Room</th>', '⚠⚠ and no empty room table');
-      has(w, 'Declutter hours (Transition Concierge):</strong> 5.5 quoted, billed as 6 whole hours &times; $150/hr = $900', '⚠ the declutter hours as they bill');
-      has(w, 'Havellin Total:</strong> $6,900', 'over the total the fee and the hours make');
+      // RESTATED 2026-10-01 (P17, Anthony's answer 6): billed hours are the quoted quarter hours, so 5.5 bill as 5.5 ($825; they billed
+      // 6 whole hours, $900) and the total is $6,825 (it was $6,900); the "billed as" clause is said only where they differ.
+      has(w, 'Declutter hours (Transition Concierge):</strong> 5.5 quoted &times; $150/hr = $825', '⚠ the declutter hours as they bill');
+      has(w, 'Havellin Total:</strong> $6,825', 'over the total the fee and the hours make');
     });
 
     // ── G. the stale text, read off the page ──────────────────────────────────────────────────────────
@@ -409,11 +411,12 @@ const PARTNERS = [{ uid: 'u-ann', partner_name: 'Ann Lowe', partner_type: 'Estat
       await toDash(idA);
       await p.evaluate((id) => { const b = document.querySelector('#client-dashboard-view button[onclick="dashGoEstimate(' + id + ')"],#client-dashboard-view button[onclick="dashEditEstimate(' + id + ')"]'); if (b) b.click(); }, idA);
       await p.waitForTimeout(900);
-      has(await txt('#adj-pricing'), '$185 TC / $125 PS rates, plus 25 concierge hours of specialty coordination', 'the Premium toggle says it adds 25 concierge hours');
+      // RESTATED 2026-10-01 (P17, Anthony's answer 1): Premium is the rates only. The toggle said it added 25 concierge hours, and did.
+      has(await txt('#adj-pricing'), '$185 TC / $125 PS rates only. Coordination comes from the vendor lines you add, as on every job.', 'the Premium toggle says it is the rates only');
       const t0 = await p.evaluate(() => currentEstimate.totTC);
       await press('label.toggle:has(#e-prem)', 'Premium estate');
       const t1 = await p.evaluate(() => currentEstimate.totTC);
-      eq(t1 - t0, 25, '⚠ and pressing it adds exactly that');
+      eq(t1 - t0, 0, '⚠ and pressing it adds no hours');
       await press('label.toggle:has(#e-prem)', 'Premium estate, off again');
       has(await txt('#adj-heirs-sub'), 'about half of total concierge hours', 'on Home Editing the heirs uplift names half the concierge hours');
       await p.click('#est-back'); await p.waitForTimeout(400);
@@ -431,8 +434,9 @@ const PARTNERS = [{ uid: 'u-ann', partner_name: 'Ann Lowe', partner_type: 'Estat
       ok(await p.evaluate(() => openJobPlanFor(4802, 'vendors')), 'the prep Job Plan opens');
       await p.waitForTimeout(800);
       const plan = await txt('#panel-job-plan');
-      has(plan, 'Havellin’s 30% site management fee is billed on the actual vendor spend logged here', '⚠ the budget card names the site management fee');
-      has(plan, 'Havellin\'s 30% site management fee is calculated on these actuals', 'and the sourcing card');
+      // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; this read "site management fee".
+      has(plan, 'Havellin’s 30% Home Sale Preparation Fee is billed on the actual vendor spend logged here', '⚠ the budget card names the Home Sale Preparation Fee');
+      has(plan, 'Havellin\'s 30% Home Sale Preparation Fee is calculated on these actuals', 'and the sourcing card');
       lacks(plan, 'GC / Site', 'not a GC fee');
       // The referral leaderboard.
       await p.evaluate(() => { const j = jobs.find((x) => x.id === 4801); j.refPartnerId = 'u-ann'; j.refPartnerName = 'Ann Lowe'; j.src = 'Estate attorney'; saveJobs(); });

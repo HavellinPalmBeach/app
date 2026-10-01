@@ -87,7 +87,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw',
     'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
     'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashOfferDiscount', 'dashNotice', '_primeEstimateFor',
-    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'discountDraftWarning', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords'];
+    'notifyManagerForApproval', 'priceChangeBlocker', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'discountDraftWarning', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'roundCents', 'fmt'];
   const DISC_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt', '_dashShown', '_dashKeepNotice'];
   // An hourly estimate: labour 20,000, a 10% discount, no rush — agreed at 18,000.
@@ -224,7 +224,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'matterTypeOf', 'svcHasDocStep', 'docTierOf', 'docTierDef', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews',
-      '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmtMoney', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn'],
+      '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],
@@ -330,7 +330,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const calls = { commit: 0, viewer: [], printed: 0, notices: [] };
     const D = sandbox({
       fns: ['docAction', 'docReadiness', 'docPreviewOnly', 'agreementReady', 'isJobWon', 'docReadOnlyWord', 'docDraftOnly',
-        'docTitle', 'openDocViewer', '_openViewer', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'fmtMoney'],
+        'docTitle', 'openDocViewer', '_openViewer', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'fmt', 'roundCents'],
       vars: ['DOC_ACTIONS', 'DOC_READY_WHY', 'DOC_STAGE_WORD', '_docViewerSpec'],
       stubs: {
         document: domStub({}),
@@ -375,7 +375,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'approvedEstimateFor', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docScopeDef', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'samePerson',
-      'canonPersonName', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn'],
+      'canonPersonName', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'],
     vars: ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DECEDENT_SERVICES', 'DOC_SCOPES',
       'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', '_PCT_WORDS', 'ESIGN_ANCHORS',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
@@ -473,7 +473,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('lows — a credit final is emailed as a credit');
   {
-    const w = sandbox({ fns: ['invoiceBalanceWords', '_emMoney'] });
+    const w = sandbox({ fns: ['invoiceBalanceWords', '_emMoney', 'roundCents', 'fmt'] });
     const cr = w.invoiceBalanceWords(-2741);
     eq(cr.label, 'Credit to you', 'a negative balance is a credit');
     eq(cr.amount, '$2,741', 'stated as a positive amount');
@@ -493,8 +493,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const B = sandbox({ fns: REC.FNS, vars: REC.VARS, stubs: {
     jobs: [], jobLogs: {}, estimateStore: {}, changeOrders: [], contractors: [], currentEstimate: null,
     currentInvStage: 'final', vendorDirectory: [], jobPlans: {}, _photoRefs: {}, document: domStub({}) } });
-  const money = (h, re) => { const m = String(h).match(re); return m ? parseInt(m[1].replace(/,/g, ''), 10) : null; };
-  const personFee = (h, name) => money(h, new RegExp('<tr><td>' + name + '</td>(?:(?!</tr>)[\\s\\S])*?\\$([\\d,]+)</td></tr>'));
+  // ⚠ RESTATED 2026-10-01 (P17): money is printed to the cent, so the figure is read with its cents.
+  const money = (h, re) => { const m = String(h).match(re); return m ? parseFloat(m[1].replace(/,/g, '')) : null; };
+  const personFee = (h, name) => money(h, new RegExp('<tr><td>' + name + '</td>(?:(?!</tr>)[\\s\\S])*?\\$([\\d,]+(?:\\.\\d\\d)?)</td></tr>'));
 
   group('lows — on a premium final two people sharing a role add up to that role’s fee');
   {
@@ -515,11 +516,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const h = B.invoiceHtml(job, 'final').html;
     const a = personFee(h, 'Anthony Graziano'), b = personFee(h, 'Ashley Jerome');
     const c = personFee(h, 'Specialist One'), d = personFee(h, 'Specialist Two');
-    eq(a + b, 3811, '⚠ the two concierge rows add up to the concierge fee — they printed $1,906 + $1,906 = $3,812');
-    eq(c + d, 2525, 'and the two specialist rows to the specialist fee');
-    eq([a, b], [1905, 1906], 'the remainder rides on ONE row — the longest, the first of them on a tie');
-    [a, b].forEach((v) => ok(Math.abs(v - 10.3 * 185) <= 1, `no concierge row moves by more than its own rounding (${v})`));
-    [c, d].forEach((v) => ok(Math.abs(v - 10.1 * 125) <= 1, `nor any specialist row (${v})`));
+    // ⚠ RESTATED 2026-10-01 (P17; measured on the real invoice): every row is its own hours × rate to the cent, so the
+    // $1,905.50 rows print as $1,905.50 and add up to the $3,811 role fee with no remainder left to place. Under the
+    // whole-dollar rule they were $1,905 + $1,906 (the remainder on one row), and before 2026-09-29 $1,906 twice.
+    eq(Math.round((a + b) * 100), 381100, '⚠ the two concierge rows add up to the concierge fee — they printed $1,906 + $1,906 = $3,812');
+    eq(Math.round((c + d) * 100), 252500, 'and the two specialist rows to the specialist fee');
+    eq([a, b], [1905.5, 1905.5], 'each row is its exact share to the cent: no remainder to ride on one row');
+    [a, b].forEach((v) => ok(Math.abs(v - 10.3 * 185) < 0.005, `no concierge row moves by any rounding (${v})`));
+    [c, d].forEach((v) => ok(Math.abs(v - 10.1 * 125) < 0.005, `nor any specialist row (${v})`));
   }
 
   group('lows — the Home Prep estimate prints its discount, so its rows reach its total');
@@ -565,7 +569,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(inv, '_midSplit.deposit + _midSplit.midpoint', 'the cumulative 75% is the split’s deposit plus its midpoint');
     lacks(inv, 'Math.round(0.5 * totalDepositBasis)', 'the private 50% rounding is gone');
     lacks(inv, 'Math.round(0.75 * totalMidBasis)', 'and the private 75%');
-    const s = sandbox({ fns: ['paymentSplit'] });
+    const s = sandbox({ fns: ['paymentSplit', 'roundCents'] });
     const bad = [];
     for (let t = 10000; t < 10100; t++) {
       const p = s.paymentSplit(t);

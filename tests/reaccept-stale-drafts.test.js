@@ -35,7 +35,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const BLK_FNS = ['priceChangeBlocker', 'discountOfferBlocker', 'estimateEditBlocker', 'isAgreementSigned', 'agreementSignature',
     'isAgreementSent', 'docSentAt', 'docKeyFor'];
-  const PRICE_FNS = ['_approvedPriceAbove', 'priceAboveAcceptance', 'priceAboveSent', 'priceRaiseSentence', 'isJobWon', 'fmtMoney']
+  const PRICE_FNS = ['_approvedPriceAbove', 'priceAboveAcceptance', 'priceAboveSent', 'priceRaiseSentence', 'isJobWon', 'fmt', 'roundCents']
     .concat(BLK_FNS);
   const SENT_AT = '2026-09-29T10:00:00Z';
   // ⚠ Draft and change stamps are fixed in the PAST on purpose: notePriceChange stamps `priceChangedAt` with the
@@ -62,8 +62,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(P.priceAboveAcceptance(wonJob(), rec(20000)), null, 'the same price is not a raise');
     eq(P.priceAboveAcceptance(wonJob(), rec(18000)), null, '⚠ a DISCOUNT is not a raise — it only lowers what the client agreed');
     eq(P.priceAboveSent(wonJob(), rec(18000)), null, 'and does not reopen the send either');
-    eq(P.priceAboveAcceptance(wonJob(), rec(20000.4)), null, 'a sub-dollar difference is not a raise');
-    eq(P.priceAboveAcceptance(wonJob({ acceptedTotal: 20000.4 }), rec(20001)), { was: 20000, now: 20001 }, 'a whole dollar is');
+    // RESTATED 2026-10-01 (P17, Anthony's answer 6): money is carried to the cent, so the price a client received or accepted is
+    // recorded to the cent and any raise of a cent or more asks again. Before P17 both figures were whole dollars, so a sub-dollar
+    // difference ($20,000.40 against $20,000) was not a raise and a $20,000.40 acceptance was recorded as $20,000.
+    eq(P.priceAboveAcceptance(wonJob(), rec(20000.004)), null, 'a difference below a cent is not a raise (float noise)');
+    eq(P.priceAboveAcceptance(wonJob(), rec(20000.4)), { was: 20000, now: 20000.4 }, 'forty cents is: the client read $20,000 and would now read $20,000.40');
+    eq(P.priceAboveAcceptance(wonJob({ acceptedTotal: 20000.4 }), rec(20001)), { was: 20000.4, now: 20001 }, 'and the figure accepted keeps its cents');
     // ⚠ Nothing is asked of a job recorded before today — there is no honest figure to compare.
     eq(P.priceAboveAcceptance(wonJob({ acceptedTotal: undefined }), rec(24100)), null,
       '⚠ a job with no accepted figure on record is asked nothing');
@@ -117,12 +121,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('the two figures are written where the facts happen — the send, and the yes');
   {
-    const M = sandbox({ fns: ['markEstimateSent'], stubs: {
+    const M = sandbox({ fns: ['markEstimateSent', 'roundCents'], stubs: {
       saveJobs() {}, syncJobToSheets() {}, updateApprovalUI() {}, _dashRedraw() {}, showSyncBadge() {} } });
     M.jobs = [{ id: 7, name: 'Butler' }];
     M.currentEstimate = { jobId: 7, havellinTotal: 20000.4 };
     M.markEstimateSent();
-    eq(M.jobs[0].estimateSentTotal, 20000, 'marking the estimate sent records the price that went, in whole dollars');
+    // RESTATED 2026-10-01 (P17, answer 6): recorded to the cent (it was 20000, in whole dollars).
+    eq(M.jobs[0].estimateSentTotal, 20000.4, 'marking the estimate sent records the price that went, to the cent');
     ok(!!M.jobs[0].estimateSentDate, 'beside the date, as before');
     M.currentEstimate = { jobId: 7, havellinTotal: 24100 };
     M.markEstimateSent();
@@ -136,7 +141,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { badges: [], fb: [], alerts: [] };
     const d = domStub({});
     const W = sandbox({
-      fns: ['openWonModal', 'confirmMarkWon', '_todayStr', '_ymdLocal'].concat(PRICE_FNS),
+      fns: ['openWonModal', 'confirmMarkWon', '_todayStr', '_ymdLocal', 'roundCents', 'fmt'].concat(PRICE_FNS),
       vars: ['WON_MODAL_COPY', '_wonJobId'],
       stubs: {
         document: d, saveJobs() {}, syncJobToSheets() {}, renderJobs() {}, renderClientDashboard() {},
@@ -225,7 +230,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
       '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', 'jtDraftLine',
       // P10 (merged here): the final's row waits for logged hours.
-      'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries', 'jobOnProbateTrack', 'matterDef', '_ymdLocal', '_localDateOf', 'paymentStageWord', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn']
+      'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries', 'jobOnProbateTrack', 'matterDef', '_ymdLocal', '_localDateOf', 'paymentStageWord', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt']
       .concat(HELP, PRICE_FNS)),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
@@ -390,7 +395,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the packet and the invoices wait for the new yes: agreementReady says reaccept, and every reader inherits it');
   {
     const G = sandbox({ fns: uniq(['agreementReady', 'agrApprovalBlocker', 'docReadiness', 'docPreviewOnly', 'docReadOnlyWord',
-      'docDraftOnly'].concat(PRICE_FNS)), vars: ['DOC_READY_WHY'] });
+      'docDraftOnly', 'roundCents', 'fmt'].concat(PRICE_FNS)), vars: ['DOC_READY_WHY'] });
     const j = wonJob(), r = rec(24100);
     G.jobs = [j]; G.estimateStore = { 7: r };
     eq(G.agreementReady(j, r), 'reaccept', '⚠⚠ a raise the client has not accepted holds the packet');
@@ -417,7 +422,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { fb: [], notices: [], primes: 0, timers: 0, fetches: 0 };
     const D = sandbox({
       fns: uniq(['ensureAgreementApproved', 'approveAgreementNow', 'stripePaymentLink', 'agreementReady', 'docReadiness', 'docState',
-        '_jobTouch'].concat(PRICE_FNS)),
+        '_jobTouch', 'roundCents', 'fmt'].concat(PRICE_FNS)),
       vars: ['DOC_READY_WHY', 'PAYMENT_STAGES', 'currentAgrJobId'],
       stubs: {
         _primeAgreementFor() { said.primes++; return true; }, setTimeout() { said.timers++; }, saveJobs() {}, syncJobToSheets() {},
@@ -451,7 +456,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d = domStub({});
     const U = sandbox({
       fns: uniq(['updateAgrUI', 'agreementReady', 'agrApprovalBlocker', 'agrApprovalWithdrawn', 'docReadiness', 'isJobFunded',
-        'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor'].concat(PRICE_FNS)),
+        'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'roundCents', 'fmt', 'paymentSplit', 'paymentLive', 'isRefundRecord'].concat(PRICE_FNS)),
       vars: ['DOC_READY_WHY', 'currentAgrJobId'],
       stubs: { document: d },
     });
@@ -524,7 +529,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // mailto: of its own, so the lines are read where they are handed over. The route itself (the draft, and the
     // mailto fallback with its From-address warning) is driven in tests/p16-payments-integrations.test.js.
     const opened = [];
-    const N = sandbox({ fns: uniq(['notifyTCOfDecision', 'firstName'].concat(PRICE_FNS)), stubs: {
+    const N = sandbox({ fns: uniq(['notifyTCOfDecision', 'firstName', 'roundCents', 'fmt'].concat(PRICE_FNS)), stubs: {
       assignedTCContact() { return { name: 'Ashley Jerome', email: 'ashley@havellinpalmbeach.com' }; },
       sendInternalEmail(to, subject, lines) { opened.push({ to, subject, text: lines.join('\n') }); } } });
     N.estimateStore = { 7: rec(24100) };
@@ -773,7 +778,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: uniq(['applyDiscountRevision', 'discountPctInput', '_discountModalSays', 'discountPreview', 'estPreDiscountTotal',
         'discountOnLabor', 'estPrepFeeOnTop', 'estFixedLines', 'estFixedFee', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'revokeAgreementApproval', 'notePriceChange', 'staleDraftNotice',
         'docState', '_jobTouch', 'estimateEventStatus', 'isJobWon', 'closeDiscountModal', '_jobBandHost', '_docNotice',
-        'dashNotice', '_dashFbTarget'].concat(HELP, BLK_FNS)),
+        'dashNotice', '_dashFbTarget', 'roundCents'].concat(HELP, BLK_FNS)),
       vars: ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_packetExported', 'currentAgrJobId', 'estimateApproved', 'estimateSubmitted', 'discountRevision', '_dashNotice', '_dashboardJobId'],
       stubs: { document: domStub({ 'dm-pct': '5' }), saveJobs() {}, syncJobToSheets() {}, saveEstimateState() {},
         renderClientEstimate() {}, updateApprovalUI() {}, _dashRedraw(id) { said.redraws.push(id); }, notifyManagerForApproval() {},

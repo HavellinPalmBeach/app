@@ -26,7 +26,8 @@ const FNS = [
   '_agrProbateCompliance', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover',
   '_agrTrustDeliverable', '_agrScopeServices', '_invFileId', '_invNeedsValue', 'invWorkFlags', '_invMissingThumbIds',
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
-  'photoSubfolder'   // P16: the share button names both photo folders by the rule that files them
+  'photoSubfolder',   // P16: the share button names both photo folders by the rule that files them
+  'roundCents', 'fmt'
 ];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 
