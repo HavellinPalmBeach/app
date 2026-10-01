@@ -662,7 +662,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(ctx.DOC_ACTIONS[k].pdfCss || '', '.approved-stamp{display:none', k + ': pdfCss hides the band');
     }
     // The only two ways a client document becomes a PDF, and both hand over the kind's pdfCss.
-    eq((SRC.match(/_exportDoc\(/g) || []).length, 3, '_exportDoc: the definition and exactly two callers');
+    // RESTATED 2026-10-01 (P17): two more callers, each filing a document that carries no approval band — the accepted
+    // change order (fileChangeOrder) and the probate package's pages (_pkgFileAll). Still exact, so a sixth fails here.
+    eq((SRC.match(/_exportDoc\(/g) || []).length, 5, '_exportDoc: the definition, the two client-document paths and the two P17 filings');
+    for (const f of ['fileChangeOrder', '_pkgFileAll']) has(H.fn(f), '_exportDoc(', f + ' is one of the two');
+    for (const f of ['printChangeOrder', 'printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport',
+                     'printContentsList', 'printAppraisalWorklist', 'probatePackageRecordHtml'])
+      lacks(H.fn(f), 'approved-stamp', f + ' prints no approval band, so filing it needs no pdfCss');
     has(H.fn('docPdfBase64'), 'spec.cfg.pdfCss', 'docPdfBase64 passes the kind\'s pdfCss');
     has(H.fn('docFile'), 'spec.cfg.pdfCss', 'docFile passes the kind\'s pdfCss');
   }

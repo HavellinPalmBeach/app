@@ -113,7 +113,9 @@ function coCtx(est, cos, seed, jobOver) {
       changeOrders: cos || [],
       estimateStore: est ? { 1: { estimate: Object.assign({}, est), approved: true } } : {},
       currentEstimate: null,
-      saveChangeOrders: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
+      saveChangeOrders: () => {},
+      // Accepting files the accepted copy to Drive (P17); that filing is driven in p17-documents-drive.test.js.
+      fileChangeOrder: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
       showFB: (id, kind, msg) => said.push({ id, kind, msg }),
       // Create and Accept speak on the screen the person is on (2026-09-29, audit H2). The routing
       // itself is driven for real in change-order-card.test.js; here it is recorded like showFB.

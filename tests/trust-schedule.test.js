@@ -22,7 +22,7 @@ const FNS = [
   '_invDocName', '_invItemNo', '_invGroupItems', '_invDispLabel', '_invRoomName', '_planRooms',
   '_invPrintThumb', '_invThumbFor', '_invThumbCache', '_invThumbKey', '_invProgressStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', '_invProgressBar',
+  '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', 'invPrimaryDoc', '_invProgressBar',
   '_agrProbateCompliance', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover',
   '_agrTrustDeliverable', '_agrScopeServices', '_invFileId', '_invNeedsValue', 'invWorkFlags', '_invMissingThumbIds',
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',

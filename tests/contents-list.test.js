@@ -485,7 +485,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // contains every string a source check would look for. This drives the real workbar.
     const BAR = FNS.concat([
       'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-      '_renderInvWorkbar', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
+      '_renderInvWorkbar', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
       'printEstateInventoryReport', 'printContentsRecord', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
       'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval',

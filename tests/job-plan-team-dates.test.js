@@ -78,7 +78,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#7, driven through the real band renderer');
   {
-    const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
+    const DFNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness',
       'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
       '_jtSendAction', 'agreementReady', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'roomStatusNormalize', 'fmtMoney', 'estimateEditBlocker', 'priceChangeBlocker', 'docKeyFor', 'draftOutstanding', 'draftIsStale', 'docDraftPending']);
     const B = sandbox({ fns: DFNS, vars: ['DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',

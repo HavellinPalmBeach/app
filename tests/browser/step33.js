@@ -195,7 +195,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   const row2 = c2 && c2.rows.find(r => r.text.indexOf('CO-' + String(coId).slice(-6)) >= 0);
   has(row2 && row2.text, 'Accepted', '⚠⚠ the row reads Accepted at once');
   has(row2 && row2.text, 'accepted by Pat Rush', 'naming who accepted');
-  ok(row2 && row2.buttons.length === 1 && row2.buttons[0].call === 'printChangeOrder(' + coId + ')', '⚠ and offers the PDF alone');
+  // RESTATED 2026-10-01 (P17): acceptance files the accepted copy to Drive (fileChangeOrder). This page has no Apps Script
+  // URL, so that filing cannot land, and the row offers it as a retry beside the PDF; nothing on it asks for acceptance.
+  ok(row2 && row2.buttons.length === 2 && row2.buttons[0].call === 'printChangeOrder(' + coId + ')'
+     && row2.buttons[1].call === 'fileChangeOrder(' + coId + ')', '⚠ and offers the PDF and File to Drive (the filing could not land: no Apps Script URL here)');
   ok(await p.evaluate(() => document.querySelectorAll('#client-dashboard-view [onclick^="openCOAcceptModal("]').length === 0),
      'nothing left to accept on the screen');
   has(await text('#client-dashboard-view'), 'incl. +8.0 hrs by change order', '⚠⚠ the Hours Log bars now carry the hours the client signed for');
@@ -273,9 +276,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     await openDash(idH);
     const ov = await overflow();
     ok(ov <= 0, 'the dashboard with an accepted and a pending change order fits at ' + w + 'px (overflow ' + ov + ')');
-    const rects = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view [onclick^="printChangeOrder("], #client-dashboard-view [onclick^="openCOAcceptModal("]'))
+    // RESTATED 2026-10-01 (P17): the accepted change order also carries File to Drive (its filing cannot land on this page), so four.
+    const rects = await p.evaluate(() => Array.from(document.querySelectorAll('#client-dashboard-view [onclick^="printChangeOrder("], #client-dashboard-view [onclick^="openCOAcceptModal("], #client-dashboard-view [onclick^="fileChangeOrder("]'))
       .map(e => { const r = e.getBoundingClientRect(); return { l: r.left, r: r.right, w: r.width }; }));
-    ok(rects.length === 3 && rects.every(r => r.l >= 0 && r.r <= w + 0.5 && r.w > 0), 'all three change-order buttons sit inside the viewport at ' + w + 'px');
+    ok(rects.length === 4 && rects.every(r => r.l >= 0 && r.r <= w + 0.5 && r.w > 0), 'all four change-order buttons sit inside the viewport at ' + w + 'px');
   }
   ok(errs.length === 0, 'no page errors (' + errs.join(' | ') + ')');
 

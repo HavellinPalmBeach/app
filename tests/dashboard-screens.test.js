@@ -359,7 +359,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE TIMELINE CARRIES BUILD ESTIMATE WHEREVER THE WALKTHROUGH IS NEXT');
   {
     const ctx = sandbox({
-      fns: ['jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
+      fns: ['jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docSentAt', 'docKeyFor', '_jtSendAction', '_jtDocViews',
             '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'esignAvailable', 'esignProviderKey', 'esignJobWatches',
             'agreementSignature', 'isAgreementSigned', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmtMoney'],

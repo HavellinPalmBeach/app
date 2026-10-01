@@ -56,7 +56,7 @@ const DASH_FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriv
   'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
   'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmtMoney',
   'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
-  'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobTimelineActions', 'docReadOnlyWord',
+  'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'depositVoidFlag', 'agreementHandedOverInPerson',
   'discountOfferBlocker', 'jobTimelineNext',
   'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
   'agreementReady', 'jobTimelineDoc',
@@ -96,7 +96,9 @@ function screen(cos, opts) {
       jobs: [job], changeOrders: cos, contractors: [], _photoRefs: {},
       estimateStore: { 7: { estimate: Object.assign({}, opts.est || EST_TM), approved: true } },
       currentEstimate: null,
-      saveChangeOrders: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
+      saveChangeOrders: () => {},
+      // Accepting files the accepted copy to Drive (P17); that filing is driven in p17-documents-drive.test.js.
+      fileChangeOrder: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {},
       docNames: () => ({ printTitle: 'Havellin Change Order' }),
       // A showFB that really writes, so a regression back to `showFB('e-fb', …)` fails on the strip it
       // wrote to rather than crashing the file on a missing function.
@@ -176,7 +178,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!!p[1] && p[1].primary === true && !p[0].primary, 'Get Acceptance is the one primary — it is the step still to take');
 
     const a = c.coCardActions(accepted(20, 20, ID_A));
-    eq(a.map((x) => x.label), ['PDF'], '⚠ an accepted one offers the PDF alone — accepting again would overwrite who agreed and when');
+    // RESTATED 2026-10-01 (P17): an accepted change order is filed to the client's Drive (Anthony's answer 9), so its row
+    // carries its filing too — File to Drive until it is filed, the filed copy after. Still never Get Acceptance.
+    eq(a.map((x) => x.label), ['PDF', '&#128193; File to Drive'], '⚠ an accepted one offers the PDF and its filing, never Get Acceptance — accepting again would overwrite who agreed and when');
     eq((a[0] || {}).call, 'printChangeOrder(' + ID_A + ')', 'the client’s copy stays printable after they agree');
 
     eq((c.coCardActions(co(1, 0, String(ID_P)))[0] || {}).call, 'printChangeOrder(' + ID_P + ')',
@@ -210,7 +214,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(acc.length > 0, 'the accepted change order has its row');
     has(acc, '>Accepted<', 'reading Accepted');
     const ab = buttons(acc);
-    eq(ab.map((b) => b.call), ['printChangeOrder(' + ID_A + ')'], '⚠⚠ with the PDF alone — no Get Acceptance on an accepted one');
+    // RESTATED 2026-10-01 (P17): and its filing to Drive (see coCardActions above).
+    eq(ab.map((b) => b.call), ['printChangeOrder(' + ID_A + ')', 'fileChangeOrder(' + ID_A + ')'], '⚠⚠ with the PDF and File to Drive — no Get Acceptance on an accepted one');
     has(acc, 'accepted by O&#39;Hara &lt;b&gt;Trust&lt;/b&gt;', 'who accepted it rides on the row, escaped');
     lacks(acc, '<b>Trust', 'never as raw markup');
 
@@ -282,7 +287,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const row2 = coRow(done, id);
     has(row2, '>Accepted<', '⚠⚠ the card is redrawn — the row reads Accepted at once …');
     has(row2, 'accepted by Tripp Butler', '… naming who accepted');
-    eq(buttons(row2).map((b) => b.label), ['PDF'], '… and Get Acceptance is gone from it');
+    // RESTATED 2026-10-01 (P17): the filing the acceptance started is stubbed in this sandbox, so the row offers File to Drive.
+    eq(buttons(row2).map((b) => b.label), ['PDF', '&#128193; File to Drive'], '… and Get Acceptance is gone from it');
     lacks(done, 'onclick="openCOAcceptModal(', 'nothing left to accept anywhere on the screen');
     const fb2 = done.slice(done.indexOf('id="dash-fb"'), done.indexOf('id="dash-fb"') + 900);
     has(fb2, 'Change Order accepted by Tripp Butler', 'the acceptance notice is painted on the dashboard');
@@ -419,7 +425,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(live.length > src.length * 0.5, 'the comment strip did not eat the file');
     const callers = (name) => (live.match(new RegExp("[^A-Za-z_$]" + name + "\\(", 'g')) || []).length
       - (live.match(new RegExp('function ' + name + '\\(', 'g')) || []).length;
-    eq(callers('printChangeOrder'), 1, '⚠⚠ printChangeOrder is named in exactly one place: the card’s actions');
+    // RESTATED 2026-10-01 (P17): two places now — the card's PDF, and fileChangeOrder, which asks it for the page itself
+    // ({asHtml:true}) to file the accepted copy. Still exact, so a third, unseen caller fails here.
+    eq(callers('printChangeOrder'), 2, '⚠⚠ printChangeOrder is named in exactly two places: the card’s actions and the Drive filing');
+    has(fn('fileChangeOrder'), 'printChangeOrder(coId, { asHtml: true })', 'and the second asks for the page, never the print dialog');
     eq(callers('openCOAcceptModal'), 1, '⚠⚠ openCOAcceptModal too');
     has(fn('coCardActions'), "'printChangeOrder('", 'and that place is coCardActions …');
     has(noComments(fn('renderClientDashboard')), 'coCardActions(co).forEach', '… which the dashboard card renders on every row');

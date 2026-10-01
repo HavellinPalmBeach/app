@@ -46,7 +46,10 @@
 // ⚠ 2026-09-30b (P16): a payment keeps a void, a clear, its Stripe intent and its cheque photo from either
 // copy when the sheet merges a job (_paymentSticky) — the app's BACKEND_MIN_VERSION names it, because no
 // action name can — and the editor-only folder sweep runs from the Run menu with no argument.
-var BACKEND_VERSION = '2026-09-30b';
+// ⚠ 2026-10-01 (P17): esignArchive files the executed agreement and its certificate through _fileBlobByName, the
+// replace-by-name rule uploadHtml has always followed, so the app's File signed copy button replaces a copy already
+// in the Agreement folder instead of adding a second one beside it. No action or type changes.
+var BACKEND_VERSION = '2026-10-01';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -1586,33 +1589,47 @@ function uploadHtmlToDrive(folderId, filename, html) {
     var htmlBlob = Utilities.newBlob(html, 'text/html', pdfName);
     var pdfBlob = htmlBlob.getAs('application/pdf').setName(pdfName);
 
-    var existing = _filesNamedInFolder(folder, pdfName);
-    var file = null, replaced = false, removed = 0;
+    var put = _fileBlobByName(folder, pdfBlob);
 
-    if (existing.length) {
-      // Update the oldest copy in place; that is the one whose link has been handed out.
-      existing.sort(function(a, b){ return a.getDateCreated() - b.getDateCreated(); });
-      var keep = existing[0];
-      try {
-        if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.update) {
-          Drive.Files.update({}, keep.getId(), pdfBlob, { supportsAllDrives: true });
-          file = keep; replaced = true;
-        }
-      } catch (eUpd) { Logger.log('uploadHtmlToDrive in-place update failed: ' + eUpd); }
-      if (!file) { try { keep.setTrashed(true); removed++; } catch (eT) {} }
-      for (var i = 1; i < existing.length; i++) {
-        try { existing[i].setTrashed(true); removed++; } catch (eT2) {}
-      }
-    }
-
-    if (!file) file = folder.createFile(pdfBlob);
-
-    return { ok: true, fileUrl: file.getUrl(), fileId: file.getId(),
-             replaced: replaced, duplicatesRemoved: removed };
+    return { ok: true, fileUrl: put.file.getUrl(), fileId: put.file.getId(),
+             replaced: put.replaced, duplicatesRemoved: put.removed };
   } catch (error) {
     Logger.log('uploadHtmlToDrive error: ' + error.toString());
     return { ok: false, error: error.toString() };
   }
+}
+
+// ⚠ ONE RULE FOR A FILE FILED UNDER A STABLE NAME: REPLACE WHAT IS THERE, NEVER ADD BESIDE IT (2026-10-01, P17).
+// This was the body of uploadHtmlToDrive, and esignArchiveEnvelope did not use it: it called folder.createFile, so a
+// second filing of one envelope — the app's File signed copy button, pressed after a certificate of completion that
+// did not come back — left two "… - SIGNED" copies in the Agreement folder (measured on the real function before the
+// change: two filings, four files). Both callers file through this now.
+// The oldest copy is updated IN PLACE where the advanced Drive service allows it, so the file keeps its id — the app
+// records the link and counsel may already hold it. Any further copies under the name are trashed (never deleted —
+// Drive's 30-day undo is the safety net), so a folder that has already accumulated duplicates collapses to one file.
+// With nothing under the name, the file is created.
+function _fileBlobByName(folder, blob) {
+  var existing = _filesNamedInFolder(folder, blob.getName());
+  var file = null, replaced = false, removed = 0;
+
+  if (existing.length) {
+    // Update the oldest copy in place; that is the one whose link has been handed out.
+    existing.sort(function(a, b){ return a.getDateCreated() - b.getDateCreated(); });
+    var keep = existing[0];
+    try {
+      if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.update) {
+        Drive.Files.update({}, keep.getId(), blob, { supportsAllDrives: true });
+        file = keep; replaced = true;
+      }
+    } catch (eUpd) { Logger.log('_fileBlobByName in-place update failed: ' + eUpd); }
+    if (!file) { try { keep.setTrashed(true); removed++; } catch (eT) {} }
+    for (var i = 1; i < existing.length; i++) {
+      try { existing[i].setTrashed(true); removed++; } catch (eT2) {}
+    }
+  }
+
+  if (!file) file = folder.createFile(blob);
+  return { file: file, replaced: replaced, removed: removed };
 }
 
 // Report the duplicate PDFs the job folders are holding, then collapse each name down to its newest
@@ -2252,6 +2269,10 @@ function _dsFetchBlob(path, filename) {
 // ⚠ NAMES MUST DIFFER FROM THE UNSIGNED PACKET. `uploadHtmlToDrive` overwrites BY FILENAME — that
 // is what makes a re-file replace rather than accumulate — so a packet re-filed after signature
 // would otherwise destroy the executed copy.
+// ⚠⚠ AND A SECOND FILING OF THE SAME ENVELOPE REPLACES THE FIRST (2026-10-01, P17). This used folder.createFile,
+// which adds a file whatever is already there; the app now offers File signed copy whenever either file is
+// missing, so a press after a certificate that did not come back would have added a second executed agreement
+// beside the first. Both files go through _fileBlobByName, the rule uploadHtmlToDrive has always followed.
 function esignArchiveEnvelope(data) {
   try {
     var id = data && data.envelopeId;
@@ -2270,14 +2291,14 @@ function esignArchiveEnvelope(data) {
 
     var folder = DriveApp.getFolderById(data.folderId);
     var out = { ok: true };
-    var f1 = folder.createFile(signed.blob);
+    var f1 = _fileBlobByName(folder, signed.blob).file;
     out.signedUrl = f1.getUrl(); out.signedId = f1.getId(); out.signedBytes = signed.bytes;
 
     // ⚠ A MISSING CERTIFICATE IS REPORTED, NEVER SILENT. The executed agreement is the thing that
     // had to be kept; losing the audit trail without saying so is how a probate matter discovers it
     // two years later.
     if (cert.ok) {
-      var f2 = folder.createFile(cert.blob);
+      var f2 = _fileBlobByName(folder, cert.blob).file;
       out.certUrl = f2.getUrl(); out.certId = f2.getId(); out.certBytes = cert.bytes;
     } else {
       out.certError = cert.error;

@@ -128,7 +128,9 @@ function fakeDrive({ sharedDrive = false, canUpdateInPlace = true } = {}) {
     },
   };
   vm.createContext(ctx);
-  vm.runInContext(gsFn(GS, '_filesNamedInFolder') + '\n' + gsFn(GS, 'uploadHtmlToDrive'),
+  // _fileBlobByName is the replace-by-name rule uploadHtmlToDrive's body moved into (2026-10-01, P17), shared with the
+  // DocuSign archive; lifted with it, so these checks still drive the whole of the real filing.
+  vm.runInContext(gsFn(GS, '_filesNamedInFolder') + '\n' + gsFn(GS, '_fileBlobByName') + '\n' + gsFn(GS, 'uploadHtmlToDrive'),
                   ctx, { filename: 'main-sync.gs (extracted)' });
   return { ctx, files, log, liveNames: () => live('FOLDER', null).map((f) => f.name).sort() };
 }
