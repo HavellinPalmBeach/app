@@ -34,7 +34,7 @@ rather than researching from nothing.
 | **2** | the first **trust** matter signing | A5, A6 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, A8, A9, B1, B3, B4, B5, B6, B7, B8, B9, B10, D1, D2, D4, D5 |
+| **5** | general — before launch | A3, A4, A7, A8, A9, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -88,6 +88,18 @@ the first week forfeits far more than the work done. Is that enforceable as a re
 is it tested as liquidated damages the way the fixed-fee earn-out might be? And the app also keeps a midpoint
 payment on an hourly walkaway (it closes the job as *Deposit Retained*), which neither form calls earned:
 should the clause say what happens to a payment above the deposit and the work done?
+
+**Added 2026-10-01 (P17) — the payment above the deposit and the work done, on Anthony's answer.** Asked whether the
+app should keep a payment above the deposit and the work done, Anthony answered *"refund the excess"*. Neither form
+was changed. The app now reads both hourly clauses as drafted: the deposit is applied against the final invoice for
+the Services performed, so on an hourly walkaway Havellin keeps **the deposit or the work done, whichever is more**,
+and shows the rest as a refund due, which is recorded once it has been sent. Measured: a $12,012.50 Home Cleanout
+that paid its deposit ($6,006.25) and midpoint ($3,003.13), with $3,600 of work logged, keeps $6,006.25 and owes back
+$3,003.13. **The question:** both clauses state a refund above the amount owed only after Havellin's uncured breach;
+outside a breach they say only that the deposit is not refunded where it exceeds the work. Does the final invoice for
+Services performed carry the refund of a payment above the greater of the deposit and the work done, or should each
+clause say so? A possible sentence: *"Any amount Client has paid above the greater of the deposit and the amount owed
+for the Services performed through the termination date is refunded with the final invoice."*
 
 ### A2. "For cause" — the definition, and an asymmetry between the two forms ⚠ PRIORITY 1
 
@@ -274,6 +286,9 @@ deposit is earned on signature and is not refundable**, including where it excee
 Client terminates under Section 12.3 for a material breach by Contractor that Contractor has failed to cure, in
 which case Contractor will refund any amount it holds above the amount owed."* **The question:** A1's hourly
 question, on the living-client form.
+
+**Added 2026-10-01 (P17).** The app refunds what an hourly walkaway paid above the deposit or the work done,
+whichever is more, on this form too. A1's P17 question applies to §12.4 unchanged.
 
 ### B3. Marketing — opt-out rather than opt-in
 
@@ -511,6 +526,38 @@ Havellin Palm Beach LLC."* The estate form has no payment-method clause.
 **The question.** Should the clause say anything about an ACH payment returned after it was recorded, or about who
 bears a wire's fees?
 
+### B11. The prep fee's one name: the Home Sale Preparation Fee — both forms ⚠ NEW 2026-10-01
+
+**What changed.** The 30% fee on home sale preparation vendors had three names: the agreements defined it as the
+*Home Sale Preparation Fee* in places and called it a *management fee* or a *General Contractor / Site Management
+Fee* in others, and the estimates and invoices used the last. On Anthony's answer every document now uses one name.
+Standard form: §1.2 *"Contractor's fee for the Services is a management fee equal to…"* → *"…is a Home Sale
+Preparation Fee equal to…"*, and *"…separate from the management fee…"* → *"…separate from the Home Sale
+Preparation Fee…"*; §3.3 *"…the management fee stated in Section 1.2 and Section 3.5"* → *"…the Home Sale
+Preparation Fee stated in…"* (both arms, and *"in addition to the management fee"* likewise); §3.5's heading
+*"3.5 Management Fee."* → *"3.5 Home Sale Preparation Fee."*, and its bundled arm *"…Contractor charges a General
+Contractor / Site Management Fee of thirty percent (30%) of those vendor costs"* → *"…a Home Sale Preparation Fee of
+thirty percent (30%)…"*. Estate form: the fee table's row *"General contractor / site management fee on the home
+sale preparation vendors identified in Exhibit A or added by Change Order"* → *"Charged on the home sale preparation
+vendors identified in Exhibit A or added by Change Order"* (the row is already headed by the fee's name). The
+printed change order's *"…% site management fee on the preparation vendors' invoices…"* → *"…% Home Sale
+Preparation Fee on…"*. The dormant §3.5 arm that would apply a fee on all vendor invoices (it prints only if the
+firm's vendor fee, now 0%, is ever restored) keeps its old wording.
+
+**The question.** Confirm the clauses describe a fee for coordinating vendors who bill the client directly at cost,
+and nothing that holds Havellin out as a contractor (the old name said *General Contractor*; Havellin is insured and
+bonded, never licensed).
+
+### B12. Time is billed in quarter hours, and neither form says so ⚠ NEW 2026-10-01
+
+**What changed.** On Anthony's answer (*"let's log hours and bill them in 15min increments. no rounding up on logging
+or billing."*) the app records time in quarter hours and bills exactly what is logged, where it used to round each
+billed figure up to the whole hour; estimates round to the nearest quarter. Both forms state the hourly rates and
+bill hours as worked, but neither states an increment.
+
+**The question.** Should each form say so? A possible sentence: *"Time is recorded and billed in quarter-hour
+(15-minute) increments, as worked, without a minimum and without rounding up."*
+
 ---
 
 ## C. Estate Firearms Protocol
@@ -657,6 +704,28 @@ vehicles are separate, and the app cannot tell which class a flagged item falls 
 
 **The question.** Is that framing right, and is the cap figure current?
 
+### D6. The probate package sent to the estate attorney ⚠ NEW 2026-10-01
+
+**What it is.** On Anthony's answer the Probate card's *Send Package* now sends one: a Gmail draft to the estate
+attorney, copying the personal representative, that attaches the inventory documents as they stand (the Court
+Inventory, the Trust Schedule where a trust is involved, the tier's inventory document and the Appraisal Worklist),
+and links the filed appraisal reports, the two photograph folders and a filed record of the release approvals and
+the chain of custody. It can be sent at any stage; a document still in progress is stamped IN PROGRESS.
+- Subject: *"Havellin Palm Beach — Inventory Package for <street>"*.
+- Body: *"Dear <attorney's first name, else Counsel>,"* / *"Attached are Havellin's inventory documents for the Estate
+  of <name>, <address>, as they stand on <date>:"*, one line per document, then *"In the estate's Google Drive folder:"*
+  with one line per link (or *"<label>: not yet shared with you"*), and *"If you need anything further for the filing,
+  reply here and we will send it."*
+- Scope lines: on the contents tier *"Valuing the property is not part of Havellin's engagement on this estate, so the
+  Contents List is attached in place of a valued schedule."*; where the estate keeps the inventory itself *"On this
+  estate the inventory and the filing are your office's; Havellin's records of the property are below."*
+- The filed record, *"Release Approvals and Chain of Custody"*: who signed each written release approval and the date
+  (*"as recorded from the signed approval returned to Havellin"*), and each custody event (date, event, party, method,
+  receipt).
+
+**The question.** Does anything here read as Havellin making the filing or advising on it? Is the record what an
+attorney needs to answer a beneficiary's question about a release, and should it carry a certification line?
+
 ---
 
 ## E. What is deliberately NOT being asked
@@ -665,7 +734,7 @@ So counsel does not spend time on settled ground:
 
 - **Whether Havellin should state values at all.** Decided — it is the product. Anthony:
   *"why wouldn't we want a valuation figure?"* The question is attribution (D4), not whether.
-- **Pricing, fee structure, the 30% vendor management fee, the 20–35% fixed-price
+- **Pricing, fee structure, the 30% Home Sale Preparation Fee, the 20–35% fixed-price
   contingency.** Business decisions, not legal ones.
 - **Anything about how the software works.** Where a rule is enforced in the app that is noted
   only so counsel knows the document and the system agree.
