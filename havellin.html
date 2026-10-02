@@ -16022,6 +16022,41 @@ var PROBATE_PKG_RECORD_TITLE = 'Release Approvals and Chain of Custody';
 // document) before Gmail is asked, so the watchdog is longer than docSend's 45 seconds.
 var PROBATE_PKG_WATCHDOG_MS = 180000;
 
+// ⚠⚠ WHETHER THERE IS A PACKAGE, AND WHICH WAY IT GOES — ONE ANSWER (Anthony, 2026-10-02, P18: "1 - yes"). The package
+// went from the Probate card alone, so a trust-only matter (the common case here: most Palm Beach homes are in trust, by
+// Anthony's own reading) had no card and no package, and its documents went out one at a time. Asked: "Use the same
+// package with the Trust Schedule, sent to the trustee's attorney (or the trustee if there's no attorney). Put the
+// button on the same card, renamed for trust matters. For 'Neither' I'd skip it." Read by the card, the blocker, the
+// addressee, the email's wording, the send's notices and the confirming tap's refusal; a test counts the readers.
+//   probate  the estate is administered through probate: jobOnProbateTrack, the one definition, unchanged (matter
+//            Probate or Both, or a Probate service whose matter is unanswered)
+//   trust    a trust-only matter (the catalogue's `trust` flag, off the probate track): a successor trustee
+//            administers it and there is no court
+//   null     everything else: Neither, an Estate Settlement whose matter is unanswered, every living client
+// ⚠ IT ANSWERS WITH THE ROUTE ITSELF, an entry of ESTATE_PKG_ROUTES, AND READERS ASK ITS FLAGS, never a name — the rule
+// matterDef and its readers follow (matter-type.test.js nets a quoted matter name in live code, because a reader that
+// tests a name is the reader that forgets Both). `court`: the card carries the court record and the authorization.
+// `trust`: the trustee may be addressed where no attorney's email is recorded, and the email speaks of the trust
+// administration rather than of the estate and its filing.
+// ⚠ BOTH IS THE PROBATE ROUTE, NOT THE TRUST ONE: a pour-over will has a court in it, and its Probate card already
+// carries the Trust Schedule (probatePackageDocs). An unanswered matter is never read as a trust (matterDef answers
+// nothing for it), so a job recorded before 2026-09-21 keeps the route it had.
+// The words each route uses, in one place: the card's heads, the package row's label and button, and the package's
+// name and card in every notice. ⚠ THE STORED KEY DOES NOT FOLLOW THE ROUTE: both record on docState.probatePackage
+// (PROBATE_PKG_KEY), so a draft, its staleness and "I've sent it" are one record whichever card sent it.
+var ESTATE_PKG_ROUTES = {
+  probate: { court: true,  trust: false, name: 'probate package', label: 'Probate package', send: 'Send probate package',
+             card: 'Probate card', title: 'Probate Information', atty: 'Probate Attorney', rep: 'Executor' },
+  trust:   { court: false, trust: true,  name: 'trust package', label: 'Trust package', send: 'Send trust package',
+             card: 'Trust card', title: 'Trust Information', atty: 'Trustee’s Attorney', rep: 'Trustee' }
+};
+function estatePackageRoute(job) {
+  if (!job) return null;
+  if (jobOnProbateTrack(job)) return ESTATE_PKG_ROUTES.probate;
+  var d = matterDef(job);
+  return (d && d.trust) ? ESTATE_PKG_ROUTES.trust : null;
+}
+
 // What the package carries, by rule. The instrument follows the matter: the Court Inventory where the estate is
 // administered through probate (jobOnProbateTrack, the one definition: an unanswered matter falls back to a Probate
 // service), the Trust Schedule where a trust holds property, both on a pour-over will. The inventory document is the
@@ -16048,24 +16083,40 @@ function probatePackagePage(jobId, key) {
         : key === 'worklist' ? printAppraisalWorklist(jobId, o) : null;
   return (r && (r.html || r.why)) ? r : { why: 'it could not be built on this device' };
 }
-// ⚠ REFUSED BY NAME, everything missing at once: the attorney's email (Anthony's one condition), and the two things
-// the package cannot be built without — the Drive folder it files into and links to, and the Apps Script that turns
-// each page into a PDF. Asked by the card and again by the send.
-// ⚠ AND ONLY WHERE THE CARD IS: the row sits on the Probate card, which is drawn on an estate administered through
-// probate (jobOnProbateTrack), so the handler asks the card's question too. A matter with no court in it (a trust, or
-// neither) has no Probate card and no package; the Trust Schedule rides in it on a pour-over will.
+// ⚠ REFUSED BY NAME, everything missing at once: someone to address it to (on the probate route the attorney's email,
+// Anthony's one condition; on the trust route the trustee's attorney's email or, failing that, the trustee's own), and
+// the two things the package cannot be built without — the Drive folder it files into and links to, and the Apps
+// Script that turns each page into a PDF. Asked by the card and again by the send.
+// ⚠ AND ONLY WHERE A CARD IS: the row sits on the Probate card, or on the Trust card since 2026-10-02 (P18), and the
+// handler asks the cards' question too (estatePackageRoute). A matter recorded Neither, an Estate Settlement whose
+// matter is unanswered, and every living client have neither card and no package.
 function probatePackageBlocker(job) {
   if (!job) return 'This job could not be found.';
-  if (!jobOnProbateTrack(job)) return 'The probate package goes from the Probate card, on an estate administered through probate, and this estate is not one.';
+  var R = estatePackageRoute(job);
+  if (!R) return 'The inventory package goes from the ' + ESTATE_PKG_ROUTES.probate.card + ', on an estate administered through probate, or the '
+    + ESTATE_PKG_ROUTES.trust.card + ', on one a successor trustee administers, and this job is neither.';
   var miss = [];
-  if (!String(job.probateAttyEmail || '').trim()) miss.push('the estate attorney’s email (Edit Client, under Estate Attorney)');
+  if (!probatePackageAddressee(job)) miss.push(R.trust
+    ? 'the trustee’s attorney’s email (Edit Client, under Estate Attorney) or the trustee’s own (Edit Client, under Authorized Representative)'
+    : 'the estate attorney’s email (Edit Client, under Estate Attorney)');
   if (!job.driveFolder) miss.push('the client’s Drive folder (Create Drive folder, on this dashboard)');
   if (!SHEETS_SYNC_URL) miss.push('the Apps Script URL in Settings');
-  return miss.length ? 'The probate package cannot be sent yet: it needs ' + _andJoin(miss) + '.' : '';
+  return miss.length ? 'The ' + R.name + ' cannot be sent yet: it needs ' + _andJoin(miss) + '.' : '';
 }
-// To the estate attorney; the personal representative and agreements@ copied.
+// WHOM THE PACKAGE IS ADDRESSED TO — one answer, read by the recipients and the greeting, so the To: line and the
+// "Dear …" cannot name two different people. The probate route goes to the estate attorney and nobody else (P17); the
+// trust route to the trustee's attorney where an email is recorded, else to the trustee (the representative), P18.
+// 'attorney', 'trustee', or '' when there is nobody to address it to (or no package on this job at all).
+function probatePackageAddressee(job) {
+  var R = estatePackageRoute(job);
+  if (!R) return '';
+  if (String(job.probateAttyEmail || '').trim()) return 'attorney';
+  return (R.trust && String(job.executorEmail || '').trim()) ? 'trustee' : '';
+}
+// To the addressee; the representative (on a trust, the trustee) and agreements@ copied — the representative only
+// when they are not the one it is addressed to, so a package sent to the trustee copies agreements@ alone.
 function probatePackageRecipients(job) {
-  var to = String((job && job.probateAttyEmail) || '').trim();
+  var to = String((job && (probatePackageAddressee(job) === 'trustee' ? job.executorEmail : job.probateAttyEmail)) || '').trim();
   var cc = [], pr = String((job && job.executorEmail) || '').trim();
   if (pr && pr.toLowerCase() !== to.toLowerCase()) cc.push(pr);
   cc.push(DEPT_EMAILS.agreements);
@@ -16162,22 +16213,37 @@ function probatePackageSubject(job) {
   var street = String((job && job.addr) || '').split(',')[0].trim();
   return 'Havellin Palm Beach — Inventory Package for ' + (street || (job && job.name) || 'the estate');
 }
+// ⚠ THE TRUST ROUTE (P18) SAYS NOTHING OF A COURT OR A FILING: no case number, no "Estate of" caption, no "for the
+// filing". Its words follow the Trust Schedule's own and the trust arm of the agreement's §5.2 (the successor trustee,
+// the trust's records, "the trustee or their counsel"). The greeting names whoever it is addressed to.
 function _pkgGreeting(job) {
+  if (probatePackageAddressee(job) === 'trustee') {
+    var t = String((job && (job.executorFname || job.executor)) || '').trim();
+    return t ? firstName(t) : 'Trustee';
+  }
   var n = String((job && (job.probateAttyFname || job.probateAttyName)) || '').trim();
   return n ? firstName(n) : 'Counsel';
 }
 function _pkgEstateLine(job) {
   var where = [job.addr, job.city].filter(Boolean).join(', ');
-  return (job.name ? 'the Estate of ' + job.name : 'the estate') + (where ? ', ' + where : '');
+  var R = estatePackageRoute(job);
+  var what = (R && R.trust)
+    ? (job.name ? 'the ' + job.name + ' trust administration' : 'the trust administration')
+    : (job.name ? 'the Estate of ' + job.name : 'the estate');
+  return what + (where ? ', ' + where : '');
 }
 function probatePackageScopeLine(job) {
-  var p = invPrimaryDoc(job);
-  if (p === 'contents') return 'Valuing the property is not part of Havellin’s engagement on this estate, so the Contents List is attached in place of a valued schedule.';
-  if (p === 'approval') return 'On this estate the inventory and the filing are your office’s; Havellin’s records of the property are below.';
+  var p = invPrimaryDoc(job), R = estatePackageRoute(job), trust = !!(R && R.trust);
+  if (p === 'contents') return 'Valuing the property is not part of Havellin’s engagement on this ' + (trust ? 'trust administration' : 'estate') + ', so the Contents List is attached in place of a valued schedule.';
+  if (p === 'approval') return trust
+    ? 'On this trust administration the schedule of the trust’s property is prepared by the trustee or their counsel; Havellin’s records of the property are below.'
+    : 'On this estate the inventory and the filing are your office’s; Havellin’s records of the property are below.';
   return '';
 }
 function buildProbatePackageEmailText(ctx) {
   var job = ctx.job, L = ['Dear ' + _pkgGreeting(job) + ',', ''];
+  var R = estatePackageRoute(job), trust = !!(R && R.trust);
+  var folder = trust ? 'the trust’s Google Drive folder' : 'the estate’s Google Drive folder';
   if (ctx.attached.length) {
     L.push('Attached are Havellin’s inventory documents for ' + _pkgEstateLine(job) + ', as they stand on ' + ctx.asOf + ':');
     ctx.attached.forEach(function (d) { L.push('  - ' + d.title); });
@@ -16185,13 +16251,13 @@ function buildProbatePackageEmailText(ctx) {
   }
   if (ctx.scope) { L.push(ctx.scope); L.push(''); }
   if (ctx.inDrive.length || ctx.unshared.length) {
-    L.push(ctx.attached.length ? 'In the estate’s Google Drive folder:'
-                               : 'Havellin’s inventory records for ' + _pkgEstateLine(job) + ', as they stand on ' + ctx.asOf + ', are in the estate’s Google Drive folder:');
+    L.push(ctx.attached.length ? 'In ' + folder + ':'
+                               : 'Havellin’s inventory records for ' + _pkgEstateLine(job) + ', as they stand on ' + ctx.asOf + ', are in ' + folder + ':');
     ctx.inDrive.forEach(function (l) { L.push('  - ' + l.label + ': ' + l.url); });
     ctx.unshared.forEach(function (label) { L.push('  - ' + label + ': not yet shared with you'); });
     L.push('');
   }
-  L.push('If you need anything further for the filing, reply here and we will send it.');
+  L.push('If you need anything further ' + (trust ? 'for the administration of the trust' : 'for the filing') + ', reply here and we will send it.');
   return L.join('\n');
 }
 function buildProbatePackageEmailHtml(ctx) {
@@ -16201,6 +16267,13 @@ function buildProbatePackageEmailHtml(ctx) {
   var li = function (t) { return '<li style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 4px;">' + t + '</li>'; };
   var ul = function (items) { return '<ul style="margin:0 0 18px;padding-left:20px;">' + items.join('') + '</ul>'; };
   var street = String(job.addr || '').split(',')[0].trim();
+  // The line under the street: the estate and its case on the probate route; on the trust route (P18) the trust
+  // administration, and never a case number, which a trust matter may still carry from an earlier answer.
+  var R = estatePackageRoute(job), trust = !!(R && R.trust);
+  var sub = trust ? (job.name ? _emHtml(job.name) + ' trust administration' : 'Trust administration')
+    : (job.name ? 'Estate of ' + _emHtml(job.name) : '') +
+      (job.probateCase ? (job.name ? ' &nbsp;&middot;&nbsp; ' : '') + 'Case ' + _emHtml(job.probateCase) : '');
+  var folder = trust ? 'the trust&rsquo;s Google Drive folder' : 'the estate&rsquo;s Google Drive folder';
   return '' +
   '<div style="margin:0;padding:0;background:#f4f1ea;">' +
   '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">' +
@@ -16214,8 +16287,7 @@ function buildProbatePackageEmailHtml(ctx) {
     '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Inventory Package</div>' +
     '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
       _emHtml(street || job.name || 'The estate') + '</div>' +
-    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + (job.name ? 'Estate of ' + _emHtml(job.name) : '') +
-      (job.probateCase ? (job.name ? ' &nbsp;&middot;&nbsp; ' : '') + 'Case ' + _emHtml(job.probateCase) : '') + '</div>' +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + sub + '</div>' +
     '<div style="height:1px;background:' + B.line + ';margin:22px 0;"></div>' +
     p('Dear ' + _emHtml(_pkgGreeting(job)) + ',') +
     (ctx.attached.length
@@ -16224,14 +16296,14 @@ function buildProbatePackageEmailHtml(ctx) {
       : '') +
     (ctx.scope ? p(_emHtml(ctx.scope)) : '') +
     ((ctx.inDrive.length || ctx.unshared.length)
-      ? (ctx.attached.length ? cap('In the estate&rsquo;s Google Drive folder')
-                             : p('Havellin&rsquo;s inventory records for ' + _emHtml(_pkgEstateLine(job)) + ', as they stand on ' + _emHtml(ctx.asOf) + ', are in the estate&rsquo;s Google Drive folder:'))
+      ? (ctx.attached.length ? cap('In ' + folder)
+                             : p('Havellin&rsquo;s inventory records for ' + _emHtml(_pkgEstateLine(job)) + ', as they stand on ' + _emHtml(ctx.asOf) + ', are in ' + folder + ':'))
         + ul(ctx.inDrive.map(function (l) { return li('<a href="' + _emHtml(l.url) + '" style="color:' + B.bronzeDk + ';">' + _emHtml(l.label) + '</a>'); })
              .concat(ctx.unshared.map(function (label) { return li(_emHtml(label) + ' &mdash; not yet shared with you'); })))
       : '') +
     '<div style="height:1px;background:' + B.line + ';margin:26px 0 20px;"></div>' +
     // No signature block — Gmail appends the sender's own. See buildInvoiceEmailHtml.
-    p('If you need anything further for the filing, reply here and we will send it.', true) +
+    p('If you need anything further ' + (trust ? 'for the administration of the trust' : 'for the filing') + ', reply here and we will send it.', true) +
   '</td></tr>' +
   '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
     '<div style="font-size:10px;line-height:1.9;letter-spacing:.06em;text-transform:uppercase;color:' + B.gray + ';text-align:center;">' +
@@ -16301,7 +16373,9 @@ function _pkgPdfAll(job, pages, cb) {
   })();
 }
 
-// The Probate card's Send probate package. ⚠ THE MANIFEST IS READ FROM THE SHEET FIRST: an inventory this device has
+// The Probate card's Send probate package, and the Trust card's Send trust package (P18): one send, its addressee,
+// words and refusals taken from the route (estatePackageRoute).
+// ⚠ THE MANIFEST IS READ FROM THE SHEET FIRST: an inventory this device has
 // not loaded is unread, not empty, and a package built from it would carry an empty schedule — the rule the workbook
 // write already follows (_invCloudSeen). Then the folders are shared, every page and the record are filed, each page
 // becomes a PDF, and the draft is made; a Gmail failure falls back to a plain email with the filed copies linked.
@@ -16311,12 +16385,14 @@ function sendProbatePackage(jobId) {
   var why = probatePackageBlocker(job);
   if (why) { _docNotice('warn', why, jobId); return false; }
   if (_docBusy) { _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
+  // The route's words (P18): the blocker has refused a job with no route, so there is one.
+  var W = estatePackageRoute(job);
   _docBusy = { jobId: jobId, docKey: PROBATE_PKG_KEY };
   var over = false;
   var watchdog = setTimeout(function () {
     if (over) return;
     over = true; _docBusy = null;
-    _docNotice('warn', 'The probate package took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send again.', jobId);
+    _docNotice('warn', 'The ' + W.name + ' took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send again.', jobId);
   }, PROBATE_PKG_WATCHDOG_MS);
   var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; };
   var step = function (label) { if (!over) _dashSendState(PROBATE_PKG_KEY, label); };
@@ -16328,7 +16404,7 @@ function sendProbatePackage(jobId) {
     if (over) return;
     if (!_invCloudSeen[jobId]) {
       finish();
-      _docNotice('warn', 'The inventory could not be read from the sheet, so the package would go out without it. Check the connection, then press Send probate package again.', jobId);
+      _docNotice('warn', 'The inventory could not be read from the sheet, so the package would go out without it. Check the connection, then press ' + W.send + ' again.', jobId);
       return;
     }
     var owed = probatePackageDocs(job);
@@ -16411,11 +16487,13 @@ function sendProbatePackage(jobId) {
   return true;
 }
 
-// The Probate card's package row: what it carries and to whom before it goes, the draft waiting on its confirming tap,
-// or who sent it and when. ⚠ THE CONFIRMING TAP AND THE DRAFT LINK ARE THE CLIENT DOCUMENTS' OWN (markDocSent,
-// openDocDraft), offered on the same rule (draftOutstanding). DOM-free markup; every person-entered value is escaped.
+// The package row at the foot of the Probate card, or of the Trust card (P18): what it carries and to whom before it
+// goes, the draft waiting on its confirming tap, or who sent it and when. ⚠ THE CONFIRMING TAP AND THE DRAFT LINK ARE
+// THE CLIENT DOCUMENTS' OWN (markDocSent, openDocDraft), offered on the same rule (draftOutstanding). DOM-free markup;
+// every person-entered value is escaped. Nothing on a job with no route: there is no card to put it on.
 function probatePackageCardHtml(job) {
-  if (!job) return '';
+  var W = estatePackageRoute(job);
+  if (!W) return '';
   var id = job.id, K = PROBATE_PKG_KEY;
   var st = (job.docState && job.docState[K]) || null;
   var live = draftOutstanding(job, K);
@@ -16432,7 +16510,7 @@ function probatePackageCardHtml(job) {
       .filter(Boolean).join(' · ')));
     lines.push(esc(jtDraftLine(job, K, true)));
   } else {
-    btns = btn('sendProbatePackage(' + id + ')', '&#128231; Send probate package');
+    btns = btn('sendProbatePackage(' + id + ')', '&#128231; ' + W.send);
     if (st && st.sentAt) {
       lines.push(esc('Sent ' + day(st.sentAt) + (st.sentBy ? ' by ' + st.sentBy : '') + ((st.pkg && st.pkg.to) ? ', to ' + st.pkg.to : '')));
     } else if (job.probatePkgSent) {
@@ -16442,12 +16520,14 @@ function probatePackageCardHtml(job) {
     if (stale) lines.push(esc(stale));
     var blk = probatePackageBlocker(job);
     if (blk) lines.push('<span style="color:#A32D2D;">' + esc(blk) + '</span>');
+    // To whom it will go, asked of the send's own recipients; on the trust route the fallback is named for what it is.
     else lines.push(esc('Carries the ' + _andJoin(probatePackageDocs(job).map(function (k) { return PROBATE_PKG_TITLES[k]; }))
-      + ', with links to the photographs and the release and custody record, to ' + job.probateAttyEmail + '.'));
+      + ', with links to the photographs and the release and custody record, to '
+      + (probatePackageAddressee(job) === 'trustee' ? 'the trustee, ' : '') + probatePackageRecipients(job).to + '.'));
   }
   return '<div class="pkg-row" id="pkg-row-' + id + '" style="margin-top:12px;padding-top:10px;border-top:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
     + '<div style="min-width:0;flex:1 1 260px;">'
-    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:3px;">Probate package</div>'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:3px;">' + W.label + '</div>'
     + lines.map(function (l) { return '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.5;">' + l + '</div>'; }).join('')
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + btns + '</div>'
@@ -17925,13 +18005,16 @@ function staleDraftNotice(job, keys) {
 
 // Why the confirming tap refused. It is only offered over an outstanding draft, so this is a screen
 // painted before the draft was flagged, or before the send was recorded on the other device.
+// ⚠ THE PACKAGE IS NAMED BY ITS ROUTE (P18): the probate package from the Probate card, the trust package from the
+// Trust card. A job whose matter has since moved off both has no card to send a fresh one from, so none is named.
 function noDraftToConfirm(job, key) {
   var st = (job && job.docState && job.docState[key]) || {};
-  var name = st.pkg ? 'probate package' : staleDocName(key);
+  var W = st.pkg ? estatePackageRoute(job) : null;
+  var name = st.pkg ? (W ? W.name : 'inventory package') : staleDocName(key);
   if (st.sentAt && !docDraftPending(st)) return 'The ' + name + ' is already recorded as sent.';
   var stale = staleDraftNote(job, key, false);
   return 'There is no draft of the ' + name + ' waiting to be confirmed.' + (stale ? ' ' + stale + '.' : '')
-    + ' Send a fresh one from the ' + (st.pkg ? 'Probate card' : 'timeline') + '.';
+    + (st.pkg && !W ? '' : ' Send a fresh one from the ' + (st.pkg ? W.card : 'timeline') + '.');
 }
 
 // ─── THE INVOICE'S FIRST REAL EMAIL ──────────────────────────────────────────
@@ -21332,46 +21415,60 @@ function renderClientDashboard(jobId) {
   // (it needs the payment figures); we splice it into this slot at the end.
   h += '<!--TIMELINE_SLOT-->';
 
-  // PROBATE CARD — every estate administered through probate, whatever service was sold (audit M5).
-  if (jobOnProbateTrack(job)) {
+  // PROBATE CARD — every estate administered through probate, whatever service was sold (audit M5) — and, since
+  // 2026-10-02, the TRUST CARD on a trust-only matter (P18, Anthony: "put the button on the same card, renamed for trust
+  // matters"). One card: whether it is drawn and its heads come from the route (estatePackageRoute, ESTATE_PKG_ROUTES),
+  // and the probate card is drawn exactly as before. ⚠ THE TRUST CARD CARRIES NO COURT RECORD AND NO AUTHORIZATION (the
+  // route's `court` flag). The case number, the court deadline and the property-sale answer are entered in the court
+  // record alone (courtRecordShown), which a trust matter does not show; and the authorization is the Letters of
+  // Administration, which jobActivationBlockers waits on only where the estate goes through probate — on a trust it would
+  // be a red line nothing waits on and nobody could close. A test holds the chip to the gate on every service and matter.
+  var _pkgW = estatePackageRoute(job);
+  if (_pkgW) {
+    var _court = _pkgW.court;
     h += '<div class="card" style="margin-bottom:12px;">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
-    h += sectionHdr('Probate Information');
+    h += sectionHdr(_pkgW.title);
     var authOk = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
-    h += '<div style="display:flex;align-items:center;gap:12px;">';
-    h += '<span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:'+(authOk?'#1D9E75':'#A32D2D')+'">';
-    h += dot(authOk?'#1D9E75':'#A32D2D')+(authOk?'Authorization received':'Authorization pending — blocker')+'</span>';
-    // (The 📧 Send Package toggle that sat here sent nothing; the real send is the package row at the foot of this card,
-    // 2026-10-01, P17 — see probatePackageCardHtml.)
-    h += '</div></div>';
-    h += '<div class="d-grid4">';
-    h += field('Case number', esc(job.probateCase||'—'));
-    h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
-    h += field('Property sale', esc(job.probateSale||'—'));
-    h += field('Authorization', authOk ? '<span style="color:#1D9E75;">'+( job.executorAuth==='notneeded'?'Not required':'Received')+'</span>' : '<span style="color:#A32D2D;font-weight:600;">'+dot('#A32D2D')+'Pending</span>');
+    if (_court) {
+      h += '<div style="display:flex;align-items:center;gap:12px;">';
+      h += '<span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:'+(authOk?'#1D9E75':'#A32D2D')+'">';
+      h += dot(authOk?'#1D9E75':'#A32D2D')+(authOk?'Authorization received':'Authorization pending — blocker')+'</span>';
+      // (The 📧 Send Package toggle that sat here sent nothing; the real send is the package row at the foot of this card,
+      // 2026-10-01, P17 — see probatePackageCardHtml.)
+      h += '</div>';
+    }
     h += '</div>';
-    h += '<div class="d-split2" style="gap:0 24px;margin-top:12px;">';
-    // Attorney
+    if (_court) {
+      h += '<div class="d-grid4">';
+      h += field('Case number', esc(job.probateCase||'—'));
+      h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
+      h += field('Property sale', esc(job.probateSale||'—'));
+      h += field('Authorization', authOk ? '<span style="color:#1D9E75;">'+( job.executorAuth==='notneeded'?'Not required':'Received')+'</span>' : '<span style="color:#A32D2D;font-weight:600;">'+dot('#A32D2D')+'Pending</span>');
+      h += '</div>';
+    }
+    h += '<div class="d-split2" style="gap:0 24px;margin-top:' + (_court ? 12 : 0) + 'px;">';
+    // Attorney (the estate attorney fields; on a trust, the trustee's attorney)
     h += '<div>';
-    h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">Probate Attorney</div>';
+    h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">' + _pkgW.atty + '</div>';
     h += '<div class="d-grid2">';
     h += field('Name', esc(job.probateAttyName||'—'));
     h += field('Firm', esc(job.probateAttyFirm||'—'));
     h += field('Phone', esc(job.probateAttyPhone||'—'));
     h += field('Email', '<span style="font-size:11px;">'+esc(job.probateAttyEmail||'—')+'</span>');
     h += '</div></div>';
-    // Executor
+    // Executor (the representative fields; on a trust, the trustee)
     h += '<div>';
-    h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">Executor</div>';
+    h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">' + _pkgW.rep + '</div>';
     h += '<div class="d-grid2">';
     h += field('Name', esc(job.executor||'—'));
     h += field('Phone', esc(job.executorPhone||'—'));
     h += field('Email', '<span style="font-size:11px;">'+esc(job.executorEmail||'—')+'</span>');
     h += field('Role', esc(job.executorRole||'—'));
-    h += field('Authorization', authOk?'<span style="color:#1D9E75;">Received</span>':'<span style="color:#A32D2D;">'+dot('#A32D2D')+'Pending</span>');
+    if (_court) h += field('Authorization', authOk?'<span style="color:#1D9E75;">Received</span>':'<span style="color:#A32D2D;">'+dot('#A32D2D')+'Pending</span>');
     h += '</div></div>';
     h += '</div>';
-    // The probate package: its one send, and who sent it when (2026-10-01, P17).
+    // The package: its one send, and who sent it when (2026-10-01, P17; the trust route 2026-10-02, P18).
     h += probatePackageCardHtml(job);
     h += '</div>';
   }

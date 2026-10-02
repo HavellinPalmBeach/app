@@ -300,7 +300,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const t = S.jobSchedule({ id: 7, svc: 'cleanout', matterType: 'trust', status: 'won', start: '2026-10-05', probateDeadline: '2026-10-31' },
       { svc: 'cleanout', days: 6 }, '2026-09-29');
     ok(!t.courtDeadline, 'a trust matter has none');
-    has(liveFn('renderClientDashboard'), 'if (jobOnProbateTrack(job))', 'the dashboard\'s Probate Information card follows the same rule');
+    // RESTATED 2026-10-02 (P18): the card is drawn where estatePackageRoute answers — the Probate card on its 'probate'
+    // answer, which is jobOnProbateTrack itself, and the Trust card (no court record) on a trust-only matter — so the
+    // M5 rule is held through the route, and driven rather than only read.
+    has(liveFn('renderClientDashboard'), 'var _pkgW = estatePackageRoute(job);', 'the dashboard\'s Probate Information card asks the route');
+    has(liveFn('estatePackageRoute'), 'if (jobOnProbateTrack(job)) return ESTATE_PKG_ROUTES.probate;', '… whose probate answer is this same rule');
+    const R = sandbox({ fns: ['estatePackageRoute', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'ESTATE_PKG_ROUTES'] });
+    ok(R.estatePackageRoute({ svc: 'cleanout', matterType: 'probate' }) === R.ESTATE_PKG_ROUTES.probate, '⚠ an Estate Settlement on a probate matter gets the Probate card');
+    ok(R.estatePackageRoute({ svc: 'cleanout', matterType: 'trust' }) === R.ESTATE_PKG_ROUTES.trust, 'a trust matter gets the Trust card instead …');
+    eq(R.ESTATE_PKG_ROUTES.trust.court, false, '… which carries no court record');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

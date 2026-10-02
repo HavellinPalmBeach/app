@@ -590,10 +590,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const g = lift(['probatePackageBlocker'], [], { SHEETS_SYNC_URL: SYNC });
     eq(g.probatePackageBlocker(ESTATE()), '', 'everything there: no refusal');
     // ⚠ The handler asks the card's question: the row is on the Probate card, drawn only where the estate is
-    // administered through probate, so a trust matter (no Probate card) is refused rather than sent from elsewhere.
-    eq(g.probatePackageBlocker(Object.assign(ESTATE(), { matterType: 'trust', svc: 'cleanout' })),
-       'The probate package goes from the Probate card, on an estate administered through probate, and this estate is not one.',
-       '⚠ off the probate track: refused, saying why');
+    // administered through probate, so a matter with no card is refused rather than sent from elsewhere.
+    // RESTATED 2026-10-02 (P18): a trust-only matter has a card of its own now, the Trust card (Anthony, answer A: "1 -
+    // yes"), so the off-route refusal is held on a matter recorded Neither, which has neither card. The trust route's
+    // own refusals are in p18-trust-package.test.js.
+    eq(g.probatePackageBlocker(Object.assign(ESTATE(), { matterType: 'neither', svc: 'cleanout' })),
+       'The inventory package goes from the Probate card, on an estate administered through probate, or the Trust card, on one a successor trustee administers, and this job is neither.',
+       '⚠ off both routes: refused, saying why');
     eq(g.probatePackageBlocker(Object.assign(ESTATE(), { matterType: 'both', svc: 'cleanout' })), '', 'a pour-over will is on the probate track');
     const noAtty = Object.assign(ESTATE(), { probateAttyEmail: '  ' });
     has(g.probatePackageBlocker(noAtty), 'the estate attorney’s email (Edit Client, under Estate Attorney)', '⚠⚠ no attorney email: named, with where it is entered');
