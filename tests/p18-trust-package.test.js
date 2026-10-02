@@ -461,6 +461,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The attached Trust Schedule is the desk's own page, with its gaps.
     const ts = (r.N.log.uploads.filter((u) => /Trust Schedule/.test(u.filename))[0] || {}).html || '';
     has(ts, 'Schedule of Tangible Personal Property Held in Trust', 'the Trust Schedule is the printer\'s own page');
+    // ⚠ P18 lead: the job still carries the case number an earlier answer recorded, and _invDocHead printed it on every
+    // desk document; no page this package files or attaches may name a probate case (it asks jobOnProbateTrack now).
+    ok(r.N.log.uploads.length > 0 && r.N.log.pdfs.length > 0
+       && !r.N.log.uploads.some((u) => /2026-CP-001234/.test(u.html || '')) && !r.N.log.pdfs.some((h) => /2026-CP-001234/.test(h)),
+       '⚠⚠ no page filed or attached prints the old probate case number');
     has(ts, 'DRAFT', 'with a line still to value it goes as a DRAFT');
     has(text(ts), 'It is not itself one', 'saying on its face that it supports the trustee\'s accounting and is not one');
     // The words, line by line.
@@ -630,6 +635,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(html.length > 500, 'fixture: the Trust card rendered');
     ['Ann &lt;i&gt;Lowe&lt;/i&gt;', 'a&lt;b&gt;@l.law', 'Rex &lt;b&gt;Hale&lt;/b&gt;', 'Successor &lt;s&gt;Trustee&lt;/s&gt;'].forEach((t) => has(html, t, 'escaped: ' + t));
     ['<i>Lowe', 'a<b>@', '<b>Hale', '<s>Trustee'].forEach((raw) => lacks(html, raw, 'never markup: ' + raw));
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P18 lead, found by W-A: _invDocHead headed every desk document with any recorded case number, whatever the matter.
+  G('lead · a desk document names a probate case only where the estate goes through probate', () => {
+    const X = lift(['_invDocHead'], [], { Date: FixedDate(NOW) });
+    const head = (j) => { try { return X._invDocHead(j, 'Estate Inventory Report'); } catch (e) { return 'threw: ' + e.message; } };
+    lacks(head(TRUST()), 'Case 2026-CP-001234', '⚠⚠ a trust matter still carrying an old case number prints none');
+    lacks(head(TRUST({ matterType: 'neither' })), 'Case 2026-CP-001234', 'nor does a Neither matter');
+    has(head(PROBATE()), 'Case 2026-CP-001234', 'a probate matter prints its case');
+    has(head(TRUST({ matterType: 'both' })), 'Case 2026-CP-001234', 'and so does a pour-over (Both), which goes through probate');
   });
 
   G('A · the four documents describe the trust route', () => {

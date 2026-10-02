@@ -1,6 +1,9 @@
 # Counsel review bundle — Havellin Palm Beach
 **Assembled 2026-09-22. Nothing here has been reviewed by an attorney.**
 
+**On hold (Anthony, 2026-10-02): not to be sent until he says go** — *"hold counsel bundle until we are done here. they may
+be more changes"*. Items keep being added and revised meanwhile.
+
 ---
 
 ## What this is, and how to use it
@@ -548,15 +551,26 @@ firm's vendor fee, now 0%, is ever restored) keeps its old wording.
 and nothing that holds Havellin out as a contractor (the old name said *General Contractor*; Havellin is insured and
 bonded, never licensed).
 
-### B12. Time is billed in quarter hours, and neither form says so ⚠ NEW 2026-10-01
+### B12. Time is billed in half-hour increments — both forms ⚠ NEW 2026-10-01, revised 2026-10-02
 
-**What changed.** On Anthony's answer (*"let's log hours and bill them in 15min increments. no rounding up on logging
-or billing."*) the app records time in quarter hours and bills exactly what is logged, where it used to round each
-billed figure up to the whole hour; estimates round to the nearest quarter. Both forms state the hourly rates and
-bill hours as worked, but neither states an increment.
+**What changed.** On 2026-10-01 the app moved to quarter hours (*"let's log hours and bill them in 15min increments"*) and
+this item asked whether the forms should say so. On 2026-10-02 Anthony revised it: *"billing every 15mins is a lot of
+detail...we are not lawyers billing $1500/hr. maybe make it thirty minutes for logging hours (so a TC can bill 1hr, 1.5hrs
+or 2hrs)... but round estimates to full hours, and round up"*, and answered the question *"yes on agreements"*. The app
+now logs and bills time in half hours, as logged; estimates are in whole hours, rounded up; change orders are in whole
+hours. Both forms now carry one sentence wherever time is billed, never on a fixed fee (where time is not billed):
+- Standard §3.3 *Hourly and Project Rates*: after *"All rates are inclusive of on-site project oversight, client liaison,
+  and vendor coordination."* it adds **"Time is recorded and billed in half-hour increments, as worked."**
+- Standard §3.3 *Basis of Fee*, Home Prep with declutter hours: after *"… the Estimate provides for 6.0 hours ($900) on
+  that basis."* it adds the same sentence.
+- Standard §3.3 *Basis of Fee*, Home Prep with no hours: *"…those hours are then billed as worked at Contractor's Transition
+  Concierge rate of $150/hour, in addition to the Home Sale Preparation Fee."* now ends *"…, in addition to the Home Sale
+  Preparation Fee, **and that time is recorded and billed in half-hour increments.**"*
+- Estate §3.2, the hourly *IMPORTANT* paragraph: *"Final billing reflects actual hours worked and materials used.
+  **Time is recorded and billed in half-hour increments, as worked.** If actual hours are projected…"*
 
-**The question.** Should each form say so? A possible sentence: *"Time is recorded and billed in quarter-hour
-(15-minute) increments, as worked, without a minimum and without rounding up."*
+**The question.** Is the sentence enough as written, or should it say how a part of a half hour is treated (the app
+refuses to log one, so a person records the half hour they worked)?
 
 ---
 
@@ -723,8 +737,24 @@ the chain of custody. It can be sent at any stage; a document still in progress 
   (*"as recorded from the signed approval returned to Havellin"*), and each custody event (date, event, party, method,
   receipt).
 
+**Added 2026-10-02 (P18) — the trust route.** On Anthony's answer a trust-only estate (a successor trustee administers it, no
+court) sends the same package from its *Trust Information* card: to the trustee's attorney where an email is recorded, else
+to the trustee, copying the trustee (when the attorney is addressed) and agreements@. It attaches the Trust Schedule, the
+tier's document and the Appraisal Worklist, never a Court Inventory, and no page names a probate case. Its words differ
+from the probate route's only where a court would be named:
+- Greeting to the trustee: *"Dear <trustee's first name, else Trustee>,"*.
+- Opening: *"Attached are Havellin's inventory documents for the <name> trust administration, <address>, as they stand on
+  <date>:"*; the links under *"In the trust's Google Drive folder:"*.
+- Scope lines: *"Valuing the property is not part of Havellin's engagement on this trust administration, so the Contents
+  List is attached in place of a valued schedule."*; and where the trustee keeps the schedule, *"On this trust administration
+  the schedule of the trust's property is prepared by the trustee or their counsel; Havellin's records of the property are
+  below."*
+- Closing: *"If you need anything further for the administration of the trust, reply here and we will send it."*
+
 **The question.** Does anything here read as Havellin making the filing or advising on it? Is the record what an
-attorney needs to answer a beneficiary's question about a release, and should it carry a certification line?
+attorney needs to answer a beneficiary's question about a release, and should it carry a certification line? On the trust
+route: is it right to send the package straight to the trustee when no attorney is recorded, and does *"trust
+administration"* describe the matter correctly?
 
 ---
 

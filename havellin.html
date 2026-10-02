@@ -26767,7 +26767,10 @@ function _invDocHead(job, title, extra) {
   var vdate = estateValueDate(job);
   return '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">' + title + '</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>'
-    + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + (job.probateCase ? ' &middot; Case ' + esc(job.probateCase) : '') + '</div>'
+    // ⚠ A CASE NUMBER ONLY WHERE THE ESTATE GOES THROUGH PROBATE (P18). A matter re-answered as a trust, or neither, keeps the
+    // case number an earlier answer recorded (Edit Client no longer shows the court record to clear it), and every desk
+    // document printed it, so the trust package attached an Estate Inventory Report headed with a probate case.
+    + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + (job.probateCase && jobOnProbateTrack(job) ? ' &middot; Case ' + esc(job.probateCase) : '') + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:10px;">' + (extra || ('Basis: <strong>' + esc(basis) + '</strong> as of '
       + (job.avd ? 'the alternate valuation date' : 'date of death') + ' (' + (vdate ? esc(fmtDate2(vdate)) : '—') + ')'))

@@ -329,6 +329,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P15** Anthony's answers of 2026-09-30 (Q20, the Q14 follow-up, a vendor on a Home Prep change order, four small items) — landed 2026-09-30
 - [x] **P16** Anthony's answers of 2026-09-30, round 2 (no cards, the hourly deposit, a vendor by change order on bundled prep, Premium's appraiser hours, a firearm to a person through a dealer), and the known-bug list — landed 2026-09-30; its backend half is live once Anthony redeploys `2026-09-30b`
 - [x] **P17** Anthony's answers of 2026-10-01, the twelve open questions (Premium is the rates only, quarter hours and cents, the Home Sale Preparation Fee, the walkaway refund, a voided deposit, handed over in person, File signed copy, change orders to Drive, the probate package, no Power of Attorney) — landed 2026-10-01; its backend half is live once Anthony redeploys `2026-10-01`
+- [x] **P18** Anthony's answers of 2026-10-02 (the trust package; estimates in whole hours rounded up, logging in half hours, change orders in whole hours, the half-hour line in both agreements) — landed 2026-10-02; app-only
 
 ### P1 · Stop estimates leaking between clients
 
@@ -669,6 +670,16 @@ Fixes: the twelve questions CLAUDE.md held for Anthony after P16 · Needs: the a
 - **12 · Power of Attorney** is off the estate roles; an older record keeps it, shown as recorded.
 - **Open after P17** (CLAUDE.md, Waiting on Anthony): a probate package for a Trust or Neither matter (no Probate card today); a sentence on the quarter-hour increment in both agreements; counsel's reading of the walkaway refund outside a breach.
 
+### P18 · Anthony's answers of 2026-10-02
+
+Fixes: the three questions P17 left open · Needs: the answers of 2026-10-02
+
+**Landed 2026-10-02.** Built in two workstreams (the trust package; hours), merged and verified together. App-only.
+- **The trust package.** Anthony: *"1 - yes"* to sending a trust-only estate the same package. Its card is the Probate card renamed (*Trust Information*, *Trustee's Attorney*, *Trustee*), with no court record; the package carries the Trust Schedule, the tier's document and the Appraisal Worklist, and goes to the trustee's attorney, or to the trustee when no attorney's email is recorded. One answer decides where a package is offered (`estatePackageRoute`); a *Neither* matter has none. A desk document no longer prints a probate case number on a trust or *Neither* matter.
+- **Hours.** Anthony: *"billing every 15mins is a lot of detail...we are not lawyers billing $1500/hr. maybe make it thirty minutes for logging hours (so a TC can bill 1hr, 1.5hrs or 2hrs)... but round estimates to full hours, and round up"*, then *"change orders whole hours."* Estimates round up to whole hours again (a Standard Estate Settlement, 3,500 sq ft, $17,775 → $18,000; a Home Cleanout $12,012.50 → $12,250); the hours log takes half hours for everyone; change orders take whole hours; a part hour typed in the declutter box is priced as the whole hour above it and flagged, so the Home Prep page reads 6 × $150 = $900.
+- **The agreements.** Anthony: *"yes on agreements."* Both forms say *"Time is recorded and billed in half-hour increments, as worked."* wherever time is billed, never on a fixed fee (counsel bundle B12).
+- **The counsel bundle is on hold** until Anthony says go (*"hold counsel bundle until we are done here. they may be more changes"*); B12 and D6 are updated in it.
+
 ## Questions for Anthony
 
 **Answered 2026-09-29, and the last three on 2026-09-30.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.
@@ -759,7 +770,7 @@ Fixes: the twelve questions CLAUDE.md held for Anthony after P16 · Needs: the a
 - [x] **Run `backfillIds()` once in the Referral Partners Apps Script project.** *Done (Anthony, 2026-09-30).* Gives every partner row a permanent id, so re-sorting that sheet can never move a referral.
 - [ ] **Google Cloud: set the Gmail consent screen's audience to Internal.** Otherwise the Gmail draft path stays in Testing mode.
 - [ ] **Run `previewOrphanRecords()` once.** From the Apps Script editor, to see leftover practice records.
-- [ ] **Send the counsel bundle in priority order.** Before the first fixed-fee, trust and firearm jobs. The hourly termination wording and the retained deposit are drafted now (A1, B2, P16); the ACH-return question is B10, and the referral-fee question is still to add. P17 adds the walkaway refund (A1, B2), the fee's one name (B11), the quarter-hour increment (B12) and the probate package's wording (D6).
+- [ ] **Send the counsel bundle in priority order.** *On hold (Anthony, 2026-10-02) until the open changes are done.* Before the first fixed-fee, trust and firearm jobs. The hourly termination wording and the retained deposit are drafted now (A1, B2, P16); the ACH-return question is B10, and the referral-fee question is still to add. P17 adds the walkaway refund (A1, B2), the fee's one name (B11), the quarter-hour increment (B12) and the probate package's wording (D6).
 - [ ] **Bind the insurance and the bond.** Before the first real client document goes out; every document already says Insured & Bonded.
 - [ ] **Update the two Drive documents.** Re-import the updated estate guide into its Google Doc, and retire the "NEEDS REWRITE" probate package.
 

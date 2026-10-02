@@ -193,6 +193,7 @@ Intake → Walkthrough → Estimate → Manager Approval → Send to Client → 
 > - ***Activate job* refuses on a probate matter, on any service,** until the authorization reads *Received* or *Not Required*. A trust matter is never asked.
 > - **The Job Plan's Letters, §733.604 and attorney chips** (§11) follow the same answer.
 > - **An unanswered matter falls back to the service**, as it always has: a Probate service records that a case was open at intake. Nothing recorded before this date moves.
+> - **The desk's documents print the case number only on a probate matter (since 2026-10-02, P18).** A matter re-answered as *Trust* or *Neither* keeps the case number an earlier answer recorded, because the court record is no longer shown to clear it, and until this date every desk document — the Estate Inventory Report, the Contents List, the worklist, the release record — still headed itself with it, so a trust package would have carried a probate case to the trustee's attorney. They print it only where the estate goes through probate.
 >
 > **What stays on the service:** the asterisks. The save still requires the case number and the attorney on a **Probate** service only, so on an Estate Settlement they are offered and marked optional.
 
