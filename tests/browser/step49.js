@@ -12,10 +12,15 @@
 //   B. a volume of 5 typed into a room leaves the complexity typed beside it alone
 //   C. Home Prep: 5.5 declutter hours bill $825 under a total that counts exactly that; 5.3 is refused by the hint
 //      and by Save Estimate, under the Home Sale Preparation Fee's name
+//      ⚠ RESTATED 2026-10-02 (P18, Anthony's answer B; re-measured on the page): estimates round up to whole hours, so 5.5
+//      bills 6 × $150 = $900 under a $6,900 total, and 5.3 is flagged beside the box and saved as 6, never refused
 //   D. the hours log refuses 2.3 hours and logs 2.25, the second concierge's row included; the boxes step by 0.25
+//      ⚠ RESTATED 2026-10-02 (P18): half hours for everyone — 2.3 and 2.25 are refused, 2.5 and 1.5 logged; the boxes step by 0.5
 //   E. a change order refuses 2.3 hours and records 2.25
+//      ⚠ RESTATED 2026-10-02 (P18): whole hours — 2.3 and 2.5 are refused, 3 is recorded; the boxes step by 1
 //   F. the estimate, the agreement and each invoice print the cents and add up to them; the ACH link asks for the
-//      outstanding figure to the cent
+//      outstanding figure to the cent (RESTATED 2026-10-02, P18: on whole hours a Premium estimate is whole dollars, so A
+//      types a 3% preferred-client discount into the estimate for the cents these read)
 //   G. overflow at 1440 and 390; no page errors
 //
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step49.js [/abs/path/to/havellin.html]
@@ -158,12 +163,20 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Family Room / Great Roo
       await addLine('Estate Sale Company', 3000);
       const s = await est();
       eq(s.vendorTCHrs - o.vendorTCHrs, 1.5, '⚠⚠ an estate sale company books 1.5 hours (3 touches; it was 4.0)');
-      eq(cents(s.havellinTotal) - cents(prem.havellinTotal), cents(9.5 * 185), 'the three lines add 9.5 hours at $185 = $1,757.50');
+      // RESTATED 2026-10-02 (P18, re-measured on this page): the 9.5 line hours join the concierge's coordination and the billed
+      // hours are rounded up to the whole hour once, with the rest, so the total moves 10 billed hours at $185 = $1,850 (P17
+      // billed the 9.5 exactly, $1,757.50).
+      eq([s.totTC - prem.totTC, cents(s.havellinTotal) - cents(prem.havellinTotal)], [10, cents(10 * 185)],
+         'the three lines\' 9.5 hours move the billed hours, rounded up with the rest, by 10 at $185 = $1,850');
       has(await txt('#vendor-group-cards'), '+9.5 hrs concierge', 'and the card adds them up to 9.5');
       // Lines, then off again for the documents below: Premium, no vendors.
       await p.evaluate(() => { while (vendors.length) removeVendor(0); });
       await p.waitForTimeout(250);
+      // RESTATED 2026-10-02 (P18): whole hours at $185 / $125 are whole dollars ($22,350), so the cents F reads come from a
+      // 3% preferred-client discount typed into its box: $21,679.50 (P17's quarter hours gave $22,071.25 with none).
+      await type('#e-discount', '3', 'a 3% preferred-client discount');
       PREM = await est();
+      eq([PREM.totTC, PREM.totPS, PREM.havellinTotal], [60, 90, 21679.5], 'fixture: 60 / 90 whole hours at the Premium rates, less 3%: $21,679.50');
       ok(cents(PREM.havellinTotal) % 100 !== 0, 'fixture: the Premium total carries cents ($' + PREM.havellinTotal + ')');
     });
 
@@ -181,7 +194,7 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Family Room / Great Roo
     });
 
     // ── C. Home Prep declutter hours ─────────────────────────────────────────
-    await section('C. Home Prep: 5.5 declutter hours bill $825 under a total that counts them; 5.3 is refused', async () => {
+    await section('C. RESTATED (P18): Home Prep: 5.5 declutter hours bill 6, $900, under a total that counts them; 5.3 is flagged and saved as 6', async () => {
       await p.evaluate(() => {
         jobs = jobs.filter((j) => j.id !== 4903);
         jobs.unshift({ id: 4903, hvlId: 'HVL-2610-4903', name: 'Sam Marston', fname: 'Sam', lname: 'Marston', svc: 'prep', sqft: '2800',
@@ -198,25 +211,25 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Family Room / Great Roo
       await press('button[onclick="addFromVendorGroup(' + gi + ')"]', 'the Property Preparation card\'s +');
       await type('#e-declutter-hrs', '5.5', 'the declutter hours');
       const e = await est();
-      eq([e.totTC, e.tcFee, e.prepFee, e.havellinTotal], [5.5, 825, 6000, 6825], '⚠⚠ 5.5 hours bill 5.5 × $150 = $825 and the services total is $6,825 (it billed 6 hours, $900)');
-      has(await txt('#e-declutter-hint'), '5.5 hrs × $150 = $825', 'the hint prices them');
+      eq([e.totTC, e.tcFee, e.prepFee, e.havellinTotal], [6, 900, 6000, 6900], '⚠⚠ 5.5 hours are priced as 6: 6 × $150 = $900, and the services total is $6,900 (P17: 5.5, $825, $6,825)');
+      has(await txt('#e-declutter-hint'), '6.0 hrs × $150 = $900', 'the hint prices them');
+      has(await txt('#e-declutter-hint'), 'Estimates round up to whole hours: 5.5 is priced as 6.', 'and flags the rounding');
       has(await txt('#e-declutter-hint'), 'Home Sale Preparation Fee', 'beside the fee, by its name');
       lacks(await txt('#e-declutter-hint'), 'site management', 'never the old name');
       eq(await txt('#s-prep-fee'), '$6,000', 'the summary\'s fee row');
       has(await txt('#s-prep-fee-row'), 'Home Sale Preparation Fee', 'named the Home Sale Preparation Fee');
-      eq(await txt('#s-tc-fee'), '$825', 'the hours row');
-      eq(await txt('#s-havellin'), '$6,825', 'and the subtotal that counts both');
-      await type('#e-declutter-hrs', '5.3', 'a figure that is not a quarter hour');
-      has(await txt('#e-declutter-hint'), 'Declutter hours are entered in quarter hours (0.25, 0.5, 0.75): 5.3 is not one. It is priced at 5.25 until you correct it, and Save refuses it.',
-          '⚠⚠ the hint refuses 5.3 and says what it is priced at meanwhile');
+      eq(await txt('#s-tc-fee'), '$900', 'the hours row');
+      eq(await txt('#s-havellin'), '$6,900', 'and the subtotal that counts both');
+      await type('#e-declutter-hrs', '5.3', 'a figure that is not a whole hour');
+      has(await txt('#e-declutter-hint'), 'Estimates round up to whole hours: 5.3 is priced as 6.', '⚠⚠ the hint flags 5.3 and says what it is priced at (P17 refused it)');
       await press('#est-save-card button:has-text("Save Estimate")', 'Save Estimate');
-      has(await txt('#e-fb'), 'Declutter hours are entered in quarter hours', '⚠⚠ and Save Estimate refuses it, where the record is written');
-      ok(!(await p.evaluate(() => !!estimateStore[4903])), 'nothing is saved');
-      await type('#e-declutter-hrs', '5.5', 'back to 5.5');
+      has(await txt('#e-fb'), '+ 6.0 declutter hrs · total $6,900', '⚠⚠ and Save Estimate saves it, as the 6 hours priced (P17 refused it here)');
+      eq(await p.evaluate(() => { const r = estimateStore[4903]; return r && r.estimate ? r.estimate.declutterTCHrs : null; }), 6, 'the record holds 6');
+      await p.waitForTimeout(1500);   // Save lands on the dashboard a moment later (G reopens Build Estimate on this job)
     });
 
     // ── D. the hours log ─────────────────────────────────────────────────────
-    await section('D. the hours log refuses 2.3 and logs 2.25, the second concierge\'s row included', async () => {
+    await section('D. RESTATED (P18): the hours log refuses 2.3 and 2.25 and logs 2.5, the second concierge\'s row included', async () => {
       await p.evaluate(() => {
         jobs = jobs.filter((j) => j.id !== 4902);
         jobs.unshift({ id: 4902, hvlId: 'HVL-2610-4902', name: 'Tripp Butler', fname: 'Tripp', lname: 'Butler', svc: 'home_cleanout', sqft: '3500',
@@ -236,41 +249,48 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Family Room / Great Roo
       await p.waitForTimeout(700);
       const open = await p.evaluate(() => { const e = document.getElementById('phase-body-hours'); return !!e && e.style.display !== 'none'; });
       if (!open) await press('[onclick="togglePhase(\'hours\')"]', 'the Hours & daily close fold');
-      for (const id of ['#log-m0-hrs', '#log-tc2-hrs', '#log-m1-hrs']) eq(await p.evaluate((s) => { const e = document.querySelector(s); return e ? e.getAttribute('step') : null; }, id), '0.25', '⚠ ' + id + ' steps by 0.25');
+      for (const id of ['#log-m0-hrs', '#log-tc2-hrs', '#log-m1-hrs']) eq(await p.evaluate((s) => { const e = document.querySelector(s); return e ? e.getAttribute('step') : null; }, id), '0.5', '⚠ ' + id + ' steps by 0.5');
       const date = await p.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
       await p.evaluate((d) => { document.getElementById('log-date').value = d; }, date);
       await type('#log-activity', 'Kitchen sort', 'the activity');
       await type('#log-m0-hrs', '2.3', 'the concierge\'s hours, 2.3');
       await type('#log-m1-hrs', '7', 'the specialist\'s 7');
       await press('#btn-save-hours', 'Save Hours Entry');
-      has(await txt('#log-fb'), 'Hours are logged in quarter hours (0.25, 0.5, 0.75, 1.0 …). Not a quarter hour: Ashley Jerome (2.3).', '⚠⚠ 2.3 is refused, naming the row');
+      has(await txt('#log-fb'), 'Hours are logged in half hours (0.5, 1.0, 1.5 …). Not a half hour: Ashley Jerome (2.3).', '⚠⚠ 2.3 is refused, naming the row');
       eq(await p.evaluate(() => (jobLogs[4902] || []).length), 0, 'and nothing is logged');
-      await type('#log-m0-hrs', '2.25', 'the concierge\'s hours, 2.25');
+      await type('#log-m0-hrs', '2.25', 'the concierge\'s hours, 2.25 (P17\'s quarter)');
+      await press('#btn-save-hours', 'Save Hours Entry');
+      has(await txt('#log-fb'), 'Not a half hour: Ashley Jerome (2.25)', '⚠⚠ a quarter is refused now too');
+      await type('#log-m0-hrs', '2.5', 'the concierge\'s hours, 2.5');
       await type('#log-tc2-hrs', '1.1', 'the second concierge\'s 1.1');
       await press('#btn-save-hours', 'Save Hours Entry');
-      has(await txt('#log-fb'), 'Not a quarter hour: Anthony Graziano (1.1)', '⚠⚠ the second concierge\'s row is asked the same question');
+      has(await txt('#log-fb'), 'Not a half hour: Anthony Graziano (1.1)', '⚠⚠ the second concierge\'s row is asked the same question');
       eq(await p.evaluate(() => (jobLogs[4902] || []).length), 0, 'still nothing logged');
-      await type('#log-tc2-hrs', '1.75', 'the second concierge\'s 1.75');
+      await type('#log-tc2-hrs', '1.5', 'the second concierge\'s 1.5');
       await press('#btn-save-hours', 'Save Hours Entry');
-      has(await txt('#log-fb'), 'Hours entry saved', 'quarters are saved');
-      eq(await p.evaluate(() => ((jobLogs[4902] || [])[0] || { members: [] }).members.map((m) => m.role + ':' + m.hours).join(' ')), 'TC:2.25 PS:7 TC:1.75',
-         '⚠ logged exactly as typed: 2.25, 7 and 1.75');
+      has(await txt('#log-fb'), 'Hours entry saved', 'half hours are saved');
+      eq(await p.evaluate(() => ((jobLogs[4902] || [])[0] || { members: [] }).members.map((m) => m.role + ':' + m.hours).join(' ')), 'TC:2.5 PS:7 TC:1.5',
+         '⚠ logged exactly as typed: 2.5, 7 and 1.5');
     });
 
     // ── E. a change order ────────────────────────────────────────────────────
-    await section('E. a change order refuses 2.3 hours and records 2.25', async () => {
+    await section('E. RESTATED (P18): a change order refuses 2.3 and 2.5 hours and records 3', async () => {
       await toDash(4902);
       await press('#client-dashboard-view button[onclick="openChangeOrder(4902)"]', '+ New on the Change Orders card');
-      eq(await p.evaluate(() => [document.getElementById('co-tc-hrs').getAttribute('step'), document.getElementById('co-ps-hrs').getAttribute('step')]), ['0.25', '0.25'],
-         'both hours boxes step by 0.25');
+      eq(await p.evaluate(() => [document.getElementById('co-tc-hrs').getAttribute('step'), document.getElementById('co-ps-hrs').getAttribute('step')]), ['1', '1'],
+         'both hours boxes step by 1');
       await type('#co-description', 'Garage added to scope.', 'the description');
       await type('#co-tc-hrs', '2.3', '2.3 concierge hours');
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create Change Order');
-      has(await txt('#co-fb'), 'Hours are entered in quarter hours (0.25, 0.5, 0.75): concierge 2.3 is not one. Nothing was saved.', '⚠⚠ refused, naming the figure');
+      has(await txt('#co-fb'), 'Change orders are in whole hours (1, 2, 3 …): concierge 2.3 is not a whole hour. Nothing was saved.', '⚠⚠ refused, naming the figure');
       eq(await p.evaluate(() => changeOrders.filter((c) => c.jobId === 4902).length), 0, 'and nothing is recorded');
-      await type('#co-tc-hrs', '2.25', '2.25 concierge hours');
+      await type('#co-tc-hrs', '2.5', '2.5 concierge hours');
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create Change Order');
-      eq(await p.evaluate(() => changeOrders.filter((c) => c.jobId === 4902).map((c) => [c.tcHrs, c.psHrs])), [[2.25, 0]], 'recorded at 2.25');
+      has(await txt('#co-fb'), 'concierge 2.5 is not a whole hour', '⚠⚠ a half hour is refused too');
+      eq(await p.evaluate(() => changeOrders.filter((c) => c.jobId === 4902).length), 0, 'still nothing recorded');
+      await type('#co-tc-hrs', '3', '3 concierge hours');
+      await press('#change-order-modal button:has-text("Create Change Order")', 'Create Change Order');
+      eq(await p.evaluate(() => changeOrders.filter((c) => c.jobId === 4902).map((c) => [c.tcHrs, c.psHrs])), [[3, 0]], 'recorded at 3');
     });
 
     // ── F. the documents, to the cent ────────────────────────────────────────

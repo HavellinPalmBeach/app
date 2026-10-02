@@ -144,7 +144,7 @@ const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 
   'setVendorRating', 'setVendorRatingNote', '_ratingJob', '_writeVendorScore', 'computeVendorAvg',
   'draftReviewRequest', 'markReviewRequestSent', 'setValBasis', 'setEstateAVD',
   '_attachPaymentEvidence', '_driveFolderFailed', 'fetchSubfolderIds', '_normalizeSubfolders', 'applyEsignStatus', 'docState',
-  'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'isQuarterHours', '_coordHrsRefusal',
+  'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'isHalfHours', '_coordHrsRefusal',
   // P17: the real money formatter, since removeLogisticsLine now prints its quote through it; the two Stripe devices
   // below stubbed it as '$' + n and read nothing it printed, so their stubs went rather than shadow it.
   'fmt'];

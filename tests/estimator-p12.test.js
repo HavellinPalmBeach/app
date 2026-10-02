@@ -187,6 +187,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-01 (P17): read with its cents, and measured against the split's own deposit (paymentSplit), which
     // the panel now asks rather than halving the total itself: $14,987.40 of a $29,974.80 total on this house (measured;
     // before P17 the same house priced at whole hours and dollars, $30,331, and the panel printed $15,166).
+    // RESTATED 2026-10-02 (P18, Anthony's answer B; re-measured through the engine): the hours are whole again and the money
+    // keeps its cents, so this house is $30,331.20 and the panel prints $15,165.60 (65 / 97 billed hours; 63.5 / 96.5 on P17).
     const dep = (html) => { const m = String(html).match(/50% deposit \(\$([\d,]+(?:\.\d\d)?)\)/); return m ? parseFloat(m[1].replace(/,/g, '')) : null; };
     eq(dep(r.doc.getElementById('margin-panel').innerHTML), r.ctx.paymentSplit(e.havellinTotal).deposit,
        'M10: the margin panel\'s deposit is half the fixed-price total, not half the hourly one');

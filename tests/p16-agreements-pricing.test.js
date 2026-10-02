@@ -72,7 +72,7 @@ const CO_FNS = ['_coJobBasis', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrep
                 'acceptChangeOrder', 'printChangeOrder', 'saveChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt',
                 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates', 'coRateModsLine', 'coRushPct', 'coRushPctFor', 'estFixedLines',
                 'coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid',
-                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coBaselineMove', 'discountOnLabor', 'roundCents', 'isQuarterHours', 'fmtHrs'];
+                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coBaselineMove', 'discountOnLabor', 'roundCents', 'isWholeHours', 'fmtHrs'];
 function coCtx(est, job, cos, seed) {
   const dom = domStub(seed || {});
   const said = [];
@@ -160,7 +160,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy',
                  'prepFeeRate', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'].concat(TIER_FNS);
-const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'DECEDENT_SERVICES',
+const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'PREP_FEE_RATE'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
 const EST_ESTATE = { svc: 'probate', jobId: 1, docScope: 'full', tcFee: 18500, psFee: 12500, pkgCost: 1500,

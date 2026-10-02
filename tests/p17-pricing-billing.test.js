@@ -12,7 +12,10 @@
 //       reads it. It was "GC / Site Management Fee", "site management fee", "management fee" and "GC fee".
 //   6   Quarter hours and cents. The engine bills the nearest quarter hour, never rounding up (day counts still
 //       round up). Every hours box steps by 0.25 and every handler that writes hours refuses anything else; an
-//       older entry that is not a quarter is shown and billed as logged. Money is carried to the cent by one helper
+//       older entry that is not a quarter is shown and billed as logged. ⚠ RESTATED 2026-10-02 (P18, Anthony's answer B):
+//       estimates round UP to whole hours again (roundUpHours), the log and recorded coordination take half hours
+//       (isHalfHours), a change order whole hours (isWholeHours), and the declutter box is flagged, not refused; the
+//       item-6 groups below are restated to those rules and their figures re-measured. Money is carried to the cent by one helper
 //       (roundCents: half away from zero, read at fifteen significant digits so 1.005 is 1.01) and printed by one
 //       formatter (fmt: "$900", "$971.25"). Every client document adds up to the cent, and the Stripe link asks
 //       for exactly the invoice's outstanding figure.
@@ -123,9 +126,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // The figures the hand-back reports, measured on the estate this project always prices.
     const ES = E(run('cleanout', { prem: true })), ES0 = E(run('cleanout'));
-    eq([ES.totTC, ES.totPS, ES.havellinTotal], [59, 89.25, 22071.25],
-       'measured: a Premium Estate Settlement bills 59 TC and 89.25 PS hours, $22,071.25 (85 TC / 90 PS and $26,975 before P17)');
-    eq(ES0.havellinTotal, 17775, 'and the same house at the standard rates $17,775 ($18,000 before: whole hours, rounded up)');
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: estimates in whole hours, rounded up), re-measured through the real engine: 60 / 90 hours and $22,350
+    // (P17's quarter hours read 59 / 89.25 and $22,071.25), and the standard rates $18,000 again (P17 $17,775).
+    eq([ES.totTC, ES.totPS, ES.havellinTotal], [60, 90, 22350],
+       'measured: a Premium Estate Settlement bills 60 TC and 90 PS hours, $22,350 (85 TC / 90 PS and $26,975 before P17)');
+    eq(ES0.havellinTotal, 18000, 'and the same house at the standard rates $18,000 (whole hours, rounded up, as before P17)');
     // labourPools itself no longer reads the flag: driven with it on and off, the pools are the same.
     const LP = sandbox({ fns: ['labourPools'] });
     const eng = { totTC: 40.3, totPS: 70.6 };
@@ -150,22 +155,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠⚠ an online auction house books 6.0 hours (12 touches): +$1,110');
     eq([AH.vendorTCHrs, AH.totTC - ES.totTC, C(AH.havellinTotal) - C(ES.havellinTotal)], [3, 3, 55500],
        'an auction house books its 3.0 hours (6 touches, unchanged): +$555');
-    eq([AP.havellinTotal, OA.havellinTotal, AH.havellinTotal], [22441.25, 23181.25, 22626.25],
-       'measured: $22,441.25 with the appraiser, $23,181.25 with the online auction, $22,626.25 with the auction house');
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: estimates in whole hours, rounded up), re-measured through the real engine (P17: $22,441.25, $23,181.25, $22,626.25).
+    eq([AP.havellinTotal, OA.havellinTotal, AH.havellinTotal], [22720, 23460, 22905],
+       'measured: $22,720 with the appraiser, $23,460 with the online auction, $22,905 with the auction house');
     // An estate sale company on a living client's cleanout: a call and the follow-up.
     const L0 = E(run('home_cleanout')), L1 = E(run('home_cleanout', { lines: [{ type: 'Estate Sale Company', cost: 3000 }] }));
-    eq([L1.vendorTCHrs, L1.totTC - L0.totTC, C(L1.havellinTotal) - C(L0.havellinTotal)], [1.5, 1.5, 22500],
-       '⚠⚠ an estate sale company books 1.5 hours (3 touches; it was 8, 4.0 hours): +$225 at $150');
-    eq([L0.havellinTotal, L1.havellinTotal], [12012.5, 12237.5], 'measured: $12,012.50 without it, $12,237.50 with it (it was $12,250 and $12,850)');
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: estimates in whole hours, rounded up), re-measured through the real engine: the line books its 1.5 hours, and the
+    // billed concierge hours, rounded up to the whole hour, rise from 41 to 42 (+$150); on P17's quarters they rose 1.5 (+$225).
+    eq([L1.vendorTCHrs, L1.totTC - L0.totTC, C(L1.havellinTotal) - C(L0.havellinTotal)], [1.5, 1, 15000],
+       '⚠⚠ an estate sale company books 1.5 hours (3 touches; it was 8, 4.0 hours): the billed whole hours rise 41 → 42, +$150 at $150');
+    eq([L0.havellinTotal, L1.havellinTotal], [12250, 12400], 'measured: $12,250 without it, $12,400 with it (P17 $12,012.50 and $12,237.50; P16 $12,250 and $12,850)');
     // A Premium Probate and its appraiser.
     const PP0 = E(run('probate', { prem: true })), PP1 = E(run('probate', { prem: true, lines: [{ type: 'Art Appraiser' }] }));
-    eq([PP0.havellinTotal, PP1.havellinTotal], [25825, 26195], 'measured: a Premium Probate $25,825, and $26,195 with an appraiser (+$370)');
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: estimates in whole hours, rounded up), re-measured through the real engine (P17: $25,825 and $26,195).
+    eq([PP0.havellinTotal, PP1.havellinTotal], [26135, 26505], 'measured: a Premium Probate $26,135, and $26,505 with an appraiser (+$370)');
     // On the screen: the concierge fee's breakdown names the vendor coordination and no Premium hours.
     const r = run('cleanout', { prem: true, lines: [{ type: 'Online Auction House' }] });
     const label = text(r.doc.getElementById('tc-fee-label').innerHTML);
     has(label, 'Third-party vendor coordination', 'the concierge fee\'s breakdown names the line\'s coordination');
     lacks(label, 'Premium specialty', '⚠ and no Premium specialty coordination');
-    has(label, '(65.0 hrs × $185)', 'at the Premium rate');
+    has(label, '(66.0 hrs × $185)', 'at the Premium rate (65.0 on P17\'s quarter hours; ' + 'RESTATED 2026-10-02, P18)');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -242,7 +251,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(agr, 'Contractor\'s fee for the Services is a Home Sale Preparation Fee equal to thirty percent (30%)', '§1.2 names it');
     has(agr, '3.3 Basis of Fee. Contractor is paid on two bases for this engagement. First, the Home Sale Preparation Fee stated in Section 1.2 and Section 3.5',
         '§3.3\'s two bases name it first');
-    has(agr, 'the Estimate provides for 5.5 hours ( $825 ) on that basis', 'and quote the 5.5 declutter hours at $825');
+    // RESTATED 2026-10-02 (P18, Anthony's answer B): a typed 5.5 is priced and saved as 6, so §3.3 provides for 6.0 hours ($900).
+    has(agr, 'the Estimate provides for 6.0 hours ( $900 ) on that basis', 'and quote the declutter hours, 5.5 typed and saved as 6, at $900');
     has(text(html(w0.agreement)), 'billed as worked at Contractor\'s Transition Concierge rate of $150/hour , in addition to the Home Sale Preparation Fee',
         'the fee-only §3.3 bills later hours on top of it, by name');
 
@@ -294,62 +304,71 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ 6 · the engine bills the nearest quarter hour, never rounds up; a part day is still a day');
+  group('⚠⚠ 6 · RESTATED (P18): the engine bills whole hours, rounded up; a part day is still a day');
   {
-    const Q = sandbox({ fns: ['roundQuarter', 'isQuarterHours', 'roundCents', 'labourBilled', 'planDays'], vars: ['ENGINE_FLOOR', 'PRODUCTIVE_HRS_PER_DAY'] });
-    eq([2.1, 2.12, 2.125, 2.13, 2.37, 2.38, 59.1, 59.13, -2.125, 0].map((h) => Q.roundQuarter(h)), [2, 2, 2.25, 2.25, 2.25, 2.5, 59, 59.25, -2.25, 0],
-       '⚠⚠ to the nearest quarter, a tie away from zero (2.12 → 2.0, 2.13 → 2.25, 59.1 → 59.0)');
-    eq([NaN, undefined, 'x'].map((h) => Q.roundQuarter(h)), [0, 0, 0], 'and nothing is 0');
-    eq([2.25, 7.75, 0, -1.5, 2.3, 2.333, 0.1].map((h) => Q.isQuarterHours(h)), [true, true, true, true, false, false, false],
-       'isQuarterHours: the question every handler that writes hours asks');
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: "round estimates to full hours, and round up"), re-measured. P17 billed the
+    // nearest quarter (59.1 → 59.0, 89.2 → 89.25, $10,961.25 for 59.13 at $185, a 5.5-hour declutter $825) through
+    // roundQuarter and asked isQuarterHours of every hours box; both are retired. Now 59.1 → 60, 89.2 → 90, 59.13 → 60
+    // ($11,100), and a 5.5-hour declutter bills 6 ($900), as before P17. p18-hours.test.js carries the rest of the rule.
+    const Q = sandbox({ fns: ['roundUpHours', 'isHalfHours', 'isWholeHours', 'roundCents', 'labourBilled', 'planDays'], vars: ['ENGINE_FLOOR', 'PRODUCTIVE_HRS_PER_DAY'] });
+    eq([2.1, 2.12, 2.125, 2.13, 2.37, 2.38, 59.1, 59.13, 59, 0].map((h) => Q.roundUpHours(h)), [3, 3, 3, 3, 3, 3, 60, 60, 59, 0],
+       '⚠⚠ up to the whole hour (2.1 → 3, 59.1 → 60; P17 took them to the nearest quarter, 2.0 and 59.0)');
+    eq([NaN, undefined, 'x'].map((h) => Q.roundUpHours(h)), [0, 0, 0], 'and nothing is 0');
+    eq([2.5, 7, 0, -1.5, 2.25, 2.3, 0.1].map((h) => Q.isHalfHours(h)), [true, true, true, true, false, false, false],
+       'isHalfHours: the question the hours log and recorded coordination ask (a quarter is no longer one)');
+    eq([3, 0, -2, 2.5, 2.25].map((h) => Q.isWholeHours(h)), [true, true, true, false, false], 'isWholeHours: the question a change order asks');
     const b = Q.labourBilled({ tcHrs: 59.1, psHrs: 89.2 }, { tcRate: 150, psRate: 100 });
-    eq([b.totTC, b.totPS, b.tcFee, b.psFee], [59, 89.25, 8850, 8925], '⚠⚠ 59.1 concierge hours bill 59.0, not 60; 89.2 specialist hours bill 89.25');
+    eq([b.totTC, b.totPS, b.tcFee, b.psFee], [60, 90, 9000, 9000], '⚠⚠ 59.1 concierge hours bill 60 and 89.2 specialist hours bill 90 (P17: 59.0 and 89.25)');
     const b2 = Q.labourBilled({ tcHrs: 59.13, psHrs: 0 }, { tcRate: 185, psRate: 125 });
-    eq([b2.totTC, b2.tcFee], [59.25, 10961.25], 'and the fee is the billed hours at the rate, to the cent ($10,961.25)');
+    eq([b2.totTC, b2.tcFee], [60, 11100], 'and the fee is the billed hours at the rate, to the cent ($11,100; P17 $10,961.25 for 59.25)');
     const dc = Q.labourBilled({ tcHrs: 0, psHrs: 0 }, { isPrep: true, declutterTCHrs: 5.5, tcRate: 150, psRate: 100 });
-    eq([dc.totTC, dc.tcFee], [5.5, 825], 'standalone prep bills its 5.5 declutter hours as 5.5 ($825; it billed 6 whole hours, $900)');
+    eq([dc.totTC, dc.tcFee], [6, 900], 'a 5.5-hour declutter on a record saved before P18 bills 6 whole hours, $900 (one saved since already holds 6)');
     eq(Q.planDays({ days: 3 }, 7.25, 2, 'cleanout', false), 4, 'a destination day of 7.25 specialist hours on a crew of two is a whole day: days still round up');
-    lacks(noComments(fn('labourBilled')), 'Math.ceil', 'the billed hours are never rounded up');
-    has(noComments(fn('computeEngineV3')), 'tc = roundQuarter(tc); ps = roundQuarter(ps);', 'the engine\'s two columns go to the quarter too');
+    lacks(noComments(fn('labourBilled')), 'Math.ceil', 'the billed hours go up through the one float-safe helper, never a bare Math.ceil');
+    has(noComments(fn('computeEngineV3')), 'tc = roundUpHours(tc); ps = roundUpHours(ps);', 'the engine\'s two columns go up to the whole hour too');
     has(noComments(fn('computeEngineV3')), 'Math.ceil(tc/7)', 'while its day count still rounds up');
-    // One helper: every quarter rounding of hours asks roundQuarter.
-    eq(readers('roundQuarter'), { calcAll: 2, computeEngineV3: 2, declutterHoursRefusal: 1, getDeclutterTCHrs: 1, labourBilled: 2 },
-       'roundQuarter\'s readers: the engine, the billing, the move day, the declutter box and its refusal');
-    eq(readers('isQuarterHours'), { _coordHrsRefusal: 1, declutterHoursRefusal: 1, saveChangeOrder: 2, saveLogEntry: 2 },
-       'isQuarterHours\' readers: the hours log (both rows), a change order (both roles), declutter and coordination');
-    eq((LIVE.match(/\* *4\) *\/ *4/g) || []).length, 0, 'no second quarter rounding written by hand');
+    // One helper: every rounding of an estimate's hours asks roundUpHours.
+    eq(readers('roundUpHours'), { calcAll: 2, computeEngineV3: 2, declutterHoursFlag: 1, getDeclutterTCHrs: 1, labourBilled: 2 },
+       'roundUpHours\' readers: the engine, the billing, the move day, the declutter box and its flag');
+    eq([readers('roundQuarter'), readers('isQuarterHours')], [{}, {}], 'P17\'s roundQuarter and isQuarterHours have no readers left: retired');
+    eq((LIVE.match(/\* *4\) *\/ *4/g) || []).length, 0, 'no quarter rounding written by hand');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ 6 · every hours box steps by a quarter hour');
+  group('⚠⚠ 6 · RESTATED (P18): every hours box steps by its unit — a whole hour where an estimate is made, a half where work is logged');
   {
+    // RESTATED 2026-10-02 (P18, Anthony's answer B): the declutter box and a change order's two boxes step by 1; the hours log's
+    // and recorded coordination's by 0.5. Every one of them stepped by 0.25 on P17.
     const tags = (s) => [...s.matchAll(/<input[^>]*>/g)].map((m) => m[0]);
     const byId = (id) => tags(SRC).filter((t) => t.indexOf('id="' + id + '"') >= 0);
     ['e-declutter-hrs', 'co-tc-hrs', 'co-ps-hrs'].forEach((id) => {
       eq(byId(id).length, 1, 'fixture: #' + id + ' is in the markup once');
-      has(byId(id)[0] || '', 'step="0.25"', '#' + id + ' steps by 0.25');
+      has(byId(id)[0] || '', 'step="1"', '#' + id + ' steps by 1');
     });
     const rows = noComments(fn('buildLogTeamRows'));
     ['id="log-m0-hrs"', 'id="log-tc2-hrs"', 'id="log-m\'+i+\'-hrs"'].forEach((id) => {
       const t = tags(rows).filter((x) => x.indexOf(id) >= 0);
       eq(t.length, 1, 'fixture: the hours log draws ' + id);
-      has(t[0] || '', 'step="0.25"', '⚠ the hours log\'s ' + id + ' steps by 0.25');
+      has(t[0] || '', 'step="0.5"', '⚠ the hours log\'s ' + id + ' steps by 0.5');
     });
-    has(noComments(fn('_coordHrsField')), '<input type="number" step="0.25"', 'the recorded-coordination box steps by 0.25');
+    has(noComments(fn('_coordHrsField')), '<input type="number" step="0.5"', 'the recorded-coordination box steps by 0.5');
     const hourBoxes = tags(SRC).filter((t) => /type=\\?"number"/.test(t) && /hrs|hours/i.test(t));
     ok(hourBoxes.length >= 6, 'fixture: the hours boxes are found (' + hourBoxes.length + ')');
-    eq(hourBoxes.filter((t) => !/step="0\.25"/.test(t)), [], 'and none steps by anything but a quarter');
+    eq(hourBoxes.filter((t) => !/step="(1|0\.5)"/.test(t)), [], 'and none steps by anything but a whole or a half hour (none by a quarter)');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ 6 · the hours log refuses anything but quarter hours, where the record is written — both concierge rows');
+  group('⚠⚠ 6 · RESTATED (P18): the hours log refuses anything but half hours, where the record is written — both concierge rows');
   {
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: "maybe make it thirty minutes for logging hours"): the question is isHalfHours
+    // and the refusal says half hours; P17's 2.25 and 1.75 were quarters, and a quarter is refused now. p18-hours.test.js drives
+    // the crew rows too.
     const crew = { tc: { name: 'Ashley Jerome', locked: false }, tc2: { name: 'Anthony Graziano', locked: false },
                    ps: [{ name: 'Anthony Graziano Jr', locked: false }], confirmed: true };
     const save = (seed) => {
       const said = [];
       const dom = domStub(Object.assign({ 'log-job': { value: '21' }, 'log-date': { value: '2026-09-20' }, 'log-activity': { value: 'Kitchen sort' } }, seed));
-      const c = sandbox({ fns: ['saveLogEntry', 'isCrewPlaceholder', 'roundCents', 'isQuarterHours', 'esc'], vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'jobLogs'],
+      const c = sandbox({ fns: ['saveLogEntry', 'isCrewPlaceholder', 'roundCents', 'isHalfHours', 'esc'], vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'jobLogs'],
         stubs: { document: dom, jobs: [{ id: 21, status: 'active' }], getJobCrew: () => crew, isJobFunded: () => true,
                  depositTargetFor: () => 0, depositPaidTotal: () => 0, fmt: (n) => '$' + n,
                  showFB: (id, kind, msg) => said.push(kind + ':' + msg), saveLogData() {}, lockAssignedCrew() {}, clearLogEntry() {},
@@ -359,22 +378,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     };
     const bad = save({ 'log-m0-name': { value: 'Ashley Jerome' }, 'log-m0-hrs': { value: '2.3' }, 'log-m1-name': { value: 'Anthony Graziano Jr' }, 'log-m1-hrs': { value: '7' } });
     eq(bad.logs.length, 0, '⚠⚠ 2.3 hours are refused: nothing is written');
-    has(bad.said, 'Hours are logged in quarter hours (0.25, 0.5, 0.75, 1.0 …). Not a quarter hour: Ashley Jerome (2.3).', 'and the refusal names the row');
+    has(bad.said, 'Hours are logged in half hours (0.5, 1.0, 1.5 …). Not a half hour: Ashley Jerome (2.3).', 'and the refusal names the row');
     has(bad.said, 'nothing was saved', 'and says nothing was saved');
-    const good = save({ 'log-m0-name': { value: 'Ashley Jerome' }, 'log-m0-hrs': { value: '2.25' }, 'log-m1-name': { value: 'Anthony Graziano Jr' }, 'log-m1-hrs': { value: '7' } });
-    eq(good.logs.length, 1, '2.25 hours are logged');
-    eq(((good.logs[0] || {}).members || []).map((m) => m.role + ':' + m.hours).join(' '), 'TC:2.25 PS:7', 'as 2.25, exactly');
-    const tc2 = save({ 'log-m0-name': { value: 'Ashley Jerome' }, 'log-m0-hrs': { value: '2.25' }, 'log-tc2-name': { value: 'Anthony Graziano' }, 'log-tc2-hrs': { value: '1.1' } });
+    const quarter = save({ 'log-m0-name': { value: 'Ashley Jerome' }, 'log-m0-hrs': { value: '2.25' }, 'log-m1-name': { value: 'Anthony Graziano Jr' }, 'log-m1-hrs': { value: '7' } });
+    eq(quarter.logs.length, 0, '⚠⚠ P17\'s quarter, 2.25, is refused now: nothing is written');
+    has(quarter.said, 'Not a half hour: Ashley Jerome (2.25)', 'naming it');
+    const good = save({ 'log-m0-name': { value: 'Ashley Jerome' }, 'log-m0-hrs': { value: '2.5' }, 'log-m1-name': { value: 'Anthony Graziano Jr' }, 'log-m1-hrs': { value: '7' } });
+    eq(good.logs.length, 1, '2.5 hours are logged');
+    eq(((good.logs[0] || {}).members || []).map((m) => m.role + ':' + m.hours).join(' '), 'TC:2.5 PS:7', 'as 2.5, exactly');
+    const tc2 = save({ 'log-m0-name': { value: 'Ashley Jerome' }, 'log-m0-hrs': { value: '2.5' }, 'log-tc2-name': { value: 'Anthony Graziano' }, 'log-tc2-hrs': { value: '1.1' } });
     eq(tc2.logs.length, 0, '⚠ the second concierge\'s row is asked the same question: 1.1 is refused and nothing is written');
-    has(tc2.said, 'Not a quarter hour: Anthony Graziano (1.1)', 'naming them');
-    const both = save({ 'log-m0-name': { value: 'Ashley Jerome' }, 'log-m0-hrs': { value: '2.25' }, 'log-tc2-name': { value: 'Anthony Graziano' }, 'log-tc2-hrs': { value: '1.75' } });
-    eq(((both.logs[0] || {}).members || []).map((m) => m.role + ':' + m.hours).join(' '), 'TC:2.25 TC:1.75', 'and a quarter on it is logged');
+    has(tc2.said, 'Not a half hour: Anthony Graziano (1.1)', 'naming them');
+    const both = save({ 'log-m0-name': { value: 'Ashley Jerome' }, 'log-m0-hrs': { value: '2.5' }, 'log-tc2-name': { value: 'Anthony Graziano' }, 'log-tc2-hrs': { value: '1.5' } });
+    eq(((both.logs[0] || {}).members || []).map((m) => m.role + ':' + m.hours).join(' '), 'TC:2.5 TC:1.5', 'and a half hour on it is logged');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ 6 · a change order, the declutter box and recorded coordination refuse a figure that is not a quarter hour');
+  group('⚠⚠ 6 · RESTATED (P18): a change order refuses a part hour, recorded coordination a figure that is not a half hour, and the declutter box is flagged, not refused');
   {
-    // A change order.
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: "change orders whole hours"; the log and coordination in half hours; the
+    // estimate's hours rounded up, so the declutter box is a flag). P17 refused anything that was not a quarter hour in all three,
+    // and Save and Submit refused a declutter figure that was not one.
+    // A change order: whole hours.
     const EST_TM = { jobId: 1, tcFee: 12000, psFee: 6000, pkgCost: 0, smf: 0, prepFee: 0, havellinTotal: 18000, tcRate: 150, psRate: 100,
                      discountPct: 0, fixedPrice: false, rush: false, vendors: [], prepItems: [], svc: 'cleanout', totTC: 80, totPS: 60 };
     const co = (tc, ps) => {
@@ -383,7 +408,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const said = [];
       const c = sandbox({ fns: ['saveChangeOrder', '_coJobBasis', 'agrBillingRates', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estFixedFee',
           'estPrepFeeOnTop', 'estFixedLines', 'coRushPctFor', 'coPriorHours', '_coPriorAccepted', 'coHours', 'coScopeLabel', 'coHoursLabel',
-          'coVendorAdds', 'coVendorAddsTxt', 'isQuarterHours', 'roundCents', 'fmtHrs', 'fmt', 'esc', 'prepFeeRate'],
+          'coVendorAdds', 'coVendorAddsTxt', 'isWholeHours', 'roundCents', 'fmtHrs', 'fmt', 'esc', 'prepFeeRate'],
         vars: ['RUSH_PCT', 'PREP_FEE_RATE'],
         stubs: { document: dom, jobs: [{ id: 1, svc: 'cleanout', status: 'active' }], changeOrders: [],
                  estimateStore: { 1: { estimate: EST_TM, approved: true } }, currentEstimate: null, saveChangeOrders() {}, renderJobs() {},
@@ -393,50 +418,49 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     };
     const r1 = co('2.3', '');
     eq(r1.cos.length, 0, '⚠⚠ a change order of 2.3 concierge hours is refused: nothing is saved');
-    has(r1.fb, 'Hours are entered in quarter hours (0.25, 0.5, 0.75): concierge 2.3 is not one. Nothing was saved.', 'and the refusal says which');
-    const r2 = co('2.25', '-1.1');
+    has(r1.fb, 'Change orders are in whole hours (1, 2, 3 …): concierge 2.3 is not a whole hour. Nothing was saved.', 'and the refusal says which');
+    const r1q = co('2.25', '');
+    eq(r1q.cos.length, 0, '⚠ P17\'s quarter, 2.25, is refused now too');
+    const r2 = co('2', '-1.1');
     eq(r2.cos.length, 0, 'a specialist figure of −1.1 is refused the same way');
     has(r2.fb, 'specialist -1.1', 'naming it');
-    const r3 = co('2.25', '-1.5');
-    eq(r3.cos.map((x) => [x.tcHrs, x.psHrs]), [[2.25, -1.5]], 'quarters are saved, a negative quarter included');
-    // The declutter box: Save Estimate and Submit both ask declutterHoursRefusal on a Home Prep estimate.
-    const DQ = (v) => sandbox({ fns: ['declutterHoursRefusal', 'isQuarterHours', 'roundQuarter', 'fmtHrs', 'esc'], vars: ['DECLUTTER_MAX_HRS'],
-                                stubs: { document: domStub({ 'e-declutter-hrs': { value: v } }) } }).declutterHoursRefusal();
-    eq(['', '0', '5.5', '5.25', '40'].map(DQ), ['', '', '', '', ''], 'a blank box, nothing, or a quarter is fine');
-    has(DQ('5.3'), 'Declutter hours are entered in quarter hours (0.25, 0.5, 0.75): 5.3 is not one. It is priced at 5.25 until you correct it, and Save refuses it.',
-        '⚠ 5.3 is refused, and the sentence says what it is priced at meanwhile');
+    const r3 = co('2', '-1');
+    eq(r3.cos.map((x) => [x.tcHrs, x.psHrs]), [[2, -1]], 'whole hours are saved, a reduction included');
+    // The declutter box: a flag beside the box, never a refusal (P18).
+    const DQ = (v) => sandbox({ fns: ['declutterHoursFlag', 'roundUpHours', 'esc'], vars: ['DECLUTTER_MAX_HRS'],
+                                stubs: { document: domStub({ 'e-declutter-hrs': { value: v } }) } }).declutterHoursFlag();
+    eq(['', '0', '5', '6', '40'].map(DQ), ['', '', '', '', ''], 'a blank box, nothing, or a whole number raises no flag');
+    eq(DQ('5.3'), 'Estimates round up to whole hours: 5.3 is priced as 6.', '⚠ 5.3 is flagged with what it is priced at (P17 refused it, priced at 5.25)');
     const said = [];
-    const S = sandbox({ fns: ['saveEstimateAndPreview', 'declutterHoursRefusal', 'isQuarterHours', 'roundQuarter', 'fmtHrs', 'esc', 'prepFeeRate'],
+    const S = sandbox({ fns: ['saveEstimateAndPreview', 'fmtHrs', 'esc', 'prepFeeRate'],
       vars: ['DECLUTTER_MAX_HRS', 'PREP_FEE_RATE'],
       stubs: { document: domStub({ 'e-job': { value: '3' }, 'e-declutter-hrs': { value: '5.3' } }), jobs: [{ id: 3, svc: 'prep' }], estimateStore: {},
-               estimateApproved: false, currentEstimate: { jobId: 3, svc: 'prep', prepEnabled: true, prepCost: 0, havellinTotal: 795 },
+               estimateApproved: false, currentEstimate: { jobId: 3, svc: 'prep', prepEnabled: true, prepCost: 0, havellinTotal: 900 },
                estimateContractBlocker: () => null, showFB: (id, k, m) => said.push(m) } });
     attempt(() => S.saveEstimateAndPreview());
-    has(said[0] || '', 'Declutter hours are entered in quarter hours', '⚠⚠ Save Estimate refuses 5.3 declutter hours, where the record is written');
-    S.document.getElementById('e-declutter-hrs').value = '5.25';
-    said.length = 0;
-    attempt(() => S.saveEstimateAndPreview());
-    has(said[0] || '', 'Add at least one Home Prep vendor with a cost', 'and 5.25 passes it (on to the next question: this fixture has no vendor)');
+    has(said[0] || '', 'Add at least one Home Prep vendor with a cost', '⚠⚠ Save Estimate no longer refuses 5.3 declutter hours: it goes on to the next question (this fixture has no vendor)');
     const sub = [];
-    const U = sandbox({ fns: ['submitForApproval', 'declutterHoursRefusal', 'isQuarterHours', 'roundQuarter', 'fmtHrs', 'esc'], vars: ['DECLUTTER_MAX_HRS'],
+    const U = sandbox({ fns: ['submitForApproval'],
       stubs: { document: domStub({ 'e-declutter-hrs': { value: '5.3' } }), jobs: [{ id: 3, svc: 'prep' }], estimateSubmitted: false,
-               currentEstimate: { jobId: 3, svc: 'prep', havellinTotal: 6795, rooms: [] }, estimateSubmitBlocker: () => null,
-               showFB: (id, k, m) => sub.push(m), saveEstimateState: () => sub.push('WROTE'), saveJobs: () => sub.push('WROTE'),
+               REQUIRE_WALKTHROUGH_NOTES: true, currentEstimate: { jobId: 3, svc: 'prep', havellinTotal: 6900, rooms: [] }, estimateSubmitBlocker: () => null,
+               estimateEventStatus: (j, st) => st, showFB: (id, k, m) => sub.push(m), saveEstimateState: () => sub.push('WROTE'), saveJobs: () => sub.push('WROTE'),
                syncJobToSheets() {}, updateApprovalUI() {}, notifyManagerForApproval: () => sub.push('NOTIFIED'), confirm: () => true } });
     const out = attempt(() => U.submitForApproval());
-    eq(out.ok && out.val ? out.val.code : null, 'declutter', '⚠⚠ Submit refuses it too');
-    eq(sub.filter((x) => x === 'WROTE' || x === 'NOTIFIED'), [], 'and writes nothing and notifies nobody');
-    eq(U.estimateSubmitted, false, 'nothing is submitted');
-    // Recorded coordination (the Job Plan's sourcing rows).
+    eq(out.ok ? out.val : out.err, null, '⚠⚠ Submit is not refused by it either');
+    eq(sub.filter((x) => x === 'WROTE' || x === 'NOTIFIED'), ['WROTE', 'WROTE', 'NOTIFIED'], 'it writes the estimate and the job and asks the manager');
+    eq(U.estimateSubmitted, true, 'the estimate is submitted');
+    // Recorded coordination (the Job Plan's sourcing rows): half hours, like the log.
     const notes = [];
-    const K = sandbox({ fns: ['setJobVendorCoordHrs', '_coordHrsRefusal', 'isQuarterHours'],
+    const K = sandbox({ fns: ['setJobVendorCoordHrs', '_coordHrsRefusal', 'isHalfHours'],
       stubs: { _svcJob: () => ({ rec: { coordHrs: 1 }, job: { id: 1 }, bucket: 'vendorSourcing', key: 'La' }), alert: (m) => notes.push(m),
                refreshVendorSourcing() {}, _saveJobEdit: () => notes.push('SAVED') } });
     K.setJobVendorCoordHrs(1, 0, '1.3');
     eq(notes.filter((x) => x === 'SAVED'), [], '⚠ recorded coordination of 1.3 hours is refused before anything is written');
-    has(notes[0] || '', 'Coordination hours are recorded in quarter hours (0.25, 0.5, 0.75): 1.3 is not one. Nothing was saved.', 'and says so');
+    has(notes[0] || '', 'Coordination hours are recorded in half hours (0.5, 1.0, 1.5 …): 1.3 is not one. Nothing was saved.', 'and says so');
     K.setJobVendorCoordHrs(1, 0, '1.25');
-    eq(notes.filter((x) => x === 'SAVED').length, 1, 'and 1.25 is recorded');
+    eq(notes.filter((x) => x === 'SAVED'), [], 'P17\'s quarter, 1.25, is refused now too');
+    K.setJobVendorCoordHrs(1, 0, '1.5');
+    eq(notes.filter((x) => x === 'SAVED').length, 1, 'and 1.5 is recorded');
     ['setPrepVendorCoordHrs', 'setLogisticsCoordHrs'].forEach((n) => has(noComments(fn(n)), 'var _why = _coordHrsRefusal(val); if (_why) {', n + ' asks the same question first'));
   }
 
@@ -529,38 +553,48 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const assigned = [...LIVE.matchAll(NAMES)].filter((m) => !/\*\s*100\s*\)\s*$|\*\s*100\)(?!\s*\/)/.test(m[1])).map((m) => enclosing(m.index) + ': ' + m[0].slice(0, 60));
     eq(assigned, [], '⚠⚠ no money figure is taken to the dollar with Math.round');
     // Driven: a total with cents prints them on every document, never its whole-dollar rounding.
-    const pr = attempt(() => E(run('cleanout', { prem: true })));
+    // RESTATED 2026-10-02 (P18, Anthony's answer B), re-measured: the estimate's hours are whole again, so a Premium estate is whole
+    // dollars ($22,350; it was $22,071.25 on P17's quarter hours) and the cents come from a percentage. A 3% preferred-client
+    // discount carries them: $21,679.50, a $10,839.75 deposit.
+    const pr = attempt(() => E(run('cleanout', { prem: true, seed: { 'e-discount': '3' } })));
     const P = pr.ok ? pr.val : {};
+    eq([P.havellinTotal, P.discountAmt], [21679.5, 670.5], 'fixture: a Premium Estate Settlement with 3% off is $21,679.50 ($670.50 off $22,350)');
     const JOB = { id: 8, hvlId: 'HVL-0081', name: 'Butler Estate', svc: 'cleanout', addr: '69 Beach Blvd', tc: 'Anthony Graziano', status: 'active',
                   won: true, premium: true, executor: 'Tripp Butler', executorRole: 'Personal Representative', executorEmail: 't@example.com', payments: [] };
     const w = walk(P, JOB, []);
     const all = [html(w.estimate), html(w.agreement), w.inv.deposit.html].map(text).join(' ');
-    has(all, '$22,071.25', 'the estimate total prints its cents');
-    has(all, '$11,035.63', 'the deposit too');
-    ok(!/\$22,071(?!\.25)/.test(all), '⚠⚠ and nowhere as $22,071');
-    ok(!/\$11,036(?![\d.])/.test(all) && !/\$11,035(?!\.63)/.test(all), '⚠⚠ nor the deposit as $11,036 or $11,035');
+    has(all, '$21,679.50', 'the estimate total prints its cents');
+    has(all, '$10,839.75', 'the deposit too');
+    ok(!/\$21,680(?![\d.])/.test(all) && !/\$21,679(?!\.50)/.test(all), '⚠⚠ and nowhere as $21,680 or $21,679');
+    ok(!/\$10,840(?![\d.])/.test(all) && !/\$10,839(?!\.75)/.test(all), '⚠⚠ nor the deposit as $10,840 or $10,839');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ 6 · every client document adds up to the cent — Home Prep with 5.5 declutter hours');
+  group('⚠⚠ 6 · every client document adds up to the cent — Home Prep with 5.5 declutter hours typed');
   {
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: "the Home Prep estimate prints the rounded-up hours so the page adds up"),
+    // re-measured through the real engine: a typed 5.5 is priced and saved as 6, so the row reads 6.0 hrs × $150 = $900 above a
+    // $6,900 total, a $3,450 deposit and $1,725 quarters (P17: 5.5 × $150 = $825, $6,825, $3,412.50 and $1,706.25). Logged as
+    // quoted (6 hours), the invoices are that schedule; 5.5 hours logged would bill $825, as logged.
     const pb = attempt(() => { const d = driveCalcAll({ svc: 'prep', sqft: 3500, rooms: [], seed: { 'e-declutter-hrs': '5.5' } });
       d.ctx.prepItems.push({ type: 'Painting', cost: 20000, note: '', lid: 'p1' }); d.ctx.calcAll(); return d.ctx.currentEstimate; });
     const PREP = pb.ok ? pb.val : {};
-    eq([PREP.totTC, PREP.tcFee, PREP.prepFee, PREP.havellinTotal], [5.5, 825, 6000, 6825],
-       '⚠⚠ 5.5 declutter hours bill 5.5 × $150 = $825, and the total is $6,000 + $825 = $6,825 (it billed 6 hours, $900, under an $825 row)');
+    eq([PREP.declutterTCHrs, PREP.totTC, PREP.tcFee, PREP.prepFee, PREP.havellinTotal], [6, 6, 900, 6000, 6900],
+       '⚠⚠ 5.5 typed is saved as 6 and bills 6 × $150 = $900, and the total is $6,000 + $900 = $6,900');
     const JOB = { id: 9, hvlId: 'HVL-0091', name: 'Marston', svc: 'prep', addr: '1 Ocean Blvd', tc: 'Anthony Graziano', status: 'active', won: true,
                   email: 'm@example.com', payments: [] };
-    const w = walk(PREP, JOB, [{ date: '2026-09-02', activity: 'declutter', members: [{ name: 'Ashley Jerome', role: 'TC', hours: 5.5 }] }]);
+    const w = walk(PREP, JOB, [{ date: '2026-09-02', activity: 'declutter', members: [{ name: 'Ashley Jerome', role: 'TC', hours: 6 }] }]);
     const ce = text(html(w.estimate));
-    has(ce, '(5.5 hrs × $150/hr) $825', 'the estimate\'s declutter row');
-    has(ce, 'Havellin Services Total $6,825', '⚠⚠ under a total that counts exactly it');
-    has(ce, '$3,412.50', 'the schedule\'s deposit, to the cent');
-    has(ce, '$1,706.25', 'and its two quarters');
-    eq([w.inv.deposit.amtDue, w.inv.midpoint.amtDue, w.inv.final.amtDue], [3412.5, 1706.25, 1706.25],
+    has(ce, '(6.0 hrs × $150/hr) $900', 'the estimate\'s declutter row');
+    has(ce, 'Havellin Services Total $6,900', '⚠⚠ under a total that counts exactly it');
+    has(ce, '$3,450', 'the schedule\'s deposit');
+    has(ce, '$1,725', 'and its two quarters');
+    eq([w.inv.deposit.amtDue, w.inv.midpoint.amtDue, w.inv.final.amtDue], [3450, 1725, 1725],
        '⚠⚠ billed as quoted, the three invoices are the schedule the client signed, to the cent');
-    eq(C(w.inv.deposit.amtDue) + C(w.inv.midpoint.amtDue) + C(w.inv.final.amtDue), C(6825), 'and they add up to the total');
-    has(text(w.inv.final.html), '$825', 'the final bills the 5.5 hours logged as $825');
+    eq(C(w.inv.deposit.amtDue) + C(w.inv.midpoint.amtDue) + C(w.inv.final.amtDue), C(6900), 'and they add up to the total');
+    has(text(w.inv.final.html), '$900', 'the final bills the 6 hours logged as $900');
+    const w55 = walk(PREP, JOB, [{ date: '2026-09-02', activity: 'declutter', members: [{ name: 'Ashley Jerome', role: 'TC', hours: 5.5 }] }]);
+    has(text(w55.inv.final.html), 'Ashley Jerome TC 5.5 $150/hr $825', 'and 5.5 hours logged bill $825, as logged');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -568,7 +602,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     [false, true].forEach((fixed) => {
       const label = fixed ? 'fixed' : 'hourly';
-      const seed = { 'e-rush': true, 'e-discount': '5' };
+      // RESTATED 2026-10-02 (P18): whole hours make a 5% discount on this house land on whole dollars ($25,479 hourly), so the
+      // fixture takes 7%, which carries cents on both bases ($24,942.60 hourly, $29,931.12 fixed; measured through the engine).
+      const seed = { 'e-rush': true, 'e-discount': '7' };
       if (fixed) seed['e-fixed'] = { checked: true };
       const pr = attempt(() => E(run('cleanout', { prem: true, seed })));
       ok(pr.ok, label + ': the estimate prices' + (pr.ok ? '' : ' — ' + pr.err));
@@ -577,8 +613,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(C(P.havellinTotal) % 100 !== 0, label + ' fixture: the total carries cents ($' + P.havellinTotal + ')');
       const JOB = { id: 10, hvlId: 'HVL-0101', name: 'Butler Estate', svc: 'cleanout', addr: '69 Beach Blvd', tc: 'Anthony Graziano', status: 'active',
                     won: true, premium: true, executor: 'Tripp Butler', executorRole: 'Personal Representative', executorEmail: 't@example.com', payments: [] };
-      // As quoted: the hours the estimate priced are the hours logged, in quarters.
-      const ps1 = Math.floor(P.totPS / 2 * 4) / 4;
+      // As quoted: the hours the estimate priced are the hours logged, in half hours (RESTATED 2026-10-02, P18; quarters on P17).
+      const ps1 = Math.floor(P.totPS / 2 * 2) / 2;
       const w = walk(P, JOB, [{ date: '2026-09-02', activity: 'work', members: [{ name: 'Anthony Graziano', role: 'TC', hours: P.totTC },
         { name: 'Specialist 1', role: 'PS', hours: ps1 }, { name: 'Specialist 2', role: 'PS', hours: P.totPS - ps1 }] }]);
       const split = w.c.paymentSplit(P.havellinTotal);
@@ -611,6 +647,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const EST_FX = { jobId: 1, tcFee: 12000, psFee: 6000, pkgCost: 0, smf: 0, prepFee: 0, havellinTotal: 24000.25, tcRate: 150, psRate: 100,
                      discountPct: 0, fixedPrice: true, fixedAmount: 24000.25, prepFeeOnTop: true, fixedLines: true, rush: false, vendors: [],
                      prepItems: [], svc: 'cleanout', totTC: 80, totPS: 60 };
+    // (P18: a change order is in whole hours since 2026-10-02; this one was recorded on P17's day in quarters, and keeps them —
+    // priced, printed and footed to the cent as entered.)
     const CO = { id: 100, jobId: 1, description: 'Guest house', reason: 'scope_add', tcHrs: 2.25, psHrs: 1.75, createdAt: 'Oct 1, 2026',
                  clientApproved: false, clientName: '', clientAcceptedAt: '' };
     const c = sandbox({ fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE'],
@@ -629,7 +667,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
   group('⚠⚠ 6 · the Stripe link asks for exactly what the invoice says is outstanding, to the cent');
   {
-    const pr = attempt(() => E(run('cleanout', { prem: true })));
+    // RESTATED 2026-10-02 (P18), re-measured: on whole hours a Premium estate is whole dollars, so the cents come from a 3% discount
+    // ($21,679.50; a $10,839.75 deposit, $5,839.75 outstanding after a $5,000 cheque). P17 read $22,071.25, $11,035.63, $6,035.63.
+    const pr = attempt(() => E(run('cleanout', { prem: true, seed: { 'e-discount': '3' } })));
     const P = pr.ok ? pr.val : {};
     const JOB = { id: 11, hvlId: 'HVL-0111', name: 'Butler Estate', svc: 'cleanout', addr: '69 Beach Blvd', tc: 'Anthony Graziano', status: 'active',
                   won: true, premium: true, executor: 'Tripp Butler', executorRole: 'Personal Representative', executorEmail: 't@example.com',
@@ -637,13 +677,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = docs(P, JOB, []);
     const inv = attempt(() => c.invoiceHtml(c.jobs[0], 'deposit'));
     const I = inv.ok ? inv.val : {};
-    eq([I.amtDue, I.outstanding], [11035.63, 6035.63], 'fixture: the deposit invoice asks $11,035.63, of which $6,035.63 is outstanding after a $5,000 cheque');
+    eq([I.amtDue, I.outstanding], [10839.75, 5839.75], 'fixture: the deposit invoice asks $10,839.75, of which $5,839.75 is outstanding after a $5,000 cheque');
     attempt(() => c.stripePaymentLink(11, 'deposit'));
-    eq(c.__posts.map((p) => p.amount), [6035.63], '⚠⚠ the link asks for $6,035.63 — not $6,036');
-    has((c.__notices[0] || {}).msg || '', 'Creating an ACH payment link for $6,035.63', 'and the notice says so, to the cent');
+    eq(c.__posts.map((p) => p.amount), [5839.75], '⚠⚠ the link asks for $5,839.75 — not $5,840');
+    has((c.__notices[0] || {}).msg || '', 'Creating an ACH payment link for $5,839.75', 'and the notice says so, to the cent');
     const c2 = docs(P, Object.assign({}, JOB, { payments: [] }), []);
     attempt(() => c2.stripePaymentLink(11, 'deposit'));
-    eq(c2.__posts.map((p) => p.amount), [11035.63], 'with nothing received, the whole deposit, to the cent');
+    eq(c2.__posts.map((p) => p.amount), [10839.75], 'with nothing received, the whole deposit, to the cent');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════

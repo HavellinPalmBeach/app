@@ -101,7 +101,7 @@ const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'co
                 // The printed change order's rush / discount line (Q14, 2026-09-29), lifted, never stubbed.
                 'coRateModsLine', 'coRushPct', 'coRushPctFor', 'estFixedLines', 'coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid',
                 // The added-vendor picker (2026-09-30) is the directory's Property Preparation categories.
-                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'roundCents', 'isQuarterHours', 'fmtHrs'];
+                'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'roundCents', 'isWholeHours', 'fmtHrs'];
 function coCtx(est, cos, seed, jobOver) {
   const dom = domStub(seed || {});
   const said = [];
@@ -507,7 +507,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'materialsBasisNote', 'materialsPackageQuoted', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docStandardEffect', 'isFormalDoc', 'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel',
       'docLevelFloorReason', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
-    const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
+    const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'DEPT_EMAILS',
       'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
       'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'MATTER_TYPES'];
     const A = (cos) => sandbox({ fns: DOC_FNS, vars: DOC_VARS, stubs: {

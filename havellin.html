@@ -2090,8 +2090,8 @@ body.no-smf .smf-col{display:none;}
       <div class="card" id="est-declutter-card" style="margin-top:1rem;display:none;">
         <div class="sec">Pre-Prep Declutter — Concierge Hours</div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Hands-on decluttering by the concierge while the trades work around them &mdash; clearing the rooms a buyer will see. Billed hourly at the Transition Concierge rate, <strong>on top of</strong> the Home Sale Preparation Fee. Leave at 0 if the house only needs the vendors.</div>
-        <label>Concierge hours <span class="lbl-hint">estimate what it takes; 0 if none</span></label>
-        <input type="number" id="e-declutter-hrs" min="0" max="40" step="0.25" value="0" placeholder="0" oninput="calcAll()">
+        <label>Concierge hours <span class="lbl-hint">whole hours: estimate what it takes; 0 if none</span></label>
+        <input type="number" id="e-declutter-hrs" min="0" max="40" step="1" value="0" placeholder="0" oninput="calcAll()">
         <div id="e-declutter-hint" style="font-size:11px;color:var(--gray);margin-top:6px;"></div>
       </div>
     </div>
@@ -3311,9 +3311,9 @@ body.no-smf .smf-col{display:none;}
     <textarea id="co-description" style="height:80px;" placeholder="e.g. Added the guest house and pool house to scope. Client asked for the garage to be cleared as well."></textarea>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <div><label>Additional concierge hours</label>
-        <input type="number" step="0.25" id="co-tc-hrs" placeholder="e.g. 8 (negative to reduce)" oninput="updateCOHours()"></div>
+        <input type="number" step="1" id="co-tc-hrs" placeholder="e.g. 8 (negative to reduce)" oninput="updateCOHours()"></div>
       <div><label>Additional specialist hours</label>
-        <input type="number" step="0.25" id="co-ps-hrs" placeholder="e.g. 16 (negative to reduce)" oninput="updateCOHours()"></div>
+        <input type="number" step="1" id="co-ps-hrs" placeholder="e.g. 16 (negative to reduce)" oninput="updateCOHours()"></div>
     </div>
     <!-- Home Prep, and a labour job whose estimate bundles prep (Anthony, 2026-09-30; P15, P16): a change order may add
          a preparation vendor found mid-job. Shown by openChangeOrder where coPrepVendorsOn says so. -->
@@ -4263,11 +4263,11 @@ var PERROOM_REF = 18;
 var ENGINE_FLOOR = {downsizing:2, downsizing_move:3, home_cleanout:3, cleanout:3, probate:3, contested_probate:4, prep:3};
 
 // ─── DOCUMENTATION SCOPE — with or without the paperwork ─────────────────────
-// The `document` step is about a third of an estate ticket, more on probate (33% Estate Settlement,
-// 38% Probate, 39% Contested on a 3,500 sqft home at Normal priced at two specialists — re-measured
-// through calcAll on 2026-10-01 at quarter hours (P17); 32/38/38% on 2026-09-30 after Q20 took the
-// appraiser scheduling out of the step, 34/39/41% before that, and p16-screens-text.test.js measures it
-// again), and until 2026-09-04 it was
+// The `document` step is about a third of an estate ticket, more on probate (32% Estate Settlement,
+// 38% Probate, 38% Contested on a 3,500 sqft home at Normal priced at two specialists — re-measured
+// through calcAll on 2026-10-02 at whole hours, rounded up (P18), as on 2026-09-30 after Q20 took the
+// appraiser scheduling out of the step; 33/38/39% at P17's quarter hours, 34/39/41% before Q20, and
+// p16-screens-text.test.js measures it again), and until 2026-09-04 it was
 // hard-wired to the service type. Anthony: "we don't quite know yet if the attorneys are
 // going to want us to do all that work to support their workflow or if they're just going
 // to delegate to a junior associate or paralegal … I want to be flexible in the ability to
@@ -4754,10 +4754,11 @@ function computeEngineV3(sqft, rooms, svc, crew, years, docScope){
     tc += stepTC; ps += stepPS;
     if (ENGINE_ROOMLEVEL[L]) { roomTC += stepTC; roomPS += stepPS; }
   }
-  // ⚠ TO THE NEAREST QUARTER HOUR, NOT UP TO THE WHOLE HOUR (2026-10-01, P17; Anthony: "no rounding up"). These two
-  // columns feed the billed hours through labourPools, so a round-up here was a second one before labourBilled's.
-  // The day count below still rounds up: a part day is a day on the schedule.
-  tc = roundQuarter(tc); ps = roundQuarter(ps);
+  // ⚠ UP TO THE WHOLE HOUR (2026-10-02, P18; Anthony: "round estimates to full hours, and round up"), as before P17,
+  // which took these two columns to the nearest quarter hour for a day. They feed the billed hours through labourPools,
+  // and labourBilled rounds the billed figure up again; roundUpHours reads the sum at twelve significant digits first,
+  // so float noise never adds an hour. The day count below rounds up too: a part day is a day on the schedule.
+  tc = roundUpHours(tc); ps = roundUpHours(ps);
   var floor = ENGINE_FLOOR[svc] || 2;
   var days = Math.max(Math.ceil(tc/7), Math.ceil(ps/(crew*7)), floor);
   // Distribute ONLY the hands-on room work to rooms. Divide by a nominal "fully
@@ -4774,12 +4775,12 @@ function computeEngineV3(sqft, rooms, svc, crew, years, docScope){
   // garage displayed "2.4 PS" and booked 9.1 person-hours, and nothing on the
   // screen let you feel a quote building as you walked the house. Now the rows
   // reconcile with the SPECIALIST line only: once the walkthrough is complete their
-  // PS hours sum to the billed specialist hours, short only of the rounding to the quarter
-  // hour (96.4 of 96.5 on a 3,500 sqft Estate Settlement, measured 2026-10-01; 96.4 of 97 while
-  // billed hours were rounded up to the whole hour). The
+  // PS hours sum to the billed specialist hours, short only of the rounding up to the whole
+  // hour (96.4 of 97 on a 3,500 sqft Estate Settlement, re-measured 2026-10-02 (P18), as before
+  // P17; 96.4 of 96.5 while P17 billed the nearest quarter hour). The
   // concierge line never reconciles to the rows and is not meant to — its off-site
   // coordination, fixed on-site presence and move day belong to no room (the rows
-  // carry 24.4 of that job's 63.5 concierge hours). p16-screens-text.test.js measures both.
+  // carry 24.4 of that job's 65 concierge hours). p16-screens-text.test.js measures both.
   var poolCoefSum = 0;
   for (var L3 in steps) poolCoefSum += steps[L3][1];
   var poolAll = load * poolCoefSum;
@@ -6117,7 +6118,7 @@ function computeWorkingSupervisor(workPool, offsiteTC, svc, forcedPS, fixedOnsit
 // at Full on them (referenceBand), so the band can never price a house differently from the estimate it
 // sits beside — the defect the hand-typed table it replaced had in both directions (audit M11). Pure:
 // every input arrives in `k`. The rounding is the estimate's own, step for step: each pool to the tenth,
-// the billed hours to the nearest quarter hour, then priced to the cent (P17; up to the whole hour before).
+// the billed hours up to the whole hour, then priced to the cent (P18; P17 took them to the nearest quarter hour).
 //
 // labourPools — the engine's two columns plus the collections, the adjustments and the off-site adders,
 // as the work pool the crew and the concierge clear and the concierge's off-site coordination. The
@@ -6145,17 +6146,17 @@ function labourPools(eng, k) {
   return { baseTCHrs: baseTCHrs, basePSHrs: basePSHrs, adjPS: adjPS, adjTC: adjTC,
            workPool: workPool, coordTC: coordTC, colOnsiteTC: colOnsiteTC };
 }
-// labourBilled — a crew solve (computeWorkingSupervisor) as billed hours and fees. ⚠ TO THE NEAREST QUARTER HOUR
-// (2026-10-01, P17; Anthony: "let's log hours and bill them in 15min increments. no rounding up on logging or billing."): the hours are logged and billed in
-// quarters, so the estimate quotes in quarters too (roundQuarter). They were rounded UP to the whole hour, on the
-// theory that a tenth implied a precision the walkthrough could not deliver; a quarter is the unit the work is now
-// billed in, and rounding up quoted every job up to an hour per role above its own engine. The fees are taken off the
-// rounded hours, to the cent (roundCents), so hours × rate reconciles on every document. Standalone prep bills its
-// declutter hours and nothing else.
+// labourBilled — a crew solve (computeWorkingSupervisor) as billed hours and fees. ⚠ UP TO THE WHOLE HOUR (2026-10-02,
+// P18; Anthony: "round estimates to full hours, and round up. I was confused about that."), through roundUpHours: a
+// tenth implies a precision the walkthrough cannot deliver, and a whole hour is what every estimate document prints.
+// For one day (P17, 2026-10-01) these went to the nearest quarter hour, the unit the log was then kept in; the log is
+// kept in half hours now and bills what is logged, so the estimate is the only place that rounds. The fees are taken
+// off the rounded hours, to the cent (roundCents), so hours × rate reconciles on every document. Standalone prep bills
+// its declutter hours and nothing else (getDeclutterTCHrs has already taken them up to the whole hour).
 function labourBilled(sup, k) {
   var tc = k.isPrep ? (k.declutterTCHrs || 0) : sup.tcHrs;
   var ps = k.isPrep ? 0 : Math.round((sup.psHrs + (k.destPS || 0)) * 10) / 10;
-  var totTC = roundQuarter(tc), totPS = roundQuarter(ps);
+  var totTC = roundUpHours(tc), totPS = roundUpHours(ps);
   return { totTC: totTC, totPS: totPS, tcFee: roundCents(totTC * k.tcRate), psFee: roundCents(totPS * k.psRate) };
 }
 // planDays — the working days a solve takes: the crew days, then the move-management destination day on
@@ -6563,6 +6564,14 @@ var MAX_DISCOUNT_PCT = 15;
 var EST_TOLERANCE_PCT = 0.15;
 function estTolerancePctTxt(){ return Math.round(EST_TOLERANCE_PCT * 100) + '%'; }
 
+// ⚠ THE HALF-HOUR INCREMENT IS A CONTRACT TERM (2026-10-02, P18; Anthony: "yes on agreements", to this line). Hours are
+// logged in half hours (isHalfHours) and the final invoice bills what is logged, so wherever an agreement bills time it
+// says so: the standard form's §3.3 on its hourly arm and on the Home Prep arm that bills declutter hours, and the estate
+// form's §3.2 IMPORTANT paragraph on its hourly arm. The Home Prep arm that bills no hours bills them only through a
+// change order, and states the increment in that clause's own words. Never on a fixed fee, where time is not billed.
+// One sentence, read by both forms. Drafted, not reviewed: it goes to counsel with the bundle.
+var TIME_INCREMENT_TXT = 'Time is recorded and billed in half-hour increments, as worked.';
+
 // ⚠⚠ THE PREFERRED-CLIENT DISCOUNT COMES OFF THE LABOUR **INCLUDING THE EXPEDITED-DELIVERY
 // PREMIUM CHARGED ON THAT LABOUR**, and that is Anthony's arithmetic verbatim rather than an
 // interpretation of it: "If it's a hundred thousand dollar job on labor, and we apply a
@@ -6811,10 +6820,10 @@ function applyEstimateServiceMode(isPrep) {
   var _dcHint = document.getElementById('e-declutter-hint');
   if (_dcHint) {
     var _dcRate = document.getElementById('e-prem') && document.getElementById('e-prem').checked ? 185 : 150;
-    // A typed figure that is not a quarter hour is priced at the nearest quarter (getDeclutterTCHrs) and refused by
-    // Save (declutterHoursRefusal), and the hint says both, beside the box, before anybody presses Save (P17).
-    var _dcWhy = isPrep ? declutterHoursRefusal() : '';
-    _dcHint.innerHTML = (_dcWhy ? '<div style="color:var(--err-tx);font-weight:600;margin-bottom:4px;">' + _dcWhy + '</div>' : '') + (_dcHrs > 0
+    // A typed figure that is not a whole hour is priced and saved at the whole hour above it (getDeclutterTCHrs), and the
+    // hint flags that beside the box, before anybody presses Save (P18: flagged and explained; P17's Save refused it).
+    var _dcFlag = isPrep ? declutterHoursFlag() : '';
+    _dcHint.innerHTML = (_dcFlag ? '<div style="color:var(--warn-tx);font-weight:600;margin-bottom:4px;">' + _dcFlag + '</div>' : '') + (_dcHrs > 0
       ? '<strong>' + fmtHrs(_dcHrs) + ' hrs</strong> &times; ' + fmt(_dcRate) + ' = <strong>' + fmt(roundCents(_dcHrs * _dcRate)) + '</strong>, billed on top of the ' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee. These hours are logged on the Job Plan and the final invoice trues up to what is actually logged.'
       : 'No declutter hours &mdash; this engagement is the ' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee alone, and the client documents say so.');
   }
@@ -7132,10 +7141,12 @@ function calcAll() {
   if (svcKey === 'downsizing_move') {
     var _destSqft = loadedJob && loadedJob.destSqft ? (parseFloat(loadedJob.destSqft) || 0) : 0;
     var _moveStyling = document.getElementById('e-move-styling') && document.getElementById('e-move-styling').checked;
-    // To the quarter hour (P17): these are billed hours of their own, printed as the destination rows of the client
-    // estimate, and they sit inside the billed totals, so the on-site rows (the totals less these) are quarters too.
-    destTC = roundQuarter(8 + _destSqft * 0.002);
-    destPS = roundQuarter(_destSqft * 0.009 + (_moveStyling ? 8 : 0));
+    // Up to the whole hour (P18): these are billed hours of their own, printed as the destination rows of the client
+    // estimate, and they sit inside the billed totals, which are whole hours too, so the on-site rows (the totals less
+    // these) are whole and the four rows add up. They were to the tenth before P17 (9.4 printed under a whole total)
+    // and to the quarter for P17's day.
+    destTC = roundUpHours(8 + _destSqft * 0.002);
+    destPS = roundUpHours(_destSqft * 0.009 + (_moveStyling ? 8 : 0));
   }
 
   // Probate documentation is priced inside the engine (work-step model). No separate
@@ -7288,9 +7299,9 @@ function calcAll() {
 
   var svcType = document.getElementById('e-svc').value;
 
-  // Billable hours go to the NEAREST QUARTER HOUR (2026-10-01, P17; they were rounded UP to the whole hour until
-  // then). Fees are recomputed off the rounded hours, to the cent, so hours × rate always reconciles on the client
-  // estimate. labourBilled carries the rounding (the note on it); the reference band bills through it too.
+  // Billable hours go UP TO THE WHOLE HOUR (2026-10-02, P18, as before P17, which took them to the nearest quarter
+  // hour for a day). Fees are recomputed off the rounded hours, to the cent, so hours × rate always reconciles on the
+  // client estimate. labourBilled carries the rounding (the note on it); the reference band bills through it too.
   var _billed = labourBilled(_sup, _billK);
   totTC = _billed.totTC; totPS = _billed.totPS; tcFee = _billed.tcFee; psFee = _billed.psFee;
 
@@ -8692,27 +8703,30 @@ var DECLUTTER_MAX_HRS = 40;
 // to a job whose engine already priced its own — invisibly, because they land inside totTC beside
 // the engine's. Same shape as the `_volPreset` leak: a stale field that only became dangerous the
 // day something started reading it.
-// ⚠ IN QUARTER HOURS (2026-10-01, P17). The box steps by 0.25 and the estimate prices the nearest quarter, so the
-// snapshot, the client estimate's declutter row and the billed concierge hours are one figure; a typed value that is
-// not a quarter is refused by Save (declutterHoursRefusal), never silently stored. It was rounded to the tenth.
+// ⚠ IN WHOLE HOURS, ROUNDED UP (2026-10-02, P18; Anthony: "round estimates to full hours, and round up"). The box steps
+// by 1, and a typed 5.5 is priced AND saved as 6 (roundUpHours), so the snapshot, the client estimate's declutter row
+// and the billed concierge hours are one figure: the Home Prep page reads 6.0 hrs × $150 = $900 above a total that
+// counts exactly that. The hint beside the box says so before Save (declutterHoursFlag). Before P17 the box was read to
+// the tenth and billed rounded up, so the page printed 5.5 × $150 = $825 above a total that counted $900; P17 took it
+// to the nearest quarter and refused anything else on Save.
 function getDeclutterTCHrs() {
   if (currentSvc() !== 'prep') return 0;
   var el = document.getElementById('e-declutter-hrs');
   if (!el) return 0;
   var v = parseFloat(el.value);
   if (!isFinite(v) || v <= 0) return 0;
-  return roundQuarter(Math.min(DECLUTTER_MAX_HRS, v));
+  return roundUpHours(Math.min(DECLUTTER_MAX_HRS, v));
 }
-// Save's refusal, in the sentence the hint beside the box prints too: '' when the declutter box holds nothing, or a
-// whole number of quarter hours. Asked where the record is written (saveEstimateAndPreview, submitForApproval), not
-// only by the box's step, and only on a Home Prep estimate: each caller asks it inside its own prep test, since the
-// box is merely hidden on a labour job and may still hold a figure typed before the service changed.
-function declutterHoursRefusal() {
+// The flag the hint beside the box prints: '' when the box holds nothing or a whole number of hours (or more than the
+// cap, which the hint's own line prices), otherwise what the estimate prices the typed figure at. A flag, never a
+// refusal (P18: nothing needs refusing, because the figure saved is the figure priced; P17's Save and Submit refused a
+// figure that was not a quarter hour). Read by calcAll's hint only.
+function declutterHoursFlag() {
   var el = document.getElementById('e-declutter-hrs');
   var v = el ? parseFloat(el.value) : NaN;
-  if (!isFinite(v) || v <= 0 || isQuarterHours(v)) return '';
-  return 'Declutter hours are entered in quarter hours (0.25, 0.5, 0.75): ' + esc(String(el.value)) + ' is not one. '
-    + 'It is priced at ' + fmtHrs(roundQuarter(Math.min(DECLUTTER_MAX_HRS, v))) + ' until you correct it, and Save refuses it.';
+  if (!isFinite(v) || v <= 0 || v > DECLUTTER_MAX_HRS) return '';
+  var priced = roundUpHours(v);   // the figure getDeclutterTCHrs prices and the snapshot keeps
+  return priced === v ? '' : 'Estimates round up to whole hours: ' + esc(String(el.value)) + ' is priced as ' + priced + '.';
 }
 // Does this estimate bill declutter hours? Reads the SNAPSHOT, so every client document and the
 // Job Plan can ask the question about a saved estimate rather than about the live form.
@@ -10306,10 +10320,8 @@ function saveEstimateAndPreview() {
   // on "at least one prep vendor with a cost" instead of the room-scoring path below.
   var isPrepEst = (currentEstimate.svc === 'prep');
   if (isPrepEst) {
-    // Declutter hours are entered in quarter hours (P17): a figure that is not one is refused here, where the
-    // record is written, in the sentence the hint beside the box already shows.
-    var _dcRefuse = declutterHoursRefusal();
-    if (_dcRefuse) { showFB('e-fb', 'warn', _dcRefuse); return; }
+    // Declutter hours are not refused here (P18): a typed 5.5 is priced and saved as 6 (getDeclutterTCHrs), and the
+    // hint beside the box has already said so (declutterHoursFlag). P17 refused a figure that was not a quarter hour.
     // ⚠⚠ THE VENDOR TEST IS ON prepCost, NOT ON havellinTotal, SINCE 2026-09-14. Declutter
     // hours land in havellinTotal (see calcAll), so the old `havellinTotal === 0` test would let a
     // prep estimate with NO VENDORS AT ALL through on the strength of a few concierge hours — and
@@ -11167,8 +11179,10 @@ function buildPrepEstimateBody(e, job) {
     (function(){
       var _dc = estDeclutterHrs(e);
       var _rate = e.tcRate || 150;
-      // ⚠ THE ROW IS WHAT THE TOTAL BILLS (P17): the hours as quoted, to the quarter, at the rate, to the cent. The total
-      // billed the hours rounded up to the whole hour, so 5.5 hours printed $825 here above a total that counted $900.
+      // ⚠ THE ROW IS WHAT THE TOTAL BILLS: the hours as saved, at the rate, to the cent. Since P18 (2026-10-02) the hours
+      // are saved as the whole hour the estimate prices (getDeclutterTCHrs: a typed 5.5 is 6), so the row reads 6.0 hrs ×
+      // $150 = $900 above a total that counts $900. Before P17 a typed 5.5 was saved as 5.5 and billed rounded up, so
+      // this row printed $825 above a total that counted $900 (a record saved then still does); P17 billed the quarter.
       var _labour = roundCents(_dc * _rate);
       return '<div class="ce-band" style="margin-top:1.25rem;">Havellin Services</div>' +
       '<table class="ce-tbl"><tbody>' +
@@ -11406,8 +11420,9 @@ function clientEstimateHtml(e, job) {
     : roundCents(e.havellinTotalFull || (e.havellinTotal + e.discountAmt - (e.rushAmt || 0)));
   var _destTcFee = _isMove ? roundCents((e.destTC||0) * e.tcRate) : 0;
   var _destPsFee = _isMove ? roundCents((e.destPS||0) * e.psRate) : 0;
-  // ⚠ THE HOURS AS BILLED, NOT ROUNDED UP AGAIN (P17). This was Math.ceil(totTC) less the destination hours: a no-op
-  // while totTC was whole, and on a quarter-hour total (10.25) it would print 11 hours over a fee for 10.25.
+  // ⚠ THE HOURS AS BILLED, NOT ROUNDED UP AGAIN (P17). This was Math.ceil(totTC) less the destination hours. The totals
+  // and the destination rows are whole hours since P18 (roundUpHours), so these on-site rows are whole and the four rows
+  // add up to the two fees; a record saved for P17's day prints its quarters as billed.
   var _onsiteTcHrs = Math.round(((e.totTC||0) - (_isMove ? (e.destTC||0) : 0)) * 100) / 100;
   var _onsitePsHrs = Math.round(((e.totPS||0) - (_isMove ? (e.destPS||0) : 0)) * 100) / 100;
   var _onsiteTcFee = roundCents((e.tcFee||0) - _destTcFee);
@@ -12177,9 +12192,8 @@ function submitForApproval(opts) {
   var subJob = jobs.find(function(j){ return j.id === (currentEstimate && currentEstimate.jobId); });
   var blk = estimateSubmitBlocker(currentEstimate, subJob);
   if (blk) { if (!opts.silent) showFB('e-fb','warn', blk.msg); return blk; }
-  // Submit writes the estimate too, so it asks Save's quarter-hour question of the declutter box (P17).
-  var _dcRefuse = (currentEstimate && currentEstimate.svc === 'prep') ? declutterHoursRefusal() : '';
-  if (_dcRefuse) { if (!opts.silent) showFB('e-fb','warn', _dcRefuse); return { code: 'declutter', msg: _dcRefuse }; }
+  // No declutter question here since P18: the figure the estimate saves is the whole hour it priced (getDeclutterTCHrs),
+  // so there is nothing to refuse (P17 asked Save's quarter-hour question here too).
 
   // The soft arm: with the Settings requirement off, a missing note is a one-click
   // confirm rather than a refusal. It stays here rather than in the blocker because a
@@ -14423,15 +14437,16 @@ function saveChangeOrder() {
   var reason = document.getElementById('co-reason').value;
 
   if (!desc) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Describe what changed in the scope.</div>'; return; }
-  // ⚠ QUARTER HOURS, AS THEY ARE LOGGED AND BILLED (2026-10-01, P17). The boxes step by 0.25; this is the same rule
-  // where the record is written, because a change order's hours move the budget, the plan and (on a fixed price) the
-  // price the client signs, and a figure the hours log could never match would sit on all three.
-  var _coNotQ = [];
-  if (tc && !isQuarterHours(tc)) _coNotQ.push('concierge ' + esc(tcRaw));
-  if (ps && !isQuarterHours(ps)) _coNotQ.push('specialist ' + esc(psRaw));
-  if (_coNotQ.length) {
-    document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Hours are entered in quarter hours (0.25, 0.5, 0.75): '
-      + _coNotQ.join(' and ') + ' ' + (_coNotQ.length === 1 ? 'is not one' : 'are not') + '. Nothing was saved.</div>';
+  // ⚠ WHOLE HOURS, EITHER ROLE, EITHER SIGN (2026-10-02, P18; Anthony: "change orders whole hours."). A change order is
+  // an estimate of added scope, so it is in the estimate's unit, the whole hour; the boxes step by 1, and this is the
+  // same rule where the record is written, because a change order's hours move the budget, the plan and (on a fixed
+  // price) the price the client signs. P17 asked for quarter hours here. The work itself is logged in half hours.
+  var _coNotWhole = [];
+  if (tc && !isWholeHours(tc)) _coNotWhole.push('concierge ' + esc(tcRaw));
+  if (ps && !isWholeHours(ps)) _coNotWhole.push('specialist ' + esc(psRaw));
+  if (_coNotWhole.length) {
+    document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Change orders are in whole hours (1, 2, 3 …): '
+      + _coNotWhole.join(' and ') + ' ' + (_coNotWhole.length === 1 ? 'is not a whole hour' : 'are not whole hours') + '. Nothing was saved.</div>';
     return;
   }
   // ⚠ HOME PREP CARRIES CONCIERGE HOURS ONLY, and cannot go below zero (2026-09-25). The specialist box is
@@ -22589,40 +22604,52 @@ function showPanel(id, btn) {
 }
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
-// ⚠⚠ MONEY TO THE CENT, HOURS TO THE QUARTER (2026-10-01, P17). Anthony: "let's log hours and bill them in 15min
-// increments. no rounding up on logging or billing." Until then every billed hour was rounded UP to the whole hour
-// (labourBilled's Math.ceil) and every money figure was rounded to the whole dollar, so a quarter hour at $185
-// ($46.25) could not be billed, a 5.5-hour declutter printed at $825 and billed at $900, and the 50/25/25 split
-// of an odd total moved a dollar between invoices. Four rules, one definition each, read everywhere:
+// ⚠⚠ MONEY TO THE CENT (2026-10-01, P17); ESTIMATES IN WHOLE HOURS, ROUNDED UP, AND HOURS LOGGED IN HALF HOURS
+// (2026-10-02, P18). Anthony, on P17's quarter hours: "I think actually billing every 15mins is a lot of detail...we
+// are not lawyers billing $1500/hr. maybe make it thirty minutes for logging hours ... but round estimates to full
+// hours, and round up." Then: "change orders whole hours." P17 had taken the estimate's billed hours to the nearest
+// quarter and asked a quarter of every hours box; before P17 every billed hour was rounded UP to the whole hour
+// (labourBilled's Math.ceil) and every money figure to the whole dollar, so a 5.5-hour declutter printed at $825 and
+// billed at $900, and the 50/25/25 split of an odd total moved a dollar between invoices. One definition each:
 //   roundCents   — every money figure the app DERIVES (fees, the premium, the discount, the split, the balance, a
 //                  change order's price, the prep fee) is taken to the cent here and nowhere else. Half a cent rounds
 //                  AWAY FROM ZERO ("half up"), the ordinary commercial rule, on the decimal value: 1.005 is stored as
 //                  1.00499999…, and multiplying by 100 first would round it down, so the product is read back at
 //                  fifteen significant digits before rounding.
-//   roundQuarter — the estimate's billed hours go to the NEAREST quarter hour (not up): 10.12 is 10.0, 10.13 is 10.25.
-//                  Day counts still round up (a part day is a day on the schedule); those are not hours billed.
-//   isQuarterHours — the test every handler that writes hours asks (the hours log, a change order, declutter hours,
-//                  recorded coordination): a person enters hours in quarters, and anything else is refused as written.
-//                  An entry made before 2026-10-01 that is not a quarter stays as it was and is billed as logged.
+//   roundUpHours — the estimate's billed hours go UP to the whole hour, at every site that rounds them (the engine's
+//                  two columns, labourBilled, the move day, the declutter box), so every hour an estimate prints is a
+//                  whole number and the rows of every document add up. The value is read at twelve significant digits
+//                  first, so the float noise of a sum (10.000000000000002) is 10, never 11. Day counts round up too
+//                  (a part day is a day on the schedule); those are not hours billed.
+//   isHalfHours  — the test the hours log asks of every row (both concierge rows and every crew row) and recorded
+//                  coordination asks of its box: hours are logged in half hours (0.5, 1.0, 1.5 …), and anything else
+//                  is refused as written. An entry logged before 2026-10-02 in quarters (or, before 2026-10-01, in
+//                  tenths) stays as it was and is billed as logged.
+//   isWholeHours — the test a change order's hours are asked (either role, either sign): whole hours.
 //   fmt          — THE money formatter: whole dollars print as before ("$900"), and cents print whenever there are
 //                  any ("$971.25", "$1,234.50"). Every money print in the app goes through it.
-//   fmtHrs       — billed and logged hours: one decimal as before ("10.0", "10.5"), two for a quarter ("10.25"), and
-//                  an older non-quarter entry as it was logged ("2.3").
+//   fmtHrs       — billed and logged hours: one decimal ("10.0", "10.5"), two for an older quarter entry ("10.25"),
+//                  and an older entry in tenths as it was logged ("2.3").
 function roundCents(n) {
   var x = Number(n);
   if (!isFinite(x)) return 0;
   var a = Math.round(Number((Math.abs(x) * 100).toPrecision(15)));
   return (x < 0 && a ? -a : a) / 100;
 }
-function roundQuarter(h) {
+function roundUpHours(h) {
   var x = Number(h);
   if (!isFinite(x)) return 0;
-  var a = Math.round(Number((Math.abs(x) * 4).toPrecision(15)));
-  return (x < 0 && a ? -a : a) / 4;
+  // `|| 0` turns the -0 a negative part hour would give into 0. Belt and braces: no caller passes a negative (every site
+  // rounds a sum of positive hours), -0 prints as 0 everywhere, and the revert sweep's removal of it stays green (P18).
+  return Math.ceil(Number(x.toPrecision(12))) || 0;
 }
-function isQuarterHours(h) {
+function isHalfHours(h) {
   var x = Number(h);
-  return isFinite(x) && Math.abs(x * 4 - Math.round(x * 4)) < 1e-9;
+  return isFinite(x) && Math.abs(x * 2 - Math.round(x * 2)) < 1e-9;
+}
+function isWholeHours(h) {
+  var x = Number(h);
+  return isFinite(x) && Math.abs(x - Math.round(x)) < 1e-9;
 }
 function fmt(n) {
   var c = roundCents(n);
@@ -32973,7 +33000,7 @@ function buildLogTeamRows() {
         _logSelectOptionsHtml('tc', crew, tcName, 0, teamOK, tcNames, psNames) +
       '</select>' +
     '</div>' +
-    '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.25" placeholder="0.00" style="margin-top:4px;text-align:right;"' + hrsAttr + '></div>' +
+    '<div><label style="margin:0;">Hours</label><input type="number" id="log-m0-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"' + hrsAttr + '></div>' +
   '</div>';
 
   // Second TC row — shown when the estimate recommended two concierges or a second
@@ -32992,7 +33019,7 @@ function buildLogTeamRows() {
           _logSelectOptionsHtml('tc2', crew, tc2Name, 0, teamOK, tcNames, psNames) +
         '</select>' +
       '</div>' +
-      '<div><label style="margin:0;">Hours</label><input type="number" id="log-tc2-hrs" min="0" max="24" step="0.25" placeholder="0.00" style="margin-top:4px;text-align:right;"' + hrsAttr + '></div>' +
+      '<div><label style="margin:0;">Hours</label><input type="number" id="log-tc2-hrs" min="0" max="24" step="0.5" placeholder="0.0" style="margin-top:4px;text-align:right;"' + hrsAttr + '></div>' +
     '</div>';
   }
 
@@ -33019,7 +33046,7 @@ function buildLogTeamRows() {
         '<select id="log-m'+i+'-name"' + (psLocked ? ' disabled' : '') + ' onchange="setCrewPS(' + jobId + ',' + slot + ',this.value)">' +
           _logSelectOptionsHtml('ps', crew, psName, slot, teamOK, tcNames, psNames) +
         '</select>' +
-        '<input type="number" id="log-m'+i+'-hrs" title="Hours" min="0" max="24" step="0.25" placeholder="hrs" style="text-align:right;"' + hrsAttr + '>' +
+        '<input type="number" id="log-m'+i+'-hrs" title="Hours" min="0" max="24" step="0.5" placeholder="hrs" style="text-align:right;"' + hrsAttr + '>' +
       '</div>' +
     '</div>';
   }
@@ -33142,11 +33169,12 @@ function saveLogEntry() {
   var activity = document.getElementById('log-activity').value.trim();
 
   var members = [];
-  // ⚠⚠ QUARTER HOURS, REFUSED HERE AS WELL AS STEPPED IN THE BOX (2026-10-01, P17; Anthony: "let's log hours and bill them
-  // in 15min increments"). The boxes step by 0.25, but a step is a hint a keyboard ignores, so the handler that writes the
-  // record asks the same question (isQuarterHours) and names each row it refuses; nothing is written until every row is a
-  // quarter. An entry logged before this that is not a quarter stays as it was and is billed as logged.
-  var _notQuarter = [];
+  // ⚠⚠ HALF HOURS, FOR EVERYONE, REFUSED HERE AS WELL AS STEPPED IN THE BOX (2026-10-02, P18; Anthony: "maybe make it
+  // thirty minutes for logging hours (so a TC can bill 1hr, 1.5hrs or 2hrs)"). Both concierge rows and every crew row.
+  // The boxes step by 0.5, but a step is a hint a keyboard ignores, so the handler that writes the record asks the same
+  // question (isHalfHours) and names each row it refuses; nothing is written until every row is a half hour. An entry
+  // logged before this in quarter hours (P17) or tenths stays as it was and is billed as logged.
+  var _notHalf = [];
   for (var i = 0; i <= 6; i++) {
     var nEl = document.getElementById('log-m'+i+'-name');
     var hEl = document.getElementById('log-m'+i+'-hrs');
@@ -33154,7 +33182,7 @@ function saveLogEntry() {
     var name = nEl.value;
     var hrs = parseFloat(hEl.value) || 0;
     if (name && hrs > 0) {
-      if (!isQuarterHours(hrs)) _notQuarter.push(esc(name) + ' (' + esc(String(hEl.value)) + ')');
+      if (!isHalfHours(hrs)) _notHalf.push(esc(name) + ' (' + esc(String(hEl.value)) + ')');
       members.push({name: name, role: i === 0 ? 'TC' : 'PS', hours: hrs});
     }
   }
@@ -33165,15 +33193,15 @@ function saveLogEntry() {
     var tc2n = tc2NEl.value;
     var tc2h = parseFloat(tc2HEl.value) || 0;
     if (tc2n && tc2h > 0) {
-      if (!isQuarterHours(tc2h)) _notQuarter.push(esc(tc2n) + ' (' + esc(String(tc2HEl.value)) + ')');
+      if (!isHalfHours(tc2h)) _notHalf.push(esc(tc2n) + ' (' + esc(String(tc2HEl.value)) + ')');
       members.push({name: tc2n, role: 'TC', hours: tc2h});
     }
   }
 
   if (members.length === 0) { showFB('log-fb','warn','Enter at least one team member with hours.'); return; }
-  if (_notQuarter.length) {
-    showFB('log-fb','err','Hours are logged in quarter hours (0.25, 0.5, 0.75, 1.0 …). Not a quarter hour: '
-      + _notQuarter.join(', ') + '. Correct ' + (_notQuarter.length === 1 ? 'it' : 'them') + ' and save again; nothing was saved.');
+  if (_notHalf.length) {
+    showFB('log-fb','err','Hours are logged in half hours (0.5, 1.0, 1.5 …). Not a half hour: '
+      + _notHalf.join(', ') + '. Correct ' + (_notHalf.length === 1 ? 'it' : 'them') + ' and save again; nothing was saved.');
     return;
   }
 
@@ -36473,14 +36501,15 @@ function removeLogisticsLine(jobId, key) {
 //
 // Never required, never gates anything, and if nobody ever fills it in the app behaves
 // exactly as it does today. That is deliberate — it is the disposable half of this change.
-// ⚠ QUARTER HOURS HERE TOO (2026-10-01, P17). Recorded coordination is an observation and is never billed, but it is
-// hours like the log's, and a figure the log could never hold is no check on the estimate. The box steps by 0.25 and
-// each setter refuses anything else before it writes, then repaints the row back to what is on record.
+// ⚠ HALF HOURS HERE TOO, LIKE THE LOG (2026-10-02, P18; quarter hours for P17's day). Recorded coordination is an
+// observation and is never billed, but it is hours like the log's, and a figure the log could never hold is no check on
+// the estimate. The box steps by 0.5 and each setter refuses anything else before it writes, then repaints the row back
+// to what is on record.
 function _coordHrsRefusal(val) {
   if (val === '' || val == null) return '';
   var n = parseFloat(val);
-  if (!isFinite(n) || isQuarterHours(n)) return '';
-  return 'Coordination hours are recorded in quarter hours (0.25, 0.5, 0.75): ' + String(val) + ' is not one. Nothing was saved.';
+  if (!isFinite(n) || isHalfHours(n)) return '';
+  return 'Coordination hours are recorded in half hours (0.5, 1.0, 1.5 …): ' + String(val) + ' is not one. Nothing was saved.';
 }
 function setJobVendorCoordHrs(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
@@ -36510,7 +36539,7 @@ function _coordHrsField(setter, est, rec, hide) {
   var v = (rec && rec.coordHrs != null && rec.coordHrs !== '') ? rec.coordHrs : '';
   var off = v !== '' && est > 0 && Math.abs(Number(v) - est) >= 1;
   return '<span style="font-size:12px;color:var(--gray);">Coord hrs</span>' +
-    '<input type="number" step="0.25" min="0" value="' + esc(String(v)) + '" ' +
+    '<input type="number" step="0.5" min="0" value="' + esc(String(v)) + '" ' +
       'title="Optional — roughly how long coordinating this vendor actually took. Not billed; ' +
       'your logged hours already cover it. Recorded so the estimate’s figure can be checked." ' +
       'onchange="' + setter + '" style="width:64px;font-size:12px;' + _fldBg(v !== '') + '">' +
@@ -39755,7 +39784,8 @@ function exportEstimateToDrive(jobId, estSnapshot) {
     // hours plus this equals the job total.
     var _rTC = (est.rooms||[]).reduce(function(a,r){ return a + (r.tcH||0); }, 0);
     var _rPS = (est.rooms||[]).reduce(function(a,r){ return a + (r.psH||0); }, 0);
-    // To the hundredth, so the rooms plus this row are the billed total exactly now that it is in quarters (P17).
+    // To the hundredth, so the rooms plus this row are the billed total exactly (whole hours since P18; quarters on a
+    // record saved for P17's day). The room rows are the engine's tenths: this worksheet is internal, never sent.
     var _oTC = Math.max(0, Math.round(((est.totTC||0) - _rTC) * 100) / 100);
     var _oPS = Math.max(0, Math.round(((est.totPS||0) - _rPS) * 100) / 100);
     // Named by work step rather than as "coordination & logistics" — on an estate job this
@@ -39803,8 +39833,9 @@ function exportEstimateToDrive(jobId, estSnapshot) {
             }).join('') || '<tr><td colspan="3" style="padding:6px 8px;color:#888;font-style:italic;">No prep vendor lines on this estimate</td></tr>')
           + '</tbody></table>'
           // The declutter hours as the estimate BILLS them: the quoted figure, the hours billed where they differ (a
-          // record saved before 2026-10-01 rounded them up to the whole hour; one saved since bills the quarter hours
-          // quoted), and the fee on them, so the footer below adds up to the total it prints.
+          // record saved before 2026-10-01 rounded them up to the whole hour; one saved for P17's day bills the quarter
+          // hours quoted; one saved since 2026-10-02 (P18) holds the whole hour it bills, so they never differ), and the
+          // fee on them, so the footer below adds up to the total it prints.
           + (_dcWs > 0
               ? '<div style="margin-top:12px;font-size:13px;"><strong>Declutter hours (Transition Concierge):</strong> '
                 + fmtHrs(_dcWs) + ' quoted' + ((est.totTC || 0) !== _dcWs ? ', billed as ' + fmtHrs(est.totTC || 0) + ' hours' : '')
@@ -40914,7 +40945,7 @@ function probateAgreementHtml(job, est) {
   content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and third-party vendor costs based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
   content += pp(isFixedAgr
     ? bb('IMPORTANT:')+'  This engagement is billed at the fixed price stated above'+(_agrPrepOnTop ? ', together with the Home Sale Preparation Fee on the preparation vendors\' actual invoices' : '')+', not on actual hours. Any work beyond the scope described in Exhibit A requires a signed Change Order before Havellin proceeds; the fixed price does not otherwise change.'
-    : bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. If actual hours are projected to exceed the estimate by more than '+estTolerancePctTxt()+', Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
+    : bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. '+TIME_INCREMENT_TXT+' If actual hours are projected to exceed the estimate by more than '+estTolerancePctTxt()+', Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
   content += subHdr('3.3 Payment Schedule');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.6rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Payment</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Amount</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Timing &amp; Trigger</th></tr></thead><tbody>';
@@ -41574,7 +41605,7 @@ function agreementHtml(job, est) {
         // $150/hour rate card that shipped on a fee-only prep agreement until 2026-09-11, in the
         // same clause, running the other way. Both bases are stated here, and the specialist half
         // survives because it stays true: calcAll holds totPS at zero on prep unconditionally.
-        ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the Home Sale Preparation Fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(fmtHrs(_agrDcHrs)+' hours')+' ('+b(fmt(_agrDcAmt))+') on that basis. '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'
+        ? p(b('3.3 Basis of Fee.')+'  Contractor is paid on two bases for this engagement. First, the Home Sale Preparation Fee stated in Section 1.2 and Section 3.5, which is not billed hourly and does not vary with the time Contractor spends coordinating vendors. Second, '+b('Transition Concierge services at $'+tcRate+'/hour')+' for the hands-on decluttering and clearing of the Property described in the Estimate, billed on hours actually worked; the Estimate provides for '+b(fmtHrs(_agrDcHrs)+' hours')+' ('+b(fmt(_agrDcAmt))+') on that basis. '+TIME_INCREMENT_TXT+' '+b('No Property Specialist hours are billed on this engagement')+'. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'
             + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : ''))
         // ⚠ THE CARVE-OUT (2026-09-25): a change order can now add concierge hours to a vendors-only prep
         // job, and this clause said flatly that none are billed. It keeps saying so for the engagement as
@@ -41587,12 +41618,12 @@ function agreementHtml(job, est) {
         // different rates for one job. ⚠ THE CONCIERGE RATE ONLY, deliberately: the bold sentence says no
         // specialist hours are billed, and a prep change order refuses them, so a specialist rate here
         // would price work this contract rules out. Draft; in the counsel bundle.
-        : p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the Home Sale Preparation Fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Hands-on work Client asks for after signing, such as decluttering, is billed only if Client signs a Change Order under Section 3.8 stating the Transition Concierge hours; those hours are then billed as worked at Contractor\'s Transition Concierge rate of '+b('$'+tcRate+'/hour')+', in addition to the Home Sale Preparation Fee. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'))
+        : p(b('3.3 Basis of Fee.')+'  Contractor\'s fee for the Services is the Home Sale Preparation Fee stated in Section 1.2 and Section 3.5. '+b('No Transition Concierge or Property Specialist hours are billed on this engagement')+', and the fee does not vary with the time Contractor spends. Hands-on work Client asks for after signing, such as decluttering, is billed only if Client signs a Change Order under Section 3.8 stating the Transition Concierge hours; those hours are then billed as worked at Contractor\'s Transition Concierge rate of '+b('$'+tcRate+'/hour')+', in addition to the Home Sale Preparation Fee, and that time is recorded and billed in half-hour increments. Third-party vendor costs are billed to Client directly by each vendor, at cost, and are not part of Contractor\'s fee.'))
       : isFixedAgr
       ? p(b('3.3 Fixed Project Fee.')+'  The Services described in the Estimate are provided for a fixed project fee of '+b(fmt(_agrFlat))+', inclusive of Transition Concierge oversight, Property Specialist labor, coordination, and materials handling. The fee is not billed hourly and does not change based on the actual hours worked. Third-party vendor costs remain the responsibility of Client and are billed separately at cost.'
           + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in Section 3.5, which covers the coordination and site supervision of the home sale preparation vendors, is not part of the fixed project fee and is charged in addition to it.' : '')
           + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : ''))
-      : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.'
+      : p(b('3.3 Hourly and Project Rates.')+'  Transition Concierge services are billed at '+b('$'+tcRate+'/hour')+'. Property Specialist services are billed at '+b('$'+psRate+'/hour')+'.'+(job.premium ? '  <em>Premium Estate rates apply to this engagement, reflecting the elevated care, handling, and oversight required for properties containing fine art, antiques, collectibles, or high-value contents.</em>' : '  Rates may vary for complex or premium estates and will be identified in the Estimate.')+'  All rates are inclusive of on-site project oversight, client liaison, and vendor coordination.  '+TIME_INCREMENT_TXT
           + (agrPriceAdjustments(est, 'Contractor') ? '  ' + agrPriceAdjustments(est, 'Contractor') : '')))+
     p(b('3.4 Third-Party Vendors.')+'  Contractor may coordinate third-party vendors at Client\'s request or consent. Vendors will bill Client directly. Client remains solely responsible for all third-party vendor charges.')+
     // §3.5 follows SMF_PCT. The 15% Service Management Fee came off on 2026-08-02 — the

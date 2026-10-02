@@ -51,7 +51,7 @@ const FNS = [
   'buildInvoiceEmailText', 'buildInvoiceEmailHtml', 'buildInvoiceMailto', 'invoiceBalanceWords', '_emMoney',
   '_emHtml', 'bestClientGreetingName', 'firstName', 'bestClientEmail', 'mailtoBody', 'mailtoSignoff', 'invoiceEmailSubject', 'clientRecipient', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'discountOnFixedFee', 'coRushPct', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', '_agrOtherAppraisalsBy', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'
 ];
-const VARS = ['PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS',
+const VARS = ['PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
   'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES',
   'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -383,6 +383,8 @@ module.exports = function ({ group, ok, eq, has }) {
     // ⚠ RESTATED 2026-10-01 (P17, answer 6): the engine bills quarter hours and money is carried to the cent, so the
     // steps are quarter hours (80 / 80.25 / 80.5 / 80.75: $37.50 a step, $46.25 at the Premium rate) and a fixed fee
     // steps by a quarter dollar ($24,000.00 / .25 / .50 / .75): the residues that decide a split are now cents mod 4.
+    // (2026-10-02, P18: the engine bills whole hours again, rounded up; the quarter-hour steps stay, because a record saved
+    // on P17's day carries them and they are what puts an hourly total on every cents residue. Nothing here is restated.)
     const residues = {};
     ['downsizing', 'cleanout'].forEach((svc) => [false, true].forEach((fixed) => [false, true].forEach((rush) =>
       [0, 5, 15].forEach((disc) => [false, true].forEach((premium) => [0, 1, 2, 3].forEach((k) => {
@@ -452,6 +454,8 @@ module.exports = function ({ group, ok, eq, has }) {
     // ⚠ The prep estimate printed NO discount row, so a discounted declutter job's fee and hours
     // added up to more than the total printed under them (2026-09-28 audit, low).
     // RESTATED 2026-10-01 (P17, answer 6): declutter hours are quarter hours (the box refuses 5.1); 5.5 is the brief's case.
+    // (2026-10-02, P18: a declutter figure is saved as the whole hour above it now, so 5, 0 and P18's 6 are what a new record
+    // carries; the quarters stay as records saved on P17's day, which must reconcile too. 6 is driven in p18-hours.test.js.)
     [0, 5, 5.25, 5.5, 5.75].forEach((dc) => [0, 10].forEach((disc) => [9500, 9501].forEach((pc) => {
       const e = buildEst({ svc: 'prep', totTC: dc, prepItems: [{ type: 'Painting', cost: pc - 1500 }, { type: 'Cleaning', cost: 1500 }], discountPct: disc });
       checkScenario(`prep declutter=${dc} disc=${disc} vendors=${pc}`, e, JOB('prep'),

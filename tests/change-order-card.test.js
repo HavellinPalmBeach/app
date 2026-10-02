@@ -78,7 +78,7 @@ const CO_FNS = ['_coJobBasis', 'coBaselineShift', '_coMoney', 'fmt', 'coPrice', 
   'coRateBasisTxt', 'coReasonLabel', 'estFixedFee', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder',
   'openCOAcceptModal', 'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', 'saveChangeOrder',
   '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates',
-  'coRateModsLine', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'coVendorAdds', 'roundCents', 'isQuarterHours', 'fmtHrs'];
+  'coRateModsLine', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'coVendorAdds', 'roundCents', 'isWholeHours', 'fmtHrs'];
 const NOTICE_FNS = ['_docNotice', 'dashNotice', '_dashRedraw', '_jobBandHost'];
 const CO_VARS = ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE', '_dashboardJobId', '_srcLidSeq'];
 

@@ -34,7 +34,7 @@ const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'est
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
   'agrSection', 'approvedEstimateFor', 'materialsBasisNote', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
   'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf', 'escLines', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
-const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT',
+const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT',
   'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
   'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE',
   'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS',
@@ -87,7 +87,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const e = sandbox({
       fns: ['computeEngineV3', 'effectiveJobSteps', 'engineRoomWeight', 'engineIsExterior',
-            'tenureMultiplier', 'docScopeDef', 'engineRelFactor', 'roomDefault', 'roundQuarter'],
+            'tenureMultiplier', 'docScopeDef', 'engineRelFactor', 'roomDefault', 'roundUpHours'],
       vars: ['JOB_STEPS', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF', 'ENGINE_CAREFUL',
              'ENGINE_ROOMLEVEL', 'ENGINE_FLOOR', 'PERROOM_REF', 'ROOMS', 'EXTERIOR_ROOMS',
              'ROOM_WEIGHT', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'] });
@@ -113,12 +113,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the accessor refuses on every service but prep — the stale-field leak guard');
   {
     const mk = (svc, val) => {
-      const ctx = sandbox({ fns: ['getDeclutterTCHrs', 'currentSvc', 'roundQuarter'], vars: ['DECLUTTER_MAX_HRS'],
+      const ctx = sandbox({ fns: ['getDeclutterTCHrs', 'currentSvc', 'roundUpHours'], vars: ['DECLUTTER_MAX_HRS'],
         stubs: { document: domStub({ 'e-svc': svc, 'e-declutter-hrs': val }) } });
       return ctx.getDeclutterTCHrs();
     };
     eq(mk('prep', '5'), 5, 'a prep job reads the field');
-    eq(mk('prep', '4.5'), 4.5, 'to the half hour');
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: estimates in whole hours, rounded up): a typed 4.5 is priced and saved
+    // as 5. It was read to the tenth before P17 and to the quarter on P17, so 4.5 stayed 4.5 on both.
+    eq(mk('prep', '4.5'), 5, 'up to the whole hour: 4.5 is priced as 5');
     // ⚠ THE CARD IS HIDDEN ON A LABOUR JOB, NOT EMPTIED, so the value survives a re-type. Without
     // this guard those hours would be ADDED to a Home Editing job whose engine already priced its
     // own concierge time — invisibly, because they land inside totTC beside the engine's.
@@ -424,7 +426,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and the fee row. Pinned as a real function so a rename cannot leave the stub standing in for
     // something that no longer exists.
     ok(typeof fn('renderVendorGroupCards') === 'string', 'renderVendorGroupCards is real (stubbed here only)');
-    const modeFns = ['applyEstimateServiceMode', 'getDeclutterTCHrs', 'currentSvc', 'prepFeeRate', 'roundCents', 'roundQuarter', 'isQuarterHours', 'fmtHrs', 'fmt', 'declutterHoursRefusal'];
+    const modeFns = ['applyEstimateServiceMode', 'getDeclutterTCHrs', 'currentSvc', 'prepFeeRate', 'roundCents', 'roundUpHours', 'fmtHrs', 'fmt', 'declutterHoursFlag'];
     const modeVars = ['DECLUTTER_MAX_HRS', 'PREP_FEE_RATE', '_vgrpPrepMode'];
     const mode = (svc, hrs) => {
       const doc = domStub({ 'e-svc': svc, 'e-declutter-hrs': hrs });

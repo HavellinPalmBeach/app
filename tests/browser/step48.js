@@ -401,8 +401,11 @@ const PARTNERS = [{ uid: 'u-ann', partner_name: 'Ann Lowe', partner_type: 'Estat
       lacks(w, '<th>Room</th>', '⚠⚠ and no empty room table');
       // RESTATED 2026-10-01 (P17, Anthony's answer 6): billed hours are the quoted quarter hours, so 5.5 bill as 5.5 ($825; they billed
       // 6 whole hours, $900) and the total is $6,825 (it was $6,900); the "billed as" clause is said only where they differ.
-      has(w, 'Declutter hours (Transition Concierge):</strong> 5.5 quoted &times; $150/hr = $825', '⚠ the declutter hours as they bill');
-      has(w, 'Havellin Total:</strong> $6,825', 'over the total the fee and the hours make');
+      // RESTATED 2026-10-02 (P18, Anthony's answer B; re-measured on this page): estimates are whole hours, rounded up, and a typed 5.5
+      // is SAVED as 6, so the worksheet quotes and bills 6 ($900) over a $6,900 total, with no "billed as" clause.
+      has(w, 'Declutter hours (Transition Concierge):</strong> 6.0 quoted &times; $150/hr = $900', '⚠ the declutter hours as they bill');
+      lacks(w, 'billed as', 'the hours quoted are the hours billed');
+      has(w, 'Havellin Total:</strong> $6,900', 'over the total the fee and the hours make');
     });
 
     // ── G. the stale text, read off the page ──────────────────────────────────────────────────────────

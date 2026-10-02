@@ -196,7 +196,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let crew = crewOf({ confirmed: true });
     let funded = true;
     const c = sandbox({
-      fns: ['saveLogEntry', 'isCrewPlaceholder', 'roundCents', 'isQuarterHours'], vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'jobLogs'],
+      fns: ['saveLogEntry', 'isCrewPlaceholder', 'roundCents', 'isHalfHours'], vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'jobLogs'],
       stubs: {
         document: dom, jobs: [{ id: 21, status: 'active', payments: [{ stage: 'deposit', amount: 11500 }] }],
         getJobCrew: () => crew, isJobFunded: () => funded, depositTargetFor: () => 11500, depositPaidTotal: () => 0, fmt: (n) => '$' + n,

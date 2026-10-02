@@ -69,7 +69,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                    'estimateDocScope', 'svcHasDocStep', 'fmt', 'esc', 'paymentSplit',
                    'conciergePhones', 'assignedTCContact', 'samePerson', 'canonPersonName',
                    'svcLabelOf', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrSection', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docTierProduces', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
-  const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'PREP_FEE_RATE', 'SVC_LABELS', 'DECEDENT_SERVICES', '_PCT_WORDS',
+  const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'PREP_FEE_RATE', 'SVC_LABELS', 'DECEDENT_SERVICES', '_PCT_WORDS',
                     'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
                     'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'JOB_STEPS', 'ESIGN_ANCHORS', 'RUSH_PCT'];
   function agrDoc(svc, over) {

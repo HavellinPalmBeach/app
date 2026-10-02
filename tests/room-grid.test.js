@@ -139,7 +139,7 @@ module.exports = function ({ group, ok, eq }) {
     // the end. So drive the real engine and read what the job actually costs.
     const eng = sandbox({
       fns: ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'engineRoomWeight',
-            'engineIsExterior', 'tenureMultiplier', 'engineRelFactor', 'roomDefault', 'roundQuarter'],
+            'engineIsExterior', 'tenureMultiplier', 'engineRelFactor', 'roomDefault', 'roundUpHours'],
       vars: ['ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'JOB_STEPS', 'DOC_SCOPES', 'ENGINE_VOLF',
              'ENGINE_CPXF', 'ENGINE_K', 'ENGINE_CAREFUL', 'ENGINE_ROOMLEVEL', 'ENGINE_FLOOR',
              'PERROOM_REF', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'],
@@ -169,15 +169,18 @@ module.exports = function ({ group, ok, eq }) {
       'and it is 2.25x a Boat House (2.0), which is what the weight MEANS');
 
     // The load has to reach BILLABLE HOURS or none of the above is money. Measured on this
-    // job: 11.75 specialist hours for the pool house. At the 2.7 it used to carry it is 7 —
-    // so the 2026-09-18 decision is worth 4.75 PS hours on every estate with a pool house, and
+    // job: 12 specialist hours for the pool house. At the 2.7 it used to carry it is 7 —
+    // so the 2026-09-18 decision is worth 5 PS hours on every estate with a pool house, and
     // an estimator would have had no way to see the difference.
     // RESTATED 2026-10-01 (P17, Anthony's answer 6): billed hours round to the nearest quarter hour, so the
     // pool house books 11.75 hours (111.5 -> 123.25); rounded up to whole hours it booked 12 (the 2.7: 7 either way).
+    // RESTATED 2026-10-02 (P18, Anthony's answer B: "round estimates to full hours, and round up"), re-measured through
+    // the real engine: the engine's columns round up to the whole hour again, so the pool house books 12 hours once more
+    // (112 -> 124; P17's quarter hours read 111.5 -> 123.25, 11.75).
     ok(pool.totPS - none.totPS > boat.totPS - none.totPS,
       'the pool house books more specialist hours than the boat house it outweighs');
-    eq(pool.totPS - none.totPS, 11.75,
-      'it books 11.75 specialist hours here; a cabana-weighted 2.7 books 7');
+    eq(pool.totPS - none.totPS, 12,
+      'it books 12 specialist hours here; a cabana-weighted 2.7 books 7');
 
     // A pool house is not under air. If it ever stopped being exterior it would modulate the
     // sqft baseline instead of adding to it, which on a big house is a REDUCTION.

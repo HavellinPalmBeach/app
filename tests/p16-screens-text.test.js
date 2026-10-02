@@ -196,7 +196,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d = domStub({ 'e-job': '7', 'e-propval': '1500000' });
     const said = [];
     const S = attempt(() => sandbox({ fns: ['saveEstimateAndPreview', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob',
-      'matterTypeOf', 'matterDef', 'unscoredRoomNames', 'estimateRepriceRoute', 'roomScoreOf', 'roundCents', 'roundQuarter', 'isQuarterHours', 'fmtHrs', 'fmt', 'declutterHoursRefusal'].concat(TIER_FNS, ROUTE_FNS),
+      'matterTypeOf', 'matterDef', 'unscoredRoomNames', 'estimateRepriceRoute', 'roomScoreOf', 'roundCents', 'fmtHrs', 'fmt'].concat(TIER_FNS, ROUTE_FNS),
       vars: ['ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'].concat(TIER_VARS),
       stubs: { document: d, jobs: [{ id: 7, svc: 'downsizing', name: 'Pat' }], estimateStore: {}, estimateApproved: false,
         currentEstimate: { svc: 'downsizing', havellinTotal: 0, rooms: [] }, showFB: (id, k, m) => said.push({ id, k, m }) } }));
@@ -652,7 +652,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(R.estimateRepriceRoute({ id: 1, status: 'pending' }, { submitted: true }), R.ESTIMATE_OUT_FOR_APPROVAL_TXT, 'out for approval: the manager');
     // Build Estimate's save refusal on an approved estimate.
     const said = [];
-    const S = sandbox({ fns: ['saveEstimateAndPreview', 'roundCents', 'roundQuarter', 'isQuarterHours', 'fmtHrs', 'fmt', 'declutterHoursRefusal'].concat(ROUTE_FNS), vars: ['ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
+    const S = sandbox({ fns: ['saveEstimateAndPreview', 'roundCents', 'fmtHrs', 'fmt'].concat(ROUTE_FNS), vars: ['ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
       stubs: { document: domStub({ 'e-job': '7' }), jobs: [{ id: 7, approved: true }], estimateStore: { 7: { approved: true } },
                estimateApproved: true, showFB: (id, k, m) => said.push(m) } });
     S.saveEstimateAndPreview();
@@ -753,22 +753,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // bill as 5.5 ($825), where they were rounded up to 6 whole hours ($900); the discount is $82.50 and the total $6,742.50
     // (it was $90 and $6,810). The worksheet's "billed as" clause is said only where the record bills other hours than it
     // quoted — a record saved before today, whose 5.5 billed as 6.
-    eq([est.declutterTCHrs, est.totTC, est.tcFee, est.prepFee, est.discountAmt, est.havellinTotal], [5.5, 5.5, 825, 6000, 82.5, 6742.5],
-       'fixture: 5.5 quoted hours bill as 5.5 ($825), the fee is $6,000, the discount $82.50, the total $6,742.50');
+    // ⚠⚠ RESTATED 2026-10-02 (P18, Anthony's answer B; re-measured through the real engine): estimates are whole hours,
+    // rounded up, and a typed 5.5 is SAVED as 6 (getDeclutterTCHrs), so the record quotes and bills 6 ($900), the discount
+    // is $90 and the total $6,810 — the figures before P17, now with a quoted figure that matches them.
+    eq([est.declutterTCHrs, est.totTC, est.tcFee, est.prepFee, est.discountAmt, est.havellinTotal], [6, 6, 900, 6000, 90, 6810],
+       'fixture: 5.5 typed is saved and billed as 6 hours ($900), the fee is $6,000, the discount $90, the total $6,810');
     const w = worksheet(est, job) || { html: '' };
     has(w.name, 'Estimate Worksheet (INTERNAL)', 'it files as the internal worksheet');
     has(w.html, '<th>Prep vendor line</th>', '⚠⚠ it files the vendor list the estimate quoted');
     has(w.html, 'Painting &lt;b&gt;x&lt;/b&gt;', 'with each line (escaped)');
     lacks(w.html, '<th>Room</th>', '⚠⚠ and no empty room table');
-    has(text(w.html), 'Declutter hours (Transition Concierge): 5.5 quoted x $150/hr = $825', '⚠ the declutter hours as they bill');
-    lacks(text(w.html), 'billed as', 'no "billed as" when the quarter hours quoted are the hours billed');
-    const wOld = worksheet(Object.assign({}, est, { totTC: 6, tcFee: 900, discountAmt: 90, havellinTotal: 6810 }), job) || { html: '' };
-    has(text(wOld.html), 'Declutter hours (Transition Concierge): 5.5 quoted, billed as 6.0 hours x $150/hr = $900', 'a record saved before today still says it billed 6 hours');
+    has(text(w.html), 'Declutter hours (Transition Concierge): 6.0 quoted x $150/hr = $900', '⚠ the declutter hours as they bill');
+    lacks(text(w.html), 'billed as', 'no "billed as" when the whole hours quoted are the hours billed');
+    const wOld = worksheet(Object.assign({}, est, { declutterTCHrs: 5.5, totTC: 6, tcFee: 900, discountAmt: 90, havellinTotal: 6810 }), job) || { html: '' };
+    has(text(wOld.html), 'Declutter hours (Transition Concierge): 5.5 quoted, billed as 6.0 hours x $150/hr = $900', 'a record saved before P17 still says it billed 6 hours');
+    const wP17 = worksheet(Object.assign({}, est, { declutterTCHrs: 5.5, totTC: 5.5, tcFee: 825, discountAmt: 82.5, havellinTotal: 6742.5 }), job) || { html: '' };
+    has(text(wP17.html), 'Declutter hours (Transition Concierge): 5.5 quoted x $150/hr = $825', 'and one saved on P17\'s day bills the 5.5 it quoted');
     const foot = text(w.html.slice(w.html.lastIndexOf('<div style="margin-top:20px;font-size:14px;">')));
     has(foot, 'Fee rate: 30% = $6,000', 'the footer states the fee');
-    has(foot, 'Declutter: $825', 'the hours');
-    has(foot, 'Discount: -$82.50', 'the discount');
-    has(foot, 'Havellin Total: $6,742.50', 'and the total');
+    has(foot, 'Declutter: $900', 'the hours');
+    has(foot, 'Discount: -$90', 'the discount');
+    has(foot, 'Havellin Total: $6,810', 'and the total');
     // RESTATED (P17): read with the cents, and added in cents.
     const n = (s) => Math.round(Number(String(s).replace(/[^0-9.]/g, '')) * 100);
     const fee = n((/Fee rate: 30% = (\$[\d,]+(?:\.\d\d)?)/.exec(foot) || [])[1]), dc = n((/Declutter: (\$[\d,]+(?:\.\d\d)?)/.exec(foot) || [])[1]),
@@ -944,7 +949,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     if (e.ok && nums && tcs) {
       const rPS = e.val.rooms.reduce((a, r) => a + (r.psH || 0), 0), rTC = e.val.rooms.reduce((a, r) => a + (r.tcH || 0), 0);
       eq([rPS.toFixed(1), String(e.val.totPS)], [nums[1], nums[2]], '⚠ the rows\' specialist hours are what the comment says, against the billed line');
-      ok(Math.abs(e.val.totPS - rPS) < 1, 'short only of the rounding to the quarter hour (P17; the round-up to whole hours before)');
+      // RESTATED 2026-10-02 (P18): the billed figure is rounded up to the whole hour again (96.4 of 97; 96.4 of 96.5 on P17).
+      ok(Math.abs(e.val.totPS - rPS) < 1, 'short only of the rounding up to the whole hour (P18; to the nearest quarter on P17)');
       eq([rTC.toFixed(1), String(e.val.totTC)], [tcs[1] || tcs[3], tcs[2] || tcs[4]], 'and the rows carry the share of the concierge line it says');
       ok(rTC < e.val.totTC / 2, 'which never reconciles — off-site coordination and presence belong to no room');
     }

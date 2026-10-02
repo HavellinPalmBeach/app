@@ -255,7 +255,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['submitForApproval', 'estimateSubmitBlocker', 'estimateContractBlocker',
               'estimateContractMissing', 'isDecedentJob', 'matterTypeOf', 'matterDef',
               'invFiduciaryMode', 'docTierOf', 'docTierDef', 'svcHasDocStep',
-              'unscoredRoomNames', 'estimateNoteGaps', 'estimateEventStatus', 'isJobWon', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'roundQuarter', 'isQuarterHours', 'fmtHrs', 'declutterHoursRefusal'],
+              'unscoredRoomNames', 'estimateNoteGaps', 'estimateEventStatus', 'isJobWon', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'fmtHrs'],
         vars: ['ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
                'DECEDENT_SERVICES', 'REQUIRE_WALKTHROUGH_NOTES', 'JOB_STEPS'],
         stubs: {
