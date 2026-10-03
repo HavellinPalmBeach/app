@@ -561,7 +561,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
-            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'clientRecipient', 'firstName', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'clientRecipient', 'firstName', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
              'JT_ROW_DOC', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: {
@@ -653,7 +653,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'docState', '_jobTouch', '_actor', 'esignProviderKey', 'esignJobWatches',
             'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
-            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
                esignArchiveSigned() {}, ESIGN_PROVIDER_KEY: 'docusign' },

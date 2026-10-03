@@ -105,11 +105,11 @@ const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'save
   'svcFamilyOptions', 'svcFamily', 'sameSvcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson',
   'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked',
   'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', 'onReferralSourceChange', 'populateReferralPicker',
-  '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'roundCents', 'fmt'].concat(TIER_FNS, ROUTE_FNS);
+  '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'roundCents', 'fmt', 'propertySaleAsked', 'trustRecordShown', 'executorAuthField', 'coFiduciaryBlockHtml', 'jobListEntries', 'readCoFiduciaryRows', 'saveCoFiduciaryRows', 'estateAuthority', '_coFidRowNums'].concat(TIER_FNS, ROUTE_FNS);
 const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
   'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES',
   'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT',
-  '_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS);
+  '_estimateDocScope', '_estimateDocTier', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'].concat(TIER_VARS);
 
 // Open Edit Client on `job`, apply `edits` to what the browser would show, set page `state` (the build on
 // Build Estimate), press Save. `said` collects the notice, the alerts and the calcAll the save runs.
@@ -238,12 +238,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay',
       '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance',
       '_approvedPriceAbove', 'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'esc', 'dot', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'agreementChipFix', 'jobPaymentsListHtml',
-      'probatePackageCardHtml', 'probatePackageBlocker', 'probatePackageAddressee', 'roundCents', 'fmtHrs'];
+      'probatePackageCardHtml', 'probatePackageBlocker', 'probatePackageAddressee', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'trustRecordShown', 'estateTaxReturnLineHtml', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn'];
     const VARS = ['_driveFolderInFlight', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS',
       'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
-      'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice', 'PROBATE_PKG_KEY', 'ESTATE_PKG_ROUTES'];
+      'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice', 'PROBATE_PKG_KEY', 'ESTATE_PKG_ROUTES', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'];
     const render = (job, logs) => {
       const dom = domStub({});
       const r = attempt(() => {

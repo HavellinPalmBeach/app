@@ -24,8 +24,11 @@ const ESTATE_IDS = [
   'i-probate-atty-phone', 'i-probate-atty-email'
 ];
 // Facts about a COURT CASE — these stay probate-only.
+// ⚠ RESTATED 2026-10-03 (P19): 'i-probate-sale' came off this list. Anthony ("yes", 2026-10-02) asked the property-sale
+// question on a trust matter too, which has no court record to show it in, so it sits in the estate block in its own
+// cell, shown by propertySaleAsked (the court record or a trust). Its containment is asserted below, beside these.
 const PROBATE_IDS = [
-  'i-probate-case', 'i-letters-date', 'i-probate-deadline', 'i-deadline-fb', 'i-probate-sale'
+  'i-probate-case', 'i-letters-date', 'i-probate-deadline', 'i-deadline-fb'
 ];
 
 // A class-aware document. domStub returns [] from querySelectorAll, so the required-marks
@@ -84,6 +87,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // withheld from one. Measured off the same walk rather than asserted separately.
     ok(ESTATE_IDS.every((id) => blockOf(id) !== 'probate-fields'), 'no decedent fact is trapped in the probate block');
     ok(PROBATE_IDS.every((id) => blockOf(id) !== 'estate-fields'), 'no court fact has leaked into the estate block');
+    // RESTATED 2026-10-03 (P19): the sale question is asked wherever the court record OR a trust is, so it is no longer a
+    // court-case fact: it sits in the estate block, in a cell of its own that propertySaleAsked shows and hides.
+    eq(blockOf('i-probate-sale'), 'estate-fields', 'i-probate-sale sits in the estate block (P19: asked on a trust too)');
+    const cell = src.slice(src.indexOf('id="i-sale-cell"'), src.indexOf('id="i-probate-sale"'));
+    ok(cell.length > 0 && cell.length < 200, '…inside its own cell, i-sale-cell, which the toggle shows by propertySaleAsked');
   }
 
   // ⚠⚠ THE TWO COLUMNS ARE A REQUIREMENT, NOT A LAYOUT PREFERENCE, and this is what keeps
@@ -200,9 +208,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
-              'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt'],
+              'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC' ],
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],
         stubs: { document: d },
       });
       c.toggleIntakeFields();
@@ -308,9 +316,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
-              'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt'],
+              'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC' ],
+                  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],
         stubs: { document: d },
       });
       c.toggleIntakeFields();
@@ -340,8 +348,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked'],
-        vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
+        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'readCoFiduciaryRows', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', '_coFidRowNums', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'],
+        vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'MATTER_TYPES'],
         stubs: {
           document: d,
           jobs: [],
@@ -412,9 +420,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const at = src.indexOf(needle);
       ok(at > open && at < close, needle + ' moved out of the probate block — the Job Plan asks for it on Estate Settlement');
     });
-    ["txt('probate-case'", 'id="ec-probate-deadline"', 'id="ec-probate-sale"'].forEach((needle) => {
+    // RESTATED 2026-10-03 (P19): 'id="ec-probate-sale"' left this list — the sale question is asked on a trust too
+    // (propertySaleAsked), so it sits in the estate block in its own wrapper, ec-sale-fields, asserted just below.
+    ["txt('probate-case'", 'id="ec-probate-deadline"'].forEach((needle) => {
       ok(src.indexOf(needle) > pOpen, needle + ' stays probate-only');
     });
+    const saleAt = src.indexOf('id="ec-probate-sale"');
+    ok(saleAt > open && saleAt < close && src.lastIndexOf('id="ec-sale-fields"', saleAt) > open,
+       'id="ec-probate-sale" sits in the estate block, in ec-sale-fields (P19: asked on a trust too)');
 
     // The save reads them on every estate service, not in the probate branch.
     const body = src.slice(src.indexOf('function saveClientEdit('));
@@ -429,9 +442,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const at = fnBody.indexOf(k + ' ');
       ok(at > est && at < pro, k + ' is written on every estate service');
     });
-    ['job.probateCase', 'job.probateDeadline', 'job.probateSale'].forEach((k) => {
+    // RESTATED 2026-10-03 (P19): job.probateSale left this list — it is written wherever the modal asks it, the court
+    // record or a trust (propertySaleAsked), on the line asserted below.
+    ['job.probateCase', 'job.probateDeadline'].forEach((k) => {
       ok(fnBody.indexOf(k + ' ') > pro, k + ' is written only on a probate matter');
     });
+    has(fnBody, "if (propertySaleAsked(svc, _mtEc)) job.probateSale = _keep('probate-sale', job.probateSale);",
+        'job.probateSale is written where the sale question is asked: the court record or a trust');
 
     // ⚠ AND THE APPROVAL LOCK MUST NOT HOLD THEM. It exists for the three inputs that feed the
     // hours engine; holding a 706 answer would make a wrong one permanent the moment an
@@ -458,10 +475,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                     'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',
                     'isFormalDoc', 'invAppraisalThreshold', 'ecToggleProbate',
-                    'matterTypeOf', 'invFiduciaryMode', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'showHouseFlagRows', 'roundCents', 'fmt'];
+                    'matterTypeOf', 'invFiduciaryMode', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'showHouseFlagRows', 'roundCents', 'fmt', 'propertySaleAsked', 'trustRecordShown', 'executorAuthField', 'coFiduciaryBlockHtml', 'jobListEntries', 'estateAuthority'];
     const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-                     'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT', 'DOC_SCOPES'];
+                     'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT', 'DOC_SCOPES', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'];
     // ⚠ THE THREE CONTROLS THE READOUT READS ARE SEEDED, BECAUSE domStub DOES NOT PARSE MARKUP.
     // showEditClient writes one innerHTML string; a real browser then has those selects in it,
     // carrying the values the string gave them, and the stub does not. Seeding them from the job

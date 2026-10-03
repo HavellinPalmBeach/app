@@ -785,7 +785,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',
         'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote',
         'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent',
-        'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'],
+        'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord', 'estateAuthority'],
       vars: ['JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'DECEDENT_SERVICES', 'DOC_STAGE_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false, SHEETS_SYNC_URL: '' } });
     // A job closed with every step before the final recorded, so the final is the one lit step (checked below).

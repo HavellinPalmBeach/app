@@ -407,7 +407,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const dom = domStub({});
       const job = Object.assign({ status: 'active', won: true, approved: true, created: 'Sep 8, 2026', walkthrough: '2020-01-01',
                                   driveFolder: 'https://drive.google.com/drive/folders/XYZ' }, JOB, { id: 7 });
-      const c = sandbox({ fns: FNS.concat(['esc']), vars: VARS, stubs: {
+      const c = sandbox({ fns: FNS.concat(['esc', 'estateAuthority', 'jobFiduciaries', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn']), vars: VARS, stubs: {
         document: dom, setTimeout: () => 0, clearTimeout: () => {}, Intl: global.Intl,
         jobs: [job], changeOrders: opts.cos || [], contractors: [], _photoRefs: {},
         estimateStore: { 7: { estimate: Object.assign({ rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }] }, est), approved: true } } } });

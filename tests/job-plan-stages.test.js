@@ -298,7 +298,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the schedule strip on the plan header — the dashboard’s own, never a second reading of the dates');
   {
     const s = sandbox({ fns: ['planScheduleHtml', '_planScheduleStrip', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal',
-                              'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coWorkingDays', '_coPaceFix'],
+                              'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
                         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
                         stubs: { docSentAt: () => null, jobLogEntries: () => [], _todayStr: () => '2026-09-24' } });
     const est = EST({ days: 6 });

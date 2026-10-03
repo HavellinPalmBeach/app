@@ -81,7 +81,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_handoverBy', '_todayStr',
             'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments',
             // The Re-open is its own branch of the transition (2026-09-29).
-            'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents'],
+            'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents', 'estateAuthority'],
       vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'DECEDENT_SERVICES'],
       stubs: { vendorDirectory: VENDORS, alerts: [] },
     });

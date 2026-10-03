@@ -230,7 +230,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositPaidTotal', 'depositTargetFor', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
       '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'estimateOutForApproval', 'jtDraftLine',
       // P10 (merged here): the final's row waits for logged hours.
-      'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries', 'jobOnProbateTrack', 'matterDef', '_ymdLocal', '_localDateOf', 'paymentStageWord', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt']
+      'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobLogEntries', 'jobOnProbateTrack', 'matterDef', '_ymdLocal', '_localDateOf', 'paymentStageWord', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt', 'estateAuthority']
       .concat(HELP, PRICE_FNS)),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',

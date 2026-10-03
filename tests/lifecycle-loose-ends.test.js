@@ -114,8 +114,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // M5 — THE MATTER DECIDES WHETHER THERE IS A COURT, NOT THE SERVICE THAT WAS SOLD
   // ═══════════════════════════════════════════════════════════════════════════
   const M5_FNS = ['jobOnProbateTrack', 'courtRecordShown', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
-    'jobActivationBlockers', 'resolveExecutorAuth', 'inventoryDeadlineFrom', '_ymdLocal'];
-  const M5_VARS = ['MATTER_TYPES', 'DECEDENT_SERVICES', 'EXECUTOR_AUTH_OPTIONS'];
+    'jobActivationBlockers', 'resolveExecutorAuth', 'inventoryDeadlineFrom', '_ymdLocal', 'estateAuthority'];
+  const M5_VARS = ['MATTER_TYPES', 'DECEDENT_SERVICES', 'EXECUTOR_AUTH_OPTIONS', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'];
   const M = sandbox({ fns: M5_FNS, vars: M5_VARS });
 
   group('⚠⚠ M5 — jobOnProbateTrack: the matter where it is answered, the service where it is not');
@@ -155,7 +155,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(B({ svc: 'cleanout', matterType: 'probate' }).indexOf(L) >= 0, '…and so is a record carrying no answer at all');
     eq(B({ svc: 'cleanout', matterType: 'probate', executorAuth: 'received' }), [], 'with the Letters received it activates');
     eq(B({ svc: 'cleanout', matterType: 'probate', executorAuth: 'notneeded' }), [], 'and a matter needing none is not held up');
-    eq(B({ svc: 'probate', matterType: 'trust', executorAuth: 'pending' }), [], 'a trust matter is not asked for Letters, whatever the service');
+    // ⚠ RESTATED 2026-10-03 (P19): this read `eq(…, [])` — nothing held a trust matter. Anthony's call 1 made the
+    // successor trustee's Certification of Trust (§736.1017) a gate on activation the way the Letters are on probate
+    // (estateAuthority), so a trust matter is held on ITS paper. What this line pinned still holds: never the Letters.
+    ok(B({ svc: 'probate', matterType: 'trust', executorAuth: 'pending' }).indexOf(L) < 0, 'a trust matter is not asked for Letters, whatever the service');
+    eq(B({ svc: 'probate', matterType: 'trust', executorAuth: 'pending' }), ['The successor trustee’s Certification of Trust must be received'],
+       '…it is asked for the Certification of Trust instead (P19)');
     ok(B({ svc: 'probate', executorAuth: 'pending' }).indexOf(L) >= 0, 'an unanswered Probate job is asked, exactly as before');
     eq(B({ svc: 'cleanout', executorAuth: 'pending' }), [], 'an unanswered Estate Settlement is not');
   }
@@ -183,9 +188,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
     'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
-    'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'inventoryDeadlineFrom', '_ymdLocal', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt'];
+    'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'inventoryDeadlineFrom', '_ymdLocal', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt', 'propertySaleAsked', 'trustRecordShown', 'executorAuthField', 'coFiduciaryBlockHtml', 'jobListEntries', 'readCoFiduciaryRows', 'saveCoFiduciaryRows', 'estateAuthority', '_coFidRowNums'];
   const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
-    'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];
+    'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'];
   const ESTATE = { id: 7, hvlId: 'HVL-0007', name: 'Butler Estate', fname: 'Tripp', lname: 'Butler', svc: 'cleanout',
     matterType: 'probate', executor: 'Tripp Butler', deathDate: '2026-06-01', sqft: '3500', propVal: '2000000' };
   function editClient(job, seed) {
@@ -248,9 +253,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({ fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode',
         'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docTierOf', 'docTierDef',
         'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
-        'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt'],
+        'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-               'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
+               'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],
         stubs: { document: d } });
       c.toggleIntakeFields();
       return d.getElementById('probate-fields').style.display;
@@ -292,7 +297,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('M5 — the schedule strip carries the court deadline on every probate matter');
   {
     const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
-      'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
+      'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
       vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
     const d = S.jobSchedule({ id: 7, svc: 'cleanout', matterType: 'probate', status: 'won', start: '2026-10-05', probateDeadline: '2026-10-31' },
       { svc: 'cleanout', days: 6 }, '2026-09-29');
@@ -551,7 +556,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
       'workingDaysInclusive', 'coWorkingDays', '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf',
-      'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt'];
+      'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt', 'estateAuthority'];
     const TL_VARS = ['JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS',
       'ESIGN_PROVIDERS', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'EXECUTOR_AUTH_OPTIONS'];

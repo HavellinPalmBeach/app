@@ -12,6 +12,9 @@
 //   · The Trust card: the same card renamed (Trust Information, Trustee's Attorney, Trustee), with no court record and
 //     no authorization chip, because jobActivationBlockers waits on the Letters only where the estate goes through
 //     probate. The chip is held to the gate on every service and matter type.
+//     RESTATED 2026-10-03 (P19): the gate now waits on the successor trustee's Certification of Trust on a trust-only
+//     matter (Anthony's call 1, estateAuthority), so the Trust card carries THAT chip and field, and the trust's own
+//     details with the property-sale answer (propertySaleAsked); the chip is still held to the gate everywhere.
 //   · To the trustee's attorney where an email is recorded, else to the trustee; the trustee copied when the attorney
 //     is addressed, agreements@ always. Refused by name, everything missing at once, saying where each is entered.
 //   · The Trust Schedule, the tier's document and the Appraisal Worklist attached, the links as on the probate route,
@@ -316,7 +319,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  G('A · the Trust card: renamed, no court record and no authorization chip, the trust package at its foot', () => {
+  G('A · the Trust card: renamed, no court record, its Certification of Trust chip (P19), the trust package at its foot', () => {
     const html = renderDash(TRUST());
     ok(html.length > 5000, 'the real dashboard rendered (' + html.length + ')');
     const card = cardAt(html, 'Trust Information');
@@ -325,14 +328,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const t = text(card);
     has(t, 'Trustee’s Attorney Name Ann Lowe Firm Lowe & Co Phone (561) 555-0102 Email ann@lowe.law', 'the attorney block, headed for the trustee\'s attorney');
     has(t, 'Trustee Name Rex Hale Phone (561) 555-0101 Email rex@hale.example Role Successor Trustee', 'the representative block, headed Trustee');
-    ['Case number', '2026-CP-001234', 'Court deadline', 'Property sale', 'Probate Attorney', 'Executor', 'Authorization', 'blocker', 'Pending']
-      .forEach((w) => lacks(t, w, '⚠ no court record and no authorization on the Trust card: ' + w));
+    // ⚠ RESTATED 2026-10-03 (P19): 'Property sale', 'blocker' and 'Pending' came off this list. The gate now waits on the
+    // successor trustee's Certification of Trust (Anthony's call 1), so the Trust card carries that chip and field — named
+    // for the paper, never "Authorization", which is the Letters' word — and the property-sale answer is asked on a trust
+    // too (Anthony, 2026-10-02: "yes"). What the list pinned still holds: no court record and no Letters on a trust.
+    ['Case number', '2026-CP-001234', 'Court deadline', 'Probate Attorney', 'Executor', 'Authorization', 'Letters']
+      .forEach((w) => lacks(t, w, '⚠ no court record and no Letters on the Trust card: ' + w));
+    has(t, 'Trust Information Certification of Trust pending — blocker', 'its chip names the Certification of Trust (P19)');
+    has(t, 'Role Successor Trustee Certification of Trust Pending', 'and so does the field beside the trustee (P19)');
+    has(t, 'Property sale yes', 'the property-sale answer, asked on a trust since P19');
     has(t, 'Trust package', 'the package row, labelled for the trust route');
     has(t, 'Carries the Trust Schedule, Estate Inventory Report and Appraisal Worklist, with links to the photographs and the release and custody record, to ann@lowe.law.',
         'it says what it carries, and to whom, before it goes');
     has(card, 'onclick="event.stopPropagation();sendProbatePackage(7)">&#128231; Send trust package</button>', '⚠ and the send, named for the route');
-    // With no court grid above them, the two blocks sit straight under the heading rather than a grid's gap below it.
-    has(card, '<div class="d-split2" style="gap:0 24px;margin-top:0px;">', 'the blocks close up under the heading, with no court grid between');
+    // RESTATED 2026-10-03 (P19): this pinned margin-top:0px — no grid above the blocks. The trust's own details (its name,
+    // date and the trustee's acceptance, with the property sale) now sit in a grid there, so the blocks keep a grid's gap.
+    has(card, '<div class="d-split2" style="gap:0 24px;margin-top:12px;">', 'the blocks sit a grid\'s gap below the trust details (P19)');
     eq((card.match(/sendProbatePackage\(/g) || []).length, 1, 'one send on the card');
     // With no attorney recorded the row names the trustee.
     has(text(cardAt(renderDash(TRUST({ probateAttyEmail: '' })), 'Trust Information')),
@@ -374,14 +385,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['probate', 'contested_probate', 'cleanout'].forEach((svc) => ['', 'probate', 'both', 'trust', 'neither'].forEach((mt) => {
       const job = TRUST({ svc, matterType: mt, executorAuth: 'pending' });
       const html = renderDash(job);
-      const chip = html.indexOf('Authorization pending — blocker') >= 0;
+      // RESTATED 2026-10-03 (P19): the trust card's chip names its paper, the Certification of Trust; the probate card's
+      // keeps "Authorization". Either is the chip.
+      const chip = /(Authorization|Certification of Trust) pending — blocker/.test(html);
       const gate = dashRig.c.jobActivationBlockers(Object.assign({}, job, { agrSigned: true, depositReceived: true })).length > 0;
       eq(chip, gate, svc + ' / ' + (mt || 'unanswered') + ': the chip is drawn exactly where a pending authorization holds the job (' + gate + ')');
     }));
     // And it is a real gate where it is drawn: received lifts it.
     ok(!dashRig.c.jobActivationBlockers(PROBATE({ agrSigned: true, depositReceived: true, executorAuth: 'received' })).length, 'fixture: received lifts the gate');
-    eq(dashRig.c.jobActivationBlockers(TRUST({ agrSigned: true, depositReceived: true, executorAuth: 'pending' })), [],
-       '⚠ on a trust matter nothing waits on the Letters, which is why the Trust card shows no chip');
+    // RESTATED 2026-10-03 (P19): this read `[]` — nothing waited on a trust. The Certification of Trust holds a trust job
+    // now (Anthony's call 1), never the Letters, and the Trust card shows its chip for exactly that reason.
+    eq(dashRig.c.jobActivationBlockers(TRUST({ agrSigned: true, depositReceived: true, executorAuth: 'pending' })),
+       ['The successor trustee’s Certification of Trust must be received'],
+       '⚠ on a trust matter the Certification of Trust holds the job, never the Letters, which is why the Trust card shows its chip');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

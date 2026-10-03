@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
-    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'];
+    'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'];
   const EST = () => ({ svc: 'cleanout', days: 6, totTC: 11, totPS: 22, havellinTotal: 20000,
     rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3, tcH: 5, psH: 10 },
             { idx: 1, name: 'Study', vol: 3, cplx: 3, tcH: 6, psH: 12 }] });
@@ -112,7 +112,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     process.env.TZ = 'America/New_York';
     try {
       const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
-                                'docSentAt', 'docKeyFor', 'fmtDate2', 'coWorkingDays', '_coPaceFix'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
+                                'docSentAt', 'docKeyFor', 'fmtDate2', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
       const est = { svc: 'downsizing_move', days: 6 };
       const job = { id: 7, svc: 'downsizing_move', status: 'active', start: '2026-10-05', activatedOn: '2026-09-23' };
       const d = S.jobSchedule(job, est, '2026-09-23');
@@ -152,7 +152,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#3 — the hard target is tested against the start the job really had');
   {
-    const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix'],
+    const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
                         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
     const est = { svc: 'cleanout', days: 6 };
     // Target start the 21st, a hard target of the 25th — reachable on paper — but the job only
@@ -172,7 +172,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                               'depositPaidTotal', 'isAgreementSigned', 'agreementSignature', 'jobCloseBlockers', 'unratedVendorsForJob',
                               '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
                               // The Re-open is its own branch of the transition (2026-09-29).
-                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents'],
+                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents', 'estateAuthority'],
                         vars: ['JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
                         stubs: { _todayStr: () => '2026-09-23', fmtDate2: (d) => 'D:' + d, approvedBy: 'Anthony Graziano',
                                  confirm: (m) => { asked.push(m); return T.__answer; } } });

@@ -67,10 +67,10 @@ const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'save
   'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById',
   'svcFamilyOptions', 'svcFamily', 'sameSvcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName',
   'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked',
-  'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', 'onReferralSourceChange', 'populateReferralPicker', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt'];
+  'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', 'onReferralSourceChange', 'populateReferralPicker', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt', 'propertySaleAsked', 'trustRecordShown', 'executorAuthField', 'coFiduciaryBlockHtml', 'jobListEntries', 'readCoFiduciaryRows', 'saveCoFiduciaryRows', 'estateAuthority', '_coFidRowNums'];
 const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
-  'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];
+  'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'];
 
 const CARLA = { name: 'Carla Mendes', role: 'TC', status: 'active' };
 const PARTNERS = [
@@ -300,7 +300,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const C = sandbox({ fns: ['resetIntakeFields', 'clearHouseFlagInputs', 'onHouseFlagToggle', '_houseFlagRowClass',
       'onReferralSourceChange', 'referralSourceKind', 'populateReferralPicker', 'referralPartnerOptionsHtml', 'jobRefersToPartner',
       'referralIdOf', 'lookupReferralById', 'paintDateChainFlag', 'dateChainFlagHtml', 'dateChainConflicts', 'paintAddressMatch',
-      'jobsAtAddress', 'normStreetAddr', 'esc'],
+      'jobsAtAddress', 'normStreetAddr', 'esc', 'buildCoFiduciaryBlock', 'coFiduciaryBlockHtml'],
       vars: ['INTAKE_FIELDS', 'INTAKE_FIELD_DEFAULTS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'REFERRAL_SOURCES', '_ADDR_ABBR'],
       stubs: { document: d, referralDirectory: PARTNERS, REFERRAL_SYNC_URL: '', jobs: [], toggleIntakeFields() {} } });
     C.resetIntakeFields();

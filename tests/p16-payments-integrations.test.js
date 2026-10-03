@@ -748,7 +748,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
         'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
         'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'paymentLive', 'isRefundRecord',
-        'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', '_localDateOf', '_ymdLocal', 'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'estDeclutterHrs', 'roundCents', 'fmtHrs'],
+        'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', '_localDateOf', '_ymdLocal', 'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'estDeclutterHrs', 'roundCents', 'fmtHrs', 'estateAuthority'],
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual', REQUIRE_WALKTHROUGH_NOTES: false } });
     const rj = Object.assign({ name: 'Butler', created: 'Sep 8, 2026', svc: 'cleanout', status: 'won', walkthrough: '2020-01-01', approved: true, won: true,

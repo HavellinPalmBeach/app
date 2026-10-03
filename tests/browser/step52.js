@@ -196,7 +196,11 @@ const UPLOADS = [], PDFS = [], SHARES = [], DRAFTS = [];
       has(card, 'Trustee’s Attorney', 'the attorney block, headed for the trustee\'s attorney');
       has(card, 'Ann Lowe', 'with the attorney recorded');
       has(card, 'Successor Trustee', 'and the trustee, with their role');
-      ['Case number', '2026-CP-009961', 'Court deadline', 'Authorization', 'blocker'].forEach((w) => lacks(card, w, '⚠ no court record or authorization chip on the Trust card: ' + w));
+      // RESTATED 2026-10-03 (P19): 'blocker' came off this list. The successor trustee's Certification of Trust is a gate on
+      // a trust job since P19 (Anthony's call 1), so the Trust card carries its chip, named for the paper — never
+      // "Authorization", which is the Letters' word and stays off. No court record, as before.
+      ['Case number', '2026-CP-009961', 'Court deadline', 'Authorization'].forEach((w) => lacks(card, w, '⚠ no court record or Letters chip on the Trust card: ' + w));
+      has(card, 'Certification of Trust pending — blocker', 'its chip names the Certification of Trust (P19)');
       has(card, 'Trust package', 'the row is labelled for the trust route');
       has(card, 'Carries the Trust Schedule, Estate Inventory Report and Appraisal Worklist', 'it says what it carries before it goes');
       has(card, 'to ann@lowe.law.', 'and to whom');

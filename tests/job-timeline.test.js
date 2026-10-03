@@ -66,10 +66,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
       'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'
-    , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
+    , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'],
     // The short names the horizontal track uses. A top-level var, so the sandbox has to
     // be told about it — without it `row()` throws and every check in the file is lost.
-    vars: ['EXECUTOR_AUTH_OPTIONS', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
+    vars: ['EXECUTOR_AUTH_OPTIONS', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],
   });
 
   // ⚠ The slice is real: it starts at the function and runs thousands of characters.

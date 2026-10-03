@@ -1592,16 +1592,25 @@ body.no-smf .smf-col{display:none;}
                Edit Client builds its own from the same list. This <select> ships EMPTY on
                purpose: a second hardcoded copy is how the two forms come to offer different
                answers to one question. -->
-          <div class="gate-cell">
-            <label>Letters of Administration</label>
+          <!-- ⚠ THE PAPER FOLLOWS THE MATTER (P19, 2026-10-03): the label and the hint are executorAuthField's, painted by
+               toggleIntakeFields as the matter type below changes — the Letters of Administration on the probate track, the
+               successor trustee's Certification of Trust on a trust-only matter, and no control at all where the matter
+               has no paper (Neither) or is not answered yet. The answer stays job.executorAuth. -->
+          <div class="gate-cell" id="i-executor-auth-cell">
+            <label id="i-executor-auth-lbl">Letters of Administration</label>
             <select id="i-executor-auth"></select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Leave <em>Pending</em> unless a certified copy is already in hand. On probate the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.</div>
+            <div id="i-executor-auth-hint" style="font-size:10px;color:var(--gray);margin-top:2px;">Leave Pending unless a certified copy is already in hand. On probate the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.</div>
           </div>
         </div>
         <div class="row">
           <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" oninput="formatPhone(this)" maxlength="14"></div>
           <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
         </div>
+        <!-- ⚠ EVERY CO-REPRESENTATIVE (P19, Anthony's call 4): the block is coFiduciaryBlockHtml's, the one builder Edit
+             Client draws too, filled at load and by the reset (buildCoFiduciaryBlock), and saved with the new job through
+             the record list's writer (jobListPut). A row with nothing typed is no one; anything typed needs a name. -->
+        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Co-representatives <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(a co-executor, co-personal representative or co-trustee who serves with the representative)</span></div>
+        <div id="i-cofid-block"></div>
       </div>
       <!-- ⚠⚠ THESE ARE FACTS ABOUT A DECEDENT, SO THEY BELONG ON ALL THREE DECEDENT
            SERVICES — Estate Settlement, Probate and Contested Probate (isDecedentJob).
@@ -1613,7 +1622,8 @@ body.no-smf .smf-col{display:none;}
            rendering into a div nobody could see; and it carried no date of death, although
            every valuation on an estate schedule is measured at one (estateValueDate).
            What stays probate-only below is the COURT record and nothing else: the case
-           number, the Letters, the §733.604 clock, the sale question.
+           number, the Letters, the §733.604 clock. (The sale question left it in P19: a
+           trust matter is asked it too, from its own cell here — propertySaleAsked.)
            ⚠ The attorney keys stay `i-probate-atty-*` / job.probateAtty* deliberately —
            twenty-odd readers and every saved job are keyed on them, and a rename here buys
            a label. Only the heading moved, to the name the Job Plan already uses. -->
@@ -1646,7 +1656,16 @@ body.no-smf .smf-col{display:none;}
             <select id="i-doc-tier" onchange="onDocGateChange()"></select>
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal? And do you want appraisals arranged?</em> This is the <strong>deliverable the agreement promises</strong>; it also seeds the estimate&rsquo;s Documentation scope, which prices it, and the walkthrough can still override that there. Leave it blank only if they genuinely have not decided.</div>
           </div>
-          <div></div>
+          <!-- ⚠ ASKED ON A TRUST AS ON A COURT MATTER (P19; Anthony, 2026-10-02: "yes"). It sat in #probate-fields, which a
+               trust matter never shows; propertySaleAsked shows it wherever the court record or a trust is. -->
+          <div class="gate-cell" id="i-sale-cell" style="display:none;"><label>Property sale required?</label>
+            <select id="i-probate-sale">
+              <option value="">Select</option>
+              <option value="yes">Yes &mdash; property must be sold</option>
+              <option value="no">No &mdash; heirs retaining property</option>
+              <option value="maybe">Under discussion</option>
+            </select>
+          </div>
         </div>
         <div class="sec" style="margin:12px 0 6px;font-size:11px;">Estate Attorney <span id="i-atty-req-note" style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(all fields required)</span></div>
         <div class="row">
@@ -1720,14 +1739,22 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div class="row">
           <div><label>§733.604 inventory deadline</label><input type="date" id="i-probate-deadline" oninput="this.dataset.userEdited='1'"><div id="i-deadline-fb" class="fb"></div></div>
-          <div><label>Property sale required?</label>
-            <select id="i-probate-sale">
-              <option value="">Select</option>
-              <option value="yes">Yes &mdash; property must be sold</option>
-              <option value="no">No &mdash; heirs retaining property</option>
-              <option value="maybe">Under discussion</option>
-            </select>
-          </div>
+          <div></div>
+        </div>
+      </div>
+      <!-- ⚠ THE TRUST ITSELF (P19, 2026-10-03): asked wherever the matter holds a trust — Trust, and Both — by
+           trustRecordShown, which toggleIntakeFields reads as the matter type changes. Optional: what the successor
+           trustee's Certification of Trust states, and a card shows a blank as not recorded. -->
+      <div id="trust-fields" style="display:none;">
+        <div class="divider"></div>
+        <div class="sec" style="margin-bottom:6px;">Trust Details <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(from the Certification of Trust; optional)</span></div>
+        <div class="row">
+          <div><label>Name of the trust</label><input type="text" id="i-trust-name" placeholder="e.g. The Adler Family Revocable Trust"></div>
+          <div><label>Trust dated</label><input type="date" id="i-trust-date"></div>
+        </div>
+        <div class="row">
+          <div><label>Successor trustee accepted</label><input type="date" id="i-trustee-accepted"></div>
+          <div></div>
         </div>
       </div>
       <div class="divider"></div>
@@ -6363,6 +6390,22 @@ function jobOnProbateTrack(job, svcKey) {
 function courtRecordShown(svc, matter) {
   return svc === 'probate' || svc === 'contested_probate' || jobOnProbateTrack({ svc: svc, matterType: matter });
 }
+// ⚠ WHERE THE TRUST ITSELF IS RECORDED (P19, 2026-10-03): its name, the date of the instrument and the day the successor
+// trustee accepted (job.trustName, trustDate, trusteeAcceptedOn), asked wherever the matter holds a trust — Trust, and
+// Both, whose pour-over will pours into one — off the catalogue's own `trust` flag, never a matter name. Optional, so it
+// is not in clientMissingFields; a card shows a blank as not recorded. Read by Client Intake (render and toggle), Edit
+// Client (render, toggle and save) and the dashboard's card, and by propertySaleAsked below.
+function trustRecordShown(svc, matter) {
+  var d = matterDef({ svc: svc, matterType: matter });
+  return !!(d && d.trust);
+}
+// ⚠ WHERE THE PROPERTY-SALE QUESTION IS ASKED (P19; Anthony, 2026-10-02: "yes" to asking it on trusts). It lived in the
+// court record alone, which a trust matter never shows, so a successor trustee selling the house had nowhere to say so.
+// Asked wherever the court record is (courtRecordShown) or a trust is (trustRecordShown); the answer stays
+// `job.probateSale`, the key every reader already uses. Read by both forms (render, toggle, save) and by the card.
+function propertySaleAsked(svc, matter) {
+  return courtRecordShown(svc, matter) || trustRecordShown(svc, matter);
+}
 
 // ⚠⚠ THE PROBATE ROWS — one predicate, read by the on-screen summary, the workbook payload and
 // nothing else yet. Fla. Stat. §733.604 is a filing deadline in a probate proceeding, Letters of
@@ -9058,6 +9101,21 @@ function toggleIntakeFields() {
   // matter had nowhere to record its case. The matter select repaints this on change.
   var pf = document.getElementById('probate-fields');
   if (pf) pf.style.display = courtRecordShown(svc, (document.getElementById('i-matter-type') || {}).value || '') ? 'block' : 'none';
+  // ⚠ WHAT FOLLOWS THE MATTER TYPE, AS IT CHANGES (P19): the trust itself wherever the matter holds one
+  // (trustRecordShown), the property-sale question wherever the court record or a trust is (propertySaleAsked), and the
+  // authority control's paper — its label and hint — or no control where the matter has none (executorAuthField).
+  var _mtI = (document.getElementById('i-matter-type') || {}).value || '';
+  var tfI = document.getElementById('trust-fields');
+  if (tfI) tfI.style.display = trustRecordShown(svc, _mtI) ? 'block' : 'none';
+  var scI = document.getElementById('i-sale-cell');
+  if (scI) scI.style.display = propertySaleAsked(svc, _mtI) ? '' : 'none';
+  var eafI = executorAuthField(svc, _mtI);
+  var acI = document.getElementById('i-executor-auth-cell');
+  if (acI) acI.style.display = eafI.show ? '' : 'none';
+  var alI = document.getElementById('i-executor-auth-lbl');
+  if (alI && eafI.show) alI.textContent = eafI.label;
+  var ahI = document.getElementById('i-executor-auth-hint');
+  if (ahI && eafI.show) ahI.textContent = eafI.hint;
   // ⚠ EVERYTHING THAT IS A FACT ABOUT A DECEDENT RATHER THAN ABOUT A COURT CASE — date of
   // death, who builds the inventory, and the two documentation gates. These sat inside
   // #probate-fields until 2026-09-21, so an Estate Settlement was asked none of them and was
@@ -9170,6 +9228,14 @@ function clientMissingFields(d) {
     if (!t('executorEmail')) m.push('Authorized rep email');
     if (!t('deathDate'))     m.push('Date of death');
     if (!t('matterType'))    m.push('How this estate is being administered');
+    // Every co-representative row with anything typed needs a name (P19): a nameless entry is nobody. A row with
+    // nothing typed is ignored, and the trust's own details are optional (trustRecordShown).
+    (Array.isArray(d.coFiduciaries) ? d.coFiduciaries : []).forEach(function (c, i) {
+      if (!c || c.voidedAt) return;
+      var nm = String(c.name == null ? '' : c.name).trim();
+      if (!nm && (String(c.role || '').trim() || String(c.phone || '').trim() || String(c.email || '').trim()))
+        m.push('Co-representative ' + (i + 1) + '’s name');
+    });
   }
   if (d.svc === 'probate' || d.svc === 'contested_probate') {
     if (!t('probateCase'))      m.push('Probate case number');
@@ -9210,6 +9276,13 @@ function saveIntake() {
 
   var isEstate = isDecedentJob(null, svc);
   var _iv = function(id){ var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
+  // The co-representatives typed into the rows, an estate only: rows left behind by switching to a living service
+  // are hidden with the estate block and never saved (P19).
+  var _coForm = isEstate ? readCoFiduciaryRows('i') : null;
+  // The trust itself and the sale answer are read where the form ASKS them (trustRecordShown, propertySaleAsked):
+  // a row the matter does not ask is not read off the form, as with the house checklist.
+  var _mtSave = _iv('i-matter-type');
+  var _trustAsked = trustRecordShown(svc, _mtSave);
   // The one required-field rule, shared with Edit Client (clientMissingFields; its notes say why
   // each field is required and why the concierge is not).
   var missing = clientMissingFields({
@@ -9221,7 +9294,8 @@ function saveIntake() {
     matterType: _iv('i-matter-type'), probateCase: _iv('i-probate-case'),
     probateAttyFname: _iv('i-probate-atty-fname'), probateAttyLname: _iv('i-probate-atty-lname'),
     probateAttyFirm: _iv('i-probate-atty-firm'), probateAttyPhone: _iv('i-probate-atty-phone'),
-    probateAttyEmail: _iv('i-probate-atty-email')
+    probateAttyEmail: _iv('i-probate-atty-email'),
+    coFiduciaries: _coForm ? _coForm.rows : []
   });
 
   if (missing.length > 0) {
@@ -9268,7 +9342,11 @@ function saveIntake() {
     executor: (function(){ var f=document.getElementById('i-executor-fname'); var l=document.getElementById('i-executor-lname'); return f&&l ? (f.value.trim()+' '+l.value.trim()).trim() : ''; })(),
     executorPhone: document.getElementById('i-executor-phone') ? document.getElementById('i-executor-phone').value : '',
     executorEmail: document.getElementById('i-executor-email') ? document.getElementById('i-executor-email').value : '',
-    probateSale: document.getElementById('i-probate-sale') ? document.getElementById('i-probate-sale').value : '',
+    probateSale: propertySaleAsked(svc, _mtSave) ? _iv('i-probate-sale') : '',
+    // The trust itself (P19): optional, read where the matter holds a trust.
+    trustName:         _trustAsked ? _iv('i-trust-name') : '',
+    trustDate:         _trustAsked ? _iv('i-trust-date') : '',
+    trusteeAcceptedOn: _trustAsked ? _iv('i-trustee-accepted') : '',
     // ⚠ ASKED HERE FROM 2026-09-22, AND RESOLVED RATHER THAN STORED RAW. Until then this was a
     // ternary over an `i-executor-auth` the form has never rendered, so it always produced
     // 'pending' while looking like a field somebody could fill in. It goes through
@@ -9307,6 +9385,9 @@ function saveIntake() {
   job.updatedAt = Date.now();
   saveJobs();
   syncJobToSheets(job);
+  // Each co-representative through the record list's own writer (P19): an entry the sheet merges on its id, stamped
+  // as a person's edit. The outbox keeps the newest copy of one job, so the extra syncs go out as one write.
+  saveCoFiduciaryRows(job, _coForm);
   populateAgrSelect && setTimeout(populateAgrSelect, 100);
 
   // Auto-create Drive job folder
@@ -9695,6 +9776,137 @@ function buildExecutorRoleOptions() {
   var el = document.getElementById('i-executor-role');
   if (el) el.innerHTML = executorRoleOptionsHtml('');
 }
+
+// ⚠⚠ THE AUTHORITY CONTROL NAMES THE PAPER THE MATTER HAS — ONE ANSWER, BOTH FORMS (P19, 2026-10-03). Intake's control
+// and Edit Client's were labelled "Letters of Administration" whatever the matter, so a successor trustee was asked for
+// Letters no court will ever issue. The paper is estateAuthority's, read off the two values the form is holding: the
+// Letters of Administration on the probate track, the Certification of Trust on a trust-only matter. Where it answers
+// nothing (Neither, or an Estate Settlement whose matter is not answered yet) the control is not shown, so no paper the
+// matter does not have is ever named, and nothing waits on one there (jobActivationBlockers asks the same rule). Hidden,
+// never removed: the answer stays job.executorAuth, and a matter answered later shows the control again with it.
+function executorAuthField(svc, matter) {
+  var a = estateAuthority({ svc: svc, matterType: matter });
+  return a ? { show: true, label: a.doc, hint: ESTATE_AUTHORITY_WORDS[a.key].hint } : { show: false, label: '', hint: '' };
+}
+
+// ═══ CO-REPRESENTATIVES ON BOTH CLIENT FORMS (P19, 2026-10-03; Anthony's call 4: record every co-executor and co-trustee) ═══
+// The representative stays where intake has always put them (job.executor and its siblings, which twenty-odd readers
+// use); everyone who serves with them is an entry on job.coFiduciaries, a record list the sheet merges entry by entry
+// (JOB_RECORD_LISTS), written only through jobListPut and taken off only through jobListRemove (a stamped removal).
+// jobFiduciaries reads them back, the representative first. ONE block for both forms, coFiduciaryBlockHtml:
+//   `<p>-cofid-rows`  the rows. `data-rows` lists the row numbers on screen, in order; `data-next` the next number, so a
+//                     number is never reused; `data-removed` the ids of recorded co-representatives taken off with ✕
+//                     (asked first, recorded by the save, so Cancel keeps them)
+//   `<p>-cofid-<n>`   one row; `data-id` is the entry's id where the row was drawn from the record
+//   `<p>-cofid-<n>-name|role|phone|email`  its controls; the role picker is executorRoleOptionsHtml, the one role list
+// Never on a living job: both forms draw it inside the estate block, and both saves read it on an estate only. A row with
+// nothing typed is no one; anything typed needs a name (clientMissingFields, the one required-field rule).
+function _coFidRowHtml(p, n, rec) {
+  rec = rec || {};
+  var ec = p === 'ec';
+  var id = function (k) { return p + '-cofid-' + n + '-' + k; };
+  var lbl = function (t, k, req) {
+    return ec ? '<div class="dfl">' + t + (req ? '<span style="color:#A32D2D;"> *</span>' : '') + '</div>'
+              : '<label for="' + id(k) + '">' + t + (req ? ' <span style="color:#A32D2D;font-weight:700;">*</span>' : '') + '</label>';
+  };
+  // Edit Client's controls carry the modal's own inline style; intake's take the form's.
+  var st = ec ? ' style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"' : '';
+  return '<div class="cofid-row" id="' + p + '-cofid-' + n + '"' + (rec.id ? ' data-id="' + esc(String(rec.id)) + '"' : '')
+    + ' style="border:0.5px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:8px;">'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:6px 14px;">'
+    + '<div style="min-width:0;">' + lbl('Name', 'name', true) + '<input type="text" id="' + id('name') + '" value="' + esc(rec.name || '') + '" placeholder="Full name"' + st + '></div>'
+    + '<div style="min-width:0;">' + lbl('Role', 'role') + '<select id="' + id('role') + '"' + st + '>' + executorRoleOptionsHtml(rec.role || '') + '</select></div>'
+    + '<div style="min-width:0;">' + lbl('Phone', 'phone') + '<input type="tel" id="' + id('phone') + '" value="' + esc(rec.phone || '') + '" oninput="formatPhone(this)" maxlength="14"' + st + '></div>'
+    + '<div style="min-width:0;">' + lbl('Email', 'email') + '<input type="email" id="' + id('email') + '" value="' + esc(rec.email || '') + '"' + st + '></div>'
+    + '</div>'
+    + '<button type="button" class="btn-s" style="font-size:10.5px;padding:2px 9px;margin-top:6px;" onclick="removeCoFiduciaryRow(\'' + p + '\',' + n + ')">&#10005; Remove</button>'
+    + '</div>';
+}
+function coFiduciaryBlockHtml(p, recs) {
+  var list = (recs || []).filter(function (r) { return r && r.id !== undefined && r.id !== null && r.id !== '' && !r.voidedAt; });
+  return '<div id="' + p + '-cofid-rows" data-rows="' + list.map(function (r, n) { return n; }).join(',') + '" data-next="' + list.length + '" data-removed="">'
+    + list.map(function (r, n) { return _coFidRowHtml(p, n, r); }).join('') + '</div>'
+    + '<button type="button" class="btn-s" id="' + p + '-cofid-add" onclick="addCoFiduciaryRow(\'' + p + '\')">+ Add a co-representative</button>'
+    + '<div style="font-size:10px;color:var(--gray);margin-top:4px;line-height:1.5;">Each one approves the releases with the representative. A DocuSign envelope goes to the representative alone: each co-representative signs the agreement on paper.</div>';
+}
+// Intake's block, drawn empty at load and again by the reset.
+function buildCoFiduciaryBlock() {
+  var el = document.getElementById('i-cofid-block');
+  if (el) el.innerHTML = coFiduciaryBlockHtml('i', []);
+}
+function _coFidRowNums(host) {
+  return String((host && host.dataset && host.dataset.rows) || '').split(',')
+    .filter(function (s) { return s !== ''; }).map(Number);
+}
+// A new, empty row at the foot. ⚠ Appended, never by rewriting the block: an innerHTML redraw destroys what is typed in
+// the rows above it.
+function addCoFiduciaryRow(p) {
+  var host = document.getElementById(p + '-cofid-rows');
+  if (!host) return null;
+  var nums = _coFidRowNums(host);
+  var n = Math.max(Number((host.dataset && host.dataset.next) || 0), nums.length ? Math.max.apply(null, nums) + 1 : 0);
+  var wrap = document.createElement('div');
+  wrap.innerHTML = _coFidRowHtml(p, n, null);
+  host.appendChild(wrap);
+  host.dataset.next = String(n + 1);
+  host.dataset.rows = nums.concat([n]).join(',');
+  var nm = document.getElementById(p + '-cofid-' + n + '-name');
+  if (nm && nm.focus) nm.focus();
+  return n;
+}
+// ✕ on a row. A recorded co-representative is asked about first, and the removal waits for the save (Cancel keeps
+// them); a row nobody has saved yet simply goes.
+function removeCoFiduciaryRow(p, n) {
+  var host = document.getElementById(p + '-cofid-rows');
+  if (!host) return false;
+  var row = document.getElementById(p + '-cofid-' + n);
+  var id = String((row && row.dataset && row.dataset.id) || '');
+  if (id) {
+    var nm = String((document.getElementById(p + '-cofid-' + n + '-name') || {}).value || '').trim();
+    if (!confirm('Remove ' + (nm || 'this co-representative') + ' from the co-representatives on this estate?\n\n'
+        + 'It is recorded when you press Save Changes; Cancel keeps them.')) return false;
+    host.dataset.removed = String(host.dataset.removed || '').split(',').filter(Boolean).concat([id]).join(',');
+  }
+  host.dataset.rows = _coFidRowNums(host).filter(function (x) { return x !== n; }).join(',');
+  var el = row;
+  if (el && el.parentNode && el.parentNode !== host && el.parentNode.parentNode === host) el = el.parentNode;   // a row added on the page sits in its own wrapper
+  if (el && el.parentNode) el.parentNode.removeChild(el);
+  return true;
+}
+// What the form holds: every row on screen, as typed (trimmed), and the recorded ids taken off. null where the form did
+// not draw the block, which the saves read as "keep what the record holds".
+function readCoFiduciaryRows(p) {
+  var host = document.getElementById(p + '-cofid-rows');
+  if (!host) return null;
+  var v = function (n, k) { var el = document.getElementById(p + '-cofid-' + n + '-' + k); return el ? String(el.value || '').trim() : ''; };
+  return {
+    rows: _coFidRowNums(host).map(function (n) {
+      var row = document.getElementById(p + '-cofid-' + n);
+      return { n: n, id: String((row && row.dataset && row.dataset.id) || ''), name: v(n, 'name'), role: v(n, 'role'), phone: v(n, 'phone'), email: v(n, 'email') };
+    }),
+    removed: String((host.dataset && host.dataset.removed) || '').split(',').filter(Boolean)
+  };
+}
+// THE ONE WRITER for both forms, run after the save's own refusals have passed. Each change is a person's edit through
+// the record list (jobListPut, jobListRemove): stamped on the entry's own key, saved and synced. ⚠ ONLY WHAT CHANGED is
+// written: a row the person did not touch is not put again, because stamping a key this device merely carried would let
+// its copy beat another device's newer edit of that co-representative. A row drawn from an entry another device has
+// since removed is left removed. Returns how many entries it wrote.
+function saveCoFiduciaryRows(job, form) {
+  if (!job || !form) return 0;
+  var n = 0;
+  (form.removed || []).forEach(function (id) { if (jobListRemove(job, 'coFiduciaries', id)) n++; });
+  (form.rows || []).forEach(function (r) {
+    if (!r.name) return;
+    var cur = r.id ? jobListGet(job, 'coFiduciaries', r.id) : null;
+    if (r.id && !cur) return;
+    if (cur && String(cur.name || '') === r.name && String(cur.role || '') === r.role
+        && String(cur.phone || '') === r.phone && String(cur.email || '') === r.email) return;
+    jobListPut(job, 'coFiduciaries', Object.assign({}, cur || {}, { name: r.name, role: r.role, phone: r.phone, email: r.email }));
+    n++;
+  });
+  return n;
+}
 // ⚠⚠ THE CONCIERGE LIST IS THE ROSTER, NOT A TYPED COPY OF IT (audit H7). Edit Client listed three
 // names by hand — one of them a property specialist — so a job assigned to any other active
 // concierge opened on "Unassigned" and a save for any reason unassigned it; the job's contact then
@@ -9881,6 +10093,7 @@ var INTAKE_FIELDS = [
   'i-probate-atty-fname', 'i-probate-atty-lname', 'i-probate-atty-firm',
   'i-probate-atty-phone', 'i-probate-atty-email',
   'i-date-of-death', 'i-letters-date', 'i-probate-case', 'i-probate-deadline', 'i-probate-sale',
+  'i-trust-name', 'i-trust-date', 'i-trustee-accepted',
   'i-mustfind', 'i-safety', 'i-notes', 'i-ptype', 'i-tc',
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
@@ -9944,6 +10157,9 @@ function resetIntakeFields() {
   ['i-phone', 'i-email'].forEach(function(id){ var e = document.getElementById(id); if (e && e.dataset) delete e.dataset.stash; });
   var dfb = document.getElementById('i-deadline-fb'); if (dfb) dfb.textContent = '';
   var fb = document.getElementById('i-fb'); if (fb) fb.innerHTML = '';
+  // The co-representative rows are built on the page, not listed controls, so the sweep above never reaches them (P19):
+  // the block is drawn again empty, or the last estate's co-trustee would ride onto the next client.
+  buildCoFiduciaryBlock();
   // Re-collapse the conditional blocks (probate, authorized rep, downsizing
   // destination) and re-enable the phone/email fields off the now-blank service type,
   // rather than hiding one section by hand and leaving the rest showing.
@@ -16786,6 +17002,12 @@ function jtScheduleHtml(sched) {
   } else if (sched.courtDeadline || sched.hard) {
     h += I((sched.courtDeadline ? 'Court deadline ' : 'Hard target ') + esc(fmtDate2(sched.courtDeadline || sched.hard)));
   }
+  // ⚠ THE FORM 706 DATE, BESIDE THE COURT DEADLINE (P19), and never a fit test: the plan is not measured against it, and
+  // it turns red only near or past the date (estateTaxReturnDue), a reminder that counsel or the accountant files.
+  if (sched.taxReturn) {
+    h += sched.taxReturn.flag ? '<span class="jt-sched-i jt-s-err">&#9888; ' + esc(estateTaxReturnWords(sched.taxReturn)) + '</span>'
+                              : I(esc(estateTaxReturnWords(sched.taxReturn)));
+  }
   // ⚠ PACE IS ITS OWN SLOT, on its own line. A brand-new job with a tight closing date is
   // perfectly on pace and its plan still does not fit; one slot holding both hides one.
   if (sched.pace) {
@@ -17214,9 +17436,41 @@ function _coPaceFix(est) {
     : 'Re-plan with the client, or raise a change order if the scope grew — a change order carries HOURS, not a dollar amount. Once the client accepts it, its hours lengthen the plan.';
 }
 
+// ⚠ THE FORM 706 DATE, KEPT IN VIEW (P19, 2026-10-03; Anthony's call 5: "track the Form 706 due date, nine months after
+// death, where it applies"). The date is estateTaxReturn's (firm on a 706 answer of yes, unfirm on an unanswered one,
+// none on a no); this adds where it stands against today, which is an ARGUMENT, so jobSchedule beside it stays
+// clock-free. It is a REMINDER: counsel or the estate's accountant files the return or its extension (Form 4768), and
+// nothing here records either. `days` are calendar days to the due date (negative once it has passed); `flag` is 'soon'
+// inside ESTATE_TAX_RETURN_WARN_DAYS, 'past' after it, '' otherwise, and it is what turns the line red.
+var ESTATE_TAX_RETURN_WARN_DAYS = 30;
+function estateTaxReturnDue(job, todayStr) {
+  var r = estateTaxReturn(job);
+  if (!r) return null;
+  var t = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(todayStr || '')), d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(r.due);
+  var days = (t && d) ? Math.round((Date.UTC(+d[1], +d[2] - 1, +d[3]) - Date.UTC(+t[1], +t[2] - 1, +t[3])) / 86400000) : null;
+  return { due: r.due, firm: !!r.firm, days: days,
+           flag: days === null ? '' : days < 0 ? 'past' : days <= ESTATE_TAX_RETURN_WARN_DAYS ? 'soon' : '' };
+}
+// The words, one place, for the strip and the card: the date as a reminder, unfirm while the 706 question is open, and
+// how near it is once that matters. Plain text; the callers escape it.
+function estateTaxReturnWords(t) {
+  if (!t) return '';
+  var n = t.days;
+  return (t.firm ? 'Form 706 due ' : 'Form 706, if a return is filed, due ') + fmtDate2(t.due)
+    + (t.flag === 'past' ? ' — passed: confirm with counsel it was filed or extended'
+       : t.flag === 'soon' ? (n === 0 ? ' — today' : ' — in ' + n + ' day' + (n === 1 ? '' : 's')) : '');
+}
+// The card's line: the reminder, and who files, in red once the date is near or past. '' where there is no return.
+function estateTaxReturnLineHtml(t) {
+  if (!t) return '';
+  return '<div class="est-706" style="margin-top:10px;font-size:12px;line-height:1.5;' + (t.flag ? 'color:#A32D2D;font-weight:600;' : 'color:var(--gray-dk);') + '">'
+    + (t.flag ? '&#9888; ' : '') + esc(estateTaxReturnWords(t))
+    + ' <span style="font-weight:400;color:var(--gray);">&middot; the federal estate tax return; counsel or the estate’s accountant files it</span></div>';
+}
+
 function jobSchedule(job, est, todayStr, prog) {
   var S = { state:'none', why:'', today: todayStr || '', days:0, daysQuoted:false, coDays:0,
-            start:'', anchor:'', anchorKind:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'',
+            start:'', anchor:'', anchorKind:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'', taxReturn:null,
             actualStart:'', actualStartKind:'',
             elapsed:0, overBy:0, endVariance:0, remaining:0,
             progress:false, workPct:0, roomsLocked:false, hoursPct:0, actHrs:0, estHrs:0,
@@ -17252,6 +17506,9 @@ function jobSchedule(job, est, todayStr, prog) {
 
   S.hard = job.completion || '';
   if (jobOnProbateTrack(job)) S.courtDeadline = job.probateDeadline || '';   // the matter, not the service (M5)
+  // The Form 706 date where a return applies (P19), measured against the today this was handed: the strip prints it
+  // beside the court deadline. A reminder, not a fit test — the plan is never measured against it.
+  S.taxReturn = estateTaxReturnDue(job, S.today);
   S.delivered = job.deliveredOn || '';
   S.start = job.start || '';   // the TARGET start, as intake recorded it
 
@@ -17469,8 +17726,13 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   // contested_probate, so a contested matter showed no executor-authorization
   // warning and then refused to activate, naming a blocker nothing on screen had
   // mentioned. `jobActivationBlockers` is the definition; nothing re-inlines it.
+  // (The fix below names the paper the gate named: estateAuthority's `short`, P19.)
+  // ⚠ THE AUTHORITY'S LINE IS PICKED OUT BY THE WORDS ITS ROUTE SPEAKS (P19), never by a word the probate line
+  // happens to open with: a trust's Certification of Trust holds the job as the Letters do, and a filter on
+  // "Executor" let a trust job's blocked activation read as ready to press.
   var actBlockers = jobActivationBlockers(job);
-  var authBlocker = actBlockers.filter(function (b) { return b.indexOf('Executor') === 0; })[0] || '';
+  var _authJt = estateAuthority(job);
+  var authBlocker = _authJt ? (actBlockers.filter(function (b) { return b === ESTATE_AUTHORITY_WORDS[_authJt.key].gate; })[0] || '') : '';
 
   // Rooms still needing a score — the hard gate on BOTH submit and approve
   // (`submitForApproval` and `checkPin` both read it). It is the only reason a
@@ -17698,7 +17960,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       blockedWhy: authBlocker, blockedFix: authBlocker
         ? ('Contact ' + (job.executor || 'the authorized representative')
           + (job.executorPhone ? ' on ' + job.executorPhone : (job.executorEmail ? ' at ' + job.executorEmail : ''))
-          + ' — the Letters must be received before work can start.')
+          + ' — the ' + _authJt.short + ' must be received before work can start.')   // the paper by route (P19)
         : '' }, _sc && _sc.start, 'start')),
 
     // ⚠ THE PLANNED DATE HERE IS THE CALENDAR HALFWAY OF THE JOB, NOT A DUE DATE FOR THE
@@ -21357,9 +21619,18 @@ function renderClientDashboard(jobId) {
   var _JT_CHIP_FIX = {
     // ⚠ The fix names what is actually missing (agreementChipFix, P16): the agreement has no approval step.
     'Service agreement must be signed': {short:'Agreement not signed', fix:agreementChipFix(job, null)},
-    'Deposit (50%) must be received': {short:'Deposit not received', fix:'Record the payment once it arrives — work starts on received, not cleared'},
-    'Executor authorization must be received': {short:'Executor auth pending', fix:'Contact '+(job.executor||'the authorized representative')+' — '+(job.executorPhone||job.executorEmail||'see the probate card below')}
+    'Deposit (50%) must be received': {short:'Deposit not received', fix:'Record the payment once it arrives — work starts on received, not cleared'}
   };
+  // ⚠ THE AUTHORITY'S CHIP NAMES THE PAPER BY ROUTE (P19, 2026-10-03): "Letters pending" on the probate track,
+  // "Certification of Trust pending" on a trust-only matter, keyed on the very line the gate pushed for this job
+  // (ESTATE_AUTHORITY_WORDS). Where there is a paper there is a card for it below (estatePackageRoute answers the same
+  // routes estateAuthority does, on every service and matter — p19-authority.test.js holds the two level), and the
+  // fix points at that card by its name.
+  var _auth = estateAuthority(job);
+  var _pkgW = estatePackageRoute(job);
+  if (_auth) _JT_CHIP_FIX[ESTATE_AUTHORITY_WORDS[_auth.key].gate] = { short: _auth.short + ' pending',
+    fix: 'Contact ' + (job.executor || 'the authorized representative') + ' — '
+      + (job.executorPhone || job.executorEmail || 'see the ' + _pkgW.card + ' below') };
   var blockers = jobActivationBlockers(job).map(function(b){
     var meta = _JT_CHIP_FIX[b] || {short:b, fix:b};
     return {msg:b, short:meta.short, fix:meta.fix};
@@ -21468,8 +21739,15 @@ function renderClientDashboard(jobId) {
     // and Letters status in here; probate keeps its own detailed card below.
     if (job.svc === 'cleanout' && job.executor) {
       h += field('Authorized rep', esc(job.executor + (job.executorRole?' · '+job.executorRole:'')));
-      h += field('Letters of Admin', ({received:'Received',pending:'Pending',notneeded:'N/A'}[job.executorAuth]) || '—');
+      // ⚠ THE PAPER THE MATTER HAS, OR NO FIELD (P19, 2026-10-03). This read "Letters of Admin" on every Estate
+      // Settlement with a representative, a trust matter included, where nothing waits on Letters. The
+      // authority's own name now (estateAuthority), read through the gate's resolver, so a blank reads Pending
+      // as the gate holds it; on Neither, and on a matter not yet answered, there is no paper to name.
+      if (_auth) h += field(_auth.doc, ({received:'Received',pending:'Pending',notneeded:'N/A'})[resolveExecutorAuth(job.executorAuth)]);
     }
+    // Every co-representative (P19, Anthony: record every co-executor and co-trustee), read through the one list.
+    var _coDash = jobFiduciaries(job).filter(function(f){ return !f.primary; });
+    if (_coDash.length) h += field('Co-representatives', esc(_coDash.map(function(f){ return f.name + (f.role ? ' · ' + f.role : ''); }).join('; ')));
   } else {
     h += field('Phone', esc(job.phone||'—'));
     h += field('Email', '<span style="font-size:11px;">'+esc(job.email||'—')+'</span>');
@@ -21503,36 +21781,57 @@ function renderClientDashboard(jobId) {
   // PROBATE CARD — every estate administered through probate, whatever service was sold (audit M5) — and, since
   // 2026-10-02, the TRUST CARD on a trust-only matter (P18, Anthony: "put the button on the same card, renamed for trust
   // matters"). One card: whether it is drawn and its heads come from the route (estatePackageRoute, ESTATE_PKG_ROUTES),
-  // and the probate card is drawn exactly as before. ⚠ THE TRUST CARD CARRIES NO COURT RECORD AND NO AUTHORIZATION (the
-  // route's `court` flag). The case number, the court deadline and the property-sale answer are entered in the court
-  // record alone (courtRecordShown), which a trust matter does not show; and the authorization is the Letters of
-  // Administration, which jobActivationBlockers waits on only where the estate goes through probate — on a trust it would
-  // be a red line nothing waits on and nobody could close. A test holds the chip to the gate on every service and matter.
-  var _pkgW = estatePackageRoute(job);
+  // and the probate card is drawn exactly as before. ⚠ THE TRUST CARD CARRIES NO COURT RECORD (the route's `court` flag):
+  // the case number and the court deadline are entered in the court record alone (courtRecordShown), which a trust matter
+  // does not show.
+  // ⚠⚠ AND SINCE P19 (2026-10-03) IT CARRIES THE AUTHORITY, AS THE PROBATE CARD CARRIES THE LETTERS. P18 drew it with
+  // none because nothing waited on one; Anthony's call 1 made the successor trustee's Certification of Trust a gate on
+  // activation (estateAuthority, jobActivationBlockers), so the trust card names that paper in its chip and beside the
+  // trustee, where the probate card keeps the word it has always used, "Authorization". A test holds the chip to the gate
+  // on every service and matter. Also since P19: the trust itself (its name, its date and when the successor trustee
+  // accepted) wherever the matter holds a trust, Both included; the property-sale answer on a trust (propertySaleAsked);
+  // the Form 706 date where a return applies; and every co-representative.
   if (_pkgW) {
     var _court = _pkgW.court;
+    var _trustRec = trustRecordShown(job.svc, matterTypeOf(job));
+    var authOk = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
+    var _authWord = _court ? 'Authorization' : _auth.doc;
+    // ⚠ "Not required" says so, on the chip and beside the representative alike. Both read "received" for it, a
+    // claim about a paper nobody was sent (P19, found in passing while the chip was rewritten for the trust card).
+    var _authVal = job.executorAuth === 'notneeded' ? '<span style="color:#1D9E75;">Not required</span>'
+      : authOk ? '<span style="color:#1D9E75;">Received</span>'
+      : '<span style="color:#A32D2D;font-weight:600;">' + dot('#A32D2D') + 'Pending</span>';
     h += '<div class="card" style="margin-bottom:12px;">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
     h += sectionHdr(_pkgW.title);
-    var authOk = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
-    if (_court) {
-      h += '<div style="display:flex;align-items:center;gap:12px;">';
-      h += '<span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:'+(authOk?'#1D9E75':'#A32D2D')+'">';
-      h += dot(authOk?'#1D9E75':'#A32D2D')+(authOk?'Authorization received':'Authorization pending — blocker')+'</span>';
-      // (The 📧 Send Package toggle that sat here sent nothing; the real send is the package row at the foot of this card,
-      // 2026-10-01, P17 — see probatePackageCardHtml.)
-      h += '</div>';
-    }
+    h += '<div style="display:flex;align-items:center;gap:12px;">';
+    h += '<span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:'+(authOk?'#1D9E75':'#A32D2D')+'">';
+    h += dot(authOk?'#1D9E75':'#A32D2D') + _authWord + (job.executorAuth === 'notneeded' ? ' not required' : authOk ? ' received' : ' pending — blocker') + '</span>';
+    // (The 📧 Send Package toggle that sat here sent nothing; the real send is the package row at the foot of this card,
+    // 2026-10-01, P17 — see probatePackageCardHtml.)
+    h += '</div>';
     h += '</div>';
     if (_court) {
       h += '<div class="d-grid4">';
       h += field('Case number', esc(job.probateCase||'—'));
       h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
       h += field('Property sale', esc(job.probateSale||'—'));
-      h += field('Authorization', authOk ? '<span style="color:#1D9E75;">'+( job.executorAuth==='notneeded'?'Not required':'Received')+'</span>' : '<span style="color:#A32D2D;font-weight:600;">'+dot('#A32D2D')+'Pending</span>');
+      h += field('Authorization', _authVal);
       h += '</div>';
     }
-    h += '<div class="d-split2" style="gap:0 24px;margin-top:' + (_court ? 12 : 0) + 'px;">';
+    // The trust itself (P19): optional at intake, so a blank says it is not recorded rather than printing nothing.
+    if (_trustRec) {
+      var _nr = '<span style="color:var(--gray);font-style:italic;">not recorded</span>';
+      h += '<div class="d-grid4"' + (_court ? ' style="margin-top:10px;"' : '') + '>';
+      h += field('Trust name', job.trustName ? esc(job.trustName) : _nr);
+      h += field('Trust dated', job.trustDate ? esc(fmtDate2(job.trustDate)) : _nr);
+      h += field('Trustee accepted', job.trusteeAcceptedOn ? esc(fmtDate2(job.trusteeAcceptedOn)) : _nr);
+      // Asked on a trust as on a court matter (propertySaleAsked); the probate card already shows it in its court grid.
+      if (!_court) h += field('Property sale', esc(job.probateSale||'—'));
+      h += '</div>';
+    }
+    h += estateTaxReturnLineHtml(_jtDead ? null : estateTaxReturnDue(job, _todayStr()));
+    h += '<div class="d-split2" style="gap:0 24px;margin-top:' + ((_court || _trustRec) ? 12 : 0) + 'px;">';
     // Attorney (the estate attorney fields; on a trust, the trustee's attorney)
     h += '<div>';
     h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">' + _pkgW.atty + '</div>';
@@ -21550,9 +21849,22 @@ function renderClientDashboard(jobId) {
     h += field('Phone', esc(job.executorPhone||'—'));
     h += field('Email', '<span style="font-size:11px;">'+esc(job.executorEmail||'—')+'</span>');
     h += field('Role', esc(job.executorRole||'—'));
-    if (_court) h += field('Authorization', authOk?'<span style="color:#1D9E75;">Received</span>':'<span style="color:#A32D2D;">'+dot('#A32D2D')+'Pending</span>');
+    h += field(_authWord, _authVal);
     h += '</div></div>';
     h += '</div>';
+    // Every co-representative (P19, Anthony's call 4), under the route's heading. DocuSign's envelope has one signer,
+    // the representative (esignSigner), so the others sign on paper: said once, here, where the names are listed.
+    var _coCard = jobFiduciaries(job).filter(function(f){ return !f.primary; });
+    if (_coCard.length) {
+      h += '<div style="margin-top:12px;">';
+      h += '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);font-weight:500;margin-bottom:8px;">' + (_court ? 'Co-Personal Representatives' : 'Co-Trustees') + '</div>';
+      _coCard.forEach(function(f){
+        h += '<div class="d-grid4" style="margin-bottom:6px;">' + field('Name', esc(f.name)) + field('Role', esc(f.role||'—'))
+          + field('Phone', esc(f.phone||'—')) + field('Email', '<span style="font-size:11px;">'+esc(f.email||'—')+'</span>') + '</div>';
+      });
+      h += '<div style="font-size:10.5px;color:var(--gray);line-height:1.5;">A DocuSign envelope goes to ' + esc(job.executor || 'the representative') + ' alone: each co-representative signs the agreement on paper.</div>';
+      h += '</div>';
+    }
     // The package: its one send, and who sent it when (2026-10-01, P17; the trust route 2026-10-02, P18).
     h += probatePackageCardHtml(job);
     h += '</div>';
@@ -21836,14 +22148,27 @@ var JOB_TRANSITIONS = {
   active: 'closed', closed: 'active'
 };
 
+// ⚠⚠ THE PAPER THAT PROVES THE REPRESENTATIVE'S AUTHORITY HOLDS ACTIVATION ON EITHER ROUTE (P19, 2026-10-03; Anthony:
+// a trust job waits on the successor trustee's Certification of Trust, §736.1017, the way a probate job waits on the
+// Letters). Which paper is estateAuthority's one answer; these are the words each route speaks in, keyed by it. `gate`
+// is the line the activation gate pushes, and the rail, the alert and the dashboard's chips key on it: the Letters'
+// line is the probate gate's own, byte for byte, as it read before P19. `hint` sits under intake's control.
+var ESTATE_AUTHORITY_WORDS = {
+  letters:       { gate: 'Executor authorization must be received',
+                   hint: 'Leave Pending unless a certified copy is already in hand. On probate the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.' },
+  certification: { gate: 'The successor trustee’s Certification of Trust must be received',
+                   hint: 'The successor trustee’s proof of authority (Fla. Stat. §736.1017). Leave Pending unless a copy is already in hand. On a trust the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.' }
+};
 function jobActivationBlockers(j) {
   var blockers = [];
   if (!j.agrSigned) blockers.push('Service agreement must be signed');
   if (!j.depositReceived) blockers.push('Deposit (50%) must be received');
-  // ⚠ THE MATTER, NOT THE SERVICE (audit M5) — see jobOnProbateTrack. And a blank is not an answer:
-  // `resolveExecutorAuth` reads anything unrecognised as pending, the rule both forms already save by,
-  // so a record carrying no answer is refused rather than waved through.
-  if (jobOnProbateTrack(j) && resolveExecutorAuth(j.executorAuth) === 'pending') blockers.push('Executor authorization must be received');
+  // ⚠ THE MATTER, NOT THE SERVICE (audit M5), AND THE PAPER THE MATTER HAS (P19): estateAuthority, which reads
+  // jobOnProbateTrack first, so the Letters still hold every job they held, and a trust-only matter now waits on the
+  // Certification of Trust. And a blank is not an answer: `resolveExecutorAuth` reads anything unrecognised as
+  // pending, the rule both forms already save by, so a record carrying no answer is refused rather than waved through.
+  var _auth = estateAuthority(j);
+  if (_auth && resolveExecutorAuth(j.executorAuth) === 'pending') blockers.push(ESTATE_AUTHORITY_WORDS[_auth.key].gate);
   return blockers;
 }
 
@@ -43504,11 +43829,11 @@ function showEditClient(jobId) {
 
   // ⚠⚠ THE ESTATE BLOCK COMES FIRST, AND EVERY FACT ABOUT THE DECEDENT IS IN IT — the same
   // split Client Intake makes. Date of death, who builds the inventory, the two documentation
-  // gates and the estate attorney are facts about a DECEDENT; the case number, the court
-  // deadline and the sale question are facts about a COURT CASE. All of them sat in the
-  // probate block until 2026-09-21, so an Estate Settlement could not record the attorney its
-  // own Job Plan asks for by name, and could not correct a 706 answer that had locked it into
-  // Strict Mode.
+  // gates and the estate attorney are facts about a DECEDENT; the case number and the court
+  // deadline are facts about a COURT CASE. All of them sat in the probate block until
+  // 2026-09-21, so an Estate Settlement could not record the attorney its own Job Plan asks for
+  // by name, and could not correct a 706 answer that had locked it into Strict Mode. (The sale
+  // question left the court record in P19: a trust is asked it too — propertySaleAsked.)
   html += '<div id="ec-estate-auth-fields" style="display:'+(isEstate?'block':'none')+';">';
   html += '<div class="sec" style="margin-top:14px;">Estate Details</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
@@ -43518,6 +43843,11 @@ function showEditClient(jobId) {
   // renamed on one form and not the other. Prefilled through docTierOf, which migrates a job
   // recorded before the tier existed off its stored scope — nothing had to be run on them.
   html += fld('What are we contracted to produce?', '<select id="ec-doc-tier" onchange="ecDocGateChange()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+docTierOptionsHtml(docTierOf(job))+'</select>', false);
+  // ⚠ ASKED ON A TRUST AS ON A COURT MATTER (P19; Anthony, 2026-10-02: "yes"): it sat in the court record, which a trust
+  // matter never shows. Shown by propertySaleAsked, here and in ecToggleProbate, and written by the save on the same rule.
+  html += '<div id="ec-sale-fields" style="display:'+(propertySaleAsked(job.svc, matterTypeOf(job))?'block':'none')+';">'
+    + fld('Property Sale Required', '<select id="ec-probate-sale" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select'},{v:'yes',l:'Yes — property must be sold'},{v:'no',l:'No — heirs retaining property'},{v:'maybe',l:'Under discussion'}], job.probateSale)+'</select>', false)
+    + '</div>';
   html += '</div>';
   html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Every value on this estate is a fair market value <em>at the date of death</em>. The inventory answer prices the estimate\'s Documentation scope: an estimate no manager has approved follows a change made here (the one open on Build Estimate at once, a saved one when it is next opened), and an approved one is never repriced by the app \u2014 the save says how to reprice it. <strong>How it is administered</strong> decides which instrument the documents take \u2014 a probate court schedule or a trustee\'s; it is never guessed, and a job recorded before 2026-09-21 carries no answer at all.</div>';
 
@@ -43555,8 +43885,16 @@ function showEditClient(jobId) {
   html += fld('Role / Authority', '<select id="ec-exec-role" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+executorRoleOptionsHtml(job.executorRole||'')+'</select>', true);
   html += fld('Phone', tel('exec-phone', job.executorPhone), true);
   html += fld('Email', txt('exec-email', job.executorEmail, '', 'email'), true);
-  html += fld('Letters of Administration', '<select id="ec-exec-auth" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+executorAuthOptionsHtml(job.executorAuth)+'</select>', false);
+  // ⚠ THE PAPER THE MATTER HAS (P19): the Letters on the probate track, the Certification of Trust on a trust-only
+  // matter, no control where the matter has none — executorAuthField, read again by ecToggleProbate as the matter
+  // changes. Hidden, never left out of the markup: the save writes back the value it holds, the record's own.
+  var _eaf = executorAuthField(job.svc, matterTypeOf(job));
+  html += '<div class="df" id="ec-exec-auth-wrap"' + (_eaf.show ? '' : ' style="display:none;"') + '><div class="dfl" id="ec-exec-auth-lbl">' + esc(_eaf.label) + '</div>'
+    + '<select id="ec-exec-auth" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+executorAuthOptionsHtml(job.executorAuth)+'</select></div>';
   html += '</div>';
+  // Every co-representative (P19): the block intake draws, from the record list.
+  html += '<div class="sec" style="margin-top:14px;">Co-representatives</div>';
+  html += coFiduciaryBlockHtml('ec', jobListEntries(job, 'coFiduciaries'));
   html += '</div>'; // end estate block
 
   // Probate-only — the COURT record, and nothing else.
@@ -43574,9 +43912,21 @@ function showEditClient(jobId) {
   html += fld('Court Deadline', '<input type="date" id="ec-probate-deadline" value="'+(job.probateDeadline||'')+'"'
     + ((job.probateDeadline && job.probateDeadline !== _ecDl60) ? ' data-user-edited="1"' : '')
     + ' oninput="this.dataset.userEdited=\'1\'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);"><div id="ec-deadline-fb" class="fb"></div>');
-  html += fld('Property Sale Required', '<select id="ec-probate-sale" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select'},{v:'yes',l:'Yes — property must be sold'},{v:'no',l:'No — heirs retaining property'},{v:'maybe',l:'Under discussion'}], job.probateSale)+'</select>', false);
   html += '</div>';
   html += '</div>'; // end probate fields
+
+  // ⚠ THE TRUST ITSELF (P19, 2026-10-03): its name, the date of the instrument and the day the successor trustee
+  // accepted, wherever the matter holds a trust (trustRecordShown: Trust, and Both). Rendered on every service and hidden
+  // off one, as the court record is, so ecToggleProbate can show it mid-edit; the save writes it only where it is shown.
+  html += '<div id="ec-trust-fields" style="display:'+(trustRecordShown(job.svc, matterTypeOf(job))?'block':'none')+';">';
+  html += '<div class="sec" style="margin-top:14px;">Trust Details</div>';
+  html += '<div class="d-grid2" style="gap:8px 20px;">';
+  html += fld('Name of the Trust', txt('trust-name', job.trustName, 'e.g. The Adler Family Revocable Trust'), false);
+  html += fld('Trust Dated', '<input type="date" id="ec-trust-date" value="'+esc(job.trustDate||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
+  html += fld('Successor Trustee Accepted', '<input type="date" id="ec-trustee-accepted" value="'+esc(job.trusteeAcceptedOn||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
+  html += '</div>';
+  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">From the Certification of Trust. Optional: a blank reads as not recorded on the dashboard.</div>';
+  html += '</div>'; // end trust fields
 
   // Footer
   html += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">';
@@ -43621,6 +43971,18 @@ function ecToggleProbate() {
   if (af) af.style.display = ecIsEstateSvc(svcVal) ? 'block' : 'none';
   var df = document.getElementById('ec-dest-fields');
   if (df) df.style.display = ecIsMoveSvc(svcVal) ? 'block' : 'none';
+  // What follows the matter type mid-edit (P19), on the rules the render and the save read: the trust itself, the
+  // property-sale question, and the authority control's paper, or no control where the matter has none.
+  var mtVal = (document.getElementById('ec-matter-type') || {}).value || '';
+  var tf = document.getElementById('ec-trust-fields');
+  if (tf) tf.style.display = trustRecordShown(svcVal, mtVal) ? 'block' : 'none';
+  var sf = document.getElementById('ec-sale-fields');
+  if (sf) sf.style.display = propertySaleAsked(svcVal, mtVal) ? 'block' : 'none';
+  var eaf = executorAuthField(svcVal, mtVal);
+  var aw = document.getElementById('ec-exec-auth-wrap');
+  if (aw) aw.style.display = eaf.show ? '' : 'none';
+  var al = document.getElementById('ec-exec-auth-lbl');
+  if (al && eaf.show) al.textContent = eaf.label;
   // Home Prep ↔ another living service: the house questions follow, as on intake (Q17).
   var hf = document.getElementById('ec-house-find');
   if (hf) hf.style.display = intakeAsksHouseContents(svcVal) ? '' : 'none';
@@ -43682,6 +44044,8 @@ function saveClientEdit(jobId) {
   // number fixed on an estate whose matter type nobody has asked the attorney yet — so what the
   // record already lacked is said after the save, not made the price of it. Flag and explain.
   var _estateNow = isDecedentJob(null, svc);
+  // The co-representative rows as the modal holds them (P19); null where it drew none, which keeps the record's.
+  var _coFormEc = _estateNow ? readCoFiduciaryRows('ec') : null;
   var _missing = clientMissingFields({
     fname: fname, lname: lname, phone: _keep('phone', job.phone), email: _keep('email', job.email),
     addr: _v('addr'), city: _v('city'), zip: _v('zip'),
@@ -43695,12 +44059,15 @@ function saveClientEdit(jobId) {
     probateCase: _keep('probate-case', job.probateCase),
     probateAttyFname: _estateNow ? _v('atty-fname') : '', probateAttyLname: _estateNow ? _v('atty-lname') : '',
     probateAttyFirm: _estateNow ? _v('atty-firm') : '', probateAttyPhone: _estateNow ? _v('atty-phone') : '',
-    probateAttyEmail: _estateNow ? _v('atty-email') : ''
+    probateAttyEmail: _estateNow ? _v('atty-email') : '',
+    coFiduciaries: _coFormEc ? _coFormEc.rows : (_estateNow ? job.coFiduciaries : [])
   });
   // Judged through the resolver: a stored matter type matterTypeOf will not read is no answer.
   var _missingBefore = clientMissingFields(Object.assign({}, job, { matterType: matterTypeOf(job) }));
   var _blanked = _missing.filter(function(m){ return _missingBefore.indexOf(m) < 0; });
-  if (_blanked.length) { alert('Please complete: ' + _blanked.join(', ') + '.\n\nThese are required, and this save would have cleared them. Nothing has been saved.'); return; }
+  if (_blanked.length) { alert('Please complete: ' + _blanked.join(', ') + '.\n\nThese are required, and this save would have cleared them. '
+    + (_blanked.some(function(m){ return m.indexOf('Co-representative') === 0; }) ? 'A co-representative needs a name; a row added by mistake comes off with its ✕ Remove. ' : '')
+    + 'Nothing has been saved.'); return; }
   var _stillMissing = _missing;
 
   // Pricing inputs are frozen once the estimate is approved. Service type, square
@@ -43861,8 +44228,17 @@ function saveClientEdit(jobId) {
   if (courtRecordShown(svc, (document.getElementById('ec-matter-type') || {}).value || '')) {
     job.probateCase      = document.getElementById('ec-probate-case').value;
     job.probateDeadline  = document.getElementById('ec-probate-deadline').value;
-    job.probateSale      = document.getElementById('ec-probate-sale').value;
     job.lettersDate      = (document.getElementById('ec-letters-date') || {}).value || '';
+  }
+  // ⚠ THE SALE QUESTION AND THE TRUST ITSELF ARE READ WHERE THE MODAL SHOWED THEM (P19): the sale wherever the court
+  // record or a trust is (propertySaleAsked), the trust's name, date and acceptance wherever the matter holds a trust
+  // (trustRecordShown). Through `_keep`, so a control the modal did not render keeps what the record holds.
+  var _mtEc = (document.getElementById('ec-matter-type') || {}).value || '';
+  if (propertySaleAsked(svc, _mtEc)) job.probateSale = _keep('probate-sale', job.probateSale);
+  if (trustRecordShown(svc, _mtEc)) {
+    job.trustName         = _keep('trust-name', job.trustName).trim();
+    job.trustDate         = _keep('trust-date', job.trustDate);
+    job.trusteeAcceptedOn = _keep('trustee-accepted', job.trusteeAcceptedOn);
   }
   // Authorized rep fields — estate settlement + probate
   if (isEstateEdit) {
@@ -43875,6 +44251,9 @@ function saveClientEdit(jobId) {
     job.executorPhone    = document.getElementById('ec-exec-phone').value;
     job.executorEmail    = document.getElementById('ec-exec-email').value;
     job.executorAuth     = resolveExecutorAuth(document.getElementById('ec-exec-auth').value);
+    // Every co-representative the modal changed, added or took off, each through the record list (P19): a person's
+    // edit stamped on that entry alone. A row untouched is not written again.
+    saveCoFiduciaryRows(job, _coFormEc);
   }
 
   job.updatedAt = Date.now();   // stamped before the save too, so this device's own store agrees with the wire
@@ -44291,6 +44670,7 @@ buildHouseFlagInputs();
 buildDocTierOptions();
 buildExecutorAuthOptions();
 buildExecutorRoleOptions();
+buildCoFiduciaryBlock();
 buildReferralSourceOptions();
 // Force Client Intake date fields to use the calendar picker only — block manual
 // keyboard entry so you can't type a malformed or impossible date.

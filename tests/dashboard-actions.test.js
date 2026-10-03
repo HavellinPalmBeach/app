@@ -49,11 +49,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'depositTargetFor', 'agreementReady',
       'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
-      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
+      'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'],
     vars: ['JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
-      'DECEDENT_SERVICES', 'JOB_STEPS'],
+      'DECEDENT_SERVICES', 'JOB_STEPS', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],
     // ⚠ `SHEETS_SYNC_URL` IS A REAL TOP-LEVEL VAR, so the rail reads it bare rather than
     // behind a `typeof` guard that could never fire in a browser. It is stubbed here because
     // the sandbox lifts only what it is told to — and it is re-pointed at '' further down,
