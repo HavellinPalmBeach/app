@@ -5809,7 +5809,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // field note, split links and a firearm's dealer route), so an older copy of an item cannot drop them on the sheet.
 // 2026-10-01 (P17): esignArchive files by name (_fileBlobByName), and File signed copy relies on it — on an older
 // deployment a second filing of one envelope adds a second executed agreement to the Agreement folder.
-var BACKEND_MIN_VERSION = '2026-10-01';
+// 2026-10-03 (P19): the job's record lists (JOB_RECORD_LISTS: co-representatives, beneficiaries, bequests, signed
+// copies, finds on site, proceeds statements) merge entry by entry on the sheet; on an older deployment they ride
+// the whole record, and a device saving an older copy of the job drops an entry another device added.
+var BACKEND_MIN_VERSION = '2026-10-03';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -5865,7 +5868,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -6382,6 +6385,73 @@ function courtRecordShown(svc, matter) {
 function invProbateRows(job) {
   var d = matterDef(job);
   return !d || !!d.onProbate;
+}
+
+// ⚠⚠ WHICH DOCUMENT PROVES THE REPRESENTATIVE'S AUTHORITY ON THIS ESTATE — one answer (P19, 2026-10-03;
+// Anthony: a trust job waits on the successor trustee's Certification of Trust the way a probate job waits
+// on the Letters). Read by the activation gate and by every label, card, checklist line and document that
+// names the paper. The stored answer stays `job.executorAuth` (pending, received, not required): one field
+// whose NAME follows the matter, so no record migrates. The probate track decides first, so Both stays on the
+// Letters (the court governs a pour-over estate, the rule the package route follows); a trust-only matter
+// takes the Certification of Trust (Fla. Stat. §736.1017); Neither, an Estate Settlement whose matter is
+// unanswered, and living work have none, and nothing waits on one. Takes a job, or the two values a form is
+// holding (`{svc, matterType}`), as jobOnProbateTrack does.
+var ESTATE_AUTHORITIES = {
+  letters:       { key: 'letters',       doc: 'Letters of Administration', short: 'Letters',                cite: '',          holder: 'Personal Representative' },
+  certification: { key: 'certification', doc: 'Certification of Trust',    short: 'Certification of Trust', cite: '§736.1017', holder: 'successor trustee' }
+};
+function estateAuthority(job) {
+  if (!job) return null;
+  if (jobOnProbateTrack(job)) return ESTATE_AUTHORITIES.letters;
+  var d = matterDef(job);
+  return (d && d.trust) ? ESTATE_AUTHORITIES.certification : null;
+}
+
+// ⚠⚠ EVERY FIDUCIARY WHO MUST JOIN A DECISION (P19; Anthony: record every co-executor and co-trustee, and a
+// release needs every one of their approvals). The representative intake records comes first, on the keys
+// twenty-odd readers already use (job.executor, executorRole, executorPhone, executorEmail), then each
+// co-representative in `job.coFiduciaries`, a list the sheet merges entry by entry on its id
+// (JOB_RECORD_LISTS). An estate only: a living client's family are not fiduciaries, and a blank name is no one.
+function jobFiduciaries(job) {
+  if (!job || !invFiduciaryMode(job)) return [];
+  var out = [];
+  var rep = String(job.executor || '').trim();
+  if (rep) out.push({ id: 'rep', name: rep, role: job.executorRole || '', phone: job.executorPhone || '', email: job.executorEmail || '', primary: true });
+  jobListEntries(job, 'coFiduciaries').forEach(function (c) {
+    var n = String(c.name || '').trim();
+    if (n) out.push({ id: String(c.id), name: n, role: c.role || '', phone: c.phone || '', email: c.email || '', primary: false });
+  });
+  return out;
+}
+
+// ⚠ THE FEDERAL ESTATE TAX RETURN (FORM 706) IS DUE NINE MONTHS AFTER THE DATE OF DEATH (IRC §6075(a)); where the
+// ninth month has no such day, the last day of that month (Treas. Reg. §20.6075-1). P19, Anthony: track it where
+// it applies. `firm` where the 706 answer is yes; where it is unanswered the date is still returned, unfirm,
+// because unknown counts as yes for the documentation standard (_gate706) and nothing says a return is not
+// filed. An answer of no, a living client or no date of death: null. Counsel and the accountant own the filing
+// and any extension (Form 4768 extends the time to file, never to pay); the app only keeps the date in view.
+// Month arithmetic is done by hand rather than with setMonth, which rolls 31 May into March.
+function estateTaxReturn(job) {
+  if (!job || !invFiduciaryMode(job)) return null;
+  var a = String(job.gate706 || '');
+  if (a === 'no') return null;
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(job.deathDate || ''));
+  if (!m) return null;
+  var mo = Number(m[2]) - 1 + 9;
+  var y = Number(m[1]) + Math.floor(mo / 12);
+  mo = mo % 12;
+  var last = new Date(y, mo + 1, 0).getDate();
+  return { due: _ymdLocal(new Date(y, mo, Math.min(Number(m[3]), last))), firm: a === 'yes' };
+}
+
+// Whose the sale proceeds are, in the words a document uses (P19): the estate on probate and on an unanswered
+// matter (the wording every estate document already used); the trust on a trust-only matter; either on a
+// pour-over, as the property is held; the client on living work, where there is no estate.
+function estateProceedsHolder(job) {
+  if (!job || !invFiduciaryMode(job)) return 'the client';
+  var d = matterDef(job);
+  if (d && d.trust) return d.onProbate ? 'the estate or the trust, as the property is held' : 'the trust';
+  return 'the estate';
 }
 
 // ─── SERVICE FAMILIES — what a job may be RECLASSIFIED to on the walkthrough ───
@@ -22903,6 +22973,193 @@ function _saveJobEdit(job, kind, key) {
   job.updatedAt = Date.now();
   saveJobs();
   syncJobToSheets(job);
+}
+
+// ⚠⚠ THE JOB'S RECORD LISTS (P19, 2026-10-03), each entry keyed on its own `id` and merged entry by entry on
+// the sheet (JOB_KEYED_LISTS and JOB_LIST_KEY in main-sync.gs, BACKEND_VERSION 2026-10-03; a test holds the two
+// lists level). Two people add to these at once (a co-trustee at the desk while the field files a receipt), so
+// riding the whole record would let the newer copy drop the other's entry. Every write goes through these
+// helpers, which stamp the entry (`_saveJobEdit(job, kind, id)`): a person's edit. A removal is the entry gone
+// AND its stamp (a stamped removal, which the sheet keeps winning); a record of something that happened (a
+// filed signed copy, a find, a statement) is never removed, only voided with a reason (`jobListVoid`).
+var JOB_RECORD_LISTS = ['coFiduciaries', 'beneficiaries', 'bequests', 'signedRecords', 'siteFinds', 'proceedsStatements'];
+function newJobListId(kind) {
+  return String(kind || 'r').slice(0, 2) + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+// Live entries, in the order recorded; a voided one only when asked for.
+function jobListEntries(job, kind, withVoided) {
+  var arr = (job && Array.isArray(job[kind])) ? job[kind] : [];
+  return arr.filter(function (e) {
+    return e && e.id !== undefined && e.id !== null && e.id !== '' && (withVoided || !e.voidedAt);
+  });
+}
+function jobListGet(job, kind, id) {
+  var arr = (job && Array.isArray(job[kind])) ? job[kind] : [];
+  for (var i = 0; i < arr.length; i++) if (arr[i] && String(arr[i].id) === String(id)) return arr[i];
+  return null;
+}
+function jobListPut(job, kind, rec) {
+  if (!job || !rec || JOB_RECORD_LISTS.indexOf(kind) < 0) return null;
+  if (rec.id === undefined || rec.id === null || rec.id === '') rec.id = newJobListId(kind);
+  if (!Array.isArray(job[kind])) job[kind] = [];
+  var at = -1;
+  for (var i = 0; i < job[kind].length; i++) if (job[kind][i] && String(job[kind][i].id) === String(rec.id)) { at = i; break; }
+  if (at >= 0) job[kind][at] = rec; else job[kind].push(rec);
+  _saveJobEdit(job, kind, rec.id);
+  return rec;
+}
+function jobListRemove(job, kind, id) {
+  if (!job || JOB_RECORD_LISTS.indexOf(kind) < 0 || !Array.isArray(job[kind])) return false;
+  var before = job[kind].length;
+  job[kind] = job[kind].filter(function (e) { return !(e && String(e.id) === String(id)); });
+  if (job[kind].length === before) return false;
+  _saveJobEdit(job, kind, id);
+  return true;
+}
+function jobListVoid(job, kind, id, reason, by) {
+  var rec = jobListGet(job, kind, id);
+  if (!rec || rec.voidedAt) return null;
+  rec.voidedAt = Date.now();
+  rec.voidedBy = by || '';
+  rec.voidReason = String(reason || '').trim();
+  _saveJobEdit(job, kind, rec.id);
+  return rec;
+}
+
+// ═══ SIGNED COPIES FILED TO DRIVE (P19) ═══
+// ⚠⚠ THE SIGNED PAPER IS THE RECORD, AND UNTIL P19 IT NEVER REACHED DRIVE. invRecordApproval stored a typed name
+// and a date, a beneficiary's receipt was a free-text box, and nothing filed a signed approval, an adopted
+// inventory, a received Trust Schedule or a signed ledger. One path files them all: a PDF or a photograph of the
+// signed page, uploaded (`uploadToDrive`, the photo upload's action, so no new backend action) to the client's
+// Signed Records folder, or to the job's root folder on a Drive folder made before P19 (the fallback the change
+// orders take), and recorded on the job in `signedRecords`. A filed copy is never deleted: one filed against the
+// wrong paper is voided with a reason (`voidSignedRecord`), and its Drive file stays.
+// `ref` names the paper a copy signs (an approval's id, a recipient, a find); `stableIds` the inventory lines it
+// covers, where it covers any. Each kind's label is what the desk and the Drive file name call it.
+var SIGNED_RECORDS_SUBFOLDER = 'Signed Records';
+var SIGNED_RECORD_KINDS = {
+  approval:  { label: 'Signed release approval' },
+  receipt:   { label: 'Signed receipt' },
+  schedule:  { label: 'Signed schedule' },
+  ledger:    { label: 'Signed Disposition Ledger' },
+  will:      { label: 'Signed receipt for the original will' },
+  cash:      { label: 'Signed cash receipt' },
+  donation:  { label: 'Charity receipt' },
+  statement: { label: 'Proceeds statement' }
+};
+var SIGNED_COPY_MAX_BYTES = 10 * 1024 * 1024;
+var _signedFiling = {};   // never saved: one filing per paper at a time
+function signedRecordsOf(job, kind, ref) {
+  return jobListEntries(job, 'signedRecords').filter(function (r) {
+    return (!kind || r.kind === kind) && (ref === undefined || ref === null || String(r.ref) === String(ref));
+  });
+}
+function _signedCopyName(job, kind, meta, file, when) {
+  var t = when || new Date();
+  var p2 = function (n) { return String(n).padStart(2, '0'); };
+  var stamp = _ymdLocal(t) + ' ' + p2(t.getHours()) + p2(t.getMinutes()) + p2(t.getSeconds());
+  var ext = /\.([A-Za-z0-9]{1,5})$/.exec(String((file && file.name) || ''));
+  ext = ext ? '.' + ext[1].toLowerCase() : ((file && file.type === 'application/pdf') ? '.pdf' : '.jpg');
+  return [job.hvlId || ('job ' + job.id), SIGNED_RECORD_KINDS[kind].label, (meta && meta.ref) ? String(meta.ref) : '', stamp]
+    .filter(Boolean).join(' - ').replace(/[\\\/:*?"<>|]+/g, '-') + ext;
+}
+// cb(ok, message, record). Refuses by name, before anything is read: no client, an unknown kind, no file, a file
+// over 10 MB or of another type, no Apps Script URL, the same paper already being filed, no Drive folder.
+function fileSignedCopy(jobId, kind, meta, file, cb) {
+  meta = meta || {};
+  var done = function (ok, msg, rec) { if (cb) cb(ok, msg, rec); return ok; };
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return done(false, 'This client could not be found.');
+  if (!SIGNED_RECORD_KINDS[kind]) return done(false, 'That is not a kind of paper the app files.');
+  if (!file) return done(false, 'Choose the PDF or the photograph of the signed page.');
+  if (!/^(application\/pdf|image\/)/.test(String(file.type || ''))) return done(false, 'File a PDF or a photograph of the signed page.');
+  if (Number(file.size) > SIGNED_COPY_MAX_BYTES) return done(false, 'That file is over 10 MB. Scan it at a lower resolution, or photograph the page.');
+  if (!SHEETS_SYNC_URL) return done(false, 'This device has no Apps Script URL in Settings, so it cannot file to Drive.');
+  var key = jobId + '|' + kind + '|' + String(meta.ref || '');
+  if (_signedFiling[key]) return done(false, 'This signed copy is being filed now. Give it a moment.');
+  _signedFiling[key] = true;
+  var reader = new FileReader();
+  reader.onerror = function () { delete _signedFiling[key]; done(false, 'That file could not be read on this device.'); };
+  reader.onload = function () {
+    var dataUrl = reader.result;
+    resolveSubfolderId(job, SIGNED_RECORDS_SUBFOLDER, function (folderId) {
+      var target = folderId || _jobRootFolderId(job);
+      if (!target) { delete _signedFiling[key]; done(false, 'This client has no Drive folder yet. Create the Drive folder on the client, then file the signed copy.'); return; }
+      var name = _signedCopyName(job, kind, meta, file);
+      uploadToDrive(target, name, dataUrl, function (ok, fileUrl, fileId) {
+        delete _signedFiling[key];
+        if (!ok) { done(false, 'The signed copy was not filed to Drive. Try again.'); return; }
+        // The store may have been replaced by a load while the upload was out: write to the record held now.
+        var j2 = jobs.find(function (j) { return j.id === jobId; }) || job;
+        var rec = jobListPut(j2, 'signedRecords', {
+          id: newJobListId('signedRecords'), kind: kind, ref: String(meta.ref || ''),
+          stableIds: (meta.stableIds || []).map(String), label: meta.label || SIGNED_RECORD_KINDS[kind].label,
+          signedBy: meta.signedBy || '', signedOn: meta.signedOn || '',
+          fileName: name, fileUrl: fileUrl || '', fileId: fileId || '',
+          filedAt: Date.now(), filedBy: _actor(j2) || j2.tc || ''
+        });
+        done(true, (meta.label || SIGNED_RECORD_KINDS[kind].label) + ' filed to Drive.', rec);
+      });
+    });
+  };
+  reader.readAsDataURL(file);
+  return true;
+}
+// The control: one button that opens the file picker and files what is chosen. The spec is held in memory by an
+// index, never written into the attribute, so a recipient's name with a quote in it cannot break the markup; the
+// index is stable per paper, so redraws do not grow the table. `after(rec)` runs once the copy is recorded.
+var _signedCopySpecs = [];
+var _signedCopyKeys = [];
+function signedCopyControlHtml(jobId, kind, meta, label, after) {
+  meta = meta || {};
+  var key = jobId + '|' + kind + '|' + String(meta.ref || '');
+  var i = _signedCopyKeys.indexOf(key);
+  if (i < 0) { i = _signedCopyKeys.length; _signedCopyKeys.push(key); }
+  _signedCopySpecs[i] = { jobId: jobId, kind: kind, meta: meta, after: after || null };
+  return '<label class="btn-s" style="cursor:pointer;position:relative;">' + esc(label || 'File signed copy')
+    + '<input type="file" accept="application/pdf,image/*" onchange="fileSignedCopyFromInput(this,' + i + ')"'
+    + ' style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;left:0;top:0;"></label>';
+}
+function fileSignedCopyFromInput(input, i) {
+  var spec = _signedCopySpecs[i];
+  var file = input && input.files && input.files[0];
+  if (input) { try { input.value = ''; } catch (e) {} }
+  if (!spec) return;
+  fileSignedCopy(spec.jobId, spec.kind, spec.meta, file, function (ok, msg, rec) {
+    showSyncBadge(msg, !ok);
+    if (ok) { if (spec.after) spec.after(rec); else _signedCopyRepaint(spec.jobId); }
+  });
+}
+// After a filing or a void, the surface that offered it repaints: the desk, the Job Plan or the dashboard, and
+// only while it still shows this client.
+function _signedCopyRepaint(jobId) {
+  var host = _jobBandHost();
+  if (host && host.jobId !== jobId) return;
+  if (host && host.kind === 'admin') { renderInventoryTab(); return; }
+  if (host && host.kind === 'plan') { loadJobPlanTab(); return; }
+  _dashRedraw(jobId);
+}
+// The filed copies of one paper, each a link with who signed and when, and a Void for one filed against the
+// wrong paper. Empty when none is filed.
+function signedRecordLinksHtml(jobId, recs) {
+  return (recs || []).map(function (r) {
+    return '<div class="sc-rec" style="font-size:11px;line-height:1.5;">&#10003; '
+      + (r.fileUrl ? '<a href="' + esc(r.fileUrl) + '" target="_blank" rel="noopener" style="color:var(--bronze);">' + esc(r.label) + '</a>' : esc(r.label))
+      + (r.signedBy ? ' &middot; signed by ' + esc(r.signedBy) : '')
+      + (r.signedOn ? ' &middot; ' + esc(fmtDate2(r.signedOn)) : '')
+      + ' <button type="button" class="btn-s" style="font-size:9.5px;padding:1px 6px;margin-left:4px;" onclick="voidSignedRecord(' + jobId + ',\'' + esc(String(r.id)) + '\')">Void</button></div>';
+  }).join('');
+}
+function voidSignedRecord(jobId, id, after) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var rec = job ? jobListGet(job, 'signedRecords', id) : null;
+  if (!rec || rec.voidedAt) return false;
+  var why = (window.prompt('Why is this signed copy being voided? (for example: filed against the wrong paper). The file stays in Drive.', '') || '').trim();
+  if (!why) return false;
+  jobListVoid(job, 'signedRecords', id, why, _actor(job) || job.tc || '');
+  showSyncBadge('Signed copy voided. It stays in Drive and on the record as voided.');
+  if (after) after(rec); else _signedCopyRepaint(jobId);
+  return true;
 }
 
 function saveJobs() {
@@ -40260,7 +40517,8 @@ function createDriveJobFolder(job) {
       hvlId: job.hvlId || '',
       clientName: job.name || '',
       svc: job.svc || '',
-      subfolders: ['Estate Inventory','As-Found Record','Walkthrough Notes','Estimates','Agreement','Change Orders','Invoice']
+      // Signed Records since P19 (fileSignedCopy); a folder made before it has none, and filing falls back to the root.
+      subfolders: ['Estate Inventory','As-Found Record','Walkthrough Notes','Estimates','Agreement','Change Orders','Invoice', SIGNED_RECORDS_SUBFOLDER]
     })
   })
   .then(function(r){ return r.json(); })

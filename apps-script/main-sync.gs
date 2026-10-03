@@ -49,7 +49,9 @@
 // ⚠ 2026-10-01 (P17): esignArchive files the executed agreement and its certificate through _fileBlobByName, the
 // replace-by-name rule uploadHtml has always followed, so the app's File signed copy button replaces a copy already
 // in the Agreement folder instead of adding a second one beside it. No action or type changes.
-var BACKEND_VERSION = '2026-10-01';
+// ⚠ 2026-10-03 (P19): the six record lists above merge entry by entry on their id (JOB_KEYED_LISTS), so a
+// co-trustee added on one device and a signed receipt filed on another both survive. No action or type changes.
+var BACKEND_VERSION = '2026-10-03';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -859,7 +861,12 @@ function pruneOrphanRecordsConfirm(force) {
 // absence ALONE is never a deletion (that is how a stale laptop resurrects things), but
 // absence plus a touch means this device took it out. The stamps union newest-per-key, so
 // the removal keeps winning against every later stale save.
-var JOB_KEYED_LISTS = ['payments', 'appraisers', 'invSnapshots'];
+// ⚠ AND THE JOB'S RECORD LISTS (2026-10-03, P19): co-representatives, beneficiaries, specific bequests, signed
+// copies filed to Drive, finds on site (an original will, cash) and proceeds statements, each entry keyed on its
+// own `id`. Two people add to these at once, so riding the whole record would let the newer copy drop the other's
+// entry. The app's JOB_RECORD_LISTS names the same six, and a test holds the two lists level.
+var JOB_KEYED_LISTS = ['payments', 'appraisers', 'invSnapshots',
+                       'coFiduciaries', 'beneficiaries', 'bequests', 'signedRecords', 'siteFinds', 'proceedsStatements'];
 // `mustFound` (2026-09-19): the Found ticks against intake's must-find list, one key per
 // line — ticked in the house, corrected at the desk, which is exactly the two-device shape
 // docState has. The app stamps every tick AND every untick (an untick with no stamp would
@@ -878,7 +885,8 @@ var JOB_KEYED_MAPS  = ['docState', 'mustFound', 'vendorSourcing', 'prepSourcing'
 // each recording a payment both produced the same id and union-by-id would fuse two real
 // payments into one. The app mints a uid now; `id` stays the fallback so a payment written
 // before this deployment still has a key, exactly as _srcLineKey keeps its index fallback.
-var JOB_LIST_KEY = { payments: 'uid', appraisers: 'id', invSnapshots: 'ts' };
+var JOB_LIST_KEY = { payments: 'uid', appraisers: 'id', invSnapshots: 'ts',
+                     coFiduciaries: 'id', beneficiaries: 'id', bequests: 'id', signedRecords: 'id', siteFinds: 'id', proceedsStatements: 'id' };
 
 // ⚠⚠ WHAT A PAYMENT KEEPS ONCE EITHER COPY HAS IT (2026-09-30b, P16). A payment merges as one value on its
 // `payments:<uid>` stamp, and the stamp alone lets a device that had NOT seen a void — an iPad offline in
