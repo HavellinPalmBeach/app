@@ -254,9 +254,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('4 · the backend version moves, and the app asks for it, naming what an older deployment does', () => {
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1];
-    eq(bv, '2026-10-01', 'BACKEND_VERSION is bumped with the .gs change');
+    // RESTATED 2026-10-03 (P19): the backend moved on to 2026-10-03 (the job's record lists merge by id), which
+    // carries this pack's filing by name; the app asks for that one now, so both are at least this pack's.
+    ok(bv >= '2026-10-01', 'BACKEND_VERSION is bumped with the .gs change (' + bv + ')');
     const B = sandbox({ vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_FEATURE_COST', 'BACKEND_MIN_VERSION'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-01', '⚠ File signed copy relies on the filing by name, so the app asks for this deployment');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-01', '⚠ File signed copy relies on the filing by name, so the app asks for this deployment or a later one');
     has(B.BACKEND_FEATURE_COST.version, 'File signed copy adds a second copy of the signed agreement', 'the banner names the consequence first');
     has(B.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-09-30b', 'and says which older gaps belong to which vintage');
   });

@@ -86,7 +86,7 @@ function run(resp, opts) {
   const warns = [];
   const timers = [];
   const ctx = sandbox({
-    vars: ['_dashKeepNotice', '_driveFolderInFlight', 'PHOTO_UPLOAD_TIMEOUT_MS'],
+    vars: ['_dashKeepNotice', '_driveFolderInFlight', 'PHOTO_UPLOAD_TIMEOUT_MS', 'SIGNED_RECORDS_SUBFOLDER'],
     // _saveJobEdit / _jobTouch are lifted though nothing here calls them today: a change that sends
     // the failure recorder through them (it must stay bare — see job-edit-stamps) then FAILS that
     // suite's exemption checks with this file still running, instead of throwing here.
@@ -225,7 +225,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const ctx = sandbox({
       fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
             '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
-      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState'],
+      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState', 'SIGNED_RECORDS_SUBFOLDER'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
         DRIVE_FOLDER_ID: '',
@@ -277,7 +277,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const ctx = sandbox({
       fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
             '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
-      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState'],
+      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState', 'SIGNED_RECORDS_SUBFOLDER'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
         DRIVE_FOLDER_ID: '',
@@ -333,7 +333,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const ctx = sandbox({
       fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
             '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch'],
-      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState'],
+      vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState', 'SIGNED_RECORDS_SUBFOLDER'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
         DRIVE_FOLDER_ID: '',
