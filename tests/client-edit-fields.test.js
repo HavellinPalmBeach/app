@@ -450,14 +450,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(intake('notneeded').blocked, [], 'and a matter with no Letters is not held up by one');
 
     const d = sandbox({
-      fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+      fns: ['planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
             '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
             'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
       vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
              'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
              'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES',
-             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'ESTATE_AUTHORITIES'],
       stubs: { isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [],
                stagePaidTotal: () => 0, _photoRefs: { 7: [] },
                isAgreementSigned: () => false, isJobFunded: () => false, depositPaidTotal: () => 0 },

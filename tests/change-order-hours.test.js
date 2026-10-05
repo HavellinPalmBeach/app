@@ -385,7 +385,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the same dependency list job-desk-scope lifts.
     function desk(cos, est) {
       const D = sandbox({
-        fns: ['planDerivedLines', 'jobOnProbateTrack', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+        fns: ['planDerivedLines', 'jobListEntries', 'jobOnProbateTrack', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
               'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
               '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
               'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'].concat(CO),

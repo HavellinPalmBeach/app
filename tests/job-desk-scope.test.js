@@ -126,47 +126,57 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // ⚠ RESTATED 2026-10-03 (P19), NOT WEAKENED. Every expected list below lost `pr_signoff`: the box ("PR sign-off
+  // obtained on the final disposition summary") is DELETED, because a tick said a signature existed without the paper.
+  // The sign-off is now the filed signed copy of the Disposition Ledger, read as a derived line (the ledger workstream).
+  // Everything else each list pins — which boxes the tier and the matter decide — is unchanged and still asserted.
   group('⚠⚠ THE COMPLIANCE LIST — the two defects D6 names, driven both ways');
   {
     // (a) THE UNDER-FIRE. An Estate Settlement administering a probate estate got nothing.
     eq(compliance({ svc: 'cleanout', docTier: 'values' }).length, 0,
        'an Estate Settlement with no matter recorded claims no court administration');
     eq(compliance({ svc: 'cleanout', matterType: 'probate', docTier: 'values' }).join(' '),
-       'inventory nonprobate served filed accounting pr_signoff',
+       'inventory nonprobate served filed accounting',
        '⚠ and gets the whole list the moment the matter says probate — it used to get NONE');
     eq(compliance({ svc: 'cleanout', matterType: 'both', docTier: 'appraisals' }).join(' '),
-       'inventory appraisals nonprobate served filed accounting pr_signoff',
-       'a pour-over will at the top tier gets all seven');
+       'inventory appraisals nonprobate served filed accounting',
+       'a pour-over will at the top tier gets all six');
 
     // (b) THE OVER-FIRE. A probate estate contracted at None was told to do counsel's work.
     eq(compliance({ svc: 'probate', matterType: 'probate', docTier: 'none' }).join(' '),
-       'served filed accounting pr_signoff',
+       'served filed accounting',
        '⚠ contracted at None, the two deliverable checks and the carve-out are gone');
     eq(compliance({ svc: 'probate', matterType: 'probate', docTier: 'contents' }).join(' '),
-       'nonprobate served filed accounting pr_signoff',
+       'nonprobate served filed accounting',
        'on a contents list we state no values, so nothing asks us to verify one');
     eq(compliance({ svc: 'probate', matterType: 'probate', docTier: 'values' }).join(' '),
-       'inventory nonprobate served filed accounting pr_signoff',
+       'inventory nonprobate served filed accounting',
        'the valued tier verifies the FMV and still does not attach reports it was not engaged for');
     eq(compliance({ svc: 'probate', matterType: 'probate', docTier: 'appraisals' }).join(' '),
-       'inventory appraisals nonprobate served filed accounting pr_signoff',
+       'inventory appraisals nonprobate served filed accounting',
        'and the top tier attaches them');
 
-    // ⚠ THE PROCEDURAL FOUR NEVER MOVE WITH THE TIER. Serving, filing, the accounting and the
-    // PR's sign-off happen on a probate matter whoever built the schedule.
+    // ⚠ THE PROCEDURAL THREE NEVER MOVE WITH THE TIER. Serving, filing and the accounting happen on a
+    // probate matter whoever built the schedule. (Four until P19: the PR's sign-off box is deleted, above.)
     ['contents', 'values', 'appraisals', 'none'].forEach((t) => {
       const got = compliance({ svc: 'probate', matterType: 'probate', docTier: t });
-      ['served', 'filed', 'accounting', 'pr_signoff'].forEach((k) => {
+      ['served', 'filed', 'accounting'].forEach((k) => {
         ok(got.indexOf(k) >= 0, 'ct_' + k + ' survives tier ' + t);
       });
+      ok(got.indexOf('pr_signoff') < 0, '⚠ and no sign-off box on tier ' + t + ': the signed ledger is the record (P19)');
     });
 
-    // ⚠ A TRUST MATTER CORRECTLY GETS NONE OF THESE, and it is not an omission: the trustee's
-    // schedule they would verify does not exist yet. Pinned so step 7 has to come back here.
+    // ⚠ A TRUST MATTER STILL GETS NONE OF THESE: they are the court's steps. RESTATED 2026-10-03 (P19): this said the
+    // trustee's schedule did not exist and was "pinned so step 7 has to come back here". It came back: a trust matter
+    // has its own list now (the `tt_*` boxes, asserted in the driven group below and in p19-site-plan.test.js), so the
+    // court list's absence on it is no longer the whole story, and Neither still gets neither list.
     ['probate', 'contested_probate', 'cleanout'].forEach((svc) => {
       ['trust', 'neither'].forEach((m) => {
         eq(compliance({ svc: svc, matterType: m, docTier: 'appraisals' }).length, 0,
            svc + ' recorded ' + m + ' gets no §733.604 list at any tier');
+        const tt = admin({ svc: svc, matterType: m, docTier: 'appraisals' }).filter((k) => k.indexOf('tt_') === 0);
+        if (m === 'trust') ok(tt.length > 0, svc + ' recorded trust gets the trustee\'s list instead');
+        else eq(tt.length, 0, svc + ' recorded neither gets no trustee\'s list either');
       });
     });
 
@@ -191,11 +201,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('a legacy job behaves as it did yesterday, and a living one is untouched');
   {
     // Every probate job created before 2026-09-21 carries neither field.
+    // RESTATED 2026-10-03 (P19): without `pr_signoff`, deleted (see the compliance group above).
     eq(compliance({ svc: 'probate' }).join(' '),
-       'inventory nonprobate served filed accounting pr_signoff',
+       'inventory nonprobate served filed accounting',
        'a probate job with no tier and no matter keeps its checklist');
     eq(compliance({ svc: 'contested_probate' }).join(' '),
-       'inventory nonprobate served filed accounting pr_signoff',
+       'inventory nonprobate served filed accounting',
        'and so does a contested one');
     eq(compliance({ svc: 'probate', docScope: 'full' }).join(' '),
        compliance({ svc: 'probate', docTier: 'values' }).join(' '),
@@ -225,8 +236,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'and an unanswered probate job keeps it, through the same service fallback');
     ok(plan({ svc: 'downsizing_move' }).indexOf('pr_authority') < 0, 'a Home Transition is never asked');
     // The rest of the Job Plan does not move with the matter type.
-    const a = plan({ svc: 'probate', matterType: 'probate' }).filter((k) => k !== 'pr_authority');
-    const b = plan({ svc: 'probate', matterType: 'trust' }).filter((k) => k !== 'pr_authority');
+    // RESTATED 2026-10-03 (P19): the trust matter's twin of pr_authority, `trustee_authority` (the Certification of
+    // Trust read, any limits on the trustee's powers noted), now moves with it as well, so both are set aside and
+    // each is pinned to its own track. Nothing ELSE on the plan moves, which is what this always asserted.
+    ok(plan({ svc: 'probate', matterType: 'trust' }).indexOf('trustee_authority') >= 0, 'a trust matter is asked the trustee\'s twin');
+    ok(plan({ svc: 'probate', matterType: 'probate' }).indexOf('trustee_authority') < 0, 'and a probate matter is not');
+    const gate = (k) => k !== 'pr_authority' && k !== 'trustee_authority';
+    const a = plan({ svc: 'probate', matterType: 'probate' }).filter(gate);
+    const b = plan({ svc: 'probate', matterType: 'trust' }).filter(gate);
     eq(a.join(' '), b.join(' '), 'and nothing else on the plan moves with it');
   }
 
@@ -240,7 +257,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const mk = () => {
       const a = sandbox({
         fns: ['renderJobAdmin', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor',
-              '_planTaskDone', 'planDerivedLines', 'planDerivedHtml', 'planTaskSectionsHtml',
+              '_planTaskDone', 'planDerivedLines', 'jobListEntries', 'planDerivedHtml', 'planTaskSectionsHtml',
               'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
               'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
               'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', '_jobAdminIsOpen', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
@@ -258,26 +275,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     };
     const render = (job) => { const a = mk(); a.estimateStore[7].estimate.svc = job.svc; return a.renderJobAdmin(7, Object.assign({ id: 7 }, job)); };
 
+    // ⚠ RESTATED 2026-10-03 (P19). Every probate count is one lower (`ct_pr_signoff` is deleted: the signed
+    // Disposition Ledger is the sign-off now), and a trust matter is no longer the financial close and the archive
+    // alone: it renders the trustee's own list. Re-measured off the real renderJobAdmin below, not worked by hand.
     const estate = render({ svc: 'cleanout', matterType: 'probate', docTier: 'values' });
-    has(estate, '0 of 11 ticked', '⚠ an Estate Settlement on a probate matter renders eleven boxes — it rendered five');
+    has(estate, '0 of 10 ticked', '⚠ an Estate Settlement on a probate matter renders ten boxes — it rendered five before 2026-09-21');
     has(estate, "'ct_filed'", 'the filing deadline is on it');
     has(estate, "'ct_inventory'", 'and the §733.604 verification');
     has(estate, 'Florida court &amp; legal compliance', 'under the compliance heading');
+    lacks(estate, "'ct_pr_signoff'", 'and no sign-off box (P19)');
 
     const none = render({ svc: 'probate', matterType: 'probate', docTier: 'none' });
-    has(none, '0 of 9 ticked', 'a probate estate contracted at None renders nine');
+    has(none, '0 of 8 ticked', 'a probate estate contracted at None renders eight');
     has(none, "'ct_filed'", 'the court procedure stays');
     lacks(none, "'ct_inventory'", '⚠ and it is no longer told to verify a value counsel states');
     lacks(none, "'ct_appraisals'", 'nor to attach reports counsel obtains');
     lacks(none, 'date-of-death FMV on every line', 'the instruction is gone from the rendered card, not just from the catalogue');
 
     const trust = render({ svc: 'probate', matterType: 'trust', docTier: 'values' });
-    has(trust, '0 of 5 ticked', 'a trust matter renders the financial close and the archive');
+    has(trust, '0 of 9 ticked', 'a trust matter renders the financial close, the trustee\'s list and the archive');
+    has(trust, 'Trust administration', '⚠⚠ under its own heading (P19) — it rendered the financial close and the archive alone');
+    ["'tt_schedule'", "'tt_excluded'", "'tt_delivered'", "'tt_records'"].forEach((k) => has(trust, k, k + ' is on it'));
     lacks(trust, 'Florida court &amp; legal compliance', 'and no court section at all');
     lacks(trust, '733.604', '⚠ nothing on it cites the wrong statute');
 
     const top = render({ svc: 'probate', matterType: 'probate', docTier: 'appraisals' });
-    has(top, '0 of 12 ticked', 'the top tier renders all twelve');
+    has(top, '0 of 11 ticked', 'the top tier renders all eleven');
     has(top, "'ct_appraisals'", 'including the reports it was engaged to attach');
   }
 
@@ -289,7 +312,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE DESK CARD SAYS WHY ITS LIST LOOKS THE WAY IT DOES');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+      fns: ['planDerivedLines', 'jobListEntries', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
             '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
             'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
@@ -345,7 +368,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the converse — no ct_ task may key on the service type again');
   {
     const ctLines = decl('JOB_ADMIN_TASKS').split('\n').filter((l) => l.indexOf("key:'ct_") >= 0);
-    eq(ctLines.length, 7, 'seven compliance boxes');
+    // RESTATED 2026-10-03 (P19): six, not seven — `ct_pr_signoff` is deleted (the signed ledger is the sign-off).
+    eq(ctLines.length, 6, 'six compliance boxes');
     ctLines.forEach((l) => {
       const key = l.match(/key:'(ct_\w+)'/)[1];
       ok(l.indexOf('c.isProbate') < 0, key + ' does not read the service type');

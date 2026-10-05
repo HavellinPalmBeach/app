@@ -705,8 +705,24 @@ body.field-mode #wl-block{display:none;}
 .pl-line:first-child{border-top:none;}
 .pl-dot{flex:0 0 14px;font-weight:800;color:var(--gray);}
 .pl-ok .pl-dot,.pl-ok .pl-lbl{color:var(--ok-tx);}
+.pl-red .pl-dot,.pl-red .pl-lbl{color:var(--err-tx);}
+.pl-red{background:var(--err-bg);}
 .pl-lbl{font-weight:600;}
 .pl-det{color:var(--gray);font-size:11px;}
+/* Found on site (P19): an original will or cash found in the house, on the Job Plan's In the house stage. Each
+   find is a row of facts over a row of actions; both wrap, so nothing is wider than a phone. */
+.fos-card{border:1px solid var(--border-md);border-radius:5px;background:var(--cream);padding:10px 12px;margin-top:12px;}
+.fos-hd{display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;font-size:12.5px;font-weight:700;color:var(--gray-dk);}
+.fos-hd small{font-size:11px;font-weight:400;color:var(--gray);}
+.fos-find{border-top:1px solid var(--border);padding:8px 0 4px;font-size:12px;line-height:1.5;color:var(--gray-dk);}
+.fos-kind{font-weight:700;}
+.fos-flag{color:var(--err-tx);font-weight:600;}
+.fos-acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px;}
+.fos-acts .btn-s{padding:6px 10px;font-size:10px;}
+/* File signed receipt is a <label> (the picker inside it); the global label rule's 12px top margin set it lower than its row. */
+.fos-acts label.btn-s{margin:0;}
+.fos-void{font-size:11px;color:var(--gray);border-top:1px dashed var(--border);padding-top:6px;margin-top:6px;}
+.fos-note{font-size:11px;color:var(--gray);line-height:1.5;margin-top:8px;}
 .ja-card{border:1px solid var(--border-md);border-radius:6px;background:var(--white);margin-bottom:12px;}
 .ja-hd{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;font-size:12.5px;font-weight:700;}
 .ja-hd .ja-n{font-size:11px;color:var(--gray);font-weight:600;margin-left:auto;}
@@ -2747,6 +2763,83 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;gap:8px;margin-top:1rem;">
       <button class="btn-s" style="flex:1;" onclick="closeRefundModal()">Cancel</button>
       <button class="btn-p" id="rf-save-btn" style="flex:1;" onclick="saveRefund()">Record refund &#8594;</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOUND ON SITE (P19, 2026-10-03). Opened from the Found on site card on an estate's Job Plan (In the house): record an
+     original will or cash found in the house, then its hand-over, then (a will) the deposit with the clerk. One dialog for
+     the three acts; openSiteFind shows the sections each act needs and saveSiteFind asks every rule again
+     (siteFindRefusal). A record is never edited or deleted: one made in error is voided on the card, with the reason. -->
+<div class="modal-overlay" id="fos-modal" style="display:none;">
+  <div class="modal-box" style="width:460px;">
+    <div class="modal-title" id="fos-title">Record an original will</div>
+    <div class="modal-sub" id="fos-summary"></div>
+    <input type="hidden" id="fos-job"><input type="hidden" id="fos-kind"><input type="hidden" id="fos-mode"><input type="hidden" id="fos-id">
+    <div id="fos-sec-find">
+      <div class="grid2" style="gap:10px;">
+        <div>
+          <label style="margin-top:0;" id="fos-date-lbl">Found on</label>
+          <input type="date" id="fos-date">
+        </div>
+        <div>
+          <label style="margin-top:0;">Where in the house</label>
+          <input type="text" id="fos-where" placeholder="e.g. study, desk drawer">
+        </div>
+      </div>
+      <div id="fos-sec-will">
+        <label>Found by</label>
+        <input type="text" id="fos-found-by" list="fos-team" autocomplete="off">
+        <label>What it looks like from the outside</label>
+        <textarea id="fos-desc" rows="3" placeholder="e.g. sealed white envelope marked &ldquo;Last Will&rdquo; in ink, unopened"></textarea>
+      </div>
+      <div id="fos-sec-cash">
+        <label>Amount counted</label>
+        <input type="number" id="fos-amount" min="0" step="0.01" placeholder="0.00">
+        <div class="grid2" style="gap:10px;">
+          <div>
+            <label>Counted by</label>
+            <input type="text" id="fos-counter1" list="fos-team" autocomplete="off">
+          </div>
+          <div>
+            <label>And by</label>
+            <input type="text" id="fos-counter2" list="fos-team" autocomplete="off">
+          </div>
+        </div>
+        <label>Sealed bag number</label>
+        <input type="text" id="fos-bag" placeholder="the number printed on the bag">
+      </div>
+    </div>
+    <div id="fos-sec-hand">
+      <div class="grid2" style="gap:10px;">
+        <div>
+          <label>Handed to</label>
+          <input type="text" id="fos-handed-to" list="fos-holders" autocomplete="off">
+        </div>
+        <div>
+          <label>On</label>
+          <input type="date" id="fos-handed-on">
+        </div>
+      </div>
+      <div id="fos-hand-hint" style="font-size:10px;color:var(--gray);margin-top:3px;"></div>
+    </div>
+    <div id="fos-sec-dep">
+      <div class="grid2" style="gap:10px;">
+        <div>
+          <label>Deposited with the clerk on</label>
+          <input type="date" id="fos-dep-on">
+        </div>
+        <div>
+          <label>Confirmed by</label>
+          <input type="text" id="fos-dep-by" list="fos-holders" autocomplete="off">
+        </div>
+      </div>
+    </div>
+    <datalist id="fos-team"></datalist><datalist id="fos-holders"></datalist>
+    <div id="fos-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeSiteFind()">Cancel</button>
+      <button class="btn-p" id="fos-save-btn" style="flex:1;" onclick="saveSiteFind()">Record</button>
     </div>
   </div>
 </div>
@@ -35493,7 +35586,8 @@ function jobTeamGateLine(job) {
 }
 
 // The gates as ONE row of chips at the top of the plan. They are the Before-Day-1 derived lines
-// (agreement signed, deposit received, the Letters, the attorney, the §733.604 deadline) plus the
+// (agreement signed, deposit received, the Letters — or on a trust, since P19, the Certification of Trust —
+// the attorney, the §733.604 deadline and, since P19, the Form 706 date) plus the
 // vendor count — facts the app already holds, so a section you cannot tick is furniture. A red
 // chip carries its fix underneath, because a panel that reports a blocker must say how to clear
 // it and a tooltip is unreachable on the iPad this tab is worked from.
@@ -35689,14 +35783,23 @@ var PLAN_TASKS = [
   { key:'materials_onsite',   phase:'p0', sec:'Access &amp; crew', label:'Moving materials on site for Day 1 morning' },
   { key:'access_tested',      phase:'p0', sec:'Access &amp; crew', label:'Keys and access codes tested; elevator and parking confirmed', mm:' (and the moving truck)' },
   { key:'crew_briefed',       phase:'p0', sec:'Access &amp; crew', label:'Crew confirmed by name and briefed — standing job flags read aloud' },
-  { key:'coi_provided',       phase:'p0', sec:'Access &amp; crew', label:'Certificate of Insurance provided to the attorney, PR or HOA as required' },
+  // ⚠ "THE REPRESENTATIVE", NOT "PR" (P19): the job may be a trust (a successor trustee) or a family distribution,
+  // and the box renders on every labour service. The key is unchanged, so a tick made under the old words stays.
+  { key:'coi_provided',       phase:'p0', sec:'Access &amp; crew', label:'Certificate of Insurance provided to the attorney, the representative or the HOA, as required' },
   // ⚠ THE SAME DEFECT ONE LIST OVER, and it is one word: a personal representative is a fact
   // about the MATTER, not about which service was sold. An Estate Settlement administering a
   // probate estate has a PR whose authority is full or limited and never got asked; a probate
-  // job recorded as a trust administration has a successor trustee instead, and was. The trust
-  // twin of this box waits on step 7 with the rest of the trust variant.
+  // job recorded as a trust administration has a successor trustee instead, and was. Its trust
+  // twin is trustee_authority, below (P19).
   { key:'pr_authority',       phase:'p0', sec:'Probate gate', when:function(c){ return c.probateTrack; },
     label:'Personal Representative authority confirmed — full vs limited, limitations noted' },
+  // ⚠ THE TRUSTEE'S AUTHORITY, ON THE TRUST TRACK (P19; Anthony, 2026-10-03: a trust job needs the probate job's
+  // functionality without the court document). The successor trustee proves their authority with a Certification of
+  // Trust (Fla. Stat. §736.1017), which states the trustee's powers and any limits on them; reading it before Day 1 is
+  // the trust's version of the box above. On `both` (a pour-over) both boxes render: the estate and the trust each have
+  // a fiduciary. A person's act nothing in the app can see, so a box; that the paper is on file is the derived line.
+  { key:'trustee_authority',  phase:'p0', sec:'Trust gate', when:function(c){ return c.trustTrack; },
+    label:'Certification of Trust (§736.1017) read — any limits on the trustee’s powers noted' },
   { key:'nh_floorplan',       phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'New home floor plan obtained or sketched to scale' },
   { key:'nh_placement',       phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'New home measured; furniture placement plan drafted against the keep list' },
   { key:'nh_plan_approved',   phase:'p0', sec:'New home prep', when:function(c){ return c.isMM; }, label:'Placement plan reviewed with and approved by the client before move day' },
@@ -35718,10 +35821,14 @@ var PLAN_TASKS = [
   { key:'record_walked',      phase:'p1', sec:'Before anything leaves the house',
     when:function(c){ return c.hasItemRecord && !c.isDocJob; },
     label:'Every room photographed and every item of consequence logged before it is moved' },
+  // ⚠ THE TWO FINDS WITH A PROCEDURE OF THEIR OWN POINT AT IT (P19). An original will and cash each have a recorded
+  // procedure on the Found on site card under these boxes (siteFindsCardHtml), so the boxes say so rather than giving
+  // a second, vaguer instruction for the same act; and "the representative" replaces "PR", which a trust or a family
+  // distribution does not have. The keys are unchanged, so a tick made under the old words stays.
   { key:'docs_sequestered',   phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
-    label:'Wills, trusts, deeds, titles, financial and military records sequestered and handed to the PR or attorney against a signed receipt' },
+    label:'Deeds, titles, trust papers, financial and military records sequestered and handed to the representative or the attorney against a signed receipt — an original will is recorded under Found on site, below' },
   { key:'cash_logged',        phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
-    label:'Cash, jewelry and documents found are logged and set aside — never removed without PR sign-off' },
+    label:'Jewelry and other valuables found logged and set aside, never removed without the representative’s written authority — cash is counted and handed over under Found on site, below' },
   // Phase 2 — pickups and disposal
   { key:'coc_pickup_present', phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.isDisposal || c.hasCOC; },
     label:'TC present for every valuables pickup; the handoff is signed for' },
@@ -35779,12 +35886,18 @@ var JOB_ADMIN_TASKS = [
   // happen on a probate matter whoever built the schedule; verifying a value we did not state,
   // or attaching a report we were not engaged to obtain, is an instruction nobody can follow.
   //
-  // ⚠ A TRUST MATTER CORRECTLY GETS NONE OF THESE: they are the §733.604 court's steps, and a trust
-  // is administered outside the court. What it lacks is its OWN list — the trustee's checklist is not
-  // built. When this was written the schedule such a list would verify did not exist either; the Trust
-  // Schedule (`printTrustSchedule`, step 7 of ESTATE_SCOPE_SPEC) was built later on 2026-09-21, so the
-  // checklist is what remains. It is listed as outstanding in both documents rather than guessed at
-  // here. (Corrected 2026-09-30, P16: this said the schedule "does not exist yet".)
+  // ⚠ A TRUST MATTER GETS NONE OF THESE: they are the §733.604 court's steps, and a trust is administered
+  // outside the court. It gets its OWN list instead, the `tt_*` boxes below (P19, 2026-10-03; Anthony: "we need
+  // full functionality even if its not a court doc"), which mirror these on the same two axes: the trust track
+  // (`ctx.trustTrack`, never the service) and, for the checks on Havellin's own deliverable, the tier.
+  // (Until P19 this said the trustee's checklist was not built; the Trust Schedule it verifies, printTrustSchedule,
+  // was built on 2026-09-21.)
+  //
+  // ⚠ NO SIGN-OFF BOX ON EITHER LIST (P19). `ct_pr_signoff` ("PR sign-off obtained on the final disposition summary")
+  // is DELETED and the trust list has no twin of it: a tick said a signature existed without the paper. The summary
+  // the representative or trustee signs is the Disposition Ledger, and a derived line reads its filed signed copy
+  // (SIGNED_RECORD_KINDS.ledger), so the sign-off is the record rather than a box. A tick saved under the old key is
+  // left on the plan store and no longer drawn.
   { key:'ct_inventory',   sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack && c.weValue; }, label:'§733.604 inventory verified — date-of-death FMV on every line' },
   // ⚠ OR the job actually HAS an appraiser on the record. The tier says whose job it was to
   // obtain one; a report that exists has to be attached however it arrived, and a box that
@@ -35794,7 +35907,17 @@ var JOB_ADMIN_TASKS = [
   { key:'ct_served',      sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Inventory served on all interested parties; proof of service filed' },
   { key:'ct_filed',       sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Filed within the 60-day deadline, or an extension petitioned for cause' },
   { key:'ct_accounting',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Final accounting prepared: sale proceeds, donations, disposal costs, professional fees' },
-  { key:'ct_pr_signoff',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'PR sign-off obtained on the final disposition summary' },
+  // ⚠⚠ THE TRUSTEE'S LIST (P19). The heading names no court, because there is none. The same split as above:
+  // the schedule check, the appraisals and the exclusion follow the tier (Havellin's own deliverable); delivering
+  // the schedule and the records for the trustee's accounting happen whoever built it. Our schedule SUPPORTS a
+  // §736.08135 accounting and is not one, so the last box hands over the records the trustee accounts from.
+  // `tt_appraisals` stays off the probate track, where `ct_appraisals` already asks it: a pour-over (`both`) is
+  // asked once. On `both` the rest of both lists render, each instrument excluding the other's property.
+  { key:'tt_schedule',    sec:'Trust administration', when:function(c){ return c.trustTrack && c.weValue; }, label:'Trust Schedule verified — date-of-death FMV on every line' },
+  { key:'tt_appraisals',  sec:'Trust administration', when:function(c){ return c.trustTrack && !c.probateTrack && (c.weAppraise || c.hasAppraisers); }, label:'All professional appraisals attached to the Trust Schedule' },
+  { key:'tt_excluded',    sec:'Trust administration', when:function(c){ return c.trustTrack && c.weInventory; }, label:'Property the trust does not hold excluded (probate property, joint with survivorship, POD/TOD, beneficiary-designated)' },
+  { key:'tt_delivered',   sec:'Trust administration', when:function(c){ return c.trustTrack; }, label:'Trust Schedule delivered to the successor trustee or their counsel' },
+  { key:'tt_records',     sec:'Trust administration', when:function(c){ return c.trustTrack; }, label:'Disposition records delivered for the trustee’s accounting (§736.08135): sale proceeds, donations, disposal costs' },
   { key:'rec_archived',   sec:'Records', label:'Job folder complete and archived in Drive — 7-year retention' }
 ];
 
@@ -35873,10 +35996,17 @@ function planTasksHtml(jobId, phase, ctx, only, skip) {
 // used to be a hand-ticked box on the Job Plan, duplicating a fact the Client Dashboard was
 // deriving at the same time — and the midpoint pair had a THIRD store of its own. One truth.
 // DOM-free and clock-free: the tests read the real rule and the real wording.
-function planDerivedLines(jobId, job, est, phase) {
+// ⚠ `today` (yyyy-mm-dd) IS AN ARGUMENT (P19): the Form 706 line and the Found on site lines turn red on a date.
+// A caller that passes none gets the local calendar day, read once and only on a job that has such a line, so
+// every other job never touches the clock. A line may carry `red` (open AND past due, or Havellin holding what it
+// must not), which planDerivedHtml paints red.
+// ⚠ `finds` IS THE FOUND ON SITE CARD'S OWN SET, beside `admin` (the desk card): the In the house stage draws its
+// room count on its heading, never as a line, so the card asks for these lines alone.
+function planDerivedLines(jobId, job, est, phase, today) {
   var out = [];
   if (!job || !est) return out;
   var ctx = planTaskCtx(job, est);
+  var day = function() { return today || (today = _todayStr()); };
   var rs = _planRooms(jobId);
   var rooms = rs.rooms;
   var plan = jobPlanStore[jobId] || {};
@@ -35895,10 +36025,19 @@ function planDerivedLines(jobId, job, est, phase) {
     // ⚠ THE COURT CHIPS FOLLOW THE MATTER (audit M5). They keyed on the service, so an Estate Settlement
     // administering a probate estate was never asked for its Letters or its §733.604 deadline — the same
     // gap the activation gate had, on the screen that would have caught it.
-    if (ctx.probateTrack) {
-      var letters = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
-      out.push({ key: 'letters', ok: letters, label: 'Letters of Administration on file',
-                 detail: job.executorAuth === 'notneeded' ? 'not required on this matter' : (letters ? 'received' : 'pending — recorded under Edit Client when the certified copy arrives, and the job cannot activate without it') });
+    // ⚠⚠ AND THE AUTHORITY CHIP NAMES THE PAPER THE MATTER TAKES (P19): `estateAuthority`, the one answer the
+    // activation gate reads, so the chip and the gate cannot name different papers. The Letters on the probate
+    // track (Both included), keyed `letters` as before; the successor trustee's Certification of Trust
+    // (§736.1017) on a trust-only matter, keyed `certification`; nothing on Neither or an unanswered Estate
+    // Settlement. Both read the one stored answer, `job.executorAuth`.
+    var auth = estateAuthority(job);
+    if (auth) {
+      var authOk = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
+      out.push({ key: auth.key, ok: authOk, label: auth.doc + ' on file',
+                 detail: job.executorAuth === 'notneeded' ? 'not required on this matter' : (authOk ? 'received'
+                   : 'pending — ' + (auth.key === 'letters' ? 'recorded under Edit Client when the certified copy arrives'
+                       : 'the ' + auth.holder + '’s proof of authority (' + auth.cite + '); recorded under Edit Client when it arrives')
+                     + ', and the job cannot activate without it') });
     }
     // ⚠ ASKED ON A PROBATE MATTER, SHOWN ANYWHERE ONE IS RECORDED (2026-09-29, audit P10). It sat red on
     // a trust administration with no attorney, where there is none to record — a successor trustee
@@ -35915,11 +36054,36 @@ function planDerivedLines(jobId, job, est, phase) {
       out.push({ key: 'deadline_733604', ok: dl, label: '§733.604 inventory deadline',
                  detail: dl ? fmtDate2(job.probateDeadline) + ' — 60 days from the Letters' : 'not recorded — enter the date the Letters issued under Edit Client and the deadline follows' });
     }
+    // ⚠⚠ THE FORM 706 DATE (P19; Anthony: track it where it applies), off `estateTaxReturn`, the one answer:
+    // nine months after the date of death, firm on a 706 answered yes, unfirm while the question is unanswered,
+    // nothing on a no. Counsel or the accountant files the return, never Havellin, and the app never sees it go.
+    // GREEN on a firm date still ahead: a federal deadline Havellin keeps in view and can neither meet nor clear,
+    // and a red chip nobody at Havellin can close for nine months is the line people learn to read past (the
+    // attorney chip, audit P10). RED while unanswered: the answer is Havellin's to get from counsel, and it also
+    // sets the documentation standard (`_gate706`, unknown counts as yes). RED once the day has passed: the valued
+    // inventory feeds the return and nobody here can see whether it, or an extension, was filed, so the chip says
+    // to confirm with counsel. The date rides in the label, because a green chip shows its label alone.
+    var tr = estateTaxReturn(job);
+    if (tr) {
+      var trPast = tr.due < day();
+      out.push({ key: 'form_706', ok: tr.firm && !trPast,
+                 label: 'Form 706 due ' + fmtDate2(tr.due) + (tr.firm ? '' : ', if one is filed'),
+                 detail: !tr.firm
+                   ? 'not known whether the estate files a federal estate tax return. If it does, it is due then, nine months after the date of death. Ask the estate attorney and answer <em>Form 706 being filed?</em> under Edit Client; counsel or the accountant files it'
+                   : trPast
+                     ? 'the date has passed. Havellin does not see the filing: confirm with the estate attorney that the return, or an extension (Form 4768), went in; counsel or the accountant files it'
+                     : 'nine months after the date of death; counsel or the accountant files it, and the valued inventory feeds it' });
+    }
   }
   if (phase === 'p1') {
     var nL = roomsAt(TC_DONE_STATUSES);
     out.push({ key: 'rooms_locked', ok: rooms.length > 0 && nL === rooms.length, label: 'All rooms locked',
                detail: nL + ' of ' + rooms.length + (rooms.length && nL === rooms.length ? ' — the project midpoint' : '') });
+  }
+  // ⚠ AN ORIGINAL WILL OR CASH FOUND IN THE HOUSE (P19): on the Found on site card itself and FIRST on the desk card,
+  // where the evening's work happens. A will Havellin still holds is the most urgent line either card can carry.
+  if (phase === 'finds' || phase === 'admin') {
+    if (jobListEntries(job, 'siteFinds').length) out = out.concat(siteFindLines(job, day()));
   }
   if (phase === 'p2') {
     var sent = !!docSentAt(job, 'invoice', 'midpoint');
@@ -36030,8 +36194,9 @@ function planDerivedLines(jobId, job, est, phase) {
       // this is the catalogue lookup on an answered key, exactly as `docTierDef(ctx.tier)` is
       // beside it, and not a second opinion of what the matter type means.
       var mdf = ctx.matter ? MATTER_TYPES[ctx.matter] : null;
+      // P19: an unanswered matter withholds the trustee's list as well as the court's (the `tt_*` boxes key on it too).
       out.push({ key: 'matter_type', ok: !!mdf, label: 'Matter type recorded',
-                 detail: mdf ? mdf.label : 'not recorded &mdash; the Florida court list is withheld until it is. Edit Client' });
+                 detail: mdf ? mdf.label : 'not recorded &mdash; the Florida court list and the trustee&rsquo;s list are withheld until it is. Edit Client' });
       var tdf = docTierDef(ctx.tier);
       out.push({ key: 'doc_tier', ok: !!tdf, label: 'Contracted to produce',
                  detail: tdf ? tdf.label : 'not recorded &mdash; Edit Client, before the agreement goes out' });
@@ -36043,13 +36208,405 @@ function planDerivedHtml(jobId, job, est, phase) {
   var lines = planDerivedLines(jobId, job, est, phase);
   if (!lines.length) return '';
   return '<div class="pl-derived" id="plan-derived-' + phase + '-' + jobId + '">' + lines.map(function(l) {
-    return '<div class="pl-line ' + (l.ok ? 'pl-ok' : 'pl-open') + '">'
-      + '<span class="pl-dot">' + (l.ok ? '&#10003;' : '&#9675;') + '</span>'
+    // `red` (P19): open and past due, or Havellin holding what it must not (an original will, estate cash).
+    return '<div class="pl-line ' + (l.ok ? 'pl-ok' : (l.red ? 'pl-open pl-red' : 'pl-open')) + '">'
+      + '<span class="pl-dot">' + (l.ok ? '&#10003;' : (l.red ? '&#9679;' : '&#9675;')) + '</span>'
       + '<span class="pl-lbl">' + l.label + '</span>'
       + (l.detail ? '<span class="pl-det">' + l.detail + '</span>' : '')
       + (l.action && !l.ok ? '<button type="button" class="btn-s" style="font-size:10px;margin-left:auto;" onclick="' + l.action.call + '">' + l.action.label + '</button>' : '')
       + '</div>';
   }).join('') + '</div>';
+}
+
+// ═══════════════════════ FOUND ON SITE — AN ORIGINAL WILL, OR CASH (P19, 2026-10-03) ═══════════════════════
+// ⚠⚠ TWO THINGS A CREW FINDS IN AN ESTATE'S HOUSE THAT HAVELLIN MUST NEVER HOLD, each with the procedure Anthony
+// set on 2026-10-03 ("i'm good with all of your calls. build it all"; counsel confirms the wording):
+//   · AN ORIGINAL WILL is described from the outside only — never opened, read, copied or interpreted — and handed
+//     to the estate attorney the SAME DAY against a signed receipt (else the representative; any name may be typed).
+//     It is then followed until the deposit with the clerk is confirmed: §732.901 gives its custodian ten days to
+//     deposit it, so the reminder falls due ten days after the hand-over and goes red once that day has passed.
+//     Havellin never keeps it, so while no hand-over is recorded the line is red and says "today".
+//   · CASH is counted by TWO people (two different names, `samePerson`, or nothing is recorded), sealed in a
+//     numbered bag (its number required), and signed for by the fiduciary the same day. NOTHING ELSE REFUSES IT:
+//     a hand-over on another day, or to somebody who is not a recorded fiduciary, is recorded and flagged.
+// Each find is an entry on `job.siteFinds` (JOB_RECORD_LISTS: merged on the sheet entry by entry), written only
+// through jobListPut (a person's edit, stamped and synced) and NEVER removed: one recorded in error is voided with a
+// reason (jobListVoid) and stays on the record, listed as void. A find's facts are written once; the hand-over and
+// the deposit are later acts, each recorded once — the way a payment is never edited (void it, record it again).
+// The signed receipt is filed through the foundation's control (fileSignedCopy, kind `will` or `cash`, ref the
+// find's id), offered once the hand-over is recorded, so a filed receipt always has a hand-over behind it.
+// Estate jobs only (invFiduciaryMode), on the card AND in every handler.
+var WILL_DEPOSIT_DAYS = 10;
+var SITE_FIND_KINDS = {
+  will: { noun: 'Original will', doc: 'Receipt for Original Will', record: 'Record an original will', made: 'found' },
+  cash: { noun: 'Cash',          doc: 'Cash Count and Receipt',    record: 'Record cash found',       made: 'counted' }
+};
+// ⚠ DRAFTED FOR COUNSEL (P19), printed on the two forms. One definition each; the counsel bundle quotes them.
+var WILL_RECEIPT_STATEMENT = 'Havellin Palm Beach, LLC found the document described above at the property during its engagement and delivers it as it was found. Havellin has not opened it, read its contents or copied it, and keeps no copy of it in any form; the description above is taken from its outside only. Havellin does not hold original wills. Under Florida law the custodian of a will must deposit it with the clerk of the court having venue of the estate within ten days after receiving information that the testator is dead (Fla. Stat. &sect;732.901).';
+var CASH_RECEIPT_STATEMENT = 'The two people named above counted this cash together at the property on the day shown and sealed it, in each other&rsquo;s presence, in the numbered bag shown. Havellin Palm Beach, LLC does not hold estate cash: it is delivered sealed to the fiduciary the day it is counted. The fiduciary signs for the bag with its seal intact and its number as shown; the amount is the count of the two people named, each of whom signs for it below.';
+function siteFindsOf(job, kind, withVoided) {
+  return jobListEntries(job, 'siteFinds', withVoided).filter(function(f) { return !!SITE_FIND_KINDS[f.kind] && (!kind || f.kind === kind); });
+}
+// The day the find was made: found, for a will; counted, for cash.
+function siteFindDay(f) { return f ? String((f.kind === 'cash' ? f.countedOn : f.foundOn) || '') : ''; }
+// The custodian's ten days (§732.901), counted from the hand-over: the day the deposit with the clerk falls due.
+// Calendar days on the local clock (a Date built from parts, never a parse of the bare string, which reads as UTC).
+function willDepositDue(f) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String((f && f.handedOn) || ''));
+  if (!m) return '';
+  return _ymdLocal(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + WILL_DEPOSIT_DAYS));
+}
+// ⚠ FLAGGED, NEVER REFUSED: a hand-over recorded on another day than the find, where the procedure is the same day.
+function siteFindHandFlag(f) {
+  var d = siteFindDay(f);
+  if (!f || !SITE_FIND_KINDS[f.kind] || !f.handedOn || !d || f.handedOn === d) return '';
+  return 'handed over ' + fmtDate2(f.handedOn) + ', not the day it was ' + SITE_FIND_KINDS[f.kind].made + ' (' + fmtDate2(d) + ')';
+}
+// ⚠ AND CASH HANDED TO SOMEBODY WHO IS NOT A FIDUCIARY RECORDED ON THE JOB, flagged the same way: the cash is the
+// estate's or the trust's, and only its fiduciary may take it. A will goes to counsel, so it is never asked this.
+function siteFindHolderFlag(job, f) {
+  if (!f || f.kind !== 'cash' || !String(f.handedTo || '').trim()) return '';
+  return jobFiduciaries(job).some(function(p) { return samePerson(p.name, f.handedTo); }) ? '' : 'not a fiduciary recorded on this job';
+}
+// Whom a find goes to unless somebody types another name: a will to the estate attorney recorded (by name, else the
+// firm), else the representative; cash to the representative, the first of jobFiduciaries.
+function siteFindDefaultHolder(job, kind) {
+  if (!job) return '';
+  if (kind === 'will') {
+    var atty = String(job.probateAttyName || '').trim() || String(job.probateAttyFirm || '').trim();
+    if (atty) return atty;
+  }
+  var fids = jobFiduciaries(job);
+  return fids.length ? fids[0].name : '';
+}
+// ⚠ THE RULES, WHERE THE RECORD IS WRITTEN: saveSiteFind asks this of the record it is about to put, so no control
+// can reach around it. `mode` is the act: 'new' (the find; a hand-over beside it is optional), 'handover', 'deposit'.
+// '' or the refusal, every missing piece named at once. DOM-free.
+function siteFindRefusal(f, mode) {
+  if (!f || !SITE_FIND_KINDS[f.kind]) return 'That is not something the Found on site card records.';
+  var ymd = function(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')); };
+  var has = function(v) { return !!String(v || '').trim(); };
+  var miss = [];
+  if (f.kind === 'will') {
+    if (!ymd(f.foundOn)) miss.push('the day it was found');
+    if (!has(f.foundBy)) miss.push('who found it');
+    if (!has(f.description)) miss.push('what it looks like from the outside');
+  } else {
+    if (!ymd(f.countedOn)) miss.push('the day it was counted');
+    if (!(Number(f.amount) > 0)) miss.push('the amount counted');
+    var by = Array.isArray(f.countedBy) ? f.countedBy : [];
+    if (!has(by[0]) || !has(by[1])) miss.push('both people who counted it');
+    if (!has(f.bagNo)) miss.push('the sealed bag’s number');
+  }
+  if (mode === 'handover' || has(f.handedOn)) {
+    if (!ymd(f.handedOn)) miss.push('the day it was handed over');
+    if (!has(f.handedTo)) miss.push('who it was handed to');
+  }
+  if (mode === 'deposit') {
+    if (f.kind !== 'will') return 'Only an original will is deposited with the clerk.';
+    if (!has(f.handedOn)) return 'Record the hand-over first: the deposit is made by whoever holds the will.';
+    if (!ymd(f.depositedOn)) miss.push('the day it was deposited with the clerk');
+    if (!has(f.depositConfirmedBy)) miss.push('who confirmed the deposit');
+  }
+  if (miss.length) return 'Enter ' + _andJoin(miss) + '.';
+  if (f.kind === 'cash' && samePerson(f.countedBy[0], f.countedBy[1])) {
+    return 'Two different people count the cash, and both names given are ' + esc(String(f.countedBy[0]).trim()) + '. Name the second person who counted it.';
+  }
+  return '';
+}
+
+// ⚠⚠ THE REMINDER: the derived lines planDerivedLines returns on the Found on site card ('finds') and first on the
+// desk card ('admin'). DOM-free and clock-free (`today` is an argument). A will Havellin still holds is RED and says
+// today; once handed over, the receipt line is open until the signed receipt is filed and the deposit line is open
+// until the deposit is confirmed, due ten days after the hand-over and RED once past. Cash still held is RED; once
+// handed over, its line is open until the count's signed receipt is filed. Every person-typed value is escaped
+// here, because a line's label and detail are drawn as markup.
+function siteFindLines(job, today) {
+  var out = [];
+  siteFindsOf(job, 'will').forEach(function(f) {
+    if (!f.handedOn) {
+      var to = siteFindDefaultHolder(job, 'will');
+      out.push({ key: 'will_held_' + f.id, ok: false, red: true, label: 'Original will held by Havellin',
+                 detail: 'hand it to ' + (to ? esc(to) : 'the estate attorney') + ' today, against a signed receipt. Found '
+                   + fmtDate2(f.foundOn) + (f.where ? ' in ' + esc(f.where) : '') + '; Havellin never keeps an original will' });
+      return;
+    }
+    var rcpt = signedRecordsOf(job, 'will', f.id).length > 0;
+    out.push({ key: 'will_receipt_' + f.id, ok: rcpt, label: 'Original will handed over against a signed receipt',
+               detail: 'to ' + esc(f.handedTo) + ' on ' + fmtDate2(f.handedOn)
+                 + (rcpt ? '' : ' &mdash; file the receipt they signed, under Found on site on the Job Plan') });
+    if (f.depositedOn) {
+      out.push({ key: 'will_deposit_' + f.id, ok: true, label: 'Original will deposited with the clerk',
+                 detail: fmtDate2(f.depositedOn) + ', confirmed by ' + esc(f.depositConfirmedBy) });
+      return;
+    }
+    var due = willDepositDue(f), late = !!due && String(today || '') > due;
+    out.push({ key: 'will_deposit_' + f.id, ok: false, red: late, label: 'Original will deposited with the clerk',
+               detail: (late ? 'was due ' : 'due ') + fmtDate2(due) + ', ten days after the hand-over: the custodian deposits it with the clerk within ten days (&sect;732.901). '
+                 + (late ? 'Confirm with ' + esc(f.handedTo) + ' that it went to the clerk, and record the date'
+                         : 'Confirm the deposit with ' + esc(f.handedTo) + ' and record it') + ' under Found on site on the Job Plan' });
+  });
+  siteFindsOf(job, 'cash').forEach(function(f) {
+    var what = fmt(Number(f.amount) || 0) + ' in sealed bag No. ' + esc(f.bagNo);
+    if (!f.handedOn) {
+      var fid = siteFindDefaultHolder(job, 'cash');
+      out.push({ key: 'cash_held_' + f.id, ok: false, red: true, label: 'Cash held by Havellin',
+                 detail: what + ', counted ' + fmtDate2(f.countedOn) + ' &mdash; hand it to ' + (fid ? esc(fid) : 'the fiduciary')
+                   + ' today, against a signed receipt' });
+      return;
+    }
+    var crc = signedRecordsOf(job, 'cash', f.id).length > 0;
+    out.push({ key: 'cash_receipt_' + f.id, ok: crc, label: 'Cash count receipt filed',
+               detail: what + ', handed to ' + esc(f.handedTo) + ' on ' + fmtDate2(f.handedOn)
+                 + (crc ? '' : ' &mdash; file the receipt both counters and ' + esc(f.handedTo) + ' signed, under Found on site on the Job Plan') });
+  });
+  return out;
+}
+
+// The names offered as the dialog is filled in (typed names are taken as typed): the team, for who found or counted
+// it, read off the job record without minting a crew; and for who it went to, every fiduciary (jobFiduciaries) and,
+// for a will, the attorney before them. Cash goes to a fiduciary, so the attorney is not offered for it.
+function _siteFindTeamNames(job) {
+  var out = [];
+  var add = function(n) { n = String(n || '').trim(); if (n && !isCrewPlaceholder(n) && !out.some(function(x) { return samePerson(x, n); })) out.push(n); };
+  add(job && job.tc);
+  var c = job && job.crew;
+  if (c) { add(c.tc && c.tc.name); add(c.tc2 && c.tc2.name); (c.ps || []).forEach(function(p) { add(p && p.name); }); }
+  return out;
+}
+function _siteFindHolderNames(job, kind) {
+  var out = [];
+  var add = function(n) { n = String(n || '').trim(); if (n && !out.some(function(x) { return samePerson(x, n); })) out.push(n); };
+  if (kind === 'will') { add(job && job.probateAttyName); add(job && job.probateAttyFirm); }
+  jobFiduciaries(job).forEach(function(p) { add(p.name); });
+  return out;
+}
+
+// One find on the card: what it is, where it went, any flag, the filed receipt, and the acts still open on it.
+function _siteFindRowHtml(jobId, job, f) {
+  var K = SITE_FIND_KINDS[f.kind];
+  var idq = '\'' + esc(String(f.id)) + '\'';
+  var facts = f.kind === 'will'
+    ? '<span class="fos-kind">Original will</span> &mdash; found ' + fmtDate2(f.foundOn) + (f.where ? ' in ' + esc(f.where) : '')
+      + ' by ' + esc(f.foundBy) + '<br><span style="color:var(--gray);">From the outside:</span> ' + escLines(f.description)
+    : '<span class="fos-kind">Cash</span> &mdash; ' + fmt(Number(f.amount) || 0) + ' counted ' + fmtDate2(f.countedOn)
+      + (f.where ? ' in ' + esc(f.where) : '') + ' by ' + esc((f.countedBy || [])[0]) + ' and ' + esc((f.countedBy || [])[1])
+      + ', sealed bag No. ' + esc(f.bagNo);
+  if (f.handedOn) facts += '<br>Handed to ' + esc(f.handedTo) + ' on ' + fmtDate2(f.handedOn);
+  if (f.kind === 'will' && f.depositedOn) facts += '<br>Deposited with the clerk ' + fmtDate2(f.depositedOn) + ', confirmed by ' + esc(f.depositConfirmedBy);
+  var flags = [siteFindHandFlag(f), siteFindHolderFlag(job, f)].filter(Boolean);
+  var recs = signedRecordsOf(job, f.kind, f.id);
+  var acts = ['<button type="button" class="btn-s" onclick="printSiteFindReceipt(' + jobId + ',' + idq + ')">Print ' + K.doc + '</button>'];
+  if (!f.handedOn) {
+    acts.push('<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'' + f.kind + '\',\'handover\',' + idq + ')">Record the hand-over</button>');
+  } else if (!recs.length) {
+    acts.push(signedCopyControlHtml(jobId, f.kind, {
+      ref: String(f.id), label: SIGNED_RECORD_KINDS[f.kind].label, signedOn: f.handedOn,
+      signedBy: f.kind === 'cash' ? [(f.countedBy || [])[0], (f.countedBy || [])[1], f.handedTo].filter(Boolean).join('; ') : f.handedTo
+    }, 'File signed receipt', function() { _repaintSiteFinds(jobId); }));
+  }
+  if (f.kind === 'will' && f.handedOn && !f.depositedOn) {
+    acts.push('<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'will\',\'deposit\',' + idq + ')">Confirm the deposit with the clerk</button>');
+  }
+  acts.push('<button type="button" class="btn-s" onclick="voidSiteFind(' + jobId + ',' + idq + ')">Void</button>');
+  return '<div class="fos-find" data-find="' + esc(String(f.id)) + '">' + facts
+    + (flags.length ? '<div class="fos-flag">&#9888; ' + flags.join('; ') + '</div>' : '')
+    + signedRecordLinksHtml(jobId, recs)
+    + '<div class="fos-acts">' + acts.join('') + '</div></div>';
+}
+// The card, on the In the house stage of an estate's Job Plan (renderJobPlan). Its own lines first, then each live
+// find, the two record buttons, any voided find (kept on the record, struck through), and the two procedures.
+function siteFindsCardHtml(jobId, job, est) {
+  if (!job || !invFiduciaryMode(job)) return '';
+  var all = siteFindsOf(job, null, true);
+  var live = all.filter(function(f) { return !f.voidedAt; });
+  var voided = all.filter(function(f) { return !!f.voidedAt; });
+  return '<div class="fos-card" id="plan-finds-' + jobId + '">'
+    + '<div class="fos-hd">Found on site <small>an original will, or cash: record it the day it is found</small></div>'
+    + planDerivedHtml(jobId, job, est, 'finds')
+    + live.map(function(f) { return _siteFindRowHtml(jobId, job, f); }).join('')
+    + '<div class="fos-acts">'
+      + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'will\')">' + SITE_FIND_KINDS.will.record + '</button>'
+      + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'cash\')">' + SITE_FIND_KINDS.cash.record + '</button>'
+    + '</div>'
+    + voided.map(function(f) {
+        return '<div class="fos-void"><s>' + SITE_FIND_KINDS[f.kind].noun + ' ' + SITE_FIND_KINDS[f.kind].made + ' ' + fmtDate2(siteFindDay(f)) + '</s>'
+          + ' &middot; void: ' + esc(f.voidReason) + (f.voidedBy ? ' (' + esc(f.voidedBy) + ')' : '') + '</div>';
+      }).join('')
+    + '<div class="fos-note"><strong>An original will:</strong> describe it from the outside only &mdash; never open, read, copy or interpret it &mdash; '
+      + 'and hand it to the estate attorney the same day against a signed receipt. Havellin never keeps it. '
+      + '<strong>Cash:</strong> two people count it, it goes in a sealed numbered bag, and the fiduciary signs for the bag the same day.</div>'
+    + '</div>';
+}
+// Repaint the card in place, never the plan: an innerHTML write over #job-plan-content takes the hours form and a
+// half-typed note with it (_parkHoursSection). Only while the plan shows this client.
+function _repaintSiteFinds(jobId) {
+  var el = document.getElementById('plan-finds-' + jobId);
+  var job = jobs.find(function(j) { return j.id === jobId; });
+  var rec = estimateStore[jobId];
+  if (!el || !job || !rec || !rec.estimate) return false;
+  el.outerHTML = siteFindsCardHtml(jobId, job, rec.estimate);
+  return true;
+}
+
+// ── The dialog: one modal (#fos-modal) for the three acts — record a find, record its hand-over, confirm a will's
+// deposit with the clerk. The handler asks every question again where the record is written (saveSiteFind).
+function openSiteFind(jobId, kind, mode, id) {
+  mode = mode || 'new';
+  var job = jobs.find(function(j) { return j.id === jobId; });
+  if (!job || !invFiduciaryMode(job) || !SITE_FIND_KINDS[kind]) { showSyncBadge('Found on site is recorded on an estate job.', true); return false; }
+  var f = null;
+  if (mode !== 'new') {
+    f = jobListGet(job, 'siteFinds', id);
+    if (!f || f.voidedAt || f.kind !== kind) { showSyncBadge('That record is no longer on this job.', true); _repaintSiteFinds(jobId); return false; }
+  }
+  var K = SITE_FIND_KINDS[kind], today = _todayStr();
+  var el = function(i) { return document.getElementById(i); };
+  var set = function(i, v) { var e = el(i); if (e) e.value = v; };
+  var show = function(i, on) { var e = el(i); if (e) e.style.display = on ? '' : 'none'; };
+  var opts = function(names) { return names.map(function(n) { return '<option value="' + esc(n) + '">'; }).join(''); };
+  set('fos-job', String(jobId)); set('fos-kind', kind); set('fos-mode', mode); set('fos-id', f ? String(f.id) : '');
+  ['fos-where', 'fos-found-by', 'fos-desc', 'fos-amount', 'fos-counter1', 'fos-counter2', 'fos-bag', 'fos-handed-on', 'fos-dep-on'].forEach(function(i) { set(i, ''); });
+  set('fos-date', today);
+  set('fos-handed-to', mode === 'new' || mode === 'handover' ? siteFindDefaultHolder(job, kind) : '');
+  if (mode === 'handover') set('fos-handed-on', today);
+  set('fos-dep-by', f && f.handedTo ? f.handedTo : '');
+  show('fos-sec-find', mode === 'new');
+  show('fos-sec-will', mode === 'new' && kind === 'will');
+  show('fos-sec-cash', mode === 'new' && kind === 'cash');
+  show('fos-sec-hand', mode !== 'deposit');
+  show('fos-sec-dep', mode === 'deposit');
+  var t = el('fos-title'); if (t) t.textContent = mode === 'new' ? K.record : mode === 'handover' ? 'Record the hand-over' : 'Confirm the deposit with the clerk';
+  var dl = el('fos-date-lbl'); if (dl) dl.textContent = kind === 'will' ? 'Found on' : 'Counted on';
+  var s = el('fos-summary');
+  if (s) s.innerHTML = mode === 'new'
+    ? (kind === 'will' ? 'Describe it from the outside only: never open, read, copy or photograph its contents. It goes to the estate attorney today, against a signed receipt.'
+                       : 'Two people count it together and seal it in a numbered bag. The fiduciary signs for the bag today.')
+    : esc(K.noun + ' ' + K.made + ' ' + fmtDate2(siteFindDay(f)) + (f.where ? ' in ' + f.where : '')
+        + (kind === 'cash' ? ': ' + fmt(Number(f.amount) || 0) + ', sealed bag No. ' + f.bagNo : '')
+        + (f.handedOn ? '. Handed to ' + f.handedTo + ' on ' + fmtDate2(f.handedOn) + '.' : '.'));
+  var hh = el('fos-hand-hint');
+  if (hh) hh.textContent = mode === 'new' ? 'Leave the date blank while Havellin still holds it, and record the hand-over when it happens.'
+    : (kind === 'will' ? 'The same day it was found. Any other day is recorded and flagged.' : 'The same day it was counted. Any other day, or anybody but a fiduciary, is recorded and flagged.');
+  var tl = el('fos-team'); if (tl) tl.innerHTML = opts(_siteFindTeamNames(job));
+  var hl = el('fos-holders'); if (hl) hl.innerHTML = opts(_siteFindHolderNames(job, kind));
+  var b = el('fos-save-btn'); if (b) b.textContent = mode === 'new' ? 'Record' : mode === 'handover' ? 'Record the hand-over' : 'Record the deposit';
+  var fb = el('fos-fb'); if (fb) fb.innerHTML = '';
+  var m = el('fos-modal'); if (m) m.style.display = 'flex';
+  return true;
+}
+function closeSiteFind() {
+  var m = document.getElementById('fos-modal');
+  if (m) m.style.display = 'none';
+}
+function saveSiteFind() {
+  var v = function(i) { var e = document.getElementById(i); return e ? String(e.value || '').trim() : ''; };
+  var jobId = parseInt(v('fos-job'), 10) || 0, kind = v('fos-kind'), mode = v('fos-mode') || 'new', id = v('fos-id');
+  var job = jobs.find(function(j) { return j.id === jobId; });
+  if (!job) { showFB('fos-fb', 'warn', 'This client could not be found.'); return false; }
+  if (!invFiduciaryMode(job) || !SITE_FIND_KINDS[kind]) { showFB('fos-fb', 'warn', 'Found on site is recorded on an estate job.'); return false; }
+  var who = _actor(job) || job.tc || '';
+  var rec;
+  if (mode === 'new') {
+    rec = { kind: kind, recordedBy: who, recordedAt: Date.now() };
+    if (kind === 'will') {
+      rec.foundOn = v('fos-date'); rec.where = v('fos-where'); rec.foundBy = v('fos-found-by'); rec.description = v('fos-desc');
+    } else {
+      rec.countedOn = v('fos-date'); rec.where = v('fos-where');
+      rec.amount = roundCents(parseFloat(v('fos-amount')) || 0);   // to the cent, as typed (P17)
+      rec.countedBy = [v('fos-counter1'), v('fos-counter2')]; rec.bagNo = v('fos-bag');
+    }
+    if (v('fos-handed-on')) { rec.handedTo = v('fos-handed-to'); rec.handedOn = v('fos-handed-on'); rec.handRecordedBy = who; }
+  } else {
+    var cur = jobListGet(job, 'siteFinds', id);
+    if (!cur || cur.voidedAt || cur.kind !== kind) { showFB('fos-fb', 'warn', 'That record is no longer on this job: it may have been voided on another device.'); return false; }
+    rec = JSON.parse(JSON.stringify(cur));
+    if (mode === 'handover') {
+      if (cur.handedOn) { showFB('fos-fb', 'warn', 'The hand-over is already recorded: to ' + esc(cur.handedTo) + ' on ' + fmtDate2(cur.handedOn) + '.'); return false; }
+      rec.handedTo = v('fos-handed-to'); rec.handedOn = v('fos-handed-on'); rec.handRecordedBy = who;
+    } else if (mode === 'deposit') {
+      if (cur.depositedOn) { showFB('fos-fb', 'warn', 'The deposit is already recorded: ' + fmtDate2(cur.depositedOn) + '.'); return false; }
+      rec.depositedOn = v('fos-dep-on'); rec.depositConfirmedBy = v('fos-dep-by'); rec.depositRecordedBy = who;
+    } else { showFB('fos-fb', 'warn', 'Nothing to record.'); return false; }
+  }
+  var why = siteFindRefusal(rec, mode);
+  if (why) { showFB('fos-fb', 'warn', why); return false; }
+  jobListPut(job, 'siteFinds', rec);
+  closeSiteFind();
+  var K = SITE_FIND_KINDS[kind];
+  var flag = [siteFindHandFlag(rec), siteFindHolderFlag(job, rec)].filter(Boolean).join('; ');
+  showSyncBadge((mode === 'new' ? K.noun + ' recorded' : mode === 'handover' ? 'Hand-over recorded' : 'Deposit with the clerk recorded')
+    + (flag ? ' (flagged: ' + flag + ')' : '') + '.', !!flag);
+  _repaintSiteFinds(jobId);
+  return true;
+}
+// A find recorded in error is VOIDED with a reason and stays on the record; nothing removes one.
+function voidSiteFind(jobId, id) {
+  var job = jobs.find(function(j) { return j.id === jobId; });
+  var f = job ? jobListGet(job, 'siteFinds', id) : null;
+  if (!f || f.voidedAt) return false;
+  var why = (window.prompt('Why is this record being voided? (for example: recorded twice, or on the wrong client). It stays on the record, marked void.', '') || '').trim();
+  if (!why) return false;
+  jobListVoid(job, 'siteFinds', id, why, _actor(job) || job.tc || '');
+  showSyncBadge('Voided. It stays on the record, marked void, with the reason.');
+  _repaintSiteFinds(jobId);
+  return true;
+}
+
+// ── The two printed forms. Pure builders (job, find) → html; printSiteFindReceipt is the thin print shim. Each prints
+// what is recorded and a blank line for what is not yet, so the form can go to the hand-over before it is recorded.
+function _siteFindFormRow(label, value) {
+  return '<tr><td style="padding:4px 12px 4px 0;color:#666;vertical-align:top;white-space:nowrap;">' + label + '</td>'
+    + '<td style="padding:4px 0;vertical-align:top;">' + value + '</td></tr>';
+}
+var _SITE_FIND_BLANK = '<span style="display:inline-block;min-width:200px;border-bottom:1px solid #999;">&nbsp;</span>';
+function _siteFindSigLine(who, note) {
+  return '<div style="margin-top:20px;font-size:11px;line-height:2.1;break-inside:avoid;">'
+    + who + ': __________________________________ &nbsp;&nbsp; Date: ______________ &nbsp; Time: ________'
+    + (note ? '<br><span style="color:#888;">' + note + '</span>' : '') + '</div>';
+}
+function willReceiptHtml(job, f) {
+  return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, SITE_FIND_KINDS.will.doc, 'An original will found at the property, delivered as it was found')
+    + '<table style="border-collapse:collapse;font-size:12px;margin:8px 0 12px;">'
+      + _siteFindFormRow('Found', fmtDate2(f.foundOn) + (f.where ? ', ' + esc(f.where) : '') + ', by ' + esc(f.foundBy) + ' of Havellin Palm Beach, LLC')
+      + _siteFindFormRow('As it appears from the outside', escLines(f.description))
+      + _siteFindFormRow('Delivered to', f.handedTo ? esc(f.handedTo) : _SITE_FIND_BLANK)
+      + _siteFindFormRow('On', f.handedOn ? fmtDate2(f.handedOn) : _SITE_FIND_BLANK)
+    + '</table>'
+    + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:6px;">' + WILL_RECEIPT_STATEMENT + '</div>'
+    + _siteFindSigLine('Received by', (f.handedTo ? esc(f.handedTo) : 'Print name: __________________________') + ' &mdash; I have received the document described above, as stated.')
+    + _siteFindSigLine('Delivered by', 'for Havellin Palm Beach, LLC')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">The signed receipt is filed with the estate record and retained for seven years.</div>'
+    + '</div>';
+}
+function cashReceiptHtml(job, f) {
+  var by = f.countedBy || [];
+  var fid = f.handedTo ? jobFiduciaries(job).filter(function(p) { return samePerson(p.name, f.handedTo); })[0] : null;
+  return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, SITE_FIND_KINDS.cash.doc, 'Cash found at the property, counted by two and delivered sealed')
+    + '<table style="border-collapse:collapse;font-size:12px;margin:8px 0 12px;">'
+      + _siteFindFormRow('Counted', fmtDate2(f.countedOn) + (f.where ? ', ' + esc(f.where) : ''))
+      + _siteFindFormRow('Amount', '<strong>' + fmt(Number(f.amount) || 0) + '</strong>')
+      + _siteFindFormRow('Counted by', esc(by[0]) + ' and ' + esc(by[1]))
+      + _siteFindFormRow('Sealed bag', 'No. ' + esc(f.bagNo))
+      + _siteFindFormRow('Delivered to', f.handedTo ? esc(f.handedTo) + (fid && fid.role ? ', ' + esc(fid.role) : '') : _SITE_FIND_BLANK)
+      + _siteFindFormRow('On', f.handedOn ? fmtDate2(f.handedOn) : _SITE_FIND_BLANK)
+    + '</table>'
+    + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:6px;">' + CASH_RECEIPT_STATEMENT + '</div>'
+    + _siteFindSigLine('Counted by', esc(by[0]))
+    + _siteFindSigLine('Counted by', esc(by[1]))
+    + _siteFindSigLine('Received sealed bag No. ' + esc(f.bagNo) + ', seal intact', (f.handedTo ? esc(f.handedTo) : 'Print name: __________________________') + ', fiduciary')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">The signed receipt is filed with the estate record and retained for seven years.</div>'
+    + '</div>';
+}
+function printSiteFindReceipt(jobId, id) {
+  var job = jobs.find(function(j) { return j.id === jobId; });
+  var f = job ? jobListGet(job, 'siteFinds', id) : null;
+  if (!job || !f || !SITE_FIND_KINDS[f.kind] || !invFiduciaryMode(job)) { showSyncBadge('That record is no longer on this job.', true); return false; }
+  if (f.voidedAt) { showSyncBadge('That record is void, so there is nothing to print.', true); return false; }
+  var html = f.kind === 'will' ? willReceiptHtml(job, f) : cashReceiptHtml(job, f);
+  return _printDocument(html, _invDocName(job, SITE_FIND_KINDS[f.kind].doc));
 }
 
 // ═══════════════════════ JOB ADMIN — the desk paperwork on the Job Admin & Inv tab ═══════════════════════
@@ -39627,7 +40184,10 @@ function renderJobPlan(jobId, job, est) {
   var formal = ctx.formal;
   // Mandatory on formal jobs and on every court matter; NOT on premium-rate alone. The track is ADDED to
   // the service test rather than replacing it (audit M5), so no probate job is ever made less strict.
-  var custodyMandatory = formal || isProbate || ctx.probateTrack;
+  // ⚠ AND ON EVERY TRUST MATTER (P19; Anthony, 2026-10-03: chain of custody mandatory on trust jobs as on probate).
+  // A successor trustee owes the beneficiaries the same account of every item a personal representative owes the
+  // court (§736.08135), so the trust track is added beside the probate track, never in place of either test.
+  var custodyMandatory = formal || isProbate || ctx.probateTrack || ctx.trustTrack;
   var rooms = _planRooms(jobId).rooms;
 
   // Midpoint billing: "all rooms locked" = the contractual midpoint, and
@@ -39731,7 +40291,9 @@ function renderJobPlan(jobId, job, est) {
   var inHouse = planTasksHtml(jobId, 'p1', ctx);
   // The in-house boxes carry their own section heading (the catalogue's `sec`), so nothing is added here —
   // a second heading over the first read as two headings stacked on the card (seen in the browser, 2026-09-20).
-  var roomsBody = roomsCard + inHouse;
+  // ⚠ FOUND ON SITE, UNDER THE BOXES, ON AN ESTATE (P19): an original will or cash found in the house, recorded the
+  // day it is found, with its reminder (siteFindsCardHtml). The two boxes above point down at it.
+  var roomsBody = roomsCard + inHouse + (ctx.fid ? siteFindsCardHtml(jobId, job, est) : '');
   var roomsMeta = nLocked + ' of ' + rooms.length + ' locked &middot; ' + nCleared + ' cleared';
 
   // ── Hours & daily close: the loader moves #plan-log-section into this slot ──────────
@@ -39753,6 +40315,7 @@ function renderJobPlan(jobId, job, est) {
     planSubsec('Client &amp; vendors') +
     '<div id="closeout-plan-' + jobId + '">' + renderCloseoutBody(jobId, job) + '</div>' +
     '<div style="font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5;">Financial close' + (ctx.probateTrack ? ', the §733.604 filing list' : '') +
+      (ctx.trustTrack ? ', the trustee&rsquo;s list' : '') +   // P19: the trust track has a desk list of its own
       ' and records are desk work: they are under <strong>Job Admin</strong>, at the top of the <strong>Job Admin &amp; Inv</strong> tab.</div>';
 
   // Collections and vehicles flagged during the estimate walkthrough are NOT items yet.
