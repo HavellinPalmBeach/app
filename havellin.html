@@ -9342,7 +9342,9 @@ function clientMissingFields(d) {
     if (!t('deathDate'))     m.push('Date of death');
     if (!t('matterType'))    m.push('How this estate is being administered');
     // Every co-representative row with anything typed needs a name (P19): a nameless entry is nobody. A row with
-    // nothing typed is ignored, and the trust's own details are optional (trustRecordShown).
+    // nothing typed is ignored, and the trust's own details are optional (trustRecordShown). A voided entry is no one
+    // either: belt and braces (its revert stays green in the P19 sweep), since the saves pass the form's rows, which
+    // never hold one, and Edit Client's read of the record itself only judges what was already missing.
     (Array.isArray(d.coFiduciaries) ? d.coFiduciaries : []).forEach(function (c, i) {
       if (!c || c.voidedAt) return;
       var nm = String(c.name == null ? '' : c.name).trim();
@@ -9936,11 +9938,13 @@ function _coFidRowHtml(p, n, rec) {
     + '</div>';
 }
 function coFiduciaryBlockHtml(p, recs) {
+  // Belt and braces (its revert stays green in the P19 sweep): Edit Client passes jobListEntries, which already leaves
+  // voided entries out, and intake passes none; this keeps a voided or id-less entry off the form whoever calls it.
   var list = (recs || []).filter(function (r) { return r && r.id !== undefined && r.id !== null && r.id !== '' && !r.voidedAt; });
   return '<div id="' + p + '-cofid-rows" data-rows="' + list.map(function (r, n) { return n; }).join(',') + '" data-next="' + list.length + '" data-removed="">'
     + list.map(function (r, n) { return _coFidRowHtml(p, n, r); }).join('') + '</div>'
     + '<button type="button" class="btn-s" id="' + p + '-cofid-add" onclick="addCoFiduciaryRow(\'' + p + '\')">+ Add a co-representative</button>'
-    + '<div style="font-size:10px;color:var(--gray);margin-top:4px;line-height:1.5;">Each one approves the releases with the representative. A DocuSign envelope goes to the representative alone: each co-representative signs the agreement on paper.</div>';
+    + '<div style="font-size:10px;color:var(--gray);margin-top:4px;line-height:1.5;">Each one approves the releases with the representative. A DocuSign envelope goes to the representative alone.</div>';
 }
 // Intake's block, drawn empty at load and again by the reset.
 function buildCoFiduciaryBlock() {
@@ -9982,6 +9986,8 @@ function removeCoFiduciaryRow(p, n) {
   }
   host.dataset.rows = _coFidRowNums(host).filter(function (x) { return x !== n; }).join(',');
   var el = row;
+  // Belt and braces (its revert stays green in the P19 sweep): left behind, the empty wrapper would be invisible and
+  // read by nothing (the rows are read off data-rows); it comes off with its row for tidiness.
   if (el && el.parentNode && el.parentNode !== host && el.parentNode.parentNode === host) el = el.parentNode;   // a row added on the page sits in its own wrapper
   if (el && el.parentNode) el.parentNode.removeChild(el);
   return true;
@@ -21999,7 +22005,8 @@ function renderClientDashboard(jobId) {
     h += '</div></div>';
     h += '</div>';
     // Every co-representative (P19, Anthony's call 4), under the route's heading. DocuSign's envelope has one signer,
-    // the representative (esignSigner), so the others sign on paper: said once, here, where the names are listed.
+    // the representative (esignSigner): said once, here, where the names are listed. Whether a co-representative must
+    // sign the agreement too, and how, is not decided, so nothing here prescribes it (P19 hand-back, for Anthony).
     var _coCard = jobFiduciaries(job).filter(function(f){ return !f.primary; });
     if (_coCard.length) {
       h += '<div style="margin-top:12px;">';
@@ -22008,7 +22015,7 @@ function renderClientDashboard(jobId) {
         h += '<div class="d-grid4" style="margin-bottom:6px;">' + field('Name', esc(f.name)) + field('Role', esc(f.role||'—'))
           + field('Phone', esc(f.phone||'—')) + field('Email', '<span style="font-size:11px;">'+esc(f.email||'—')+'</span>') + '</div>';
       });
-      h += '<div style="font-size:10.5px;color:var(--gray);line-height:1.5;">A DocuSign envelope goes to ' + esc(job.executor || 'the representative') + ' alone: each co-representative signs the agreement on paper.</div>';
+      h += '<div style="font-size:10.5px;color:var(--gray);line-height:1.5;">A DocuSign envelope goes to ' + esc(job.executor || 'the representative') + ' alone.</div>';
       h += '</div>';
     }
     // The package: its one send, and who sent it when (2026-10-01, P17; the trust route 2026-10-02, P18).
