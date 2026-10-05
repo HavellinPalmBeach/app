@@ -396,6 +396,13 @@ input:checked+.slider:before{transform:translateX(18px);}
 .jt-ghost-d{color:var(--err-tx);}
 /* A refund on the list (2026-10-01, P17): money that went back, in the neutral grey of a record, never a payment's green. */
 .jt-pay-st.rfd{color:var(--gray-dk);}
+/* A flag on a row that stays as it is (2026-10-05, P20: a co-representative's signature not on record): amber, never
+   the red of a blocker. And the co-signed agreement page under the strip: each co-representative's signature, the
+   filing control while one is not on record, and the filed pages. */
+.jt-warn,.jt-sub.jt-warn,.jt-ssub.jt-warn{color:var(--warn-tx);font-weight:600;}
+.jt-cosign{margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border);font-size:12px;color:var(--gray-dk);min-width:0;}
+.jt-cosign-row{padding:2px 0;min-width:0;overflow-wrap:anywhere;}
+.jt-cosign-act{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:6px;font-size:11px;color:var(--gray);}
 /* An hourly walkaway's settlement on the Deposit Retained card, and in the close-out dialog: received, earned, refunded,
    due back. Label left, figure right; the label takes the slack and wraps, so nothing overflows at 390px. */
 .jt-settle{margin-top:14px;padding-top:10px;border-top:0.5px solid var(--border);}
@@ -6005,7 +6012,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // 2026-10-03 (P19): the job's record lists (JOB_RECORD_LISTS: co-representatives, beneficiaries, bequests, signed
 // copies, finds on site, proceeds statements) merge entry by entry on the sheet; on an older deployment they ride
 // the whole record, and a device saving an older copy of the job drops an entry another device added.
-var BACKEND_MIN_VERSION = '2026-10-03';
+// 2026-10-05 (P20): esignSend puts each co-representative on the envelope beside the client and says who it put there,
+// and esignStatus finds the client by recipientId and reports the co-signers. An older deployment sends to the client
+// and Anthony alone (the app records that, and the row asks for the printed page instead), so it is named by version.
+var BACKEND_MIN_VERSION = '2026-10-05';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -6061,7 +6071,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -10008,7 +10018,8 @@ function coFiduciaryBlockHtml(p, recs) {
   return '<div id="' + p + '-cofid-rows" data-rows="' + list.map(function (r, n) { return n; }).join(',') + '" data-next="' + list.length + '" data-removed="">'
     + list.map(function (r, n) { return _coFidRowHtml(p, n, r); }).join('') + '</div>'
     + '<button type="button" class="btn-s" id="' + p + '-cofid-add" onclick="addCoFiduciaryRow(\'' + p + '\')">+ Add a co-representative</button>'
-    + '<div style="font-size:10px;color:var(--gray);margin-top:4px;line-height:1.5;">Each one approves the releases with the representative. A DocuSign envelope goes to the representative alone.</div>';
+    // Since 2026-10-05 (P20; Q22) each signs the agreement beside the representative, so the email is what reaches them.
+    + '<div style="font-size:10px;color:var(--gray);margin-top:4px;line-height:1.5;">Each one approves the releases with the representative and signs the agreement beside them: in DocuSign, which needs their email, or on the printed page when it is signed by hand.</div>';
 }
 // Intake's block, drawn empty at load and again by the reset.
 function buildCoFiduciaryBlock() {
@@ -15176,9 +15187,18 @@ function confirmAgreementSignature() {
   _sigJobId = null;
   if (typeof updateAgrUI === 'function') updateAgrUI();
   renderJobs();
-  dashNotice('ok', 'Signature recorded — signed by ' + by + '. Record the deposit when it arrives.');
+  // A co-representative whose signature is not on record yet is named, with where it goes (P20; agreementCoSignState).
+  var _co = agreementCoSignState(job), _coN = _andJoin(_co.gaps.map(function (c) { return c.name; }));
+  var _msg = 'Signature recorded — signed by ' + by + '.'
+    + (_co.owed ? ' ' + (_co.gaps.length > 1 ? 'The signatures of ' + _coN + ' are' : _coN + '’s signature is')
+       + ' not on record yet: have them sign the printed signature page, then file it under the timeline.' : '')
+    + ' Record the deposit when it arrives.';
+  dashNotice(_co.owed ? 'warn' : 'ok', _msg);
   _dashRedraw(jobId);
-  showFB(_dashFbTarget('agr-fb'), 'ok', 'Signature recorded. Record the deposit when it arrives.');
+  // ⚠ THE SAME MESSAGE ON THE STRIP (P20). On the dashboard _dashFbTarget is the strip the notice was just painted into,
+  // and the shorter "Signature recorded. Record the deposit when it arrives." written here replaced it, so the signer's
+  // name (and now a co-signature still owed) was never on screen. Escaped: showFB writes HTML and `by` was typed.
+  showFB(_dashFbTarget('agr-fb'), _co.owed ? 'warn' : 'ok', esc(_msg));
 }
 
 // Deposit target: 50% of the approved job total. Read from the saved estimate so the
@@ -17912,6 +17932,9 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   var funded = isJobFunded(job);
   var _depVoid = depositVoidFlag(job);   // a void took the deposit below its target (P17); null while it is funded
   var _jtSig = agreementSignature(job);   // null until something is actually signed
+  // The co-representatives' signatures (P20): the one answer, asked only where a co-representative may be recorded
+  // (the guard is not a rule: agreementCoSignState answers nothing owed on a job with none).
+  var _jtCo = (job.coFiduciaries && job.coFiduciaries.length) ? agreementCoSignState(job) : null;
   var depPaid = depositPaidTotal(job);
   var depTgt = depositTargetFor(job);
   var midPaid = stagePaidTotal(job, 'midpoint');
@@ -17977,6 +18000,9 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       notYet: !!o.notYet, dueOn: o.dueOn || '',
       at: o.at || '', atKind: o.atKind || 'text', by: o.by || '',
       sub: o.sub || '', amount: (typeof o.amount === 'number') ? o.amount : null,
+      // A FLAG ON A ROW THAT STAYS AS IT IS (P20): something on record is missing and nothing waits on it (the
+      // co-representatives' signatures). Painted amber under the row on the rail and the track; never a blocker.
+      flag: o.flag || '',
       blockedWhy: o.blockedWhy || '', blockedFix: o.blockedFix || '',
       // ⚠⚠ A PLANNED DATE IS NOT AN ACTUAL AND MUST NEVER SHARE THE `at` SLOT. Every `at` on
       // this rail is something that HAPPENED and `_jtAt` formats it as one, so a projection
@@ -18139,14 +18165,36 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     // Havellin manager who approved the price — so this row named one of ours as having
     // signed the client's contract. A job signed before 2026-09-11 has no signer recorded
     // and says so rather than naming somebody.
+    // ⚠⚠ THE CO-REPRESENTATIVES RIDE ON THIS ROW (2026-10-05, P20; Q22), from the one answer, agreementCoSignState, and
+    // only where one is recorded (`_jtCo`; the guard spares a job with none the reading). Before the client signs, who
+    // signs where: beside the client in DocuSign, or on a printed copy for one the envelope does not carry. Once the
+    // client's signature is in, each co-signer on record is named with the signer (`by`) and their day, and one not on
+    // record is FLAGGED (`flag`, amber, on the rail and the track) until the page they signed is filed (the block under
+    // the timeline, agreementCoSignHtml). Never the row undone: nothing waits on it, and an undone row would hold the
+    // light here and withhold Activate job.
     row({ key: 'agreement_signed', group: 'Agreement', label: 'Agreement signed',
       done: isAgreementSigned(job), at: (_jtSig && _jtSig.signedOn) || '', atKind: 'date',
-      by: (_jtSig && _jtSig.signedBy) || '',
+      by: [(_jtSig && _jtSig.signedBy) || ''].concat(_jtSig && _jtCo ? _jtCo.coSigners.filter(function (c) { return c.how; })
+        .map(function (c) { return c.name; }) : []).filter(Boolean).join(', '),
       // An e-signature names the address the provider authenticated (2026-09-30), beside how it came back.
       sub: _jtSig
         ? (_jtSig.legacy ? 'Signed before the signature record — who signed it is not on file'
-           : [((AGR_SIG_METHODS[_jtSig.how] || {}).label || ''), _jtSig.signerEmail || ''].filter(Boolean).join(' · '))
-        : (esignJobWatches(job) ? ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for it' : '') }),
+           : [((AGR_SIG_METHODS[_jtSig.how] || {}).label || ''), _jtSig.signerEmail || '']
+               .concat(_jtCo ? _jtCo.coSigners.filter(function (c) { return c.how; }).map(function (c) {
+                 return c.how === 'esign' ? c.name + ' signed in ' + ESIGN_PROVIDERS.docusign.label + (c.signedOn ? ' ' + fmtDate2(c.signedOn) : '')
+                   : c.name + ' on the co-signed page filed';
+               }) : []).filter(Boolean).join(' · '))
+        : (esignJobWatches(job) ? ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for it'
+           + (_jtCo ? [_jtCo.coSigners.filter(function (c) { return c.onEnvelope; }), _jtCo.coSigners.filter(function (c) { return !c.onEnvelope; })]
+               .map(function (g, i) {
+                 if (!g.length) return '';
+                 var n = _andJoin(g.map(function (c) { return c.name; }));
+                 return i ? n + (g.length > 1 ? ' were' : ' was') + ' not sent the envelope and sign' + (g.length > 1 ? '' : 's') + ' a printed copy'
+                   : n + ' sign' + (g.length > 1 ? '' : 's') + ' there too';
+               }).filter(Boolean).map(function (s, i) { return (i ? '; ' : ' — ') + s; }).join('') : '')
+           : ''),
+      flag: (_jtCo && _jtCo.owed) ? 'Not on record: the signature' + (_jtCo.gaps.length > 1 ? 's' : '') + ' of '
+        + _andJoin(_jtCo.gaps.map(function (c) { return c.name; })) + '. File the page they signed, under the timeline' : '' }),
 
     // ⚠ THESE THREE WERE DELIBERATELY ABSENT UNTIL NOW. Slice 0: "a row whose `done`
     // cannot be answered honestly is worse than no row" — nothing recorded that an
@@ -18749,6 +18797,10 @@ var DOC_SEND_PROVIDERS = {
   docusign: {
     needsHumanSend: false,
     carriesAttachment: true,
+    // ⚠ WHAT THIS PROVIDER WOULD REFUSE FROM THE JOB AND THE DOCUMENT ALONE (2026-10-05, P20): a co-representative
+    // DocuSign cannot reach. docSend asks it before the PDF is built, so nothing at all is posted; `send` asks again
+    // where the envelope is made.
+    refuse: function (spec) { return esignCoSigners(spec.job, spec.anchors).why; },
     send: function (spec, pdf, cb) {
       // ⚠⚠ NO PDF MEANS NO ENVELOPE, AND THIS ARM MUST NOT BE MADE LENIENT. Gmail can honestly
       // create a draft with the attachment missing and say so — a person reads it before it goes.
@@ -18758,6 +18810,9 @@ var DOC_SEND_PROVIDERS = {
       var who = esignSigner(spec.job);
       if (!who.email) { cb(false, 'no client email on this job'); return; }
       if (!who.name)  { cb(false, 'no client or representative name on this job — DocuSign needs someone to address the envelope to'); return; }
+      // Every co-representative signs beside the client (P20), or the envelope does not go.
+      var co = esignCoSigners(spec.job, spec.anchors);
+      if (co.why) { cb(false, co.why.replace(/\.$/, '')); return; }
 
       if (!SHEETS_SYNC_URL) { cb(false, 'No Apps Script URL configured — add it in Settings.'); return; }
 
@@ -18765,7 +18820,7 @@ var DOC_SEND_PROVIDERS = {
       // a failed POST never reveals whether it reached Google. Re-sending an append duplicates a
       // directory row; re-sending this MAILS THE CLIENT A SECOND SIGNATURE REQUEST for the same
       // agreement. The fourth argument is deliberately omitted, so `_appsScriptPost` does not retry.
-      _appsScriptPost(SHEETS_SYNC_URL, {
+      var payload = {
         action: 'esignSend',
         pdfBase64: pdf,
         filename: spec.names.attachment,
@@ -18777,7 +18832,11 @@ var DOC_SEND_PROVIDERS = {
         // regardless — their absence is a defect worth refusing an envelope over — and every
         // optional one only when it is named here.
         anchors: spec.anchors || []
-      }, function (ok, d) {
+      };
+      // Each co-representative with the pair of markers measured for them (P20). Left off with none, so a job without
+      // one posts exactly what it always did.
+      if (co.list.length) payload.coSigners = co.list;
+      _appsScriptPost(SHEETS_SYNC_URL, payload, function (ok, d) {
         if (!ok || !d || !d.ok) {
           var why = (d && (d.error || d.message)) || 'the request did not reach DocuSign';
           // ⚠ A CONSENT FAILURE CARRIES ITS OWN FIX AND MUST NOT BE FLATTENED INTO "it failed".
@@ -18785,7 +18844,14 @@ var DOC_SEND_PROVIDERS = {
           cb(false, why);
           return;
         }
-        cb(true, null, '', { envelopeId: d.envelopeId || '', esignStatus: d.status || 'sent' });
+        var extra = { envelopeId: d.envelopeId || '', esignStatus: d.status || 'sent' };
+        // ⚠ WHO IS ON THE ENVELOPE IS WHAT THE BACKEND SAYS IT PUT THERE, never what was asked (P20). An answer without
+        // the list is a deployment older than 2026-10-05, which sent to the client and Anthony alone: recorded as no
+        // co-signer on the envelope, so the co-representatives sign a printed copy.
+        if (co.list.length) extra.coSigners = (Array.isArray(d.coSigners) ? d.coSigners : []).map(function (c) {
+          return { name: String((c && c.name) || ''), email: String((c && c.email) || ''), recipientId: String((c && c.recipientId) || '') };
+        });
+        cb(true, null, '', extra);
       });
     }
   },
@@ -18844,6 +18910,11 @@ function docSend(spec) {
   spec.anchors = esignAnchorsPresent(html);
 
   var provider = docProvider(spec);
+  // ⚠ A REFUSAL THE PROVIDER CAN MAKE FROM THE JOB AND THE DOCUMENT ALONE IS MADE HERE, BEFORE ANYTHING IS POSTED
+  // (2026-10-05, P20): DocuSign's is a co-representative it cannot reach (esignCoSigners), named with the fix. The
+  // provider's own send asks again, where the envelope is made.
+  var _refused = DOC_SEND_PROVIDERS[provider].refuse ? DOC_SEND_PROVIDERS[provider].refuse(spec) : '';
+  if (_refused) { _docNotice('warn', _refused, spec.job.id); return false; }
   _docBusy = { jobId: spec.job.id, docKey: spec.key };
   _dashSendState(spec.key, 'Building PDF…');
 
@@ -18906,8 +18977,10 @@ function docSend(spec) {
       // read and send; DocuSign has already emailed the client by the time this runs. A message
       // that said "draft created" over a sent envelope would invite somebody to go looking for a
       // draft that does not exist — and worse, to send the agreement a second time by hand.
+      // DocuSign names everyone the backend put on the envelope: the client, then each co-representative (P20).
       var msg = (provider === 'docusign'
-          ? ('Sent to ' + esignSigner(spec.job).name + ' for signature through DocuSign')
+          ? ('Sent to ' + _andJoin([esignSigner(spec.job).name].concat(((extra && extra.coSigners) || []).map(function (c) { return c.name; })))
+             + ' for signature through DocuSign')
         : provider === 'gmail'
           ? ('Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox'))
           : 'Email opened')
@@ -18926,6 +18999,14 @@ function docSend(spec) {
       var _staleLine = (_stCur.sentAt && !docDraftPending(_stCur)) ? '' : staleDraftNote(spec.job, spec.key, true);
       if (_staleLine) msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _staleLine + '.';
       docRecordSent(spec, { provider: provider, draftUrl: draftUrl || '', pdfOk: attached, extra: extra || null });
+      // ⚠ A CO-REPRESENTATIVE THE ENVELOPE DOES NOT CARRY IS NAMED NOW (P20), off what was just recorded
+      // (agreementCoSignState). Asked only where co-signers were sent (`extra.coSigners`): a deployment older than
+      // 2026-10-05 sends to the client and Anthony alone.
+      var _offEnv = (extra && Array.isArray(extra.coSigners))
+        ? agreementCoSignState(spec.job).coSigners.filter(function (c) { return !c.onEnvelope; }).map(function (c) { return c.name; }) : [];
+      if (_offEnv.length) msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _andJoin(_offEnv) + (_offEnv.length > 1 ? ' were' : ' was')
+        + ' not put on the envelope (the Apps Script deployment is older than 2026-10-05: redeploy it), so they sign a printed'
+        + ' copy of the agreement; file the page they signed under the timeline once the client has signed.';
       // ⚠ SENDING FILES IT. A document that has gone to a client is one the firm must be
       // able to produce afterwards, and until Slice 5 only the estimate managed that: the
       // agreement and packet filed on approval, and the INVOICE filed nowhere unless
@@ -18939,7 +19020,7 @@ function docSend(spec) {
       // It still shows in the sync badge, and the rail says which documents are filed.
       docAction(spec.job.id, spec.kind, 'file',
                 spec.stage ? { stage: spec.stage, auto: true } : { auto: true });
-      _docNotice((attached && !_staleLine) ? 'ok' : 'warn', msg, spec.job.id);
+      _docNotice((attached && !_staleLine && !_offEnv.length) ? 'ok' : 'warn', msg, spec.job.id);
       if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
       showSyncBadge(provider === 'docusign' ? 'Sent for signature ✓' : provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
     }
@@ -19050,6 +19131,21 @@ var ESIGN_ANCHORS = { clientSig: '/hsc/', clientDate: '/hdc/', havSig: '/hsh/', 
 // construction: the backend places it only when the document is measured to carry it, and these
 // four are the ones whose absence is a defect worth refusing an envelope over.
 var ESIGN_REQUIRED_ANCHORS = ['clientSig', 'clientDate', 'havSig', 'havDate'];
+// ⚠⚠ EACH CO-REPRESENTATIVE'S OWN SIGNATURE AND DATE MARKERS (2026-10-05, P20; Anthony, Q22: every co-executor and
+// co-trustee recorded on the job signs in DocuSign beside the client). The co-signer the estate agreement's signature
+// page prints n-th carries '#' replaced by n: '/hcs1/' and '/hcd1/' for the first. MUST MATCH `DS_COSIGNER_ANCHOR` in
+// main-sync.gs (a test holds the two equal for every n), and like the four above they are white text, never hidden.
+// ⚠ DOCUSIGN MATCHES AN ANCHOR AS A SUBSTRING, so no marker may sit inside another: each is wrapped in slashes with
+// none inside, so one appears in another only where the two are equal ('/hcs1/' is not in '/hcs12/'). A test checks
+// every pair, and every two run together, the way adjacent text reaches the PDF's text layer.
+var ESIGN_COSIGNER_ANCHOR = { sig: '/hcs#/', date: '/hcd#/' };
+// The n-th co-signer's markers and the keys that name them on the wire ('coSig1', 'coDate1', as 'clientSig' names the
+// client's): the one namer, read by the signature page that prints them and the measurer that finds them.
+function esignCoSignerAnchors(n) {
+  var k = String(n);
+  return { sig: ESIGN_COSIGNER_ANCHOR.sig.replace('#', k), date: ESIGN_COSIGNER_ANCHOR.date.replace('#', k),
+           sigKey: 'coSig' + k, dateKey: 'coDate' + k };
+}
 
 // ⚠⚠ THE DOCUMENT IS MEASURED, NEVER RE-DERIVED. This runs over the very html that is about to
 // be converted to the PDF the envelope carries, so the tab list and the document cannot disagree
@@ -19061,6 +19157,14 @@ function esignAnchorsPresent(html) {
   Object.keys(ESIGN_ANCHORS).forEach(function (k) {
     if (html.indexOf(ESIGN_ANCHORS[k]) !== -1) out.push(k);
   });
+  // Each co-signer's pair, measured the same way (P20), numbered as the page numbers its blocks: from the first, until a
+  // number the page carries neither marker for. A document with no co-signer reports exactly the list it always did.
+  for (var n = 1; ; n++) {
+    var a = esignCoSignerAnchors(n), s = html.indexOf(a.sig) !== -1, d = html.indexOf(a.date) !== -1;
+    if (!s && !d) break;
+    if (s) out.push(a.sigKey);
+    if (d) out.push(a.dateKey);
+  }
   return out;
 }
 
@@ -19236,6 +19340,34 @@ function esignSigner(job) {
   return { name: r.name, email: r.email };
 }
 
+// ⚠⚠ WHO SIGNS BESIDE THE CLIENT IN DOCUSIGN, AND WHAT STOPS THE ENVELOPE (2026-10-05, P20; Anthony, Q22: each
+// co-representative signs in DocuSign beside the client). Every co-representative recorded on the job (_agrCoSigners,
+// in the order the signature page prints their blocks), each with the pair of markers the page carries for them,
+// named by the keys esignAnchorsPresent measured off the very html being sent (`anchors`). DOM-free, so the send's
+// check before the PDF is built (DOC_SEND_PROVIDERS.docusign.refuse) and the send itself, where the envelope is made,
+// ask one question.
+// ⚠ REFUSED BY NAME, EVERYTHING MISSING AT ONCE, AND NEVER RETRIED: a co-representative with no email (DocuSign has
+// nowhere to send them), and one the page gives no signature line of their own (a signer with no tab could sign
+// anywhere). The fix is in the sentence: the email goes in on Edit Client, or the agreement goes the paper route, where
+// the co-signed page is filed by hand. `why` is '' when the envelope may go; `list` is what the backend is sent.
+function esignCoSigners(job, anchors) {
+  var have = {};
+  (anchors || []).forEach(function (k) { have[k] = true; });
+  var noEmail = [], noLine = [], list = [];
+  _agrCoSigners(job).forEach(function (f, i) {
+    var a = esignCoSignerAnchors(i + 1), email = String(f.email || '').trim();
+    if (!email) noEmail.push(f.name);
+    if (!have[a.sigKey] || !have[a.dateKey]) noLine.push(f.name);
+    list.push({ name: f.name, email: email, anchors: [a.sigKey, a.dateKey] });
+  });
+  var why = [];
+  if (noEmail.length) why.push(_andJoin(noEmail) + (noEmail.length > 1 ? ' have' : ' has') + ' no email recorded. Add '
+    + (noEmail.length > 1 ? 'them' : 'it') + ' on Edit Client, or send the PDF to sign by hand.');
+  if (noLine.length) why.push('The agreement carries no DocuSign signature line for ' + _andJoin(noLine)
+    + ', so the envelope could not place ' + (noLine.length > 1 ? 'their signatures' : 'that signature') + '. Send the PDF to sign by hand.');
+  return { list: list, why: why.join(' ') };
+}
+
 // The record itself. Returns null when nothing is signed — a caller asking "who signed
 // this?" on an unsigned agreement must get nothing, not an empty shape that reads as one.
 function agreementSignature(job) {
@@ -19279,6 +19411,50 @@ function agreementHandedOverInPerson(job) {
   return !!(st && st.sentHow === 'in_person' && st.sentAt && st.sentHowAt === st.sentAt);
 }
 
+// ⚠⚠ ARE THE CO-REPRESENTATIVES' SIGNATURES ON RECORD? THE ONE ANSWER (2026-10-05, P20; Anthony, Q22: each
+// co-representative signs in DocuSign beside the client; on the sign-by-hand route the co-signed page is filed as a
+// signed record). Read by the Agreement signed row, the co-signed page block under the timeline, and the send's and
+// the hand recorder's notices; nothing else reads `sig.coSigners` or the filed pages (a test counts the readers).
+// A co-representative (_agrCoSigners) has signed on the record when DocuSign reported them signed on the agreement's
+// completed envelope (`sig.coSigners`, matched by samePerson or by the address the envelope carried), or when a live
+// co-signed page filed through fileSignedCopy names them (kind `agreement`, ref AGR_COSIGN_REF, signers in `signedBy`,
+// '; ' between names). Nothing else: a co-signer on an envelope still out has signed nothing the app has seen.
+// Returns { coSigners: [{id, name, email, onEnvelope, how, signedOn}], gaps, pages, onRecord, owed }:
+//   onEnvelope  the backend said it put them on the envelope (`esign.coSigners`); never on the paper route, on an
+//               envelope a deployment older than 2026-10-05 sent, or for someone recorded after the envelope went;
+//   how         'esign' or 'filed' once on record, '' while not; `signedOn` DocuSign's day (a filed page has none);
+//   pages       the live co-signed pages filed;
+//   onRecord    THE PREDICATE: every co-representative's signature is on record (true where none is recorded);
+//   owed        the flag: the client's signature is recorded and onRecord is not. Never a refusal and never a gate:
+//               activation reads the client's signature alone.
+function agreementCoSignState(job) {
+  var out = { coSigners: [], gaps: [], pages: [], onRecord: true, owed: false };
+  var co = _agrCoSigners(job);
+  if (!co.length) return out;
+  var st = (job.docState && job.docState.agreement) || {};
+  var env = (st.esign && Array.isArray(st.esign.coSigners)) ? st.esign.coSigners : [];
+  var sig = agreementSignature(job);
+  var esigned = (sig && Array.isArray(sig.coSigners)) ? sig.coSigners : [];
+  out.pages = signedRecordsOf(job, 'agreement', AGR_COSIGN_REF);
+  var is = function (f, x) {
+    var em = function (v) { return String(v || '').trim().toLowerCase(); };
+    return !!x && ((!!x.name && samePerson(x.name, f.name)) || (!!em(x.email) && em(x.email) === em(f.email)));
+  };
+  co.forEach(function (f) {
+    var e = esigned.filter(function (x) { return is(f, x); })[0] || null;
+    var p = e ? null : (out.pages.filter(function (r) {
+      return String(r.signedBy || '').split(';').some(function (n) { return samePerson(n, f.name); });
+    })[0] || null);
+    var c = { id: f.id, name: f.name, email: f.email || '', onEnvelope: env.some(function (x) { return is(f, x); }),
+              how: e ? 'esign' : (p ? 'filed' : ''), signedOn: (e && e.signedOn) || '' };
+    out.coSigners.push(c);
+    if (!c.how) out.gaps.push(c);
+  });
+  out.onRecord = !out.gaps.length;
+  out.owed = !out.onRecord && !!sig;
+  return out;
+}
+
 // Who the signature is expected FROM, so the recorder prefills a name rather than asking
 // somebody to retype it. The estate's authorized representative signs for the estate; on a
 // living-client job the client signs for themselves.
@@ -19319,6 +19495,9 @@ function recordAgreementSignature(jobId, sig) {
     recordedBy: sig.recordedBy || _actor(job) || '',
     recordedAt: new Date().toISOString()
   };
+  // Each co-representative the provider reports signed beside the client, with their own day (2026-10-05, P20). Only
+  // where it names any: a signature recorded by hand, or an envelope with no co-signer, keeps the record it always had.
+  if (sig.coSigners && sig.coSigners.length) st.sig.coSigners = sig.coSigners;
   job.agrSigned = true;
   job.agrSignedBy = st.sig.recordedBy;
   job.agrSignedAt = st.sig.signedOn;
@@ -19389,11 +19568,14 @@ function applyEsignStatus(jobId, status) {
   // Bare: "still out" is a write the app makes on its own (docStateBare). A completed envelope is
   // recorded below by recordAgreementSignature, which stamps the key like a hand entry.
   var st = docStateBare(job, 'agreement');
+  var _sentWith = st.esign && st.esign.coSigners;
   st.esign = {
     envelopeId: (status && status.envelopeId) || (st.esign && st.esign.envelopeId) || '',
     status: (status && status.status) || '',
     checkedAt: new Date().toISOString()
   };
+  // Who the send put on the envelope beside the client is a fact about the envelope, not about this check (P20): kept.
+  if (Array.isArray(_sentWith)) st.esign.coSigners = _sentWith;
   if (!status || status.status !== 'completed') { _saveArrivalCheck(); return ''; }
   // ⚠ THE PROVIDER NAMES THE SIGNER. That is the entire point of routing signatures through
   // one — it knows who authenticated and when, which a person typing into a box does not.
@@ -19403,6 +19585,13 @@ function applyEsignStatus(jobId, status) {
   // (routing order 1) and the address DocuSign authenticated (`signerEmail`), and both were dropped here.
   // The day is the local calendar day it happened here (_localDateOf), never an ISO slice: a client signing
   // at 9:30pm Eastern is stamped 01:30Z the next day. `completedAt` is the fallback for an answer without one.
+  // ⚠ EACH CO-REPRESENTATIVE DOCUSIGN REPORTS IS RECORDED AS SIGNED BESIDE THE CLIENT (2026-10-05, P20): the name and
+  // address on the envelope and their own day, through _localDateOf as the client's is (`completedAt` where DocuSign
+  // gave none: a completed envelope means every signer finished). Only what the provider named, and only on
+  // `completed`: an answer without them (an older deployment) records none, and the row then asks for the printed page.
+  var _co = (Array.isArray(status.coSigners) ? status.coSigners : []).filter(function (c) { return c && (c.name || c.email); })
+    .map(function (c) { return { name: String(c.name || ''), email: String(c.email || ''),
+      signedOn: _localDateOf(c.signedAt) || _localDateOf(status.completedAt) }; });
   var blk = recordAgreementSignature(jobId, {
     how: 'esign',
     signedBy: status.signerName || '',
@@ -19410,7 +19599,8 @@ function applyEsignStatus(jobId, status) {
     signedOn: _localDateOf(status.signedAt) || _localDateOf(status.completedAt),
     provider: esignProviderKey(),
     envelopeId: st.esign.envelopeId,
-    recordedBy: ESIGN_PROVIDERS[esignProviderKey()].label
+    recordedBy: ESIGN_PROVIDERS[esignProviderKey()].label,
+    coSigners: _co
   });
   if (!blk) {
     // ⚠ THE EXECUTED COPY IS RETRIEVED HERE, ON THE TRANSITION, AND OTHERWISE ONLY WHEN SOMEBODY PRESSES FILE SIGNED
@@ -19649,6 +19839,34 @@ function dashFileSignedCopy(jobId) {
   dashNotice('ok', 'Fetching the signed agreement and its certificate of completion from ' + label + '…');
   _dashRedraw(jobId);
   esignArchiveSigned(jobId);
+}
+
+// ─── THE CO-SIGNED PAGE (2026-10-05, P20) ────────────────────────────────────
+// Anthony, Q22: each co-representative signs in DocuSign beside the client; on the sign-by-hand route (a PDF to sign by
+// hand, or the packet handed over in person) the co-signed page is filed as a signed record. Under the timeline on the
+// dashboard, beside the payments, because it outlives the row that asks for it: Agreement signed is done the moment the
+// client's signature is in. While a co-representative's signature is not on record (agreementCoSignState's `owed`), who,
+// and the control that files the page they signed (fileSignedCopy, kind `agreement`, their names on the record); and
+// every co-signed page filed, with its Void, so one filed against the wrong paper comes off the record. '' on every
+// other job, and FLAG ONLY: nothing waits on it. Reads agreementCoSignState and nothing else.
+function agreementCoSignHtml(job) {
+  var cs = agreementCoSignState(job);
+  if (!cs.owed && !cs.pages.length) return '';
+  var h = '<div class="jt-cosign" id="jt-cosign"><div class="jt-pays-hd">Co-representatives on the agreement</div>';
+  cs.coSigners.forEach(function (c) {
+    h += '<div class="jt-cosign-row' + (c.how ? '' : ' jt-warn') + '">' + (c.how ? '&#10003; ' : '&#9888; ') + esc(c.name) + ' &mdash; '
+      + (c.how === 'esign' ? 'signed in ' + ESIGN_PROVIDERS.docusign.label + (c.signedOn ? ' ' + esc(fmtDate2(c.signedOn)) : '')
+         : c.how === 'filed' ? 'on the co-signed page filed'
+         : 'signature not on record') + '</div>';
+  });
+  if (cs.owed) {
+    var names = cs.gaps.map(function (c) { return c.name; });
+    h += '<div class="jt-cosign-act"><span>Have ' + esc(_andJoin(names)) + ' sign the agreement’s printed signature page, then file it:</span>'
+      + signedCopyControlHtml(job.id, 'agreement', { ref: AGR_COSIGN_REF, label: SIGNED_RECORD_KINDS.agreement.label, signedBy: names.join('; ') },
+                              'File the page signed by ' + _andJoin(names))
+      + '</div>';
+  }
+  return h + signedRecordLinksHtml(job.id, cs.pages) + '</div>';
 }
 
 // Agreements out for signature and not yet back — what a poll would ask about. DOM-free, so
@@ -20004,6 +20222,9 @@ function docRecordSent(spec, res) {
     st.esign = { envelopeId: res.extra.envelopeId,
                  status: res.extra.esignStatus || 'sent',
                  checkedAt: st.draftedAt };
+    // Who the backend says it put on the envelope beside the client (P20): an empty list where co-representatives were
+    // asked for and an older deployment put none there. Absent where none were asked, so that record is unchanged.
+    if (Array.isArray(res.extra.coSigners)) st.esign.coSigners = res.extra.coSigners;
   }
   if (!DOC_SEND_PROVIDERS[res.provider].needsHumanSend) {
     st.sentAt = st.draftedAt;
@@ -21681,6 +21902,8 @@ function jtTrackHtml(rows, legs) {
       if (_sm) h += '<div class="jt-smeta">' + esc(_sm) + '</div>';
       var _ss = r.by || (r.state === 'blocked' ? '' : r.sub);
       if (_ss) h += '<div class="jt-ssub">' + esc(_ss) + '</div>';
+      // A flag is the one extra line a step carries (P20): what is missing on record, in amber, on the desk as on a phone.
+      if (r.flag) h += '<div class="jt-ssub jt-warn">&#9888; ' + esc(r.flag) + '</div>';
       // ⚠ THE TRACK SHOWS A PLAN ONLY WHEN IT IS LATE, and the asymmetry is deliberate: a
       // 150px column already carries three lines and a fourth stops it being scannable. The
       // rail shows every plan because it has the room.
@@ -21711,6 +21934,7 @@ function jtRailHtml(rows) {
     // A blocked row says nothing extra: the band directly above carries the reason and
     // the fix, and repeating them here is the duplication the client-copy rule cuts.
     if (r.state !== 'blocked' && r.sub) h += '<div class="jt-sub">' + esc(r.sub) + '</div>';
+    if (r.flag) h += '<div class="jt-sub jt-warn">&#9888; ' + esc(r.flag) + '</div>';   // P20: a flag, never a blocker
     // ⚠ A PLAN IS SUPPRESSED THE INSTANT ITS ACTUAL EXISTS: once it happened, the actual IS
     // the fact and the projection is history. The word "Planned" is ALWAYS in front of it, so
     // this line can never be read as something that was recorded.
@@ -22076,9 +22300,10 @@ function renderClientDashboard(jobId) {
     h += field(_authWord, _authVal);
     h += '</div></div>';
     h += '</div>';
-    // Every co-representative (P19, Anthony's call 4), under the route's heading. DocuSign's envelope has one signer,
-    // the representative (esignSigner): said once, here, where the names are listed. Whether a co-representative must
-    // sign the agreement too, and how, is not decided, so nothing here prescribes it (P19 hand-back, for Anthony).
+    // Every co-representative (P19, Anthony's call 4), under the route's heading. Since 2026-10-05 (P20; Anthony, Q22)
+    // each signs the agreement beside the representative: in DocuSign (esignCoSigners puts them on the envelope, so
+    // their email is what reaches them), or on the printed page on the sign-by-hand route. Said once, here, where the
+    // names and emails are listed; whether each one's signature is on record is the timeline's (agreementCoSignState).
     var _coCard = jobFiduciaries(job).filter(function(f){ return !f.primary; });
     if (_coCard.length) {
       h += '<div style="margin-top:12px;">';
@@ -22087,7 +22312,8 @@ function renderClientDashboard(jobId) {
         h += '<div class="d-grid4" style="margin-bottom:6px;">' + field('Name', esc(f.name)) + field('Role', esc(f.role||'—'))
           + field('Phone', esc(f.phone||'—')) + field('Email', '<span style="font-size:11px;">'+esc(f.email||'—')+'</span>') + '</div>';
       });
-      h += '<div style="font-size:10.5px;color:var(--gray);line-height:1.5;">A DocuSign envelope goes to ' + esc(job.executor || 'the representative') + ' alone.</div>';
+      h += '<div style="font-size:10.5px;color:var(--gray);line-height:1.5;">Each signs the agreement beside ' + esc(job.executor || 'the representative')
+        + ': in DocuSign, which needs their email, or on the printed page when it is signed by hand.</div>';
       h += '</div>';
     }
     // The package: its one send, and who sent it when (2026-10-01, P17; the trust route 2026-10-02, P18).
@@ -22204,6 +22430,10 @@ function renderClientDashboard(jobId) {
     _qa.forEach(function(a){ h += '<button class="jt-ghost" onclick="' + a.call + '">' + a.label + '</button>'; });
     h += '</div>';
   }
+  // The co-representatives' signatures on the agreement, and the page they signed by hand (2026-10-05, P20): the block
+  // the Agreement signed row's flag points to. Asked only where a co-representative may be recorded (the guard is not a
+  // rule: agreementCoSignState answers nothing owed on a job with none).
+  if (job.coFiduciaries && job.coFiduciaries.length) h += agreementCoSignHtml(job);
   // An hourly walkaway's settlement — received, earned, any refund, what is due back, and Record refund — on the
   // Deposit Retained card, above the payments it is worked from (2026-10-01, P17). '' on every other job.
   h += walkawaySettlementHtml(job);
@@ -23604,8 +23834,13 @@ var SIGNED_RECORD_KINDS = {
   will:      { label: 'Signed receipt for the original will' },
   cash:      { label: 'Signed cash receipt' },
   donation:  { label: 'Charity receipt' },
-  statement: { label: 'Proceeds statement' }
+  statement: { label: 'Proceeds statement' },
+  // The agreement's signature page as the co-representatives signed it by hand (2026-10-05, P20; Q22): on the paper
+  // route, or where an envelope did not carry them. Its signers in `signedBy`, '; ' between names; read by
+  // agreementCoSignState.
+  agreement: { label: 'Co-signed agreement page' }
 };
+var AGR_COSIGN_REF = 'agreement';   // signedRecords' ref for a co-signed agreement page — a stored value: never rename it
 var SIGNED_COPY_MAX_BYTES = 10 * 1024 * 1024;
 var _signedFiling = {};   // never saved: one filing per paper at a time
 function signedRecordsOf(job, kind, ref) {
@@ -43680,10 +43915,11 @@ function _agrAuthorityTitle(job) {
   return 'Authority &amp; Legal Compliance';
 }
 // ⚠⚠ EVERY RECORDED CO-REPRESENTATIVE SIGNS (P19, Anthony's call 4: record every co-executor and co-trustee): each
-// fiduciary jobFiduciaries records beyond the representative intake names (the `primary`), one wet-sign block apiece.
-// ⚠ NO E-SIGNATURE ANCHOR ON THEIRS, STILL: the envelope carries the Client (order 1), Anthony (2) and agreements@ (3),
-// and an anchor with no recipient leaves an envelope at `sent` for good (the note on the co-signer block). A recorded
-// co-representative signs a printed copy; nothing in the app watches for that signature (the hand-back says so).
+// fiduciary jobFiduciaries records beyond the representative intake names (the `primary`), one signature block apiece.
+// ⚠ AND SINCE 2026-10-05 (P20; Anthony, Q22) EACH SIGNS IN DOCUSIGN BESIDE THE CLIENT: their block carries its own
+// markers (esignCoSignerAnchors), the send puts them on the envelope at routing order 1 (esignCoSigners), and the
+// signature comes back on `sig.coSigners`. On the hand route they sign the printed page, which is filed as a signed
+// record. Whether every one of their signatures is on record is one answer, agreementCoSignState.
 function _agrCoSigners(job) {
   return jobFiduciaries(job).filter(function (f) { return !f.primary; });
 }
@@ -44543,26 +44779,30 @@ function probateAgreementHtml(job, est) {
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientDate)+'</div></div>';
   content += '</div></div>';
   // Co-signer
-  // ⚠ NO E-SIGNATURE ANCHOR ON THIS BLOCK, DELIBERATELY. It is the optional second
-  // beneficiary or co-PR, and an anchor here would need a THIRD DocuSign recipient whose
-  // name and email nothing in the app records. An envelope built for a co-signer who does
-  // not exist sits at `sent` forever waiting on nobody, which reads on the rail as a client
-  // who has not got round to signing. It stays a wet-sign line until intake captures a
-  // second signer; if that is ever built, add the anchor and the recipient together.
+  // ⚠ THE BLANK BLOCK CARRIES NO E-SIGNATURE ANCHOR, DELIBERATELY. With nobody recorded it is
+  // the optional second beneficiary or co-PR, and an anchor there would need a DocuSign
+  // recipient whose name and email nothing in the app records. An envelope built for a
+  // co-signer who does not exist sits at `sent` forever waiting on nobody, which reads on the
+  // rail as a client who has not got round to signing.
   // ⚠ P19: INTAKE NOW RECORDS THE CO-REPRESENTATIVES (job.coFiduciaries; Anthony's call 4), and each gets a block of
-  // their own with the printed name and the recorded role filled in, the way the Client's block is. STILL NO ANCHOR:
-  // the envelope's recipients are unchanged (see _agrCoSigners), so each signs a printed copy. Nobody recorded: the
-  // blank block as before, its caption by matter (_agrCoSignerCaption: co-PR, co-trustee, either, or neither).
+  // their own with the printed name and the recorded role filled in, the way the Client's block is. Nobody recorded:
+  // the blank block as before, its caption by matter (_agrCoSignerCaption: co-PR, co-trustee, either, or neither).
+  // ⚠⚠ AND SINCE 2026-10-05 (P20; Anthony, Q22) EACH RECORDED CO-SIGNER SIGNS IN DOCUSIGN BESIDE THE CLIENT, so their
+  // block carries the anchor and the recipient together, as the note above always said it must: the n-th co-signer's
+  // signature and date lines carry their own markers (esignCoSignerAnchors(n), white text like the client's), the
+  // send names them for that co-signer, and the envelope places that person's tabs there. On paper the markers are
+  // invisible and the lines are signed by hand, so the page reads the same on both routes and says nothing about how.
   var _coSign = _agrCoSigners(job);
   if (_coSign.length) {
-    _coSign.forEach(function (f) {
+    _coSign.forEach(function (f, i) {
+      var _an = esignCoSignerAnchors(i + 1);
       content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;">';
       content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Co-Signer</div>';
       content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
       content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">' + esc(f.name) + '</div></div>';
       content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">' + esc(f.role) + '</div></div>';
-      content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
-      content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
+      content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line">' + esignAnchor(_an.sig) + '</div></div>';
+      content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">' + esignAnchor(_an.date) + '</div></div>';
       content += '</div></div>';
     });
   } else {

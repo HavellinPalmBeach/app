@@ -51,7 +51,11 @@
 // in the Agreement folder instead of adding a second one beside it. No action or type changes.
 // ⚠ 2026-10-03 (P19): the six record lists above merge entry by entry on their id (JOB_KEYED_LISTS), so a
 // co-trustee added on one device and a signed receipt filed on another both survive. No action or type changes.
-var BACKEND_VERSION = '2026-10-03';
+// ⚠ 2026-10-05 (P20): esignSend puts every co-representative the app names on the envelope beside the client
+// (routing order 1, their own tabs) and answers with who it put there; esignStatus finds the client by recipientId
+// '1' and reports each co-signer. No action or type changes. An older deployment sends to the client and Anthony
+// alone, and the app records that the co-representatives were not on the envelope.
+var BACKEND_VERSION = '2026-10-05';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -1848,6 +1852,23 @@ var DS_ANCHORS = {
 // The APP measures the document it is sending (`esignAnchorsPresent`) and names what it carries;
 // this list is what gets placed regardless, because their absence really is a defect.
 var DS_REQUIRED_ANCHORS = ['clientSig', 'clientDate', 'havSig', 'havDate'];
+// ⚠⚠ EACH CO-REPRESENTATIVE'S OWN PAIR (2026-10-05, P20; Anthony, Q22: every co-executor and co-trustee recorded on the
+// job signs in DocuSign beside the client). The estate agreement's signature page gives the co-signer numbered n its own
+// signature and date markers, '#' replaced by n: '/hcs1/' and '/hcd1/' for the first. MUST MATCH havellin.html's
+// ESIGN_COSIGNER_ANCHOR; a test holds the two equal for every n, as it holds DS_ANCHORS to ESIGN_ANCHORS.
+// ⚠ DOCUSIGN MATCHES AN ANCHOR AS A SUBSTRING (anchorMatchWholeWord defaults to false), so no marker may sit inside
+// another. Every marker here is wrapped in slashes and none contains one inside, so one can only appear in another if
+// the two are equal: '/hcs1/' is not in '/hcs12/', nor in any of the five above. A test checks every pair, and every
+// two markers run together, which is how adjacent text reaches the PDF's text layer.
+// ⚠ A KEY NAMES THE MARKER ON THE WIRE ('coSig1', 'coDate1'), as 'clientSig' does: the app measures the document and
+// names what it carries for each co-signer, and _dsCoSignerAnchor reads the key back into the string placed.
+var DS_COSIGNER_ANCHOR = { sig: '/hcs#/', date: '/hcd#/' };
+function _dsCoSignerAnchor(key) {
+  var m = /^co(Sig|Date)([1-9][0-9]{0,2})$/.exec(String(key || ''));
+  if (!m) return null;
+  var kind = m[1] === 'Sig' ? 'sig' : 'date';
+  return { kind: kind, n: Number(m[2]), anchor: DS_COSIGNER_ANCHOR[kind].replace('#', m[2]) };
+}
 
 // ⚠ ONE PLACE TO TUNE THE TAB POSITION, AND IT NEEDS ONE VISUAL CHECK IN THE SANDBOX BEFORE
 // ANYTHING GOES TO A CLIENT. The anchor sits at the TOP of a 36px `.sig-line` box whose
@@ -2048,10 +2069,54 @@ function _dsApi(method, path, payload) {
 // ⚠ TABS ARE PLACED BY ANCHOR, NEVER BY x/y. The signing packet's length varies with the
 // estimate attached as Exhibit A, so a fixed page-and-coordinate would drift onto the wrong
 // page the moment a job has one more room than the last one.
+//
+// ⚠⚠ AND EVERY RECORDED CO-REPRESENTATIVE SIGNS BESIDE THE CLIENT (2026-10-05, P20; Anthony, Q22). Until now a
+// co-executor or co-trustee signed a printed copy and nothing recorded it, while DocuSign reported the agreement
+// `completed` on the client's and Anthony's signatures alone. Each co-signer the app names (`coSigners`, in the order
+// the signature page prints them) is a signer at ROUTING ORDER 1, in parallel with the client, so Anthony's
+// countersignature (2) still comes last and `completed` now means every one of them has signed. recipientIds stay
+// unique and the client keeps '1' (esignEnvelopeStatus finds the client by it, since order 1 is shared now); Havellin
+// keeps '2', the carbon copy '3', and the co-signers take '4' onward.
+// ⚠ A CO-SIGNER'S TABS GO ONLY WHERE THE APP SAYS THE DOCUMENT CARRIES THEIR MARKERS: the pair of keys it measured
+// for them (`anchors`), read back through _dsCoSignerAnchor, with anchorIgnoreIfNotPresent 'false' as on the four
+// required markers, so a marker named and missing makes DocuSign refuse the envelope. A co-signer the app gives no
+// name, no email or no complete pair is refused here, by name and all at once, before DocuSign is asked: a signer with
+// no tab would be free to sign anywhere, and one with no email cannot be sent anything.
+// ⚠ THE ANSWER SAYS WHO WAS PUT ON THE ENVELOPE (`coSigners`: name, email, recipientId), so the app records what
+// DocuSign holds rather than what it asked for. A deployment older than this one ignores `coSigners`, sends the
+// envelope to the client and Anthony alone, and answers without the list: the app reads that as no co-signer on the
+// envelope, and the co-representatives sign a printed copy.
 function esignSendEnvelope(data) {
   try {
     if (!data || !data.pdfBase64) return { ok: false, error: 'No document supplied to send.' };
     if (!data.signerEmail || !data.signerName) return { ok: false, error: 'The envelope needs the signer name and email.' };
+
+    var coSigners = [], coWhy = [], coSeen = {};
+    (Array.isArray(data.coSigners) ? data.coSigners : []).forEach(function (c, i) {
+      var name = String((c && c.name) || '').trim(), email = String((c && c.email) || '').trim();
+      var who = name || ('co-signer ' + (i + 1));
+      if (!name || !email) { coWhy.push(who + ' needs a name and an email'); return; }
+      var pair = {};
+      ((c && Array.isArray(c.anchors)) ? c.anchors : []).forEach(function (k) {
+        var a = _dsCoSignerAnchor(k);
+        if (a) pair[a.kind] = a;
+      });
+      // One pair, from one block on the page, and no block twice: a signature on one co-signer's line and a date on
+      // another's, or two co-signers on one line, would put a person's tabs on somebody else's block.
+      if (!pair.sig || !pair.date || pair.sig.n !== pair.date.n || coSeen[pair.sig.n]) {
+        coWhy.push(who + ' has no signature line of their own on the agreement'); return;
+      }
+      coSeen[pair.sig.n] = true;
+      coSigners.push({
+        email: email,
+        name: name,
+        recipientId: String(4 + coSigners.length),
+        routingOrder: '1',
+        roleName: 'Co-Signer',
+        tabs: _dsTabs(pair.sig.anchor, pair.date.anchor)
+      });
+    });
+    if (coWhy.length) return { ok: false, error: 'The envelope was not created: ' + coWhy.join('; ') + '.' };
 
     // ⚠⚠ THE COUNTERSIGNATURE GOES TO A PERSON, NOT TO THE DEPARTMENT GROUP, AND THAT IS A
     // CORRECTNESS RULE RATHER THAN A PREFERENCE. It used to default to agreements@, which is a
@@ -2077,6 +2142,8 @@ function esignSendEnvelope(data) {
         documentId: '1'
       }],
       recipients: {
+        // The client, then each co-signer (order 1, beside the client), then Havellin (order 2). With no co-signer the
+        // list is the two signers it always was, byte for byte.
         signers: [
           {
             email: data.signerEmail,
@@ -2085,7 +2152,8 @@ function esignSendEnvelope(data) {
             routingOrder: '1',
             roleName: 'Client',
             tabs: _dsClientTabs(data.anchors)
-          },
+          }
+        ].concat(coSigners, [
           {
             email: havEmail,
             name: havName,
@@ -2094,7 +2162,7 @@ function esignSendEnvelope(data) {
             roleName: 'Havellin',
             tabs: _dsTabs(DS_ANCHORS.havSig, DS_ANCHORS.havDate)
           }
-        ],
+        ]),
         // ⚠⚠ THIS IS WHAT PUTS THE EXECUTED AGREEMENT IN THE FIRM'S FILE, AND IT COSTS NOTHING
         // TO RUN. DocuSign mails every recipient — signers and carbon copies alike — the completed
         // envelope with the signed PDF attached the moment the last signature lands. So the client
@@ -2124,7 +2192,9 @@ function esignSendEnvelope(data) {
                                  + (b.message || b.error || JSON.stringify(b).slice(0, 300)) };
     }
     return { ok: true, envelopeId: res.body.envelopeId, status: res.body.status || 'sent',
-             sentAt: res.body.statusDateTime || '' };
+             sentAt: res.body.statusDateTime || '',
+             // Who is on the envelope beside the client: the app records exactly this (P20).
+             coSigners: coSigners.map(function (s) { return { name: s.name, email: s.email, recipientId: s.recipientId }; }) };
   } catch (error) {
     Logger.log('esignSendEnvelope error: ' + error);
     return { ok: false, error: String(error) };
@@ -2187,10 +2257,16 @@ function _dsClientTabs(anchors) {
 }
 
 // ─── STATUS ──────────────────────────────────────────────────────────────────────
-// ⚠ THE SIGNER IS READ OFF ROUTING ORDER 1, NOT "whoever signed last". Order 2 is Havellin
-// countersigning, and recording OUR name as the person who bound the estate is byte for
-// byte the defect Slice 6 exists to undo (`agrSignedBy` holding the manager who approved
-// the price). A test drives a two-signer envelope and asserts the client comes back.
+// ⚠ THE SIGNER IS THE CLIENT, NOT "whoever signed last". Order 2 is Havellin countersigning,
+// and recording OUR name as the person who bound the estate is byte for byte the defect Slice
+// 6 exists to undo (`agrSignedBy` holding the manager who approved the price). A test drives
+// a two-signer envelope and asserts the client comes back.
+// ⚠⚠ AND THE CLIENT IS FOUND BY recipientId '1' NOW, NEVER BY ROUTING ORDER (2026-10-05, P20). This read the first
+// signer at order 1, which was the client while nobody else signed at order 1; every co-representative signs there
+// now (esignSendEnvelope), and DocuSign need not list the client first, so a co-trustee would have been recorded as the
+// person who signed for the estate. The client has been recipientId '1' on every envelope this file has ever sent;
+// roleName 'Client' is the second test, for an answer that somehow lacks the id. Every other signer except Havellin
+// ('2', roleName 'Havellin') is a co-signer, and comes back with the day DocuSign says they signed (`signedAt`).
 function esignEnvelopeStatus(data) {
   try {
     var id = data && data.envelopeId;
@@ -2205,9 +2281,19 @@ function esignEnvelopeStatus(data) {
     }
 
     var signers = ((res.body.recipients || {}).signers) || [];
-    var client = null;
-    for (var i = 0; i < signers.length; i++) {
-      if (String(signers[i].routingOrder) === '1') { client = signers[i]; break; }
+    var client = null, i;
+    for (i = 0; i < signers.length && !client; i++) {
+      if (String(signers[i].recipientId) === '1') client = signers[i];
+    }
+    for (i = 0; i < signers.length && !client; i++) {
+      if (signers[i].roleName === 'Client') client = signers[i];
+    }
+    var coSigners = [];
+    for (i = 0; i < signers.length; i++) {
+      var s = signers[i];
+      if (s === client || String(s.recipientId) === '2' || s.roleName === 'Havellin') continue;
+      coSigners.push({ name: s.name || '', email: s.email || '', recipientId: String(s.recipientId || ''),
+                       signedAt: s.signedDateTime || '' });
     }
 
     return {
@@ -2217,7 +2303,8 @@ function esignEnvelopeStatus(data) {
       completedAt: res.body.completedDateTime || '',
       signerName: (client && client.name) || '',
       signerEmail: (client && client.email) || '',
-      signedAt: (client && client.signedDateTime) || ''
+      signedAt: (client && client.signedDateTime) || '',
+      coSigners: coSigners
     };
   } catch (error) {
     Logger.log('esignEnvelopeStatus error: ' + error);

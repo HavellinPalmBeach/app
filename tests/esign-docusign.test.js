@@ -76,7 +76,7 @@ function gsCtx({ props = {}, api = null } = {}) {
     gsVar('DS_AUTH_HOST_DEMO'), gsVar('DS_AUTH_HOST_PROD'), gsVar('DS_JWT_SCOPES'),
     gsVar('DS_TOKEN_TTL_SEC'), gsVar('DS_ANCHORS'), gsVar('DS_TAB_Y_OFFSET'),
     gsFn('_dsProp'), gsFn('_dsIsDemo'), gsFn('_dsAuthHost'), gsFn('_dsMissingProps'),
-    gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsVar('DS_REQUIRED_ANCHORS'), gsFn('_dsClientTabs'), gsFn('_dsAccessToken'),
+    gsFn('dsConsentUrl'), gsFn('_dsB64Url'), gsFn('_dsTabs'), gsVar('DS_REQUIRED_ANCHORS'), gsVar('DS_COSIGNER_ANCHOR'), gsFn('_dsCoSignerAnchor'), gsFn('_dsClientTabs'), gsFn('_dsAccessToken'),
     gsVar('DS_RSA_ALG_ID'), gsFn('_dsDerLen'), gsFn('_dsSigningKey'), gsFn('dsKeyReport'),
     gsFn('esignSendEnvelope'), gsFn('esignEnvelopeStatus'),
   ].join('\n');
@@ -102,9 +102,9 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'estTolerancePctTxt', 'esignAnchorsPresent', 'estFixedFee', 'estPrepFeeOnTop',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'esignCoSignerAnchors'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
-                  'ESIGN_REQUIRED_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
+                  'ESIGN_REQUIRED_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE', 'ESIGN_COSIGNER_ANCHOR'];
 const appCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
 
 const EST = { jobId: 1, tcFee: 18500, psFee: 12500, pkgCost: 1500, pkgLabel: 'Estate Premium — $1,500',
@@ -267,16 +267,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
   }
 
-  group('⚠ THE CO-SIGNER BLOCK IS DELIBERATELY BARE');
+  // RESTATED 2026-10-05 (P20): the BLANK block (nobody recorded) is what stays bare. A co-representative RECORDED on
+  // the job now signs in DocuSign beside the client (Anthony, Q22), so their block carries markers of its own and the
+  // envelope carries them as a recipient (tests/p20-esign-cosigners.test.js); the reason below still holds for the blank.
+  group('⚠ THE BLANK CO-SIGNER BLOCK IS DELIBERATELY BARE');
   {
-    // It is the optional second beneficiary / co-PR, and an anchor there needs a THIRD recipient
-    // whose name and email nothing in the app records. An envelope built for a co-signer who does
+    // With nobody recorded it is the optional second beneficiary / co-PR, and an anchor there needs a
+    // recipient whose name and email the app does not have. An envelope built for a co-signer who does
     // not exist waits at `sent` on nobody — which reads on the rail as a client dragging their feet.
     const doc = appCtx().probateAgreementHtml(PROBATE, EST);
     const A = appCtx().ESIGN_ANCHORS;
     has(doc, 'Co-Signer', 'the block is still on the document');
     eq(doc.split(A.clientSig).length - 1, 1,
        '⚠ and carries no anchor of its own — one client signature anchor on the page, not two');
+    eq([doc.indexOf('/hcs'), doc.indexOf('/hcd')], [-1, -1], '⚠ and no co-signer marker either: nobody is recorded to send it to');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -319,7 +323,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        + 'signature box on it — the loud failure is the one we want here');
   }
 
-  group('⚠⚠ THE SIGNER COMES OFF ROUTING ORDER 1, NOT WHOEVER SIGNED LAST');
+  // RESTATED 2026-10-05 (P20): the client is recipientId '1', not routing order 1. Every co-representative now signs at
+  // order 1 beside the client (Anthony, Q22), so "the first signer at order 1" could be a co-trustee; the fixture carries
+  // the recipientIds and roleNames DocuSign returns as the send set them. The requirement is unchanged: the client, never us.
+  group('⚠⚠ THE SIGNER IS THE CLIENT (recipientId 1), NOT WHOEVER SIGNED LAST');
   {
     // Order 2 is us. Recording OUR name as the person who bound the estate is byte for byte the
     // Slice 6 defect (`agrSignedBy` holding the manager who approved the price).
@@ -328,8 +335,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       api: () => ({ ok: true, code: 200, body: {
         status: 'completed', completedDateTime: '2026-09-17T14:02:00Z',
         recipients: { signers: [
-          { routingOrder: '2', name: 'Anthony Graziano', email: 'anthony@havellinpalmbeach.com', signedDateTime: '2026-09-17T14:02:00Z' },
-          { routingOrder: '1', name: 'Tripp Butler', email: 'tripp@example.com', signedDateTime: '2026-09-17T13:40:00Z' },
+          { recipientId: '2', roleName: 'Havellin', routingOrder: '2', name: 'Anthony Graziano', email: 'anthony@havellinpalmbeach.com', signedDateTime: '2026-09-17T14:02:00Z' },
+          { recipientId: '1', roleName: 'Client', routingOrder: '1', name: 'Tripp Butler', email: 'tripp@example.com', signedDateTime: '2026-09-17T13:40:00Z' },
         ] } } }),
     });
     const st = c.esignEnvelopeStatus({ envelopeId: 'env-1' });
@@ -493,7 +500,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let posted = null;
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
-            'docState', '_jobTouch', '_actor', 'esignSigner', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending', 'clientRecipient', 'isDecedentJob', 'firstName'],
+            'docState', '_jobTouch', '_actor', 'esignSigner', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending', 'clientRecipient', 'isDecedentJob', 'firstName',
+            'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -561,7 +569,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
-            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'clientRecipient', 'firstName', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'],
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'clientRecipient', 'firstName', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority',
+            'esignCoSigners', '_agrCoSigners', 'jobFiduciaries'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
              'JT_ROW_DOC', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: {
@@ -737,7 +746,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // missing and say so — a person reads it before it goes. An envelope with no document is a
     // signature request for nothing, mailed to the client automatically with nobody in between.
     const mk = (over) => sandbox({
-      fns: ['esignSigner', 'clientRecipient', 'isDecedentJob', 'firstName'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
+      fns: ['esignSigner', 'clientRecipient', 'isDecedentJob', 'firstName', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: Object.assign({ SHEETS_SYNC_URL: 'https://script.example/exec',
                              _appsScriptPost: (u, b, cb) => cb(true, { ok: true, envelopeId: 'e' }) }, over) });
     const spec = (job) => ({ job, kind: 'agreement', key: 'agreement',
@@ -765,10 +774,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠⚠ NO AUTOMATIC RETRY — the same rule addVendor follows, for the same reason: a failed POST
     // never reveals whether it landed. A re-sent append duplicates a directory row; a re-sent
     // envelope mails the client a SECOND signature request for one agreement.
+    // RESTATED 2026-10-05 (P20): the payload is built into a variable first (a co-representative is added to it only
+    // where one is recorded), so the post is `_appsScriptPost(SHEETS_SYNC_URL, payload, function (ok, d) {…})`. The
+    // check now walks to the callback's own closing brace and reads what follows it, where a fourth argument would be,
+    // instead of a window after "}, function" (which no longer follows the literal, so the old window read nothing).
     const dsBody = noComments(decl('DOC_SEND_PROVIDERS'));
-    const call = dsBody.slice(dsBody.indexOf("action: 'esignSend'"));
-    lacks(call.slice(0, call.indexOf('}, function') + 400), '}, true)',
-          '⚠⚠ the esignSend post passes no allowRetry');
+    const postAt = dsBody.indexOf('_appsScriptPost(SHEETS_SYNC_URL, payload, function (ok, d) {');
+    ok(postAt > 0 && dsBody.indexOf("action: 'esignSend'") > 0 && dsBody.indexOf("action: 'esignSend'") < postAt,
+       'fixture: the esignSend payload, then its one post');
+    const cbClose = matchBrace(dsBody, dsBody.indexOf('{', postAt + 40));
+    eq(dsBody.slice(cbClose, cbClose + 3), '});',
+       '⚠⚠ the esignSend post passes no allowRetry: the callback closes the call');
   }
 
   group('⚠⚠ THE OLD-SCHOOL ROUTE IS A PER-JOB BUTTON, NOT A SETTING');
@@ -1374,8 +1390,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       let posted = null;
       const c = sandbox({
         fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor',
-              'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'clientRecipient', 'isDecedentJob', 'firstName'],
-        vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS'],
+              'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'clientRecipient', 'isDecedentJob', 'firstName',
+              'esignCoSignerAnchors', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'],
+        vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS', 'ESIGN_COSIGNER_ANCHOR'],
         stubs: {
           SHEETS_SYNC_URL: 'https://script.example/exec',
           _appsScriptPost: (url, body, cb) => { posted = body; cb(true, { ok: true, envelopeId: 'e1', status: 'sent' }); },

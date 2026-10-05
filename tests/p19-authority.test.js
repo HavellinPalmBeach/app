@@ -347,11 +347,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const card = cardAt(renderDash(TRUST()), 'Trust Information');
     const t = text(card);
     has(t, 'Co-Trustees Name Daniel Adler Role Trustee Phone (561) 555-0103 Email dan@adler.example', '⚠⚠ the co-trustee, under Co-Trustees');
-    has(t, 'A DocuSign envelope goes to Rex Hale alone.', 'and the one signer DocuSign has, said once');
+    // RESTATED 2026-10-05 (P20): Anthony decided (Q22) that each co-representative signs the agreement beside the
+    // representative, in DocuSign or on the printed page, so the card says so where it said DocuSign went to one signer.
+    has(t, 'Each signs the agreement beside Rex Hale: in DocuSign, which needs their email, or on the printed page when it is signed by hand.', 'and how each signs the agreement, said once');
+    lacks(t, 'A DocuSign envelope goes to Rex Hale alone.', '⚠ never the old one-signer sentence');
     eq((t.match(/DocuSign/g) || []).length, 1, 'once');
-    // ⚠ The fact, and no procedure: whether a co-representative must sign the agreement too is Anthony's to decide
-    // (P19 hand-back), so the card never tells anyone to collect a signature on paper.
-    lacks(t, 'on paper', 'no signing procedure is prescribed');
+    lacks(t, 'on paper', 'and nothing beyond the two routes is prescribed');
     has(text(cardAt(renderDash(PROBATE()), 'Probate Information')), 'Co-Personal Representatives Name Daniel Adler', 'on a probate matter: Co-Personal Representatives');
     const two = renderDash(TRUST({ coFiduciaries: [{ id: 'c1', name: 'Daniel <i>Adler</i>', role: 'Trustee' }, { id: 'c2', name: 'Mae O\'Neil', email: 'mae@x.com' },
       { id: 'c3', name: 'Voided Person', voidedAt: 5 }, { id: '', name: 'No Id' }] }));
@@ -612,8 +613,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        ['Daniel Adler', 'Trustee', 'Mae O\'Neil', 'mae@oneil.example'], 'each with what was recorded');
     has(t.html, 'id="ec-cofid-0" data-id="cf1"', 'each row carries its entry\'s id');
     has(t.html, 'onclick="removeCoFiduciaryRow(\'ec\',1)">&#10005; Remove</button>', 'each with ✕ Remove');
-    has(t.html, 'Each one approves the releases with the representative. A DocuSign envelope goes to the representative alone.</div>', 'and the one-signer sentence');
-    lacks(t.html, 'on paper', 'and no signing procedure, which is not decided');
+    // RESTATED 2026-10-05 (P20; Q22): the hint says each co-representative signs the agreement beside the representative.
+    has(t.html, 'Each one approves the releases with the representative and signs the agreement beside them: in DocuSign, which needs their email, or on the printed page when it is signed by hand.</div>', 'and how each signs the agreement');
+    lacks(t.html, 'A DocuSign envelope goes to the representative alone', '⚠ never the old one-signer sentence');
+    lacks(t.html, 'on paper', 'and nothing beyond the two routes is prescribed');
     const p = ecRig(PROBATE());
     eq((/<div class="dfl" id="ec-exec-auth-lbl">([^<]*)<\/div>/.exec(p.html) || [])[1], 'Letters of Administration', 'a probate matter: the Letters');
     eq([styleOf(p.html, 'ec-trust-fields'), styleOf(p.html, 'ec-sale-fields')], ['display:none;', 'display:block;'], 'no trust; the sale question');
@@ -722,8 +725,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(d.split('\n').some((l) => l.indexOf('Certification of Trust') >= 0 && l.indexOf('2026-10-03') >= 0 && l.indexOf('§736.1017') >= 0),
          f + ' names the Certification of Trust, its statute and its date, in one passage');
       has(d, '+ Add a co-representative', f + ' names the co-representative control');
-      has(d, 'a DocuSign envelope goes to the representative alone', f + ' says DocuSign goes to one signer');
-      // …and prescribes no way for the others to sign, which Anthony has not decided.
+      // RESTATED 2026-10-05 (P20): Anthony decided (Q22) that each co-representative signs the agreement beside the
+      // representative, in DocuSign or on the printed page, so the documents say that where they said DocuSign went to one
+      // signer. tests/p20-esign-cosigners.test.js reads the rest of what they say about it.
+      has(d, 'signs the agreement beside them', f + ' says each co-representative signs the agreement beside the representative');
+      lacks(d, 'a DocuSign envelope goes to the representative alone', f + ' no longer says DocuSign goes to one signer');
+      // …and still prescribes no "on paper" signing beyond the two routes it names.
       lacks(d, 'sign the agreement on paper', f + ' prescribes no paper signing for a co-representative');
       lacks(d, 'signs the agreement on paper', f + ' (either wording)');
       has(d, 'Form 706', f + ' names the Form 706 date');
