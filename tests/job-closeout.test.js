@@ -81,8 +81,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_actor', '_handoverBy', '_todayStr',
             'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments',
             // The Re-open is its own branch of the transition (2026-09-29).
-            'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents'],
-      vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'DECEDENT_SERVICES'],
+            'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents',
+            // P19: an estate's close names its unsigned Disposition Ledger.
+            'ledgerCloseFlag', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover'],
+      vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'DECEDENT_SERVICES', 'LEDGER_SIGNED_REF'],
       stubs: { vendorDirectory: VENDORS, alerts: [] },
     });
     const said = [], asked = [];
@@ -306,11 +308,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the desk card stops asking a prep job questions that do not apply to it');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
+      fns: ['planDerivedLines', 'donationReceiptLine', 'donationGroups', 'invDonationReceipted', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly',
             'planTasksFor', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-      vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
+      vars: ['LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
              'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
              'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'JOB_ADMIN_TASKS', 'DOC_SCOPES'],
       stubs: { isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [], stagePaidTotal: () => 0,
@@ -338,7 +340,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'a prep job that DID price declutter hours keeps the hours line');
     const tasks = (svc) => d.planTasksFor(d.JOB_ADMIN_TASKS, null, d.planTaskCtx({ id: 7, svc }, { svc })).map((x) => x.key);
     ok(tasks('prep').indexOf('fin_donation_receipts') < 0, 'no donation receipts on a prep job');
-    ok(tasks('home_cleanout').indexOf('fin_donation_receipts') >= 0, 'and still on a cleanout');
+    // RESTATED 2026-10-03 (P19): the donation receipts are a derived line on the desk now, present wherever a line is
+    // donated (a prep job has no inventory, so none), and the box is gone from every service.
+    ok(tasks('home_cleanout').indexOf('fin_donation_receipts') < 0, 'and the box is gone from a cleanout too: the line is derived');
+    d._photoRefs = { 7: [{ stableId: 's1', label: 'inventory', disposition: 'Donate', channel: 'Goodwill', ts: 1 }] };
+    ok(d.planDerivedLines(7, { id: 7, svc: 'home_cleanout' }, Object.assign({}, est, { svc: 'home_cleanout' }), 'admin').some((l) => l.key === 'donation_receipt'),
+       'a cleanout with a donated line carries the derived donation line at the desk');
+    d._photoRefs = {};
   }
 
   // ───────────────────────────────────────────────────────────────────────────

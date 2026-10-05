@@ -28,7 +28,12 @@ const FNS = ['_invScheduleSection', '_invTrackDefault',
   '_invNamed', '_invDateTime', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames',
   // P16: the dealer route, the import panel's own list, and the photo folders the share names.
   'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer',
-  '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder', 'roundCents', 'fmt'
+  '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder', 'roundCents', 'fmt',
+  // P19: the Disposition Ledger's own card on the desk, where the ledger moved from the More menu.
+  '_renderLedgerCards', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
+  'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
+  'jobListEntries', 'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', 'estateProceedsHolder', '_invRecipient',
+  '_ymdLocal', 'invDonationReceipted', '_jobDestLabel'
 ];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 
@@ -40,6 +45,7 @@ const VARS = [
   'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS', 'MATTER_TYPES', '_invFilter', '_invShowRoll',
   '_invOpen', '_invPick', 'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'DOC_SCOPES',
   'INV_VAL_SOURCES', 'EXEMPT_CAP_732_402', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
+  'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs',
 ];
 
 const ESTATE = (over) => Object.assign({
@@ -196,12 +202,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The converse is the half that keeps this a gate rather than a cull. Each of these is
     // work Havellin does on every engagement, so withholding one would be the opposite defect.
-    const KEEP = ['printApprovalRequest', 'printDispositionLedger', 'printAppraisalWorklist',
+    // RESTATED 2026-10-03 (P19): the Disposition Ledger left the strip's More menu for its own card under the inventory,
+    // where it is printed, filed to Drive and its signed copy filed; it is still offered at every tier, now from there.
+    const KEEP = ['printApprovalRequest', 'printAppraisalWorklist',
                   'printAsFoundRecord', 'takeInventorySnapshot', 'exportInventoryCSV',
                   'shareInventoryWithCounsel'];
     ['contents', 'values', 'appraisals', 'none'].forEach((tier) => {
       const b = bar(ESTATE({ docTier: tier }));
       KEEP.forEach((d) => has(b, d + '(', tier + ': ' + d.replace(/^print|^export|^take/, '') + ' still offered'));
+      lacks(b, 'printDispositionLedger(', tier + ': the ledger is not on the strip, which draws each document once');
+      const { ctx } = rig(ESTATE({ docTier: tier }));
+      has(ctx._renderLedgerCards(ESTATE({ docTier: tier }), ctx._jobInvRefs(7)), 'printDispositionLedger(7)', tier + ': DispositionLedger still offered, on its card');
     });
     // The Appraisal Worklist specifically: the capture agreement says Havellin gives the
     // appraiser access and attends on request, so the per-specialist packet is exactly what we

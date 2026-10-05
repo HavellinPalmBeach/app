@@ -575,16 +575,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('11 · what the package carries follows the matter and the tier', () => {
     const g = lift(['probatePackageDocs'], [], { jobs: [], estimateStore: {} });
     const J = (o) => Object.assign(ESTATE(), o);
-    eq(g.probatePackageDocs(J({})), ['court', 'schedule', 'worklist'], 'probate, valued: the Court Inventory, the Estate Inventory Report, the Appraisal Worklist');
-    eq(g.probatePackageDocs(J({ matterType: 'trust', svc: 'cleanout' })), ['trustee', 'schedule', 'worklist'], 'a trust: the Trust Schedule');
-    eq(g.probatePackageDocs(J({ matterType: 'both' })), ['court', 'trustee', 'schedule', 'worklist'], 'a pour-over will: both instruments');
-    eq(g.probatePackageDocs(J({ matterType: '' })), ['court', 'schedule', 'worklist'], 'an unanswered matter on a probate service: the court\'s');
+    // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
+    // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
+    eq(g.probatePackageDocs(J({})), ['court', 'schedule', 'ledger', 'worklist'], 'probate, valued: the Court Inventory, the Estate Inventory Report, the Disposition Ledger, the Appraisal Worklist');
+    eq(g.probatePackageDocs(J({ matterType: 'trust', svc: 'cleanout' })), ['trustee', 'schedule', 'ledger', 'worklist'], 'a trust: the Trust Schedule');
+    eq(g.probatePackageDocs(J({ matterType: 'both' })), ['court', 'trustee', 'schedule', 'ledger', 'worklist'], 'a pour-over will: both instruments');
+    eq(g.probatePackageDocs(J({ matterType: '' })), ['court', 'schedule', 'ledger', 'worklist'], 'an unanswered matter on a probate service: the court\'s');
     // ⚠ The court's instrument is jobOnProbateTrack's answer, the one definition: an unanswered matter claims a court
     // only on a Probate service, and a family distribution claims none.
-    eq(g.probatePackageDocs(J({ matterType: '', svc: 'cleanout' })), ['schedule', 'worklist'], '⚠ an unanswered matter on an Estate Settlement claims no court');
-    eq(g.probatePackageDocs(J({ matterType: 'neither', svc: 'cleanout' })), ['schedule', 'worklist'], 'neither a court nor a trust: neither instrument');
-    eq(g.probatePackageDocs(J({ docTier: 'contents' })), ['contents', 'worklist'], '⚠ a contents engagement: no valued schedule, the Contents List instead');
-    eq(g.probatePackageDocs(J({ docTier: 'none' })), ['worklist'], 'tier none: the inventory is counsel\'s');
+    eq(g.probatePackageDocs(J({ matterType: '', svc: 'cleanout' })), ['schedule', 'ledger', 'worklist'], '⚠ an unanswered matter on an Estate Settlement claims no court');
+    eq(g.probatePackageDocs(J({ matterType: 'neither', svc: 'cleanout' })), ['schedule', 'ledger', 'worklist'], 'neither a court nor a trust: neither instrument');
+    eq(g.probatePackageDocs(J({ docTier: 'contents' })), ['contents', 'ledger', 'worklist'], '⚠ a contents engagement: no valued schedule, the Contents List instead');
+    eq(g.probatePackageDocs(J({ docTier: 'none' })), ['ledger', 'worklist'], 'tier none: the inventory is counsel\'s (the ledger is our own record)');
     eq(g.probatePackageDocs(Object.assign(ESTATE(), { svc: 'downsizing' })), [], 'a living job has no package');
   });
 
@@ -648,14 +650,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(bareLF(mime), 0, '⚠ every line break in the message is CRLF');
     const p = mimeParts(mime);
     const day = new Date(NOW).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
+    // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
+    // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
     eq(p.pdfs.map((x) => x.name), ['Havellin Court Inventory - 69 Beach Blvd - ' + day + '.pdf', 'Havellin Estate Inventory - 69 Beach Blvd - ' + day + '.pdf',
-      'Havellin Appraisal Worklist - 69 Beach Blvd - ' + day + '.pdf'], '⚠⚠ three PDFs: the Court Inventory, the Estate Inventory Report and the Appraisal Worklist, named as the desk names them');
+      'Havellin Disposition Ledger - 69 Beach Blvd - ' + day + '.pdf',
+      'Havellin Appraisal Worklist - 69 Beach Blvd - ' + day + '.pdf'], '⚠⚠ four PDFs: the Court Inventory, the Estate Inventory Report, the Disposition Ledger and the Appraisal Worklist, named as the desk names them');
     ok(p.pdfs.every((x) => x.lines.every((l) => l.length <= 76)), 'each attachment\'s base64 wrapped at 76');
-    eq(p.pdfs.map((x) => /^%PDF/.test(Buffer.from(x.lines.join(''), 'base64').toString())), [true, true, true], 'each one the PDF the server built');
+    eq(p.pdfs.map((x) => /^%PDF/.test(Buffer.from(x.lines.join(''), 'base64').toString())), [true, true, true, true], 'each one the PDF the server built');
     // The body: the documents, and the links.
     has(p.text, 'Dear Ann,', 'the attorney greeted');
     has(p.text, 'Attached are Havellin’s inventory documents for the Estate of Walter Ellsworth, 69 Beach Blvd, Palm Beach', 'naming the estate');
-    ['Court Inventory', 'Estate Inventory Report', 'Appraisal Worklist'].forEach((t) => has(p.text, '  - ' + t, 'listing the ' + t));
+    ['Court Inventory', 'Estate Inventory Report', 'Disposition Ledger', 'Appraisal Worklist'].forEach((t) => has(p.text, '  - ' + t, 'listing the ' + t));
     has(p.text, 'Appraisal report or offer — Christies appraisal.pdf: https://drive.google.com/file/d/APPR1/view', '⚠ the filed appraisal report, linked');
     has(p.text, 'As-Found Record photographs: https://drive.google.com/drive/folders/AF7', 'the As-Found Record folder, linked');
     has(p.text, 'Estate Inventory photographs: https://drive.google.com/drive/folders/INV7', 'the Estate Inventory folder, linked');
@@ -670,11 +675,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠⚠ both photograph folders shared with the attorney through the existing sharing action');
     eq(r.N.log.uploads.map((u) => [u.folderId, u.filename]), [
       ['INV7', 'HVL-0007 - Havellin Release Approvals and Chain of Custody.html'], ['INV7', 'HVL-0007 - Havellin Court Inventory.html'],
-      ['INV7', 'HVL-0007 - Havellin Estate Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Appraisal Worklist.html']],
+      ['INV7', 'HVL-0007 - Havellin Estate Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'],
+      ['INV7', 'HVL-0007 - Havellin Appraisal Worklist.html']],
        '⚠ every PDF filed to the Estate Inventory folder too, under undated names, so the next package replaces them');
-    eq(r.N.log.pdfs.length, 3, 'three conversions, through the one PDF builder');
+    eq(r.N.log.pdfs.length, 4, 'four conversions, through the one PDF builder');
     // Sequential, never parallel, and in order.
-    eq(r.N.log.posts, ['shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
+    eq(r.N.log.posts, ['shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
        'one Apps Script call after another');
     ok(r.N.log.gets.some((u) => /action=loadMedia&jobId=7/.test(u)), '⚠ the inventory is read from the sheet first, never assumed empty');
   });
@@ -707,11 +713,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!!st.draftedAt && !st.sentAt, '⚠⚠ a draft is recorded (draftedAt), never a send the app did not see');
     eq([st.provider, st.mailbox, st.draftUrl], ['gmail', BOX, 'https://mail.google.com/mail/u/0/#drafts?compose=m-1'], 'which mailbox it is in, and the link to it');
     eq(st.draftedBy, 'Anthony Graziano', 'who drafted it');
-    eq(JSON.parse(JSON.stringify(st.pkg)), { owed: ['court', 'schedule', 'worklist'], docs: ['court', 'schedule', 'worklist'], to: 'ann@lowe.law',
+    // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
+    // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
+    eq(JSON.parse(JSON.stringify(st.pkg)), { owed: ['court', 'schedule', 'ledger', 'worklist'], docs: ['court', 'schedule', 'ledger', 'worklist'], to: 'ann@lowe.law',
        cc: ['rex@hale.example', 'agreements@havellinpalmbeach.com'] }, 'what it carried and to whom');
     ok((r.job().at || {})['docState:probatePackage'] > 0, '⚠ stamped on its key: a person\'s edit, which the sheet merges by key');
     ok(r.saves.indexOf('sync') >= 0, 'and synced');
-    has((r.notices[r.notices.length - 1] || {}).m, 'Draft created in ' + BOX + ' for ann@lowe.law, copied to rex@hale.example and agreements@havellinpalmbeach.com, with the Court Inventory, Estate Inventory Report and Appraisal Worklist attached',
+    has((r.notices[r.notices.length - 1] || {}).m, 'Draft created in ' + BOX + ' for ann@lowe.law, copied to rex@hale.example and agreements@havellinpalmbeach.com, with the Court Inventory, Estate Inventory Report, Disposition Ledger and Appraisal Worklist attached',
         'the notice says where the draft is and what it carries');
     eq((r.notices[r.notices.length - 1] || {}).t, 'ok', 'all of it went: ok');
     eq(r.opened, ['https://mail.google.com/mail/u/0/#drafts?compose=m-1'], 'the draft opens');
@@ -813,17 +821,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pdfFail = pkgRig({ net: { failPdf: /<h2[^>]*>Appraisal Worklist/ } });
     pdfFail.c.sendProbatePackage(7);
     const pf = mimeParts(pdfFail.N.log.drafts[0] || '');
-    eq(pf.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Estate Inventory'], 'fixture: the worklist\'s PDF failed, the other two attached');
-    has(pf.text, 'Appraisal Worklist: https://drive.google.com/file/d/up4/view', '⚠ the page that could not be attached is linked to its filed copy');
+    // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
+    // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
+    eq(pf.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Estate Inventory', 'Havellin Disposition Ledger'], 'fixture: the worklist\'s PDF failed, the other three attached');
+    has(pf.text, 'Appraisal Worklist: https://drive.google.com/file/d/up5/view', '⚠ the page that could not be attached is linked to its filed copy');
     lacks(pf.text, 'Court Inventory: https://', 'an attached page is not linked as well');
     has((pdfFail.notices[pdfFail.notices.length - 1] || {}).m, 'The Appraisal Worklist could not be made into a PDF, so it is linked from Drive instead of attached', 'and the notice says so');
-    eq(JSON.parse(JSON.stringify(pdfFail.job().docState.probatePackage.pkg.docs)), ['court', 'schedule'], 'the record names what was attached');
+    eq(JSON.parse(JSON.stringify(pdfFail.job().docState.probatePackage.pkg.docs)), ['court', 'schedule', 'ledger'], 'the record names what was attached');
 
     // A document the inventory cannot yet produce is left out, and the notice (the sender's, not the attorney's) says why.
     const empty = pkgRig({ rows: [] });
     empty.c.sendProbatePackage(7);
     const em = empty.notices[empty.notices.length - 1] || {};
     has(em.m, 'Not in the package: the Estate Inventory Report — There is nothing in the inventory to report yet.', '⚠ an empty inventory: the report is left out, by name, with its reason');
+    has(em.m, 'Not in the package: the Disposition Ledger — There is nothing in the inventory to record yet.', 'P19: and so is the ledger, which has nothing to record');
     eq(em.t, 'warn', 'and the notice warns');
     eq(mimeParts(empty.N.log.drafts[0] || '').pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Appraisal Worklist'],
        'the rest still goes, the Court Inventory as the working draft it is');
@@ -834,20 +845,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const un = unfiled.notices[unfiled.notices.length - 1] || {};
     eq(un.t, 'warn', 'a page that was not filed: the notice warns');
     has(un.m, 'Not filed to Drive: the Court Inventory.', '⚠ naming what is missing from the folder');
-    eq(mimeParts(unfiled.N.log.drafts[0] || '').pdfs.length, 3, 'and the draft still attaches it');
+    eq(mimeParts(unfiled.N.log.drafts[0] || '').pdfs.length, 4, 'and the draft still attaches it (P19: four documents with the ledger)');
 
     // A pour-over will: both instruments go.
     const both = pkgRig({ job: Object.assign(ESTATE(), { matterType: 'both' }) });
     both.c.sendProbatePackage(7);
     const bp = mimeParts(both.N.log.drafts[0] || '');
-    eq(bp.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Appraisal Worklist'],
+    eq(bp.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
        '⚠ a pour-over will carries the Court Inventory and the Trust Schedule, each the desk\'s own page');
     lacks((both.notices[both.notices.length - 1] || {}).m, 'Not in the package', 'and leaves nothing out');
 
     const contents = pkgRig({ job: Object.assign(ESTATE(), { docTier: 'contents' }) });
     contents.c.sendProbatePackage(7);
     const cp = mimeParts(contents.N.log.drafts[0] || '');
-    eq(cp.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Contents List', 'Havellin Appraisal Worklist'], 'a contents engagement sends the Contents List');
+    eq(cp.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Contents List', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], 'a contents engagement sends the Contents List');
     has(cp.text, 'Valuing the property is not part of Havellin’s engagement on this estate, so the Contents List is attached in place of a valued schedule.',
         '⚠ and says once, to counsel, that the values are theirs');
   });
@@ -881,7 +892,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // No Estate Inventory subfolder at all (Drive lists none): the documents are filed in the client's own folder.
     const flat = pkgRig({ job: Object.assign(ESTATE(), { driveSubfolders: { 'Agreement': 'AGR7' } }), net: { subfolders: { Agreement: 'AGR7' } } });
     flat.c.sendProbatePackage(7);
-    ok(flat.N.log.uploads.length === 4 && flat.N.log.uploads.every((u) => u.folderId === 'ROOT7'),
+    ok(flat.N.log.uploads.length === 5 && flat.N.log.uploads.every((u) => u.folderId === 'ROOT7'),
        '⚠ with no Estate Inventory folder the record and every page are filed in the client\'s folder, never dropped');
     eq(flat.N.log.drafts.length, 1, 'and the draft is still made');
 
@@ -889,7 +900,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const none = pkgRig({ job: Object.assign(ESTATE(), { docTier: 'none' }) });
     none.c.sendProbatePackage(7);
     const np = mimeParts(none.N.log.drafts[0] || '');
-    eq(np.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Appraisal Worklist'], 'tier none: the Appraisal Worklist alone');
+    eq(np.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], 'tier none: the Disposition Ledger and the Appraisal Worklist (P19)');
     has(np.text, 'On this estate the inventory and the filing are your office’s; Havellin’s records of the property are below.', '⚠ and the one absence that shifts the work to counsel is stated');
 
     // A report removed from the Job Plan is not linked.
@@ -928,12 +939,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const h = g.probatePackageCardHtml(Object.assign(ESTATE(), { probateAttyEmail: 'a<b>@l.law' }));
     has(h, 'a&lt;b&gt;@l.law', 'the attorney\'s email is escaped');
     lacks(h, 'a<b>@', 'never markup');
-    has(text(h), 'Carries the Court Inventory, Estate Inventory Report and Appraisal Worklist, with links to the photographs and the release and custody record', 'it says what it carries before it goes');
+    has(text(h), 'Carries the Court Inventory, Estate Inventory Report, Disposition Ledger and Appraisal Worklist, with links to the photographs and the release and custody record', 'it says what it carries before it goes (P19: with the ledger)');
     // The waiting draft's who-and-when line is text too: the address came from what was typed, the rest from records.
     const live = Object.assign(ESTATE(), { probateAttyEmail: 'a<b>@l.law' });
     live.docState = { probatePackage: { draftedAt: '2026-10-01T14:00:00.000Z', draftedBy: 'O<i>Hara</i>', provider: 'gmail',
       mailbox: 'box<u>@h.com', draftUrl: 'https://mail.google.com/mail/u/0/#drafts?compose=m-1',
-      pkg: { owed: ['court', 'schedule', 'worklist'], docs: ['court', 'schedule', 'worklist'], to: 'a<b>@l.law', cc: [] } } };
+      // RESTATED 2026-10-03 (P19): a draft carries the documents owed when it was made, and the package owes the ledger now.
+      pkg: { owed: ['court', 'schedule', 'ledger', 'worklist'], docs: ['court', 'schedule', 'ledger', 'worklist'], to: 'a<b>@l.law', cc: [] } } };
     const hl = g.probatePackageCardHtml(live);
     has(hl, 'markDocSent(7,', 'fixture: the draft is waiting on its confirming tap');
     has(hl, 'O&lt;i&gt;Hara', '⚠ who drafted it, as text');

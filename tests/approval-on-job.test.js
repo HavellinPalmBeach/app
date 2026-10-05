@@ -522,8 +522,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = { notices: [], alerts: [] };
     const ctx = sandbox({
       fns: AGR_FNS.concat(['_actor', '_handoverBy', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
-        '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'paymentCounts', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending', 'roundCents', 'paymentLive', 'isRefundRecord']),
-      vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS']),
+        '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'paymentCounts', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending', 'roundCents', 'paymentLive', 'isRefundRecord',
+        // P19: an estate's close names its unsigned Disposition Ledger.
+        'ledgerCloseFlag', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover']),
+      vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS', 'LEDGER_SIGNED_REF']),
       stubs: {
         document: domStub({}), currentEstimate: null,
         estimateStore: { 1: { estimate: AEST(1), approved: true, approvedBy: 'Anthony Graziano' },
@@ -664,10 +666,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The only two ways a client document becomes a PDF, and both hand over the kind's pdfCss.
     // RESTATED 2026-10-01 (P17): two more callers, each filing a document that carries no approval band — the accepted
     // change order (fileChangeOrder) and the probate package's pages (_pkgFileAll). Still exact, so a sixth fails here.
-    eq((SRC.match(/_exportDoc\(/g) || []).length, 5, '_exportDoc: the definition, the two client-document paths and the two P17 filings');
-    for (const f of ['fileChangeOrder', '_pkgFileAll']) has(H.fn(f), '_exportDoc(', f + ' is one of the two');
+    // RESTATED 2026-10-03 (P19): a third such caller, the Disposition Ledger filed as the job closes (fileDispositionLedger);
+    // the ledger prints no approval band either. Still exact, so a seventh fails here.
+    eq((SRC.match(/_exportDoc\(/g) || []).length, 6, '_exportDoc: the definition, the two client-document paths, the two P17 filings and the P19 ledger');
+    for (const f of ['fileChangeOrder', '_pkgFileAll', 'fileDispositionLedger']) has(H.fn(f), '_exportDoc(', f + ' is one of the three');
     for (const f of ['printChangeOrder', 'printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport',
-                     'printContentsList', 'printAppraisalWorklist', 'probatePackageRecordHtml'])
+                     'printContentsList', 'printAppraisalWorklist', 'probatePackageRecordHtml', 'printDispositionLedger'])
       lacks(H.fn(f), 'approved-stamp', f + ' prints no approval band, so filing it needs no pdfCss');
     has(H.fn('docPdfBase64'), 'spec.cfg.pdfCss', 'docPdfBase64 passes the kind\'s pdfCss');
     has(H.fn('docFile'), 'spec.cfg.pdfCss', 'docFile passes the kind\'s pdfCss');

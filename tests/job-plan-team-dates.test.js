@@ -219,9 +219,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ #1 — pressing Activate takes you to that client’s Job Plan; closing does not');
   {
-    const calls = { plan: [], redraw: [], dash: [] };
+    const calls = { plan: [], redraw: [], dash: [], filed: [] };
     const A = sandbox({ fns: ['activateOrCycle'],
-                        stubs: { saveJobs: () => {}, syncJobToSheets: () => {},
+                        // P19: a close files the Disposition Ledger to Drive (driven in p19-ledger.test.js); recorded here.
+                        stubs: { saveJobs: () => {}, syncJobToSheets: () => {}, fileDispositionLedger: (id, o) => { calls.filed.push([id, !!(o && o.auto)]); },
                                  applyJobTransition: (j) => { j.status = A.__to; return true; },
                                  openJobPlanFor: (id) => { calls.plan.push(id); return A.__planOk; },
                                  _dashRedraw: (id) => { calls.redraw.push(id); return true; },
@@ -242,6 +243,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const before = calls.plan.length;
     A.activateOrCycle(9);   // closed -> active (Re-open)
     eq(calls.plan.length, before + 1, 're-opening a closed job starts it again, so it lands on the plan too');
+    eq(calls.filed, [[8, true]], 'P19: the close, and only the close, files the Disposition Ledger, in the background');
 
     // openJobPlanFor: the one way onto a client's Job Plan from another screen. DOM-heavy (it
     // presses the real nav), so pinned here and proven in tests/browser/step20.js.

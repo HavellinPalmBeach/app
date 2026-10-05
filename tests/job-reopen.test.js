@@ -94,10 +94,12 @@ const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimeline
   // Lifted, never stubbed — the button, the refusal and the undo are one rule read three ways.
   'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch',
   // The two readers of the handover stamp outside the rail.
-  'jobIsSettled', 'planCurrentStage', '_planRooms', '_planRoomStatus', 'docReadOnlyWord', 'docPreviewOnly', 'estimateEditBlocker', 'priceChangeBlocker', 'discountOfferBlocker', 'roundCents']);
+  'jobIsSettled', 'planCurrentStage', '_planRooms', '_planRoomStatus', 'docReadOnlyWord', 'docPreviewOnly', 'estimateEditBlocker', 'priceChangeBlocker', 'discountOfferBlocker', 'roundCents',
+  // P19: an estate's close names its unsigned Disposition Ledger.
+  'ledgerCloseFlag', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover']);
 const VARS = ['DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_READY_WHY',
   'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
-  'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'JOB_TRANSITIONS', 'jobPlanStore'];
+  'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'JOB_TRANSITIONS', 'jobPlanStore', 'LEDGER_SIGNED_REF'];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
@@ -109,6 +111,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     saveJobs() {}, syncJobToSheets(j) { if (j) j.updatedAt = Date.now(); },
     openJobPlanFor(id) { landed.push(id); return true; }, _dashRedraw() { return true; }, renderClientDashboard() {},
     alert(m) { said.push(m); }, confirm(m) { asked.push(m); return answer; },
+    // P19: a close files the Disposition Ledger in the background (driven in p19-ledger.test.js).
+    fileDispositionLedger() {},
   } });
   const reset = (a) => { asked.length = 0; said.length = 0; landed.length = 0; answer = a === undefined ? true : a; };
 

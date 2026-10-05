@@ -432,8 +432,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Removals stamp as well — that is the whole mechanism for propagating a deletion.
     const rm = source('removeAppraiser');
     has(rm, '_jobTouch(job, \'appraisers\', apprId)', 'removing an appraiser stamps the removal');
-    has(source('removeInventorySnapshot'), '_jobTouch(job, \'invSnapshots\', ts)',
-        'and so does removing a snapshot');
+    // RESTATED 2026-10-03 (P19): a snapshot is never removed now, only voided with a reason, and the void stamps the same
+    // key through the one helper (p19-ledger.test.js drives it against the sheet's merge).
+    has(source('voidInventorySnapshot'), '_saveJobEdit(job, \'invSnapshots\', snap.ts)',
+        'and so does voiding a snapshot');
     has(source('saveDeposit'), 'uid: _photoUid()',
         '⚠ a payment is born with a device-independent key, not a max(id)+1 counter');
   }

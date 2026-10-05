@@ -72,7 +72,11 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
   '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
   // P16: the dealer route, the one field-on-this-job rule, and the photo folders the share names.
-  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt'
+  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
+  // P19: the Disposition Ledger's card on the desk, on living work as on an estate.
+  '_renderLedgerCards', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
+  'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
+  'jobListEntries', 'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', 'estateProceedsHolder', '_ymdLocal', 'invDonationReceipted'
 ];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   '_agRun', 'AGENT_NOTICE_KINDS', 
@@ -83,7 +87,8 @@ const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   'estimateStore', '_invFilter', '_invShowRoll', '_invOpen', '_invPick',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
   'MAIV_OTHER', 'MAIV_BY_CATEGORY',
-  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER'
+  'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
+  'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs'
 ];
 
 function rig(job, refs) {
@@ -147,7 +152,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the first was the dark PRIMARY button on the tab.
     lacks(bar, 'printCourtInventory(', '⚠ no §733.604 court schedule for a living owner');
     lacks(bar, 'printEstateInventoryReport(', '⚠ no "Estate Inventory" asset schedule');
-    lacks(bar, 'printDispositionLedger(', '⚠ no fiduciary accounting ledger');
+    // RESTATED 2026-10-03 (P19): the Disposition Ledger is no longer a fiduciary accounting on the strip. It is the close-out
+    // summary the client signs, on its own card under the inventory, on living work as on an estate (the client signs it
+    // there); the strip carries it on neither (no control renders twice).
+    lacks(bar, 'printDispositionLedger(', '⚠ no ledger on the strip');
+    const lcard = ctx._renderLedgerCards(Object.assign({}, LIVING), ctx._jobInvRefs(2));
+    has(lcard, 'printDispositionLedger(2)', 'the ledger is offered on its card, to the client');
+    has(lcard, 'Net to the client', 'its proceeds net to the client');
+    lacks(lcard, 'the estate', 'never to an estate');
     lacks(bar, 'takeInventorySnapshot(', '⚠ no amended-inventory snapshot trail');
     has(bar, 'printContentsRecord(2)', 'the primary is the record the family is promised');
     has(bar, 'Contents Record', 'and it is named for what it is');
@@ -161,9 +173,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // could be built by quietly weakening the estate one and every check above would still pass.
     const e = rig(ESTATE, [ITEM('b', { disposition: 'Donate' })]);
     const ebar = e.ctx._renderInvWorkbar(Object.assign({}, ESTATE), e.ctx._jobInvRefs(7));
-    ['printCourtInventory(7)', 'printEstateInventoryReport(7)', 'printDispositionLedger(7)',
+    ['printCourtInventory(7)', 'printEstateInventoryReport(7)',
      'takeInventorySnapshot(7)', 'printApprovalRequest(7)', 'Share w/ Counsel']
       .forEach((s) => has(ebar, s, 'the estate job still offers ' + s));
+    // RESTATED 2026-10-03 (P19): the estate's ledger is on its card too, not the strip.
+    has(e.ctx._renderLedgerCards(Object.assign({}, ESTATE), e.ctx._jobInvRefs(7)), 'printDispositionLedger(7)', 'the estate job still offers printDispositionLedger(7), on its card');
     lacks(ebar, 'printContentsRecord(', '⚠ and the estate job is NOT offered the living record');
   }
 

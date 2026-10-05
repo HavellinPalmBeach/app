@@ -206,11 +206,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       eq(compliance({ svc: svc, matterType: 'probate', docTier: 'appraisals' }).length, 0,
          svc + ' is offered none even with both fields written onto it');
     });
+    // RESTATED 2026-10-03 (P19): fin_proceeds and fin_donation_receipts are derived lines now (the proceeds statements
+    // reconciled against the ledger, every donated line receipted; p19-ledger.test.js drives both), so neither is a box
+    // on either list. Everything else on the two lists is exactly what it was.
     eq(admin({ svc: 'home_cleanout' }).join(' '),
-       'fin_vendor_invoices fin_proceeds fin_settlement fin_donation_receipts rec_archived',
-       'a Home Cleanout desk list is exactly what it was');
+       'fin_vendor_invoices fin_settlement rec_archived',
+       'a Home Cleanout desk list is what it was, less the two boxes that became derived lines');
     eq(admin({ svc: 'downsizing' }).join(' '),
-       'fin_vendor_invoices fin_donation_receipts rec_archived',
+       'fin_vendor_invoices rec_archived',
        'and a Home Editing one');
   }
 
@@ -240,11 +243,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const mk = () => {
       const a = sandbox({
         fns: ['renderJobAdmin', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor',
-              '_planTaskDone', 'planDerivedLines', 'planDerivedHtml', 'planTaskSectionsHtml',
+              '_planTaskDone', 'planDerivedLines', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planDerivedHtml', 'planTaskSectionsHtml',
               'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
               'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
               'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', '_jobAdminIsOpen', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-        vars: ['DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore',
+        vars: ['LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore',
                'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
                'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
                'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
@@ -258,26 +261,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     };
     const render = (job) => { const a = mk(); a.estimateStore[7].estimate.svc = job.svc; return a.renderJobAdmin(7, Object.assign({ id: 7 }, job)); };
 
+    // RESTATED 2026-10-03 (P19, W5): every disposal estate's card carries two boxes fewer — fin_proceeds and
+    // fin_donation_receipts became derived lines (the statements reconciled against the ledger, each donated line
+    // receipted) — so each count below is two lower. (W4's court and trust boxes move the court ones again; the merge
+    // takes both.)
     const estate = render({ svc: 'cleanout', matterType: 'probate', docTier: 'values' });
-    has(estate, '0 of 11 ticked', '⚠ an Estate Settlement on a probate matter renders eleven boxes — it rendered five');
+    has(estate, '0 of 9 ticked', '⚠ an Estate Settlement on a probate matter renders nine boxes — it rendered five before the court list');
     has(estate, "'ct_filed'", 'the filing deadline is on it');
     has(estate, "'ct_inventory'", 'and the §733.604 verification');
     has(estate, 'Florida court &amp; legal compliance', 'under the compliance heading');
 
     const none = render({ svc: 'probate', matterType: 'probate', docTier: 'none' });
-    has(none, '0 of 9 ticked', 'a probate estate contracted at None renders nine');
+    has(none, '0 of 7 ticked', 'a probate estate contracted at None renders seven');
     has(none, "'ct_filed'", 'the court procedure stays');
     lacks(none, "'ct_inventory'", '⚠ and it is no longer told to verify a value counsel states');
     lacks(none, "'ct_appraisals'", 'nor to attach reports counsel obtains');
     lacks(none, 'date-of-death FMV on every line', 'the instruction is gone from the rendered card, not just from the catalogue');
 
     const trust = render({ svc: 'probate', matterType: 'trust', docTier: 'values' });
-    has(trust, '0 of 5 ticked', 'a trust matter renders the financial close and the archive');
+    has(trust, '0 of 3 ticked', 'a trust matter renders the financial close and the archive');
     lacks(trust, 'Florida court &amp; legal compliance', 'and no court section at all');
     lacks(trust, '733.604', '⚠ nothing on it cites the wrong statute');
 
     const top = render({ svc: 'probate', matterType: 'probate', docTier: 'appraisals' });
-    has(top, '0 of 12 ticked', 'the top tier renders all twelve');
+    has(top, '0 of 10 ticked', 'the top tier renders all ten');
     has(top, "'ct_appraisals'", 'including the reports it was engaged to attach');
   }
 
@@ -289,11 +296,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE DESK CARD SAYS WHY ITS LIST LOOKS THE WAY IT DOES');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+      fns: ['planDerivedLines', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
             '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
             'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-      vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+      vars: ['LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
              'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
              'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],

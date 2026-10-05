@@ -719,7 +719,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                               'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'isAgreementSigned',
                               'agreementSignature', '_ymdLocal', '_todayStr', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
                               // The Re-open is its own branch of the transition (2026-09-29).
-                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents'],
+                              'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents',
+                              // P19: the close names an estate's unsigned Disposition Ledger.
+                              'ledgerCloseFlag'],
                         vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
                         // ⚠ Closing with no midpoint payment asks first (2026-09-29); this job has none,
                         // and the question is answered yes so the close this check is about happens.

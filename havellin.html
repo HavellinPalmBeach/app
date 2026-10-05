@@ -2751,6 +2751,56 @@ body.no-smf .smf-col{display:none;}
   </div>
 </div>
 
+<!-- RECORD A PROCEEDS STATEMENT (P19, 2026-10-03). Opened from + Record a statement on the desk's Proceeds statements card.
+     The statement is checked against the Disposition Ledger to the cent (proceedsReconciliation) and is never deleted:
+     one recorded in error is voided with a reason (voidProceedsStatement). Its lines are listed when it opens. -->
+<div class="modal-overlay" id="ps-modal" style="display:none;">
+  <div class="modal-box" style="width:520px;">
+    <div class="modal-title">Record a proceeds statement</div>
+    <div class="modal-sub">An auction house, consignment shop or estate sale company&rsquo;s statement, or a buyer&rsquo;s bill of sale.</div>
+    <label>From <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— who issued it</span></label>
+    <input type="text" id="ps-vendor" list="ps-vendor-list" placeholder="e.g. Kodner Galleries">
+    <datalist id="ps-vendor-list"></datalist>
+    <label>Statement date</label>
+    <input type="date" id="ps-date">
+    <label>Items it covers</label>
+    <div id="ps-lines" style="max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:4px 8px;"></div>
+    <div class="grid2" style="gap:10px;">
+      <div>
+        <label>Gross</label>
+        <input type="number" id="ps-gross" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div>
+        <label>Commission &amp; fees</label>
+        <input type="number" id="ps-fees" min="0" step="0.01" placeholder="0.00">
+      </div>
+    </div>
+    <div class="grid2" style="gap:10px;">
+      <div>
+        <label>Net paid</label>
+        <input type="number" id="ps-net" min="0" step="0.01" placeholder="0.00">
+      </div>
+      <div>
+        <label>Paid on</label>
+        <input type="date" id="ps-paidon">
+      </div>
+    </div>
+    <label>Paid to <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— the account it went to</span></label>
+    <input type="text" id="ps-paidto" placeholder="e.g. Estate of M. Ellsworth, checking ending 4417">
+    <label>Reference <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— settlement, cheque or wire no.</span></label>
+    <input type="text" id="ps-ref" placeholder="e.g. settlement 2026-118">
+    <input type="hidden" id="ps-job">
+    <div style="font-size:10px;color:var(--gray);margin-top:3px;">
+      Its gross and fees are checked against what its lines record, and its net paid against gross less fees; a difference of a cent is flagged with both figures. File the statement itself from its row once it is recorded. It is never deleted: one recorded in error is voided, with the reason.
+    </div>
+    <div id="ps-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeProceedsStatement()">Cancel</button>
+      <button class="btn-p" id="ps-save-btn" style="flex:1;" onclick="saveProceedsStatement()">Record statement &#8594;</button>
+    </div>
+  </div>
+</div>
+
 <!-- SETTINGS MODAL -->
 <div class="modal-overlay" id="settings-modal" style="display:none;">
   <div class="modal-box" style="width:460px;">
@@ -16100,11 +16150,14 @@ function jobsWatchTick() {
 // `docState` — so the draft rules (draftOutstanding, staleDraftNote, "I've sent it") are the client documents' own.
 // ⚠ AN OLD `probatePkgSent` IS HISTORY, NEVER A SEND: nothing went behind it, so the card names it as a mark made by hand.
 var PROBATE_PKG_KEY = 'probatePackage';
+// `ledger` (P19): the Disposition Ledger. Its title is also the name the close-out filing files it under
+// (fileDispositionLedger), so the package's copy and the close's are one file in Drive.
 var PROBATE_PKG_TITLES = { court: 'Court Inventory', trustee: 'Trust Schedule', schedule: 'Estate Inventory Report',
-                           contents: 'Contents List', worklist: 'Appraisal Worklist' };
+                           contents: 'Contents List', ledger: 'Disposition Ledger', worklist: 'Appraisal Worklist' };
 var PROBATE_PKG_RECORD_TITLE = 'Release Approvals and Chain of Custody';
-// Up to nine Apps Script calls run one after another (two folder shares, the record, and a filing and a PDF for each
-// document) before Gmail is asked, so the watchdog is longer than docSend's 45 seconds.
+// Up to thirteen Apps Script calls run one after another (two folder shares, the record, and a filing and a PDF for each
+// of up to five documents, the Disposition Ledger's two since P19) before Gmail is asked, so the watchdog is longer than
+// docSend's 45 seconds.
 var PROBATE_PKG_WATCHDOG_MS = 180000;
 
 // ⚠⚠ WHETHER THERE IS A PACKAGE, AND WHICH WAY IT GOES — ONE ANSWER (Anthony, 2026-10-02, P18: "1 - yes"). The package
@@ -16148,6 +16201,9 @@ function estatePackageRoute(job) {
 // desk's own primary (invPrimaryDoc), and the tier decides what is ours to issue (invDocContractBlock): no valued
 // schedule on a contents engagement, where the Contents List goes instead, and no inventory document at tier none.
 // The Appraisal Worklist goes at every tier.
+// ⚠ AND THE DISPOSITION LEDGER, ON BOTH ROUTES AND AT EVERY TIER (P19): where each item went and what it brought is
+// a record of Havellin's own work, never a valuation (INV_CONTRACT_DOCS), and the representative's accounting and the
+// trustee's both need it. Before the worklist, after the inventory documents.
 function probatePackageDocs(job) {
   if (!job || !invFiduciaryMode(job)) return [];
   var out = [], d = matterDef(job);
@@ -16155,6 +16211,7 @@ function probatePackageDocs(job) {
   if (d && d.trust && !invDocContractBlock(job, 'trustee')) out.push('trustee');
   var p = invPrimaryDoc(job);
   if (p === 'schedule' || p === 'contents') out.push(p);
+  out.push('ledger');
   out.push('worklist');
   return out;
 }
@@ -16165,6 +16222,7 @@ function probatePackagePage(jobId, key) {
         : key === 'trustee' ? printTrustSchedule(jobId, o)
         : key === 'schedule' ? printEstateInventoryReport(jobId, o)
         : key === 'contents' ? printContentsList(jobId, o)
+        : key === 'ledger' ? printDispositionLedger(jobId, o)
         : key === 'worklist' ? printAppraisalWorklist(jobId, o) : null;
   return (r && (r.html || r.why)) ? r : { why: 'it could not be built on this device' };
 }
@@ -21948,10 +22006,15 @@ function applyJobTransition(j) {
     // invoice goes out (`jobReopenBlocker`), and the question says exactly that, no more.
     // Home Prep calls this payment its second (paymentStageWord), and the question says so too.
     var _mwc = paymentStageWord(j, 'midpoint');
-    if (!j.deliveredOn && !(stagePaidTotal(j, 'midpoint') > 0)
+    // ⚠ AND AN ESTATE WHOSE DISPOSITION LEDGER HAS NO SIGNED COPY ON FILE IS NAMED IN THE SAME QUESTION (P19), never
+    // refused: the close is often the day the representative signs, and the page goes to Drive as the job closes.
+    var _noMid = !j.deliveredOn && !(stagePaidTotal(j, 'midpoint') > 0);
+    var _ledg = j.deliveredOn ? '' : ledgerCloseFlag(j);
+    if ((_noMid || _ledg)
         && !confirm('Close this job now?\n\n'
-          + 'No ' + _mwc.noun + ' payment is recorded. That is fine: the final invoice bills everything not yet '
-          + 'paid, the ' + _mwc.noun + '\'s share included, against the payments actually received.\n\n'
+          + (_noMid ? 'No ' + _mwc.noun + ' payment is recorded. That is fine: the final invoice bills everything not yet '
+          + 'paid, the ' + _mwc.noun + '\'s share included, against the payments actually received.\n\n' : '')
+          + (_ledg ? _ledg + '\n\n' : '')
           + 'Closing records today, ' + fmtDate2(_todayStr()) + ', as the day the work was handed over. '
           + 'Until the final invoice goes out, Re-open can undo the close.\n\n'
           + 'If the work is not finished, press Cancel.')) {
@@ -22008,6 +22071,10 @@ function activateOrCycle(jobId) {
   if (!j) return;
   if (!applyJobTransition(j)) return;
   j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
+  // ⚠ THE DISPOSITION LEDGER GOES TO DRIVE AS THE JOB CLOSES (P19). `closed` after a transition can only mean it just
+  // closed (closed → active is the Re-open). It runs in the background and reports through the sync badge, the way an
+  // accepted change order files itself; a failure leaves File to Drive on the desk's Disposition Ledger card.
+  if (j.status === 'closed') fileDispositionLedger(jobId, { auto: true });
   // ⚠⚠ AN ACTIVATION LANDS ON THE JOB PLAN (2026-09-23). Anthony: *"the activate job button on the
   // client dashboard should take you to the job plan."* Activating is starting the job, and the Job
   // Plan is where a started job is worked — so the press that starts it takes you there, on this
@@ -25380,7 +25447,10 @@ var INVENTORY_COLUMNS = [
   {key:'approvalDate', header:'Approval Date',       kind:'manage',  edit:'date',      group:'disp'},
   {key:'gross',        header:'Gross Proceeds',      kind:'manage',  edit:'currency',  group:'disp'},
   {key:'fees',         header:'Fees',                kind:'manage',  edit:'currency',  group:'disp'},
-  {key:'net',          header:'Net to Estate',       kind:'formula', group:'disp'},
+  // ⚠ NEUTRAL SINCE P19: "Net to Estate" was false on a trust and on every living client. `sheetHeader` is the name the
+  // client's workbook resolves this column by (saveInventory.gs finds its Net formula and its Summary total by header),
+  // held until that script accepts the neutral one; the app's own surfaces, the CSV included, read `header`.
+  {key:'net',          header:'Net Proceeds',        kind:'formula', group:'disp', sheetHeader:'Net to Estate'},
   {key:'dispDate',     header:'Date of Disposition', kind:'manage',  edit:'date',      group:'disp'},
   {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage',  edit:'text',      group:'disp'}
 ];
@@ -25818,6 +25888,7 @@ function _invSplitRepaint(jobId, ref) {
   var wb = document.getElementById('inv-workbar');
   if (wb) wb.outerHTML = _renderInvWorkbar(job, all);
   _invRefreshFlagStrip(jobId);
+  _invRefreshRecords(jobId);   // the ledger counts the lines too (P19)
   _invRefreshSummary(jobId);
   // Belt and braces, said so: a new line has no value and the default category, so it cannot enter the
   // appraisal guardrail today, and removing this changes nothing a test can see. It is repainted so a future
@@ -26467,6 +26538,8 @@ function _invEdit(jobId, stableId, key, el) {
   // repainted whatever changed rather than on a list of keys that would fall out of step with
   // INV_WORK_FLAGS the first time a seventh count is added.
   _invRefreshFlagStrip(jobId);
+  // The close-out records likewise (P19): the ledger's figures, a statement's reconciliation, a charity's lines.
+  _invRefreshRecords(jobId);
   // Forcing MAIV on or off changes whether the class beside it is editable at all, so
   // that row has to be redrawn rather than left showing a control that no longer applies.
   // Changing the disposition moves the item into a different section, and changing the
@@ -26772,45 +26845,121 @@ function _apprEstimateFlags(jobId) {
 // ── Inventory snapshots (amended-inventory / as-of trail) ─────────────────────
 // Capture a point-in-time copy of the manifest so you can show a trust officer what
 // the inventory looked like on a given date and what changed since.
+// ⚠⚠ A SNAPSHOT IS A RECORD OF WHAT THE INVENTORY SAID ON A DAY, AND IT IS NEVER DELETED (P19, 2026-10-03). Remove took
+// one confirm and the snapshot was gone from every device, so the trail this exists to keep ("filed with court", "as
+// of the walkthrough") could lose the one entry somebody later needed. A snapshot taken in error is VOIDED with a
+// reason (voidInventorySnapshot), stays listed with that reason, and still prints, marked VOIDED. The promised "what
+// changed" view is built: printSnapshotComparison sets a snapshot against the inventory now, or against the snapshot
+// before it, by item number (snapshotDiff).
+// The one mapper from a manifest line to a snapshot line: what a snapshot keeps, and what a comparison with the
+// inventory NOW reads, so the two sides of a comparison are always the same shape.
+// itemNo travels with the snapshot so two snapshots can be diffed by IDENTITY. Without it the only key was the object
+// name, which is exactly what an amended-inventory trail cannot rely on — names get corrected, and a corrected name
+// reads as a deletion plus an addition rather than as the same item.
+function _snapItemOf(r, job) {
+  return { itemNo: r.itemNo || '', object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r, job) };
+}
 function takeInventorySnapshot(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var items = _invAssignItemNos(jobId);
-  var label = (window.prompt('Label for this snapshot (e.g. "Filed with court", "As of walkthrough"):', '') || '').trim();
+  // ⚠ CANCEL TAKES NOTHING (P19). It took the snapshot anyway, unlabelled — harmless while one click removed it, and a
+  // permanent entry on the trail now that a snapshot can only be voided.
+  var asked = window.prompt('Label for this snapshot (e.g. "Filed with court", "As of walkthrough"):', '');
+  if (asked === null) return;
+  var label = String(asked).trim();
   var totalFMV = 0;
-  // itemNo travels with the snapshot so two snapshots can be diffed by IDENTITY. Without
-  // it the only key was the object name, which is exactly what an amended-inventory trail
-  // cannot rely on — names get corrected, and a corrected name reads as a deletion plus
-  // an addition rather than as the same item.
-  var snapItems = items.map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) totalFMV += n;
-    return { itemNo: r.itemNo || '', object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r, job) }; });
+  var snapItems = items.map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) totalFMV += n; return _snapItemOf(r, job); });
   if (!job.invSnapshots) job.invSnapshots = [];
-  job.invSnapshots.push({ ts: Date.now(), label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: totalFMV, items: snapItems });
+  job.invSnapshots.push({ ts: Date.now(), label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: roundCents(totalFMV), items: snapItems });
   _jobTouch(job, 'invSnapshots', job.invSnapshots[job.invSnapshots.length - 1].ts);
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
   renderInventoryTab();
 }
-function removeInventorySnapshot(jobId, ts) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job || !job.invSnapshots) return;
-  if (!window.confirm('Remove this snapshot?')) return;
-  job.invSnapshots = job.invSnapshots.filter(function(s){ return String(s.ts) !== String(ts); });
-  _jobTouch(job, 'invSnapshots', ts);
-  saveJobs(); syncJobToSheets(job); renderInventoryTab();
+// A void needs a reason, and keeps the snapshot. Stamped on its own key (`invSnapshots:<ts>`, the key the sheet merges
+// this list on, JOB_LIST_KEY), so the void reaches every device and a stale copy without it cannot bring it back.
+function voidInventorySnapshot(jobId, ts) {
+  var job = _invJob(jobId);
+  var snap = job && (job.invSnapshots || []).find(function(s){ return s && String(s.ts) === String(ts); });
+  if (!snap || snap.voidedAt) return false;
+  var asked = window.prompt('Why is this snapshot being voided? It stays on the record, marked void with your reason, and can still be printed.', '');
+  if (asked === null) return false;
+  var why = String(asked).trim();
+  if (!why) { showSyncBadge('Not voided: a snapshot is voided only with a reason.', true); return false; }
+  snap.voidedAt = Date.now();
+  snap.voidedBy = _actor(job) || job.tc || '';
+  snap.voidReason = why;
+  _saveJobEdit(job, 'invSnapshots', snap.ts);
+  showSyncBadge('Snapshot voided. It stays on the record, marked void, and still prints.');
+  renderInventoryTab();
+  return true;
+}
+// The snapshot a comparison "with the previous" reads: the latest one taken before this one that is not voided.
+function _snapPrevLive(job, ts) {
+  var t = Number(ts);
+  return (job && job.invSnapshots || []).filter(function(s){ return s && !s.voidedAt && Number(s.ts) < t; })
+    .sort(function(a, b){ return b.ts - a.ts; })[0] || null;
+}
+function _snapVal(v) { var n = parseFloat(v); return isNaN(n) ? null : roundCents(n); }
+// ⚠ WHAT CHANGED, BY ITEM NUMBER. DOM-free: the printed comparison reads it and the tests drive it. A line in neither
+// side's numbering (a snapshot taken before item numbers existed) cannot be matched by identity and is counted apart,
+// never guessed at by name: a corrected name is exactly what this is for finding.
+function snapshotDiff(before, after) {
+  var key = function(it){ var n = parseInt(it && it.itemNo, 10); return n > 0 ? String(n) : ''; };
+  var A = {}, B = {}, unkeyed = 0;
+  (before || []).forEach(function(it){ var k = key(it); if (k) A[k] = it; else unkeyed++; });
+  (after || []).forEach(function(it){ var k = key(it); if (k) B[k] = it; else unkeyed++; });
+  var byNo = function(a, b){ return Number(a.no) - Number(b.no); };
+  var out = { added: [], removed: [], renamed: [], value: [], disposition: [], track: [], unchanged: 0, unkeyed: unkeyed };
+  Object.keys(A).forEach(function(k){
+    var a = A[k], b = B[k];
+    if (!b) { out.removed.push({ no: k, it: a }); return; }
+    var moved = false;
+    if (String(a.object || '') !== String(b.object || '')) { out.renamed.push({ no: k, from: a.object || '', to: b.object || '' }); moved = true; }
+    var va = _snapVal(a.fmv), vb = _snapVal(b.fmv);
+    if (va !== vb) { out.value.push({ no: k, it: b, from: va, to: vb }); moved = true; }
+    if (String(a.disposition || '') !== String(b.disposition || '')) { out.disposition.push({ no: k, it: b, from: a.disposition || '', to: b.disposition || '' }); moved = true; }
+    if (String(a.track || '') !== String(b.track || '')) { out.track.push({ no: k, it: b, from: a.track || '', to: b.track || '' }); moved = true; }
+    if (!moved) out.unchanged++;
+  });
+  Object.keys(B).forEach(function(k){ if (!A[k]) out.added.push({ no: k, it: B[k] }); });
+  ['added', 'removed', 'renamed', 'value', 'disposition', 'track'].forEach(function(s){ out[s].sort(byNo); });
+  var tot = function(list){
+    var v = 0, any = false;
+    (list || []).forEach(function(it){ var n = _snapVal(it.fmv); if (n !== null) { v = roundCents(v + n); any = true; } });
+    return { count: (list || []).length, value: v, valued: any };
+  };
+  out.totals = { before: tot(before), after: tot(after) };
+  return out;
+}
+function _snapVoidedBlock(s) {
+  if (!s || !s.voidedAt) return '';
+  return '<div style="margin-bottom:10px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:7px 10px;color:#7a2020;">'
+    + '<strong>VOIDED</strong> &mdash; the snapshot of ' + esc(_invDateTime(s.ts)) + (s.label ? ' (' + esc(s.label) + ')' : '')
+    + ' was voided on ' + esc(fmtDate2(_ymdLocal(new Date(s.voidedAt)))) + (s.voidedBy ? ' by ' + esc(s.voidedBy) : '')
+    + ': ' + esc(s.voidReason || '') + '. It is kept on the record as it was taken.</div>';
 }
 function _renderInventorySnapshots(job) {
-  var snaps = (job.invSnapshots || []).slice().sort(function(a,b){ return b.ts - a.ts; });
+  var snaps = (job.invSnapshots || []).filter(Boolean).slice().sort(function(a,b){ return b.ts - a.ts; });
   if (!snaps.length) return '';
   var rows = snaps.map(function(s){
-    return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
-      + '<span>' + esc(_invDateTime(s.ts)) + (s.label ? ' <strong>· ' + esc(s.label) + '</strong>' : '') + ' <span style="color:var(--gray);">· ' + s.count + ' items · ' + (_money(s.totalFMV) || '$0') + '</span></span>'
-      + '<span style="display:flex;gap:6px;"><button class="btn-s" onclick="printInventorySnapshot(' + job.id + ',' + s.ts + ')">Print</button>'
-      + '<button class="icon-btn del" onclick="removeInventorySnapshot(' + job.id + ',' + s.ts + ')">Remove</button></span>'
-      + '</div>';
+    var v = !!s.voidedAt;
+    var prev = _snapPrevLive(job, s.ts);
+    return '<div class="snap-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;' + (v ? 'color:var(--gray);' : '') + '">'
+      + '<span style="min-width:0;">' + (v ? '<strong style="color:#A32D2D;">VOIDED</strong> &middot; ' : '')
+        + esc(_invDateTime(s.ts)) + (s.label ? ' <strong>· ' + esc(s.label) + '</strong>' : '') + ' <span style="color:var(--gray);">· ' + esc(String(s.count)) + ' items · ' + (_money(s.totalFMV) || '$0') + '</span>'
+        + (v ? '<span style="display:block;font-size:10.5px;color:#7a2020;">Voided ' + esc(fmtDate2(_ymdLocal(new Date(s.voidedAt)))) + (s.voidedBy ? ' by ' + esc(s.voidedBy) : '') + ': ' + esc(s.voidReason || '') + '</span>' : '')
+      + '</span>'
+      + '<span style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn-s" onclick="printInventorySnapshot(' + job.id + ',' + s.ts + ')">Print</button>'
+      + '<button class="btn-s" onclick="printSnapshotComparison(' + job.id + ',' + s.ts + ',\'now\')">Compare with now</button>'
+      + (prev ? '<button class="btn-s" onclick="printSnapshotComparison(' + job.id + ',' + s.ts + ',\'prev\')">Compare with previous</button>' : '')
+      + (v ? '' : '<button class="btn-s" onclick="voidInventorySnapshot(' + job.id + ',' + s.ts + ')">Void</button>')
+      + '</span></div>';
   }).join('');
-  return '<div class="card" style="margin-bottom:1rem;">'
+  return '<div class="card" id="inv-snapshots" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Snapshots <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(point-in-time inventory records)</span></div>'
+    + '<div style="font-size:10.5px;color:var(--gray);margin-bottom:4px;">A snapshot is never deleted: one taken in error is voided, with the reason, and still prints. Compare sets it against the inventory now, or against the snapshot before it, by item number.</div>'
     + rows + '</div>';
 }
 function printInventorySnapshot(jobId, ts) {
@@ -26829,13 +26978,78 @@ function printInventorySnapshot(jobId, ts) {
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.track || '—') + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(it.fmv) + '</td></tr>';
   }).join('');
+  // ⚠ "Inventory Snapshot", not "Estate Inventory — Snapshot" (P19): a trust's snapshot is not an estate's.
   pt.innerHTML = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
-    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Estate Inventory — Snapshot</h2>'
+    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Inventory Snapshot</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
-    + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Captured ' + esc(_invDateTime(snap.ts)) + (snap.label ? ' &middot; ' + esc(snap.label) : '') + ' &middot; ' + snap.count + ' items &middot; total ' + (_invMoney(snap.totalFMV)) + '</div>'
+    + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Captured ' + esc(_invDateTime(snap.ts)) + (snap.label ? ' &middot; ' + esc(snap.label) : '') + ' &middot; ' + esc(String(snap.count)) + ' items &middot; total ' + (_invMoney(snap.totalFMV)) + '</div>'
+    + _snapVoidedBlock(snap)
     + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Item #</th><th style="padding:2px 6px;">Object</th><th style="padding:2px 6px;">Category</th><th style="padding:2px 6px;">Track</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '</div>';
   _printDocument(pt.innerHTML, _invDocName(job, 'Inventory Snapshot'));
+}
+// The "what changed" page: a snapshot against the inventory now (`against` 'now'), or the snapshot before it against
+// this one ('prev'). `opt.asHtml` returns {html, title}, or {why} where there is nothing to compare.
+function printSnapshotComparison(jobId, ts, against, opt) {
+  var job = _invJob(jobId);
+  var snap = job && (job.invSnapshots || []).find(function(s){ return s && String(s.ts) === String(ts); });
+  var refuse = function(why){ if (opt && opt.asHtml) return { why: why }; alert(why); return null; };
+  if (!snap) return refuse('That snapshot could not be found.');
+  var prev = against === 'prev' ? _snapPrevLive(job, snap.ts) : null;
+  if (against === 'prev' && !prev) return refuse('There is no earlier snapshot to compare this one with.');
+  var name = function(s){ return 'the snapshot of ' + _invDateTime(s.ts) + (s.label ? ' (' + s.label + ')' : ''); };
+  var nowDay = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  var before = prev ? prev.items : snap.items;
+  var after = prev ? snap.items : _invAssignItemNos(jobId).map(function(r){ return _snapItemOf(r, job); });
+  var fromName = prev ? name(prev) : name(snap);
+  var toName = prev ? name(snap) : 'the inventory as it stands on ' + nowDay;
+  var d = snapshotDiff(before, after);
+  var td = 'padding:2px 6px;border-bottom:1px solid #eee;vertical-align:top;';
+  var th = function(cols){ return '<thead><tr style="color:#888;text-align:left;">' + cols.map(function(c){ return '<th style="padding:2px 6px;">' + c + '</th>'; }).join('') + '</tr></thead>'; };
+  var money = function(v){ return v === null ? 'no value' : fmt(v); };
+  var head = function(t, n){ return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;border-bottom:1px solid #bbb;margin:14px 0 4px;">' + t + ' <span style="font-size:11px;color:#888;font-family:Raleway,sans-serif;">(' + n + ')</span></div>'; };
+  var lineRows = function(list){
+    return list.map(function(x){
+      return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + esc(x.no) + '</td><td style="' + td + '">' + esc(x.it.object || '—') + '</td>'
+        + '<td style="' + td + '">' + esc(x.it.category || '—') + '</td><td style="' + td + '">' + esc(x.it.disposition || '—') + '</td>'
+        + '<td style="' + td + '">' + esc(x.it.track || '—') + '</td><td style="' + td + 'text-align:right;">' + money(_snapVal(x.it.fmv)) + '</td></tr>';
+    }).join('');
+  };
+  // A renamed line has no third column: its name IS what changed.
+  var wasNow = function(list, fmtv, named){
+    return list.map(function(x){
+      return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + esc(x.no) + '</td>'
+        + (named ? '<td style="' + td + '">' + esc((x.it && x.it.object) || '—') + '</td>' : '')
+        + '<td style="' + td + '">' + fmtv(x.from) + '</td><td style="' + td + '">' + fmtv(x.to) + '</td></tr>';
+    }).join('');
+  };
+  var txt = function(v){ return esc(v || '—'); };
+  var sec = function(title, list, body){ return list.length ? head(title, list.length) + '<table style="width:100%;border-collapse:collapse;font-size:11px;">' + body + '</table>' : ''; };
+  var T = d.totals;
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, 'Inventory Snapshot &mdash; What Changed', esc(fromName.charAt(0).toUpperCase() + fromName.slice(1)) + ' compared with ' + esc(toName))
+    + _snapVoidedBlock(snap)
+    + '<table style="border-collapse:collapse;font-size:11.5px;margin:4px 0 6px;"><tbody>'
+      + '<tr><td style="padding:2px 12px 2px 0;color:#666;">Items</td><td style="padding:2px 0;font-weight:700;">' + T.before.count + ' &rarr; ' + T.after.count + '</td></tr>'
+      + ((T.before.valued || T.after.valued) ? '<tr><td style="padding:2px 12px 2px 0;color:#666;">Total recorded value</td><td style="padding:2px 0;font-weight:700;">' + fmt(T.before.value) + ' &rarr; ' + fmt(T.after.value) + '</td></tr>' : '')
+    + '</tbody></table>'
+    + '<div style="font-size:11px;color:#555;margin-bottom:6px;">Added ' + d.added.length + ' &middot; Removed ' + d.removed.length + ' &middot; Renamed ' + d.renamed.length
+      + ' &middot; Value changed ' + d.value.length + ' &middot; Disposition changed ' + d.disposition.length + ' &middot; Track changed ' + d.track.length
+      + ' &middot; Unchanged ' + d.unchanged + '</div>'
+    + (d.unkeyed ? '<div style="font-size:10.5px;color:#8a6d3b;font-style:italic;margin-bottom:6px;">' + d.unkeyed + ' line' + (d.unkeyed === 1 ? ' carries' : 's carry')
+        + ' no item number (taken before item numbers existed), so ' + (d.unkeyed === 1 ? 'it is' : 'they are') + ' not compared.</div>' : '')
+    + sec('Added', d.added, th(['Item #', 'Item', 'Category', 'Disposition', 'Track', 'Value']) + '<tbody>' + lineRows(d.added) + '</tbody>')
+    + sec('Removed', d.removed, th(['Item #', 'Item', 'Category', 'Disposition', 'Track', 'Value']) + '<tbody>' + lineRows(d.removed) + '</tbody>')
+    + sec('Renamed', d.renamed, th(['Item #', 'Was', 'Now']) + '<tbody>' + wasNow(d.renamed, txt, false) + '</tbody>')
+    + sec('Value changed', d.value, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.value, money, true) + '</tbody>')
+    + sec('Disposition changed', d.disposition, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.disposition, txt, true) + '</tbody>')
+    + sec('Track changed', d.track, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.track, txt, true) + '</tbody>')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Lines are matched by item number, which is never reissued. A removed line is one on the earlier side that is not on the later one.</div>'
+    + '</div>';
+  var title = _invDocName(job, 'Inventory Snapshot Comparison');
+  if (opt && opt.asHtml) return { html: html, title: title };
+  _printDocument(html, title);
+  return null;
 }
 
 // ── Chain-of-custody event log (per item) ─────────────────────────────────────
@@ -27524,7 +27738,10 @@ function _csvCell(v) {
 }
 function buildInventoryCSV(jobId) {
   var p = buildInventoryPayload(jobId);
-  return [p.columns].concat(p.rows).map(function(row){
+  // The rows are the workbook's; the header row is the columns' own names, which is where the workbook's wire name for
+  // a column (`sheetHeader`) and the name a person reads part (P19).
+  var head = ['Job ID'].concat(INVENTORY_COLUMNS.map(function(c){ return c.header; }));
+  return [head].concat(p.rows).map(function(row){
     return row.map(_csvCell).join(',');
   }).join('\r\n');
 }
@@ -28152,49 +28369,656 @@ function printTrustSchedule(jobId, opt) {
   _printDocument(html, _invDocName(job, 'Trust Schedule'));
 }
 
-function printDispositionLedger(jobId) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  var pt = document.getElementById('print-target');
-  if (!job || !pt) return;
-  var items = _jobInvRefs(jobId).filter(function(r){ return r.disposition || r.gross || r.channel || r.dispDate; });
+// ═══════════ THE DISPOSITION LEDGER — THE CLOSE-OUT SUMMARY THE CLIENT SIGNS (P19, 2026-10-03) ═══════════
+// ⚠⚠ THE AGREEMENT AND THE CLIENT ESTIMATE ASK FOR "SIGN-OFF ON THE FINAL DISPOSITION SUMMARY", AND NOTHING WAS ONE.
+// This page was headed "Disposition & Accounting Ledger — Fiduciary accounting of disposed items · proceeds net to the
+// estate": an accounting it is not (the accounting is the representative's, with counsel, as the Trust Schedule says in
+// as many words), a fiduciary on a living job, which has none, and an estate on a trust. It carried no item numbers, so
+// a proceeds statement could not be checked against it, had no sign-off, and was never filed. Anthony, 2026-10-03:
+// "build it all". It is now:
+//   · where each item went and what it brought, under the item numbers every inventory document cites, with the
+//     proceeds net to whoever holds them (estateProceedsHolder: the estate, the trust, either on a pour-over, the
+//     client on living work);
+//   · its gaps named ABOVE the table (the release-cautions rule: a caveat under the table arrives after the signature it
+//     exists to come before): lines with no disposition, items that left with no recipient, sales with no proceeds
+//     recorded, a proceeds statement that disagrees with its lines, a sold line on no statement;
+//   · signed: "reviewed and approved as the final record of the disposition of the property", one line per fiduciary
+//     (jobFiduciaries), the client on living work. WITHHELD while any line has no disposition — the rule the valued
+//     schedules follow for an unvalued line: a "final record" over undecided property is a claim the page cannot
+//     support. The wording is drafted, not reviewed: it goes to counsel.
+// The signed copy comes back on paper and is filed through the foundation's control (kind `ledger`, ref
+// LEDGER_SIGNED_REF); the page itself is filed to Drive as the job closes (fileDispositionLedger) and rides the estate
+// package (probatePackageDocs).
+// ⚠ THE SALE DISPOSITIONS — a line that brings proceeds through a selling partner (or a buyer). One list: the ledger's
+// pending proceeds, the statements' lines and the reconciliation read it.
+var INV_SALE_DISPOSITIONS = ['Auction', 'Consign', 'Sell'];
+var LEDGER_DOC_KEY = 'dispositionLedger';   // docState key for the filed page — a stored key: never rename it
+var LEDGER_SIGNED_REF = 'ledger';           // signedRecords' ref for a signed copy of the page
+var _ledgerFiling = {};                     // never saved: one filing per client at a time
+
+// The ledger's figures, DOM-free: read by the page, the desk card and the tests. `items` defaults to the numbered list.
+function dispositionLedger(jobId, items) {
+  var job = _invJob(jobId);
+  var all = items || (job ? _invAssignItemNos(jobId) : []);
+  var num = function (v) { var n = parseFloat(v); return isNaN(n) ? null : roundCents(n); };
+  var byNo = function (a, b) { return (parseInt(a.itemNo, 10) || 0) - (parseInt(b.itemNo, 10) || 0); };
+  var rows = all.filter(function (r) { return r.disposition || num(r.gross) !== null || num(r.fees) !== null || r.channel || r.dispDate; })
+    .slice().sort(byNo);
   var gross = 0, fees = 0;
-  var rows = items.map(function(r){
+  rows.forEach(function (r) {
+    var g = num(r.gross), f = num(r.fees);
+    if (g !== null) gross = roundCents(gross + g);
+    if (f !== null) fees = roundCents(fees + f);
+  });
+  var stmts = !!job && jobTakesProceedsStatements(job);
+  return {
+    job: job, items: all, rows: rows, gross: gross, fees: fees, net: roundCents(gross - fees),
+    holder: estateProceedsHolder(job),
+    undecided: all.filter(function (r) { return !r.disposition; }).sort(byNo),
+    noRecipient: all.filter(function (r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !_invRecipient(job, r); }).sort(byNo),
+    pending: all.filter(function (r) { return INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0 && num(r.gross) === null; }).sort(byNo),
+    // Statements are recorded on the disposal services only (jobTakesProceedsStatements), and only there is a sold line
+    // on no statement a gap.
+    recon: stmts ? proceedsReconciliation(job, all) : null
+  };
+}
+// The live signed copies of the page: the one answer to "is the ledger signed", read by the derived line, the close
+// question and the card.
+function ledgerSignedCopies(job) { return job ? signedRecordsOf(job, 'ledger', LEDGER_SIGNED_REF) : []; }
+// Who signs: each fiduciary on an estate (the representative, then every co-representative); the role named by the
+// matter where none is recorded; the client on living work.
+function ledgerSigners(job) {
+  if (!job) return [];
+  if (!invFiduciaryMode(job)) return [{ name: String(job.name || '').trim(), role: 'Client' }];
+  var f = jobFiduciaries(job);
+  if (!f.length) return [{ name: '', role: _agrApprover(job) }];
+  return f.map(function (x) { return { name: x.name, role: x.role || _agrApprover(job) }; });
+}
+// ⚠ AT CLOSE, AN ESTATE WHOSE LEDGER IS UNSIGNED IS NAMED IN THE CLOSE QUESTION — never refused (P19; the close is
+// often the day the representative signs, and the page is filed to Drive as the job closes either way). '' otherwise.
+function ledgerCloseFlag(job) {
+  if (!job || !invFiduciaryMode(job) || ledgerSignedCopies(job).length) return '';
+  return 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have the '
+    + _agrApprover(job) + ' sign it, then file the signed copy on the Disposition Ledger card (Job Admin & Inv).';
+}
+// A short list of lines for a gap sentence: "#3 Lamp, #7 Chair and 4 more".
+function _ledgerNames(list, max) {
+  var m = max || 6;
+  var names = list.slice(0, m).map(_invNamed);
+  return names.join(', ') + (list.length > m ? ' and ' + (list.length - m) + ' more' : '');
+}
+// The evidence filed for a line: a recipient's signed receipt, a charity's receipt or the partner's statement, each
+// filed through the foundation's control and covering the line by its stableId; else the reference typed on the line.
+function _ledgerReceiptCell(job, r) {
+  var sid = String(r.stableId);
+  var hit = jobListEntries(job, 'signedRecords').filter(function (s) {
+    return ['receipt', 'donation', 'statement'].indexOf(s.kind) >= 0 && (s.stableIds || []).map(String).indexOf(sid) >= 0;
+  })[0];
+  if (hit) return hit.fileUrl
+    ? '<a href="' + esc(hit.fileUrl) + '" style="color:#7a5c2e;">' + esc(hit.label || 'Filed') + '</a>'
+    : esc(hit.label || 'Filed');
+  return esc(r.receiptDoc || '—');
+}
+function printDispositionLedger(jobId, opt) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  if (!job) return (opt && opt.asHtml) ? { why: 'this client could not be found on this device' } : undefined;
+  var L = dispositionLedger(jobId);
+  // An empty inventory has nothing to record, and a sign-off under nothing would approve nothing: refused, as the Estate
+  // Inventory Report refuses, so the package leaves it out by name.
+  if (!L.items.length) { if (opt && opt.asHtml) return { why: 'There is nothing in the inventory to record yet.' }; alert('There is nothing in the inventory to record yet.'); return; }
+  var holder = L.holder;
+  var td = 'padding:2px 5px;border-bottom:1px solid #eee;vertical-align:top;';
+  var rows = L.rows.map(function(r){
     var g = parseFloat(r.gross), f = parseFloat(r.fees);
-    if (!isNaN(g)) gross += g; if (!isNaN(f)) fees += f;
-    var net = (isNaN(g) ? 0 : g) - (isNaN(f) ? 0 : f);
     var hasNet = !isNaN(g) || !isNaN(f);
+    var net = roundCents((isNaN(g) ? 0 : roundCents(g)) - (isNaN(f) ? 0 : roundCents(f)));
+    var sale = INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0;
     // ⚠ THE SAME MARKING AS THE APPROVAL REQUEST, and it belongs here for a different reason:
-    // this is the permanent fiduciary accounting. A bequest that WAS sold has to be findable in
-    // the record, or nothing on the page shows the decision was taken deliberately rather than
+    // this is the permanent record. A bequest that WAS sold has to be findable in the
+    // record, or nothing on the page shows the decision was taken deliberately rather than
     // by nobody. Warning on the request and going quiet on the account is the four-verbs-one-out-
     // of-step shape this file records more often than anything else.
     return '<tr>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—')
-        + _invCautionBadges(r, jobId) + '</td>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.disposition || '—') + '</td>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.channel || '—') + '</td>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.authBy || '—') + (r.approvalDate ? ' <span style="color:#888;">' + esc(fmtDate2(r.approvalDate)) + '</span>' : '') + '</td>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.gross) + '</td>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fees) + '</td>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;text-align:right;">' + (hasNet ? _invMoney(net) : '—') + '</td>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
-      + '<td style="padding:2px 5px;border-bottom:1px solid #eee;">' + esc(r.receiptDoc || '—') + '</td>'
+      + '<td style="' + td + 'font-weight:700;color:#666;white-space:nowrap;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="' + td + '">' + esc(r.objectName || '—') + _invCautionBadges(r, jobId) + '</td>'
+      + '<td style="' + td + '">' + esc(r.disposition || 'Not yet decided') + '</td>'
+      + '<td style="' + td + '">' + esc(_invRecipient(job, r) || '—') + '</td>'
+      + '<td style="' + td + '">' + esc(r.authBy || '—') + (r.approvalDate ? ' <span style="color:#888;">' + esc(fmtDate2(r.approvalDate)) + '</span>' : '') + '</td>'
+      + '<td style="' + td + 'white-space:nowrap;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
+      + '<td style="' + td + 'text-align:right;">' + _invMoney(r.gross) + '</td>'
+      + '<td style="' + td + 'text-align:right;">' + _invMoney(r.fees) + '</td>'
+      + '<td style="' + td + 'text-align:right;">' + (hasNet ? _invMoney(net) : (sale ? '<span style="color:#8a6d3b;">pending</span>' : '—')) + '</td>'
+      + '<td style="' + td + '">' + _ledgerReceiptCell(job, r) + '</td>'
       + '</tr>';
   }).join('');
+  // The gaps, above the table.
+  var gaps = [];
+  var n = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
+  if (L.undecided.length) gaps.push('<strong>' + n(L.undecided.length, 'line has', 'lines have') + ' no disposition recorded</strong>: '
+    + esc(_ledgerNames(L.undecided)) + '. The sign-off below is withheld until every line has one.');
+  if (L.noRecipient.length) gaps.push('<strong>' + n(L.noRecipient.length, 'item', 'items') + '</strong> left the property with no recipient recorded: ' + esc(_ledgerNames(L.noRecipient)) + '.');
+  if (L.pending.length) gaps.push('<strong>' + n(L.pending.length, 'line', 'lines') + '</strong> sold, consigned or at auction with no proceeds recorded yet: ' + esc(_ledgerNames(L.pending)) + '.');
+  if (L.recon) {
+    L.recon.statements.forEach(function (x) {
+      if (x.agrees) return;
+      gaps.push('<strong>The ' + esc(x.st.vendor || 'proceeds') + ' statement' + (x.st.statementDate ? ' of ' + esc(fmtDate2(x.st.statementDate)) : '')
+        + ' does not agree with this ledger</strong>: ' + x.flags.map(function (f) { return esc(_reconFlagText(f)); })
+          .concat(x.gone.map(function (l) { return 'item #' + esc(String(l.itemNo || '?')) + ' on it is no longer on the inventory'; })).join('; ') + '.');
+    });
+    if (L.recon.unlisted.length) gaps.push('<strong>' + n(L.recon.unlisted.length, 'sold line is', 'sold lines are') + ' on no proceeds statement</strong>: ' + esc(_ledgerNames(L.recon.unlisted)) + '.');
+  }
+  var gapBlock = gaps.length
+    ? '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:9px 12px;margin-bottom:12px;font-size:11px;line-height:1.55;">'
+      + '<strong style="color:#8a6d3b;">This ledger is not yet complete.</strong><ul style="margin:5px 0 0 16px;padding:0;">'
+      + gaps.map(function (g) { return '<li>' + g + '</li>'; }).join('') + '</ul></div>'
+    : '';
+  // The proceeds statements, as recorded, beside the lines they cover.
+  var stTable = '';
+  if (L.recon && L.recon.statements.length) {
+    stTable = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;border-bottom:1px solid #bbb;margin:16px 0 4px;">Proceeds statements</div>'
+      + '<table style="width:100%;border-collapse:collapse;font-size:10.5px;"><thead><tr style="color:#888;text-align:left;">'
+      + ['From', 'Dated', 'Items', 'Gross', 'Fees', 'Net paid', 'Paid', 'Against the ledger'].map(function (h) { return '<th style="padding:2px 5px;">' + h + '</th>'; }).join('')
+      + '</tr></thead><tbody>'
+      + L.recon.statements.map(function (x) {
+          var st = x.st;
+          return '<tr><td style="' + td + '">' + esc(st.vendor || '—') + (st.reference ? '<div style="color:#888;font-size:9.5px;">' + esc(st.reference) + '</div>' : '') + '</td>'
+            + '<td style="' + td + 'white-space:nowrap;">' + (st.statementDate ? esc(fmtDate2(st.statementDate)) : '—') + '</td>'
+            + '<td style="' + td + '">' + esc(x.lines.map(function (l) { return '#' + (l.ref ? _invItemNo(l.ref) : (l.itemNo || '?')); }).join(', ')) + '</td>'
+            + '<td style="' + td + 'text-align:right;">' + fmt(roundCents(st.gross)) + '</td>'
+            + '<td style="' + td + 'text-align:right;">' + fmt(roundCents(st.fees)) + '</td>'
+            + '<td style="' + td + 'text-align:right;">' + fmt(roundCents(st.netPaid)) + '</td>'
+            + '<td style="' + td + '">' + (st.paidOn ? esc(fmtDate2(st.paidOn)) : '—') + (st.paidTo ? '<div style="color:#888;font-size:9.5px;">to ' + esc(st.paidTo) + '</div>' : '') + '</td>'
+            + '<td style="' + td + '">' + (x.agrees ? 'Agrees' : '<span style="color:#A32D2D;">Differs &mdash; see above</span>') + '</td></tr>';
+        }).join('') + '</tbody></table>';
+  }
+  // The sign-off: one line per signer, or withheld while a line has no disposition.
+  var signers = ledgerSigners(job);
+  var signoff = L.undecided.length
+    ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;">'
+      + '<strong>The sign-off is withheld.</strong> This page cannot be approved as the final record of the disposition of the property while '
+      + n(L.undecided.length, 'line has', 'lines have') + ' no disposition recorded. Record one on every line, then print the ledger again.</div>'
+    : '<div style="margin-top:20px;font-size:11px;line-height:1.6;break-inside:avoid;">'
+      + '<div style="font-weight:700;">Sign-off</div>'
+      + '<div>Reviewed and approved as the final record of the disposition of the property listed above.</div>'
+      + signers.map(function (s) {
+          return '<div style="margin-top:20px;">Signature: __________________________________ &nbsp; Date: ______________<br>'
+            + '<span style="color:#888;">' + esc([s.name, s.role].filter(Boolean).join(', ')) + '</span></div>';
+        }).join('')
+      + '</div>';
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
-    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Disposition &amp; Accounting Ledger</h2>'
-    + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
-    + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Fiduciary accounting of disposed items &middot; proceeds net to the estate &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
-    + (items.length
+    + _invDocHead(job, 'Disposition Ledger', 'Where each item went and what it brought &middot; proceeds net to ' + esc(holder))
+    + (L.items.length ? _invProgressStamp(L.items) : '')
+    + gapBlock
+    + (L.rows.length
         ? '<table style="width:100%;border-collapse:collapse;font-size:10.5px;"><thead><tr style="color:#888;text-align:left;">'
-          + ['Item','Disposition','Channel / recipient','Authorized by','Gross','Fees','Net','Date','Receipt'].map(function(h){ return '<th style="padding:2px 5px;">' + h + '</th>'; }).join('')
+          + ['Item #', 'Item', 'Disposition', 'Channel / recipient', 'Authorized by', 'Date', 'Gross', 'Fees', 'Net', 'Receipt'].map(function(h){ return '<th style="padding:2px 5px;">' + h + '</th>'; }).join('')
           + '</tr></thead><tbody>' + rows + '</tbody>'
-          + '<tfoot><tr style="font-weight:700;border-top:2px solid #333;"><td colspan="4" style="padding:4px 5px;text-align:right;">Totals</td>'
-          + '<td style="padding:4px 5px;text-align:right;">' + _invMoney(gross) + '</td><td style="padding:4px 5px;text-align:right;">' + _invMoney(fees) + '</td><td style="padding:4px 5px;text-align:right;">' + _invMoney(gross - fees) + '</td><td colspan="2"></td></tr></tfoot></table>'
-        : '<div style="font-size:12px;color:#888;">No items have been disposed yet.</div>')
-    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Proceeds are net to the estate less the partner&rsquo;s fees. Havellin charges no commission on sales, consignments, or auction results; Havellin service fees are billed separately and do not appear here.</div>'
+          + '<tfoot><tr style="font-weight:700;border-top:2px solid #333;"><td colspan="6" style="padding:4px 5px;text-align:right;">Totals</td>'
+          + '<td style="padding:4px 5px;text-align:right;">' + fmt(L.gross) + '</td><td style="padding:4px 5px;text-align:right;">' + fmt(L.fees) + '</td><td style="padding:4px 5px;text-align:right;">' + fmt(L.net) + '</td><td></td></tr></tfoot></table>'
+        : '<div style="font-size:12px;color:#888;">No item has a disposition recorded yet.</div>')
+    + stTable
+    // ⚠ THE FOOTER FOLLOWS WHOSE THE PROCEEDS ARE (P19). It said "net to the estate" on a trust and on a living client.
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Gross is what an item sold for and Fees the selling partner&rsquo;s commission and charges; Net, the difference, is the proceeds to '
+      + esc(holder) + '. Havellin charges no commission on sales, consignments or auction results, and Havellin&rsquo;s own service fees are billed separately and do not appear here. '
+      + 'This ledger records where each item went and what it brought; it does not state what anything is worth.</div>'
+    + signoff
     + '</div>';
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Disposition Ledger') };
   _printDocument(html, _invDocName(job, 'Disposition Ledger'));
+}
+
+// ⚠⚠ FILED TO DRIVE AS THE JOB CLOSES, AND ON DEMAND FROM THE DESK (P19). The page goes to the client's Estate Inventory
+// folder (the job's root on a folder without one) under its undated name — the name and folder the estate package files
+// it under, so a later filing replaces the earlier one in place (uploadHtml replaces by name) and Drive holds one ledger.
+// ⚠ THE MANIFEST IS READ FROM THE SHEET FIRST, the package's rule: an inventory this device has not loaded is unread,
+// not empty, and a ledger built from it would replace a true one in Drive with an empty page. One filing per client at a
+// time (`_ledgerFiling`, never saved). `auto` (from activateOrCycle) reports through the sync badge, so the close is not
+// interrupted; a failure leaves File to Drive on the desk's Disposition Ledger card, which is where it says to go.
+// ⚠ A HOME PREP JOB HAS NO INVENTORY: the desk's own rule (renderInventoryTab), so a prep close files nothing and says nothing.
+// The record is docState.dispositionLedger {filedAt, filedUrl, filedId, filedBy, filedHow}: a docState key, so the sheet
+// merges it on its own stamp (JOB_KEYED_MAPS) and a device saving an older copy of the job cannot drop it; the one reader
+// that walks docState's keys (outstandingDrafts) asks for a draft, which this record never has. It is A PERSON'S EDIT,
+// stamped and synced: the press that caused it (Close job, or File to Drive) is a person's, and the record learns
+// something new (the file's link), the rule a completed envelope follows.
+function fileDispositionLedger(jobId, opt) {
+  var auto = !!(opt && opt.auto);
+  var job = _invJob(jobId);
+  var say = function (type, msg) {
+    if (auto) { showSyncBadge(msg, type !== 'ok'); return; }
+    _docNotice(type, msg, jobId);
+  };
+  if (!job) { say('warn', 'This client could not be found.'); return false; }
+  if (job.svc === 'prep') return false;
+  if (_ledgerFiling[jobId]) { say('warn', 'The Disposition Ledger is being filed now — give it a moment.'); return false; }
+  if (!SHEETS_SYNC_URL) { say('warn', 'The Disposition Ledger was not filed to Drive: this device has no Apps Script URL in Settings.' + (auto ? ' Press File to Drive on the Disposition Ledger card (Job Admin & Inv) once one is set.' : '')); return false; }
+  if (!job.driveFolder) { say('warn', 'The Disposition Ledger was not filed to Drive: this client has no Drive folder yet. Create the Drive folder on the client dashboard, then press File to Drive on the Disposition Ledger card.'); return false; }
+  _ledgerFiling[jobId] = true;
+  _invEnsureLoaded(jobId);
+  refreshPhotoRefs(jobId, function () {
+    if (!_invCloudSeen[jobId]) {
+      delete _ledgerFiling[jobId];
+      say('err', 'The Disposition Ledger was not filed to Drive: the inventory could not be read from the sheet, and a ledger built without it would be empty. Check the connection, then press File to Drive on the Disposition Ledger card (Job Admin & Inv).');
+      return;
+    }
+    if (!_jobInvRefs(jobId).length) {
+      delete _ledgerFiling[jobId];
+      if (!auto) say('warn', 'The inventory holds no lines, so there is no ledger to file yet.');
+      return;
+    }
+    var page = printDispositionLedger(jobId, { asHtml: true });
+    if (!page || !page.html) { delete _ledgerFiling[jobId]; say('err', 'The Disposition Ledger could not be built on this device, so it was not filed.'); return; }
+    var title = PROBATE_PKG_TITLES.ledger;
+    resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
+      var target = folderId || _jobRootFolderId(job);
+      if (!target) { delete _ledgerFiling[jobId]; say('warn', 'The Disposition Ledger was not filed to Drive: this client has no Drive folder yet.'); return; }
+      uploadHtmlToDrive(target, _invDocDriveName(job, title), _exportDoc(title + ' – ' + (job.hvlId || ''), page.html, ''), function (ok, fileUrl, meta) {
+        delete _ledgerFiling[jobId];
+        if (!ok) {
+          say('err', 'The Disposition Ledger was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the Disposition Ledger card (Job Admin & Inv) to try again.');
+          return;
+        }
+        // The store may have been replaced by a load while the upload was out: write to the record held now.
+        var j2 = _invJob(jobId) || job;
+        var st = docState(j2, LEDGER_DOC_KEY);
+        st.filedAt = new Date().toISOString();
+        st.filedUrl = fileUrl || st.filedUrl || '';
+        st.filedId = (meta && meta.fileId) || st.filedId || '';
+        st.filedBy = _actor(j2) || j2.tc || '';
+        st.filedHow = auto ? 'close' : 'desk';
+        j2.updatedAt = Date.now();
+        saveJobs();
+        syncJobToSheets(j2);
+        if (auto) showSyncBadge('Disposition Ledger filed to Drive ✓');
+        else say('ok', 'Disposition Ledger filed to the client’s Estate Inventory folder in Drive.');
+        _ledgerCardRepaint(jobId);
+      });
+    });
+  });
+  return true;
+}
+// After a filing lands, the desk's records repaint by id and nothing else, and only while the desk still shows this
+// client: the answer may land while somebody types on the desk, and a whole-tab redraw would take the field from under them.
+function _ledgerCardRepaint(jobId) {
+  var el = document.getElementById('inv-records');
+  if (!el || String(el.getAttribute('data-job')) !== String(jobId)) return;
+  _invRefreshRecords(jobId);
+}
+function _renderLedgerCard(job, all) {
+  var jid = job.id;
+  var L = dispositionLedger(jid, all);
+  var st = (job.docState && job.docState[LEDGER_DOC_KEY]) || null;
+  var signed = ledgerSignedCopies(job);
+  var filed = !!(st && st.filedAt);
+  var amber = function (t) { return '<div style="font-size:10.5px;color:#8a6d3b;">' + t + '</div>'; };
+  var n = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
+  var gaps = '';
+  if (L.undecided.length) gaps += amber(n(L.undecided.length, 'line has', 'lines have') + ' no disposition yet &mdash; the sign-off is withheld until every line has one.');
+  if (L.noRecipient.length) gaps += amber(n(L.noRecipient.length, 'item', 'items') + ' left with no recipient recorded.');
+  if (L.pending.length) gaps += amber(n(L.pending.length, 'line', 'lines') + ' sold, consigned or at auction with no proceeds recorded.');
+  if (L.recon && L.recon.disagree) gaps += amber(n(L.recon.disagree, 'proceeds statement disagrees', 'proceeds statements disagree') + ' with the ledger &mdash; see Proceeds statements.');
+  return '<div class="card" id="inv-ledger-card" style="margin-bottom:1rem;">'
+    + '<div class="sec" style="margin-bottom:4px;">Disposition Ledger <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the close-out summary the client signs)</span></div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;">' + L.rows.length + ' of ' + L.items.length + ' line' + (L.items.length === 1 ? '' : 's')
+      + ' on the ledger &middot; Gross ' + fmt(L.gross) + ' &middot; Fees ' + fmt(L.fees) + ' &middot; Net to ' + esc(L.holder) + ' ' + fmt(L.net) + '</div>'
+    + gaps
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:7px;">'
+      + '<button class="btn-s" onclick="printDispositionLedger(' + jid + ')">Print</button>'
+      + '<button class="btn-s" onclick="fileDispositionLedger(' + jid + ')">' + (filed ? 'Update the filed copy' : 'File to Drive') + '</button>'
+      + signedCopyControlHtml(jid, 'ledger', { ref: LEDGER_SIGNED_REF, label: SIGNED_RECORD_KINDS.ledger.label }, 'File signed copy')
+    + '</div>'
+    + '<div style="font-size:11px;margin-top:6px;">' + (filed
+        ? 'Filed to Drive ' + esc(fmtDate2(_localDateOf(st.filedAt))) + (st.filedHow === 'close' ? ', as the job closed' : '')
+          + (st.filedUrl ? ' &middot; <a href="' + esc(st.filedUrl) + '" target="_blank" rel="noopener" style="color:var(--bronze);">Filed copy</a>' : '')
+        : '<span style="color:var(--gray);">Not in Drive yet' + (job.status === 'closed' ? '.' : ' &mdash; it is filed when the job closes, or now with File to Drive.') + '</span>')
+    + '</div>'
+    + (signed.length ? signedRecordLinksHtml(jid, signed)
+        : '<div style="font-size:11px;color:var(--gray);margin-top:3px;">No signed copy on file &mdash; ' + (invFiduciaryMode(job) ? 'the ' + esc(_agrApprover(job)) : 'the client') + ' signs it at close-out.</div>')
+    + '</div>';
+}
+
+// ═══════════ DONATIONS: A RECEIPT FOR EVERY LINE, AND A RECORD PER CHARITY (P19) ═══════════
+// ⚠⚠ THE CHECK PASSED WHEN ONE DONATED LINE OF ANY NUMBER HAD A RECEIPT (`donating.some`), so a job sending forty
+// items to three charities read "Donation receipt on file" off one typed reference. A line is receipted now when the
+// charity's receipt filed through the foundation's control covers it (kind `donation`, its stableIds the lines the
+// group held when it was filed) or when the line carries a receipt reference of its own (Receipt / Doc, the record
+// before P19). One answer, read by the Job Plan's line, the desk's line, the Donations card and the record.
+function invDonationReceipted(job, r, recs) {
+  if (!r) return false;
+  if (String(r.receiptDoc || '').trim()) return true;
+  var sid = String(r.stableId);
+  return (recs || signedRecordsOf(job, 'donation')).some(function (s) { return (s.stableIds || []).map(String).indexOf(sid) >= 0; });
+}
+// The Donate lines grouped by charity (Channel / Recipient, trimmed, any case), in the order first named; the lines with
+// no charity recorded together, last. Each group: {charity, lines, receipted, records}.
+function donationGroups(job, items) {
+  var recs = job ? signedRecordsOf(job, 'donation') : [];
+  var map = {}, order = [];
+  (items || []).forEach(function (r) {
+    if (!r || r.disposition !== 'Donate') return;
+    var name = String(r.channel || '').trim(), key = name.toLowerCase();
+    if (!map[key]) { map[key] = { charity: name, lines: [], receipted: 0, records: [] }; order.push(key); }
+    map[key].lines.push(r);
+    if (invDonationReceipted(job, r, recs)) map[key].receipted++;
+  });
+  var out = order.filter(function (k) { return k !== ''; }).concat(map[''] ? [''] : []).map(function (k) { return map[k]; });
+  out.forEach(function (g) {
+    var ids = g.lines.map(function (r) { return String(r.stableId); });
+    g.records = recs.filter(function (s) { return (s.stableIds || []).some(function (x) { return ids.indexOf(String(x)) >= 0; }); });
+  });
+  return out;
+}
+// The Job Plan's line (Midpoint & pickups) and the desk's (it replaces the fin_donation_receipts box): N of M receipted.
+function donationReceiptLine(job, items) {
+  if (!(items || []).some(function (r) { return r && r.disposition === 'Donate'; })) return null;
+  var groups = donationGroups(job, items);
+  var total = 0, done = 0, unnamed = 0;
+  groups.forEach(function (g) { total += g.lines.length; done += g.receipted; if (!g.charity) unnamed += g.lines.length - g.receipted; });
+  if (!total) return null;
+  return { key: 'donation_receipt', ok: done === total, label: 'Donation receipts on file',
+           detail: done + ' of ' + total + ' donated line' + (total === 1 ? '' : 's') + ' receipted'
+             + (done === total ? '' : ' — file each charity’s receipt on the Donations card, Job Admin & Inv'
+                 + (unnamed ? ' (' + unnamed + ' with no charity recorded: name it in Channel / Recipient first)' : '')) };
+}
+// ⚠ A DONATION RECORD PER CHARITY (P19): what went to it, for the donor's own tax records and to hand the charity.
+// Values, where a line carries one, are Havellin's estimates and are said to be; whether a deduction is available is the
+// donor's tax adviser's question, and the page says that too. Drafted, not reviewed: it goes to counsel and the CPA.
+// `stableId`: any line in the charity's group (the button carries one, never the charity's name).
+function printDonationRecord(jobId, stableId, opt) {
+  var job = _invJob(jobId);
+  var refuse = function (why) { if (opt && opt.asHtml) return { why: why }; alert(why); return null; };
+  if (!job) return refuse('This client could not be found on this device.');
+  var g = donationGroups(job, _invAssignItemNos(jobId)).filter(function (x) {
+    return x.charity && x.lines.some(function (r) { return String(r.stableId) === String(stableId); });
+  })[0];
+  if (!g) return refuse('That line is not a donation with a charity recorded. Name the charity in Channel / Recipient first.');
+  var fid = invFiduciaryMode(job);
+  var td = 'padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top;';
+  var showVal = g.lines.some(function (r) { return !isNaN(parseFloat(r.fmv)); });
+  var total = 0, qty = 0;
+  var lines = g.lines.slice().sort(function (a, b) { return (parseInt(a.itemNo, 10) || 0) - (parseInt(b.itemNo, 10) || 0); });
+  var rows = lines.map(function (r) {
+    var v = parseFloat(r.fmv), q = parseInt(r.qty, 10) || 1;
+    if (!isNaN(v)) total = roundCents(total + roundCents(v));
+    qty += q;
+    return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="' + td + '">' + esc(r.objectName || '—') + (r.category ? '<div style="color:#888;font-size:10px;">' + esc(r.category) + '</div>' : '') + '</td>'
+      + '<td style="' + td + 'text-align:right;">' + q + '</td>'
+      + '<td style="' + td + '">' + esc(r.condition || '—') + '</td>'
+      + '<td style="' + td + 'white-space:nowrap;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
+      + (showVal ? '<td style="' + td + 'text-align:right;">' + _invMoney(r.fmv) + '</td>' : '') + '</tr>';
+  }).join('');
+  var fids = fid ? jobFiduciaries(job) : [];
+  var donor = fid
+    ? 'Donated on behalf of ' + esc(estateProceedsHolder(job)) + (fids.length ? ', by ' + esc(fids.map(function (f) { return f.name + (f.role ? ', ' + f.role : ''); }).join(' and ')) : '')
+    : 'Donated by ' + esc(job.name || 'the client');
+  var title = 'Donation Record - ' + g.charity;
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, 'Donation Record', 'Property donated to ' + esc(g.charity))
+    + '<div style="font-size:11.5px;margin-bottom:4px;"><strong>Charity:</strong> ' + esc(g.charity) + '</div>'
+    + '<div style="font-size:11.5px;margin-bottom:4px;">' + donor + '.</div>'
+    // Every receipt filed against these lines (a second drop-off brings a second receipt), and how many lines are
+    // receipted where that is not all of them.
+    + '<div style="font-size:11.5px;margin-bottom:12px;"><strong>The charity&rsquo;s receipt' + (g.records.length > 1 ? 's' : '') + ':</strong> '
+      + (g.records.length ? g.records.map(function (rec) {
+          return 'filed ' + esc(fmtDate2(_ymdLocal(new Date(rec.filedAt)))) + (rec.fileUrl ? ' &middot; <a href="' + esc(rec.fileUrl) + '" style="color:#7a5c2e;">' + esc(rec.label || 'receipt') + '</a>' : '');
+        }).join('; ') : 'not yet on file')
+      + (g.receipted < g.lines.length ? ' (' + g.receipted + ' of the ' + g.lines.length + ' lines below ' + (g.receipted === 1 ? 'is' : 'are') + ' receipted)' : '') + '</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+      + ['Item #', 'Item', 'Qty', 'Condition', 'Date donated'].concat(showVal ? ['Estimated value'] : []).map(function (h) { return '<th style="padding:2px 6px;">' + h + '</th>'; }).join('')
+      + '</tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<div style="display:flex;justify-content:flex-end;font-size:12px;font-weight:700;margin-top:8px;border-top:2px solid #333;padding-top:6px;">'
+      + g.lines.length + ' line' + (g.lines.length === 1 ? '' : 's') + ' &middot; ' + qty + ' item' + (qty === 1 ? '' : 's') + (showVal ? ' &middot; estimated value ' + fmt(total) : '') + '</div>'
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
+      + (showVal ? 'Values are Havellin&rsquo;s estimates of what each item would sell for, given for the donor&rsquo;s records. They are not appraisals. ' : '')
+      + 'Whether a charitable deduction is available, and in what amount, is for the donor&rsquo;s tax adviser to determine.</div>'
+    + '</div>';
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, title) };
+  _printDocument(html, _invDocName(job, title));
+  return null;
+}
+function _renderDonationsCard(job, all) {
+  var groups = donationGroups(job, all);
+  if (!groups.length) return '';
+  var jid = job.id;
+  var rows = groups.map(function (g) {
+    var names = esc(_ledgerNames(g.lines, 8));
+    if (!g.charity) {
+      return '<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
+        + '<strong>No charity recorded</strong> &middot; ' + g.lines.length + ' line' + (g.lines.length === 1 ? '' : 's') + ' &middot; ' + g.receipted + ' receipted'
+        + '<div style="font-size:10.5px;color:var(--gray);">' + names + '</div>'
+        + '<div style="font-size:10.5px;color:#8a6d3b;">Name the charity in Channel / Recipient on each line, then print its Donation Record and file its receipt.</div></div>';
+    }
+    return '<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
+      + '<div><strong>' + esc(g.charity) + '</strong> &middot; ' + g.lines.length + ' line' + (g.lines.length === 1 ? '' : 's') + ' &middot; '
+        + '<span style="color:' + (g.receipted === g.lines.length ? 'var(--sage-dk)' : '#8a6d3b') + ';">' + g.receipted + ' of ' + g.lines.length + ' receipted</span></div>'
+      + '<div style="font-size:10.5px;color:var(--gray);">' + names + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px;">'
+        + '<button class="btn-s" onclick="printDonationRecord(' + jid + ',\'' + g.lines[0].stableId + '\')">Print Donation Record</button>'
+        + signedCopyControlHtml(jid, 'donation', { ref: g.charity, label: SIGNED_RECORD_KINDS.donation.label + ' — ' + g.charity,
+            stableIds: g.lines.map(function (r) { return String(r.stableId); }) }, 'File charity receipt')
+      + '</div>'
+      + signedRecordLinksHtml(jid, g.records)
+      + '</div>';
+  }).join('');
+  return '<div class="card" id="inv-donations-card" style="margin-bottom:1rem;">'
+    + '<div class="sec" style="margin-bottom:4px;">Donations <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(a record and a receipt per charity)</span></div>'
+    + '<div style="font-size:10.5px;color:var(--gray);margin-bottom:2px;">A charity&rsquo;s receipt, filed here, covers the lines going to it at the time. A line with a receipt reference of its own (Receipt / Doc) counts as receipted too.</div>'
+    + rows + '</div>';
+}
+
+// ═══════════ PROCEEDS STATEMENTS, RECONCILED AGAINST THE LEDGER (P19; Anthony's call 8) ═══════════
+// ⚠⚠ "Sale, consignment and auction proceeds reconciled" WAS A TICK BOX, so nothing checked the figures it vouched for.
+// Each auction-house, consignment or estate-sale statement (or a buyer's bill of sale) is recorded on the job
+// (`job.proceedsStatements`, through the foundation's list helpers: a person's edit, merged entry by entry on the sheet)
+// and voided with a reason, never removed. Each is checked against the ledger — its gross and fees against the sum of
+// its lines' recorded gross and fees, and its net paid against gross less fees — and any difference of a cent or more
+// is flagged with both figures (roundCents). A sold line on no statement is listed. The derived line that replaces the
+// box reads this one answer. The statement itself is filed through the foundation's control (kind `statement`).
+// Recorded on the disposal services, where the fin_proceeds box was: the same answer as planTaskCtx's isDisposal, which
+// a test holds equal across every service.
+function jobTakesProceedsStatements(job) {
+  return !!job && ((job.svc || job.serviceType) === 'home_cleanout' || invFiduciaryMode(job));
+}
+function proceedsReconciliation(job, items) {
+  var live = {};
+  (items || []).forEach(function (r) { if (r) live[String(r.stableId)] = r; });
+  var seen = {}, twice = {};
+  var differs = function (a, b) { return Math.abs(roundCents(a - b)) >= 0.01; };
+  var list = jobListEntries(job, 'proceedsStatements').map(function (st) {
+    var lines = (st.lines || []).map(function (l) {
+      var sid = String(l.stableId);
+      if (seen[sid]) twice[sid] = true;
+      seen[sid] = true;
+      return { stableId: sid, itemNo: l.itemNo || '', ref: live[sid] || null };
+    });
+    var lg = 0, lf = 0;
+    lines.forEach(function (l) {
+      if (!l.ref) return;
+      var g = parseFloat(l.ref.gross), f = parseFloat(l.ref.fees);
+      if (!isNaN(g)) lg = roundCents(lg + roundCents(g));
+      if (!isNaN(f)) lf = roundCents(lf + roundCents(f));
+    });
+    var sg = roundCents(st.gross), sf = roundCents(st.fees), sn = roundCents(st.netPaid), calc = roundCents(sg - sf);
+    var flags = [];
+    if (differs(sg, lg)) flags.push({ key: 'gross', what: 'Gross', statement: sg, ledger: lg });
+    if (differs(sf, lf)) flags.push({ key: 'fees', what: 'Commission and fees', statement: sf, ledger: lf });
+    if (differs(sn, calc)) flags.push({ key: 'net', what: 'Net paid', statement: sn, ledger: calc });
+    var gone = lines.filter(function (l) { return !l.ref; });
+    return { st: st, lines: lines, linesGross: lg, linesFees: lf, flags: flags, gone: gone, agrees: !flags.length && !gone.length,
+             filed: signedRecordsOf(job, 'statement', st.id).length > 0 };
+  });
+  var unlisted = (items || []).filter(function (r) { return r && INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !seen[String(r.stableId)]; });
+  return { statements: list, unlisted: unlisted,
+           twice: Object.keys(twice).map(function (sid) { return live[sid] || { stableId: sid }; }),
+           disagree: list.filter(function (x) { return !x.agrees; }).length,
+           unfiled: list.filter(function (x) { return !x.filed; }).length };
+}
+// One flag in words, with both figures.
+function _reconFlagText(f) {
+  var gap = fmt(Math.abs(roundCents(f.statement - f.ledger)));
+  return f.what + ': ' + fmt(f.statement) + ' on the statement, '
+    + (f.key === 'net' ? fmt(f.ledger) + ' is its gross less fees' : fmt(f.ledger) + ' on its lines') + ' (' + gap + ' apart)';
+}
+// The desk's line (it replaces the fin_proceeds box): present where there is something to reconcile.
+function proceedsLine(job, items) {
+  var sold = (items || []).filter(function (r) { return r && INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0; }).length;
+  if (!sold && !jobListEntries(job, 'proceedsStatements').length) return null;
+  var R = proceedsReconciliation(job, items);
+  var n = R.statements.length;
+  var bits = [n + ' statement' + (n === 1 ? '' : 's') + (n ? (R.disagree ? ', ' + R.disagree + ' disagree' + (R.disagree === 1 ? 's' : '') + ' with the ledger' : ', all agree') : '')];
+  bits.push(R.unlisted.length + ' sold line' + (R.unlisted.length === 1 ? '' : 's') + ' on no statement');
+  if (R.unfiled) bits.push(R.unfiled + ' statement' + (R.unfiled === 1 ? '' : 's') + ' not yet filed to Drive');
+  if (R.twice.length) bits.push(R.twice.length + ' line' + (R.twice.length === 1 ? '' : 's') + ' on two statements');
+  var ok = !R.disagree && !R.unlisted.length && !R.unfiled && !R.twice.length;
+  return { key: 'proceeds_reconciled', ok: ok, label: 'Sale proceeds reconciled',
+           detail: bits.join('; ') + (ok ? '' : ' — the Proceeds statements card, below the inventory') };
+}
+function _renderProceedsCard(job, all) {
+  if (!jobTakesProceedsStatements(job)) return '';
+  var jid = job.id;
+  var R = proceedsReconciliation(job, all);
+  var voided = jobListEntries(job, 'proceedsStatements', true).filter(function (s) { return s.voidedAt; });
+  var sold = (all || []).filter(function (r) { return INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
+  if (!sold.length && !R.statements.length && !voided.length) return '';
+  var rows = R.statements.map(function (x) {
+    var st = x.st;
+    var nos = x.lines.map(function (l) { return '#' + (l.ref ? _invItemNo(l.ref) : (l.itemNo || '?')); }).join(', ');
+    var files = signedRecordsOf(job, 'statement', st.id);
+    return '<div class="ps-row" style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
+      + '<div><strong>' + esc(st.vendor || '—') + '</strong>' + (st.statementDate ? ' &middot; statement of ' + esc(fmtDate2(st.statementDate)) : '')
+        + (st.reference ? ' &middot; ' + esc(st.reference) : '') + '</div>'
+      + '<div style="font-size:10.5px;color:var(--gray);">Items ' + esc(nos) + ' &middot; Gross ' + fmt(roundCents(st.gross)) + ' &middot; Fees ' + fmt(roundCents(st.fees))
+        + ' &middot; Net paid ' + fmt(roundCents(st.netPaid)) + (st.paidOn ? ' on ' + esc(fmtDate2(st.paidOn)) : '') + (st.paidTo ? ' to ' + esc(st.paidTo) : '') + '</div>'
+      + (x.agrees
+          ? '<div style="font-size:10.5px;color:var(--sage-dk);">&#10003; Agrees with the ledger</div>'
+          : x.flags.map(function (f) { return '<div class="ps-flag" style="font-size:10.5px;color:#A32D2D;">&#9888; ' + esc(_reconFlagText(f)) + '</div>'; }).join('')
+            + x.gone.map(function (l) { return '<div class="ps-flag" style="font-size:10.5px;color:#A32D2D;">&#9888; Item #' + esc(String(l.itemNo || '?')) + ' on it is no longer on the inventory</div>'; }).join(''))
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px;">'
+        + (files.length ? '' : signedCopyControlHtml(jid, 'statement', { ref: st.id, label: SIGNED_RECORD_KINDS.statement.label + ' — ' + (st.vendor || ''),
+            stableIds: x.lines.map(function (l) { return l.stableId; }), signedOn: st.statementDate || '' }, 'File the statement'))
+        + '<button class="btn-s" onclick="voidProceedsStatement(' + jid + ',\'' + esc(String(st.id)) + '\')">Void</button>'
+      + '</div>'
+      + signedRecordLinksHtml(jid, files)
+      + '</div>';
+  }).join('');
+  return '<div class="card" id="inv-proceeds-card" style="margin-bottom:1rem;">'
+    + '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+      + '<div class="sec" style="margin-bottom:4px;">Proceeds statements <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(checked against the ledger)</span></div>'
+      + '<button class="btn-s" onclick="openProceedsStatement(' + jid + ')">+ Record a statement</button></div>'
+    + '<div style="font-size:10.5px;color:var(--gray);margin-bottom:2px;">Each statement&rsquo;s gross and fees are checked against what its lines record, and its net paid against gross less fees. A statement is never deleted: one recorded in error is voided, with the reason.</div>'
+    + (rows || '<div style="font-size:11px;color:var(--gray);padding:4px 0;">No statement recorded yet.</div>')
+    + (R.unlisted.length ? '<div style="font-size:10.5px;color:#8a6d3b;margin-top:6px;">Sold lines on no statement: ' + esc(_ledgerNames(R.unlisted, 10)) + '.</div>' : '')
+    + (R.twice.length ? '<div style="font-size:10.5px;color:#A32D2D;margin-top:4px;">On more than one statement: ' + esc(_ledgerNames(R.twice, 10)) + '.</div>' : '')
+    + (voided.length ? '<div style="font-size:10.5px;color:var(--gray);margin-top:6px;">' + voided.map(function (s) {
+        return 'Voided: ' + esc(s.vendor || '—') + (s.statementDate ? ' of ' + esc(fmtDate2(s.statementDate)) : '') + ' &mdash; ' + esc(s.voidReason || '')
+          + (s.voidedBy ? ' (' + esc(s.voidedBy) + ')' : '');
+      }).join('<br>') + '</div>' : '')
+    + '</div>';
+}
+// The modal (#ps-modal): opened on a client, its sale lines listed to tick.
+function openProceedsStatement(jobId) {
+  var job = _invJob(jobId);
+  var m = document.getElementById('ps-modal');
+  if (!job || !m) return false;
+  var g = function (id) { return document.getElementById(id); };
+  var all = _invAssignItemNos(jobId);
+  var R = proceedsReconciliation(job, all);
+  var on = {};
+  R.statements.forEach(function (x) { x.lines.forEach(function (l) { on[l.stableId] = x.st.vendor || 'another'; }); });
+  var sold = all.filter(function (r) { return INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
+  g('ps-job').value = String(jobId);
+  ['ps-vendor', 'ps-date', 'ps-gross', 'ps-fees', 'ps-net', 'ps-paidon', 'ps-paidto', 'ps-ref'].forEach(function (id) { if (g(id)) g(id).value = ''; });
+  g('ps-fb').innerHTML = '';
+  var vend = [];
+  sold.forEach(function (r) { var c = String(r.channel || '').trim(); if (c && vend.indexOf(c) < 0) vend.push(c); });
+  g('ps-vendor-list').innerHTML = vend.map(function (v) { return '<option value="' + esc(v) + '"></option>'; }).join('');
+  g('ps-lines').innerHTML = sold.length
+    ? sold.map(function (r) {
+        return '<label class="ps-line" style="display:flex;gap:6px;align-items:flex-start;font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;margin:0;padding:3px 0;color:var(--gray-dk);">'
+          + '<input type="checkbox" data-sid="' + esc(String(r.stableId)) + '" style="width:auto;margin-top:2px;">'
+          + '<span>' + esc(_invNamed(r)) + ' &middot; ' + esc(r.disposition) + (r.channel ? ' &middot; ' + esc(r.channel) : '')
+          + (on[String(r.stableId)] ? ' <span style="color:#8a6d3b;">(on the ' + esc(on[String(r.stableId)]) + ' statement)</span>' : '') + '</span></label>';
+      }).join('')
+    : '<div style="font-size:11px;color:#8a6d3b;">No line is marked Auction, Consign or Sell yet. Set the disposition on the lines the statement covers first.</div>';
+  m.style.display = 'flex';
+  return true;
+}
+function closeProceedsStatement() { var m = document.getElementById('ps-modal'); if (m) m.style.display = 'none'; }
+function saveProceedsStatement() {
+  var g = function (id) { return document.getElementById(id); };
+  var fb = g('ps-fb');
+  var refuse = function (m) { if (fb) fb.innerHTML = '<div class="alert a-warn">' + esc(m) + '</div>'; return false; };
+  var jobId = parseInt(g('ps-job').value, 10) || 0;
+  var job = _invJob(jobId);
+  if (!job) return refuse('This client could not be found.');
+  var val = function (id) { return String((g(id) && g(id).value) || '').trim(); };
+  var num = function (id) { var v = val(id); return v === '' ? null : Number(v); };
+  var box = g('ps-lines');
+  var sids = Array.prototype.slice.call((box && box.querySelectorAll) ? box.querySelectorAll('input[type=checkbox]') : [])
+    .filter(function (c) { return c.checked; }).map(function (c) { return String(c.getAttribute('data-sid')); });
+  var gross = num('ps-gross'), fees = num('ps-fees'), net = num('ps-net');
+  var bad = function (x) { return x === null || !isFinite(x) || x < 0; };
+  var miss = [];
+  if (!val('ps-vendor')) miss.push('who it is from');
+  if (!val('ps-date')) miss.push('the statement date');
+  if (!sids.length) miss.push('the lines it covers');
+  if (bad(gross)) miss.push('the gross');
+  if (fees !== null && bad(fees)) miss.push('the commission and fees as a figure');
+  if (bad(net)) miss.push('the net paid');
+  if (miss.length) return refuse('To record this statement, enter ' + _andJoin(miss) + '. Nothing was saved.');
+  var byId = {};
+  _jobInvRefs(jobId).forEach(function (r) { byId[String(r.stableId)] = r; });
+  var rec = jobListPut(job, 'proceedsStatements', {
+    vendor: val('ps-vendor'), statementDate: val('ps-date'),
+    lines: sids.map(function (sid) { return { stableId: sid, itemNo: (byId[sid] && byId[sid].itemNo) || '' }; }),
+    gross: roundCents(gross), fees: roundCents(fees || 0), netPaid: roundCents(net),
+    paidOn: val('ps-paidon'), paidTo: val('ps-paidto'), reference: val('ps-ref'),
+    recordedAt: Date.now(), recordedBy: _actor(job) || job.tc || ''
+  });
+  closeProceedsStatement();
+  var x = rec ? proceedsReconciliation(job, _jobInvRefs(jobId)).statements.filter(function (s) { return s.st.id === rec.id; })[0] : null;
+  showSyncBadge(x && x.agrees ? 'Statement recorded — it agrees with the ledger ✓' : 'Statement recorded — it does not agree with the ledger; the card says where.', !(x && x.agrees));
+  renderInventoryTab();
+  return true;
+}
+function voidProceedsStatement(jobId, id) {
+  var job = _invJob(jobId);
+  var st = job ? jobListGet(job, 'proceedsStatements', id) : null;
+  if (!st || st.voidedAt) return false;
+  var asked = window.prompt('Why is this statement being voided? It stays on the record, marked void with your reason; a filed copy stays in Drive.', '');
+  if (asked === null) return false;
+  var why = String(asked).trim();
+  if (!why) { showSyncBadge('Not voided: a statement is voided only with a reason.', true); return false; }
+  jobListVoid(job, 'proceedsStatements', id, why, _actor(job) || job.tc || '');
+  showSyncBadge('Statement voided. It stays on the record as voided.');
+  renderInventoryTab();
+  return true;
+}
+
+// The derived lines this block owns (planDerivedLines asks once, for p4 and the desk): the ledger signed on an estate
+// (it replaces the ct_pr_signoff box); at the desk, the donation receipts (fin_donation_receipts) and the sale proceeds
+// (fin_proceeds). Each is a fact the app now holds, so none of them is a box.
+function ledgerDerivedLines(jobId, job, phase) {
+  var out = [];
+  if (!job) return out;
+  if (invFiduciaryMode(job)) {
+    var sc = ledgerSignedCopies(job), last = sc[sc.length - 1];
+    out.push({ key: 'ledger_signed', ok: sc.length > 0, label: 'Disposition Ledger signed by the ' + _agrApprover(job),
+               detail: last ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(last.filedAt)))) + (last.filedBy ? ' by ' + esc(last.filedBy) : '')
+                            : 'not yet — print it from the Disposition Ledger card on Job Admin & Inv, have it signed, and file the signed copy there' });
+  }
+  if (phase === 'admin') {
+    var items = _jobInvRefs(jobId);
+    var don = donationReceiptLine(job, items);
+    if (don) out.push(don);
+    if (jobTakesProceedsStatements(job)) { var pl = proceedsLine(job, items); if (pl) out.push(pl); }
+  }
+  return out;
+}
+// The desk's close-out records, together under the inventory: the ledger, the statements and the donations.
+function _renderLedgerCards(job, all) {
+  if (!all || !all.length) return '';
+  return _renderLedgerCard(job, all) + _renderProceedsCard(job, all) + _renderDonationsCard(job, all);
 }
 
 // The aggregate block on the printed worklist. It renders whether or not any individual
@@ -29299,6 +30123,13 @@ function _invRefreshFlagStrip(jobId) {
   var el = document.getElementById('inv-flagstrip');
   if (job && el) el.innerHTML = _renderInvFlagStrip(job, _jobInvRefs(jobId));
 }
+// The close-out records' host (P19): the Disposition Ledger, Proceeds statements and Donations cards. It holds no field a
+// person types into (a signed copy's picker is a button), so a repaint takes nothing from under anybody.
+function _invRefreshRecords(jobId) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var el = document.getElementById('inv-records');
+  if (job && el) el.innerHTML = _renderLedgerCards(job, _jobInvRefs(jobId));
+}
 
 function _invRefreshGuardrail(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -30302,7 +31133,8 @@ function _renderInvWorkbar(job, all) {
         // which is exactly the dead end this document exists to close. A pour-over will is
         // genuinely both, and gets both.
         + (fid && !invDocContractBlock(job, 'trustee') ? btn('printTrustSchedule(' + jid + ')', 'Trust Schedule', 'Chapter 736 schedule of the tangible personal property held in trust, at date-of-death carrying value — prepared to SUPPORT the trustee\'s accounting, never to be one') : '')
-        + (fid ? btn('printDispositionLedger(' + jid + ')', 'Disposition Ledger', 'Proceeds, fees, net to estate, receipts') : '')
+        // The Disposition Ledger left this menu in P19 for its own card under the inventory (_renderLedgerCard), on every
+        // job that keeps an item record: it is printed, filed and signed there, and no control renders twice.
         + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', fid
             ? 'Per-specialist packet of every item flagged for appraisal'
             : 'Per-specialist packet of everything going out to an appraiser, auction house or dealer')
@@ -30833,6 +31665,9 @@ function renderInventoryTab() {
     + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>'
     + _renderAppraiserRoster(job)
     + _renderRemovedRows(jobId)
+    // The close-out records (P19): the Disposition Ledger, the proceeds statements and the donations, in one host that
+    // the desk's partial repaints refresh by id (_invRefreshRecords).
+    + '<div id="inv-records" data-job="' + esc(String(jobId)) + '">' + _renderLedgerCards(job, all) + '</div>'
     + _renderInventorySnapshots(job)
     // A read-out, not a workspace — so it sits at the bottom and starts closed. It was
     // occupying the top of the tab, above the work.
@@ -30869,8 +31704,9 @@ var AS_FOUND_COLUMNS = ['Room', '#', 'Date', 'Time', 'File', 'Link', 'Pass confi
 function buildInventoryPayload(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; }) || {};
   var items = _invAssignItemNos(jobId);
-  // Column A = Job ID, then the 25 manifest columns (includes the on-screen-hidden ones).
-  var columns = ['Job ID'].concat(INVENTORY_COLUMNS.map(function(c){ return c.header; }));
+  // Column A = Job ID, then the 25 manifest columns (includes the on-screen-hidden ones). A column the workbook resolves
+  // under another name goes on the wire under that name (`sheetHeader`, P19).
+  var columns = ['Job ID'].concat(INVENTORY_COLUMNS.map(function(c){ return c.sheetHeader || c.header; }));
   var rows = items.map(function(ref, i){
     var row = [job.hvlId || String(jobId)];
     INVENTORY_COLUMNS.forEach(function(c){ row.push(_invExportValue(ref, c, job, i + 1)); });
@@ -35760,12 +36596,12 @@ var PLAN_TASKS = [
 // workflow."* Same store, same tick, same per-key merge as the Job Plan's boxes.
 var JOB_ADMIN_TASKS = [
   { key:'fin_vendor_invoices',   sec:'Financial close', label:'All vendor invoices collected and filed in the job folder' },
-  { key:'fin_proceeds',          sec:'Financial close', when:function(c){ return c.isDisposal; },
-    label:'Sale, consignment and auction proceeds reconciled — amounts received confirmed and documented' },
+  // ⚠ fin_proceeds AND fin_donation_receipts ARE DERIVED LINES SINCE P19 (2026-10-03), not boxes: the app now holds the
+  // records each one vouched for — every proceeds statement, checked against the ledger to the cent, and every
+  // charity's receipt, line by line — so a tick beside them would be a second store of one fact (ledgerDerivedLines).
+  // A tick already stored under either key is left where it is, read by nothing.
   { key:'fin_settlement',        sec:'Financial close', when:function(c){ return c.isDisposal; },
     label:'Settlement timeline confirmed with any auction house or consignment vendor for proceeds not yet received' },
-  // A prep job sends nothing to donation — it is the realtor's house being made show-ready.
-  { key:'fin_donation_receipts', sec:'Financial close', when:function(c){ return c.svc !== 'prep'; }, label:'Donation receipts collected and filed for tax records' },
   // ⚠⚠ THE COMPLIANCE LIST IS KEYED ON WHICH INSTRUMENT THE ESTATE FEEDS AND ON WHAT WE ARE
   // CONTRACTED TO PRODUCE — never on the service type, which records what Havellin was HIRED to
   // do rather than what it promised. Keyed on `isProbate` it failed in both directions at once,
@@ -35959,12 +36795,10 @@ function planDerivedLines(jobId, job, est, phase) {
       out.push({ key: 'recipients_recorded', ok: nR === leaving.length, label: 'Recipient recorded on everything that left',
                  detail: nR + ' of ' + leaving.length + ' — name who took it on the Job Admin & Inv tab, or the family\'s record cannot say' });
     }
-    var donating = _jobInvRefs(jobId).filter(function(r){ return r.disposition === 'Donate'; });
-    if (donating.length) {
-      var rcpt = donating.some(function(r){ return !!r.receiptDoc; });
-      out.push({ key: 'donation_receipt', ok: rcpt, label: 'Donation receipt on file',
-                 detail: rcpt ? 'attached' : donating.length + ' item' + (donating.length > 1 ? 's' : '') + ' going to donation — attach the receipt on the Job Admin & Inv tab (Receipt / Doc)' });
-    }
+    // ⚠ EVERY DONATED LINE, NOT ANY ONE (P19): it passed on `donating.some`, so one receipt cleared forty lines. One
+    // answer, donationReceiptLine, read here and on the desk.
+    var _don = donationReceiptLine(job, _jobInvRefs(jobId));
+    if (_don) out.push(_don);
   }
   // ⚠ `admin` IS THE DESK CARD AND `p4` IS THE JOB PLAN'S CLOSE-OUT STAGE, and they share the
   // close-out facts deliberately — a concierge closing a room and a concierge at the desk want
@@ -36037,6 +36871,10 @@ function planDerivedLines(jobId, job, est, phase) {
                  detail: tdf ? tdf.label : 'not recorded &mdash; Edit Client, before the agreement goes out' });
     }
   }
+  // ⚠ THE CLOSE-OUT RECORDS (P19): the Disposition Ledger signed on an estate (it replaces the ct_pr_signoff box, a tick
+  // for a paper the app now files), and at the desk the donation receipts and the sale proceeds reconciled (they replace
+  // fin_donation_receipts and fin_proceeds). Derived, never ticked; ledgerDerivedLines words them.
+  if (phase === 'p4' || phase === 'admin') ledgerDerivedLines(jobId, job, phase).forEach(function(l){ out.push(l); });
   return out;
 }
 function planDerivedHtml(jobId, job, est, phase) {
