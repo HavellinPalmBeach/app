@@ -472,8 +472,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ss = { getSheetByName: () => sheet, insertSheet: () => sheet };
 
     // The real header list, straight out of the app.
+    // RESTATED 2026-10-03 (P19): the columns go on the wire as buildInventoryPayload sends them, under `sheetHeader` where a
+    // column has one. The Net column reads "Net Proceeds" on the app's own surfaces now, and keeps "Net to Estate" on the
+    // wire because this script resolves its formula by that name; the check below is still the two ends held together.
     const p3 = sandbox({ vars: ['INVENTORY_COLUMNS'] });
-    const columns = ['Job ID'].concat(p3.INVENTORY_COLUMNS.map((c) => c.header));
+    const columns = ['Job ID'].concat(p3.INVENTORY_COLUMNS.map((c) => c.sheetHeader || c.header));
+    has(fn('buildInventoryPayload'), 'return c.sheetHeader || c.header;', 'fixture: the payload sends the same names');
     const col = (h) => columns.indexOf(h) + 1;
     gctx._writeInventorySheet(ss, { columns, rows: [columns.map(() => '')] });
 

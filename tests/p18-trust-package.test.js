@@ -338,7 +338,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Role Successor Trustee Certification of Trust Pending', 'and so does the field beside the trustee (P19)');
     has(t, 'Property sale yes', 'the property-sale answer, asked on a trust since P19');
     has(t, 'Trust package', 'the package row, labelled for the trust route');
-    has(t, 'Carries the Trust Schedule, Estate Inventory Report and Appraisal Worklist, with links to the photographs and the release and custody record, to ann@lowe.law.',
+    // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
+    // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
+    has(t, 'Carries the Trust Schedule, Estate Inventory Report, Disposition Ledger and Appraisal Worklist, with links to the photographs and the release and custody record, to ann@lowe.law.',
         'it says what it carries, and to whom, before it goes');
     has(card, 'onclick="event.stopPropagation();sendProbatePackage(7)">&#128231; Send trust package</button>', '⚠ and the send, named for the route');
     // RESTATED 2026-10-03 (P19): this pinned margin-top:0px — no grid above the blocks. The trust's own details (its name,
@@ -362,7 +364,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Property sale yes', 'the property sale');
     has(t, 'Probate Attorney Name Ann Lowe', 'the probate attorney');
     has(t, 'Executor Name Rex Hale Phone (561) 555-0101 Email rex@hale.example Role Personal Representative Authorization', 'the executor, with the authorization');
-    has(t, 'Probate package Carries the Court Inventory, Estate Inventory Report and Appraisal Worklist', 'the probate package row');
+    has(t, 'Probate package Carries the Court Inventory, Estate Inventory Report, Disposition Ledger and Appraisal Worklist', 'the probate package row (P19: with the ledger)');
     has(card, '&#128231; Send probate package</button>', 'and its send');
     has(card, '<div class="d-split2" style="gap:0 24px;margin-top:12px;">', 'the blocks spaced from the court grid as before');
     // A pour-over will, and an unanswered Probate service, are the probate route.
@@ -452,12 +454,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   G('A · what the trust package carries: the Trust Schedule, the tier\'s document, the worklist — never the Court Inventory', () => {
+    // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
+    // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
     const g = lift(['probatePackageDocs'], [], { jobs: [], estimateStore: {} });
-    eq(g.probatePackageDocs(TRUST()), ['trustee', 'schedule', 'worklist'], 'valued: the Trust Schedule, the Estate Inventory Report, the Appraisal Worklist');
-    eq(g.probatePackageDocs(TRUST({ docTier: 'appraisals' })), ['trustee', 'schedule', 'worklist'], 'with appraisals: the same three');
-    eq(g.probatePackageDocs(TRUST({ docTier: 'contents' })), ['contents', 'worklist'], 'a contents engagement: no valued schedule, the Contents List');
-    eq(g.probatePackageDocs(TRUST({ docTier: 'none' })), ['worklist'], 'tier none: the worklist alone');
-    eq(g.probatePackageDocs(TRUST({ svc: 'probate' })), ['trustee', 'schedule', 'worklist'], '⚠ a Probate service recorded as a trust matter: still no Court Inventory');
+    eq(g.probatePackageDocs(TRUST()), ['trustee', 'schedule', 'ledger', 'worklist'], 'valued: the Trust Schedule, the Estate Inventory Report, the Disposition Ledger, the Appraisal Worklist');
+    eq(g.probatePackageDocs(TRUST({ docTier: 'appraisals' })), ['trustee', 'schedule', 'ledger', 'worklist'], 'with appraisals: the same four');
+    eq(g.probatePackageDocs(TRUST({ docTier: 'contents' })), ['contents', 'ledger', 'worklist'], 'a contents engagement: no valued schedule, the Contents List');
+    eq(g.probatePackageDocs(TRUST({ docTier: 'none' })), ['ledger', 'worklist'], 'tier none: the ledger and the worklist');
+    eq(g.probatePackageDocs(TRUST({ svc: 'probate' })), ['trustee', 'schedule', 'ledger', 'worklist'], '⚠ a Probate service recorded as a trust matter: still no Court Inventory');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -470,8 +474,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(headerOf(mime, 'Cc'), 'rex@hale.example, ' + AGREEMENTS, 'the trustee and agreements@ copied');
     eq(decodeHeader(headerOf(mime, 'Subject')), 'Havellin Palm Beach — Inventory Package for 69 Beach Blvd', 'the subject, the probate route\'s: it names no court');
     const p = mimeParts(mime);
-    eq(p.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Appraisal Worklist'],
-       '⚠⚠ the Trust Schedule, the Estate Inventory Report and the Appraisal Worklist attached');
+    // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
+    // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
+    eq(p.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
+       '⚠⚠ the Trust Schedule, the Estate Inventory Report, the Disposition Ledger and the Appraisal Worklist attached');
+    const led = (r.N.log.uploads.filter((u) => /Disposition Ledger/.test(u.filename))[0] || {}).html || '';
+    has(text(led), 'proceeds net to the trust', 'P19: the ledger the trust package carries says the proceeds are the trust\'s');
     ok(!r.N.log.uploads.some((u) => /Court Inventory/.test(u.filename)) && !r.N.log.pdfs.some((h) => /Estate Inventory — Tangible Personal Property/.test(h)),
        '⚠⚠ and no Court Inventory: not attached, not filed, not built');
     // The attached Trust Schedule is the desk's own page, with its gaps.
@@ -491,6 +499,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'Attached are Havellin’s inventory documents for the Walter Ellsworth trust administration, 69 Beach Blvd, Palm Beach, as they stand on October 2, 2026:',
       '  - Trust Schedule',
       '  - Estate Inventory Report',
+      '  - Disposition Ledger',
       '  - Appraisal Worklist',
       '',
       'In the trust’s Google Drive folder:',
@@ -514,15 +523,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.N.log.shares, [{ folderId: 'AF7', email: 'ann@lowe.law' }, { folderId: 'INV7', email: 'ann@lowe.law' }], 'both photograph folders shared with the attorney');
     eq(r.N.log.uploads.map((u) => [u.folderId, u.filename]), [
       ['INV7', 'HVL-0007 - Havellin Release Approvals and Chain of Custody.html'], ['INV7', 'HVL-0007 - Havellin Trust Schedule.html'],
-      ['INV7', 'HVL-0007 - Havellin Estate Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Appraisal Worklist.html']],
+      ['INV7', 'HVL-0007 - Havellin Estate Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'],
+      ['INV7', 'HVL-0007 - Havellin Appraisal Worklist.html']],
        'the record and every page filed to Estate Inventory, undated, so the next package replaces them');
     const st = (r.job().docState || {}).probatePackage || {};
     ok(!!st.draftedAt && !st.sentAt && st.provider === 'gmail', '⚠ recorded on docState.probatePackage as a draft, never a send');
-    eq(JSON.parse(JSON.stringify(st.pkg || {})), { owed: ['trustee', 'schedule', 'worklist'], docs: ['trustee', 'schedule', 'worklist'], to: 'ann@lowe.law',
+    eq(JSON.parse(JSON.stringify(st.pkg || {})), { owed: ['trustee', 'schedule', 'ledger', 'worklist'], docs: ['trustee', 'schedule', 'ledger', 'worklist'], to: 'ann@lowe.law',
        cc: ['rex@hale.example', AGREEMENTS] }, 'what it carried and to whom');
     ok((r.job().at || {})['docState:probatePackage'] > 0, 'stamped on its key: a person\'s edit');
     has(r.last().m, 'Draft created in ' + BOX + ' for ann@lowe.law, copied to rex@hale.example and ' + AGREEMENTS
-        + ', with the Trust Schedule, Estate Inventory Report and Appraisal Worklist attached', 'the notice');
+        + ', with the Trust Schedule, Estate Inventory Report, Disposition Ledger and Appraisal Worklist attached', 'the notice');
     eq(r.last().t, 'ok', 'all of it went');
     // The card waits on the confirming tap, which records the send.
     const card = r.c.probatePackageCardHtml(r.job());
@@ -545,8 +555,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const p = mimeParts(mime);
     eq(p.text.split('\n')[0], 'Dear Rex,', '⚠ the trustee greeted');
     has(p.html, '<p style="font-size:15px;line-height:1.65;color:#2e2e33;margin:0 0 14px;">Dear Rex,</p>', 'in both parts');
-    eq(p.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Appraisal Worklist'],
-       'the same three documents');
+    eq(p.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
+       'the same four documents');
     eq(r.N.log.shares, [{ folderId: 'AF7', email: 'rex@hale.example' }, { folderId: 'INV7', email: 'rex@hale.example' }], '⚠ the folders shared with the trustee');
     eq(JSON.parse(JSON.stringify(r.job().docState.probatePackage.pkg)).to, 'rex@hale.example', 'recorded as sent to the trustee');
     eq(JSON.parse(JSON.stringify(r.job().docState.probatePackage.pkg)).cc, [AGREEMENTS], 'copied to agreements@');
@@ -558,13 +568,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const contents = pkgRig({ job: TRUST({ probateAttyEmail: '', docTier: 'contents' }) });
     contents.c.sendProbatePackage(7);
     const cp = mimeParts(contents.N.log.drafts[0] || '');
-    eq(cp.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Contents List', 'Havellin Appraisal Worklist'], 'a contents engagement: the Contents List');
+    eq(cp.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Contents List', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], 'a contents engagement: the Contents List (and, since P19, the ledger)');
     has(cp.text, '\nValuing the property is not part of Havellin’s engagement on this trust administration, so the Contents List is attached in place of a valued schedule.\n',
         '⚠ the one absence stated, for a trust administration');
     const none = pkgRig({ job: TRUST({ docTier: 'none' }) });
     none.c.sendProbatePackage(7);
     const np = mimeParts(none.N.log.drafts[0] || '');
-    eq(np.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Appraisal Worklist'], 'tier none: the worklist alone');
+    eq(np.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], 'tier none: the ledger and the worklist (P19)');
     has(np.text, '\nOn this trust administration the schedule of the trust’s property is prepared by the trustee or their counsel; Havellin’s records of the property are below.\n',
         '⚠ and whose the schedule is, in the agreement\'s own words — never "the filing"');
     lacks(np.text, 'your office', 'nor "your office", which a trustee does not have');

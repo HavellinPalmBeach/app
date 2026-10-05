@@ -37,10 +37,11 @@ const DERIVED_FNS = ['planDerivedLines', 'planDerivedHtml', 'planTaskCtx', 'jobO
   'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef',
   'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt',
   'estateAuthority', 'estateTaxReturn', '_ymdLocal', 'fmtDate2', 'esc', 'escLines', 'jobListEntries', 'jobFiduciaries', 'signedRecordsOf',
-  'siteFindLines', 'siteFindsOf', 'siteFindDefaultHolder', 'willDepositDue'];
+  'siteFindLines', 'siteFindsOf', 'siteFindDefaultHolder', 'willDepositDue',
+  'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine'];
 const DERIVED_VARS = ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
   'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
-  'JOB_STEPS', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS', 'WILL_DEPOSIT_DAYS'];
+  'JOB_STEPS', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS', 'WILL_DEPOSIT_DAYS', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS'];
 const DERIVED_STUBS = () => ({ isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [], stagePaidTotal: () => 0,
   isAgreementSigned: () => false, isJobFunded: () => false, depositPaidTotal: () => 0, _photoRefs: { 7: [], 41: [] },
   estimateStore: { 7: { estimate: { rooms: [{ idx: 0, name: 'Kitchen' }] } } } });
@@ -239,6 +240,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const PLAN_FNS = ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
       'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines',
+      'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
       'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', '_planRoomListHtml',
       '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow',
       'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn',
@@ -252,7 +254,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const PLAN_VARS = ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS',
       'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
       'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES',
-      'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS'];
+      'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS'];
     const render = (job, formal) => {
       const dom = domStub({});
       const j = sandbox({ fns: PLAN_FNS, vars: PLAN_VARS, stubs: {

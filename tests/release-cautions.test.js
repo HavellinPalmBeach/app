@@ -37,10 +37,14 @@ const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_
              // the bulk handler asks the staff rule.
              'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete', 'invApprovalGap',
              'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf',
-             'invHavellinRecipient'];
+             'invHavellinRecipient',
+             // P19: the Disposition Ledger reads its figures, its gaps and its signers through these.
+             'dispositionLedger', '_invRecipient', '_ledgerReceiptCell', '_ledgerNames', '_reconFlagText', 'ledgerSigners',
+             '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
+             '_jobDestLabel', '_agrApprover', 'signedRecordsOf'];
 const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-              'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
+              'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler', tc: 'Anthony Graziano' };
@@ -242,7 +246,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.printDispositionLedger(1);
     const led = s.__state.printed;
     ok(led.length > 0, 'the ledger renders');
-    has(led, 'Disposition &amp; Accounting Ledger', 'it is the ledger');
+    // RESTATED 2026-10-03 (P19): the page is the Disposition Ledger, the close-out summary the client signs. It was headed
+    // "Disposition & Accounting Ledger … Fiduciary accounting", an accounting it is not (the accounting is the
+    // representative's, with counsel) on jobs where nobody is a fiduciary.
+    has(led, 'Disposition Ledger</h2>', 'it is the ledger');
+    lacks(led, 'Accounting Ledger', 'and no longer calls itself an accounting');
     has(led, 'SPECIFIC BEQUEST', '⚠ a bequest that WAS disposed is findable in the accounting');
     has(led, 'DISPUTED', 'and so is a disputed item');
     has(readable(led), 'Sargent portrait', 'beside the object it belongs to');

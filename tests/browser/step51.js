@@ -15,7 +15,8 @@
 //      Change Orders folder under its undated name, with the typed acceptance and the date; the card shows the filed
 //      copy. Drive fails on another: the card offers File to Drive, and the press files it.
 //   C. The Probate card's 📧 Send probate package: the inventory read from the sheet, both photograph folders shared
-//      with the attorney, four filings, three PDFs, one Gmail draft — its To, Cc, three attachments and links read
+//      with the attorney, five filings, four PDFs, one Gmail draft — its To, Cc, four attachments (the Disposition
+//      Ledger since P19) and links read
 //      back — then ✓ I've sent it, and the card says who sent it and when. With no attorney email it is refused by
 //      name and nothing is asked of anyone.
 //   D. overflow at 1440 and 390 with the Probate card and the change order card on screen; no page errors.
@@ -273,7 +274,7 @@ const FAIL = { upload: null };
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════
     let pkgId = 55;
-    await section('C. the probate package: one Gmail draft to the attorney, three PDFs, the links, then I\'ve sent it', async () => {
+    await section('C. the probate package: one Gmail draft to the attorney, four PDFs, the links, then I\'ve sent it', async () => {
       const T0 = Date.now() - 3 * 86400000;
       STORE.media[pkgId] = { items: [
         { stableId: 'a', label: 'inventory', collId: null, roomIdx: 1, status: 'uploaded', ts: T0, updatedAt: T0, itemNo: 1, objectName: 'Sargent portrait',
@@ -292,7 +293,7 @@ const FAIL = { upload: null };
       const card = dash + ' #pkg-row-' + pkgId;
       ok(await vis(card), 'the Probate card carries the package row');
       lacks(await txt(dash), 'Package Sent', 'the self-attested toggle is gone');
-      has(await txt(card), 'Carries the Court Inventory, Estate Inventory Report and Appraisal Worklist', 'it says what it carries before it goes');
+      has(await txt(card), 'Carries the Court Inventory, Estate Inventory Report, Disposition Ledger and Appraisal Worklist', 'it says what it carries before it goes (the ledger since P19)');
       has(await txt(card), 'to ann@lowe.law', 'and to whom');
       const d0 = DRAFTS.length, u0 = UPLOADS.length, p0 = PDFS.length, s0 = SHARES.length;
       await press(card + ' button[onclick*="sendProbatePackage(' + pkgId + ')"]', '📧 Send probate package');
@@ -304,7 +305,7 @@ const FAIL = { upload: null };
       eq(head('Cc'), 'rex@hale.example, agreements@havellinpalmbeach.com', 'copying the personal representative and agreements@');
       eq((mime.match(/(^|[^\r])\n/g) || []).length, 0, 'every line break CRLF');
       const names = [...mime.matchAll(/filename="([^"]+)"/g)].map((m) => m[1].replace(/ - 69 Beach Blvd - .*$/, ''));
-      eq(names, ['Havellin Court Inventory', 'Havellin Estate Inventory', 'Havellin Appraisal Worklist'], '⚠⚠ three PDFs attached');
+      eq(names, ['Havellin Court Inventory', 'Havellin Estate Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], '⚠⚠ four PDFs attached (the Disposition Ledger since P19)');
       const alt = (/boundary="(ALT-[^"]+)"/.exec(mime) || [])[1];
       const plain = alt ? mime.split('--' + alt)[1] : '';
       const body = Buffer.from(plain.slice(plain.indexOf('\r\n\r\n') + 4).replace(/\r\n/g, ''), 'base64').toString('utf8');
@@ -314,9 +315,10 @@ const FAIL = { upload: null };
       has(body, 'Release approvals and chain of custody: https://drive.google.com/file/d/up', 'the release approvals and custody log, linked to their filed record');
       eq(SHARES.slice(s0), [{ folderId: 'AF55', email: 'ann@lowe.law' }, { folderId: 'INV55', email: 'ann@lowe.law' }], 'both folders shared with the attorney');
       eq(UPLOADS.slice(u0).map((u) => u.folderId + ' ' + u.filename), ['INV55 HVL-0055 - Havellin Release Approvals and Chain of Custody.html',
-        'INV55 HVL-0055 - Havellin Court Inventory.html', 'INV55 HVL-0055 - Havellin Estate Inventory Report.html', 'INV55 HVL-0055 - Havellin Appraisal Worklist.html'],
+        'INV55 HVL-0055 - Havellin Court Inventory.html', 'INV55 HVL-0055 - Havellin Estate Inventory Report.html', 'INV55 HVL-0055 - Havellin Disposition Ledger.html',
+        'INV55 HVL-0055 - Havellin Appraisal Worklist.html'],
          'every document filed to the Estate Inventory folder too, undated');
-      eq(PDFS.length - p0, 3, 'three PDFs built');
+      eq(PDFS.length - p0, 4, 'four PDFs built');
       const court = (UPLOADS.slice(u0).find((u) => /Court Inventory/.test(u.filename)) || {}).html || '';
       has(court, 'DRAFT', 'a Court Inventory with a line still to value goes out as a DRAFT');
       has(court, 'not a complete total', 'its total a floor');

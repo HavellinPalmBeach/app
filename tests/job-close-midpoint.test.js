@@ -49,15 +49,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'lookupVendorById', 'vendorIdOf', '_actor', '_handoverBy', 'estimateEditBlocker', 'priceChangeBlocker', 'agreementSignature', 'isAgreementSent', 'docKeyFor', 'draftOutstanding', 'docDraftPending', 'draftIsStale',
     // The Re-open (2026-09-29): the same door, its own branch. Lifted, never stubbed — a stub of "can this job
     // be re-opened" is exactly what would let the rail's button and the transition's refusal disagree.
-    'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch', 'roundCents']);
+    'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch', 'roundCents',
+    // P19: an estate's close names its unsigned Disposition Ledger in the same question.
+    'ledgerCloseFlag', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover']);
   const VARS = ['JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
     'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
     'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY',
-    'JOB_TRANSITIONS'];
+    'JOB_TRANSITIONS', 'LEDGER_SIGNED_REF'];
 
   const asked = [];
+  const filed = [];
   let answer = true;
   const R = sandbox({ fns: RAIL_FNS, vars: VARS, stubs: {
+    // P19: a close files the Disposition Ledger in the background (driven in p19-ledger.test.js); recorded here.
+    fileDispositionLedger(id, o) { filed.push([id, !!(o && o.auto)]); },
     Intl: global.Intl, _todayStr: () => '2026-09-30', vendorDirectory: [],
     saveJobs() {}, syncJobToSheets() {}, openJobPlanFor() { return false; }, _dashRedraw() { return true; },
     renderClientDashboard() {}, alert() {},
@@ -232,6 +237,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(job.status, 'closed', 'the job closes');
     eq(job.deliveredOn, '2026-09-30', 'stamped as handed over today');
     eq(asked.length, 1, 'having asked once, because no midpoint payment is recorded');
+    eq(filed, [[7, true]], 'P19: and the close files the Disposition Ledger, in the background');
 
     const after = rail(job, '2026-09-30', CLEARED);
     eq(after.next && after.next.key, 'final_invoiced', '⚠⚠ the FINAL takes the light once the job is closed');
@@ -404,10 +410,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(j.deliveredOn, '2026-09-30', 'stamped with today');
 
     // A midpoint payment on file: the normal close, asked nothing — the question is scoped to what is new.
-    const paid = JOB({ payments: [{ id: 1, stage: 'deposit', amount: 10000 }, { id: 2, stage: 'midpoint', amount: 5000 }] });
+    // ⚠ RESTATED 2026-10-03 (P19): this is an Estate Settlement, and since P19 an estate whose Disposition Ledger has no
+    // signed copy on file is named in the same question (flagged, never refused). With a signed copy on file it asks
+    // nothing, as before; without one it asks once, about the ledger and not the midpoint.
+    const paid = JOB({ payments: [{ id: 1, stage: 'deposit', amount: 10000 }, { id: 2, stage: 'midpoint', amount: 5000 }],
+      signedRecords: [{ id: 's1', kind: 'ledger', ref: 'ledger', filedAt: 1 }] });
     asked.length = 0; answer = false;
     ok(R.applyJobTransition(paid) === true, 'a job with its midpoint paid closes');
     eq(asked.length, 0, 'without a question');
+    const paidUnsigned = JOB({ payments: [{ id: 1, stage: 'deposit', amount: 10000 }, { id: 2, stage: 'midpoint', amount: 5000 }] });
+    asked.length = 0; answer = true;
+    ok(R.applyJobTransition(paidUnsigned) === true, 'P19: an estate with no signed ledger still closes on OK');
+    eq(asked.length, 1, 'having asked once');
+    has(asked[0] || '', 'The Disposition Ledger has no signed copy on file', 'about the ledger');
+    lacks(asked[0] || '', 'payment is recorded', 'and not the midpoint, which is paid');
     // ⚠ DEFENSIVE, not a live path: an ACTIVE job carrying a handover date. A Re-open clears the stamp (below),
     // so the only way to reach this is a record written by hand or by an older build. The stamp is still
     // write-once — a close never overwrites one — and the question is not asked over it, because "closing
@@ -475,12 +491,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const P = sandbox({
       fns: ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
-            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus',
+            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt',
             'planStageCard', 'planStageState', 'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'],
-      vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
+      vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS'],
       stubs: {
         document: dom, isFormalDoc: () => false, _todayStr: () => '2026-09-24',

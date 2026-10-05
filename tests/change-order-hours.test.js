@@ -385,11 +385,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the same dependency list job-desk-scope lifts.
     function desk(cos, est) {
       const D = sandbox({
-        fns: ['planDerivedLines', 'jobListEntries', 'jobOnProbateTrack', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+        fns: ['planDerivedLines', 'jobListEntries', 'jobOnProbateTrack', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
               'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
               '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
               'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'].concat(CO),
-        vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+        vars: ['LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
                'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
                'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES',
                'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],

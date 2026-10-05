@@ -539,7 +539,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // it.itemNo || (i + 1) — a snapshot row taken before item numbers existed carries
     // none, and a position printed in that column reads as a number that was issued.
-    const snapFns = ['printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime', 'roundCents', 'fmt'];
+    const snapFns = ['printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime', 'roundCents', 'fmt', '_snapVoidedBlock'];
     const sctx = sandbox({ fns: snapFns, vars: [] });
     sctx.jobs.push({ id: 1, name: 'Estate of Doe', hvlId: 'HVL-1001', invSnapshots: [{
       ts: 1757000000000, label: 'At filing', count: 2, totalFMV: 5100,
@@ -587,7 +587,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const m = sandbox({ fns: ['_invEdit', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
                               '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal'],
                         vars: ['INV_STICKY_FIELDS'],
-                        stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {},
+                        stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {},
                                  _scheduleInventorySync() {}, _invNetDisplay: () => '' } });
     m._photoRefs[2] = [{ stableId: 'a', label: 'inventory', collId: null, fmv: '500000' }];
 
@@ -846,7 +846,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const a = sandbox({ fns: ['_invSetAppraiser', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
                               '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch'],
                         stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
-                                 _invRefreshGuardrail() {}, _invRefreshSummary() {}, _invRefreshFlagStrip() {} } });
+                                 _invRefreshGuardrail() {}, _invRefreshSummary() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {} } });
     a.jobs.push({ id: 1, appraisers: [{ id: 7, name: 'Marie Wayland', firm: 'Appraisals by the Sea' }] });
     a._photoRefs[1] = [{ stableId: 'x', label: 'inventory', collId: null }];
 
