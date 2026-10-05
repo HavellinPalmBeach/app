@@ -319,7 +319,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ RESTATED 2026-09-29, not deleted: the notice also goes amber when it has to name an out-of-date
     // draft of the same document (staleDraftNote). The requirement is unchanged — no attachment is never
     // a success — and it reads the same variable.
-    has(s, "_docNotice((attached && !_staleLine) ? 'ok' : 'warn'", 'and a send with no attachment reads as a warning, not a success');
+    // ⚠ RESTATED 2026-10-05 (P20): and amber too when it names a co-representative the envelope did not carry (an
+    // Apps Script deployment older than 2026-10-05). Still the same variable for the attachment, so no attachment is
+    // still never a success; the third condition only adds a reason to warn.
+    has(s, "_docNotice((attached && !_staleLine && !_offEnv.length) ? 'ok' : 'warn'", 'and a send with no attachment reads as a warning, not a success');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

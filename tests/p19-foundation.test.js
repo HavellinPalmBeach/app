@@ -183,9 +183,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'this.merge = _mergeJobRecord;'].join('\n\n'), ctx2);
     eq(ctx2.merge(desk, field).coFiduciaries.map((c) => c.id), ['c2'], '(control: without the backend list entry the newer whole record wins and the desk\'s co-trustee is lost)');
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1];
-    eq(bv, '2026-10-03', 'BACKEND_VERSION is bumped with the .gs change');
+    // RESTATED 2026-10-05 (P20): at or past this pack's version, not equal to it: P20's .gs change (the co-signers on the
+    // envelope) carries this merge forward, and the app asks for that later deployment.
+    ok(bv >= '2026-10-03', 'BACKEND_VERSION is bumped with the .gs change (' + bv + ')');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-03', 'the app asks for it: on an older deployment these lists ride the whole record');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-03', 'the app asks for it: on an older deployment these lists ride the whole record (' + B.BACKEND_MIN_VERSION + ')');
     has(B.BACKEND_FEATURE_COST.version, 'a co-trustee, a beneficiary, a signed copy filed to Drive', 'and the banner names that consequence');
   }
 

@@ -563,8 +563,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // confirmation, moved to `confirmAgreementSignature`, which is where the record is
     // actually written. The requirement is unchanged: the "it worked" reaches the
     // drilldown, not a panel the drilldown hides.
-    has(body('confirmAgreementSignature()'), "_dashFbTarget('agr-fb'), 'ok'", 'so does the signature confirmation');
-    has(body('confirmAgreementSignature()'), "dashNotice('ok'", 'and the drilldown strip carries it too');
+    // RESTATED 2026-10-05 (P20): the strip now carries the notice's own message (escaped), amber while a co-representative's
+    // signature is owed; the shorter message it wrote over the notice on the dashboard hid the signer's name.
+    has(body('confirmAgreementSignature()'), "_dashFbTarget('agr-fb'), _co.owed ? 'warn' : 'ok', esc(_msg)", 'so does the signature confirmation');
+    // RESTATED 2026-10-05 (P20): still the drilldown strip, and amber where a co-representative's signature is still owed
+    // (agreementCoSignState names it there); 'ok' otherwise, as before. tests/p20-esign-cosigners.test.js drives both.
+    has(body('confirmAgreementSignature()'), "dashNotice(_co.owed ? 'warn' : 'ok'", 'and the drilldown strip carries it too');
     has(body('confirmAgreementSignature()'), 'signed by ', 'naming the person who signed');
 
 

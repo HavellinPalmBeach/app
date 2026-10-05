@@ -159,8 +159,11 @@ const C_GATE = 'The successor trustee’s Certification of Trust must be receive
       has(tc, 'Property sale yes', 'the property sale');
       has(tc, 'Role Trustee Certification of Trust Pending', 'the Certification beside the trustee');
       has(tc, 'Co-Trustees Name Daniel Adler Role Trustee', 'Co-Trustees');
-      has(tc, 'A DocuSign envelope goes to Rex Hale alone.', 'the one-signer sentence');
-      lacks(tc, 'on paper', 'and no signing procedure for the others, which is not decided');
+      // RESTATED 2026-10-05 (P20): Anthony decided (Q22) that each co-trustee signs the agreement beside the trustee, in
+      // DocuSign or on the printed page; the card says so where it said DocuSign went to one signer (step 60 drives both).
+      has(tc, 'Each signs the agreement beside Rex Hale: in DocuSign, which needs their email, or on the printed page when it is signed by hand.', 'how each co-trustee signs');
+      lacks(tc, 'A DocuSign envelope goes to Rex Hale alone.', 'never the old one-signer sentence');
+      lacks(tc, 'on paper', 'and nothing prescribed beyond the two routes');
       has(tc, 'Form 706 due ' + DUE_TXT + ' — in ' + N + ' days', '⚠ the Form 706 date, ' + N + ' days out');
       const red = await p.evaluate(() => { const e = document.querySelector('#client-dashboard-view .est-706'); return e ? getComputedStyle(e).color : ''; });
       eq(red, 'rgb(163, 45, 45)', 'in red inside thirty days');

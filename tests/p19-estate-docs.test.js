@@ -57,8 +57,8 @@ function readers(name, call) {
 // ── The agreement and the client estimate: the reconciliation suite's lift list, and what an answered matter reaches
 //    that its unanswered fixtures never do (estateAuthority, jobOnProbateTrack, the trust's accounting sentence), the
 //    trust's namer and the anchor measure.
-const AGR_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', 'esignAnchorsPresent', '_ceGroupedSpaces']);
-const AGR_VARS = DOCREC.VARS.concat(['ESIGN_REQUIRED_ANCHORS', 'AGR_NOT_AN_ACCOUNTING']);
+const AGR_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', 'esignAnchorsPresent', '_ceGroupedSpaces', 'esignCoSignerAnchors']);
+const AGR_VARS = DOCREC.VARS.concat(['ESIGN_REQUIRED_ANCHORS', 'AGR_NOT_AN_ACCOUNTING', 'ESIGN_COSIGNER_ANCHOR']);
 // One sandbox for the whole file (building one compiles ~170 functions, and the renders are pure): each render starts
 // from the same empty stores, with only the job it is about on the client list.
 let _docCtx = null;
@@ -263,7 +263,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('B1 · each recorded co-representative signs a block of their own, with no e-signature anchor; §5.1 states their joinder');
+  // RESTATED 2026-10-05 (P20): each co-representative's block now carries markers of its own (Anthony, Q22: they sign in
+  // DocuSign beside the client), and still none of the client's or Havellin's four. The title said "no e-signature anchor".
+  group('B1 · each recorded co-representative signs a block of their own, with their own e-signature markers and none of the four; §5.1 states their joinder');
   {
     const sigPage = (h) => between(h, 'Signature Page', 'Havellin Palm Beach, LLC</div>');
     const coBlocks = (h) => sigPage(h).split('>Co-Signer</div>').slice(1);
@@ -280,9 +282,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(coBlocks(two)[1] || '', 'Eve Adler', label + ': each named');
       lacks(sigPage(one), '(if applicable', label + ': no blank "if applicable" block once one is recorded');
       has(sigPage(none), '(if applicable', label + ': the blank block when nobody is recorded');
-      // ⚠ NO ANCHOR ON A CO-SIGNER: the envelope carries no recipient for them.
+      // ⚠ NONE OF THE FOUR ON A CO-SIGNER (RESTATED 2026-10-05, P20: a co-signer's block carries its own pair instead,
+      // '/hcs<n>/' and '/hcd<n>/'; the four stay the client's and Havellin's, once each).
       ANCHORS.forEach((a) => eq([count(none, a), count(one, a), count(two, a)], [1, 1, 1], label + ': exactly one ' + a + ' anchor with 0, 1 and 2 co-representatives'));
-      ok(coBlocks(two).every((blk) => ANCHORS.every((a) => blk.indexOf(a) < 0)), label + ': ⚠ no anchor inside any co-signer block');
+      ok(coBlocks(two).every((blk) => ANCHORS.every((a) => blk.indexOf(a) < 0)), label + ': ⚠ none of the four inside any co-signer block');
+      eq(coBlocks(two).map((blk) => [count(blk, '/hcs1/'), count(blk, '/hcd1/'), count(blk, '/hcs2/'), count(blk, '/hcd2/')]), [[1, 1, 0, 0], [0, 0, 1, 1]],
+         label + ': each co-signer block carries its own pair, once, and not the other\'s');
+      eq([count(none, '/hcs'), count(none, '/hcd')], [0, 0], label + ': the blank block carries none: there is nobody to send it to');
       eq(docCtx().esignAnchorsPresent(two).filter((k) => ['clientSig', 'clientDate', 'havSig', 'havDate'].indexOf(k) >= 0).length, 4,
          label + ': the real measure still finds the four required anchors');
       // §5.1: the joinder, singular and plural, and nothing when nobody is recorded.
@@ -532,7 +538,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(readers('_agrClientCapacity'), { probateAgreementHtml: 2 }, 'the Client\'s capacity: §6.3 and the signature page');
     eq(readers('_agrEstateNoun'), { probateAgreementHtml: 5 }, 'the estate noun: §3.1, §5.3, §7.1 twice (once as a possessive) and §10');
     eq(readers('_agrTrustIsParty'), { _agrEstateNoun: 1, clientEstimateHtml: 1, probateAgreementHtml: 1 }, 'whether the trust is the party: §1.2, the noun and the client estimate\'s identity line');
-    eq(readers('_agrCoSigners'), { _agrCoRepRepresentation: 1, probateAgreementHtml: 1 }, 'the co-signers: the signature page and §5.1');
+    // RESTATED 2026-10-05 (P20): two more readers, the envelope's co-signers (esignCoSigners) and the one answer to whether
+    // their signatures are on record (agreementCoSignState).
+    eq(readers('_agrCoSigners'), { _agrCoRepRepresentation: 1, agreementCoSignState: 1, esignCoSigners: 1, probateAgreementHtml: 1 }, 'the co-signers: the signature page, §5.1, the envelope and the record');
     const body = noComments(fn('probateAgreementHtml'));
     ok(body.length > 20000, 'fixture: the estate form\'s live source (' + body.length + ')');
     ["dRow('Estate Attorney'", "dRow('Letters of Administration'", ">Client / Personal Representative<", "Notify Client / Personal Representative", "anyone the Personal Representative authorizes",
