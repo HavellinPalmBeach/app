@@ -475,13 +475,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const P = sandbox({
       fns: ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
-            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', '_planRooms', '_planRoomStatus',
+            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt',
             'planStageCard', 'planStageState', 'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'],
       vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore',
-             'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES'],
+             'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS'],
       stubs: {
         document: dom, isFormalDoc: () => false, _todayStr: () => '2026-09-24',
         _sfHost: () => '', renderVendorSourcing: () => '', renderVendorScorecard: () => '', renderDailyCloseBlock: () => '',
