@@ -701,7 +701,7 @@ Fixes: the estate-workflow audit's calls · Needs: Anthony's *"i'm good with all
 
 ## Questions for Anthony
 
-**Answered 2026-09-29, and the last three on 2026-09-30.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.
+**Answered 2026-09-29, the last three on 2026-09-30, and Q22 to Q27 on 2026-10-05.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.
 
 ### Answer these first
 
@@ -781,17 +781,23 @@ Fixes: the estate-workflow audit's calls · Needs: Anthony's *"i'm good with all
 ### New, from P19 (2026-10-05)
 
 - **Q22** A co-representative signs the agreement on paper and nothing records it: DocuSign records the agreement signed once the client and Anthony have, with a co-representative unsigned. Add each co-representative as a DocuSign signer, or file their wet signature as a signed record?  
-  *Recommendation:* Each co-representative signs in DocuSign beside the client (the same routing order, Anthony after them); on the *sign by hand* route the co-signed page is filed as a signed record. *(counsel bundle A11)*
+  *Recommendation:* Each co-representative signs in DocuSign beside the client (the same routing order, Anthony after them); on the *sign by hand* route the co-signed page is filed as a signed record. *(counsel bundle A11)*  
+  *Answer (2026-10-05):* "A, and yes to all the others." Agreed. *(used by P20)*
 - **Q23** A co-representative recorded after a line has already gone makes that line's approval incomplete, so it comes back on the next Approval Request. Ask the new co-trustee to ratify those lines, or leave them?  
-  *Recommendation:* Ratify: the next request lists them apart, as already released, for the new co-trustee's signature; nothing is undone.
+  *Recommendation:* Ratify: the next request lists them apart, as already released, for the new co-trustee's signature; nothing is undone.  
+  *Answer (2026-10-05):* Agreed. *(used by P20)*
 - **Q24** When one co-trustee signs a week before the other, the first signature can only be typed into the item record, where it reads *approval incomplete*. Let **Record approval** save a partial approval?  
-  *Recommendation:* Yes: record who signed and when, and keep the line open until everyone has; the request already prints *"Signed so far by…; still to sign…"*.
+  *Recommendation:* Yes: record who signed and when, and keep the line open until everyone has; the request already prints *"Signed so far by…; still to sign…"*.  
+  *Answer (2026-10-05):* Agreed. *(used by P20)*
 - **Q25** The staff rule is estate-only: a sale or gift to a Havellin person on a living client's job is neither refused nor flagged. Flag it there too?  
-  *Recommendation:* Flag it, never refuse: an owner gives their own things to whom they like, but the conflict should be on the record.
+  *Recommendation:* Flag it, never refuse: an owner gives their own things to whom they like, but the conflict should be on the record.  
+  *Answer (2026-10-05):* Agreed. *(used by P20)*
 - **Q26** A Probate or Contested Probate service recorded as a trust or *Neither* still prices the legal step and titles the agreement *Probate Estate Settlement*. Re-type it to Estate Settlement?  
-  *Recommendation:* Yes, before the estimate is approved: Edit Client flags it and names Estate Settlement; after approval the price stays as quoted.
+  *Recommendation:* Yes, before the estimate is approved: Edit Client flags it and names Estate Settlement; after approval the price stays as quoted.  
+  *Answer (2026-10-05):* **A**: flag it before the estimate is approved and suggest Estate Settlement; never switch automatically; once approved the price stays and a change goes through ✎ Edit estimate or a change order. Contested Probate on such a matter keeps its price, and only its title and wording change (a fight over a trust usually ends up in court too). On such a matter no client document names the service *Probate*, whichever of the two it is. *(used by P20)*
 - **Q27** The trust's title prints its date as *"Mar 3, 2015"*. Spell the month out in a legal title (*"March 3, 2015"*)?  
-  *Recommendation:* Yes.
+  *Recommendation:* Yes.  
+  *Answer (2026-10-05):* Agreed. *(used by P20)*
 
 ## Only Anthony can do these
 
