@@ -11041,6 +11041,16 @@ function _cePhases(e, job) {
   var hasDisp      = !!steps.disposition;                    // outbound disposition streams
   var deep         = (typeof isFormalDoc === 'function') ? isFormalDoc(job) : false;
   var hasColl      = (e.collections || []).length > 0;
+  // ⚠⚠ P19 (2026-10-03): AN ESTATE'S WORDS FOLLOW ITS MATTER, AS THE AGREEMENT'S DO. A trust-only matter's Exhibit A asked
+  // the trustee for Letters of Administration, routed proceeds to "the estate account", promised to flag property "claimed
+  // as exempt" (a §732.402 claim in a probate court) and, on a Probate service, a court filing "within the statutory
+  // deadline": a proceeding the matter does not have. The paper is docEstateAuthority's (the Letters on the probate track
+  // and on an unanswered matter, the Certification of Trust on a trust-only one, nothing on Neither); the court's words
+  // stand where invProbateRows holds (an unanswered matter included: the safe direction); the proceeds' holder is
+  // estateProceedsHolder's. Living work keeps every word it had. Client copy: Anthony approves it (the hand-back lists it).
+  var _ceAuth = isDeceased ? docEstateAuthority(job) : null;
+  var _ceCourt = !isDeceased || invProbateRows(job);
+  var _ceHolder = isDeceased ? estateProceedsHolder(job || { svc: svc }) : '';
   var P = [];
 
   // Vendors are named in the STAGE THEY ACTUALLY APPEAR IN rather than gathered
@@ -11099,7 +11109,10 @@ function _cePhases(e, job) {
   // from none of them. Saying that plainly is what the representative wants to read.
   var beforeBody;
   if (isDeceased) {
-    beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through how the engagement will run — the sequence, who will be on site, and what comes back to you and when. We confirm access, parking and any building or association rules, and brief the crew on the property before anyone arrives. We also confirm authority: a certified copy of the Letters of Administration or Testamentary on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.'
+    beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through how the engagement will run — the sequence, who will be on site, and what comes back to you and when. We confirm access, parking and any building or association rules, and brief the crew on the property before anyone arrives. We also confirm authority: '
+      + (!_ceAuth ? 'who is authorized to direct the work and approve releases, confirmed in writing, and a direct channel opened with any attorney advising you.'
+        : _ceAuth === ESTATE_AUTHORITIES.certification ? 'the successor trustee’s Certification of Trust on file, any limits on the trustee’s powers noted in writing, and a direct channel opened with your attorney.'
+        : 'a certified copy of the Letters of Administration or Testamentary on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.')
       + ' <strong>We work for you.</strong> If family members or beneficiaries will be at the property while we are there, tell us who to expect — we will be courteous to everyone present, but we take direction from you alone and nothing is released to anyone without your written authority.';
   } else if (isDownsizing) {
     beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through exactly how the work will run — the daily rhythm, who will be in your home, and the decisions you will be asked to make in every room. We confirm access, parking, elevator and building rules, and brief the crew on the property before anyone arrives.';
@@ -11110,7 +11123,12 @@ function _cePhases(e, job) {
   // and mostly repeated these per-phase asks. Folded in: access and the multi-party
   // point belong at the start, decisions belong to the sorting stage.
   var beforeNeed = isDeceased
-    ? 'A signed engagement agreement, the deposit, and a certified copy of the Letters of Administration or Testamentary, with any limits on that authority noted in writing. If particular items are designated to particular people, we need that list from you or from counsel before anything is handled — we do not need the will itself.'
+    ? 'A signed engagement agreement, the deposit, and '
+      + (!_ceAuth ? 'written confirmation of who is authorized to direct the work and approve releases.'
+        : _ceAuth === ESTATE_AUTHORITIES.certification ? 'the successor trustee’s Certification of Trust, with any limits on the trustee’s powers noted in writing.'
+        : 'a certified copy of the Letters of Administration or Testamentary, with any limits on that authority noted in writing.')
+      + ' If particular items are designated to particular people, we need that list from you or from counsel before anything is handled — we do not need the will '
+      + (_ceAuth === ESTATE_AUTHORITIES.certification ? 'or the trust instrument itself.' : 'itself.')
     : 'A signed engagement agreement, the deposit, and one named person who can make the final call on what stays and what goes.';
   beforeNeed += ' Keys or codes, parking, and any building, HOA or elevator rules, confirmed before the first day.';
   if (e.heirs) {
@@ -11168,10 +11186,10 @@ function _cePhases(e, job) {
     sortNeed = 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.';
     sortDone = 'A room is complete when every item in it has been routed and the keep list is confirmed with you in writing.';
   } else if (isDeceased && docScope === 'full') {
-    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, property that may be claimed as exempt is flagged for your attention, and anything that may carry real value is held for the appropriate specialist before it moves. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, ' + (_ceCourt ? 'property that may be claimed as exempt is flagged for your attention, ' : '') + 'and anything that may carry real value is held for the appropriate specialist before it moves. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
     sortNeed = 'The list of any items designated to a named person, so they are set aside before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The inventory comes to you and to counsel. <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = deep
-      ? 'A room is complete when every item in it is catalogued and photographed, specific bequests and exempt property are set aside and recorded, and the room\'s inventory has been delivered to the representative and counsel.'
+      ? 'A room is complete when every item in it is catalogued and photographed, specific bequests ' + (_ceCourt ? 'and exempt property are' : 'are') + ' set aside and recorded, and the room\'s inventory has been delivered to the representative and counsel.'
       : 'A room is complete when every item in it is catalogued and photographed, specific bequests are set aside, and the room\'s inventory has been delivered to the representative.';
   } else if (isDeceased && captureOnly) {
     sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location and condition. <strong>Valuation is not part of this engagement</strong> — the photographed list goes to you and to counsel, whose office states the values'
@@ -11211,9 +11229,9 @@ function _cePhases(e, job) {
     // because on a court-supervised matter "we gave it to the daughter" is not a
     // record. We do not arbitrate between beneficiaries — we hold and wait.
     dispTitle = 'Distribution &amp; Disposition';
-    dispBody = '<strong>Nothing leaves the property until the representative has reviewed the inventory and authorised it in writing.</strong> Once that authority is given, and only as you direct: designated items are released to the people you name, against signed receipts; property claimed as exempt is set aside; and the remainder is routed to sale, donation or disposal, with the outcome recorded against its inventory line. Sensitive documents are shredded, and your Transition Concierge is physically present for the pickup of anything valuable — a valuable item does not leave this property unattended.';
+    dispBody = '<strong>Nothing leaves the property until the representative has reviewed the inventory and authorised it in writing.</strong> Once that authority is given, and only as you direct: designated items are released to the people you name, against signed receipts; ' + (_ceCourt ? 'property claimed as exempt is set aside; ' : '') + 'and the remainder is routed to sale, donation or disposal, with the outcome recorded against its inventory line. Sensitive documents are shredded, and your Transition Concierge is physically present for the pickup of anything valuable — a valuable item does not leave this property unattended.';
     dispNeed = 'Written authority to proceed, once you and counsel have read the inventory. Where beneficiaries disagree about an item, we hold it and wait for your instruction — we do not arbitrate and we do not release anything on a verbal request.';
-    dispDone = 'Every disposition stream is cleared, each outcome is recorded against its inventory line, a signed receipt is held for every item released to a beneficiary, and any proceeds are routed to the estate account.';
+    dispDone = 'Every disposition stream is cleared, each outcome is recorded against its inventory line, a signed receipt is held for every item released to a beneficiary, and any proceeds are routed to ' + ((_ceHolder === 'the estate' || _ceHolder === 'the trust') ? _ceHolder + ' account' : _ceHolder) + '.';
   } else if (hasDisp) {
     dispTitle = 'Packing &amp; Disposition';
     dispBody = 'Every decision from the previous stage is carried out. Items for sale go to the consignment, auction or dealer partner named in the plan; donations are collected and receipted for your tax records; disposal is hauled; sensitive documents are shredded. Retained items are packed and labeled. Your Transition Concierge is physically present for the pickup of anything valuable — a valuable item does not leave this property unattended.';
@@ -11267,11 +11285,11 @@ function _cePhases(e, job) {
   if (e.svc !== 'prep' && e.prepEnabled && (e.prepItems || []).some(function(p){ return p.cost > 0; })) {
     closeBody += ' The market-preparation work itemised below runs from here — we source each trade, hold the schedule, and inspect the work against the scope you approved.';
   }
-  if (hasLegal && docScope === 'full') {
+  if (hasLegal && docScope === 'full' && _ceCourt) {
     closeBody += ' The verified inventory is prepared with date-of-death fair market value for every asset, '
       + (weAppraise ? 'appraisals attached as supporting documentation, ' : '')
       + 'non-probate assets excluded, and the whole package served on interested parties and filed within the statutory deadline.';
-  } else if (hasLegal && captureOnly) {
+  } else if (hasLegal && captureOnly && _ceCourt) {
     closeBody += ' The photographed, room-by-room list is delivered to counsel in a form their office can value and file within the statutory deadline.';
   }
   // What the client is left holding. This used to be a separate section after the
@@ -11300,7 +11318,9 @@ function _cePhases(e, job) {
   // valued inventory and the appraisals are counsel's; on a no-documentation job none of it
   // is ours to promise.
   if (deep && docScope === 'full') {
-    records.push('A verified inventory to the standard the court requires, carrying date-of-death fair market value for every asset');
+    records.push(_ceCourt
+      ? 'A verified inventory to the standard the court requires, carrying date-of-death fair market value for every asset'
+      : 'A verified inventory to a formal documentation standard, carrying date-of-death fair market value for every asset');
     records.push('A chain-of-custody log for each documented item — who handled it, when, and where it went');
     if (weAppraise) records.push('Independent appraisals attached as supporting documentation');
     records.push('The complete record retained for seven years');
@@ -11309,13 +11329,13 @@ function _cePhases(e, job) {
     records.push('The complete record retained for seven years');
   }
   P.push({
-    title: 'Close-Out' + (hasLegal ? ' &amp; Court Filing' : ''),
+    title: 'Close-Out' + (hasLegal && _ceCourt ? ' &amp; Court Filing' : ''),
     body: closeBody,
     need: isDeceased
-      ? 'Sign-off on the final disposition summary. A closing walkthrough with us if you want one — on an estate it is often the attorney or a family member standing in, and the records do not depend on anyone attending.'
+      ? 'Sign-off on the Disposition Ledger, the final record of where every item went. A closing walkthrough with us if you want one — on an estate it is often the attorney or a family member standing in, and the records do not depend on anyone attending.'
       : 'A final walkthrough with us, and sign-off on the disposition summary.',
     done: deep
-      ? 'The property is confirmed clear and photographed, the financial close reconciles, the filing is complete, and the full documentation package is complete and retained.'
+      ? 'The property is confirmed clear and photographed, the financial close reconciles, ' + (_ceCourt ? 'the filing is complete, ' : '') + 'and the full documentation package is complete and retained.'
       : 'The property is confirmed clear and photographed, the financial close reconciles, and the complete documentation package is handed over to you.',
     receive: records
   });
@@ -28276,6 +28296,30 @@ function _invScheduleSection(title, list) {
   return { html: h, total: total };
 }
 
+// ⚠⚠ WHO SIGNS EACH SCHEDULE, A LINE APIECE ONCE CO-REPRESENTATIVES ARE RECORDED (P19, Anthony's call 4: record every
+// co-executor and co-trustee). Both schedules carried one blank line, so a matter with two personal representatives, or
+// two trustees, was handed a page only one of them could sign. The Court Inventory is ADOPTED by the personal
+// representatives (`court`), the Trust Schedule RECEIVED by the trustees (`trustee`, invDocContractBlock's kind names).
+// On a pour-over (Both) jobFiduciaries holds both kinds, so a fiduciary whose recorded role names a trustee receives
+// the trust's schedule and does not adopt the estate's; on a trust-only matter every fiduciary is a trustee; on probate,
+// Neither or an unanswered matter (read as probate) every fiduciary adopts the court's. One person or none: the blank
+// line each schedule always had, unchanged.
+function scheduleSigners(job, kind) {
+  var d = matterDef(job);
+  var namesTrustee = function (f) { return /trustee/i.test(f.role || ''); };
+  return jobFiduciaries(job).filter(function (f) {
+    return kind === 'trustee' ? ((d && d.trust && !d.onProbate) || namesTrustee(f)) : (!(d && d.trust) || !namesTrustee(f));
+  });
+}
+// The named signature lines: the act ("Reviewed and adopted by"), a line and a date, and under it who signs and in what
+// capacity. Each line kept whole on a printed page.
+function scheduleSignLines(signers, act, capacity) {
+  return signers.map(function (f, i) {
+    return '<div style="margin-top:' + (i ? '14px' : '18px') + ';font-size:11px;break-inside:avoid;page-break-inside:avoid;">' + act
+      + ': __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">' + esc(f.name) + ' &middot; ' + capacity + '</span></div>';
+  }).join('');
+}
+
 function printCourtInventory(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var _blocked = invDocContractBlock(job, 'court');
@@ -28425,6 +28469,10 @@ function printCourtInventory(jobId, opt) {
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
     + (draft
         ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be adopted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; ' + esc(_draftFix.join('; ')) + '.</div>'
+        // ⚠ ONE LINE PER PERSONAL REPRESENTATIVE once a co-representative is recorded (P19, scheduleSigners); the one
+        // blank line otherwise, as before.
+        : scheduleSigners(job, 'court').length > 1
+        ? scheduleSignLines(scheduleSigners(job, 'court'), 'Reviewed and adopted by', 'Personal Representative / authorized fiduciary')
         : '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>')
     + '</div>';
   // ⚠ THE PROBATE PACKAGE ASKS FOR THE PAGE ITSELF (`opt.asHtml`, 2026-10-01, P17), so what counsel receives is byte for
@@ -28512,6 +28560,9 @@ function printTrustSchedule(jobId, opt) {
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Schedule of Tangible Personal Property Held in Trust</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + esc(job.name || '') + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
+    // ⚠ THE TRUST, NAMED (P19): the instrument this schedule is for, where the record holds its name (trustInstrumentTitle:
+    // "The <name>, dated <date>"), and never on a matter recorded as having no trust in it.
+    + ((!_noTrust && trustInstrumentTitle(job)) ? '<div style="font-size:12px;margin-bottom:2px;">' + trustInstrumentTitle(job) + '</div>' : '')
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:8px;">Prepared for the successor trustee&rsquo;s use in administering the trust under chapter 736, Florida Statutes.</div>'
@@ -28563,6 +28614,9 @@ function printTrustSchedule(jobId, opt) {
         // court filing; a successor trustee files nothing — they take this into the trust's
         // records and carry its figures into the accounting. Naming the act wrongly on a
         // signature line is the same class of claim the $0 FINAL was.
+        // ⚠ ONE LINE PER TRUSTEE once a co-trustee is recorded (P19, scheduleSigners); the one blank line otherwise.
+        : scheduleSigners(job, 'trustee').length > 1
+        ? scheduleSignLines(scheduleSigners(job, 'trustee'), 'Received for the trust&rsquo;s records by', 'Successor Trustee')
         : '<div style="margin-top:18px;font-size:11px;">Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Successor Trustee</span></div>')
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
@@ -41774,16 +41828,17 @@ function agrPriceAdjustments(est, party) {
 // carving all of them out beside an Exhibit A that prices one. Without it the tier answers alone, as before.
 function _agrScopeServices(docScope, job, est) {
   var _duty = appraisalDuty(docScope, job, est);
+  var _c = _agrCounsel(job);   // P19: the trustee's counsel on a trust, the Client's advisers on Neither
   var _listed = _duty === 'listed'
-    ? 'Havellin will coordinate the professional appraisals listed in Exhibit A (' + esc(estimateAppraiserNames(est)) + '); any other appraisal remains the responsibility of the Client and the estate attorney. '
+    ? 'Havellin will coordinate the professional appraisals listed in Exhibit A (' + esc(estimateAppraiserNames(est)) + '); any other appraisal remains the responsibility of the Client and ' + _c.withClient + '. '
     : '';
   if (docScope === 'none') {
-    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: sorting, staging, and set-aside of all property contents against the inventory prepared by the estate attorney\'s office; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>The inventory and valuation of estate assets are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney; Havellin works from the schedule they provide. ' + _listed + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+    return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: sorting, staging, and set-aside of all property contents against the inventory prepared by ' + _c.office + '; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. <strong>The inventory and valuation of estate assets are not within this engagement</strong> and remain the responsibility of the Client and ' + _c.withClient + '; Havellin works from the schedule they provide. ' + _listed + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
   }
   if (docScope === 'capture') {
     return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room photography and listing of property contents (description, location and condition, without valuation); sorting and staging; sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. ' + (_listed
-      ? '<strong>Valuation of estate assets is not within this engagement</strong> and remains the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. ' + _listed
-      : '<strong>Valuation of estate assets and the coordination of professional appraisals are not within this engagement</strong> and remain the responsibility of the Client and the estate attorney, who receive Havellin\'s photographed list for that purpose. ') + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
+      ? '<strong>Valuation of estate assets is not within this engagement</strong> and remains the responsibility of the Client and ' + _c.withClient + ', who receive Havellin\'s photographed list for that purpose. ' + _listed
+      : '<strong>Valuation of estate assets and the coordination of professional appraisals are not within this engagement</strong> and remain the responsibility of the Client and ' + _c.withClient + ', who receive Havellin\'s photographed list for that purpose. ') + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
   }
   // ⚠ Both valued tiers land here. Only `appraisals` puts the appraisers with Havellin — see
   // weArrangeAppraisals — and on `values` the absence is stated rather than left to inference,
@@ -41792,7 +41847,7 @@ function _agrScopeServices(docScope, job, est) {
   return 'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the Client and authorized by the ' + _agrApprover(job) + '. Services include, as applicable: room-by-room asset documentation and inventory; sorting, staging, and photographing all property contents; '
     + (_weAppraise ? 'appraisal coordination for all asset categories; ' : '')
     + 'sale, auction, and liquidation coordination; charitable donation logistics with tax documentation; disposal and waste management; family distribution and documented handoff to beneficiaries; and vendor coordination throughout. '
-    + (_weAppraise ? '' : _listed ? _listed : '<strong>The coordination of professional appraisals is not within this engagement</strong> and remains the responsibility of the Client and the estate attorney, who receive Havellin\'s list of the items it believes warrant one. ')
+    + (_weAppraise ? '' : _listed ? _listed : '<strong>The coordination of professional appraisals is not within this engagement</strong> and remains the responsibility of the Client and ' + _c.withClient + ', who receive Havellin\'s list of the items it believes warrant one. ')
     + 'Where applicable, property preparation for sale is included as reflected in Exhibit A.';
 }
 // ⚠ WHO APPROVES A DISPOSITION IS A FACT ABOUT THE MATTER, NOT ABOUT THE SERVICE SOLD. The
@@ -41807,6 +41862,110 @@ function _agrApprover(job) {
   if (d.trust) return 'successor trustee';
   if (d.onProbate) return 'Personal Representative';
   return 'Client';                                    // neither: no court, no trust
+}
+// ⚠⚠ P19 (2026-10-03; Anthony: "i'm good with all of your calls. build it all") — THE ESTATE FORM STOPS READING AS
+// PROBATE ON A TRUST. Measured on the real builder before the change, a trust-only matter's agreement named "Estate of
+// <decedent>" as the party, "Letters of Administration: Pending", a "Probate Case Number" and a "Court" to fill in, an
+// "Estate Attorney", "Client / Personal Representative" on the signature page and in §6.3, a "co-PR" co-signer, and "the
+// Personal Representative" three times in §7.1: a proceeding, an officer and a paper the matter does not have, on the
+// document the trustee signs. Each helper below answers one of those nouns by matter, reading the catalogue's flags as
+// _agrApprover does, and each keeps today's words on an UNANSWERED matter byte for byte (invProbateRows' safe direction:
+// a matter papered before the question existed keeps its probate wording). A test compares the unanswered form with the
+// probate one whole, and pins each clause's old words.
+// The capacity the Client signs and is notified in: "Client / " and this matter's approver (§6.3, the signature page).
+// Where the approver IS the Client (Neither: no court and no trust) it is "Client" alone, never "Client / Client".
+function _agrClientCapacity(job) {
+  var a = _agrApprover(job);
+  return a === 'Client' ? a : 'Client / ' + a;
+}
+// Who counsel is, in the agreement's words: one table, read by §1.2's attorney row, §2's scope arms and §2.1's
+// exclusion. On a trust it is the trustee's attorney (the P18 Trust card's label for the same fields); on Neither the
+// Client may have none, so §2 names "their advisers", as §5.2's Neither arm already did. Probate, Both (a pour-over will
+// has an estate attorney) and an unanswered matter keep today's words.
+function _agrCounsel(job) {
+  var d = matterDef(job);
+  if (!d || d.onProbate) return { label: 'Estate Attorney', withClient: 'the estate attorney', office: 'the estate attorney\'s office',
+    exclusion: 'legal representation or probate court filings (handled by estate attorney)' };
+  if (d.trust) return { label: 'Trustee\'s Attorney', withClient: 'their counsel', office: 'the trustee or their counsel',
+    exclusion: 'legal representation or court filings (handled by the trustee\'s counsel)' };
+  return { label: 'Attorney', withClient: 'their advisers', office: 'the Client or their advisers',
+    exclusion: 'legal representation or court filings (handled by the Client\'s own counsel)' };
+}
+// Whether the party the Client acts for is the trust: a trust-only matter (no probate estate beside it). Read by §1.2's
+// party row and by the estate noun below, so the two cannot disagree about who the party is.
+function _agrTrustIsParty(job) {
+  var d = matterDef(job);
+  return !!(d && d.trust && !d.onProbate);
+}
+// "The estate" where the form names the party that pays, is acted for or accounts, which on a trust-only matter is the
+// trust: the fee table's vendors, §5.3's lead, §7.1 and §10. Both keeps "the estate" (a pour-over will has one), and so
+// do Neither and an unanswered matter. "Estate" as the matter's own word (estate settlement, estate records, the
+// estate's project folder) is left alone: a trust matter is still the settling of a decedent's estate.
+function _agrEstateNoun(job) {
+  return _agrTrustIsParty(job) ? 'the trust' : 'the estate';
+}
+// Section 5's own title named probate on every matter. The number never moves; the words do (§5.2's rule).
+function _agrAuthorityTitle(job) {
+  var d = matterDef(job);
+  if (!d || (d.onProbate && !d.trust)) return 'Authority, Probate &amp; Legal Compliance';
+  if (d.onProbate && d.trust) return 'Authority, Probate, Trust &amp; Legal Compliance';
+  if (d.trust) return 'Authority, Trust &amp; Legal Compliance';
+  return 'Authority &amp; Legal Compliance';
+}
+// ⚠⚠ EVERY RECORDED CO-REPRESENTATIVE SIGNS (P19, Anthony's call 4: record every co-executor and co-trustee): each
+// fiduciary jobFiduciaries records beyond the representative intake names (the `primary`), one wet-sign block apiece.
+// ⚠ NO E-SIGNATURE ANCHOR ON THEIRS, STILL: the envelope carries the Client (order 1), Anthony (2) and agreements@ (3),
+// and an anchor with no recipient leaves an envelope at `sent` for good (the note on the co-signer block). A recorded
+// co-representative signs a printed copy; nothing in the app watches for that signature (the hand-back says so).
+function _agrCoSigners(job) {
+  return jobFiduciaries(job).filter(function (f) { return !f.primary; });
+}
+// The blank co-signer block's caption, where nobody is recorded beside the Client: who might sign, by matter.
+function _agrCoSignerCaption(job) {
+  var d = matterDef(job);
+  if (!d || (d.onProbate && !d.trust)) return '(if applicable — second beneficiary or co-PR)';
+  if (d.onProbate && d.trust) return '(if applicable — second beneficiary, co-PR or co-trustee)';
+  if (d.trust) return '(if applicable — second beneficiary or co-trustee)';
+  return '(if applicable — second beneficiary)';
+}
+// ⚠ THE CO-REPRESENTATIVES' JOINDER, STATED WHERE ANY IS RECORDED (P19; drafted, not reviewed: counsel bundle). A
+// contract signed by one fiduciary of several binds the others only if they joined it or the signer could bind them,
+// and Anthony's call 4 has a release wait on every one of their approvals; §5.1 says both. Absent with no
+// co-representative recorded, so a single representative's form reads exactly as before.
+function _agrCoRepRepresentation(job) {
+  var n = _agrCoSigners(job).length;
+  if (!n) return '';
+  return n === 1
+    ? 'The Client acts together with the co-representative named on the signature page. That co-representative has signed this Agreement, or the Client holds written authority to bind them to it, and every written approval this Agreement requires is given by the Client and the co-representative together.'
+    : 'The Client acts together with the co-representatives named on the signature page. Each of them has signed this Agreement, or the Client holds written authority to bind each of them to it, and every written approval this Agreement requires is given by the Client and every co-representative.';
+}
+// ⚠⚠ STAFF NEVER BUY (P19, Anthony's call 6: extend the firearms rule to all estate property, "a conflict of interest
+// otherwise"; drafted, not reviewed: counsel bundle). Havellin prices, sorts and routes the property it would be buying,
+// so a purchase by anyone on the job, or a cut of a sale it arranged, is self-dealing against the fiduciary it serves.
+// §5.4, after the disposition table, on the estate form only: the standard form is untouched (living clients are out of
+// scope). ⚠ IT IS LIMITED TO THE CONTENTS AND OTHER TANGIBLE PERSONAL PROPERTY because §2.1 leaves real property sales to
+// a separate agreement (Team Ashley & Anthony at Douglas Elliman), whose commission this must not be read to forbid.
+var AGR_NO_PURCHASE = 'Havellin, its owners, team members and contractors will not purchase or otherwise acquire any of the contents of the property, or any other tangible personal property of the estate or the trust, whether directly or through any other person, and will take no commission, percentage or other share of the proceeds of any sale of that property.';
+// The paper a document names as the representative's authority (P19): estateAuthority, the foundation's one answer,
+// once the matter is answered (the Letters on the probate track, Both included; the Certification of Trust on a
+// trust-only matter; nothing on Neither). ⚠ AN UNANSWERED MATTER KEEPS THE LETTERS ON THE DOCUMENTS, where
+// estateAuthority answers nothing for an Estate Settlement: activation waits on no paper there, but every estate
+// document papered before the question existed named the Letters, and taking them off on the strength of a question
+// nobody was asked is the bad failure (invProbateRows' rule). Read by the agreement's §1.2 and the client estimate.
+function docEstateAuthority(job) {
+  return matterDef(job) ? estateAuthority(job) : ESTATE_AUTHORITIES.letters;
+}
+// The trust, named as an instrument is named (P19): "The Adler Family Trust, dated Mar 3, 2015". One namer, read by the
+// agreement's §1.2 and the Trust Schedule's header. With `blank` (a form someone signs) a half not recorded is a line
+// to complete; without it (a schedule, which states only what the record holds) a missing date is left out and a
+// missing name answers '' (a date alone names no trust). A name already beginning "The" is not given a second.
+function trustInstrumentTitle(job, blank) {
+  var n = String((job && job.trustName) || '').trim();
+  var d = String((job && job.trustDate) || '').trim();
+  if (!n && !blank) return '';
+  var name = n ? (/^the\s/i.test(n) ? esc(n) : 'The ' + esc(n)) : blank;
+  var date = d ? esc(fmtDate2(d)) : (blank ? '____________________' : '');
+  return name + (date ? ', dated ' + date : '');
 }
 // ⚠⚠ THE SENTENCE THAT KEEPS HAVELLIN OUT OF FIDUCIARY ACCOUNTING WORK, and it belongs on the
 // CONTRACT as well as on the schedule's own face. Putting it only on the document would leave
@@ -42083,7 +42242,16 @@ function probateAgreementHtml(job, est) {
   content += '</table>';
   content += subHdr('1.2 Client / Authorized Party');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
-  content += dRow('Estate', bb(estateName));
+  // ⚠ THE PARTY THE CLIENT ACTS FOR, BY MATTER (P19): on a trust-only matter the trust, named as the instrument
+  // (trustInstrumentTitle, with a line to complete where its name or date is not recorded), and the decedent beside it;
+  // a pour-over (Both) keeps the estate and adds the trust; Neither and an unanswered matter keep the estate row alone.
+  if (_agrTrustIsParty(job)) {
+    content += dRow('Trust', bb(trustInstrumentTitle(job, _blank)));
+    content += dRow('Decedent', clientName);
+  } else {
+    content += dRow('Estate', bb(estateName));
+    if (matterDef(job) && matterDef(job).trust) content += dRow('Trust', bb(trustInstrumentTitle(job, _blank)));
+  }
   content += dRow('Authorized Representative', bb(executorName));
   // ⚠ THE ROLE STAYS ON THIS FORM, AND IT IS NOT THE TICK BOX THAT CAME OFF THE STANDARD ONE.
   // It is the CAPACITY that lets this person bind the estate — the same thing `Managing Member`
@@ -42098,9 +42266,14 @@ function probateAgreementHtml(job, est) {
   content += dRow('Mailing Address', clientAddr);
   content += dRow('Email', clientEmail);
   content += dRow('Phone', clientPhone);
-  content += dRow('Estate Attorney', attyName + (attyFirm ? ' &middot; '+attyFirm : ''));
+  content += dRow(_agrCounsel(job).label, attyName + (attyFirm ? ' &middot; '+attyFirm : ''));
   content += dRow('Attorney Phone', attyPhone);
-  content += dRow('Letters of Administration', job.lettersDate ? fmtDate2(job.lettersDate) : letters);
+  // ⚠ THE PAPER THAT PROVES THE CLIENT'S AUTHORITY, BY MATTER (P19; docEstateAuthority): the Letters as before on the
+  // probate track and on an unanswered matter; the Certification of Trust (§736.1017) on a trust-only matter, read off the
+  // same stored answer (job.executorAuth), whose NAME follows the matter; no row on Neither, which has no such paper.
+  var _agrAuth = docEstateAuthority(job);
+  if (_agrAuth === ESTATE_AUTHORITIES.letters) content += dRow(_agrAuth.doc, job.lettersDate ? fmtDate2(job.lettersDate) : letters);
+  else if (_agrAuth) content += dRow(_agrAuth.doc, ({ received: 'Attached', pending: 'Pending', notneeded: 'N/A' })[job.executorAuth] || 'Pending');
   content += '</table>';
   content += subHdr('1.3 Property');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
@@ -42117,15 +42290,19 @@ function probateAgreementHtml(job, est) {
       '<span style="color:#A32D2D;">' + excl.map(function(r){ return esc(r.name); }).join(', ') + '</span> — not within the scope of this Agreement; no work will be performed in ' + (excl.length === 1 ? 'this space' : 'these spaces') + '.');
     return out;
   })();
-  content += dRow('Probate Case Number', probateCase);
-  content += dRow('Court','_______________________________________________');
+  // ⚠ A CASE NUMBER AND A COURT ONLY WHERE THERE IS A COURT (P19): invProbateRows, the one predicate (an unanswered
+  // matter keeps them, as Probate and Both have them; a trust-only matter and Neither have no court to name).
+  if (invProbateRows(job)) {
+    content += dRow('Probate Case Number', probateCase);
+    content += dRow('Court','_______________________________________________');
+  }
   content += '</table>';
   // SECTION 2: SCOPE
   content += secHdr(2,'Scope of Services');
   content += pp(_agrScopeServices(docScope, job, est));
   content += pp('All disposition decisions — including sale, auction, donation, or disposal of any item — require written authorization from the ' + _agrApprover(job) + ' or authorized signatory prior to execution. The specific scope, estimated hours, and projected costs are detailed in Exhibit A (attached estimate), which is incorporated into this Agreement by reference.');
   content += subHdr('2.1 Explicit Exclusions');
-  content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: legal representation or probate court filings (handled by estate attorney); tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
+  content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: ' + _agrCounsel(job).exclusion + '; tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
   // SECTION 3: FEES
   content += secHdr(3,'Fees, Billing &amp; Payment Terms');
   // The rate card below STAYS on a fixed-fee engagement and is load-bearing there: the
@@ -42155,7 +42332,7 @@ function probateAgreementHtml(job, est) {
       // below it charges 30%. On an estate matter with prep vendors the table would state
       // both without reconciling them, in front of a court that reviews the expenses.
       : ['Third-Party Vendors', 'At cost — no fee',
-         'Vendors bill the estate directly at cost. Havellin adds no markup to any vendor invoice; the concierge time spent coordinating them is '
+         'Vendors bill ' + _agrEstateNoun(job) + ' directly at cost. Havellin adds no markup to any vendor invoice; the concierge time spent coordinating them is '
          // On a fixed fee there is no TC rate billing anything — the coordination is inside the flat fee.
          + (isFixedAgr ? 'included in the fixed project fee below' : 'billed at the TC rate above')
          + (_agrHasPrepVendors(est) ? ', except for the home sale preparation vendors in the row below.' : '.')])
@@ -42276,7 +42453,7 @@ function probateAgreementHtml(job, est) {
   content += dRow('Havellin Authorization','Signature: _________________________________ &nbsp;&nbsp; Date: _________________');
   content += '</table>';
   // SECTION 5: AUTHORITY
-  content += secHdr(5,'Authority, Probate &amp; Legal Compliance');
+  content += secHdr(5, _agrAuthorityTitle(job));
   content += subHdr('5.1 Client Representations');
   content += pp('By signing this Agreement, the Client represents and warrants the following:');
   var reps = [
@@ -42295,6 +42472,8 @@ function probateAgreementHtml(job, est) {
   if (matterDef(job) && matterDef(job).trust) {
     reps.splice(2, 0, 'If acting as successor trustee, the Client has accepted the trusteeship and holds authority under the trust instrument to direct the disposition of the property described in this Agreement.');
   }
+  // ⚠ AND WHERE A CO-REPRESENTATIVE IS RECORDED, THEIR JOINDER (P19; _agrCoRepRepresentation). Appended, so no rep moves.
+  if (_agrCoRepRepresentation(job)) reps.push(_agrCoRepRepresentation(job));
   content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
   reps.forEach(function(r){ content += '<li style="margin-bottom:.3rem;">'+r+'</li>'; });
   content += '</ol>';
@@ -42305,7 +42484,7 @@ function probateAgreementHtml(job, est) {
   comp.forEach(function(c){ content += '<li style="margin-bottom:.3rem;">'+c+'</li>'; });
   content += '</ol>';
   content += subHdr('5.3 Asset Disposition Authorization');
-  content += pp('The Client authorizes Havellin to take the following actions on behalf of the estate, subject to the written approval thresholds below:');
+  content += pp('The Client authorizes Havellin to take the following actions on behalf of ' + _agrEstateNoun(job) + ', subject to the written approval thresholds below:');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Action</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Approval Required</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Threshold</th></tr></thead><tbody>';
   // ⚠ FIVE ROWS SAID "Written PR approval" ON A FORM THAT ISSUES ON MATTERS WITH NO PR. One
@@ -42336,6 +42515,10 @@ function probateAgreementHtml(job, est) {
     content += '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[0]+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[1]+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[2]+'</td></tr>';
   });
   content += '</tbody></table>';
+  // ⚠⚠ §5.4: STAFF NEVER BUY (P19, Anthony's call 6) — see AGR_NO_PURCHASE. A new last subsection of §5, so nothing is
+  // renumbered: Termination, Dispute Resolution and General Provisions keep the numbers agreements already issued cite.
+  content += subHdr('5.4 No Purchase by Havellin');
+  content += pp(AGR_NO_PURCHASE);
   // SECTION 6: LIABILITY
   content += secHdr(6,'Liability, Insurance &amp; Damage Protocol');
   content += subHdr('6.1 Havellin Insurance Coverage');
@@ -42356,7 +42539,7 @@ function probateAgreementHtml(job, est) {
   content += subHdr('6.3 Damage Incident Protocol');
   var proto = [
     'Havellin team member discovers or causes damage — document immediately with photographs and written description',
-    'Notify Client / Personal Representative within 24 hours of discovery',
+    'Notify ' + _agrClientCapacity(job) + ' within 24 hours of discovery',
     'Preserve damaged item in place — do not move, repair, or dispose of without Client authorization',
     'Submit written incident report to Anthony Graziano within 24 hours',
     'Engage insurance carrier if damage exceeds $500',
@@ -42417,8 +42600,8 @@ function probateAgreementHtml(job, est) {
     if (d.trust) return 'the trust&rsquo;s schedule of property';
     return 'the schedule of contents';
   })();
-  content += pp('Havellin photographs and video-records the property, its contents, and all significant assets as a necessary part of the Services — for condition documentation, asset identification, ' + _agrInstrument + ', appraisal support, and the chain-of-custody record. This documentation is not optional and is not separately charged; it is how the estate is accounted for.');
-  content += pp('Documentation Media is stored in the estate&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court. It is retained for seven years as part of the fiduciary record. It is never sold or licensed. It is not shared with any third party except a vendor performing Services on this engagement, or as required by law or court order, and is not published except as Section 7.2 permits.');
+  content += pp('Havellin photographs and video-records the property, its contents, and all significant assets as a necessary part of the Services — for condition documentation, asset identification, ' + _agrInstrument + ', appraisal support, and the chain-of-custody record. This documentation is not optional and is not separately charged; it is how ' + _agrEstateNoun(job) + ' is accounted for.');
+  content += pp('Documentation Media is stored in the estate&rsquo;s own project folder on Havellin&rsquo;s Google Drive, accessible only to Havellin personnel assigned to this engagement and to anyone the ' + _agrApprover(job) + ' authorizes in writing — counsel, the appraiser' + (invProbateRows(job) ? ', the court' : '') + '. It is retained for seven years as part of the fiduciary record. It is never sold or licensed. It is not shared with any third party except a vendor performing Services on this engagement, or as required by law or court order, and is not published except as Section 7.2 permits.');
   // ⚠⚠ THE SAME CLAUSE AND THE SAME BOX AS THE LIVING-CLIENT FORM'S §10.2, and the flat
   // prohibition this replaces lasted one day — the reasoning for the reversal is written out on
   // `marketingUseParas`, because it is a judgement about the business rather than about this form.
@@ -42440,8 +42623,8 @@ function probateAgreementHtml(job, est) {
   // It reads to me as covering the estate's OWN documents we encounter — the will, deeds,
   // financial records — rather than records we create, but a contract is construed against
   // its drafter and that is not a thing to leave to inference on a matter a court may read.
-  content += pp('Havellin also maintains a written record of the estate&rsquo;s contents and their disposition: an itemized list of the property documented, its location and condition, the disposition authorized for each item, the date it was carried out, the person who authorized it, and, where an item was released to a beneficiary or to a third party, the name of that recipient and the reference of any receipt obtained under Section 5.3 (together with the Documentation Media, the &ldquo;Project Records&rdquo;). Where an item was sold or consigned and proceeds were actually received, the Project Records state the amount received, any fees deducted, and the net amount.');
-  content += pp('The Project Records are Havellin&rsquo;s work product, prepared for the Personal Representative and forming part of the fiduciary record of this engagement. They are held on the terms stated above and are retained for seven years. Havellin will provide them to the Personal Representative, to counsel of record, and to any other person the Personal Representative authorizes in writing, and will produce them as required by law or court order. This obligation survives completion of the engagement, and the Project Records are not Client documents for the purposes of the return-or-destroy provision in Section 7. No part of the Project Records is used for marketing or promotional purposes, and Section 7.2 does not apply to them.');
+  content += pp('Havellin also maintains a written record of the estate&rsquo;s contents and their disposition: an itemized list of the property documented, its location and condition, the disposition authorized for each item, the date it was carried out, the person who authorized it, and, where an item was released to a beneficiary or to a third party, the name of that recipient and the reference of any receipt obtained under Section 5.3 (together with the Documentation Media, the &ldquo;Project Records&rdquo;). Where an item was sold or consigned and proceeds were actually received, the Project Records state the amount received, any fees deducted, and the net amount. At the close of the engagement Havellin delivers the Disposition Ledger, the Project Records&rsquo; final statement of where every item went, to the ' + _agrApprover(job) + ' for review and signature.');
+  content += pp('The Project Records are Havellin&rsquo;s work product, prepared for the ' + _agrApprover(job) + ' and forming part of the fiduciary record of this engagement. They are held on the terms stated above and are retained for seven years. Havellin will provide them to the ' + _agrApprover(job) + ', to counsel of record, and to any other person the ' + _agrApprover(job) + ' authorizes in writing, and will produce them as required by law or court order. This obligation survives completion of the engagement, and the Project Records are not Client documents for the purposes of the return-or-destroy provision in Section 7. No part of the Project Records is used for marketing or promotional purposes, and Section 7.2 does not apply to them.');
   // ⚠ THE DISCLAIMER NAMES §733.604 AND BEQUEST SATISFACTION, which the living-client form's
   // equivalent must never do. A representative holding a tidy itemized list with recipients
   // against it is exactly the reader who might file it, or treat a delivery recorded on it as
@@ -42456,7 +42639,7 @@ function probateAgreementHtml(job, est) {
     if (d.trust) return 'they are not a trust accounting under Fla. Stat. &sect;736.08135';
     return 'they are not a statutory inventory of any kind';
   })();
-  content += pp(bb('What the Project Records are and are not.')+'  The Project Records are Havellin&rsquo;s contemporaneous record of work performed at the direction of the ' + _agrApprover(job) + '. They are not an appraisal or a statement of value, ' + _agrNotInstrument + ', and they do not evidence that any distribution satisfied a devise or bequest or that title to any item has passed. Responsibility for the estate&rsquo;s inventory, accounting and distributions rests with the ' + _agrApprover(job) + ' and counsel.');
+  content += pp(bb('What the Project Records are and are not.')+'  The Project Records are Havellin&rsquo;s contemporaneous record of work performed at the direction of the ' + _agrApprover(job) + '. They are not an appraisal or a statement of value, ' + _agrNotInstrument + ', and they do not evidence that any distribution satisfied a devise or bequest or that title to any item has passed. Responsibility for ' + _agrEstateNoun(job) + '&rsquo;s inventory, accounting and distributions rests with the ' + _agrApprover(job) + ' and counsel.');
   content += subHdr('7.2 Marketing &amp; Promotional Use');
   content += _mktClause(pp, '', 'Havellin', '7.2');
   // SECTION 8: TERMINATION
@@ -42560,7 +42743,7 @@ function probateAgreementHtml(job, est) {
     ['Amendments','No amendment to this Agreement is valid unless in writing and signed by both parties.'],
     ['Severability','If any provision of this Agreement is found unenforceable, the remaining provisions remain in full force and effect.'],
     ['Assignment','Neither party may assign this Agreement without the written consent of the other party. Havellin may use qualified subcontractors to fulfill its obligations; Havellin remains responsible for their performance.'],
-    ['Independent Contractor','Havellin and its team members are independent contractors, not employees of the Client or the estate. Havellin is responsible for all applicable taxes, insurance, and employment obligations for its personnel.'],
+    ['Independent Contractor','Havellin and its team members are independent contractors, not employees of the Client or ' + _agrEstateNoun(job) + '. Havellin is responsible for all applicable taxes, insurance, and employment obligations for its personnel.'],
     ['Force Majeure','Neither party is liable for delays caused by circumstances beyond their reasonable control, including natural disasters, government orders, or public health emergencies.']
   ];
   gen.forEach(function(g){ content += pp(bb(g[0]+'.')+'  '+g[1]); });
@@ -42580,7 +42763,7 @@ function probateAgreementHtml(job, est) {
   content += pp('By signing below, both parties acknowledge they have read, understood, and agreed to all terms of this Agreement. No work will begin until both signatures are obtained and the deposit has been received.');
   // Client sig block
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
-  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Client / Personal Representative</div>';
+  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">' + _agrClientCapacity(job) + '</div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+executorName+'</div></div>';
   // ⚠ THE LABEL UNDER THIS LINE PRINTS THE RECORDED ROLE AND NOTHING ELSE. It used to fall back
@@ -42599,14 +42782,32 @@ function probateAgreementHtml(job, est) {
   // not exist sits at `sent` forever waiting on nobody, which reads on the rail as a client
   // who has not got round to signing. It stays a wet-sign line until intake captures a
   // second signer; if that is ever built, add the anchor and the recipient together.
+  // ⚠ P19: INTAKE NOW RECORDS THE CO-REPRESENTATIVES (job.coFiduciaries; Anthony's call 4), and each gets a block of
+  // their own with the printed name and the recorded role filled in, the way the Client's block is. STILL NO ANCHOR:
+  // the envelope's recipients are unchanged (see _agrCoSigners), so each signs a printed copy. Nobody recorded: the
+  // blank block as before, its caption by matter (_agrCoSignerCaption: co-PR, co-trustee, either, or neither).
+  var _coSign = _agrCoSigners(job);
+  if (_coSign.length) {
+    _coSign.forEach(function (f) {
+      content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;">';
+      content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Co-Signer</div>';
+      content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
+      content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">' + esc(f.name) + '</div></div>';
+      content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">' + esc(f.role) + '</div></div>';
+      content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
+      content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
+      content += '</div></div>';
+    });
+  } else {
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
-  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Co-Signer <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">(if applicable — second beneficiary or co-PR)</span></div>';
+  content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Co-Signer <span style="font-weight:400;font-style:italic;text-transform:none;letter-spacing:0;">' + _agrCoSignerCaption(job) + '</span></div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div></div>';
   content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line"></div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line"></div></div>';
   content += '</div></div>';
+  }
   // Havellin sig block
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
   // ⚠⚠ ONE SIGNATORY, AND THE NAME MUST NOT SIT INSIDE A COLUMN. This block used to run a

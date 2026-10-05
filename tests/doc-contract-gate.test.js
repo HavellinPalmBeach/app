@@ -28,8 +28,8 @@ const FNS = ['_invScheduleSection', '_invTrackDefault',
   '_invNamed', '_invDateTime', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames',
   // P16: the dealer route, the import panel's own list, and the photo folders the share names.
   'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer',
-  '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder', 'roundCents', 'fmt'
-];
+  '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder', 'roundCents', 'fmt',
+  'scheduleSigners', 'jobFiduciaries', 'jobListEntries'];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
