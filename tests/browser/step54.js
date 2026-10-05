@@ -159,7 +159,8 @@ const C_GATE = 'The successor trustee’s Certification of Trust must be receive
       has(tc, 'Property sale yes', 'the property sale');
       has(tc, 'Role Trustee Certification of Trust Pending', 'the Certification beside the trustee');
       has(tc, 'Co-Trustees Name Daniel Adler Role Trustee', 'Co-Trustees');
-      has(tc, 'A DocuSign envelope goes to Rex Hale alone: each co-representative signs the agreement on paper.', 'the one-signer sentence');
+      has(tc, 'A DocuSign envelope goes to Rex Hale alone.', 'the one-signer sentence');
+      lacks(tc, 'on paper', 'and no signing procedure for the others, which is not decided');
       has(tc, 'Form 706 due ' + DUE_TXT + ' — in ' + N + ' days', '⚠ the Form 706 date, ' + N + ' days out');
       const red = await p.evaluate(() => { const e = document.querySelector('#client-dashboard-view .est-706'); return e ? getComputedStyle(e).color : ''; });
       eq(red, 'rgb(163, 45, 45)', 'in red inside thirty days');

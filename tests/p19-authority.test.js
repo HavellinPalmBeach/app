@@ -347,8 +347,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const card = cardAt(renderDash(TRUST()), 'Trust Information');
     const t = text(card);
     has(t, 'Co-Trustees Name Daniel Adler Role Trustee Phone (561) 555-0103 Email dan@adler.example', '⚠⚠ the co-trustee, under Co-Trustees');
-    has(t, 'A DocuSign envelope goes to Rex Hale alone: each co-representative signs the agreement on paper.', 'and the one signer DocuSign has, said once');
+    has(t, 'A DocuSign envelope goes to Rex Hale alone.', 'and the one signer DocuSign has, said once');
     eq((t.match(/DocuSign/g) || []).length, 1, 'once');
+    // ⚠ The fact, and no procedure: whether a co-representative must sign the agreement too is Anthony's to decide
+    // (P19 hand-back), so the card never tells anyone to collect a signature on paper.
+    lacks(t, 'on paper', 'no signing procedure is prescribed');
     has(text(cardAt(renderDash(PROBATE()), 'Probate Information')), 'Co-Personal Representatives Name Daniel Adler', 'on a probate matter: Co-Personal Representatives');
     const two = renderDash(TRUST({ coFiduciaries: [{ id: 'c1', name: 'Daniel <i>Adler</i>', role: 'Trustee' }, { id: 'c2', name: 'Mae O\'Neil', email: 'mae@x.com' },
       { id: 'c3', name: 'Voided Person', voidedAt: 5 }, { id: '', name: 'No Id' }] }));
@@ -606,7 +609,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        ['Daniel Adler', 'Trustee', 'Mae O\'Neil', 'mae@oneil.example'], 'each with what was recorded');
     has(t.html, 'id="ec-cofid-0" data-id="cf1"', 'each row carries its entry\'s id');
     has(t.html, 'onclick="removeCoFiduciaryRow(\'ec\',1)">&#10005; Remove</button>', 'each with ✕ Remove');
-    has(t.html, 'A DocuSign envelope goes to the representative alone: each co-representative signs the agreement on paper.', 'and the one-signer sentence');
+    has(t.html, 'Each one approves the releases with the representative. A DocuSign envelope goes to the representative alone.</div>', 'and the one-signer sentence');
+    lacks(t.html, 'on paper', 'and no signing procedure, which is not decided');
     const p = ecRig(PROBATE());
     eq((/<div class="dfl" id="ec-exec-auth-lbl">([^<]*)<\/div>/.exec(p.html) || [])[1], 'Letters of Administration', 'a probate matter: the Letters');
     eq([styleOf(p.html, 'ec-trust-fields'), styleOf(p.html, 'ec-sale-fields')], ['display:none;', 'display:block;'], 'no trust; the sale question');
@@ -716,6 +720,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
          f + ' names the Certification of Trust, its statute and its date, in one passage');
       has(d, '+ Add a co-representative', f + ' names the co-representative control');
       has(d, 'a DocuSign envelope goes to the representative alone', f + ' says DocuSign goes to one signer');
+      // …and prescribes no way for the others to sign, which Anthony has not decided.
+      lacks(d, 'sign the agreement on paper', f + ' prescribes no paper signing for a co-representative');
+      lacks(d, 'signs the agreement on paper', f + ' (either wording)');
       has(d, 'Form 706', f + ' names the Form 706 date');
       has(d, 'Trust Details', f + ' names the trust\'s details');
       // ⚠ The sentences that described the old behaviour are gone (a behaviour change updates every one of them).
