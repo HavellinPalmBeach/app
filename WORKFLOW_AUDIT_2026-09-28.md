@@ -330,6 +330,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P16** Anthony's answers of 2026-09-30, round 2 (no cards, the hourly deposit, a vendor by change order on bundled prep, Premium's appraiser hours, a firearm to a person through a dealer), and the known-bug list — landed 2026-09-30; its backend half is live once Anthony redeploys `2026-09-30b`
 - [x] **P17** Anthony's answers of 2026-10-01, the twelve open questions (Premium is the rates only, quarter hours and cents, the Home Sale Preparation Fee, the walkaway refund, a voided deposit, handed over in person, File signed copy, change orders to Drive, the probate package, no Power of Attorney) — landed 2026-10-01; its backend half is live once Anthony redeploys `2026-10-01`
 - [x] **P18** Anthony's answers of 2026-10-02 (the trust package; estimates in whole hours rounded up, logging in half hours, change orders in whole hours, the half-hour line in both agreements) — landed 2026-10-02; app-only
+- [x] **P19** Anthony's calls on the estate workflow (*"i'm good with all of your calls. build it all"*, 2026-10-03): trust parity, the Certification of Trust, every co-representative and co-trustee, the Form 706 date, an original will or cash found on site, staff never buy, beneficiaries and bequests, receipts and signed papers to Drive, the Disposition Ledger signed at close, donations, proceeds statements, snapshots voided — landed 2026-10-05; its backend half is live once Anthony redeploys `2026-10-03`
 
 ### P1 · Stop estimates leaking between clients
 
@@ -680,6 +681,24 @@ Fixes: the three questions P17 left open · Needs: the answers of 2026-10-02
 - **The agreements.** Anthony: *"yes on agreements."* Both forms say *"Time is recorded and billed in half-hour increments, as worked."* wherever time is billed, never on a fixed fee (counsel bundle B12).
 - **The counsel bundle is on hold** until Anthony says go (*"hold counsel bundle until we are done here. they may be more changes"*); B12 and D6 are updated in it.
 
+### P19 · Anthony's calls on the estate workflow (2026-10-03)
+
+Fixes: the estate-workflow audit's calls · Needs: Anthony's *"i'm good with all of your calls. build it all"*
+
+**Landed 2026-10-05.** Built on a shared foundation (the job's six record lists, merged entry by entry on the server; the one signed-copy path to a *Signed Records* folder) in five workstreams (authority; estate documents; releases; site and plan; the ledger), each in its own worktree with its own tests, revert sweep and browser step, then merged, re-swept on the merged tree and verified together. Its backend half is `2026-10-03` (below, *Only Anthony can do these*).
+- **Trust parity.** The estate agreement, the client estimate and the schedules follow the matter type clause by clause: the trust named as a party on a trust-only matter, the Certification of Trust in place of the Letters, the trustee's counsel in place of the estate attorney, no probate case or court where there is none; an unanswered matter keeps the probate wording byte for byte. Intake and Edit Client record the trust (name, date, the trustee's acceptance) and ask the property-sale question on a trust too; the trustee gets a desk checklist of their own (*Trust administration*); chain of custody is mandatory on a trust as on probate.
+- **The Certification of Trust** gates activation on a trust-only matter (§736.1017), as the Letters do on the probate track.
+- **Every co-representative and co-trustee** is recorded on the client, named on the agreement (§5.1's joinder and a co-signer block each) and on the schedules' signature lines, and **every one of them approves a release**: the approval request, the firearm gates, the worklist and the Job Plan all ask the one answer.
+- **The Form 706 date** (nine months after death) is a chip on the plan and a line on the schedule strip, unless the 706 is answered *No*.
+- **An original will found on site** goes to the estate attorney the same day against a signed receipt, with the ten-day §732.901 reminder; **cash found** is counted by two people, sealed in a numbered bag and handed to the fiduciary the same day against a receipt. Both on the Job Plan's *Found on site* card, red on the desk while Havellin holds either.
+- **Havellin's people never buy or receive estate property:** a sale or release to anyone on the team is refused where it is written, and the agreement says so (§5.4).
+- **Beneficiaries and specific bequests:** a roster and a list of designated items the inventory is checked against; a matched line proposed to go elsewhere is named on the request.
+- **Receipts and signed papers:** a receipt for every item released to a person, and every signed paper (approvals, receipts, adopted schedules, the ledger, charity receipts, statements, the will and cash receipts) filed to the client's *Signed Records* folder.
+- **The Disposition Ledger** is the close-out summary the client signs: its own desk card, filed to Drive as the job closes, its signed copy a derived line in place of the PR's sign-off box; the estate package attaches it.
+- **Donations** are receipted line by line, with a Donation Record per charity; **proceeds statements** are recorded and reconciled against the ledger to the cent; **snapshots** are voided with a reason, never deleted, and compared by item number.
+- **Neutral wording:** the ledger, the item panel and the CSV read *Net Proceeds*; the net total is headed for whoever holds the proceeds (*Net to Trust* on a trust), on the desk now and in the workbook from the `2026-10-03` deployment.
+- **Questions this pack raised** are Q22 to Q27 below; the found-in-passing items are in `CLAUDE.md`, Open work.
+
 ## Questions for Anthony
 
 **Answered 2026-09-29, and the last three on 2026-09-30.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.
@@ -759,13 +778,28 @@ Fixes: the three questions P17 left open · Needs: the answers of 2026-10-02
   *Recommendation:* Yes, if you will pay or receive referral fees. Send it to counsel with the bundle. *(counsel bundle)*  
   *Answer (2026-09-29):* Agreed.
 
+### New, from P19 (2026-10-05)
+
+- **Q22** A co-representative signs the agreement on paper and nothing records it: DocuSign records the agreement signed once the client and Anthony have, with a co-representative unsigned. Add each co-representative as a DocuSign signer, or file their wet signature as a signed record?  
+  *Recommendation:* Each co-representative signs in DocuSign beside the client (the same routing order, Anthony after them); on the *sign by hand* route the co-signed page is filed as a signed record. *(counsel bundle A11)*
+- **Q23** A co-representative recorded after a line has already gone makes that line's approval incomplete, so it comes back on the next Approval Request. Ask the new co-trustee to ratify those lines, or leave them?  
+  *Recommendation:* Ratify: the next request lists them apart, as already released, for the new co-trustee's signature; nothing is undone.
+- **Q24** When one co-trustee signs a week before the other, the first signature can only be typed into the item record, where it reads *approval incomplete*. Let **Record approval** save a partial approval?  
+  *Recommendation:* Yes: record who signed and when, and keep the line open until everyone has; the request already prints *"Signed so far by…; still to sign…"*.
+- **Q25** The staff rule is estate-only: a sale or gift to a Havellin person on a living client's job is neither refused nor flagged. Flag it there too?  
+  *Recommendation:* Flag it, never refuse: an owner gives their own things to whom they like, but the conflict should be on the record.
+- **Q26** A Probate or Contested Probate service recorded as a trust or *Neither* still prices the legal step and titles the agreement *Probate Estate Settlement*. Re-type it to Estate Settlement?  
+  *Recommendation:* Yes, before the estimate is approved: Edit Client flags it and names Estate Settlement; after approval the price stays as quoted.
+- **Q27** The trust's title prints its date as *"Mar 3, 2015"*. Spell the month out in a legal title (*"March 3, 2015"*)?  
+  *Recommendation:* Yes.
+
 ## Only Anthony can do these
 
 - [x] **Redeploy the Apps Script.** The repo is at `2026-09-22b`; the last recorded deploy is `22a`. Add `ANTHROPIC_API_KEY` in Script Properties and run `testAgentIdentify()` once. Until then, Agent One (photo naming) can't run. *You report this done (2026-09-29). To confirm: no "out of date" banner when the app loads means the 22b deployment is live, and pressing Name N shots on a job with photos (or running `testAgentIdentify()` in the editor) proves the key.*
 - [ ] **Redeploy quo-sync.gs, then check before pruning.** Deploy the 2026-09-18 fix, fix the duplicate "David Schneider" vendor row, and run `dryRunQuoAll` before any prune.
 - [x] **Send one DocuSign sandbox envelope end to end.** Check that the opt-out box renders, where the signature boxes land, that no green "Approved for Sending" band is on the PDF, and that the signed PDF and certificate file to Drive. Then move to production. *You report several that worked (2026-09-30). What remains is the move to production when you are ready.*
 - [x] **Redeploy the Apps Script at `2026-09-30`.** *Done (Anthony, 2026-09-30).* Copy `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → New version. Until then P11's per-key merges, the unreadable-store refusal, the busy answer and Agent One's larger answer limit are not live; the banner says so.
-- [ ] **Redeploy the Apps Script at `2026-10-01`** (P17; it carries P16's `2026-09-30b`). Paste `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → edit → New version. Every device shows the out-of-date banner until it is done. Until then **File signed copy** can add a second executed agreement beside the first (the editor's `previewFolderDuplicates` / `dedupeFolderConfirm` collapse it); and if `2026-09-30b` never went live, a payment voided or marked cleared can come back from a device that had not reloaded, an older copy of an inventory item can drop a firearm's serial, recipient or dealer route on the sheet, and the folder sweep still needs a folder id.
+- [ ] **Redeploy the Apps Script at `2026-10-03`** (P19; it carries P17's `2026-10-01` and P16's `2026-09-30b`). Paste `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → edit → New version. Every device shows the out-of-date banner until it is done. Until then the six lists P19 adds to a client (co-representatives, beneficiaries, bequests, signed papers, finds on site, proceeds statements) can lose an entry when two devices add to one, a void can be undone by a device that had not reloaded, and a trust's workbook heads its net total *Net to Estate*; and if `2026-10-01` never went live, **File signed copy** can file a second executed agreement beside the first.
 - [ ] **Stripe: one test ACH link.** It proves the ACH-only check. Confirm the account's ACH limit covers your largest deposit. *Lower priority (2026-09-30), still to do before the first real deposit.*
 - [x] **Run `backfillIds()` once in the Referral Partners Apps Script project.** *Done (Anthony, 2026-09-30).* Gives every partner row a permanent id, so re-sorting that sheet can never move a referral.
 - [ ] **Google Cloud: set the Gmail consent screen's audience to Internal.** Otherwise the Gmail draft path stays in Testing mode.

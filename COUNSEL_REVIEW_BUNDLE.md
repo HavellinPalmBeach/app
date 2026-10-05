@@ -34,10 +34,10 @@ rather than researching from nothing.
 | | Blocks | Items |
 |---|---|---|
 | **1** | the first engagement signing: on a **fixed fee**, and since 2026-09-30 on an **hourly** one too (the deposit) | A1, A2, B2 |
-| **2** | the first **trust** matter signing | A5, A6 |
+| **2** | the first **trust** matter signing | A5, A6, A10, A14 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, A8, A9, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6 |
+| **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -255,6 +255,94 @@ names, in all three columns:
 **The question.** (4) Does each row name the right party for its matter type?
 
 ---
+
+### A10. The estate form on a trust matter, and on a pour-over ⚠ NEW 2026-10-03 · PRIORITY 2
+
+**What changed (P19).** The estate form followed the probate case whatever the matter: a successor trustee's agreement
+named *"Estate of <decedent>"* as the party, asked for the Letters of Administration and a probate case number, and sent
+everything to *"the estate attorney"*. It now follows the matter type recorded at intake, clause by clause. An unanswered
+matter keeps the probate wording byte for byte.
+
+| Where | Before (every estate form) | Now, on a trust-only matter |
+|---|---|---|
+| §1.2 party | *Estate* · **Estate of <decedent>** | *Trust* · **The <trust name>, dated <date>** (blank lines where not recorded), and *Decedent* · <decedent>. On a pour-over (*Both*) the Estate row stays and the Trust row is added |
+| §1.2 authority | *Letters of Administration* · date, or Attached / Pending / N/A | *Certification of Trust* · Attached / Pending / N/A. On *Neither*: no row |
+| §1.2 attorney | *Estate Attorney* | *Trustee's Attorney*; on *Neither* *Attorney* |
+| §1.3 | *Probate Case Number*; *Court* | removed (trust-only and *Neither*) |
+| §2, §2.1 | "…the responsibility of the Client and the estate attorney…"; "(handled by estate attorney)" | "…the Client and their counsel…"; "(handled by the trustee's counsel)"; on *Neither* "the Client and their advisers", "(handled by the Client's own counsel)" |
+| §3.1 vendors | "Vendors bill the estate directly at cost." | "Vendors bill the trust directly at cost." |
+| Section 5 title | *Authority, Probate & Legal Compliance* | *Authority, Trust & Legal Compliance*; *Both*: *Authority, Probate, Trust & Legal Compliance*; *Neither*: *Authority & Legal Compliance* |
+| §5.3 lead, §7.1, §10 | "on behalf of the estate"; "how the estate is accounted for"; "employees of the Client or the estate" | "the trust" in each |
+| §6.3 | "Notify Client / Personal Representative within 24 hours" | "Client / successor trustee"; *Both* "Personal Representative or successor trustee"; *Neither* "Client" |
+| §7.1 | records delivered "to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court" | "the successor trustee … counsel, the appraiser" (no court); *Both* keeps the court |
+| Signature page | *Client / Personal Representative* | *Client / successor trustee* (and the *Both* / *Neither* forms as above) |
+
+**The question.** Is the trust named correctly as a party beside the decedent, and is the Certification of Trust the
+right paper to rely on (§736.1017)? On a pour-over, is naming both the estate and the trust right?
+
+### A11. §5.1 — a co-representative's joinder ⚠ NEW 2026-10-03
+
+**What it says.** Added as the last representation of §5.1 on any estate form where a co-representative or co-trustee is
+recorded (Anthony, P19: record every co-executor and co-trustee, and all of them approve releases). With one:
+*"The Client acts together with the co-representative named on the signature page. That co-representative has signed
+this Agreement, or the Client holds written authority to bind them to it, and every written approval this Agreement
+requires is given by the Client and the co-representative together."* With several: *"The Client acts together with the
+co-representatives named on the signature page. Each of them has signed this Agreement, or the Client holds written
+authority to bind each of them to it, and every written approval this Agreement requires is given by the Client and every
+co-representative."* The signature page then carries one filled *Co-Signer* block per co-representative.
+
+**The question.** Florida's co-fiduciary rules differ by office (from memory, unverified: co-trustees may act by majority,
+§736.0703; joint personal representatives' concurrence, §733.615). Is requiring every co-representative's approval, and the
+Client's warranty of joinder or authority to bind, right for both?
+
+### A12. §5.4 — no purchase by Havellin ⚠ NEW 2026-10-03
+
+**What it says.** On every estate form: *"5.4 No Purchase by Havellin. Havellin, its owners, team members and contractors
+will not purchase or otherwise acquire any of the contents of the property, or any other tangible personal property of the
+estate or the trust, whether directly or through any other person, and will take no commission, percentage or other share
+of the proceeds of any sale of that property."* (Anthony, P19: the firearms rule extended to all estate property, because
+anything else is a conflict of interest.) The app refuses such a sale or release on the desk, and every estate release
+approval request says *"Havellin and its people never purchase or receive estate property, and take no share of the
+proceeds of its sale."*
+
+**The questions.** (a) Q21's agreed referral-fee disclosure: a partner fee computed on sale proceeds would be a "share of the
+proceeds"; reconcile before either goes out. (b) *Contractors* means Havellin's own crew; third-party vendors (an estate-sale
+company's commission) are not bound and are not meant to be. (c) It is limited to tangible personal property because §2.1
+sends real property to a separate agreement. Is the clause right on all three?
+
+### A13. §7.1 and the Disposition Ledger — the close-out summary the client signs ⚠ NEW 2026-10-03
+
+**What changed.** The agreement and the client estimate asked the client to sign off "the final disposition summary", and
+nothing was one. §7.1 now ends *"At the close of the engagement Havellin delivers the Disposition Ledger, the Project
+Records' final statement of where every item went, to the <approver> for review and signature."* The estimate's
+Close-Out asks for *"Sign-off on the Disposition Ledger, the final record of where every item went."* The ledger page:
+- Heading *Disposition Ledger*, *"Where each item went and what it brought · proceeds net to <the estate | the trust | the
+  estate or the trust, as the property is held | the client>"* (it was *Disposition & Accounting Ledger — Fiduciary
+  accounting of disposed items · proceeds net to the estate*).
+- Footer: *"Gross is what an item sold for and Fees the selling partner's commission and charges; Net, the difference, is
+  the proceeds to <holder>. Havellin charges no commission on sales, consignments or auction results, and Havellin's own
+  service fees are billed separately and do not appear here. This ledger records where each item went and what it brought;
+  it does not state what anything is worth."*
+- Sign-off, one line per fiduciary (the client on living work): *"Reviewed and approved as the final record of the
+  disposition of the property listed above."* It is withheld while any line has no disposition: *"The sign-off is withheld.
+  This page cannot be approved as the final record of the disposition of the property while N lines have no disposition
+  recorded."*
+
+**The question.** The §7.1 sentence is meant as a delivery-and-signature expectation, not a condition of payment. Does it
+read that way, and does the sign-off avoid reading as an accounting (A6)?
+
+### A14. The client estimate (Exhibit A) on a trust or a Neither matter ⚠ NEW 2026-10-03 · PRIORITY 2
+
+**What changed.** *Before We Start* asked every estate for *"a certified copy of the Letters of Administration or
+Testamentary"*. On a trust-only matter it now reads *"We also confirm authority: the successor trustee's Certification of
+Trust on file, any limits on the trustee's powers noted in writing, and a direct channel opened with your attorney"*, and
+the need, *"…the deposit, and the successor trustee's Certification of Trust, with any limits on the trustee's powers noted
+in writing. If particular items … — we do not need the will or the trust instrument itself."* On *Neither*: *"written
+confirmation of who is authorized to direct the work and approve releases"*. Exempt-property sentences and the court filing
+fall away off the probate track, and proceeds route *"to the trust account"* on a trust.
+
+**The question.** *"We do not need the … trust instrument itself"* leans on §736.1017 (a certification in lieu of the
+instrument; citation from memory). Is that right?
 
 ## B. Standard (living-client) services agreement
 
@@ -758,6 +846,67 @@ administration"* describe the matter correctly?
 
 ---
 
+### D7. The release approval request: every fiduciary signs ⚠ NEW 2026-10-03
+
+**What changed.** Anthony (P19): every co-executor and co-trustee approves a release. The request is addressed to every
+fiduciary by name (with nobody recorded, by matter: *Personal Representative*, *Successor Trustee*, *Personal Representative
+or Successor Trustee*, *Authorized Representative*), asks *"…then each of you sign and date at the foot. Every co-trustee
+named below must sign: nothing on this list is approved until all 2 of you have."*, marks a line one of them has signed
+(*"Signed so far by Ruth Adler (Oct 1, 2026); still to sign: Daniel Adler"*) and carries one signature line per fiduciary.
+Under the total: *"Havellin and its people never purchase or receive estate property, and take no share of the proceeds of
+its sale."* (*trust property* on a trust). The specific-bequest caution now reads *"designated by the will or the trust for a
+particular person … or the proceeds may be needed for the administration"*, and a line matched to a bequest on the list the
+representative or counsel gave us, proposed to go elsewhere, is named with the person and the proposal. The Appraisal
+Worklist's firearm sentence and the package's release record follow the same rule.
+
+**The question.** Is all-must-sign right on a trust where co-trustees may act by majority (A11)?
+
+### D8. Receipt for property released to a person ⚠ NEW 2026-10-03
+
+**What it says.** The estate agreement's §5.3 asks for a *"signed receipt from recipient"*; the desk now prints one per
+recipient: *"Released to <name> from <the Estate of <decedent> | the trustee of <trust> | either, as the property is
+held>"*, the items, and *"I acknowledge that I received the property listed above, in the condition described, from <from>,
+delivered to me by Havellin Palm Beach, LLC as directed in writing by <the fiduciaries>. This receipt records the delivery
+only: it does not decide who owns the property or what it is worth, and it does not release or waive any right or claim
+concerning <the estate | the trust>."*, with a signature, a printed name and a witness line for Havellin.
+
+**The question.** A beneficiary's receipt-and-release is counsel's paper; is this delivery receipt enough for what §5.3
+promises, and does it stay clear of a release?
+
+### D9. An original will found on site ⚠ NEW 2026-10-03
+
+**What it says.** Anthony (P19): an original will found in the house goes to the estate attorney the same day, against a
+signed receipt. The *Receipt for Original Will*: *"Havellin Palm Beach, LLC found the document described above at the
+property during its engagement and delivers it as it was found. Havellin has not opened it, read its contents or copied it,
+and keeps no copy of it in any form; the description above is taken from its outside only. Havellin does not hold original
+wills. Under Florida law the custodian of a will must deposit it with the clerk of the court having venue of the estate
+within ten days after receiving information that the testator is dead (Fla. Stat. §732.901)."* The app reminds the team ten
+days from the hand-over and turns red the day after, until the deposit is confirmed.
+
+**The questions.** Is §732.901 cited correctly, and is ten days from the hand-over the right reminder (the statute counts
+from the custodian's knowledge of the death)? Who is the custodian once the attorney holds it?
+
+### D10. Cash found on site ⚠ NEW 2026-10-03
+
+**What it says.** Two people count it, seal it in a numbered bag and hand it to the fiduciary the same day. The *Cash Count
+and Receipt*: *"The two people named above counted this cash together at the property on the day shown and sealed it, in
+each other's presence, in the numbered bag shown. Havellin Palm Beach, LLC does not hold estate cash: it is delivered sealed
+to the fiduciary the day it is counted. The fiduciary signs for the bag with its seal intact and its number as shown; the
+amount is the count of the two people named, each of whom signs for it below."*
+
+**The question.** Is a fiduciary's signature for a sealed bag (rather than a recount) enough?
+
+### D11. The Donation Record ⚠ NEW 2026-10-03
+
+**What it says.** One per charity: what went to it (item, quantity, condition, date and, where recorded, Havellin's estimate
+of its value), *"Donated on behalf of <the estate | the trust>, by <the fiduciaries>"* (the client on living work), the
+charity's receipts on file, and the footer *"Values are Havellin's estimates of what each item would sell for, given for the
+donor's records. They are not appraisals. Whether a charitable deduction is available, and in what amount, is for the
+donor's tax adviser to determine."*
+
+**The question.** Does printing an estimated value on a donation record invite its use as a deduction figure, and is the
+footer enough?
+
 ## E. What is deliberately NOT being asked
 
 So counsel does not spend time on settled ground:
@@ -783,6 +932,8 @@ So counsel does not spend time on settled ground:
 | Signing packet | the agreement with the estimate attached as Exhibit A — this is what a client actually signs |
 | Estate Firearms Protocol | `firearms-protocol.html`, also in Drive at `03_Operations / SOPs & Playbooks` |
 | Court Inventory / Trust Schedule / Appraisal Worklist | sample documents, for D1–D5 |
+| Release Approval Request with two fiduciaries, a Receipt for Property Released, the Disposition Ledger, a Donation Record | from the desk (Job Admin & Inv), for A13, D7, D8, D11 |
+| Receipt for Original Will, Cash Count and Receipt | from the Job Plan's *Found on site* card, for D9 and D10 |
 
 **⚠ Send the signing packet, not the agreement alone.** Both forms incorporate the estimate as
 Exhibit A and the estate form states it is not valid without it.
