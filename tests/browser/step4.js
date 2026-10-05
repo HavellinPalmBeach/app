@@ -80,16 +80,19 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   // ⚠ RESTATED 2026-10-03 (P19): every court list below is without `pr_signoff` (the box is deleted: the representative's
   // sign-off is the filed signed Disposition Ledger, a derived line), so every probate count is one lower; and a trust
   // matter renders the trustee's own list (Trust administration) where it rendered the financial close and the archive alone.
+  // RESTATED AGAIN at the P19 merge, NOT WEAKENED: `fin_proceeds` and `fin_donation_receipts` are lines the app reads now
+  // (the proceeds statements reconciled, the donation receipts line by line; the ledger workstream), so every count below is
+  // two lower again. Which boxes the matter and the tier decide is unchanged and still asserted list by list.
   eq(estate.ct.join(' '), 'inventory nonprobate served filed accounting',
      '⚠ the compliance list is there — on the service that had NONE at any tier');
-  ok(/0 of 10 ticked/.test(estate.count), 'counted: ' + JSON.stringify(estate.count));
+  ok(/0 of 8 ticked/.test(estate.count), 'counted: ' + JSON.stringify(estate.count));
   ok(/733\.604/.test(estate.txt), 'the §733.604 verification is on the rendered card');
   ok(/florida court/i.test(estate.txt), 'under the compliance heading (innerText applies text-transform, so match case-insensitively)');
 
   console.log('\n=== THE SAME ESTATE, CONTRACTED AT EACH TIER ===');
   const top = await read({ docTier: 'appraisals' });
   eq(top.ct.join(' '), 'inventory appraisals nonprobate served filed accounting', 'the top tier attaches the reports too');
-  ok(/0 of 11 ticked/.test(top.count), 'eleven: ' + JSON.stringify(top.count));
+  ok(/0 of 9 ticked/.test(top.count), 'nine: ' + JSON.stringify(top.count));
 
   const contents = await read({ docTier: 'contents' });
   eq(contents.ct.join(' '), 'nonprobate served filed accounting', 'a contents list states no values, so nothing asks us to verify one');
@@ -97,7 +100,7 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
 
   const none = await read({ docTier: 'none' });
   eq(none.ct.join(' '), 'served filed accounting', '⚠ contracted at None, the three deliverable checks are gone');
-  ok(/0 of 8 ticked/.test(none.count), 'eight: ' + JSON.stringify(none.count));
+  ok(/0 of 6 ticked/.test(none.count), 'six: ' + JSON.stringify(none.count));
   ok(/proof of service/.test(none.txt), 'and the court procedure stays — it happens whoever built the schedule');
 
   console.log('\n=== A REPORT ON THE RECORD BRINGS THE ATTACH BOX BACK ===');
@@ -111,7 +114,7 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   eq(trust.ct.length, 0, 'no §733.604 checklist on a matter with no probate in it');
   ok(!/733\.604/.test(trust.txt), '⚠ and nothing on the rendered card cites the wrong statute');
   ok(!/florida court/i.test(trust.txt), 'no court section at all');
-  ok(/0 of 9 ticked/.test(trust.count), 'the financial close, the trustee\'s list and the archive: ' + JSON.stringify(trust.count));
+  ok(/0 of 7 ticked/.test(trust.count), 'the financial close, the trustee\'s list and the archive: ' + JSON.stringify(trust.count));
   ok(/vendor invoices/.test(trust.txt), 'so the desk is not left with an empty card');
   ok(/trust administration/i.test(trust.txt), '⚠ and the trustee\'s own list, under a heading with no court in it (P19)');
   ok(/Trust Schedule verified/.test(trust.txt) && /trustee.s accounting/.test(trust.txt), 'the schedule check and the records for the trustee\'s accounting');
@@ -135,7 +138,7 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   }, jobId);
   eq(legacy.ct.join(' '), 'inventory nonprobate served filed accounting',
      'a probate job with neither field keeps the checklist it has today');
-  ok(/0 of 10 ticked/.test(legacy.count), 'ten — the attach box the migration refuses to claim, and the deleted sign-off: ' + JSON.stringify(legacy.count));
+  ok(/0 of 8 ticked/.test(legacy.count), 'eight — the attach box the migration refuses to claim, the deleted sign-off and the two financial-close lines: ' + JSON.stringify(legacy.count));
 
   console.log('\n=== THE CARD SAYS WHY ITS LIST LOOKS THE WAY IT DOES ===');
   const line = (r, lbl) => r.derived.find(d => d.lbl === lbl);
