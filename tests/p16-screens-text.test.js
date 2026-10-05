@@ -95,7 +95,7 @@ const TIER_FNS = ['docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 's
 const ROUTE_FNS = ['estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval',
   'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor'];
 const TIER_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DOC_SCOPES', 'JOB_STEPS'];
-const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate',
+const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
   'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
   'docTierOptionsHtml', 'docTierScopeMirror', 'esc', 'onDocGateChange',
   'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -312,7 +312,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ZED = { name: 'Zed <b>Bold</b> & Co', role: 'TC', status: 'active', phone: '555<b>0123', email: 'z<b>@x.com',
                   bio: 'First line <i>it</i> & more\nSecond line' };
-    const DOC_FNS = ['estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'escLines', 'fmtDate2', 'svcLabelOf', 'isDecedentJob',
+    const DOC_FNS = ['estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'escLines', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob',
       'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays',
       'paymentSplit', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
       'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted', 'proposedPlanRow', 'estimateDocScope',
@@ -361,7 +361,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice',
       'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs',
-      'esc', 'escLines', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
+      'esc', 'escLines', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments',
       'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee',
       'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];

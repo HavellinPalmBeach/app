@@ -30,7 +30,7 @@ const { sandbox, domStub } = require('./harness');
 const FNS = [
   // the estimate and both agreement forms
   'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate',
-  'fmt', 'esc', 'fmtDate2', 'svcLabelOf', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones',
+  'fmt', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones',
   'conciergePhonesText', 'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit',
   'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection',
   '_cePhases', 'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted',

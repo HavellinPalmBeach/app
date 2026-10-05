@@ -318,7 +318,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('it states the same numbers as the document, from the same fields');
   {
     const ctx = sandbox({
-      fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'buildEstimateEmailText', 'estimateEmailSubject',
+      fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'buildEstimateEmailText', 'estimateEmailSubject',
             'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             // Both emails state the vendor-fee rule through the one shared sentence (2026-09-10).
             'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines', 'roundCents', 'fmt'],
@@ -384,7 +384,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A phase list that throws must not take the email down with it.
     const ctx2 = sandbox({
-      fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
+      fns: ['estTolerancePctTxt', 'buildEstimateEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines', 'roundCents', 'fmt'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'RUSH_PCT'],
       stubs: {
@@ -859,7 +859,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the agreement email states the schedule and reads as a covering note');
   {
     const ctx = sandbox({
-      fns: ['buildAgreementEmailHtml', 'buildAgreementEmailText', 'agreementEmailSubject',
+      fns: ['buildAgreementEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'buildAgreementEmailText', 'agreementEmailSubject',
             'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
@@ -889,7 +889,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A job with no approved estimate must not print a $0 schedule.
     const ctx2 = sandbox({
-      fns: ['buildAgreementEmailHtml', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt'],
+      fns: ['buildAgreementEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),

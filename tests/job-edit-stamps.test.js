@@ -440,7 +440,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ─────────────────────────────────────────────────────────────────────────
   group('⚠⚠ HOUSE FLAGS — an Edit Client correction survives the stale save');
   {
-    const EC_FNS = ['saveClientEdit', 'courtRecordShown', 'jobOnProbateTrack', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
+    const EC_FNS = ['saveClientEdit', 'courtRecordShown', 'jobOnProbateTrack', 'probateSvcFlag', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
       'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'readHouseFlagInputs',
       'isDecedentJob', 'matterTypeOf', 'invFiduciaryMode', 'matterDef', 'saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 'sameSvcFamily', 'svcFamily', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'houseFlagAsked', 'houseFlagsOf', 'intakeAsksHouseContents', '_stampChangedKeys', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'propertySaleAsked', 'trustRecordShown'];
     const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',

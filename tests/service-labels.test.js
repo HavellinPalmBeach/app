@@ -7,11 +7,22 @@
 // this suite is what keeps a stale copy of the old name from surviving anywhere a client or
 // a concierge reads it.
 
-const { sandbox, source, fn } = require('./harness');
+const { sandbox, source, fn, domStub } = require('./harness');
+const DOCREC = require('./document-reconciliation.test.js');
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const ctx = sandbox({ fns: ['svcLabelOf', 'isDecedentJob'], vars: ['SVC_LABELS', 'DECEDENT_SERVICES'] });
   const src = source();
+  // The two client documents that name the service, rendered by their real builders (the reconciliation suite's lists).
+  const docs = sandbox({ fns: DOCREC.FNS, vars: DOCREC.VARS, stubs: { jobs: [], jobLogs: {}, estimateStore: {}, changeOrders: [],
+    contractors: [], currentEstimate: null, currentInvStage: 'final', vendorDirectory: [], jobPlans: {}, _photoRefs: {}, document: domStub({}) } });
+  const JOB = (svc) => ({ id: 1, hvlId: 'HVL-0001', name: 'Pat Client', svc, addr: '1 Ocean Blvd', city: 'Palm Beach', status: 'won', payments: [] });
+  const EST = (svc) => ({ jobId: 1, svc, tcFee: 3000, psFee: 4000, tcRate: 150, psRate: 100, totTC: 20, totPS: 40, pkgCost: 0, smf: 0, prepFee: 0,
+    havellinTotal: 7000, grandTotal: 7000, discountPct: 0, discountAmt: 0, fixedPrice: false, rush: false, vendors: [], prepItems: [], rooms: [],
+    collections: [], vehicles: [] });
+  const render = (f, svc) => { try { docs.jobs = [JOB(svc)]; return f === 'agr' ? docs.agreementHtml(JOB(svc), EST(svc)) : docs.clientEstimateHtml(EST(svc), JOB(svc)); }
+    catch (e) { return 'THREW ' + e.message; } };
+  const agrTitle = (svc) => { const h = render('agr', svc); const m = h.match(/margin:\.6rem 0 \.25rem;">([^<]*)<\/div>/); return m ? m[1] : 'NO TITLE: ' + h.slice(0, 80); };
 
   group('the catalogue carries the new names on the old keys');
   {
@@ -57,16 +68,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(src, 'Onsite Downsizing Services', 'the fee-table sub-header is renamed');
     has(src, '<option value="downsizing">Home Editing</option>', 'intake offers Home Editing');
     has(src, '<option value="downsizing_move">Home Transition</option>', 'intake offers Home Transition');
-    has(src, "downsizing: 'Onsite Home Editing Services'", 'client estimate sub-header, editing');
-    has(src, "downsizing_move: 'Onsite Home Transition Services'", 'client estimate sub-header, transition');
+    // RESTATED 2026-10-05 (P20, Q26): the fee table's heading is no longer a map of its own (_svcSubHdr) but the service row's
+    // name, through the one namer for a client document (docServiceTitle) over this catalogue, so the renamed services are
+    // read off the rendered estimate rather than off the map's source.
+    has(render('ce', 'downsizing'), 'Onsite Home Editing Services', 'client estimate sub-header, editing');
+    has(render('ce', 'downsizing_move'), 'Onsite Home Transition Services', 'client estimate sub-header, transition');
     has(src, 'Home Editing / Transition Basic — $200', 'the living-client materials tier is renamed with them');
   }
 
   group('the standard agreement names the services the client is buying');
   {
     const agr = fn('agreementHtml');
-    has(agr, "downsizing:'Home Editing'", 'the agreement header map, editing');
-    has(agr, "downsizing_move:'Home Transition'", 'the agreement header map, transition');
+    // RESTATED 2026-10-05 (P20, Q26): the header names the service through docServiceTitle, not a map of its own (svcMap, which
+    // had no Home Cleanout), so the renamed services are read off the rendered agreement's title.
+    eq(agrTitle('downsizing'), 'Home Editing', 'the agreement header, editing');
+    eq(agrTitle('downsizing_move'), 'Home Transition', 'the agreement header, transition');
     has(agr, 'home editing, home transition and move-management, property preparation', '§1.1 Services lists the renamed work');
     has(agr, 'for Estate Settlement, Home Editing and Home Transition engagements', '§3.5 names the renamed engagements on the SMF arm');
     lacks(agr, 'Downsizing', 'and the old word is gone from the agreement');

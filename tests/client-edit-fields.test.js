@@ -38,7 +38,7 @@ const liveLines = (s) => String(s).split('\n')
   .filter((l) => { const t = l.trim(); return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('<!--')); })
   .join('\n');
 
-const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate',
+const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
                 'executorAuthOptionsHtml', 'resolveExecutorAuth', 
                 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
                 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope',

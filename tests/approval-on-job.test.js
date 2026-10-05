@@ -34,7 +34,7 @@ const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', '
   'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals',
   '_srcLineKey', 'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate',
   'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc',
-  'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
+  'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
   'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPaidTotal',
   'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'docReadiness', 'agreementReady',
   'isJobWon', 'resolvePin', 'checkInvPin', 'dashApproveInvoice', 'openInvPinModal', 'invFinalApproval',
@@ -101,14 +101,14 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 // ─── the agreement sandbox ───────────────────────────────────────────────────
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable',
   'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas',
-  '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrBillingRates',
+  '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', 'agrBillingRates',
   'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
   '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
   '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
   'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', '_agrApprovedStamp',
   'ensureAgreementApproved', 'agreementReady', 'isJobWon', '_primeAgreementFor', 'loadAgreement',
   'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docDraftPending', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
-const AGR_VARS = ['DOC_STAGE_WORD', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT',
+const AGR_VARS = ['DOC_STAGE_WORD', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT',
   'DECEDENT_SERVICES', 'currentAgrJobId',
   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
 const AEST = (id) => ({ jobId: id, tcFee: 15000, psFee: 5000, pkgCost: 0, smf: 0, prepFee: 0,

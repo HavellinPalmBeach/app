@@ -183,7 +183,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(d.getElementById('ec-probate-deadline').value, '2026-11-30', '⚠ a deadline set by hand (an extension the court granted) is never recounted over');
   }
 
-  const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate',
+  const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
     'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
     'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
     'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -250,11 +250,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const run = (svc, matter) => {
       const d = domStub({ 'i-svc': svc, 'i-matter-type': matter });
-      const c = sandbox({ fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode',
+      const c = sandbox({ fns: ['toggleIntakeFields', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'estimateOutForApproval', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode',
         'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docTierOf', 'docTierDef',
         'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
         'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
-        vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
+        vars: ['MATTER_TYPES', 'SVC_LABELS', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
                'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],
         stubs: { document: d } });
       c.toggleIntakeFields();
@@ -324,7 +324,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal',
     'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson',
     'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
-    'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
+    'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
     'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'paymentCounts', 'paymentLive', 'isRefundRecord',
     'estFixedFee', 'estPrepFeeOnTop', 'estDeclutterHrs', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
   const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
