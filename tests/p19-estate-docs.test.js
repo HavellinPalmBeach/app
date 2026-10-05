@@ -96,7 +96,7 @@ const SCH_FNS = [
   'invAppraisalThreshold', '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney', '_invDocName',
   'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames',
   'docScopeDef', 'weArrangeAppraisals', 'roundCents', 'fmt', 'fmtDate2',
-  'trustInstrumentTitle', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'jobListEntries'];
+  'trustInstrumentTitle', 'fmtCEDate', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'jobListEntries'];
 const SCH_VARS = ['INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'INV_ASSET_TRACKS',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'EXEMPT_CAP_732_402', 'INV_CATEGORIES', 'DOC_SCOPES'];
 const IT = (id, o) => Object.assign({ stableId: id, label: 'inventory', objectName: 'Item ' + id, category: 'Furniture', condition: 'Good',
@@ -158,7 +158,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(h.length > 30000, 'fixture: rendered (' + h.length + ')');
     // §1.2: the party is the trust, named as the instrument, with the decedent beside it.
     has(h, '>Trust</td>', 'the party row is the trust');
-    has(h, '<strong>The Adler Family Trust, dated Mar 3, 2015</strong>', '⚠⚠ named as the instrument: "The <name>, dated <date>"');
+    // RESTATED 2026-10-05 (P20, Q27; Anthony: "yes"): the trust's date is spelled out, "March 3, 2015", as an instrument is
+    // cited (trustInstrumentTitle reads fmtCEDate); P19 printed the app's short date, "Mar 3, 2015". Every date pin below follows.
+    has(h, '<strong>The Adler Family Trust, dated March 3, 2015</strong>', '⚠⚠ named as the instrument: "The <name>, dated <date>"');
     has(h, '>Decedent</td>', 'with the decedent beside it');
     has(between(h, '>Decedent</td>', '</tr>'), 'Margaret Doe', 'by name');
     lacks(h, 'Estate of', '⚠⚠ no "Estate of <decedent>" as the party');
@@ -197,9 +199,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Missing halves of the trust are lines to complete; a name beginning "The" is not given a second; text is escaped.
     has(agr(JOB('trust')), '<strong>_______________________________________________, dated ____________________</strong>', 'nothing recorded: two lines to complete');
     has(agr(JOB('trust', { trustName: 'Adler Family Trust' })), 'The Adler Family Trust, dated ____________________', 'no date: the date is the line');
-    has(agr(JOB('trust', { trustDate: '2015-03-03' })), '_______________________________________________, dated Mar 3, 2015', 'no name: the name is the line');
+    has(agr(JOB('trust', { trustDate: '2015-03-03' })), '_______________________________________________, dated March 3, 2015', 'no name: the name is the line');
     const the = agr(JOB('trust', { trustName: 'The Adler Family Trust', trustDate: '2015-03-03' }));
-    has(the, 'The Adler Family Trust, dated Mar 3, 2015', 'a recorded name already beginning "The" …');
+    has(the, 'The Adler Family Trust, dated March 3, 2015', 'a recorded name already beginning "The" …');
     lacks(the, 'The The', '… is not given a second');
     const xss = agr(JOB('trust', { trustName: '<img src=x onerror=alert(1)> Trust' }));
     lacks(xss, '<img src=x', '⚠ a typed trust name is text: escaped');
@@ -216,7 +218,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const b = agr(JOB('both', TRUST)), bt = text(b);
     has(b, '>Estate</td>', 'a pour-over keeps the estate row');
     has(b, 'Estate of Margaret Doe', 'named as the estate');
-    has(between(b, '>Trust</td>', '</tr>'), 'The Adler Family Trust, dated Mar 3, 2015', '⚠ and adds the trust row');
+    // RESTATED 2026-10-05 (P20, Q27): the month spelled out, as above.
+    has(between(b, '>Trust</td>', '</tr>'), 'The Adler Family Trust, dated March 3, 2015', '⚠ and adds the trust row');
     ok(b.indexOf('>Estate</td>') < b.indexOf('>Trust</td>'), 'the estate first, then the trust');
     has(b, 'Letters of Administration</td>', 'the Letters: the probate track governs a pour-over');
     has(b, 'Probate Case Number</td>', 'its case number');
@@ -434,7 +437,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ce = (job) => inEastern(() => attempt(() => docCtx(job).clientEstimateHtml(EST({ svc: job.svc }), job)));
     const cell = (h) => { const i = h.indexOf('ce-ident-row'); const j = h.indexOf('Property</div>', i); return i > 0 && j > i ? text(h.slice(i, j)) : 'NO IDENTITY ROW'; };
     const named = cell(ce(JOB('trust', TRUST)));
-    has(named, 'Trust The Adler Family Trust, dated Mar 3, 2015', '⚠⚠ a trust-only matter with the trust recorded: the trust, by its name and date');
+    // RESTATED 2026-10-05 (P20, Q27): the month spelled out (trustInstrumentTitle, through fmtCEDate).
+    has(named, 'Trust The Adler Family Trust, dated March 3, 2015', '⚠⚠ a trust-only matter with the trust recorded: the trust, by its name and date');
     lacks(named, 'Estate of', 'and never "Estate of"');
     const bare = cell(ce(JOB('trust')));
     has(bare, 'Decedent Margaret Doe', 'no trust name recorded: the decedent, which is true either way');
@@ -458,12 +462,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const items = () => [IT('i1', { objectName: 'Trust sofa', assetTrack: 'Trust' }), IT('i2', { objectName: 'Trust rug', fmv: '900', assetTrack: 'Trust' })];
     const h = sched('trust', JOB('trust', TRUST), items());
     ok(h.indexOf('#357a50') > 0, 'fixture: a FINAL trust schedule (its signature block is drawn)');
-    has(h, '<div style="font-size:12px;margin-bottom:2px;">The Adler Family Trust, dated Mar 3, 2015</div>', '⚠⚠ the header names the trust as the instrument');
+    // RESTATED 2026-10-05 (P20, Q27): the month spelled out, and the sandbox lifts the real long-date helper (fmtCEDate).
+    has(h, '<div style="font-size:12px;margin-bottom:2px;">The Adler Family Trust, dated March 3, 2015</div>', '⚠⚠ the header names the trust as the instrument');
     ok(h.indexOf('The Adler Family Trust') > h.indexOf('Margaret Doe') && h.indexOf('The Adler Family Trust') < h.indexOf('Prepared for the successor trustee'),
        'under the decedent\'s line, above "Prepared for the successor trustee"');
     lacks(sched('trust', JOB('trust'), items()), ', dated', 'no trust recorded: no line, nothing invented');
     has(sched('trust', JOB('trust', { trustName: 'Adler Family Trust' }), items()), '>The Adler Family Trust</div>', 'a name without a date: the name alone');
-    lacks(sched('trust', JOB('trust', { trustDate: '2015-03-03' }), items()), 'Mar 3, 2015</div>', 'a date alone names no trust');
+    lacks(sched('trust', JOB('trust', { trustDate: '2015-03-03' }), items()), 'March 3, 2015</div>', 'a date alone names no trust');
     lacks(sched('trust', JOB('probate', TRUST), items()), 'Adler Family Trust', 'a matter recorded as having no trust never names one');
     has(sched('trust', JOB('trust', { trustName: '<b>X</b> Trust' }), items()), 'The &lt;b&gt;X&lt;/b&gt; Trust', '⚠ escaped');
     // One line, unchanged, without co-trustees.

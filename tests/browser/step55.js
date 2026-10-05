@@ -7,7 +7,7 @@
 // a person could not type in one sitting: a won client whose estimate is approved, the trust and a co-trustee recorded
 // (W1 builds those inputs), and an inventory on the desk. The jobs backend is answered by a route.
 //
-//   A. a TRUST-ONLY estate's agreement names the trust (The Adler Family Trust, dated Mar 3, 2015) and the decedent, a
+//   A. a TRUST-ONLY estate's agreement names the trust (The Adler Family Trust, dated March 3, 2015) and the decedent, a
 //      Certification of Trust row, the Trustee's Attorney, no case number, no court and no "Estate of"; §6.3, §7.1 and the
 //      signature page name the successor trustee; Daniel Adler has a Co-Signer block of his own; §5.4 No Purchase by
 //      Havellin and the Disposition Ledger sentence are on it; Exhibit A in the same packet asks for the Certification of
@@ -143,7 +143,9 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       ok(agrH.length > 20000, 'fixture: the agreement half of the packet (' + agrH.length + ')');
       const s12 = await T(A.html.slice(A.html.indexOf('1.2 Client / Authorized Party'), A.html.indexOf('1.3 Property')));
       const s13 = await T(A.html.slice(A.html.indexOf('1.3 Property'), A.html.indexOf('Scope of Services')));
-      has(s12, 'Trust The Adler Family Trust, dated Mar 3, 2015', '⚠⚠ §1.2: the party is the trust, named as the instrument');
+      // RESTATED 2026-10-05 (P20, Q27; Anthony: "yes"): the trust's date is spelled out, as an instrument is cited; P19 printed
+      // the app's short date, "Mar 3, 2015".
+      has(s12, 'Trust The Adler Family Trust, dated March 3, 2015', '⚠⚠ §1.2: the party is the trust, named as the instrument');
       has(s12, 'Decedent Margaret Doe', 'with the decedent beside it');
       lacks(s12, 'Estate of', '⚠⚠ no "Estate of" as the party');
       has(s12, 'Certification of Trust Pending', '⚠⚠ the Certification of Trust row, Pending');
@@ -219,7 +221,8 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       for (let i = 0; i < 20 && (await p.evaluate(() => (window.__prints || []).length)) === before; i++) await p.waitForTimeout(150);
       const pr = await lastPrint();
       ok(pr.html.indexOf('Schedule of Tangible Personal Property Held in Trust') >= 0, 'fixture: the Trust Schedule printed');
-      has(pr.text, 'The Adler Family Trust, dated Mar 3, 2015', '⚠⚠ the header names the trust');
+      // RESTATED 2026-10-05 (P20, Q27): the month spelled out, as on the agreement.
+      has(pr.text, 'The Adler Family Trust, dated March 3, 2015', '⚠⚠ the header names the trust');
       ok(pr.text.indexOf('The Adler Family Trust') > pr.text.indexOf('Margaret Doe'), 'under the decedent\'s line');
       eq(count(pr.text, 'Received for the trust’s records by'), 2, '⚠⚠ two trustees recorded: two lines');
       has(pr.text, 'Ruth Adler · Successor Trustee', 'the representative named under hers');

@@ -23,7 +23,7 @@
 const { fn, sandbox, domStub, source } = require('./harness');
 
 const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'fmtDate2',
-  'svcLabelOf', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText',
+  'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText',
   'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit',
   'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
   'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted', 'proposedPlanRow',
@@ -267,7 +267,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson',
       'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine',
       'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2',
-      'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
+      'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
     const invVars = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',

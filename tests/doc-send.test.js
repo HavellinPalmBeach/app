@@ -330,7 +330,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // so the rendered invoice arrives as unstyled text; the complete document is the
     // attached PDF, from the same conversion that writes the Drive copy.
     const ctx = sandbox({
-      fns: ['invoiceEmailSubject', 'paymentStageWord', 'buildInvoiceEmailText', 'invoiceBalanceWords', 'buildInvoiceEmailHtml',
+      fns: ['invoiceEmailSubject', 'paymentStageWord', 'buildInvoiceEmailText', 'invoiceBalanceWords', 'buildInvoiceEmailHtml', 'docServiceTitle', 'probateSvcOffTrack',
             '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt'],
       vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'DOC_STAGE_WORD', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
       stubs: {

@@ -65,7 +65,7 @@ const LEGACY = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20000,
 
 // ── the real client estimate ────────────────────────────────────────────────
 const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
-                'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases',
+                'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor', 'prepFeeRate', 'estWorkingDays', 'estFixedFee',
                 'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'escLines', 'roundCents', 'fmtHrs'];
 const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
@@ -77,7 +77,7 @@ const ceDoc = (e) => sandbox({ fns: CE_FNS, vars: CE_VARS }).clientEstimateHtml(
 const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
                  'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
                  '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor',
-                 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones',
+                 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones',
                  'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly',
                  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'paymentCounts', 'paymentLive', 'isRefundRecord',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
@@ -106,12 +106,12 @@ const actuals = () => ({ La1: { quote: 900, status: 'Confirmed', vendorName: 'Br
 // ── the real agreements ─────────────────────────────────────────────────────
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate',
                  'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
-const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
+const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', '_PCT_WORDS',
                   'PREP_FEE_RATE', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
 const agr = (job, e) => text(sandbox({ fns: AGR_FNS, vars: AGR_VARS,

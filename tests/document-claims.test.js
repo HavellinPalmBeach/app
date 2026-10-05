@@ -367,7 +367,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // The agreement builders — the reconciliation suite's list, trimmed to what these forms read.
   const AGR = sandbox({
     fns: ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt',
-      'svcLabelOf', 'isDecedentJob', 'estTolerancePctTxt', 'paymentSplit', 'materialsBasisNote', 'materialsPackageQuoted',
+      'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob', 'estTolerancePctTxt', 'paymentSplit', 'materialsBasisNote', 'materialsPackageQuoted',
       'estimateDocScope', 'svcHasDocStep', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp',
       'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
       'docStandardEffect', 'isFormalDoc', 'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel',

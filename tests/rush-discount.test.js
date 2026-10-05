@@ -57,7 +57,7 @@ const DISCOUNT_VARS = ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_da
 
 // ── the real client estimate, so the document a client reads is what is asserted ─────
 const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
-                'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection',
+                'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                 'proposedPlanRow', '_cePhases', 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor',
                 // proposedPlanRow's prep narrative reads the rate rather than printing a 30.
                 'prepFeeRate',
@@ -83,7 +83,7 @@ function invCtx(e, logs) {
     fns: ['invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
-          'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf',
+          'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
           'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'],

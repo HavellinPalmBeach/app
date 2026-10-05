@@ -206,7 +206,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (svc) => {
       const d = classDom({ 'i-svc': svc }, {});
       const c = sandbox({
-        fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+        fns: ['toggleIntakeFields', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -314,7 +314,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (svc) => {
       const d = classDom({ 'i-svc': svc }, marks);
       const c = sandbox({
-        fns: ['toggleIntakeFields', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+        fns: ['toggleIntakeFields', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -470,7 +470,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // Every one of them is something a person sees and no source needle noticed.
   group('driving the Edit Client modal');
   {
-    const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
+    const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'ecPaintSvcFlag', 'matterDef', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
                     'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass',
                     'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',

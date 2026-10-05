@@ -58,7 +58,7 @@ const optionValues = (html, id) => {
   return m ? (m[1].match(/<option\b[^>]*>/g) || []).map((o) => unesc((/value="([^"]*)"/.exec(o) || [])[1] || '')) : null;
 };
 
-const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate',
+const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack',
   'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
   'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
   'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',

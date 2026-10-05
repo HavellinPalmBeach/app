@@ -1673,6 +1673,9 @@ body.no-smf .smf-col{display:none;}
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Which <em>instrument</em> the work feeds, not what we were hired to do. <strong>Deliberately has no default</strong> &mdash; guessing probate is what puts a court schedule in front of a successor trustee. A pour-over will is usually <em>Both</em>.</div>
           </div>
         </div>
+        <!-- A Probate service on a matter with no court (P20, Q26): flagged live as the service or the matter changes
+             (probateSvcFlag, painted by toggleIntakeFields). A flag; Save Client is never refused for it. -->
+        <div id="i-svc-flag"></div>
         <div class="row">
           <!-- ⚠ THE OPTIONS ARE RENDERED FROM DOC_TIERS AT LOAD, NOT TYPED HERE. A menu written
                into the markup is a second copy of the catalogue, and this file records exactly
@@ -2199,6 +2202,9 @@ body.no-smf .smf-col{display:none;}
              read off the screen and quote on the phone. It is painted by calcAll and is empty
              on every job whose questions are answered. -->
         <div id="e-contract-gate"></div>
+        <!-- A Probate service on a matter with no court (P20, Q26), under the number it prices: painted by calcAll from
+             probateSvcFlag while the estimate is unapproved; empty on every other job. -->
+        <div id="e-svc-flag"></div>
         <div id="fixed-price-panel" style="display:none;margin-top:10px;padding:10px 14px;background:#F5F0E8;border:1.5px solid #C4A96B;border-radius:6px;">
           <div style="font-size:10px;color:#A67C45;font-weight:700;letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;">Fixed-Price Project Fee Option</div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;">
@@ -6572,6 +6578,58 @@ function trustRecordShown(svc, matter) {
 function propertySaleAsked(svc, matter) {
   return courtRecordShown(svc, matter) || trustRecordShown(svc, matter);
 }
+// ⚠⚠ ONE ANSWER TO "A PROBATE SERVICE ON A MATTER WITH NO PROBATE" (P20, 2026-10-05, Q26; Anthony: "A"). The service is
+// what we were hired to do, and it prices the job (JOB_STEPS' `legal` step, fixedPriceBuffer's 25% or 35%); the matter is
+// how the estate is administered. A Probate or Contested Probate service on a matter ANSWERED Trust or Neither is off the
+// probate track (jobOnProbateTrack: Both and an unanswered matter are on it), so a document that named the service named
+// a probate the matter does not have. What follows reads this and nothing else: the documents name the service without
+// "Probate" (docServiceTitle, both services), and Probate alone is flagged until its estimate is approved
+// (probateSvcFlag). ⚠ THE PRICE FOLLOWS THE SERVICE, UNCHANGED, and nothing here re-types a job: pricing is Anthony's call.
+// Takes a job, or the two values a form holds ({svc, matterType}); `svcKey` asks about the service an estimate priced.
+function probateSvcOffTrack(job, svcKey) {
+  if (!job) return false;
+  var svc = svcKey || job.svc || job.serviceType || '';
+  return (svc === 'probate' || svc === 'contested_probate') && !jobOnProbateTrack(job, svc);
+}
+// ⚠⚠ THE SERVICE'S NAME ON A CLIENT DOCUMENT (P20, Q26): one namer, read by every client document and email that prints
+// the service (both agreement forms' title, the client estimate's service row and fee-table heading, the invoices, the
+// three client emails). The catalogue's name (svcLabelOf), except that a probate service off the probate track never
+// claims a probate: Probate reads Estate Settlement, Contested Probate reads Contested Estate Settlement (drafted, for
+// Anthony). The price is the service's own either way. Internal screens (the client list, the dashboard, Build Estimate's
+// picker, the manager's emails) keep svcLabelOf: there the service is the price basis. `svcKey`: the service a document
+// prints where it is the estimate's own. '—' where nothing names a service (svcLabelOf's contract).
+function docServiceTitle(job, svcKey) {
+  var j = svcKey ? Object.assign({}, job || {}, { svc: svcKey }) : job;
+  if (!probateSvcOffTrack(j)) return svcLabelOf(j);
+  return (j.svc === 'contested_probate' ? 'Contested ' : '') + SVC_LABELS.cleanout;
+}
+// ⚠⚠ THE FLAG (P20, Q26: Anthony's answer A). A PROBATE service on a matter with no court prices court work that will not
+// happen, so until the estimate is approved the screens that set the service and the matter say so and suggest Estate
+// Settlement, which reprices it: Client Intake and Edit Client live as either control changes (and Edit Client's save
+// notice), Build Estimate beside the summary. A flag, never a refusal, and never a switch: the switch stays a person's,
+// through the service pickers (svcFamily keeps it in the decedent family). ⚠ CONTESTED PROBATE IS NEVER FLAGGED: a fight
+// over a trust usually reaches a court too, so its price stays and only its words follow the matter (docServiceTitle).
+// Approved: it suggests nothing (the price stays; ✎ Edit estimate or a change order is the route, and Edit Client holds
+// the service). Out for approval: it names the route (estimateRepriceRoute). DOM-free: `job` is a job or a form's
+// {svc, matterType}; `estRec` the estimate record ({approved, submitted}) where there is one. '' when nothing applies.
+function probateSvcFlag(job, estRec) {
+  if (!job || (job.svc || job.serviceType) !== 'probate' || !probateSvcOffTrack(job)) return '';
+  if ((estRec && estRec.approved) || job.approved) return '';
+  var d = matterDef(job);
+  return 'No court on this matter: it is recorded as ' + (d && d.trust ? 'a trust administration' : 'a family distribution, with no trust')
+    + '. The ' + SVC_LABELS.probate + ' service prices court work that will not happen. '
+    + (estimateOutForApproval(job, estRec) ? estimateRepriceRoute(job, estRec)
+      : 'Switch the service to ' + SVC_LABELS.cleanout + ' before the estimate is approved; it reprices the estimate.');
+}
+// Paints probateSvcFlag's sentence into its slot on intake, Edit Client or Build Estimate: a warning, or nothing (the slot
+// hidden, so an empty one takes no row in Edit Client's grid). The esc() is belt and braces: every word of the flag is the
+// app's own (the matter's words, the catalogue's names, the route sentence), so its revert stays green in the P20 sweep.
+function paintProbateSvcFlag(id, msg) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = msg ? '<div class="alert a-warn" style="margin:8px 0 0;font-size:11px;">' + esc(msg) + '</div>' : '';
+  el.style.display = msg ? '' : 'none';
+}
 
 // ⚠⚠ THE PROBATE ROWS — one predicate, read by the on-screen summary, the workbook payload and
 // nothing else yet. Fla. Stat. §733.604 is a filing deadline in a probate proceeding, Letters of
@@ -7303,6 +7361,11 @@ function calcAll() {
   var eng = computeEngineV3(sqftVal, engineRooms, svcKey, crewSize, yearsInHomeVal, activeDocScope());
   paintEstimateDocScope(svcKey, _ejob);
   paintEstimateContractGate(_ejob);
+  // The service this screen prices, on the job's matter (P20, Q26): a Probate service with no court is flagged beside the
+  // summary until the estimate is approved, by the store's record or this screen's own state, whichever says more.
+  var _psRec = (_ejob && estimateStore[_ejob.id]) || {};
+  paintProbateSvcFlag('e-svc-flag', _ejob ? probateSvcFlag(Object.assign({}, _ejob, { svc: svcKey }),
+    { approved: !!(_psRec.approved || estimateApproved), submitted: !!(_psRec.submitted || estimateSubmitted) }) : '');
   if (isPrep) eng = {totTC:0, totPS:0, roomTC:0, roomPS:0, load:0, days:0, perRoom:[], volFactor:1, cpxFactor:1};
   // Under the working-supervisor model these two are NOT the billed TC/PS figures.
   // baseTCHrs = off-site coordination; basePSHrs = the hands-on work pool (W).
@@ -9293,6 +9356,8 @@ function toggleIntakeFields() {
   if (alI && eafI.show) alI.textContent = eafI.label;
   var ahI = document.getElementById('i-executor-auth-hint');
   if (ahI && eafI.show) ahI.textContent = eafI.hint;
+  // A Probate service on a matter with no court (P20, Q26): flagged as either control changes, never refused.
+  paintProbateSvcFlag('i-svc-flag', probateSvcFlag({ svc: svc, matterType: _mtI }, null));
   // ⚠ EVERYTHING THAT IS A FACT ABOUT A DECEDENT RATHER THAN ABOUT A COURT CASE — date of
   // death, who builds the inventory, and the two documentation gates. These sat inside
   // #probate-fields until 2026-09-21, so an Estate Settlement was asked none of them and was
@@ -11466,7 +11531,7 @@ function _ceGroupedSpaces(rooms) {
   });
 }
 
-function proposedPlanRow(e) {
+function proposedPlanRow(e, job) {
   var narratives = {
     downsizing: 'We work alongside you room by room, editing what comes with you to the next home — sorting every item into keep, sell, donate, and dispose, then packing and organizing what stays. Your Transition Concierge directs the plan and manages every vendor while Property Specialists handle the hands-on sorting, packing, and heavy lifting; the hours below reflect that careful, decision-by-decision pace.',
     downsizing_move: 'We work alongside you room by room — sorting into what you keep, what comes with you, what goes to family, and what is sold, donated or disposed of, with every item photographed and logged against where it went — then packing what comes with you for the move. On move day your Transition Concierge supervises the crew at both the current and new home and directs placement room by room, so you arrive to an organized home rather than a wall of boxes.',
@@ -11477,6 +11542,10 @@ function proposedPlanRow(e) {
     prep: 'We prepare the property for market by managing every vendor needed to get it show-ready — painting, repairs, landscaping, deep cleaning, and staging. Your Transition Concierge sources and schedules each trade, oversees the work to Havellin\'s standard, and handles all coordination and quality control on your behalf. Third-party vendors are billed to you directly at cost; Havellin\'s fee is a ' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on that vendor spend.'
   };
   narratives.estate = narratives.cleanout;
+  // ⚠ A PROBATE SERVICE ON A MATTER WITH NO COURT (P20, Q26: probateSvcOffTrack) told the trustee its work followed "the
+  // documentation standards probate requires" and kept "the records the court and counsel may request". The same work,
+  // without the probate or the court; the price is the service's own. Contested's narrative names neither.
+  if (e.svc === 'probate' && probateSvcOffTrack(job, e.svc)) narratives.probate = 'We settle the estate room by room under full documentation standards — a complete inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records counsel may request and keeps all parties informed.';
   var narrative = narratives[e.svc] || 'We work through the property room by room — sorting and routing every item to the right destination while your Transition Concierge manages the plan and all vendor coordination and Property Specialists handle the hands-on work. The hours below reflect that careful, methodical pace.';
 
   // The four conditional notes that used to hang off this narrative are gone. Every
@@ -11493,7 +11562,7 @@ function proposedPlanRow(e) {
 // before they read what it costs.
 function clientJobPlanSection(e, job) {
   var _j = job || (typeof jobs !== 'undefined' ? jobs.find(function(j){ return j.id === e.jobId; }) : null) || {};
-  var parts = proposedPlanRow(e);
+  var parts = proposedPlanRow(e, _j);
   var isPrep = e.svc === 'prep';
   var steps = (typeof JOB_STEPS !== 'undefined' && JOB_STEPS[e.svc]) ? JOB_STEPS[e.svc] : {};
 
@@ -11710,7 +11779,9 @@ function clientEstimateHtml(e, job) {
   if (!job) return '';
   var _eSplit = paymentSplit(e.havellinTotal);
   var today = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  var svcLabels = SVC_LABELS;
+  // The estimate's own service as every client document names it (docServiceTitle, P20): off the probate track a probate
+  // service is named without "Probate". '—' where the estimate names no service, as before.
+  var _ceSvcTitle = SVC_LABELS[e.svc] ? esc(docServiceTitle(job, e.svc)) : '—';
 
   // Duration comes straight from the estimate's stored working-day count (e.days),
   // the same figure the Estimate tab's timeline badge shows — so the two never
@@ -11771,7 +11842,7 @@ function clientEstimateHtml(e, job) {
         // sits cleanly at the left edge, and the three representative fields then read
         // as one group rather than being split around it.
         '<div class="ce-hdr-row ce-hdr-row-4">' +
-        '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + _ceSvcTitle + '</div></div>' +
         '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + esc(job.executor||'—') + (job.executorRole ? ' — ' + esc(job.executorRole) : '') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Phone</div><div class="ce-meta-val">' + esc(job.executorPhone||'—') + '</div></div>' +
         '<div><div class="ce-meta-label">Rep Email</div><div class="ce-meta-val">' + esc(job.executorEmail||'—') + '</div></div>' +
@@ -11781,7 +11852,7 @@ function clientEstimateHtml(e, job) {
       : '<div class="ce-hdr-divider"></div>' +
         '<div class="ce-hdr-row" style="grid-template-columns:1fr 1fr;">' +
         '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + esc(job.phone||'—') + '</div></div>' +
-        '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + (svcLabels[e.svc]||'—') + '</div></div>' +
+        '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + _ceSvcTitle + '</div></div>' +
         '</div>'
     ) +
 
@@ -11858,15 +11929,9 @@ function clientEstimateHtml(e, job) {
 
   if (!vendorRows) vendorRows = '<tr><td colspan="2" style="color:var(--gray);font-size:12px;font-style:italic;">No third-party vendors estimated at this time</td></tr>';
 
-  var _svcSubHdr = {
-    downsizing: 'Onsite Home Editing Services',
-    downsizing_move: 'Onsite Home Transition Services',
-    home_cleanout: 'Onsite Home Cleanout Services',
-    cleanout: 'Onsite Estate Settlement Services',
-    probate: 'Onsite Probate Estate Settlement Services',
-    contested_probate: 'Onsite Contested Probate Estate Services'
-  };
-  var onsiteLabel = _svcSubHdr[e.svc] || 'Onsite Services';
+  // The fee table's heading names the service as the service row above does (_ceSvcTitle, P20). It was a map of its own,
+  // which named Contested Probate "Contested Probate Estate", and a Probate service on a trust "Probate Estate Settlement".
+  var onsiteLabel = SVC_LABELS[e.svc] ? 'Onsite ' + _ceSvcTitle + ' Services' : 'Onsite Services';
   // Fee-only (standalone Home Prep): no hours are billed, so the payment schedule and the
   // Terms take their own arms. See estimateIsFeeOnly.
   var _isFeeOnlyEst = estimateIsFeeOnly(e, job);
@@ -18643,7 +18708,7 @@ function buildInvoiceEmailHtml(job, stage, amtDue) {
     '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">' + _emHtml(word) + ' Invoice</div>' +
     '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
       _emHtml(street || job.name || 'Your property') + '</div>' +
-    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(svcLabelOf(job)) +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(docServiceTitle(job)) +
       (job.hvlId ? ' &nbsp;&middot;&nbsp; Reference ' + _emHtml(job.hvlId) : '') + '</div>' +
   '</td></tr>' +
   '<tr><td style="padding:20px 22px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:' + B.ink + ';line-height:1.6;">' +
@@ -24342,7 +24407,7 @@ function buildAgreementEmailHtml(job) {
     '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Service Agreement</div>' +
     '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
       _emHtml(street || job.name || 'Your property') + '</div>' +
-    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(svcLabelOf(job)) +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(docServiceTitle(job)) +
       (job.hvlId ? ' &nbsp;&middot;&nbsp; Reference ' + _emHtml(job.hvlId) : '') + '</div>' +
 
     '<div style="height:1px;background:' + B.line + ';margin:22px 0;"></div>' +
@@ -24785,7 +24850,7 @@ function buildEstimateEmailHtml(e, job) {
     '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">Service Estimate</div>' +
     '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
       _emHtml(street || job.name || 'Your property') + '</div>' +
-    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(svcLabelOf(job)) +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(docServiceTitle(job)) +
       (job.hvlId ? ' &nbsp;&middot;&nbsp; Reference ' + _emHtml(job.hvlId) : '') + '</div>' +
 
     '<div style="height:1px;background:' + B.line + ';margin:22px 0;"></div>' +
@@ -36743,7 +36808,7 @@ function invoiceHtml(job, stage) {
     '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
     '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—') + '</div></div>' +
     '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + esc(job.phone||'—') + '</div></div>' +
-    '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(svcLabelOf(job)) + '</div></div>' +
+    '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(docServiceTitle(job)) + '</div></div>' +
     '</div>' +
     '<div class="ce-divider"></div>' +
     contactLine +
@@ -43722,16 +43787,19 @@ var AGR_NO_PURCHASE = 'Havellin, its owners, team members and contractors will n
 function docEstateAuthority(job) {
   return matterDef(job) ? estateAuthority(job) : ESTATE_AUTHORITIES.letters;
 }
-// The trust, named as an instrument is named (P19): "The Adler Family Trust, dated Mar 3, 2015". One namer, read by the
-// agreement's §1.2 and the Trust Schedule's header. With `blank` (a form someone signs) a half not recorded is a line
-// to complete; without it (a schedule, which states only what the record holds) a missing date is left out and a
-// missing name answers '' (a date alone names no trust). A name already beginning "The" is not given a second.
+// The trust, named as an instrument is named (P19): "The Adler Family Trust, dated March 3, 2015". One namer, read by the
+// agreement's §1.2, the Trust Schedule's header and the client estimate's identity line. With `blank` (a form someone
+// signs) a half not recorded is a line to complete; without it (a schedule, which states only what the record holds) a
+// missing date is left out and a missing name answers '' (a date alone names no trust). A name already beginning "The"
+// is not given a second. ⚠ THE MONTH IS SPELLED OUT (P20, Q27; Anthony: yes): a legal title read "dated Mar 3, 2015"
+// through the app's short date; the long-date helper (fmtCEDate: local noon, never a UTC parse) reads it as an instrument
+// is cited.
 function trustInstrumentTitle(job, blank) {
   var n = String((job && job.trustName) || '').trim();
   var d = String((job && job.trustDate) || '').trim();
   if (!n && !blank) return '';
   var name = n ? (/^the\s/i.test(n) ? esc(n) : 'The ' + esc(n)) : blank;
-  var date = d ? esc(fmtDate2(d)) : (blank ? '____________________' : '');
+  var date = d ? esc(fmtCEDate(d)) : (blank ? '____________________' : '');
   return name + (date ? ', dated ' + date : '');
 }
 // ⚠⚠ THE SENTENCE THAT KEEPS HAVELLIN OUT OF FIDUCIARY ACCOUNTING WORK, and it belongs on the
@@ -43957,8 +44025,10 @@ function probateAgreementHtml(job, est) {
   var attyFirm = esc(job.probateAttyFirm || '');
   var hvlId = job.hvlId || '—';
   var lettersMap = {received:'Attached', pending:'Pending', notneeded:'N/A (non-probate)'};
-  var svcLabelMap = {probate:'Probate Estate Settlement', cleanout:'Estate Settlement'};
-  var svcLabel = svcLabelMap[job.svc] || esc(job.svcLabel) || 'Estate Services';
+  // ⚠ THE SERVICE AS THE CLIENT DOCUMENTS NAME IT (docServiceTitle, P20). This was its own map of two services, so a
+  // Contested Probate form fell through to the label stored at intake, and a Probate service on a trust titled the
+  // trustee's contract "Probate Estate Settlement"; off the probate track it reads Estate Settlement now.
+  var svcLabel = esc(docServiceTitle(job));
   var letters = lettersMap[job.executorAuth] || 'Pending';
   var today = new Date();
   var monthYear = today.toLocaleDateString('en-US',{month:'long',year:'numeric'});
@@ -44663,13 +44733,10 @@ function agreementHtml(job, est) {
   var propAddr    = esc([job.addr, job.city ? job.city + ', FL' : '', job.zip].filter(Boolean).join(' ') || '[PROPERTY ADDRESS]');
   var hvlId       = job.hvlId || '—';
   var startFmt    = job.start ? new Date(job.start+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) : '[START DATE]';
-  var svcMap = {
-    cleanout:'Estate Settlement', probate:'Probate Estate Settlement',
-    downsizing:'Home Editing',
-    downsizing_move:'Home Transition',
-    prep:'Home Prep for Sale'
-  };
-  var svcLabel = svcMap[job.svc] || job.svcLabel || '[SERVICE TYPE]';
+  // The service as every client document names it (docServiceTitle, P20), not a map of its own: this one had no Home
+  // Cleanout, which fell back to the label stored at intake. A blank template names none ('—') and keeps its blank.
+  var svcLabel = docServiceTitle(job);
+  svcLabel = svcLabel === '—' ? '[SERVICE TYPE]' : esc(svcLabel);
   var isPrepAgr = (job.svc === 'prep');   // Home Prep for Sale — fee-only vendor management; Client is the homeowner
   // Declutter hours make a prep engagement NOT fee-only, and three clauses below say outright
   // that it is. See estimateIsFeeOnly. Zero on a blank template (no estimate yet), which is the
@@ -46370,6 +46437,9 @@ function showEditClient(jobId) {
   html += '<div class="d-grid2" style="gap:8px 20px;">';
   html += fld('Date of Death', '<input type="date" id="ec-date-of-death" value="'+(job.deathDate||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', true);
   html += fld('How is this estate being administered?', '<select id="ec-matter-type" onchange="ecToggleProbate()" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'',l:'Select — ask the attorney'}].concat(Object.keys(MATTER_TYPES).map(function(k){ return { v:k, l: MATTER_TYPES[k].label }; })), matterTypeOf(job))+'</select>', true);
+  // A Probate service on a matter with no court (P20, Q26): painted by ecPaintSvcFlag on open and as the service or the
+  // matter changes, and named again in the save's notice. The slot names the client whose estimate decides what it says.
+  html += '<div id="ec-svc-flag" data-job="'+job.id+'" style="grid-column:1 / -1;display:none;"></div>';
   // Built from DOC_TIERS through the same helper Client Intake uses, so a tier cannot be
   // renamed on one form and not the other. Prefilled through docTierOf, which migrates a job
   // recorded before the tier existed off its stored scope — nothing had to be run on them.
@@ -46471,6 +46541,22 @@ function showEditClient(jobId) {
   // Paint the documentation readout on open, not only on a change — the reason an estate is
   // in Strict Mode is the thing somebody opening this modal has come to find out.
   if (isEstate) ecDocGateChange();
+  ecPaintSvcFlag();
+}
+
+// Edit Client's flag for a Probate service on a matter with no court (P20, Q26: probateSvcFlag), read off the modal's own
+// service and matter as they stand: on open, and as either changes (ecToggleProbate). The slot carries the client, whose
+// estimate decides what the flag may suggest (nothing once approved; the route while out for approval).
+function ecPaintSvcFlag() {
+  var slot = document.getElementById('ec-svc-flag');
+  var jid = slot ? (parseInt(slot.dataset.job, 10) || 0) : 0;
+  var job = jid ? jobs.find(function(j){ return j.id === jid; }) : null;
+  if (!job) return;
+  var mtEl = document.getElementById('ec-matter-type');
+  paintProbateSvcFlag('ec-svc-flag', probateSvcFlag(Object.assign({}, job, {
+    svc: (document.getElementById('ec-svc') || {}).value || job.svc,
+    matterType: mtEl ? mtEl.value : matterTypeOf(job)
+  }), (typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null));
 }
 
 // The Edit Client half of onDocGateChange. One function decides the level for both forms;
@@ -46514,6 +46600,8 @@ function ecToggleProbate() {
   if (aw) aw.style.display = eaf.show ? '' : 'none';
   var al = document.getElementById('ec-exec-auth-lbl');
   if (al && eaf.show) al.textContent = eaf.label;
+  // A Probate service on a matter with no court (P20, Q26), as either control changes.
+  ecPaintSvcFlag();
   // Home Prep ↔ another living service: the house questions follow, as on intake (Q17).
   var hf = document.getElementById('ec-house-find');
   if (hf) hf.style.display = intakeAsksHouseContents(svcVal) ? '' : 'none';
@@ -46805,10 +46893,12 @@ function saveClientEdit(jobId) {
   // docTierChangeNotice re-seeds the build open on Build Estimate (the calcAll at the foot of this function
   // reprices it) and says what happened, before the redraw that shows the notice.
   var _tierNote = (isEstateEdit && docTierOf(job) !== _tierBefore) ? docTierChangeNotice(job, _tierBefore) : null;
-  if ((_stillMissing.length || _tierNote) && typeof dashNotice === 'function')
-    dashNotice((_stillMissing.length || _tierNote.type === 'warn') ? 'warn' : 'ok',
+  // A Probate service saved on a matter with no court (P20, Q26): the notice names it, as the modal did live. Never a refusal.
+  var _svcFlag = probateSvcFlag(job, _rec);
+  if ((_stillMissing.length || _tierNote || _svcFlag) && typeof dashNotice === 'function')
+    dashNotice((_stillMissing.length || _svcFlag || _tierNote.type === 'warn') ? 'warn' : 'ok',
       (_stillMissing.length ? 'Saved. Still missing on this client: ' + _stillMissing.join(', ') + '.' : 'Saved.')
-      + (_tierNote ? ' ' + _tierNote.msg : ''));
+      + (_tierNote ? ' ' + _tierNote.msg : '') + (_svcFlag ? ' ' + _svcFlag : ''));
   if (typeof renderClientDashboard === 'function') renderClientDashboard(jobId);
   if (typeof renderJobs === 'function') renderJobs();   // client list may show a new name
 

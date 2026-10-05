@@ -364,7 +364,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift',
       'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs',
-      'esc', 'fmtDate2', 'svcLabelOf', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat',
+      'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat',
       'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'discountOnLabor', 'estFixedFee',
       'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds',
       'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'agrBillingRates', 'estDeclutterHrs', 'escLines', 'roundCents', 'fmtHrs'];
