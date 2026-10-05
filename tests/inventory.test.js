@@ -19,6 +19,8 @@ const INV_FNS = [ 'invDocContractBlock', 'docTierProduces',
   '_apprGroups', '_apprWithheld', '_apprNFA',
   '_invTrack', '_invIsProbateAsset', '_invIsExempt', '_invOnProbateSchedule', '_invExcludedTracks', '_invHasValue',
   'savePhotoRefs', '_warnPhotoStoreFull',
+  // P19: written authority is every fiduciary's (invApprovalComplete).
+  'invApprovalComplete',
 ];
 const INV_VARS = [ 'INV_CONTRACT_DOCS',
   'INV_STICKY_FIELDS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
@@ -454,10 +456,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
       'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat', 'invMAIVCategory',
-      'isDecedentJob', '_gate706', 'roundCents', 'fmt'
+      'isDecedentJob', '_gate706', 'roundCents', 'fmt',
+      // P19: the firearm gate asks every fiduciary's approval against the job, and the withheld block names who authorises.
+      'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', 'jobListEntries', 'invRepresentativeTitle', 'matterDef', 'matterTypeOf'
     ]);
     const WL_VARS = INV_VARS.concat([
-      'INV_TRANSPORT_REASONS',
+      'INV_TRANSPORT_REASONS', 'MATTER_TYPES',
       'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
       'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INVENTORY_COLUMNS',
     ]);

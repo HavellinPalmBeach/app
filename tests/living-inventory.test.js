@@ -72,7 +72,10 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
   '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
   // P16: the dealer route, the one field-on-this-job rule, and the photo folders the share names.
-  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt'
+  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
+  // P19: the bequest caution asks the job's bequest list; written authority is every fiduciary's.
+  'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete',
+  'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'invRepresentativeTitle'
 ];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   '_agRun', 'AGENT_NOTICE_KINDS', 

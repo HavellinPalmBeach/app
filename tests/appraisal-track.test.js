@@ -32,9 +32,13 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode
                   // P16: the documents name a firearm's dealer route, the worklist counts only what the
                   // import panel still offers, and the bulk handler asks the one field-on-this-job rule.
                   'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer',
-                  '_importableFromEstimate', '_importedSourceSet', '_invKeyOnJob', '_invColOnJob'];
+                  '_importableFromEstimate', '_importedSourceSet', '_invKeyOnJob', '_invColOnJob',
+                  // P19: the bequest caution asks the job's bequest list; written authority is every fiduciary's.
+                  'invBequestElsewhere', 'invBequestFor', 'jobListEntries',
+                  'invApprovalComplete', 'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', '_andJoin',
+                  'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf', 'invHavellinRecipient'];
 const APPR_VARS = ['INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
-                   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS'];
+                   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler' };

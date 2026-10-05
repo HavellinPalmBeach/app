@@ -188,8 +188,13 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       // The representative signs; the desk records it with the bulk bar.
       await p.click('#inv-row-g1 input[type=checkbox]'); await p.waitForTimeout(300);
       await p.click('#inv-row-n1 input[type=checkbox]'); await p.waitForTimeout(300);
-      answers.push('Margaret Butler', '2026-09-30');
+      // RESTATED 2026-10-03 (P19): Record approval is a dialog with a tick for each fiduciary on the job (here the one
+      // representative, Margaret Butler) and the date, not two prompts. The approval it records is the same.
       await press('button[onclick="invRecordApproval(4701)"]', 'Record approval on the bulk bar');
+      await p.check('#ia-fid-0').catch((e) => ok(false, 'the representative\'s tick — ' + e.message.split('\n')[0]));
+      await p.fill('#ia-date', '2026-09-30').catch((e) => ok(false, 'the date — ' + e.message.split('\n')[0]));
+      await press('#ia-save-btn', 'Record approval in the dialog');
+      await press('#ia-actions button[onclick="closeInvApproval()"]', 'Done');
       has(await txt('#inv-row-g1'), 'Cleared to carry. Anthony Graziano alone takes it to Palm Beach Arms (FFL)',
           '⚠⚠ with the authority recorded the firearm is cleared to carry, to the dealer on its route');
       has(await txt('#inv-row-n1'), 'NFA item — never transported by Havellin', 'the NFA item is not, authority or no authority');

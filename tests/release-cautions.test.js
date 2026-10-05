@@ -32,10 +32,15 @@ const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_
              'isDecedentJob',
              // P16: the request names a firearm's dealer route; the bulk handler asks the one
              // field-on-this-job rule before it writes.
-             'invDealerRoute', 'invDealerRouteOffered', '_invKeyOnJob', '_invColOnJob', 'roundCents', 'fmt'];
+             'invDealerRoute', 'invDealerRouteOffered', '_invKeyOnJob', '_invColOnJob', 'roundCents', 'fmt',
+             // P19: the bequest caution asks the job's bequest list; the request signs every fiduciary;
+             // the bulk handler asks the staff rule.
+             'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete', 'invApprovalGap',
+             'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf',
+             'invHavellinRecipient'];
 const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-              'DECEDENT_SERVICES', 'INVENTORY_COLUMNS'];
+              'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler', tc: 'Anthony Graziano' };
@@ -106,8 +111,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // landed on 2026-09-11. Restated as the RULE rather than the list: the two AUTHORITY
     // questions — is this the estate's property to sell at all — come before the PRICE one,
     // which only arises once the answer to them is yes.
+    // RESTATED 2026-10-03 (P19): a fourth caution, `bequestElsewhere` — a line matched to a bequest on the job's list
+    // and proposed to go anywhere but to the person it names — is an AUTHORITY question too, so it sits with the two
+    // above and before the price one. The rule this pins is unchanged: authority first, valuation last.
     eq(s.INV_RELEASE_CAUTIONS.map((c) => c.key).join(','),
-       'flagBequest,flagDisputed,needsAppraisal',
+       'flagBequest,flagDisputed,bequestElsewhere,needsAppraisal',
        'authority cautions first, the valuation one last');
     s.INV_RELEASE_CAUTIONS.forEach((c) => {
       ok(c.head && c.body && c.badge && c.tone, c.key + ' carries a heading, a body and a badge');
