@@ -125,7 +125,9 @@ function _writeInventorySheet(ss, payload) {
   var cFmv   = idx('Estimated FMV');
   var cGross = idx('Gross Proceeds');
   var cFees  = idx('Fees');
-  var cNet   = idx('Net to Estate');
+  // The Net column under either name (P19, E7): the app shows it as "Net Proceeds" and still sends "Net to Estate",
+  // the name every deployment before 2026-10-03 resolves, until this one is live everywhere.
+  var cNet   = idx('Net Proceeds') || idx('Net to Estate');
 
   if (rows.length) {
     sh.getRange(2, 1, rows.length, nCol).setValues(rows);
@@ -284,7 +286,7 @@ function _writeSummarySheet(ss, payload) {
     disp2: _invColLetter(cols, 'Disputed')        || 'R',
     gross: _invColLetter(cols, 'Gross Proceeds')  || 'V',
     fees:  _invColLetter(cols, 'Fees')            || 'W',
-    net:   _invColLetter(cols, 'Net to Estate')   || 'X'
+    net:   _invColLetter(cols, 'Net Proceeds') || _invColLetter(cols, 'Net to Estate') || 'X'
   };
   var rng = function(letter) { return 'Inventory!' + letter + '2:' + letter; };
 
@@ -327,7 +329,9 @@ function _writeSummarySheet(ss, payload) {
   put(t,1, fid ? 'PROCEEDS (reconciliation)' : 'PROCEEDS RECEIVED'); bold(t,1); t++;
   put(t,1,'Gross'); sh.getRange(t,2).setFormula('=SUM(' + rng(C.gross) + ')').setNumberFormat('$#,##0'); t++;
   put(t,1,'Fees');  sh.getRange(t,2).setFormula('=SUM(' + rng(C.fees) + ')').setNumberFormat('$#,##0');  t++;
-  put(t,1, fid ? 'Net to Estate' : 'Net received');
+  // Headed for whoever holds the proceeds, as the app states it (P19, E7: "Net to Estate" was false on a trust). An app
+  // build from before P19 sends no `netLabel` and gets the heading it always had.
+  put(t,1, payload.netLabel || (fid ? 'Net to Estate' : 'Net received'));
   sh.getRange(t,2).setFormula('=SUM(' + rng(C.net) + ')').setNumberFormat('$#,##0'); t++;
 
   // The app sends its own lists; the fallbacks only catch a pre-2026-08-24 payload.

@@ -75,7 +75,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
   // P19: the bequest caution asks the job's bequest list; written authority is every fiduciary's.
   'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete',
-  'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'invRepresentativeTitle',
+  'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'inventoryNetLabel', 'invRepresentativeTitle',
   // P19: the Disposition Ledger's card on the desk, on living work as on an estate.
   '_renderLedgerCards', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
@@ -91,7 +91,7 @@ const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
   'MAIV_OTHER', 'MAIV_BY_CATEGORY',
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
-  'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs'
+  'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS'
 ];
 
 function rig(job, refs) {
@@ -818,9 +818,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(Ph, r, '…and on a probate one');
     });
     ['Date of Death', 'Valuation Basis', 'Value as of', 'Total Estimated FMV',
-     'Items Awaiting Valuation', 'Specific Bequests', 'Net to Estate'].forEach((r) => {
+     'Items Awaiting Valuation', 'Specific Bequests'].forEach((r) => {
       has(Th, r, '⚠⚠ "' + r + '" stays — the valuation block is not a probate thing');
     });
+    // RESTATED 2026-10-05 (P19, E7), NOT WEAKENED: the net total stays on a trust's summary, under the trust's own
+    // heading. "Net to Estate" was false there; the proceeds are the trust's (inventoryNetLabel).
+    has(Th, 'Net to Trust', '⚠⚠ the net total stays on a trust, headed for the trust');
+    lacks(Th, 'Net to Estate', '⚠ and never "Net to Estate" on a trust');
+    has(Ph, 'Net to Estate', '…while a probate estate keeps "Net to Estate"');
     has(Th, 'trust instrument', 'the footer says what is administered elsewhere');
     lacks(Th, 'court inventory', '⚠ and cites no court filing');
     has(Ph, 'court inventory', '…while the probate footer is untouched');
@@ -954,11 +959,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invProbateRows', 'matterDef', 'matterTypeOf',
             'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
             '_asFoundRows', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest',
-            '_roomFoundDone', '_afTime', '_afDate'],
+            '_roomFoundDone', '_afTime', '_afDate', 'estateProceedsHolder', 'inventoryNetLabel'],
       vars: ['INVENTORY_COLUMNS', 'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'INV_VAL_BASES',
              'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'MATTER_TYPES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AS_FOUND_COLUMNS',
-             'estimateStore', 'jobPlanStore'],
+             'estimateStore', 'jobPlanStore', 'INV_NET_LABELS'],
       stubs: { jobs: [V_TIER('contents'), Object.assign({}, ESTATE, { id: 71, docTier: 'values' }),
                       Object.assign({}, ESTATE, { id: 72 })],
                _photoRefs: { 7: [], 71: [], 72: [] }, fmtDate2: (d) => String(d || '') },

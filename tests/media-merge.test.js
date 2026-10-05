@@ -389,12 +389,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // The as-found index rides the same payload, so the real chain runs here rather
             // than a stub: this is the one place the manifest and the workbook meet, and a
             // throw anywhere in it would otherwise surface on a client's spreadsheet.
-            '_asFoundRows', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_afTime'],
+            '_asFoundRows', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_afTime',
+            'estateProceedsHolder', 'inventoryNetLabel'],
       vars: ['INVENTORY_COLUMNS', 'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS',
              'INV_VAL_BASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AS_FOUND_COLUMNS',
              'DECEDENT_SERVICES', 'MATTER_TYPES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-             'estimateStore', 'jobPlanStore'],
+             'estimateStore', 'jobPlanStore', 'INV_NET_LABELS'],
       stubs: { fmtDate2: (d) => String(d || '') },
     });
     p2.jobs.push({ id: 3, name: 'Estate', hvlId: 'HVL-3' });

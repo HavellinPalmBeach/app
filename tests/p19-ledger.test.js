@@ -862,6 +862,74 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('_renderInvPanel')), '+ c.header +', 'the item panel heads the field with `header`');
   });
 
+  // ── E7, completed by the lead ────────────────────────────────────────────
+  // W5 left the workbook's half to the lead (a .gs change). The net total is headed for whoever holds the proceeds on the
+  // desk and in the workbook alike (inventoryNetLabel, estateProceedsHolder's answer as a heading), and the 2026-10-03
+  // deployment finds the Net column under either name, so the app can send "Net Proceeds" once it is live everywhere.
+  G('Lead · E7 completed: the net total headed for the holder, and the workbook finds the Net column under either name', () => {
+    const N = lift(['inventoryNetLabel'], [], {});
+    const MATTERS = ['', 'probate', 'trust', 'both', 'neither'];
+    eq(MATTERS.map((m) => N.inventoryNetLabel(ESTATE({ matterType: m }))),
+       ['Net to Estate', 'Net to Estate', 'Net to Trust', 'Net to Estate or Trust', 'Net to Estate'],
+       '⚠⚠ by matter: the estate; the trust on a trust-only matter; either on a pour-over');
+    eq(N.inventoryNetLabel(LIVING()), 'Net received', 'a living client: what they received, as before');
+    // Every answer the holder rule gives has its own heading, so a reworded holder cannot fall to the fallback unseen.
+    MATTERS.map((m) => ESTATE({ matterType: m })).concat([LIVING()]).forEach((j) => {
+      const a = N.estateProceedsHolder(j);
+      ok(Object.prototype.hasOwnProperty.call(N.INV_NET_LABELS, a), 'a heading for the holder "' + a + '"');
+    });
+
+    // The desk's Summary, driven: the same heading.
+    const items = () => [ROW('s1', { itemNo: 1, objectName: 'Sideboard', disposition: 'Sell', gross: '1000', fees: '250' })];
+    const D = lift(['_renderInventorySummary'], ['savePhotoRefs'], { savePhotoRefs() {}, jobs: [], _photoRefs: {}, estimateStore: {}, jobPlanStore: {} });
+    const desk = (j) => text(D._renderInventorySummary(j, items()));
+    const tr = desk(ESTATE({ matterType: 'trust' }));
+    has(tr, 'Net to Trust $750', '⚠⚠ the desk heads a trust\'s net total for the trust');
+    lacks(tr, 'Net to Estate', 'and never "Net to Estate" on a trust');
+    has(desk(ESTATE({ matterType: 'both' })), 'Net to Estate or Trust $750', 'a pour-over: either, as the property is held');
+    has(desk(ESTATE()), 'Net to Estate $750', 'a probate estate: unchanged');
+    has(desk(LIVING()), 'Net received $750', 'a living client: unchanged');
+
+    // The payload states it, derived (the server keeps no copy of the matter types).
+    const P = lift(['buildInventoryPayload'], ['savePhotoRefs'], { savePhotoRefs() {}, document: domStub({}),
+      jobs: [ESTATE({ matterType: 'trust' })], _photoRefs: { 7: LINES() }, estimateStore: {}, jobPlanStore: {} });
+    P.jobs = [ESTATE({ matterType: 'trust' })]; P._photoRefs = { 7: LINES() };
+    const pay = P.buildInventoryPayload(7);
+    eq(pay.netLabel, 'Net to Trust', 'the payload carries the heading');
+    ok(pay.columns.indexOf('Net to Estate') > 0, 'and still sends the Net column under the name every deployment resolves');
+
+    // The real server: the Summary's heading is the app's, an older app's payload (no netLabel) keeps the old one, and
+    // the net SUM points at the Net column under either name.
+    const g = vm.createContext({});
+    vm.runInContext([gsFn(INVGS, '_invColLetter'), gsFn(INVGS, '_writeSummarySheet'), gsFn(INVGS, '_writeInventorySheet'),
+      gsVar(INVGS, 'INV_CATEGORIES_FALLBACK'), gsVar(INVGS, 'INV_DISPOSITIONS_FALLBACK')].join('\n'), g);
+    const book = () => {
+      const cells = {};
+      const rng = (r, c) => ({ setValue(v) { (cells[r + ',' + c] = cells[r + ',' + c] || {}).v = v; return this; },
+        setValues(v) { (cells[r + ',' + c] = cells[r + ',' + c] || {}).vs = v; return this; },
+        setFormula(f) { (cells[r + ',' + c] = cells[r + ',' + c] || {}).f = f; return this; },
+        setFormulas(f) { (cells[r + ',' + c] = cells[r + ',' + c] || {}).fs = f; return this; },
+        setNumberFormat() { return this; }, setFontWeight() { return this; }, setBackground() { return this; } });
+      const sh = { clear() {}, setFrozenRows() {}, autoResizeColumns() {}, setColumnWidth() {}, getRange: rng };
+      return { cells, ss: { getSheetByName: () => sh, insertSheet: () => sh } };
+    };
+    const netRow = (b) => { const k = Object.keys(b.cells).filter((x) => /^(Net to|Net received)/.test(String(b.cells[x].v || '')) && x.split(',')[1] === '1')[0]; return k ? { label: b.cells[k].v, f: (b.cells[k.split(',')[0] + ',2'] || {}).f } : null; };
+    const cols = (net) => ['Job ID', 'Item #', 'Item', 'Gross Proceeds', 'Fees', net, 'Receipt / Doc'];
+    const summary = (payload) => { const b = book(); g._writeSummarySheet(b.ss, Object.assign({ docSet: 'estate', columns: cols('Net to Estate'), rows: [] }, payload)); return netRow(b); };
+    const s1 = summary({ netLabel: 'Net to Trust', onProbate: false });
+    eq(s1 && s1.label, 'Net to Trust', '⚠⚠ the workbook heads the total as the app states it');
+    eq(s1 && s1.f, '=SUM(Inventory!F2:F)', 'over the Net column');
+    eq((summary({}) || {}).label, 'Net to Estate', 'an app build older than 2026-10-03 (no netLabel): the old heading, unchanged');
+    eq((summary({ docSet: 'contents' }) || {}).label, 'Net received', 'and a living client\'s, unchanged');
+    eq((summary({ netLabel: 'Net to Trust', columns: cols('Net Proceeds') }) || {}).f, '=SUM(Inventory!F2:F)', '⚠ the SUM finds the column under its new name');
+    // The Inventory sheet's per-row formula, under either name.
+    ['Net to Estate', 'Net Proceeds'].forEach((name) => {
+      const b = book();
+      g._writeInventorySheet(b.ss, { columns: cols(name), rows: [cols(name).map(() => '')] });
+      ok(!!(b.cells['2,6'] && b.cells['2,6'].fs), '⚠ the Net formula lands on the Net column headed "' + name + '"');
+    });
+  });
+
   // ── One definition each ──────────────────────────────────────────────────
   G('One definition each, and the readers counted', () => {
     const live = noComments(SRC);
