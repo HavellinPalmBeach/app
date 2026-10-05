@@ -127,8 +127,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // (invSaveApproval), so the writer read here is the save; tests/p19-releases.test.js drives both.
     const rec = src.slice(src.indexOf('function invSaveApproval('));
     const recBody = rec.slice(0, rec.indexOf('\n}\n'));
-    has(recBody, 'ref.authBy = who', 'recording a signed approval writes who signed');
-    has(recBody, 'ref.approvalDate = when', 'and when');
+    // RESTATED 2026-10-05 (P20, Q24): the save adds the signers to whoever each line records already, each keeping their
+    // own date (invApprovalWithSigners), so it writes the merged result rather than the dialog's names as they stand.
+    has(recBody, 'invApprovalWithSigners(ref, names, when)', 'recording a signed approval adds who signed, and when, to the line');
+    has(recBody, 'ref.authBy = signed.authBy', 'recording a signed approval writes who signed');
+    has(recBody, 'ref.approvalDate = signed.approvalDate', 'and when');
   }
 
   group('CSV — same rows as the workbook, quoted so a spreadsheet can read it');

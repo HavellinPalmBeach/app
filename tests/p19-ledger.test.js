@@ -188,7 +188,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const html = page.html, t = text(html);
     has(page.title, 'Havellin Disposition Ledger - 69 Beach Blvd', 'the page carries the desk\'s dated title');
     has(html, '<th style="padding:2px 5px;">Item #</th>', 'an Item # column: the numbers every inventory document cites');
-    has(t, '1 Sargent portrait Auction Kodner Galleries Rex Hale Sep 25, 2026 Sep 30, 2026 $1,000 $250 $750', 'a line: number, item, disposition, recipient, authority, date, gross, fees, net');
+    // RESTATED 2026-10-05 (P20, Q24): who authorized a line prints through invApprovalSignedText, each signer with the day
+    // they signed, so "Rex Hale Sep 25, 2026" reads "Rex Hale (Sep 25, 2026)" (and two signers on two days each with theirs).
+    has(t, '1 Sargent portrait Auction Kodner Galleries Rex Hale (Sep 25, 2026) Sep 30, 2026 $1,000 $250 $750', 'a line: number, item, disposition, recipient, authority, date, gross, fees, net');
     has(t, '2 Silver tea set Auction Kodner Galleries — Sep 30, 2026 $237.50 $59.38 $178.12', 'to the cent');
     has(t, '3 Tabriz rug Consign Palm Consign — — — — pending', '⚠ a consignment with nothing recorded reads pending, not $0');
     has(t, 'Totals $1,237.50 $309.38 $928.12', 'the totals add the lines: $1,237.50 less $309.38');
@@ -250,7 +252,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ] });
     const html = ledgerRig(job, LINES({ undecided: false })).printDispositionLedger(7, { asHtml: true }).html;
     has(html, '<a href="https://drive.google.com/file/d/RC/view" style="color:#7a5c2e;">Charity receipt — Goodwill</a>', 'a donated line covered by a filed charity receipt links it');
-    has(text(html), '1 Sargent portrait Auction Kodner Galleries Rex Hale Sep 25, 2026 Sep 30, 2026 $1,000 $250 $750 Proceeds statement — Kodner', 'an auctioned line names its filed statement');
+    // RESTATED 2026-10-05 (P20, Q24): the authority cell reads "Rex Hale (Sep 25, 2026)", as above.
+    has(text(html), '1 Sargent portrait Auction Kodner Galleries Rex Hale (Sep 25, 2026) Sep 30, 2026 $1,000 $250 $750 Proceeds statement — Kodner', 'an auctioned line names its filed statement');
     has(text(html), 'Goodwill #4411', 'a line with its own reference keeps it');
     lacks(text(html), 'Signed receipt', '⚠ a voided copy is no receipt');
   });
