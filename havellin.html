@@ -6584,7 +6584,8 @@ function jobFiduciaries(job) {
 // it applies. `firm` where the 706 answer is yes; where it is unanswered the date is still returned, unfirm,
 // because unknown counts as yes for the documentation standard (_gate706) and nothing says a return is not
 // filed. An answer of no, a living client or no date of death: null. Counsel and the accountant own the filing
-// and any extension (Form 4768 extends the time to file, never to pay); the app only keeps the date in view.
+// and any extension (Form 4768 asks for more time to file and, separately and at the IRS's discretion, to pay; the app
+// records neither); the app only keeps the date in view.
 // Month arithmetic is done by hand rather than with setMonth, which rolls 31 May into March.
 function estateTaxReturn(job) {
   if (!job || !invFiduciaryMode(job)) return null;
@@ -11660,6 +11661,16 @@ function clientEstimateHtml(e, job) {
   var isEstateJob = !!(job.executor && job.executor.trim());
 
   var _estDate = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  // ⚠ ON A TRUST-ONLY MATTER THE PARTY IS THE TRUST, NOT AN ESTATE (P19, found by the documents workstream). The identity
+  // line read "Estate of <decedent>" on a successor trustee's estimate while the agreement it becomes Exhibit A to names
+  // the trust (_agrTrustIsParty). The trust by its own name where it is recorded (trustInstrumentTitle, already
+  // escaped), else the decedent, which is true either way; probate, Both, Neither and an unanswered matter keep
+  // "Estate of", and a living client their own name.
+  var _ceTrustParty = isEstateJob && _agrTrustIsParty(job);
+  var _ceTrustTitle = _ceTrustParty ? trustInstrumentTitle(job) : '';
+  var _cePartyLbl = !isEstateJob ? 'Client' : !_ceTrustParty ? 'Estate' : _ceTrustTitle ? 'Trust' : 'Decedent';
+  var _cePartyVal = !isEstateJob ? esc(job.name||'—') : !_ceTrustParty ? 'Estate of ' + esc(job.name||'—')
+    : (_ceTrustTitle || esc(job.name||'—'));
   var html =
     '<div style="text-align:center;padding:0 0 .75rem;">' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
@@ -11674,7 +11685,7 @@ function clientEstimateHtml(e, job) {
     // facts and pushed the actual scope further down the page.
     '<div class="ce-hdr-row ce-ident-row" style="margin-top:.35rem;">' +
     '<div><div class="ce-meta-label">Job ID</div><div class="ce-meta-val" style="font-family:monospace;color:var(--bronze);font-weight:600;white-space:nowrap;">' + esc(job.hvlId||'\u2014') + '</div></div>' +
-    '<div><div class="ce-meta-label">' + (isEstateJob ? 'Estate' : 'Client') + '</div><div class="ce-meta-val">' + (isEstateJob ? 'Estate of ' + esc(job.name||'\u2014') : esc(job.name||'\u2014')) + '</div></div>' +
+    '<div><div class="ce-meta-label">' + _cePartyLbl + '</div><div class="ce-meta-val">' + _cePartyVal + '</div></div>' +
     '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + propAddr + '</div></div>' +
     '<div><div class="ce-meta-label">Date</div><div class="ce-meta-val" style="white-space:nowrap;">' + _estDate + '</div></div>' +
     '</div>' +

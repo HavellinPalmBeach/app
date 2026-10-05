@@ -426,6 +426,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
+  // The lead, after the merge (P19): this workstream found the estimate's identity line still reading "Estate of
+  // <decedent>" on a trust-only matter, outside its listed functions. The trust by name where recorded, else the
+  // decedent; every other matter, and a living client, exactly as before.
+  group('Lead · the client estimate\'s identity line names the trust on a trust-only matter, never "Estate of"');
+  {
+    const ce = (job) => inEastern(() => attempt(() => docCtx(job).clientEstimateHtml(EST({ svc: job.svc }), job)));
+    const cell = (h) => { const i = h.indexOf('ce-ident-row'); const j = h.indexOf('Property</div>', i); return i > 0 && j > i ? text(h.slice(i, j)) : 'NO IDENTITY ROW'; };
+    const named = cell(ce(JOB('trust', TRUST)));
+    has(named, 'Trust The Adler Family Trust, dated Mar 3, 2015', '⚠⚠ a trust-only matter with the trust recorded: the trust, by its name and date');
+    lacks(named, 'Estate of', 'and never "Estate of"');
+    const bare = cell(ce(JOB('trust')));
+    has(bare, 'Decedent Margaret Doe', 'no trust name recorded: the decedent, which is true either way');
+    lacks(bare, 'Estate of', 'still no "Estate of"');
+    has(cell(ce(JOB('trust', { trustName: 'The Adler Trust' }))), 'Trust The Adler Trust', 'a name already beginning "The" is not given a second');
+    const typed = ce(JOB('trust', { trustName: '<b>Adler</b>' }));
+    has(typed, 'The &lt;b&gt;Adler&lt;/b&gt;', 'a typed name is text: escaped by the namer');
+    lacks(typed, '<b>Adler</b>', 'and never markup');
+    ['', 'probate', 'both', 'neither'].forEach((m) => {
+      const c = cell(ce(JOB(m, TRUST)));
+      has(c, 'Estate Estate of Margaret Doe', (m || 'unanswered') + ': "Estate of", unchanged');
+      lacks(c, 'Adler Family Trust', (m || 'unanswered') + ': no trust named in the identity line');
+    });
+    const living = cell(ce(JOB('', { svc: 'home_cleanout', executor: '', executorRole: '', name: 'Joan Smith' })));
+    has(living, 'Client Joan Smith', 'a living client: their own name, as before');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════════════════════
   group('B3 · the Trust Schedule names the trust, and each trustee receives it on a line of their own');
   {
     const items = () => [IT('i1', { objectName: 'Trust sofa', assetTrack: 'Trust' }), IT('i2', { objectName: 'Trust rug', fmv: '900', assetTrack: 'Trust' })];
@@ -497,13 +524,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('One definition each, and every reader counted');
   {
     eq(readers('docEstateAuthority'), { _cePhases: 1, probateAgreementHtml: 1 }, 'the documents\' paper: the agreement and Exhibit A');
-    eq(readers('trustInstrumentTitle'), { printTrustSchedule: 2, probateAgreementHtml: 2 }, 'the trust\'s namer: the agreement\'s two rows and the schedule\'s header');
+    // The lead (P19, after the merge) gave the client estimate's identity line the same namer: one more reader.
+    eq(readers('trustInstrumentTitle'), { clientEstimateHtml: 1, printTrustSchedule: 2, probateAgreementHtml: 2 }, 'the trust\'s namer: the agreement\'s two rows, the schedule\'s header and the client estimate\'s identity line');
     eq(readers('scheduleSigners'), { printCourtInventory: 2, printTrustSchedule: 2 }, 'who signs a schedule: the two schedules');
     eq(readers('scheduleSignLines'), { printCourtInventory: 1, printTrustSchedule: 1 }, 'and their lines');
     eq(readers('_agrCounsel'), { _agrScopeServices: 1, probateAgreementHtml: 2 }, 'counsel\'s names: §1.2, §2 and §2.1');
     eq(readers('_agrClientCapacity'), { probateAgreementHtml: 2 }, 'the Client\'s capacity: §6.3 and the signature page');
     eq(readers('_agrEstateNoun'), { probateAgreementHtml: 5 }, 'the estate noun: §3.1, §5.3, §7.1 twice (once as a possessive) and §10');
-    eq(readers('_agrTrustIsParty'), { _agrEstateNoun: 1, probateAgreementHtml: 1 }, 'whether the trust is the party: §1.2 and the noun');
+    eq(readers('_agrTrustIsParty'), { _agrEstateNoun: 1, clientEstimateHtml: 1, probateAgreementHtml: 1 }, 'whether the trust is the party: §1.2, the noun and the client estimate\'s identity line');
     eq(readers('_agrCoSigners'), { _agrCoRepRepresentation: 1, probateAgreementHtml: 1 }, 'the co-signers: the signature page and §5.1');
     const body = noComments(fn('probateAgreementHtml'));
     ok(body.length > 20000, 'fixture: the estate form\'s live source (' + body.length + ')');
