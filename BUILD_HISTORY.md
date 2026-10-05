@@ -6,6 +6,13 @@ Not loaded into sessions. `CLAUDE.md` holds the current rules; this file is the 
 
 ## Entries
 
+### 2026-10-05 · Agent Two specced (valuation), not built
+Anthony asked what was still open and for Agent Two, the value agent of inventory phase two, to be specced. Docs only: `AGENT_TWO_SPEC.md`, a line under Open work and in the repository map, and a WorthPoint item on the tracker's *Only Anthony can do these*.
+- **Decided (Anthony):** the agent writes `fmv` flagged unreviewed (*"the whole point is to save time"*), on every line, on living disposal jobs as well as estates; ordinary lots get a general estimate, valuables sold comparables; its value stands until an appraisal replaces it; a range crossing the appraisal threshold flags an appraiser.
+- **Sources, checked 2026-10-05:** eBay's sold data is closed (Marketplace Insights not open to new developers, `findCompletedItems` shut down February 2025, Browse API active listings only); WorthPoint and LiveAuctioneers publish no API. Browser automation of a WorthPoint subscription was weighed and ruled out (no server to run it; terms; fragility). WorthPoint is the confirming source by hand, the agent writing each lookup; a partnership inquiry was drafted to Anthony's Gmail.
+- **The contract question the spec raises:** on the Contents list and None tiers the agreement says Havellin states no opinion of value; the spec recommends internal figures only there (§8), for Anthony and counsel.
+- Reverses, once built, the 2026-09-21 rule that a living job never enters values (`invNeedsAppraisal`'s comment); `invNeedsAppraisal` itself stays the tick alone on a living job.
+
 ### 2026-10-05 · P21: Anthony's answers to Q28–Q32: the signature page names who signs, the sign-by-hand email asks the co-representatives too, signers at one address named on the send
 P20 raised five questions; Anthony answered *"yes to all, build P21"*. A small pack, built and verified in the lead's own tree; app-only (no `.gs` change, no redeploy).
 - **Q28, Q29: recorded, no code.** *Contested Estate Settlement* and the off-track Probate narrative stay as P20 drafted them (the namer's comment and the narrative's now say Anthony kept them; counsel to confirm, A15). The marketing opt-out stays the client's DocuSign tab; a co-representative opts out in writing (§7.2), and the manual's *What the client actually fills in* and the playbook's marketing paragraph now say so (bundle B4).

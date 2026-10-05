@@ -61,7 +61,7 @@ The recurring lessons, each learned from a defect that shipped.
 - `tools/stamp-build.sh` (the only way to stamp); `tools/retire-branches.sh` with `BRANCH_ARCHIVE.md` (deleted branches and their tip SHAs).
 - `WORKFLOW_AUDIT_2026-09-28.md`: the tracker for open work (fix packs, questions and answers, Anthony's own items). Read it before building a pack.
 - `COUNSEL_REVIEW_BUNDLE.md`: every legal text drafted here, collected for counsel.
-- Specs, each still the best explanation of its area: `ESTATE_SCOPE_SPEC.md`, `ESTATE_DOCUMENTATION_SPEC.md`, `INVENTORY_WORKSPACE_SPEC.md`, `AGENT_ONE_SPEC.md`, `STRIPE_PAYMENTS_SPEC.md`, `LIFECYCLE_AUDIT.md`, `UNEARNED_REVENUE_SPEC.md` and `TIME_TRACKING_INTEGRATION_SPEC.md` (QuickBooks; not built). `PRICING_SCHEMA.md` is historical: price from the engine.
+- Specs, each still the best explanation of its area: `ESTATE_SCOPE_SPEC.md`, `ESTATE_DOCUMENTATION_SPEC.md`, `INVENTORY_WORKSPACE_SPEC.md`, `AGENT_ONE_SPEC.md`, `AGENT_TWO_SPEC.md` (valuation; not built), `STRIPE_PAYMENTS_SPEC.md`, `LIFECYCLE_AUDIT.md`, `UNEARNED_REVENUE_SPEC.md` and `TIME_TRACKING_INTEGRATION_SPEC.md` (QuickBooks; not built). `PRICING_SCHEMA.md` is historical: price from the engine.
 
 ## Testing
 ### The harness
@@ -343,6 +343,7 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
 - Once `2026-10-03` (or later) is live everywhere: drop the Net column's `sheetHeader` (and the CSV's own header row) so the workbook's column reads *Net Proceeds*, as the desk and the CSV do. The server already finds either name; sending the new one to an older deployment would put the Net formula nowhere.
 - The counsel bundle is on hold until Anthony says go (2026-10-02: "hold counsel bundle until we are done here. they may be more changes"): keep adding to it, send nothing.
 - `WORKFLOW_AUDIT_2026-09-28.md` is the tracker. Every pack (P1 to P21) has landed and every question to Q32 is answered (Q32's last step is Anthony's sandbox test); Anthony's own items are listed there (the redeploy above, a Stripe test ACH link, the counsel bundle, the insurance and bond).
+- Agent Two (valuation) is specced, not built: `AGENT_TWO_SPEC.md` (Anthony, 2026-10-05: writes the number flagged unreviewed, every line, living jobs too, the agent's value stands until an appraisal, a range crossing the threshold flags an appraiser, WorthPoint by hand). Its §12 holds four questions for Anthony; build it as its own pack after the `2026-10-05` redeploy.
 - Waiting on Anthony:
   - The walkaway refund rests on the final invoice for services performed; both hourly clauses (standard §12.4, estate §8.1) state a refund above the amount owed only after Havellin's uncured breach. Counsel to confirm the reading or add a sentence (bundle).
 - Decided, not to build: intake sanity checks on square footage and room counts (Anthony, 2026-09-30: "no sanity check is needed").
