@@ -41,7 +41,9 @@ const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_
              // P19: the Disposition Ledger reads its figures, its gaps and its signers through these.
              'dispositionLedger', '_invRecipient', '_ledgerReceiptCell', '_ledgerNames', '_reconFlagText', 'ledgerSigners',
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
-             '_jobDestLabel', '_agrApprover', 'signedRecordsOf'];
+             '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
+             // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
+             'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused'];
 const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS'];
@@ -118,8 +120,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-03 (P19): a fourth caution, `bequestElsewhere` — a line matched to a bequest on the job's list
     // and proposed to go anywhere but to the person it names — is an AUTHORITY question too, so it sits with the two
     // above and before the price one. The rule this pins is unchanged: authority first, valuation last.
+    // RESTATED 2026-10-05 (P20, Q25): a fifth caution, `staffRecipient` (a living client's line sold or given to one of
+    // Havellin's people: flagged, never refused, so the client signs knowing), is a question about whom the property goes
+    // to, so it sits with the authority cautions and before the price one. The rule pinned is unchanged.
     eq(s.INV_RELEASE_CAUTIONS.map((c) => c.key).join(','),
-       'flagBequest,flagDisputed,bequestElsewhere,needsAppraisal',
+       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,needsAppraisal',
        'authority cautions first, the valuation one last');
     s.INV_RELEASE_CAUTIONS.forEach((c) => {
       ok(c.head && c.body && c.badge && c.tone, c.key + ' carries a heading, a body and a badge');

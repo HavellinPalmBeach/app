@@ -113,7 +113,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(S.invApprovalMissing(L('Ruth Adler', '2026-10-02'), job), ['Daniel Adler'], 'and the one missing is named');
     has(S.invApprovalGap(L('Ruth Adler', '2026-10-02'), job), 'Daniel Adler has not approved it, and every co-trustee must',
         'the flag says why, in the trust\'s word for them');
-    has(S.invApprovalGap(L('Ruth Adler', '2026-10-02'), job), '(recorded: Ruth Adler, Oct 2, 2026)', 'and what was recorded');
+    // RESTATED 2026-10-05 (P20, Q24): who has signed is read through invApprovalSignedText, never the field (which carries
+    // each signer's own ISO date once their days differ), so "(recorded: Ruth Adler, Oct 2, 2026)" reads as below.
+    has(S.invApprovalGap(L('Ruth Adler', '2026-10-02'), job), '. Signed so far by Ruth Adler (Oct 2, 2026).', 'and what was recorded');
     ok(!S.invApprovalComplete(L(BOTH, ''), job), 'no date is no approval');
     ok(!S.invApprovalComplete(L('', '2026-10-02'), job), 'no signer is no approval');
     // Typed by hand: the separators people use, a bracketed role, case and spacing.
@@ -134,7 +136,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const solo = PROBATE();
     ok(S.invApprovalComplete(L('Tripp Butler', '2026-10-02'), solo), 'the representative alone, as recorded');
     ok(!S.invApprovalComplete(L('Jane Counsel, Esq.', '2026-10-02'), solo), '⚠ a signature from somebody who is not the fiduciary is not written authority');
-    has(S.invApprovalGap(L('Jane Counsel, Esq.', '2026-10-02'), solo), 'Tripp Butler has not approved it (recorded: Jane Counsel, Esq.', 'and says so, without a co- word');
+    // RESTATED 2026-10-05 (P20, Q24): the same sentence, read through the one readable form.
+    has(S.invApprovalGap(L('Jane Counsel, Esq.', '2026-10-02'), solo), 'Tripp Butler has not approved it. Signed so far by Jane Counsel, Esq. (Oct 2, 2026).', 'and says so, without a co- word');
     eq(S.invApprovalGap(L(BOTH, '2026-10-02'), job), '', 'a complete approval has no gap');
     eq(S.invApprovalGap(L('', ''), job), '', 'and no approval recorded is not a gap (the line simply awaits one)');
   });
@@ -159,14 +162,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       _invCellRead: 'the panel\'s read-only date display', printApprovalRequest: 'prints who has signed so far, beside the gap',
       probatePackageRecordHtml: 'the package\'s record of what was recorded, marked where it is not complete',
       printDispositionLedger: 'W5\'s ledger: prints who authorized each line, as recorded',
+      // RESTATED 2026-10-05 (P20, Q24): each signer's own date rides authBy, so the field has one parser, one readable
+      // form and one merge, and the displays read those instead of the field.
+      invApprovalSigners: 'the one parser (P20): who signed and when each signed',
+      invApprovalSignedText: 'the one readable form (P20): never a raw ISO date in front of a reader',
+      invApprovalWithSigners: 'the writer\'s rule (P20): names added, never dropped, each keeping its first date',
     };
     const extra = [...owners].filter((n) => !ALLOWED[n]).sort();
     eq(extra, [], '⚠⚠ no function outside the rule, the writer and the displays reads authBy or approvalDate');
     ok(owners.has('invApprovalComplete') && owners.has('invSaveApproval'), 'fixture: the scan finds the rule and the writer');
     // And the readers of the answer: each one asks invApprovalComplete (directly, or through invFirearmAuthorized).
     const callers = [...ALL_FNS].filter((n) => { try { return /\binvApprovalComplete\(/.test(noComments(fn(n))) && n !== 'invApprovalComplete'; } catch (e) { return false; } }).sort();
-    eq(callers, ['_invAwaitingApproval', 'invFirearmAuthorized', 'invReleasedToPerson', 'planDerivedLines'].sort(),
-       'the four direct readers: the request\'s list, the firearm gate, what counts as released for a receipt, the Job Plan line');
+    // RESTATED 2026-10-05 (P20): three more read the one predicate, and none decides it on its own: what left before it was
+    // complete (invRatificationOwed, Q23), an act's lines still open (invApprovalBatches) and what Record approval's dialog
+    // says it will leave open (invApprovalLeftOpen, Q24).
+    eq(callers, ['_invAwaitingApproval', 'invApprovalBatches', 'invApprovalLeftOpen', 'invFirearmAuthorized', 'invRatificationOwed',
+                 'invReleasedToPerson', 'planDerivedLines'].sort(),
+       'the direct readers: the request\'s list, the desk\'s acts, the dialog, the firearm gate, ratification, what counts as released for a receipt, the Job Plan line');
     const viaFirearm = [...ALL_FNS].filter((n) => { try { return /\binvFirearmAuthorized\(/.test(noComments(fn(n))) && n !== 'invFirearmAuthorized'; } catch (e) { return false; } }).sort();
     eq(viaFirearm, ['invReleaseBlocked', 'invTransportBlocked'], 'and the two firearm gates read it through invFirearmAuthorized');
     // Every caller of the firearm gates hands the job over, so a co-trustee recorded on it holds the firearm.
@@ -193,23 +205,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(body, 'ia-signer', 'no free-text signer where fiduciaries are recorded');
     has(doc.getElementById('ia-sub').innerHTML, '#1 Line 1', 'the lines it covers are named');
     eq(doc.getElementById('ia-date').value || (/id="ia-date" value="([^"]+)"/.exec(body) || [])[1], '2026-10-03', 'dated today by default');
-    // Partial ticks: refused, naming who, and nothing written.
-    doc.__seed('ia-fid-0', true); doc.__seed('ia-fid-1', false); doc.__seed('ia-date', '2026-10-02');
-    eq(S.invSaveApproval(), false, '⚠⚠ one co-trustee ticked: refused');
-    has(text(doc.getElementById('ia-fb').innerHTML), 'Not recorded: Daniel Adler is not ticked. Every co-trustee on the job signs a release before it is approved.',
-        'and the refusal names who is missing');
-    ok(!lines[0].authBy && !lines[1].authBy, 'nothing was written to either line');
-    // None ticked.
-    doc.__seed('ia-fid-0', false);
+    // RESTATED 2026-10-05 (P20, Q24; Anthony: "yes", let Record approval save a partial approval). P19 refused one
+    // co-trustee ticked alone, naming the other, and a co-trustee recorded since the dialog opened; both are now saved as a
+    // partial approval, said before saving and never refused (tests/p20-approvals.test.js drives both). What is still
+    // refused: nobody ticked, and a date not in the stored form, each with nothing written.
+    doc.__seed('ia-fid-0', false); doc.__seed('ia-fid-1', false); doc.__seed('ia-date', '2026-10-02');
     eq(S.invSaveApproval(), false, 'nobody ticked: refused');
-    // A co-trustee recorded while the dialog was open is asked for too.
-    S.jobs[0].coFiduciaries.push({ id: 'cf2', name: 'Sam Adler' });
+    has(text(doc.getElementById('ia-fb').innerHTML), 'Not recorded: tick the signatures on the returned request.', 'and the refusal says what to do');
+    ok(!lines[0].authBy && !lines[1].authBy, 'nothing was written to either line');
     doc.__seed('ia-fid-0', true); doc.__seed('ia-fid-1', true);
-    eq(S.invSaveApproval(), false, '⚠ a co-trustee recorded since the dialog opened: refused');
-    has(text(doc.getElementById('ia-fb').innerHTML), 'Sam Adler was recorded after this dialog opened', 'naming them and the fix');
-    S.jobs[0].coFiduciaries.pop();
     doc.__seed('ia-date', '02/10/2026');
     eq(S.invSaveApproval(), false, 'a date not in the stored form: refused');
+    ok(!lines[0].authBy && !lines[1].authBy, 'and nothing written');
     doc.__seed('ia-date', '2026-10-02');
     // The desk repaints as the approval lands, and its approvals list draws a control for this same batch (one spec per
     // paper): the dialog's own control must be drawn after it, or the dialog would stay open over a filed request.
@@ -346,7 +353,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                 LINE('b', 2, { objectName: 'Desk', disposition: 'Sell', authBy: BOTH, approvalDate: '2026-10-02' })];
     const PK = desk(['probatePackageRecordHtml'], TRUST(), pl);
     const pr = attempt(() => text(PK.probatePackageRecordHtml(7)));
-    has(pr.ok ? pr.val : 'threw: ' + pr.err, 'Ruth Adler Not complete: no approval recorded from Daniel Adler',
+    // RESTATED 2026-10-05 (P20, Q24): who approved prints through invApprovalSignedText, each signer with their day.
+    has(pr.ok ? pr.val : 'threw: ' + pr.err, 'Ruth Adler (Oct 1, 2026) Not complete: no approval recorded from Daniel Adler',
         '⚠ the package record marks the approval one co-trustee signed as not complete, naming who is missing');
     eq(count(pr.val, 'Not complete'), 1, 'and only that one');
   });
@@ -737,6 +745,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(!/\bsaveJobs\(\)/.test(b), n + ' never saves the job store bare');
     });
     // The staff rule is asked by both handlers that write a channel or a disposition.
-    ['_invEdit', '_invBulkApply'].forEach((n) => has(noComments(fn(n)), 'invHavellinRecipient(', n + ' asks the staff rule'));
+    // RESTATED 2026-10-05 (P20, Q25): invHavellinRecipient answers on every job now (the living client's caution reads it
+    // too), so the estate's refusal is its own predicate, invStaffRefused, which reads it; both handlers ask that.
+    ['_invEdit', '_invBulkApply'].forEach((n) => has(noComments(fn(n)), 'invStaffRefused(', n + ' asks the staff rule'));
+    has(noComments(fn('invStaffRefused')), 'invHavellinRecipient(', 'which reads the one definition');
   });
 };

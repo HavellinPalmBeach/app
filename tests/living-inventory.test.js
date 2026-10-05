@@ -79,8 +79,9 @@ const PRINT_FNS = [ 'invDocContractBlock',
   // P19: the Disposition Ledger's card on the desk, on living work as on an estate.
   '_renderLedgerCards', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
-  'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted'
-];
+  'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
+  // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
+  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord'];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   '_agRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
@@ -91,8 +92,9 @@ const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
   'MAIV_OTHER', 'MAIV_BY_CATEGORY',
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
-  'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS'
-];
+  'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS',
+  // P20 vars: the names the living client's staff caution reads.
+  'PERSON_NAME_ALIASES'];
 
 function rig(job, refs) {
   const printed = [];

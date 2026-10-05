@@ -15,6 +15,8 @@
 //      the designated item going elsewhere and its beneficiary, and states the staff rule in the trust's words
 //   C. Record approval: one co-trustee ticked is refused, naming the other, and nothing is written; both ticked records
 //      "Ruth Adler; Daniel Adler" on every line; the signed request is filed to Drive from the dialog and listed
+//      RESTATED 2026-10-05 (P20, Q24): one co-trustee ticked is saved as a partial approval, never refused (step 61);
+//      here the dialog says so before saving, and both are ticked, as the returned paper shows
 //   D. receipts: the card names what is owed, the receipt prints (who it came from, by matter), the signed copy files
 //      back and the line counts as receipted; the Job Admin line reads 1 of 2
 //   E. staff never buy: a recipient naming the concierge on a sale is refused in the row, and the bulk bar refuses a
@@ -222,9 +224,12 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       eq(dialogs.filter((d) => /^prompt/.test(d)).length, 0, 'and no prompt is asked');
       await p.fill('#ia-date', '2026-10-02');
       await p.check('#ia-fid-0');
-      await press('#ia-save-btn', 'Record approval, with Ruth alone ticked');
-      has(await txt('#ia-fb'), 'Not recorded: Daniel Adler is not ticked. Every co-trustee on the job signs a release before it is approved.', '⚠⚠ refused, naming who is missing');
-      eq((await line(5601, 's1')).authBy, undefined, 'and nothing is written');
+      // RESTATED 2026-10-05 (P20, Q24; Anthony: "yes", Record approval saves a partial approval). P19 pressed Record approval
+      // here and was refused; it would now record Ruth alone and say the lines stay open (step 61 drives that). The dialog
+      // says so before anything is saved, and the paper both signed is recorded with both ticked.
+      ok(await vis('#ia-note'), 'the dialog\'s note is on screen');
+      eq(await txt('#ia-note'), 'Daniel Adler has not signed yet: these lines stay on the next request until they do.', '⚠⚠ with Ruth alone ticked, the dialog says the lines would stay open');
+      eq((await line(5601, 's1')).authBy, undefined, 'and nothing is written by saying it');
       await p.check('#ia-fid-1');
       await press('#ia-save-btn', 'Record approval, both ticked');
       has(await txt('#ia-body'), 'Approval recorded on 3 items, signed by Ruth Adler; Daniel Adler on Oct 2, 2026.', 'recorded');
@@ -316,7 +321,9 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       await p.evaluate(() => { const j = jobs.find((x) => x.id === 5601); jobListPut(j, 'coFiduciaries', { name: 'Sam Adler', role: 'Co-trustee' }); });
       await toDesk(5601);
       has(await rowText('s1'), 'approval incomplete', '⚠⚠ an approval recorded before Sam was is incomplete now');
-      has(await txt('#inv-releases'), '⚠ Sam Adler has not approved it, and every co-trustee must (recorded: Ruth Adler; Daniel Adler, Oct 2, 2026).', 'and the desk says who is missing');
+      // RESTATED 2026-10-05 (P20): who has signed is read through the one readable form ("Signed so far by …"), never the
+      // field; and #2, already gone (Mary's signed receipt is filed), goes on the next request apart, for ratification (Q23).
+      has(await txt('#inv-releases'), '⚠ Sam Adler has not approved it, and every co-trustee must. Signed so far by Ruth Adler; Daniel Adler (Oct 2, 2026). These lines go back on the next approval request, #2 apart, for ratification: it has already left.', 'and the desk says who is missing');
       await press('#inv-workbar button[onclick="printApprovalRequest(5601)"]', 'Approval Request again');
       const t = await T((await lastPrint()).html);
       has(t, 'Signed so far by Ruth Adler; Daniel Adler (Oct 2, 2026); still to sign: Sam Adler', 'the lines are back on the request, naming who is still to sign');
