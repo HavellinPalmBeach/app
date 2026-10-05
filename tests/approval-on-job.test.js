@@ -107,10 +107,10 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
   '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
   'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', '_agrApprovedStamp',
   'ensureAgreementApproved', 'agreementReady', 'isJobWon', '_primeAgreementFor', 'loadAgreement',
-  'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docDraftPending', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
+  'approvedEstimateFor', 'signingPacketHtml', 'buildSigningPacketHtml', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docDraftPending', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
 const AGR_VARS = ['DOC_STAGE_WORD', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT',
   'DECEDENT_SERVICES', 'currentAgrJobId',
-  'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT'];
+  'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
 const AEST = (id) => ({ jobId: id, tcFee: 15000, psFee: 5000, pkgCost: 0, smf: 0, prepFee: 0,
   havellinTotal: 20000, totTC: 100, totPS: 50, tcRate: 150, psRate: 100, discountPct: 0,
   fixedPrice: false, rush: false, vendors: [], prepItems: [], rooms: [], collections: [], vehicles: [] });

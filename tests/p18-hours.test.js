@@ -81,7 +81,7 @@ const E = (r) => (r && r.ctx && r.ctx.currentEstimate) || {};
 const tryE = (f) => { const a = attempt(() => E(f())); return a.ok ? a.val : { err: a.err }; };
 
 // The documents, through the reconciliation suite's own lift list, plus Exhibit A's packet.
-const DOC_FNS = DOCREC.FNS.concat(['_ceGroupedSpaces', 'signingPacketHtml', '_approvedEstimateHtml', 'buildSigningPacketHtml']);
+const DOC_FNS = DOCREC.FNS.concat(['_ceGroupedSpaces', 'signingPacketHtml', '_approvedEstimateHtml', 'buildSigningPacketHtml', 'estateAuthority', 'jobOnProbateTrack']);
 const DOC_VARS = DOCREC.VARS;
 function docs(est, job, logs) {
   return sandbox({ fns: DOC_FNS, vars: DOC_VARS, stubs: {

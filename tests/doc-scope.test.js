@@ -169,9 +169,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
-            'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames'],
+            'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'invProbateRows', 'estateProceedsHolder'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
-             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE'],
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'ESTATE_AUTHORITIES'],
       stubs: { isFormalDoc: () => true },
     });
     const job = { id: 1, svc: 'probate', executor: 'PR' };
@@ -232,7 +232,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the estate agreement follows the same pin');
   {
     const ctx = sandbox({ fns: ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
-                                'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy'],
+                                'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', '_agrCounsel'],
                           vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'AGR_NOT_AN_ACCOUNTING', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
     // ⚠ WHO ARRANGES THE APPRAISALS IS THE TIER'S QUESTION, NOT THE SCOPE'S (2026-09-24). `values`
     // and `appraisals` both price at `full`, so these two assertions used to be true of the scope

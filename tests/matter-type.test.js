@@ -206,7 +206,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
                  'matterDef', 'matterTypeOf', 'invDocContractBlock',
-                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt'];
+                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries'];
     const VARS = ['DECEDENT_SERVICES', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                   'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS', 'DOC_SCOPES'];

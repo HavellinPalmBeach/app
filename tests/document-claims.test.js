@@ -375,11 +375,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'approvedEstimateFor', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docScopeDef', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'samePerson',
-      'canonPersonName', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'],
+      'canonPersonName', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'],
     vars: ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'DECEDENT_SERVICES', 'DOC_SCOPES',
       'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', '_PCT_WORDS', 'ESIGN_ANCHORS',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
-      'PERSON_NAME_ALIASES', 'MAX_DISCOUNT_PCT'],
+      'PERSON_NAME_ALIASES', 'MAX_DISCOUNT_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'],
     stubs: { jobs: [], estimateStore: {}, contractors: [] },
   });
   const flat = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/&rsquo;|’/g, '’').replace(/\s+/g, ' ');

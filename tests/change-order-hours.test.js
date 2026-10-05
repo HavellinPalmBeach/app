@@ -507,8 +507,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
       '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger',
       '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
-      'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
-    const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT'];
+      'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
+    const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
     const A = sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
     const PROB = { id: 7, hvlId: 'HVL-0007', name: 'Margaret Doe', svc: 'probate', executor: 'Tripp Butler',
                    addr: '69 Beach Blvd', city: 'Palm Beach', zip: '33480', deathDate: '2026-01-15', docLevel: 'formal' };

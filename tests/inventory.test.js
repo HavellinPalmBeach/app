@@ -222,7 +222,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'matterDef', 'matterTypeOf', 'invFiduciaryMode',
       // Who arranges an appraisal, job-level (Q20, 2026-09-30): the tier, or the approved estimate's appraiser lines.
       'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines',
-      'estimateAppraiserNames', 'docTierProduces', 'docScopeDef', 'roundCents', 'fmt'
+      'estimateAppraiserNames', 'docTierProduces', 'docScopeDef', 'roundCents', 'fmt',
+      'scheduleSigners', 'jobFiduciaries'
     ]);
     const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
                                         'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES']);
