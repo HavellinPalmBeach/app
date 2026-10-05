@@ -384,6 +384,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(due('2026-02-10', 'yes', '').flag, '', '(and never a guess)');
     // ⚠ Across a DST change and a month end, a calendar count, not a millisecond one.
     eq(due('2026-02-28', 'yes', '2026-11-01').days, 27, 'across the November clock change: 27 calendar days');
+    // The March change is the one a local-midnight millisecond count gets wrong: that day has 23 hours, so 14 days
+    // measure 13.96 and floor to 13 (the November day has 25, which floors back to the right answer).
+    eq(due('2025-06-15', 'yes', '2026-03-01'), { due: '2026-03-15', firm: true, days: 14, flag: 'soon' }, '⚠ across the spring clock change: 14 calendar days, not 13');
     // The words.
     const w = (death, a, today) => S.estateTaxReturnWords(S.estateTaxReturnDue({ svc: 'cleanout', deathDate: death, gate706: a }, today));
     eq(w('2026-02-10', 'yes', '2026-10-03'), 'Form 706 due D:2026-11-10', 'firm, far: the date');

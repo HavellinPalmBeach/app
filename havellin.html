@@ -9229,7 +9229,9 @@ function clientMissingFields(d) {
     if (!t('deathDate'))     m.push('Date of death');
     if (!t('matterType'))    m.push('How this estate is being administered');
     // Every co-representative row with anything typed needs a name (P19): a nameless entry is nobody. A row with
-    // nothing typed is ignored, and the trust's own details are optional (trustRecordShown).
+    // nothing typed is ignored, and the trust's own details are optional (trustRecordShown). A voided entry is no one
+    // either: belt and braces (its revert stays green in the P19 sweep), since the saves pass the form's rows, which
+    // never hold one, and Edit Client's read of the record itself only judges what was already missing.
     (Array.isArray(d.coFiduciaries) ? d.coFiduciaries : []).forEach(function (c, i) {
       if (!c || c.voidedAt) return;
       var nm = String(c.name == null ? '' : c.name).trim();
@@ -9823,6 +9825,8 @@ function _coFidRowHtml(p, n, rec) {
     + '</div>';
 }
 function coFiduciaryBlockHtml(p, recs) {
+  // Belt and braces (its revert stays green in the P19 sweep): Edit Client passes jobListEntries, which already leaves
+  // voided entries out, and intake passes none; this keeps a voided or id-less entry off the form whoever calls it.
   var list = (recs || []).filter(function (r) { return r && r.id !== undefined && r.id !== null && r.id !== '' && !r.voidedAt; });
   return '<div id="' + p + '-cofid-rows" data-rows="' + list.map(function (r, n) { return n; }).join(',') + '" data-next="' + list.length + '" data-removed="">'
     + list.map(function (r, n) { return _coFidRowHtml(p, n, r); }).join('') + '</div>'
@@ -9869,6 +9873,8 @@ function removeCoFiduciaryRow(p, n) {
   }
   host.dataset.rows = _coFidRowNums(host).filter(function (x) { return x !== n; }).join(',');
   var el = row;
+  // Belt and braces (its revert stays green in the P19 sweep): left behind, the empty wrapper would be invisible and
+  // read by nothing (the rows are read off data-rows); it comes off with its row for tidiness.
   if (el && el.parentNode && el.parentNode !== host && el.parentNode.parentNode === host) el = el.parentNode;   // a row added on the page sits in its own wrapper
   if (el && el.parentNode) el.parentNode.removeChild(el);
   return true;
