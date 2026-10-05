@@ -331,6 +331,7 @@ Paste one per session, in this order. Where a prompt says "Decision to apply", i
 - [x] **P17** Anthony's answers of 2026-10-01, the twelve open questions (Premium is the rates only, quarter hours and cents, the Home Sale Preparation Fee, the walkaway refund, a voided deposit, handed over in person, File signed copy, change orders to Drive, the probate package, no Power of Attorney) — landed 2026-10-01; its backend half is live once Anthony redeploys `2026-10-01`
 - [x] **P18** Anthony's answers of 2026-10-02 (the trust package; estimates in whole hours rounded up, logging in half hours, change orders in whole hours, the half-hour line in both agreements) — landed 2026-10-02; app-only
 - [x] **P19** Anthony's calls on the estate workflow (*"i'm good with all of your calls. build it all"*, 2026-10-03): trust parity, the Certification of Trust, every co-representative and co-trustee, the Form 706 date, an original will or cash found on site, staff never buy, beneficiaries and bequests, receipts and signed papers to Drive, the Disposition Ledger signed at close, donations, proceeds statements, snapshots voided — landed 2026-10-05; its backend half is live once Anthony redeploys `2026-10-03`
+- [x] **P20** Anthony's answers to Q22–Q27 (*"A, and yes to all the others"*; *"yes, cover approved estimates too"*, 2026-10-05): every co-representative signs the agreement in DocuSign beside the client, partial approvals saved and a release already gone ratified, the staff rule flagged on a living client's job, a Probate service with no court flagged and never titled Probate, the trust's date in full — landed 2026-10-05; its backend half is live once Anthony redeploys `2026-10-05`
 
 ### P1 · Stop estimates leaking between clients
 
@@ -699,9 +700,22 @@ Fixes: the estate-workflow audit's calls · Needs: Anthony's *"i'm good with all
 - **Neutral wording:** the ledger, the item panel and the CSV read *Net Proceeds*; the net total is headed for whoever holds the proceeds (*Net to Trust* on a trust), on the desk now and in the workbook from the `2026-10-03` deployment.
 - **Questions this pack raised** are Q22 to Q27 below; the found-in-passing items are in `CLAUDE.md`, Open work.
 
+### P20 · Anthony's answers to Q22–Q27 (2026-10-05)
+
+Fixes: Q22–Q27 · Needs: Anthony's *"A, and yes to all the others"* and *"yes, cover approved estimates too"*
+
+**Landed 2026-10-05.** Three workstreams (DocuSign co-signers; approvals; the service on a matter with no court), each in its own worktree with its own tests, revert sweep and browser step, then merged, re-swept on the merged tree and verified together. Its backend half is `2026-10-05` (below, *Only Anthony can do these*).
+- **Q22 · Every co-representative signs the agreement.** In DocuSign, each co-executor or co-trustee signs beside the client on their own block (the same routing order; Anthony countersigns once all have), and one with no email stops the send by name before anything goes out. On the sign-by-hand route and in person, the *Agreement signed* row flags anyone not yet on record and files the page they signed (**File the page signed by …**); it never holds up activation.
+- **Q24 · Partial approvals.** **Record approval** saves whoever has signed, each with their own day, says before and after the save which lines stay open and for whom, and the lines stay on the next request until everyone has signed. Every document prints each signer with their day, never a raw date.
+- **Q23 · Ratification.** A line that left before every fiduciary approved it is listed apart on the next request, *Already released: for ratification*, for the missing signature; the desk row reads *ratification owed*; nothing is undone.
+- **Q25 · The staff rule on a living client's job.** A sale or gift to someone who works with Havellin is saved and flagged (the row, the line's record, the bulk bar, the request the client initials, the Contents Record and the ledger), never refused; an estate still refuses it.
+- **Q26 · A Probate service with no court.** On a trust or *Neither* matter, intake, Edit Client and Build Estimate flag a Probate service while the estimate is unapproved and suggest Estate Settlement, which reprices it; nothing switches by itself, and Contested Probate is never flagged. No client document names a probate there, for either service, an approved estimate included (*Estate Settlement*, *Contested Estate Settlement*); the price stays the service's own.
+- **Q27** The trust's date reads *March 3, 2015* in the agreement, Exhibit A and the Trust Schedule.
+- **Questions this pack raised** are Q28 to Q32 below; the found-in-passing items are in `CLAUDE.md`, Open work.
+
 ## Questions for Anthony
 
-**Answered 2026-09-29, the last three on 2026-09-30, and Q22 to Q27 on 2026-10-05.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.
+**Answered 2026-09-29, the last three on 2026-09-30, and Q22 to Q27 on 2026-10-05; Q28 to Q32 (from P20) are open.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.
 
 ### Answer these first
 
@@ -782,22 +796,35 @@ Fixes: the estate-workflow audit's calls · Needs: Anthony's *"i'm good with all
 
 - **Q22** A co-representative signs the agreement on paper and nothing records it: DocuSign records the agreement signed once the client and Anthony have, with a co-representative unsigned. Add each co-representative as a DocuSign signer, or file their wet signature as a signed record?  
   *Recommendation:* Each co-representative signs in DocuSign beside the client (the same routing order, Anthony after them); on the *sign by hand* route the co-signed page is filed as a signed record. *(counsel bundle A11)*  
-  *Answer (2026-10-05):* "A, and yes to all the others." Agreed. *(used by P20)*
+  *Answer (2026-10-05):* "A, and yes to all the others." Agreed. *(built by P20)*
 - **Q23** A co-representative recorded after a line has already gone makes that line's approval incomplete, so it comes back on the next Approval Request. Ask the new co-trustee to ratify those lines, or leave them?  
   *Recommendation:* Ratify: the next request lists them apart, as already released, for the new co-trustee's signature; nothing is undone.  
-  *Answer (2026-10-05):* Agreed. *(used by P20)*
+  *Answer (2026-10-05):* Agreed. *(built by P20)*
 - **Q24** When one co-trustee signs a week before the other, the first signature can only be typed into the item record, where it reads *approval incomplete*. Let **Record approval** save a partial approval?  
   *Recommendation:* Yes: record who signed and when, and keep the line open until everyone has; the request already prints *"Signed so far by…; still to sign…"*.  
-  *Answer (2026-10-05):* Agreed. *(used by P20)*
+  *Answer (2026-10-05):* Agreed. *(built by P20)*
 - **Q25** The staff rule is estate-only: a sale or gift to a Havellin person on a living client's job is neither refused nor flagged. Flag it there too?  
   *Recommendation:* Flag it, never refuse: an owner gives their own things to whom they like, but the conflict should be on the record.  
-  *Answer (2026-10-05):* Agreed. *(used by P20)*
+  *Answer (2026-10-05):* Agreed. *(built by P20)*
 - **Q26** A Probate or Contested Probate service recorded as a trust or *Neither* still prices the legal step and titles the agreement *Probate Estate Settlement*. Re-type it to Estate Settlement?  
   *Recommendation:* Yes, before the estimate is approved: Edit Client flags it and names Estate Settlement; after approval the price stays as quoted.  
-  *Answer (2026-10-05):* **A**: flag it before the estimate is approved and suggest Estate Settlement; never switch automatically; once approved the price stays and a change goes through ✎ Edit estimate or a change order. Contested Probate on such a matter keeps its price, and only its title and wording change (a fight over a trust usually ends up in court too). On such a matter no client document names the service *Probate*, whichever of the two it is, an estimate approved before the matter was recorded included (Anthony, 2026-10-05: *"yes, cover approved estimates too"*); its price stays as quoted. *(used by P20)*
+  *Answer (2026-10-05):* **A**: flag it before the estimate is approved and suggest Estate Settlement; never switch automatically; once approved the price stays and a change goes through ✎ Edit estimate or a change order. Contested Probate on such a matter keeps its price, and only its title and wording change (a fight over a trust usually ends up in court too). On such a matter no client document names the service *Probate*, whichever of the two it is, an estimate approved before the matter was recorded included (Anthony, 2026-10-05: *"yes, cover approved estimates too"*); its price stays as quoted. *(built by P20)*
 - **Q27** The trust's title prints its date as *"Mar 3, 2015"*. Spell the month out in a legal title (*"March 3, 2015"*)?  
   *Recommendation:* Yes.  
-  *Answer (2026-10-05):* Agreed. *(used by P20)*
+  *Answer (2026-10-05):* Agreed. *(built by P20)*
+
+### New, from P20 (2026-10-05)
+
+- **Q28** Two drafts need your word. *Contested Estate Settlement*: the name a Contested Probate service now takes on the client's documents when the matter is a trust or *Neither*. And the client estimate's Probate narrative off the probate track: *"We settle the estate room by room under full documentation standards — a complete inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records counsel may request and keeps all parties informed."* (it read *"…under the documentation standards probate requires…"* and *"…the records the court and counsel may request…"*).  
+  *Recommendation:* Keep both. *(counsel bundle A15)*
+- **Q29** The marketing opt-out box is the client's DocuSign tab alone: a co-representative cannot tick it, and their way out is written notice (§7.2). Give each co-representative a box of their own?  
+  *Recommendation:* No: the client's box speaks for the matter, and any co-representative can still opt out by written notice. Counsel to confirm (B4).
+- **Q30** The estate signature page says *"No work will begin until both signatures are obtained and the deposit has been received."* With co-representatives on the page, "both" is ambiguous, and the app starts the work on the client's signature (a co-representative's is flagged until it is on record). Reword it?  
+  *Recommendation:* *"No work will begin until the Client and Havellin have signed and the deposit has been received."* It matches what the app waits for, and §5.1's joinder covers a co-representative who signs later. Counsel to confirm (A11).
+- **Q31** The sign-by-hand email (*"When you are ready, sign and return it…"*) says nothing of co-representatives. Add *"Each co-representative named on the signature page signs it too."* where one is recorded?  
+  *Recommendation:* Yes.
+- **Q32** Two signers on one email address (a couple sharing an inbox): the app neither refuses nor flags a co-representative recorded with the client's email, and how DocuSign handles it is unmeasured.  
+  *Recommendation:* Try it once in the sandbox (below). If DocuSign takes it, allow it and say so on the send; if it refuses, refuse it in the app by name before anything is sent.
 
 ## Only Anthony can do these
 
@@ -805,12 +832,13 @@ Fixes: the estate-workflow audit's calls · Needs: Anthony's *"i'm good with all
 - [ ] **Redeploy quo-sync.gs, then check before pruning.** Deploy the 2026-09-18 fix, fix the duplicate "David Schneider" vendor row, and run `dryRunQuoAll` before any prune.
 - [x] **Send one DocuSign sandbox envelope end to end.** Check that the opt-out box renders, where the signature boxes land, that no green "Approved for Sending" band is on the PDF, and that the signed PDF and certificate file to Drive. Then move to production. *You report several that worked (2026-09-30). What remains is the move to production when you are ready.*
 - [x] **Redeploy the Apps Script at `2026-09-30`.** *Done (Anthony, 2026-09-30).* Copy `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → New version. Until then P11's per-key merges, the unreadable-store refusal, the busy answer and Agent One's larger answer limit are not live; the banner says so.
-- [ ] **Redeploy the Apps Script at `2026-10-03`** (P19; it carries P17's `2026-10-01` and P16's `2026-09-30b`). Paste `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → edit → New version. Every device shows the out-of-date banner until it is done. Until then the six lists P19 adds to a client (co-representatives, beneficiaries, bequests, signed papers, finds on site, proceeds statements) can lose an entry when two devices add to one, a void can be undone by a device that had not reloaded, and a trust's workbook heads its net total *Net to Estate*; and if `2026-10-01` never went live, **File signed copy** can file a second executed agreement beside the first.
+- [ ] **Redeploy the Apps Script at `2026-10-05`** (P20; it carries P19's `2026-10-03`, P17's `2026-10-01` and P16's `2026-09-30b`). Paste `main-sync.gs` and `saveInventory.gs` from `main`, then Deploy → Manage deployments → edit → New version. Every device shows the out-of-date banner until it is done. Until then a DocuSign envelope goes to the client and Anthony alone, so a co-executor or co-trustee signs a printed copy and the app asks for the page they signed. If `2026-10-03` never went live, the six lists P19 adds to a client (co-representatives, beneficiaries, bequests, signed papers, finds on site, proceeds statements) can lose an entry when two devices add to one, a void can be undone by a device that had not reloaded, and a trust's workbook heads its net total *Net to Estate*; and if `2026-10-01` never went live, **File signed copy** can file a second executed agreement beside the first.
+- [ ] **DocuSign co-signers in the sandbox, before production** (P20; proved only against stubs). With a test trust whose trustee is one of your mailboxes and a co-trustee on a second (once, a second co-trustee on a third): (1) both get DocuSign's email at the same time, and you only after both have signed; (2) each signature and date lands on its own *Co-Signer* block, not the client's; (3) ↻ Check DocuSign now names the client as the signer even if DocuSign lists a co-trustee first; (4) a co-trustee who signs after 8pm Eastern gets their own day; (5) the envelope stays out until everyone has signed, and a decline records nothing; (6) the executed copy and the certificate filed to Drive list every signer; (7) optionally, remove a co-trustee's email to see the refusal; (8) one envelope with two signers on one email address (Q32).
 - [ ] **Stripe: one test ACH link.** It proves the ACH-only check. Confirm the account's ACH limit covers your largest deposit. *Lower priority (2026-09-30), still to do before the first real deposit.*
 - [x] **Run `backfillIds()` once in the Referral Partners Apps Script project.** *Done (Anthony, 2026-09-30).* Gives every partner row a permanent id, so re-sorting that sheet can never move a referral.
 - [ ] **Google Cloud: set the Gmail consent screen's audience to Internal.** Otherwise the Gmail draft path stays in Testing mode.
 - [ ] **Run `previewOrphanRecords()` once.** From the Apps Script editor, to see leftover practice records.
-- [ ] **Send the counsel bundle in priority order.** *On hold (Anthony, 2026-10-02) until the open changes are done.* Before the first fixed-fee, trust and firearm jobs. The hourly termination wording and the retained deposit are drafted now (A1, B2, P16); the ACH-return question is B10, and the referral-fee question is still to add. P17 adds the walkaway refund (A1, B2), the fee's one name (B11), the quarter-hour increment (B12) and the probate package's wording (D6).
+- [ ] **Send the counsel bundle in priority order.** *On hold (Anthony, 2026-10-02) until the open changes are done.* Before the first fixed-fee, trust and firearm jobs. The hourly termination wording and the retained deposit are drafted now (A1, B2, P16); the ACH-return question is B10, and the referral-fee question is still to add. P17 adds the walkaway refund (A1, B2), the fee's one name (B11), the quarter-hour increment (B12) and the probate package's wording (D6). P19 adds the trust form and the estate workflow's papers (A10 to A14, D7 to D11). P20 adds co-representatives signing in DocuSign and the signature page's "both signatures" (A11), the service's name on a matter with no court and the trust's date (A15), partial approvals and ratification (D7) and a living client's property going to a team member (D12).
 - [ ] **Bind the insurance and the bond.** Before the first real client document goes out; every document already says Insured & Bonded.
 - [ ] **Update the two Drive documents.** Re-import the updated estate guide into its Google Doc, and retire the "NEEDS REWRITE" probate package.
 

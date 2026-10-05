@@ -34,10 +34,10 @@ rather than researching from nothing.
 | | Blocks | Items |
 |---|---|---|
 | **1** | the first engagement signing: on a **fixed fee**, and since 2026-09-30 on an **hourly** one too (the deposit) | A1, A2, B2 |
-| **2** | the first **trust** matter signing | A5, A6, A10, A14 |
+| **2** | the first **trust** matter signing | A5, A6, A10, A14, A15 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11 |
+| **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11, D12 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -295,6 +295,16 @@ co-representative."* The signature page then carries one filled *Co-Signer* bloc
 §736.0703; joint personal representatives' concurrence, §733.615). Is requiring every co-representative's approval, and the
 Client's warranty of joinder or authority to bind, right for both?
 
+**Since 2026-10-05 (P20, Anthony's answer to Q22).** Each co-representative now signs in DocuSign beside the Client, at the
+same routing order, on their own *Co-Signer* block (Havellin countersigns once all have); the block carries invisible signing
+markers on its signature and date lines, and no visible wording changed. On the sign-by-hand route the page they signed is
+filed with the client's records, and the app flags a co-representative whose signature is not yet on record; the work still
+starts on the Client's signature and the deposit. Two follow-ups: (a) the signature page still reads *"No work will begin
+until both signatures are obtained and the deposit has been received."* With co-representatives on the page, "both" is
+ambiguous; Q30 proposes *"No work will begin until the Client and Havellin have signed and the deposit has been
+received"*, relying on this section's warranty for a co-representative who signs later. (b) The marketing opt-out box (B4) is
+the Client's tab alone; a co-representative's way out is written notice (§7.2). Are both right?
+
 ### A12. §5.4 — no purchase by Havellin ⚠ NEW 2026-10-03
 
 **What it says.** On every estate form: *"5.4 No Purchase by Havellin. Havellin, its owners, team members and contractors
@@ -343,6 +353,29 @@ fall away off the probate track, and proceeds route *"to the trust account"* on 
 
 **The question.** *"We do not need the … trust instrument itself"* leans on §736.1017 (a certification in lieu of the
 instrument; citation from memory). Is that right?
+
+### A15. The service's name on a matter with no court, and the trust's date ⚠ NEW 2026-10-05 · PRIORITY 2
+
+**What changed (P20, Anthony's answers to Q26 and Q27).** A Probate or Contested Probate service on a matter recorded as a
+trust administration or *Neither* titled the agreement *Probate Estate Settlement* and told the client the work follows
+*"the documentation standards probate requires"*. The price stays the service's own (court work on a contested trust is
+usually real), but no client document names a probate there now, an estimate approved earlier included:
+
+| Where | Before | Now, on a trust or *Neither* matter |
+|---|---|---|
+| Agreement title, and the sentence under it (*"This Agreement governs … services provided by Havellin Palm Beach, LLC to the Client identified below."*) | *Probate Estate Settlement*; *Contested Probate Estate Settlement* (*Estate Services* where no name was stored) | *Estate Settlement*; *Contested Estate Settlement* (drafted, Q28) |
+| The estimate's *Service* row and fee table (*Onsite … Services*), the invoices, the client emails | the same names | the same as the title |
+| The estimate's *How We Work* | *"We settle the estate room by room under the documentation standards probate requires — a full inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records the court and counsel may request and keeps all parties informed."* | *"We settle the estate room by room under full documentation standards — a complete inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records counsel may request and keeps all parties informed."* |
+| The trust's title (§1.2, Exhibit A, the Trust Schedule; every matter) | *The Adler Family Trust, dated Mar 3, 2015* | *The Adler Family Trust, dated March 3, 2015* |
+
+On the probate track nothing changed but the fallbacks: a Contested Probate form with no stored name reads *Contested Probate
+Estate Settlement* (it read *Estate Services*). Kept on purpose, as clause wording rather than the service's name: §4.1's
+trigger *"Multi-state property requiring ancillary probate coordination not identified at intake"*, §5.1's conditional
+*"If acting as Personal Representative or Executor, the Client has been duly appointed by the probate court…"*, and on
+*Neither* §5.2's *"This estate is not being administered through a probate proceeding or a trust"*.
+
+**The question.** Is *Estate Settlement* the right name for the engagement on a trust administration, and *Contested Estate
+Settlement* for a contested trust matter? Are the three kept clauses right where there is no court?
 
 ## B. Standard (living-client) services agreement
 
@@ -861,6 +894,19 @@ Worklist's firearm sentence and the package's release record follow the same rul
 
 **The question.** Is all-must-sign right on a trust where co-trustees may act by majority (A11)?
 
+**Since 2026-10-05 (P20, Anthony's answers to Q23 and Q24).** A fiduciary's signature is recorded when it comes back, with
+its own date, and a line stays on the next request until every fiduciary has signed: *"Signed so far by Ruth Adler (Oct 1,
+2026); still to sign: Daniel Adler"*. A line that left the property before every fiduciary approved it (a co-trustee recorded
+after the hand-over, or a signature still to come) is listed apart, after the lines asked for, under **Already released: for
+ratification**: *"These items left the property before every co-trustee had approved their release in writing. They are
+listed apart from the items above, for the signature of Daniel Adler, which ratifies each release; nothing is undone."*,
+each with when it left (*"Released Oct 2, 2026"*, or the receipt on file) and who still has to sign. A request carrying only
+such lines opens *"…the items listed below have already left the property and are listed for your signature"* and drops
+*"Nothing on this list will be moved, sold, donated or disposed of until this request is returned signed."*
+
+**The further question.** Is a fiduciary's later signature an effective ratification of a release made before it, and does
+the wording say so without admitting more than it should?
+
 ### D8. Receipt for property released to a person ⚠ NEW 2026-10-03
 
 **What it says.** The estate agreement's §5.3 asks for a *"signed receipt from recipient"*; the desk now prints one per
@@ -907,6 +953,20 @@ donor's tax adviser to determine."*
 **The question.** Does printing an estimated value on a donation record invite its use as a deduction figure, and is the
 footer enough?
 
+### D12. A living client's property going to someone who works with Havellin ⚠ NEW 2026-10-05
+
+**What it says.** On a living client's job a sale or gift to someone on Havellin's team is not refused (Anthony, P20, Q25: an
+owner gives their own things to whom they like) but put on the record. The release approval request carries, above the
+table, **Property going to someone who works with Havellin**: *"These lines are proposed to be sold or given to a person who
+works with Havellin, named against each line. What happens to your own property is your decision, and you may sell it or
+give it to whomever you choose; because the person works with us, it is a conflict of interest for Havellin, so we put it on
+the record before anything leaves. Initialling a line below confirms that you know who is receiving it. To send a line
+somewhere else instead, ask your concierge."* Each such line is badged *"Going to <name>, who works with Havellin"*, as on
+the Contents Record and the Disposition Ledger. On an estate the sale or release is still refused (A12).
+
+**The question.** Is the client's initial against a named line an adequate disclosure and consent for a sale or gift to a
+team member, and does the standard agreement need a clause to match A12?
+
 ## E. What is deliberately NOT being asked
 
 So counsel does not spend time on settled ground:
@@ -926,13 +986,13 @@ So counsel does not spend time on settled ground:
 
 | | Where |
 |---|---|
-| Estate / probate services agreement | generated by the app — send a sample for a probate matter **and** one for a trust matter, they differ |
+| Estate / probate services agreement | generated by the app — send a sample for a probate matter **and** one for a trust matter, they differ; for A11 one with a co-trustee, and for A15 a Probate service on a trust |
 | Standard (living-client) services agreement | generated by the app — send a fixed-fee sample, and an hourly rush sample carrying a discount for B6 |
 | Home Prep agreement, vendors only, and a prep change order | generated by the app — for B5; the rate is in the agreement's §3.3 and restated on the change order |
 | Signing packet | the agreement with the estimate attached as Exhibit A — this is what a client actually signs |
 | Estate Firearms Protocol | `firearms-protocol.html`, also in Drive at `03_Operations / SOPs & Playbooks` |
 | Court Inventory / Trust Schedule / Appraisal Worklist | sample documents, for D1–D5 |
-| Release Approval Request with two fiduciaries, a Receipt for Property Released, the Disposition Ledger, a Donation Record | from the desk (Job Admin & Inv), for A13, D7, D8, D11 |
+| Release Approval Request with two fiduciaries (one line partly signed, one listed for ratification), a living client's request naming a line going to a team member, a Receipt for Property Released, the Disposition Ledger, a Donation Record | from the desk (Job Admin & Inv), for A13, D7, D8, D11, D12 |
 | Receipt for Original Will, Cash Count and Receipt | from the Job Plan's *Found on site* card, for D9 and D10 |
 
 **⚠ Send the signing packet, not the agreement alone.** Both forms incorporate the estimate as
