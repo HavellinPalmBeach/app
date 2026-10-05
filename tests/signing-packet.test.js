@@ -153,8 +153,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       lacks(fn(f), 'IMPORTANT: Read carefully',
             '⚠ ' + f + ' no longer opens with the banner');
     });
-    has(fn('probateAgreementHtml'), 'No work will begin until both signatures are obtained',
+    // ⚠ RESTATED 2026-10-05 (P21; Anthony's answer to Q30): the sentence names who signs before the work begins rather
+    // than counting "both", which read as any two once a co-representative signs on the page too (P20). Still on the
+    // signature page, which is the requirement this pin holds; the rendered page is driven in p21-signing-email.test.js.
+    has(fn('probateAgreementHtml'), 'No work will begin until the Client and Havellin have signed and the deposit has been received',
         '⚠ and the estate form still says it where it belongs — on the signature page');
+    lacks(fn('probateAgreementHtml'), 'No work will begin until both signatures are obtained', 'in the words Anthony chose, not the count');
   }
 
   group('⚠⚠ PAGINATION — the exhibit and the signature page each start a fresh page');

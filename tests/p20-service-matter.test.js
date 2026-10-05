@@ -115,7 +115,8 @@ const SERVICES = ['probate', 'contested_probate', 'cleanout', 'downsizing', 'dow
 // signing packet and the two other client emails reach.
 const DOC_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', '_ceGroupedSpaces', 'signingPacketHtml',
   '_approvedEstimateHtml', 'buildSigningPacketHtml', 'buildAgreementEmailHtml', 'buildEstimateEmailHtml', 'estimateHavellinLines', 'vendorFeeNote',
-  '_emPhoneLines', 'agreementEmailSubject', 'estimateEmailSubject']);
+  '_emPhoneLines', 'agreementEmailSubject', 'estimateEmailSubject',
+  'agreementEmailCoSignLine']);  // P21: the agreement email's co-representatives' line (Q31)
 const DOC_VARS = DOCREC.VARS.concat(['ESIGN_REQUIRED_ANCHORS', 'AGR_NOT_AN_ACCOUNTING']);
 let _doc = null;
 function docs(job, est) {

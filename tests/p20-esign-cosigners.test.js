@@ -240,7 +240,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(noComments(fn('esignAnchorsPresent')), "'/", 'no marker string is typed into the measurer: it asks the namer');
     // ⚠⚠ A JOB WITH NO CO-REPRESENTATIVE RENDERS EXACTLY AS IT DID: the two forms, byte for byte against 456d0cb.
     eq(sha(A.agreementHtml(GOLD_LIVING, GOLD_EST)), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20');
-    eq(sha(A.probateAgreementHtml(GOLD_PROBATE, GOLD_EST)), GOLD.probate, '⚠⚠ the estate form with no co-representative, byte for byte as before P20');
+    // RESTATED 2026-10-05 (P21; Anthony's answer to Q30): the signature page's sentence names who signs before the work
+    // begins ("until the Client and Havellin have signed") where it counted "both signatures". Put the old words back and
+    // the page is still 456d0cb's byte for byte, so that sentence is the only change and nothing else moved.
+    const _q30 = A.probateAgreementHtml(GOLD_PROBATE, GOLD_EST);
+    const _q30New = 'No work will begin until the Client and Havellin have signed and the deposit has been received.';
+    eq(count(_q30, _q30New), 1, 'the estate form carries the new sentence once');
+    eq(sha(_q30.replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
+       '⚠⚠ the estate form with no co-representative, byte for byte as before P20 but for that sentence');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

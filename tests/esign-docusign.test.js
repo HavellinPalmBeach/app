@@ -10,8 +10,8 @@
 //
 // ⚠⚠ THE CLAIM THIS FILE EXISTS TO PIN, because it is the one a reader will doubt: THE ENVELOPE
 // CARRIES TWO SIGNERS, NOT ONE. Both agreement forms print a Havellin signature block beside the
-// client's and the probate form states outright that *"No work will begin until both signatures
-// are obtained"*. A client-only envelope comes back `completed` over a contract Havellin never
+// client's and the probate form states outright that *"No work will begin until the Client and
+// Havellin have signed"* (until P21, *"until both signatures are obtained"*). A client-only envelope comes back `completed` over a contract Havellin never
 // signed — and `applyEsignStatus` would then record it as signed, which is byte for byte the
 // false claim the signature record was built to remove. Client is routing order 1, Havellin
 // countersigns at 2, and DocuSign reports `completed` only when both are done.
@@ -299,7 +299,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(s[0].routingOrder, '1', 'the client signs first');
     eq(s[0].email, 'tripp@example.com', 'and is the person named on the send');
     eq(s[1].routingOrder, '2', '⚠ Havellin countersigns SECOND — the document says no work begins '
-                               + 'until both signatures are obtained');
+                               + 'until the Client and Havellin have signed');
     eq(env.status, 'sent', 'and the envelope actually goes out rather than saving as a draft');
   }
 
@@ -1391,7 +1391,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor',
               'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'clientRecipient', 'isDecedentJob', 'firstName',
-              'esignCoSignerAnchors', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'],
+              'esignCoSignerAnchors', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode',
+              'esignSharedEmails'],  // P21: the send names signers sharing one address (Q32)
         vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS', 'ESIGN_COSIGNER_ANCHOR'],
         stubs: {
           SHEETS_SYNC_URL: 'https://script.example/exec',

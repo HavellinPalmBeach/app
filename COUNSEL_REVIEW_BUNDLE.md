@@ -299,11 +299,12 @@ Client's warranty of joinder or authority to bind, right for both?
 same routing order, on their own *Co-Signer* block (Havellin countersigns once all have); the block carries invisible signing
 markers on its signature and date lines, and no visible wording changed. On the sign-by-hand route the page they signed is
 filed with the client's records, and the app flags a co-representative whose signature is not yet on record; the work still
-starts on the Client's signature and the deposit. Two follow-ups: (a) the signature page still reads *"No work will begin
-until both signatures are obtained and the deposit has been received."* With co-representatives on the page, "both" is
-ambiguous; Q30 proposes *"No work will begin until the Client and Havellin have signed and the deposit has been
-received"*, relying on this section's warranty for a co-representative who signs later. (b) The marketing opt-out box (B4) is
-the Client's tab alone; a co-representative's way out is written notice (§7.2). Are both right?
+starts on the Client's signature and the deposit. Two follow-ups, both decided by Anthony on 2026-10-05: (a) the signature
+page read *"No work will begin until both signatures are obtained and the deposit has been received."*, and with
+co-representatives on the page "both" was ambiguous; since P21 (Q30) it reads *"No work will begin until the Client and
+Havellin have signed and the deposit has been received."*, relying on this section's warranty for a co-representative who
+signs later. (b) The marketing opt-out box (B4) stays the Client's tab alone; a co-representative's way out is written notice
+(§7.2; Q29). Are both right?
 
 ### A12. §5.4 — no purchase by Havellin ⚠ NEW 2026-10-03
 
@@ -363,7 +364,7 @@ usually real), but no client document names a probate there now, an estimate app
 
 | Where | Before | Now, on a trust or *Neither* matter |
 |---|---|---|
-| Agreement title, and the sentence under it (*"This Agreement governs … services provided by Havellin Palm Beach, LLC to the Client identified below."*) | *Probate Estate Settlement*; *Contested Probate Estate Settlement* (*Estate Services* where no name was stored) | *Estate Settlement*; *Contested Estate Settlement* (drafted, Q28) |
+| Agreement title, and the sentence under it (*"This Agreement governs … services provided by Havellin Palm Beach, LLC to the Client identified below."*) | *Probate Estate Settlement*; *Contested Probate Estate Settlement* (*Estate Services* where no name was stored) | *Estate Settlement*; *Contested Estate Settlement* (Anthony kept the name, Q28) |
 | The estimate's *Service* row and fee table (*Onsite … Services*), the invoices, the client emails | the same names | the same as the title |
 | The estimate's *How We Work* | *"We settle the estate room by room under the documentation standards probate requires — a full inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records the court and counsel may request and keeps all parties informed."* | *"We settle the estate room by room under full documentation standards — a complete inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records counsel may request and keeps all parties informed."* |
 | The trust's title (§1.2, Exhibit A, the Trust Schedule; every matter) | *The Adler Family Trust, dated Mar 3, 2015* | *The Adler Family Trust, dated March 3, 2015* |
@@ -374,8 +375,8 @@ trigger *"Multi-state property requiring ancillary probate coordination not iden
 *"If acting as Personal Representative or Executor, the Client has been duly appointed by the probate court…"*, and on
 *Neither* §5.2's *"This estate is not being administered through a probate proceeding or a trust"*.
 
-**The question.** Is *Estate Settlement* the right name for the engagement on a trust administration, and *Contested Estate
-Settlement* for a contested trust matter? Are the three kept clauses right where there is no court?
+**The question.** Anthony kept both names and the narrative (2026-10-05, Q28). Is *Estate Settlement* the right name for the
+engagement on a trust administration, and *Contested Estate Settlement* for a contested trust matter? Are the three kept clauses right where there is no court?
 
 ## B. Standard (living-client) services agreement
 
@@ -453,6 +454,11 @@ client can waive past them:
 
 **The question.** Is the fiduciary-consenting-for-heirs point adequately answered by the
 anonymity restrictions? **Should either operating rule be a clause instead?**
+
+**Since 2026-10-05 (Anthony, Q29).** Where co-representatives sign the estate form beside the Client (A11), the opt-out box
+stays the Client's alone: the Client's choice speaks for the matter, and a co-representative who objects says so in writing
+under §7.2's notice route. Is one fiduciary's consent (or silence) enough to bind the co-fiduciaries here, or should the
+clause say the box speaks for all of them?
 
 ### B5. Home Prep — hours added after signing, at a rate the agreement states ⚠ NEW 2026-09-25
 

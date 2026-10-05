@@ -6605,10 +6605,11 @@ function probateSvcOffTrack(job, svcKey) {
 // ⚠⚠ THE SERVICE'S NAME ON A CLIENT DOCUMENT (P20, Q26): one namer, read by every client document and email that prints
 // the service (both agreement forms' title, the client estimate's service row and fee-table heading, the invoices, the
 // three client emails). The catalogue's name (svcLabelOf), except that a probate service off the probate track never
-// claims a probate: Probate reads Estate Settlement, Contested Probate reads Contested Estate Settlement (drafted, for
-// Anthony). The price is the service's own either way. Internal screens (the client list, the dashboard, Build Estimate's
-// picker, the manager's emails) keep svcLabelOf: there the service is the price basis. `svcKey`: the service a document
-// prints where it is the estimate's own. '—' where nothing names a service (svcLabelOf's contract).
+// claims a probate: Probate reads Estate Settlement, Contested Probate reads Contested Estate Settlement (Anthony kept the
+// name, P21, Q28; counsel to confirm). The price is the service's own either way. Internal screens (the client list,
+// the dashboard, Build Estimate's picker, the manager's emails) keep svcLabelOf: there the service is the price basis.
+// `svcKey`: the service a document prints where it is the estimate's own. '—' where nothing names a service
+// (svcLabelOf's contract).
 function docServiceTitle(job, svcKey) {
   var j = svcKey ? Object.assign({}, job || {}, { svc: svcKey }) : job;
   if (!probateSvcOffTrack(j)) return svcLabelOf(j);
@@ -11556,7 +11557,8 @@ function proposedPlanRow(e, job) {
   narratives.estate = narratives.cleanout;
   // ⚠ A PROBATE SERVICE ON A MATTER WITH NO COURT (P20, Q26: probateSvcOffTrack) told the trustee its work followed "the
   // documentation standards probate requires" and kept "the records the court and counsel may request". The same work,
-  // without the probate or the court; the price is the service's own. Contested's narrative names neither.
+  // without the probate or the court; the price is the service's own (Anthony kept this wording: P21, Q28). Contested's
+  // narrative names neither.
   if (e.svc === 'probate' && probateSvcOffTrack(job, e.svc)) narratives.probate = 'We settle the estate room by room under full documentation standards — a complete inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records counsel may request and keeps all parties informed.';
   var narrative = narratives[e.svc] || 'We work through the property room by room — sorting and routing every item to the right destination while your Transition Concierge manages the plan and all vendor coordination and Property Specialists handle the hands-on work. The hours below reflect that careful, methodical pace.';
 
@@ -19074,6 +19076,15 @@ function docSend(spec) {
       if (_offEnv.length) msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _andJoin(_offEnv) + (_offEnv.length > 1 ? ' were' : ' was')
         + ' not put on the envelope (the Apps Script deployment is older than 2026-10-05: redeploy it), so they sign a printed'
         + ' copy of the agreement; file the page they signed under the timeline once the client has signed.';
+      // ⚠ SIGNERS SHARING ONE EMAIL ADDRESS ARE NAMED NOW (P21, Q32), off whom the backend says it put on the envelope:
+      // the client, and `extra.coSigners` (none from a deployment older than 2026-10-05). The provider check is belt and
+      // braces: no other route answers a list of co-signers, so it could only ever ask about the client alone.
+      var _shared = provider === 'docusign'
+        ? esignSharedEmails([esignSigner(spec.job)].concat((extra && Array.isArray(extra.coSigners)) ? extra.coSigners : [])) : [];
+      _shared.forEach(function (g) {
+        msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _andJoin(g.names) + ' are on the envelope at one email address (' + g.email
+          + '): make sure each of them signs for themselves.';
+      });
       // ⚠ SENDING FILES IT. A document that has gone to a client is one the firm must be
       // able to produce afterwards, and until Slice 5 only the estimate managed that: the
       // agreement and packet filed on approval, and the INVOICE filed nowhere unless
@@ -19087,7 +19098,7 @@ function docSend(spec) {
       // It still shows in the sync badge, and the rail says which documents are filed.
       docAction(spec.job.id, spec.kind, 'file',
                 spec.stage ? { stage: spec.stage, auto: true } : { auto: true });
-      _docNotice((attached && !_staleLine && !_offEnv.length) ? 'ok' : 'warn', msg, spec.job.id);
+      _docNotice((attached && !_staleLine && !_offEnv.length && !_shared.length) ? 'ok' : 'warn', msg, spec.job.id);
       if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
       showSyncBadge(provider === 'docusign' ? 'Sent for signature ✓' : provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
     }
@@ -19433,6 +19444,24 @@ function esignCoSigners(job, anchors) {
   if (noLine.length) why.push('The agreement carries no DocuSign signature line for ' + _andJoin(noLine)
     + ', so the envelope could not place ' + (noLine.length > 1 ? 'their signatures' : 'that signature') + '. Send the PDF to sign by hand.');
   return { list: list, why: why.join(' ') };
+}
+
+// ⚠ TWO SIGNERS AT ONE EMAIL ADDRESS (2026-10-05, P21; Anthony's answer to Q32: try it in the sandbox; if DocuSign takes
+// it, allow it and say so on the send; if it refuses, refuse it in the app by name before anything is sent). A couple
+// sharing an inbox is real, and so is a co-trustee's address typed in as the Client's. Until the sandbox answers, the
+// envelope goes and the send's notice names who shares which address, read off whom the backend says it put on the
+// envelope. Should DocuSign refuse it, the refusal goes in DOC_SEND_PROVIDERS.docusign.refuse, asking this. DOM-free:
+// `signers` is [{name, email}] in signing order; the answer is [{email, names}], one per address that two or more of
+// them share (trimmed, case-folded), in the order first met; [] otherwise.
+function esignSharedEmails(signers) {
+  var by = {}, order = [];
+  (signers || []).forEach(function (w) {
+    var raw = String((w && w.email) || '').trim(), key = raw.toLowerCase();
+    if (!key) return;
+    if (!by[key]) { by[key] = { email: raw, names: [] }; order.push(key); }
+    by[key].names.push(String((w && w.name) || '').trim());
+  });
+  return order.map(function (k) { return by[k]; }).filter(function (g) { return g.names.length > 1; });
 }
 
 // The record itself. Returns null when nothing is signed — a caller asking "who signed
@@ -24619,6 +24648,15 @@ function conciergePhonesText(c, sep) {
 // Estimate as Exhibit A and the estate form says the agreement is not valid without it —
 // a client sent the agreement by itself is signing against an exhibit they do not have.
 // That is the whole reason the packet exists; emailing the bare agreement would reopen it.
+// ⚠ ON THE SIGN-BY-HAND ROUTE THE EMAIL SAYS WHO ELSE SIGNS (2026-10-05, P21; Anthony's answer to Q31). Since P20 every
+// co-representative signs the agreement beside the Client: DocuSign asks each of them itself, but the PDF route's email
+// told the Client alone to "sign and return it", so a packet could come back with the Client's signature only. The
+// line is asked of the list the signature page prints its blocks from (_agrCoSigners), and read by both email builders
+// (the mailto fallback is built from the text one); '' with nobody beside the Client, so every other email is unchanged.
+// The html part escapes it like every other line it prints, though it is the app's own text (belt and braces).
+function agreementEmailCoSignLine(job) {
+  return _agrCoSigners(job).length ? 'Each co-representative named on the signature page signs it too.' : '';
+}
 function buildAgreementEmailHtml(job) {
   var B = EMAIL_BRAND;
   var tc = assignedTCContact(job);
@@ -24628,6 +24666,7 @@ function buildAgreementEmailHtml(job) {
   var street = String(job.addr || '').split(',')[0].trim();
   var td = 'padding:9px 0;font-size:15px;color:' + B.ink + ';border-bottom:1px solid ' + B.line + ';';
   var tdR = td + 'text-align:right;white-space:nowrap;';
+  var coLine = agreementEmailCoSignLine(job);
 
   return '' +
   '<div style="margin:0;padding:0;background:#f4f1ea;">' +
@@ -24651,7 +24690,7 @@ function buildAgreementEmailHtml(job) {
 
     '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">Dear ' + _emHtml(bestClientGreetingName(job)) + ',</p>' +
     '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 14px;">Thank you for entrusting this work to us. The service agreement is attached, with the approved estimate included as <strong>Exhibit A</strong> so everything we discussed is in one document.</p>' +
-    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 22px;">Please review it at your convenience. When you are ready, sign and return it and we will confirm the schedule.</p>' +
+    '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 22px;">Please review it at your convenience. When you are ready, sign and return it and we will confirm the schedule.' + (coLine ? ' ' + _emHtml(coLine) : '') + '</p>' +
 
     (total > 0
       ? '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';margin-bottom:8px;">Payment schedule</div>' +
@@ -24688,9 +24727,10 @@ function buildAgreementEmailText(job) {
   var tc = assignedTCContact(job);
   var est = approvedEstimateFor(job.id);
   var split = paymentSplit(est ? (est.havellinTotal || 0) : (job.havellinEst || 0));
+  var coLine = agreementEmailCoSignLine(job);
   var L = ['Dear ' + bestClientGreetingName(job) + ',', '',
     'Thank you for entrusting this work to us. The service agreement is attached, with the approved estimate included as Exhibit A.', '',
-    'Please review it at your convenience. When you are ready, sign and return it and we will confirm the schedule.', ''];
+    'Please review it at your convenience. When you are ready, sign and return it and we will confirm the schedule.' + (coLine ? ' ' + coLine : ''), ''];
   if (split.total > 0) {
     L.push('Payment schedule (Havellin services):');
     L.push('  50% on acceptance: ' + _emMoney(split.deposit));
@@ -44642,8 +44682,8 @@ function probateAgreementHtml(job, est) {
   // ⚠ NO "IMPORTANT: READ CAREFULLY" BANNER, AND IT IS NOT COMING BACK. Anthony: *"the top
   // banner is not needed and sounds amateurish."* A contract that opens by telling the reader it
   // is a contract reads as though it doubts they can tell — and both halves of it were already
-  // said better further down: the signature page states that no work begins until both signatures
-  // are obtained, which is the operative term, and the standard form's §18 states the
+  // said better further down: the estate form's signature page states that no work begins until the Client and
+  // Havellin have signed, which is the operative term, and the standard form's §18 states the
   // read-and-understood acknowledgment where a court looks for it.
   // SECTION 1: PARTIES
   content += secHdr(1,'Parties');
@@ -45176,7 +45216,13 @@ function probateAgreementHtml(job, est) {
   content += '<div class="agr-sig-page">';
   content += '<div class="ce-divider" style="margin-top:1.5rem;"></div>';
   content += '<div style="text-align:center;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gray-dk);margin:.8rem 0 .4rem;">Signature Page</div>';
-  content += pp('By signing below, both parties acknowledge they have read, understood, and agreed to all terms of this Agreement. No work will begin until both signatures are obtained and the deposit has been received.');
+  // ⚠ WHO MUST SIGN BEFORE THE WORK BEGINS IS NAMED, NOT COUNTED (2026-10-05, P21; Anthony's answer to Q30). The sentence
+  // counted two signatures, and since P20 each co-representative signs on this page too, so "both" read as any two of
+  // three. The work starts on the Client's and Havellin's signatures and the deposit, which is what the app waits for
+  // (jobActivationBlockers reads the signed agreement, never a co-representative's signature); a co-representative who
+  // signs later is covered by §5.1's joinder, and the Agreement signed row flags them until they are on record. Drafted,
+  // for counsel (bundle A11).
+  content += pp('By signing below, both parties acknowledge they have read, understood, and agreed to all terms of this Agreement. No work will begin until the Client and Havellin have signed and the deposit has been received.');
   // Client sig block
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">' + _agrClientCapacity(job) + '</div>';
@@ -45372,8 +45418,8 @@ function agreementHtml(job, est) {
   // ⚠ NO "IMPORTANT: READ CAREFULLY" BANNER, AND IT IS NOT COMING BACK. Anthony: *"the top
   // banner is not needed and sounds amateurish."* A contract that opens by telling the reader it
   // is a contract reads as though it doubts they can tell — and both halves of it were already
-  // said better further down: the signature page states that no work begins until both signatures
-  // are obtained, which is the operative term, and the standard form's §18 states the
+  // said better further down: the estate form's signature page states that no work begins until the Client and
+  // Havellin have signed, which is the operative term, and the standard form's §18 states the
   // read-and-understood acknowledgment where a court looks for it.
 
   // ── PARTIES TABLE ─────────────────────────────────────────────────────────

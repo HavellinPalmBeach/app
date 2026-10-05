@@ -860,8 +860,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({
       fns: ['buildAgreementEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'buildAgreementEmailText', 'agreementEmailSubject',
-            'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt'],
-      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
+            'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt',
+            // P21: the co-representatives' line (Q31) and the list it asks
+            'agreementEmailCoSignLine', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DECEDENT_SERVICES'],
       stubs: {
         assignedTCContact: () => ({ name: 'Anthony Graziano', phone: '(561) 370-4700', email: 'anthony@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -889,8 +891,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A job with no approved estimate must not print a $0 schedule.
     const ctx2 = sandbox({
-      fns: ['buildAgreementEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt'],
-      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
+      fns: ['buildAgreementEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt',
+            // P21: the co-representatives' line (Q31) and the list it asks
+            'agreementEmailCoSignLine', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DECEDENT_SERVICES'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
         bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',

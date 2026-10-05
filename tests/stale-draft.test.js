@@ -492,7 +492,8 @@ function run({ group, ok, eq, has, lacks }) {
         docusign: { needsHumanSend: false, carriesAttachment: true,  send(spec, pdf, cb) { cb(true, '', '', { envelopeId: 'e1', esignStatus: 'sent' }); } },
       };
       const ctx = sandbox({
-        fns: ['docSend', 'docRecordSent', 'docState', '_jobTouch', '_actor', '_stamp'].concat(HELP),
+        fns: ['docSend', 'docRecordSent', 'docState', '_jobTouch', '_actor', '_stamp',
+              'esignSharedEmails'].concat(HELP),  // P21: the DocuSign send names signers sharing one address (Q32)
         stubs: {
           DOC_SEND_PROVIDERS: PROVIDERS, _docBusy: null, docProvider: () => provider, esignAnchorsPresent: () => [],
           _dashSendState() {}, setTimeout: () => 0, clearTimeout() {}, docPdfBase64: (spec, h, cb) => cb('JVBERi0='),
