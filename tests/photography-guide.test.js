@@ -207,9 +207,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(g.length === 1 ? [g[0].rows.length, g[0].why] : g.length, [2, 'the cobalt vase on the dresser in one and close up in the other'],
        'after it: one group, with what the pictures showed');
     // The runs a big room is read in, as the guide states them.
-    has(guide, 'overlapping runs of 24', 'the guide states the run');
-    const win = GS.match(/var\s+AGENT_ROOM_WINDOW\s*=\s*(\d+)/);
-    eq(win ? +win[1] : NaN, 24, 'and the backend reads a room in runs of 24');
+    // ⚠ 12 and 6 since the first live run (2026-10-06: eight photographs in 32 s, against UrlFetchApp's 60 s).
+    has(guide, 'overlapping runs of 12', 'the guide states the run');
+    has(guide, 'within six of each other are always read together', 'and what the overlap guarantees');
+    const win = GS.match(/var\s+AGENT_ROOM_WINDOW\s*=\s*(\d+)/), lap = GS.match(/var\s+AGENT_ROOM_OVERLAP\s*=\s*(\d+)/);
+    eq([win ? +win[1] : NaN, lap ? +lap[1] : NaN], [12, 6], 'and the backend reads a room in runs of 12 sharing 6');
   }
 
   group('collections: on the inventory by themselves, and the camera’s shot goes on the collection’s line (P24)');
