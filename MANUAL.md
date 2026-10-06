@@ -1955,6 +1955,8 @@ A **Name N shots** button sits first on the Inventory Review bar, because on a f
 
 > **So the field rule is one Items shot per object or shelf, and *Detail of last* for every second angle.** The toggle resets after each shot, so it is one deliberate tap per close-up.
 
+> **The field method is its own page: [`photography-guide.html`](photography-guide.html), *Photographing a House* (new 2026-10-06).** It sits beside this manual and the playbook on the same Pages site and is linked from both, not from the app. It teaches the room order that keeps each object in one Items frame (as found first; pull out what matters; one thing per frame; every second angle a *Detail of last*; shot things out of every later frame; furniture last), the close-ups worth taking for each kind of object, the desk's checks that evening and a printable field card. It also states four gaps the method works round: a frame the agent splits gives the chip and ⚑ to its first line only, and the desk shows the frame's close-ups under that line alone; a note said over a close-up reaches neither agent nor desk; *Possible duplicates* compares names, not pictures; and a walkthrough collection shot in the house instead of added from *From the Estimate Walkthrough* stays listed as not brought in. `tests/photography-guide.test.js` holds each of those sentences to the code.
+
 > **⚠ And the desk catches what the field missed: *Possible duplicates*.** Any two agent-named lines in the same room carrying the same name, **off different photographs**, are flagged in a block above the rows with both thumbnails side by side, and each row wears a bronze *possible duplicate* chip. Two answers, and the block will not choose for you:
 
 | Button | What it does |

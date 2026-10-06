@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Photographing a House &middot; Havellin Palm Beach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#faf8f4;
+  --surface:#f3efe6;
+  --ink:#2a241d;
+  --ink-soft:#5c5347;
+  --grey:#8a8078;
+  --bronze:#7a5a2e;
+  --bronze-bright:#a67c45;
+  --red:#8f2323;
+  --red-ground:#f7eaea;
+  --green:#4f6b2a;
+  --green-ground:#eef2e4;
+  --rule:#e3ddd1;
+  --rule-strong:#cec5b4;
+
+  --ff-display:'Spectral', Georgia, 'Times New Roman', serif;
+  --ff-body:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --ff-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#17140f;
+    --surface:#211c16;
+    --ink:#ece5d9;
+    --ink-soft:#b5aa99;
+    --grey:#8d8375;
+    --bronze:#c9a36a;
+    --bronze-bright:#dbb987;
+    --red:#e89393;
+    --red-ground:#33191a;
+    --green:#a6c478;
+    --green-ground:#1e2516;
+    --rule:#332c23;
+    --rule-strong:#4a4034;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#17140f;
+  --surface:#211c16;
+  --ink:#ece5d9;
+  --ink-soft:#b5aa99;
+  --grey:#8d8375;
+  --bronze:#c9a36a;
+  --bronze-bright:#dbb987;
+  --red:#e89393;
+  --red-ground:#33191a;
+  --green:#a6c478;
+  --green-ground:#1e2516;
+  --rule:#332c23;
+  --rule-strong:#4a4034;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--ff-body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:760px;
+  margin:0 auto;
+  padding-inline:22px;
+  padding-block:56px 96px;
+}
+
+/* ---- masthead ---- */
+.mast{border-bottom:2px solid var(--bronze);padding-bottom:26px;}
+.eyebrow{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:600;color:var(--bronze);margin:0 0 14px;
+}
+h1{
+  font-family:var(--ff-display);
+  font-size:clamp(34px,6.5vw,50px);
+  line-height:1.06;font-weight:700;margin:0;
+  text-wrap:balance;letter-spacing:-.015em;
+}
+.standfirst{
+  font-family:var(--ff-display);
+  font-size:18px;font-style:italic;line-height:1.55;
+  color:var(--ink-soft);margin:16px 0 0;max-width:60ch;
+}
+.meta{
+  display:flex;flex-wrap:wrap;gap:8px 26px;
+  margin-top:22px;font-size:12px;color:var(--grey);
+}
+.meta b{color:var(--ink-soft);font-weight:600;}
+
+/* ---- shared blocks ---- */
+section{margin-top:52px;}
+h2{
+  font-family:var(--ff-display);
+  font-size:26px;font-weight:600;line-height:1.2;
+  margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em;
+}
+h3{
+  font-size:13px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:700;color:var(--bronze);margin:30px 0 10px;
+}
+p{margin:0 0 14px;max-width:66ch;}
+.lede{color:var(--ink-soft);margin-bottom:26px;max-width:64ch;}
+strong{font-weight:700;}
+a{color:var(--bronze);}
+.btn{
+  font-family:var(--ff-body);font-size:.88em;font-weight:600;white-space:nowrap;
+  border:1px solid var(--rule-strong);border-radius:4px;padding:0 5px;background:var(--surface);
+}
+ul.plain{margin:0;padding-left:0;list-style:none;}
+ul.plain li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:64ch;
+}
+ul.plain li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+
+/* ---- the three rules ---- */
+.rules{
+  margin-top:44px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);
+}
+.rule-card{background:var(--surface);padding:20px 22px;}
+.rule-card .tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--bronze);font-weight:500;
+  display:block;margin-bottom:8px;
+}
+.rule-card h4{
+  font-family:var(--ff-display);font-size:19px;font-weight:600;
+  margin:0 0 8px;line-height:1.25;
+}
+.rule-card p{font-size:13.5px;margin:0;color:var(--ink-soft);line-height:1.55;}
+
+/* ---- tables ---- */
+.tbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:14.5px;}
+.tbl th{
+  text-align:left;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--grey);font-weight:700;padding:0 12px 8px 0;
+  border-bottom:1px solid var(--rule-strong);
+}
+.tbl td{padding:11px 12px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top;}
+.tbl td:first-child{font-weight:600;width:26%;}
+.tbl td.how{color:var(--ink-soft);font-size:13.5px;width:24%;}
+.tbl th:last-child,.tbl td:last-child{padding-right:0;}
+@media screen{ .tbl-scroll{overflow-x:auto;} }
+
+/* ---- the vase, three ways ---- */
+.ways{display:grid;gap:14px;margin-top:6px;}
+.way{border:1px solid var(--rule-strong);border-left-width:4px;padding:18px 20px 16px;background:var(--paper);}
+.way.bad{border-left-color:var(--red);}
+.way.ok{border-left-color:var(--bronze-bright);}
+.way.best{border-left-color:var(--green);background:var(--green-ground);}
+.way .tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:500;display:block;margin-bottom:4px;
+}
+.way.bad .tag{color:var(--red);}
+.way.ok .tag{color:var(--bronze);}
+.way.best .tag{color:var(--green);}
+.way h4{font-family:var(--ff-display);font-size:19px;font-weight:600;margin:0 0 10px;line-height:1.25;}
+.way ol{margin:0 0 12px;padding-left:22px;}
+.way li{font-size:14.5px;line-height:1.55;margin-bottom:5px;max-width:62ch;}
+.way .result{font-size:14px;line-height:1.55;margin:0;padding-top:10px;border-top:1px solid var(--rule);color:var(--ink-soft);}
+.way .result b{color:var(--ink);}
+.test{
+  margin-top:18px;font-family:var(--ff-display);font-size:18px;font-style:italic;line-height:1.5;
+  color:var(--bronze);max-width:60ch;
+}
+
+/* ---- staged sequence ---- */
+.stages{margin-top:10px;}
+.stage{
+  position:relative;
+  padding-left:52px;
+  padding-bottom:34px;
+  border-left:2px solid var(--rule-strong);
+  margin-left:14px;
+}
+.stage:last-child{border-left-color:transparent;padding-bottom:4px;}
+.stage::before{
+  content:attr(data-n);
+  position:absolute;left:-15px;top:0;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--bronze);color:var(--paper);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+.stage-h{
+  font-family:var(--ff-display);font-size:21px;font-weight:600;
+  margin:0 0 3px;line-height:1.25;
+}
+.stage-when{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--grey);font-weight:600;margin:0 0 14px;
+}
+.stage ul{margin:0;padding-left:0;list-style:none;}
+.stage li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:62ch;
+}
+.stage li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+.stage li.crit::before{background:var(--red);}
+
+/* ---- own frame or shared ---- */
+.split{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);margin-top:6px;
+}
+.side{background:var(--paper);padding:18px 20px 10px;}
+.side h4{font-family:var(--ff-display);font-size:19px;font-weight:600;margin:0 0 12px;line-height:1.25;}
+.side.own h4{color:var(--bronze);}
+
+/* ---- tricky spots ---- */
+.tricky{margin:6px 0 0;}
+.tricky dt{font-weight:700;font-size:15px;margin-top:16px;}
+.tricky dd{margin:4px 0 0;font-size:14.5px;line-height:1.6;color:var(--ink-soft);max-width:64ch;}
+
+/* ---- never list ---- */
+.never{margin-top:52px;border-top:2px solid var(--red);padding-top:22px;}
+.never h2{color:var(--red);}
+.never ol{margin:18px 0 0;padding-left:0;list-style:none;counter-reset:n;}
+.never li{
+  counter-increment:n;position:relative;padding-left:36px;
+  margin-bottom:13px;font-size:15px;line-height:1.55;max-width:64ch;
+}
+.never li::before{
+  content:counter(n,decimal-leading-zero);
+  position:absolute;left:0;top:1px;
+  font-family:var(--ff-mono);font-size:11px;font-weight:500;
+  color:var(--red);letter-spacing:.04em;
+}
+
+/* ---- the desk ---- */
+ol.desk{margin:6px 0 0;padding-left:0;list-style:none;counter-reset:d;}
+ol.desk li{
+  counter-increment:d;position:relative;padding-left:40px;
+  margin-bottom:14px;font-size:15px;line-height:1.55;max-width:64ch;
+}
+ol.desk li::before{
+  content:counter(d);
+  position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;
+  border:1.5px solid var(--bronze);color:var(--bronze);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ---- where the app still leans on you ---- */
+.gaps{
+  margin-top:52px;background:var(--surface);border-left:3px solid var(--bronze);
+  padding:22px 24px 12px;
+}
+.gaps h2{font-size:22px;}
+.gaps p{font-size:14.5px;color:var(--ink-soft);}
+
+/* ---- field card ---- */
+.card{
+  margin-top:56px;border:2px solid var(--ink);padding:24px 26px 14px;background:var(--paper);
+}
+.card .eyebrow{margin-bottom:6px;}
+.card h2{font-size:28px;margin-bottom:16px;}
+.card ol{margin:0;padding-left:0;list-style:none;counter-reset:c;}
+.card li{
+  counter-increment:c;position:relative;padding-left:38px;
+  margin-bottom:11px;font-size:15.5px;line-height:1.45;
+}
+.card li::before{
+  content:counter(c,decimal-leading-zero);
+  position:absolute;left:0;top:2px;
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;color:var(--bronze);
+}
+.card li b{font-weight:700;}
+
+/* ---- footer ---- */
+footer{
+  margin-top:64px;padding-top:22px;border-top:1px solid var(--rule-strong);
+  font-size:12.5px;color:var(--grey);line-height:1.65;
+}
+footer p{max-width:66ch;}
+
+@media screen and (max-width:600px){
+  .wrap{padding-inline:16px;padding-block:38px 64px;}
+  .stage{padding-left:36px;margin-left:10px;}
+  .stage::before{left:-14px;width:26px;height:26px;font-size:11px;}
+  .tbl td:first-child{width:34%;}
+  .card{padding:20px 18px 10px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+}
+
+@media print{
+  @page{margin:.6in .6in;}
+  :root{--paper:#fff;--surface:#f4f1ec;--ink:#1a1a1a;--ink-soft:#333;--grey:#555;
+        --rule:#ccc;--rule-strong:#999;--red-ground:#f6eded;--green-ground:#f1f4ea;}
+  body{background:#fff;}
+  .wrap{max-width:100%;padding-block:0;padding-inline:0;}
+  h1{font-size:28px;}
+  h2,h3,.stage-h,.rule-card h4,.way h4,.side h4{page-break-after:avoid;break-after:avoid;}
+  /* Keep a rule, a way, a stage, a side and the card whole; never a long list. */
+  .rule-card,.way,.stage,.side,.tbl tr,.gaps{page-break-inside:avoid;break-inside:avoid;}
+  .card{page-break-before:always;break-before:page;page-break-inside:avoid;break-inside:avoid;}
+  p,li{orphans:3;widows:3;}
+  .tbl{font-size:11.5px;}
+  footer{page-break-before:avoid;break-before:avoid;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Havellin Palm Beach &middot; Field Guide</p>
+    <h1>Photographing a House</h1>
+    <p class="standfirst">How to shoot a house so the inventory comes out right the first time: every object
+      counted once, named from its own picture, and carrying the close-ups that let it be valued.</p>
+    <div class="meta">
+      <span><b>For</b> Every job that keeps an inventory</span>
+      <span><b>Camera</b> The room&rsquo;s camera, on the Job Plan</span>
+      <span><b>Status</b> Draft for Anthony</span>
+      <span><b>Issued</b> 6 Oct 2026</span>
+    </div>
+  </header>
+
+  <div class="rules">
+    <div class="rule-card">
+      <span class="tag">Rule 01</span>
+      <h4>One thing, one Items shot</h4>
+      <p>Every object is the subject of exactly one Items shot, ever. The agent reads each Items shot on
+        its own, with no memory of the one before, and writes a line for everything it can see in it.
+        Two shots of the vase are two vases.</p>
+    </div>
+    <div class="rule-card">
+      <span class="tag">Rule 02</span>
+      <h4>Every other picture is a Detail</h4>
+      <p>The zoom, the back, the mark, the label, the damage: tap <strong>+&nbsp;Detail of last</strong>
+        before each one, straight after the item&rsquo;s own shot. A Detail rides with its item and never
+        becomes a line. Miss the tap and it is a second Items shot.</p>
+    </div>
+    <div class="rule-card">
+      <span class="tag">Rule 03</span>
+      <h4>One frame, one fate</h4>
+      <p>The chip you tapped and <strong>&#9873;&nbsp;Appraise</strong> land on one line per picture. When
+        the agent finds several things in a frame, the others come back Undecided and unflagged. Anything
+        going somewhere else, or worth a flag or a word of its own, gets its own shot.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>How the app reads your pictures</h2>
+    <p class="lede">Four kinds of shot. Only one of them makes inventory lines.</p>
+    <div class="tbl-scroll">
+      <table class="tbl">
+        <thead><tr><th>Shot</th><th>What it becomes</th><th>How many</th></tr></thead>
+        <tbody>
+          <tr><td>&#128247; As found</td>
+            <td>The record of the room before anything moved, printed on the As-Found Record. Never a line,
+              never read by the agent, and it cannot be deleted.</td>
+            <td class="how">As many as you like.</td></tr>
+          <tr><td>&#128247; Items</td>
+            <td>Inventory lines. <strong>Agent One</strong> writes a line for every thing it can see: ordinary
+              household goods as one line with a count, and a line each for Art &amp; D&eacute;cor, Antiques,
+              Jewelry &amp; Watches, Silver &amp; Precious Metal, Rugs &amp; Carpets, Collectibles, Firearms,
+              Wine &amp; Spirits, Musical Instruments, and anything marked, signed or plainly valuable.</td>
+            <td class="how">One per object or lot, ever.</td></tr>
+          <tr><td>+ Detail of last</td>
+            <td>A close-up of the last Items shot&rsquo;s object. Both agents read up to four with their item,
+              and the desk shows them under it. Never a line.</td>
+            <td class="how">As many as the object earns.</td></tr>
+          <tr><td>&#128247; After</td>
+            <td>The room once it is empty. Never a line.</td>
+            <td class="how">One or two, before Cleared.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <h3>What that means in the room</h3>
+    <ul class="plain">
+      <li>The agent sees <strong>one Items shot at a time</strong>: the picture, its close-ups, the
+        room&rsquo;s name and your note. It cannot know it has already seen the vase.</li>
+      <li><strong>Everything in the frame counts, the background too.</strong> The lamp at the edge of the
+        dresser shot becomes a lamp line, and a second one when you shoot the side table.</li>
+      <li>The app keeps a <strong>900-pixel</strong> copy of each shot. A mark or a signature has to fill a
+        close-up to be read.</li>
+      <li>The desk&rsquo;s <strong>Possible duplicates</strong> only catches two lines in one room with the same
+        name off different pictures. &ldquo;Blue vase&rdquo; and &ldquo;cobalt art glass vase, likely
+        Murano&rdquo; are not the same name. The room is where a double is stopped.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>The blue vase on the dresser</h2>
+    <p class="lede">The pattern for every surface in the house.</p>
+    <div class="ways">
+      <div class="way bad">
+        <span class="tag">Wrong</span>
+        <h4>Two Items shots</h4>
+        <ol>
+          <li>Items: the dresser, vase on top.</li>
+          <li>Items: the vase, zoomed in.</li>
+        </ol>
+        <p class="result"><b>Dresser, blue vase, blue vase.</b> Two vases, and the agent may name them
+          differently, so the desk may never flag it.</p>
+      </div>
+      <div class="way ok">
+        <span class="tag">Quick</span>
+        <h4>One shot and its Details</h4>
+        <ol>
+          <li>Items: the dresser, vase on top.</li>
+          <li>+ Detail of last: the vase, close.</li>
+          <li>+ Detail of last: the mark on its base.</li>
+        </ol>
+        <p class="result"><b>Dresser and blue vase, one each.</b> The vase line shares the dresser&rsquo;s
+          picture, comes back Undecided with no &#9873; whatever you tapped, and its close-ups sit under the
+          dresser&rsquo;s line at the desk. Fine for an ordinary vase.</p>
+      </div>
+      <div class="way best">
+        <span class="tag">Best</span>
+        <h4>The vase gets its own frame</h4>
+        <ol>
+          <li>Items: the vase alone, filling the frame, with the chip for where it is going (and
+            &#9873;&nbsp;Appraise if it deserves one).</li>
+          <li>Hold to talk: &ldquo;Mom&rsquo;s, from Venice, promised to Karen.&rdquo;</li>
+          <li>+ Detail of last: the mark on its base.</li>
+          <li>The vase goes behind you, to the shot spot.</li>
+          <li>Items: the dresser, bare.</li>
+          <li>+ Detail of last: the maker&rsquo;s label in the top drawer.</li>
+        </ol>
+        <p class="result"><b>Two lines, each with its own picture, chip, flag, close-up and note.</b>
+          Nothing to fix at the desk.</p>
+      </div>
+    </div>
+    <p class="test">The test: if you would mind seeing it in a box lot, it gets its own frame.</p>
+  </section>
+
+  <section>
+    <h2>A room, start to finish</h2>
+    <p class="lede">The order is what keeps a thing in one frame. Same order, every room.</p>
+    <div class="stages">
+
+      <div class="stage" data-n="1">
+        <p class="stage-h">Before the camera opens</p>
+        <p class="stage-when">In the doorway</p>
+        <ul>
+          <li>Read the brief at the top of the room: the must-finds, firearms, cash and safes, the
+            walkthrough note.</li>
+          <li>Pick the <strong>shot spot</strong>: a cleared bed, a table, a box by the door. Everything you
+            shoot goes there, behind you, out of every frame you have left.</li>
+          <li>One shooter per room. Two of you on the job: take different rooms.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="2">
+        <p class="stage-h">As found</p>
+        <p class="stage-when">Before anything moves; on an estate, the whole house first</p>
+        <ul>
+          <li>From the door, then each wall, then every drawer, cabinet, closet and box opened and shot as
+            it sits.</li>
+          <li>Nothing moves and nothing is tidied. These shots never become lines and cannot be deleted,
+            so shoot freely.</li>
+          <li class="crit">On an estate, do every room before anyone sorts anything, so no room is touched
+            before its record exists.</li>
+          <li>Tick <strong>As-found pass complete</strong> in each room.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="3">
+        <p class="stage-h">Sort</p>
+        <p class="stage-when">Before the Items pass</p>
+        <ul>
+          <li>Pull out what gets its own frame (the list below).</li>
+          <li>Gather everyday things of one kind and one fate on one surface: the paperbacks, the linens,
+            the everyday glasses. A shelf that is already one lot stays where it is.</li>
+          <li>Pairs and sets go together: both lamps, all eight chairs, the whole dinner service.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="4">
+        <p class="stage-h">Items</p>
+        <p class="stage-when">Round the room in one direction from the door</p>
+        <ul>
+          <li>Pulled-out pieces first, one frame each, filling it. Then each lot, with its chip.</li>
+          <li>Each piece of furniture top to bottom: what sits on it, what is in it, then the piece itself,
+            bare, drawers shut.</li>
+          <li>Drawers: the contents as a lot, framed tight on the contents, then shut the drawer.</li>
+          <li class="crit">Before every shot, look at the edges. Anything with its own shot, taken or to
+            come, is in the way: move it or step in.</li>
+          <li>Everything shot goes to the shot spot. Never back into a frame.</li>
+          <li>What you cannot empty (a full bookcase, a china cabinet you will not unload): shoot it once,
+            full, and the agent splits it. Pull out anything that needs its own frame first, and never
+            shoot those contents again.</li>
+          <li>Big pieces are shot where they stand.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="5">
+        <p class="stage-h">Close-ups and words</p>
+        <p class="stage-when">Straight after each item&rsquo;s own shot, before the next item</p>
+        <ul>
+          <li class="crit"><strong>Talk first.</strong> Hold to talk (or type): who it is going to, family
+            history, &ldquo;pair&rdquo;, &ldquo;set of 8&rdquo;, the size of a painting or a rug. The note
+            rides the last shot, and a note said over a close-up stays on the close-up, where neither the
+            agent nor the desk reads it.</li>
+          <li>Then <strong>+ Detail of last</strong>, one tap per close-up: it resets after every shot. The
+            mark or the signature first: the agents read up to four.</li>
+          <li>Close-ups cannot be added later. + Detail of last only reaches the last Items shot since the
+            camera opened.</li>
+          <li>Blurry? Press the &#128465; on the <em>Last</em> panel at once, then reshoot. A saved close-up
+            has no tile in the room, so the camera is the only place to bin it.</li>
+        </ul>
+      </div>
+
+      <div class="stage" data-n="6">
+        <p class="stage-h">Before you leave the room</p>
+        <p class="stage-when">Then Lock</p>
+        <ul>
+          <li>Open the room&rsquo;s strip: no <em>&#9888; not saved</em> (press Retry), <em>+1 detail</em> on
+            every item you took close-ups of, nothing shot twice.</li>
+          <li>Finish the room before you leave it. A room shot over two days is where doubles come from. If
+            you must stop, leave the shot spot as it is, so tomorrow&rsquo;s start is plain.</li>
+          <li><strong>Lock</strong> when it is sorted and shot. <strong>&#128247; After</strong> once it is
+            empty, then <strong>Cleared</strong>.</li>
+        </ul>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>Its own frame, or a shared one</h2>
+    <p class="lede">Decide while you sort, not while you shoot.</p>
+    <div class="split">
+      <div class="side own">
+        <h4>Its own frame, filling it</h4>
+        <ul class="plain">
+          <li>Art &amp; D&eacute;cor, Antiques, Jewelry &amp; Watches, Silver &amp; Precious Metal,
+            Rugs &amp; Carpets, Collectibles, Firearms, Wine &amp; Spirits, Musical Instruments. The agent
+            gives each a line anyway; give each its own picture.</li>
+          <li>Anything signed, stamped or hallmarked.</li>
+          <li>Anything you would tap &#9873;&nbsp;Appraise for.</li>
+          <li>Anything going to a named person, or somewhere different from what is around it.</li>
+          <li>A must-find. Tap <strong>Found it</strong> on the brief as well.</li>
+          <li>On an estate filing a Form 706: anything that might be worth more than <strong>$100</strong>.
+            No article in a lot may be (Treas. Reg. &sect;20.2031-6(a)).</li>
+          <li>Anything you would mind seeing in a box lot.</li>
+        </ul>
+      </div>
+      <div class="side">
+        <h4>A shared frame, one lot, one chip</h4>
+        <ul class="plain">
+          <li>Ordinary things of one kind with one fate: books, linens, kitchenware, everyday glass and
+            china, tools, garage and cleaning supplies, clothing on a rail, holiday decorations.</li>
+          <li>Spread them so they can be counted. The agent writes &ldquo;Flatware, 30 pieces&rdquo; as one
+            line with a count.</li>
+          <li>A pair or a set: in one frame, together.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Close-ups worth taking</h2>
+    <p class="lede">Each one is a <strong>+ Detail of last</strong>, taken straight after the object&rsquo;s own
+      shot. They turn &ldquo;appears to be&rdquo; into a reading, and they are what Agent Two values from.</p>
+    <div class="tbl-scroll">
+      <table class="tbl">
+        <thead><tr><th>Object</th><th>Close-ups</th></tr></thead>
+        <tbody>
+          <tr><td>Painting, print, photograph</td><td>The signature; the edition number; the back (labels,
+            gallery stamps, inscriptions); any damage. Say the size.</td></tr>
+          <tr><td>Furniture</td><td>The maker&rsquo;s label or stamp (inside a drawer, under the seat, on the
+            back); the drawer joints on anything old; damage.</td></tr>
+          <tr><td>China, porcelain, pottery, glass</td><td>The mark on the base; chips and cracks.</td></tr>
+          <tr><td>Silver</td><td>The hallmark, or the Sterling or 925 stamp.</td></tr>
+          <tr><td>Jewelry</td><td>The stamp (14K, 18K, PT, 925) and the maker&rsquo;s mark, on a plain
+            cloth.</td></tr>
+          <tr><td>Watches</td><td>The dial; the caseback, with its model and serial.</td></tr>
+          <tr><td>Rugs</td><td>A corner; the back; the label. Say the size.</td></tr>
+          <tr><td>Electronics and appliances</td><td>The model and serial label.</td></tr>
+          <tr><td>Handbags, furs, couture</td><td>The label.</td></tr>
+          <tr><td>Books</td><td>The title page of anything old or signed.</td></tr>
+          <tr><td>Coins, stamps, cards</td><td>The dates and marks of anything notable.</td></tr>
+          <tr><td>Firearms</td><td>The <a href="firearms-protocol.html">Firearms Protocol</a>&rsquo;s list,
+            where it lies.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tricky spots</h2>
+    <dl class="tricky">
+      <dt>A set split across rooms</dt>
+      <dd>Bring it together and shoot it once. If it cannot move, shoot the main group, say &ldquo;set of 8,
+        two more in the study&rdquo;, and keep the two out of every Items frame in the study.</dd>
+      <dt>A rug under furniture</dt>
+      <dd>Shoot it after the furniture on it, tight on the pattern and a corner, and say &ldquo;rug
+        only&rdquo;. The agent reads your words with the picture. That helps; it is not a guarantee, so check
+        it at the desk.</dd>
+      <dt>Mirrors and glass doors</dt>
+      <dd>A reflection puts other things in the frame. Shoot at an angle, and keep yourself out of it.</dd>
+      <dt>A collection on the walkthrough</dt>
+      <dd>Anything added from the desk&rsquo;s <em>From the Estimate Walkthrough</em> panel becomes new lines,
+        with no picture. So one road per collection: shoot it on the Items pass and do not add it from the
+        panel, or add it from the panel and shoot it only as found. Never both. For now the Job Plan banner keeps
+        listing a collection you shot instead of adding (and the Appraisal Worklist too, where the walkthrough
+        marked it for appraisal); that entry is expected (the last box below).</dd>
+      <dt>Vehicles</dt>
+      <dd>Add them from that panel at the desk: it carries the year, the description and the condition.
+        Keep them out of the garage&rsquo;s Items frames.</dd>
+      <dt>Papers</dt>
+      <dd>Shoot the box, the drawer or the stack from the side, never the pages. A will, codicil, deed or
+        title is set aside unread and handed over against a signed receipt, an original will to the estate
+        attorney the same day (the playbook, Step 10g). Never photograph its pages.</dd>
+      <dt>Cash</dt>
+      <dd>Not an Items shot. Two of you count it and seal it, on the <em>Found on site</em> card
+        (Step 10g), and the desk adds it as a line of its own.</dd>
+      <dt>Medicines</dt>
+      <dd>As found only, never the labels.</dd>
+      <dt>People</dt>
+      <dd>Keep them out of every frame: the family, the crew, and yourself in a mirror. Framed family
+        photographs are fine as a lot.</dd>
+      <dt>Firearms</dt>
+      <dd>One Items shot each, where it lies, untouched. Everything after that is the
+        <a href="firearms-protocol.html">Firearms Protocol</a>.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Shooting well</h2>
+    <ul class="plain">
+      <li>Lights on and blinds open, and never into a window. The camera in the app has no flash.</li>
+      <li>Fill the frame with the subject. Step back for big pieces, in for small ones.</li>
+      <li>Hold level and still for a beat, until the picture sharpens.</li>
+      <li>Glass, framed art and silver: a step to the side kills the glare.</li>
+      <li>Small things on something plain: a towel, the bed.</li>
+    </ul>
+  </section>
+
+  <section class="never">
+    <h2>Never</h2>
+    <ol>
+      <li>Never shoot one thing on two Items shots.</li>
+      <li>Never take a close-up without tapping <strong>+ Detail of last</strong> first.</li>
+      <li>Never put a shot thing back where a later frame will catch it.</li>
+      <li>Never leave a bad shot in place. Bin it from <em>Last</em> and reshoot.</li>
+      <li>Never two people on one room&rsquo;s Items pass.</li>
+      <li>Never both add a walkthrough collection and shoot it on the Items pass.</li>
+      <li>Never photograph the inside of private papers or a will, a medicine label, or a person.</li>
+      <li>Never move or handle a firearm for a picture beyond what the Firearms Protocol allows.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>At the desk that evening</h2>
+    <p class="lede">On the Job Admin &amp; Inv tab, in this order.</p>
+    <ol class="desk">
+      <li>Retry anything <em>&#9888; not saved</em>, then press <span class="btn">Name N shots</span>.</li>
+      <li><strong>Possible duplicates</strong>, above the rows: open both pictures, then press
+        <span class="btn">Remove</span> on the double or <span class="btn">Not duplicates</span>.</li>
+      <li>Rows reading <strong>&#128279; 1 of N in this photo</strong>: the agent split that picture. Set the
+        disposition on the lines it split off (they come back Undecided), move <em>Needs Appraisal</em> to
+        the right line in its panel, and check each name says which object it is, because every line off
+        that picture shows the whole picture.</li>
+      <li>Read each room&rsquo;s lines against its as-found shots: anything doubled, anything missing.</li>
+      <li>Work the <em>agent &middot; unsure</em> rows first.</li>
+      <li>Then <span class="btn">Value N lines</span>. Agent Two values from the same picture and close-ups,
+        so a clean frame is a better figure.</li>
+    </ol>
+  </section>
+
+  <section class="gaps">
+    <h2>Where the app still leans on you</h2>
+    <p>Four things the method above works around. Each is on the open list for after the pilot.</p>
+    <ul class="plain">
+      <li>A walkthrough collection you shot instead of adding keeps showing as not brought in, on the Job
+        Plan banner (and on the Appraisal Worklist where it was marked for appraisal).</li>
+      <li>Lines split off one picture come back Undecided and unflagged, and the desk shows the
+        picture&rsquo;s close-ups under its first line only.</li>
+      <li>A note said over a close-up stays on the close-up: neither agent nor desk reads it.</li>
+      <li>Possible duplicates compares names, not pictures.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Field card &middot; print and keep it in the kit</p>
+    <h2>Shooting a room</h2>
+    <ol>
+      <li><b>As found first.</b> Whole house, nothing moved. Never lines.</li>
+      <li><b>One thing, one Items shot.</b> Check the edges.</li>
+      <li><b>Every other picture:</b> tap + Detail of last first.</li>
+      <li><b>One frame, one fate.</b></li>
+      <li><b>Pull out what matters.</b> Its own frame, filling it.</li>
+      <li><b>Shot, then behind you.</b> Furniture last, bare.</li>
+      <li><b>Talk before the close-ups.</b></li>
+      <li><b>Bad shot?</b> &#128465; now, then reshoot.</li>
+      <li><b>One shooter per room.</b> Finish the room.</li>
+      <li><b>Walkthrough collections:</b> shoot it or add it. Never both.</li>
+    </ol>
+  </section>
+
+  <footer>
+    <p><strong>Draft for Anthony, 6 October 2026.</strong> Written against the app as it is built today: the
+      room&rsquo;s camera, Agent One&rsquo;s naming and the desk&rsquo;s checks. The
+      <a href="concierge-guide.html">Concierge Guide</a> describes each control (Step 10a in the house,
+      Step 10e at the desk); this page is the method. The <a href="firearms-protocol.html">Firearms
+      Protocol</a> governs everything about a firearm.</p>
+  </footer>
+
+</div>
+</body>
+</html>

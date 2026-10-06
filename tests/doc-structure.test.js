@@ -1,6 +1,6 @@
 'use strict';
-// The STRUCTURE of the three HTML documents — manual.html, concierge-guide.html and
-// firearms-protocol.html (2026-09-23).
+// The STRUCTURE of the HTML documents — manual.html, concierge-guide.html and
+// firearms-protocol.html (2026-09-23), and photography-guide.html (2026-10-06).
 //
 // ⚠⚠ WHY THIS EXISTS. For weeks the operations manual rendered its back two-thirds — the second
 // half of §7 and every section from §8 to §17 — INSIDE one `.note` box and OUTSIDE the page
@@ -31,6 +31,7 @@ const DOCS = [
   { file: 'manual.html', wrapper: 'page', minH2: 15, minBoxes: 100 },
   { file: 'concierge-guide.html', wrapper: 'page', minH2: 10, minBoxes: 50 },
   { file: 'firearms-protocol.html', wrapper: 'wrap', minH2: 3, minBoxes: 0 },
+  { file: 'photography-guide.html', wrapper: 'wrap', minH2: 8, minBoxes: 0 },
 ];
 
 // The boxes a reader sees as a callout. None of them may hold a section heading or another box.

@@ -22,7 +22,7 @@ const path = require('path');
 const { sandbox } = require('./harness');
 
 const ROOT = path.join(__dirname, '..');
-const SHIPPED = ['havellin.html', 'manual.html', 'concierge-guide.html', 'firearms-protocol.html', 'MANUAL.md', 'CONCIERGE_GUIDE.md']
+const SHIPPED = ['havellin.html', 'manual.html', 'concierge-guide.html', 'firearms-protocol.html', 'photography-guide.html', 'MANUAL.md', 'CONCIERGE_GUIDE.md']
   .concat(fs.readdirSync(path.join(ROOT, 'apps-script')).filter((f) => f.endsWith('.gs')).map((f) => 'apps-script/' + f));
 
 module.exports = function ({ group, ok, eq }) {
@@ -39,7 +39,7 @@ module.exports = function ({ group, ok, eq }) {
     }
     ok(bad.length === 0, f + ' carries no raw control byte' + (bad.length ? ' — found ' + bad.join(', ') + '; write it as an escape (\\u0000) instead' : ''));
   });
-  ok(SHIPPED.length >= 7, 'the list covers the app, the three documents, both markdown copies and the Apps Script files (' + SHIPPED.length + ')');
+  ok(SHIPPED.length >= 8, 'the list covers the app, the four documents, both markdown copies and the Apps Script files (' + SHIPPED.length + ')');
 
   group('the vendor category key still joins on U+0000, so two names cannot collide');
   {
