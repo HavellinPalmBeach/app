@@ -22,7 +22,7 @@ const FNS = [
   '_invDocName', '_invItemNo', '_invGroupItems', '_invDispLabel', '_invRoomName', '_planRooms',
   '_invPrintThumb', '_invThumbFor', '_invThumbCache', '_invThumbKey', '_invProgressStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar',
+  '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar',
   '_agrProbateCompliance', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover',
   '_agrTrustDeliverable', '_agrScopeServices', '_invFileId', '_invNeedsValue', 'invWorkFlags', '_invMissingThumbIds',
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
@@ -30,7 +30,7 @@ const FNS = [
   'roundCents', 'fmt',
   'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf'];
 const VARS = [
-  '_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 
+  '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'MATTER_TYPES', 'INV_ASSET_TRACKS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
   'EXEMPT_CAP_732_402', 'AGR_NOT_AN_ACCOUNTING', 'INV_CATEGORIES', '_invShowRoll', 'INV_GROUP_ORDER', 'INV_CAT_GLYPH', 'INV_UNDECIDED', 'INV_DISPOSITIONS', 'INV_DEFAULT_CATEGORY', 'DOC_SCOPES',

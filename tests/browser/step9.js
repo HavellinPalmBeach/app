@@ -1,11 +1,12 @@
 // Step 9 of ESTATE_SCOPE_SPEC, second half — §20.2031-6(a), the grouping cap, built where
 // the per-article data still exists.
 //
-// ⚠ The unit suite proves the predicate, the gate and the three surfaces in isolation. Only
-// this proves that somebody at the desk, on the real Inventory tab, can SEE the arithmetic
-// at the moment the lot is created — which is the entire reason this rule is implementable
-// at all. A lot row carries one name, one value and one quantity; nothing downstream can
-// split it, so a readout nobody reaches is the same as no rule.
+// ⚠ The unit suite proves the predicate, the gate and the surfaces in isolation. Only this
+// proves that somebody at the desk, on the real Inventory tab, can SEE the arithmetic at the
+// moment the lot is created. Since P24 (2026-10-06) that moment is the desk opening: each
+// walkthrough collection joins the inventory by itself as one lot, waiting for its photograph,
+// and the desk's Lots to split reads the cap on that line (the import panel's readout went with
+// the import).
 //
 // ⚠ Read the RENDERED container, never `document.body.innerHTML`: this is a single-file app
 // whose <script> lives in the body, so that string carries the entire JavaScript source and
@@ -82,48 +83,37 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   }, jobId);
   await p.waitForTimeout(600);
 
-  const panel = await p.evaluate(() => {
+  // ── RESTATED P24: THE COLLECTIONS JOIN THE INVENTORY BY THEMSELVES, AND THE CAP IS READ ON THEIR LINES ──────────
+  // The import panel's capture-time readout went with the import itself (Anthony, 2026-10-06: "collections should
+  // automatically be in inventory and obviously need photo documentation"). Each collection is one lot line the moment
+  // the desk opens, and the desk's own Lots to split reads the cap on that line: the same predicate, at the same moment,
+  // with no button between the walkthrough and the flag. The fix it names is the photograph, split into its pieces.
+  const auto = await p.evaluate((id) => {
     const el = document.getElementById('panel-inventory');
-    const hint = (c) => { const h=document.getElementById('imp-hint-'+c); return h ? h.textContent.trim() : null; };
-    return { c1: hint(9001), c2: hint(9002), c3: hint(9003),
-             visible: !!document.getElementById('imp-hint-9001'),
-             offsetOK: (() => { const h=document.getElementById('imp-hint-9001'); return !!(h && h.offsetParent !== null); })() };
-  });
-  ok(panel.visible, 'the import panel carries a readout row for every collection');
-  ok(panel.offsetOK, 'and it is actually on screen, not in a hidden container');
-  ok(/above the \$100/.test(panel.c1 || ''), 'the $5,000 six-piece lot warns: above the $100 cap');
-  // RESTATED 2026-10-01 (P17, Anthony's answer 6): money prints its cents whenever there are any, so the average of a
-  // $5,000 lot of six reads $833.33 (it printed $833, the figure taken to the dollar). maiv.test.js restates it too.
-  ok(/averages \$833\.33 an article/.test(panel.c1 || ''), 'with the arithmetic in front of the person choosing');
-  ok(/Itemize it/.test(panel.c1 || ''), 'and names the fix, which is the selector immediately beside it');
-  ok(/inside the \$100/.test(panel.c2 || ''), 'the 40-piece $800 lot is confirmed INSIDE the cap, not left silent');
-  ok(/cannot be tested/.test(panel.c3 || ''), 'the unpriced collection says the cap cannot be tested');
-
-  // ⚠ Switching the mode to Itemize IS the fix, so the panel stops talking about it.
-  const afterItemize = await p.evaluate(() => {
-    const s = document.getElementById('imp-mode-9001'); s.value = 'itemize';
-    if (s.onchange) s.onchange(); else _impLotHint(jobs[0].id, 9001);
-    return (document.getElementById('imp-hint-9001')||{}).textContent.trim();
-  });
-  eq(afterItemize, '', 'choosing Itemize clears the warning — itemising is the fix');
-
-  const afterQty = await p.evaluate(() => {
-    const s = document.getElementById('imp-mode-9001'); s.value = 'lot';
-    if (s.onchange) s.onchange();
-    const q = document.getElementById('imp-qty-9001'); q.value = '80';
-    if (q.oninput) q.oninput();
-    return (document.getElementById('imp-hint-9001')||{}).textContent.trim();
-  });
-  ok(/inside the \$100/.test(afterQty), 'raising the count to 80 brings the same $5,000 inside the cap, live');
+    const row = (c) => { const r = document.getElementById('inv-row-' + id + '_col' + c);
+      return r ? { text: r.textContent.replace(/\s+/g, ' '), shown: r.checkVisibility() } : null; };
+    const j = jobs.find(x => x.id === id);
+    return { a: row(9001), b: row(9002), c: row(9003), importRows: !!document.querySelector('[id^="imp-hint-"]'),
+             text: el ? el.textContent : '', lots: invLotsToSplit(_jobInvRefs(id), j).map(r => r.objectName),
+             untested: invLotsUntestable(_jobInvRefs(id), j).map(r => r.objectName), keys: invWorkFlags(j).map(f => f.key) };
+  }, jobId);
+  ok(!!(auto.a && auto.b && auto.c), 'each of the three collections is a line on the desk, with nothing pressed');
+  ok(!!(auto.a && auto.a.shown), 'and it is actually on screen, not in a hidden container');
+  ok(/no photograph yet/.test(auto.a ? auto.a.text : ''), 'each waiting for its photograph, and saying so on its row');
+  ok(!auto.importRows, 'the import panel offers no collection to add');
+  eq(auto.lots.join('|'), 'Sterling flatware service', 'the $5,000 six-piece lot is over the $100 cap, on its own line');
+  eq(auto.untested.join('|'), 'Boxed china', 'the unpriced one is held as untestable');
+  ok(auto.keys.indexOf('lotsplit') >= 0 && /Lots to split/.test(auto.text), 'and the desk shows Lots to split, rendered on the tab');
 
   // ── THE DESK CHIP, on a real manifest with a real lot ───────────────────────────────────
   const chips = await p.evaluate((id) => {
     const it=(sid,o)=>Object.assign({stableId:id+'_'+sid,label:'inventory',roomIdx:1,ts:1,
       status:'uploaded',category:'Silver & Precious Metal',condition:'Good',
       driveFileId:'f'+sid,driveFileUrl:'https://drive.google.com/file/d/f'+sid+'/view'},o||{});
-    _photoRefs[id]=[it('a',{objectName:'Sterling flatware service',qty:'6',fmv:'5000'}),
-                    it('b',{objectName:'Kitchen sundries',qty:'40',fmv:'800'}),
-                    it('c',{objectName:'Boxed china',qty:'25',fmv:''})];
+    // P24: the collections, photographed: each line carries its collection, so none is made again beside it.
+    _photoRefs[id]=[it('a',{objectName:'Sterling flatware service',qty:'6',fmv:'5000',sourceCollId:9001}),
+                    it('b',{objectName:'Kitchen sundries',qty:'40',fmv:'800',sourceCollId:9002}),
+                    it('c',{objectName:'Boxed china',qty:'25',fmv:'',sourceCollId:9003})];
     savePhotoRefs(id); renderInventoryTab();
     const el = document.getElementById('panel-inventory');
     const j = jobs.find(x=>x.id===id);
@@ -167,13 +157,11 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
     const el = document.getElementById('panel-inventory');
     return { keys: invWorkFlags(j).map(f=>f.key),
              text: (el ? el.textContent : ''),
-             lots: invLotsToSplit(_jobInvRefs(id), j).length,
-             hint: (document.getElementById('imp-hint-9001')||{}).textContent || '' };
+             lots: invLotsToSplit(_jobInvRefs(id), j).length };
   }, jobId);
   ok(noFiling.keys.indexOf('lotsplit') < 0, 'an estate filing no 706 gets NO chip at all');
   ok(!/Lots to split/.test(noFiling.text), 'and nothing on the tab');
-  eq(noFiling.lots, 0, 'and no lot is flagged');
-  eq(noFiling.hint.trim(), '', 'and the capture readout goes quiet — Florida sets no floor');
+  eq(noFiling.lots, 0, 'and no lot is flagged — Florida sets no floor');
 
   const wl2 = await print('printAppraisalWorklist');
   ok(!/20\.2031-6\(a\)/.test(wl2.html), 'the worklist drops the (a) block entirely on that estate');

@@ -127,8 +127,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ The recursion itself is the thing to keep an eye on. The callback is allowed to
     // re-render — it MUST, for a photo from the other device to show — so the only thing
     // standing between it and an infinite loop is `changed` being honest.
-    has(fnBody('loadJobPlanTab'), 'refreshPhotoRefs(jobId, function(changed){ if (changed) loadJobPlanTab(); });',
-        'loadJobPlanTab still re-renders on a real change');
+    // P24: the one other trigger is the walkthrough's collections joining the inventory, which collectionLinesEnsure
+    // does once (inventory.test.js drives "a second call makes nothing"), so the pass after it is a no-op too.
+    has(fnBody('loadJobPlanTab'), 'refreshPhotoRefs(jobId, function(changed){ if (collectionLinesEnsure(jobId) || changed) loadJobPlanTab(); });',
+        'loadJobPlanTab still re-renders on a real change, and once when the collections join');
     lacks(fnBody('refreshPhotoRefs'), 'if (cb) cb(true);',
           'and refreshPhotoRefs no longer reports one unconditionally');
   }

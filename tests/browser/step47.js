@@ -20,7 +20,7 @@
 //   D. B10: a living client's Approval Request carries no "not yet valued … under oath" notice
 //   E. B12: the living bulk bar offers no valuation source; the estate one does
 //   F. B22a: the None tier's workbar draws Approval Request once; Share w/ Counsel names both folders;
-//      the Job Plan's import banner names the Job Admin & Inv tab
+//      the Job Plan names a walkthrough collection waiting for its photograph (P24; it named the import tab)
 //   G. overflow at 1440 and 390 (the desk with a record open, the room workspace); the Approval
 //      Request under print media at Letter width; no page errors
 //
@@ -306,9 +306,13 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       ok(await p.evaluate((id) => !!(_photoRefs[4702].find((r) => r.stableId === id) || {}).deletedAt, det2), 'the bin takes it');
       lacks(await txt('#plan-rooms-4702'), 'not saved', '⚠ and "not saved" clears');
       await p.evaluate(() => closeRoomWorkspace()); await p.waitForTimeout(300);
-      // The import banner on this Job Plan names the tab the panel is on.
-      has(await txt('#job-plan-content'), 'Bring them in on the Job Admin & Inv tab, under From the Estimate Walkthrough',
-          'the Job Plan\'s import banner names the Job Admin & Inv tab');
+      // RESTATED P24: a collection is no longer brought in by hand. The Job Plan names it as waiting for its photograph and
+      // says where it is taken; the import banner (vehicles only now) does not appear for a collection.
+      has(await txt('#job-plan-content'), '1 collection from the walkthrough is not photographed yet: Silver service',
+          'the Job Plan names the collection waiting for its photograph');
+      has(await txt('#job-plan-content'), 'open the room it is in and tap it beside the cameras',
+          'and where it is taken');
+      lacks(await txt('#job-plan-content'), 'Bring them in on the Job Admin & Inv tab', 'with no import to press');
     });
 
     // ── D. a living client's Approval Request ──────────────────────────────

@@ -80,7 +80,9 @@ function cameraRig(grant) {
           'fieldCamTypedNote', 'fieldCamNoteDraft', '_fieldCamPendingNote', '_fieldCamFlushNote',
           'fieldCamTalkStart', '_fieldCamRoomName', '_planRoom', '_getPhotoRef',
           '_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_setPhotoRef',
-          '_fieldNoteAppend', '_invTouch', '_invDetailRefs'],
+          '_fieldNoteAppend', '_invTouch', '_invDetailRefs',
+          // P24: the camera arms a walkthrough collection, and its shot fills that collection's line.
+          'collectionLinesUnshot', 'collectionLineUnshot', '_invHasPhoto', '_jobInvRefs', 'collectionLineWithPhoto', 'fieldCamToggleColl'],
     vars: ['_fieldCam', 'FIELD_CAM_MODES', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
            'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
            '_localShotThumbs', '_photoUidSeq', 'INV_DEFAULT_CATEGORY'],
@@ -688,7 +690,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!w.INV_WORK_FLAGS[0].test({ objectName: 'Sideboard' }), 'and drops off once named');
 
     const rowCtx = sandbox({
-      fns: ['_renderInvRow', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
+      fns: ['_renderInvRow', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',

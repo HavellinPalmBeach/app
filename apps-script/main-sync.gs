@@ -59,11 +59,13 @@
 // workbook states its money to the cent. No action or type changes; the app's BACKEND_MIN_VERSION names it.
 // ⚠ 2026-10-06b (P23): Agent Two, `agentValue` — the desk values its unvalued lines (AGENT_TWO_SPEC.md). A new action,
 // so an older deployment is named by the action the app finds missing, not by version.
-var BACKEND_VERSION = '2026-10-06b';
+// ⚠ 2026-10-06c (P24): the room check, `agentRoomCheck` — a room's photographs read together for one thing counted
+// twice. A new action, so an older deployment is named by the action the app finds missing.
+var BACKEND_VERSION = '2026-10-06c';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
-  'stripeLink', 'stripeStatus', 'agentIdentify', 'agentValue'
+  'stripeLink', 'stripeStatus', 'agentIdentify', 'agentValue', 'agentRoomCheck'
 ];
 var BACKEND_TYPES = [
   'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
@@ -152,6 +154,7 @@ function doPost(e) {
     if (data.action === 'stripeStatus')  { return jsonOut(stripePaymentsForLink(data)); }
     if (data.action === 'agentIdentify') { return jsonOut(agentIdentifyShots(data)); }
     if (data.action === 'agentValue')    { return jsonOut(agentValueLines(data)); }
+    if (data.action === 'agentRoomCheck') { return jsonOut(agentCheckRooms(data)); }
 
     var type = data.type;
     var payload = data.payload;
@@ -3273,6 +3276,332 @@ function testAgentIdentify() {
   }
   for (var n = 0; n < (r.notices || []).length; n++) {
     Logger.log('  NOTICE [' + r.notices[n].kind + '] ' + r.notices[n].text);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// THE ROOM CHECK — ONE THING PHOTOGRAPHED TWICE (P24, 2026-10-06)
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Anthony, offered a field rule that set every photographed thing aside so no later frame caught it: *"Fix option 2
+// above with room level check. That's an obvious fix and will help with our fake client we are doing tomorrow with
+// full inventory."* Agent One names every Items shot alone (`agentIdentifyShots`: one request per photograph, no memory
+// between them), so a vase shot on the dresser and again close up, or a lamp at the edge of two frames, comes back as
+// two lines. This reads a ROOM's photographs together, each introduced by the lines already named off it, and answers
+// which lines are one physical object.
+// ⚠⚠ IT ANSWERS AND NEVER MERGES. The app flags the lines under Possible duplicates with both pictures side by side and a
+// person removes one or says they are separate: two matching nightstands are two real objects, and only somebody who
+// can see both photographs can say which (CLAUDE.md, Decided: no auto-merging of possible duplicates).
+// ⚠ THE LINE LABELS ARE PLAIN STRINGS CHECKED HERE, never an enum (Agent Two's rule): a label this request did not carry
+// is dropped, and so is a "double" whose lines all came off one photograph, which is two things the namer saw at once.
+var AGENT_ROOM_MODEL       = 'claude-opus-5-5';  // its own constant: it compares many pictures at once (measure before changing)
+var AGENT_ROOM_EFFORT      = 'low';     // a look at up to 24 pictures has to answer inside UrlFetchApp's per-request limit
+var AGENT_ROOM_MAX_TOKENS  = 16000;     // the non-streaming ceiling Agent One settled on; it caps, it does not spend
+var AGENT_ROOM_WINDOW      = 24;        // photographs in one request
+var AGENT_ROOM_OVERLAP     = 8;         // photographs a run shares with the one before, so neighbouring shots always meet
+var AGENT_ROOM_MAX_SHOTS   = 160;       // a room's photographs read in one call, whatever the caller sends
+var AGENT_ROOM_MAX_ROOMS   = 12;        // rooms in one call; the rest come back as remaining
+var AGENT_ROOM_PARALLEL    = 4;         // fetchAll width: each request carries up to 24 pictures, so not 8
+var AGENT_ROOM_TIME_BUDGET = 240000;    // 4 min of Apps Script's 6, as Agent One
+var AGENT_ROOM_CONF_RANK   = { high: 3, medium: 2, low: 1 };
+
+// The runs a room's photographs are read in, as [from, to) in the order taken. A room of up to AGENT_ROOM_WINDOW is one
+// run; a bigger one is read in runs overlapping by AGENT_ROOM_OVERLAP, so a close-up taken straight after its wide shot,
+// or a neighbouring frame's background, always meets its pair. Two shots of one thing far apart in a big room can miss
+// each other, and the guide says so.
+function _arWindows(n) {
+  if (!(n > 0)) return [];
+  if (n <= AGENT_ROOM_WINDOW) return [[0, n]];
+  var out = [], step = AGENT_ROOM_WINDOW - AGENT_ROOM_OVERLAP;
+  for (var s = 0; ; s += step) {
+    var e = Math.min(n, s + AGENT_ROOM_WINDOW);
+    out.push([s, e]);
+    if (e >= n) break;
+  }
+  return out;
+}
+
+// ⚠ `strict` with `tool_choice: auto` plus an instruction, never a forced tool choice — Agent One's shape and its reasons.
+function _arTool() {
+  return {
+    name: 'record_doubles',
+    description: 'Record every object that is on more than one line because it shows in more than one photograph. '
+               + 'Call this exactly once.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['doubles'],
+      properties: {
+        doubles: {
+          type: 'array',
+          description: 'One entry per object counted more than once. Empty when nothing is.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['lines', 'why', 'confidence'],
+            properties: {
+              lines:      { type: 'array', items: { type: 'string' },
+                            description: 'The labels (L1, L2 ...) of the lines that are this one object, each from a different photograph.' },
+              why:        { type: 'string', description: 'One sentence a person can check against the photographs: what the object is and where it shows in each.' },
+              confidence: { type: 'string', enum: ['high', 'medium', 'low'] }
+            }
+          }
+        }
+      }
+    }
+  };
+}
+
+// Stable for every room of one job, so it carries `cache_control` like Agent One's.
+function _arSystem(ctx) {
+  var s = ''
+    + 'You are checking one room of a home inventory for things counted twice.\n\n'
+    + 'A concierge photographed the room\'s contents one photograph at a time, and each photograph was then named by a '
+    + 'model that could not see any of the others. So one physical object that shows in two photographs can come back '
+    + 'as two inventory lines: a closer second shot of something already in a wider one, a piece at the edge or in the '
+    + 'background of a neighbouring shot, or the same piece shot twice.\n\n'
+    + 'You get the room\'s photographs in the order they were taken, labelled P1, P2 and so on. Each is introduced by '
+    + 'the lines already named from it, labelled L1, L2 and so on, with their names and categories.\n\n'
+    + 'WHAT COUNTS AS COUNTED TWICE\n'
+    + '- Two or more lines, from different photographs, that are the same physical object or the same lot of things.\n'
+    + '- Look at the pictures, not the names. The names were written separately and often differ: "Blue vase" in a wide '
+    + 'shot and "Cobalt art glass vase, likely Murano" in a close one can be one vase.\n'
+    + '- Two lines from the same photograph are never one object.\n'
+    + '- Matching things are separate unless the photographs show the very same piece: the same place in the room, the '
+    + 'same surroundings, the same marks, wear or damage. A pair of nightstands, a set of dining chairs and two prints '
+    + 'of one image are separate objects.\n'
+    + '- A lot that overlaps another lot counts: the same shelf of books shot twice, in whole or in part. Say which part '
+    + 'overlaps.\n'
+    + '- Something that shows in two photographs but was named from only one of them is not counted twice. Only lines '
+    + 'count.\n\n'
+    + 'HOW SURE\n'
+    + 'high = the photographs plainly show the same piece. medium = very likely the same piece. low = possibly the same '
+    + 'piece. When you are unsure, record it as low: a person looks at both photographs before anything is removed, and '
+    + 'an object counted twice that nobody is shown stays counted twice.\n\n'
+    + 'WHAT YOU NEVER DO\n'
+    + '- Never say what anything is worth or what should happen to it.\n'
+    + '- Never describe a person.\n'
+    + '- Never use a line label you were not given.\n\n'
+    + 'For each object counted twice give its line labels, one sentence a person can check against the photographs '
+    + '(what it is and where it shows in each), and how sure you are. Call record_doubles exactly once, with an empty '
+    + 'list when nothing in the room is counted twice.';
+  if (ctx && ctx.fiduciary) {
+    s += '\n\nThis is a decedent\'s estate. The inventory may be read by an attorney, a personal representative, a '
+       + 'beneficiary or a court, so an object counted twice overstates the estate.';
+  }
+  return s;
+}
+
+// One request's user turn: the room, then each photograph introduced by the lines named off it, then the ask. The
+// labels are minted here and never leave this file; the answer is read back through them. `cache` holds each picture
+// once per call, because overlapping runs send the same photograph twice.
+function _arWindowContent(room, shots, from, total, cache) {
+  var content = [], labels = {}, n = 0;
+  content.push({ type: 'text', text: 'Room: ' + ((room && room.room) || 'not recorded') + '. ' + shots.length
+    + ' photograph' + (shots.length === 1 ? '' : 's') + ' in the order taken'
+    + (shots.length < total ? ' (numbers ' + (from + 1) + ' to ' + (from + shots.length) + ' of the ' + total + ' taken in this room)' : '')
+    + '.' });
+  for (var i = 0; i < shots.length; i++) {
+    var p = 'P' + (i + 1), shot = shots[i] || {};
+    var named = (shot.lines || []).map(function (l) {
+      var lab = 'L' + (++n);
+      labels[lab] = { id: String(l.id), photo: p };
+      var q = parseInt(l.qty, 10);
+      return lab + ' "' + String(l.name || '').replace(/"/g, '\'').slice(0, 160) + '"'
+        + (l.category ? ' (' + l.category + (q > 1 ? ', ' + q + ' pieces' : '') + ')' : '');
+    });
+    content.push({ type: 'text', text: p + ' · lines named from it: ' + (named.length ? named.join('; ') : 'none') });
+    var fid = String(shot.fileId || '');
+    if (!cache[fid]) cache[fid] = _agImageBlock(fid);
+    content.push(cache[fid]);
+  }
+  content.push({ type: 'text', text: 'Which lines are one object counted twice? Call record_doubles exactly once.' });
+  return { content: content, labels: labels };
+}
+
+function _arRequestFor(content, ctx, key) {
+  var body = {
+    model: AGENT_ROOM_MODEL,
+    max_tokens: AGENT_ROOM_MAX_TOKENS,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: AGENT_ROOM_EFFORT },
+    system: [{ type: 'text', text: _arSystem(ctx), cache_control: { type: 'ephemeral' } }],
+    tools: [_arTool()],
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: content }]
+  };
+  return {
+    url: AGENT_API,
+    method: 'post',
+    contentType: 'application/json',
+    headers: { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION },
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  };
+}
+
+// Agent One's reading, for this tool. A refusal and a cut-off answer are failures, and so is prose: tool_choice is
+// `auto`, and an answer that recorded nothing is not a room with nothing counted twice.
+function _arReadResult(res, labels) {
+  var code = res.getResponseCode();
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')' }; }
+  if (code >= 300) {
+    var err = (body && body.error) || {};
+    return { ok: false, error: (err.message || err.type || 'HTTP ' + code) };
+  }
+  if (body.stop_reason === 'refusal') return { ok: false, error: 'the model declined these photographs' };
+  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished' };
+  var blocks = body.content || [];
+  for (var i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'tool_use' && blocks[i].name === 'record_doubles') {
+      return { ok: true, doubles: _arDoubles((blocks[i].input || {}).doubles, labels) };
+    }
+  }
+  return { ok: false, error: 'the model answered in prose instead of recording anything' };
+}
+
+// Each answer back through the labels this request minted. An unknown label is dropped, a line named twice counts once,
+// and an entry left with fewer than two lines, or with every line off one photograph, is not a double.
+function _arDoubles(list, labels) {
+  var out = [];
+  (list || []).forEach(function (d) {
+    if (!d) return;
+    var seen = {}, ids = [], photos = {};
+    (d.lines || []).forEach(function (l) {
+      var lab = String(l).trim().toUpperCase();
+      // Belt-and-braces (P24 sweep): an upper-cased label can name nothing on Object.prototype, so a plain lookup would do.
+      if (!Object.prototype.hasOwnProperty.call(labels, lab)) return;
+      var hit = labels[lab];
+      if (seen[hit.id]) return;
+      seen[hit.id] = 1; ids.push(hit.id); photos[hit.photo] = 1;
+    });
+    if (ids.length < 2 || Object.keys(photos).length < 2) return;
+    out.push({ ids: ids, why: String(d.why || '').slice(0, 300),
+               confidence: AGENT_ROOM_CONF_RANK[d.confidence] ? d.confidence : 'low' });
+  });
+  return out;
+}
+
+// Overlapping runs can find one double twice: once, at the higher confidence.
+function _arMergeDoubles(list) {
+  var by = {}, order = [];
+  (list || []).forEach(function (d) {
+    var k = d.ids.slice().sort().join('|');
+    if (!by[k]) { by[k] = d; order.push(k); return; }
+    if ((AGENT_ROOM_CONF_RANK[d.confidence] || 0) > (AGENT_ROOM_CONF_RANK[by[k].confidence] || 0)) by[k] = d;
+  });
+  return order.map(function (k) { return by[k]; });
+}
+
+// ⚠ BUDGET AND RESUME, as Agent One: a room is answered only when every run of it came back, a room that failed says
+// why, and a room the clock did not reach comes back in `remaining` for the app to send again.
+function agentCheckRooms(data) {
+  try {
+    var miss = _agMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'The room check is not configured — missing Script Property: '
+                                 + miss.join(', ') + '. Add it in Project Settings > Script Properties.' };
+    }
+    var ctx = (data && data.context) || {};
+    var all = (data && data.rooms) || [];
+    var rooms = all.slice(0, AGENT_ROOM_MAX_ROOMS);
+    var remaining = all.slice(AGENT_ROOM_MAX_ROOMS).map(function (r) { return String(r && r.key); });
+    if (!rooms.length) return { ok: true, success: true, results: {}, failed: {}, remaining: remaining, model: AGENT_ROOM_MODEL };
+
+    var key = _agProp('ANTHROPIC_API_KEY');
+    var started = new Date().getTime();
+    var cache = {}, runs = [];
+    var state = rooms.map(function (room) {
+      var shots = ((room && room.shots) || []).slice(0, AGENT_ROOM_MAX_SHOTS);
+      // One photograph has nothing to be compared with, and is answered without a call.
+      var wins = shots.length >= 2 ? _arWindows(shots.length) : [];
+      var st = { key: String(room && room.key), room: room || {}, shots: shots, wins: wins.length, done: 0, doubles: [], error: '' };
+      wins.forEach(function (w) { runs.push({ st: st, from: w[0], to: w[1] }); });
+      return st;
+    });
+
+    var i = 0;
+    while (i < runs.length) {
+      if (new Date().getTime() - started > AGENT_ROOM_TIME_BUDGET) break;
+      var slice = runs.slice(i, i + AGENT_ROOM_PARALLEL);
+      var reqs = [], keep = [];
+      slice.forEach(function (run) {
+        if (run.st.error) return;
+        try {
+          var built = _arWindowContent(run.st.room, run.st.shots.slice(run.from, run.to), run.from, run.st.shots.length, cache);
+          run.labels = built.labels;
+          reqs.push(_arRequestFor(built.content, ctx, key));
+          keep.push(run);
+        } catch (imgErr) {
+          // A photograph not in Drive yet, or not an image: the room fails by name rather than being read without it.
+          run.st.error = String(imgErr.message || imgErr);
+        }
+      });
+      if (reqs.length) {
+        var responses = null;
+        try { responses = UrlFetchApp.fetchAll(reqs); }
+        catch (fetchErr) {
+          // UrlFetchApp's own per-request limit throws the whole slice (Agent Two's lesson): those rooms took too long.
+          keep.forEach(function (run) { run.st.error = 'took too long (' + String(fetchErr.message || fetchErr).slice(0, 120) + ')'; });
+        }
+        for (var k = 0; responses && k < responses.length; k++) {
+          var read = _arReadResult(responses[k], keep[k].labels);
+          if (read.ok) { keep[k].st.done++; keep[k].st.doubles = keep[k].st.doubles.concat(read.doubles); }
+          else keep[k].st.error = read.error;
+        }
+      }
+      i += slice.length;
+    }
+
+    var results = {}, failed = {};
+    state.forEach(function (st) {
+      if (st.error) failed[st.key] = st.error;
+      else if (st.done === st.wins) results[st.key] = { doubles: _arMergeDoubles(st.doubles), photos: st.shots.length };
+      else remaining.push(st.key);
+    });
+    return { ok: true, success: true, results: results, failed: failed, remaining: remaining, model: AGENT_ROOM_MODEL };
+  } catch (error) {
+    Logger.log('agentCheckRooms error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ RUN THIS FROM THE EDITOR FIRST, BEFORE TRUSTING THE BUTTON, and note the time it prints: how long a
+// room's look takes is what UrlFetchApp's per-request limit decides, and it has never been measured live. Argument-free,
+// because the Run menu passes none: it finds a folder holding several photographs and checks them as one room.
+function testAgentRoomCheck() {
+  var miss = _agMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+  var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  var stack = [root], guard = 0, picked = [];
+  while (stack.length && guard++ < 400) {
+    var f = stack.pop();
+    var files = f.getFilesByType('image/jpeg'), here = [];
+    while (files.hasNext() && here.length < 8) here.push(files.next());
+    if (here.length >= 2) { picked = here; break; }
+    var subs = f.getFolders();
+    while (subs.hasNext()) stack.push(subs.next());
+  }
+  if (picked.length < 2) { Logger.log('No folder under the root holds two photographs yet: shoot a room on the Job Plan first.'); return; }
+  Logger.log('Folder photographs: ' + picked.map(function (x) { return x.getName(); }).join(', '));
+  var t0 = new Date().getTime();
+  var out = agentCheckRooms({
+    context: { fiduciary: true },
+    rooms: [{ key: 'probe', room: 'probe', shots: picked.map(function (file, n) {
+      return { fileId: file.getId(), lines: [{ id: 'line' + (n + 1), name: 'everything in this photograph', category: 'General/Household', qty: 1 }] };
+    }) }]
+  });
+  var secs = Math.round((new Date().getTime() - t0) / 1000);
+  if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
+  if (out.failed.probe) { Logger.log('FAILED after ' + secs + 's: ' + out.failed.probe); return; }
+  var r = out.results.probe;
+  if (!r) { Logger.log('NOT FINISHED after ' + secs + 's: the time budget ran out before the room was read.'); return; }
+  Logger.log('ALL GOOD — ' + out.model + ' read ' + picked.length + ' photographs in ' + secs + 's.');
+  Logger.log('  counted twice: ' + r.doubles.length);
+  for (var d = 0; d < r.doubles.length; d++) {
+    Logger.log('   - [' + r.doubles[d].confidence + '] ' + r.doubles[d].ids.join(' + ') + ' — ' + r.doubles[d].why);
   }
 }
 

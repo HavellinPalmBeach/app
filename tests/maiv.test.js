@@ -340,20 +340,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ctx.invLotSplitSentence({ qty: '6', fmv: '' }), 'no value recorded',
         'and says so when there is nothing to divide');
 
-    // ⚠ ONE SENTENCE, THREE SURFACES. The import panel, the desk and the worklist must not
-    // state the arithmetic differently — that is how two readings of one lot appear on one job.
+    // ⚠ ONE SENTENCE, TWO SURFACES. The desk and the worklist must not state the arithmetic
+    // differently — that is how two readings of one lot appear on one job. (P24 retired the import
+    // panel's capture readout, the third, with the collection import itself.)
     const srcA = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
     eq((srcA.match(/function invLotSplitSentence/g) || []).length, 1, 'exactly one such sentence exists');
-    has(fn('_impLotHintHtml'), 'invLotSplitSentence',
-        'the capture readout asks the shared sentence rather than rebuilding the arithmetic');
-    // ⚠ ONE PREDICATE, THREE SURFACES — the capture readout, the desk chip and the
+    // ⚠ ONE PREDICATE — the desk chip and the
     // worklist. THAT is the net that matters: a second opinion of "is this lot over the cap"
     // is how the panel comes to wave through what the document then flags, on one job, on one
     // evening. The worklist tabulates the same arithmetic in columns rather than in prose,
     // which is why it reads the VALUE helper instead of the sentence.
     has(fn('_lotSplitWorklistBlock'), 'invLotSplitState', 'the worklist asks the shared predicate');
     has(fn('_lotSplitWorklistBlock'), 'invLotArticleValue', 'and the shared per-article figure');
-    has(fn('_impLotHintHtml'), 'invLotSplitState', 'the capture readout asks the shared predicate');
 
   }
 
@@ -428,93 +426,37 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
   }
 
-  group('the capture-time readout — the one moment the estate can still be looked at');
+  group('a walkthrough collection’s lot meets the cap the moment it joins the inventory (P24)');
   {
-    // ⚠⚠ THIS IS THE HALF THAT MAKES THE RULE IMPLEMENTABLE AT ALL. A lot row carries ONE
-    // name, ONE value and ONE quantity, so nothing downstream can split it. The import panel
-    // is where the lot is born and where the mode selector sits one tap from the number.
-    const dctx = sandbox({
-      fns: ['_impLotHintHtml', 'invLotSplitState', 'invLotSplitSentence', 'invLotArticleValue',
-            'maivFilingApplies', '_gate706', 'isDecedentJob', '_numOrBlank', '_invMoney', 'esc', 'roundCents', 'fmt'],
-      vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES'],
+    // P24 retired the import panel's capture-time readout with the import itself: a collection now joins the inventory
+    // by itself as one lot (collectionLinesEnsure), and the cap is the desk's shared predicate on that line, read by the
+    // Lots to split chip and the worklist. The lot is no longer sealed once made: it is photographed, and a piece split
+    // off it stays the collection's (collectionPieceOf), so splitting is still the fix the flag names.
+    const lines = [];
+    const c = sandbox({
+      fns: ['collectionLinesEnsure', '_collLinesOf', 'collectionLineId', '_collDispToInv', '_collDispNeedsAppr',
+            '_guessCategory', '_numOrBlank', '_invJob', '_pushInvLine', '_setPhotoRef',
+            'invLotSplitState', 'invLotsToSplit', 'maivFilingApplies', '_gate706', 'isDecedentJob'],
+      vars: ['COLL_LINE_WEAK_STAMP', 'INV_DEFAULT_CATEGORY', 'INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES'],
       stubs: {
-        jobs: [{ id: 1, svc: 'cleanout' }],
-        estimateStore: { 1: { estimate: { collections: [{ id: 'c1', name: 'Sterling flatware', value: '5000' },
-                                                        { id: 'c2', name: 'Kitchen sundries', value: '800' },
-                                                        { id: 'c3', name: 'Boxed china', value: 'Unknown' }] } } },
-        document: domStub({}),
-      },
-    });
-    const over = dctx._impLotHintHtml(1, 'c1', 'lot', 6);
-    has(over, 'above the $100', 'six articles at $5,000 warns at the moment the lot is chosen');
-    has(over, 'averages $833.33 an article', 'with the arithmetic on screen');   // RESTATED (P17): to the cent
-    has(over, 'Itemize it', 'and names the fix, which is the control immediately beside it');
-
-    // ⚠ IT READS OUT, IT NEVER REFUSES — the collection value here is a walkthrough estimate
-    // and the count is often a guess, so blocking would refuse on a figure nobody has stood
-    // behind. The house rule: flag, name the arithmetic, name the fix.
-    lacks(fn('materializeCollection'), 'invLotSplitState', 'the Add button is not gated on it');
-
-    // ⚠ THE INSIDE-THE-CAP CASE SPEAKS. A silent pass is indistinguishable from a check that
-    // never ran, on the one surface whose job is saying the grouping is safe before you commit.
-    const okHint = dctx._impLotHintHtml(1, 'c2', 'lot', 40);
-    has(okHint, 'inside the $100', 'a lot under the cap is confirmed rather than left silent');
-
-    const blank = dctx._impLotHintHtml(1, 'c3', 'lot', 25);
-    has(blank, 'cannot be tested', 'an unpriced collection says the cap cannot be tested');
-
-    eq(dctx._impLotHintHtml(1, 'c1', 'itemize', 6), '',
-       'itemizing IS the fix, so the panel says nothing about it');
-    eq(dctx._impLotHintHtml(1, 'c1', 'lot', 1), '', 'and a single article groups nothing');
-
-    // ⚠⚠ THE JOIN, AND THE REVERT SWEEP IS WHAT FOUND IT MISSING. Everything above drives the
-    // HELPER. Deleting the hint row from the panel that renders it — i.e. removing the entire
-    // capture-time surface this build exists for — left the whole suite green, because no check
-    // asked whether the two ends meet. CLAUDE.md records that exact shape more often than any
-    // other. This drives the REAL panel and reads its markup back.
-    const pctx = sandbox({
-      fns: ['_renderInventoryImportPanel', '_impLotHintHtml', '_impLotHint', 'invLotSplitState',
-            'invLotSplitSentence', 'invLotArticleValue', 'maivFilingApplies', '_gate706',
-            'isDecedentJob', '_numOrBlank', '_invMoney', 'esc', '_importableFromEstimate',
-            '_importedSourceSet', '_guessCategory', '_vehicleLineName', 'fmtColVal', '_jobInvRefs', 'roundCents', 'fmt'],
-      vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES', 'INV_CATEGORIES', 'INV_TAXONOMY'],
-      stubs: {
-        jobs: [{ id: 1, svc: 'cleanout' }],
-        estimateStore: { 1: { estimate: { vehicles: [], collections: [
+        jobs: [{ id: 1, svc: 'cleanout' }], isJobWon: () => true, SHEETS_SYNC_URL: '', _invCloudSeen: {},
+        _photoRefs: { 1: lines },
+        estimateStore: { 1: { estimate: { collections: [
           { id: 'c1', name: 'Sterling flatware', value: '5000', qty: 6, disp: 'sell' },
-          { id: 'c2', name: 'Kitchen sundries', value: '800', qty: 40, disp: 'donate' }] } } },
-        _photoRefs: { 1: [] },
-        document: domStub({}),
+          { id: 'c2', name: 'Kitchen sundries', value: '800', qty: 40, disp: 'donate' },
+          { id: 'c3', name: 'Boxed china', value: 'Unknown', qty: 25, disp: 'donate' }] } } },
+        savePhotoRefs() {}, _scheduleInventorySync() {},
       },
     });
-    const panel = pctx._renderInventoryImportPanel(1);
-    has(panel, 'imp-hint-c1', 'the real panel emits a readout row for the collection');
-    has(panel, 'above the $100', 'carrying the warning, rendered rather than merely available');
-    has(panel, 'averages $833.33 an article', 'with the arithmetic already on the page');   // RESTATED (P17): to the cent
-    has(panel, 'inside the $100', 'and the confirmation on the lot that is fine');
-    // ⚠ AND IT HAS TO RE-READ LIVE, or the number is right once and wrong the moment somebody
-    // changes the count — which is the one thing they are there to do.
-    has(panel, "onchange=\"_impLotHint(", 'the mode selector repaints it');
-    has(panel, "oninput=\"_impLotHint(", 'and so does the quantity box, on every keystroke');
-
-    // The same panel on an estate filing no return says nothing at all.
-    const qctx = sandbox({
-      fns: ['_renderInventoryImportPanel', '_impLotHintHtml', '_impLotHint', 'invLotSplitState',
-            'invLotSplitSentence', 'invLotArticleValue', 'maivFilingApplies', '_gate706',
-            'isDecedentJob', '_numOrBlank', '_invMoney', 'esc', '_importableFromEstimate',
-            '_importedSourceSet', '_guessCategory', '_vehicleLineName', 'fmtColVal', '_jobInvRefs', 'roundCents', 'fmt'],
-      vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES', 'INV_CATEGORIES', 'INV_TAXONOMY'],
-      stubs: {
-        jobs: [{ id: 1, svc: 'cleanout', gate706: 'no' }],
-        estimateStore: { 1: { estimate: { vehicles: [], collections: [
-          { id: 'c1', name: 'Sterling flatware', value: '5000', qty: 6, disp: 'sell' }] } } },
-        _photoRefs: { 1: [] },
-        document: domStub({}),
-      },
-    });
-    const quiet = qctx._renderInventoryImportPanel(1);
-    has(quiet, 'imp-hint-c1', 'the row is still there on a no-706 estate');
-    lacks(quiet, '20.2031-6(a)', 'and it is empty — there is no federal floor to state');
+    eq(c.collectionLinesEnsure(1), 3, 'three collections, three lots, made by themselves');
+    const all = c._photoRefs[1];
+    const by = (n) => all.filter((r) => r.objectName === n)[0];
+    eq(c.invLotSplitState(by('Sterling flatware'), c.jobs[0]), 'over', 'six articles at $5,000 is over the $100 cap, on the line itself');
+    eq(c.invLotSplitState(by('Kitchen sundries'), c.jobs[0]), '', 'forty at $800 is inside it');
+    eq(c.invLotSplitState(by('Boxed china'), c.jobs[0]), 'unvalued', 'and an unpriced collection cannot be tested');
+    eq(c.invLotsToSplit(all, c.jobs[0]).map((r) => r.objectName), ['Sterling flatware'], 'the desk’s Lots to split lists exactly the one');
+    c.jobs[0].gate706 = 'no';
+    eq(c.invLotsToSplit(all, c.jobs[0]).length, 0, 'and on an estate filing no return nothing is flagged');
   }
 
   group('the retired house rule has not come back wearing the new one clothes');

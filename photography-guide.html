@@ -344,9 +344,10 @@ footer p{max-width:66ch;}
     <div class="rule-card">
       <span class="tag">Rule 01</span>
       <h4>One thing, one Items shot</h4>
-      <p>Every object is the subject of exactly one Items shot, ever. The agent reads each Items shot on
-        its own, with no memory of the one before, and writes a line for everything it can see in it.
-        Two shots of the vase are two vases.</p>
+      <p>Every object is the subject of exactly one Items shot. The agent reads each Items shot on its own,
+        with no memory of the one before, and writes a line for everything it can see in it, so two shots of
+        the vase are two vase lines. The room check catches most of them at the desk; each one it catches is
+        still a line somebody has to remove.</p>
     </div>
     <div class="rule-card">
       <span class="tag">Rule 02</span>
@@ -399,9 +400,10 @@ footer p{max-width:66ch;}
         dresser shot becomes a lamp line, and a second one when you shoot the side table.</li>
       <li>The app keeps a <strong>900-pixel</strong> copy of each shot. A mark or a signature has to fill a
         close-up to be read.</li>
-      <li>The desk&rsquo;s <strong>Possible duplicates</strong> only catches two lines in one room with the same
-        name off different pictures. &ldquo;Blue vase&rdquo; and &ldquo;cobalt art glass vase, likely
-        Murano&rdquo; are not the same name. The room is where a double is stopped.</li>
+      <li>At the desk, once the shots are named, the <strong>room check</strong> reads each room&rsquo;s
+        photographs together and flags any line that is one thing photographed twice, whatever the two lines
+        are called (&ldquo;Blue vase&rdquo; and &ldquo;cobalt art glass vase, likely Murano&rdquo;). It flags;
+        a person removes the extra line. It is the net, not the method: shoot as if it were not there.</li>
     </ul>
   </section>
 
@@ -416,8 +418,8 @@ footer p{max-width:66ch;}
           <li>Items: the dresser, vase on top.</li>
           <li>Items: the vase, zoomed in.</li>
         </ol>
-        <p class="result"><b>Dresser, blue vase, blue vase.</b> Two vases, and the agent may name them
-          differently, so the desk may never flag it.</p>
+        <p class="result"><b>Dresser, blue vase, blue vase.</b> Two vases. The room check should flag the
+          pair at the desk, and somebody removes one: a tap that did not need to happen.</p>
       </div>
       <div class="way ok">
         <span class="tag">Quick</span>
@@ -439,7 +441,7 @@ footer p{max-width:66ch;}
             &#9873;&nbsp;Appraise if it deserves one).</li>
           <li>Hold to talk: &ldquo;Mom&rsquo;s, from Venice, promised to Karen.&rdquo;</li>
           <li>+ Detail of last: the mark on its base.</li>
-          <li>The vase goes behind you, to the shot spot.</li>
+          <li>Set the vase down off the dresser (you are holding it anyway).</li>
           <li>Items: the dresser, bare.</li>
           <li>+ Detail of last: the maker&rsquo;s label in the top drawer.</li>
         </ol>
@@ -461,8 +463,8 @@ footer p{max-width:66ch;}
         <ul>
           <li>Read the brief at the top of the room: the must-finds, firearms, cash and safes, the
             walkthrough note.</li>
-          <li>Pick the <strong>shot spot</strong>: a cleared bed, a table, a box by the door. Everything you
-            shoot goes there, behind you, out of every frame you have left.</li>
+          <li>Check the brief for <strong>From the walkthrough, not photographed yet</strong>: the collections the
+            walkthrough recorded. Each is on the inventory already, waiting for its photograph.</li>
           <li>One shooter per room. Two of you on the job: take different rooms.</li>
         </ul>
       </div>
@@ -502,11 +504,12 @@ footer p{max-width:66ch;}
           <li>Drawers: the contents as a lot, framed tight on the contents, then shut the drawer.</li>
           <li class="crit">Before every shot, look at the edges. Anything with its own shot, taken or to
             come, is in the way: move it or step in.</li>
-          <li>Everything shot goes to the shot spot. Never back into a frame.</li>
           <li>What you cannot empty (a full bookcase, a china cabinet you will not unload): shoot it once,
             full, and the agent splits it. Pull out anything that needs its own frame first, and never
             shoot those contents again.</li>
           <li>Big pieces are shot where they stand.</li>
+          <li>A walkthrough collection: tap it on the room&rsquo;s brief (or its chip in the camera) and shoot it.
+            The photograph goes on its line, which keeps its number. Close-ups after it, as for anything else.</li>
         </ul>
       </div>
 
@@ -533,8 +536,8 @@ footer p{max-width:66ch;}
         <ul>
           <li>Open the room&rsquo;s strip: no <em>&#9888; not saved</em> (press Retry), <em>+1 detail</em> on
             every item you took close-ups of, nothing shot twice.</li>
-          <li>Finish the room before you leave it. A room shot over two days is where doubles come from. If
-            you must stop, leave the shot spot as it is, so tomorrow&rsquo;s start is plain.</li>
+          <li>Finish the room before you leave it. A room shot over two days is where doubles come from; the
+            room check reads both days together at the desk, but each double it finds is still a line to remove.</li>
           <li><strong>Lock</strong> when it is sorted and shot. <strong>&#128247; After</strong> once it is
             empty, then <strong>Cleared</strong>.</li>
         </ul>
@@ -617,14 +620,13 @@ footer p{max-width:66ch;}
       <dt>Mirrors and glass doors</dt>
       <dd>A reflection puts other things in the frame. Shoot at an angle, and keep yourself out of it.</dd>
       <dt>A collection on the walkthrough</dt>
-      <dd>Anything added from the desk&rsquo;s <em>From the Estimate Walkthrough</em> panel becomes new lines,
-        with no picture. So one road per collection: shoot it on the Items pass and do not add it from the
-        panel, or add it from the panel and shoot it only as found. Never both. For now the Job Plan banner keeps
-        listing a collection you shot instead of adding (and the Appraisal Worklist too, where the walkthrough
-        marked it for appraisal); that entry is expected (the last box below).</dd>
+      <dd>It is on the inventory already, as a line reading <em>no photograph yet</em>, and the Job Plan says so
+        until it is photographed. When you find it, tap it on the room&rsquo;s brief (or its chip in the camera)
+        and shoot it: the photograph goes on that line. Shot it as an ordinary Items line by mistake? At the
+        desk, open the collection&rsquo;s line and pick the line you shot; the collection is counted once.</dd>
       <dt>Vehicles</dt>
-      <dd>Add them from that panel at the desk: it carries the year, the description and the condition.
-        Keep them out of the garage&rsquo;s Items frames.</dd>
+      <dd>Add them from the desk&rsquo;s <em>From the Estimate Walkthrough</em> panel: it carries the year, the
+        description and the condition. Keep them out of the garage&rsquo;s Items frames.</dd>
       <dt>Papers</dt>
       <dd>Shoot the box, the drawer or the stack from the side, never the pages. A will, codicil, deed or
         title is set aside unread and handed over against a signed receipt, an original will to the estate
@@ -659,10 +661,9 @@ footer p{max-width:66ch;}
     <ol>
       <li>Never shoot one thing on two Items shots.</li>
       <li>Never take a close-up without tapping <strong>+ Detail of last</strong> first.</li>
-      <li>Never put a shot thing back where a later frame will catch it.</li>
       <li>Never leave a bad shot in place. Bin it from <em>Last</em> and reshoot.</li>
       <li>Never two people on one room&rsquo;s Items pass.</li>
-      <li>Never both add a walkthrough collection and shoot it on the Items pass.</li>
+      <li>Never shoot a walkthrough collection without tapping it first.</li>
       <li>Never photograph the inside of private papers or a will, a medicine label, or a person.</li>
       <li>Never move or handle a firearm for a picture beyond what the Firearms Protocol allows.</li>
     </ol>
@@ -672,9 +673,14 @@ footer p{max-width:66ch;}
     <h2>At the desk that evening</h2>
     <p class="lede">On the Job Admin &amp; Inv tab, in this order.</p>
     <ol class="desk">
-      <li>Retry anything <em>&#9888; not saved</em>, then press <span class="btn">Name N shots</span>.</li>
-      <li><strong>Possible duplicates</strong>, above the rows: open both pictures, then press
-        <span class="btn">Remove</span> on the double or <span class="btn">Not duplicates</span>.</li>
+      <li>Retry anything <em>&#9888; not saved</em>, then press <span class="btn">Name N shots</span>. When the
+        naming finishes, the room check runs by itself; <span class="btn">Check N rooms</span> runs it again for
+        any room with new lines.</li>
+      <li><strong>Possible duplicates</strong>, above the rows: the same name twice in a room, or what the room
+        check saw. Open both pictures, then press <span class="btn">Remove</span> on the extra line or
+        <span class="btn">Not duplicates</span>.</li>
+      <li>A line reading <strong>&#128247; no photograph yet</strong> is a walkthrough collection still waiting
+        for its photograph: take it in the house, or pick the line already shot of it in its panel.</li>
       <li>Rows reading <strong>&#128279; 1 of N in this photo</strong>: the agent split that picture. Set the
         disposition on the lines it split off (they come back Undecided), move <em>Needs Appraisal</em> to
         the right line in its panel, and check each name says which object it is, because every line off
@@ -688,14 +694,14 @@ footer p{max-width:66ch;}
 
   <section class="gaps">
     <h2>Where the app still leans on you</h2>
-    <p>Four things the method above works around. Each is on the open list for after the pilot.</p>
+    <p>What the method above works around. Each is on the open list for after the pilot.</p>
     <ul class="plain">
-      <li>A walkthrough collection you shot instead of adding keeps showing as not brought in, on the Job
-        Plan banner (and on the Appraisal Worklist where it was marked for appraisal).</li>
       <li>Lines split off one picture come back Undecided and unflagged, and the desk shows the
         picture&rsquo;s close-ups under its first line only.</li>
       <li>A note said over a close-up stays on the close-up: neither agent nor desk reads it.</li>
-      <li>Possible duplicates compares names, not pictures.</li>
+      <li>The room check looks within one room. A thing moved and shot in two rooms is not caught.</li>
+      <li>A room of more than 24 photographs is read in overlapping runs of 24, in the order taken, so two
+        shots of one thing far apart in a big room can miss each other.</li>
     </ul>
   </section>
 
@@ -708,17 +714,19 @@ footer p{max-width:66ch;}
       <li><b>Every other picture:</b> tap + Detail of last first.</li>
       <li><b>One frame, one fate.</b></li>
       <li><b>Pull out what matters.</b> Its own frame, filling it.</li>
-      <li><b>Shot, then behind you.</b> Furniture last, bare.</li>
+      <li><b>Smalls first, furniture last.</b></li>
       <li><b>Talk before the close-ups.</b></li>
       <li><b>Bad shot?</b> &#128465; now, then reshoot.</li>
       <li><b>One shooter per room.</b> Finish the room.</li>
-      <li><b>Walkthrough collections:</b> shoot it or add it. Never both.</li>
+      <li><b>Walkthrough collections:</b> tap it, then shoot it.</li>
     </ol>
   </section>
 
   <footer>
     <p><strong>Draft for Anthony, 6 October 2026.</strong> Written against the app as it is built today: the
-      room&rsquo;s camera, Agent One&rsquo;s naming and the desk&rsquo;s checks. The
+      room&rsquo;s camera, Agent One&rsquo;s naming, the room check and the desk&rsquo;s checks. Revised the
+      same day: the room check replaced setting each photographed thing aside, and the walkthrough&rsquo;s
+      collections joined the inventory by themselves. The
       <a href="concierge-guide.html">Concierge Guide</a> describes each control (Step 10a in the house,
       Step 10e at the desk); this page is the method. The <a href="firearms-protocol.html">Firearms
       Protocol</a> governs everything about a firearm.</p>

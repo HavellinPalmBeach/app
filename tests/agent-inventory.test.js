@@ -130,8 +130,10 @@ function rig(refs, over) {
           '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_agDupIndex', '_agDupHtml',
           '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo',
           // P16: the desk's one removal writer, which records who removed the line.
-          '_invTombstoneLine', '_invStampBy', '_invJob'],
-    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', '_agDupSet',
+          '_invTombstoneLine', '_invStampBy', '_invJob',
+          // P24: the room check's links join the same-name rule in one grouping.
+          '_arDupEligible'],
+    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
@@ -786,7 +788,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['_renderInvRow', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
+      fns: ['_renderInvRow', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.

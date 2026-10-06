@@ -66,11 +66,16 @@ function rig(refs, stubs) {
     fns: ['agentShotGroups', 'agentNameableRefs', '_agDetailRefs', '_agShotPayload', '_agWrite',
           'agentApplyResult', '_agState', 'invSplitItemN', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDetailRefs',
-          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups',
-          '_importableFromEstimate', '_importedSourceSet', 'materializeCollection', '_pushInvLine',
-          '_collDispToInv', '_collDispNeedsAppr', '_guessCategory', '_numOrBlank'],
+          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_arDupEligible', '_arWrite',
+          '_importableFromEstimate', '_importedSourceSet', '_pushInvLine',
+          '_collDispToInv', '_collDispNeedsAppr', '_guessCategory', '_numOrBlank',
+          // P24: the walkthrough's collections join the inventory by themselves and wait for a photograph.
+          'collectionLinesEnsure', '_collLinesOf', 'collectionLineId', 'collectionLineUnshot', '_invHasPhoto',
+          'collectionsAwaitingPhoto', 'collectionLineWithPhoto', 'collectionUseLine', '_invJob', 'fieldDispToInv',
+          '_invTombstoneLine', '_invItemNo', '_invNamed', '_avHasFigure', '_invHasValue'],
     vars: ['_agRun', 'AGENT_MAX_DETAILS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
-           'INV_SPLIT_MAX', '_photoUidSeq'],
+           'INV_SPLIT_MAX', '_photoUidSeq', 'AGENT_ROOM_CONF_RANK', 'COLL_LINE_WEAK_STAMP',
+           'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
       _photoRefs: { 7: refs || [] },
@@ -81,11 +86,13 @@ function rig(refs, stubs) {
       renderInventoryTab() {},
       alert() {},
       document: { getElementById: () => null },
+      isJobWon: () => true, SHEETS_SYNC_URL: '', _invCloudSeen: {},
+      window: { confirm: () => true }, _invStampBy: () => 'Ashley Jerome',
     }, stubs || {}),
   });
 }
 
-module.exports = function ({ group, ok, eq, has }) {
+module.exports = function ({ group, ok, eq, has, lacks }) {
   const guideHtml = read(GUIDE_FILE);
   const guide = text(guideHtml);
 
@@ -185,32 +192,54 @@ module.exports = function ({ group, ok, eq, has }) {
     eq(ctx._jobInvRefs(7).map((r) => r.fieldNote), ['Venetian glass'], 'the desk’s line carries the item’s note alone');
   }
 
-  group('the gaps box: Possible duplicates compares names, not pictures');
+  group('the room check: a room read together, and its finding under Possible duplicates (P24)');
   {
-    has(guide, 'compares names, not pictures', 'the guide says so');
-    const named = (id, name) => ROW({ stableId: id, driveFileId: 'F' + id, objectName: name, namedBy: 'agent' });
-    const differ = rig([named('a', 'Blue vase'), named('b', 'Cobalt art glass vase, likely Murano')]);
-    eq(differ.agentDuplicateGroups(7).length, 0, 'one vase shot twice and named two ways is not flagged');
-    const same = rig([named('a', 'Blue vase'), named('b', 'blue vase.')]);
-    eq(same.agentDuplicateGroups(7).length, 1, 'named the same way, it is');
+    has(guide, 'reads each room’s photographs together', 'the guide says what the room check does');
+    lacks(guide, 'shot spot', '⚠ Anthony replaced setting each shot thing aside with the room check (2026-10-06)');
+    // Two lines named two ways off two photographs: the name rule cannot see them, the room check's finding can.
+    const named = (id, name) => ROW({ stableId: id, driveFileId: 'F' + id, filename: id + '.jpg', objectName: name, namedBy: 'agent' });
+    const ctx = rig([named('a', 'Blue vase'), named('b', 'Cobalt art glass vase, likely Murano')]);
+    eq(ctx.agentDuplicateGroups(7).length, 0, 'before the check: one vase named two ways is not flagged by name');
+    const room = { roomIdx: 4, photos: [{ srcId: 'a', lines: [ctx._getPhotoRef(7, 'a')] }, { srcId: 'b', lines: [ctx._getPhotoRef(7, 'b')] }] };
+    eq(ctx._arWrite(7, room, { doubles: [{ ids: ['a', 'b'], why: 'the cobalt vase on the dresser in one and close up in the other', confidence: 'high' }] }), 1,
+       'the room check’s answer is written on the two lines');
+    const g = ctx.agentDuplicateGroups(7);
+    eq(g.length === 1 ? [g[0].rows.length, g[0].why] : g.length, [2, 'the cobalt vase on the dresser in one and close up in the other'],
+       'after it: one group, with what the pictures showed');
+    // The runs a big room is read in, as the guide states them.
+    has(guide, 'overlapping runs of 24', 'the guide states the run');
+    const win = GS.match(/var\s+AGENT_ROOM_WINDOW\s*=\s*(\d+)/);
+    eq(win ? +win[1] : NaN, 24, 'and the backend reads a room in runs of 24');
   }
 
-  group('tricky spots and the gaps box: a walkthrough collection is new lines, and stays listed if shot instead');
+  group('collections: on the inventory by themselves, and the camera’s shot goes on the collection’s line (P24)');
   {
-    has(guide, 'with no picture', 'the guide says what the panel makes');
-    has(guide, 'not brought in', 'and what the banner keeps saying');
+    has(guide, 'It is on the inventory already', 'the guide says a collection needs no import');
+    has(guide, 'tap it, then shoot it', 'and the field card says how it is photographed');
     const est = { rooms: [{ idx: 4, name: 'Study', note: '' }],
-                  collections: [{ id: 3, name: 'Coin collection', disp: 'appraise', qty: '200', value: '' }] };
-    const shot = rig([ROW({ objectName: 'Coin collection, about 200 coins in albums', namedBy: 'agent' })],
-                     { estimateStore: { 7: { estimate: est } } });
-    eq(shot._importableFromEstimate(7).collections.length, 1,
-       'shot in the house, the collection is still offered as not yet in the inventory');
-    const added = rig([], { estimateStore: { 7: { estimate: est } } });
-    added.materializeCollection(7, 3);
-    const lines = added._jobInvRefs(7);
-    eq(lines.length, 1, 'adding it from the panel makes a line');
-    eq(lines.map((r) => [!!r.manual, r.driveFileUrl || null]), [[true, null]], 'with no picture');
-    eq(added._importableFromEstimate(7).collections.length, 0, 'and only that clears the listing');
+                  collections: [{ id: 1700000000000, name: 'Coin collection', disp: 'appraise', qty: '200', value: '' }] };
+    const ctx = rig([], { estimateStore: { 7: { estimate: est } } });
+    eq(ctx.collectionLinesEnsure(7), 1, 'the walkthrough’s collection is a line by itself');
+    const id = '7_col1700000000000';
+    const line = ctx._getPhotoRef(7, id);
+    eq([ctx.collectionLineUnshot(line), ctx.collectionsAwaitingPhoto(7).length], [true, 1], 'waiting for its photograph');
+    // The camera armed for it: the shot is filed under the line's own id (`_captureShot` with `into`).
+    const shot = { roomIdx: 4, label: 'inventory', seq: 3, collId: null, filename: 'HVL_Study_INV_3.jpg', driveFileUrl: null, status: 'uploading', ts: 9 };
+    const filled = ctx.collectionLineWithPhoto(line, shot, { fieldDisp: 'undecided' });
+    eq([filled.stableId, filled.roomIdx, filled.needsAppr, String(filled.sourceCollId), filled.objectName],
+       [id, 4, true, '1700000000000', ''], 'the line keeps its id, link and instruction, in the room it was shot, and is named from the picture');
+    has(filled.fieldNote, 'From the walkthrough: Coin collection (200)', 'with the walkthrough’s words for the agent to read');
+    ctx._setPhotoRef(7, filled);
+    eq([ctx.collectionLineUnshot(ctx._getPhotoRef(7, id)), ctx.collectionsAwaitingPhoto(7).length], [false, 0], 'and it is photographed: nothing owed');
+    eq(ctx._jobInvRefs(7).length, 1, '⚠⚠ one line for the collection, never two');
+
+    // The desk's half: shot as an ordinary line, the collection's line hands over to it and the count stays one.
+    const desk = rig([ROW({ stableId: 'p1', filename: 'p1.jpg', objectName: 'Morgan dollars in albums' })], { estimateStore: { 7: { estimate: est } } });
+    desk.collectionLinesEnsure(7);
+    eq(desk._jobInvRefs(7).length, 2, 'fixture: the collection’s line and the line shot of it');
+    eq(desk.collectionUseLine(7, id, 'p1'), true, 'the desk hands the collection to the line shot of it');
+    eq(desk._jobInvRefs(7).map((r) => [r.stableId, String(r.sourceCollId), r.needsAppr]), [['p1', '1700000000000', true]],
+       'one line, the photographed one, carrying the collection and its instruction');
   }
 
   group('a Detail never makes a line');

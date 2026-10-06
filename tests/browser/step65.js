@@ -257,8 +257,11 @@ const SHARES = [], UPLOADS = [];
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════
     await section('F. the shots a dead page left "Uploading…" read as not saved, the detail shot with its own tile', async () => {
-      const st = await p.evaluate((id) => (_photoRefs[id] || []).map((r) => r.stableId + ':' + r.status).sort(), DESK);
+      // The shots: since P24 the walkthrough's coin collection is on the inventory by itself, as a line, not a shot.
+      const st = await p.evaluate((id) => (_photoRefs[id] || []).filter((r) => r.sourceCollId == null).map((r) => r.stableId + ':' + r.status).sort(), DESK);
       eq(st, ['ok1:uploaded', 'stuck1:failed', 'stuckd:failed'], '⚠⚠ the two the dead page left read as failed on load');
+      const coll = await p.evaluate((id) => (_photoRefs[id] || []).filter((r) => r.sourceCollId != null).map((r) => r.stableId + ':' + r.status + ':' + (r.filename || '')), DESK);
+      eq(coll, [DESK + '_col1:manual:'], 'the collection\'s own line (P24) has no photograph, so nothing reads it as a shot that failed');
       has(await txt('#job-plan-content'), 'not saved', 'the room says so');
       await press('#job-plan-content button.rl-row[onclick="openRoomWorkspace(' + DESK + ',1)"]', 'the Study');
       const ws = await txt('#room-ws');

@@ -12,6 +12,13 @@ is gone from the desk's split, which now repaints only the rows it changed (`_in
 §11's quota wall still stands. **§6's sweep of the as-found frames was never built, and Anthony has
 decided it will not be (2026-09-30):** Agent One looks only at the detailed inventory photographs.
 
+**Since P24 (2026-10-06):** Agent One still names each Items shot alone, so one thing in two frames
+comes back as two lines. The room check (`agentRoomCheck` in `main-sync.gs`, run after every naming run
+and from *Check N rooms*) reads a room's photographs together with the lines named off them and flags
+the doubles under *Possible duplicates*; it never merges. A walkthrough collection's line is filled by
+the camera when it is shot from the room's brief, so Agent One names it from the picture, with the
+walkthrough's words in its field note. Step 3, Agent Two, was built as P23 (`AGENT_TWO_SPEC.md`).
+
 Anthony, on what the field is for: *"the whole point is that we don't take the time to name objects
 in the field. we just capture per room and the agent names."*
 

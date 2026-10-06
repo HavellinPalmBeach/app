@@ -55,7 +55,7 @@ const ITEM = (id, over) => Object.assign({
 const PRINT_FNS = [ 'invDocContractBlock',
   'printContentsRecord', 'dispositionRecord', 'printApprovalRequest', 'printCourtInventory', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  'printDispositionLedger', '_renderInvWorkbar', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
+  'printDispositionLedger', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
   '_jobHasDestination', 'invFiduciaryMode', 'isDecedentJob', '_invJob', '_jobInvRefs',
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',
@@ -83,7 +83,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
   'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'photoSharesLine', 'photoSharesOf'];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
-  '_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 
+  '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
   'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'INV_WORK_FLAGS', 'FIELD_DISPOSITIONS',
   'DECEDENT_SERVICES', 'MATTER_TYPES', 'CONTENTS_RECORD_GLOSS', 'INV_CAT_GLYPH', 'INV_TAXONOMY',

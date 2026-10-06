@@ -590,7 +590,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // STALE TEXT, AND WHAT IS TRUE NOW
   // ═══════════════════════════════════════════════════════════════════════════
-  G('stale text · the worklist counts only what is not in the inventory, and says where to bring it in', () => {
+  // RESTATED P24: a collection joins the inventory by itself, so what the worklist can still be missing is its photograph.
+  G('stale text · the worklist counts only a collection with no photograph yet, and says where to take it', () => {
     const printed = [];
     const est = { rooms: ROOMS, collections: [{ id: 11, name: 'Silver service', disp: 'appraise' }], vehicles: [] };
     const s = lift(['printAppraisalWorklist'], ['_printDocument', '_invPrintThumb', 'maivAggregate'], {
@@ -601,13 +602,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     s.printAppraisalWorklist(7);
     const before = text(printed[printed.length - 1]);
-    has(before, '1 collection flagged to appraise from the estimate is not yet in the inventory', 'fixture: the note, before the import');
-    has(before, 'bring them in on the Job Admin & Inv tab, under From the Estimate Walkthrough', '⚠ it names where the import is');
-    lacks(before, 'add them on the Job Plan', 'not the Job Plan, which has no import');
-    s._photoRefs[7].push(LINE('silver', { objectName: 'Silver service', sourceCollId: 11 }));
+    has(before, '1 collection from the walkthrough flagged to appraise has no photograph yet', 'fixture: the note, before the photograph');
+    has(before, 'photograph it in its room (Job Plan, In the house) so the appraiser sees it', '⚠ it names where the photograph is taken');
+    lacks(before, 'not yet in the inventory', 'a collection is never "not in the inventory": it joins by itself');
+    // On the inventory but not photographed: still owed.
+    s._photoRefs[7].push(LINE('silver', { objectName: 'Silver service', sourceCollId: 11, driveFileId: '', driveFileUrl: null, manual: true }));
     s.printAppraisalWorklist(7);
-    lacks(text(printed[printed.length - 1]), 'not yet in the inventory',
-          '⚠⚠ once the collection is imported the worklist stops saying it is missing — it said so for ever');
+    has(text(printed[printed.length - 1]), 'has no photograph yet', 'its line on the inventory with no photograph keeps the note');
+    s._photoRefs[7][s._photoRefs[7].length - 1] = LINE('silver', { objectName: 'Silver service', sourceCollId: 11, filename: 'HVL_INV_1.jpg' });
+    s.printAppraisalWorklist(7);
+    lacks(text(printed[printed.length - 1]), 'no photograph yet',
+          '⚠⚠ once the collection is photographed the worklist stops saying so');
   });
 
   G('stale text · the Job Plan\'s banner, and three code comments', () => {
@@ -615,8 +620,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = plan.indexOf('from the estimate walkthrough');
     const banner = at >= 0 ? plan.slice(at, at + 900) : '';
     ok(banner.length > 100, 'fixture: the import banner is found in renderJobPlan');
-    has(banner, 'Bring them in on the <strong>Job Admin &amp; Inv</strong> tab, under <strong>From the Estimate Walkthrough</strong>',
+    // RESTATED P24: the import banner is for vehicles alone; collections have their own banner, which names the camera.
+    has(banner, ' in on the <strong>Job Admin &amp; Inv</strong> tab, under <strong>From the Estimate Walkthrough</strong>',
         'the banner names the tab the panel is on');
+    has(plan, ' in and tap it beside the cameras: the photograph goes on its line.', 'the collections banner names where the photograph is taken');
     lacks(banner, 'Inventory &rarr;', 'not a tab called Inventory, which no longer exists');
     // The comments describe the code they sit on.
     const fdAt = SRC.indexOf('var FIELD_DISPOSITIONS');

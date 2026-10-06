@@ -1331,7 +1331,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.06 · 12:31am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.06 · 10:40am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6052,7 +6052,7 @@ var CONTRACTOR_TC_NAME = 'Contractor — TC';
 // while the app also posted uploadHtml, getSubfolders, the two sharing actions, DocuSign, Stripe and
 // every store save, so a deployment missing any of those drew no banner. A test now derives what the
 // app posts from its own source and requires each one here, with its consequence below.
-var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile', 'agentIdentify', 'agentValue',
+var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile', 'agentIdentify', 'agentValue', 'agentRoomCheck',
   'uploadHtml', 'getSubfolders', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
   'stripeLink', 'stripeStatus'];                          // actions this build calls
 var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', 'saveAllEstimates', 'saveAllJobPlans',
@@ -6113,6 +6113,7 @@ var BACKEND_FEATURE_COST = {
   trashFile:     'a photo deleted in the field still stays in the client\u2019s Drive folder',
   agentIdentify: 'the desk cannot name the day\u2019s shots automatically \u2014 every line has to be typed by hand',
   agentValue:    'the desk cannot value lines automatically \u2014 every value has to be typed by hand',
+  agentRoomCheck: 'the desk cannot check a room\u2019s photographs for one thing photographed twice \u2014 only two lines with the same name are flagged',
   getSubfolders: 'photographs and documents cannot find the client\u2019s Drive subfolders',
   shareFolder:   'sharing the inventory folders with counsel does nothing',
   unshareFolder: 'taking counsel\u2019s access to the inventory folders away does nothing',
@@ -26045,6 +26046,9 @@ function savePhotoRefs(jobId) {
                valLow:r.valLow, valHigh:r.valHigh, valComps:r.valComps, valLookup:r.valLookup, valConf:r.valConf,
                valNotices:r.valNotices, valuedBy:r.valuedBy, valAgentAt:r.valAgentAt, valNameAt:r.valNameAt,
                valFailed:r.valFailed, valReviewed:r.valReviewed, valReviewedBy:r.valReviewedBy, valReviewedAt:r.valReviewedAt,
+               // ⚠ THE ROOM CHECK'S FIELDS (P24): the lines a room's photographs say are this one thing, why, how sure, and
+               // when the room was last read together.
+               dupWith:r.dupWith, dupWhy:r.dupWhy, dupConf:r.dupConf, dupChkAt:r.dupChkAt,
                // ⚠ P16 (2026-09-30): the firearm's dealer route, who removed a line at the desk, and
                // whether a discarded shot's photograph went to the Drive bin. `driveTrashed` was
                // written by discardShot and never kept, so after a reload Removed items stopped
@@ -26628,8 +26632,8 @@ function invLotSplitState(ref, job) {
   return (v / q) > INV_LOT_ARTICLE_CAP ? 'over' : '';
 }
 
-// One sentence, read by the import panel, the desk and the worklist, so the three cannot
-// state the arithmetic differently.
+// One sentence, read by the desk and the worklist, so the two cannot state the arithmetic
+// differently (the import panel read it too until P24 made collections join the inventory by themselves).
 function invLotSplitSentence(ref) {
   var q = parseInt(ref && ref.qty, 10) || 0;
   var a = invLotArticleValue(ref);
@@ -27165,6 +27169,8 @@ function invSplitItemN(jobId, stableId, count) {
       status: 'uploaded', ts: src.ts,
       objectName: '', category: INV_DEFAULT_CATEGORY, disposition: ''
     };
+    // ⚠ EXCEPT A COLLECTION'S PIECE (P24): the link, and what the walkthrough recorded for every piece of it.
+    if (src.sourceCollId != null) collectionPieceOf(jobId, src, ref);
     _invTouch(ref);
     _setPhotoRef(jobId, ref);
     out.push(ref);
@@ -28407,7 +28413,8 @@ function _apprTransport(jobId) {
 // the Job Plan for it, which carries no import (the panel is `_renderInventoryImportPanel`, on the desk).
 function _apprEstimateFlags(jobId) {
   var imp = _importableFromEstimate(jobId);
-  var colls = imp.collections.filter(function(c){ return c.disp === 'appraise' || c.disp === 'firearms'; }).length;
+  // ⚠ A COLLECTION IS ON THE INVENTORY BY ITSELF NOW (P24): what the worklist can still be missing is its photograph.
+  var colls = collectionsAwaitingPhoto(jobId).filter(function(c){ return c.disp === 'appraise' || c.disp === 'firearms'; }).length;
   var vehs  = imp.vehicles.filter(function(v){ return v.collector; }).length;
   return { collections: colls, vehicles: vehs };
 }
@@ -32181,10 +32188,13 @@ function printAppraisalWorklist(jobId, opt) {
   var f = _apprEstimateFlags(jobId);
   if (f.collections || f.vehicles) {
     var bits = [];
-    if (f.collections) bits.push(f.collections + ' collection' + (f.collections > 1 ? 's' : '') + ' flagged to appraise');
-    if (f.vehicles) bits.push(f.vehicles + ' collector vehicle' + (f.vehicles > 1 ? 's' : ''));
-    html += '<div style="margin-top:10px;font-size:11px;color:#8a6d3b;font-style:italic;">Note: ' + bits.join(' and ')
-      + ' from the estimate ' + ((f.collections + f.vehicles) > 1 ? 'are' : 'is') + ' not yet in the inventory — bring them in on the Job Admin &amp; Inv tab, under From the Estimate Walkthrough, to include them here.</div>';
+    if (f.collections) bits.push(f.collections + ' collection' + (f.collections > 1 ? 's' : '') + ' from the walkthrough flagged to appraise '
+      + (f.collections > 1 ? 'have' : 'has') + ' no photograph yet: photograph ' + (f.collections > 1 ? 'each' : 'it')
+      + ' in its room (Job Plan, In the house) so the appraiser sees ' + (f.collections > 1 ? 'them' : 'it') + '.');
+    if (f.vehicles) bits.push(f.vehicles + ' collector vehicle' + (f.vehicles > 1 ? 's' : '') + ' from the estimate '
+      + (f.vehicles > 1 ? 'are' : 'is') + ' not yet in the inventory: bring ' + (f.vehicles > 1 ? 'them' : 'it')
+      + ' in on the Job Admin &amp; Inv tab, under From the Estimate Walkthrough, to include ' + (f.vehicles > 1 ? 'them' : 'it') + ' here.');
+    html += '<div style="margin-top:10px;font-size:11px;color:#8a6d3b;font-style:italic;">Note: ' + bits.join(' ') + '</div>';
   }
   html += '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
@@ -32613,15 +32623,214 @@ function _invDuplicateImports(jobId) {
   return Object.keys(byKey).map(function(k){ return byKey[k]; }).filter(function(g){ return g.length > 1; });
 }
 
+// ═══ WALKTHROUGH COLLECTIONS ARE ON THE INVENTORY FROM THE START (P24, 2026-10-06) ═══
+// Anthony: *"definitely fix the collection double count. collections should automatically be in inventory and obviously
+// need photo documentation."* Until now a collection reached the inventory only when somebody pressed Add on the desk's
+// From the Estimate Walkthrough panel, as the Job Plan's banner asked them to, while the same collection shot on the
+// Items pass was already a line: counted twice, once with a photograph and once without.
+// ⚠⚠ ONE LINE PER COLLECTION, MADE BY ITSELF, under a stableId the collection decides (`collectionLineId`) so two devices
+// make the same line, and with the weakest clock there is (`updatedAt` 1) so any record of it the sheet holds wins the
+// merge. Made only once this device has read the job's manifest from the sheet (`_invCloudSeen`), and never again once a
+// person has taken it off (Removed items gives it back) or a photographed line has taken it over (`sourceCollId`).
+// ⚠ IT WAITS FOR A PHOTOGRAPH, and says so wherever the collection is read (`collectionLineUnshot`,
+// `collectionsAwaitingPhoto`): the room camera fills it under its own stableId and number (`collectionLineWithPhoto`), or
+// the desk hands it to a line already shot (`collectionUseLine`). Vehicles are still brought in by hand.
+var COLL_LINE_WEAK_STAMP = 1;
+function collectionLineId(jobId, collId) { return jobId + '_col' + collId; }
+
+function collectionOf(jobId, collId) {
+  var est = estimateStore[jobId] && estimateStore[jobId].estimate;
+  return ((est && est.collections) || []).filter(function(c) { return !!c && String(c.id) === String(collId); })[0] || null;
+}
+
+// Every line of one collection, live or removed: its own line, and any line that took it over or was split off it.
+function _collLinesOf(jobId, collId) {
+  var id = collectionLineId(jobId, collId);
+  return (_photoRefs[jobId] || []).filter(function(r) {
+    return r.label === 'inventory' && !r.collId
+      && (r.stableId === id || (r.sourceCollId != null && String(r.sourceCollId) === String(collId)));
+  });
+}
+
+// Returns how many lines it made. Called on the desk's render and when the desk or the Job Plan has read the sheet.
+function collectionLinesEnsure(jobId) {
+  var job = _invJob(jobId);
+  if (!job || job.svc === 'prep' || !isJobWon(job)) return 0;
+  if (SHEETS_SYNC_URL && !_invCloudSeen[jobId]) return 0;
+  var est = estimateStore[jobId] && estimateStore[jobId].estimate;
+  var made = 0;
+  ((est && est.collections) || []).forEach(function(c) {
+    if (!c || c.id == null || _collLinesOf(jobId, c.id).length) return;
+    _pushInvLine(jobId, {
+      stableId: collectionLineId(jobId, c.id), objectName: String(c.name || 'Collection'),
+      category: _guessCategory(c.name, c.disp), disposition: _collDispToInv(c.disp),
+      qty: String(Math.max(1, parseInt(c.qty, 10) || 1)), fmv: _numOrBlank(c.value),
+      needsAppr: _collDispNeedsAppr(c.disp), sourceCollId: c.id,
+      ts: Number(c.id) || 0, updatedAt: COLL_LINE_WEAK_STAMP
+    });
+    made++;
+  });
+  if (made) { savePhotoRefs(jobId); _scheduleInventorySync(jobId); }
+  return made;
+}
+
+// ⚠ ONE TEST for a collection's line still waiting for its photograph (P24): read by the camera's chips, the room's
+// brief, the desk's chip and panel, and `_captureShot`, which fills only such a line.
+function collectionLineUnshot(r) {
+  return !!r && r.sourceCollId != null && r.label === 'inventory' && !r.collId && !r.deletedAt && !_invHasPhoto(r);
+}
+// A line with a photograph taken for it: a filename from the capture (saved or still uploading) or a file in Drive.
+// The Drive arms are belt and braces, and said so: every shot is given its filename at capture, before Drive answers.
+function _invHasPhoto(r) { return !!(r && (r.filename || r.driveFileUrl || r.driveFileId)); }
+function collectionLinesUnshot(jobId) { return _jobInvRefs(jobId).filter(collectionLineUnshot); }
+
+// ⚠ ONE ANSWER to which walkthrough collections have no photograph on the inventory yet (P24): not on it yet, or on it
+// with no line of it photographed. One a person took off the inventory has had its answer. Read by the Job Plan's
+// banner, the Appraisal Worklist and the Collection Partners card; `collectionLineUnshot` is its per-line half.
+function collectionsAwaitingPhoto(jobId) {
+  var job = _invJob(jobId);
+  if (!job || job.svc === 'prep') return [];
+  var est = estimateStore[jobId] && estimateStore[jobId].estimate;
+  return ((est && est.collections) || []).filter(function(c) {
+    if (!c || c.id == null) return false;
+    var lines = _collLinesOf(jobId, c.id);
+    if (!lines.length) return true;
+    var live = lines.filter(function(r) { return !r.deletedAt; });
+    return live.length > 0 && !live.some(_invHasPhoto);
+  });
+}
+
+// The collection's line with this shot's photograph on it, for `_captureShot` alone. Its number, its link, the quantity,
+// the value and the instructions the walkthrough recorded stay; the name is cleared so Agent One names it from the
+// picture like every Items shot (raising any firearm, NFA or must-find notice), with the walkthrough's words in the field
+// note for it to read. A chip tapped other than Undecided, and ⚑ Appraise, are the field's newer answers.
+function collectionLineWithPhoto(line, shot, opts) {
+  var out = JSON.parse(JSON.stringify(line));
+  ['manual', 'driveFileId', 'namedBy', 'agentAt', 'agentConf', 'agentBasis', 'reviewed', 'reviewedAt', 'reviewedBy']
+    .forEach(function(k) { delete out[k]; });
+  ['roomIdx', 'label', 'seq', 'collId', 'filename', 'driveFileUrl', 'status', 'ts'].forEach(function(k) { out[k] = shot[k]; });
+  var q = parseInt(line.qty, 10);
+  out.fieldNote = ('From the walkthrough: ' + String(line.objectName || 'a collection') + (q > 1 ? ' (' + q + ')' : '') + '. '
+    + String(line.fieldNote || '')).trim();
+  out.objectName = '';
+  var fd = fieldDispToInv((opts && opts.fieldDisp) || FIELD_DISP_DEFAULT);
+  if (fd) out.disposition = fd;
+  if (opts && opts.needsAppr) out.needsAppr = true;
+  return out;
+}
+
+// ⚠ A PIECE OF A COLLECTION IS STILL THE COLLECTION'S (P24): a line split off a collection's line carries the link and
+// what the walkthrough recorded for every piece, its disposition and any instruction to appraise, so a collection marked
+// Appraise reaches the worklist piece by piece (the guarantee the itemised import made). Read by `invSplitItemN`.
+function collectionPieceOf(jobId, src, ref) {
+  ref.sourceCollId = src.sourceCollId;
+  var c = collectionOf(jobId, src.sourceCollId);
+  if (!c) return ref;
+  ref.disposition = _collDispToInv(c.disp);
+  if (_collDispNeedsAppr(c.disp)) ref.needsAppr = true;
+  return ref;
+}
+
+// ⚠ THE DESK'S HALF (P24): a collection shot on the Items pass as an ordinary line. That line becomes the collection's:
+// it keeps its photograph, its close-ups and its number, and takes the link and what the walkthrough recorded where it
+// holds nothing of its own. The collection's own line comes off (the desk's one removal writer, so Removed items gives
+// it back): the collection is one line. Asked first; refused by name where it would be wrong.
+function collectionUseLine(jobId, collLineId, lineId) {
+  var coll = _getPhotoRef(jobId, collLineId);
+  if (!collectionLineUnshot(coll)) { renderInventoryTab(); return false; }
+  var line = lineId ? _getPhotoRef(jobId, lineId) : null;
+  var name = coll.objectName || 'this collection';
+  if (!line || line.deletedAt || line.label !== 'inventory' || line.collId || !_invHasPhoto(line) || line.stableId === coll.stableId) {
+    alert('Pick the photographed line that shows ' + name + '.');
+    return false;
+  }
+  if (line.sourceCollId != null) {
+    alert('#' + _invItemNo(line) + ' is already the line of a collection from the walkthrough. Nothing was changed.');
+    return false;
+  }
+  if (!window.confirm('Use #' + _invItemNo(line) + ' (' + _invNamed(line) + ') as ' + name + ' from the walkthrough?\n\n'
+      + 'It keeps its photograph and its number, and takes the walkthrough’s instructions where it has none of its own. '
+      + 'Line #' + _invItemNo(coll) + ' comes off the inventory, so the collection is counted once. Removed items gives it back.')) return false;
+  line.sourceCollId = coll.sourceCollId;
+  if (!line.disposition && coll.disposition) line.disposition = coll.disposition;
+  if (coll.needsAppr) line.needsAppr = true;
+  if (!_avHasFigure(line) && String(coll.fmv == null ? '' : coll.fmv).trim() !== '') line.fmv = coll.fmv;
+  _setPhotoRef(jobId, _invTouch(line));
+  _invTombstoneLine(jobId, coll);
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return true;
+}
+
+// The desk's panel on a collection's line still waiting for its photograph: where to take it, and the link to a line
+// already shot. Empty on every other line.
+function _collPanelHtml(job, ref) {
+  if (!collectionLineUnshot(ref)) return '';
+  var jid = job.id, sid = ref.stableId, selId = 'coll-use-' + sid;
+  var shot = _jobInvRefs(jid).filter(function(r) { return r.stableId !== sid && _invHasPhoto(r) && r.sourceCollId == null; });
+  shot.sort(function(a, b) {
+    return ((a.category === ref.category ? 0 : 1) - (b.category === ref.category ? 0 : 1))
+      || ((parseInt(a.itemNo, 10) || 0) - (parseInt(b.itemNo, 10) || 0));
+  });
+  return '<div class="inv-coll-panel" style="margin-bottom:10px;font-size:11px;line-height:1.5;">'
+    + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">From the walkthrough</div>'
+    + '<div>No photograph yet. In the house: on the Job Plan, open the room it is in and tap <strong>&#128247; '
+    + esc(ref.objectName || 'it') + '</strong> beside the cameras. The shot becomes this line’s photograph, and the line keeps its number.</div>'
+    + (shot.length
+        ? '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px;">'
+          + '<span>Shot already as another line?</span>'
+          + '<select id="' + esc(selId) + '" style="max-width:280px;font-size:11px;"><option value="">Pick that line…</option>'
+          + shot.map(function(r) {
+              return '<option value="' + esc(r.stableId) + '">#' + esc(_invItemNo(r)) + ' ' + esc(_invNamed(r))
+                + ' · ' + esc(_invRoomName(jid, r.roomIdx)) + '</option>';
+            }).join('')
+          + '</select>'
+          + '<button class="btn-s" onclick="collectionUseLine(' + jid + ',\'' + sid + '\',(document.getElementById(\'' + selId + '\')||{}).value)">Use that line</button>'
+          + '</div>'
+        : '')
+    + '</div>';
+}
+
+// The Collection Partners card reads the collection's inventory line (P24) instead of keeping photographs of its own.
+function _collLineStatusHtml(jobId, collId) {
+  var live = _collLinesOf(jobId, collId).filter(function(r) { return !r.deletedAt; });
+  var shot = live.filter(_invHasPhoto);
+  if (shot.length) {
+    return '<span class="coll-line-status" style="font-size:11px;color:var(--ok-tx);font-weight:600;align-self:center;">&#10003; Photographed on the inventory: '
+      + shot.map(function(r) { return '#' + esc(_invItemNo(r)) + ' in ' + esc(_invRoomName(jobId, r.roomIdx)); }).join(', ') + '</span>';
+  }
+  if (live.length) {
+    return '<span class="coll-line-status" style="font-size:11px;color:var(--bronze);font-weight:600;align-self:center;">&#128247; Not photographed yet: '
+      + 'open the room it is in under In the house and tap it beside the cameras</span>';
+  }
+  return '<span class="coll-line-status" style="font-size:11px;color:var(--gray);align-self:center;">'
+    + (_collLinesOf(jobId, collId).length ? 'Taken off the inventory (Removed items on Job Admin &amp; Inv gives it back)' : 'Joins the inventory by itself') + '</span>';
+}
+
+// The room's brief (P24): the walkthrough's collections still waiting for a photograph, in every room, because the
+// walkthrough recorded no room for them. One tap opens Items with that collection armed.
+function _roomCollectionsHtml(jobId, roomIdx) {
+  var colls = collectionLinesUnshot(jobId);
+  if (!colls.length) return '';
+  return '<div class="ws-colls" style="margin:9px 0 2px;font-size:11.5px;color:var(--gray-dk);line-height:1.45;">'
+    + '<strong>From the walkthrough, not photographed yet.</strong> If one is in this room, tap it and shoot it: '
+    + 'the photograph goes on its line.'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;">'
+    + colls.map(function(c) {
+        return '<button type="button" class="btn-s ws-coll" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'inventory\',{coll:\'' + c.stableId + '\'})">&#128247; '
+          + esc(c.objectName || 'Collection') + '</button>';
+      }).join('')
+    + '</div></div>';
+}
+
 function _importableFromEstimate(jobId) {
   var rec = estimateStore[jobId];
   var est = rec && rec.estimate;
-  if (!est) return { collections: [], vehicles: [] };
+  if (!est) return { vehicles: [] };
   var done = _importedSourceSet(jobId);
-  return {
-    collections: (est.collections || []).filter(function(c){ return !done.coll[c.id]; }),
-    vehicles:    (est.vehicles || []).filter(function(v){ return !done.veh[v.id]; })
-  };
+  // P24: collections are not offered. They join the inventory by themselves (collectionLinesEnsure).
+  return { vehicles: (est.vehicles || []).filter(function(v){ return !done.veh[v.id]; }) };
 }
 
 // Push a manual inventory line (same shape as addInventoryManualItem's rows).
@@ -32634,36 +32843,6 @@ function _pushInvLine(jobId, o) {
   _setPhotoRef(jobId, o);
 }
 
-function materializeCollection(jobId, collId) {
-  var rec = estimateStore[jobId];
-  var est = rec && rec.estimate;
-  var coll = est && (est.collections || []).find(function(c){ return c.id === collId; });
-  if (!coll) return;
-  if (_importedSourceSet(jobId).coll[collId]) {
-    alert('That collection is already in this manifest. Remove the existing line(s) first if you meant to re-import it.');
-    return;
-  }
-  var cat  = (document.getElementById('imp-cat-'  + collId) || {}).value || _guessCategory(coll.name, coll.disp);
-  var mode = (document.getElementById('imp-mode-' + collId) || {}).value || 'lot';
-  var qty  = Math.max(1, parseInt((document.getElementById('imp-qty-' + collId) || {}).value, 10) || 1);
-  var disp = _collDispToInv(coll.disp);
-  var appr = _collDispNeedsAppr(coll.disp);
-  var ts = Date.now();
-  if (mode === 'itemize') {
-    for (var i = 1; i <= qty; i++) {
-      _pushInvLine(jobId, { stableId: jobId + '_col' + collId + '_' + i + '_' + ts,
-        objectName: coll.name + ' #' + i, category: cat, disposition: disp, qty: '1',
-        fmv: '', needsAppr: appr, sourceCollId: collId, ts: ts + i });
-    }
-  } else {
-    _pushInvLine(jobId, { stableId: jobId + '_col' + collId + '_lot_' + ts,
-      objectName: coll.name, category: cat, disposition: disp, qty: String(qty),
-      fmv: _numOrBlank(coll.value), needsAppr: appr, sourceCollId: collId, ts: ts });
-  }
-  savePhotoRefs(jobId);
-  renderInventoryTab();
-  _scheduleInventorySync(jobId);
-}
 
 // Don't prepend a year the description already carries. People type the whole thing into
 // the description box ("2025 Mercedes E63") AND fill the year field, and the naive join
@@ -32698,100 +32877,25 @@ function materializeVehicle(jobId, vehId) {
   _scheduleInventorySync(jobId);
 }
 
-// ⚠⚠ THE CAPTURE-TIME GATE. This is the one moment the estate can still be looked at: the
-// collection is on the estimate, somebody is at the desk with the walkthrough in front of
-// them, and the mode selector is one tap from the number. Once "Keep as lot" is committed
-// the row carries ONE name, ONE value and ONE quantity and there is nothing left inside it
-// for any later rule to split — which is exactly why the retired threshold could never have
-// been implemented as a post-hoc test.
-//
-// ⚠ IT READS OUT, IT DOES NOT REFUSE. The collection's value at this point is a walkthrough
-// estimate and the count is often a guess, so blocking on either would be refusing on a
-// figure nobody has stood behind yet. The house rule holds: flag, name the arithmetic, name
-// the fix. The desk chip and the worklist catch whatever is committed anyway.
-//
-// ⚠ AND THE INSIDE-THE-CAP CASE SPEAKS TOO. A silent pass is indistinguishable from a check
-// that never ran, and this is the surface whose whole job is telling somebody the grouping
-// is safe before they commit to it.
-function _impLotHintHtml(jobId, collId, defMode, defQty) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  var rec = estimateStore[jobId];
-  var est = rec && rec.estimate;
-  var coll = est && (est.collections || []).find(function(c){ return c.id === collId; });
-  if (!coll) return '';
-  var mEl = document.getElementById('imp-mode-' + collId);
-  var qEl = document.getElementById('imp-qty-'  + collId);
-  var mode = (mEl && mEl.value) || defMode || 'lot';
-  if (mode !== 'lot') return '';                 // itemising IS the fix; say nothing about it
-  // ⚠ A BLANK BOX IS NOT A QUANTITY OF ONE. On the first paint the input does not exist
-  // yet (this is called while the row is being built), and mid-edit it can legitimately be
-  // empty for a keystroke. Either way the panel's own default is the better answer than
-  // silently reading 1 and reporting a single article, which is never flagged.
-  var qRaw = (qEl && String(qEl.value || '').trim()) || String(defQty == null ? '' : defQty);
-  var qty = Math.max(1, parseInt(qRaw, 10) || 1);
-  var probe = { qty: String(qty), fmv: _numOrBlank(coll.value) };
-  var st = invLotSplitState(probe, job);
-  if (!st) {
-    // ⚠⚠ '' IS OVERLOADED AND THE CONFIRMATION MUST NOT TAKE IT AT FACE VALUE. The
-    // predicate answers '' both for "this lot is inside the cap" and for "no cap applies here",
-    // and only the first is worth confirming — the second would tell an estate filing no
-    // federal return that its lot sits inside a FEDERAL cap. Caught by the driven panel test,
-    // not by reading: the helper looked right in isolation and was wrong on the join.
-    if (!maivFilingApplies(job)) return '';
-    if (qty < 2 || isNaN(parseFloat(probe.fmv))) return '';
-    return '<span style="color:var(--gray);">&#10003; ' + esc(invLotSplitSentence(probe))
-      + ' &mdash; inside the ' + fmt(INV_LOT_ARTICLE_CAP) + ' §20.2031-6(a) grouping cap.</span>';
-  }
-  if (st === 'unvalued') {
-    return '<span style="color:var(--gray);">' + esc(invLotSplitSentence(probe))
-      + ' &mdash; the ' + fmt(INV_LOT_ARTICLE_CAP) + ' §20.2031-6(a) grouping cap cannot be tested until one is.</span>';
-  }
-  return '<span style="color:var(--bronze);font-weight:700;">&#9888; ' + esc(invLotSplitSentence(probe))
-    + ' &mdash; above the ' + fmt(INV_LOT_ARTICLE_CAP) + ' §20.2031-6(a) grouping cap.</span>'
-    + '<span style="color:var(--gray);"> Itemize it, or record on the line why it is properly grouped.</span>';
-}
-function _impLotHint(jobId, collId) {
-  var el = document.getElementById('imp-hint-' + collId);
-  if (el) el.innerHTML = _impLotHintHtml(jobId, collId);
-}
 
 function _renderInventoryImportPanel(jobId) {
   var imp = _importableFromEstimate(jobId);
-  var total = imp.collections.length + imp.vehicles.length;
+  var total = imp.vehicles.length;
   if (!total) return '';
   var rows = '';
-  imp.collections.forEach(function(c) {
-    var guess = _guessCategory(c.name, c.disp);
-    var catSel = '<select id="imp-cat-' + c.id + '" style="font-size:11px;padding:2px 4px;">'
-      + INV_CATEGORIES.map(function(x){ return '<option' + (x === guess ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select>';
-    var defMode = (guess === 'Art & Décor' || guess === 'Jewelry & Watches') ? 'itemize' : 'lot';
-    var modeSel = '<select id="imp-mode-' + c.id + '" onchange="_impLotHint(' + jobId + ',' + c.id + ')" style="font-size:11px;padding:2px 4px;">'
-      + '<option value="lot"' + (defMode === 'lot' ? ' selected' : '') + '>Keep as lot</option>'
-      + '<option value="itemize"' + (defMode === 'itemize' ? ' selected' : '') + '>Itemize</option></select>';
-    var qtyGuess = parseInt(c.qty, 10) || 1;
-    rows += '<tr>'
-      + '<td style="font-size:11px;"><strong>' + esc(c.name) + '</strong>' + (c.value && c.value !== 'Unknown' ? ' <span style="color:var(--gray);">&middot; ' + esc(fmtColVal(c.value)) + '</span>' : '') + '</td>'
-      + '<td>' + catSel + '</td>'
-      + '<td>' + modeSel + '</td>'
-      + '<td><input type="number" id="imp-qty-' + c.id + '" value="' + qtyGuess + '" min="1" oninput="_impLotHint(' + jobId + ',' + c.id + ')" style="width:50px;font-size:11px;padding:2px 4px;text-align:center;"></td>'
-      + '<td><button class="btn-s" onclick="materializeCollection(' + jobId + ',' + c.id + ')">Add &rarr;</button></td>'
-      + '</tr>'
-      + '<tr><td colspan="5" id="imp-hint-' + c.id + '" style="font-size:10.5px;line-height:1.45;padding:0 6px 6px;border-bottom:1px solid #eee;">'
-      + _impLotHintHtml(jobId, c.id, defMode, qtyGuess) + '</td></tr>';
-  });
   imp.vehicles.forEach(function(v) {
     var name = _vehicleLineName(v);   // one rule, one place — this copy printed the year twice
     rows += '<tr>'
       + '<td style="font-size:11px;"><strong>' + esc(name) + '</strong> <span style="color:var(--gray);">&middot; vehicle</span>' + (v.collector ? ' <span style="color:var(--bronze);font-weight:700;">collector</span>' : '') + '</td>'
       + '<td style="font-size:11px;color:var(--gray);">Vehicles &amp; Watercraft</td>'
-      + '<td colspan="2" style="font-size:10px;color:var(--gray);">' + (v.collector ? '&#9873; &rarr; Vehicle / Boat appraiser' : 'book value (KBB / NADA)') + '</td>'
+      + '<td style="font-size:10px;color:var(--gray);">' + (v.collector ? '&#9873; &rarr; Vehicle / Boat appraiser' : 'book value (KBB / NADA)') + '</td>'
       + '<td><button class="btn-s" onclick="materializeVehicle(' + jobId + ',' + v.id + ')">Add &rarr;</button></td>'
       + '</tr>';
   });
   return '<div class="card" style="margin-bottom:1rem;border:1px solid var(--bronze);">'
     + '<div class="sec" style="margin-bottom:4px;">From the Estimate Walkthrough <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(' + total + ' to add)</span></div>'
-    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Bring flagged collections and vehicles into the inventory. Collections can be itemized (one row each) or kept as a lot; the category sets the appraiser routing.</div>'
-    + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Item</th><th>Category</th><th>Add as</th><th>Qty</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Bring the vehicles the walkthrough flagged into the inventory; the job decides the disposition, not the estimate. The walkthrough’s collections are on the inventory already, each waiting for its photograph.</div>'
+    + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Item</th><th>Category</th><th>Valuation</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '</div>';
 }
 
@@ -33276,9 +33380,12 @@ function _invRefreshFromCloud() {
   if (!jobId) return;
   var before = JSON.stringify((_photoRefs[jobId] || []).map(function(r){ return [r.stableId, r.updatedAt || r.ts, r.deletedAt || 0]; }));
   refreshPhotoRefs(jobId, function(changed) {
-    if (!changed) return;
+    // ⚠ THE FIRST READ OF THE SHEET IS WHAT LETS THE WALKTHROUGH'S COLLECTIONS JOIN THE INVENTORY (P24), so a read that
+    // changed nothing still redraws when it made them.
+    var made = collectionLinesEnsure(jobId);
+    if (!changed && !made) return;
     var after = JSON.stringify((_photoRefs[jobId] || []).map(function(r){ return [r.stableId, r.updatedAt || r.ts, r.deletedAt || 0]; }));
-    if (after !== before) renderInventoryTab();
+    if (made || after !== before) renderInventoryTab();
   });
 }
 
@@ -33876,7 +33983,8 @@ function agentNameShots(jobId) {
 
   if (!confirm('Name ' + groups.length + ' photograph' + (groups.length === 1 ? '' : 's') + ' on this job?\n\n'
              + 'Each one comes back named, categorised and marked unchecked for you to confirm. '
-             + 'Nothing is valued and no disposition is set.')) return;
+             + 'Nothing is valued and no disposition is set. Then each room’s photographs are checked together '
+             + 'for anything photographed twice.')) return;
 
   st.running = true; st.total = groups.length; st.done = 0;
   st.named = 0; st.split = 0; st.empty = 0; st.failed = 0; st.error = '';
@@ -33934,6 +34042,9 @@ function _agFinish(jobId) {
   savePhotoRefs(jobId);
   _scheduleInventorySync(jobId);
   renderInventoryTab();
+  // ⚠ THE ROOM CHECK FOLLOWS A NAMING RUN BY ITSELF (P24): a line counted twice is found by reading a room's named
+  // photographs together, which exists only once they are named. Not after a run that failed outright.
+  if (!st.error) agentRoomCheckRun(jobId, { auto: true });
 }
 
 function _agRepaint(jobId) {
@@ -34014,23 +34125,73 @@ function _agDupEligible(r) {
 // this photo* — whereas two frames of one object is the failure mode. Same name, same room,
 // two separate pieces of evidence.
 function agentDuplicateGroups(jobId, all) {
-  var rows = (all || _jobInvRefs(jobId)).filter(_agDupEligible);
-  var by = {}, order = [];
+  var rows = all || _jobInvRefs(jobId);
+  var byId = {};
+  rows.forEach(function(r) { byId[r.stableId] = r; });
+  // ⚠ TWO KINDS OF EVIDENCE, ONE GROUPING (P24): the same name in one room (Agent One's unreviewed lines), and the room
+  // check's finding off the pictures. Joined, so a line linked to one by name and to another by picture is one group.
+  var parent = {};
+  var find = function(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  var join = function(a, b) {
+    if (!(a in parent)) parent[a] = a;
+    if (!(b in parent)) parent[b] = b;
+    var ra = find(a), rb = find(b);
+    if (ra !== rb) parent[rb] = ra;
+  };
+  var byName = {}, named = {};
+  rows.filter(_agDupEligible).forEach(function(r) {
+    var k = String(r.roomIdx) + '\u0000' + _agNameKey(r.objectName);
+    (byName[k] = byName[k] || []).push(r);
+  });
+  Object.keys(byName).forEach(function(k) {
+    var g = byName[k];
+    if (g.length < 2) return;
+    g.forEach(function(r) { join(g[0].stableId, r.stableId); named[r.stableId] = g[0].objectName; });
+  });
+  var checked = {};
+  rows.filter(_arDupEligible).forEach(function(r) {
+    r.dupWith.forEach(function(o) {
+      var other = byId[o];
+      if (!_arDupEligible(other) || other.roomIdx !== r.roomIdx) return;
+      join(r.stableId, o);
+      checked[r.stableId] = 1; checked[o] = 1;
+    });
+  });
+  var comps = {}, order = [];
   rows.forEach(function(r) {
-    var key = String(r.roomIdx) + '\u0000' + _agNameKey(r.objectName);
-    if (!by[key]) { by[key] = { key: key, roomIdx: r.roomIdx, name: r.objectName, rows: [] }; order.push(key); }
-    by[key].rows.push(r);
+    if (!(r.stableId in parent)) return;
+    var root = find(r.stableId);
+    if (!comps[root]) { comps[root] = []; order.push(root); }
+    comps[root].push(r);
   });
-  return order.map(function(k){ return by[k]; }).filter(function(g) {
-    // ⚠ BELT AND BRACES, AND RECORDED AS SUCH: two distinct source photographs already
-    // imply two rows, so this line cannot change an answer — it is a cheap early-out that
-    // skips building the map for the single-row case, which on a 3,000-row manifest is
-    // almost every group. Do not write a test that pretends it decides something.
-    if (g.rows.length < 2) return false;
-    var seen = {}, n = 0;
-    g.rows.forEach(function(r){ var sid = r.derivedFrom || r.stableId; if (!seen[sid]) { seen[sid] = 1; n++; } });
-    return n > 1;
-  });
+  return order.map(function(root) {
+    var g = comps[root];
+    var photos = {};
+    g.forEach(function(r) { photos[r.derivedFrom || r.stableId] = 1; });
+    // ⚠⚠ STILL OFF DIFFERENT PHOTOGRAPHS, whichever evidence joined them: two objects split off one frame were seen at once.
+    if (g.length < 2 || Object.keys(photos).length < 2) return null;
+    var best = null, sameName = null;
+    g.forEach(function(r) {
+      if (checked[r.stableId] && (!best || (AGENT_ROOM_CONF_RANK[r.dupConf] || 0) > (AGENT_ROOM_CONF_RANK[best.dupConf] || 0))) best = r;
+      if (sameName == null && named[r.stableId] != null) sameName = named[r.stableId];
+    });
+    return {
+      key: String(g[0].roomIdx) + '|' + g.map(function(r) { return r.stableId; }).sort().join('|'),
+      roomIdx: g[0].roomIdx,
+      name: sameName != null ? sameName : g[0].objectName,
+      sameName: sameName != null,
+      why: best ? String(best.dupWhy || '') : '',
+      conf: best ? (best.dupConf || 'low') : '',
+      rows: g
+    };
+  }).filter(Boolean);
+}
+
+// A line the room check flagged (P24), still flagged: live, in a room, linked to another, and nobody has said it is
+// separate (`dupOK`). Reviewed or not: the finding is new evidence from the pictures, where the name rule's is nagging
+// once a person has looked at the line.
+function _arDupEligible(r) {
+  return !!r && !r.dupOK && !r.deletedAt && r.roomIdx != null && Array.isArray(r.dupWith) && r.dupWith.length > 0;
 }
 
 // ⚠ COMPUTED ONCE PER PAINT AND READ PER ROW. `_renderInvRow` must never call the grouper
@@ -34090,15 +34251,21 @@ function _agDupHtml(jobId, all) {
   if (!groups.length) return '';
   var shown = groups.slice(0, 8);
   var lines = shown.map(function(g) {
-    return '<div style="border-top:0.5px solid var(--border);padding:5px 0;margin-top:4px;">'
-      + '<div><strong style="font-size:11.5px;">' + esc(g.name) + '</strong> '
-        + '<span style="font-size:10.5px;color:var(--gray);">' + esc(_invRoomName(jobId, g.roomIdx))
-        + ' &middot; ' + g.rows.length + ' lines</span></div>'
+    // A room-check group leads with what the pictures showed and names each line under its photograph, because the
+    // names were written separately and often differ; a same-name group leads with the name, as it always did.
+    var head = g.why
+      ? '<strong style="font-size:11.5px;">' + esc(g.why) + '</strong> '
+        + '<span style="font-size:10.5px;color:var(--gray);">room check: ' + esc(AGENT_ROOM_CONF_WORDS[g.conf] || AGENT_ROOM_CONF_WORDS.low) + ' &middot; '
+      : '<strong style="font-size:11.5px;">' + esc(g.name) + '</strong> '
+        + '<span style="font-size:10.5px;color:var(--gray);">';
+    return '<div class="inv-dup-group" style="border-top:0.5px solid var(--border);padding:5px 0;margin-top:4px;">'
+      + '<div>' + head + esc(_invRoomName(jobId, g.roomIdx)) + ' &middot; ' + g.rows.length + ' lines</span></div>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px;">'
       + g.rows.map(function(r) {
           return '<span style="display:flex;align-items:center;gap:5px;">'
             + _invThumbHTML(jobId, r, 34)
             + '<span style="font-size:10px;color:var(--gray);font-weight:700;">#' + esc(_invItemNo(r)) + '</span>'
+            + (g.why ? '<span style="font-size:10px;color:var(--gray-dk);max-width:170px;">' + esc(r.objectName || '') + '</span>' : '')
             + '<button class="btn-s" style="font-size:10px;color:#c0392b;" '
             + 'onclick="agentDropDuplicate(' + jobId + ',\'' + r.stableId + '\')" '
             + 'title="Take this line off the inventory. The photograph stays in Drive and Removed items gives the line back.">'
@@ -34110,15 +34277,232 @@ function _agDupHtml(jobId, all) {
       + '</div></div>';
   }).join('');
   return '<div class="alert a-warn" style="font-size:11px;line-height:1.5;margin-bottom:10px;">'
-    + '&#9888; <strong>Possible duplicates.</strong> Agent One gave the same name to more than one line '
-    + 'in the same room, off different photographs — ' + groups.length + ' name'
-    + (groups.length === 1 ? '' : 's') + '. Two shots of one credenza make two sets of lines; '
+    + '&#9888; <strong>Possible duplicates.</strong> Lines in one room that may be one thing counted twice: Agent One gave '
+    + 'them the same name off different photographs, or the room check saw one thing in two of the room’s photographs — '
+    + groups.length + ' group' + (groups.length === 1 ? '' : 's') + '. Two shots of one credenza make two sets of lines; '
     + 'two matching nightstands make two real ones. <strong>Look at both photographs before you choose.</strong>'
     + lines
     + (groups.length > shown.length
         ? '<div style="font-size:10.5px;color:var(--gray);margin-top:5px;">' + (groups.length - shown.length)
           + ' more once these are cleared.</div>' : '')
     + '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// THE ROOM CHECK — ONE THING PHOTOGRAPHED TWICE (P24, 2026-10-06)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Anthony, offered a field rule that set every photographed thing aside so no later frame caught it: *"Fix option 2
+// above with room level check. That's an obvious fix and will help with our fake client we are doing tomorrow with full
+// inventory."* Agent One reads each Items shot alone, so the vase shot on the dresser and again close up, or the lamp at
+// the edge of two frames, comes back as two lines, and the name rule above catches it only when both names match. The
+// room check (`agentCheckRooms` in main-sync.gs, action `agentRoomCheck`) reads a room's photographs together, each with
+// the lines named off it, and answers which lines are one thing.
+// ⚠⚠ IT FLAGS AND NEVER MERGES: its answer is written on the lines (`_arWrite`, the one writer of `dupWith`, `dupWhy`,
+// `dupConf` and `dupChkAt`) and shown under Possible duplicates, where a person removes the extra line or says they are
+// separate. Two matching nightstands are two real objects (CLAUDE.md, Decided).
+var AGENT_ROOM_BATCH_SHOTS = 48;   // photographs per call to the backend: whole rooms, at least one a call
+var AGENT_ROOM_CONF_RANK   = { high: 3, medium: 2, low: 1 };   // the backend's own ranking, held equal by a test
+var AGENT_ROOM_CONF_WORDS  = { high: 'plainly one thing', medium: 'very likely one thing', low: 'possibly one thing' };
+var _arRun = {};                   // jobId -> live run state, session-only
+
+function _arState(jobId) {
+  if (!_arRun[jobId]) _arRun[jobId] = { running: false, total: 0, done: 0, doubles: 0, failed: 0, error: '', failures: {} };
+  return _arRun[jobId];
+}
+
+// A line the room check reads: an Items line with a name, a room and its photograph in Drive. A line typed at the desk,
+// one still uploading and one not yet named wait until they qualify.
+function _arCheckable(r) {
+  return !!r && r.label === 'inventory' && !r.collId && !r.deletedAt && r.roomIdx != null
+      && !!String(r.objectName || '').trim() && !!_invFileId(r);
+}
+
+// The rooms whose photographs have not all been read together since a line in them was named: two photographs or more,
+// and a line among them with no `dupChkAt`. Each comes back with its photographs in the order taken, and each photograph
+// with the lines named off it, so the answer stamps exactly the lines that were sent.
+function agentRoomsToCheck(jobId, all) {
+  var by = {}, order = [];
+  (all || _jobInvRefs(jobId)).filter(_arCheckable).forEach(function(r) {
+    var k = String(r.roomIdx);
+    if (!by[k]) { by[k] = { roomIdx: r.roomIdx, photos: {}, porder: [], fresh: false }; order.push(k); }
+    var room = by[k], src = r.derivedFrom || r.stableId;
+    if (!room.photos[src]) { room.photos[src] = { srcId: src, fileId: _invFileId(r), ts: r.ts || 0, lines: [] }; room.porder.push(src); }
+    room.photos[src].lines.push(r);
+    if (!r.dupChkAt) room.fresh = true;
+  });
+  return order.map(function(k) {
+    var room = by[k];
+    return { roomIdx: room.roomIdx, fresh: room.fresh,
+             // BELT AND BRACES, AND SAID SO: `_jobInvRefs` already hands the lines over in the order taken, so this sort
+             // changes no answer today; it keeps the order a rule of this function whatever list a caller passes.
+             photos: room.porder.map(function(s) { return room.photos[s]; })
+               .sort(function(a, b) { return (a.ts - b.ts) || String(a.srcId).localeCompare(String(b.srcId)); }) };
+  }).filter(function(room) { return room.fresh && room.photos.length >= 2; });
+}
+
+function _arRoomPayload(jobId, room) {
+  return {
+    key: String(room.roomIdx),
+    room: _invRoomName(jobId, room.roomIdx),
+    shots: room.photos.map(function(p) {
+      return { fileId: p.fileId, lines: p.lines.map(function(r) {
+        return { id: r.stableId, name: String(r.objectName || '').slice(0, 160), category: r.category || '', qty: parseInt(r.qty, 10) || 1 };
+      }) };
+    })
+  };
+}
+
+// *Check N rooms* on the work bar, and the tail of a naming run (`_agFinish`, `opts.auto`, which asks nothing and says
+// nothing when there is nothing to check).
+function agentRoomCheckRun(jobId, opts) {
+  opts = opts || {};
+  var job = _invJob(jobId);
+  if (!job) return false;
+  if (!SHEETS_SYNC_URL) {
+    if (!opts.auto) alert('This device has no Apps Script URL set, so it cannot reach the room check. Settings > Sync.');
+    return false;
+  }
+  var st = _arState(jobId);
+  if (st.running) return false;
+  var rooms = agentRoomsToCheck(jobId);
+  if (!rooms.length) {
+    if (!opts.auto) alert('Every room has been checked since its last line was named.');
+    return false;
+  }
+  var shots = rooms.reduce(function(n, r) { return n + r.photos.length; }, 0);
+  if (!opts.auto && !confirm('Check ' + rooms.length + ' room' + (rooms.length === 1 ? '' : 's') + ' for anything photographed twice?\n\n'
+      + 'Each room’s photographs (' + shots + ' in all) are read together with the lines named off them. Lines that look '
+      + 'like one thing counted twice are flagged under Possible duplicates for you to look at. Nothing is removed.')) return false;
+  st.running = true; st.total = rooms.length; st.done = 0; st.doubles = 0; st.failed = 0; st.error = ''; st.failures = {};
+  _arRepaint(jobId);
+  _arSendNext(jobId, job, rooms);
+  return true;
+}
+
+// ⚠ THE QUEUE IS BY ROOM, AND EACH ROOM CARRIES WHAT IT SENT: its answer stamps exactly those lines, so a line named
+// while the call was out waits for the next check. Whole rooms, about AGENT_ROOM_BATCH_SHOTS photographs to a call. A
+// room the server's clock did not reach comes back in `remaining` and goes again; a call that answers for no room ends
+// the run, named.
+function _arSendNext(jobId, job, queue) {
+  var st = _arState(jobId);
+  if (!queue.length) { _arFinish(jobId); return; }
+  var batch = [], n = 0;
+  for (var i = 0; i < queue.length; i++) {
+    if (batch.length && n + queue[i].photos.length > AGENT_ROOM_BATCH_SHOTS) break;
+    batch.push(queue[i]); n += queue[i].photos.length;
+  }
+  var byKey = {};
+  batch.forEach(function(room) { byKey[String(room.roomIdx)] = room; });
+  fetch(SHEETS_SYNC_URL, {
+    method: 'POST', mode: 'cors', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'agentRoomCheck', jobId: jobId, context: { fiduciary: invFiduciaryMode(job) },
+                           rooms: batch.map(function(room) { return _arRoomPayload(jobId, room); }) })
+  })
+    .then(_readAppsScriptJson)
+    .then(function(d) {
+      if (!d || !d.ok) {
+        // Named, never silent: an older deployment answers "Unknown action" here (Agent One's rule).
+        st.error = (d && d.error) || 'the room check did not answer';
+        _arFinish(jobId);
+        return;
+      }
+      var answered = {};
+      Object.keys(d.results || {}).forEach(function(k) {
+        if (!byKey[k] || answered[k]) return;
+        answered[k] = 1; st.done++;
+        st.doubles += _arWrite(jobId, byKey[k], d.results[k]);
+      });
+      Object.keys(d.failed || {}).forEach(function(k) {
+        if (!byKey[k] || answered[k]) return;
+        answered[k] = 1; st.done++; st.failed++;
+        st.failures[_invRoomName(jobId, byKey[k].roomIdx)] = String(d.failed[k] || 'no reason given');
+      });
+      savePhotoRefs(jobId);
+      _scheduleInventorySync(jobId);
+      _arRepaint(jobId);
+      if (!Object.keys(answered).length) {
+        st.error = 'the room check answered for none of the ' + batch.length + ' room' + (batch.length === 1 ? '' : 's') + ' it was sent';
+        _arFinish(jobId);
+        return;
+      }
+      _arSendNext(jobId, job, queue.filter(function(room) { return !answered[String(room.roomIdx)]; }));
+    })
+    .catch(function(e) {
+      st.error = (e && e.message) || 'the room check could not be reached';
+      _arFinish(jobId);
+    });
+}
+
+// ⚠⚠ THE ONE WRITER of the room check's four fields, and it touches nothing else on a line: never the name, a value, a
+// disposition or a flag. A room's answer replaces what the last look said about the lines it was sent, so a pair the new
+// look does not repeat stops being flagged; a line it was not sent is left alone. Returns how many doubles it recorded.
+function _arWrite(jobId, room, result) {
+  var sent = {};
+  room.photos.forEach(function(p) { p.lines.forEach(function(r) { sent[r.stableId] = 1; }); });
+  var links = {}, n = 0;
+  ((result && result.doubles) || []).forEach(function(d) {
+    var ids = [];
+    (d.ids || []).forEach(function(id) { if (sent[id] && ids.indexOf(id) < 0) ids.push(id); });
+    if (ids.length < 2) return;
+    n++;
+    ids.forEach(function(id) {
+      var l = links[id] || (links[id] = { with: [], why: '', conf: '' });
+      ids.forEach(function(o) { if (o !== id && l.with.indexOf(o) < 0) l.with.push(o); });
+      if ((AGENT_ROOM_CONF_RANK[d.confidence] || 0) > (AGENT_ROOM_CONF_RANK[l.conf] || 0)) {
+        l.conf = d.confidence; l.why = String(d.why || '').slice(0, 300);
+      }
+    });
+  });
+  var now = Date.now();
+  Object.keys(sent).forEach(function(id) {
+    var r = _getPhotoRef(jobId, id);
+    if (!r || r.deletedAt) return;
+    r.dupChkAt = now;
+    var l = links[id];
+    if (l) { r.dupWith = l.with; r.dupWhy = l.why; r.dupConf = l.conf || 'low'; }
+    else { delete r.dupWith; delete r.dupWhy; delete r.dupConf; }
+    _setPhotoRef(jobId, _invTouch(r));
+  });
+  return n;
+}
+
+function _arFinish(jobId) {
+  _arState(jobId).running = false;
+  savePhotoRefs(jobId);
+  _scheduleInventorySync(jobId);
+  renderInventoryTab();
+}
+
+function _arRepaint(jobId) {
+  var el = document.getElementById('inv-room-state');
+  if (el) el.innerHTML = _arStateHtml(jobId);
+}
+
+function _arStateHtml(jobId) {
+  var st = _arState(jobId);
+  if (st.error) return '<span style="color:var(--err);">&#9888; Room check: ' + esc(st.error) + '</span>';
+  if (st.running) return '<span style="color:var(--bronze-dk);">Checking rooms for anything photographed twice&hellip; ' + st.done + ' of ' + st.total + '</span>';
+  if (!st.total) return '';
+  var bits = [st.doubles
+    ? st.doubles + ' possible double' + (st.doubles === 1 ? '' : 's') + ' flagged under Possible duplicates'
+    : 'nothing photographed twice in the ' + (st.done - st.failed) + ' room' + (st.done - st.failed === 1 ? '' : 's') + ' read'];
+  if (st.failed) {
+    bits.push(st.failed + ' room' + (st.failed === 1 ? '' : 's') + ' could not be read ('
+      + Object.keys(st.failures).map(function(k) { return k + ': ' + st.failures[k]; }).join('; ') + ')');
+  }
+  return '<span style="color:var(--gray);">Room check: ' + esc(bits.join(' · ')) + '</span>';
+}
+
+// The work bar's *Check N rooms* (P24): offered while a room has a line not yet read together with the rest of its
+// photographs, withdrawn once none has and while a check is running. Between naming and valuing on the bar.
+function _arCheckButtonHtml(job) {
+  if (_arState(job.id).running) return '';
+  var n = agentRoomsToCheck(job.id).length;
+  if (!n) return '';
+  return '<button class="btn-s" onclick="agentRoomCheckRun(' + job.id + ')"'
+    + ' title="Read each room’s photographs together and flag any line that is one thing photographed twice. Nothing is removed: the pairs are listed under Possible duplicates for you to decide."'
+    + ' style="background:var(--bronze-dk);color:#fff;border-color:var(--bronze-dk);">Check ' + n + ' room' + (n === 1 ? '' : 's') + '</button>';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -34745,6 +35129,8 @@ function _renderInvWorkbar(job, all) {
             + ' style="background:var(--bronze-dk);color:#fff;border-color:var(--bronze-dk);">Name ' + _agNameables
             + ' shot' + (_agNameables === 1 ? '' : 's') + '</button>'
           : '')
+      // ⚠ THE ROOM CHECK BETWEEN THEM (P24): a line counted twice is a line valued twice.
+      + _arCheckButtonHtml(job)
       // ⚠ AGENT TWO NEXT, BECAUSE IT VALUES WHAT AGENT ONE NAMED (P23).
       + _avValueButtonHtml(job)
       // ⚠⚠ THE ESTATE SET WAS ON SCREEN FOR EVERY SERVICE AND NOTHING GATED IT (2026-09-21).
@@ -34820,6 +35206,7 @@ function _renderInvWorkbar(job, all) {
         ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;">Client documents print with an <strong>IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.</div>'
         : '')
     + '<div id="inv-agent-state" style="font-size:10.5px;margin-top:7px;">' + _agStateHtml(jid) + '</div>'
+    + '<div id="inv-room-state" style="font-size:10.5px;margin-top:4px;">' + _arStateHtml(jid) + '</div>'
     + '<div id="inv-value-state" style="font-size:10.5px;margin-top:4px;">' + _avStateHtml(jid) + '</div>'
     + _agNoticesHtml(jid, all)
     + '<div id="inv-value-notices">' + _avNoticesHtml(job, all) + '</div>'
@@ -34977,6 +35364,12 @@ function _renderInvRow(job, ref) {
   var _pk = invPickupRecord(ref, job);
   if (_pk) warn.push('<span class="inv-pickup-chip" title="' + esc('On ' + (_pk.ref || 'the vendor') + '’s pickup list, filed to Drive'
     + (_pk.signedOn ? ' ' + fmtDate2(_pk.signedOn) : '') + '.') + '" style="color:var(--ok-tx);font-weight:700;">&#10003; picked up by ' + esc(_pk.ref || 'the vendor') + '</span>');
+  // ⚠ A WALKTHROUGH COLLECTION STILL WAITING FOR ITS PHOTOGRAPH (P24). Bronze: red on this strip is a held firearm.
+  if (collectionLineUnshot(ref)) {
+    warn.push('<span class="inv-coll-chip" title="' + esc('A collection from the estimate walkthrough, on the inventory and waiting for its photograph. '
+      + 'In the house: open its room on the Job Plan and tap it beside the cameras. Shot already as another line? Open this line and pick that one.')
+      + '" style="color:var(--bronze);font-weight:700;">&#128247; no photograph yet</span>');
+  }
   if (invReceiptOwed(ref, job)) {
     warn.push('<span title="' + esc('Released to ' + (invRecipientName(ref.channel) || 'a person') + ' and no signed receipt is filed for it.'
       + (String(ref.receiptDoc || '').trim() ? ' Receipt / Doc reads “' + String(ref.receiptDoc).trim() + '”: a typed reference, not a filed receipt.' : '')
@@ -34999,8 +35392,10 @@ function _renderInvRow(job, ref) {
   // it can show both photographs side by side; this is so a row met while scrolling reads as
   // contested rather than settled. Bronze, never red — red on this strip is a held firearm.
   if (_agDupSet[sid] > 1) {
-    warn.push('<span title="' + esc('Agent One gave this name to ' + _agDupSet[sid]
-      + ' lines in this room, off different photographs. Check Possible duplicates at the top of the tab.')
+    warn.push('<span title="' + esc((_arDupEligible(ref) && ref.dupWhy
+          ? 'The room check: ' + ref.dupWhy + '.'
+          : 'Agent One gave this name to ' + _agDupSet[sid] + ' lines in this room, off different photographs.')
+      + ' Check Possible duplicates at the top of the tab.')
       + '" style="color:var(--bronze);">possible duplicate</span>');
   }
   var det = _invDetailRefs(jid, ref.stableId);
@@ -35137,6 +35532,7 @@ function _renderInvPanel(job, ref) {
     + _invFirearmPanelHtml(job, ref)
     + _invPanelCautionHtml(job, ref)
     + _invPanelLeftoverHtml(job, ref)
+    + _collPanelHtml(job, ref)
     + fieldHtml + _avPanelHtml(job, ref) + secs + '</div>';
 }
 // ⚠ THE LIVING CLIENT'S CONFLICT OF INTEREST, IN THE LINE'S RECORD (P20, Q25), through the one rule, invReleaseCautions:
@@ -35340,6 +35736,7 @@ function renderInventoryTab() {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) { cont.innerHTML = '<div class="tab-empty">Job not found.</div>'; return; }
   _invEnsureLoaded(jobId);
+  collectionLinesEnsure(jobId);   // P24: the walkthrough's collections, once the sheet has been read
   var all = _invAssignItemNos(jobId);
   // Default to the day's work when there IS a day's work — that is what the tab is opened
   // for — and to everything otherwise, so a job resumed a week later is not an empty screen.
@@ -35628,6 +36025,11 @@ function loadMediaStore(cb) {
 }
 
 function _renderCollPhotoCapture(jobId, collId) {
+  // ⚠ ON A JOB THAT KEEPS AN INVENTORY, A COLLECTION'S PHOTOGRAPHS ARE ITS INVENTORY LINE'S (P24), taken in its room, and
+  // this card reads that line rather than keeping a second set of its own. A prep job keeps no inventory and keeps the
+  // asset photograph here.
+  var _job = jobs.find(function(j){ return j.id === jobId; });
+  var onInv = !!_job && _job.svc !== 'prep';
   var refs = (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId) && r.label === 'collection'; });
   var nUploaded = refs.filter(function(r){ return r.status === 'uploaded'; }).length;
   var failedRefs = refs.filter(function(r){ return r.status === 'failed'; });
@@ -35640,17 +36042,18 @@ function _renderCollPhotoCapture(jobId, collId) {
   var btnStyle = 'cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;'
     + 'border-radius:4px;border:1px solid var(--border-md);font-size:11px;background:var(--cream);line-height:1.4;';
   return '<div style="margin-top:6px;display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;">'
-    + '<label style="' + btnStyle + '">'
-    + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
-    + 'onchange="attachJobPlanCollectionPhoto(this,' + jobId + ',' + collId + ')">'
-    + '&#128247; Capture Asset Photo</label>'
+    + (onInv ? _collLineStatusHtml(jobId, collId)
+      : '<label style="' + btnStyle + '">'
+        + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
+        + 'onchange="attachJobPlanCollectionPhoto(this,' + jobId + ',' + collId + ')">'
+        + '&#128247; Capture Asset Photo</label>')
     + Object.keys(COLL_DOC_KINDS).map(function (k) {
         return '<label style="' + btnStyle + '" title="' + COLL_DOC_KINDS[k].title + ' — PDF or image">'
           + '<input type="file" accept="image/*,application/pdf" style="display:none;" '
           + 'onchange="attachCollectionDoc(this,' + jobId + ',' + collId + ',\'' + k + '\')">'
           + '&#128196; ' + COLL_DOC_KINDS[k].btn + '</label>';
       }).join('')
-    + '<span id="photo-coll-status-' + jobId + '-' + collId + '">' + statusHtml + '</span>'
+    + (onInv ? '' : '<span id="photo-coll-status-' + jobId + '-' + collId + '">' + statusHtml + '</span>')
     + '</div>'
     + '<div id="coll-docs-' + jobId + '-' + collId + '">' + _renderCollDocs(jobId, collId) + '</div>';
 }
@@ -35777,7 +36180,12 @@ function _captureShot(jobId, roomIdx, label, rawDataUrl, opts) {
     // referenced by nothing, and the badge counted one shot where two were taken.
     var seq = _slotRefs(jobId, roomIdx, label).length + 1;
     var tag = label === 'inventory' ? 'INV' : (label === 'detail' ? 'DETAIL' : label);
-    var stableId = jobId + '_r' + roomIdx + '_' + label + '_' + _photoUid();
+    // ⚠ A WALKTHROUGH COLLECTION'S LINE TAKES THIS PHOTOGRAPH (P24) when the camera was armed for it: the shot is filed
+    // under that line's own stableId, so the number already issued and what the walkthrough recorded stay on it. Read
+    // here, after the compress, and only while the line still has none; otherwise the shot is an ordinary Items line.
+    var into = (label === 'inventory' && opts.into) ? _getPhotoRef(jobId, opts.into) : null;
+    if (into && !collectionLineUnshot(into)) into = null;
+    var stableId = into ? into.stableId : (jobId + '_r' + roomIdx + '_' + label + '_' + _photoUid());
     // ⚠ NO OBJECT NAME AND NO CATEGORY IN THE FILENAME. Drive cannot rename after upload and
     // neither exists at capture time any more. The inventory LINE links to the file — that is
     // the promise to counsel (one line, one photo) and it holds; the filename never needed to
@@ -35785,7 +36193,9 @@ function _captureShot(jobId, roomIdx, label, rawDataUrl, opts) {
     var filename = (job.hvlId ? job.hvlId + '_' : '') + cleanRoom + '_' + tag + '_' + seq + '_' + _photoStamp(ts) + '.jpg';
     var ref = { stableId: stableId, roomIdx: roomIdx, label: label, seq: seq, collId: null,
                 filename: filename, driveFileUrl: null, status: 'uploading', ts: ts };
-    if (label === 'inventory') {
+    if (into) {
+      ref = collectionLineWithPhoto(into, ref, opts);
+    } else if (label === 'inventory') {
       ref.objectName = '';                     // the desk names it
       ref.category = INV_DEFAULT_CATEGORY;     // the desk files it
       ref.disposition = fieldDispToInv(opts.fieldDisp || FIELD_DISP_DEFAULT);
@@ -35858,7 +36268,7 @@ function _fieldCamRoomName(jobId, roomIdx) {
   return r ? r.name : ('Room ' + roomIdx);
 }
 
-function openFieldCamera(jobId, roomIdx, mode) {
+function openFieldCamera(jobId, roomIdx, mode, opts) {
   if (!FIELD_CAM_MODES[mode]) return false;
   var job = _photoCaptureJob(jobId);
   if (!job) return false;
@@ -35867,6 +36277,8 @@ function openFieldCamera(jobId, roomIdx, mode) {
   _fieldCamStop();
   _fieldCam = { open: true, jobId: jobId, roomIdx: roomIdx, mode: mode,
                 disp: FIELD_DISP_DEFAULT, appr: false, detail: false,
+                // P24: a walkthrough collection armed for the next Items shot, from the room's brief or the chips below.
+                coll: (mode === 'inventory' && opts && opts.coll) ? String(opts.coll) : null,
                 last: null, lastAny: null, lastThumb: '', count: 0,
                 stream: null, ready: false, native: false, nativeWhy: '',
                 talking: false, recog: null, heard: '', noteDraft: '', noteFor: null };
@@ -35940,7 +36352,8 @@ function _fieldCamPaint() {
       + '<div style="flex:1;min-width:0;">'
       + '<button type="button" class="fc-del" title="Delete this photo" aria-label="Delete this photo"'
       + ' onclick="discardShot(' + st.jobId + ',\'' + lastRef.stableId + '\')">&#128465;&#65039;</button>'
-      + '<div><strong>Last:</strong> ' + (lastRef.label === 'detail' ? 'detail of the item before it' : esc(FIELD_CAM_MODES[lastRef.label] || lastRef.label)) + ' \u00b7 shot ' + lastRef.seq
+      + '<div><strong>Last:</strong> ' + (lastRef.label === 'detail' ? 'detail of the item before it'
+          : lastRef.sourceCollId != null ? 'the collection from the walkthrough' : esc(FIELD_CAM_MODES[lastRef.label] || lastRef.label)) + ' \u00b7 shot ' + lastRef.seq
       + (lastRef.status === 'failed' ? ' \u00b7 <span style="color:#ff8a80;">not saved \u2014 held on this device</span>' : '') + '</div>'
       + (lastRef.fieldNote ? '<div style="font-style:italic;color:#ddd;">\u201c' + esc(lastRef.fieldNote) + '\u201d</div>' : '')
       + (st.talking ? '<div id="fc-talk-status" style="color:#ffb3a7;">Listening\u2026 ' + esc(st.heard) + '</div>' : '')
@@ -35954,6 +36367,15 @@ function _fieldCamPaint() {
       + '<button type="button" class="fc-tog' + (st.appr ? ' on' : '') + '" onclick="fieldCamToggleAppr()" title="Flag the next shot for a specialist valuation">&#9873; Appraise</button>'
       + '<button type="button" class="fc-tog' + (st.detail ? ' on' : '') + '" onclick="fieldCamToggleDetail()"' + (st.last ? '' : ' disabled') + ' title="The next shot is a close-up of the last item, not a new item">+ Detail of last</button>'
       + '</div>';
+    // ⚠ THE WALKTHROUGH'S COLLECTIONS STILL WAITING FOR A PHOTOGRAPH (P24): tap one and the next shot is its line's
+    // photograph. Per shot, like ⚑ Appraise and the detail toggle, and gone once the collection is photographed.
+    var _colls = collectionLinesUnshot(st.jobId);
+    if (_colls.length) {
+      h += '<div class="fc-row fc-colls">' + _colls.map(function(c) {
+        return '<button type="button" class="fc-tog' + (st.coll === c.stableId ? ' on' : '') + '" onclick="fieldCamToggleColl(\'' + c.stableId + '\')"'
+          + ' title="The next shot is this collection from the walkthrough, on its own line">&#128230; ' + esc(c.objectName || 'Collection') + '</button>';
+      }).join('') + '</div>';
+    }
   }
   // The note on the last shot: hold to talk where the browser can transcribe, typed where it cannot.
   var SR = (typeof window !== 'undefined') && (window.SpeechRecognition || window.webkitSpeechRecognition);
@@ -35996,7 +36418,19 @@ function fieldCamSetDisp(key) {
   return true;
 }
 function fieldCamToggleAppr()   { if (!_fieldCam.open) return; _fieldCam.appr = !_fieldCam.appr; _fieldCamPaint(); }
-function fieldCamToggleDetail() { if (!_fieldCam.open || !_fieldCam.last) return; _fieldCam.detail = !_fieldCam.detail; _fieldCamPaint(); }
+function fieldCamToggleDetail() {
+  if (!_fieldCam.open || !_fieldCam.last) return;
+  _fieldCam.detail = !_fieldCam.detail;
+  if (_fieldCam.detail) _fieldCam.coll = null;   // a close-up of the last item is never a collection's own shot
+  _fieldCamPaint();
+}
+// P24: arm a walkthrough collection for the next Items shot, or disarm it. Arming one turns the detail toggle off.
+function fieldCamToggleColl(id) {
+  if (!_fieldCam.open) return;
+  _fieldCam.coll = (_fieldCam.coll === String(id)) ? null : String(id);
+  if (_fieldCam.coll) _fieldCam.detail = false;
+  _fieldCamPaint();
+}
 
 // The bytes arrive here from the shutter (a canvas frame) or the native input (a file). One
 // path from here on, so the two cannot disagree about what a shot records.
@@ -36009,6 +36443,7 @@ function _fieldCamCommit(dataUrl) {
     fieldDisp: st.disp,
     needsAppr: st.appr,
     groupId: label === 'detail' ? st.last : null,
+    into: (label === 'inventory' && st.coll) ? st.coll : null,
     onRef: function(ref) {
       if (_fieldCam !== st) return;
       // ⚠ THE NEXT PHOTOGRAPH COMMITS THE LAST NOTE, and it happens HERE, above the line that
@@ -36019,6 +36454,7 @@ function _fieldCamCommit(dataUrl) {
       if (ref.label === 'inventory') st.last = ref.stableId;   // a detail never becomes the primary
       st.appr = false;      // per shot, never latched
       st.detail = false;    // likewise
+      st.coll = null;       // likewise (P24)
       st.lastThumb = '';
       if (st.open) _fieldCamPaint();
       if (wsHere()) _paintRoomWorkspace();
@@ -36409,6 +36845,7 @@ function _paintRoomWorkspace() {
     + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'inventory\')">&#128247; Items<small>' + nI + ' shot' + (nI === 1 ? '' : 's') + '</small></button>'
     + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'after\')">&#128247; After<small>' + nA + ' shot' + (nA === 1 ? '' : 's') + '</small></button>'
     + '</div>';
+  h += _roomCollectionsHtml(jobId, roomIdx);
   // The second half of the as-found gate, under the cameras because that is the pass it is
   // about. The app cannot count drawers, so this is a person's word with their name on it.
   h += _roomFoundDoneHtml(jobId, roomIdx, decedent);
@@ -39906,7 +40343,8 @@ function loadJobPlanTab() {
   loadPhotoRefs(jobId);
   // ...and pull anything another device captured, redrawing once it lands. The local
   // copy renders immediately either way, so this never blocks the plan appearing.
-  refreshPhotoRefs(jobId, function(changed){ if (changed) loadJobPlanTab(); });
+  // P24: the first read of the sheet also lets the walkthrough's collections join the inventory (they are briefed in rooms).
+  refreshPhotoRefs(jobId, function(changed){ if (collectionLinesEnsure(jobId) || changed) loadJobPlanTab(); });
 
   // Home Prep for Sale gets a stripped-down plan: no PS crew, room phases, or end-of-job
   // logistics — just vendor sourcing, budget, and a coordination checklist.
@@ -44924,17 +45362,24 @@ function renderJobPlan(jobId, job, est) {
   // But nothing said so anywhere: a job with three vehicles on the estimate showed no
   // items here and no items on the Inventory tab, with no hint that anything was
   // pending. Reported from a real job on 2026-08-24.
-  var _pend = (typeof _importableFromEstimate === 'function') ? _importableFromEstimate(jobId) : { collections: [], vehicles: [] };
-  var _nPend = _pend.collections.length + _pend.vehicles.length;
+  // ⚠ P24: VEHICLES ONLY. A collection joins the inventory by itself (collectionLinesEnsure) and what it can still lack is
+  // its photograph, which the banner below names.
+  var _pend = (typeof _importableFromEstimate === 'function') ? _importableFromEstimate(jobId) : { vehicles: [] };
+  var _nPend = _pend.vehicles.length;
   var _pendBanner = _nPend ? '<div class="alert a-info" style="margin-bottom:12px;font-size:12.5px;line-height:1.5;">'
-      + '&#128230; <strong>' + _nPend + ' item' + (_nPend > 1 ? 's' : '') + ' from the estimate walkthrough '
+      + '&#128230; <strong>' + _nPend + ' vehicle' + (_nPend > 1 ? 's' : '') + ' from the estimate walkthrough '
       + (_nPend > 1 ? 'are' : 'is') + ' not in the inventory yet</strong> &mdash; '
-      + [_pend.collections.length ? _pend.collections.length + ' collection' + (_pend.collections.length > 1 ? 's' : '') : '',
-         _pend.vehicles.length ? _pend.vehicles.length + ' vehicle' + (_pend.vehicles.length > 1 ? 's' : '') : ''].filter(Boolean).join(' and ')
-      + '. They are added deliberately rather than automatically, because the job decides the disposition, not the estimate. '
+      + (_nPend > 1 ? 'they are' : 'it is') + ' added deliberately rather than automatically, because the job decides the disposition, not the estimate. '
       // ⚠ THE TAB IS "Job Admin & Inv" (P16): there has been no tab called Inventory since the desk was
       // renamed, and the panel sits below the inventory there.
-      + 'Bring them in on the <strong>Job Admin &amp; Inv</strong> tab, under <strong>From the Estimate Walkthrough</strong>.</div>' : '';
+      + 'Bring ' + (_nPend > 1 ? 'them' : 'it') + ' in on the <strong>Job Admin &amp; Inv</strong> tab, under <strong>From the Estimate Walkthrough</strong>.</div>' : '';
+  var _cw = (typeof collectionsAwaitingPhoto === 'function') ? collectionsAwaitingPhoto(jobId) : [];
+  var _collBanner = _cw.length ? '<div class="alert a-info plan-coll-banner" style="margin-bottom:12px;font-size:12.5px;line-height:1.5;">'
+      + '&#128247; <strong>' + _cw.length + ' collection' + (_cw.length > 1 ? 's' : '') + ' from the walkthrough '
+      + (_cw.length > 1 ? 'are' : 'is') + ' not photographed yet</strong>: '
+      + esc(_cw.map(function(c){ return c.name || 'Collection'; }).join(', ')) + '. '
+      + 'Under <strong>In the house</strong>, open the room ' + (_cw.length > 1 ? 'each is' : 'it is')
+      + ' in and tap it beside the cameras: the photograph goes on its line.</div>' : '';
 
   // ── The job, top to bottom, OPEN (2026-09-20). The two tools fold above it; nothing below
   // does. `cur` is the stage the job is in and each card's node reads done / NOW / ahead off it.
@@ -44947,7 +45392,7 @@ function renderJobPlan(jobId, job, est) {
     + planStageCard('p4', 'Close-out', p4, planStageMeta(jobId, job, est, 'p4', ctx), planStageState('p4', cur))
     + '</div>';
 
-  return _midBanner + _pendBanner + gates +
+  return _midBanner + _pendBanner + _collBanner + gates +
     planPhaseWrap('vendors', 'Vendors &amp; partners', vendorsBody, vendorsMeta) +
     planPhaseWrap('hours', 'Hours &amp; daily close', hoursBody, planHoursMetaHtml(jobId, job, est)) +
     flow;

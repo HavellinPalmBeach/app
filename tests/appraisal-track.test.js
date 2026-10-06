@@ -180,7 +180,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const s = sandbox({
       fns: ['_fieldCamPaint', '_getPhotoRef', 'fieldCamSetDisp', 'fieldCamToggleAppr', 'fieldCamToggleDetail',
-            'fieldDispChips', '_jobHasDestination', '_invJob'],
+            'fieldDispChips', '_jobHasDestination', '_invJob', 'collectionLinesUnshot', 'collectionLineUnshot', '_invHasPhoto', '_jobInvRefs'],
       vars: ['_fieldCam', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'FIELD_CAM_MODES'],
       stubs: { document: dom, _photoRefs: { 1: [] } },
     });
@@ -323,21 +323,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // fall through every regex to General/Household, which is NOT intrinsic. So the automatic
     // rule never fired, the bridge set no flag, and the line sat in Hold — an explicit written
     // instruction to appraise, parked where nobody looks, reported on no document.
+    // P24: the collection joins the inventory by itself (collectionLinesEnsure), and the bridge it crosses is the same.
     const pushed = [];
     const s = sandbox({
-      fns: ['materializeCollection', '_collDispToInv', '_collDispNeedsAppr', '_guessCategory',
-            '_numOrBlank', '_importedSourceSet', '_jobInvRefs'],
+      fns: ['collectionLinesEnsure', '_collLinesOf', 'collectionLineId', '_collDispToInv', '_collDispNeedsAppr',
+            '_guessCategory', '_numOrBlank', '_invJob'],
+      vars: ['COLL_LINE_WEAK_STAMP'],
       stubs: {
-        jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] },
+        jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] }, isJobWon: () => true,
+        SHEETS_SYNC_URL: '', _invCloudSeen: {},
         estimateStore: { 1: { estimate: { collections: [
           { id: 'c1', name: 'Asian ceramics', disp: 'appraise', value: '' },
         ] } } },
-        document: { getElementById: () => null },
         _pushInvLine: (j, line) => pushed.push(line),
-        savePhotoRefs: () => {}, renderInventoryTab: () => {}, _scheduleInventorySync: () => {},
+        savePhotoRefs: () => {}, _scheduleInventorySync: () => {},
       },
     });
-    s.materializeCollection(1, 'c1');
+    eq(s.collectionLinesEnsure(1), 1, 'the walkthrough’s collection joins the inventory by itself');
 
     eq(pushed.length, 1, 'the collection lands as one lot line');
     eq(pushed[0].category, 'General/Household',
@@ -355,27 +357,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ and the category alone would NOT have found it — the measurement, not the argument');
   }
 
-  group('an itemised import carries the flag onto every line, not just the first');
+  group('every piece split off a collection’s line carries the flag, not just the first (P24)');
   {
-    const pushed = [];
+    // The itemised import's guarantee, kept where pieces are now made: a collection photographed whole and split at the
+    // desk (or by Agent One) into its pieces. A per-item worklist that covers one of three is worse than none.
+    const line = { stableId: 'c2line', label: 'inventory', roomIdx: 2, seq: 1, ts: 5, filename: 'x.jpg',
+                   driveFileUrl: 'https://drive.google.com/file/d/FID/view', driveFileId: 'FID', status: 'uploaded',
+                   objectName: 'Porcelain figures', category: 'General/Household', needsAppr: true, sourceCollId: 'c2' };
     const s = sandbox({
-      fns: ['materializeCollection', '_collDispToInv', '_collDispNeedsAppr', '_guessCategory',
-            '_numOrBlank', '_importedSourceSet', '_jobInvRefs'],
+      fns: ['invSplitItemN', 'collectionPieceOf', 'collectionOf', '_collDispToInv', '_collDispNeedsAppr',
+            '_getPhotoRef', '_setPhotoRef', '_invPhotoSource', '_invFileId', '_photoUid'],
+      vars: ['INV_SPLIT_MAX', 'INV_DEFAULT_CATEGORY', '_photoUidSeq'],
       stubs: {
-        jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] },
-        estimateStore: { 1: { estimate: { collections: [
-          { id: 'c2', name: 'Porcelain figures', disp: 'appraise', value: '' },
-        ] } } },
-        document: { getElementById: (id) => (id === 'imp-mode-c2' ? { value: 'itemize' }
-                                           : id === 'imp-qty-c2' ? { value: '3' } : null) },
-        _pushInvLine: (j, line) => pushed.push(line),
-        savePhotoRefs: () => {}, renderInventoryTab: () => {}, _scheduleInventorySync: () => {},
+        _photoRefs: { 1: [line] },
+        estimateStore: { 1: { estimate: { collections: [{ id: 'c2', name: 'Porcelain figures', disp: 'appraise' }] } } },
+        _invTouch: (r) => r, savePhotoRefs: () => {}, _scheduleInventorySync: () => {},
       },
     });
-    s.materializeCollection(1, 'c2');
-    eq(pushed.length, 3, 'three lines');
-    eq(pushed.filter((l) => l.needsAppr === true).length, 3,
-       '⚠ all three — a per-item worklist that covers one of three is worse than none');
+    const made = s.invSplitItemN(1, 'c2line', 2);
+    eq(Array.isArray(made) ? made.length : made, 2, 'two more pieces off the one photograph');
+    eq(made.filter((l) => l.needsAppr === true).length, 2,
+       '⚠ both carry the instruction to appraise — a per-item worklist that covers one of three is worse than none');
+    eq(made.map((l) => String(l.sourceCollId)), ['c2', 'c2'], 'and both stay the collection’s');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -533,7 +536,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ];
     const s = sandbox({
       fns: APPR_FNS.concat(['_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
-                            '_apprEstimateFlags', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
+                            '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
@@ -562,7 +565,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const s = sandbox({
       fns: APPR_FNS.concat(['_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
-                            '_apprEstimateFlags', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
+                            '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',

@@ -11,7 +11,7 @@ const FNS = ['_invScheduleSection', 'invValBasisWord', '_invTrackDefault',
   'printEstateInventoryReport', 'printCourtInventory', '_avUnreviewedStamp', 'printContentsList', 'contentsList',
   'printContentsRecord', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  '_clFlags', '_renderInvWorkbar', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
+  '_clFlags', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms', '_invFileId',
   '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull', '_invDocHead', '_invDocName',
   '_invPrintThumb', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
@@ -37,7 +37,7 @@ const FNS = ['_invScheduleSection', 'invValBasisWord', '_invTrackDefault',
   '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf'
 ];
 const VARS = [
-  '_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 
+  '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'SVC_ORDER', 'SVC_LABELS', 'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_CATEGORIES', 'INV_TAXONOMY', 'MAIV_BY_CATEGORY',

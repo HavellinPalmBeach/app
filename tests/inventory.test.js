@@ -452,7 +452,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('appraisal worklist: the permanent item number, not the row position');
   {
     const WL_FNS = INV_FNS.concat([
-      '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags',
+      '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob',
       // P16: the gate reads the dealer route, and the flags count only what the import panel still offers.
       'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', 'invChannelLeftover', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
@@ -743,11 +743,39 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        + 'where reading _photoRefs directly locked it out forever');
 
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
-    ['materializeVehicle', 'materializeCollection'].forEach((name) => {
+    ['materializeVehicle'].forEach((name) => {
       const at = src.indexOf('function ' + name + '(');
       const body = src.slice(at, src.indexOf('\nfunction ', at + 10));
       has(body, '_importedSourceSet(jobId)', name + ' refuses a second import of the same line');
     });
+  }
+
+  group('a walkthrough collection joins the inventory once, by itself, and a removed one stays removed (P24)');
+  {
+    // ⚠ The collection's line is made by itself under a stableId the collection decides, so a second call, a second
+    // device or a reload never makes a second line; and once a person has taken it off, it is never made again.
+    const lines = [];
+    const c = sandbox({
+      fns: ['collectionLinesEnsure', '_collLinesOf', 'collectionLineId', '_collDispToInv', '_collDispNeedsAppr',
+            '_guessCategory', '_numOrBlank', '_invJob', '_pushInvLine', '_setPhotoRef'],
+      vars: ['COLL_LINE_WEAK_STAMP', 'INV_DEFAULT_CATEGORY'],
+      stubs: {
+        jobs: [{ id: 3, svc: 'cleanout' }], isJobWon: () => true, SHEETS_SYNC_URL: 'https://x', _invCloudSeen: { 3: true },
+        _photoRefs: { 3: lines },
+        estimateStore: { 3: { estimate: { collections: [{ id: 1700000000000, name: 'Coin collection', disp: 'appraise', qty: '200', value: '5000' }] } } },
+        savePhotoRefs() {}, _scheduleInventorySync() {},
+      },
+    });
+    eq(c.collectionLinesEnsure(3), 1, 'the first call makes the line');
+    eq(c.collectionLinesEnsure(3), 0, 'a second call makes nothing');
+    const L = c._photoRefs[3][0];
+    eq([L.stableId, L.objectName, L.qty, L.needsAppr, L.manual, L.updatedAt],
+       ['3_col1700000000000', 'Coin collection', '200', true, true, 1],
+       'one lot line under the collection’s own id, the walkthrough’s count and instruction, the weakest clock');
+    L.deletedAt = 5;
+    eq(c.collectionLinesEnsure(3), 0, '⚠ a line a person took off is never made again');
+    c._invCloudSeen[3] = false; c._photoRefs[3] = [];
+    eq(c.collectionLinesEnsure(3), 0, '⚠ and nothing is made before this device has read the job from the sheet');
   }
 
   group('the column switcher is gone — the groups are the item panel now');

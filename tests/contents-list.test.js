@@ -23,7 +23,7 @@ const FNS = ['matterDef', 'matterTypeOf', 'invProbateRows', '_invTrackDefault', 
   'resolveValBasis',
 ];
 const VARS = ['MATTER_TYPES',  'INV_CONTRACT_DOCS',
-  '_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 
+  '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
   'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_CATEGORIES', 'INV_TAXONOMY',
@@ -485,7 +485,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // contains every string a source check would look for. This drives the real workbar.
     const BAR = FNS.concat([
       'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-      '_renderInvWorkbar', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
+      '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
       'printEstateInventoryReport', '_avUnreviewedStamp', 'printContentsRecord', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
       'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval',
