@@ -493,6 +493,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(v.lbl, 'Certification of Trust', 'and back again, live');
   });
 
+  G('P22 · intake refuses the representative as their own co-representative, by name', () => {
+    const r = intakeRig();
+    r.c.addCoFiduciaryRow('i');
+    r.d.getElementById('i-cofid-0-name').value = 'rex hale';
+    r.d.getElementById('i-cofid-0-role').value = 'Co-Trustee';
+    r.c.saveIntake();
+    eq(r.c.jobs.length, 0, '⚠⚠ refused: nothing is written');
+    eq((r.said.fb[0] || {}).m, 'rex hale is the representative on this estate, so cannot also be a co-representative: take that row off with ✕ Remove.', 'named, as typed');
+    r.d.getElementById('i-cofid-0-name').value = 'Daniel Adler';
+    r.said.fb.length = 0;
+    r.c.saveIntake();
+    eq(((r.c.jobs[0] || {}).coFiduciaries || []).map((c) => [c.name, c.role]), [['Daniel Adler', 'Co-Trustee']], 'anyone else is saved');
+  });
+
   G('A4 · A5 · A6 · intake saves the trust, the sale answer and every co-representative', () => {
     const r = intakeRig();
     r.c.buildCoFiduciaryBlock();

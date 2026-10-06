@@ -271,6 +271,7 @@ input:checked+.slider:before{transform:translateX(18px);}
 .dash-id-who{display:flex;align-items:center;gap:12px;min-width:0;flex:1 1 260px;}
 .dash-avatar{flex:0 0 38px;height:38px;border-radius:50%;background:var(--tan);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--bronze);}
 .dash-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:flex-end;min-width:0;}
+.dash-chip-fixes{margin-top:8px;font-size:11px;line-height:1.5;color:#A32D2D;min-width:0;overflow-wrap:anywhere;}
 /* A hard date the reader must not miss. A class rather than an inline span so the probate
    card's court-deadline cell can share it. */
 .dfv-alert{color:#A32D2D;font-weight:600;}
@@ -1182,6 +1183,8 @@ body.field-mode #est-summary-col,
    name now rather than inheriting it from the old Property Specialists column. */
 body.field-mode #crew-size-wrap,
 body.field-mode #est-crew-col{display:none!important;}
+/* The Probate flag's field-mode copy, beside the service picker (P22); on a desk it is under the total. */
+body:not(.field-mode) #e-svc-flag-field{display:none!important;}
 /* The two-column grids collapse to one so the capture cards run full width. */
 body.field-mode #est-job-grid,
 body.field-mode #est-main-grid{grid-template-columns:1fr!important;}
@@ -1855,6 +1858,9 @@ body.no-smf .smf-col{display:none;}
           <span class="lbl-hint">what the walkthrough found, not what the phone call said</span></label>
         <select id="e-svc" onchange="changeEstimateService()"><option value="">&mdash;</option></select>
         <div id="e-svc-note" style="font-size:10px;color:var(--gray);margin-top:3px;"></div>
+        <!-- The Probate flag beside the picker it suggests, in field mode only (P22): its desk slot, #e-svc-flag, is under
+             the total in #est-summary-col, which field mode hides. Painted by calcAll with the same words. -->
+        <div id="e-svc-flag-field"></div>
         <!-- "Target start date", matching what Client Intake calls the same field. It read
              "Start date" here, which sounded like a commitment rather than the target the
              intake form actually captured. -->
@@ -2153,7 +2159,7 @@ body.no-smf .smf-col{display:none;}
       <div class="card" id="est-declutter-card" style="margin-top:1rem;display:none;">
         <div class="sec">Pre-Prep Declutter — Concierge Hours</div>
         <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Hands-on decluttering by the concierge while the trades work around them &mdash; clearing the rooms a buyer will see. Billed hourly at the Transition Concierge rate, <strong>on top of</strong> the Home Sale Preparation Fee. Leave at 0 if the house only needs the vendors.</div>
-        <label>Concierge hours <span class="lbl-hint">whole hours: estimate what it takes; 0 if none</span></label>
+        <label>Concierge hours <span class="lbl-hint">whole hours, at most 40: estimate what it takes; 0 if none</span></label>
         <input type="number" id="e-declutter-hrs" min="0" max="40" step="1" value="0" placeholder="0" oninput="calcAll()">
         <div id="e-declutter-hint" style="font-size:11px;color:var(--gray);margin-top:6px;"></div>
       </div>
@@ -3568,7 +3574,7 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;">Referral Partners</div>
-        <div class="vdir-blurb" style="font-size:11px;color:var(--gray);margin-top:2px;max-width:680px;">Build and work your referral network — estate attorneys, realtors, trust officers. Move each partner through the outreach lifecycle (Identified &rarr; Contacted &rarr; Intro Meeting &rarr; Active Partner), log outreach, and add new partners. Link a partner to a job at intake so referrals are tracked.</div>
+        <div class="vdir-blurb" style="font-size:11px;color:var(--gray);margin-top:2px;max-width:680px;">Build and work your referral network — estate attorneys, realtors, trust officers. Move each partner through the outreach lifecycle (Identified &rarr; Contacted &rarr; Intro Meeting &rarr; Active Partner), log outreach, and add new partners. Link a partner to a job at intake or on Edit Client so referrals are tracked.</div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn-s" onclick="loadReferralDirectory()">&#8635; Reload</button>
@@ -4825,7 +4831,9 @@ function _docScopeIntakeNote(job, active) {
   var seeded = docTierScope(t);
   if (seeded === active) return '';
   var a = docScopeDef(active);
-  return 'Intake recorded ' + docTierDef(t).label.split(' \u2014 ')[0]
+  // "The client record", not "Intake recorded" (P22): the tier is set at intake or on Edit Client, and this read
+  // "Intake recorded …" over a tier somebody had changed on Edit Client since.
+  return 'The client record\u2019s documentation tier is ' + docTierDef(t).label.split(' \u2014 ')[0]
        + '; this estimate is priced at ' + (a ? a.label.split(' \u2014 ')[0] : active) + '.';
 }
 function setEstimateDocScope(key) {
@@ -5029,11 +5037,16 @@ var STEP_LABELS_COORD = {
 // Render a set of {label, hrs} parts as one "A 12.0 · B 8.5" line, largest first, with
 // anything below the threshold dropped so a long tail of 0.1s doesn't bury the real work.
 // Parts are pre-scaled by the caller; this only formats.
+// ⚠ THE PARTS UNDER HALF AN HOUR ARE SUMMED AS "other", NEVER DROPPED (P22): dropped, the line no longer added up to the
+// billed figure _scaleHoursParts had just made it add up to.
 function _hoursPartsLine(parts, minHrs) {
   var min = minHrs === undefined ? 0.5 : minHrs;
+  var other = Math.round(parts.filter(function(p){ return !(p.hrs >= min); })
+                              .reduce(function(a,p){ return a + p.hrs; }, 0) * 10) / 10;
   return parts.filter(function(p){ return p.hrs >= min; })
               .sort(function(a,b){ return b.hrs - a.hrs; })
               .map(function(p){ return p.label + ' ' + p.hrs.toFixed(1); })
+              .concat(other > 0 ? ['other ' + other.toFixed(1)] : [])
               .join(' &middot; ');
 }
 
@@ -5639,6 +5652,23 @@ function paintEstimateService(svc, job, pricedAs) {
     var _stamp = _svcChangeStampHtml(job, svc);
     note.innerHTML = _drift + (_drift && _stamp ? '<br>' : '') + _stamp;
   }
+}
+
+// ⚠ THE BUILD OPEN ON BUILD ESTIMATE FOLLOWS THE JOB'S SERVICE (P22). Edit Client can switch the service (within its family,
+// while the price is not held), and the screen kept pricing the old one: openEstimateScreen's resume never repainted
+// #e-svc, and saveClientEdit re-ran calcAll without it, so Save Estimate there saved the old `svc`. Repaints the picker to
+// the job's service, naming the service the saved copy was priced as (paintEstimateService's note), and reprices.
+// Returns true when it moved anything. Read by both; a no-op on a build bound to another client.
+function followJobService(job) {
+  var sel = document.getElementById('e-svc');
+  var eJob = document.getElementById('e-job');
+  if (!job || !sel || !eJob || (parseInt(eJob.value, 10) || 0) !== job.id) return false;
+  var svc = job.svc || '';
+  if (!svc || sel.value === svc) return false;
+  var rec = (typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null;
+  paintEstimateService(svc, job, (rec && rec.estimate && rec.estimate.svc) || sel.value || '');
+  svcTypeChanged();
+  return true;
 }
 
 // A reclassification is a fact about the job worth keeping: the client was told one thing
@@ -6570,8 +6600,17 @@ function jobOnProbateTrack(job, svcKey) {
 // shows it, because the save requires the case number there and a required field must never be hidden;
 // any estate whose matter is administered through probate shows it too, which is the half that was
 // missing. Read by Client Intake, Edit Client (render, mid-edit toggle and save) alike.
+// ⚠ THE TRACK, NOT THE SERVICE (P22): a Probate or Contested Probate service on a matter answered Trust or Neither is off
+// the probate track (probateSvcOffTrack, P20), and was still shown — and required — a case number and the attorney of
+// record for a court it does not have. On the track (an unanswered matter on a Probate service included) nothing moved.
 function courtRecordShown(svc, matter) {
-  return svc === 'probate' || svc === 'contested_probate' || jobOnProbateTrack({ svc: svc, matterType: matter });
+  return jobOnProbateTrack({ svc: svc, matterType: matter });
+}
+// Where the court record and the estate attorney are REQUIRED: a Probate or Contested Probate service on the probate
+// track. One rule, read by clientMissingFields (both saves), intake's and Edit Client's required marks and the attorney
+// block's note. Off the track the attorney is offered, as on an Estate Settlement (the trustee's attorney, on a trust).
+function courtRecordRequired(svc, matter) {
+  return (svc === 'probate' || svc === 'contested_probate') && courtRecordShown(svc, matter);
 }
 // ⚠ WHERE THE TRUST ITSELF IS RECORDED (P19, 2026-10-03): its name, the date of the instrument and the day the successor
 // trustee accepted (job.trustName, trustDate, trusteeAcceptedOn), asked wherever the matter holds a trust — Trust, and
@@ -6698,6 +6737,9 @@ function jobFiduciaries(job) {
   if (rep) out.push({ id: 'rep', name: rep, role: job.executorRole || '', phone: job.executorPhone || '', email: job.executorEmail || '', primary: true });
   jobListEntries(job, 'coFiduciaries').forEach(function (c) {
     var n = String(c.name || '').trim();
+    // One person, one fiduciary (P22): an entry naming the representative is not a second signer, approver or envelope
+    // recipient. Both saves refuse a new one by name (coFiduciaryRepRefusal); an older one is skipped here and named.
+    if (rep && samePerson(n, rep)) return;
     if (n) out.push({ id: String(c.id), name: n, role: c.role || '', phone: c.phone || '', email: c.email || '', primary: false });
   });
   return out;
@@ -7376,8 +7418,10 @@ function calcAll() {
   // The service this screen prices, on the job's matter (P20, Q26): a Probate service with no court is flagged beside the
   // summary until the estimate is approved, by the store's record or this screen's own state, whichever says more.
   var _psRec = (_ejob && estimateStore[_ejob.id]) || {};
-  paintProbateSvcFlag('e-svc-flag', _ejob ? probateSvcFlag(Object.assign({}, _ejob, { svc: svcKey }),
-    { approved: !!(_psRec.approved || estimateApproved), submitted: !!(_psRec.submitted || estimateSubmitted) }) : '');
+  var _psFlag = _ejob ? probateSvcFlag(Object.assign({}, _ejob, { svc: svcKey }),
+    { approved: !!(_psRec.approved || estimateApproved), submitted: !!(_psRec.submitted || estimateSubmitted) }) : '';
+  paintProbateSvcFlag('e-svc-flag', _psFlag);
+  paintProbateSvcFlag('e-svc-flag-field', _psFlag);   // field mode's copy, beside the picker (P22)
   if (isPrep) eng = {totTC:0, totPS:0, roomTC:0, roomPS:0, load:0, days:0, perRoom:[], volFactor:1, cpxFactor:1};
   // Under the working-supervisor model these two are NOT the billed TC/PS figures.
   // baseTCHrs = off-site coordination; basePSHrs = the hands-on work pool (W).
@@ -9089,15 +9133,30 @@ function getDeclutterTCHrs() {
 function declutterHoursFlag() {
   var el = document.getElementById('e-declutter-hrs');
   var v = el ? parseFloat(el.value) : NaN;
-  if (!isFinite(v) || v <= 0 || v > DECLUTTER_MAX_HRS) return '';
+  if (!isFinite(v) || v <= 0) return '';
+  // Above the cap the box is priced at the cap, and the hint says so (P22: it said nothing, and the figure under it was
+  // the cap's).
+  if (v > DECLUTTER_MAX_HRS) return 'The declutter box takes at most ' + DECLUTTER_MAX_HRS + ' hours: ' + esc(String(el.value)) + ' is priced as ' + DECLUTTER_MAX_HRS + '.';
   var priced = roundUpHours(v);   // the figure getDeclutterTCHrs prices and the snapshot keeps
   return priced === v ? '' : 'Estimates round up to whole hours: ' + esc(String(el.value)) + ' is priced as ' + priced + '.';
 }
 // Does this estimate bill declutter hours? Reads the SNAPSHOT, so every client document and the
 // Job Plan can ask the question about a saved estimate rather than about the live form.
-function estDeclutterHrs(e) {
+// The figure the box saved, as typed (since P18 the whole hour it bills). Read by the internal worksheet alone, which
+// states it beside the hours billed where the two differ; everything else reads estDeclutterHrs below.
+function estDeclutterHrsQuoted(e) {
   var h = e && e.declutterTCHrs;
   return (typeof h === 'number' && isFinite(h) && h > 0) ? h : 0;
+}
+// ⚠ THE HOURS THE ESTIMATE BILLS, NOT THE FIGURE TYPED (P22). A prep snapshot's totTC IS its billed declutter hours
+// (labourBilled bills nothing else on prep), so a record saved before P17, whose box kept 5.5 and whose total billed 6
+// (labourBilled's Math.ceil then), prints 6.0 hrs × $150 = $900 above the $900 it counts — and a P17 record, billed at the
+// quarter, prints what it billed too. A record with no totTC falls back to the field as saved.
+function estDeclutterHrs(e) {
+  var h = e && e.declutterTCHrs;
+  if (!(typeof h === 'number' && isFinite(h) && h > 0)) return 0;
+  var b = e.totTC;
+  return (e.svc === 'prep' && typeof b === 'number' && isFinite(b) && b > 0) ? b : h;
 }
 
 // ─── THE VENDOR FIGURES ARE GOOD FAITH, AND THE DOCUMENT HAS TO SAY SO ─────────
@@ -9384,12 +9443,14 @@ function toggleIntakeFields() {
   // attorney of record to name. saveIntake enforces exactly that split; these marks say so
   // rather than asserting five required fields the save will happily accept blank. Matched by
   // CLASS, not by an id list, so a sixth attorney field cannot be added and quietly missed.
+  // On the probate track only (courtRecordRequired, P22): the rule clientMissingFields asks.
+  var _attyReq = courtRecordRequired(svc, _mtI);
   var attyNote = document.getElementById('i-atty-req-note');
-  if (attyNote) attyNote.textContent = isProbate
+  if (attyNote) attyNote.textContent = _attyReq
     ? '(all fields required)'
     : '(if there is one — many estate settlements never open probate)';
   document.querySelectorAll('.req-probate').forEach(function(el){
-    el.style.display = isProbate ? 'inline' : 'none';
+    el.style.display = _attyReq ? 'inline' : 'none';
   });
   // Home Prep for Sale: nothing leaves the house, so there is nothing to find and no
   // contents to tick. The SAFETY question stays — vendors still walk in, and the prep Job
@@ -9493,7 +9554,7 @@ function clientMissingFields(d) {
         m.push('Co-representative ' + (i + 1) + '’s name');
     });
   }
-  if (d.svc === 'probate' || d.svc === 'contested_probate') {
+  if (courtRecordRequired(d.svc, t('matterType'))) {
     if (!t('probateCase'))      m.push('Probate case number');
     if (!t('probateAttyFname')) m.push('Attorney first name');
     if (!t('probateAttyLname')) m.push('Attorney last name');
@@ -9558,6 +9619,9 @@ function saveIntake() {
     showFB('i-fb','warn','Please complete: ' + missing.join(', ') + '.');
     return;
   }
+  // The representative is not their own co-representative (P22), named.
+  var _coClashI = _coForm ? coFiduciaryRepRefusal(_coForm.rows, (_iv('i-executor-fname') + ' ' + _iv('i-executor-lname')).trim()) : '';
+  if (_coClashI) { showFB('i-fb', 'warn', esc(_coClashI)); return; }
   var svcLabels = SVC_LABELS;
   var _ref = readReferralInputs('i');
   var job = {
@@ -10028,6 +10092,24 @@ function executorRoleOptionsHtml(selected) {
   EXECUTOR_ROLES.forEach(function (r) { if (r.v === 'Other') out += o(r); });
   return out;
 }
+// ⚠ A CO-REPRESENTATIVE'S ROLE IS A FIDUCIARY'S (P22). The rows used executorRoleOptionsHtml, which offers Estate Attorney
+// and Family Member (not fiduciary roles) and no co-trustee. Their own catalogue: a co-personal representative (Florida's
+// word for a co-executor) or a co-trustee, and Other; a value recorded before is kept, shown "(as recorded)", as every
+// picker here does. /trustee/i (scheduleSigners) reads Co-Trustee as a trustee.
+var CO_FIDUCIARY_ROLES = [
+  { v: 'Co-Personal Representative', l: 'Co-Personal Representative' },
+  { v: 'Co-Trustee',                 l: 'Co-Trustee' },
+  { v: 'Other',                      l: 'Other' }
+];
+function coFiduciaryRoleOptionsHtml(selected) {
+  var sel = selected || '';
+  var out = '<option value="">Select role</option>';
+  if (sel && !CO_FIDUCIARY_ROLES.some(function (r) { return r.v === sel; }))
+    out += '<option value="' + esc(sel) + '" selected>' + esc(sel) + ' (as recorded)</option>';
+  return out + CO_FIDUCIARY_ROLES.map(function (r) {
+    return '<option value="' + esc(r.v) + '"' + (r.v === sel ? ' selected' : '') + '>' + esc(r.l) + '</option>';
+  }).join('');
+}
 function buildExecutorRoleOptions() {
   var el = document.getElementById('i-executor-role');
   if (el) el.innerHTML = executorRoleOptionsHtml('');
@@ -10054,7 +10136,7 @@ function executorAuthField(svc, matter) {
 //                     number is never reused; `data-removed` the ids of recorded co-representatives taken off with ✕
 //                     (asked first, recorded by the save, so Cancel keeps them)
 //   `<p>-cofid-<n>`   one row; `data-id` is the entry's id where the row was drawn from the record
-//   `<p>-cofid-<n>-name|role|phone|email`  its controls; the role picker is executorRoleOptionsHtml, the one role list
+//   `<p>-cofid-<n>-name|role|phone|email`  its controls; the role picker is coFiduciaryRoleOptionsHtml (P22)
 // Never on a living job: both forms draw it inside the estate block, and both saves read it on an estate only. A row with
 // nothing typed is no one; anything typed needs a name (clientMissingFields, the one required-field rule).
 function _coFidRowHtml(p, n, rec) {
@@ -10071,7 +10153,7 @@ function _coFidRowHtml(p, n, rec) {
     + ' style="border:0.5px solid var(--border);border-radius:5px;padding:8px 10px;margin-bottom:8px;">'
     + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:6px 14px;">'
     + '<div style="min-width:0;">' + lbl('Name', 'name', true) + '<input type="text" id="' + id('name') + '" value="' + esc(rec.name || '') + '" placeholder="Full name"' + st + '></div>'
-    + '<div style="min-width:0;">' + lbl('Role', 'role') + '<select id="' + id('role') + '"' + st + '>' + executorRoleOptionsHtml(rec.role || '') + '</select></div>'
+    + '<div style="min-width:0;">' + lbl('Role', 'role') + '<select id="' + id('role') + '"' + st + '>' + coFiduciaryRoleOptionsHtml(rec.role || '') + '</select></div>'
     + '<div style="min-width:0;">' + lbl('Phone', 'phone') + '<input type="tel" id="' + id('phone') + '" value="' + esc(rec.phone || '') + '" oninput="formatPhone(this)" maxlength="14"' + st + '></div>'
     + '<div style="min-width:0;">' + lbl('Email', 'email') + '<input type="email" id="' + id('email') + '" value="' + esc(rec.email || '') + '"' + st + '></div>'
     + '</div>'
@@ -10153,12 +10235,28 @@ function readCoFiduciaryRows(p) {
 // written: a row the person did not touch is not put again, because stamping a key this device merely carried would let
 // its copy beat another device's newer edit of that co-representative. A row drawn from an entry another device has
 // since removed is left removed. Returns how many entries it wrote.
+// ⚠ THE REPRESENTATIVE RECORDED AS THEIR OWN CO-REPRESENTATIVE (P22): nothing asked, so the DocuSign envelope could carry
+// the client twice and the shared-address notice name her twice. coFiduciaryRepClash names the rows that are the
+// representative (samePerson); coFiduciaryRepRefusal is the sentence. Asked by saveIntake and saveClientEdit (a clash
+// the save would add is refused; one already on the record is named after the save), by the writer below, and
+// jobFiduciaries skips such an entry. DOM-free.
+function coFiduciaryRepClash(rows, rep) {
+  rep = String(rep == null ? '' : rep).trim();
+  if (!rep) return [];
+  return (rows || []).filter(function (r) { return r && !r.voidedAt && String(r.name || '').trim() && samePerson(String(r.name).trim(), rep); })
+    .map(function (r) { return String(r.name).trim(); });
+}
+function coFiduciaryRepRefusal(rows, rep) {
+  var c = coFiduciaryRepClash(rows, rep);
+  return c.length ? c[0] + ' is the representative on this estate, so cannot also be a co-representative: take that row off with ✕ Remove.' : '';
+}
 function saveCoFiduciaryRows(job, form) {
   if (!job || !form) return 0;
   var n = 0;
   (form.removed || []).forEach(function (id) { if (jobListRemove(job, 'coFiduciaries', id)) n++; });
   (form.rows || []).forEach(function (r) {
     if (!r.name) return;
+    if (coFiduciaryRepClash([r], job.executor).length) return;   // never written as a co-representative (P22)
     var cur = r.id ? jobListGet(job, 'coFiduciaries', r.id) : null;
     if (r.id && !cur) return;
     if (cur && String(cur.name || '') === r.name && String(cur.role || '') === r.role
@@ -11082,7 +11180,11 @@ function resetEstimate() {
 // ─── CLIENT ESTIMATE PREVIEW ──────────────────────────────────────────────────
 function fmtCEDate(d) {
   if (!d) return '—';
-  try { return new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}); } catch(e) { return d; }
+  // ⚠ toLocaleDateString DOES NOT THROW on an invalid date: it prints "Invalid Date" (P22). Anything that is not a
+  // yyyy-mm-dd read at local noon is printed as given.
+  var dt = new Date(d+'T12:00:00');
+  if (isNaN(dt.getTime())) return String(d);
+  return dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 }
 
 // 50/25/25 payment split. The final payment absorbs rounding so the three
@@ -12728,6 +12830,17 @@ function estimateContractNotice(job) {
 // follows: reaching for the `jobs` global inside would cost this function the DOM-free,
 // argument-only property every test of it depends on. A caller that omits it simply does not
 // get the contract arm, and a test pins that the one live caller passes it.
+// ⚠ APPROVAL ASKS WHAT SUBMIT ASKS ABOUT THE TIER (P22). An estimate submitted before the documentation tier changed on
+// Edit Client could be approved at the old scope: Submit refused such a draft (estimateSubmitBlocker), the PIN did not.
+// The way out is the manager's other decision: denied, it is a draft again, follows the tier when it is next opened on
+// Build Estimate (followDocTier), and is saved and submitted at the new scope. Asked by dashApproveEstimate before the
+// PIN and by checkPin, which writes the approval. '' when the tier has not moved.
+function estimateApprovalTierBlocker(est, job) {
+  if (!estimateTierMoved(est, job)) return '';
+  return 'the documentation tier on this client changed to ' + docTierWord(docTierOf(job))
+    + ' after this estimate was saved, and it is still priced at ' + docScopeWord(estimateDocScope(est)) + '. '
+    + 'Deny it: it reopens for editing, follows the new tier on Build Estimate, and is saved and submitted again.';
+}
 function estimateSubmitBlocker(est, job) {
   if (!est || est.havellinTotal === 0) return { code:'noest', msg:'No estimate to submit.' };
   var contract = estimateContractBlocker(job);
@@ -13553,6 +13666,10 @@ function checkPin() {
     var _pinContract = estimateContractBlocker(
       jobs.find(function(j){ return j.id === (currentEstimate && currentEstimate.jobId); }));
     if (_pinContract) { document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Cannot approve — ' + esc(_pinContract.msg) + '</div>'; return; }
+    // A tier changed on Edit Client after this estimate was saved (P22): Submit refuses it, and so does approval.
+    var _pinTier = estimateApprovalTierBlocker(currentEstimate,
+      jobs.find(function(j){ return j.id === (currentEstimate && currentEstimate.jobId); }));
+    if (_pinTier) { document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Cannot approve — ' + esc(_pinTier) + '</div>'; return; }
     estimateApproved = true;
     estimateSubmitted = false;
     discountRevision = false;
@@ -15619,12 +15736,14 @@ function onDepStageChange() {
       + list.map(function(p){
           var live = paymentCounts(p);
           return '<div style="font-size:11px;padding:4px 8px;background:var(--tan);border-radius:3px;margin-bottom:3px;">'
-            + (live ? '<strong>' + fmt(p.amount) + '</strong>' : '<s>' + fmt(p.amount) + '</s>') + ' · ' + esc(paymentMethodLabel(p.method))
+            // No method on a deposit migrated from before payment records: named by its inferred note below, never "· —"
+            // (P22; the dashboard's list, jobPaymentsListHtml, reads it the same way).
+            + (live ? '<strong>' + fmt(p.amount) + '</strong>' : '<s>' + fmt(p.amount) + '</s>') + (p.method ? ' · ' + esc(paymentMethodLabel(p.method)) : '')
             + (p.receivedOn ? ' · ' + esc(p.receivedOn) : '')
             + (p.payer ? ' · ' + esc(p.payer) : '')
             + (!live ? ' <span style="color:var(--err-tx);font-weight:600;">void</span>'
                : (p.clearedOn ? '' : ' <span style="color:var(--warn-tx);font-weight:600;">uncleared</span>'))
-            + (p.reconstructed ? ' <span style="color:var(--warn-tx);">(amount inferred — predates payment records)</span>' : '')
+            + (p.reconstructed ? ' · <span style="color:var(--warn-tx);">amount inferred — predates payment records</span>' : '')
             + '</div>';
         }).join('')
     : '';
@@ -16010,13 +16129,16 @@ function walkawaySettlement(job) {
   var c = roundCents;
   var received = c(jobPaidTotal(job)), refunded = c(jobRefundedTotal(job)), held = c(received - refunded);
   var out = { basis: 'unknown', received: received, refunded: refunded, held: held,
-              deposit: 0, work: 0, earned: 0, due: 0, retained: held };
+              deposit: 0, work: 0, earned: 0, due: 0, retained: held, wait: 'its estimate' };
   var rec = (typeof estimateStore !== 'undefined' && estimateStore) ? estimateStore[job.id] : null;
   var est = rec && rec.estimate;
   if (!est) return out;
   if (est.fixedPrice) { out.basis = 'fixed'; out.earned = held; return out; }
   out.basis = 'hourly';
   out.deposit = c(depositTargetFor(job) || depositPaidTotal(job));
+  // ⚠ AN UNREAD HOURS LOG IS NOT ZERO HOURS (P22): the work done is the final's sum of the hours logged, so until the log
+  // has answered (hoursLogReady) the settlement is unknown, as it is without the estimate. `wait` names what it waits on.
+  if (!hoursLogReady()) { out.basis = 'unknown'; out.wait = 'its hours log'; return out; }
   var inv = null;
   try { inv = invoiceHtml(job, 'final'); } catch (e) { inv = null; }
   if (!inv) { out.basis = 'unknown'; return out; }
@@ -16034,7 +16156,7 @@ function refundBlocker(job, s) {
   if (!job) return 'This job could not be found.';
   if (job.status !== 'closed_retained') return 'A refund is recorded once the job has been closed out with the deposit retained.';
   s = s || walkawaySettlement(job);
-  if (!s || s.basis === 'unknown') return 'What this job earned cannot be worked out on this device yet: its estimate has not loaded. Reload, then try again.';
+  if (!s || s.basis === 'unknown') return 'What this job earned cannot be worked out on this device yet: ' + ((s && s.wait) || 'its estimate') + ' has not loaded. Reload, then try again.';
   if (s.basis === 'fixed') return 'A fixed-price job keeps its stage earn-out under the agreement, so there is no refund to work out.';
   if (!(s.due > 0)) return 'Nothing is due back on this job: it holds no more than it has earned.';
   return '';
@@ -17252,8 +17374,9 @@ function jtScheduleHtml(sched) {
   if (sched.state === 'done') {
     h += I('Started ' + esc(fmtDate2(sched.actualStart || sched.start)));
     if (sched.delivered) h += I('Delivered ' + V(fmtDate2(sched.delivered)));
-    // `endVariance` is the working days the job took (P16: "1 working days" on a one-day job — pluralised now).
-    if (sched.endVariance) h += I(sched.endVariance + ' working day' + (sched.endVariance === 1 ? '' : 's') + ' against a ' + sched.days + '-day plan');
+    // `workedDays` is the working days the job took (P16: "1 working days" on a one-day job — pluralised now). It was
+    // named `endVariance`, which it never held (P22).
+    if (sched.workedDays) h += I(sched.workedDays + ' working day' + (sched.workedDays === 1 ? '' : 's') + ' against a ' + sched.days + '-day plan');
     return h + '</div>';   // flat grey, no flag: history is not an instruction
   }
 
@@ -17785,7 +17908,7 @@ function jobSchedule(job, est, todayStr, prog) {
   var S = { state:'none', why:'', today: todayStr || '', days:0, daysQuoted:false, coDays:0,
             start:'', anchor:'', anchorKind:'', halfway:'', planEnd:'', hard:'', courtDeadline:'', delivered:'', taxReturn:null,
             actualStart:'', actualStartKind:'',
-            elapsed:0, overBy:0, endVariance:0, remaining:0,
+            elapsed:0, overBy:0, workedDays:0, remaining:0,
             progress:false, workPct:0, roomsLocked:false, hoursPct:0, actHrs:0, estHrs:0,
             paceEnd:'', paceBy:0,
             fit:'', fitTxt:'', pace:'', paceTxt:'', paceFix:'' };
@@ -17847,7 +17970,7 @@ function jobSchedule(job, est, todayStr, prog) {
 
   if (job.deliveredOn) {
     S.state = 'done';
-    if (S.actualStart) S.endVariance = workingDaysInclusive(S.actualStart, job.deliveredOn);
+    if (S.actualStart) S.workedDays = workingDaysInclusive(S.actualStart, job.deliveredOn);
   } else if (job.status === 'active') {
     S.state = 'running';
     if (S.actualStart && S.today) S.elapsed = workingDaysInclusive(S.actualStart, S.today);
@@ -20016,15 +20139,32 @@ function outstandingPayments() {
       if (!st.stripe || !st.stripe.linkId) return;
       var stage = key.indexOf('invoice:') === 0 ? key.slice(8) : '';
       if (PAYMENT_STAGES.indexOf(stage) === -1) return;
-      // The deposit is in; stop asking — ⚠ unless a bank transfer recorded BY HAND on it is still waiting
+      // The stage is paid; stop asking — ⚠ unless a bank transfer recorded BY HAND on it is still waiting
       // for Stripe to confirm it (2026-09-30, P16). Recording the ACH when the client says "I've paid" funds
       // the job, and a funded deposit used to drop off here, so that payment read uncleared for good.
-      if (stage === 'deposit' && isJobFunded(j)
-          && !jobPayments(j).some(function (p) { return _handAchAwaitingStripe(p) && p.stage === 'deposit' && !p.clearedOn; })) return;
+      // ⚠ EVERY STAGE, NOT THE DEPOSIT ALONE (P22): a paid midpoint or final link was re-checked on every arrival for
+      // the life of the job. stripeStagePaid is the one answer to "is this stage paid".
+      if (stripeStagePaid(j, stage)
+          && !jobPayments(j).some(function (p) { return _handAchAwaitingStripe(p) && p.stage === stage && !p.clearedOn; })) return;
       out.push({ jobId: j.id, hvlId: j.hvlId || '', key: key, stage: stage, linkId: st.stripe.linkId });
     });
   });
   return out;
+}
+
+// Is this stage paid, so its payment link need not be watched (P22)? The deposit is funded (isJobFunded, as it always
+// was); a midpoint or final is paid when its own invoice has nothing outstanding (invoiceHtml's `outstanding`, the figure
+// the link asked for) and money has come in against that stage. Never on a guess: with no estimate on this device, an
+// invoice that cannot be priced, or nothing yet received at the stage, the answer is no and the link stays watched.
+function stripeStagePaid(job, stage) {
+  if (!job) return false;
+  if (stage === 'deposit') return isJobFunded(job);
+  if (!(stagePaidTotal(job, stage) > 0)) return false;
+  var rec = (typeof estimateStore !== 'undefined' && estimateStore) ? estimateStore[job.id] : null;
+  if (!rec || !rec.estimate) return false;
+  var inv = null;
+  try { inv = invoiceHtml(job, stage); } catch (e) { inv = null; }
+  return !!(inv && !inv.blocked && !(roundCents(inv.outstanding || 0) > 0));
 }
 
 // ⚠ SEQUENTIAL, NEVER Promise.all. Every store write takes the GLOBAL Apps Script lock, and
@@ -21718,6 +21858,9 @@ function dashSubmitEstimate(jobId) {
 
 function dashApproveEstimate(jobId) {
   if (!_primeEstimateFor(jobId)) { dashNotice('warn', 'No estimate saved for this job yet.'); _dashRedraw(jobId); return; }
+  // Said before anybody types a PIN; checkPin, which writes the approval, asks the same question (P22).
+  var _tierBlk = estimateApprovalTierBlocker(currentEstimate, jobs.find(function(j){ return j.id === jobId; }));
+  if (_tierBlk) { dashNotice('warn', 'Cannot approve — ' + _tierBlk); _dashRedraw(jobId); return; }
   openPinModal();
 }
 
@@ -22245,13 +22388,21 @@ function renderClientDashboard(jobId) {
   // `lost` or `closed_retained`, so "Agreement not signed" on one is an instruction
   // that cannot be followed, sitting beside a rail that correctly says the job is over.
   var _jtDead = (job.status === 'lost' || job.status === 'closed_retained');
+  var _chipFixes = [];
   if (blockers.length > 0 && !_jtDead && job.status !== 'active' && job.status !== 'closed') {
     blockers.forEach(function(b){
       h += '<span class="badge" style="'+_bpad+'background:#FCEBEB;color:#A32D2D;border:0.5px solid #F09595;cursor:default;" title="'+esc(b.fix)+'">&#9888; '+esc(b.short)+'</span>';
+      _chipFixes.push(b);
     });
   }
   h += '</div>';   // close chip row
   h += '</div>';   // close .dash-id
+  // ⚠ EACH CHIP'S FIX IS PRINTED UNDER THE ROW, NOT ONLY IN ITS TOOLTIP (P22). The how-to lived in `title` alone, which an
+  // iPad cannot hover, so on the device this screen is read on a red chip said what was wrong and never what to do. The
+  // lit timeline row prints its own blocker's fix; this prints every chip's, one line each, in the chip's own words.
+  if (_chipFixes.length) h += '<div class="dash-chip-fixes">' + _chipFixes.map(function(b){
+    return '<div><strong>&#9888; ' + esc(b.short) + ':</strong> ' + esc(b.fix) + '</div>';
+  }).join('') + '</div>';
 
   // ⚠ THE CLIENT DETAIL IS IN THIS CARD, NOT ITS OWN ONE BELOW THE TIMELINE. Anthony:
   // *"put the first screenshot's info under the second screenshot's info, below the Won,
@@ -22291,7 +22442,15 @@ function renderClientDashboard(jobId) {
     }
     // Every co-representative (P19, Anthony: record every co-executor and co-trustee), read through the one list.
     var _coDash = jobFiduciaries(job).filter(function(f){ return !f.primary; });
-    if (_coDash.length) h += field('Co-representatives', esc(_coDash.map(function(f){ return f.name + (f.role ? ' · ' + f.role : ''); }).join('; ')));
+    // ⚠ AN ENTRY WITH NO NAME IS NAMED HERE, AS EDIT CLIENT DRAWS IT (P22): jobFiduciaries drops it (nobody signs or
+    // approves as a blank), so the card showed nothing while Edit Client showed a row. And one naming the representative.
+    var _coAll = jobListEntries(job, 'coFiduciaries');
+    var _coNoName = _coAll.filter(function(c){ return !String(c.name || '').trim(); }).length;
+    var _coIsRep = coFiduciaryRepClash(_coAll, job.executor);
+    if (_coDash.length || _coNoName || _coIsRep.length) h += field('Co-representatives',
+      esc(_coDash.map(function(f){ return f.name + (f.role ? ' · ' + f.role : ''); }).join('; '))
+      + (_coNoName ? '<div style="color:var(--warn-tx);font-size:11px;">' + _coNoName + ' recorded with no name: name ' + (_coNoName === 1 ? 'it' : 'them') + ' or take ' + (_coNoName === 1 ? 'it' : 'them') + ' off on Edit Client.</div>' : '')
+      + (_coIsRep.length ? '<div style="color:var(--warn-tx);font-size:11px;">' + esc(coFiduciaryRepRefusal(_coAll, job.executor)).replace('take that row off with ✕ Remove', 'take that row off on Edit Client') + '</div>' : ''));
   } else {
     h += field('Phone', esc(job.phone||'—'));
     h += field('Email', '<span style="font-size:11px;">'+esc(job.email||'—')+'</span>');
@@ -23301,7 +23460,7 @@ function openCloseoutModal(id) {
             + (_st.due > 0 ? ' Record the refund on the client’s card once it has been sent.' : '')
           : (_st && _st.basis === 'unknown')
           // An unread estimate is not an answer: nothing here may say what was earned, or that nothing is owed back.
-          ? 'not as a loss. What it has earned cannot be worked out until its estimate loads on this device; the client’s card shows it, and any refund due, once it has.'
+          ? 'not as a loss. What it has earned cannot be worked out until ' + (_st.wait || 'its estimate') + ' loads on this device; the client’s card shows it, and any refund due, once it has.'
           : 'with the ' + fmt(_kept) + ' kept, not as a loss.')
       + ' The record is archived, never erased.'
     : 'Mark <strong>' + esc(j.name||'this client') + '</strong> as Lost with a reason. The record is '
@@ -23540,6 +23699,8 @@ function openEstimateScreen(jobId) {
     // A tier changed on Edit Client while the screen was put away reaches the build now — including after
     // ✎ Edit estimate, which un-approves the estimate before landing here (followDocTier, P16).
     followDocTier(jobs.find(function(j){ return j.id === jobId; }));
+    // …and a service switched there too (P22): the screen's picker is repainted to the job's service, which prices it.
+    followJobService(jobs.find(function(j){ return j.id === jobId; }));
     calcAll();
     // The lock is re-read on arrival, as the tab did: a manager may have approved (or the rail
     // un-approved) this estimate while the screen was put away.
@@ -35612,6 +35773,16 @@ function setVendorDirStatus(msg, isErr) {
 
 // ─── JOB LOG ──────────────────────────────────────────────────────────────────
 var jobLogs = {}; // keyed by job.id
+// Has the cloud hours log answered? 'loading' until loadLogData's fetch resolves, then 'ready' (the sheet's log, or no
+// sync URL, so the local cache is all there is) or 'offline' (it could not be read). The estimates and the jobs have had
+// this since the cold-cache bugs (_estStoreState, _jobsState); the log had none, so on a device whose log had not loaded
+// the work read as zero hours and the walkaway's refund due came out too large (P22). Read through hoursLogReady by the
+// one figure it decides, walkawaySettlement; _logsLanded repaints the dashboard when it lands.
+var _logsState = 'loading';
+function hoursLogReady() { return _logsState === 'ready'; }
+function _logsLanded() {
+  if (typeof _dashRedraw === 'function') { try { _asBackgroundRedraw(function () { _dashRedraw(); }); } catch (e) {} }
+}
 // ⚠⚠ NO `invApproved` / `invApprovedBy` / `invApprovedAt` HERE ANY MORE, AND THEY MUST NOT
 // COME BACK. A final's manager approval is a fact about ONE job, so it is recorded on that job
 // (`job.docState['invoice:final'].approval`) — see invFinalApproval beside checkInvPin for what
@@ -37671,9 +37842,15 @@ function loadLogData() {
         if (data && data.logs && typeof data.logs === 'object' && !data.error) {
           jobLogs = migrateRetiredNames(data.logs);   // cloud wins
           try { localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
+          _logsState = 'ready';
+        } else {
+          _logsState = 'offline';   // an answer that carried no log is not the log
         }
+        _logsLanded();
       })
-      .catch(function(){ /* offline — local cache remains the fallback */ });
+      .catch(function(){ /* offline — local cache remains the fallback */ _logsState = 'offline'; _logsLanded(); });
+  } else {
+    _logsState = 'ready';   // no sync URL configured; the local cache is all there is
   }
 }
 
@@ -37831,6 +38008,7 @@ function refreshPlanAndLogFromCloud(jobId, cb) {
         if (superseded()) return;
         jobLogs = migrateRetiredNames(data.logs);
         try { localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
+        _logsState = 'ready';   // the sheet's log is here now, whatever the first load said
       }
     })
     .catch(function(){ fail = true; })
@@ -43519,7 +43697,7 @@ function exportEstimateToDrive(jobId, estSnapshot) {
     // service, and the declutter hours are a line under it when there are any.
     var _feeOnlyWs = estimateIsFeeOnly(est, job);
     var _prepWs = (est.svc === 'prep') || _feeOnlyWs;
-    var _dcWs = estDeclutterHrs(est);
+    var _dcWs = estDeclutterHrsQuoted(est);   // the figure saved; the line says what was billed where it differs
     // Room names and notes are typed, so escaped (P16); vol and cplx are the engine's whole numbers, escaped as belt and braces.
     var rows = (est.rooms||[]).map(function(r){
       return '<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">'+esc(r.name)+'</td>'
@@ -46878,7 +47056,8 @@ function loadContractors() {
 function showEditClient(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
-  var isProbate = ecIsProbateSvc(job.svc);
+  // Required marks follow the one rule the save asks (courtRecordRequired, P22): a Probate service on the probate track.
+  var isProbate = courtRecordRequired(job.svc, matterTypeOf(job));
   var isEstate = ecIsEstateSvc(job.svc);
   var isMove = ecIsMoveSvc(job.svc);
   var svcLabels = SVC_LABELS;
@@ -46913,10 +47092,12 @@ function showEditClient(jobId) {
   }
   function txt(id, val, ph, type) {
     type = type || 'text';
-    return '<input type="'+type+'" id="ec-'+id+'" value="'+(val||'').replace(/"/g,'&quot;')+'" placeholder="'+(ph||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">';
+    // ⚠ esc(), and a number is a value (P22): this escaped `"` alone, so a stored `&amp;` saved back as `&`, and it called
+    // .replace on the raw value, so a numeric job.sqft threw and Edit Client never opened.
+    return '<input type="'+type+'" id="ec-'+id+'" value="'+esc(val == null ? '' : val)+'" placeholder="'+(ph||'')+'" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">';
   }
   function tel(id, val, ph) {
-    return '<input type="tel" id="ec-'+id+'" value="'+(val||'').replace(/"/g,'&quot;')+'" placeholder="'+(ph||'')+'" oninput="formatPhone(this)" maxlength="14" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">';
+    return '<input type="tel" id="ec-'+id+'" value="'+esc(val == null ? '' : val)+'" placeholder="'+(ph||'')+'" oninput="formatPhone(this)" maxlength="14" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">';
   }
 
   var html = '<div style="background:white;border-radius:8px;width:100%;max-width:720px;overflow:hidden;">';
@@ -47051,7 +47232,7 @@ function showEditClient(jobId) {
   html += fld('City', txt('dest-city', job.destCity, 'e.g. Boca Raton'), false);
   html += fld('New Home Sq Ft <span style="font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the estimate will not save without it)</span>', txt('dest-sqft', job.destSqft, 'e.g. 1800', 'number'), false);
   html += '</div>';
-  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Move day is priced off the <strong>new</strong> home, not the old one — the sq ft sets the supervision day and the unpack crew\'s hours. Like the other three pricing inputs it is held once the estimate is approved; raise a change order instead.</div>';
+  html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Move day is priced off the <strong>new</strong> home, not the old one — the sq ft sets the supervision day and the unpack crew\'s hours. Like the other pricing inputs it is held once the estimate goes for approval; the save says how to reprice it.</div>';
   html += '</div>'; // end move destination
 
   // ⚠⚠ THE ESTATE BLOCK COMES FIRST, AND EVERY FACT ABOUT THE DECEDENT IS IN IT — the same
@@ -47210,7 +47391,7 @@ function ecDocGateChange() {
 // render or from what the save reads.
 function ecToggleProbate() {
   var svcVal = document.getElementById('ec-svc') ? document.getElementById('ec-svc').value : '';
-  var isP = ecIsProbateSvc(svcVal);
+  var isP = courtRecordRequired(svcVal, (document.getElementById('ec-matter-type') || {}).value || '');
   var pf = document.getElementById('ec-probate-fields');
   if (pf) pf.style.display = courtRecordShown(svcVal, (document.getElementById('ec-matter-type') || {}).value || '') ? 'block' : 'none';
   var af = document.getElementById('ec-estate-auth-fields');
@@ -47317,6 +47498,15 @@ function saveClientEdit(jobId) {
     + (_blanked.some(function(m){ return m.indexOf('Co-representative') === 0; }) ? 'A co-representative needs a name; a row added by mistake comes off with its ✕ Remove. ' : '')
     + 'Nothing has been saved.'); return; }
   var _stillMissing = _missing;
+  // The representative is not their own co-representative (P22): a clash this save would add is refused by name; one
+  // already on the record is named after the save, as an older gap is.
+  var _repEc = _estateNow ? ((_v('exec-fname') || '') + ' ' + (_v('exec-lname') || '')).trim() : '';
+  var _clashNow = _coFormEc ? coFiduciaryRepClash(_coFormEc.rows, _repEc) : [];
+  var _clashBefore = coFiduciaryRepClash(jobListEntries(job, 'coFiduciaries'), job.executor);
+  if (_clashNow.some(function (n) { return !_clashBefore.some(function (b) { return samePerson(b, n); }); })) {
+    alert(coFiduciaryRepRefusal(_coFormEc.rows, _repEc) + '\n\nNothing has been saved.'); return;
+  }
+  var _clashOld = _clashNow.length ? coFiduciaryRepRefusal(_coFormEc.rows, _repEc) : '';
 
   // Pricing inputs are frozen once the estimate is approved. Service type, square
   // footage and the premium flag all feed the hours engine, so changing them here
@@ -47325,7 +47515,11 @@ function saveClientEdit(jobId) {
   // trace. Contact details stay editable throughout; only the three pricing fields
   // are held, and only once someone has approved the number.
   var _rec = (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null;
-  var _locked = !!((_rec && _rec.approved) || job.approved || job.agrSigned || job.depositReceived);
+  // ⚠ AND WHILE THE ESTIMATE IS OUT FOR APPROVAL (P22): the manager is deciding on a price these inputs make, and the
+  // estimate cannot be edited to follow them (ESTIMATE_OUT_FOR_APPROVAL_TXT), so a change here moved the job away from
+  // the figure in front of the manager.
+  var _outForAppr = estimateOutForApproval(job, _rec);
+  var _locked = !!((_rec && _rec.approved) || job.approved || job.agrSigned || job.depositReceived || _outForAppr);
   if (_locked) {
     var _changed = [];
     if (svc !== job.svc) _changed.push('Service type');
@@ -47345,7 +47539,9 @@ function saveClientEdit(jobId) {
       // estimate, after which these fields can be changed here.
       var _heldEdit = !estimateEditBlocker(job) && !estimateOutForApproval(job, _rec);
       alert(_changed.join(' and ') + ' cannot be changed on this job.\n\n'
-        + 'The estimate has been approved, so these feed a price a manager has approved, and changing them here '
+        + (_outForAppr && !(_rec && _rec.approved) && !job.approved
+          ? 'The estimate is out for manager approval, so these feed the price a manager is deciding on, and changing them here '
+          : 'The estimate has been approved, so these feed a price a manager has approved, and changing them here ')
         + 'would move the job away from it behind the record. ' + estimateRepriceRoute(job, _rec)
         + (_heldEdit ? ' Then change them here.' : '')
         + '\n\nEverything else you edited will still be saved.');
@@ -47524,10 +47720,10 @@ function saveClientEdit(jobId) {
   var _tierNote = (isEstateEdit && docTierOf(job) !== _tierBefore) ? docTierChangeNotice(job, _tierBefore) : null;
   // A Probate service saved on a matter with no court (P20, Q26): the notice names it, as the modal did live. Never a refusal.
   var _svcFlag = probateSvcFlag(job, _rec);
-  if ((_stillMissing.length || _tierNote || _svcFlag) && typeof dashNotice === 'function')
-    dashNotice((_stillMissing.length || _svcFlag || _tierNote.type === 'warn') ? 'warn' : 'ok',
+  if ((_stillMissing.length || _tierNote || _svcFlag || _clashOld) && typeof dashNotice === 'function')
+    dashNotice((_stillMissing.length || _svcFlag || _clashOld || (_tierNote && _tierNote.type === 'warn')) ? 'warn' : 'ok',
       (_stillMissing.length ? 'Saved. Still missing on this client: ' + _stillMissing.join(', ') + '.' : 'Saved.')
-      + (_tierNote ? ' ' + _tierNote.msg : '') + (_svcFlag ? ' ' + _svcFlag : ''));
+      + (_tierNote ? ' ' + _tierNote.msg : '') + (_svcFlag ? ' ' + _svcFlag : '') + (_clashOld ? ' ' + _clashOld : ''));
   if (typeof renderClientDashboard === 'function') renderClientDashboard(jobId);
   if (typeof renderJobs === 'function') renderJobs();   // client list may show a new name
 
@@ -47542,6 +47738,8 @@ function saveClientEdit(jobId) {
   if (_eJobEl && parseInt(_eJobEl.value) === jobId) {
     var _ePropEl = document.getElementById('e-propval');
     if (_ePropEl) _ePropEl.value = job.propVal || '';
+    // The service this save switched, so the build open there prices it and Save Estimate there saves it (P22).
+    followJobService(job);
     if (typeof calcAll === 'function') calcAll();
   }
 }

@@ -394,7 +394,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ the won client, driven end to end: discount → re-approval → deny → resubmit → edit');
   const ST_FNS = ['discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountPctInput',
     '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'estFixedFee',
-    'estPrepFeeOnTop', 'closeDiscountModal', 'dashNotice', 'notifyManagerForApproval', 'checkPin', 'resolvePin',
+    'estPrepFeeOnTop', 'closeDiscountModal', 'dashNotice', 'notifyManagerForApproval', 'checkPin', 'estimateApprovalTierBlocker', 'resolvePin',
     'unscoredRoomNames', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'svcHasDocStep', 'matterTypeOf',
     'docTierOf', 'docTierDef', 'buildLockSnapshot', 'submitDeny', 'isJobWon', '_jobStatusCell', 'jobStatusView',
     'estimateEventStatus', 'submitForApproval', 'estimateSubmitBlocker', 'estimateNoteGaps', 'editEstimateFromCE',

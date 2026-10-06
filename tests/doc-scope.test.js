@@ -345,8 +345,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx._docScopeIntakeNote(j({}), 'none'), '', 'no note when intake never answered — there is nothing to disagree with');
     // ⚠ THE NOTE NAMES THE TIER, because that is the sentence somebody said to the attorney.
     // "Intake recorded Capture only" is our pricing word for it and nobody's actual answer.
-    has(ctx._docScopeIntakeNote(j({ docScope: 'capture' }), 'full'), 'Intake recorded Contents list; this estimate is priced at Full', 'the two answers never silently disagree');
-    has(ctx._docScopeIntakeNote(j({ docScope: 'none' }), 'capture'), 'Intake recorded None; this estimate is priced at Capture only', 'in either direction');
+    // Restated P22: the client record, not "Intake recorded" — the tier is set at intake or on Edit Client.
+    has(ctx._docScopeIntakeNote(j({ docScope: 'capture' }), 'full'), 'The client record\u2019s documentation tier is Contents list; this estimate is priced at Full', 'the two answers never silently disagree');
+    has(ctx._docScopeIntakeNote(j({ docScope: 'none' }), 'capture'), 'The client record\u2019s documentation tier is None; this estimate is priced at Capture only', 'in either direction');
 
     const src = source();
     // ⚠ THIS USED TO PIN THE QUESTION BELOW THE GATES INSIDE #probate-fields, and the layout

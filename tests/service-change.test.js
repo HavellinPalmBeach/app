@@ -596,7 +596,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Every one of the four sites reads the shared predicate, so the toggle cannot drift from
     // the render or from what saveClientEdit reads back out.
     const tog = fn('ecToggleProbate');
-    has(tog, 'ecIsProbateSvc(svcVal)', 'the toggle asks the predicate');
+    // Restated P22: the attorney's required marks follow the track (courtRecordRequired), the rule the save asks.
+    has(tog, 'courtRecordRequired(svcVal,', 'the toggle asks the predicate');
     has(tog, 'ecIsEstateSvc(svcVal)', 'for both blocks');
     lacks(tog, "svcVal === 'probate' ?", 'no bare probate-only test survives');
     lacks(tog, "svcVal === 'cleanout'", 'nor an inline estate list that omitted contested probate');

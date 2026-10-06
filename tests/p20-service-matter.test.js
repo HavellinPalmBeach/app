@@ -337,7 +337,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(flag('probate', 'trust', null, { id: 7, name: 'Margaret Doe' }), HEAD_TRUST + ' ' + SWITCH, 'a job record answers as a form\'s two values');
     eq(readers('probateSvcFlag'), { calcAll: 1, ecPaintSvcFlag: 1, saveClientEdit: 1, toggleIntakeFields: 1 },
        '⚠ its readers: intake\'s toggle, Edit Client\'s painter and save notice, Build Estimate\'s summary — and no save refusal');
-    eq(readers('paintProbateSvcFlag'), { calcAll: 1, ecPaintSvcFlag: 1, toggleIntakeFields: 1 }, 'one painter, on the three screens');
+    // calcAll paints two slots since P22: under the total, and beside the picker in field mode (#e-svc-flag-field), one flag.
+    eq(readers('paintProbateSvcFlag'), { calcAll: 2, ecPaintSvcFlag: 1, toggleIntakeFields: 1 }, 'one painter, on the three screens');
     eq(readers('ecPaintSvcFlag'), { ecToggleProbate: 1, showEditClient: 1 }, 'Edit Client paints on open and on every change');
     ['saveIntake', 'saveEstimateAndPreview', 'submitForApproval', 'checkPin', 'dashApproveEstimate', 'changeEstimateService'].forEach((f) =>
       lacks(codeOnly(fn(f)), 'probateSvcFlag', 'never a refusal: ' + f + ' does not ask it'));

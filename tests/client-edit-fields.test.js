@@ -38,7 +38,7 @@ const liveLines = (s) => String(s).split('\n')
   .filter((l) => { const t = l.trim(); return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('<!--')); })
   .join('\n');
 
-const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
+const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
                 'executorAuthOptionsHtml', 'resolveExecutorAuth', 
                 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
                 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope',
@@ -254,7 +254,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (eJob) => {
       const d = domStub({ 'ec-svc': 'downsizing_move', 'ec-fname': 'Tripp', 'ec-lname': 'Butler',
                           'ec-home-value': '$5,500,000', 'ec-sqft': '4500', 'ec-premium': 'no',
-                          'e-job': eJob });
+                          'e-job': eJob, 'e-svc': 'downsizing_move' });
       let recalcs = 0;
       const c = sandbox({
         fns: EC_FNS, vars: EC_VARS,
@@ -408,8 +408,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, INTAKE, auth === undefined ? {} : { 'i-executor-auth': auth }));
       const said = [];
       const cc = sandbox({
-        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef',
-              'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'estateAuthority', 'readCoFiduciaryRows', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', '_coFidRowNums', 'courtRecordShown'],
+        fns: ['saveIntake', 'coFiduciaryRepRefusal', 'coFiduciaryRepClash', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef',
+              'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'clientMissingFields', 'courtRecordRequired', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'estateAuthority', 'readCoFiduciaryRows', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', '_coFidRowNums', 'courtRecordShown'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],
         stubs: { document: d, jobs: [], showFB: (el, k, m) => said.push({ k, m }),
                  saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
