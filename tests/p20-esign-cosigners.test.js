@@ -687,9 +687,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('S9 · the backend: 2026-10-05, asked for by the app, and the banner names what an older one costs', () => {
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1];
-    eq(bv, '2026-10-05', 'BACKEND_VERSION is bumped with the .gs change');
+    ok(bv >= '2026-10-05', 'BACKEND_VERSION is at least the P20 bump (P22 raised it to 2026-10-06)');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST', 'BACKEND_NEEDS'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-05', '⚠⚠ the app asks for it: an older deployment puts no co-representative on the envelope');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-05', '⚠⚠ the app asks for at least it: an older deployment puts no co-representative on the envelope');
     ok(String(B.BACKEND_FEATURE_COST.version).indexOf('a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement') === 0,
        '⚠ the banner names that consequence first');
     has(B.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-03, a co-trustee, a beneficiary', 'and says which older gaps belong to which vintage');
