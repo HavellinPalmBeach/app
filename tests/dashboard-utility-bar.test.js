@@ -49,7 +49,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
     'agreementReady', 'jobTimelineDoc',
     // The schedule strip and the planned dates the rail now carries.
-    'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
+    'jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
     // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
     'roomStatusNormalize',
     'workingDaysInclusive', 'approvedEstimateFor',
@@ -58,14 +58,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
     'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix', 'escLines',
     // A closed-retained job names what it kept (the payments list group below renders one).
-    'closeoutRetainedTotal', 'jobPaidTotal', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'jobListEntries'];
+    'closeoutRetainedTotal', 'jobPaidTotal', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'jobListEntries',
+    // P22: jobSchedule reads the estate's dates before it asks for an estimate, so a job with none reaches them too.
+    'estateTaxReturnDue', 'estateTaxReturn'];
   const VARS = ['_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'DEPOSIT_VOID_STEP',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',
       'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
       // Read up front by the Hours Log card since 2026-09-25 — lifted, never stubbed.
-      'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'];
+      'EST_TOLERANCE_PCT', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES', 'ESTATE_TAX_RETURN_WARN_DAYS'];
 
   const EST = () => ({ rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }], havellinTotal: 24100 });
   const BASE = { id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout', created: 'Sep 8, 2026',

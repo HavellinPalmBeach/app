@@ -105,8 +105,25 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'a living job has an in-house section now — the record is made before the room is emptied');
     has(mm, 'Every room photographed and every item of consequence logged before it is moved',
         'and that is the one box it carries');
-    ['sequestered', 'PR sign-off', 'chain of custody']
+    ['sequestered', 'chain of custody']
       .forEach((t) => lacks(mm, t, '⚠ and none of the decedent boxes: "' + t + '"'));
+    // ⚠ RESTATED P22: this list also lacked 'PR sign-off', which since P19 is in no live text anywhere (ct_pr_signoff was
+    // deleted: the signed Disposition Ledger is the sign-off), so it could never fail. The net it was standing in for is
+    // now the one below: no sign-off box on any task list, the plan's or the desk's, and none on a probate plan.
+    {
+      const L = sandbox({ vars: ['PLAN_TASKS', 'JOB_ADMIN_TASKS'] });
+      const all = [].concat(L.PLAN_TASKS || [], L.JOB_ADMIN_TASKS || []);
+      ok(all.length > 20 && all.some((t) => /^ct_/.test(t.key)), 'the net reaches both task lists, the court list included');
+      // The mover's sign-off on a Home Transition's move day is a different paper and stays; the net is the
+      // fiduciary's sign-off on the disposition record, under any of its names.
+      const fid = /\bPR\b|pr_|representative|trustee|disposition|ledger/i;
+      const signoff = all.filter((t) => { const w = String(t.key) + ' ' + String(t.label); return /sign-?off/i.test(w) && fid.test(w); });
+      eq(signoff.map((t) => t.key), [], '⚠⚠ no task on the plan or the desk is a fiduciary\'s sign-off box: the signed Disposition Ledger is the sign-off (P19)');
+      ok(all.some((t) => /sign-?off/i.test(String(t.label))), '(the pattern still finds a sign-off where one is: the mover\'s)');
+      const prBoxes = (plan(JOB({ svc: 'probate', matterType: 'probate' }), EST({ svc: 'probate' })).out.match(/<label class="plan-chk[^>]*>[\s\S]*?<\/label>/g) || []);
+      ok(prBoxes.length > 5, 'a probate plan draws its boxes');
+      eq(prBoxes.filter((b) => /sign-?off/i.test(b)), [], '⚠ and none of them is a sign-off');
+    }
     // The converse: the estate job keeps its heavier set and does NOT gain the living box.
     const est = plan(JOB({ svc: 'probate' }), EST({ svc: 'probate' })).out;
     has(est, 'sequestered', 'the estate job still sequesters the legal file');
@@ -150,6 +167,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const probate = plan(JOB({ matterType: 'probate' }), EST()).out;
     ['letters', 'attorney_on_file', 'deadline_733604'].forEach((k) => has(probate, 'data-gate="' + k + '"', 'on a probate matter the ' + k + ' chip joins the row'));
     eq((probate.match(/class="gate-chip /g) || []).length, 6, 'six chips on a probate matter: the three court facts beside the three every job has');
+    // P22: a green chip shows its label alone, so a recorded §733.604 deadline's date rides in the label (as the 706 chip's does).
+    const dlChip = (job) => { const m = /<span class="gate-chip [^"]*" data-gate="deadline_733604">[^<]*<\/span>/.exec(plan(job, EST()).out); return m ? m[0] : ''; };
+    const dlRec = dlChip(JOB({ matterType: 'probate', probateDeadline: '2026-12-15' }));
+    has(dlRec, 'gate-ok', 'a recorded deadline: green');
+    has(dlRec, '§733.604 inventory deadline Dec 15, 2026</span>', '⚠⚠ …and its date is on the chip row');
+    const dlOpen = dlChip(JOB({ matterType: 'probate' }));
+    has(dlOpen, '§733.604 inventory deadline</span>', 'an unrecorded deadline: the label alone, red (its fix is under the row)');
+    has(dlOpen, 'gate-no', '(red)');
     has(plan(JOB({ probateAttyName: 'Richard Comiter' }), EST()).out, 'gate-ok" data-gate="attorney_on_file"',
         'an attorney recorded on any estate still shows, green');
     has(out, '<strong>Deposit received:</strong> not yet', 'and the fix is under the row, not in a tooltip');
@@ -297,7 +322,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the schedule strip on the plan header — the dashboard’s own, never a second reading of the dates');
   {
-    const s = sandbox({ fns: ['planScheduleHtml', '_planScheduleStrip', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal',
+    const s = sandbox({ fns: ['planScheduleHtml', '_planScheduleStrip', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal',
                               'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
                         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
                         stubs: { docSentAt: () => null, jobLogEntries: () => [], _todayStr: () => '2026-09-24' } });

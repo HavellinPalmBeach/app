@@ -255,9 +255,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['submitForApproval', 'estimateSubmitBlocker', 'estimateContractBlocker',
               'estimateContractMissing', 'isDecedentJob', 'matterTypeOf', 'matterDef',
               'invFiduciaryMode', 'docTierOf', 'docTierDef', 'svcHasDocStep',
-              'unscoredRoomNames', 'estimateNoteGaps', 'estimateEventStatus', 'isJobWon', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'fmtHrs'],
+              'unscoredRoomNames', 'estimateNoteGaps', 'estimateEventStatus', 'isJobWon', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'fmtHrs',
+              // P22: the tier refusal's route (estimateSubmitBlocker → estimateEditBlocker), as doc-tier.test.js lifts it, so a
+              // revert that reaches the tier arm fails an assertion here instead of throwing.
+              'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor'],
         vars: ['ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
-               'DECEDENT_SERVICES', 'REQUIRE_WALKTHROUGH_NOTES', 'JOB_STEPS'],
+               'DECEDENT_SERVICES', 'REQUIRE_WALKTHROUGH_NOTES', 'JOB_STEPS',
+               // P22: docScopeDef (lifted, through estimateTierMoved's seedDocScopeFromJob and estimateDocScope) reads the
+               // scope catalogue, and the page's approval flag sits beside the submitted one this test drives. Without them a
+               // revert that reaches those paths threw instead of failing an assertion.
+               'DOC_SCOPES', 'estimateApproved'],
         stubs: {
           showFB: (id, kind, msg) => { spoke.push({ id, kind, msg }); },
           saveEstimateState: () => { wrote.push('est'); },
