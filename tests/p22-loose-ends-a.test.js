@@ -150,12 +150,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const est = { jobId: 5, svc: 'cleanout', docScope: 'capture', docTier: 'contents', havellinTotal: 18000, rooms: [{ name: 'Study', st: 'in', vol: 3, cplx: 3 }] };
     const said = {};
     const c = lift(['dashApproveEstimate', 'checkPin'], ['buildLockSnapshot', 'saveEstimateState', 'applyEstimateLock', 'renderClientEstimate',
-      'closePinModal', 'notifyTCOfDecision', 'exportEstimateToDrive', 'saveFolderEstimate', 'uploadWalkthroughNotesToDrive', '_dashRedraw', 'priceRaiseSentence'], {
+      'closePinModal', 'notifyTCOfDecision', 'exportEstimateToDrive', 'saveFolderEstimate', '_dashRedraw', 'priceRaiseSentence'], {
       document: domStub({ 'pin-input': '1234' }), jobs: [job], estimateStore: { 5: { estimate: est, submitted: true } }, currentEstimate: null,
       _primeEstimateFor: (id) => { c.currentEstimate = JSON.parse(JSON.stringify(est)); return true; },
       openPinModal: () => { said.pin = true; }, dashNotice: (t, m) => { said.notice = m; }, _dashRedraw() {}, resolvePin: () => 'Anthony Graziano',
       buildLockSnapshot() {}, saveEstimateState: () => { said.saved = true; }, applyEstimateLock() {}, renderClientEstimate() {}, closePinModal() {},
-      notifyTCOfDecision() {}, exportEstimateToDrive() {}, saveFolderEstimate() {}, uploadWalkthroughNotesToDrive() {}, priceRaiseSentence: () => '',
+      notifyTCOfDecision() {}, exportEstimateToDrive() {}, saveFolderEstimate() {}, priceRaiseSentence: () => '',
       setTimeout: () => 0, saveJobs() {}, syncJobToSheets() {} });
     const WHY = 'the documentation tier on this client changed to Inventory with values after this estimate was saved, and it is still priced at Capture only. '
       + 'Deny it: it reopens for editing, follows the new tier on Build Estimate, and is saved and submitted again.';

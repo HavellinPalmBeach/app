@@ -370,7 +370,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     attempt(() => S.createDriveJobFolder(S.jobs[0]));
     eq(posted.length, 1, 'the folder request is posted');
     ok(posted[0] && posted[0].subfolders.indexOf('Signed Records') >= 0, 'and asks for a Signed Records subfolder');
-    eq(posted[0] && posted[0].subfolders.slice(0, 7), ['Estate Inventory', 'As-Found Record', 'Walkthrough Notes', 'Estimates', 'Agreement', 'Change Orders', 'Invoice'], 'beside the seven it always made, unchanged');
+    eq(posted[0] && posted[0].subfolders.slice(0, 6), ['Estate Inventory', 'As-Found Record', 'Estimates', 'Agreement', 'Change Orders', 'Invoice'], 'beside the six it makes (no Walkthrough Notes since 2026-10-06)');
   }
 
   // ── 11 ────────────────────────────────────────────────────────────────────

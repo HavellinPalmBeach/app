@@ -23,7 +23,7 @@ const eq = (a, b, m) => ok(JSON.stringify(a) === JSON.stringify(b),
 const APP = process.env.APP || 'file:///home/user/app/havellin.html';
 
 const FOLDER = 'https://drive.google.com/drive/folders/STEP15-FOLDER';
-const SUBS = { 'Estate Inventory':'s1','As-Found Record':'s2','Walkthrough Notes':'s3',
+const SUBS = { 'Estate Inventory':'s1','As-Found Record':'s2',
                'Estimates':'s4','Agreement':'s5','Change Orders':'s6','Invoice':'s7' };
 
 // Fill the real intake form. The ids are the real ones — guessing them is what made an

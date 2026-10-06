@@ -354,10 +354,10 @@ New 2026-09-10, replacing the single free-text *Notes* box as the main thing int
 Drive folder structure created automatically per job:
 
 ```
-Estate Inventory · As-Found Record · Walkthrough Notes · Estimates · Agreement · Change Orders · Invoice
+Estate Inventory · As-Found Record · Estimates · Agreement · Change Orders · Invoice
 ```
 
-Item photos, collection photos/appraisals and the inventory workbook live in **Estate Inventory**; the **as-found** shots have their own **As-Found Record** subfolder since 2026-09-20 (§10a, §15). *Share w/ Counsel* grants read-only access to **both**, so it is still one action and one package. Everything else — Walkthrough Notes, Estimates, Agreement, Change Orders, Invoice — stays private. A folder made by the older fallback route (used only when the app's normal request to the script fails outright) names its estimate folder *Estimate* and adds an empty *Job Log*; the app files into either name.
+Item photos, collection photos/appraisals and the inventory workbook live in **Estate Inventory**; the **as-found** shots have their own **As-Found Record** subfolder since 2026-09-20 (§10a, §15). *Share w/ Counsel* grants read-only access to **both**, so it is still one action and one package. Everything else — Estimates, Agreement, Change Orders, Invoice — stays private. A folder made by the older fallback route (used only when the app's normal request to the script fails outright) names its estimate folder *Estimate* and adds an empty *Walkthrough Notes* and *Job Log*; the app files into either name.
 
 ### Correcting a client later — Edit Client (brought up to intake's rules 2026-09-30)
 
@@ -399,7 +399,7 @@ Item photos, collection photos/appraisals and the inventory workbook live in **E
 
 ### 5a. Walkthrough Notes & Voice
 
-During the site visit, use the **📝** (notes) and **🎙** (voice-to-text) buttons in each room row. Type with **📝** and press **Save Notes**: the note goes on the room and a `.txt` copy is filed to the job's **Walkthrough Notes** Drive folder at once. **🎙** transcribes in real time straight into the same note, with no Save Notes step. Either way the note is saved with the estimate when you press **Save Estimate**, which also files every room and collection note to Walkthrough Notes (with a `.json` sidecar of the walkthrough) and the internal Estimate Worksheet to the job's Estimates folder.
+During the site visit, use the **📝** (notes) and **🎙** (voice-to-text) buttons in each room row. Type with **📝** and press **Save Notes**: the note goes on the room. **🎙** transcribes in real time straight into the same note, with no Save Notes step. Either way the note is saved with the estimate when you press **Save Estimate**, which also files the internal Estimate Worksheet (every room's note in its *Walkthrough note* column) to the job's Estimates folder. The notes are read in the Job Plan (the top of each room), the dashboard's **🔍 Walkthrough** view and Agent One's request. Since 2026-10-06 nothing is filed to a *Walkthrough Notes* folder: the per-note `.txt` files and the `walkthrough.json` were never read, and new clients get no such subfolder.
 
 **Private Walkthrough Notes** is a separate box, sitting as the last cell of the room grid with its own 🎙 button. It is *internal only* — never shown to the client, never on the estimate document, never uploaded to a shared folder. It is for what you would not say in front of the family: access problems, hoarding, who is actually making the decision, anything that changes how the job runs. It saves with the estimate (`est.privateNote`) and reloads with it. The intended use is dictating in the car on the way out.
 
@@ -2711,7 +2711,6 @@ A vendor is a **firm**, so the record separates what belongs to the company from
 
 | Subfolder | Contents | When populated |
 | --- | --- | --- |
-| Walkthrough Notes | Voice/typed notes per room and per collection (.txt), and a structured `<HVL-ID>_walkthrough.json` | As a room note is saved, on every **Save Estimate**, and again on approval (the locked copy) |
 | Estimates | The client estimate (`<HVL-ID> - Havellin Service Estimate`) and the internal worksheet (`<HVL-ID> - Estimate Worksheet (INTERNAL)`) | The worksheet on every Save Estimate and again on approval; the client estimate on approval, and again whenever it is sent or filed from the dashboard |
 | Agreement | The signing packet — the agreement with the approved estimate as Exhibit A. On a DocuSign job, also the executed agreement (`… - SIGNED`) and DocuSign's certificate of completion (`… - Certificate of Completion`, §8a) | The packet the first time it is printed, sent or filed (that is what stamps the agreement's approval), and again each time it is sent. The signed copy and the certificate automatically, when the app sees the envelope completed (since 2026-09-17; until then this row said a signed copy was never retained), and from **📁 File signed copy** on the *Agreement signed* row while either is missing (since 2026-10-01). **A copy signed by hand on the PDF route is not retained** — there is no upload path for one. |
 | Invoice | Every issued invoice, one file per stage, plus cheque photos for recorded payments | When the invoice is sent, or filed with *File … to Drive* (printing files nothing); a cheque photo when its payment is recorded |

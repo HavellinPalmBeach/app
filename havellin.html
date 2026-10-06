@@ -1331,7 +1331,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.06 · 10:40am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.06 · 11:46am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11071,7 +11071,7 @@ function saveEstimateAndPreview() {
   // Capture estimate snapshot now — clearEstimateTab() nulls currentEstimate at t+1200ms
   // so Drive uploads must use a local reference, not currentEstimate.
   var _estSnapshotForDrive = currentEstimate;
-  setTimeout(function() { exportEstimateToDrive(jobId, _estSnapshotForDrive); uploadWalkthroughNotesToDrive(jobId, _estSnapshotForDrive); }, 1500);
+  setTimeout(function() { exportEstimateToDrive(jobId, _estSnapshotForDrive); }, 1500);
   // ⚠⚠ THIS BLOCK USED TO WIPE THE SCREEN, AND THE MECHANISM IS WORTH KNOWING. It opened with
   // `document.querySelector('.nb[onclick*="\'client-estimate\'"]')` — and that tab was RETIRED
   // FROM THE NAV in Slice 7, so the selector resolves to **null**. `querySelector` returns null
@@ -13773,11 +13773,9 @@ function checkPin() {
       // lines above; the delay lets that DOM settle before it is read.
       setTimeout(function(){ saveFolderEstimate(true); }, 600);
     }
-    // Write the frozen walkthrough notes to Drive as the searchable corpus.
-    if (currentEstimate && currentEstimate.jobId) {
-      var _lockedEst = currentEstimate, _lockedJobId = currentEstimate.jobId;
-      setTimeout(function(){ uploadWalkthroughNotesToDrive(_lockedJobId, _lockedEst); }, 400);
-    }
+    // ⚠ NO WALKTHROUGH NOTES FOLDER (Anthony, 2026-10-06). Approval used to file a .txt per room and
+    // collection and a walkthrough.json to Drive; nothing ever read them. The notes live on the estimate,
+    // and are read in the Job Plan's rooms, the Walkthrough view and the worksheet filed just above.
   } else if (pin.length === 4) {
     document.getElementById('pin-fb').innerHTML = '<div class="alert a-err">Incorrect PIN. Try again.</div>';
     document.getElementById('pin-input').value = '';
@@ -45648,72 +45646,6 @@ function estimateDocNames(job) {
   };
 }
 
-// Drive-safe filename fragment: alphanumerics/_/- only, trimmed and capped.
-function _sanitizeFilePart(s) {
-  return String(s == null ? '' : s).replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 50) || 'unnamed';
-}
-
-// Writes the walkthrough corpus to the job's "Walkthrough Notes" Drive folder:
-// one .txt per room-with-a-note, one .txt per collection-with-a-note, and a
-// single estimate-level JSON sidecar carrying the full lockedRooms dataset.
-// Prefers the immutable lock snapshot; falls back to live rooms for drafts.
-function uploadWalkthroughNotesToDrive(jobId, estSnapshot) {
-  var est = estSnapshot || currentEstimate;
-  if (!est) return;
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
-
-  var locked = est.lockedRooms || null;
-  var srcRooms = locked || est.rooms || [];
-  var srcColls = est.lockedCollections || est.collections || collectionsData || [];
-  var rooms = srcRooms.filter(function(r){ return r.note && r.note.trim(); });
-  var colls = srcColls.filter(function(c){ return c.note && c.note.trim(); });
-  // Nothing to write — and not locked, so don't even emit an empty sidecar.
-  if (!rooms.length && !colls.length && !locked) return;
-
-  var hvl = job.hvlId ? job.hvlId : ('job' + jobId);
-  function _txtUrl(text) { return 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text))); }
-
-  function _doUpload(folderId) {
-    if (!folderId) return;
-    var ts = _todayStr();
-
-    // One file per room. Deterministic name (section + index disambiguate
-    // same-named rooms) so a re-lock overwrites rather than proliferates.
-    rooms.forEach(function(r, i){
-      var fname = hvl + '_' + _sanitizeFilePart(r.section) + '_' + _sanitizeFilePart(r.name) + '_' + (i+1) + '.txt';
-      var body = (r.name || 'Room') + (r.section ? ' (' + r.section + ')' : '') + '\n'
-        + 'HVL: ' + hvl + '  ·  ' + (r.locked_at ? 'Locked: ' + r.locked_at : 'Draft: ' + ts) + '\n\n'
-        + r.note.trim() + '\n';
-      uploadToDrive(folderId, fname, _txtUrl(body), function(){});
-    });
-
-    // One file per collection. Same folder with a collection_ prefix — the
-    // Drive integration exposes no nested-subfolder create action.
-    colls.forEach(function(c, i){
-      var fname = hvl + '_collection_' + _sanitizeFilePart(c.name) + '_' + (i+1) + '.txt';
-      var body = (c.name || 'Collection') + '\n'
-        + 'HVL: ' + hvl + '  ·  ' + (c.locked_at ? 'Locked: ' + c.locked_at : 'Draft: ' + ts) + '\n\n'
-        + c.note.trim() + '\n';
-      uploadToDrive(folderId, fname, _txtUrl(body), function(){});
-    });
-
-    // Estimate-level structured sidecar — the searchable dataset that compounds.
-    var sidecar = {
-      hvlId: hvl,
-      jobId: jobId,
-      jobName: job.name || '',
-      lockedAt: est.lockedAt || null,
-      lockedBy: est.lockedBy || null,
-      lockedRooms: est.lockedRooms || null,
-      lockedCollections: est.lockedCollections || null,
-      generatedAt: new Date().toISOString()
-    };
-    var jsonUrl = 'data:application/json;base64,' + btoa(unescape(encodeURIComponent(JSON.stringify(sidecar, null, 2))));
-    uploadToDrive(folderId, hvl + '_walkthrough.json', jsonUrl, function(){});
-  }
-  resolveSubfolderId(job, 'Walkthrough Notes', _doUpload);
-}
 
 function exportEstimateToDrive(jobId, estSnapshot) {
   var est = estSnapshot || currentEstimate;
@@ -46125,7 +46057,7 @@ function createDriveJobFolder(job) {
       clientName: job.name || '',
       svc: job.svc || '',
       // Signed Records since P19 (fileSignedCopy); a folder made before it has none, and filing falls back to the root.
-      subfolders: ['Estate Inventory','As-Found Record','Walkthrough Notes','Estimates','Agreement','Change Orders','Invoice', SIGNED_RECORDS_SUBFOLDER]
+      subfolders: ['Estate Inventory','As-Found Record','Estimates','Agreement','Change Orders','Invoice', SIGNED_RECORDS_SUBFOLDER]
     })
   })
   .then(function(r){ return r.json(); })
@@ -48487,24 +48419,7 @@ function saveNotesModal() {
   }
   closeNotesModal();
   calcAll();
-  if (text.trim()) {
-    var jobId = document.getElementById('e-job') ? parseInt(document.getElementById('e-job').value)||0 : 0;
-    var job = jobs.find(function(j){ return j.id === jobId; });
-    if (job) {
-      var nameEl = document.getElementById('name-'+_notesRoomId);
-      var roomName = nameEl ? (nameEl.tagName === 'INPUT' ? nameEl.value : nameEl.textContent) : _notesRoomId;
-      var ts = _todayStr();
-      var filename = (job.hvlId?job.hvlId+'_':'') + _cleanName(roomName) + '_Notes_' + ts + '.txt';
-      var dataUrl = 'data:text/plain;base64,' + btoa(unescape(encodeURIComponent(text)));
-      function _up() {
-        var folderId = job.driveSubfolders && job.driveSubfolders['Walkthrough Notes'] ? job.driveSubfolders['Walkthrough Notes'].id : null;
-        if (!folderId) return;
-        uploadToDrive(folderId, filename, dataUrl, function(){});
-      }
-      if (!job.driveSubfolders && job.driveFolder) fetchSubfolderIds(job, _up);
-      else _up();
-    }
-  }
+  // The note rides the estimate's Save; it is no longer filed to Drive as a .txt per save (2026-10-06).
 }
 
 

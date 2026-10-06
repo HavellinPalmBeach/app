@@ -410,7 +410,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       applyEstimateLock() {}, showFB() {}, showSyncBadge() {}, assignedTCContact() { return { name: 'Ashley Jerome' }; },
       svcLabelOf() { return 'Home Editing'; }, sendInternalEmail() {}, MANAGER_APPROVAL_EMAIL: 'a@example.com',
       renderClientDashboard() {}, _repaintJobBand() {}, setTimeout() {}, closePinModal() {}, closeDenyModal() {},
-      notifyTCOfDecision() {}, exportEstimateToDrive() {}, saveFolderEstimate() {}, uploadWalkthroughNotesToDrive() {},
+      notifyTCOfDecision() {}, exportEstimateToDrive() {}, saveFolderEstimate() {},
       editEstimateForJob() {}, confirm() { return true; },
     } });
     ctx.jobs = [Object.assign({ id: 1, name: 'Butler', svc: 'downsizing', status: 'won', won: true, wonAt: '2026-09-20',

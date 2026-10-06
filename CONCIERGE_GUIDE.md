@@ -156,7 +156,7 @@ The screen reads top to bottom. **Top card:** *Job* on the left (the client, the
 
 ### On the walkthrough
 
-- Use **📝** for notes and **🎤** for voice-to-text in each room row. Voice transcribes as you talk. Hit **Save Notes** and it files itself to the job's Walkthrough Notes folder.
+- Use **📝** for notes and **🎤** for voice-to-text in each room row. Voice transcribes as you talk. Hit **Save Notes**; the note is kept with the estimate when you press **Save Estimate**, and the crew sees it at the top of that room in the Job Plan. Nothing is filed to Drive per note (since 2026-10-06).
 - **Private Walkthrough Notes** — the box at the end of the room grid, with its own mic. Internal only: never on the client estimate, never in a shared folder. It's for what you wouldn't say in front of the family — access problems, hoarding, who's actually making the decision. Dictate it in the car on the way out. **Write it properly — somebody reads it back before Day 1.** It comes up on the client dashboard under **🔍 Walkthrough**, at the top of the page, above the rooms.
 - **No photos at this stage.** Photography happens after the job is active, not on the estimate visit.
 - Room sections open collapsed and run two across. Open each one as you walk that part of the house; use *Expand all / Collapse all / Hide empty* at the top.

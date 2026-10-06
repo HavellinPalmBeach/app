@@ -505,7 +505,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       document: domStub({ 'pin-input': '3010' }), REQUIRE_WALKTHROUGH_NOTES: false,
       saveJobs() {}, syncJobToSheets() {}, renderClientEstimate() {}, applyEstimateLock() {}, closePinModal() {},
       renderClientDashboard() {}, _repaintJobBand() {}, setTimeout() {}, exportEstimateToDrive() {}, saveFolderEstimate() {},
-      uploadWalkthroughNotesToDrive() {}, notifyTCOfDecision(j, e, d) { told.push(d); },
+      notifyTCOfDecision(j, e, d) { told.push(d); },
       // What the real saveEstimateState does: rebuild the store record from the page's approval globals.
       saveEstimateState() {
         ctx.estimateStore[ctx.currentEstimate.jobId] = { approved: ctx.estimateApproved, submitted: ctx.estimateSubmitted,
