@@ -95,7 +95,7 @@ const TIER_FNS = ['docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 's
 const ROUTE_FNS = ['estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval',
   'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor'];
 const TIER_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DOC_SCOPES', 'JOB_STEPS'];
-const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
+const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'jobListEntries', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
   'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
   'docTierOptionsHtml', 'docTierScopeMirror', 'esc', 'onDocGateChange',
   'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -231,7 +231,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays',
       'jobProgress', 'roomStatusNormalize', 'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker',
@@ -511,8 +511,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (state) => {
       const log = [];
       const r = attempt(() => {
-        const c = sandbox({ fns: ['openEstimateScreen', 'followDocTier'].concat(TIER_FNS), vars: ['_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS),
-          stubs: { document: domStub({ 'e-job': { value: '9' }, 'est-loading-bar': { style: { display: 'none' } } }),
+        const c = sandbox({ fns: ['openEstimateScreen', 'followJobService', 'followDocTier'].concat(TIER_FNS), vars: ['_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS),
+          stubs: { document: domStub({ 'e-job': { value: '9' }, 'e-svc': { value: ESTATE.svc }, 'est-loading-bar': { style: { display: 'none' } } }),
                    currentEstimate: { jobId: 9 }, jobs: [Object.assign({}, ESTATE, { docTier: 'contents' })],
                    _showDashScreen() {}, calcAll: () => log.push('calc:' + c._estimateDocScope), applyEstimateLock() {},
                    editEstimateForJob: () => log.push('open'), estimateApproved: false, estimateSubmitted: false } });
@@ -534,7 +534,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const est = (o) => Object.assign({ jobId: 9, svc: 'cleanout', docScope: 'full', docTier: 'values', rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }], havellinTotal: 19450 }, o || {});
     // 1. A blank tier, the walkthrough open on Build Estimate: the refusal's promise comes true.
-    let r = editSave(Object.assign({}, ESTATE, { docTier: '', docScope: '' }), { 'ec-doc-tier': 'contents', 'e-job': '9' },
+    let r = editSave(Object.assign({}, ESTATE, { docTier: '', docScope: '' }), { 'ec-doc-tier': 'contents', 'e-job': '9', 'e-svc': ESTATE.svc },
       { state: { _estimateDocScope: 'full', _estimateDocTier: '' } });
     eq(r.err, '', 'the save runs');
     eq(r.job.docTier, 'contents', 'the tier is saved');
@@ -545,7 +545,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(r.said.notice, 'Press Save Estimate there to keep it', 'and that the saved copy changes when Save is pressed');
 
     // 2. Approved: never repriced, flagged, and the route named.
-    r = editSave(Object.assign({}, ESTATE, { approved: true }), { 'ec-doc-tier': 'contents', 'e-job': '9' },
+    r = editSave(Object.assign({}, ESTATE, { approved: true }), { 'ec-doc-tier': 'contents', 'e-job': '9', 'e-svc': ESTATE.svc },
       { store: { 9: { approved: true, estimate: est() } }, state: { _estimateDocScope: 'full', _estimateDocTier: 'values', estimateApproved: true } });
     eq(r.c._estimateDocScope, 'full', '⚠⚠ an approved estimate open on the screen is NOT repriced by the save');
     eq(r.said.type, 'warn', 'it is a warning');
@@ -586,7 +586,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // 8. The build open on the screen was submitted in this session and the store has not caught up: it is still
     //    locked, so it is flagged rather than silently left behind.
-    r = editSave(ESTATE, { 'ec-doc-tier': 'contents', 'e-job': '9' },
+    r = editSave(ESTATE, { 'ec-doc-tier': 'contents', 'e-job': '9', 'e-svc': ESTATE.svc },
       { store: { 9: { estimate: est() } }, state: { _estimateDocScope: 'full', _estimateDocTier: 'values', estimateSubmitted: true } });
     eq(r.c._estimateDocScope, 'full', 'a submitted build is not re-seeded');
     has(r.said.notice, 'estimate out for manager approval is priced at Full', '⚠ and the save says so, from the screen\'s own lock');
@@ -735,7 +735,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const worksheet = (est, job) => {
       let out = null;
-      const r = attempt(() => sandbox({ fns: ['exportEstimateToDrive', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'estimateDocNames', '_todayStr', '_ymdLocal', 'roundCents', 'fmtHrs'],
+      const r = attempt(() => sandbox({ fns: ['exportEstimateToDrive', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estDeclutterHrsQuoted', 'prepFeeRate', 'fmt', 'esc', 'estimateDocNames', '_todayStr', '_ymdLocal', 'roundCents', 'fmtHrs'],
         vars: ['PREP_FEE_RATE'], stubs: { jobs: [job], resolveSubfolderId: (j, name, cb) => cb('F1'),
           uploadHtmlToDrive: (folder, name, html) => { out = { name, html }; }, showSyncBadge() {} } }).exportEstimateToDrive(job.id, est));
       return r.ok ? out : { html: 'THREW ' + r.err };
@@ -870,10 +870,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // jtScheduleHtml: the working days a delivered job took, in the singular when it is one.
     const J = sandbox({ fns: ['jtScheduleHtml', 'esc', 'fmtDate2'] });
-    const one = text(J.jtScheduleHtml({ state: 'done', actualStart: '2026-09-01', delivered: '2026-09-01', endVariance: 1, days: 6 }));
+    const one = text(J.jtScheduleHtml({ state: 'done', actualStart: '2026-09-01', delivered: '2026-09-01', workedDays: 1, days: 6 }));
     has(one, '1 working day against a 6-day plan', '⚠ one working day is a day');
     lacks(one, '1 working days', 'not "1 working days"');
-    has(text(J.jtScheduleHtml({ state: 'done', actualStart: '2026-09-01', delivered: '2026-09-03', endVariance: 3, days: 6 })), '3 working days against a 6-day plan', 'and three are days');
+    has(text(J.jtScheduleHtml({ state: 'done', actualStart: '2026-09-01', delivered: '2026-09-03', workedDays: 3, days: 6 })), '3 working days against a 6-day plan', 'and three are days');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════

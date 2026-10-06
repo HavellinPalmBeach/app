@@ -53,7 +53,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
     'roomStatusNormalize',
     'workingDaysInclusive', 'approvedEstimateFor',
-    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
+    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'hoursLogReady', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
     'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',
     // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
     'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix', 'escLines',
@@ -88,6 +88,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       document: dom, setTimeout: () => 0, clearTimeout: () => {}, Intl: global.Intl,
       jobs: [job], logs: [], changeOrders: [], contractors: [], _photoRefs: {},
       estimateStore: rec === null ? {} : { 7: rec || { estimate: EST(), approved: true } },
+      _logsState: 'ready',   // the hours log has loaded (P22: hoursLogReady; an unread log is not zero hours)
     };
     if (driveRoot !== undefined) stubs.DRIVE_FOLDER_ID = driveRoot;
     const c = sandbox({ fns: FNS, vars: VARS, stubs });

@@ -71,7 +71,7 @@ function inZone(body) {
 // the sync, the redraw, the notices and the tab plumbing. Each is recorded so a test can read what happened.
 const STATE = ['jobs', 'estimateStore', 'jobLogs', 'changeOrders', 'contractors', 'currentEstimate', 'currentInvStage',
   'jobPlanStore', 'vendorDirectory', 'vendors', 'prepItems', 'currentAgrJobId', '_dashNotice', '_dashboardJobId',
-  '_gmailUserEmail', '_wonJobId', 'closeoutJobId', '_sigJobId', 'referralDirectory', 'approvedBy'];
+  '_gmailUserEmail', '_wonJobId', 'closeoutJobId', '_sigJobId', 'referralDirectory', 'approvedBy', '_logsState'];
 const BOUNDS = ['saveJobs', 'syncJobToSheets', 'renderJobs', '_dashRedraw', 'dashNotice', 'showFB', '_dashFbTarget',
   'updateAgrUI', 'loadInvoice', '_attachPaymentEvidence', 'showSyncBadge', 'postSyncBadge', 'renderClientDashboard',
   '_primeAgreementFor', '_agrJob', 'exportSigningPacketToDrive', '_docNotice', 'renderWinLoss', '_jobBandHost'];
@@ -90,6 +90,8 @@ function box(roots, opts) {
       jobPlanStore: {}, vendorDirectory: [], vendors: [], prepItems: [], currentAgrJobId: job ? job.id : 0,
       _dashNotice: null, _dashboardJobId: job ? job.id : 0, _gmailUserEmail: '', referralDirectory: [], approvedBy: '',
       _wonJobId: 0, closeoutJobId: job ? job.id : 0, _sigJobId: null,
+      // The hours log the test hands in (jobLogs) has loaded (P22: an unread log is not zero hours, hoursLogReady).
+      _logsState: 'ready',
       confirm: (m) => { seen.confirms.push(String(m)); return o.decline ? false : true; },
       setTimeout: () => { seen.timeouts++; return 0; }, clearTimeout() {},
       saveJobs: () => { seen.saved++; }, syncJobToSheets: (j) => { seen.synced++; seen.lastSynced = JSON.parse(JSON.stringify(j)); },

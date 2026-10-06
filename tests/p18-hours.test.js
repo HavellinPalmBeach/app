@@ -203,7 +203,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ES = tryE(() => run('cleanout'));
     const job = { id: 7, hvlId: 'HVL-0007', name: 'Butler', svc: 'cleanout' };
     let out = null;
-    attempt(() => sandbox({ fns: ['exportEstimateToDrive', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'estimateDocNames', '_todayStr', '_ymdLocal', 'roundCents', 'fmtHrs'],
+    attempt(() => sandbox({ fns: ['exportEstimateToDrive', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estDeclutterHrsQuoted', 'prepFeeRate', 'fmt', 'esc', 'estimateDocNames', '_todayStr', '_ymdLocal', 'roundCents', 'fmtHrs'],
       vars: ['PREP_FEE_RATE'], stubs: { jobs: [job], resolveSubfolderId: (j, name, cb) => cb('F1'),
         uploadHtmlToDrive: (folder, name, h) => { out = { name, html: h }; }, showSyncBadge() {} } }).exportEstimateToDrive(job.id, ES));
     const w = (out && out.html) || '';
@@ -235,10 +235,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       stubs: { document: domStub({ 'e-declutter-hrs': { value: v } }) } }).declutterHoursFlag();
     eq(F('5.5'), 'Estimates round up to whole hours: 5.5 is priced as 6.', '⚠⚠ the flag says what a typed 5.5 is priced at');
     eq(F('0.25'), 'Estimates round up to whole hours: 0.25 is priced as 1.', 'and a quarter');
-    eq(['', '0', '5', '40', '45', 'x'].map(F), ['', '', '', '', '', ''], 'a whole number, nothing, or past the cap (which the hint\'s own line prices) raises no flag');
+    eq(['', '0', '5', '40', 'x'].map(F), ['', '', '', '', ''], 'a whole number or nothing raises no flag');
     // ⚠ Past the 40-hour cap a part hour is priced at 40 (getDeclutterTCHrs), so "45.5 is priced as 46" would be false: the
-    // rounding flag stays silent there (the revert sweep found nothing holding this guard).
-    eq(F('45.5'), '', '⚠ and a part hour past the cap is not flagged as rounded up: it is priced at the cap, 40');
+    // rounding flag stays silent there. Restated P22: the cap is said instead, which nothing on screen did.
+    eq(F('45'), 'The declutter box takes at most 40 hours: 45 is priced as 40.', '⚠ past the cap, the cap is said');
+    eq(F('45.5'), 'The declutter box takes at most 40 hours: 45.5 is priced as 40.', '⚠ and a part hour past the cap is not flagged as rounded up: it is priced at the cap, 40');
     // The real engine: the snapshot, the billed hours and the hint are one figure.
     const pb = attempt(() => { const d = driveCalcAll({ svc: 'prep', sqft: 3500, rooms: [], seed: { 'e-declutter-hrs': '5.5' } });
       d.ctx.prepItems.push({ type: 'Painting', cost: 20000, note: '', lid: 'p1' }); d.ctx.calcAll(); return d; });

@@ -76,17 +76,17 @@ const SYNC_VARS = ['_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW'
   'PERSON_NAME_ALIASES'];
 
 const INTAKE_FNS = ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth',
-  'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'];
+  'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'courtRecordRequired', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'];
 const INTAKE_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
 
 // The Edit Client modal's own dependency list (client-edit-fields.test.js).
-const EC_FNS = ['saveClientEdit', 'courtRecordShown', 'jobOnProbateTrack', 'ecToggleProbate', 'probateSvcFlag', 'executorAuthOptionsHtml', 'resolveExecutorAuth',
+const EC_FNS = ['saveClientEdit', 'jobListEntries', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'courtRecordShown', 'jobOnProbateTrack', 'ecToggleProbate', 'probateSvcFlag', 'executorAuthOptionsHtml', 'resolveExecutorAuth',
   'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange', 'docTierOptionsHtml',
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
   'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor',
   'gateDispute', '_gateYes', '_gate706', 'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel',
   'docStandardEffect', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
-  'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'sameSvcFamily', 'svcFamily', 'clientMissingFields', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'houseFlagAsked', 'intakeAsksHouseContents', 'showHouseFlagRows', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt', 'propertySaleAsked', 'trustRecordShown'];
+  'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'sameSvcFamily', 'svcFamily', 'clientMissingFields', 'courtRecordRequired', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'houseFlagAsked', 'intakeAsksHouseContents', 'showHouseFlagRows', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt', 'propertySaleAsked', 'trustRecordShown'];
 const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC',
   'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'referralDirectory', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];

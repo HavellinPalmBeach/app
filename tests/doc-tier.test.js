@@ -199,7 +199,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The intake markup is an EMPTY <select> on purpose, so a build that stops filling it renders
     // the one question this whole step exists to ask as a blank box with nothing in it — and the
     // catalogue, the builder and the markup all still look right on their own.
-    const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecPaintSvcFlag', 'probateSvcFlag', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
+    const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecPaintSvcFlag', 'probateSvcFlag', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
       'ecDocGateChange', 'docTierOptionsHtml', 'buildDocTierOptions', 'docTierOf', 'docTierDef',
       'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml',
       'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706',

@@ -123,7 +123,7 @@ const C_GATE = 'The successor trustee’s Certification of Trust must be receive
       await date('#i-date-of-death', death); await p.selectOption('#i-gate-706', 'yes');
       await press('#i-cofid-add', '+ Add a co-representative');
       ok(await shown('#i-cofid-0-name'), 'a co-representative row appears');
-      await p.fill('#i-cofid-0-name', 'Daniel Adler'); await p.selectOption('#i-cofid-0-role', 'Trustee');
+      await p.fill('#i-cofid-0-name', 'Daniel Adler'); await p.selectOption('#i-cofid-0-role', 'Co-Trustee');   // the co-representative's own roles (P22)
       await p.fill('#i-cofid-0-phone', '5615550103'); await p.fill('#i-cofid-0-email', 'dan@adler.example');
       // A second row, left empty, is no one.
       await press('#i-cofid-add', '+ Add a co-representative, again');
@@ -137,7 +137,7 @@ const C_GATE = 'The successor trustee’s Certification of Trust must be receive
       eq([j.fname, j.matterType], ['Walter', 'trust'], 'the client was created through the real Save Client');
       eq([j.trustName, j.trustDate, j.trusteeAcceptedOn, j.probateSale], ['The Adler Family Revocable Trust', '2019-04-02', wd(-20), 'yes'],
          '⚠⚠ the trust, its date, the trustee\'s acceptance and the property sale are recorded');
-      eq((j.coFiduciaries || []).map((c) => [c.name, c.role, c.email]), [['Daniel Adler', 'Trustee', 'dan@adler.example']], '⚠⚠ the co-trustee is recorded; the empty row is no one');
+      eq((j.coFiduciaries || []).map((c) => [c.name, c.role, c.email]), [['Daniel Adler', 'Co-Trustee', 'dan@adler.example']], '⚠⚠ the co-trustee is recorded; the empty row is no one');
       const cid = ((j.coFiduciaries || [])[0] || {}).id;
       ok(!!cid && typeof (j.at || {})['coFiduciaries:' + cid] === 'number', 'stamped on its own key');
       eq(j.executorAuth, 'pending', 'the Certification is recorded Pending');
@@ -152,13 +152,13 @@ const C_GATE = 'The successor trustee’s Certification of Trust must be receive
       const view = await words('#client-dashboard-view');
       has(view, 'Certification of Trust Pending', 'the client card names the paper');
       lacks(view, 'Letters of Admin', 'never the Letters');
-      has(view, 'Co-representatives Daniel Adler · Trustee', 'and lists the co-trustee');
+      has(view, 'Co-representatives Daniel Adler · Co-Trustee', 'and lists the co-trustee');
       const tc = await card('Trust Information');
       has(tc, 'Trust Information Certification of Trust pending — blocker', '⚠⚠ the Trust card carries the Certification chip');
       has(tc, 'Trust name The Adler Family Revocable Trust Trust dated Apr 2, 2019', 'the trust itself');
       has(tc, 'Property sale yes', 'the property sale');
       has(tc, 'Role Trustee Certification of Trust Pending', 'the Certification beside the trustee');
-      has(tc, 'Co-Trustees Name Daniel Adler Role Trustee', 'Co-Trustees');
+      has(tc, 'Co-Trustees Name Daniel Adler Role Co-Trustee', 'Co-Trustees');
       // RESTATED 2026-10-05 (P20): Anthony decided (Q22) that each co-trustee signs the agreement beside the trustee, in
       // DocuSign or on the printed page; the card says so where it said DocuSign went to one signer (step 60 drives both).
       has(tc, 'Each signs the agreement beside Rex Hale: in DocuSign, which needs their email, or on the printed page when it is signed by hand.', 'how each co-trustee signs');
@@ -226,7 +226,7 @@ const C_GATE = 'The successor trustee’s Certification of Trust must be receive
       await press('#client-dashboard-view button[onclick="dashEditClient(' + ID + ')"]', '✎ Edit Client');
       eq(await p.inputValue('#ec-cofid-0-name'), 'Daniel Adler', 'the recorded co-trustee is drawn');
       await press('#ec-cofid-add', '+ Add a co-representative');
-      await p.fill('#ec-cofid-1-name', 'Mae O\'Neil'); await p.selectOption('#ec-cofid-1-role', 'Trustee'); await p.fill('#ec-cofid-1-email', 'mae@oneil.example');
+      await p.fill('#ec-cofid-1-name', 'Mae O\'Neil'); await p.selectOption('#ec-cofid-1-role', 'Co-Trustee'); await p.fill('#ec-cofid-1-email', 'mae@oneil.example');
       dialogs.length = 0;
       await press('#ec-cofid-0 button[onclick="removeCoFiduciaryRow(\'ec\',0)"]', '✕ Remove on Daniel Adler');
       has(dialogs[0] || '', 'Remove Daniel Adler from the co-representatives on this estate?', '⚠ asked first');
@@ -238,7 +238,7 @@ const C_GATE = 'The successor trustee’s Certification of Trust must be receive
       eq(daniel.length, 2, 'both changes stamped on their own keys (the removal included)');
       await p.evaluate((id) => openClientDashboard(id), ID); await p.waitForTimeout(400);
       const tc = await card('Trust Information');
-      has(tc, 'Co-Trustees Name Mae O\'Neil Role Trustee', 'the card lists Mae');
+      has(tc, 'Co-Trustees Name Mae O\'Neil Role Co-Trustee', 'the card lists Mae');
       lacks(tc, 'Daniel Adler', 'and not Daniel');
     });
 

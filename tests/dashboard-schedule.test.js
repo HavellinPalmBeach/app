@@ -234,7 +234,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const done = sched({ start: '2026-09-21', status: 'closed', activatedOn: '2026-09-21', deliveredOn: '2026-10-02' }, '2026-10-10');
     eq(done.state, 'done', 'a delivered job is history');
-    eq(done.endVariance, 10, 'and it reports what it actually took');
+    eq(done.workedDays, 10, 'and it reports what it actually took');
 
     // ⚠ DOM-FREE AND CLOCK-FREE, the same rule jobTimeline follows.
     const sb = noComments(fn('jobSchedule'));
@@ -429,7 +429,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // no hard target: an error-coloured warning nobody can act on, visible in the screenshot
     // that asked for these two fields to move here. A stub that does not match the real source
     // is worse than no stub — this repo has now paid for that twice.
-    const DFNS = ['renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts',
+    const DFNS = ['renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts',
       'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'esignSignedCopyGaps', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',

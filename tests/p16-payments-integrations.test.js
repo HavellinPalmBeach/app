@@ -538,7 +538,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // ─── STRIPE ─────────────────────────────────────────────────────────────────
   const RB_FNS = ['applyStripePayments', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentStageLabel', 'paymentStageWord',
-    '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_todayStr', '_stripeDue', 'outstandingPayments', 'stripeRefresh', 'jobPayments',
+    '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_todayStr', '_stripeDue', 'outstandingPayments', 'stripeStagePaid', 'stripeRefresh', 'jobPayments',
     'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey', 'stagePaidTotal', 'depositPaidTotal', 'depositClearedTotal', 'isJobFunded', 'depositTargetFor',
     '_photoUid', '_jobTouch', 'fmt', 'fmtDate2', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit', 'paymentSummaryText', 'paymentMethodLabel',
     'jobPaymentsListHtml', 'esc', 'roundCents', 'paymentSplit'];

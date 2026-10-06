@@ -58,7 +58,7 @@ const optionValues = (html, id) => {
   return m ? (m[1].match(/<option\b[^>]*>/g) || []).map((o) => unesc((/value="([^"]*)"/.exec(o) || [])[1] || '')) : null;
 };
 
-const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack',
+const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack',
   'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
   'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
   'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -323,7 +323,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Both forms ask one required-field rule.
     has(noComments(fn('saveIntake')), 'clientMissingFields(', 'intake asks the shared rule');
     has(noComments(fn('saveClientEdit')), 'clientMissingFields(', 'and so does Edit Client');
-    const M = sandbox({ fns: ['clientMissingFields', 'isDecedentJob'], vars: ['DECEDENT_SERVICES'] });
+    const M = sandbox({ fns: ['clientMissingFields', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'isDecedentJob', 'invFiduciaryMode'], vars: ['DECEDENT_SERVICES', 'MATTER_TYPES'] });
     eq(M.clientMissingFields(LIVING), [], 'a complete living client is missing nothing');
     eq(M.clientMissingFields(ESTATE), [], 'nor a complete estate (no phone or email asked for the deceased)');
     eq(M.clientMissingFields(Object.assign({}, ESTATE, { executorRole: '', probateCase: '' })),

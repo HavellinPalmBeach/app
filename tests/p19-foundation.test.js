@@ -75,7 +75,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 2 ─────────────────────────────────────────────────────────────────────
   group('jobFiduciaries: the representative, then every co-representative; an estate only');
   {
-    const S = sandbox({ fns: ['jobFiduciaries', 'jobListEntries'].concat(MATTER_FNS), vars: MATTER_VARS });
+    const S = sandbox({ fns: ['jobFiduciaries', 'samePerson', 'canonPersonName', 'jobListEntries'].concat(MATTER_FNS), vars: MATTER_VARS.concat(['PERSON_NAME_ALIASES']) });
     const job = { svc: 'cleanout', matterType: 'trust', executor: '  Ruth Adler ', executorRole: 'Trustee', executorEmail: 'ruth@x.com', executorPhone: '(561) 555-0101',
       coFiduciaries: [{ id: 'c1', name: 'Daniel Adler', role: 'Trustee', email: 'dan@x.com' }, { id: 'c2', name: '  ' }, null, { id: '', name: 'No Id' },
         { id: 'c3', name: 'Voided Person', voidedAt: 5 }] };

@@ -215,7 +215,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // disagreement note takes over.
     const answered = job({ matterType: 'probate', docTier: 'values' });
     eq(c.estimateContractNotice(answered), '', 'an answered tier silences the contract notice');
-    has(c._docScopeIntakeNote(answered, 'none'), 'Intake recorded',
+    has(c._docScopeIntakeNote(answered, 'none'), 'The client record\u2019s documentation tier is',
        'and the disagreement note is the one that speaks when the estimate overrides it');
   }
 
