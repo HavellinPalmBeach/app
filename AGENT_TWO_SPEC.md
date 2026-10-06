@@ -213,19 +213,28 @@ stays unvalued with the reason on the row, never a guess.
 
 ---
 
-## 8 · LIVING CLIENTS AND THE CONTRACT
+## 8 · WHERE THE VALUE IS SHOWN
 
-Decided (2): it runs on living jobs too. One thing in the paper has to be squared first:
+Decided (2): it runs on living jobs too. Decided (Anthony, 2026-10-06): **where the estate's attorney
+values the property, Havellin does not.**
 
-- On the *Contents list* and *None* tiers (`docTierProduces(job, 'values')` false), the agreement says
-  Havellin states no opinion of value. Writing `fmv` there and printing it breaks a signed term.
-- **Recommendation:** on those tiers the agent writes its figure to the internal fields only (`valLow`,
-  `valHigh`, the comps, `valuedBy`), never `fmv`, and no client document prints them. The desk uses
-  them to route the sale (auction house, online, estate sale, donate). On a tier that states values,
-  it writes `fmv` as above. **Anthony to confirm**, and counsel to see the routing use (bundle).
-- Living valuation date: the day of the run. No date-of-death basis applies.
-
----
+- The documentation tiers exist only on the three estate services. On *Contents list* and *None*
+  (`docTierProduces(job, 'values')` false) the agreement gives the valuation to counsel, and the
+  Contents List says Havellin *"states no opinion of value"*. Anthony: *"if an attorney doesn't want us
+  to value things, we shouldn't."*
+- **On those tiers the agent still runs, and its figure stays internal.** It writes `valLow`,
+  `valHigh`, the comps, `valuedBy` and `valConf`, never `fmv`, `valDate` or `valSource`, and no client
+  document, schedule, workbook or package prints them. The desk uses them for two things:
+  - **Routing the sale** (auction house, online, estate sale, donate).
+  - **Telling counsel what probably needs an appraisal**, by item and without a figure: *"we recommend
+    a specialist appraisal for these items"*. Counsel arranges it on these tiers (`appraisalDuty`), so
+    the desk raises it and counsel decides. The `invNeedsAppraisal` range read (§6) drives the list.
+- On *Inventory with values* and *Inventory + appraisals*, it writes `fmv` and the documents print it,
+  as above.
+- Living clients have no tier: the agent writes `fmv`, and the client's own documents may show it.
+  The valuation date is the day of the run; no date-of-death basis applies.
+- A test holds it: on a no-values tier no `fmv` is written and no client builder prints an agent
+  figure.
 
 ## 9 · COST
 
@@ -270,7 +279,7 @@ Measure on the first real estate before tuning. Cost does not drive the model ch
 
 ## 12 · OPEN, FOR ANTHONY
 
-1. **§8:** internal figures only on the no-values tiers (recommended), or change the tier wording.
+1. ~~§8~~ Answered 2026-10-06: internal figures only where counsel values, used for routing and to recommend appraisals without a figure.
 2. **Does an unreviewed agent value keep a schedule from reading FINAL?** Today a schedule is FINAL
    only with every line valued. Recommended: an unreviewed agent value counts as valued but the
    schedule says *N values not yet reviewed*, like the *IN PROGRESS* stamp, and nothing is withheld.
