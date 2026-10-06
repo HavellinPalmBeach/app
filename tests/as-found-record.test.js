@@ -277,6 +277,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['_invShareFolders', '_invShareEach', 'shareInventoryWithCounsel', 'unshareInventory'],
       vars: ['AS_FOUND_SUBFOLDER'],
       stubs: {
+        // P22: the share is recorded on the job (recordPhotoShare, driven in p22-group-b.test.js); here only the folders.
+        recordPhotoShare: () => null, _photoSharesRepaint: () => {},
         jobs: [Object.assign({}, JOB, { driveFolder: 'https://drive.google.com/drive/folders/PARENT' })],
         SHEETS_SYNC_URL: 'https://script.example/exec',
         resolveSubfolderId: (job, name, cb) => cb(name === 'Estate Inventory' ? 'INV' : 'AF'),
@@ -297,6 +299,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['_invShareFolders', '_invShareEach', 'shareInventoryWithCounsel'],
       vars: ['AS_FOUND_SUBFOLDER'],
       stubs: {
+        // P22: the share is recorded on the job (recordPhotoShare, driven in p22-group-b.test.js); here only the folders.
+        recordPhotoShare: () => null, _photoSharesRepaint: () => {},
         jobs: [Object.assign({}, JOB, { driveFolder: 'https://drive.google.com/drive/folders/PARENT' })],
         SHEETS_SYNC_URL: 'https://script.example/exec',
         resolveSubfolderId: (job, name, cb) => cb('INV'),

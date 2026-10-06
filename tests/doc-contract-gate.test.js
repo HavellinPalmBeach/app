@@ -34,7 +34,7 @@ const FNS = ['_invScheduleSection', '_invTrackDefault',
   '_renderLedgerCards', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', 'estateProceedsHolder', '_invRecipient',
-  '_ymdLocal', 'invDonationReceipted', '_jobDestLabel'
+  '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf'
 ];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 

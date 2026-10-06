@@ -58,7 +58,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
     'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix', 'escLines',
     // A closed-retained job names what it kept (the payments list group below renders one).
-    'closeoutRetainedTotal', 'jobPaidTotal', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'jobListEntries'];
+    'closeoutRetainedTotal', 'jobPaidTotal', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'jobListEntries', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote'];
   const VARS = ['_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'DEPOSIT_VOID_STEP',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',

@@ -313,7 +313,9 @@ const FAIL = { upload: null };
       has(body, 'As-Found Record photographs: https://drive.google.com/drive/folders/AF55', 'the As-Found Record folder, linked');
       has(body, 'Estate Inventory photographs: https://drive.google.com/drive/folders/INV55', 'the Estate Inventory folder, linked');
       has(body, 'Release approvals and chain of custody: https://drive.google.com/file/d/up', 'the release approvals and custody log, linked to their filed record');
-      eq(SHARES.slice(s0), [{ folderId: 'AF55', email: 'ann@lowe.law' }, { folderId: 'INV55', email: 'ann@lowe.law' }], 'both folders shared with the attorney');
+      // P22 (2026-10-06): and with the representative the package copies, so the email's links do not refuse them.
+      eq(SHARES.slice(s0), [{ folderId: 'AF55', email: 'ann@lowe.law' }, { folderId: 'AF55', email: 'rex@hale.example' },
+                            { folderId: 'INV55', email: 'ann@lowe.law' }, { folderId: 'INV55', email: 'rex@hale.example' }], 'both folders shared with the attorney, and with the copied representative');
       eq(UPLOADS.slice(u0).map((u) => u.folderId + ' ' + u.filename), ['INV55 HVL-0055 - Havellin Release Approvals and Chain of Custody.html',
         'INV55 HVL-0055 - Havellin Court Inventory.html', 'INV55 HVL-0055 - Havellin Estate Inventory Report.html', 'INV55 HVL-0055 - Havellin Disposition Ledger.html',
         'INV55 HVL-0055 - Havellin Appraisal Worklist.html'],

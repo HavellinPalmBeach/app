@@ -269,7 +269,7 @@ function run({ group, ok, eq, has, lacks }) {
       'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews',
       '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'estimateEditBlocker', 'priceChangeBlocker',
       // The re-acceptance build's rules, which the rail reads on every job (merged 2026-09-29) — lifted, never stubbed.
-      'estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'fmt', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'].concat(HELP),
+      'estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'fmt', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'esignFiledCopies', 'agreementHandOverDraftNote'].concat(HELP),
     vars: ['JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'JT_ROW_DOC', 'DOC_READY_WHY',
       'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS',
       'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', 'currentInvStage'],
@@ -495,6 +495,8 @@ function run({ group, ok, eq, has, lacks }) {
         fns: ['docSend', 'docRecordSent', 'docState', '_jobTouch', '_actor', '_stamp',
               'esignSharedEmails'].concat(HELP),  // P21: the DocuSign send names signers sharing one address (Q32)
         stubs: {
+          // P22: whom the envelope's Client line went to is read off clientRecipient, the rung esignSigner (stubbed below) reads.
+          esignCounselSignsNote: () => '',
           DOC_SEND_PROVIDERS: PROVIDERS, _docBusy: null, docProvider: () => provider, esignAnchorsPresent: () => [],
           _dashSendState() {}, setTimeout: () => 0, clearTimeout() {}, docPdfBase64: (spec, h, cb) => cb('JVBERi0='),
           _pdfFailAdviceText: () => '', esignSigner: () => ({ name: 'Tripp Butler' }), docAction() { said.filed++; },
@@ -689,6 +691,10 @@ function run({ group, ok, eq, has, lacks }) {
       probatePackageMovedSince: 'the rule, for the probate package',
       // … and its card prints when the draft was made. The tap and the draft link on it read draftOutstanding.
       probatePackageCardHtml: 'the probate package card\'s who-and-when line',
+      // P22: two drafts the app no longer watches, NAMED so nobody sends them, never offered: the packet's draft a hand-over
+      // in person left in the mailbox, and a package draft whose card a moved matter took away.
+      agreementHandOverDraftNote: 'the draft a hand-over in person left in the mailbox',
+      estatePackageOrphanDraftNote: 'a package draft with no card left to name it',
     };
     const names = [...new Set([...src.matchAll(/(^|\n)function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[2]))];
     const readers = names.filter((n) => { let b; try { b = fn(n); } catch (e) { return false; } return /draftedAt/.test(live(b)); });

@@ -57,7 +57,7 @@ function readers(name, call) {
 // ── The agreement and the client estimate: the reconciliation suite's lift list, and what an answered matter reaches
 //    that its unanswered fixtures never do (estateAuthority, jobOnProbateTrack, the trust's accounting sentence), the
 //    trust's namer and the anchor measure.
-const AGR_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', 'esignAnchorsPresent', '_ceGroupedSpaces', 'esignCoSignerAnchors']);
+const AGR_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', 'esignAnchorsPresent', '_ceGroupedSpaces', 'esignCoSignerAnchors', 'esignCoSignerTop']);
 const AGR_VARS = DOCREC.VARS.concat(['ESIGN_REQUIRED_ANCHORS', 'AGR_NOT_AN_ACCOUNTING', 'ESIGN_COSIGNER_ANCHOR']);
 // One sandbox for the whole file (building one compiles ~170 functions, and the renders are pure): each render starts
 // from the same empty stores, with only the job it is about on the client list.

@@ -50,7 +50,7 @@ function rig(opts) {
           '_invDetailRefs', '_invFileId', '_roomShotThumbStyle',
           'discardShot', '_shotDesc', '_trashShotFiles',
           '_invDerivedRefs', '_invNamed', '_invItemNo'],
-    vars: ['PHOTO_UPLOAD_TIMEOUT_MS', '_localShotThumbs'],
+    vars: ['PHOTO_UPLOAD_TIMEOUT_MS', '_localShotThumbs', '_photoUploadsLive'],
     stubs: {
       jobs: [{ id: 1, driveFolder: 'https://drive.google.com/drive/folders/FOLDER' }],
       _photoRefs: { 1: [] },

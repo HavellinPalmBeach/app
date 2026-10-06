@@ -86,7 +86,7 @@ function run(resp, opts) {
   const warns = [];
   const timers = [];
   const ctx = sandbox({
-    vars: ['_dashKeepNotice', '_driveFolderInFlight', 'PHOTO_UPLOAD_TIMEOUT_MS', 'SIGNED_RECORDS_SUBFOLDER'],
+    vars: ['_dashKeepNotice', '_driveFolderInFlight', 'PHOTO_UPLOAD_TIMEOUT_MS', 'SIGNED_RECORDS_SUBFOLDER', '_photoUploadsLive'],
     // _saveJobEdit / _jobTouch are lifted though nothing here calls them today: a change that sends
     // the failure recorder through them (it must stay bare — see job-edit-stamps) then FAILS that
     // suite's exemption checks with this file still running, instead of throwing here.

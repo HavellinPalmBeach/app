@@ -283,7 +283,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const D = class extends Date { constructor(...a) { if (a.length) super(...a); else super(clock); } static now() { return clock; } };
     const c = lift(['dashFileSignedCopy', 'esignArchiveSigned', 'esignSignedCopyGaps', 'jobTimeline', 'jobTimelineActions', 'jobTimelineNext'],
       ['saveJobs', 'syncJobToSheets', '_dashRedraw', 'dashNotice', '_docNotice', '_appsScriptPost', 'renderJobs'], {
-        jobs: [job], estimateStore: { 7: EST() }, SHEETS_SYNC_URL: SYNC, Date: D,
+        jobs: [job], estimateStore: { 7: EST() }, SHEETS_SYNC_URL: SYNC, Date: D, setTimeout: () => 0, clearTimeout() {},
         // Each save keeps what the device would write: the agreement's DocuSign record at that moment.
         saveJobs: () => saves.push(JSON.parse(JSON.stringify(((c.jobs[0].docState || {}).agreement || {}).esign || {}))),
         syncJobToSheets() {}, _dashRedraw: redraw, renderJobs() {},
@@ -434,7 +434,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = lift(['acceptChangeOrder', 'fileChangeOrder', 'coCardActions', 'openChangeOrderFiled'],
       ['saveJobs', 'syncJobToSheets', 'renderJobs', '_docNotice', 'showSyncBadge', 'saveChangeOrders', '_dashRedraw', 'dashNotice', '_asBackgroundRedraw', 'closeCOAcceptModal'], Object.assign({
         jobs: [job], estimateStore: { 7: EST() }, changeOrders: cos, currentEstimate: null, SHEETS_SYNC_URL: SYNC, Date: FixedDate(NOW),
-        document: dom, fetch: N.fetch, window: { open: (u) => notices.push({ t: 'open', m: u }) },
+        setTimeout: () => 0, clearTimeout() {}, document: dom, fetch: N.fetch, window: { open: (u) => notices.push({ t: 'open', m: u }) },
         saveJobs() {}, syncJobToSheets() {}, renderJobs() {}, closeCOAcceptModal() {}, _asBackgroundRedraw: (f) => f(),
         // Each repaint keeps what the change order's row offers at that moment.
         _dashRedraw: () => redraws.push(c.coCardActions(c.changeOrders[0]).map((a) => a.label)),
@@ -671,8 +671,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(p.html, 'Inventory Package', 'in the branded email');
     lacks(p.text, 'Valuing the property is not part', 'a valued engagement states no absence');
     // Shared, filed, converted.
-    eq(r.N.log.shares, [{ folderId: 'AF7', email: 'ann@lowe.law' }, { folderId: 'INV7', email: 'ann@lowe.law' }],
-       '⚠⚠ both photograph folders shared with the attorney through the existing sharing action');
+    // P22: and with the representative the package copies (never agreements@), so the links do not refuse them.
+    eq(r.N.log.shares, [{ folderId: 'AF7', email: 'ann@lowe.law' }, { folderId: 'AF7', email: 'rex@hale.example' },
+                        { folderId: 'INV7', email: 'ann@lowe.law' }, { folderId: 'INV7', email: 'rex@hale.example' }],
+       '⚠⚠ both photograph folders shared with the attorney through the existing sharing action, and with the copied representative');
     eq(r.N.log.uploads.map((u) => [u.folderId, u.filename]), [
       ['INV7', 'HVL-0007 - Havellin Release Approvals and Chain of Custody.html'], ['INV7', 'HVL-0007 - Havellin Court Inventory.html'],
       ['INV7', 'HVL-0007 - Havellin Estate Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'],
@@ -680,7 +682,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ every PDF filed to the Estate Inventory folder too, under undated names, so the next package replaces them');
     eq(r.N.log.pdfs.length, 4, 'four conversions, through the one PDF builder');
     // Sequential, never parallel, and in order.
-    eq(r.N.log.posts, ['shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
+    eq(r.N.log.posts, ['shareFolder', 'shareFolder', 'shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
        'one Apps Script call after another');
     ok(r.N.log.gets.some((u) => /action=loadMedia&jobId=7/.test(u)), '⚠ the inventory is read from the sheet first, never assumed empty');
   });
@@ -884,7 +886,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A folder from before the 2026-09-20 split: both names resolve to one folder, which is shared and linked once.
     const one = pkgRig({ job: Object.assign(ESTATE(), { driveSubfolders: { 'Estate Inventory': 'INV7', 'Agreement': 'AGR7' } }) });
     one.c.sendProbatePackage(7);
-    eq(one.N.log.shares, [{ folderId: 'INV7', email: 'ann@lowe.law' }], '⚠ one photograph folder is shared once');
+    eq(one.N.log.shares, [{ folderId: 'INV7', email: 'ann@lowe.law' }, { folderId: 'INV7', email: 'rex@hale.example' }], '⚠ one photograph folder is shared once with each');
     const op = mimeParts(one.N.log.drafts[0] || '');
     has(op.text, 'Photographs: https://drive.google.com/drive/folders/INV7', 'and linked once, as the photographs');
     lacks(op.text, 'As-Found Record photographs', 'never claiming a second folder');

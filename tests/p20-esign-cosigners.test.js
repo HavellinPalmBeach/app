@@ -235,8 +235,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(A.esignAnchorsPresent(none), ['clientSig', 'clientDate', 'havSig', 'havDate', 'mktOptOut'], 'and reports exactly the five with none recorded');
     eq(A.esignAnchorsPresent(two.replace('/hcd2/', '')), ['clientSig', 'clientDate', 'havSig', 'havDate', 'mktOptOut', 'coSig1', 'coDate1', 'coSig2'],
        'a marker gone from the page is reported gone, never assumed');
-    eq(A.esignAnchorsPresent(two.replace('/hcs1/', '').replace('/hcd1/', '')), ['clientSig', 'clientDate', 'havSig', 'havDate', 'mktOptOut'],
-       'and the walk stops at the first co-signer the page carries neither marker for (a safe refusal, below)');
+    // P22: the walk goes to the highest number the page carries, so a gap no longer hides the co-signers after it.
+    eq(A.esignAnchorsPresent(two.replace('/hcs1/', '').replace('/hcd1/', '')), ['clientSig', 'clientDate', 'havSig', 'havDate', 'mktOptOut', 'coSig2', 'coDate2'],
+       'a co-signer the page carries neither marker for is not reported, and the ones after it still are (esignCoSigners refuses the gap by name)');
     lacks(noComments(fn('esignAnchorsPresent')), "'/", 'no marker string is typed into the measurer: it asks the namer');
     // ⚠⚠ A JOB WITH NO CO-REPRESENTATIVE RENDERS EXACTLY AS IT DID: the two forms, byte for byte against 456d0cb.
     eq(sha(A.agreementHtml(GOLD_LIVING, GOLD_EST)), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20');
@@ -677,7 +678,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Nothing else reads the co-signature record or the filed pages.
     eq(readers(/\bsig\.coSigners\b/g), { agreementCoSignState: 2, recordAgreementSignature: 4 }, '⚠ the signature\'s co-signers: written by the recorder (from what the provider named), read by the one answer alone');
     eq(readers(/signedRecordsOf\([^)]*'agreement'/g), { agreementCoSignState: 1 }, '⚠ the filed pages are read by the one answer');
-    eq(readers(/\besign\.coSigners\b/g), { agreementCoSignState: 2, applyEsignStatus: 2, docRecordSent: 1 }, 'the envelope\'s list: written at the send, kept by the check, read by the one answer alone');
+    eq(readers(/\besign\.coSigners\b/g), { agreementCoSignState: 2, docRecordSent: 1 }, 'the envelope\'s list: written at the send, read by the one answer alone (the check keeps it with every other field of the envelope\'s record, P22)');
     eq(readers(/AGR_COSIGN_REF/g), { agreementCoSignHtml: 1, agreementCoSignState: 1 }, 'the page\'s ref');
     const kinds = new Function('return ' + decl('SIGNED_RECORD_KINDS').replace(/^var\s+\w+\s*=\s*/, '').replace(/;\s*$/, ''))();
     eq(kinds.agreement, { label: 'Co-signed agreement page' }, 'the new kind of signed record');

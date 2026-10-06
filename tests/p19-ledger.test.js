@@ -318,6 +318,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = lift(['activateOrCycle', 'fileDispositionLedger'],
       ['saveJobs', 'syncJobToSheets', 'showSyncBadge', '_docNotice', 'openJobPlanFor', '_dashRedraw', 'renderClientDashboard', 'savePhotoRefs',
        'loadPhotoRefs', 'jobCloseBlockers'], {
+        setTimeout: () => 0, clearTimeout() {},
         saveJobs() { log.saves++; }, syncJobToSheets() { log.syncs++; }, showSyncBadge(m, err) { log.badges.push({ m: String(m), err: !!err }); },
         _docNotice(t, m) { log.notices.push({ t, m: String(m) }); }, openJobPlanFor() { return false; }, _dashRedraw() { return true; },
         renderClientDashboard() {}, savePhotoRefs() {}, loadPhotoRefs() {}, jobCloseBlockers: () => [],

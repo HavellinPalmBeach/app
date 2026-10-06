@@ -109,8 +109,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // reload, without opening that client's Job Plan first, drew an empty manifest against
     // a perfectly good localStorage, and _importedSourceSet re-offered every import.
     const ctx = sandbox({ fns: ['_invEnsureLoaded', 'loadPhotoRefs', '_loadPendingPhotoData',
-                                '_pendingPhotoKey'],
-                          vars: ['_invHydrated'],
+                                '_pendingPhotoKey', '_expireStaleUploads', 'photoUploadStale'],
+                          vars: ['_invHydrated', '_photoUploadsLive', 'PHOTO_UPLOAD_TIMEOUT_MS'],
                           stubs: { _photoRetryData: {} } });
     ctx.__store['hav_media_4'] = JSON.stringify([
       { stableId: 'v1', label: 'inventory', objectName: '2026 Bentley SUV' },

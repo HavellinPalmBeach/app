@@ -238,7 +238,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay',
       '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance',
       '_approvedPriceAbove', 'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'esc', 'dot', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'agreementChipFix', 'jobPaymentsListHtml',
-      'probatePackageCardHtml', 'probatePackageBlocker', 'probatePackageAddressee', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'trustRecordShown', 'estateTaxReturnLineHtml', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn'];
+      'probatePackageCardHtml', 'probatePackageBlocker', 'probatePackageAddressee', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'trustRecordShown', 'estateTaxReturnLineHtml', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote', 'photoSharesLine', 'photoSharesOf'];
     const VARS = ['_driveFolderInFlight', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS',
       'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
