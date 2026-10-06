@@ -37,7 +37,7 @@ rather than researching from nothing.
 | **2** | the first **trust** matter signing | A5, A6, A10, A14, A15 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11, D12 |
+| **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -972,6 +972,37 @@ the Contents Record and the Disposition Ledger. On an estate the sale or release
 
 **The question.** Is the client's initial against a named line an adequate disclosure and consent for a sale or gift to a
 team member, and does the standard agreement need a clause to match A12?
+
+### D13. Agent Two: values researched by software, and kept internal where counsel values ⚠ NEW 2026-10-06
+
+**What it does.** From P23 the desk can put an estimated value on every inventory line with **Agent Two**: software that
+searches recent sold results (auction prices realised, dealer sales) and, for ordinary household lots, the going resale rate.
+Every figure comes back marked *unreviewed* for a person to accept or correct, cites the sales it rests on (a sale is kept only
+if its link was actually returned by the search), and is replaced outright by a credentialed appraisal once one is recorded.
+Anthony's decisions (2026-10-05 and -06): it values living clients' lines too; an unreviewed figure counts as valued (the
+schedule is not held at DRAFT for it); and where the engagement gives valuation to counsel it writes no value at all.
+
+**What the documents now say.**
+- **Court Inventory and Trust Schedule:** a *Basis* column on every line naming what the figure rests on, in these words:
+  *appraisal*, *auction comps*, *online comps*, *general estimate*, *WorthPoint comps*, *dealer quote*, *PR estimate*.
+- **Court Inventory, Trust Schedule and Estate Inventory PDF:** a stamp beside the DRAFT / FINAL status reading
+  *"N values not yet reviewed"* when software figures nobody at Havellin has accepted are on the page. It does not make the
+  schedule a draft, and the signature block is still offered when the schedule is otherwise final.
+- **Contents list and None tiers** (the agreement gives valuation to counsel, and the Contents List says Havellin *"states no
+  opinion of value"*): Agent Two's range is kept on Havellin's desk only, never written as a value and never printed, and is
+  used to route sales and to recommend, by item and without a figure, which items counsel may want appraised.
+
+**The questions.**
+1. Is a FINAL schedule carrying *"N values not yet reviewed"* acceptable for a personal representative to adopt (or a trustee
+   to receive), or should an unreviewed software figure keep the schedule at DRAFT, as an unvalued line does?
+2. Does *auction comps* / *general estimate* as the stated basis, with D4's estimate-not-appraisal wording, keep a software
+   estimate from being read as an appraisal by a court, a beneficiary or the IRS? Should the basis say a figure was
+   *researched by software and reviewed by Havellin*?
+3. On a *Contents list* engagement, is holding an internal estimate (for routing a sale) consistent with the agreement's
+   *"states no opinion of value"*, given that it is never given to the client, counsel or anyone else? Does recommending an
+   appraisal *by item, without a figure* amount to an opinion of value?
+4. On a living client's job the figure reaches the client's CSV and workbook. Does the standard agreement need a sentence
+   that these are estimates for planning a sale, not appraisals?
 
 ## E. What is deliberately NOT being asked
 

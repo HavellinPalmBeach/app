@@ -686,7 +686,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('S9 · the backend: 2026-10-05, asked for by the app, and the banner names what an older one costs', () => {
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1];
-    eq(bv, '2026-10-05', 'BACKEND_VERSION is bumped with the .gs change');
+    // RESTATED 2026-10-06 (P23): Agent Two's action moved the version on, as every later .gs change will; at or past this
+    // pack's, the way p16, p17 and p19 hold theirs.
+    ok(bv >= '2026-10-05', 'BACKEND_VERSION is at or past this pack\'s .gs change (' + bv + ')');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST', 'BACKEND_NEEDS'] });
     eq(B.BACKEND_MIN_VERSION, '2026-10-05', '⚠⚠ the app asks for it: an older deployment puts no co-representative on the envelope');
     ok(String(B.BACKEND_FEATURE_COST.version).indexOf('a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement') === 0,

@@ -131,7 +131,7 @@ function rig(refs, over) {
           '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo',
           // P16: the desk's one removal writer, which records who removed the line.
           '_invTombstoneLine', '_invStampBy', '_invJob'],
-    vars: ['_agRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', '_agDupSet',
+    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', '_agDupSet',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
@@ -786,7 +786,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['_renderInvRow', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
+      fns: ['_renderInvRow', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.

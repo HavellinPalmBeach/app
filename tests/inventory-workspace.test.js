@@ -190,7 +190,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = src.indexOf('function _invBulkApply(');
     const body = src.slice(at, src.indexOf('\n}\n', at));
     // Selecting the placeholder must never blank the field across the whole selection.
-    has(body, "if (key !== 'reviewed' && (value === '' || value == null)) return;",
+    // RESTATED 2026-10-06 (P23): Accept values (`valReviewed`) is the second act that carries no value of its own, so it
+    // passes the guard as Mark reviewed does; every field the bar sets still refuses the placeholder.
+    has(body, "if (key !== 'reviewed' && key !== 'valReviewed' && (value === '' || value == null)) return;",
         'the placeholder is not a value and cannot wipe forty items');
     has(body, "(value === '__none') ? null : parseInt(value, 10)",
         'estate-wide is applied deliberately, not as a fallback for an empty string');

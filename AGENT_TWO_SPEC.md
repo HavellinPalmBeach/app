@@ -1,9 +1,9 @@
 # AGENT TWO — VALUE THE INVENTORY
 
-**Status: spec, not built (2026-10-05).** Step 3 of the inventory pipeline Anthony scoped on 2026-09-19
-(step 1 the two-pass field camera, step 2 Agent One, `AGENT_ONE_SPEC.md`). This file is the design
-and the decisions behind it; nothing here is live. Build it as its own pack, after the `2026-10-05`
-redeploy.
+**Status: built (P23, 2026-10-06); live once Apps Script `2026-10-06b` is deployed.** Step 3 of the
+inventory pipeline Anthony scoped on 2026-09-19 (step 1 the two-pass field camera, step 2 Agent One,
+`AGENT_ONE_SPEC.md`). This file is the design and the decisions behind it; §13 says where the build
+departs from it. `CLAUDE.md` holds the rules as built.
 
 Anthony, on what it is for: *"the whole point is to save time, not have a human re-enter numbers
 where we don't have to."*
@@ -290,3 +290,47 @@ Measure on the first real estate before tuning. Cost does not drive the model ch
 4. **An appraisal replaces the agent's figures** rather than sitting beside them (§2.3).
 
 Still open: WorthPoint's answer to the partnership inquiry, if it changes §4.
+
+---
+
+## 13 · AS BUILT (P23, 2026-10-06)
+
+Where the build settles something the spec left open, or departs from it. Each is held by `tests/agent-value.test.js`
+and browser step 69.
+
+- **Names.** Server: `agentValueLines` (action `agentValue`), `testAgentValue()`, `BACKEND_VERSION` `2026-10-06b`. App:
+  `agentValueMode(ref)` (it needs no job: nothing in the rule reads one), `agentValueInternal(job)`, `_avWrite` (the one
+  writer), `_avTakeValue` (who owns a figure), `agentValueUnreviewed`, `agentValueStale`, `agentValueSpecialistWorth`,
+  `invValBasisWord`, `_avUnreviewedStamp`.
+- **Two more fields than §5:** `valNotices` (the triage notices, kept on the line as Agent One keeps `agentNotices`) and
+  `valFailed` (a line it could not value keeps the reason, §7: *"with the reason on the row"*). `valReviewedBy` and
+  `valReviewedAt` record the acceptance. All on the `savePhotoRefs` whitelist; none sticky. No workbook or CSV column was
+  added, so `saveInventory.gs` is unchanged.
+- **The ceiling (§3) is read off the point value** (`fmv` above $250), and the re-run is the app's: the general answer is
+  never written, the line is forced to research for the session, and it goes in the next call of the same run. The server
+  values what it is asked, as asked.
+- **Searches (§7).** Research: five searches and two page reads per line. Ordinary lots: eight to a request with up to
+  eight searches. `max_uses` is constant per depth so the cached prompt is read back (the tool list renders first). Line
+  labels are plain strings checked on the server, never an enum (an enum would change the tool on every request).
+- **The URL guard (§4b)** reads links out of every tool *result* block (search results, fetched pages, and what the dynamic
+  filter's code printed), never the model's own blocks (a fetch request carries a URL the model chose). A drop costs a level
+  of confidence; research with no sold comparable left is `low`. An ordinary lot is not held to the sold rule.
+- **Refusal fallback.** `fallbacks: 'default'` with its beta header, per Anthropic's guidance for this model; a 400 that names
+  the field is sent once more without it. `pause_turn` is continued twice at most; a request still paused is failed as
+  unfinished.
+- **Timeouts.** UrlFetchApp's own per-request limit (60 seconds is the commonly reported figure; the Google docs could not be
+  read from the build environment) throws for the whole `fetchAll`, so a slice that throws fails its lines as *took too long*,
+  nothing is written, and the run goes on. A slice is started only within 120 seconds of the call's start. Measure with
+  `testAgentValue()`, which prints the elapsed time.
+- **The desk.** *Value N lines* on the work bar, after *Name N shots*; *Unreviewed values* chip; *Accept value* under the
+  figure; *Accept values* on the bulk bar (only lines with an unreviewed agent figure are touched); the line's record carries
+  the comparables, the WorthPoint search with Copy, *Use a WorthPoint sale* and Re-value, and nothing on a line Agent Two has
+  not touched. Re-value researches one line and replaces only the agent's own figure.
+- **The appraisal (§2.3)** takes the line when its source is set to Appraisal (on the line or the bulk bar), or when a figure
+  is typed over the agent's on a line with an appraiser linked. Linking an appraiser alone changes nothing: the agent's number
+  stands until the appraisal's figure lands.
+- **§8 internal tiers:** nothing a document can print is written (`fmv`, `valDate`, `valSource`, `valNote`); a Re-value on a
+  line whose earlier agent figure predates a tier change clears it. A source somebody recorded is left alone.
+- **§12.2 and §12.3:** `_avUnreviewedStamp` on the Court Inventory, the Trust Schedule and the Estate Inventory PDF (it counts
+  printed figures only); the Basis column lives in `_invScheduleSection`, the table both schedules share.
+

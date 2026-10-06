@@ -55,11 +55,13 @@
 // (routing order 1, their own tabs) and answers with who it put there; esignStatus finds the client by recipientId
 // '1' and reports each co-signer. No action or type changes. An older deployment sends to the client and Anthony
 // alone, and the app records that the co-representatives were not on the envelope.
-var BACKEND_VERSION = '2026-10-05';
+// ⚠ 2026-10-06b (P23): Agent Two, `agentValue` — the desk values its unvalued lines (AGENT_TWO_SPEC.md). A new action,
+// so an older deployment is named by the action the app finds missing, not by version.
+var BACKEND_VERSION = '2026-10-06b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
-  'stripeLink', 'stripeStatus', 'agentIdentify'
+  'stripeLink', 'stripeStatus', 'agentIdentify', 'agentValue'
 ];
 var BACKEND_TYPES = [
   'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
@@ -147,6 +149,7 @@ function doPost(e) {
     if (data.action === 'stripeLink')    { return jsonOut(stripeCreatePaymentLink(data)); }
     if (data.action === 'stripeStatus')  { return jsonOut(stripePaymentsForLink(data)); }
     if (data.action === 'agentIdentify') { return jsonOut(agentIdentifyShots(data)); }
+    if (data.action === 'agentValue')    { return jsonOut(agentValueLines(data)); }
 
     var type = data.type;
     var payload = data.payload;
@@ -3269,4 +3272,610 @@ function testAgentIdentify() {
   for (var n = 0; n < (r.notices || []).length; n++) {
     Logger.log('  NOTICE [' + r.notices[n].kind + '] ' + r.notices[n].text);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// AGENT TWO — VALUING THE INVENTORY
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Spec: AGENT_TWO_SPEC.md (P23, 2026-10-06). Step 3 of the inventory pipeline Anthony scoped on
+// 2026-09-19: the field shoots, Agent One names, Agent Two values, the desk confirms. Anthony:
+// *"the whole point is to save time, not have a human re-enter numbers where we don't have to."*
+//
+// ⚠⚠ IT RUNS HERE FOR AGENT ONE'S REASON: the key cannot live in a public file. Same project, same
+// deployment, same `ANTHROPIC_API_KEY`, and it moves in lockstep with BACKEND_VERSION and the
+// dispatch-parity test like every other action.
+//
+// ⚠⚠ THIS END VALUES WHAT IT IS ASKED, AS IT IS ASKED, AND DECIDES NOTHING ELSE. Which lines are
+// valued, at which depth (`mode`), whether a figure is written as the line's value or kept internal
+// on a tier where counsel values (spec §8), and what a range does to the appraisal rule are all the
+// app's, each in one place. The one thing decided here is the guard that only this end can apply:
+// a comparable must cite a page a tool actually returned (§4b), because only this end sees the
+// tool results.
+//
+// ⚠ AND IT IS NEVER TOLD A THRESHOLD (§6). It values; the app's rules decide. A figure taught to the
+// model is a second copy of `invAppraisalThreshold`, the drift this codebase keeps paying for.
+
+var AGENT_VALUE_MODEL       = 'claude-opus-5-5';   // its own constant: measure before changing (spec §7)
+// ⚠ `medium` TO START, which is also this model's default — set explicitly so a default moving on
+// the API side cannot change what an estate costs. Sweep low/medium/high on one real estate and
+// measure against the comps a person would have found before tuning it.
+var AGENT_VALUE_EFFORT      = 'medium';
+var AGENT_VALUE_MAX_TOKENS  = 16000;  // the non-streaming ceiling Agent One settled on (P11); it caps, it does not spend
+var AGENT_VALUE_PARALLEL    = 8;      // fetchAll width, as Agent One
+var AGENT_VALUE_MAX_LINES   = 40;     // hard cap on one invocation whatever the caller sends
+var AGENT_VALUE_GENERAL_BATCH = 8;    // ordinary lots per request ("about ten", spec §3)
+// Searches each request may run. ⚠ A CONSTANT PER MODE, never sized to the batch: the tool list is
+// the first thing in the prompt, so a `max_uses` that varied with the batch would give every
+// request a different prefix and the cached system prompt would never be read back.
+var AGENT_VALUE_SEARCHES    = { comps: 5, general: 8 };
+var AGENT_VALUE_FETCHES     = 2;      // comps only: reading a results page the search turned up
+var AGENT_VALUE_CONTINUES   = 2;      // `pause_turn` continuations per request before it is called unfinished
+var AGENT_VALUE_MAX_COMPS   = 6;      // comparables kept per line (the manifest lives in a ~5MB localStorage)
+// ⚠ A SLICE IS STARTED ONLY INSIDE THIS, and it is half of Agent One's budget for a reason: a
+// valuing request researches for tens of seconds and may be continued twice, so the slice started
+// at the budget's edge still has to finish inside Apps Script's six minutes.
+var AGENT_VALUE_TIME_BUDGET = 120000;
+// ⚠ SERVER-SIDE REFUSAL FALLBACK, opted into by default as Anthropic's guidance asks of this model:
+// a classifier decline is re-run on the model Anthropic recommends for its category, inside the same
+// call. The header and the scalar `fallbacks:'default'` go together; pairing either with the other
+// form is a 400. A deployment whose account refuses the field answers 400 naming it, and that one
+// request is sent again without it (`_avReadResult`, `noFallbacks`) rather than the button dying.
+var AGENT_VALUE_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
+var AGENT_VALUE_SOURCES = { comps: ['Auction comps', 'Online comps'], general: ['General estimate'] };
+var AGENT_VALUE_NOTICE_KINDS = ['appraiser', 'specialist', 'worthpoint', 'name', 'other'];
+
+// Money to the cent, half away from zero, read at fifteen significant digits so 1.005 is 1.01: the
+// app's `roundCents`, which this file cannot lift. A test holds the two to the same answers.
+function _avCents(x) {
+  // ⚠ A MISSING FIGURE IS NOT ZERO: Number(null) and Number('') are 0, and a value of $0 is a claim that the line is
+  // worthless. Absent stays NaN, so the line is failed rather than valued at nothing.
+  if (x === null || x === undefined || x === '') return NaN;
+  var n = Number(x);
+  if (!isFinite(n)) return NaN;
+  var s = n < 0 ? -1 : 1;
+  return s * Math.round(parseFloat((Math.abs(n) * 100).toPrecision(15))) / 100;
+}
+
+// ─── THE TOOL THE MODEL FILLS IN ──────────────────────────────────────────────────
+// ⚠ `strict: true` WITH `tool_choice: auto` AND AN INSTRUCTION, as Agent One: forced tool use is a
+// 400 on this model, and strict still guarantees the arguments validate. Strict wants every property
+// required, so a general estimate sends an empty `lookup` and may send no comps.
+// ⚠ `line` IS A PLAIN STRING, NOT AN ENUM OF THIS REQUEST'S LABELS. An enum would make the tool, and
+// with it the cached prefix, different on every request; the labels are checked here instead and an
+// answer for a line nobody asked about is dropped.
+function _avTool(mode) {
+  return {
+    name: 'record_values',
+    description: 'Record a value for every line you were given, or say why a line could not be valued. '
+               + 'Call this exactly once, after your research.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['values', 'unvalued'],
+      properties: {
+        values: {
+          type: 'array',
+          description: 'One entry per line you could value.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['line', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'],
+            properties: {
+              line:       { type: 'string', description: 'The label the line was given, for example L1.' },
+              value:      { type: 'number', description: 'Your point value for the WHOLE line, in US dollars: every article on it together, never a per-piece price.' },
+              low:        { type: 'number', description: 'The low end of the range it would realistically sell for, whole line, US dollars.' },
+              high:       { type: 'number', description: 'The high end of that range, whole line, US dollars.' },
+              confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+              source:     { type: 'string', enum: AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general },
+              basis:      { type: 'string', description: 'One sentence saying how the comparables became this figure. Read by the desk.' },
+              comps: {
+                type: 'array',
+                description: 'The sales you relied on. Each must be a page your search or fetch returned, with its URL copied exactly.',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['title', 'venue', 'saleDate', 'price', 'url', 'kind'],
+                  properties: {
+                    title:    { type: 'string' },
+                    venue:    { type: 'string', description: 'Who sold it: the auction house, the platform or the dealer.' },
+                    saleDate: { type: 'string', description: 'YYYY-MM-DD, or YYYY-MM, or empty when the page gives no date.' },
+                    price:    { type: 'number', description: 'The price realised (sold) or asked (asking), US dollars, for what that listing covered.' },
+                    url:      { type: 'string' },
+                    kind:     { type: 'string', enum: ['sold', 'asking'] }
+                  }
+                }
+              },
+              lookup: { type: 'string', description: 'The terms a person would type into WorthPoint to check this line: maker, pattern, mark, form, period. Empty for a general estimate.' },
+              notices: {
+                type: 'array',
+                description: 'Things a person should look at. Never a substitute for a value.',
+                items: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['kind', 'text'],
+                  properties: {
+                    kind: { type: 'string', enum: AGENT_VALUE_NOTICE_KINDS },
+                    text: { type: 'string' }
+                  }
+                }
+              }
+            }
+          }
+        },
+        unvalued: {
+          type: 'array',
+          description: 'Every line you could not value, each with the reason. Never guess instead.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['line', 'reason'],
+            properties: { line: { type: 'string' }, reason: { type: 'string' } }
+          }
+        }
+      }
+    }
+  };
+}
+
+// The tools for one request: search (and, for the research depth, reading a page it found) and the
+// tool the answer comes back through. ⚠ `_20260209` CARRIES DYNAMIC FILTERING ITSELF, so no
+// `code_execution` tool is declared beside it (a second execution environment confuses the model).
+function _avTools(mode) {
+  var tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: AGENT_VALUE_SEARCHES[mode] || 1 }];
+  if (mode === 'comps') tools.push({ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: AGENT_VALUE_FETCHES });
+  tools.push(_avTool(mode));
+  return tools;
+}
+
+// ─── THE SYSTEM PROMPT ────────────────────────────────────────────────────────────
+// Stable for every request on one job, so it carries `cache_control`: the valuation date, the basis
+// and whether this is an estate are constant within a job, which is the span the cache has to cover.
+function _avSystem(ctx) {
+  var estate = !!ctx.estate;
+  var basis = String(ctx.basis || 'Fair Market Value');
+  var vdate = String(ctx.valuationDate || '');
+  var s = ''
+    + 'You are putting a value on the contents of a home so that a concierge can complete '
+    + (estate ? 'an estate inventory' : 'an inventory for a client who is moving or clearing their home')
+    + '. Each line has already been named by someone else. Your job is to say what each line is WORTH, '
+    + 'show the sales that figure rests on, and say plainly when you cannot tell.\n\n'
+
+    + 'WHAT A VALUE MEANS HERE\n'
+    + 'The basis is ' + basis + '.'
+    + (basis === 'Fair Market Value'
+        ? ' That is the price at which the property would change hands between a willing buyer and a '
+        + 'willing seller, neither being under any compulsion and both having reasonable knowledge of the '
+        + 'facts. In practice it is what the thing actually SELLS for on the secondary market: auction '
+        + 'prices realised and completed sales. It is not retail, not an asking price and not an insurance '
+        + 'replacement figure.'
+        : ' Value every line on that basis and say so in the basis sentence where it matters.')
+    + '\n'
+    + (vdate
+        ? 'Value as of ' + vdate + (estate ? ', the valuation date for this estate' : '') + '. Prefer sales '
+        + 'near that date; if the only good comparables are much later, say so in the basis sentence.\n'
+        : (estate
+            ? 'The valuation date for this estate is not recorded yet, so value at the current market and say so '
+            + 'in the basis sentence.\n'
+            : 'Value at the current market.\n'))
+    + 'The property is in Palm Beach County, Florida. Bulky furniture usually sells locally, so its market '
+    + 'is regional; small valuable things sell nationally.\n'
+    + 'A line is a whole lot. "Sterling flatware, service for 12, 72 pieces" is ONE figure for all 72 '
+    + 'pieces, never a per-piece price. Adjust for the condition recorded on the line.\n\n'
+
+    + 'THE TWO DEPTHS\n'
+    + 'A request marked RESEARCH is one line that may be worth real money: art, antiques, jewellery, '
+    + 'silver, rugs, collectibles, firearms, wine, instruments, or anything carrying a maker, a model or '
+    + 'a mark. Search for SOLD results: auction prices realised (LiveAuctioneers and Invaluable results '
+    + 'pages, auction house archives) and dealer sales. Find three or more sold comparables where they '
+    + 'exist and read the photographs, because the maker\'s mark is what makes a comparable a match. '
+    + 'Your value is your reading of those sales, adjusted for condition and for any difference between '
+    + 'them and this line.\n'
+    + 'A request marked ORDINARY is a batch of everyday lots: kitchenware, linens, books, everyday '
+    + 'furniture and decor. One quick search for the going resale rate of that kind of lot is enough, '
+    + 'and you need not cite a comparable. This is a figure for a schedule, not research: "Stainless '
+    + 'flatware, service for 12, everyday brand, $40 to $60" is the whole job.\n\n'
+
+    + 'EVIDENCE\n'
+    + '- A comparable must be a page your search or fetch actually returned. Copy its URL exactly. A sale '
+    + 'you remember, or a link you construct, is not evidence: never invent a sale, a price, a date or a '
+    + 'link. Comparables without a returned URL are thrown away.\n'
+    + '- Say whether each comparable SOLD or was only ASKING. An asking price is not a sale. You may cite '
+    + 'one as "asking", but never set the value on asking prices alone.\n'
+    + '- If a research line has no sold comparable, give your best reading with confidence low, or put the '
+    + 'line under unvalued with the reason. Do not dress a guess up as research.\n\n'
+
+    + 'THE RANGE AND CONFIDENCE\n'
+    + 'low and high bracket where the line would realistically sell; your value sits inside them. high '
+    + 'confidence = several close sold comparables agree. medium = the comparables are near but not exact, '
+    + 'or few. low = a best estimate on thin or indirect evidence.\n\n'
+
+    + 'THE WORTHPOINT LOOKUP\n'
+    + 'For a research line, write in lookup the words a person would type into WorthPoint\'s price guide to '
+    + 'check it: maker, pattern, mark, form, period. Leave it empty for an ordinary lot.\n\n'
+
+    + 'NOTICES\n'
+    + 'kind "appraiser": a qualified appraisal is advisable - the piece is signed, marked, rare, or the '
+    + 'comparables disagree widely.\n'
+    + 'kind "specialist": it should sell through a specialist auction house or dealer, not a general sale.\n'
+    + 'kind "worthpoint": a WorthPoint check would be worth a person\'s time.\n'
+    + 'kind "name": the photograph or the sales suggest the line is something other than its name says. Say '
+    + 'what you think it is. Do NOT rename it and still value the line as named, saying so.\n'
+    + 'kind "other": anything else a person must see. Use notices sparingly.\n\n'
+
+    + 'WHAT YOU MUST NEVER DO\n'
+    + '- Never change what a line is called or what category it is in. A disagreement is a notice.\n'
+    + '- Never say what should happen to a line (keep, sell, donate, junk) beyond the notices above. That '
+    + 'is the family\'s decision.\n'
+    + '- Never give legal or tax advice, and never describe a person.\n'
+    + '- Never value private papers, correspondence or records for their contents.\n\n'
+
+    + 'Call record_values exactly once, after your research, with every line you were given: each one '
+    + 'either under values or under unvalued, using the label it was given.';
+
+  if (estate) {
+    s += '\n\nThis is a decedent\'s estate. The schedule may be read by an attorney, a personal representative '
+       + 'or trustee, a beneficiary, a court or the IRS, so an overstated figure or an invented comparable is a '
+       + 'real problem for real people. That is the reason for the evidence rules above.';
+  }
+  return s;
+}
+
+// One line, as the model reads it. Everything a person recorded that bears on value, and nothing the
+// model must not act on (no disposition, no recipient, no flags).
+function _avLineText(label, it) {
+  var t = label + '. ' + String(it.name || '').slice(0, 300)
+        + ' | Category: ' + String(it.category || 'not recorded')
+        + ' | Quantity: ' + (parseInt(it.qty, 10) > 1 ? parseInt(it.qty, 10) : 1)
+        + ' | Condition: ' + String(it.condition || 'not recorded');
+  if (it.fieldNote)  t += ' | The crew noted: "' + String(it.fieldNote).slice(0, 300) + '"';
+  if (it.agentBasis) t += ' | Named from: ' + String(it.agentBasis).slice(0, 200);
+  return t;
+}
+
+// The user turn for one request. A research line carries its photograph and close-ups (Agent One's
+// image block, the same full file); an ordinary batch is text alone.
+function _avUserContent(unit) {
+  var content = [];
+  if (unit.mode === 'comps') {
+    var it = unit.items[0];
+    if (it.fileId) {
+      content.push(_agImageBlock(it.fileId));
+      var details = it.details || [];
+      for (var i = 0; i < details.length && i < 4; i++) content.push(_agImageBlock(details[i].fileId));
+    }
+    content.push({ type: 'text', text: 'RESEARCH. One line to value'
+      + (it.fileId ? ', with its photograph' + ((it.details || []).length ? ' and close-ups of its marks' : '') : '')
+      + ':\n' + _avLineText(unit.labels[0], it) });
+  } else {
+    var lines = unit.items.map(function (x, k) { return _avLineText(unit.labels[k], x); });
+    content.push({ type: 'text', text: 'ORDINARY. ' + unit.items.length + ' everyday lot'
+      + (unit.items.length === 1 ? '' : 's') + ' to value:\n' + lines.join('\n') });
+  }
+  return content;
+}
+
+function _avBody(unit, ctx, noFallbacks) {
+  var body = {
+    model: AGENT_VALUE_MODEL,
+    max_tokens: AGENT_VALUE_MAX_TOKENS,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: AGENT_VALUE_EFFORT },
+    system: [{ type: 'text', text: _avSystem(ctx), cache_control: { type: 'ephemeral' } }],
+    tools: _avTools(unit.mode),
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: _avUserContent(unit) }]
+  };
+  if (!noFallbacks) body.fallbacks = 'default';
+  return body;
+}
+
+function _avHttp(body, key) {
+  var headers = { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION };
+  if (body.fallbacks) headers['anthropic-beta'] = AGENT_VALUE_FALLBACK_BETA;
+  return {
+    url: AGENT_API,
+    method: 'post',
+    contentType: 'application/json',
+    headers: headers,
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  };
+}
+
+// ⚠ ECHOING A PAUSED TURN BACK. After a refusal fallback the turn carries a `fallback` marker, and
+// what came before the last one is the declined model's: its thinking, a tool call it never finished
+// and any server tool call without its result must not be replayed. A non-streaming answer omits the
+// declined partial already, so this normally changes nothing; it is the documented rule, kept here so
+// a continuation can never be the request that 400s.
+function _avEcho(content) {
+  var blocks = content || [];
+  var last = -1;
+  for (var i = 0; i < blocks.length; i++) if (blocks[i] && blocks[i].type === 'fallback') last = i;
+  if (last < 0) return blocks;
+  var results = {};
+  blocks.forEach(function (b) { if (b && b.tool_use_id && /_tool_result$/.test(b.type || '')) results[b.tool_use_id] = 1; });
+  return blocks.filter(function (b, k) {
+    if (k > last || !b) return true;
+    if (b.type === 'text') return true;
+    if (b.type === 'server_tool_use') return !!results[b.id];
+    if (/_tool_result$/.test(b.type || '')) return true;
+    return false;
+  });
+}
+
+// Pull the answer out of one HTTP response. {ok, input} | {pause, content} | {ok:false, error, fallbackRefused}.
+function _avReadResult(res) {
+  var code = res.getResponseCode();
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')' }; }
+  if (code >= 300) {
+    var err = (body && body.error) || {};
+    var msg = String(err.message || err.type || ('HTTP ' + code));
+    return { ok: false, error: msg, fallbackRefused: code === 400 && /fallback/i.test(msg) };
+  }
+  // ⚠ A REFUSAL IS AN HTTP 200 AND IS CHECKED BEFORE content IS READ.
+  if (body.stop_reason === 'refusal') {
+    var d = body.stop_details || {};
+    return { ok: false, error: 'the model declined to value this' + (d.category ? ' (' + d.category + ')' : '') };
+  }
+  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished' };
+  // ⚠ THE SERVER'S OWN TOOL LOOP STOPPED AT ITS ITERATION LIMIT. Not an answer and not a failure: the
+  // caller sends the turn back and the API resumes where it left off (never with a "continue" message).
+  if (body.stop_reason === 'pause_turn') return { pause: true, content: body.content || [] };
+  var blocks = body.content || [];
+  for (var i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'tool_use' && blocks[i].name === 'record_values') {
+      return { ok: true, input: blocks[i].input || {}, content: blocks };
+    }
+  }
+  // ⚠ PROSE IS A FAILURE TO RECORD, NOT A FINDING THAT NOTHING IS WORTH ANYTHING (Agent One's rule).
+  return { ok: false, error: 'the model answered in prose instead of recording a value' };
+}
+
+// ─── NO INVENTED SALES (spec §4b) ─────────────────────────────────────────────────
+// Every URL a TOOL returned on this request, from the result blocks only: a web search result, a
+// fetched page, and whatever the dynamic filter's code printed. ⚠ NEVER THE MODEL'S OWN BLOCKS: a
+// `server_tool_use` input carries the URL the model ASKED to fetch, which it may have made up, and
+// its text is the thing being checked.
+function _avSeenUrls(contents) {
+  var seen = {};
+  var add = function (u) { var k = _avUrlKey(u); if (k) seen[k] = 1; };
+  var walk = function (v) {
+    if (v == null) return;
+    if (typeof v === 'string') {
+      var m = v.match(/https?:\/\/[^\s"'<>\]\)]+/g);
+      if (m) m.forEach(add);
+      return;
+    }
+    if (Array.isArray(v)) { v.forEach(walk); return; }
+    if (typeof v === 'object') {
+      Object.keys(v).forEach(function (k) {
+        if (k === 'encrypted_content' || k === 'encrypted_index') return;
+        if (k === 'url' && typeof v[k] === 'string') add(v[k]);
+        else walk(v[k]);
+      });
+    }
+  };
+  (contents || []).forEach(function (blocks) {
+    (blocks || []).forEach(function (b) {
+      if (b && /_tool_result$/.test(String(b.type || ''))) walk(b.content);
+    });
+  });
+  return seen;
+}
+
+// A URL as a comparison key: no scheme, no `www.`, no fragment, no trailing slash or punctuation,
+// the host lowercased. The query stays: a results page's query IS the page.
+function _avUrlKey(u) {
+  var s = String(u || '').trim().replace(/[.,;:]+$/, '');
+  var m = s.match(/^https?:\/\/([^\/?#]+)([^#]*)/i);
+  if (!m) return '';
+  return m[1].toLowerCase().replace(/^www\./, '') + m[2].replace(/\/+$/, '');
+}
+
+var AGENT_VALUE_CONF_DOWN = { high: 'medium', medium: 'low', low: 'low' };
+
+// One line of the model's answer, checked. Returns the result the app writes, or {error}.
+function _avLineResult(v, mode, seen) {
+  var fmv = _avCents(v.value), low = _avCents(v.low), high = _avCents(v.high);
+  if (!isFinite(fmv) || fmv < 0) return { error: 'the answer carried no usable value' };
+  if (!isFinite(low) || low < 0) low = fmv;
+  if (!isFinite(high) || high < 0) high = fmv;
+  // A range that does not hold its own point value is put round it rather than refused: the point is
+  // the agent's reading and the range is its spread, so the spread widens to include the reading.
+  if (low > fmv) low = fmv;
+  if (high < fmv) high = fmv;
+  var kept = [], dropped = 0;
+  (v.comps || []).forEach(function (c) {
+    if (!c || !seen[_avUrlKey(c.url)]) { dropped++; return; }
+    var price = _avCents(c.price);
+    kept.push({
+      title: String(c.title || '').slice(0, 160),
+      venue: String(c.venue || '').slice(0, 80),
+      saleDate: (String(c.saleDate || '').trim().match(/^\d{4}(?:-\d{2}(?:-\d{2})?)?/) || [''])[0],
+      price: isFinite(price) ? price : '',
+      url: String(c.url || '').slice(0, 400),
+      kind: c.kind === 'sold' ? 'sold' : 'asking'
+    });
+  });
+  kept = kept.slice(0, AGENT_VALUE_MAX_COMPS);
+  var conf = ['high', 'medium', 'low'].indexOf(v.confidence) >= 0 ? v.confidence : 'low';
+  // ⚠ A DROPPED COMPARABLE COSTS THE LINE A LEVEL OF CONFIDENCE: the model cited something no tool
+  // returned, so the rest of its reading is worth less too. And at the research depth a line with no
+  // sold comparable left is low whatever else it found (§4b).
+  if (dropped) conf = AGENT_VALUE_CONF_DOWN[conf];
+  if (mode === 'comps' && !kept.some(function (c) { return c.kind === 'sold'; })) conf = 'low';
+  var sources = AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general;
+  var notices = (v.notices || []).filter(function (n) {
+    return n && AGENT_VALUE_NOTICE_KINDS.indexOf(n.kind) >= 0 && String(n.text || '').trim();
+  }).slice(0, 4).map(function (n) { return { kind: n.kind, text: String(n.text).slice(0, 300) }; });
+  return {
+    fmv: fmv, low: low, high: high, confidence: conf,
+    source: sources.indexOf(v.source) >= 0 ? v.source : sources[0],
+    basis: String(v.basis || '').slice(0, 300),
+    comps: kept,
+    lookup: mode === 'comps' ? String(v.lookup || '').slice(0, 160) : '',
+    notices: notices,
+    dropped: dropped,
+    mode: mode
+  };
+}
+
+// ─── THE ACTION ───────────────────────────────────────────────────────────────────
+// ⚠ BUDGET AND RESUME, never fail a batch whole (getDriveThumbnails, agentIdentifyShots). Every line
+// it was sent comes back in `results` or in `failed`, or is counted in `remaining` and simply not
+// answered; the app re-asks for what it did not get back, by id, so the order lines were answered in
+// never matters to it.
+function agentValueLines(data) {
+  try {
+    var miss = _agMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'Agent Two is not configured — missing Script Property: '
+                                 + miss.join(', ') + '. Add it in Project Settings > Script Properties.' };
+    }
+    var ctx = (data && data.context) || {};
+    var items = (data && data.items) || [];
+    if (!items.length) return { ok: true, success: true, results: {}, failed: {}, remaining: 0, model: AGENT_VALUE_MODEL };
+
+    var key = _agProp('ANTHROPIC_API_KEY');
+    var started = new Date().getTime();
+    var todo = items.slice(0, AGENT_VALUE_MAX_LINES);
+
+    // Research lines go one to a request with their photographs; ordinary lots in batches, labelled
+    // L1, L2 … within each request so the answer can be matched back without trusting the model with ids.
+    var units = [], general = [];
+    todo.forEach(function (it) {
+      if (it.mode === 'comps') units.push({ mode: 'comps', items: [it], labels: ['L1'] });
+      else general.push(it);
+    });
+    for (var g = 0; g < general.length; g += AGENT_VALUE_GENERAL_BATCH) {
+      var chunk = general.slice(g, g + AGENT_VALUE_GENERAL_BATCH);
+      units.push({ mode: 'general', items: chunk, labels: chunk.map(function (x, k) { return 'L' + (k + 1); }) });
+    }
+
+    var results = {}, failed = {}, timedOut = false, noFallbacks = false, u = 0;
+    var failUnit = function (unit, why) { unit.items.forEach(function (it) { failed[it.stableId] = why; }); };
+
+    while (u < units.length) {
+      if (new Date().getTime() - started > AGENT_VALUE_TIME_BUDGET) break;
+      var slice = units.slice(u, u + AGENT_VALUE_PARALLEL);
+      var pending = [];
+      slice.forEach(function (unit) {
+        try {
+          var body = _avBody(unit, ctx, noFallbacks);
+          pending.push({ unit: unit, body: body, user: body.messages[0], turns: [], said: [] });
+        } catch (imgErr) {
+          // A photograph that has not reached Drive yet is ordinary, not fatal (Agent One's rule).
+          failUnit(unit, String(imgErr.message || imgErr));
+        }
+      });
+      var round = 0;
+      while (pending.length) {
+        var responses;
+        try {
+          responses = UrlFetchApp.fetchAll(pending.map(function (p) { return _avHttp(p.body, key); }));
+        } catch (fetchErr) {
+          // ⚠ ONE REQUEST THAT RUNS PAST URLFETCH'S OWN LIMIT THROWS FOR THE WHOLE fetchAll, so every
+          // line in flight is answered as unfinished, named as such, and the run goes on with the next
+          // slice. Nothing is written for them and the app can ask again.
+          timedOut = true;
+          pending.forEach(function (p) { failUnit(p.unit, 'the valuation took too long to come back (' + String(fetchErr.message || fetchErr).slice(0, 80) + ')'); });
+          pending = [];
+          break;
+        }
+        var next = [];
+        responses.forEach(function (res, k) {
+          var p = pending[k];
+          var read = _avReadResult(res);
+          if (read.pause) {
+            p.turns = p.turns.concat(read.content);
+            p.said.push(read.content);
+            if (round < AGENT_VALUE_CONTINUES) {
+              p.body.messages = [p.user, { role: 'assistant', content: _avEcho(p.turns) }];
+              next.push(p);
+            } else {
+              failUnit(p.unit, 'the research ran long and stopped before it finished');
+            }
+            return;
+          }
+          if (!read.ok) {
+            if (read.fallbackRefused && p.body.fallbacks) {
+              noFallbacks = true;
+              delete p.body.fallbacks;
+              next.push(p);
+              return;
+            }
+            failUnit(p.unit, read.error);
+            return;
+          }
+          p.said.push(read.content);
+          var seen = _avSeenUrls(p.said);
+          var input = read.input || {};
+          var byLine = {};
+          (input.values || []).forEach(function (v) { if (v && byLine[v.line] == null) byLine[v.line] = { v: v }; });
+          (input.unvalued || []).forEach(function (x) { if (x && byLine[x.line] == null) byLine[x.line] = { why: x.reason }; });
+          p.unit.items.forEach(function (it, j) {
+            var hit = byLine[p.unit.labels[j]];
+            if (!hit) { failed[it.stableId] = 'the model did not answer for this line'; return; }
+            if (hit.why != null) { failed[it.stableId] = String(hit.why || 'could not be valued').slice(0, 200); return; }
+            var r = _avLineResult(hit.v, p.unit.mode, seen);
+            if (r.error) failed[it.stableId] = r.error;
+            else results[it.stableId] = r;
+          });
+        });
+        pending = next;
+        round++;
+      }
+      u += slice.length;
+    }
+
+    var answered = Object.keys(results).length + Object.keys(failed).length;
+    var out = {
+      ok: true, success: true,
+      results: results,
+      failed: failed,
+      remaining: Math.max(0, items.length - answered),
+      model: AGENT_VALUE_MODEL
+    };
+    if (timedOut) out.timedOut = true;
+    return out;
+  } catch (error) {
+    Logger.log('agentValueLines error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ RUN THIS FROM THE EDITOR FIRST, BEFORE TRUSTING THE BUTTON. Argument-free, because the Run menu
+// cannot pass any. Three known lines with no photographs (one researched, two ordinary), so an auth,
+// beta or timeout failure can never masquerade as a valuing bug, and it prints how long the call took:
+// that figure is the one to send back if it fails with "took too long".
+function testAgentValue() {
+  var miss = _agMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+  var t0 = new Date().getTime();
+  var out = agentValueLines({
+    context: { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14' },
+    items: [
+      { stableId: 'probe-comps', mode: 'comps', name: 'Herend Rothschild Bird dinner plates, set of 8',
+        category: 'Antiques', qty: 8, condition: 'Good' },
+      { stableId: 'probe-flatware', mode: 'general', name: 'Stainless steel flatware, service for 12, everyday brand',
+        category: 'General/Household', qty: 60, condition: 'Good' },
+      { stableId: 'probe-books', mode: 'general', name: 'Hardcover books, general fiction',
+        category: 'General/Household', qty: 40, condition: 'Fair' }
+    ]
+  });
+  var secs = Math.round((new Date().getTime() - t0) / 1000);
+  if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
+  Logger.log((out.timedOut ? 'PARTLY TIMED OUT' : 'ANSWERED') + ' in ' + secs + 's — ' + out.model);
+  Object.keys(out.results).forEach(function (id) {
+    var r = out.results[id];
+    Logger.log('  ' + id + ': $' + r.fmv + ' ($' + r.low + '–$' + r.high + ', ' + r.confidence + ', ' + r.source + ') — ' + r.basis);
+    (r.comps || []).forEach(function (c) { Logger.log('      [' + c.kind + '] ' + c.title + ' · ' + c.venue + ' · ' + c.saleDate + ' · $' + c.price + ' · ' + c.url); });
+    if (r.dropped) Logger.log('      ' + r.dropped + ' comparable(s) dropped: no tool returned their link');
+    if (r.lookup) Logger.log('      WorthPoint: ' + r.lookup);
+  });
+  Object.keys(out.failed).forEach(function (id) { Logger.log('  ' + id + ' NOT VALUED: ' + out.failed[id]); });
+  if (out.remaining) Logger.log('  ' + out.remaining + ' line(s) left for another call (the time budget ran out)');
 }

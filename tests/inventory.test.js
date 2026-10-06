@@ -217,7 +217,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('court inventory: exempt property');
   {
     const COURT_FNS = INV_FNS.concat([
-      '_invMoney', '_invDocName', 'printCourtInventory', '_invScheduleSection', 'isFormalDoc', 'resolveDocLevel',
+      '_invMoney', '_invDocName', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
@@ -584,7 +584,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('a cleared value stays blank, and money shows as money');
   {
-    const m = sandbox({ fns: ['_invEdit', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
+    const m = sandbox({ fns: ['_invEdit', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
                               '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal'],
                         vars: ['INV_STICKY_FIELDS'],
                         stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {},
