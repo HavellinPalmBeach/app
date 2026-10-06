@@ -81,7 +81,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
-  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord'];
+  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord', 'photoSharesLine', 'photoSharesOf'];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   '_agRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',

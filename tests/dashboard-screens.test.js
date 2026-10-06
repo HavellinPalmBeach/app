@@ -362,7 +362,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docSentAt', 'docKeyFor', '_jtSendAction', '_jtDocViews',
             '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'esignAvailable', 'esignProviderKey', 'esignJobWatches',
-            'agreementSignature', 'isAgreementSigned', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents'],
+            'agreementSignature', 'isAgreementSigned', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents', 'esignFiledCopies'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS',
              'ESIGN_PROVIDER_KEY', 'AGR_SIG_METHODS'],
       stubs: { SHEETS_SYNC_URL: '' },

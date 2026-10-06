@@ -218,7 +218,9 @@ const UPLOADS = [], PDFS = [], SHARES = [], DRAFTS = [];
       ['filing', 'Estate of', 'Case ', '2026-CP-009961'].forEach((w) => lacks(d.text + d.html, w, '⚠ no court language in the email: ' + w));
       ok(!/court|probate/i.test(d.text), '⚠ the text names no court and no probate');
       has(d.text, 'Release approvals and chain of custody: https://drive.google.com/file/d/up', 'the release and custody record, linked');
-      eq(SHARES.slice(s0), [{ folderId: 'AF61', email: 'ann@lowe.law' }, { folderId: 'INV61', email: 'ann@lowe.law' }], 'both photograph folders shared with the attorney');
+      // P22 (2026-10-06): and with the trustee the package copies, so the email's links do not refuse them.
+      eq(SHARES.slice(s0), [{ folderId: 'AF61', email: 'ann@lowe.law' }, { folderId: 'AF61', email: 'rex@hale.example' },
+                            { folderId: 'INV61', email: 'ann@lowe.law' }, { folderId: 'INV61', email: 'rex@hale.example' }], 'both photograph folders shared with the attorney, and with the copied trustee');
       const ts = (UPLOADS.slice(u0).find((u) => /Trust Schedule/.test(u.filename)) || {}).html || '';
       has(ts, 'Schedule of Tangible Personal Property Held in Trust', 'the Trust Schedule is the desk\'s own page');
       has(await txt(dash + ' .jt-fb'), 'Draft created in ' + BOX + ' for ann@lowe.law, copied to rex@hale.example and ' + AGREEMENTS, 'the notice says where the draft is');

@@ -16487,6 +16487,30 @@ function printChangeOrder(coId, opt) {
 // the press), so it moves the change order's clock — the store merges whole records on `updatedAt`, and a filing left
 // on the old stamp would lose to any device still holding the accepted copy.
 var _coFiling = {};   // change orders whose upload is out right now, on this page — never saved
+// ⚠⚠ ONE WATCHDOG FOR A FILING'S IN-FLIGHT FLAG (P22). `_appsScriptPost` and `uploadHtmlToDrive` are bare fetches with
+// no timeout, so a request that never answered left `_esignFiling`, `_coFiling` or `_ledgerFiling` set until the page
+// was reloaded, and File signed copy / File to Drive refused every later press as "being filed now". The probate
+// package has had a watchdog since P17; these three share this one. `_armFiling(map, key, onTimeout)` sets the flag to a
+// token of its own and returns `release()`: the answer's handler calls it, and it answers whether the flag was still this
+// request's (false once the watchdog has spoken, or a newer press took the flag). After FILING_WATCHDOG_MS the flag is
+// cleared and `onTimeout` says so, so a press can try again; a late answer still records a filing that landed (the
+// filings replace by name, so a second one never doubles a file) and stays silent about a failure already reported.
+var FILING_WATCHDOG_MS = 120000;
+function _armFiling(map, key, onTimeout) {
+  var token = { at: Date.now() };
+  map[key] = token;
+  var t = setTimeout(function () {
+    if (map[key] !== token) return;
+    delete map[key];
+    if (onTimeout) onTimeout();
+  }, FILING_WATCHDOG_MS);
+  return function release() {
+    clearTimeout(t);
+    if (map[key] !== token) return false;
+    delete map[key];
+    return true;
+  };
+}
 function fileChangeOrder(coId, opt) {
   var auto = !!(opt && opt.auto);
   var co = (changeOrders || []).find(function (c) { return c.id === coId; });
@@ -16503,18 +16527,21 @@ function fileChangeOrder(coId, opt) {
   if (!page || !page.html) { say('warn', 'There is nothing to file on this change order yet.'); return false; }
   var coNo = 'CO-' + String(co.id).slice(-6);
   var doc = _exportDoc('Change Order ' + coNo + ' – ' + (job.hvlId || ''), page.html, '');
-  _coFiling[coId] = true;
+  var release = _armFiling(_coFiling, coId, function () {
+    say('warn', coNo + ': no answer from Drive after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes. It may still have been filed: press File to Drive on the change order to try again (a second filing replaces the first).');
+  });
   resolveSubfolderId(job, 'Change Orders', function (folderId) {
     // The job root when an older folder has no Change Orders subfolder — the fallback docFile takes, for its reason.
     var target = folderId || _jobRootFolderId(job);
     if (!target) {
-      delete _coFiling[coId];
+      if (!release()) return;
       say('warn', 'This client has no Drive folder yet, so ' + coNo + ' could not be filed. Create the Drive folder, then press File to Drive on the change order.');
       return;
     }
     uploadHtmlToDrive(target, docNames(job, 'changeorder', { coNo: coNo }).drive, doc, function (ok, fileUrl, meta) {
-      delete _coFiling[coId];
+      var mine = release();
       if (!ok) {
+        if (!mine) return;   // the watchdog has already said so
         // No repaint: nothing was recorded, so the row already offers File to Drive.
         say('err', coNo + ' was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the change order to try again.');
         return;
@@ -16750,10 +16777,17 @@ function probatePackageMovedSince(job, st) {
 }
 // The appraisal reports and offers filed to the estate's Drive folder (Upload Appraisal / Offer, on the Job Plan):
 // uploaded and not removed. Linked, never attached — they are already in Drive.
+// ⚠ EACH NAMED FOR WHAT IT IS (P22): an offer is linked as an offer and a receipt as a receipt (`docKind`, chosen at upload,
+// COLL_DOC_KINDS). Everything went out as "Appraisal report or offer", so counsel could not tell a dealer's bid from an
+// appraisal without opening it. A file uploaded before the choice existed has no kind and keeps the old, hedged name.
 function probatePackageReports(job) {
   return ((typeof _photoRefs !== 'undefined' && job && _photoRefs[job.id]) || []).filter(function (r) {
     return r && r.label === 'appraisal' && !r.deletedAt && r.status === 'uploaded' && !!r.driveFileUrl;
-  }).map(function (r) { return { name: r.objectName || r.filename || 'Appraisal report', url: r.driveFileUrl }; });
+  }).map(function (r) {
+    var K = COLL_DOC_KINDS[r.docKind] || null;
+    return { name: r.objectName || r.filename || (K ? K.title : 'Appraisal report'), url: r.driveFileUrl,
+             kind: K ? r.docKind : '', title: K ? K.title : 'Appraisal report or offer' };
+  });
 }
 
 // ⚠ THE SIGNED RELEASE APPROVALS AND THE CUSTODY LOG, AS ONE FILED RECORD. The package links to both and neither existed
@@ -16941,19 +16975,43 @@ function probatePackageMailto(ctx, rcpt) {
 // the Estate Inventory and As-Found Record folders, one entry where an older job's two names are one folder). A folder
 // that could not be shared comes back unshared, and the email names it as not yet shared rather than linking a page
 // that would refuse them.
-function _pkgShareFolders(job, email, cb) {
+// ⚠⚠ AND WITH EVERY PERSON COPIED WHO IS NOT HAVELLIN (P22): the representative, or on the trust route the trustee, when
+// the package is addressed to the attorney (pkgShareEmails). It shared with the addressee alone, so a copied trustee
+// opened the email's folder links onto a Google permission wall. Never a department mailbox (agreements@ is copied for
+// the record, and is Havellin's own). `f.shared` stays the ADDRESSEE's answer, the one the email's links rest on; each
+// copied address that could not be shared is listed on `f.notShared` ({email, error}) and named in the send's notice.
+function pkgShareEmails(rcpt) {
+  var dept = Object.keys(DEPT_EMAILS).map(function (k) { return String(DEPT_EMAILS[k]).toLowerCase(); });
+  var out = [];
+  [rcpt && rcpt.to].concat((rcpt && rcpt.cc) || []).forEach(function (e) {
+    var a = String(e || '').trim(), k = a.toLowerCase();
+    if (!a || dept.indexOf(k) >= 0 || out.some(function (x) { return x.toLowerCase() === k; })) return;
+    out.push(a);
+  });
+  return out;
+}
+function _pkgShareFolders(job, emails, cb) {
+  emails = (Array.isArray(emails) ? emails : [emails]).filter(Boolean);
   resolveSubfolderId(job, PHOTO_SUBFOLDER, function (inv) {
     resolveSubfolderId(job, AS_FOUND_SUBFOLDER, function (af) {
       var list = [];
       if (af && af !== inv) list.push({ label: 'As-Found Record photographs', id: af });
       if (inv) list.push({ label: (af && af !== inv) ? 'Estate Inventory photographs' : 'Photographs', id: inv });
+      var jobs2 = [];
+      list.forEach(function (f) {
+        f.url = 'https://drive.google.com/drive/folders/' + encodeURIComponent(f.id);
+        f.sharedWith = []; f.notShared = [];
+        emails.forEach(function (e, n) { jobs2.push({ f: f, email: e, addressee: n === 0 }); });
+      });
       var i = 0;
       (function next() {
-        if (i >= list.length) { cb(list); return; }
-        var f = list[i++];
-        f.url = 'https://drive.google.com/drive/folders/' + encodeURIComponent(f.id);
-        _invShareEach([f.id], 'shareFolder', email, function (okCount, err) {
-          f.shared = okCount > 0; f.error = f.shared ? '' : (err || 'unknown error');
+        if (i >= jobs2.length) { cb(list); return; }
+        var w = jobs2[i++];
+        _invShareEach([w.f.id], 'shareFolder', w.email, function (okCount, err) {
+          var ok = okCount > 0;
+          if (ok) w.f.sharedWith.push(w.email);
+          if (w.addressee) { w.f.shared = ok; w.f.error = ok ? '' : (err || 'unknown error'); }
+          else if (!ok) w.f.notShared.push({ email: w.email, error: err || 'unknown error' });
           next();
         });
       })();
@@ -17029,8 +17087,14 @@ function sendProbatePackage(jobId) {
       else left.push({ title: PROBATE_PKG_TITLES[k], why: r.why || '' });
     });
     var record = { key: 'record', title: PROBATE_PKG_RECORD_TITLE, html: probatePackageRecordHtml(jobId) };
-    step('Sharing the photograph folders with ' + rcpt.to + '…');
-    _pkgShareFolders(job, rcpt.to, function (folders) {
+    var shareTo = pkgShareEmails(rcpt);
+    step('Sharing the photograph folders with ' + _andJoin(shareTo) + '…');
+    _pkgShareFolders(job, shareTo, function (folders) {
+      // Recorded as it lands, whatever happens to the draft after it: the access is real either way (P22).
+      shareTo.forEach(function (e) {
+        var n = folders.filter(function (f) { return f.sharedWith.indexOf(e) >= 0; }).length;
+        if (n) recordPhotoShare(job, e, 'package', n);
+      });
       if (over) return;
       step('Filing the documents to Drive…');
       resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
@@ -17048,7 +17112,7 @@ function sendProbatePackage(jobId) {
                 var a = atts.some(function (x) { return x.key === pg.key; });
                 if ((withPages || !a) && filed[pg.key] && filed[pg.key].ok) out.push({ label: pg.title, url: filed[pg.key].url });
               });
-              probatePackageReports(job).forEach(function (r) { out.push({ label: 'Appraisal report or offer — ' + r.name, url: r.url }); });
+              probatePackageReports(job).forEach(function (r) { out.push({ label: r.title + ' — ' + r.name, url: r.url }); });
               folders.forEach(function (f) { if (f.shared) out.push({ label: f.label, url: f.url }); });
               if (filed.record && filed.record.ok) out.push({ label: 'Release approvals and chain of custody', url: filed.record.url });
               return out;
@@ -17075,9 +17139,12 @@ function sendProbatePackage(jobId) {
               if (gmail) pdfFails.forEach(function (d) { bits.push('The ' + d.title + ' could not be made into a PDF, so it is linked from Drive instead of attached — ' + d.why); });
               folders.forEach(function (f) {
                 if (!f.shared) bits.push('The ' + f.label + ' folder could not be shared with ' + rcpt.to + ' (' + f.error + '), so the draft says it is not yet shared: share it from Job Admin & Inv (Share w/ Counsel) when it can be.');
+                f.notShared.forEach(function (x) {
+                  bits.push('The ' + f.label + ' folder could not be shared with ' + x.email + ', who is copied (' + x.error + '): share it from Job Admin & Inv (Share w/ Counsel), or the links will refuse them.');
+                });
               });
               if (unfiled.length) bits.push('Not filed to Drive: the ' + _andJoin(unfiled.map(function (d) { return d.title; })) + '.');
-              var clean = gmail && atts.length === pages.length && !left.length && !unfiled.length && folders.every(function (f) { return f.shared; });
+              var clean = gmail && atts.length === pages.length && !left.length && !unfiled.length && folders.every(function (f) { return f.shared && !f.notShared.length; });
               _docNotice(clean ? 'ok' : 'warn', bits.join(' '), jobId);
               if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
               showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
@@ -17105,6 +17172,31 @@ function sendProbatePackage(jobId) {
 // goes, the draft waiting on its confirming tap, or who sent it and when. ⚠ THE CONFIRMING TAP AND THE DRAFT LINK ARE
 // THE CLIENT DOCUMENTS' OWN (markDocSent, openDocDraft), offered on the same rule (draftOutstanding). DOM-free markup;
 // every person-entered value is escaped. Nothing on a job with no route: there is no card to put it on.
+// ⚠⚠ A PACKAGE DRAFT WITH NO CARD LEFT TO NAME IT (P22). A matter moved to Neither (or a service re-typed off the estate
+// track) after a package draft was made takes the Probate or Trust card away, and with it the only line that named the
+// draft, so a draft addressed to counsel sat in Gmail with nothing on screen saying so. Named where the card was, while a
+// draft made and never confirmed sent is on the record (docDraftPending: draftOutstanding cannot be asked here, since
+// the documents owed have moved and that rule calls the draft stale), and any older draft staleDraftsOf still keeps.
+// Plain text, '' with a card on screen (the card names it) or nothing outstanding. Every reader escapes it.
+function estatePackageOrphanDraftNote(job) {
+  if (!job || estatePackageRoute(job)) return '';
+  var st = job.docState && job.docState[PROBATE_PKG_KEY];
+  if (!st) return '';
+  // The drafts the history keeps (staleDraftsOf: those since the last send, the current one too once the moved matter has
+  // overtaken it), and the current one where it has not.
+  var list = staleDraftsOf(job, PROBATE_PKG_KEY);
+  if (docDraftPending(st) && !draftIsStale(job, st)) list = list.concat([{ draftedAt: st.draftedAt, provider: st.provider || '', mailbox: st.mailbox || '' }]);
+  if (!list.length) return '';
+  var gmail = list.some(function (d) { return d.provider === 'gmail'; });
+  var days = list.map(function (d) { return _draftDay(d.draftedAt); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  var boxes = list.map(function (d) { return d.provider === 'gmail' ? (d.mailbox || '') : ''; }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+  var to = (st.pkg && st.pkg.to) || '';
+  return 'An inventory package ' + (gmail ? (list.length > 1 ? 'Gmail drafts' : 'Gmail draft') : (list.length > 1 ? 'emails' : 'email'))
+    + (days.length ? ' from ' + _andJoin(days) : '') + (boxes.length ? ' (' + boxes.join(', ') + ')' : '')
+    + (to ? ' to ' + to : '') + ' was made before the matter changed, and this matter has no package now. '
+    + (gmail ? (list.length > 1 ? 'Delete them in Gmail; don’t send them.' : 'Delete it in Gmail; don’t send it.')
+             : (list.length > 1 ? 'If they were never sent, discard them.' : 'If it was never sent, discard it.'));
+}
 function probatePackageCardHtml(job) {
   var W = estatePackageRoute(job);
   if (!W) return '';
@@ -17132,6 +17224,8 @@ function probatePackageCardHtml(job) {
     }
     var stale = st ? staleDraftNote(job, K, false) : '';
     if (stale) lines.push(esc(stale));
+    var shares = photoSharesLine(job);
+    if (shares) lines.push(esc(shares));
     var blk = probatePackageBlocker(job);
     if (blk) lines.push('<span style="color:#A32D2D;">' + esc(blk) + '</span>');
     // To whom it will go, asked of the send's own recipients; on the trust route the fallback is named for what it is.
@@ -18224,7 +18318,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       // the app, and the old draft is the thing somebody might still send from Gmail, so both are named.
       // Once sent, the one route worth naming is the one no email or envelope records (2026-10-01, P17).
       sub: isAgreementSent(job)
-        ? (agreementHandedOverInPerson(job) ? 'Handed over in person' : '')
+        ? (agreementHandedOverInPerson(job) ? ['Handed over in person', agreementHandOverDraftNote(job)].filter(Boolean).join('. ') : '')
         : (agrApprovalWithdrawn(job, estRec)
           ? [agrApprovalWithdrawn(job, estRec), staleDraftNote(job, 'agreement', draftOutstanding(job, 'agreement'))]
               .filter(Boolean).join('. ')
@@ -19085,6 +19179,8 @@ function docSend(spec) {
         msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _andJoin(g.names) + ' are on the envelope at one email address (' + g.email
           + '): make sure each of them signs for themselves.';
       });
+      var _counsel = provider === 'docusign' ? esignCounselSignsNote(spec.job) : '';
+      if (_counsel) msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _counsel + '.';
       // ⚠ SENDING FILES IT. A document that has gone to a client is one the firm must be
       // able to produce afterwards, and until Slice 5 only the estimate managed that: the
       // agreement and packet filed on approval, and the INVOICE filed nowhere unless
@@ -19098,7 +19194,7 @@ function docSend(spec) {
       // It still shows in the sync badge, and the rail says which documents are filed.
       docAction(spec.job.id, spec.kind, 'file',
                 spec.stage ? { stage: spec.stage, auto: true } : { auto: true });
-      _docNotice((attached && !_staleLine && !_offEnv.length && !_shared.length) ? 'ok' : 'warn', msg, spec.job.id);
+      _docNotice((attached && !_staleLine && !_offEnv.length && !_shared.length && !_counsel) ? 'ok' : 'warn', msg, spec.job.id);
       if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
       showSyncBadge(provider === 'docusign' ? 'Sent for signature ✓' : provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
     }
@@ -19235,17 +19331,33 @@ function esignAnchorsPresent(html) {
   Object.keys(ESIGN_ANCHORS).forEach(function (k) {
     if (html.indexOf(ESIGN_ANCHORS[k]) !== -1) out.push(k);
   });
-  // Each co-signer's pair, measured the same way (P20), numbered as the page numbers its blocks: from the first, until a
-  // number the page carries neither marker for. A document with no co-signer reports exactly the list it always did.
-  for (var n = 1; ; n++) {
+  // Each co-signer's pair, measured the same way (P20), numbered as the page numbers its blocks: from the first through the
+  // highest number the page carries a marker for (esignCoSignerTop). ⚠ NOT UNTIL THE FIRST GAP (P22): a page missing the
+  // second co-signer's block left the third and every later one unmeasured, so their markers read as absent while the page
+  // carried them. A number with neither marker is simply not reported, and esignCoSigners refuses the envelope for whoever
+  // it belongs to. A document with no co-signer reports exactly the list it always did.
+  var top = esignCoSignerTop(html);
+  for (var n = 1; n <= top; n++) {
     var a = esignCoSignerAnchors(n), s = html.indexOf(a.sig) !== -1, d = html.indexOf(a.date) !== -1;
-    if (!s && !d) break;
     if (s) out.push(a.sigKey);
     if (d) out.push(a.dateKey);
   }
   return out;
 }
 
+// The highest co-signer number whose signature or date marker the html carries (0 for none), read off the namer's own
+// template (ESIGN_COSIGNER_ANCHOR, '#' standing for the number), never a second copy of the marker.
+function esignCoSignerTop(html) {
+  var rx = function (t) {
+    return new RegExp(t.split('#').map(function (part) { return part.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&'); }).join('(\\d+)'), 'g');
+  };
+  var top = 0;
+  [ESIGN_COSIGNER_ANCHOR.sig, ESIGN_COSIGNER_ANCHOR.date].forEach(function (t) {
+    var m, r = rx(t);
+    while ((m = r.exec(String(html || ''))) !== null) top = Math.max(top, Math.min(99, parseInt(m[1], 10) || 0));   // a page signs a handful, never more than 99
+  });
+  return top;
+}
 function esignAnchor(tag) {
   return '<span style="color:#fff;font-size:6px;line-height:0;">' + tag + '</span>';
 }
@@ -19417,6 +19529,17 @@ function esignSigner(job) {
   var r = clientRecipient(job);
   return { name: r.name, email: r.email };
 }
+// ⚠ WHEN THE ENVELOPE'S CLIENT SIGNER IS COUNSEL (P22, found in P20). clientRecipient's ladder ends at the estate
+// attorney, so on an estate with no email recorded for the representative the attorney is DocuSign's recipient 1 and is
+// sent the Client's signature line. Who signs is Anthony's call and is NOT changed here; the send's notice names it, so
+// nobody learns it from the attorney. Plain text, '' unless that is who the envelope went to.
+function esignCounselSignsNote(job) {
+  var r = clientRecipient(job);
+  if (r.who !== 'attorney') return '';
+  return (r.name || r.email) + ', the estate attorney, was sent the Client’s signature line: no email is recorded for '
+    + (String((job && job.executor) || '').trim() || 'the representative') + '. If the representative should sign, void the envelope in '
+    + ESIGN_PROVIDERS.docusign.label + ', add their email on Edit Client and send again';
+}
 
 // ⚠⚠ WHO SIGNS BESIDE THE CLIENT IN DOCUSIGN, AND WHAT STOPS THE ENVELOPE (2026-10-05, P20; Anthony, Q22: each
 // co-representative signs in DocuSign beside the client). Every co-representative recorded on the job (_agrCoSigners,
@@ -19505,6 +19628,29 @@ function isAgreementSent(job) {
 function agreementHandedOverInPerson(job) {
   var st = job && job.docState && job.docState.agreement;
   return !!(st && st.sentHow === 'in_person' && st.sentAt && st.sentHowAt === st.sentAt);
+}
+// ⚠⚠ THE DRAFT A HAND-OVER LEFT IN A MAILBOX (P22). **Handed over in person** stays offered while a Gmail draft of the
+// packet (or a plain email the app opened for it) waits on its confirming tap: the client may be across the table with the
+// packet before anybody sends the email. Pressing it records the send, so the draft stops being one the app watches (its
+// `draftedAt` is now older than `sentAt`) and its "I've sent it" goes, but the draft itself is still in Gmail, where a
+// second copy of the agreement can still be sent from. This names it, while the hand-over is still the send on record and
+// a draft made before it exists. DOM-free plain text, '' otherwise; read by the Signing packet sent row and the press's
+// confirmation (dashMarkAgreementSent), which asks it of the draft as it stands BEFORE the press (`pending`).
+function agreementHandOverDraftNote(job, pending) {
+  var st = job && job.docState && job.docState.agreement;
+  if (!st || !st.draftedAt) return '';
+  if (pending) { if (!docDraftPending(st)) return ''; }
+  else {
+    if (!agreementHandedOverInPerson(job)) return '';
+    var d = Date.parse(st.draftedAt), s = Date.parse(st.sentAt);
+    if (isNaN(d) || isNaN(s) || d >= s) return '';
+  }
+  if (st.provider !== 'gmail' && st.provider !== 'mailto') return '';
+  var day = _draftDay(st.draftedAt);
+  return st.provider === 'gmail'
+    ? 'The Gmail draft of the packet' + (day ? ' from ' + day : '') + (st.mailbox ? ' (' + st.mailbox + ')' : '')
+      + ' is still in Gmail — delete it, so a second copy is not sent'
+    : 'The email of the packet opened' + (day ? ' on ' + day : '') + ' may still be in your mail app unsent — discard it, so a second copy is not sent';
 }
 
 // ⚠⚠ ARE THE CO-REPRESENTATIVES' SIGNATURES ON RECORD? THE ONE ANSWER (2026-10-05, P20; Anthony, Q22: each
@@ -19664,14 +19810,19 @@ function applyEsignStatus(jobId, status) {
   // Bare: "still out" is a write the app makes on its own (docStateBare). A completed envelope is
   // recorded below by recordAgreementSignature, which stamps the key like a hand entry.
   var st = docStateBare(job, 'agreement');
-  var _sentWith = st.esign && st.esign.coSigners;
-  st.esign = {
-    envelopeId: (status && status.envelopeId) || (st.esign && st.esign.envelopeId) || '',
-    status: (status && status.status) || '',
-    checkedAt: new Date().toISOString()
-  };
-  // Who the send put on the envelope beside the client is a fact about the envelope, not about this check (P20): kept.
-  if (Array.isArray(_sentWith)) st.esign.coSigners = _sentWith;
+  // ⚠⚠ EVERY FIELD ALREADY ON THE ENVELOPE'S RECORD IS KEPT (P22). This rebuilt `esign` from three fields and carried only
+  // `coSigners` across, so anything else written there before completion (by the send, or by a future writer) was
+  // dropped by the next check. A check answers for the envelope's status and when it was asked, and writes those two;
+  // everything else on the record is a fact about the envelope, kept, unless the answer is for a DIFFERENT envelope,
+  // whose facts are not this one's (who the send put on it, what was filed from it).
+  var _prev = st.esign || {};
+  var _env = (status && status.envelopeId) || _prev.envelopeId || '';
+  var _next = {};
+  if (!_prev.envelopeId || _prev.envelopeId === _env) Object.keys(_prev).forEach(function (k) { _next[k] = _prev[k]; });
+  _next.envelopeId = _env;
+  _next.status = (status && status.status) || '';
+  _next.checkedAt = new Date().toISOString();
+  st.esign = _next;
   if (!status || status.status !== 'completed') { _saveArrivalCheck(); return ''; }
   // ⚠ THE PROVIDER NAMES THE SIGNER. That is the entire point of routing signatures through
   // one — it knows who authenticated and when, which a person typing into a box does not.
@@ -19835,6 +19986,23 @@ function esignSignedCopyGaps(job) {
   if (!st.esign.certUrl) out.push('certificate');
   return out;
 }
+// The executed copies the filing recorded, each with its link and its name on the row (P22): the agreement DocuSign
+// executed and its certificate of completion. Named with docWord's noun for the agreement ('packet'), as every other
+// link to the agreement is. Only what was recorded, on an agreement executed through an envelope; [] otherwise.
+function esignFiledCopies(job) {
+  var st = (job && job.docState && job.docState.agreement) || null;
+  if (!st || !st.esign || !st.esign.envelopeId) return [];
+  var out = [];
+  if (st.esign.filedUrl) out.push({ which: 'agreement', label: 'Filed signed ' + docWord('agreement'), url: st.esign.filedUrl });
+  if (st.esign.certUrl) out.push({ which: 'certificate', label: 'Filed certificate of completion', url: st.esign.certUrl });
+  return out;
+}
+function openEsignFiled(jobId, which) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var f = esignFiledCopies(job).filter(function (x) { return x.which === which; })[0];
+  if (!f) { dashNotice('warn', 'No Drive link was recorded for the ' + (which === 'certificate' ? 'certificate of completion' : 'signed agreement') + '.'); _dashRedraw(jobId); return; }
+  try { window.open(f.url, '_blank'); } catch (e) {}
+}
 // Jobs whose executed copy is being fetched and filed right now, on this page. Never saved: it says only that a
 // request is out, so the button cannot send a second one on top of it.
 var _esignFiling = {};
@@ -19855,11 +20023,14 @@ function esignArchiveSigned(jobId) {
   if (!esignSignedCopyGaps(job).length) return;   // nothing DocuSign holds that Drive does not
   if (_esignFiling[jobId] || !SHEETS_SYNC_URL) return;
   var envelopeId = job.docState.agreement.esign.envelopeId;
-  _esignFiling[jobId] = true;
+  var release = _armFiling(_esignFiling, jobId, function () {
+    _docNotice('warn', 'No answer from the server after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes while the signed copy was fetched from '
+      + 'DocuSign. It may still have been filed: press File signed copy on the timeline to try again.', jobId);
+  });
 
   resolveSubfolderId(job, 'Agreement', function (folderId) {
     if (!folderId) {
-      delete _esignFiling[jobId];
+      if (!release()) return;
       _docNotice('warn', 'The agreement is signed, but this client has no Agreement folder in Drive, '
                  + 'so the executed copy could not be filed. It is safe in DocuSign: create the Drive folder, then '
                  + 'press File signed copy on the timeline.', jobId);
@@ -19872,10 +20043,11 @@ function esignArchiveSigned(jobId) {
       action: 'esignArchive', envelopeId: envelopeId, folderId: folderId,
       baseName: docNames(job, 'agreement').drive.replace(/\.[a-z]+$/i, '')
     }, function (ok, d) {
-      delete _esignFiling[jobId];
+      var mine = release();
       var again = new Date(Date.now() + ESIGN_RECHECK_MINS * 60000)
         .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
       if (!ok || !d || !d.ok) {
+        if (!mine) return;   // the watchdog has already said so
         _docNotice('warn', 'The agreement is signed, but the executed copy could not be retrieved from '
                    + 'DocuSign — ' + ((d && (d.error || d.message)) || 'no answer from the server')
                    + '. It is still in DocuSign: press File signed copy on the timeline to try again, from ' + again + '.', jobId);
@@ -21347,6 +21519,11 @@ function jobTimelineActions(row, job, estRec) {
       // completion is not in Drive (esignSignedCopyGaps), and gone once both are. The row is done by then, so the
       // button lands in the strip under the timeline with the row's other out-of-sequence actions.
       if (esignSignedCopyGaps(job).length) out.secondary.push({ label: '&#128193; File signed copy', call: 'dashFileSignedCopy(' + id + ')' });
+      // ⚠ AND WHAT THE FILING RECORDED IS OFFERED (P22): the executed agreement's and the certificate's Drive links were
+      // written to `esign.filedUrl` / `esign.certUrl` and offered nowhere, so the only way to the signed copy was Drive.
+      esignFiledCopies(job).forEach(function (f) {
+        out.secondary.push({ label: '&#128193; ' + f.label, call: 'openEsignFiled(' + id + ",'" + f.which + "')" });
+      });
       break;
 
     case 'deposit_invoiced':
@@ -21547,7 +21724,9 @@ function _dashRedraw(jobId) {
 // somebody presses a button on Ellsworth's Job Plan. Asked first, the tab that is actually
 // active wins; the dashboard answer is unchanged everywhere else.
 function _jobBandHost() {
-  var act = function(id){ var el = document.getElementById(id); return !!(el && el.classList && el.classList.contains('active')); };
+  // ⚠ A PANEL _printDocument TOOK DOWN FOR THE PRINT IS STILL THE ONE ON SCREEN (P22): it marks it `data-was-active` and
+  // restores it about 650 ms later, and a filing that landed in that window was told the dashboard was showing.
+  var act = function(id){ var el = document.getElementById(id); return !!(el && el.classList && (el.classList.contains('active') || (el.dataset && el.dataset.wasActive === '1'))); };
   var val = function(id){ var el = document.getElementById(id); return el ? parseInt(el.value) || 0 : 0; };
   if (act('panel-job-plan') && val('plan-job') && document.getElementById('jband-slot-plan')) {
     return { kind: 'plan', jobId: val('plan-job'), fb: 'jband-fb-plan' };
@@ -21757,9 +21936,11 @@ function dashMarkAgreementSent(jobId) {
   if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
   // A send already on the record is not recorded twice — a second press, or a screen painted before the first.
   if (isAgreementSent(job)) { dashNotice('ok', 'The signing packet is already recorded as sent. Record the signature when it comes back.'); _dashRedraw(jobId); return; }
+  var _draftLeft = agreementHandOverDraftNote(job, true);
   if (!confirm('Record the signing packet as handed to ' + (clientRecipient(job).name || 'the client') + ' in person today?\n\n'
       + 'Do this once they have the printed packet (the agreement with the estimate as Exhibit A) in hand. '
-      + 'The timeline then waits for the signature.')) return;
+      + 'The timeline then waits for the signature.'
+      + (_draftLeft ? '\n\n' + _draftLeft + '.' : ''))) return;
   if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
   markAgreementSent();
   if (!isAgreementSent(job)) return;   // the gate refused, and markAgreementSent has already said why
@@ -21769,7 +21950,9 @@ function dashMarkAgreementSent(jobId) {
   st.sentHow = 'in_person';
   st.sentHowAt = st.sentAt;   // which send the route describes — see agreementHandedOverInPerson
   _saveJobEdit(job);          // a person's edit: the job's clock moves (docState() above stamped docState:agreement)
-  dashNotice('ok', 'Recorded as handed over in person' + (st.sentBy ? ' by ' + st.sentBy : '') + '. Record the signature when it comes back.');
+  var _left = agreementHandOverDraftNote(job);
+  dashNotice(_left ? 'warn' : 'ok', 'Recorded as handed over in person' + (st.sentBy ? ' by ' + st.sentBy : '') + '. Record the signature when it comes back.'
+    + (_left ? ' ' + _left + '.' : ''));
   _dashRedraw(jobId);
 }
 
@@ -22415,6 +22598,10 @@ function renderClientDashboard(jobId) {
     // The package: its one send, and who sent it when (2026-10-01, P17; the trust route 2026-10-02, P18).
     h += probatePackageCardHtml(job);
     h += '</div>';
+  } else {
+    // No card, and a package draft still in a mailbox (P22): named where the card was.
+    var _orphan = estatePackageOrphanDraftNote(job);
+    if (_orphan) h += '<div class="card pkg-orphan" id="pkg-orphan-' + job.id + '" style="margin-bottom:12px;"><div class="alert a-warn" style="font-size:11.5px;margin:0;">&#9888; ' + esc(_orphan) + '</div></div>';
   }
 
   // Payment/estimate figures — rendered inside the Timeline & Payments card below,
@@ -24022,11 +24209,16 @@ function fileSignedCopyFromInput(input, i) {
 }
 // After a filing or a void, the surface that offered it repaints: the desk, the Job Plan or the dashboard, and
 // only while it still shows this client.
-function _signedCopyRepaint(jobId) {
+// ⚠ A FIND'S RECEIPT REPAINTS ITS CARD, NEVER THE PLAN (P22): the filing did (its `after` is _repaintSiteFinds), and the
+// Void beside it repainted the whole plan, taking the hours form and a half-typed note with it. `kind` is the record's.
+function _signedCopyRepaint(jobId, kind) {
   var host = _jobBandHost();
   if (host && host.jobId !== jobId) return;
   if (host && host.kind === 'admin') { renderInventoryTab(); return; }
-  if (host && host.kind === 'plan') { loadJobPlanTab(); return; }
+  if (host && host.kind === 'plan') {
+    if ((kind === 'will' || kind === 'cash') && _repaintSiteFinds(jobId)) return;
+    loadJobPlanTab(); return;
+  }
   _dashRedraw(jobId);
 }
 // The filed copies of one paper, each a link with who signed and when, and a Void for one filed against the
@@ -24048,7 +24240,7 @@ function voidSignedRecord(jobId, id, after) {
   if (!why) return false;
   jobListVoid(job, 'signedRecords', id, why, _actor(job) || job.tc || '');
   showSyncBadge('Signed copy voided. It stays in Drive and on the record as voided.');
-  if (after) after(rec); else _signedCopyRepaint(jobId);
+  if (after) after(rec); else _signedCopyRepaint(jobId, rec.kind);
   return true;
 }
 
@@ -25407,6 +25599,32 @@ function loadPhotoRefs(jobId) {
     }
   } catch(e) {}
   _loadPendingPhotoData(jobId);
+  _expireStaleUploads(jobId, Date.now());
+}
+
+// ⚠⚠ A SHOT THE PAGE WAS STILL UPLOADING WHEN IT RELOADED OR DIED READ "Uploading…" FOR GOOD
+// (P22). The watchdog in _doPhotoUpload lives in the page, so a reload took it with the request,
+// and the ref came back from localStorage at 'uploading' with nothing left to settle it: no Retry,
+// no bin verdict, and a detail shot with no tile at all (the strip draws failed details only). A
+// state with no exit is worse than a failure. On load, a ref still at 'uploading' that THIS page is
+// not uploading (`_photoUploadsLive`, memory only) and that started longer than the watchdog's
+// own PHOTO_UPLOAD_TIMEOUT_MS ago reads as failed, so it gets the failed shot's tile and Retry. The
+// time bound is what keeps another device's genuinely live upload, merged in a moment ago, from being
+// called failed here. A write the app makes on its own: no _invTouch, nothing synced.
+var _photoUploadsLive = {};
+function photoUploadStale(ref, now, live) {
+  if (!ref || ref.status !== 'uploading' || ref.deletedAt) return false;
+  if (live && live[ref.stableId]) return false;
+  var t = Number(ref.ts) || 0;
+  return (Number(now) || 0) - t > PHOTO_UPLOAD_TIMEOUT_MS;
+}
+function _expireStaleUploads(jobId, now) {
+  var n = 0;
+  (_photoRefs[jobId] || []).forEach(function(r) {
+    if (photoUploadStale(r, now, _photoUploadsLive)) { r.status = 'failed'; n++; }
+  });
+  if (n) { savePhotoRefs(jobId); _savePendingPhotoData(jobId); }
+  return n;
 }
 
 // ── Retry bytes for FAILED uploads ───────────────────────────────────────────
@@ -25430,16 +25648,24 @@ function _loadPendingPhotoData(jobId) {
   } catch(e) {}
 }
 
+// ⚠ A shot still UPLOADING keeps its bytes here too (P22): a page that dies mid-upload leaves the
+// ref to be read as failed on the next load (_expireStaleUploads), and Retry needs the image to
+// resend. An uploaded shot's bytes are dropped by _finish, so the key holds only what Drive lacks.
 function _savePendingPhotoData(jobId) {
-  var map = {};
+  var map = {}, anyFailed = false;
   (_photoRefs[jobId] || []).forEach(function(r) {
-    if (r.status === 'failed' && _photoRetryData[r.stableId]) map[r.stableId] = _photoRetryData[r.stableId];
+    if ((r.status === 'failed' || r.status === 'uploading') && _photoRetryData[r.stableId]) {
+      map[r.stableId] = _photoRetryData[r.stableId];
+      if (r.status === 'failed') anyFailed = true;
+    }
   });
   try {
     if (Object.keys(map).length) localStorage.setItem(_pendingPhotoKey(jobId), JSON.stringify(map));
     else localStorage.removeItem(_pendingPhotoKey(jobId));
   } catch(e) {
-    _warnPhotoRetryUnsaved(e);
+    // The alert speaks of a FAILED photo; a shot still in flight has not failed yet.
+    if (anyFailed) _warnPhotoRetryUnsaved(e);
+    else console.warn('[Photos] could not hold in-flight photo bytes:', e);
   }
 }
 
@@ -25538,6 +25764,7 @@ function savePhotoRefs(jobId) {
                filename:r.filename, driveFileUrl:r.driveFileUrl, driveFileId:r.driveFileId,
                reviewed:r.reviewed, reviewedAt:r.reviewedAt, reviewedBy:r.reviewedBy, valNote:r.valNote,
                fieldNote:r.fieldNote, groupId:r.groupId, derivedFrom:r.derivedFrom,
+               docKind:r.docKind,   // what an uploaded collection document is (COLL_DOC_KINDS, P22)
                // ⚠ AGENT ONE'S FIELDS. A new manifest key missing from this whitelist is
                // dropped silently on every save — this file records that exact failure three
                // separate times (fieldNote/groupId, serial, clearedAt).
@@ -30550,28 +30777,31 @@ function fileDispositionLedger(jobId, opt) {
   if (_ledgerFiling[jobId]) { say('warn', 'The Disposition Ledger is being filed now — give it a moment.'); return false; }
   if (!SHEETS_SYNC_URL) { say('warn', 'The Disposition Ledger was not filed to Drive: this device has no Apps Script URL in Settings.' + (auto ? ' Press File to Drive on the Disposition Ledger card (Job Admin & Inv) once one is set.' : '')); return false; }
   if (!job.driveFolder) { say('warn', 'The Disposition Ledger was not filed to Drive: this client has no Drive folder yet. Create the Drive folder on the client dashboard, then press File to Drive on the Disposition Ledger card.'); return false; }
-  _ledgerFiling[jobId] = true;
+  var release = _armFiling(_ledgerFiling, jobId, function () {
+    say('warn', 'No answer from Drive after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes while the Disposition Ledger was filed. It may still have been filed: press File to Drive on the Disposition Ledger card (Job Admin & Inv) to try again.');
+  });
   _invEnsureLoaded(jobId);
   refreshPhotoRefs(jobId, function () {
     if (!_invCloudSeen[jobId]) {
-      delete _ledgerFiling[jobId];
+      if (!release()) return;
       say('err', 'The Disposition Ledger was not filed to Drive: the inventory could not be read from the sheet, and a ledger built without it would be empty. Check the connection, then press File to Drive on the Disposition Ledger card (Job Admin & Inv).');
       return;
     }
     if (!_jobInvRefs(jobId).length) {
-      delete _ledgerFiling[jobId];
+      if (!release()) return;
       if (!auto) say('warn', 'The inventory holds no lines, so there is no ledger to file yet.');
       return;
     }
     var page = printDispositionLedger(jobId, { asHtml: true });
-    if (!page || !page.html) { delete _ledgerFiling[jobId]; say('err', 'The Disposition Ledger could not be built on this device, so it was not filed.'); return; }
+    if (!page || !page.html) { if (!release()) return; say('err', 'The Disposition Ledger could not be built on this device, so it was not filed.'); return; }
     var title = PROBATE_PKG_TITLES.ledger;
     resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
       var target = folderId || _jobRootFolderId(job);
-      if (!target) { delete _ledgerFiling[jobId]; say('warn', 'The Disposition Ledger was not filed to Drive: this client has no Drive folder yet.'); return; }
+      if (!target) { if (!release()) return; say('warn', 'The Disposition Ledger was not filed to Drive: this client has no Drive folder yet.'); return; }
       uploadHtmlToDrive(target, _invDocDriveName(job, title), _exportDoc(title + ' – ' + (job.hvlId || ''), page.html, ''), function (ok, fileUrl, meta) {
-        delete _ledgerFiling[jobId];
+        var mine = release();
         if (!ok) {
+          if (!mine) return;   // the watchdog has already said so
           say('err', 'The Disposition Ledger was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the Disposition Ledger card (Job Admin & Inv) to try again.');
           return;
         }
@@ -32165,6 +32395,66 @@ function _invShareEach(ids, action, email, done) {
       .catch(function(){ err = err || 'the Apps Script could not be reached'; next(i + 1); });
   })(0);
 }
+// ⚠⚠ WHO CAN SEE THE PHOTOGRAPHS IS RECORDED ON THE JOB (P22). Share w/ Counsel and the package's shares said so in an alert
+// or a notice and recorded nothing, so the next person to open the client could not tell whether counsel could already
+// see the photographs, or whose access a Revoke had taken away. One record, `docState.photoShares` (PHOTO_SHARES_KEY, a
+// stored key: never rename it; a docState key, so the sheet merges it on its own stamp, JOB_KEYED_MAPS, with no
+// redeploy), one entry per address (case-folded): when it was shared, by whom, how (`desk` or `package`) and how many
+// folders; a revoke stamps `revokedAt`/`revokedBy` and a later share clears them. A person's edit: the press is a
+// person's. Written by recordPhotoShare alone, read by photoSharesLine (the desk, the package row) and photoShareLive.
+var PHOTO_SHARES_KEY = 'photoShares';
+function recordPhotoShare(job, email, how, folders, revoke) {
+  var addr = String(email || '').trim();
+  if (!job || !addr) return null;
+  var st = docState(job, PHOTO_SHARES_KEY);
+  if (!st.shares || typeof st.shares !== 'object') st.shares = {};
+  var k = addr.toLowerCase(), now = new Date().toISOString(), by = _actor(job) || job.tc || '';
+  var cur = st.shares[k] || { email: addr };
+  if (revoke) { cur.revokedAt = now; cur.revokedBy = by; }
+  else {
+    cur.email = addr; cur.sharedAt = now; cur.sharedBy = by; cur.via = how === 'package' ? 'package' : 'desk';
+    cur.folders = Number(folders) || 0;
+    delete cur.revokedAt; delete cur.revokedBy;
+  }
+  st.shares[k] = cur;
+  _saveJobEdit(job);
+  return cur;
+}
+function photoSharesOf(job) {
+  var st = job && job.docState && job.docState[PHOTO_SHARES_KEY];
+  var m = (st && st.shares && typeof st.shares === 'object') ? st.shares : {};
+  return Object.keys(m).map(function (k) { return m[k]; }).filter(function (x) { return x && x.email; })
+    .sort(function (a, b) { return String(b.revokedAt || b.sharedAt || '').localeCompare(String(a.revokedAt || a.sharedAt || '')); });
+}
+// The addresses that can see the photographs now, most recently shared first.
+function photoShareLive(job) {
+  return photoSharesOf(job).filter(function (x) { return x.sharedAt && !x.revokedAt; })
+    .sort(function (a, b) { return String(b.sharedAt).localeCompare(String(a.sharedAt)); });
+}
+// One plain-text line, '' with nothing recorded: who can see the photographs (since when, by whom, how) and whose access
+// was taken away. Every reader escapes it.
+function photoSharesLine(job) {
+  var all = photoSharesOf(job);
+  if (!all.length) return '';
+  var live = all.filter(function (x) { return x.sharedAt && !x.revokedAt; });
+  var gone = all.filter(function (x) { return x.revokedAt; });
+  var bits = [];
+  if (live.length) bits.push('Photographs shared read-only with ' + _andJoin(live.map(function (x) {
+    return x.email + ' (' + [_draftDay(x.sharedAt), x.sharedBy ? 'by ' + x.sharedBy : '', x.via === 'package' ? 'with the package' : '']
+      .filter(Boolean).join(', ') + ')';
+  })));
+  if (gone.length) bits.push('access revoked for ' + _andJoin(gone.map(function (x) {
+    return x.email + ' (' + [_draftDay(x.revokedAt), x.revokedBy ? 'by ' + x.revokedBy : ''].filter(Boolean).join(', ') + ')';
+  })));
+  var line = bits.join('; ');
+  return line.charAt(0).toUpperCase() + line.slice(1) + '.';
+}
+// Where the desk shows it: repainted by id, never the tab (the answer lands while somebody may be typing on the desk).
+function _photoSharesRepaint(jobId) {
+  var el = document.getElementById('inv-shares-' + jobId);
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (el && job) el.innerHTML = esc(photoSharesLine(job));
+}
 function shareInventoryWithCounsel(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
@@ -32177,6 +32467,9 @@ function shareInventoryWithCounsel(jobId) {
     if (!ids.length) { alert('No photograph folder was found yet \u2014 capture an item or run a sync first so the folder exists in Drive.'); return; }
     _invShareEach(ids, 'shareFolder', email, function(okCount, err) {
       if (!okCount) { alert('Share failed: ' + (err || 'unknown error')); return; }
+      var j2 = jobs.find(function(j){ return j.id === jobId; }) || job;
+      recordPhotoShare(j2, email, 'desk', okCount);
+      _photoSharesRepaint(jobId);
       alert('Shared ' + (okCount > 1 ? (okCount + ' photograph folders') : 'the photograph folder')
         + ' (read-only) with ' + email + '.'
         + (okCount < ids.length ? '\n\nOne folder could not be shared: ' + err : ''));
@@ -32186,7 +32479,11 @@ function shareInventoryWithCounsel(jobId) {
 function unshareInventory(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job || !SHEETS_SYNC_URL || !job.driveFolder) { alert('Nothing to unshare.'); return; }
-  var email = window.prompt('Remove access to the estate\u2019s photographs for:', job.probateAttyEmail || '');
+  // The address most recently shared with, else whoever Share w/ Counsel offers (the attorney, then the representative):
+  // a Revoke prefilled with nobody, where the share had fallen back to the representative, invited a typo (P22).
+  var _live = photoShareLive(job);
+  var email = window.prompt('Remove access to the estate\u2019s photographs for:',
+    (_live[0] && _live[0].email) || job.probateAttyEmail || job.executorEmail || '');
   if (!email) return;
   email = email.trim();
   // ⚠ REVOKE SWEEPS BOTH WHATEVER THE SHARE DID. A revoke that covers less than the grant
@@ -32195,6 +32492,11 @@ function unshareInventory(jobId) {
   _invShareFolders(job, function(ids) {
     if (!ids.length) { alert('Folder not found.'); return; }
     _invShareEach(ids, 'unshareFolder', email, function(okCount, err) {
+      if (okCount) {
+        var j2 = jobs.find(function(j){ return j.id === jobId; }) || job;
+        recordPhotoShare(j2, email, 'desk', okCount, true);
+        _photoSharesRepaint(jobId);
+      }
       alert(okCount ? ('Removed access for ' + email + ' on ' + okCount + ' folder' + (okCount > 1 ? 's' : '') + '.'
                        + (okCount < ids.length ? '\n\nOne folder could not be updated: ' + err : ''))
                     : ('Failed: ' + (err || 'unknown error')));
@@ -33137,6 +33439,7 @@ function _renderInvWorkbar(job, all) {
         + btn('invToggleRollups()', (_invShowRoll ? 'Hide' : 'Show') + ' summary &amp; rollups', 'Totals, FMV by category, MAIV aggregate')
         + '</div></details>'
     + '</div>'
+    + '<div id="inv-shares-' + jid + '" class="inv-shares" style="font-size:10.5px;color:var(--gray);margin-top:7px;">' + esc(photoSharesLine(job)) + '</div>'
     + (fid && invDocContractBlock(job, 'schedule')
         ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;"><strong>No valued schedule on this engagement.</strong> '
           + esc(docTierDef(docTierOf(job)) ? docTierDef(docTierOf(job)).they : 'Counsel values it and prepares the filing.')
@@ -33947,10 +34250,12 @@ function _renderCollPhotoCapture(jobId, collId) {
     + '<input type="file" accept="image/*" capture="environment" style="display:none;" '
     + 'onchange="attachJobPlanCollectionPhoto(this,' + jobId + ',' + collId + ')">'
     + '&#128247; Capture Asset Photo</label>'
-    + '<label style="' + btnStyle + '" title="Appraisal report, dealer/buyer offer, receipt — PDF or image">'
-    + '<input type="file" accept="image/*,application/pdf" style="display:none;" '
-    + 'onchange="attachCollectionDoc(this,' + jobId + ',' + collId + ')">'
-    + '&#128196; Upload Appraisal / Offer</label>'
+    + Object.keys(COLL_DOC_KINDS).map(function (k) {
+        return '<label style="' + btnStyle + '" title="' + COLL_DOC_KINDS[k].title + ' — PDF or image">'
+          + '<input type="file" accept="image/*,application/pdf" style="display:none;" '
+          + 'onchange="attachCollectionDoc(this,' + jobId + ',' + collId + ',\'' + k + '\')">'
+          + '&#128196; ' + COLL_DOC_KINDS[k].btn + '</label>';
+      }).join('')
     + '<span id="photo-coll-status-' + jobId + '-' + collId + '">' + statusHtml + '</span>'
     + '</div>'
     + '<div id="coll-docs-' + jobId + '-' + collId + '">' + _renderCollDocs(jobId, collId) + '</div>';
@@ -34833,6 +35138,7 @@ function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpd
     // the second one wins — which would turn a shot that DID land back into a failure.
     if (_settled) return;
     _settled = true;
+    delete _photoUploadsLive[stableId];
     if (_watchdog) { clearTimeout(_watchdog); _watchdog = null; }
     var ref = _getPhotoRef(jobId, stableId);
     if (ref) {
@@ -34847,7 +35153,9 @@ function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpd
     _savePendingPhotoData(jobId);
     if (onUpdate) onUpdate();
   }
+  _photoUploadsLive[stableId] = true;
   if (!job) { _finish('failed'); return; }
+  _savePendingPhotoData(jobId);
   _watchdog = setTimeout(function(){
     if (_settled) return;
     _finish('failed');
@@ -34925,6 +35233,13 @@ function retryPhotoUpload(jobId, stableId) {
 // Collection diligence docs (appraisals, buyer offers, receipts). Uploaded to the
 // job's "Asset Documentation" Drive folder and tracked as refs (label 'appraisal')
 // so each collection lists its supporting documents with open links.
+// What a collection document is (P22): chosen by the button pressed, carried on the ref as `docKind`, and read by the
+// package's links (probatePackageReports) and the collection's own list. `tag` goes in the Drive filename.
+var COLL_DOC_KINDS = {
+  appraisal: { title: 'Appraisal report', btn: 'Upload Appraisal', tag: 'APPRSL' },
+  offer:     { title: 'Offer',            btn: 'Upload Offer',     tag: 'OFFER' },
+  receipt:   { title: 'Receipt',          btn: 'Upload Receipt',   tag: 'RCPT' }
+};
 function _collDocRefs(jobId, collId) {
   return (_photoRefs[jobId] || []).filter(function(r){ return r.collId === String(collId) && r.label === 'appraisal'; });
 }
@@ -34939,7 +35254,8 @@ function _renderCollDocs(jobId, collId) {
           ? '<button onclick="retryPhotoUpload(' + jobId + ',\'' + r.stableId + '\')" style="font-size:9px;padding:1px 5px;cursor:pointer;background:#c0392b;color:#fff;border:none;border-radius:3px;font-family:inherit;">Retry</button>'
           : '<span style="color:var(--gray);">…</span>');
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;padding:1px 0;">'
-      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">&#128196; ' + esc(r.objectName || r.filename) + '</span>' + st + '</div>';
+      + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">&#128196; '
+      + (COLL_DOC_KINDS[r.docKind] ? COLL_DOC_KINDS[r.docKind].title + ' &middot; ' : '') + esc(r.objectName || r.filename) + '</span>' + st + '</div>';
   }).join('');
   return '<div style="margin-top:4px;padding-top:3px;border-top:1px dashed var(--border-md);">' + rows + '</div>';
 }
@@ -34949,7 +35265,8 @@ function _updateCollDocs(jobId, collId) {
   if (el) el.innerHTML = _renderCollDocs(jobId, collId);
 }
 
-function attachCollectionDoc(input, jobId, collId) {
+function attachCollectionDoc(input, jobId, collId, kind) {
+  var K = COLL_DOC_KINDS[kind] ? kind : 'appraisal';
   var file = input.files[0];
   if (!file) return;
   var job = _photoCaptureJob(jobId);
@@ -34965,8 +35282,8 @@ function attachCollectionDoc(input, jobId, collId) {
     // After the read, for the reason given in attachJobPlanPhoto.
     var seq = _collDocRefs(jobId, collId).length + 1;
     var stableId = jobId + '_cdoc' + collId + '_' + _photoUid();
-    var filename = (job.hvlId ? job.hvlId + '_' : '') + 'APPRSL_' + _cleanName(collName) + '_' + seq + '_' + _photoStamp(ts) + '.' + ext;
-    var ref = { stableId:stableId, roomIdx:null, label:'appraisal', collId:String(collId),
+    var filename = (job.hvlId ? job.hvlId + '_' : '') + COLL_DOC_KINDS[K].tag + '_' + _cleanName(collName) + '_' + seq + '_' + _photoStamp(ts) + '.' + ext;
+    var ref = { stableId:stableId, roomIdx:null, label:'appraisal', docKind:K, collId:String(collId),
                 objectName:file.name, filename:filename, driveFileUrl:null, status:'uploading', ts:ts };
     _setPhotoRef(jobId, ref); savePhotoRefs(jobId);
     _photoRetryData[stableId] = ev.target.result;
@@ -38880,7 +39197,12 @@ function planDerivedLines(jobId, job, est, phase, today) {
   // ⚠ AN ORIGINAL WILL OR CASH FOUND IN THE HOUSE (P19): on the Found on site card itself and FIRST on the desk card,
   // where the evening's work happens. A will Havellin still holds is the most urgent line either card can carry.
   if (phase === 'finds' || phase === 'admin') {
-    if (jobListEntries(job, 'siteFinds').length) out = out.concat(siteFindLines(job, day()));
+    // On the desk each open line carries the way to the card it names (P22): the line said "under Found on site on the
+    // Job Plan" and offered nothing to press. Not on the card itself, which is where it would lead.
+    if (jobListEntries(job, 'siteFinds').length) out = out.concat(siteFindLines(job, day()).map(function(l) {
+      if (phase === 'admin' && !l.ok) l.action = { label: 'Open Found on site', call: 'goToSiteFinds(' + jobId + ')' };
+      return l;
+    }));
   }
   if (phase === 'p2') {
     var sent = !!docSentAt(job, 'invoice', 'midpoint');
@@ -39266,6 +39588,13 @@ function siteFindsCardHtml(jobId, job, est) {
       + 'and hand it to the estate attorney the same day against a signed receipt. Havellin never keeps it. '
       + '<strong>Cash:</strong> two people count it, it goes in a sealed numbered bag, and the fiduciary signs for the bag the same day.</div>'
     + '</div>';
+}
+// The desk's way to the card (P22): the Job Plan on this client, In the house open, the card in view.
+function goToSiteFinds(jobId) {
+  if (!openJobPlanFor(jobId, 'p1')) return false;
+  var el = document.getElementById('plan-finds-' + jobId);
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+  return true;
 }
 // Repaint the card in place, never the plan: an innerHTML write over #job-plan-content takes the hours form and a
 // half-typed note with it (_parkHoursSection). Only while the plan shows this client.

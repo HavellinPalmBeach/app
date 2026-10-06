@@ -296,6 +296,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       sendProbatePackage: 'the notices',
       probatePackageCardHtml: 'the row\'s label and button',
       noDraftToConfirm: 'the confirming tap\'s refusal',
+      estatePackageOrphanDraftNote: 'a package draft named where the card was, once there is none (P22)',
     };
     eq(readers('estatePackageRoute'), Object.keys(ROUTE_READERS).sort(), '⚠⚠ estatePackageRoute is read by exactly these');
     eq(readers('probatePackageAddressee'), ['_pkgGreeting', 'probatePackageBlocker', 'probatePackageCardHtml', 'probatePackageRecipients'],
@@ -520,7 +521,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(!/court|probate|§/i.test(part), '⚠ the ' + which + ' part names no court, no probate and no statute');
     });
     // Shared with the recipient, filed, recorded.
-    eq(r.N.log.shares, [{ folderId: 'AF7', email: 'ann@lowe.law' }, { folderId: 'INV7', email: 'ann@lowe.law' }], 'both photograph folders shared with the attorney');
+    eq(r.N.log.shares, [{ folderId: 'AF7', email: 'ann@lowe.law' }, { folderId: 'AF7', email: 'rex@hale.example' },
+                        { folderId: 'INV7', email: 'ann@lowe.law' }, { folderId: 'INV7', email: 'rex@hale.example' }],
+       'both photograph folders shared with the attorney, and with the copied trustee (P22)');
     eq(r.N.log.uploads.map((u) => [u.folderId, u.filename]), [
       ['INV7', 'HVL-0007 - Havellin Release Approvals and Chain of Custody.html'], ['INV7', 'HVL-0007 - Havellin Trust Schedule.html'],
       ['INV7', 'HVL-0007 - Havellin Estate Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'],

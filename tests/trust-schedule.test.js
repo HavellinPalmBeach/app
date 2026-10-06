@@ -28,7 +28,7 @@ const FNS = [
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
   'photoSubfolder',   // P16: the share button names both photo folders by the rule that files them
   'roundCents', 'fmt',
-  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel'];
+  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf'];
 const VARS = [
   '_agRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',

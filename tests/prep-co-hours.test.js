@@ -469,7 +469,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const T = (cos) => sandbox({
       fns: ['agrApprovalWithdrawn', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'paymentLive', 'isRefundRecord',
-            'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending', 'estimateOutForApproval', 'priceAboveSent', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'].concat(CO),
+            'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending', 'estimateOutForApproval', 'priceAboveSent', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'].concat(CO),
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { changeOrders: cos } });
     const sub = (est, cos, logged, jobOver) => {
