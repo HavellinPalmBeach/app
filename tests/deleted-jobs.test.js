@@ -128,7 +128,7 @@ function server(opts = {}) {
     gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'),
     gsVar(GS, 'JOB_KEYED_LISTS'), gsVar(GS, 'JOB_KEYED_MAPS'), gsVar(GS, 'JOB_LIST_KEY'), gsVar(GS, 'JOB_PAYMENT_STICKY'), ...names.map((n) => gsFn(GS, n)),
     // saveMediaStore lives in the other file and leans on getMediaStore + _mergeMediaItems.
-    gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_mergeMediaItems')].join('\n\n');
+    gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_invApprovalEntries'), gsFn(GS_INV, '_invApprovalSetAt'), gsFn(GS_INV, '_invMergeApprovals'), gsFn(GS_INV, '_mergeMediaItems')].join('\n\n');
   vm.runInContext(code, ctx, { filename: 'main-sync.gs (extracted)' });
   return ctx;
 }

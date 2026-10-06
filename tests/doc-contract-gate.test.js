@@ -27,7 +27,7 @@ const FNS = ['_invScheduleSection', '_invTrackDefault',
   'maivFilingApplies', 'invReleaseCautions', '_invCautionBadges', '_invCautionNotices',
   '_invNamed', '_invDateTime', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames',
   // P16: the dealer route, the import panel's own list, and the photo folders the share names.
-  'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer',
+  'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', 'invChannelLeftover',
   '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder', 'roundCents', 'fmt',
   'scheduleSigners', 'jobFiduciaries', 'jobListEntries',
   // P19: the Disposition Ledger's own card on the desk, where the ledger moved from the More menu.

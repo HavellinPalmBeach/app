@@ -18,7 +18,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_invBulkApply',
+const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_invBulkApply', 'invNoteDispositionMove',
              'invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_invNamed',
              '_invItemNo', '_invAwaitingApproval', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',
@@ -124,7 +124,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Havellin's people: flagged, never refused, so the client signs knowing), is a question about whom the property goes
     // to, so it sits with the authority cautions and before the price one. The rule pinned is unchanged.
     eq(s.INV_RELEASE_CAUTIONS.map((c) => c.key).join(','),
-       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,needsAppraisal',
+       // RESTATED P22: `staffEstate`, the estate's mirror of `staffRecipient`, sits beside it.
+       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,staffEstate,needsAppraisal',
        'authority cautions first, the valuation one last');
     s.INV_RELEASE_CAUTIONS.forEach((c) => {
       ok(c.head && c.body && c.badge && c.tone, c.key + ' carries a heading, a body and a badge');

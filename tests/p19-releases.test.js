@@ -167,6 +167,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       invApprovalSigners: 'the one parser (P20): who signed and when each signed',
       invApprovalSignedText: 'the one readable form (P20): never a raw ISO date in front of a reader',
       invApprovalWithSigners: 'the writer\'s rule (P20): names added, never dropped, each keeping its first date',
+      // P22: the item record's box shows the readable form and saves the stored one, and the merge unions the signers.
+      invApprovalBoxText: 'the Authorized By box (P22): the readable form where a signer\'s own day is stored',
+      invApprovalBoxToStored: 'the box\'s save (P22): a reader\'s date back to the stored one',
+      _invEdit: 'the box\'s writer (P22): stores the stored form and stamps the hand edit',
+      _invApprovalEntries: 'the merge (P22): the entries Record approval writes, keyed by name',
+      invMergeApprovals: 'the merge (P22): signers unioned per line, as the server does',
+      _invApprovalSetAt: 'the merge (P22): when the list was last edited by hand',
     };
     const extra = [...owners].filter((n) => !ALLOWED[n]).sort();
     eq(extra, [], '⚠⚠ no function outside the rule, the writer and the displays reads authBy or approvalDate');

@@ -192,7 +192,7 @@ const TRUST = 6101, LIVING = 6103;
       has(main, 'Sargent portrait', 'the lines still here are asked for');
       lacks(main, 'Locket', '⚠ the line that already left is not "ready to be released"');
       has(rat, 'Locket', '⚠ it is listed apart');
-      has(rat, 'These items left the property before every co-trustee had approved their release in writing. They are listed apart from the items above, for the signature of Daniel Adler, which ratifies each release; nothing is undone.',
+      has(rat, 'This item left the property before every co-trustee had approved its release in writing. It is listed apart from the items above, for the signature of Daniel Adler, which ratifies the release; nothing is undone.',
           'for the missing signature, nothing undone');
       has(rat, 'Released Oct 2, 2026', 'saying when it went');
       has(rat, 'Signed so far by Ruth Adler (Sep 30, 2026); still to sign: Daniel Adler', 'and who has signed it');

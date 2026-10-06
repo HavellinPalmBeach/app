@@ -973,6 +973,19 @@ the Contents Record and the Disposition Ledger. On an estate the sale or release
 **The question.** Is the client's initial against a named line an adequate disclosure and consent for a sale or gift to a
 team member, and does the standard agreement need a clause to match A12?
 
+### D13. An estate line already recorded as going to someone who works with Havellin ⚠ NEW P22
+
+**What it says.** On an estate the sale or release is refused where it is written (A12), so nothing new gets there; a line
+written before that rule (2026-10-03), or naming someone added to Havellin's directory since, is flagged rather than undone.
+The release approval request carries, above the table, **Property recorded as going to someone who works with Havellin**:
+*"Havellin and its people never purchase or receive estate or trust property, and take no share of the proceeds of its sale.
+These lines are recorded as going to a person who works with Havellin, named against each line. Please do not initial them.
+Your concierge will change where each one goes and ask for your approval again."* Each such line is badged *"Going to
+<name>, who works with Havellin"*.
+
+**The question.** Is asking the representative not to initial the line (rather than withholding it from the request) the
+right way to keep a pre-existing conflicted line from being approved?
+
 ## E. What is deliberately NOT being asked
 
 So counsel does not spend time on settled ground:
