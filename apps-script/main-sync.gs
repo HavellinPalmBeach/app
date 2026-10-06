@@ -61,7 +61,10 @@
 // so an older deployment is named by the action the app finds missing, not by version.
 // ⚠ 2026-10-06c (P24): the room check, `agentRoomCheck` — a room's photographs read together for one thing counted
 // twice. A new action, so an older deployment is named by the action the app finds missing.
-var BACKEND_VERSION = '2026-10-06c';
+// ⚠ 2026-10-06d (P24, after the first live run): the room check reads runs of 12 photographs, not 24, so one request
+// answers inside UrlFetchApp's limit; its sentence is short, plain and cut at a word; testAgentRoomCheck times one full
+// run. No action or type changes: an older deployment still answers, and a big room there fails as *took too long*.
+var BACKEND_VERSION = '2026-10-06d';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -3294,20 +3297,26 @@ function testAgentIdentify() {
 // ⚠ THE LINE LABELS ARE PLAIN STRINGS CHECKED HERE, never an enum (Agent Two's rule): a label this request did not carry
 // is dropped, and so is a "double" whose lines all came off one photograph, which is two things the namer saw at once.
 var AGENT_ROOM_MODEL       = 'claude-opus-5-5';  // its own constant: it compares many pictures at once (measure before changing)
-var AGENT_ROOM_EFFORT      = 'low';     // a look at up to 24 pictures has to answer inside UrlFetchApp's per-request limit
+var AGENT_ROOM_EFFORT      = 'low';     // a run of pictures has to answer inside UrlFetchApp's per-request limit
 var AGENT_ROOM_MAX_TOKENS  = 16000;     // the non-streaming ceiling Agent One settled on; it caps, it does not spend
-var AGENT_ROOM_WINDOW      = 24;        // photographs in one request
-var AGENT_ROOM_OVERLAP     = 8;         // photographs a run shares with the one before, so neighbouring shots always meet
+// ⚠⚠ MEASURED, NOT GUESSED (Anthony's first live run of testAgentRoomCheck, 2026-10-06): eight photographs in one request
+// took 32 s, and UrlFetchApp cuts a request off at about 60 s (undocumented, and no option raises it). At that pace a run
+// of 24 runs past the limit and its room fails as *took too long*, so a room is read in runs of 12 sharing 6. Re-time
+// one full run with testAgentRoomCheck before raising either figure.
+var AGENT_ROOM_WINDOW      = 12;        // photographs in one request
+var AGENT_ROOM_OVERLAP     = 6;         // photographs a run shares with the one before: two shots within six always meet
 var AGENT_ROOM_MAX_SHOTS   = 160;       // a room's photographs read in one call, whatever the caller sends
 var AGENT_ROOM_MAX_ROOMS   = 12;        // rooms in one call; the rest come back as remaining
-var AGENT_ROOM_PARALLEL    = 4;         // fetchAll width: each request carries up to 24 pictures, so not 8
+var AGENT_ROOM_PARALLEL    = 6;         // fetchAll width: 6 runs of 12 pictures, fewer in flight than the 4 runs of 24 it replaced
 var AGENT_ROOM_TIME_BUDGET = 240000;    // 4 min of Apps Script's 6, as Agent One
 var AGENT_ROOM_CONF_RANK   = { high: 3, medium: 2, low: 1 };
+var AGENT_ROOM_WHY_MAX     = 200;       // characters of the sentence the desk shows: cut at a word, never mid-word
 
 // The runs a room's photographs are read in, as [from, to) in the order taken. A room of up to AGENT_ROOM_WINDOW is one
-// run; a bigger one is read in runs overlapping by AGENT_ROOM_OVERLAP, so a close-up taken straight after its wide shot,
-// or a neighbouring frame's background, always meets its pair. Two shots of one thing far apart in a big room can miss
-// each other, and the guide says so.
+// run; a bigger one is read in runs overlapping by AGENT_ROOM_OVERLAP. Two shots within AGENT_ROOM_OVERLAP of each other
+// always share a run, so a close-up taken straight after its wide shot, or a neighbouring frame's background, meets its
+// pair; two shots AGENT_ROOM_WINDOW or more apart never do, and between the two it depends where they fall. The guide
+// says so.
 function _arWindows(n) {
   if (!(n > 0)) return [];
   if (n <= AGENT_ROOM_WINDOW) return [[0, n]];
@@ -3342,7 +3351,9 @@ function _arTool() {
             properties: {
               lines:      { type: 'array', items: { type: 'string' },
                             description: 'The labels (L1, L2 ...) of the lines that are this one object, each from a different photograph.' },
-              why:        { type: 'string', description: 'One sentence a person can check against the photographs: what the object is and where it shows in each.' },
+              why:        { type: 'string', description: 'One short sentence, under 25 words, for the person at the desk who sees the '
+                                                   + 'photographs side by side: what the object is and what shows it is the same one. '
+                                                   + 'Plain words only: never a label (no P1, no L2).' },
               confidence: { type: 'string', enum: ['high', 'medium', 'low'] }
             }
           }
@@ -3382,9 +3393,11 @@ function _arSystem(ctx) {
     + '- Never say what anything is worth or what should happen to it.\n'
     + '- Never describe a person.\n'
     + '- Never use a line label you were not given.\n\n'
-    + 'For each object counted twice give its line labels, one sentence a person can check against the photographs '
-    + '(what it is and where it shows in each), and how sure you are. Call record_doubles exactly once, with an empty '
-    + 'list when nothing in the room is counted twice.';
+    + 'For each object counted twice give its line labels, how sure you are, and one short sentence (under 25 words) '
+    + 'for the person at the desk, who sees the photographs side by side but never your labels: what the object is and '
+    + 'what shows it is the same one, in plain words, with no P or L label in it. For example: "The cobalt vase: on the '
+    + 'sideboard in one, close up in the other." Call record_doubles exactly once, with an empty list when nothing in '
+    + 'the room is counted twice.';
   if (ctx && ctx.fiduciary) {
     s += '\n\nThis is a decedent\'s estate. The inventory may be read by an attorney, a personal representative, a '
        + 'beneficiary or a court, so an object counted twice overstates the estate.';
@@ -3462,6 +3475,16 @@ function _arReadResult(res, labels) {
   return { ok: false, error: 'the model answered in prose instead of recording anything' };
 }
 
+// The desk's sentence: one line of plain words, at most AGENT_ROOM_WHY_MAX characters, cut at a word with an ellipsis when
+// the model ran on (its first live run wrote 300 characters and the cut fell mid-clause: "…so the overlap is").
+function _arWhy(s) {
+  var t = String(s || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= AGENT_ROOM_WHY_MAX) return t;
+  var cut = t.slice(0, AGENT_ROOM_WHY_MAX - 1), sp = cut.lastIndexOf(' ');
+  if (sp > AGENT_ROOM_WHY_MAX / 2) cut = cut.slice(0, sp);
+  return cut.replace(/[\s,;:.\u2013\u2014(-]+$/, '') + '\u2026';
+}
+
 // Each answer back through the labels this request minted. An unknown label is dropped, a line named twice counts once,
 // and an entry left with fewer than two lines, or with every line off one photograph, is not a double.
 function _arDoubles(list, labels) {
@@ -3478,7 +3501,7 @@ function _arDoubles(list, labels) {
       seen[hit.id] = 1; ids.push(hit.id); photos[hit.photo] = 1;
     });
     if (ids.length < 2 || Object.keys(photos).length < 2) return;
-    out.push({ ids: ids, why: String(d.why || '').slice(0, 300),
+    out.push({ ids: ids, why: _arWhy(d.why),
                confidence: AGENT_ROOM_CONF_RANK[d.confidence] ? d.confidence : 'low' });
   });
   return out;
@@ -3568,24 +3591,37 @@ function agentCheckRooms(data) {
   }
 }
 
-// ⚠ RUN THIS FROM THE EDITOR FIRST, BEFORE TRUSTING THE BUTTON, and note the time it prints: how long a
-// room's look takes is what UrlFetchApp's per-request limit decides, and it has never been measured live. Argument-free,
-// because the Run menu passes none: it finds a folder holding several photographs and checks them as one room.
+// ⚠ RUN THIS FROM THE EDITOR AFTER EVERY REDEPLOY, BEFORE TRUSTING THE BUTTON, and note the time it prints: it times ONE
+// FULL RUN, the longest single request the room check makes, and UrlFetchApp cuts a request off at about 60 s. Running it
+// needs no new deployment (the editor runs the saved file). Argument-free, because the Run menu passes none: it finds the
+// room with the most Items photographs in Drive (a name with `_INV_`; a close-up is never a line, so it is never sent) and
+// reads the first AGENT_ROOM_WINDOW of them, in the order taken. One line a photograph, so the timing errs long.
 function testAgentRoomCheck() {
   var miss = _agMissingProps();
   if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
-  var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
-  var stack = [root], guard = 0, picked = [];
+  var stack = [DriveApp.getFolderById(ROOT_FOLDER_ID)], guard = 0, rooms = {}, best = '';
   while (stack.length && guard++ < 400) {
     var f = stack.pop();
-    var files = f.getFilesByType('image/jpeg'), here = [];
-    while (files.hasNext() && here.length < 8) here.push(files.next());
-    if (here.length >= 2) { picked = here; break; }
+    var files = f.getFilesByType('image/jpeg');
+    while (files.hasNext()) {
+      var file = files.next(), name = file.getName(), at = name.indexOf('_INV_');
+      if (at < 0) continue;
+      var key = f.getId() + '|' + name.slice(0, at);
+      (rooms[key] = rooms[key] || []).push(file);
+      if (!best || rooms[key].length > rooms[best].length) best = key;
+    }
     var subs = f.getFolders();
     while (subs.hasNext()) stack.push(subs.next());
   }
-  if (picked.length < 2) { Logger.log('No folder under the root holds two photographs yet: shoot a room on the Job Plan first.'); return; }
-  Logger.log('Folder photographs: ' + picked.map(function (x) { return x.getName(); }).join(', '));
+  var all = best ? rooms[best] : [];
+  if (all.length < 2) { Logger.log('No room in Drive has two Items photographs yet: shoot a room on the Job Plan first.'); return; }
+  // The order taken: each name ends in the day and time of its shot.
+  var taken = function (file) { var m = /_(\d{4}-\d{2}-\d{2}_\d{6})\.\w+$/.exec(file.getName()); return m ? m[1] : file.getName(); };
+  all.sort(function (a, b) { var x = taken(a), y = taken(b); return x < y ? -1 : x > y ? 1 : 0; });
+  var picked = all.slice(0, AGENT_ROOM_WINDOW);
+  Logger.log('Room ' + best.split('|')[1] + ': ' + all.length + ' Items photographs; reading the first ' + picked.length
+    + (picked.length === AGENT_ROOM_WINDOW ? ', one full run.' : ' (fewer than a full run of ' + AGENT_ROOM_WINDOW + ').'));
+  Logger.log('Photographs: ' + picked.map(function (x) { return x.getName(); }).join(', '));
   var t0 = new Date().getTime();
   var out = agentCheckRooms({
     context: { fiduciary: true },
@@ -3598,7 +3634,9 @@ function testAgentRoomCheck() {
   if (out.failed.probe) { Logger.log('FAILED after ' + secs + 's: ' + out.failed.probe); return; }
   var r = out.results.probe;
   if (!r) { Logger.log('NOT FINISHED after ' + secs + 's: the time budget ran out before the room was read.'); return; }
-  Logger.log('ALL GOOD — ' + out.model + ' read ' + picked.length + ' photographs in ' + secs + 's.');
+  Logger.log('ALL GOOD — ' + out.model + ' read ' + picked.length + ' photographs in one run in ' + secs
+    + 's. UrlFetchApp cuts a request off at about 60s.');
+  if (secs > 45) Logger.log('⚠ CLOSE TO THE LIMIT: lower AGENT_ROOM_WINDOW before a full house.');
   Logger.log('  counted twice: ' + r.doubles.length);
   for (var d = 0; d < r.doubles.length; d++) {
     Logger.log('   - [' + r.doubles[d].confidence + '] ' + r.doubles[d].ids.join(' + ') + ' — ' + r.doubles[d].why);

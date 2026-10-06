@@ -41,9 +41,9 @@ function gsVar(name) {
 }
 const AR_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_ROOM_MODEL', 'AGENT_ROOM_EFFORT', 'AGENT_ROOM_MAX_TOKENS',
   'AGENT_ROOM_WINDOW', 'AGENT_ROOM_OVERLAP', 'AGENT_ROOM_MAX_SHOTS', 'AGENT_ROOM_MAX_ROOMS', 'AGENT_ROOM_PARALLEL',
-  'AGENT_ROOM_TIME_BUDGET', 'AGENT_ROOM_CONF_RANK', 'AGENT_MAX_IMG'];
+  'AGENT_ROOM_TIME_BUDGET', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_WHY_MAX', 'AGENT_MAX_IMG'];
 const AR_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_arWindows', '_arTool', '_arSystem', '_arWindowContent',
-  '_arRequestFor', '_arReadResult', '_arDoubles', '_arMergeDoubles', 'agentCheckRooms'];
+  '_arRequestFor', '_arReadResult', '_arWhy', '_arDoubles', '_arMergeDoubles', 'agentCheckRooms'];
 
 // `reply(body, i, sent)` answers each request; `files` the images by Drive id; `throwFetch` makes fetchAll throw.
 function gs(opts) {
@@ -153,22 +153,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
 
   // ═══ THE BACKEND ═════════════════════════════════════════════════════════════════════════
-  group('backend · the runs a room is read in: neighbours always meet');
+  group('backend · the runs a room is read in: twelve at a time, sharing six, so neighbours always meet');
   {
     const c = gs();
+    // ⚠ MEASURED (Anthony's first live run, 2026-10-06): eight photographs took 32 s and UrlFetchApp cuts a request off at
+    // about 60 s, so a run carries twelve, not twenty-four.
+    eq([c.AGENT_ROOM_WINDOW, c.AGENT_ROOM_OVERLAP, c.AGENT_ROOM_PARALLEL], [12, 6, 6], 'runs of 12 sharing 6, six at a time');
     eq(c._arWindows(0), [], 'nothing to read');
     eq(c._arWindows(1), [[0, 1]], 'one photograph is one run');
-    eq(c._arWindows(24), [[0, 24]], 'a room of 24 is one run');
-    eq(c._arWindows(25), [[0, 24], [16, 25]], 'a room of 25 is two runs sharing 8');
-    eq(c._arWindows(60), [[0, 24], [16, 40], [32, 56], [48, 60]], 'and 60 is four');
-    // Every pair of consecutive photographs sits together in some run, for every size up to the cap.
-    let gap = '';
-    for (let n = 2; n <= 160 && !gap; n++) {
+    eq(c._arWindows(12), [[0, 12]], 'a room of 12 is one run');
+    eq(c._arWindows(13), [[0, 12], [6, 13]], 'a room of 13 is two runs sharing 6');
+    eq(c._arWindows(30), [[0, 12], [6, 18], [12, 24], [18, 30]], 'and 30 is four');
+    // For every size up to the cap: two shots within six always share a run, two twelve or more apart never do, and the
+    // last run reaches the end.
+    let gap = '', apart = '';
+    for (let n = 2; n <= 160 && !gap && !apart; n++) {
       const w = c._arWindows(n);
-      for (let i = 0; i + 1 < n; i++) if (!w.some((x) => x[0] <= i && i + 1 < x[1])) { gap = n + ': ' + i; break; }
+      for (let i = 0; i < n && !gap; i++) {
+        for (let j = i + 1; j < n && j - i <= 6; j++) if (!w.some((x) => x[0] <= i && j < x[1])) { gap = n + ': ' + i + '/' + j; break; }
+        for (let j = i + 12; j < n; j++) if (w.some((x) => x[0] <= i && j < x[1])) { apart = n + ': ' + i + '/' + j; break; }
+      }
       if (w[w.length - 1][1] !== n) gap = n + ': the last run stops short';
     }
-    eq(gap, '', 'every photograph meets the one after it, and the last run reaches the end');
+    eq(gap, '', 'two photographs within six of each other always share a run, and the last run reaches the end');
+    eq(apart, '', 'two twelve or more apart never do (what the guide says)');
   }
 
   group('backend · the request: one room\'s photographs, each introduced by its lines, labels minted here');
@@ -190,6 +198,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body.system[0].text, 'Two lines from the same photograph are never one object', 'and the one-photograph rule');
     has(body.system[0].text, 'overstates the estate', 'an estate is told what a double costs');
     lacks(body.system[0].text, '$', 'and it is never told a value or a threshold');
+    // The first live run wrote 300 characters naming its own labels ("P8 shows it all, P6 is a close shot…"), which mean
+    // nothing at the desk: the sentence is asked short and plain.
+    has(body.system[0].text, 'one short sentence (under 25 words)', 'the sentence is asked short');
+    has(body.system[0].text, 'with no P or L label in it', 'and without the labels the desk never sees');
+    has(body.tools[0].input_schema.properties.doubles.items.properties.why.description, 'never a label (no P1, no L2)',
+        'and the tool says so too');
     const user = body.messages[0].content;
     eq(user.filter((b) => b.type === 'image').length, 2, 'both photographs ride the request');
     has(user[1].text, 'P1 · lines named from it: L1 "Mahogany dresser" (Furniture); L2 "Blue vase" (Art & Décor)', 'each photograph is introduced by its lines');
@@ -209,6 +223,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(c._arDoubles([{ lines: ['L2', 'L2', 'L3'], why: 'x', confidence: 'certain' }], labels)[0].confidence, 'low', 'an unknown confidence reads low');
     eq(c._arMergeDoubles([{ ids: ['c', 'b'], why: 'low one', confidence: 'low' }, { ids: ['b', 'c'], why: 'high one', confidence: 'high' }]),
        [{ ids: ['b', 'c'], why: 'high one', confidence: 'high' }], 'overlapping runs that find one double keep it once, at the higher confidence');
+    // The first live run's own sentence, which the old 300-character slice cut mid-clause ("…so the overlap is").
+    const long = 'The same oak sideboard, Banksy-style canvas and items on top: P8 shows it all, P6 is a close shot of the right '
+      + 'half (orchid, dog photos in acrylic frames, paw-print dish), and P7 is a close shot of the left half (navy bar '
+      + 'tray, Decoy wine, basket ice bucket, boat photo, wood bowl), so the overlap is the whole sideboard.';
+    const cut = c._arDoubles([{ lines: ['L2', 'L3'], why: long, confidence: 'high' }], labels)[0].why;
+    ok(cut.length <= c.AGENT_ROOM_WHY_MAX, 'a sentence that runs on is cut to the desk\'s length (' + cut.length + ')');
+    const kept = cut.slice(0, -1);
+    eq([cut.slice(-1), long.startsWith(kept), /^[\s,;:.)]/.test(long.slice(kept.length))], ['\u2026', true, true],
+       'cut at a word, never inside one, with an ellipsis: ' + JSON.stringify(cut.slice(-30)));
+    eq(c._arWhy('  The cobalt vase:\n on the sideboard   in one, close up in the other. '), 'The cobalt vase: on the sideboard in one, close up in the other.',
+       'a short sentence stands as written, on one line');
   }
 
   group('backend · a room answers whole: every run back, or failed by name, or remaining');
@@ -223,7 +248,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       return { code: 200, body: OK([{ lines: [lab('thing 18'), lab('thing 20')], why: 'the same lamp', confidence: 'medium' }]) };
     } });
     const out = c.agentCheckRooms({ context: {}, rooms: [{ key: '4', room: 'Bedroom', shots: shots(30) }, { key: '5', room: 'Study', shots: shots(1) }] });
-    eq(c.sent[0].length, 2, 'two runs for the room of thirty, sent together; none for the room of one');
+    eq(c.sent[0].length, 4, 'four runs for the room of thirty, sent together; none for the room of one');
     eq(out.results['4'].doubles, [{ ids: ['l18', 'l20'], why: 'the same lamp', confidence: 'medium' }], 'found in both runs, reported once');
     eq(out.results['5'], { doubles: [], photos: 1 }, 'a room of one photograph is answered without a call');
     eq(out.model, 'claude-opus-5-5', 'and the answer names the model');
@@ -250,11 +275,54 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     has(gsVar('BACKEND_ACTIONS'), "'agentRoomCheck'", 'BACKEND_ACTIONS lists it');
     has(GS, "if (data.action === 'agentRoomCheck') { return jsonOut(agentCheckRooms(data)); }", 'doPost dispatches it');
-    eq(/var BACKEND_VERSION = '([^']+)'/.exec(GS)[1], '2026-10-06c', 'the version moved');
+    eq(/var BACKEND_VERSION = '([^']+)'/.exec(GS)[1], '2026-10-06d', 'the version moved');
     const c = gs();
     const a = app([]).ctx;
     eq(JSON.stringify(a.AGENT_ROOM_CONF_RANK), JSON.stringify(c.AGENT_ROOM_CONF_RANK), 'the app ranks confidence as the server does');
     has(src, "'agentRoomCheck'", 'and the app names the action it needs');
+  }
+
+  group('backend · testAgentRoomCheck times one full run of the fullest room: Items photographs only, in the order taken');
+  {
+    const iter = (arr) => { let i = 0; return { hasNext: () => i < arr.length, next: () => arr[i++] }; };
+    const file = (name) => ({ getName: () => name, getId: () => 'id:' + name });
+    let fid = 0;
+    const folder = (files, subs) => { const id = 'F' + (++fid); return { getId: () => id, getFilesByType: () => iter(files), getFolders: () => iter(subs || []) }; };
+    // Fifteen Items shots of the living room, numbered against the clock so a sort by name would disagree with the order
+    // taken; three close-ups and an as-found shot beside them; a smaller kitchen.
+    const living = Array.from({ length: 15 }, (_, i) => file('HVL-1_Living_Room_INV_' + (i + 1) + '_2026-10-07_' + (100000 + i * 10) + '.jpg'));
+    const others = [file('HVL-1_Living_Room_DETAIL_1_2026-10-07_099999.jpg'), file('HVL-1_Living_Room_DETAIL_2_2026-10-07_100001.jpg'),
+      file('HVL-1_Living_Room_DETAIL_3_2026-10-07_100002.jpg'), file('HVL-1_Living_Room_ASFOUND_1_2026-10-07_090000.jpg')]
+      .concat(Array.from({ length: 5 }, (_, i) => file('HVL-1_Kitchen_INV_' + (i + 1) + '_2026-10-07_08000' + i + '.jpg')));
+    // The kitchen listed first, so a test that took the first room it met would read the wrong one.
+    const inv = folder(others.slice(4).concat(others.slice(0, 2), living.slice().reverse(), others.slice(2, 4)));
+    const run = (clock) => {
+      const logs = [], sent = [];
+      const ctx = {
+        ROOT_FOLDER_ID: 'ROOT',
+        PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k === 'ANTHROPIC_API_KEY' ? 'sk-ant-test' : null) }) },
+        DriveApp: { getFolderById: () => folder([], [folder([], [inv])]) },
+        Logger: { log: (m) => logs.push(String(m)) },
+        Date: function () { return { getTime: () => clock.shift() }; },
+        agentCheckRooms: (d) => { sent.push(d); return { ok: true, model: 'claude-opus-5-5', failed: {},
+          results: { probe: { doubles: [{ ids: ['line1', 'line2'], why: 'The oak sideboard, whole and close up.', confidence: 'high' }], photos: 12 } } }; },
+        JSON, Math, String, Object, Array, Number, Error,
+      };
+      vm.createContext(ctx);
+      vm.runInContext(['AGENT_ROOM_WINDOW'].map(gsVar).concat(['_agProp', '_agMissingProps', 'testAgentRoomCheck'].map(gsFn)).join('\n'), ctx);
+      ctx.testAgentRoomCheck();
+      return { logs, sent };
+    };
+    const a = run([1000, 31000]);
+    const shots = (a.sent[0] && a.sent[0].rooms[0].shots) || [];
+    eq(shots.length, 12, 'one full run: twelve photographs');
+    eq(shots.map((x) => x.fileId), living.slice(0, 12).map((f) => f.getId()), '⚠ the living room\'s Items shots, first twelve in the order taken');
+    ok(!shots.some((x) => /DETAIL|ASFOUND|Kitchen/.test(x.fileId)), 'never a close-up, an as-found shot or another room');
+    ok(a.logs.some((l) => /15 Items photographs; reading the first 12, one full run/.test(l)), 'it says which room and how many');
+    ok(a.logs.some((l) => /read 12 photographs in one run in 30s/.test(l)), 'and how long the run took');
+    ok(!a.logs.some((l) => /CLOSE TO THE LIMIT/.test(l)), 'thirty seconds is inside the limit');
+    const b = run([1000, 51000]);
+    ok(b.logs.some((l) => /CLOSE TO THE LIMIT/.test(l)), '⚠ fifty seconds says lower the run before a full house');
   }
 
   // ═══ THE APP: WHAT IS SENT, AND WHAT COMES BACK ══════════════════════════════════════════════
