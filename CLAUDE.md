@@ -6,7 +6,9 @@ This file is loaded into every session, so it holds only what is true now: how t
 
 ## Who and what
 - Havellin Palm Beach: white-glove downsizing, move management, cleanouts and estate work in Palm Beach County, launching Q4 2026. Anthony Graziano and Ashley Jerome run it and are its concierges; Anthony Graziano Jr is a property specialist. Prelaunch: every client in the app is dummy data.
-- Anthony decides pricing, policy, legal wording and anything a client reads. Recommend, ask, then record the answer here as a rule. Fix what was asked; list what you find in passing under Open work instead of widening the commit.
+- Anthony decides pricing, policy, legal wording and anything a client reads. Recommend, ask, then record the answer here as a rule. Ask him one question at a time (the AskUserQuestion tool), with three or four suggested answers and your recommendation first: he reads on a phone (2026-10-06).
+- Thorough, never cumbersome (Anthony, 2026-10-06): estate work must hold up to trust officers and attorneys, but the app is a facilitator for the concierge in the field and at the desk, not a wall of tick boxes. Prefer what the app can derive or record from something already done (a photographed paper, a press that was needed anyway) over a new box, check or confirmation; flag rather than block; one paper per batch, never per item. Before adding a step, ask what it costs the concierge on a full house.
+- Prelaunch, no live data: every record is dummy data, so never build for, or ask Anthony about, records written before a change (migrations, legacy fallbacks, "an older record could…"). Build for the rule as it stands. Fix what was asked; list what you find in passing under Open work instead of widening the commit.
 - The app is `havellin.html`: one file of HTML, CSS and JS with no build step, served by GitHub Pages from `main`. Data lives in Google Sheets and Drive behind Google Apps Script web apps. Settings (per device) holds the three Apps Script URLs, the default production rate and cost rates, and an optional Gmail client id override.
 
 ## Every session
