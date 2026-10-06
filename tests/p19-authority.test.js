@@ -400,7 +400,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   G('A7 · jobSchedule carries the date, and the strip prints it beside the court deadline', () => {
-    const S = lift(['jobSchedule', 'jtScheduleHtml'], [], { fmtDate2: (d) => 'D:' + d });
+    const S = lift(['jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml'], [], { fmtDate2: (d) => 'D:' + d });
     const EST6 = { days: 6, svc: 'cleanout' };
     const sched = (job, today) => S.jobSchedule(Object.assign({ id: 7, svc: 'cleanout', deathDate: '2026-02-10', gate706: 'yes', start: '2026-10-19' }, job), EST6, today);
     const p = sched({}, '2026-10-03');

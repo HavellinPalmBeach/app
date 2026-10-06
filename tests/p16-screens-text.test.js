@@ -229,7 +229,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
-      'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays',
+      'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays',
       'jobProgress', 'roomStatusNormalize', 'workingDaysInclusive', 'approvedEstimateFor',
       'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
@@ -869,7 +869,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(dom.getElementById('referrals-leaderboard').innerHTML, 'jobs attributed to each partner at intake or on Edit Client', 'the leaderboard says where attribution is set');
 
     // jtScheduleHtml: the working days a delivered job took, in the singular when it is one.
-    const J = sandbox({ fns: ['jtScheduleHtml', 'esc', 'fmtDate2'] });
+    const J = sandbox({ fns: ['jtScheduleHtml', '_jtSchedDeadlinesHtml', 'esc', 'fmtDate2'] });
     const one = text(J.jtScheduleHtml({ state: 'done', actualStart: '2026-09-01', delivered: '2026-09-01', workedDays: 1, days: 6 }));
     has(one, '1 working day against a 6-day plan', '⚠ one working day is a day');
     lacks(one, '1 working days', 'not "1 working days"');

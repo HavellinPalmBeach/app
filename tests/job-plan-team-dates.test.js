@@ -111,7 +111,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const prevTZ = process.env.TZ;
     process.env.TZ = 'America/New_York';
     try {
-      const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
+      const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
                                 'docSentAt', 'docKeyFor', 'fmtDate2', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
       const est = { svc: 'downsizing_move', days: 6 };
       const job = { id: 7, svc: 'downsizing_move', status: 'active', start: '2026-10-05', activatedOn: '2026-09-23' };

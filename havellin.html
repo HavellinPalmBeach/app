@@ -17424,6 +17424,26 @@ function field(label, val, extraStyle) {
 }
 
 // ─── THE SCHEDULE STRIP ──────────────────────────────────────────────────────
+// The strip's deadline clauses, ONE builder for every state that prints them (P22: the job with no estimate and the
+// job with no target start printed neither). A plan that misses its committed date says so in red in place of the
+// date; otherwise the court deadline (it outranks the hard target, which is a preference), then the Form 706 date.
+// `courtOnly`: with no estimate there is no plan, so no hard target to set one against — only the estate's own dates.
+function _jtSchedDeadlinesHtml(sched, courtOnly) {
+  var I = function (t) { return '<span class="jt-sched-i">' + t + '</span>'; };
+  var h = '';
+  if (sched.fit === 'late' || sched.fit === 'inverted') {
+    h += '<span class="jt-sched-i jt-s-err">&#9888; ' + esc(sched.fitTxt) + '</span>';
+  } else if (sched.courtDeadline || (sched.hard && !courtOnly)) {
+    h += I((sched.courtDeadline ? 'Court deadline ' : 'Hard target ') + esc(fmtDate2(sched.courtDeadline || sched.hard)));
+  }
+  // ⚠ THE FORM 706 DATE, BESIDE THE COURT DEADLINE (P19), and never a fit test: the plan is not measured against it, and
+  // it turns red only near or past the date (estateTaxReturnDue), a reminder that counsel or the accountant files.
+  if (sched.taxReturn) {
+    h += sched.taxReturn.flag ? '<span class="jt-sched-i jt-s-err">&#9888; ' + esc(estateTaxReturnWords(sched.taxReturn)) + '</span>'
+                              : I(esc(estateTaxReturnWords(sched.taxReturn)));
+  }
+  return h;
+}
 // One line above the rail: how long the job is, when it starts, where its calendar halfway
 // falls, when it should end, and whether any of that is slipping.
 //
@@ -17437,10 +17457,17 @@ function jtScheduleHtml(sched) {
   // ⚠ NO "no schedule yet" LINE. Explaining an absence is what draws attention to it, and on
   // a cold estimate-store cache this is also the correct behaviour: `_estStoreLanded` already
   // calls `_dashRedraw`, so the strip simply appears when the store lands.
-  if (!sched || sched.state === 'dead' || sched.state === 'none') return '';
+  if (!sched || sched.state === 'dead') return '';
   var I = function (t) { return '<span class="jt-sched-i">' + t + '</span>'; };
   var V = function (t) { return '<span class="jt-sched-v">' + esc(t) + '</span>'; };
   var h = '<div class="jt-sched"><span class="jt-sched-lbl">Schedule</span>';
+  // ⚠⚠ THE DATES THAT DO NOT WAIT FOR A PLAN (P22): the §733.604 court deadline and the Form 706 date are the
+  // estate's, not the job's, so they print before an estimate exists and on a job with no target start. With
+  // no estimate the strip is these two and nothing else, and on a job without either it is still nothing at all.
+  if (sched.state === 'none') {
+    var _dd = _jtSchedDeadlinesHtml(sched, true);
+    return _dd ? h + _dd + '</div>' : '';
+  }
 
   // A positive statement of how this engagement IS scheduled, not an apology for a number the
   // app has no honest way to produce. Prep books no concierge hours at all.
@@ -17461,7 +17488,7 @@ function jtScheduleHtml(sched) {
   // The one absence that earns a line: it is fixable, it blanks four other figures, and a
   // panel reporting a blocker carries the fix on screen rather than in a title=.
   if (sched.state === 'nostart') {
-    return h + I(V(dayTxt)) + coDayChip + I('No target start on this job')
+    return h + I(V(dayTxt)) + coDayChip + I('No target start on this job') + _jtSchedDeadlinesHtml(sched)
          + '<div class="jt-sched-note jt-s-warn">Set one in Edit Client to get a target end.</div></div>';
   }
 
@@ -17527,17 +17554,7 @@ function jtScheduleHtml(sched) {
     // as one, and never beside a second end ("now ending …") as it was until 2026-09-23.
     h += I((sched.anchorKind === 'actual' ? 'Planned end ' : 'Target end ') + V(fmtDate2(sched.planEnd)));
   }
-  if (sched.fit === 'late' || sched.fit === 'inverted') {
-    h += '<span class="jt-sched-i jt-s-err">&#9888; ' + esc(sched.fitTxt) + '</span>';
-  } else if (sched.courtDeadline || sched.hard) {
-    h += I((sched.courtDeadline ? 'Court deadline ' : 'Hard target ') + esc(fmtDate2(sched.courtDeadline || sched.hard)));
-  }
-  // ⚠ THE FORM 706 DATE, BESIDE THE COURT DEADLINE (P19), and never a fit test: the plan is not measured against it, and
-  // it turns red only near or past the date (estateTaxReturnDue), a reminder that counsel or the accountant files.
-  if (sched.taxReturn) {
-    h += sched.taxReturn.flag ? '<span class="jt-sched-i jt-s-err">&#9888; ' + esc(estateTaxReturnWords(sched.taxReturn)) + '</span>'
-                              : I(esc(estateTaxReturnWords(sched.taxReturn)));
-  }
+  h += _jtSchedDeadlinesHtml(sched);
   // ⚠ PACE IS ITS OWN SLOT, on its own line. A brand-new job with a tight closing date is
   // perfectly on pace and its plan still does not fit; one slot holding both hides one.
   if (sched.pace) {
@@ -18022,6 +18039,14 @@ function jobSchedule(job, est, todayStr, prog) {
   // behaviour stands unchanged and only the stated reason was wrong.
   if (job.svc === 'prep' || (est && est.svc === 'prep')) { S.state = 'vendor'; return S; }
 
+  // ⚠⚠ THE ESTATE'S OWN DATES COME FIRST (P22), before any estimate is asked for: the court deadline and the Form 706
+  // date are set by the Letters and the date of death, not by the plan, and the strip prints them on a job with no
+  // estimate and on one with no target start. The Form 706 date where a return applies (P19), measured against the
+  // today this was handed. A reminder, not a fit test — the plan is never measured against it.
+  S.hard = job.completion || '';
+  if (jobOnProbateTrack(job)) S.courtDeadline = job.probateDeadline || '';   // the matter, not the service (M5)
+  S.taxReturn = estateTaxReturnDue(job, S.today);
+
   if (!est) { S.why = 'no-estimate'; return S; }
   S.days = estWorkingDays(est);
   S.daysQuoted = !!(est.days && est.days > 0);
@@ -18034,11 +18059,6 @@ function jobSchedule(job, est, todayStr, prog) {
   S.coDays = coWorkingDays(est, prog ? prog.coTC : 0, prog ? prog.coPS : 0);
   S.days = Math.max(1, S.days + S.coDays);
 
-  S.hard = job.completion || '';
-  if (jobOnProbateTrack(job)) S.courtDeadline = job.probateDeadline || '';   // the matter, not the service (M5)
-  // The Form 706 date where a return applies (P19), measured against the today this was handed: the strip prints it
-  // beside the court deadline. A reminder, not a fit test — the plan is never measured against it.
-  S.taxReturn = estateTaxReturnDue(job, S.today);
   S.delivered = job.deliveredOn || '';
   S.start = job.start || '';   // the TARGET start, as intake recorded it
 
@@ -37799,9 +37819,9 @@ function invoiceHtml(job, stage) {
   var _priorInvoices = _midBilled ? 'the deposit and ' + _mw.noun + ' invoices' : 'the deposit invoice';
   var _midHereLbl    = '25% ' + _mw.noun + ' — billed on this invoice';
 
-  // Aliases consumed by the final-invoice body below. roundCents is belt-and-braces here (P17): nothing below reads
-  // this alias any more (the body prints havellinTotalDiscounted), and only a source check holds it (service-change.test.js).
-  var havellinTotal = roundCents(tcFee + psFee + pkgCost + smf + prepFee);
+  // ⚠ NO `havellinTotal` ALIAS (P22): it summed the five fees again, nothing read it (the body prints
+  // havellinTotalDiscounted, and `servicesTotal` is that figure), and only a source check held it. A second sum of one
+  // figure is the drift this file records most; service-change.test.js now holds the invoice to having none.
   // ⚠ NOTHING IS BACKED OUT HERE ANY MORE, and that is the fix rather than a tidy-up.
   // This used to be `totalFinalBasis - coTotal`, which subtracted the change order straight
   // back out before `overUnder` was computed — so the ±15% gate was measuring a figure the
@@ -39665,7 +39685,9 @@ function planDerivedLines(jobId, job, est, phase, today) {
     }
     if (ctx.probateTrack) {
       var dl = !!job.probateDeadline;
-      out.push({ key: 'deadline_733604', ok: dl, label: '§733.604 inventory deadline',
+      // ⚠ THE DATE RIDES IN THE LABEL once recorded (P22), as the Form 706 chip's does: a green chip shows its label
+      // alone (planGateChipsHtml), so the recorded deadline was nowhere on the plan's chip row.
+      out.push({ key: 'deadline_733604', ok: dl, label: '§733.604 inventory deadline' + (dl ? ' ' + fmtDate2(job.probateDeadline) : ''),
                  detail: dl ? fmtDate2(job.probateDeadline) + ' — 60 days from the Letters' : 'not recorded — enter the date the Letters issued under Edit Client and the deadline follows' });
     }
     // ⚠⚠ THE FORM 706 DATE (P19; Anthony: track it where it applies), off `estateTaxReturn`, the one answer:
