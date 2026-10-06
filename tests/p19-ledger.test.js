@@ -289,7 +289,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(line().ok, false, 'a voided copy is no signature: the line opens again');
     // Where it appears: an estate's desk and close-out stage, never a living job's.
     eq(c.ledgerDerivedLines(7, c.jobs[0], 'p4').map((l) => l.key), ['ledger_signed'], 'on the close-out stage (p4)');
-    eq(c.ledgerDerivedLines(7, LIVING(), 'p4').map((l) => l.key), [], 'and never on living work');
+    // RESTATED P22: living work with an inventory asks for the client's signed copy (p22-desk-c.test.js drives it).
+    eq((c.ledgerDerivedLines(7, LIVING(), 'p4')[0] || {}).label, 'Disposition Ledger signed by the client', 'and on living work, the client\'s');
     const trust = c.ledgerDerivedLines(7, ESTATE({ matterType: 'trust' }), 'p4')[0] || {};
     eq(trust.label, 'Disposition Ledger signed by the successor trustee', 'a trust names the successor trustee');
   });
@@ -798,7 +799,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(l.detail.slice(0, 51), '1 statement, 1 disagrees with the ledger; 0 sold li', 'one that disagrees');
     eq(c.proceedsLine(ESTATE(), rows.filter((r) => ['Auction', 'Consign', 'Sell'].indexOf(r.disposition) < 0)), null, 'nothing sold and no statements: no line');
     eq(c.ledgerDerivedLines(7, ESTATE(), 'admin').map((l) => l.key), ['ledger_signed', 'donation_receipt', 'proceeds_reconciled'], 'an estate\'s desk carries all three lines');
-    eq(c.ledgerDerivedLines(7, LIVING({ svc: 'downsizing_move' }), 'admin').map((l) => l.key), ['donation_receipt'],
+    eq(c.ledgerDerivedLines(7, LIVING({ svc: 'downsizing_move' }), 'admin').map((l) => l.key), ['ledger_signed', 'donation_receipt'],
        '⚠ a Home Transition that sells a line is not asked to reconcile statements it has no card to record (jobTakesProceedsStatements)');
     // The card.
     const card = c._renderLedgerCards(ESTATE({ proceedsStatements: [STATEMENT()] }), rows);

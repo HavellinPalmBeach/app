@@ -90,7 +90,7 @@ function gsServer(opts = {}) {
     'doPost', 'doGet', 'jsonOut', '_okWithDrops'];
   const code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, '_BLOB_CHUNK'), gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'),
     gsVar(GS, 'BACKEND_VERSION'), ...names.map((n) => gsFn(GS, n)),
-    gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_mergeMediaItems')].join('\n\n');
+    gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_invApprovalEntries'), gsFn(GS_INV, '_invApprovalSetAt'), gsFn(GS_INV, '_invMergeApprovals'), gsFn(GS_INV, '_mergeMediaItems')].join('\n\n');
   vm.runInContext(code, ctx, { filename: 'main-sync.gs (extracted)' });
   return ctx;
 }

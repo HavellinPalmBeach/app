@@ -21,7 +21,7 @@ const ids = (list) => list.map((r) => r.stableId);
 function _letter(n) { let out = ''; while (n > 0) { out = String.fromCharCode(65 + ((n - 1) % 26)) + out; n = Math.floor((n - 1) / 26); } return out; }
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
-  const ctx = sandbox({ fns: ['mergeMediaItems', 'mergeCustodyLogs', '_custodyEventId',
+  const ctx = sandbox({ fns: ['mergeMediaItems', 'invMergeApprovals', '_invApprovalEntries', '_invApprovalSetAt', 'mergeCustodyLogs', '_custodyEventId',
                               'invStickyValue', '_invHasVal'],
                        vars: ['INV_STICKY_FIELDS'] });
   const merge = ctx.mergeMediaItems;
@@ -223,10 +223,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // somebody revises, and a revision is the whole point of editing it.
     eq(merge([it('c', { updatedAt: 10, fmv: 48000 })],
              [it('c', { updatedAt: 20, fmv: 52000 })])[0].fmv, 52000, 'a revised value wins');
+    // RESTATED P22: the signers are unioned per line (two devices recording different co-trustees keep both), so a
+    // correction is told apart by its stamp: the item record's box stamps `authBySetAt` on a hand edit.
     eq(merge([it('c', { updatedAt: 10, authBy: 'Ashley Jerome' })],
-             [it('c', { updatedAt: 20, authBy: 'Tripp Butler' })])[0].authBy, 'Tripp Butler',
+             [it('c', { updatedAt: 20, authBy: 'Tripp Butler', authBySetAt: 20 })])[0].authBy, 'Tripp Butler',
        '⚠ and a sticky field the winner DOES have is not overwritten by the older one — '
        + 'correcting a mis-typed approver has to work');
+    eq(merge([it('c', { updatedAt: 10, authBy: 'Ashley Jerome' })],
+             [it('c', { updatedAt: 20, authBy: 'Tripp Butler' })])[0].authBy, 'Tripp Butler; Ashley Jerome',
+       '⚠⚠ while two signatures recorded on two devices (no hand edit) are both kept (P22)');
 
     // ⚠⚠ AND A DELIBERATE CLEAR HAS TO STICK, or the field could never be emptied at all:
     // you would blank a mis-recorded approver on one device and the other would restore it on
@@ -268,7 +273,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // rule written twice, and a union written on one side only loses events on the other.
     const gsVar = (name) => (gs.match(new RegExp('var ' + name + ' = \\[[\\s\\S]*?\\];')) || [''])[0];
     vm.runInContext([gsVar('INV_STICKY_FIELDS'), grab('_invHasVal'), grab('_invStickyValue'),
-                     grab('_custodyEventId'), grab('_mergeCustodyLogs'), grab('_mergeMediaItems')].join('\n\n'),
+                     grab('_custodyEventId'), grab('_mergeCustodyLogs'), grab('_invApprovalEntries'), grab('_invApprovalSetAt'),
+                     grab('_invMergeApprovals'), grab('_mergeMediaItems')].join('\n\n'),
                     gctx, { filename: 'saveInventory.gs (extracted)' });
     const gmerge = gctx._mergeMediaItems;
 
@@ -491,7 +497,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'the formula reads the Gross Proceeds column');
     has(cap.formulas[0].f[0][0], _letter(col('Fees')) + '2', 'and the Fees column');
 
-    const moneyCols = cap.formats.filter((f) => f.f === '$#,##0').map((f) => f.c).sort((a, b) => a - b);
+    const moneyCols = cap.formats.filter((f) => f.f === '$#,##0.00').map((f) => f.c).sort((a, b) => a - b);
     eq(moneyCols, [col('Estimated FMV'), col('Gross Proceeds'), col('Fees'), col('Net to Estate')].sort((a, b) => a - b),
        'the currency formats land on the four money columns and nothing else');
 

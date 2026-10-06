@@ -16786,7 +16786,7 @@ function probatePackageRecordHtml(jobId) {
             + '<td style="' + td + '">' + esc(r.disposition || '—')
               + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '') + '</td>'
             // Each signer with their own day (P20): the one readable form, never the raw field.
-            + '<td style="' + td + '">' + esc(invApprovalSignedText(r) || '—')
+            + '<td style="' + td + '">' + esc(invApprovalSignedText(r, job) || '—')
               // ⚠ AN APPROVAL WITHOUT EVERY FIDUCIARY IS RECORDED AS WHAT IT IS (P19, call 4): not complete, and who is missing.
               + (invApprovalGap(r, job) ? '<div style="color:#8a6d3b;font-size:10px;">Not complete: no approval recorded from '
                   + esc(_andJoin(invApprovalMissing(r, job))) + '</div>' : '') + '</td>'
@@ -25550,6 +25550,9 @@ function savePhotoRefs(jobId) {
                // saying *photo in the Drive bin* and read like a line whose photograph was intact.
                viaDealer:r.viaDealer, viaDealerBy:r.viaDealerBy, viaDealerAt:r.viaDealerAt,
                deletedBy:r.deletedBy, driveTrashed:r.driveTrashed,
+               // ⚠ P22: the person left in Channel / Recipient after the line came off Distribute, the item a detail
+               // shot was binned with, and the merge's stamps on the signers (a hand edit, each name Record approval added).
+               channelLeftover:r.channelLeftover, deletedWith:r.deletedWith, authBySetAt:r.authBySetAt, authAdds:r.authAdds,
                clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
@@ -25698,6 +25701,9 @@ function discardShot(jobId, stableId) {
 
   [ref].concat(dets).concat(derived).forEach(function(r) {
     r.deletedAt = Date.now();
+    // ⚠ A DETAIL SHOT TAKEN WITH ITS ITEM SAYS SO (P22), so Restore gives it back with the item and never brings back a
+    // detail shot somebody binned on its own.
+    if (r !== ref && r.label === 'detail') r.deletedWith = ref.stableId;
     // ⚠ SO THE UNDO BUFFER CAN TELL THE TRUTH. Restore gives the ROW back — name, value,
     // disposition, custody — and it cannot give the photograph back, because that is in
     // Google's own bin. Stamped here rather than in the Drive callback: an async write back
@@ -26859,6 +26865,85 @@ function mergeCustodyLogs(a, b) {
   return out;
 }
 
+// ⚠⚠ TWO DEVICES RECORDING DIFFERENT SIGNERS ON ONE LINE KEEP BOTH (P22). The manifest merges whole items on
+// `updatedAt`, and `authBy` is sticky only where the winner has none, so Ruth's signature recorded on one iPad and
+// Daniel's on another before either synced kept only the newer device's: the line read as approved by one co-trustee and
+// went back on the next request. The signers are unioned per line now, on both sides (the app's mergeMediaItems and the
+// server's _mergeMediaItems carry this rule byte for byte; a test drives both). Entries are the ones Record approval
+// writes, separated by ";" or a line break (a comma inside a name stays put), keyed on the name with its date and any
+// bracketed role taken off, case and spacing ignored.
+// ⚠ A CORRECTION IS NOT UNDONE BY A STALE COPY: a hand edit of the field (the item record's Authorized By box) stamps
+// `authBySetAt`, a deliberate clear stamps `clearedAt.authBy`, and Record approval stamps each name it adds in
+// `authAdds`. The copy with the later hand edit is the base; a name only the other copy holds is added only when it was
+// recorded after that edit. With no hand edit on either side every name is kept. Each signer keeps their own date (or
+// their copy's `approvalDate`), the field is written plainly while every date is one day, and `approvalDate` is the
+// latest. Returns the fields to write over the winner's copy, or null when there is nothing to change.
+function _invApprovalEntries(it) {
+  var out = [];
+  var parts = String((it && it.authBy) || '').split(/\s*(?:;|\n)\s*/);
+  for (var i = 0; i < parts.length; i++) {
+    var text = String(parts[i] || '').trim();
+    if (!text) continue;
+    var own = /\s*\((\d{4}-\d{2}-\d{2})\)$/.exec(text);
+    if (own) text = text.slice(0, own.index).trim();
+    var key = text.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!key) continue;
+    out.push({ key: key, text: text, date: own ? own[1] : String((it && it.approvalDate) || '').trim() });
+  }
+  return out;
+}
+function _invApprovalSetAt(it) {
+  var a = Number((it && it.authBySetAt) || 0);
+  var c = Number((it && it.clearedAt && it.clearedAt.authBy) || 0);
+  return a > c ? a : c;
+}
+function invMergeApprovals(win, lose) {
+  if (!win || !lose) return null;
+  var setW = _invApprovalSetAt(win), setL = _invApprovalSetAt(lose);
+  var adds = {}, k, hasAdds = false;
+  var srcs = [win.authAdds || {}, lose.authAdds || {}];
+  for (var s = 0; s < srcs.length; s++) {
+    for (k in srcs[s]) if (Object.prototype.hasOwnProperty.call(srcs[s], k)) {
+      var t = Number(srcs[s][k]) || 0;
+      if (!(adds[k] >= t)) adds[k] = t;
+      hasAdds = true;
+    }
+  }
+  var fx = {};
+  if (hasAdds) fx.authAdds = adds;
+  var setAt = setW > setL ? setW : setL;
+  if (setAt) fx.authBySetAt = setAt;
+  var wa = String(win.authBy || '').trim(), la = String(lose.authBy || '').trim();
+  var baseIsLose = setL > setW;
+  var base = baseIsLose ? lose : win, other = baseIsLose ? win : lose;
+  // A cleared or empty base keeps the sticky rule's answer; the same list on both sides needs nothing.
+  if (!String(base.authBy || '').trim() || wa === la) return (hasAdds || setAt) ? fx : null;
+  var be = _invApprovalEntries(base), oe = _invApprovalEntries(other);
+  var have = {};
+  for (var i = 0; i < be.length; i++) have[be[i].key] = true;
+  var added = 0;
+  for (var j = 0; j < oe.length; j++) {
+    var e = oe[j];
+    if (have[e.key]) continue;
+    if (setAt && !(Number(adds[e.key] || 0) > setAt)) continue;
+    have[e.key] = true;
+    be.push(e);
+    added++;
+  }
+  if (!added && !baseIsLose) return (hasAdds || setAt) ? fx : null;
+  if (!added) { fx.authBy = lose.authBy; fx.approvalDate = lose.approvalDate; return fx; }
+  var oneDay = true, last = '';
+  for (var m = 0; m < be.length; m++) {
+    if (be[m].date !== be[0].date) oneDay = false;
+    if (be[m].date > last) last = be[m].date;
+  }
+  var texts = [];
+  for (var n = 0; n < be.length; n++) texts.push(be[n].text + (oneDay || !be[n].date ? '' : ' (' + be[n].date + ')'));
+  fx.authBy = texts.join('; ');
+  fx.approvalDate = last || String(base.approvalDate || '');
+  return fx;
+}
+
 function mergeMediaItems(existing, incoming) {
   var byId = {}, order = [];
   // ⚠ THE WINNER IS COPIED, NEVER MUTATED. Both arguments belong to the caller — one of them
@@ -26883,6 +26968,9 @@ function mergeMediaItems(existing, incoming) {
       var v = invStickyValue(win, lose, key);
       if (v !== undefined) out[key] = v;
     });
+    // The signers, unioned per line (P22): the same rule as the server's _mergeMediaItems.
+    var ap = invMergeApprovals(win, lose);
+    if (ap) for (var ak in ap) if (Object.prototype.hasOwnProperty.call(ap, ak)) out[ak] = ap[ak];
     return out;
   };
   var take = function(list) {
@@ -27049,15 +27137,17 @@ function _renderInventorySummary(job, items) {
     var cat = (r.category && catAgg[r.category]) ? r.category : 'General/Household';
     if (!catAgg[cat]) catAgg[cat] = {fmv:0, count:0};
     catAgg[cat].count++;
+    // ⚠ MONEY IS SUMMED TO THE CENT (P22): each figure and every sum through roundCents, as the Disposition Ledger sums
+    // the same lines (dispositionLedger); `+=` on raw floats drifted, and fmt only rounded what it printed.
     var f = parseFloat(r.fmv);
-    if (!isNaN(f)) { catAgg[cat].fmv += f; totalFMV += f; } else { awaiting++; }
+    if (!isNaN(f)) { f = roundCents(f); catAgg[cat].fmv = roundCents(catAgg[cat].fmv + f); totalFMV = roundCents(totalFMV + f); } else { awaiting++; }
     if (r.disposition && dispAgg.hasOwnProperty(r.disposition)) dispAgg[r.disposition]++;
     if (r.flagDisputed || r.disposition === 'Hold') nDisp++;
     if (r.flagBequest) nBequest++;
     if (r.flagExempt) nExempt++;
     if (invNeedsAppraisal(r, job)) nAppr++;
-    var g = parseFloat(r.gross); if (!isNaN(g)) gross += g;
-    var fe = parseFloat(r.fees);  if (!isNaN(fe)) fees += fe;
+    var g = parseFloat(r.gross); if (!isNaN(g)) gross = roundCents(gross + roundCents(g));
+    var fe = parseFloat(r.fees);  if (!isNaN(fe)) fees = roundCents(fees + roundCents(fe));
   });
   var dt = function(v){ return v ? fmtDate2(v) : '—'; };
   var hdrRow = function(l, v){
@@ -27121,7 +27211,7 @@ function _renderInventorySummary(job, items) {
     + (_pr ? hdrRow('Exempt §732.402', String(nExempt)) : '')
     + hdrRow('Gross Proceeds', _money(gross) || '$0')
     + hdrRow('Fees', _money(fees) || '$0')
-    + hdrRow(inventoryNetLabel(job), _money(gross - fees) || '$0')
+    + hdrRow(inventoryNetLabel(job), _money(roundCents(gross - fees)) || '$0')
     + '</div>';
   // ⚠⚠ COUNTS WHERE WE STATE NO VALUES, AND THIS CLOSED A SCREEN/WORKBOOK DISAGREEMENT THAT
   // WAS ALREADY LIVE. `_writeSummarySheet` has branched to an ITEMS BY CATEGORY count block on a
@@ -27297,6 +27387,9 @@ function _invInput(jobId, ref, col, job) {
     case 'flag':
       return '<input type="checkbox" ' + (v ? 'checked' : '') + ' onchange="_invEdit(' + jobId + ',\'' + ref.stableId + '\',\'' + col.key + '\',this)" style="width:15px;height:15px;cursor:pointer;accent-color:var(--gray-dk);">';
     case 'text': default:
+      // ⚠ THE AUTHORIZED BY BOX SHOWS WHO SIGNED IN A READER'S WORDS (P22): once the signers' days differ the stored field
+      // carries ISO dates; the box shows "(Oct 1, 2026)" and its save writes them back as stored (invApprovalBoxToStored).
+      if (col.key === 'authBy') v = invApprovalBoxText(ref, job);
       return '<input type="text" value="' + esc(v || '') + '"' + (col.key === 'channel' ? _invBenListAttr(job, ref) : '') + ' ' + on + ' ' + base + '>';
   }
 }
@@ -27307,26 +27400,18 @@ function _invNetDisplay(ref) {
   return _money((isNaN(g) ? 0 : g) - (isNaN(f) ? 0 : f));
 }
 
+// ⚠ THE OLD TABLE'S `seq` BRANCH IS GONE (P22): its only caller is the line's record, whose columns never include the
+// item number (`_invPanelCols`), so the ✕ and custody link it drew were unreachable.
 function _invCell(jobId, ref, col, job, seq) {
-  if (col.key === 'seq') {
-    var s = _invItemNo(ref);
-    if (ref.manual) {
-      s += ' <span style="font-size:8px;color:var(--bronze);font-weight:700;" title="Manual line item (no photo)">M</span>'
-        +  ' <a href="#" onclick="removeInventoryManualItem(' + jobId + ',\'' + ref.stableId + '\');return false;" title="Remove line item" style="color:#c0392b;text-decoration:none;font-weight:700;">✕</a>';
-    }
-    var nC = custodyEvents(ref).length;
-    s += ' <a href="#" onclick="openCustodyModal(' + jobId + ',\'' + ref.stableId + '\');return false;" title="Chain of custody log" style="text-decoration:none;">&#128279;' + (nC ? '<span style="font-size:8px;color:var(--bronze);font-weight:700;">' + nC + '</span>' : '') + '</a>';
-    return s;
-  }
   if (col.key === 'net') return '<span id="inv-net-' + ref.stableId + '">' + _invNetDisplay(ref) + '</span>';
-  // ⚠ WHO SIGNED, EACH ON THEIR OWN DAY, READ BENEATH THE BOX (P20, Q24): the box holds the record as stored, which once
-  // the signers' days differ carries them as ISO dates; the line under it is the one readable form, and who is still to sign.
+  // ⚠ WHO SIGNED, EACH ON THEIR OWN DAY, READ BENEATH THE BOX (P20, Q24): since P22 the box shows the readable form too
+  // (invApprovalBoxText) and saves the stored one; the line under it adds who is still to sign.
   if (col.key === 'authBy' && _invColEditable(ref, col)) return _invInput(jobId, ref, col, job) + _invApprovalReadHtml(ref, job);
   if (_invColEditable(ref, col)) return _invInput(jobId, ref, col, job);
   return _invCellRead(ref, col, job, seq);
 }
 function _invApprovalReadHtml(ref, job) {
-  var t = invApprovalSignedText(ref);
+  var t = invApprovalSignedText(ref, job);
   if (!t) return '';
   var still = invApprovalMissing(ref, job);
   return '<div class="inv-auth-read" style="font-size:10px;color:var(--gray);margin-top:3px;line-height:1.4;">Signed: ' + esc(t)
@@ -27358,6 +27443,7 @@ function _invEdit(jobId, stableId, key, el) {
       return;
     }
   }
+  var _prevDisp = ref.disposition;
   if (key === 'roomIdx') {
     ref.roomIdx = (el.value === '') ? null : parseInt(el.value);
   } else if (key === 'fmv' || key === 'gross' || key === 'fees') {
@@ -27368,6 +27454,10 @@ function _invEdit(jobId, stableId, key, el) {
     // worth nothing.
     var _raw = String(el.value == null ? '' : el.value).replace(/[^0-9.]/g, '');
     ref[key] = (_raw === '') ? '' : moneyToNumber(el.value);
+  } else if (key === 'authBy') {
+    ref.authBy = invApprovalBoxToStored(el.value, ref, _invJob(jobId));
+    // A hand edit of the list is the newest word on it (P22): a merge does not add back a name it took off.
+    ref.authBySetAt = Date.now();
   } else {
     ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
   }
@@ -27380,6 +27470,11 @@ function _invEdit(jobId, stableId, key, el) {
     ref.namedBy = 'desk';
     delete ref.agentConf;   // the amber row is about an UNCHECKED guess; this one has been checked
   }
+  // ⚠ A LINE TAKEN OFF To a person KEEPS THE PERSON IN Channel / Recipient, FLAGGED (P22): never cleared, and the
+  // dealer arm stops reading it (invTransportDealer). Retyping the channel is the answer, so it retires the flag.
+  var _leftNow = key === 'disposition' && invNoteDispositionMove(ref, _prevDisp);
+  var _retired = key === 'channel' && !!ref.channelLeftover;
+  if (key === 'channel') delete ref.channelLeftover;
   // ⚠ A STICKY FIELD THAT HAS BEEN DELIBERATELY EMPTIED IS STAMPED, so the merge can tell it
   // apart from a device that simply never saw a value there. Without this the field could
   // never be cleared across two devices: the stale copy would restore it on the next sync.
@@ -27390,6 +27485,7 @@ function _invEdit(jobId, stableId, key, el) {
   }
   _setPhotoRef(jobId, _invTouch(ref));
   savePhotoRefs(jobId);
+  if (_leftNow) showSyncBadge(_invNamed(ref) + ': ' + invChannelLeftoverText(ref), true);
   if (key === 'gross' || key === 'fees') {
     var netEl = document.getElementById('inv-net-' + stableId);
     if (netEl) netEl.textContent = _invNetDisplay(ref);
@@ -27411,7 +27507,7 @@ function _invEdit(jobId, stableId, key, el) {
   // Changing the disposition moves the item into a different section, and changing the
   // room moves it within one. Leaving it drawn where it was is how the list stops
   // describing the estate.
-  if (['flagMAIV','disposition','roomIdx'].indexOf(key) >= 0 && typeof renderInventoryTab === 'function') renderInventoryTab();
+  if ((['flagMAIV','disposition','roomIdx'].indexOf(key) >= 0 || _retired) && typeof renderInventoryTab === 'function') renderInventoryTab();
   _scheduleInventorySync(jobId);
 }
 
@@ -27436,8 +27532,6 @@ function addInventoryManualItem(jobId) {
   _scheduleInventorySync(jobId);
 }
 
-// A manual line is removed like any other line now; the name stays because the old table's ✕ calls it.
-function removeInventoryManualItem(jobId, stableId) { return invRemoveLine(jobId, stableId); }
 
 // ⚠⚠ REMOVE ONE LINE, WHATEVER KIND IT IS (2026-09-30, P16). Until today a line could come off the
 // desk only if it was typed by hand (Remove line item), or if Agent One had flagged it as a possible
@@ -27555,16 +27649,58 @@ function invTransportBlocked(ref, job) {
 // PERSON, so the dealer is the route's: read `channel` there and a recipient's name satisfies the
 // `dealer` arm again, which is the defect the `beneficiary` arm was written against. One answer,
 // read by the gate, the line's panel and the worklist's cleared list.
+// ⚠⚠ AND OFF Distribute, NEVER THE PERSON IT WAS GOING TO (P22): a line moved from To a person to Sell or Consign
+// keeps the person's name in Channel / Recipient (nothing clears a person's typing silently), and that name read as
+// the receiving dealer, so the `dealer` arm cleared a firearm to be carried with a daughter's name standing in for a
+// licensed dealer. The leftover name (invChannelLeftover) is not a dealer until somebody retypes the channel or says
+// it is one (invKeepChannel).
 function invTransportDealer(ref) {
   if (!ref) return '';
-  return ref.disposition === 'Distribute' ? invDealerRoute(ref) : String(ref.channel || '').trim();
+  if (ref.disposition === 'Distribute') return invDealerRoute(ref);
+  return invChannelLeftover(ref) ? '' : String(ref.channel || '').trim();
+}
+// ⚠⚠ THE PERSON A LINE WAS GOING TO, LEFT IN Channel / Recipient AFTER ITS DISPOSITION CHANGED (P22). One writer,
+// asked by both handlers that write a disposition (`_invEdit`, `_invBulkApply`): moving a line off Distribute with a
+// name in the channel records that name as left over from To a person; moving it back onto Distribute clears the
+// mark (the name is the recipient again). The channel is never cleared: the mark is a flag, and it holds only while
+// the channel still reads what it read when the line moved (invChannelLeftover), so retyping the channel retires it.
+function invNoteDispositionMove(ref, prevDisp) {
+  if (!ref) return false;
+  if (ref.disposition === 'Distribute') { delete ref.channelLeftover; return false; }
+  var who = String(ref.channel || '').trim();
+  if (prevDisp === 'Distribute' && who) { ref.channelLeftover = who; return true; }
+  return false;
+}
+// The name left over from To a person, while Channel / Recipient still reads it, else ''.
+function invChannelLeftover(ref) {
+  if (!ref || ref.disposition === 'Distribute') return '';
+  var held = String(ref.channelLeftover || '').trim();
+  return held && held === String(ref.channel || '').trim() ? held : '';
+}
+// The flag, in the words the row, the record and the handlers' notices use.
+function invChannelLeftoverText(ref) {
+  var who = invChannelLeftover(ref);
+  return who ? 'Channel / Recipient still names ' + who + ', from when this line went to a person. Record who it goes to now'
+    + (invIsFirearm(ref) ? ' (for a firearm, the receiving dealer)' : '') + ', or keep the name if it is right.' : '';
+}
+// A person saying the name left in the channel is right after all (the dealer is the same name, a sale to that person):
+// the mark comes off and the channel stays as typed.
+function invKeepChannel(jobId, stableId) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref || !invChannelLeftover(ref)) return false;
+  delete ref.channelLeftover;
+  _setPhotoRef(jobId, _invTouch(ref));
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return true;
 }
 // Kept beside the predicate rather than at the render sites: four call sites each writing their
 // own sentence is how the screen and the gate come to disagree about what is wrong.
 var INV_TRANSPORT_REASONS = {
   nfa:       'NFA item — never transported by Havellin. It transfers from the estate to the dealer on ATF paperwork.',
   beneficiary: 'Going to a named person — never handed over directly. The transfer runs through a licensed dealer, who does the background check and the paperwork. Open the line and record its dealer route: Through a licensed dealer.',
-  authority: 'No written authority on file — record Authorized By and Approval Date.',
+  authority: 'No written authority on file — select the line on Job Admin & Inv and press Record approval once the signed authority is back.',
   serial:    'No serial number recorded — the authorisation names each firearm by serial.',
   dealer:    'No dealer named — record the receiving dealer in Channel / Recipient.'
 };
@@ -27573,6 +27709,10 @@ var INV_TRANSPORT_REASONS = {
 function invTransportReason(ref, job) {
   var why = invTransportBlocked(ref, job);
   var gap = why === 'authority' ? invApprovalGap(ref, job) : '';
+  // A leftover recipient (P22) is named for what it is, not as an empty channel.
+  if (why === 'dealer' && invChannelLeftover(ref)) {
+    return 'No dealer named — Channel / Recipient still names ' + invChannelLeftover(ref) + ', the person this line was going to. Record the receiving dealer there.';
+  }
   return gap ? 'Written authority is not complete. ' + gap : (INV_TRANSPORT_REASONS[why] || '');
 }
 function invTransportable(ref, job) { return invIsFirearm(ref) && !invTransportBlocked(ref, job); }
@@ -28699,13 +28839,33 @@ function invRecipientName(s) {
 // bracket each), and a bracketed role comes off the name as it always has (invRecipientName). `text` is the entry as
 // recorded with its date taken off; `own` says the date was the entry's own. Every reader of who approved a line, and
 // when, asks this or the two below, never the field.
-function invApprovalSigners(ref) {
+// ⚠⚠ A RECORDED FIDUCIARY'S NAME IS NEVER CUT IN TWO (P22): `job`, where the caller has it, lends the names
+// jobFiduciaries records, and each one the separators would cut (*Smith, John*, *Jane Counsel, Esq.*, *Ruth & Co*) is
+// matched whole first, longest first, at a separator or a space on either side; the rest of the field splits as
+// before. Read only: what is stored is untouched. Without the job (or with nobody recorded) it is the rule P20 wrote.
+function invApprovalSigners(ref, job) {
   var at = String((ref && ref.approvalDate) || '').trim();
   var held = [];
   var masked = String((ref && ref.authBy) || '').replace(/\([^()]*\)/g, function(m){ held.push(m); return '[[hv' + (held.length - 1) + ']]'; });
+  var whole = [];
+  if (job && masked) {
+    jobFiduciaries(job).map(function(f){ return invRecipientName(f.name); })
+      .filter(function(n){ return n && /[;,&\/]|\band\b/i.test(n); })
+      .sort(function(a, b){ return b.length - a.length; })
+      .forEach(function(n){
+        var re = new RegExp(n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'gi');
+        masked = masked.replace(re, function(m, off, str){
+          var pre = off > 0 ? str.charAt(off - 1) : '', post = str.charAt(off + m.length);
+          if ((pre && !/[\s;,&\/]/.test(pre)) || (post && !/[\s;,&\/\[]/.test(post))) return m;
+          whole.push(m);
+          return '[[fd' + (whole.length - 1) + ']]';
+        });
+      });
+  }
   var out = [];
   masked.split(/\s*(?:;|,|&|\/|\n|\band\b)\s*/i).forEach(function(part){
-    var text = part.replace(/\[\[hv(\d+)\]\]/g, function(x, i){ return held[Number(i)] || ''; }).trim();
+    var text = part.replace(/\[\[fd(\d+)\]\]/g, function(x, i){ return whole[Number(i)] || ''; })
+      .replace(/\[\[hv(\d+)\]\]/g, function(x, i){ return held[Number(i)] || ''; }).trim();
     var own = /\s*\((\d{4}-\d{2}-\d{2})\)$/.exec(text);
     if (own) text = text.slice(0, own.index).trim();
     var name = invRecipientName(text);
@@ -28715,15 +28875,15 @@ function invApprovalSigners(ref) {
 }
 // The names as recorded: "Ruth Adler; Daniel Adler" as Record approval writes them, and a list typed by hand split on
 // the separators people type, each with any bracketed role taken off.
-function invApprovalNames(ref) {
-  return invApprovalSigners(ref).map(function(s){ return s.name; });
+function invApprovalNames(ref, job) {
+  return invApprovalSigners(ref, job).map(function(s){ return s.name; });
 }
 // Who signed and when, for a reader (P20): "Ruth Adler (Oct 1, 2026); Daniel Adler (Oct 8, 2026)", or, where nobody's
 // date is their own, the names as recorded and the day, "Ruth Adler; Daniel Adler (Oct 2, 2026)". Never a raw ISO date:
 // the request, the desk's flags, the item panel, the Disposition Ledger, the package's record and the client's workbook
 // all print this.
-function invApprovalSignedText(ref) {
-  var s = invApprovalSigners(ref);
+function invApprovalSignedText(ref, job) {
+  var s = invApprovalSigners(ref, job);
   if (!s.length) return '';
   if (!s.some(function(x){ return x.own; })) {
     var at = String(ref.approvalDate || '').trim();
@@ -28731,12 +28891,34 @@ function invApprovalSignedText(ref) {
   }
   return s.map(function(x){ return x.text + (x.date ? ' (' + fmtDate2(x.date) + ')' : ''); }).join('; ');
 }
+// ⚠ THE AUTHORIZED BY BOX (P22): the readable form wherever a signer's own day is stored (an ISO date in a person's
+// box), else the field as stored, which is already what a person wrote. Its save turns a reader's date back into the
+// stored one, and a box left reading what it was shown keeps the field exactly as stored.
+function invApprovalBoxText(ref, job) {
+  if (!ref) return '';
+  return invApprovalSigners(ref, job).some(function(x){ return x.own; }) ? invApprovalSignedText(ref, job) : String(ref.authBy || '');
+}
+function invApprovalBoxToStored(typed, ref, job) {
+  var t = String(typed == null ? '' : typed);
+  if (ref && t.trim() === invApprovalBoxText(ref, job).trim()) return ref.authBy;
+  return t.replace(/\(([^()]*)\)/g, function(m, inner){ var iso = _invReadableDay(inner); return iso ? '(' + iso + ')' : m; });
+}
+// "Oct 1, 2026" (fmtDate2's form, any month spelling) as "2026-10-01", else ''. Never through new Date(), which reads
+// "garbage" as a date without complaint.
+function _invReadableDay(t) {
+  var m = /^\s*([A-Za-z]{3})[A-Za-z]*\.?\s+(\d{1,2}),?\s+(\d{4})\s*$/.exec(String(t == null ? '' : t));
+  if (!m) return '';
+  var mi = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'].indexOf(m[1].toLowerCase());
+  var d = parseInt(m[2], 10);
+  if (mi < 0 || d < 1 || d > 31) return '';
+  return m[3] + '-' + String(mi + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
 // The approval a line records once `names` have signed on `when` (P20, Q24): added to whoever it records already and
 // never dropping one, and a name recorded twice keeps its first date. Written plainly while every signer signed the same
 // day (the form every reader before P20 knows), with each signer's own date once they differ; `approvalDate` is the
 // latest signature's. Record approval's save is the one writer that calls it.
-function invApprovalWithSigners(ref, names, when) {
-  var s = invApprovalSigners(ref);
+function invApprovalWithSigners(ref, names, when, job) {
+  var s = invApprovalSigners(ref, job);
   (names || []).forEach(function(n){
     var text = String(n == null ? '' : n).trim(), name = invRecipientName(text);
     if (!name || s.some(function(x){ return samePerson(x.name, name); })) return;
@@ -28751,7 +28933,7 @@ function invApprovalWithSigners(ref, names, when) {
 function invApprovalMissing(ref, job) {
   var fids = jobFiduciaries(job);
   if (!fids.length) return [];
-  var names = invApprovalNames(ref);
+  var names = invApprovalNames(ref, job);
   return fids.filter(function(f){
     var n = invRecipientName(f.name);
     return !names.some(function(x){ return samePerson(x, n); });
@@ -28770,7 +28952,7 @@ function invApprovalGap(ref, job) {
   if (!miss.length) return '';
   return _andJoin(miss) + (miss.length > 1 ? ' have' : ' has') + ' not approved it'
     + (jobFiduciaries(job).length > 1 ? ', and every ' + invCoFiduciaryNoun(job) + ' must' : '')
-    + '. Signed so far by ' + (invApprovalSignedText(ref) || String(ref.authBy).trim()) + '.';
+    + '. Signed so far by ' + (invApprovalSignedText(ref, job) || String(ref.authBy).trim()) + '.';
 }
 // Who must still sign, in a sentence's words (P20): every co-trustee (or co-representative) where several are recorded,
 // else the representative's role by matter. Read by the request's ratification section, the desk row and the Job Plan.
@@ -28821,7 +29003,7 @@ function invApprovalBatches(job, refs) {
   (refs || []).forEach(function(r){
     if (!r || r.deletedAt) return;
     live[String(r.stableId)] = r;
-    invApprovalSigners(r).forEach(function(s){
+    invApprovalSigners(r, job).forEach(function(s){
       if (!s.date) return;
       var b = actOn(s.date);
       if (!b.names.some(function(n){ return samePerson(n, s.name); })) { b.names.push(s.name); b.texts.push(s.text); }
@@ -28912,11 +29094,22 @@ function invReleasedToPerson(ref, job) {
 // ⚠ RECORDED AS GONE, ONE DEFINITION (P19's rule, lifted out of invReleasedToPerson for P20): a date of disposition, a
 // Released event on the line's chain of custody, or a signed receipt filed for it (the recipient's own word that it
 // went). Read by what counts as released to a person (above) and by what is owed ratification (below).
+// ⚠ AND (P22) A CHARITY'S RECEIPT OR A SELLING PARTNER'S STATEMENT FILED FOR IT: each is the receiving side's own paper
+// that the line went, and neither counted, so a donated or sold line with no date typed read as still in the house and
+// owed no ratification. A charity's receipt counts where it is filed covering the line (kind `donation`, its stableIds);
+// a statement where it is live, lists the line and its scan is filed (kind `statement`, ref the statement). A typed
+// Receipt / Doc is not a filed paper and counts for nothing here.
 function invRecordedGone(ref, job) {
   if (!ref || ref.deletedAt) return false;
   if (String(ref.dispDate || '').trim()) return true;
   if (custodyEvents(ref).some(function(e){ return e.action === 'Released'; })) return true;
-  return !!invReceiptRecord(ref, job);
+  if (invReceiptRecord(ref, job)) return true;
+  if (!job) return false;
+  var sid = String(ref.stableId);
+  if (signedRecordsOf(job, 'donation').some(function(s){ return (s.stableIds || []).map(String).indexOf(sid) >= 0; })) return true;
+  return jobListEntries(job, 'proceedsStatements').some(function(st){
+    return (st.lines || []).some(function(l){ return String(l && l.stableId) === sid; }) && signedRecordsOf(job, 'statement', st.id).length > 0;
+  });
 }
 // ⚠⚠ LEFT BEFORE EVERY FIDUCIARY APPROVED: THE ONE PREDICATE (P20, Q23; Anthony, 2026-10-05: ratify, nothing is
 // undone). A line leaving the property (INV_RELEASE_DISPOSITIONS) that is recorded as gone while its written approval
@@ -28938,7 +29131,15 @@ function invGoneText(ref, job) {
   var ev = custodyEvents(ref).filter(function(e){ return e.action === 'Released'; }).pop();
   if (ev) return 'Released' + (ev.date ? ' ' + fmtDate2(ev.date) : '') + (ev.party ? ' to ' + ev.party : '');
   var rc = invReceiptRecord(ref, job);
-  return 'Released' + (rc ? ': ' + (rc.signedBy || rc.ref || 'the recipient') + '’s signed receipt is on file' : '');
+  if (rc) return 'Released: ' + (rc.signedBy || rc.ref || 'the recipient') + '’s signed receipt is on file';
+  // The receiving side's paper (P22): a charity's receipt, a selling partner's statement.
+  var sid = String(ref.stableId);
+  var don = job ? signedRecordsOf(job, 'donation').filter(function(s){ return (s.stableIds || []).map(String).indexOf(sid) >= 0; })[0] : null;
+  if (don) return 'Released: ' + (don.ref || 'the charity') + '’s receipt is on file';
+  var st = job ? jobListEntries(job, 'proceedsStatements').filter(function(x){
+    return (x.lines || []).some(function(l){ return String(l && l.stableId) === sid; }) && signedRecordsOf(job, 'statement', x.id).length > 0;
+  })[0] : null;
+  return 'Released' + (st ? ': ' + (st.vendor || 'the selling partner') + '’s statement is on file' : '');
 }
 // The live filed receipt that lists this line, signed by the person it is released to now, or null. ⚠ A receipt one
 // person signed never clears a line since re-routed to somebody else: that person's signature is not on file.
@@ -28970,8 +29171,19 @@ function invReceiptGroups(job, refs) {
     if (!invReceiptRecord(r, job)) g.owed.push(r);
   });
   // The receipts this person signed (filed under their name), whichever lines they list now.
+  var recs = signedRecordsOf(job, 'receipt');
   out.forEach(function(g){
-    g.filed = signedRecordsOf(job, 'receipt').filter(function(s){ return samePerson(s.ref, g.name); });
+    g.filed = recs.filter(function(s){ return samePerson(s.ref, g.name); });
+  });
+  // ⚠ A RECEIPT WHOSE SIGNER NO LONGER HAS A LINE GOING TO THEM STAYS LISTED (P22): the line was re-routed or removed,
+  // and the receipt dropped off the card while it stayed in Drive and on signedRecords. Nothing a person filed drops off
+  // the desk, so it is a group of its own, `orphan`, labelled on the card. Grouped by the same name rule (samePerson:
+  // trimmed, any case, spaces collapsed), the first spelling filed kept for print.
+  recs.forEach(function(s){
+    var name = invRecipientName(s.ref);
+    if (!name || out.some(function(g){ return samePerson(g.name, name); })) return;
+    out.push({ name: name, released: [], owed: [], waiting: [], orphan: true,
+               filed: recs.filter(function(x){ return samePerson(x.ref, name); }) });
   });
   return out;
 }
@@ -29124,6 +29336,28 @@ var INV_RELEASE_CAUTIONS = [
         + 'because the person works with us, it is a conflict of interest for Havellin, so we put it on the record before '
         + 'anything leaves. <strong>Initialling a line below confirms that you know who is receiving it.</strong> To send '
         + 'a line somewhere else instead, ask your concierge.' },
+  // ⚠⚠ ITS ESTATE MIRROR: A LINE ALREADY GOING TO ONE OF HAVELLIN'S PEOPLE (P22). The estate refuses the write
+  // (invStaffRefused), so nothing new gets here; a line written before P19's rule, or naming someone added to the
+  // directory since, was flagged nowhere. Flagged now, on the row, in the line's record and on the request, through this
+  // one rule; never refused or undone after the fact (the line was written when nothing refused it), and the request
+  // asks the representative not to initial it. `fid`: an estate only, as `staffRecipient` is living only.
+  // ⚠ THE BODY IS DRAFTED, NOT REVIEWED: it goes to counsel with the P22 hand-back.
+  { key: 'staffEstate', fid: true, badge: 'GOING TO SOMEONE WITH HAVELLIN', tone: '#8a5a1e',
+    test: function(r, jobId){ return !!invHavellinRecipient(r, _invJob(jobId)); },
+    badgeFor: function(r, jobId){
+      return 'GOING TO ' + String(invHavellinRecipient(r, _invJob(jobId))).toUpperCase() + ', WHO WORKS WITH HAVELLIN';
+    },
+    note: function(r, jobId){
+      return invHavellinRecipient(r, _invJob(jobId)) + ' works with Havellin; proposed: ' + (r.disposition || '');
+    },
+    desk: 'Havellin and its people never buy or receive estate or trust property, so this line cannot go to them. It was '
+        + 'recorded before that was refused here, or before they were listed with Havellin; change where it goes. The '
+        + 'release approval request names it and asks that it not be initialled.',
+    head: 'Property recorded as going to someone who works with Havellin',
+    body: 'Havellin and its people never purchase or receive estate or trust property, and take no share of the proceeds '
+        + 'of its sale. These lines are recorded as going to a person who works with Havellin, named against each line. '
+        + '<strong>Please do not initial them.</strong> Your concierge will change where each one goes and ask for your '
+        + 'approval again.' },
   // ⚠⚠ AND THIS ONE IS THE DEFECT THE OTHER TWO ALREADY TAUGHT US ABOUT. Until today
   // _invAwaitingApproval filtered on disposition-plus-no-approval-date and consulted the
   // appraisal track NOWHERE, so an object the app itself had flagged for a specialist — sitting
@@ -29257,7 +29491,7 @@ function printApprovalRequest(jobId, selectedOnly) {
         + (gone ? '<div style="color:#8a5a1e;font-size:10px;">' + esc(invGoneText(r, job)) + '</div>' : '')
         // ⚠ A LINE ONE FIDUCIARY HAS ALREADY SIGNED FOR (P19) says so, and who is still to sign it, each signer with their
         // own date (P20: through invApprovalSignedText, never the raw field, which carries ISO dates once they differ).
-        + (gap ? '<div style="color:#8a5a1e;font-size:10px;">Signed so far by ' + esc(invApprovalSignedText(r))
+        + (gap ? '<div style="color:#8a5a1e;font-size:10px;">Signed so far by ' + esc(invApprovalSignedText(r, job))
             + '; still to sign: ' + esc(_andJoin(invApprovalMissing(r, job))) + '</div>'
           : gone ? '<div style="color:#8a5a1e;font-size:10px;">No written approval recorded; to sign: '
             + esc(_andJoin(invApprovalMissing(r, job)) || 'the ' + invRepresentativeTitle(job)) + '</div>' : '')
@@ -29285,13 +29519,16 @@ function printApprovalRequest(jobId, selectedOnly) {
   }).map(function(f){ return f.name; });
   // ⚠ THE RATIFICATION SECTION'S WORDING IS DRAFTED, NOT REVIEWED (P20): it records a ratification of a release already
   // made and undoes nothing. Its heading, its sentence and the gone line's note are in the hand-back for counsel.
+  // ⚠ THE WORDING AGREES WITH THE COUNT (P22): one line gone read "These items … They are listed …".
+  var _r1 = ratify.length === 1;
   var ratBlock = !ratify.length ? '' : '<div class="inv-ratify" style="margin-top:18px;">'
     + '<div style="font-size:12px;font-weight:700;color:#8a5a1e;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:4px;">Already released: for ratification</div>'
-    + '<div style="font-size:11px;line-height:1.55;margin-bottom:8px;">These items left the property before '
-      + esc(invEveryFiduciaryPhrase(job)) + ' had approved their release in writing. '
-      + (asked.length ? 'They are listed apart from the items above, for ' : 'They are listed here for ')
+    + '<div style="font-size:11px;line-height:1.55;margin-bottom:8px;">' + (_r1 ? 'This item' : 'These items') + ' left the property before '
+      + esc(invEveryFiduciaryPhrase(job)) + ' had approved ' + (_r1 ? 'its' : 'their') + ' release in writing. '
+      + (asked.length ? (_r1 ? 'It is' : 'They are') + ' listed apart from the ' + (asked.length === 1 ? 'item' : 'items') + ' above, for '
+          : (_r1 ? 'It is' : 'They are') + ' listed here for ')
       + 'the signature of ' + esc(ratMiss.length ? _andJoin(ratMiss) : 'the ' + invRepresentativeTitle(job))
-      + ', which ratifies each release; nothing is undone.</div>'
+      + ', which ratifies ' + (_r1 ? 'the' : 'each') + ' release; nothing is undone.</div>'
     + theadOf(true) + ratify.map(rowOf).join('') + '</tbody></table>'
     + footOf(ratify, ' already released')
     + '</div>';
@@ -29321,15 +29558,16 @@ function printApprovalRequest(jobId, selectedOnly) {
   var toPerson = gunRows.filter(invDealerRouteOffered).length;
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     // ⚠ The third argument is how this avoids _invDocHead's default tail, which states the
-    // valuation basis and the date of death — neither of which a living job has.
-    + _invDocHead(job, 'Release Approval Request', _fid ? null
-        : 'Everything leaving the property, for your sign-off · Prepared by Havellin Palm Beach, LLC · '
-          + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))
+    // valuation basis and the date of death — neither of which a living job has. ⚠ It replaces only the basis: the head
+    // adds "Prepared by Havellin Palm Beach, LLC · <date>" itself, which this printed a second time until P22.
+    + _invDocHead(job, 'Release Approval Request', _fid ? null : 'Everything leaving the property, for your sign-off')
     + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:12px;">'
       + 'To <strong>' + esc(who) + '</strong>: '
       // A request carrying only lines already gone says so (P20): none of them is "ready to be released".
-      + (asked.length ? 'the items listed below are ready to be released from the property. '
-          : 'the items listed below have already left the property and are listed for your signature. ')
+      + (asked.length ? (asked.length === 1 ? 'the item listed below is ready to be released from the property. '
+              : 'the items listed below are ready to be released from the property. ')
+          : (items.length === 1 ? 'the item listed below has already left the property and is listed for your signature. '
+              : 'the items listed below have already left the property and are listed for your signature. '))
       + (_many
           ? 'Please initial each line you approve, then each of you sign and date at the foot. <strong>Every '
             + invCoFiduciaryNoun(job) + ' named below must sign: nothing on this list is approved until all '
@@ -29411,7 +29649,7 @@ function invRecordApproval(jobId) {
           : 'Tick the signature on the returned request.') + '</div>'
         + fids.map(function(f, i){
             // Who has signed these lines already (P20), so the person ticking the paper sees what is on record.
-            var on = picked.filter(function(r){ return invApprovalNames(r).some(function(x){ return samePerson(x, invRecipientName(f.name)); }); }).length;
+            var on = picked.filter(function(r){ return invApprovalNames(r, job).some(function(x){ return samePerson(x, invRecipientName(f.name)); }); }).length;
             return '<label style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;">'
               + '<input type="checkbox" id="ia-fid-' + i + '" onchange="invApprovalDialogNote()" style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
               + '<span>' + esc(f.name) + (f.role ? ' <span style="color:var(--gray);">&middot; ' + esc(f.role) + '</span>' : '')
@@ -29471,8 +29709,14 @@ function invSaveApproval() {
   var still = invApprovalOpenText(job, refs, invApprovalLeftOpen(job, refs, names, when));
   refs.forEach(function(ref){
     // Added to whoever the line records already, each signer keeping their own date (P20).
-    var signed = invApprovalWithSigners(ref, names, when);
+    var signed = invApprovalWithSigners(ref, names, when, job);
     ref.authBy = signed.authBy; ref.approvalDate = signed.approvalDate;
+    // ⚠ EACH NAME ADDED IS STAMPED (P22), so a merge with another device's copy keeps it beside theirs (invMergeApprovals).
+    var _now = Date.now();
+    if (!ref.authAdds) ref.authAdds = {};
+    _invApprovalEntries(ref).forEach(function(e){
+      if (names.some(function(n){ return _invApprovalEntries({ authBy: n }).some(function(x){ return x.key === e.key; }); })) ref.authAdds[e.key] = _now;
+    });
     // A value written after a deliberate clear is the newer word on both fields (see invStickyValue).
     if (ref.clearedAt) { delete ref.clearedAt.authBy; delete ref.clearedAt.approvalDate; }
     _setPhotoRef(jobId, _invTouch(ref));
@@ -29514,7 +29758,7 @@ function _invRecordTicked(c) {
 function invApprovalLeftOpen(job, refs, names, when) {
   var open = [], afters = [];
   (refs || []).forEach(function(r){
-    var after = invApprovalWithSigners(r, names, when);
+    var after = invApprovalWithSigners(r, names, when, job);
     afters.push(after);
     if (!invApprovalComplete(after, job)) open.push(r);
   });
@@ -29650,6 +29894,14 @@ function _renderInvReleasesCard(job, all) {
     parts.push(head('Signed release approvals') + batches.map(function(b){
       var rat = b.open.filter(function(r){ return invRatificationOwed(r, job); });
       var gap = b.open.length ? (invApprovalGap(b.open[0], job) || (_andJoin(b.missing) + (b.missing.length > 1 ? ' have' : ' has') + ' not approved it.')) : '';
+      // ⚠ OPEN LINES MISSING DIFFERENT PEOPLE EACH SAY THEIR OWN GAP (P22): the first line's sentence stood for all of them,
+      // naming the wrong person against the rest.
+      var _missKey = function(r){ return invApprovalMissing(r, job).join('|'); };
+      var mixed = b.open.some(function(r){ return _missKey(r) !== _missKey(b.open[0]); });
+      if (mixed) gap = b.open.map(function(r){
+        var m = invApprovalMissing(r, job);
+        return '#' + _invItemNo(r) + ': ' + (invApprovalGap(r, job) || (_andJoin(m) + (m.length > 1 ? ' have' : ' has') + ' not approved it.'));
+      }).join(' ');
       return '<div class="inv-rel-row" style="' + row + '">'
         + '<div>Approved ' + esc(fmtDate2(b.date)) + ' by <strong>' + esc(b.who || 'nobody recorded') + '</strong> &middot; '
           + (b.lines.length ? b.lines.length + ' line' + (b.lines.length > 1 ? 's' : '') + ' (' + nums(b.lines) + ')' : 'no line on the inventory now') + '</div>'
@@ -29678,6 +29930,7 @@ function _renderInvReleasesCard(job, all) {
             + (g.owed.length ? ' &middot; <span style="color:#8a5a1e;font-weight:600;">&#9888; no signed receipt filed for ' + nums(g.owed) + '</span>'
                : g.released.length ? ' &middot; <span style="color:var(--ok-tx);">&#10003; every one receipted</span>' : '')
           + '</div>'
+          + (g.orphan ? '<div class="inv-rel-orphan" style="color:var(--gray);">No line on the inventory goes to them now; the receipt they signed stays here and in Drive.</div>' : '')
           + (g.waiting.length ? '<div style="color:var(--gray);">' + nums(g.waiting) + ' going to them ' + (g.waiting.length > 1 ? 'await' : 'awaits')
               + ' written approval, so ' + (g.waiting.length > 1 ? 'they are' : 'it is') + ' not on a receipt yet.</div>' : '')
           + (typed.length ? '<div style="color:var(--gray);">' + typed.map(function(r){
@@ -30354,8 +30607,10 @@ var LEDGER_SIGNED_REF = 'ledger';           // signedRecords' ref for a signed c
 var _ledgerFiling = {};                     // never saved: one filing per client at a time
 
 // The ledger's figures, DOM-free: read by the page, the desk card and the tests. `items` defaults to the numbered list.
-function dispositionLedger(jobId, items) {
-  var job = _invJob(jobId);
+// ⚠ `jobIn` (P22): a caller holding the job hands it over, so the figures and the card's other reads answer from the
+// same record (`_renderLedgerCard` read this by id while it read the rest off the job it was given).
+function dispositionLedger(jobId, items, jobIn) {
+  var job = jobIn || _invJob(jobId);
   var all = items || (job ? _invAssignItemNos(jobId) : []);
   var num = function (v) { var n = parseFloat(v); return isNaN(n) ? null : roundCents(n); };
   var byNo = function (a, b) { return (parseInt(a.itemNo, 10) || 0) - (parseInt(b.itemNo, 10) || 0); };
@@ -30441,7 +30696,7 @@ function printDispositionLedger(jobId, opt) {
       + '<td style="' + td + '">' + esc(r.disposition || 'Not yet decided') + '</td>'
       + '<td style="' + td + '">' + esc(_invRecipient(job, r) || '—') + '</td>'
       // Who authorized it, each signer with their own day (P20): the one readable form, never the raw field.
-      + '<td style="' + td + '">' + esc(invApprovalSignedText(r) || '—') + '</td>'
+      + '<td style="' + td + '">' + esc(invApprovalSignedText(r, job) || '—') + '</td>'
       + '<td style="' + td + 'white-space:nowrap;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
       + '<td style="' + td + 'text-align:right;">' + _invMoney(r.gross) + '</td>'
       + '<td style="' + td + 'text-align:right;">' + _invMoney(r.fees) + '</td>'
@@ -30603,7 +30858,7 @@ function _ledgerCardRepaint(jobId) {
 }
 function _renderLedgerCard(job, all) {
   var jid = job.id;
-  var L = dispositionLedger(jid, all);
+  var L = dispositionLedger(jid, all, job);
   var st = (job.docState && job.docState[LEDGER_DOC_KEY]) || null;
   var signed = ledgerSignedCopies(job);
   var filed = !!(st && st.filedAt);
@@ -30964,6 +31219,13 @@ function ledgerDerivedLines(jobId, job, phase) {
     out.push({ key: 'ledger_signed', ok: sc.length > 0, label: 'Disposition Ledger signed by the ' + _agrApprover(job),
                detail: last ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(last.filedAt)))) + (last.filedBy ? ' by ' + esc(last.filedBy) : '')
                             : 'not yet — print it from the Disposition Ledger card on Job Admin & Inv, have it signed, and file the signed copy there' });
+  } else if (_jobInvRefs(jobId).length) {
+    // ⚠ ON LIVING WORK THE CLIENT SIGNS IT (P22): the card said so and nothing asked for the signed copy. Asked only where
+    // the job has an inventory, as the card is drawn only there; a reminder, never a gate (the close does not read it).
+    var lsc = ledgerSignedCopies(job), llast = lsc[lsc.length - 1];
+    out.push({ key: 'ledger_signed', ok: lsc.length > 0, label: 'Disposition Ledger signed by the client',
+               detail: llast ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(llast.filedAt)))) + (llast.filedBy ? ' by ' + esc(llast.filedBy) : '')
+                             : 'not yet — print it from the Disposition Ledger card on Job Admin & Inv, have the client sign it, and file the signed copy there' });
   }
   if (phase === 'admin') {
     var items = _jobInvRefs(jobId);
@@ -31219,7 +31481,7 @@ function printAppraisalWorklist(jobId, opt) {
       // and a firearm one co-trustee authorised stays on this list until the others have (invApprovalComplete).
       + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until '
       + (jobFiduciaries(job).length > 1 ? 'every ' + invCoFiduciaryNoun(job) + ' has' : 'the ' + invRepresentativeTitle(job) + ' has')
-      + ' authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the authority on the item — Authorized By and Approval Date, with the dealer in Channel / Recipient (on a firearm going to a named person, on its dealer route) — and the item joins this worklist. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
+      + ' authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the signed authority with <strong>Record approval</strong> on Job Admin &amp; Inv (select the firearm, then Record approval), with the dealer in Channel / Recipient (on a firearm going to a named person, on its dealer route), and the item joins this worklist. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
       + withheld.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
       + '</div></div>';
@@ -32261,6 +32523,18 @@ function _invRemovedRows(jobId) {
     .filter(function(r){ return r.label === 'inventory' && !r.collId && r.deletedAt; })
     .sort(function(a, b){ return (b.deletedAt || 0) - (a.deletedAt || 0); });
 }
+// The detail shots tombstoned with this item by the room's bin (P22), read by Restore and Removed items.
+function invDetailsRemovedWith(jobId, ref) {
+  if (!ref || !ref.deletedAt) return [];
+  var at = Number(ref.deletedAt) || 0;
+  return (_photoRefs[jobId] || []).filter(function(d){
+    if (!d || d.label !== 'detail' || d.groupId !== ref.stableId || !d.deletedAt) return false;
+    if (d.deletedWith) return d.deletedWith === ref.stableId;
+    return Math.abs((Number(d.deletedAt) || 0) - at) <= 2000;
+  });
+}
+var _invRemovedAll = false;   // never saved: Removed items shows every removal, not the twelve most recent
+function _invToggleRemovedAll() { _invRemovedAll = !_invRemovedAll; renderInventoryTab(); }
 function restoreInventoryItem(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
@@ -32272,10 +32546,20 @@ function restoreInventoryItem(jobId, stableId) {
   var taken = want > 0 && _jobInvRefs(jobId).some(function(r){
     return r.stableId !== ref.stableId && parseInt(r.itemNo, 10) === want;
   });
+  // ⚠⚠ THE DETAIL SHOTS THE BIN TOOK WITH IT COME BACK WITH IT (P22). The room's bin tombstones an item shot and its
+  // detail shots together; Restore gave back the line alone, so its close-ups stayed removed under a live item. Only
+  // those taken with it: `deletedWith` names the item (stamped by discardShot since P22); a shot binned before then
+  // counts where it was tombstoned within the same press (two seconds of the item). One binned on its own stays gone.
+  var _withIt = invDetailsRemovedWith(jobId, ref);
   delete ref.deletedAt;
   delete ref.deletedBy;      // the removal's own stamp goes with it (P16)
   _invTouch(ref);            // newer than the tombstone, so the undelete wins the merge
   _setPhotoRef(jobId, ref);
+  _withIt.forEach(function(d){
+    delete d.deletedAt;
+    delete d.deletedWith;
+    _setPhotoRef(jobId, _invTouch(d));
+  });
   if (taken) {
     ref.itemNo = null;       // _invAssignItemNos issues the next free one
     _invAssignItemNos(jobId);
@@ -32293,8 +32577,11 @@ function _renderRemovedRows(jobId) {
   // between a history panel and an apparent double count.
   var liveNames = {};
   _jobInvRefs(jobId).forEach(function(r){ liveNames[String(r.objectName || '').trim().toLowerCase()] = 1; });
-  var rows = gone.slice(0, 12).map(function(r){
+  // ⚠ THE TWELVE MOST RECENT, THEN ALL OF THEM ON ONE PRESS (P22): an older removal had no Restore on screen.
+  var shown = _invRemovedAll ? gone : gone.slice(0, 12);
+  var rows = shown.map(function(r){
     var val = (r.fmv !== '' && r.fmv != null) ? ' · ' + _invMoney(r.fmv) : '';
+    var dn = invDetailsRemovedWith(jobId, r).length;
     var backAgain = liveNames[String(r.objectName || '').trim().toLowerCase()];
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:0.5px solid var(--border);font-size:11px;">'
       + '<span>#' + esc(_invItemNo(r)) + ' &middot; ' + esc(r.objectName || '(unnamed)') + '<span style="color:var(--gray);">' + esc(val)
@@ -32303,6 +32590,7 @@ function _renderRemovedRows(jobId) {
       // Who removed it, where the removal recorded one (the desk's Remove line and duplicate Remove, P16).
       + (r.deletedBy ? ' by ' + esc(r.deletedBy) : '')
       + (r.driveTrashed ? ' · <span style="color:var(--bronze);" title="Restore gives the row back. The photograph is in Google Drive\u2019s bin, which holds it for 30 days.">photo in the Drive bin</span>' : '')
+      + (dn ? ' · ' + dn + ' detail shot' + (dn > 1 ? 's' : '') + ' removed with it' : '')
       + '</span>'
       + (backAgain ? ' <span style="color:var(--bronze);" title="An item with this name is on the list again — this is the older copy you removed, not a second one.">&middot; already back on the list</span>' : '')
       + '</span>'
@@ -32318,8 +32606,12 @@ function _renderRemovedRows(jobId) {
     + 'Nothing here is counted, valued or printed anywhere. Restore returns the row under its original item number, '
     + 'or the next free one if that number has since been taken. A row marked <em>photo in the Drive bin</em> was '
     + 'deleted in the field: the row comes back, the photograph has to be restored from Google Drive\u2019s own bin, '
-    + 'which holds it for 30 days. Any other row was removed as a line and kept its photograph, so Restore gives both back.</div>'
-    + rows + '</div>';
+    + 'which holds it for 30 days. Any other row was removed as a line and kept its photograph, so Restore gives both back. '
+    + 'Detail shots deleted with an item come back with it.</div>'
+    + rows
+    + (gone.length > 12 ? '<div style="margin-top:6px;"><button class="btn-s" id="inv-removed-all" onclick="_invToggleRemovedAll()">'
+        + (_invRemovedAll ? 'Show the 12 most recent' : 'Show all ' + gone.length) + '</button></div>' : '')
+    + '</div>';
 }
 
 function _renderDuplicateImportNotice(jobId) {
@@ -32547,7 +32839,9 @@ function _invBulkApply(jobId, key, value) {
     }
   }
   var what = '';
+  var _leftover = [];   // lines moved off To a person still naming the person (P22)
   picked.forEach(function(ref){
+    var _prev = ref.disposition;
     if (key === 'reviewed') {
       ref.reviewed = true; ref.reviewedAt = Date.now(); ref.reviewedBy = (job && job.tc) || '';
     } else if (key === 'roomIdx') {
@@ -32557,6 +32851,8 @@ function _invBulkApply(jobId, key, value) {
     } else {
       ref[key] = value;
     }
+    if (key === 'disposition' && invNoteDispositionMove(ref, _prev)) _leftover.push(ref);
+    if (key === 'channel') delete ref.channelLeftover;
     _setPhotoRef(jobId, _invTouch(ref));
   });
   savePhotoRefs(jobId);
@@ -32600,7 +32896,14 @@ function _invBulkApply(jobId, key, value) {
   }
   else if (key === 'roomIdx')      what = items + ' moved to ' + _invRoomName(jobId, picked[0].roomIdx) + '.';
   else if (key === 'valSource')    what = 'Valuation source set to ' + value + ' on ' + items + '.';
-  else                             what = items + ' updated.';
+  // ⚠ ONLY WHERE NOTHING ABOVE SAID WHAT CHANGED (P22): this `else` overwrote the first chain's sentence, so Keep, Move
+  // or Hold swept across a selection, and Mark reviewed, both confirmed as "N items updated".
+  else if (!what)                  what = items + ' updated.';
+  // ⚠ A LINE TAKEN OFF To a person STILL NAMES THE PERSON (P22): said at once, by name, never cleared.
+  if (_leftover.length) what += ' \u26a0 ' + _leftover.length + ' of them still name' + (_leftover.length > 1 ? '' : 's')
+    + ' the person ' + (_leftover.length > 1 ? 'they were' : 'it was') + ' going to in Channel / Recipient \u2014 '
+    + _leftover.map(function(r){ return _invNamed(r) + ' (' + invChannelLeftover(r) + ')'; }).join(', ')
+    + '. Record who each goes to now, or keep the name if it is right.';
   // An item that no longer matches the filters on screen has just vanished from the list.
   // Saying so is the difference between "it worked" and "nothing happened".
   var hidden = picked.some(function(r){ return !_invMatchesFilter(r, job); });
@@ -33290,9 +33593,14 @@ function _renderInvRow(job, ref) {
   } else if (_gap) warn.push('<span title="' + esc(_gap) + '" style="color:var(--bronze);font-weight:700;">approval incomplete</span>');
   // ⚠ GOING TO ONE OF HAVELLIN'S PEOPLE ON A LIVING CLIENT'S JOB (P20, Q25): flagged on the row through the one rule,
   // invReleaseCautions (an estate refuses the write instead). Bronze: red on this strip is a held firearm.
-  var _stC = invReleaseCautions(ref, jid, 'staffRecipient')[0];
+  // ⚠ AND ITS ESTATE MIRROR (P22): a line already recorded as going to one of them, written before anything refused it.
+  var _stC = _invStaffCaution(ref, jid);
   if (_stC) warn.push('<span title="' + esc('Conflict of interest: ' + _stC.note(ref, jid) + '. ' + _stC.desk)
     + '" style="color:var(--bronze);font-weight:700;">&#9888; ' + esc(invHavellinRecipient(ref, job)) + ' works with Havellin</span>');
+  // ⚠ A LINE TAKEN OFF To a person STILL NAMING THE PERSON (P22): flagged, never cleared (invChannelLeftover).
+  var _left = invChannelLeftover(ref);
+  if (_left) warn.push('<span class="inv-left-chip" title="' + esc(invChannelLeftoverText(ref))
+    + '" style="color:var(--bronze);font-weight:700;">&#9888; still names ' + esc(_left) + '</span>');
   if (invReceiptOwed(ref, job)) {
     warn.push('<span title="' + esc('Released to ' + (invRecipientName(ref.channel) || 'a person') + ' and no signed receipt is filed for it.'
       + (String(ref.receiptDoc || '').trim() ? ' Receipt / Doc reads “' + String(ref.receiptDoc).trim() + '”: a typed reference, not a filed receipt.' : '')
@@ -33449,17 +33757,30 @@ function _renderInvPanel(job, ref) {
     + '</div>'
     + _invFirearmPanelHtml(job, ref)
     + _invPanelCautionHtml(job, ref)
+    + _invPanelLeftoverHtml(job, ref)
     + fieldHtml + secs + '</div>';
 }
 // ⚠ THE LIVING CLIENT'S CONFLICT OF INTEREST, IN THE LINE'S RECORD (P20, Q25), through the one rule, invReleaseCautions:
 // the same caution the row, the bulk bar and the request read. Nothing renders where it does not apply.
 function _invPanelCautionHtml(job, ref) {
-  var c = invReleaseCautions(ref, job.id, 'staffRecipient')[0];
+  var c = _invStaffCaution(ref, job.id);
   if (!c) return '';
   return '<div class="inv-panel-caution" style="margin-bottom:10px;font-size:11px;line-height:1.5;color:#8a5a1e;">&#9888; '
-    + '<strong>Conflict of interest.</strong> ' + esc(c.note(ref, job.id)) + '. ' + esc(c.desk) + '</div>';
+    + '<strong>' + (c.key === 'staffEstate' ? 'Cannot go to Havellin&rsquo;s people.' : 'Conflict of interest.') + '</strong> '
+    + esc(c.note(ref, job.id)) + '. ' + esc(c.desk) + '</div>';
+}
+// The staff caution a line raises, through the one rule: the living client's conflict, or the estate's mirror (P22).
+function _invStaffCaution(ref, jobId) {
+  return invReleaseCautions(ref, jobId, 'staffRecipient')[0] || invReleaseCautions(ref, jobId, 'staffEstate')[0] || null;
 }
 
+// ⚠ THE PERSON LEFT IN Channel / Recipient (P22), in the line's record, with the one press that says the name is right.
+function _invPanelLeftoverHtml(job, ref) {
+  var t = invChannelLeftoverText(ref);
+  if (!t) return '';
+  return '<div class="inv-panel-leftover" style="margin-bottom:10px;font-size:11px;line-height:1.5;color:#8a5a1e;">&#9888; ' + esc(t)
+    + ' <button class="btn-s" onclick="invKeepChannel(' + job.id + ',\'' + ref.stableId + '\')">Keep the name</button></div>';
+}
 // ⚠ THE FIREARM BLOCK OF A LINE'S RECORD (P16): whether it may be carried, and on a line going to a
 // named person, its dealer route. It answers from `invTransportBlocked` and the route helpers and
 // never re-derives either, so the panel, the worklist and the gate cannot disagree about a firearm.
@@ -33470,7 +33791,7 @@ function _invFirearmPanelHtml(job, ref) {
   var route = invDealerRoute(ref);
   var status = why
     ? '<div style="color:#A32D2D;">&#9888; Not cleared to carry: ' + esc(invTransportReason(ref, job)) + '</div>'
-    : '<div style="color:var(--ok-tx);">&#10003; Cleared to carry. Anthony Graziano alone takes it to '
+    : '<div style="color:var(--ok-tx);">&#10003; Cleared to carry. Havellin&rsquo;s named principal alone takes it to '
       + esc(invTransportDealer(ref)) + ', in a locked case.</div>';
   var routeHtml = '';
   if (invDealerRouteOffered(ref)) {
@@ -33746,7 +34067,7 @@ function _invExportValue(ref, col, job, seq) {
     case 'flagExempt': case 'flagBequest': case 'flagDisputed': return ref[col.key] ? 'Yes' : '';
     // ⚠ WHO AUTHORIZED IT, EACH SIGNER WITH THEIR OWN DAY (P20, Q24): the workbook is the spreadsheet the client keeps, so
     // it carries the one readable form, never the stored field, which holds ISO dates once the signers' days differ.
-    case 'authBy': return invApprovalSignedText(ref);
+    case 'authBy': return invApprovalSignedText(ref, job);
     default: { var v = ref[col.key]; return (v == null) ? '' : v; }
   }
 }
@@ -36621,7 +36942,8 @@ function renderLogHistory(jobId) {
 
   logs.forEach(function(entry) {
     var dateStr = new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-    var teamStr = entry.members.map(function(m){ return '<span style="display:block;font-size:11px;">' + m.name + ' <strong>' + fmtHrs(m.hours) + 'h</strong></span>'; }).join('');
+    // ⚠ A NAME AND AN ACTIVITY ARE TEXT A PERSON TYPED (P22): escaped, as everywhere else a record reaches innerHTML.
+    var teamStr = entry.members.map(function(m){ return '<span style="display:block;font-size:11px;">' + esc(m.name) + ' <strong>' + fmtHrs(m.hours) + 'h</strong></span>'; }).join('');
     var tcHrs = entry.members.filter(function(m){ return m.role==='TC'; }).reduce(function(a,m){ return a+m.hours; },0);
     var psHrs = entry.members.filter(function(m){ return m.role==='PS'; }).reduce(function(a,m){ return a+m.hours; },0);
     tcHrs = tcHrs ? fmtHrs(tcHrs) : 0; psHrs = psHrs ? fmtHrs(psHrs) : 0;   // as logged, quarters and all (P17)
@@ -36629,7 +36951,7 @@ function renderLogHistory(jobId) {
     html += '<tr>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;white-space:nowrap;">' + dateStr + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);">' + teamStr + '</td>' +
-      '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--gray);">' + (entry.activity||'—') + '</td>' +
+      '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;color:var(--gray);">' + (entry.activity ? esc(entry.activity) : '—') + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;text-align:center;">' + (tcHrs||'—') + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;text-align:center;">' + (psHrs||'—') + '</td>' +
       '<td style="padding:9px 12px;border-bottom:1px solid var(--border);"><button class="icon-btn del" onclick="deleteLogEntry(' + jobId + ',' + entry.id + ')">✕</button></td>' +

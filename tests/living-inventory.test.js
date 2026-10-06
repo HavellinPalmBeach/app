@@ -72,7 +72,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
   '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
   // P16: the dealer route, the one field-on-this-job rule, and the photo folders the share names.
-  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
+  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
   // P19: the bequest caution asks the job's bequest list; written authority is every fiduciary's.
   'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete',
   'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'inventoryNetLabel', 'invRepresentativeTitle',
@@ -458,8 +458,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(ctx.invReleaseCautions(both, 2).map((c) => c.key).indexOf(k) >= 0,
          k + ' fires on a living job too');
     });
-    eq(ctx.INV_RELEASE_CAUTIONS.filter((c) => c.fid).map((c) => c.key).join(','), 'needsAppraisal',
-       'exactly one caution is fiduciary-only');
+    // RESTATED P22: the estate's staff mirror (`staffEstate`) is fiduciary-only too.
+    eq(ctx.INV_RELEASE_CAUTIONS.filter((c) => c.fid).map((c) => c.key).join(','), 'staffEstate,needsAppraisal',
+       'the estate staff mirror and the appraisal caution are fiduciary-only');
   }
 
   group('⚠ A TRANSITION HAS A NEW HOME BEFORE ANYONE HAS TYPED THE ADDRESS');

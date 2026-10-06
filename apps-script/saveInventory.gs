@@ -142,7 +142,7 @@ function _writeInventorySheet(ss, payload) {
       sh.getRange(2, cNet, rows.length, 1).setFormulas(netFormulas);
     }
     [cFmv, cGross, cFees, cNet].forEach(function(c) {
-      if (c) sh.getRange(2, c, rows.length, 1).setNumberFormat('$#,##0');
+      if (c) sh.getRange(2, c, rows.length, 1).setNumberFormat('$#,##0.00');
     });
   }
   sh.autoResizeColumns(1, Math.min(nCol, 9));
@@ -300,7 +300,7 @@ function _writeSummarySheet(ss, payload) {
   var fmvRow = 0;
   if (sv) {
     fmvRow = t;
-    put(t,1,'Total Estimated FMV');      sh.getRange(t,2).setFormula('=SUM(' + rng(C.fmv) + ')').setNumberFormat('$#,##0'); t++;
+    put(t,1,'Total Estimated FMV');      sh.getRange(t,2).setFormula('=SUM(' + rng(C.fmv) + ')').setNumberFormat('$#,##0.00'); t++;
     put(t,1,'Items Awaiting Valuation'); sh.getRange(t,2).setFormula('=COUNTIFS(' + rng(C.item) + ',">0",' + rng(C.fmv) + ',"")'); t++;
   }
   t++;
@@ -327,12 +327,12 @@ function _writeSummarySheet(ss, payload) {
   // family asks about the dining table — the same reason the printed Contents Record keeps
   // these three while carrying no FMV at all.
   put(t,1, fid ? 'PROCEEDS (reconciliation)' : 'PROCEEDS RECEIVED'); bold(t,1); t++;
-  put(t,1,'Gross'); sh.getRange(t,2).setFormula('=SUM(' + rng(C.gross) + ')').setNumberFormat('$#,##0'); t++;
-  put(t,1,'Fees');  sh.getRange(t,2).setFormula('=SUM(' + rng(C.fees) + ')').setNumberFormat('$#,##0');  t++;
+  put(t,1,'Gross'); sh.getRange(t,2).setFormula('=SUM(' + rng(C.gross) + ')').setNumberFormat('$#,##0.00'); t++;
+  put(t,1,'Fees');  sh.getRange(t,2).setFormula('=SUM(' + rng(C.fees) + ')').setNumberFormat('$#,##0.00');  t++;
   // Headed for whoever holds the proceeds, as the app states it (P19, E7: "Net to Estate" was false on a trust). An app
   // build from before P19 sends no `netLabel` and gets the heading it always had.
   put(t,1, payload.netLabel || (fid ? 'Net to Estate' : 'Net received'));
-  sh.getRange(t,2).setFormula('=SUM(' + rng(C.net) + ')').setNumberFormat('$#,##0'); t++;
+  sh.getRange(t,2).setFormula('=SUM(' + rng(C.net) + ')').setNumberFormat('$#,##0.00'); t++;
 
   // The app sends its own lists; the fallbacks only catch a pre-2026-08-24 payload.
   var cats  = (payload.categories   && payload.categories.length)   ? payload.categories   : INV_CATEGORIES_FALLBACK;
@@ -347,13 +347,13 @@ function _writeSummarySheet(ss, payload) {
     r++; first = r;
     for (var i = 0; i < cats.length; i++, r++) {
       put(r,4,cats[i]);
-      sh.getRange(r,5).setFormula('=SUMIF(' + rng(C.cat) + ',$D' + r + ',' + rng(C.fmv) + ')').setNumberFormat('$#,##0');
+      sh.getRange(r,5).setFormula('=SUMIF(' + rng(C.cat) + ',$D' + r + ',' + rng(C.fmv) + ')').setNumberFormat('$#,##0.00');
       sh.getRange(r,6).setFormula('=COUNTIF(' + rng(C.cat) + ',$D' + r + ')');
     }
     // A total under the category rows, so a reader can see at a glance that the breakdown
     // reconciles to Total Estimated FMV. When it did not, nothing on the sheet said so.
     put(r,4,'Total (should equal B' + fmvRow + ')'); bold(r,4);
-    sh.getRange(r,5).setFormula('=SUM(E' + first + ':E' + (r - 1) + ')').setNumberFormat('$#,##0');
+    sh.getRange(r,5).setFormula('=SUM(E' + first + ':E' + (r - 1) + ')').setNumberFormat('$#,##0.00');
     sh.getRange(r,6).setFormula('=SUM(F' + first + ':F' + (r - 1) + ')');
   } else {
     // Counts, not money. A column headed FMV over an engagement that prices nothing is an
@@ -490,6 +490,85 @@ function _mergeCustodyLogs(a, b) {
   return out;
 }
 
+// ⚠⚠ TWO DEVICES RECORDING DIFFERENT SIGNERS ON ONE LINE KEEP BOTH (P22). The manifest merges whole items on
+// `updatedAt`, and `authBy` is sticky only where the winner has none, so Ruth's signature recorded on one iPad and
+// Daniel's on another before either synced kept only the newer device's: the line read as approved by one co-trustee and
+// went back on the next request. The signers are unioned per line now, on both sides (the app's mergeMediaItems and the
+// server's _mergeMediaItems carry this rule byte for byte; a test drives both). Entries are the ones Record approval
+// writes, separated by ";" or a line break (a comma inside a name stays put), keyed on the name with its date and any
+// bracketed role taken off, case and spacing ignored.
+// ⚠ A CORRECTION IS NOT UNDONE BY A STALE COPY: a hand edit of the field (the item record's Authorized By box) stamps
+// `authBySetAt`, a deliberate clear stamps `clearedAt.authBy`, and Record approval stamps each name it adds in
+// `authAdds`. The copy with the later hand edit is the base; a name only the other copy holds is added only when it was
+// recorded after that edit. With no hand edit on either side every name is kept. Each signer keeps their own date (or
+// their copy's `approvalDate`), the field is written plainly while every date is one day, and `approvalDate` is the
+// latest. Returns the fields to write over the winner's copy, or null when there is nothing to change.
+function _invApprovalEntries(it) {
+  var out = [];
+  var parts = String((it && it.authBy) || '').split(/\s*(?:;|\n)\s*/);
+  for (var i = 0; i < parts.length; i++) {
+    var text = String(parts[i] || '').trim();
+    if (!text) continue;
+    var own = /\s*\((\d{4}-\d{2}-\d{2})\)$/.exec(text);
+    if (own) text = text.slice(0, own.index).trim();
+    var key = text.replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    if (!key) continue;
+    out.push({ key: key, text: text, date: own ? own[1] : String((it && it.approvalDate) || '').trim() });
+  }
+  return out;
+}
+function _invApprovalSetAt(it) {
+  var a = Number((it && it.authBySetAt) || 0);
+  var c = Number((it && it.clearedAt && it.clearedAt.authBy) || 0);
+  return a > c ? a : c;
+}
+function _invMergeApprovals(win, lose) {
+  if (!win || !lose) return null;
+  var setW = _invApprovalSetAt(win), setL = _invApprovalSetAt(lose);
+  var adds = {}, k, hasAdds = false;
+  var srcs = [win.authAdds || {}, lose.authAdds || {}];
+  for (var s = 0; s < srcs.length; s++) {
+    for (k in srcs[s]) if (Object.prototype.hasOwnProperty.call(srcs[s], k)) {
+      var t = Number(srcs[s][k]) || 0;
+      if (!(adds[k] >= t)) adds[k] = t;
+      hasAdds = true;
+    }
+  }
+  var fx = {};
+  if (hasAdds) fx.authAdds = adds;
+  var setAt = setW > setL ? setW : setL;
+  if (setAt) fx.authBySetAt = setAt;
+  var wa = String(win.authBy || '').trim(), la = String(lose.authBy || '').trim();
+  var baseIsLose = setL > setW;
+  var base = baseIsLose ? lose : win, other = baseIsLose ? win : lose;
+  // A cleared or empty base keeps the sticky rule's answer; the same list on both sides needs nothing.
+  if (!String(base.authBy || '').trim() || wa === la) return (hasAdds || setAt) ? fx : null;
+  var be = _invApprovalEntries(base), oe = _invApprovalEntries(other);
+  var have = {};
+  for (var i = 0; i < be.length; i++) have[be[i].key] = true;
+  var added = 0;
+  for (var j = 0; j < oe.length; j++) {
+    var e = oe[j];
+    if (have[e.key]) continue;
+    if (setAt && !(Number(adds[e.key] || 0) > setAt)) continue;
+    have[e.key] = true;
+    be.push(e);
+    added++;
+  }
+  if (!added && !baseIsLose) return (hasAdds || setAt) ? fx : null;
+  if (!added) { fx.authBy = lose.authBy; fx.approvalDate = lose.approvalDate; return fx; }
+  var oneDay = true, last = '';
+  for (var m = 0; m < be.length; m++) {
+    if (be[m].date !== be[0].date) oneDay = false;
+    if (be[m].date > last) last = be[m].date;
+  }
+  var texts = [];
+  for (var n = 0; n < be.length; n++) texts.push(be[n].text + (oneDay || !be[n].date ? '' : ' (' + be[n].date + ')'));
+  fx.authBy = texts.join('; ');
+  fx.approvalDate = last || String(base.approvalDate || '');
+  return fx;
+}
+
 function _mergeMediaItems(existing, incoming) {
   var byId = {}, order = [];
   // The winner is COPIED, never mutated — `existing` is the store blob this function was
@@ -513,6 +592,9 @@ function _mergeMediaItems(existing, incoming) {
       var v = _invStickyValue(win, lose, key);
       if (v !== undefined) out[key] = v;
     }
+    // The signers, unioned per line (P22): the same rule as the app's mergeMediaItems.
+    var ap = _invMergeApprovals(win, lose);
+    if (ap) for (var ak in ap) if (Object.prototype.hasOwnProperty.call(ap, ak)) out[ak] = ap[ak];
     return out;
   };
   var take = function(list) {
