@@ -46,7 +46,9 @@ A test holds the write path to the fields in §5 and fails on any key above.
    This reverses the 2026-09-21 rule that a living job never enters values (`invNeedsAppraisal`'s
    comment); §8 says how, and the contract question it raises.
 3. **The agent's number stands until an appraisal replaces it.** An appraisal linked to the line
-   (`valSource: 'Appraisal'`) wins; the agent's figure stays in the record as the prior estimate.
+   (`valSource: 'Appraisal'`) wins, and the agent's figures go with it (Anthony, 2026-10-06: the agent's
+   value does not stay on the record): `valLow`, `valHigh`, `valComps`, `valLookup` and `valConf` are
+   cleared and `valuedBy` becomes `'appraiser'`. The appraisal is the only figure the line carries.
 4. **A range that crosses the appraisal threshold flags the item for an appraiser.** A $2,500 to $4,000
    range is an appraisal, whatever the point value says (§6).
 5. **WorthPoint is the confirming source, by hand.** No public API (checked 2026-10-05); browser
@@ -277,12 +279,14 @@ Measure on the first real estate before tuning. Cost does not drive the model ch
 
 ---
 
-## 12 · OPEN, FOR ANTHONY
+## 12 · ANSWERED (Anthony, 2026-10-06)
 
-1. ~~§8~~ Answered 2026-10-06: internal figures only where counsel values, used for routing and to recommend appraisals without a figure.
-2. **Does an unreviewed agent value keep a schedule from reading FINAL?** Today a schedule is FINAL
-   only with every line valued. Recommended: an unreviewed agent value counts as valued but the
-   schedule says *N values not yet reviewed*, like the *IN PROGRESS* stamp, and nothing is withheld.
-3. **Does the Court Inventory or Trust Schedule name the basis per line** (*auction comps*, *general
-   estimate*)? Recommended yes: it is what makes the figure defensible, and the column exists.
-4. **WorthPoint's answer** to the partnership inquiry, if it changes §4.
+1. **§8:** internal figures only where counsel values, used for routing and to recommend appraisals
+   without a figure.
+2. **An unreviewed agent value counts as valued** for FINAL; the schedule says *N values not yet
+   reviewed*, as the *IN PROGRESS* stamp does, and nothing is withheld.
+3. **The Court Inventory and the Trust Schedule name the basis on each line** (*auction comps*,
+   *general estimate*, *WorthPoint comps*, *appraisal*).
+4. **An appraisal replaces the agent's figures** rather than sitting beside them (§2.3).
+
+Still open: WorthPoint's answer to the partnership inquiry, if it changes §4.
