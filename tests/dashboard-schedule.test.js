@@ -234,7 +234,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const done = sched({ start: '2026-09-21', status: 'closed', activatedOn: '2026-09-21', deliveredOn: '2026-10-02' }, '2026-10-10');
     eq(done.state, 'done', 'a delivered job is history');
-    eq(done.endVariance, 10, 'and it reports what it actually took');
+    eq(done.workedDays, 10, 'and it reports what it actually took');
 
     // ⚠ DOM-FREE AND CLOCK-FREE, the same rule jobTimeline follows.
     const sb = noComments(fn('jobSchedule'));
@@ -246,7 +246,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('the schedule strip — a projection never wears the clothes of a record');
   {
-    const V = sandbox({ fns: ['jtScheduleHtml'], stubs: { fmtDate2: (d) => 'D:' + d } });
+    const V = sandbox({ fns: ['jtScheduleHtml', '_jtSchedDeadlinesHtml'], stubs: { fmtDate2: (d) => 'D:' + d } });
     const base = { state: 'planned', days: 6, daysQuoted: true, start: '2026-09-21',
                    halfway: '2026-09-23', planEnd: '2026-09-28', today: '2026-09-14' };
 
@@ -429,11 +429,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // no hard target: an error-coloured warning nobody can act on, visible in the screenshot
     // that asked for these two fields to move here. A stub that does not match the real source
     // is worse than no stub — this repo has now paid for that twice.
-    const DFNS = ['renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts',
+    const DFNS = ['renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts',
       'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'esignSignedCopyGaps', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-      'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
+      'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
       // Lifted, never stubbed (2026-09-29): jobProgress now counts every in-scope room's status before it
       // checks the room's hours, for the every-room-locked midpoint, so it reaches this on every fixture.
       'roomStatusNormalize',
@@ -444,8 +444,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',
       // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
-      'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn'];
-    const DVARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
+      'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote'];
+    const DVARS = ['_driveFolderInFlight', 'PROBATE_PKG_KEY', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
       'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
@@ -639,7 +639,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineDoc', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'finalAwaitsHours', 'estimateIsFeeOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'jobStageDoc', 'docReadiness',
             'docDraftOnly', 'docTitle', 'paymentStageWord', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
-            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs'],
+            'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'esignFiledCopies'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
     });
     const REC = { estimate: { jobId: 7 }, approved: true };
@@ -817,7 +817,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-            'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'],
+            'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'],
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
     });
@@ -871,5 +871,56 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // quietly add a second.
     eq((jtBody.match(/new Date\(\)/g) || []).length, 1,
        'the one pre-existing clock read is the walkthrough test, and it stays alone');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // P22: the estate's own dates do not wait for a plan. The court deadline and the Form 706 date printed only on a job
+  // with an estimate AND a target start; a job with no estimate drew no strip at all, so on Neither or an unanswered
+  // Estate Settlement (no Probate or Trust card) the 706 date was nowhere on screen. Driven through the real
+  // jobSchedule and the real strip.
+  group('P22 — the court deadline and the Form 706 date print before an estimate and before a target start');
+  {
+    const S = sandbox({
+      fns: ['jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
+        'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix',
+        'estateTaxReturnDue', 'estateTaxReturn', 'estateTaxReturnWords', 'esc'],
+      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY', 'ESTATE_TAX_RETURN_WARN_DAYS'],
+      stubs: { fmtDate2: (d) => 'D:' + d },
+    });
+    const strip = (job, est, today) => {
+      try { return S.jtScheduleHtml(S.jobSchedule(Object.assign({ id: 7, svc: 'cleanout', status: 'new' }, job), est, today || '2026-10-03')); }
+      catch (e) { return 'THREW ' + e.message; }
+    };
+    const DEATH = { deathDate: '2026-02-10', gate706: 'yes' };
+    // No estimate at all.
+    const neither = strip(Object.assign({ matterType: 'neither' }, DEATH), null);
+    has(neither, 'Form 706 due D:2026-11-10', '⚠⚠ Neither, no estimate: the 706 date is on the strip');
+    has(neither, '<span class="jt-sched-lbl">Schedule</span>', '…as the Schedule strip');
+    lacks(neither, 'working day', '…and nothing of a plan the job does not have');
+    has(strip(Object.assign({}, DEATH), null), 'Form 706 due D:2026-11-10', '⚠ an unanswered Estate Settlement, no estimate: the same');
+    has(strip({ deathDate: '2026-02-10', gate706: '' }, null), 'Form 706, if a return is filed, due D:2026-11-10', 'unfirm while the 706 is unanswered');
+    const pr = strip(Object.assign({ svc: 'probate', matterType: 'probate', probateDeadline: '2026-12-15' }, DEATH), null);
+    ok(pr.indexOf('Court deadline D:2026-12-15') > 0 && pr.indexOf('Form 706 due') > pr.indexOf('Court deadline'),
+      '⚠ probate, no estimate: the court deadline, then the 706 date');
+    lacks(strip(Object.assign({ matterType: 'neither', completion: '2026-12-01' }, DEATH), null), 'Hard target',
+      'no estimate: no hard target (there is no plan to set one against), only the estate’s dates');
+    has(strip(Object.assign({ matterType: 'neither', start: '2026-10-19' }, DEATH), { days: 0, totTC: 0, totPS: 0 }), 'Form 706 due',
+      'an estimate with no derivable length: the 706 date all the same');
+    has(strip(Object.assign({}, DEATH), null, '2026-10-24'), 'jt-s-err', 'red inside thirty days, before an estimate too');
+    // Nothing to say: still nothing at all (no "no schedule yet" line).
+    eq(strip({ matterType: 'neither', deathDate: '2026-02-10', gate706: 'no' }, null), '', 'a 706 answered no and no estimate: no strip');
+    eq(strip({ svc: 'downsizing' }, null), '', 'a living client with no estimate: no strip');
+    eq(strip({ svc: 'probate', matterType: 'trust', probateDeadline: '2026-12-15', deathDate: '2026-02-10', gate706: 'no' }, null), '',
+      'a trust-only matter carries no court deadline, here as on a planned job');
+    // No target start.
+    const ns = strip(Object.assign({ svc: 'probate', matterType: 'probate', probateDeadline: '2026-12-15' }, DEATH), { days: 6, svc: 'probate' });
+    has(ns, 'No target start on this job', 'no target start: still named');
+    has(ns, 'Court deadline D:2026-12-15', '⚠⚠ …and the court deadline beside it');
+    has(ns, 'Form 706 due D:2026-11-10', '⚠⚠ …and the 706 date');
+    ok(ns.indexOf('Form 706') < ns.indexOf('jt-sched-note'), '…on the strip, above the fix');
+    has(strip({ completion: '2026-12-01' }, { days: 6, svc: 'cleanout' }), 'Hard target D:2026-12-01', 'and a hard target, where there is a plan to hold to it');
+    // A delivered job is history, as before.
+    lacks(strip(Object.assign({ status: 'closed', start: '2026-09-21', activatedOn: '2026-09-21', deliveredOn: '2026-09-30' }, DEATH), { days: 6, svc: 'cleanout' }),
+      'Form 706', 'a delivered job: unchanged, no 706 date on the strip');
   }
 };

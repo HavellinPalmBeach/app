@@ -231,7 +231,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const after = text(row('g', true));
     has(after, 'To Marie Delgado (daughter), through Palm Beach Arms (FFL), a licensed dealer', 'the record names the route');
     has(after, 'recorded by Ashley Jerome', 'and who recorded it');
-    has(after, 'Cleared to carry. Anthony Graziano alone takes it to Palm Beach Arms (FFL)', 'and that it may now be carried, by whom and to where');
+    has(after, 'Cleared to carry. Havellin’s named principal alone takes it to Palm Beach Arms (FFL)', 'and that it may now be carried, by whom and to where');
     has(row('g', true), "invSetDealerRoute(7,'g',false)", 'with a way to take it off');
     has(text(row('g', false)), 'via Palm Beach Arms (FFL)', 'and the desk row names the route');
     lacks(text(row('g', false)), 'no dealer route', 'in place of the missing-route chip');
@@ -457,7 +457,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('B22b · Remove line takes the line — photographed, split or typed — and never the photograph', () => {
     const confirms = [], trashCalls = [], discards = [];
     let answer = true;
-    const rig = (refs) => lift(['invRemoveLine', 'removeInventoryManualItem', 'restoreInventoryItem', '_renderRemovedRows', 'loadPhotoRefs', '_invAssignItemNos'],
+    const rig = (refs) => lift(['invRemoveLine', 'restoreInventoryItem', '_renderRemovedRows', 'loadPhotoRefs', '_invAssignItemNos'],
       ['renderInventoryTab', '_scheduleInventorySync', 'driveTrashFile', '_trashShotFiles', 'discardShot', 'showSyncBadge', '_warnPhotoStoreFull'], {
         jobs: [Object.assign({}, ESTATE)], _photoRefs: { 7: refs },
         renderInventoryTab: () => {}, _scheduleInventorySync: () => {}, showSyncBadge: () => {}, _warnPhotoStoreFull: () => {},
@@ -491,12 +491,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([trashCalls.length, discards.length], [0, 0], '⚠⚠ Drive is never asked to trash anything, and the shot binner is never called');
     eq(p.driveFileId, 'fp', 'the removed line still points at its photograph, for Restore');
 
-    // A split line, a typed one (through the old name too) and one whose photo never reached Drive.
+    // A split line, a typed one and one whose photo never reached Drive.
     confirms.length = 0;
     s.invRemoveLine(7, 'd1');
     ok(s._getPhotoRef(7, 'd1').deletedAt > 0 && !s._getPhotoRef(7, 'd2').deletedAt, 'a split line comes off alone');
     has(confirms[0], 'Remove item #2 — Banksy print?', 'asked about by name');
-    s.removeInventoryManualItem(7, 'm');
+    s.invRemoveLine(7, 'm');
     ok(s._getPhotoRef(7, 'm').deletedAt > 0, 'a typed line comes off through the same writer');
     eq(s._getPhotoRef(7, 'm').deletedBy, 'Ashley Jerome', 'recording who');
     lacks(confirms[1], 'photograph', 'and a typed line\'s question does not mention a photograph it never had');
@@ -549,7 +549,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const grab = (name) => (gs.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}')) || [''])[0];
     const gctx = {}; vm.createContext(gctx);
     vm.runInContext([(gs.match(/var INV_STICKY_FIELDS = \[[\s\S]*?\];/) || [''])[0], grab('_invHasVal'), grab('_invStickyValue'),
-                     grab('_custodyEventId'), grab('_mergeCustodyLogs'), grab('_mergeMediaItems')].join('\n\n'), gctx);
+                     grab('_custodyEventId'), grab('_mergeCustodyLogs'), grab('_invApprovalEntries'), grab('_invApprovalSetAt'), grab('_invMergeApprovals'),
+                     grab('_mergeMediaItems')].join('\n\n'), gctx);
     ok(typeof gctx._mergeMediaItems === 'function', 'fixture: the server merge is lifted');
     [gctx._mergeMediaItems([removed], [stale])[0], gctx._mergeMediaItems([stale], [removed])[0]].forEach((x, i) => {
       eq([x.deletedAt, x.deletedBy], [200, 'Ashley Jerome'], 'nor on the sheet (server, order ' + i + ')');

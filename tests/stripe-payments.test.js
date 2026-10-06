@@ -470,7 +470,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ─── THE APP SIDE OF THE READ-BACK ───────────────────────────────────────────
   // A sandbox holding the real recorder over the real payment helpers, so the record that
   // comes out is the one `isJobFunded`, the rail and the invoice all read.
-  const RB_FNS = ['applyStripePayments', '_stripeHandMatch', '_handAchAwaitingStripe', '_paymentKey', 'paymentSummaryText', 'paymentMethodLabel', 'paymentStageLabel', 'paymentStageWord', '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_stripeDue', 'outstandingPayments',
+  const RB_FNS = ['applyStripePayments', '_stripeHandMatch', '_handAchAwaitingStripe', '_paymentKey', 'paymentSummaryText', 'paymentMethodLabel', 'paymentStageLabel', 'paymentStageWord', '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_stripeDue', 'outstandingPayments', 'stripeStagePaid',
                   'stripeRefresh', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
                   'depositClearedTotal', 'isJobFunded', 'depositTargetFor', '_photoUid',
                   '_jobTouch', 'docState', 'fmt', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit', 'roundCents', 'paymentSplit'];

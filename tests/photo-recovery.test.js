@@ -46,11 +46,11 @@ function rig(opts) {
   const ctx = sandbox({
     // The room workspace's shot strip is where a failed shot shows now (2026-09-19); the
     // per-slot badge it replaced lived on room cards that no longer exist.
-    fns: ['_doPhotoUpload', '_getPhotoRef', '_setPhotoRef', '_slotRefs', '_roomShotStripHtml',
+    fns: ['_doPhotoUpload', '_getPhotoRef', '_setPhotoRef', '_slotRefs', '_roomShotStripHtml', 'shotMarkLostOffered',
           '_invDetailRefs', '_invFileId', '_roomShotThumbStyle',
           'discardShot', '_shotDesc', '_trashShotFiles',
           '_invDerivedRefs', '_invNamed', '_invItemNo'],
-    vars: ['PHOTO_UPLOAD_TIMEOUT_MS', '_localShotThumbs'],
+    vars: ['PHOTO_UPLOAD_TIMEOUT_MS', '_localShotThumbs', '_photoUploadsLive'],
     stubs: {
       jobs: [{ id: 1, driveFolder: 'https://drive.google.com/drive/folders/FOLDER' }],
       _photoRefs: { 1: [] },

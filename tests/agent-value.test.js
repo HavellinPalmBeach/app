@@ -710,7 +710,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient'],
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient',
+            // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'],
       stubs: {

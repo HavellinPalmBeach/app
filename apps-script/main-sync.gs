@@ -55,6 +55,8 @@
 // (routing order 1, their own tabs) and answers with who it put there; esignStatus finds the client by recipientId
 // '1' and reports each co-signer. No action or type changes. An older deployment sends to the client and Anthony
 // alone, and the app records that the co-representatives were not on the envelope.
+// ⚠ 2026-10-06 (P22): saveInventory.gs only — the manifest merge unions each line's approval signers, and the client's
+// workbook states its money to the cent. No action or type changes; the app's BACKEND_MIN_VERSION names it.
 // ⚠ 2026-10-06b (P23): Agent Two, `agentValue` — the desk values its unvalued lines (AGENT_TWO_SPEC.md). A new action,
 // so an older deployment is named by the action the app finds missing, not by version.
 var BACKEND_VERSION = '2026-10-06b';

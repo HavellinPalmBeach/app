@@ -72,7 +72,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
   '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
   // P16: the dealer route, the one field-on-this-job rule, and the photo folders the share names.
-  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
+  'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
   // P19: the bequest caution asks the job's bequest list; written authority is every fiduciary's.
   'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete',
   'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'inventoryNetLabel', 'invRepresentativeTitle',
@@ -81,7 +81,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
-  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord'];
+  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'photoSharesLine', 'photoSharesOf'];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',

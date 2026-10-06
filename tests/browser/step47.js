@@ -195,7 +195,7 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       await p.fill('#ia-date', '2026-09-30').catch((e) => ok(false, 'the date — ' + e.message.split('\n')[0]));
       await press('#ia-save-btn', 'Record approval in the dialog');
       await press('#ia-actions button[onclick="closeInvApproval()"]', 'Done');
-      has(await txt('#inv-row-g1'), 'Cleared to carry. Anthony Graziano alone takes it to Palm Beach Arms (FFL)',
+      has(await txt('#inv-row-g1'), 'Cleared to carry. Havellin’s named principal alone takes it to Palm Beach Arms (FFL)',
           '⚠⚠ with the authority recorded the firearm is cleared to carry, to the dealer on its route');
       has(await txt('#inv-row-n1'), 'NFA item — never transported by Havellin', 'the NFA item is not, authority or no authority');
       await press('#inv-workbar details > summary', 'More');

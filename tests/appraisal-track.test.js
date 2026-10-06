@@ -31,14 +31,14 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode
                   'invIsIntrinsic', 'invCatMeta', '_invJob',
                   // P16: the documents name a firearm's dealer route, the worklist counts only what the
                   // import panel still offers, and the bulk handler asks the one field-on-this-job rule.
-                  'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer',
+                  'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', 'invChannelLeftover',
                   '_importableFromEstimate', '_importedSourceSet', '_invKeyOnJob', '_invColOnJob',
                   // P19: the bequest caution asks the job's bequest list; written authority is every fiduciary's.
                   'invBequestElsewhere', 'invBequestFor', 'jobListEntries',
                   'invApprovalComplete', 'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', '_andJoin',
                   'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf', 'invHavellinRecipient',
                   // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-                  'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
+                  'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
 const APPR_VARS = ['INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                    'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
@@ -499,7 +499,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ];
     let badge = '';
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invBulkApply', 'invReleaseCautions', '_invNamed', '_invItemNo',
+      fns: APPR_FNS.concat(['_invBulkApply', 'invNoteDispositionMove', 'invReleaseCautions', '_invNamed', '_invItemNo',
                             '_invPicked', '_jobInvRefs', '_invTouch', '_invMatchesFilter',
                             '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invRoomName']),
       vars: APPR_VARS.concat(['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS']),

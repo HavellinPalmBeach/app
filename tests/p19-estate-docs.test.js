@@ -57,7 +57,7 @@ function readers(name, call) {
 // ── The agreement and the client estimate: the reconciliation suite's lift list, and what an answered matter reaches
 //    that its unanswered fixtures never do (estateAuthority, jobOnProbateTrack, the trust's accounting sentence), the
 //    trust's namer and the anchor measure.
-const AGR_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', 'esignAnchorsPresent', '_ceGroupedSpaces', 'esignCoSignerAnchors']);
+const AGR_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', '_agrTrusteeRepresentation', 'esignAnchorsPresent', '_ceGroupedSpaces', 'esignCoSignerAnchors', 'esignCoSignerTop']);
 const AGR_VARS = DOCREC.VARS.concat(['ESIGN_REQUIRED_ANCHORS', 'AGR_NOT_AN_ACCOUNTING', 'ESIGN_COSIGNER_ANCHOR']);
 // One sandbox for the whole file (building one compiles ~170 functions, and the renders are pure): each render starts
 // from the same empty stores, with only the job it is about on the client list.
@@ -96,9 +96,9 @@ const SCH_FNS = [
   'invAppraisalThreshold', '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney', '_invDocName',
   'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames',
   'docScopeDef', 'weArrangeAppraisals', 'roundCents', 'fmt', 'fmtDate2',
-  'trustInstrumentTitle', 'fmtCEDate', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'jobListEntries'];
+  'trustInstrumentTitle', 'fmtCEDate', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'samePerson', 'canonPersonName', 'jobListEntries'];
 const SCH_VARS = ['INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'INV_ASSET_TRACKS',
-  'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'EXEMPT_CAP_732_402', 'INV_CATEGORIES', 'DOC_SCOPES'];
+  'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'EXEMPT_CAP_732_402', 'INV_CATEGORIES', 'DOC_SCOPES', 'PERSON_NAME_ALIASES'];
 const IT = (id, o) => Object.assign({ stableId: id, label: 'inventory', objectName: 'Item ' + id, category: 'Furniture', condition: 'Good',
   qty: '1', ts: Number(String(id).replace(/\D/g, '')) || 1, fmv: '4000' }, o || {});
 let _schCtx = null;   // one sandbox, the job and its inventory set per print (as docCtx)
@@ -536,7 +536,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     eq(readers('docEstateAuthority'), { _cePhases: 1, probateAgreementHtml: 1 }, 'the documents\' paper: the agreement and Exhibit A');
     // The lead (P19, after the merge) gave the client estimate's identity line the same namer: one more reader.
-    eq(readers('trustInstrumentTitle'), { clientEstimateHtml: 1, printTrustSchedule: 2, probateAgreementHtml: 2 }, 'the trust\'s namer: the agreement\'s two rows, the schedule\'s header and the client estimate\'s identity line');
+    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, clientEstimateHtml: 1, printTrustSchedule: 2, probateAgreementHtml: 2 },  // P22 E: §5.1's dated acceptance
+       'the trust\'s namer: the agreement\'s two rows, the schedule\'s header and the client estimate\'s identity line');
     eq(readers('scheduleSigners'), { printCourtInventory: 2, printTrustSchedule: 2 }, 'who signs a schedule: the two schedules');
     eq(readers('scheduleSignLines'), { printCourtInventory: 1, printTrustSchedule: 1 }, 'and their lines');
     eq(readers('_agrCounsel'), { _agrScopeServices: 1, probateAgreementHtml: 2 }, 'counsel\'s names: §1.2, §2 and §2.1');

@@ -28,15 +28,15 @@ const TIER_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
 
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docTierProduces', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
-const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
+const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'].concat(TIER_VARS);
 
 const CE_FNS = ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'isDecedentJob', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', 'estateProceedsHolder'].concat(TIER_FNS);
-const CE_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'ESTATE_AUTHORITIES']
+const CE_VARS = ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'ESTATE_AUTHORITIES']
   .concat(TIER_VARS);
 
 const EST = {
@@ -258,7 +258,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // DOC_TIERS is the one menu both forms build from, and each tier's `they` is counsel's half of
     // the deal. `values` read "Counsel prepares the filing." — silent on the appraisals, and the
     // appraisals are the only thing separating it from the tier above, which prices the same.
-    const c = sandbox({ vars: ['DOC_TIERS'] });
+    const c = sandbox({ vars: ['CE_FOUND_PAPERS_TXT', 'DOC_TIERS'] });
     const tiers = c.DOC_TIERS;
     const byKey = (k) => tiers.filter((t) => t.key === k)[0] || {};
     tiers.filter((t) => t.produces && t.produces.inventory && !t.produces.appraisals).forEach((t) => {

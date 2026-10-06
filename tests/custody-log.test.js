@@ -186,8 +186,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ABSENCE of the raw read across the file rather than the presence of the fixed one.
     lacks(noComments(src), 'var nC = (ref.custodyLog || []).length;',
           'no raw-length read survives anywhere');
-    eq((noComments(src).match(/var nC = custodyEvents\(ref\)\.length;/g) || []).length, 2,
-       'both count sites read the live list');
+    // RESTATED P22: the old table's site (`_invCell`'s `seq` branch) was unreachable and is deleted; the panel's is the one.
+    eq((noComments(src).match(/var nC = custodyEvents\(ref\)\.length;/g) || []).length, 1,
+       'the count site reads the live list');
 
     const empty = ctx([]);
     empty._renderCustodyList();
@@ -203,9 +204,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const m = sandbox({
       fns: ['_invEdit', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull',
-            '_invTouch', 'moneyToNumber', '_invHasVal', 'invStickyValue'],
+            '_invTouch', 'moneyToNumber', '_invHasVal', 'invStickyValue',
+            // P22: the Authorized By box saves the stored form (invApprovalBoxToStored), asked of the job.
+            'invApprovalBoxToStored', 'invApprovalBoxText', 'invApprovalSigners', 'invApprovalSignedText', 'invRecipientName',
+            '_invReadableDay', '_invJob'],
       vars: ['INV_STICKY_FIELDS'],
-      stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _scheduleInventorySync() {},
+      stubs: { jobs: [], fmtDate2: (d) => String(d || ''), _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _scheduleInventorySync() {},
                _invNetDisplay: () => '', renderInventoryTab() {} },
     });
     m._photoRefs[3] = [{ stableId: 'a', label: 'inventory', collId: null }];

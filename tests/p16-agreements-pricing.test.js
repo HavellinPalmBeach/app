@@ -154,7 +154,7 @@ const TIER_FNS = ['weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTie
 const TIER_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                  '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
@@ -606,7 +606,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([p0.totTC, p0.totPS], [s0.totTC, s0.totPS], '⚠⚠ and Premium itself adds no hours: the same hours as the standard estate, at the higher rates');
     eq(p0.havellinTotal, C(p0.totTC * 185 + p0.totPS * 125), 'priced at $185 / $125 and nothing else');
     const pf0 = E(run(true, false, true)), pf1 = E(run(true, true, true));
-    eq(C(pf1.fixedAmount - pf0.fixedAmount), C(370 * 1.2), 'a Premium fixed-price suggestion carries it too, with its contingency ($' + pf0.fixedAmount + ' → $' + pf1.fixedAmount + ')');
+    // RESTATED P22 E: each suggestion is rounded up to the next $100 (fixedFeeSuggested), so the move is $444 to within $100.
+    ok(Math.abs(C(pf1.fixedAmount - pf0.fixedAmount) - C(370 * 1.2)) < 100 && pf1.fixedAmount % 100 === 0, 'a Premium fixed-price suggestion carries it too, with its contingency ($' + pf0.fixedAmount + ' → $' + pf1.fixedAmount + ')');
     const pp0 = E(run(true, false, false, 'probate')), pp1 = E(run(true, true, false, 'probate'));
     eq(C(pp1.havellinTotal - pp0.havellinTotal), 370, 'and a Premium Probate ($' + pp0.havellinTotal + ' → $' + pp1.havellinTotal + ')');
     // Switching Premium off and on changes the rate, never the line's hours.
@@ -785,7 +786,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',
         'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote',
         'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent',
-        'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord', 'estateAuthority'],
+        'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord', 'estateAuthority', 'agreementHandOverDraftNote'],
       vars: ['JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'DECEDENT_SERVICES', 'DOC_STAGE_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false, SHEETS_SYNC_URL: '' } });
     // A job closed with every step before the final recorded, so the final is the one lit step (checked below).

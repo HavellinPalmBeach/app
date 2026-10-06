@@ -327,7 +327,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('the strip prints both figures, and withholds the one it cannot stand behind');
   {
-    const V = sandbox({ fns: ['jtScheduleHtml'], stubs: { fmtDate2: (d) => 'D:' + d } });
+    const V = sandbox({ fns: ['jtScheduleHtml', '_jtSchedDeadlinesHtml'], stubs: { fmtDate2: (d) => 'D:' + d } });
     const run = (over) => V.jtScheduleHtml(Object.assign({ state: 'running', days: 6,
       daysQuoted: true, start: '2026-09-21', halfway: '2026-09-23', planEnd: '2026-09-28',
       today: '2026-09-24', elapsed: 4, actualStart: '2026-09-21', actualStartKind: 'activated' },
@@ -379,19 +379,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // every check above drives a PIECE (`jobProgress` alone, `jobSchedule` alone, the strip
     // alone) and nothing drove the join. That is the same gap this repo has recorded four
     // times; the fix is always to drive the real renderer and read the real output.
-const DFNS = ['renderClientDashboard', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts',
+const DFNS = ['renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts',
       'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'esignSignedCopyGaps', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-      'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
+      'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
       'agreementReady', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docSentAt', 'docKeyFor',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent',
-      'roomStatusNormalize', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn'];
-    const DVARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
+      'roomStatusNormalize', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote'];
+    const DVARS = ['_driveFolderInFlight', 'PROBATE_PKG_KEY', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY',
       'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',

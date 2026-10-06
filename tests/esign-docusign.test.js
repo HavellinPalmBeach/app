@@ -102,7 +102,7 @@ const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'jobOnProbateTrack', '
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'estTolerancePctTxt', 'esignAnchorsPresent', 'estFixedFee', 'estPrepFeeOnTop',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'esignCoSignerAnchors'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'esignCoSignerAnchors', 'esignCoSignerTop'];
 const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
                   'ESIGN_REQUIRED_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE', 'ESIGN_COSIGNER_ANCHOR'];
 const appCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -471,7 +471,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠⚠ ON AN ESTATE JOB THE NAMED CLIENT IS DECEASED. bestClientEmail correctly falls back to the
     // representative, then counsel — so pairing that address with job.name would put a dead
     // person's name on a signature request for their own estate, sent to their executor's inbox.
-    const c = sandbox({ fns: ['esignSigner', 'clientRecipient', 'isDecedentJob', 'firstName'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', ] });
+    const c = sandbox({ fns: ['esignSigner', 'esignClientSignerRefusal', 'clientRecipient', 'isDecedentJob', 'firstName'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', ] });
     eq(c.esignSigner({ name: 'Jane Doe', email: 'jane@x.com' }),
        { name: 'Jane Doe', email: 'jane@x.com' }, 'a living client signs for themselves');
 
@@ -500,7 +500,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let posted = null;
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
-            'docState', '_jobTouch', '_actor', 'esignSigner', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending', 'clientRecipient', 'isDecedentJob', 'firstName',
+            'docState', '_jobTouch', '_actor', 'esignSigner', 'esignClientSignerRefusal', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending', 'clientRecipient', 'isDecedentJob', 'firstName',
             'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: {
@@ -565,12 +565,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
             'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_stamp',
-            'esignSigner', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
+            'esignSigner', 'esignClientSignerRefusal', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
             'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
             'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'clientRecipient', 'firstName', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority',
-            'esignCoSigners', '_agrCoSigners', 'jobFiduciaries'],
+            'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'agreementHandOverDraftNote'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_PROVIDERS', 'ESIGN_RECHECK_MINS', 'AGR_SIG_METHODS',
              'JT_ROW_DOC', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: {
@@ -662,7 +662,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'docState', '_jobTouch', '_actor', 'esignProviderKey', 'esignJobWatches',
             'agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
-            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'],
+            'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'AGR_SIG_METHODS', 'JT_SHORT', 'JT_NEXT', 'DOC_KIND_WORD'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {},
                esignArchiveSigned() {}, ESIGN_PROVIDER_KEY: 'docusign' },
@@ -746,7 +746,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // missing and say so — a person reads it before it goes. An envelope with no document is a
     // signature request for nothing, mailed to the client automatically with nobody in between.
     const mk = (over) => sandbox({
-      fns: ['esignSigner', 'clientRecipient', 'isDecedentJob', 'firstName', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
+      fns: ['esignSigner', 'esignClientSignerRefusal', 'clientRecipient', 'isDecedentJob', 'firstName', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: Object.assign({ SHEETS_SYNC_URL: 'https://script.example/exec',
                              _appsScriptPost: (u, b, cb) => cb(true, { ok: true, envelopeId: 'e' }) }, over) });
     const spec = (job) => ({ job, kind: 'agreement', key: 'agreement',
@@ -797,7 +797,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
             'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docKeyFor', 'docSentAt', 'esignAvailable',
-            'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents'],
+            'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents', 'esignFiledCopies'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
       stubs: { ESIGN_PROVIDER_KEY: key } });
     const row = { key: 'agreement_sent', state: 'current' };
@@ -899,7 +899,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'applyEsignStatus', '_localDateOf', '_ymdLocal',
             'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature', 'docState',
-            '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docStateBare', '_saveArrivalCheck'],
+            '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docStateBare', '_saveArrivalCheck', '_armFiling'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -1390,9 +1390,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       let posted = null;
       const c = sandbox({
         fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor',
-              'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'clientRecipient', 'isDecedentJob', 'firstName',
+              'esignSigner', 'esignClientSignerRefusal', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'clientRecipient', 'isDecedentJob', 'firstName',
               'esignCoSignerAnchors', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode',
-              'esignSharedEmails'],  // P21: the send names signers sharing one address (Q32)
+              'esignSharedEmails', 'esignCoSignerTop'],  // P21: the send names signers sharing one address (Q32)
         vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS', 'ESIGN_COSIGNER_ANCHOR'],
         stubs: {
           SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -1631,7 +1631,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['dashCheckEsign', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes',
               'applyEsignStatus', '_localDateOf', '_ymdLocal', 'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature',
               'docState', '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey',
-              'isAgreementSent', 'docSentAt', 'docKeyFor', '_esignRecordBlockerText', 'docStateBare', '_saveArrivalCheck'],
+              'isAgreementSent', 'docSentAt', 'docKeyFor', '_esignRecordBlockerText', 'docStateBare', '_saveArrivalCheck', '_armFiling'],
         vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
         stubs: {
           SHEETS_SYNC_URL: 'https://script.example/exec',

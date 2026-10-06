@@ -206,7 +206,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (svc) => {
       const d = classDom({ 'i-svc': svc }, {});
       const c = sandbox({
-        fns: ['toggleIntakeFields', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+        fns: ['toggleIntakeFields', 'courtRecordRequired', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -314,7 +314,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (svc) => {
       const d = classDom({ 'i-svc': svc }, marks);
       const c = sandbox({
-        fns: ['toggleIntakeFields', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
+        fns: ['toggleIntakeFields', 'courtRecordRequired', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute',
               'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
               'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -348,7 +348,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'readCoFiduciaryRows', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', '_coFidRowNums', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'],
+        fns: ['saveIntake', 'coFiduciaryRepRefusal', 'coFiduciaryRepClash', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'courtRecordRequired', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'readCoFiduciaryRows', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', '_coFidRowNums', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'],
         vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'MATTER_TYPES'],
         stubs: {
           document: d,
@@ -470,7 +470,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // Every one of them is something a person sees and no source needle noticed.
   group('driving the Edit Client modal');
   {
-    const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'ecPaintSvcFlag', 'matterDef', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
+    const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'ecPaintSvcFlag', 'matterDef', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc',
                     'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass',
                     'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
                     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',

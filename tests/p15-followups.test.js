@@ -158,7 +158,7 @@ const TIER_FNS = ['weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTie
 const TIER_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                  '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
@@ -167,7 +167,7 @@ const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'SVC_LA
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
 const ceCtx = () => sandbox({ fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'isDecedentJob', 'esc', 'estimateAppraiserNames', 'estimateAppraiserLines', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', 'estateProceedsHolder'].concat(TIER_FNS),
-                              vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'ESTATE_AUTHORITIES'].concat(TIER_VARS),
+                              vars: ['CE_FOUND_PAPERS_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'ESTATE_AUTHORITIES'].concat(TIER_VARS),
                               stubs: { isFormalDoc: () => true } });
 const EST_ESTATE = { svc: 'probate', jobId: 1, docScope: 'full', tcFee: 18500, psFee: 12500, pkgCost: 1500,
                      pkgLabel: 'Estate Premium — $1,500', smf: 0, prepFee: 0, havellinTotal: 32500, totTC: 100, totPS: 100,

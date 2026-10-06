@@ -152,7 +152,8 @@ const SWITCH = 'Switch the service to Estate Settlement before the estimate is a
       await p.selectOption('#i-executor-role', 'Trustee');
       await p.fill('#i-executor-phone', '5615550101'); await p.fill('#i-executor-email', 'ruth@adler.example');
       await p.fill('#i-trust-name', 'Adler Family Trust'); await date('#i-trust-date', '2015-03-03');
-      await p.fill('#i-probate-case', '2026-CP-006200');
+      // A Probate service on a trust is off the probate track: since P22 it is not asked a case number (courtRecordRequired).
+      ok(!(await shown('#i-probate-case')), 'the court record is not asked on a trust (P22)');
       await p.fill('#i-probate-atty-fname', 'Ann'); await p.fill('#i-probate-atty-lname', 'Lowe'); await p.fill('#i-probate-atty-firm', 'Lowe & Co');
       await p.fill('#i-probate-atty-phone', '5615550102'); await p.fill('#i-probate-atty-email', 'ann@lowe.law');
       await p.fill('#i-home-value', '2500000').catch(() => {});

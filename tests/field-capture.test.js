@@ -551,7 +551,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
@@ -688,14 +688,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!w.INV_WORK_FLAGS[0].test({ objectName: 'Sideboard' }), 'and drops off once named');
 
     const rowCtx = sandbox({
-      fns: ['_renderInvRow', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
+      fns: ['_renderInvRow', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             // P19: the row names a bequest, an incomplete approval and a receipt owed; the recipient box offers the roster.
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', '_invPanelCautionHtml'],
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelCautionHtml', '_invPanelLeftoverHtml'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
              'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'],

@@ -96,7 +96,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ M4 — Win / Loss counts what a retained job KEPT, and the list says so');
   {
     const W = sandbox({ fns: ['winLossFigures', 'isJobWon', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobPayments', 'winLossListHtml', 'jobRefundedTotal', 'refundCounts', 'paymentLive', 'isRefundRecord',
-      '_wlClientCell', '_jobStatusCell', 'fmtDate2', 'jobStatusView', 'svcLabelOf', 'depositTargetFor', 'stagePaidTotal', 'roundCents', 'fmt', 'paymentSplit'],
+      '_wlClientCell', '_jobStatusCell', 'fmtDate2', 'jobStatusView', 'jobClosedRefunded', 'svcLabelOf', 'depositTargetFor', 'stagePaidTotal', 'roundCents', 'fmt', 'paymentSplit'],
       vars: ['WON_METHOD_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'SVC_LABELS', 'LOSS_REASONS'] });
     W.jobs = [
       { id: 1, name: 'Butler', status: 'active', won: true, havellinEst: 20000, payments: [p('deposit', 10000)] },
@@ -136,7 +136,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ M5 — courtRecordShown: wider than the track, because a required field must never be hidden');
   {
-    eq(M.courtRecordShown('probate', 'trust'), true, 'a Probate service always shows the case fields — the save requires the case number there');
+    // ⚠ RESTATED P22: a Probate service on a matter answered Trust or Neither is off the probate track (P20, Q26), and the
+    // save no longer requires a case number there (courtRecordRequired), so the court record is not shown either.
+    eq(M.courtRecordShown('probate', 'trust'), false, 'a Probate service on a trust matter is not asked the court record (off the probate track)');
+    eq(M.courtRecordShown('probate', ''), true, 'a Probate service whose matter is unanswered is on the track, and is asked');
     eq(M.courtRecordShown('cleanout', 'probate'), true, '⚠⚠ an Estate Settlement on a probate matter shows them now (it had nowhere to enter a case)');
     eq(M.courtRecordShown('cleanout', 'both'), true, '…a pour-over will too');
     eq(M.courtRecordShown('cleanout', 'trust'), false, 'a trust matter does not');
@@ -183,7 +186,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(d.getElementById('ec-probate-deadline').value, '2026-11-30', '⚠ a deadline set by hand (an extension the court granted) is never recounted over');
   }
 
-  const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
+  const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
     'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
     'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
     'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -250,7 +253,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const run = (svc, matter) => {
       const d = domStub({ 'i-svc': svc, 'i-matter-type': matter });
-      const c = sandbox({ fns: ['toggleIntakeFields', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'estimateOutForApproval', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode',
+      const c = sandbox({ fns: ['toggleIntakeFields', 'courtRecordRequired', 'paintProbateSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack', 'estimateOutForApproval', 'courtRecordShown', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode',
         'intakeAsksHouseContents', 'onDocGateChange', '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docTierOf', 'docTierDef',
         'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob',
         'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'showHouseFlagRows', 'houseFlagAsked', 'roundCents', 'fmt', 'trustRecordShown', 'propertySaleAsked', 'executorAuthField', 'estateAuthority'],
@@ -263,7 +266,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(run('cleanout', 'probate'), 'block', '⚠⚠ an Estate Settlement on a probate matter is shown the court record at intake');
     eq(run('cleanout', 'trust'), 'none', 'a trust matter is not');
     eq(run('cleanout', ''), 'none', 'nor an unanswered one');
-    eq(run('probate', 'trust'), 'block', 'a Probate service always is — its case number is required');
+    eq(run('probate', 'trust'), 'none', 'a Probate service on a trust is not (P22: off the track, no case number required)');
+    eq(run('probate', 'probate'), 'block', 'on the probate track it is');
     has(src, '<select id="i-matter-type" onchange="toggleIntakeFields()">', '…and the matter select repaints it on change');
   }
 
@@ -549,14 +553,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the rail, driven: the retained row names what was kept; Home Prep names its second payment');
   {
     const TL_FNS = ['estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending',
-      'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries',
+      'agrApprovalWithdrawn', 'jobTimeline', 'jobClosedRefunded', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries',
       'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'resolveExecutorAuth', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'jobPaidTotal',
       'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
       'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
       'workingDaysInclusive', 'coWorkingDays', '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf',
-      'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt', 'estateAuthority'];
+      'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt', 'estateAuthority', 'agreementHandOverDraftNote'];
     const TL_VARS = ['JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS',
       'ESIGN_PROVIDERS', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'EXECUTOR_AUTH_OPTIONS'];

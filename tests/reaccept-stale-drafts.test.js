@@ -222,7 +222,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // The rail — the real jobTimeline and jobTimelineActions, the fixture shape price-lock-won-status uses.
   const RAIL = sandbox({
-    fns: uniq(['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'depositVoidFlag', 'agreementHandedOverInPerson',
+    fns: uniq(['agrApprovalWithdrawn', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'esignFiledCopies', 'agreementHandOverDraftNote', 'docReadOnlyWord', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'estimateSubmitBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
       'docPreviewOnly', 'agreementReady', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
@@ -493,7 +493,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('the manager and the concierge are told: checkPin warns on screen, the email carries the same sentence');
   {
-    const ST_FNS = uniq(['checkPin', 'resolvePin', 'unscoredRoomNames', 'estimateContractBlocker', 'estimateContractMissing',
+    const ST_FNS = uniq(['checkPin', 'estimateApprovalTierBlocker', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'resolvePin', 'unscoredRoomNames', 'estimateContractBlocker', 'estimateContractMissing',
       'isDecedentJob', 'svcHasDocStep', 'matterTypeOf', 'docTierOf', 'docTierDef', 'buildLockSnapshot', 'estimateEventStatus',
       'dashNotice', '_dashRedraw', '_jobBandHost'].concat(PRICE_FNS));
     const ST_VARS = ['_dashboardJobId', '_dashNotice', 'estimateApproved', 'estimateSubmitted', 'discountRevision', 'approvedBy',

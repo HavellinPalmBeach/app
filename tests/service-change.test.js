@@ -546,8 +546,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-01 (P17, answer 6): both sums are carried to the cent (roundCents), term for term.
     has(fn('calcAll'), 'var havellinTotal = roundCents(tcFee + psFee + pkgCost + smf + prepFee);',
         'the services total adds only the five fees that exist');
-    has(fn('invoiceHtml', 'jobLogEntries'), 'var havellinTotal = roundCents(tcFee + psFee + pkgCost + smf + prepFee);',
-        'and the invoice agrees with it, term for term');
+    // RESTATED P22: the invoice's own `havellinTotal` was an alias nothing read (CLAUDE.md, Open work), held only by the
+    // `has` that stood here. It is gone; the invoice's services figure is havellinTotalDiscounted (its `servicesTotal`),
+    // and this holds it to carrying no second, unread sum of the five fees under the old name.
+    {
+      const inv = fn('invoiceHtml', 'jobLogEntries').split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+      ok(inv.length > 20000 && inv.indexOf('havellinTotalDiscounted') > 0, 'the invoice body is read (and prints havellinTotalDiscounted)');
+      eq((inv.match(/(^|[^.\w])havellinTotal(?!\w)/g) || []).length, 0, '⚠ and declares or reads no bare havellinTotal: no unread alias of the services sum');
+    }
   }
 
   group('migrations that could never run are gone');
@@ -596,7 +602,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Every one of the four sites reads the shared predicate, so the toggle cannot drift from
     // the render or from what saveClientEdit reads back out.
     const tog = fn('ecToggleProbate');
-    has(tog, 'ecIsProbateSvc(svcVal)', 'the toggle asks the predicate');
+    // Restated P22: the attorney's required marks follow the track (courtRecordRequired), the rule the save asks.
+    has(tog, 'courtRecordRequired(svcVal,', 'the toggle asks the predicate');
     has(tog, 'ecIsEstateSvc(svcVal)', 'for both blocks');
     lacks(tog, "svcVal === 'probate' ?", 'no bare probate-only test survives');
     lacks(tog, "svcVal === 'cleanout'", 'nor an inline estate list that omitted contested probate');

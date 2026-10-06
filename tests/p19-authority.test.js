@@ -400,7 +400,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   G('A7 · jobSchedule carries the date, and the strip prints it beside the court deadline', () => {
-    const S = lift(['jobSchedule', 'jtScheduleHtml'], [], { fmtDate2: (d) => 'D:' + d });
+    const S = lift(['jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml'], [], { fmtDate2: (d) => 'D:' + d });
     const EST6 = { days: 6, svc: 'cleanout' };
     const sched = (job, today) => S.jobSchedule(Object.assign({ id: 7, svc: 'cleanout', deathDate: '2026-02-10', gate706: 'yes', start: '2026-10-19' }, job), EST6, today);
     const p = sched({}, '2026-10-03');
@@ -491,6 +491,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([v.cell, v.lbl, v.sale], ['', 'Letters of Administration', ''], 'a Probate service not yet answered: the Letters, and the sale with the court record');
     v = look('cleanout', 'trust');
     eq(v.lbl, 'Certification of Trust', 'and back again, live');
+  });
+
+  G('P22 · intake refuses the representative as their own co-representative, by name', () => {
+    const r = intakeRig();
+    r.c.addCoFiduciaryRow('i');
+    r.d.getElementById('i-cofid-0-name').value = 'rex hale';
+    r.d.getElementById('i-cofid-0-role').value = 'Co-Trustee';
+    r.c.saveIntake();
+    eq(r.c.jobs.length, 0, '⚠⚠ refused: nothing is written');
+    eq((r.said.fb[0] || {}).m, 'rex hale is the representative on this estate, so cannot also be a co-representative: take that row off with ✕ Remove.', 'named, as typed');
+    r.d.getElementById('i-cofid-0-name').value = 'Daniel Adler';
+    r.said.fb.length = 0;
+    r.c.saveIntake();
+    eq(((r.c.jobs[0] || {}).coFiduciaries || []).map((c) => [c.name, c.role]), [['Daniel Adler', 'Co-Trustee']], 'anyone else is saved');
   });
 
   G('A4 · A5 · A6 · intake saves the trust, the sale answer and every co-representative', () => {

@@ -769,7 +769,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const calls = [];
       const dom = domStub({ 'e-job': { value: String(bound) }, 'est-loading-bar': { style: { display: loading ? 'block' : 'none' } },
                             'e-discount': { value: '10' } });
-      const c = sandbox({ fns: ['openEstimateScreen', 'followDocTier'],
+      const c = sandbox({ fns: ['openEstimateScreen', 'followJobService', 'followDocTier'],
         stubs: { document: dom, currentEstimate: currentJob ? { jobId: currentJob } : null,
                  _showDashScreen() {}, calcAll: () => calls.push('calcAll'), applyEstimateLock() {},
                  editEstimateForJob: (id) => calls.push('open:' + id), resetEstimateJobState: () => calls.push('reset'),

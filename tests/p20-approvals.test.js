@@ -369,7 +369,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const h = (S.__log.printed[0] || {}).html || '', t = text(h);
     const at = (s) => h.indexOf(s);
     ok(at('Already released: for ratification') > 0, '⚠⚠ the ratification section prints');
-    has(t, 'These items left the property before every co-trustee had approved their release in writing. They are listed apart from the items above, for the signature of Ruth Adler and Daniel Adler, which ratifies each release; nothing is undone.',
+    has(t, 'These items left the property before every co-trustee had approved their release in writing. They are listed apart from the item above, for the signature of Ruth Adler and Daniel Adler, which ratifies each release; nothing is undone.',
         'its sentence: already released, for whose signature, nothing undone');
     const main = h.slice(0, at('Already released: for ratification')), rat = h.slice(at('Already released: for ratification'), at('Approved by:'));
     has(text(main), 'Sargent portrait', 'the line still here is asked for in the main list');
@@ -425,15 +425,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const O = desk(['printApprovalRequest'], TRUST(), [LINE('o', 1, { objectName: 'Clock', disposition: 'Sell', dispDate: '2026-10-02', authBy: 'Ruth Adler', approvalDate: '2026-09-30' })]);
     O.printApprovalRequest(7);
     const ot = flat((O.__log.printed[0] || {}).html);
-    has(ot, 'To Ruth Adler and Daniel Adler: the items listed below have already left the property and are listed for your signature.', 'the intro says so');
+    has(ot, 'To Ruth Adler and Daniel Adler: the item listed below has already left the property and is listed for your signature.', 'the intro says so (one line: singular, P22)');
     lacks(ot, 'ready to be released', 'never "ready to be released"');
     lacks(ot, 'Nothing on this list will be moved', 'nor that nothing will be moved');
     has(ot, 'Verbal approval is not accepted.', 'verbal approval is still not accepted');
-    has(ot, 'They are listed here for the signature of Daniel Adler, which ratifies each release; nothing is undone.', 'and the section names who signs');
+    has(ot, 'It is listed here for the signature of Daniel Adler, which ratifies the release; nothing is undone.', 'and the section names who signs');
     // One representative on a probate estate: the role's words.
     const PR = desk(['printApprovalRequest'], PROBATE(), [LINE('p', 1, { objectName: 'Clock', disposition: 'Sell', dispDate: '2026-10-02' })]);
     PR.printApprovalRequest(8);
-    has(text((PR.__log.printed[0] || {}).html), 'These items left the property before the Personal Representative had approved their release in writing. They are listed here for the signature of Tripp Butler',
+    has(text((PR.__log.printed[0] || {}).html), 'This item left the property before the Personal Representative had approved its release in writing. It is listed here for the signature of Tripp Butler',
         'one representative: named by role and by name');
   });
 
@@ -527,7 +527,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(decl('INV_RELEASE_CAUTIONS')), 'invHavellinRecipient(r, _invJob(jobId))', 'the living caution reads the same definition');
     ['_invEdit', '_invBulkApply'].forEach((n) => lacks(noComments(fn(n)), 'invHavellinRecipient(', n + ' never asks the definition bare (the estate refusal is invStaffRefused)'));
     // Every surface that prints who signed reads the one readable form.
-    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', '_invExportValue', 'invApprovalGap', 'printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml'],
+    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', '_invExportValue', 'invApprovalBoxText', 'invApprovalGap', 'printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml'],
        '⚠ the request, the flag, the panel, the ledger, the package\'s record, the workbook');
     ['printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml', '_invExportValue', 'invApprovalGap'].forEach((n) =>
       ok(!/esc\(r\.authBy|String\(r\.authBy\)|String\(ref\.authBy\)\.trim\(\) \+ ', '/.test(noComments(fn(n))), n + ' never prints the stored field'));

@@ -538,7 +538,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // ─── STRIPE ─────────────────────────────────────────────────────────────────
   const RB_FNS = ['applyStripePayments', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentStageLabel', 'paymentStageWord',
-    '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_todayStr', '_stripeDue', 'outstandingPayments', 'stripeRefresh', 'jobPayments',
+    '_stripeRecordPayment', '_localDateOf', '_ymdLocal', '_todayStr', '_stripeDue', 'outstandingPayments', 'stripeStagePaid', 'stripeRefresh', 'jobPayments',
     'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey', 'stagePaidTotal', 'depositPaidTotal', 'depositClearedTotal', 'isJobFunded', 'depositTargetFor',
     '_photoUid', '_jobTouch', 'fmt', 'fmtDate2', 'docStateBare', '_saveArrivalCheck', '_saveJobEdit', 'paymentSummaryText', 'paymentMethodLabel',
     'jobPaymentsListHtml', 'esc', 'roundCents', 'paymentSplit'];
@@ -748,7 +748,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'docState', '_jobTouch', 'paymentSplit', 'unscoredRoomNames',
         'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
         'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'paymentLive', 'isRefundRecord',
-        'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', '_localDateOf', '_ymdLocal', 'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'estDeclutterHrs', 'roundCents', 'fmtHrs', 'estateAuthority'],
+        'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', '_localDateOf', '_ymdLocal', 'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'estDeclutterHrs', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'],
       vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual', REQUIRE_WALKTHROUGH_NOTES: false } });
     const rj = Object.assign({ name: 'Butler', created: 'Sep 8, 2026', svc: 'cleanout', status: 'won', walkthrough: '2020-01-01', approved: true, won: true,
@@ -1016,8 +1016,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-01 (P17): the archive files only an agreement executed in DocuSign whose copy is missing
     // (esignSignedCopyGaps), so the fixture is one: signed through the envelope, nothing filed yet.
     const mk = (folderId, answer) => sandbox({ fns: ['esignArchiveSigned', 'docState', '_jobTouch', 'esignSignedCopyGaps', 'agreementSignature',
-                                                     'docStateBare', '_saveArrivalCheck'], vars: ['ESIGN_RECHECK_MINS', '_esignFiling'],
-      stubs: { SHEETS_SYNC_URL: 'https://x', jobs: [{ id: 1, docState: { agreement: { esign: { envelopeId: 'env1' },
+                                                     'docStateBare', '_saveArrivalCheck', '_armFiling'], vars: ['ESIGN_RECHECK_MINS', '_esignFiling', 'FILING_WATCHDOG_MS'],
+      stubs: { setTimeout: () => 0, clearTimeout() {}, SHEETS_SYNC_URL: 'https://x', jobs: [{ id: 1, docState: { agreement: { esign: { envelopeId: 'env1' },
         sig: { how: 'esign', signedBy: 'Tripp Butler', signedOn: '2026-09-22', envelopeId: 'env1' } } } }],
         resolveSubfolderId: (job, sub, cb) => cb(folderId), _appsScriptPost: (u, b, cb) => cb(answer.ok, answer.d),
         docNames: () => ({ drive: 'Agreement – HVL-1.pdf' }), _docNotice: (t, m) => notices.push(String(m)), saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {} } });

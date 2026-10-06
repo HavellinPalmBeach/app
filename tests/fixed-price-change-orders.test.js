@@ -388,16 +388,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobActivationBlockers', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
-      'jobSchedule', 'jtScheduleHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
+      'jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
       // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
       'roomStatusNormalize',
       'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'coHours', 'dot', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coInclTxt',
       // Lifted, never stubbed: the band's change-order-hours sub asks estimateIsFeeOnly once an accepted
       // change order exists, so a sandbox without it throws rather than failing when that filter is broken.
-      'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs'];
+      'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote'];
     const VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',

@@ -173,7 +173,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const said = [], landed = [], timers = [];
     const c = sandbox({
-      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'],
+      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'courtRecordRequired', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'],
       vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: d, jobs: [], showFB: (el, k, m) => said.push({ el, k, m }),
                saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
@@ -208,7 +208,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const landed3 = [];
     const c3 = sandbox({
-      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'esc', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'],
+      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'esc', 'clientMissingFields', 'courtRecordRequired', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'],
       vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: d3, jobs: [], showFB() {}, saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
                clearIntakeForm() {}, populateAgrSelect: null, showPanel() {}, generateHvlId: () => 'HVL-0009',
@@ -225,7 +225,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d2 = domStub({ 'i-svc': 'downsizing', 'i-fname': 'Tripp' });
     const landed2 = [];
     const c2 = sandbox({
-      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'matterDef', 'matterTypeOf', 'invFiduciaryMode'],
+      fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'courtRecordRequired', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'matterDef', 'matterTypeOf', 'invFiduciaryMode'],
       vars: ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'DECEDENT_SERVICES', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: d2, jobs: [], showFB() {}, saveJobs() {}, syncJobToSheets() {}, createDriveJobFolder() {},
                clearIntakeForm() {}, populateAgrSelect: null, showPanel() {}, generateHvlId: () => 'HVL-0008',
@@ -245,7 +245,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                           'est-loading-bar': { style: { display: o.loading ? 'block' : 'none' } } });
       const log = [];
       const c = sandbox({
-        fns: ['openEstimateScreen', 'followDocTier'],
+        fns: ['openEstimateScreen', 'followJobService', 'followDocTier'],
         stubs: { document: d, currentEstimate: o.cur === undefined ? null : o.cur,
                  _showDashScreen: (id) => log.push('show:' + id), calcAll: () => log.push('calc'),
                  applyEstimateLock: () => log.push('lock'), editEstimateForJob: (id) => log.push('open:' + id) },
@@ -362,7 +362,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docSentAt', 'docKeyFor', '_jtSendAction', '_jtDocViews',
             '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'esignAvailable', 'esignProviderKey', 'esignJobWatches',
-            'agreementSignature', 'isAgreementSigned', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents'],
+            'agreementSignature', 'isAgreementSigned', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents', 'esignFiledCopies'],
       vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS',
              'ESIGN_PROVIDER_KEY', 'AGR_SIG_METHODS'],
       stubs: { SHEETS_SYNC_URL: '' },

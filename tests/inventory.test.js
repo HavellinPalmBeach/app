@@ -13,7 +13,7 @@ const { sandbox } = require('./harness');
 const INV_FNS = [ 'invDocContractBlock', 'docTierProduces',
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
-  '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems',
+  '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems', 'invMergeApprovals', '_invApprovalEntries', '_invApprovalSetAt',
   'mergeCustodyLogs', '_custodyEventId', 'invStickyValue', '_invHasVal',
   '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
   '_apprGroups', '_apprWithheld', '_apprNFA',
@@ -454,7 +454,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const WL_FNS = INV_FNS.concat([
       '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags',
       // P16: the gate reads the dealer route, and the flags count only what the import panel still offers.
-      'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
+      'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', 'invChannelLeftover', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
       'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat', 'invMAIVCategory',
       'isDecedentJob', '_gate706', 'roundCents', 'fmt',
@@ -685,7 +685,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('restore issues a fresh number when the old one has been taken');
   {
-    const r = sandbox({ fns: ['restoreInventoryItem', '_getPhotoRef', '_setPhotoRef',
+    const r = sandbox({ fns: ['restoreInventoryItem', 'invDetailsRemovedWith', '_getPhotoRef', '_setPhotoRef',
                               'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch',
                               '_jobInvRefs', '_invAssignItemNos', '_invItemNo'],
                         stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
@@ -822,7 +822,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The tombstone keeps every value on the row. That was designed for merge
     // correctness, and it means a mis-click is fully recoverable — but nothing offered
     // it back, so a $500,000 line with a linked appraiser was gone for good.
-    const r = sandbox({ fns: ['_invRemovedRows', 'restoreInventoryItem', '_getPhotoRef',
+    const r = sandbox({ fns: ['_invRemovedRows', 'restoreInventoryItem', 'invDetailsRemovedWith', '_getPhotoRef',
                               '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull',
                               '_invTouch', '_jobInvRefs'],
                         stubs: { renderInventoryTab() {}, _scheduleInventorySync() {} } });

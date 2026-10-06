@@ -120,7 +120,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const d = domStub(Object.assign({}, base, over));
       const said = [];
       const c = sandbox({
-        fns: ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'readCoFiduciaryRows', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', '_coFidRowNums', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'], vars: ['EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
+        fns: ['saveIntake', 'coFiduciaryRepRefusal', 'coFiduciaryRepClash', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth', 'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'courtRecordRequired', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'readCoFiduciaryRows', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', '_coFidRowNums', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'], vars: ['EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', 'DOC_TIERS', 'REFERRAL_SOURCES', 'referralDirectory', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
         stubs: {
           document: d, jobs: [],
           showFB: (el, kind, msg) => said.push({ kind, msg }),
@@ -152,7 +152,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('Edit Client carries it, and discards an answer it does not recognise');
   {
-    const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecPaintSvcFlag', 'probateSvcFlag', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
+    const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecPaintSvcFlag', 'probateSvcFlag', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
                     'ecDocGateChange', 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml', 'houseFlagsOf',
                     '_houseFlagRowClass', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute', '_gateYes', '_gate706',
                     'isDecedentJob', 'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect',

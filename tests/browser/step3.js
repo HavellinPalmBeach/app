@@ -174,7 +174,7 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   eq(est.none, 'none', 'None at None');
   eq(est.legacy, 'capture', 'and a legacy job opens exactly where it always did');
   eq(est.agree, '', 'agreeing says nothing');
-  ok(/Intake recorded Contents list/.test(est.disagree), 'disagreeing names the TIER, which is the word the attorney was told: ' + JSON.stringify(est.disagree));
+  ok(/documentation tier is Contents list/.test(est.disagree), 'disagreeing names the TIER, which is the word the attorney was told: ' + JSON.stringify(est.disagree));
   ok(!/Capture only;/.test(est.disagree), 'and not our pricing word for it');
   eq(est.unanswered, '', 'an unanswered tier claims nothing about what intake recorded');
 

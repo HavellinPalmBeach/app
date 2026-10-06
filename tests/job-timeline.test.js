@@ -59,14 +59,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: [
-      'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', 'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobPaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+      'agrApprovalWithdrawn', 'jobTimeline', 'jobClosedRefunded', 'depositVoidFlag', 'agreementHandedOverInPerson', 'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobPaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments',
       'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
       // Slice 4: the rail reads where each document has been.
       'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
       'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove'
-    , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority'],
+    , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'],
     // The short names the horizontal track uses. A top-level var, so the sandbox has to
     // be told about it — without it `row()` throws and every check in the file is lost.
     vars: ['EXECUTOR_AUTH_OPTIONS', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_SHORT', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],

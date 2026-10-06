@@ -22,7 +22,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
+const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrTrusteeRepresentation', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
                  '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',

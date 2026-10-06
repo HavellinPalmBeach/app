@@ -27,14 +27,14 @@ const FNS = ['_invScheduleSection', 'invValBasisWord', '_invTrackDefault',
   'maivFilingApplies', 'invReleaseCautions', '_invCautionBadges', '_invCautionNotices',
   '_invNamed', '_invDateTime', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames',
   // P16: the dealer route, the import panel's own list, and the photo folders the share names.
-  'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer',
+  'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', 'invChannelLeftover',
   '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder', 'roundCents', 'fmt',
   'scheduleSigners', 'jobFiduciaries', 'jobListEntries',
   // P19: the Disposition Ledger's own card on the desk, where the ledger moved from the More menu.
   '_renderLedgerCards', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', 'estateProceedsHolder', '_invRecipient',
-  '_ymdLocal', 'invDonationReceipted', '_jobDestLabel'
+  '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf'
 ];
 const VARS = [
   '_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 

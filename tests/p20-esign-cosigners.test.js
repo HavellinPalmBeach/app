@@ -235,8 +235,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(A.esignAnchorsPresent(none), ['clientSig', 'clientDate', 'havSig', 'havDate', 'mktOptOut'], 'and reports exactly the five with none recorded');
     eq(A.esignAnchorsPresent(two.replace('/hcd2/', '')), ['clientSig', 'clientDate', 'havSig', 'havDate', 'mktOptOut', 'coSig1', 'coDate1', 'coSig2'],
        'a marker gone from the page is reported gone, never assumed');
-    eq(A.esignAnchorsPresent(two.replace('/hcs1/', '').replace('/hcd1/', '')), ['clientSig', 'clientDate', 'havSig', 'havDate', 'mktOptOut'],
-       'and the walk stops at the first co-signer the page carries neither marker for (a safe refusal, below)');
+    // P22: the walk goes to the highest number the page carries, so a gap no longer hides the co-signers after it.
+    eq(A.esignAnchorsPresent(two.replace('/hcs1/', '').replace('/hcd1/', '')), ['clientSig', 'clientDate', 'havSig', 'havDate', 'mktOptOut', 'coSig2', 'coDate2'],
+       'a co-signer the page carries neither marker for is not reported, and the ones after it still are (esignCoSigners refuses the gap by name)');
     lacks(noComments(fn('esignAnchorsPresent')), "'/", 'no marker string is typed into the measurer: it asks the namer');
     // ⚠⚠ A JOB WITH NO CO-REPRESENTATIVE RENDERS EXACTLY AS IT DID: the two forms, byte for byte against 456d0cb.
     eq(sha(A.agreementHtml(GOLD_LIVING, GOLD_EST)), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20');
@@ -677,7 +678,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Nothing else reads the co-signature record or the filed pages.
     eq(readers(/\bsig\.coSigners\b/g), { agreementCoSignState: 2, recordAgreementSignature: 4 }, '⚠ the signature\'s co-signers: written by the recorder (from what the provider named), read by the one answer alone');
     eq(readers(/signedRecordsOf\([^)]*'agreement'/g), { agreementCoSignState: 1 }, '⚠ the filed pages are read by the one answer');
-    eq(readers(/\besign\.coSigners\b/g), { agreementCoSignState: 2, applyEsignStatus: 2, docRecordSent: 1 }, 'the envelope\'s list: written at the send, kept by the check, read by the one answer alone');
+    eq(readers(/\besign\.coSigners\b/g), { agreementCoSignState: 2, docRecordSent: 1 }, 'the envelope\'s list: written at the send, read by the one answer alone (the check keeps it with every other field of the envelope\'s record, P22)');
     eq(readers(/AGR_COSIGN_REF/g), { agreementCoSignHtml: 1, agreementCoSignState: 1 }, 'the page\'s ref');
     const kinds = new Function('return ' + decl('SIGNED_RECORD_KINDS').replace(/^var\s+\w+\s*=\s*/, '').replace(/;\s*$/, ''))();
     eq(kinds.agreement, { label: 'Co-signed agreement page' }, 'the new kind of signed record');
@@ -686,11 +687,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('S9 · the backend: 2026-10-05, asked for by the app, and the banner names what an older one costs', () => {
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1];
-    // RESTATED 2026-10-06 (P23): Agent Two's action moved the version on, as every later .gs change will; at or past this
-    // pack's, the way p16, p17 and p19 hold theirs.
-    ok(bv >= '2026-10-05', 'BACKEND_VERSION is at or past this pack\'s .gs change (' + bv + ')');
+    ok(bv >= '2026-10-05', 'BACKEND_VERSION is at least the P20 bump (P22 raised it to 2026-10-06)');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST', 'BACKEND_NEEDS'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-05', '⚠⚠ the app asks for it: an older deployment puts no co-representative on the envelope');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-05', '⚠⚠ the app asks for at least it: an older deployment puts no co-representative on the envelope');
     ok(String(B.BACKEND_FEATURE_COST.version).indexOf('a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement') === 0,
        '⚠ the banner names that consequence first');
     has(B.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-03, a co-trustee, a beneficiary', 'and says which older gaps belong to which vintage');

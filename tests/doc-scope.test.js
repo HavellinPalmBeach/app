@@ -18,7 +18,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ENGINE_FNS = ['computeEngineV3', 'effectiveJobSteps', 'docScopeDef', 'svcHasDocStep',
     'estimateDocScope', 'tenureMultiplier', 'engineRoomWeight', 'engineIsExterior', 'roomDefault', 'engineRelFactor', 'roundUpHours'];
-  const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
+  const ENGINE_VARS = ['EST_TOLERANCE_PCT', 'CE_FOUND_PAPERS_TXT', 'JOB_STEPS', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'ENGINE_CAREFUL',
     'ENGINE_ROOMLEVEL', 'PERROOM_REF', 'ENGINE_FLOOR', 'ENGINE_K', 'ENGINE_VOLF', 'ENGINE_CPXF',
     'ROOM_WEIGHT', 'EXTERIOR_ROOMS', 'ROOM_DEFAULTS', 'DOC_COORD_INVENTORY_SHARE'];
 
@@ -104,7 +104,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let calcs = 0;
     const ctx = sandbox({
       fns: ['activeDocScope', 'setEstimateDocScope', 'docScopeDef'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', '_estimateDocScope'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', '_estimateDocScope'],
       stubs: { calcAll() { calcs++; } },
     });
     eq(ctx.activeDocScope(), 'full', 'a fresh estimate is full');
@@ -128,7 +128,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // from the job it is for — never left at the last estimate's.
     const rs = sandbox({
       fns: ['resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'estimateOpensFixed', 'isDecedentJob'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
              'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', '_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope'],
       stubs: { document: domStub(), paintVolPreset() {}, renderVendors() {}, renderCollections() {}, renderVehicles() {}, clearAllRooms() {} },
     });
@@ -149,7 +149,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rr = sandbox({
       fns: ['resetEstimate', 'resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf', 'docTierDef',
             'docTierScope', 'svcHasDocStep', 'estimateHasContent', 'clearEstimateScratch', 'estimateOpensFixed', 'isDecedentJob'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
              'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', '_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_volPreset', '_volHandSet'],
       stubs: { document: domStub({ 'e-job': { value: '5' } }), jobs: [{ id: 5, svc: 'cleanout', docScope: 'none' }],
                estimateStore: {}, window: {}, estimateApproved: false, estimateSubmitted: false,
@@ -170,7 +170,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
             'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'invProbateRows', 'estateProceedsHolder'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'ESTATE_AUTHORITIES'],
       stubs: { isFormalDoc: () => true },
     });
@@ -233,7 +233,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx = sandbox({ fns: ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
                                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', '_agrCounsel'],
-                          vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'AGR_NOT_AN_ACCOUNTING', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
+                          vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'] });
     // ⚠ WHO ARRANGES THE APPRAISALS IS THE TIER'S QUESTION, NOT THE SCOPE'S (2026-09-24). `values`
     // and `appraisals` both price at `full`, so these two assertions used to be true of the scope
     // alone — which is exactly how the `values` tier came to sign a contract promising Havellin
@@ -326,7 +326,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['seedDocScopeFromJob', '_docScopeIntakeNote', 'docScopeDef', 'docTierOf', 'docTierDef',
             'docTierScope', 'docTierScopeMirror', 'svcHasDocStep'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+      vars: ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
     });
     // ⚠ THE FIXTURES CARRY A SERVICE NOW, AND THAT IS THE POINT RATHER THAN A CHORE. The tier is
     // what we hand over, so it only exists on a service that prices a documentation step — the
@@ -345,8 +345,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx._docScopeIntakeNote(j({}), 'none'), '', 'no note when intake never answered — there is nothing to disagree with');
     // ⚠ THE NOTE NAMES THE TIER, because that is the sentence somebody said to the attorney.
     // "Intake recorded Capture only" is our pricing word for it and nobody's actual answer.
-    has(ctx._docScopeIntakeNote(j({ docScope: 'capture' }), 'full'), 'Intake recorded Contents list; this estimate is priced at Full', 'the two answers never silently disagree');
-    has(ctx._docScopeIntakeNote(j({ docScope: 'none' }), 'capture'), 'Intake recorded None; this estimate is priced at Capture only', 'in either direction');
+    // Restated P22: the client record, not "Intake recorded" — the tier is set at intake or on Edit Client.
+    has(ctx._docScopeIntakeNote(j({ docScope: 'capture' }), 'full'), 'The client record\u2019s documentation tier is Contents list; this estimate is priced at Full', 'the two answers never silently disagree');
+    has(ctx._docScopeIntakeNote(j({ docScope: 'none' }), 'capture'), 'The client record\u2019s documentation tier is None; this estimate is priced at Capture only', 'in either direction');
 
     const src = source();
     // ⚠ THIS USED TO PIN THE QUESTION BELOW THE GATES INSIDE #probate-fields, and the layout

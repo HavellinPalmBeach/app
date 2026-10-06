@@ -41,7 +41,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(src, 'function clientEstimateHtml(e, job)', 'the estimate takes its estimate and job');
     has(src, 'function agreementHtml(job, est)', 'the agreement takes its job and estimate');
     has(src, 'function probateAgreementHtml(job, est)', 'so does the estate form');
-    has(src, 'function invoiceHtml(job, stage)', 'the invoice takes its job and stage');
+    has(src, 'function invoiceHtml(job, stage, opt)', 'the invoice takes its job and stage (and, since P22, the walkaway\'s workDone option)');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

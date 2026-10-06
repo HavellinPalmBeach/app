@@ -199,7 +199,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The intake markup is an EMPTY <select> on purpose, so a build that stops filling it renders
     // the one question this whole step exists to ask as a blank box with nothing in it — and the
     // catalogue, the builder and the markup all still look right on their own.
-    const EC_FNS = ['showEditClient', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'ecPaintSvcFlag', 'probateSvcFlag', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
+    const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecPaintSvcFlag', 'probateSvcFlag', 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc',
       'ecDocGateChange', 'docTierOptionsHtml', 'buildDocTierOptions', 'docTierOf', 'docTierDef',
       'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange', 'houseFlagInputsHtml',
       'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706',
@@ -208,7 +208,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'invFiduciaryMode', 'readHouseFlagInputs', 'docScopeDef', 'referralSourceKind', 'referralSourceOptionsHtml', 'referralPartnerOptionsHtml', 'jobRefersToPartner', 'referralIdOf', 'lookupReferralById', 'svcFamilyOptions', 'svcFamily', 'conciergeOptionsHtml', 'getAllActiveTC', '_byContractorName', 'samePerson', 'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked', 'sameSvcFamily', 'clientMissingFields', 'readReferralInputs', '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'activeDocScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor', 'roundCents', 'fmt', 'propertySaleAsked', 'trustRecordShown', 'executorAuthField', 'coFiduciaryBlockHtml', 'jobListEntries', 'readCoFiduciaryRows', 'saveCoFiduciaryRows', 'estateAuthority', '_coFidRowNums'];
     const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD',
-      'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'];
+      'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'DOC_SCOPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES', 'referralDirectory', 'DEFAULT_CONTRACTORS', 'contractors', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES',
+      // P22: the page's estimate state, which followDocTier and docTierChangeNotice read (both lifted above). Absent, a
+      // revert that reaches either path threw a ReferenceError and left the rest of this file unrun; lifted, it fails an
+      // assertion. Their initialisers (false, false, '', 'full') are what a freshly loaded page holds; nothing here stubs them.
+      'estimateApproved', 'estimateSubmitted', '_estimateDocTier', '_estimateDocScope'];
     const JOB = { id: 7, hvlId: 'HVL-0007', name: 'Tripp Butler', fname: 'Tripp', lname: 'Butler',
                   svc: 'cleanout', deathDate: '2026-08-14', gate706: 'no', matterType: 'trust',
                   docScope: 'capture' };

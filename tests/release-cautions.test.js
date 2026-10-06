@@ -18,7 +18,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_invBulkApply',
+const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_invBulkApply', 'invNoteDispositionMove',
              'invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_invNamed',
              '_invItemNo', '_invAwaitingApproval', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',
@@ -43,7 +43,7 @@ const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-             'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused'];
+             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused'];
 const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS'];
