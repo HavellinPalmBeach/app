@@ -1331,7 +1331,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.05 · 5:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.05 · 10:46pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6073,7 +6073,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // 2026-10-05 (P20): esignSend puts each co-representative on the envelope beside the client and says who it put there,
 // and esignStatus finds the client by recipientId and reports the co-signers. An older deployment sends to the client
 // and Anthony alone (the app records that, and the row asks for the printed page instead), so it is named by version.
-var BACKEND_MIN_VERSION = '2026-10-05';
+// 2026-10-06 (P22): saveInventory.gs merges a line's release signers from both copies (`_invMergeApprovals`, held equal to
+// the app's `invMergeApprovals`) and formats the workbook's money to the cent. An older deployment keeps only the newer
+// copy's signers, so a co-trustee's signature recorded on another device can drop.
+var BACKEND_MIN_VERSION = '2026-10-06';
 var _backendVersion = null;
 
 function checkBackendVersion() {

@@ -55,7 +55,7 @@
 // (routing order 1, their own tabs) and answers with who it put there; esignStatus finds the client by recipientId
 // '1' and reports each co-signer. No action or type changes. An older deployment sends to the client and Anthony
 // alone, and the app records that the co-representatives were not on the envelope.
-var BACKEND_VERSION = '2026-10-05';
+var BACKEND_VERSION = '2026-10-06';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
