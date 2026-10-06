@@ -471,7 +471,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠⚠ ON AN ESTATE JOB THE NAMED CLIENT IS DECEASED. bestClientEmail correctly falls back to the
     // representative, then counsel — so pairing that address with job.name would put a dead
     // person's name on a signature request for their own estate, sent to their executor's inbox.
-    const c = sandbox({ fns: ['esignSigner', 'clientRecipient', 'isDecedentJob', 'firstName'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', ] });
+    const c = sandbox({ fns: ['esignSigner', 'esignClientSignerRefusal', 'clientRecipient', 'isDecedentJob', 'firstName'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', ] });
     eq(c.esignSigner({ name: 'Jane Doe', email: 'jane@x.com' }),
        { name: 'Jane Doe', email: 'jane@x.com' }, 'a living client signs for themselves');
 
@@ -500,7 +500,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let posted = null;
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
-            'docState', '_jobTouch', '_actor', 'esignSigner', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending', 'clientRecipient', 'isDecedentJob', 'firstName',
+            'docState', '_jobTouch', '_actor', 'esignSigner', 'esignClientSignerRefusal', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending', 'clientRecipient', 'isDecedentJob', 'firstName',
             'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: {
@@ -565,7 +565,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
             'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_stamp',
-            'esignSigner', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
+            'esignSigner', 'esignClientSignerRefusal', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
             'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
@@ -746,7 +746,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // missing and say so — a person reads it before it goes. An envelope with no document is a
     // signature request for nothing, mailed to the client automatically with nobody in between.
     const mk = (over) => sandbox({
-      fns: ['esignSigner', 'clientRecipient', 'isDecedentJob', 'firstName', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
+      fns: ['esignSigner', 'esignClientSignerRefusal', 'clientRecipient', 'isDecedentJob', 'firstName', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'], vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: Object.assign({ SHEETS_SYNC_URL: 'https://script.example/exec',
                              _appsScriptPost: (u, b, cb) => cb(true, { ok: true, envelopeId: 'e' }) }, over) });
     const spec = (job) => ({ job, kind: 'agreement', key: 'agreement',
@@ -1390,9 +1390,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       let posted = null;
       const c = sandbox({
         fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor',
-              'esignSigner', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'clientRecipient', 'isDecedentJob', 'firstName',
+              'esignSigner', 'esignClientSignerRefusal', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'clientRecipient', 'isDecedentJob', 'firstName',
               'esignCoSignerAnchors', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode',
-              'esignSharedEmails', 'esignCounselSignsNote', 'esignCoSignerTop'],  // P21: the send names signers sharing one address (Q32)
+              'esignSharedEmails', 'esignCoSignerTop'],  // P21: the send names signers sharing one address (Q32)
         vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS', 'ESIGN_ANCHORS', 'ESIGN_COSIGNER_ANCHOR'],
         stubs: {
           SHEETS_SYNC_URL: 'https://script.example/exec',

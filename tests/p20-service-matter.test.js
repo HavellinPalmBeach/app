@@ -113,7 +113,7 @@ const SERVICES = ['probate', 'contested_probate', 'cleanout', 'downsizing', 'dow
 
 // The client documents, rendered by their real builders: the reconciliation suite's lists, with what an answered matter, the
 // signing packet and the two other client emails reach.
-const DOC_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', '_ceGroupedSpaces', 'signingPacketHtml',
+const DOC_FNS = DOCREC.FNS.concat(['estateAuthority', 'jobOnProbateTrack', 'trustInstrumentTitle', '_agrTrusteeRepresentation', '_ceGroupedSpaces', 'signingPacketHtml',
   '_approvedEstimateHtml', 'buildSigningPacketHtml', 'buildAgreementEmailHtml', 'buildEstimateEmailHtml', 'estimateHavellinLines', 'vendorFeeNote',
   '_emPhoneLines', 'agreementEmailSubject', 'estimateEmailSubject',
   'agreementEmailCoSignLine']);  // P21: the agreement email's co-representatives' line (Q31)
@@ -153,7 +153,9 @@ const probateWords = (h) => (text(h).match(/.{0,40}probate.{0,40}/gi) || []);
 // The figures the engine priced on 456d0cb (P19, before this change), through the same drive (driveCalcAll, 3,500 sq ft,
 // these six rooms at their defaults, the values tier), on every matter alike: hourly, and the suggested fixed fee.
 const BASE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroom 2', 'Garage (2-car)'];
-const PRICED_BEFORE = { probate: [22750, 28437.5], contested_probate: [30150, 43605], cleanout: [19450, 23340] };
+// RESTATED P22 E (Anthony, 2026-10-06): the suggested fixed fee rounds up to the next $100 (fixedFeeSuggested); 456d0cb priced
+// $28,437.50, $43,605 and $23,340, each now the next whole hundred above.
+const PRICED_BEFORE = { probate: [22750, 28500], contested_probate: [30150, 43700], cleanout: [19450, 23400] };
 function priced(svc, matter, fixed, after) {
   return inEastern(() => {
     const r = driveCalcAll({ svc, sqft: 3500, rooms: BASE, job: Object.assign({ svc, docTier: 'values' }, matter ? { matterType: matter } : {}),
@@ -507,7 +509,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('trustInstrumentTitle')), 'esc(fmtCEDate(d))', 'it reads the long-date helper');
     lacks(codeOnly(fn('trustInstrumentTitle')), 'fmtDate2', 'and not the short one');
     has(noComments(fn('fmtCEDate')), "new Date(d+'T12:00:00')", 'which reads the day at local noon');
-    eq(readers('trustInstrumentTitle'), { clientEstimateHtml: 1, printTrustSchedule: 2, probateAgreementHtml: 2 }, 'the documents the title reaches');
+    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, clientEstimateHtml: 1, printTrustSchedule: 2, probateAgreementHtml: 2 }, 'the documents the title reaches (P22: §5.1\'s dated acceptance too)');
     // On each of them, rendered.
     const d = render('probate', 'trust');
     has(text(d.agr), 'Trust The Adler Family Trust, dated March 3, 2015', '⚠⚠ the agreement\'s §1.2');

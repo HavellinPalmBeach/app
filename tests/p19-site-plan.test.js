@@ -238,7 +238,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 7 ─────────────────────────────────────────────────────────────────────
   group('D4 — chain of custody is mandatory on the trust track, as on the probate track');
   {
-    const PLAN_FNS = ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
+    const PLAN_FNS = ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
       'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines',
       'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
       'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', '_planRoomListHtml',
@@ -652,7 +652,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!/\.siteFinds\s*(=|\.push\()/.test(SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n')), '⚠ nothing assigns or pushes job.siteFinds: the list helpers are the only writers');
     has(live('voidSiteFind'), "jobListVoid(job, 'siteFinds', id,", 'a find is voided through the list helper');
     lacks(live('voidSiteFind'), 'jobListRemove', 'and never removed');
-    has(live('renderJobPlan'), 'var custodyMandatory = formal || isProbate || ctx.probateTrack || ctx.trustTrack;', 'custody: the trust track added beside the others');
+    // RESTATED P22 E: the rule moved into custodyLogKept (the vendor pickup list asks it too), read by renderJobPlan.
+    has(live('custodyLogKept'), 'return !!(ctx.formal || ctx.isProbate || ctx.probateTrack || ctx.trustTrack);', 'custody: the trust track added beside the others');
+    has(live('renderJobPlan'), 'var custodyMandatory = custodyLogKept(job, est);', 'and the plan reads it');
     has(decl('SIGNED_RECORD_KINDS'), "will:      { label: 'Signed receipt for the original will' }", 'the will\'s receipt files under the foundation\'s own kind');
   }
 };

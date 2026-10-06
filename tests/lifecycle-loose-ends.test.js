@@ -96,7 +96,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ M4 — Win / Loss counts what a retained job KEPT, and the list says so');
   {
     const W = sandbox({ fns: ['winLossFigures', 'isJobWon', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobPayments', 'winLossListHtml', 'jobRefundedTotal', 'refundCounts', 'paymentLive', 'isRefundRecord',
-      '_wlClientCell', '_jobStatusCell', 'fmtDate2', 'jobStatusView', 'svcLabelOf', 'depositTargetFor', 'stagePaidTotal', 'roundCents', 'fmt', 'paymentSplit'],
+      '_wlClientCell', '_jobStatusCell', 'fmtDate2', 'jobStatusView', 'jobClosedRefunded', 'svcLabelOf', 'depositTargetFor', 'stagePaidTotal', 'roundCents', 'fmt', 'paymentSplit'],
       vars: ['WON_METHOD_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'SVC_LABELS', 'LOSS_REASONS'] });
     W.jobs = [
       { id: 1, name: 'Butler', status: 'active', won: true, havellinEst: 20000, payments: [p('deposit', 10000)] },
@@ -553,7 +553,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the rail, driven: the retained row names what was kept; Home Prep names its second payment');
   {
     const TL_FNS = ['estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending',
-      'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries',
+      'agrApprovalWithdrawn', 'jobTimeline', 'jobClosedRefunded', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries',
       'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'resolveExecutorAuth', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'jobPaidTotal',
       'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',

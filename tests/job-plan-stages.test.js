@@ -32,7 +32,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     opts = opts || {};
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',

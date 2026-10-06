@@ -37,7 +37,7 @@ const RENDER_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'paym
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',
   'renderWinLoss', 'winLossBlockHtml', 'winLossFigures', 'closeoutRetainedTotal', 'jobPaidTotal', 'winLossListHtml', '_wlClientCell', 'jobRefundedTotal', 'refundCounts',
-  'isJobWon', 'secCaret', 'fmtDate2', 'jobStatusView', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'];
+  'isJobWon', 'secCaret', 'fmtDate2', 'jobStatusView', 'jobClosedRefunded', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'];
 const RENDER_VARS = ['currentFilter', 'SVC_LABELS', '_jobsWatch',
   '_jobsState', '_jobSort', '_wlOpen', 'JOB_SORTS', 'JOB_LIST_COLS', 'JOB_STATUS_ORDER',
   'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'WON_METHOD_LABELS'];

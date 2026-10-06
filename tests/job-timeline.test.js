@@ -59,7 +59,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: [
-      'agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', 'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobPaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+      'agrApprovalWithdrawn', 'jobTimeline', 'jobClosedRefunded', 'depositVoidFlag', 'agreementHandedOverInPerson', 'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'jobPaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments',
       'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor',
       // Slice 4: the rail reads where each document has been.

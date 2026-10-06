@@ -769,7 +769,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const D = sandbox({
       fns: ['docSend', 'docProvider', 'gmailConfigured', 'docRecordSent', 'docState', '_jobTouch', 'draftIsStale', 'docDraftPending',
         'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', '_jtSendAction', 'docKeyFor', 'draftOutstanding',
-        'jtDraftLine', 'markDocSent', 'noDraftToConfirm', 'buildMimeMessage', '_mimeHeader', '_b64Wrap', 'esignCounselSignsNote'],
+        'jtDraftLine', 'markDocSent', 'noDraftToConfirm', 'buildMimeMessage', '_mimeHeader', '_b64Wrap'],
       vars: ['DOC_SEND_PROVIDERS', 'GMAIL_CLIENT_ID_DEFAULT', 'GMAIL_CLIENT_ID', '_gmailUserEmail', '_docBusy'],
       stubs: {
         Date: clockAt(NOW), window: win, jobs: [job],

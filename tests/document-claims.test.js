@@ -57,7 +57,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(live, 'Compressing the project calendar at your request', 'nor the advance invoices’ version');
     eq((liveBody('clientEstimateHtml(e, job)').match(/rushScopeLine\(e\)/g) || []).length, 1, 'the estimate’s rush row reads the helper');
     // Three since 2026-09-30: a fixed price itemises its premium too (estFixedLines), on the same helper.
-    eq((liveBody('invoiceHtml(job, stage)').match(/rushScopeLine\(est\)/g) || []).length, 3,
+    eq((liveBody('invoiceHtml(job, stage, opt)').match(/rushScopeLine\(est\)/g) || []).length, 3,
        'every invoice rush row (hourly final, advance, and the fixed-price line) reads it');
     has(liveBody('calcAll()'), 'psRecommended: isPrep ? 0 : _recommendedPS',
         'the snapshot records the recommended crew, so the claim can be tested off the record');
@@ -376,7 +376,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docScopeDef', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'samePerson',
       'canonPersonName', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'],
-    vars: ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'DECEDENT_SERVICES', 'DOC_SCOPES',
+    vars: ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'CE_FOUND_PAPERS_TXT', 'TIME_INCREMENT_TXT', 'DECEDENT_SERVICES', 'DOC_SCOPES',
       'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', '_PCT_WORDS', 'ESIGN_ANCHORS',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
       'PERSON_NAME_ALIASES', 'MAX_DISCOUNT_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'],
@@ -564,7 +564,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('lows — the invoice bills paymentSplit’s running targets, never a second rounding');
   {
-    const inv = liveBody('invoiceHtml(job, stage)');
+    const inv = liveBody('invoiceHtml(job, stage, opt)');
     has(inv, 'paymentSplit(totalDepositBasis)', 'the deposit is the split’s deposit');
     has(inv, '_midSplit.deposit + _midSplit.midpoint', 'the cumulative 75% is the split’s deposit plus its midpoint');
     lacks(inv, 'Math.round(0.5 * totalDepositBasis)', 'the private 50% rounding is gone');

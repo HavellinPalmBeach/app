@@ -215,7 +215,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const nv = sandbox({
         fns: ['neutralizeEstimateView', 'resetEstimateJobState', 'seedDocScopeFromJob', 'docScopeDef', 'docTierOf',
               'docTierDef', 'docTierScope', 'svcHasDocStep', 'paintVolPreset', 'estimateOpensFixed', 'isDecedentJob'],
-        vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
+        vars: ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DOC_TIERS',
                'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'VOL_PRESETS', '_volPreset', '_volHandSet', '_estimateAlphaPin'],
         stubs: { document: domStub(), window: {}, renderVendors() {}, renderCollections() {}, renderVehicles() {}, clearAllRooms() {} },
       });
@@ -273,7 +273,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
             'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'invProbateRows', 'estateProceedsHolder'],
-      vars: ['JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'ESTATE_AUTHORITIES'],
+      vars: ['CE_FOUND_PAPERS_TXT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'ESTATE_AUTHORITIES'],
       stubs: { isFormalDoc: () => true },
     });
     const withAppraiser = JSON.stringify(ctx._cePhases(

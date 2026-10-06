@@ -164,7 +164,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const prepFee = C2(10000 * r.ctx.prepFeeRate());
     eq([e.fixedLines, e.rushExPrepFee], [true, true], 'the record says it was priced under these rules');
     eq(e.fixedAmount, e.fixedSuggested, 'the fee tracks the suggestion until a figure is typed');
-    eq(e.fixedSuggested, C2((e.tcFee + e.psFee + 1500) * (1 + r.ctx.fixedPriceBuffer('cleanout'))),
+    // RESTATED P22 E (Anthony, 2026-10-06): the suggestion is then rounded up to the next $100 (fixedFeeSuggested).
+    eq(e.fixedSuggested, Math.ceil(C2((e.tcFee + e.psFee + 1500) * (1 + r.ctx.fixedPriceBuffer('cleanout'))) / 100) * 100,
        '⚠ the suggestion is the price of the scope: the services and the contingency, with no premium and no discount inside it');
     eq(e.rushAmt, C2(e.fixedAmount * 0.20), 'the premium is 20% of the fee, and nothing of the prep fee');
     eq(e.discountAmt, r.ctx.discountOnLabor(e.fixedAmount - 1500, 0.20, 10),

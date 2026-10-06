@@ -381,7 +381,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(sub, 'Received ' + w.C.fmt(s.received), 'the dialog names what was received');
     has(sub, 'Earned: the deposit (' + w.C.fmt(s.deposit) + ') or the work done (' + w.C.fmt(s.work) + ') ' + w.C.fmt(s.earned), '⚠⚠ what was earned, and how');
     has(sub, 'Refund due ' + w.C.fmt(s.due), '⚠⚠ and the refund due');
-    has(sub, 'what the final invoice bills', 'it says where the work done comes from');
+    // RESTATED P22 E (Anthony, 2026-10-06): the work done is what was delivered or incurred (walkawayWorkNote).
+    has(sub, 'The work done is what was delivered: the hours logged at the job’s rates', 'it says where the work done comes from');
     eq(w.btn.textContent, 'Close — Retain ' + w.C.fmt(s.retained) + ' · refund ' + w.C.fmt(s.due), 'the button states the decision: keep the earned, refund the rest');
     w.doc.__seed('closeout-reason', 'timing');
     inZone(() => w.C.confirmMarkLost());

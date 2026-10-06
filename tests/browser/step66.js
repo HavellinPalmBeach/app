@@ -12,7 +12,7 @@
 //      is not cleared to carry until Keep the name (or a dealer typed); the record names the named principal (item 3)
 //   B. item 2: Removed items shows the twelve most recent, then all fourteen; Restore gives back the detail shots
 //   C. item 9: the bulk bar says what Keep and Mark reviewed did; the Authorized By box reads "(Oct 1, 2026)" and a
-//      save left as shown keeps the stored form; an estate line going to the concierge is flagged on the row and the
+//      save left as shown keeps the stored form; an estate line going to the concierge is not flagged (P22 E removed staffEstate) on the row or the
 //      request; item 6: the receipt with no line now stays on the card, labelled
 //   D. item 5: the living request says who prepared it once; item 8: the plan asks for the client's signed ledger;
 //      item 4: the hours log prints what the crew typed as text
@@ -196,11 +196,11 @@ const EST = 6601, LIVING = 6603;
       await p.fill(box, 'Tripp Butler (Oct 1, 2026); Smith, John (Oct 9, 2026)');
       await p.press(box, 'Tab'); await p.waitForTimeout(400);
       eq((await line(EST, 'a1')).authBy, 'Tripp Butler (2026-10-01); Smith, John (2026-10-09)', '⚠ a corrected day is saved in the stored form');
-      // The estate line going to the concierge, written before anything refused it.
-      has(await rowText('c1'), 'Ashley Jerome works with Havellin', '⚠⚠ the row flags it');
+      // The estate line going to the concierge: group C's estate mirror (staffEstate) was removed in P22 group E (Anthony,
+      // 2026-10-06: prelaunch, the case cannot occur because a new one is refused at the write), so nothing flags it.
+      lacks(await rowText('c1'), 'works with Havellin', 'P22 E: an estate line raises no staff caution (the write refuses instead)');
       const h = await requestOf(EST), t = await T(h);
-      has(t, 'Property recorded as going to someone who works with Havellin', '⚠⚠ the request names it above the table');
-      has(t, 'Please do not initial them.', 'and asks that it not be initialled');
+      lacks(t, 'Property recorded as going to someone who works with Havellin', 'and the request prints no estate staff section');
       // The receipt whose signer has no line now.
       const rel = await txt('#inv-releases');
       has(rel, 'Sam Jones', 'the receipt\'s signer is on the card');

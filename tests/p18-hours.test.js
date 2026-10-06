@@ -156,7 +156,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const PP0 = tryE(() => run('probate', { prem: true })), PP1 = tryE(() => run('probate', { prem: true, lines: [{ type: 'Art Appraiser' }] }));
     eq([PP0.havellinTotal, PP1.havellinTotal], [26135, 26505], 'a Premium Probate $26,135, and $26,505 with an appraiser (P17 $25,825 / $26,195)');
     const FX = tryE(() => run('cleanout', { prem: true, seed: { 'e-fixed': { checked: true } }, lines: [{ type: 'Art Appraiser' }] }));
-    eq(FX.fixedSuggested, 27264, 'the Premium fixed-fee suggestion with an appraiser $27,264 (P17 $26,929.50)');
+    eq(FX.fixedSuggested, 27300, 'the Premium fixed-fee suggestion with an appraiser $27,300 (P22 E: $27,264 up to the next $100; P17 $26,929.50)');
     const CX = tryE(() => run('cleanout', { rooms: BASE.map((n) => ({ name: n, cplx: 5 })) }));
     const CXP = tryE(() => run('cleanout', { prem: true, rooms: BASE.map((n) => ({ name: n, cplx: 5 })) }));
     eq([CX.havellinTotal, CXP.havellinTotal], [18450, 22905], 'complexity 5 throughout: $18,450, and $22,905 with Premium on (P17 $18,300 / $22,718.75)');

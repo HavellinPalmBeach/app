@@ -509,9 +509,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     E._invBulkApply(8, 'channel', 'Carla Ortiz');
     eq(E._photoRefs[8][1].channel, undefined, 'the bulk bar too');
     const pre = LINE('q', 7, { objectName: 'Vase', disposition: 'Sell', channel: 'Ashley Jerome' });
-    // RESTATED P22: an estate line already going to one of them (written before anything refused it) raises the estate's
-    // own mirror, `staffEstate`, and never the living caution.
-    eq(E.invReleaseCautions(pre, 8).map((c) => c.key), ['staffEstate'], 'and an estate never prints the living caution (its own mirror instead)');
+    eq(E.invReleaseCautions(pre, 8).map((c) => c.key), [], 'and an estate never prints the living caution');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

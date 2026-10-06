@@ -363,12 +363,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([job.docState.agreement.esign.envelopeId, job.docState.agreement.esign.futureField, job.docState.agreement.esign.coSigners],
       ['E2', undefined, undefined], 'an answer for a different envelope carries none of the old one\'s facts');
 
-    const C = lift(['esignCounselSignsNote'], {});
+    // RESTATED P22 E (Anthony, 2026-10-06): the amber note after the send (esignCounselSignsNote) is replaced by a refusal
+    // before it, esignClientSignerRefusal (p22-group-e.test.js, E8).
+    const C = lift(['esignClientSignerRefusal'], {});
     const est = (o) => Object.assign({ id: 7, svc: 'probate', executor: 'Rex Hale', probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law' }, o);
-    has(C.esignCounselSignsNote(est({ executorEmail: '' })), 'Ann Lowe, the estate attorney, was sent the Client’s signature line: no email is recorded for Rex Hale',
-      '⚠⚠ an envelope whose Client signer is counsel says so');
-    eq(C.esignCounselSignsNote(est({ executorEmail: 'rex@hale.example' })), '', 'the representative signs where their email is recorded');
-    has(fn('docSend'), "provider === 'docusign' ? esignCounselSignsNote(spec.job) : ''", 'read by the DocuSign send\'s notice alone');
+    eq(C.esignClientSignerRefusal(est({ executorEmail: '' })), 'Add the representative’s email: the estate attorney can’t sign as the client.',
+      '⚠⚠ an envelope whose Client signer would be counsel is refused by name');
+    eq(C.esignClientSignerRefusal(est({ executorEmail: 'rex@hale.example' })), '', 'the representative signs where their email is recorded');
 
     const A = sandbox({ fns: ['esignAnchorsPresent', 'esignCoSignerAnchors', 'esignCoSignerTop'], vars: ['ESIGN_ANCHORS', 'ESIGN_COSIGNER_ANCHOR'] });
     const page = '/hsc/ /hdc/ /hsh/ /hdh/ /hcs1/ /hcd1/ /hcs3/ /hcd3/';

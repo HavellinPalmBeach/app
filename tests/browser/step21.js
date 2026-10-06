@@ -119,7 +119,8 @@ const money = (n) => { const c = CT(n); const r = Math.abs(c) % 100; return '$' 
   ok(sB.prepFeeOnTop === true, 'the record carries the on-top marker');
   ok(sB.havellinTotal === 20000 + sB.prepFee, 'the Havellin total is the flat fee plus the prep fee');
   ok(sB.grandTotal === 20000 + sB.prepFee + (sB.vendorCost || 0) + (sB.prepCost || 0), 'the grand total adds the vendors at cost');
-  const suggExpect = await p.evaluate((s) => Math.round((s.havellinTotalFull ? (s.havellinTotalFull - s.prepFee) : 0) * (1 + fixedPriceBuffer(s.svc)) * 100) / 100, B0.snap);
+  // RESTATED P22 E (Anthony, 2026-10-06): the suggestion is rounded up to the next $100 (fixedFeeSuggested).
+  const suggExpect = await p.evaluate((s) => Math.ceil(Math.round((s.havellinTotalFull ? (s.havellinTotalFull - s.prepFee) : 0) * (1 + fixedPriceBuffer(s.svc)) * 100) / 100 / 100 - 1e-9) * 100, B0.snap);
   ok(B0.sugg === suggExpect, 'the suggested fee excludes the prep fee (' + B0.sugg + ' vs ' + suggExpect + ')');
   const ceB = await ceCheck(idB, sB);
   console.log('   rows', JSON.stringify(ceB.rows), 'total', ceB.total);

@@ -949,7 +949,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callers('fileDispositionLedger'), ['activateOrCycle'], 'the close files the ledger (the desk\'s button is the other caller)');
     eq(callers('ledgerDerivedLines'), ['planDerivedLines'], 'the derived lines are asked for once, by planDerivedLines');
     const saleReaders = Object.keys(BODY).filter((f) => /\bINV_SALE_DISPOSITIONS\b/.test(codeOnly(BODY[f]))).sort();
-    eq(saleReaders, ['_renderProceedsCard', 'dispositionLedger', 'invHavellinRecipient', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
+    eq(saleReaders, ['_renderProceedsCard', 'dispositionLedger', 'invHavellinRecipient', 'invPickupLine', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
     eq(count(live, "['Auction', 'Consign', 'Sell']"), 1, 'and no second copy of it written out');
   });
 };

@@ -275,21 +275,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(S.invApprovalSigners({ authBy: 'Ruth Adler, Daniel Adler' }, TRUST()).map((s) => s.name), ['Ruth Adler', 'Daniel Adler'], 'names with no separator in them split as before');
   });
 
-  G('9b · an estate line already going to one of Havellin\'s people is flagged on the row, the record and the request', () => {
-    const S = desk(['invReleaseCautions', '_renderInvRow', '_renderInvPanel', 'printApprovalRequest', '_getPhotoRef'], PROBATE(),
-      [LINE('a', 1, { disposition: 'Distribute', channel: 'Ashley Jerome' })]);
-    const a = S._getPhotoRef(8, 'a');
-    eq(S.invReleaseCautions(a, 8).map((c) => c.key), ['staffEstate'], '⚠⚠ the estate mirror, through the one rule');
-    has(text(S._renderInvRow(S.jobs[0], a, {})), 'Ashley Jerome works with Havellin', 'the desk row');
-    has(text(S._renderInvPanel(S.jobs[0], a)), 'Cannot go to Havellin’s people.', 'the line\'s record');
-    S.printApprovalRequest(8);
-    const t = flat((S.__log.printed[0] || {}).html);
-    has(t, 'Property recorded as going to someone who works with Havellin', '⚠⚠ the request names it above the table');
-    has(t, 'GOING TO ASHLEY JEROME, WHO WORKS WITH HAVELLIN', 'and on the line');
-    const V = desk(['invReleaseCautions', '_getPhotoRef'], LIVING(), [LINE('a', 1, { disposition: 'Distribute', channel: 'Ashley Jerome' })]);
-    eq(V.invReleaseCautions(V._getPhotoRef(2, 'a'), 2).map((c) => c.key), ['staffRecipient'], 'a living client keeps its own caution, not the estate\'s');
-  });
-
   G('9c · a charity\'s receipt or a filed statement covering a line records it as gone', () => {
     const base = { disposition: 'Donate', channel: 'Goodwill', authBy: 'Ruth Adler', approvalDate: '2026-10-01' };
     const J = (recs, stmts) => TRUST({ signedRecords: recs || [], proceedsStatements: stmts || [] });

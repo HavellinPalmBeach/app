@@ -38,7 +38,7 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode
                   'invApprovalComplete', 'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', '_andJoin',
                   'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf', 'invHavellinRecipient',
                   // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-                  'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
+                  'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
 const APPR_VARS = ['INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                    'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 

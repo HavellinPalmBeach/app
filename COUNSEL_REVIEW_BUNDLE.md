@@ -34,10 +34,10 @@ rather than researching from nothing.
 | | Blocks | Items |
 |---|---|---|
 | **1** | the first engagement signing: on a **fixed fee**, and since 2026-09-30 on an **hourly** one too (the deposit) | A1, A2, B2 |
-| **2** | the first **trust** matter signing | A5, A6, A10, A14, A15 |
+| **2** | the first **trust** matter signing | A5, A6, A10, A14, A15, A16 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6 |
 | **4** | the first **706 estate** | D3 |
-| **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11, D12 |
+| **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, A17, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11, D12 |
 | — | only if firearms become a **service line** | C4 |
 
 ---
@@ -377,6 +377,32 @@ trigger *"Multi-state property requiring ancillary probate coordination not iden
 
 **The question.** Anthony kept both names and the narrative (2026-10-05, Q28). Is *Estate Settlement* the right name for the
 engagement on a trust administration, and *Contested Estate Settlement* for a contested trust matter? Are the three kept clauses right where there is no court?
+
+### A16. §5.1 — the successor trustee's acceptance, dated ⚠ NEW P22 (2026-10-06) · PRIORITY 2
+
+**What changed (Anthony, 2026-10-06).** On a matter holding a trust, §5.1's added representation read, and still reads where
+no acceptance date is recorded: *"If acting as successor trustee, the Client has accepted the trusteeship and holds authority
+under the trust instrument to direct the disposition of the property described in this Agreement."* Where the intake or
+Edit Client records the day the successor trustee accepted, it now names the trust and that day: *"If acting as successor
+trustee, the Client accepted the trusteeship of The Adler Family Trust, dated March 3, 2015 on March 1, 2026 and holds
+authority under the trust instrument to direct the disposition of the property described in this Agreement."* (the trust's
+title as §1.2 prints it; with no trust name recorded, *"…accepted the trusteeship on March 1, 2026 and holds…"*).
+
+**The question.** Is a dated acceptance the right thing for the client to warrant (§736.0701: acceptance by signing or by
+exercising powers; citation from memory), and should the form say how it was accepted?
+
+### A17. Exhibit A — what happens to an original will found in the house ⚠ NEW P22 (2026-10-06)
+
+**What changed (Anthony, 2026-10-06).** The client estimate's sorting stage (all three documentation arms) said: *"Any
+wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel
+against a signed receipt — we do not open the estate's legal file."* That contradicted the will procedure (D9), which hands an
+original will to the estate attorney the same day. It now reads: *"An original will or codicil we find is handed, unopened,
+to the estate attorney the same day (or to you where no attorney is recorded), against a signed receipt, for deposit with
+the clerk as Florida law requires. Deeds, titles and financial records go to you and counsel against a signed receipt — we
+do not open the estate's legal file."*
+
+**The question.** Is handing an original will to the representative, where no attorney is recorded, consistent with
+§732.901's custodian duty (D9), and is *"as Florida law requires"* the right level of reference on a client document?
 
 ## B. Standard (living-client) services agreement
 
@@ -972,19 +998,6 @@ the Contents Record and the Disposition Ledger. On an estate the sale or release
 
 **The question.** Is the client's initial against a named line an adequate disclosure and consent for a sale or gift to a
 team member, and does the standard agreement need a clause to match A12?
-
-### D13. An estate line already recorded as going to someone who works with Havellin ⚠ NEW P22
-
-**What it says.** On an estate the sale or release is refused where it is written (A12), so nothing new gets there; a line
-written before that rule (2026-10-03), or naming someone added to Havellin's directory since, is flagged rather than undone.
-The release approval request carries, above the table, **Property recorded as going to someone who works with Havellin**:
-*"Havellin and its people never purchase or receive estate or trust property, and take no share of the proceeds of its sale.
-These lines are recorded as going to a person who works with Havellin, named against each line. Please do not initial them.
-Your concierge will change where each one goes and ask for your approval again."* Each such line is badged *"Going to
-<name>, who works with Havellin"*.
-
-**The question.** Is asking the representative not to initial the line (rather than withholding it from the request) the
-right way to keep a pre-existing conflicted line from being approved?
 
 ## E. What is deliberately NOT being asked
 

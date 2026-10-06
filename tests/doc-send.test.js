@@ -324,7 +324,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // still never a success; the third condition only adds a reason to warn.
     // ⚠ RESTATED 2026-10-05 (P21): and amber when it names signers the envelope carries at one email address (Q32,
     // esignSharedEmails). The attachment is still the first condition, so no attachment is still never a success.
-    has(s, "_docNotice((attached && !_staleLine && !_offEnv.length && !_shared.length && !_counsel) ? 'ok' : 'warn'", 'and a send with no attachment reads as a warning, not a success');
+    has(s, "_docNotice((attached && !_staleLine && !_offEnv.length && !_shared.length) ? 'ok' : 'warn'", 'and a send with no attachment reads as a warning, not a success');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

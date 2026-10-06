@@ -490,7 +490,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // brought into line with, and it must not go on asking for the midpoint after the final bills it.
     const dom = domStub({});
     const P = sandbox({
-      fns: ['renderJobPlan', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',

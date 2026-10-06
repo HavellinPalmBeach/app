@@ -43,7 +43,7 @@ const FNS = ['_invDocName', 'printApprovalRequest', 'printDispositionLedger', '_
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-             'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused'];
+             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused'];
 const VARS = ['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS'];
@@ -124,8 +124,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Havellin's people: flagged, never refused, so the client signs knowing), is a question about whom the property goes
     // to, so it sits with the authority cautions and before the price one. The rule pinned is unchanged.
     eq(s.INV_RELEASE_CAUTIONS.map((c) => c.key).join(','),
-       // RESTATED P22: `staffEstate`, the estate's mirror of `staffRecipient`, sits beside it.
-       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,staffEstate,needsAppraisal',
+       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,needsAppraisal',
        'authority cautions first, the valuation one last');
     s.INV_RELEASE_CAUTIONS.forEach((c) => {
       ok(c.head && c.body && c.badge && c.tone, c.key + ' carries a heading, a body and a badge');

@@ -495,8 +495,6 @@ function run({ group, ok, eq, has, lacks }) {
         fns: ['docSend', 'docRecordSent', 'docState', '_jobTouch', '_actor', '_stamp',
               'esignSharedEmails'].concat(HELP),  // P21: the DocuSign send names signers sharing one address (Q32)
         stubs: {
-          // P22: whom the envelope's Client line went to is read off clientRecipient, the rung esignSigner (stubbed below) reads.
-          esignCounselSignsNote: () => '',
           DOC_SEND_PROVIDERS: PROVIDERS, _docBusy: null, docProvider: () => provider, esignAnchorsPresent: () => [],
           _dashSendState() {}, setTimeout: () => 0, clearTimeout() {}, docPdfBase64: (spec, h, cb) => cb('JVBERi0='),
           _pdfFailAdviceText: () => '', esignSigner: () => ({ name: 'Tripp Butler' }), docAction() { said.filed++; },

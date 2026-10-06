@@ -79,7 +79,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // exactly what the strip at the foot of the rail does (it collects the doc acts of every row
   // but the lit one), so "no row offers it" is "neither the tray nor the strip offers it".
   const RAIL = sandbox({
-    fns: ['agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'depositVoidFlag', 'agreementHandedOverInPerson',
+    fns: ['agrApprovalWithdrawn', 'jobTimeline', 'jobClosedRefunded', 'jobRefundedTotal', 'refundCounts', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'estimateSubmitBlocker', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries',
       'docPreviewOnly', 'agreementReady', 'isJobWon', 'estimateNoteGaps', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'invFiduciaryMode',
@@ -396,7 +396,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'estFixedFee',
     'estPrepFeeOnTop', 'closeDiscountModal', 'dashNotice', 'notifyManagerForApproval', 'checkPin', 'estimateApprovalTierBlocker', 'resolvePin',
     'unscoredRoomNames', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'svcHasDocStep', 'matterTypeOf',
-    'docTierOf', 'docTierDef', 'buildLockSnapshot', 'submitDeny', 'isJobWon', '_jobStatusCell', 'jobStatusView',
+    'docTierOf', 'docTierDef', 'buildLockSnapshot', 'submitDeny', 'isJobWon', '_jobStatusCell', 'jobStatusView', 'jobClosedRefunded', 'jobRefundedTotal', 'refundCounts', 'jobPayments',
     'estimateEventStatus', 'submitForApproval', 'estimateSubmitBlocker', 'estimateNoteGaps', 'editEstimateFromCE',
     'revokeEstimateApproval', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'estimateOutForApproval', 'priceRaiseSentence', 'priceAboveSent', 'fmt', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'roundCents', 'fmtHrs'].concat(BLK_FNS);
   const ST_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
@@ -463,7 +463,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('jobStatusView: ONE reading of the status, and a won job never reads as a pre-won phase');
   {
-    const V = sandbox({ fns: ['jobStatusView', 'isJobWon', '_jobStatusCell', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'], vars: ['JOB_STATUS_LABELS', 'JOB_STATUS_DOT'] });
+    const V = sandbox({ fns: ['jobStatusView', 'jobClosedRefunded', 'jobRefundedTotal', 'refundCounts', 'jobPayments', 'isJobWon', '_jobStatusCell', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'], vars: ['JOB_STATUS_LABELS', 'JOB_STATUS_DOT'] });
     const v = (j) => V.jobStatusView(j);
     eq(v({ status: 'pending', won: true }).label, 'Won · Pending Re-approval', 'won + pending: both facts');
     eq(v({ status: 'pending', won: true }).key, 'pending', '⚠ keyed pending, so the manager’s Pending Approval filter still finds it');
@@ -482,7 +482,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
   {
     // The Status sort reads the same view.
-    const s = sandbox({ fns: ['sortJobsForList', 'svcLabelOf', 'jobStatusView', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'],
+    const s = sandbox({ fns: ['sortJobsForList', 'svcLabelOf', 'jobStatusView', 'jobClosedRefunded', 'jobRefundedTotal', 'refundCounts', 'jobPayments', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'roundCents'],
       vars: ['SVC_LABELS', 'SVC_ORDER', 'JOB_STATUS_ORDER', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'JOB_SORTS'] });
     const list = [{ id: 1, status: 'approved', won: true, name: 'A' }, { id: 2, status: 'approved', name: 'B' },
       { id: 3, status: 'active', won: true, name: 'C' }];

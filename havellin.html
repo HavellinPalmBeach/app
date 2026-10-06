@@ -2662,6 +2662,21 @@ body.no-smf .smf-col{display:none;}
   </div>
 </div>
 
+<div class="modal-overlay" id="inv-pickup-modal" style="display:none;">
+  <div class="modal-box" style="width:460px;max-width:94%;">
+    <div class="modal-title">File a vendor pickup list</div>
+    <div class="modal-sub" id="ip-sub"></div>
+    <div id="ip-body" style="max-height:50vh;overflow-y:auto;"></div>
+    <div id="ip-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closePickupDialog()">Cancel</button>
+      <label class="btn-p" id="ip-file-btn" style="flex:1;cursor:pointer;position:relative;text-align:center;">Photograph or choose the sheet
+        <input type="file" accept="application/pdf,image/*" onchange="pickupFileFromDialog(this)"
+          style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;left:0;top:0;"></label>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════ AGREEMENT ══════════════════════════════ -->
 <div class="panel" id="panel-agreement">
   <div class="card" style="margin-bottom:1rem;">
@@ -5645,9 +5660,15 @@ function paintEstimateService(svc, job, pricedAs) {
     // A saved estimate that was PRICED as something else has to say so where the number
     // is, not in a feedback line that the next toast scrolls away. Same lesson the sync
     // chip and the draft-link strip already carry.
+    // ⚠ "THIS ESTIMATE HAS BEEN REPRICED" ONLY WHERE AN ESTIMATE IS SAVED (P22, found by group A): an unsaved build that
+    // followed the job's service (followJobService) has no estimate to have repriced, so it says the build is repriced.
+    var _saved = !!(job && typeof estimateStore !== 'undefined' && estimateStore && estimateStore[job.id] && estimateStore[job.id].estimate);
     var _drift = (pricedAs && pricedAs !== svc)
-      ? '<span style="color:var(--bronze);font-weight:700;">Priced as ' + esc(SVC_LABELS[pricedAs] || pricedAs)
-        + '; the job is now ' + esc(SVC_LABELS[svc] || svc) + ' and this estimate has been repriced. Re-check the scope before sending.</span>'
+      ? '<span style="color:var(--bronze);font-weight:700;">' + (_saved
+          ? 'Priced as ' + esc(SVC_LABELS[pricedAs] || pricedAs) + '; the job is now ' + esc(SVC_LABELS[svc] || svc)
+            + ' and this estimate has been repriced. Re-check the scope before sending.'
+          : 'This build was priced as ' + esc(SVC_LABELS[pricedAs] || pricedAs) + '; the job is now ' + esc(SVC_LABELS[svc] || svc)
+            + ', so it is repriced as that. Re-check the scope before saving.') + '</span>'
       : '';
     var _stamp = _svcChangeStampHtml(job, svc);
     note.innerHTML = _drift + (_drift && _stamp ? '<br>' : '') + _stamp;
@@ -7106,11 +7127,20 @@ function _fxAmtSet(n) {
   el.value = n > 0 ? fmt(n) : '';
 }
 
-// A clean figure below the suggested fee, for the manager who reads $25,275 and wants to
-// quote $25,000 (Anthony, 2026-09-20). Rounds DOWN — the suggestion already carries the
-// contingency, and a quote rounded up charges the client for the rounding — to the nearest
+// A clean figure below the suggested fee, for the manager who reads $25,300 and wants to
+// quote $25,000 (Anthony, 2026-09-20). Rounds DOWN (the suggestion itself is rounded UP to the next $100 since P22,
+// fixedFeeSuggested; this is the manager's cleaner figure under it) to the nearest
 // $1,000 above $20,000, $500 above $5,000, $100 below that, so a small job is not rounded
 // down by a tenth of itself. A figure that is already round comes back unchanged.
+// ⚠⚠ THE SUGGESTED FIXED FEE, ROUNDED UP TO THE NEXT $100 (P22; Anthony, 2026-10-06: "round UP to the next $100, never
+// below the calculated price"). The one definition: the services at the two-specialist plan plus the contingency, to the
+// cent, then up to the next whole hundred (a figure already on a hundred stays). It carried cents before. The Round chip
+// below still offers a cleaner figure under it, which is the manager's call.
+function fixedFeeSuggested(services, buf) {
+  var raw = roundCents((services || 0) * (1 + (buf || 0)));
+  if (!(raw > 0)) return 0;
+  return Math.ceil(raw / 100 - 1e-9) * 100;
+}
 function fixedFeeRounded(fee) {
   fee = roundCents(fee || 0);
   if (fee <= 0) return 0;
@@ -7940,7 +7970,7 @@ function calcAll() {
   // carry the expedited premium and the preferred-client discount inside it, so no fixed-price document
   // could show either, and a fee typed by hand ignored the rush tick entirely. Both are their own lines
   // now, charged on whatever fee is quoted (estimateFigures), so ticking rush always raises the price.
-  var _fpFee  = roundCents(_fpServices * (1 + _fpBuf));
+  var _fpFee  = fixedFeeSuggested(_fpServices, _fpBuf);
   window._fixedPriceSuggested = _fpFee;
   if (isFixed && !_fixedAmountUserSet && _fpFee > 0) {
     // Not typed by hand yet, so it is still a prefill — keep it current with the estimate
@@ -8162,7 +8192,7 @@ function calcAll() {
     var _fpPrepNote = prepFee > 0
       ? ' The ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee (' + fmt(prepFee) + ' on these estimates) is not in this figure — it is billed on top of the fixed fee, on the prep vendors\' actual invoices.'
       : '';
-    if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services' + (prepFee > 0 ? ' excluding the Home Sale Preparation Fee' : '') + ' × ' + Math.round(buf * 100) + '% contingency';
+    if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services' + (prepFee > 0 ? ' excluding the Home Sale Preparation Fee' : '') + ' × ' + Math.round(buf * 100) + '% contingency, rounded up to the next $100';
     if (fpVal)   fpVal.textContent   = fmt(fpFee);
     if (fpNote)  fpNote.textContent  = 'Covers scope drift, access delays, and unforeseen complexity. Vendor costs remain pass-through at cost.'
       + _fp2Note + _fpLinesNote + _fpPrepNote;
@@ -11284,6 +11314,10 @@ function _fixedFeeBlurb(e) {
 // count for the same reason: a number beside a phase reads as a delivery
 // commitment, and the pace here is set by how fast the client makes decisions.
 // Sequence and completion gates only.
+// ⚠ WHAT HAPPENS TO A WILL, AND TO THE ESTATE'S PAPERS, WE FIND (P22; Anthony, 2026-10-06; counsel bundle). One sentence,
+// read by all three of _cePhases' sorting arms. It said wills were "turned over to you and counsel", where the will procedure
+// (Found on site, siteFindRefusal) hands an original will to the estate attorney the same day for deposit with the clerk.
+var CE_FOUND_PAPERS_TXT = 'An original will or codicil we find is handed, unopened, to the estate attorney the same day (or to you where no attorney is recorded), against a signed receipt, for deposit with the clerk as Florida law requires. Deeds, titles and financial records go to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
 function _cePhases(e, job) {
   var svc = e.svc || '';
   var steps = (typeof JOB_STEPS !== 'undefined' && JOB_STEPS[svc]) ? JOB_STEPS[svc] : {};
@@ -11456,7 +11490,7 @@ function _cePhases(e, job) {
     sortNeed = 'Decisions, room by room. This is the part of the job that sets the pace — we can work as fast as decisions are made, and no faster.';
     sortDone = 'A room is complete when every item in it has been routed and the keep list is confirmed with you in writing.';
   } else if (isDeceased && docScope === 'full') {
-    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, ' + (_ceCourt ? 'property that may be claimed as exempt is flagged for your attention, ' : '') + 'and anything that may carry real value is held for the appropriate specialist before it moves. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them. In each space the crew sorts contents while your Transition Concierge records what is there: every item of consequence photographed in place, described, and logged with its location, condition, and estimated value. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, ' + (_ceCourt ? 'property that may be claimed as exempt is flagged for your attention, ' : '') + 'and anything that may carry real value is held for the appropriate specialist before it moves. ' + CE_FOUND_PAPERS_TXT;
     sortNeed = 'The list of any items designated to a named person, so they are set aside before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The inventory comes to you and to counsel. <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = deep
       ? 'A room is complete when every item in it is catalogued and photographed, specific bequests ' + (_ceCourt ? 'and exempt property are' : 'are') + ' set aside and recorded, and the room\'s inventory has been delivered to the representative and counsel.'
@@ -11467,11 +11501,11 @@ function _cePhases(e, job) {
       // capture scope). It said counsel "arranges any appraisal" beside Exhibit A's priced appraiser, against the
       // agreement's §2 and §5.2. Found by the P13 documentation pass.
       + (weAppraise ? '; we coordinate the appraisals this estimate lists (' + esc(estimateAppraiserNames(e)) + '), and counsel arranges any other.' : ' and arranges any appraisal.')
-      + ' <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, and anything that may carry real value is held in place until counsel has seen it. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+      + ' <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, and anything that may carry real value is held in place until counsel has seen it. ' + CE_FOUND_PAPERS_TXT;
     sortNeed = 'The list of any items designated to a named person, so they are set aside before anything is handled, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> The list comes to you and to counsel. <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = 'A room is complete when every item in it is photographed and listed, specific bequests are set aside, and the room\'s list has been delivered to the representative and counsel.';
   } else if (isDeceased) {
-    sortBody = 'We work the property one room at a time, in the same order the estimate lists them, sorting and staging contents. <strong>The inventory and valuation of the estate are being handled by counsel</strong>, and we work from their schedule rather than producing one. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, and anything that may carry real value is held in place until counsel has seen it. Any wills, codicils, deeds, titles or financial records we come across are sequestered and turned over to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+    sortBody = 'We work the property one room at a time, in the same order the estimate lists them, sorting and staging contents. <strong>The inventory and valuation of the estate are being handled by counsel</strong>, and we work from their schedule rather than producing one. <strong>Nothing is sold, donated or removed at this stage.</strong> Items you or counsel have designated to a named person are set aside and recorded separately, and anything that may carry real value is held in place until counsel has seen it. ' + CE_FOUND_PAPERS_TXT;
     sortNeed = 'Counsel\'s inventory or schedule of the contents, the list of any items designated to a named person, and confirmation of who may enter the property. <strong>You do not need to be on site.</strong> <strong>We do not read or interpret the will and we do not decide what happens to anything</strong> — that is yours and your attorney\'s, and we act on what you tell us in writing.';
     sortDone = 'A room is complete when every item in it is sorted and staged and specific bequests are set aside, checked against counsel\'s schedule.';
   } else {
@@ -13763,13 +13797,13 @@ function setFilter(f, btn) {
 // first, status in lifecycle order, RE with the ★ clients first. The second press reverses it and
 // the third clears it — back to newest-created first, the list's own order, which a sort would
 // otherwise hide for the rest of the session.
-var JOB_STATUS_ORDER = ['new', 'pending', 'approved', 'won', 'active', 'closed', 'closed_retained', 'lost'];
+var JOB_STATUS_ORDER = ['new', 'pending', 'approved', 'won', 'active', 'closed', 'closed_retained', 'closed_refunded', 'lost'];
 // ONE status vocabulary for every list on the dashboard — the client list and the Won list both
 // read it, so a status cannot be worded one way in one table and another way in the next.
 var JOB_STATUS_LABELS = { new: 'New', pending: 'Pending Approval', approved: 'Approved — Awaiting Client', won: 'Won',
-  active: 'Active', closed: 'Closed', closed_retained: 'Closed — Deposit Retained', lost: 'Lost' };
+  active: 'Active', closed: 'Closed', closed_retained: 'Closed — Deposit Retained', closed_refunded: 'Closed — Refunded', lost: 'Lost' };
 var JOB_STATUS_DOT = { new: 's-new', pending: 's-pending', approved: 's-pending', won: 's-active', active: 's-active',
-  closed: 's-closed', closed_retained: 's-closed', lost: 's-lost' };
+  closed: 's-closed', closed_retained: 's-closed', closed_refunded: 's-lost', lost: 's-lost' };
 
 // ⚠⚠ WHAT AN ESTIMATE EVENT LEAVES A JOB'S STATUS AT — save, submit, discount, approve, deny, edit.
 // The status line is ONE string carrying two different facts: before the client's yes it tracks the
@@ -13802,6 +13836,9 @@ function jobStatusView(j) {
   var s = (j && j.status) || '';
   var won = isJobWon(j);
   if (won && (s === '' || s === 'new' || s === 'approved')) s = 'won';
+  // ⚠ CLOSED — REFUNDED IS A READING, NEVER A STORED STATUS (P22, Anthony 2026-10-06): a Deposit Retained job whose
+  // refunds took it below its deposit (jobClosedRefunded) reads so here, and so wherever this is read.
+  if (s === 'closed_retained' && jobClosedRefunded(j)) s = 'closed_refunded';
   // ⚠ A RAISE THE CLIENT HAS NOT ACCEPTED IS STILL A WON JOB, and it reads as both facts — the key stays
   // 'won' so the sort and the Won list keep it where it is, and the words say what is outstanding.
   var reask = (won && s === 'won') ? priceAboveAcceptance(j, null) : null;
@@ -15573,6 +15610,21 @@ function closeoutRetainedTotal(job) {
   return job ? roundCents(jobPaidTotal(job) - jobRefundedTotal(job)) : 0;
 }
 
+// ⚠⚠ CLOSED — REFUNDED (P22; Anthony, 2026-10-06: "close as 'Closed — Refunded', show net kept (can be $0), Win/Loss
+// counts it lost"). A refund above what was due (saveRefund asks, then records it) could leave a job reading Closed —
+// Deposit Retained, and counted won, while it kept nothing. The ONE answer: a job closed out with money kept
+// (`closed_retained`) on which a refund is recorded and which now keeps $0, or less than the deposit it asked for
+// (depositTargetFor). It is DERIVED, never stored: jobStatusView reads it as `closed_refunded`, and winLossFigures
+// counts it lost, so recording or voiding a refund moves it with nothing to migrate. Retaining at least the deposit
+// stays Deposit Retained, whatever else went back.
+function jobClosedRefunded(job) {
+  if (!job || job.status !== 'closed_retained' || !(jobRefundedTotal(job) > 0)) return false;
+  var kept = closeoutRetainedTotal(job);
+  if (kept <= 0.005) return true;
+  var dep = roundCents(depositTargetFor(job) || 0);
+  return dep > 0 && kept < dep - 0.005;
+}
+
 // The gate the whole job hangs off. True when deposit payments meet the 50% target;
 // the 1% tolerance absorbs rounding between the estimate total and what a client's bank
 // actually sent. With no target known, any recorded deposit counts — refusing to call a
@@ -16122,6 +16174,19 @@ function refundMethodLabel(m) {
   var r = REFUND_METHODS.filter(function (x) { return x.v === m; })[0];
   return r ? r.l : (m || '—');
 }
+// ⚠ THE ONE SIGNAL THAT THE MOVING-MATERIALS PACKAGE WAS DELIVERED (P22): the Job Plan's Before Day 1 box *Moving materials
+// on site for Day 1 morning* (`materials_onsite`), which the concierge ticks anyway. No new box. Read by invoiceHtml's
+// workDone pricing and the settlement's note.
+function materialsDelivered(job) {
+  return !!(job && _planTaskDone(job.id, 'materials_onsite'));
+}
+// The sentence under the walkaway's figures, on the card and in the close-out dialog: what the work done counts, and, where a
+// quoted package was left out, why.
+function walkawayWorkNote(s) {
+  var t = 'The work done is what was delivered: the hours logged at the job’s rates, the moving materials once they are on site, and the fees on vendor costs actually recorded.';
+  if (s && s.pkg > 0 && !s.pkgCounted) t += ' The ' + fmt(s.pkg) + ' materials package is not counted: “Moving materials on site” is not ticked on the Job Plan.';
+  return t;
+}
 function walkawaySettlement(job) {
   if (!job) return null;
   // The one cents rule (P17 merge): this had its own Math.round(v * 100) / 100, which rounds 1.005 down. Belt-and-braces:
@@ -16140,9 +16205,13 @@ function walkawaySettlement(job) {
   // has answered (hoursLogReady) the settlement is unknown, as it is without the estimate. `wait` names what it waits on.
   if (!hoursLogReady()) { out.basis = 'unknown'; out.wait = 'its hours log'; return out; }
   var inv = null;
-  try { inv = invoiceHtml(job, 'final'); } catch (e) { inv = null; }
+  // ⚠ WHAT WAS DELIVERED OR INCURRED, NOT WHAT WAS QUOTED (P22; Anthony, 2026-10-06): the final priced with workDone
+  // counts the moving-materials package only once it is recorded on site, and the fees only on vendor quotes recorded.
+  try { inv = invoiceHtml(job, 'final', { workDone: true }); } catch (e) { inv = null; }
   if (!inv) { out.basis = 'unknown'; return out; }
   out.work = c(inv.servicesTotal);
+  out.pkg = c(est.pkgCost || 0);
+  out.pkgCounted = out.pkg > 0 && materialsDelivered(job);
   out.earned = Math.max(out.deposit, out.work);
   out.due = Math.max(0, c(held - out.earned));
   out.retained = c(held - out.due);
@@ -16167,6 +16236,13 @@ function refundBlocker(job, s) {
 function walkawaySettlementHtml(job) {
   if (!job || job.status !== 'closed_retained') return '';
   var s = walkawaySettlement(job);
+  // ⚠ AN UNKNOWN SETTLEMENT SAYS WHAT IT WAITS ON (P22, found by group A): the card was silent, where the close-out dialog
+  // names the missing record. Same words as the dialog's, and no figure.
+  if (s && s.basis === 'unknown') {
+    return '<div class="jt-settle" id="jt-settle-' + job.id + '"><div class="jt-pays-hd">Walkaway settlement</div>'
+      + '<div class="jt-settle-note">What this job has earned, and any refund due, cannot be worked out until ' + esc(s.wait || 'its estimate')
+      + ' loads on this device.</div></div>';
+  }
   if (!s || s.basis !== 'hourly') return '';
   var row = function (l, v, cls) {
     return '<div class="jt-settle-row' + (cls ? ' ' + cls : '') + '"><span>' + l + '</span><span>' + v + '</span></div>';
@@ -16176,7 +16252,7 @@ function walkawaySettlementHtml(job) {
   h += row('Earned: the deposit (' + fmt(s.deposit) + ') or the work done (' + fmt(s.work) + '), whichever is more', fmt(s.earned));
   if (s.refunded > 0) h += row('Refunded', '(' + fmt(s.refunded) + ')');
   h += row('Refund due', fmt(s.due), s.due > 0 ? 'jt-settle-due' : '');
-  h += '<div class="jt-settle-note">The work done is what the final invoice bills: the hours logged at the job’s rates, with the materials and fees.</div>';
+  h += '<div class="jt-settle-note">' + esc(walkawayWorkNote(s)) + '</div>';
   if (!refundBlocker(job, s)) {
     h += '<div class="jt-acts"><button class="jt-btn" onclick="openRefundModal(' + job.id + ')">Record refund</button></div>';
   }
@@ -16245,7 +16321,8 @@ function saveRefund() {
   closeRefundModal();
   renderJobs();
   var s2 = walkawaySettlement(job);
-  dashNotice('ok', 'Refund recorded: ' + paymentSummaryText(job, refund) + '. The job now retains ' + fmt(closeoutRetainedTotal(job))
+  dashNotice('ok', 'Refund recorded: ' + paymentSummaryText(job, refund) + '. The job now '
+    + (jobClosedRefunded(job) ? 'reads Closed — Refunded and keeps ' : 'retains ') + fmt(closeoutRetainedTotal(job))
     + (s2 && s2.due > 0 ? '; ' + fmt(s2.due) + ' is still due back.' : '.'));
   _dashRedraw(jobId);
 }
@@ -18608,9 +18685,10 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   var terminalKind = job.status === 'lost' ? 'lost' : (job.status === 'closed_retained' ? 'retained' : '');
   if (terminalKind) {
     var retained = terminalKind === 'retained';
+    var refundedOut = retained && jobClosedRefunded(job);   // P22: the net kept is named even at $0
     return [row({
       key: 'terminal', group: 'Close-out',
-      label: retained ? 'Closed — deposit retained' : 'Lost',
+      label: refundedOut ? 'Closed — refunded' : retained ? 'Closed — deposit retained' : 'Lost',
       // ⚠ `lostAt` is an ISO stamp, not the yyyy-mm-dd every other milestone carries
       // (`confirmMarkLost` writes toISOString()). Handed over whole it rendered as
       // "2026-09-12T00:00:00Z" on the one row a client-facing screen shows on a dead
@@ -18619,7 +18697,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       sub: (job.lostReasonLabel || job.lostReason || '')
         // Everything received, not the deposit stage alone: a job abandoned after its midpoint was
         // paid kept both, and naming only the deposit understated what the firm holds (audit M4).
-        + (retained && closeoutRetainedTotal(job) > 0 ? ' · ' + fmt(closeoutRetainedTotal(job)) + ' retained' : '')
+        + (refundedOut ? ' · ' + fmt(closeoutRetainedTotal(job)) + ' kept after refunds'
+          : retained && closeoutRetainedTotal(job) > 0 ? ' · ' + fmt(closeoutRetainedTotal(job)) + ' retained' : '')
     })].map(function (r) { r.state = 'terminal'; return r; });
   }
 
@@ -19106,7 +19185,7 @@ var DOC_SEND_PROVIDERS = {
     // ⚠ WHAT THIS PROVIDER WOULD REFUSE FROM THE JOB AND THE DOCUMENT ALONE (2026-10-05, P20): a co-representative
     // DocuSign cannot reach. docSend asks it before the PDF is built, so nothing at all is posted; `send` asks again
     // where the envelope is made.
-    refuse: function (spec) { return esignCoSigners(spec.job, spec.anchors).why; },
+    refuse: function (spec) { return esignClientSignerRefusal(spec.job) || esignCoSigners(spec.job, spec.anchors).why; },
     send: function (spec, pdf, cb) {
       // ⚠⚠ NO PDF MEANS NO ENVELOPE, AND THIS ARM MUST NOT BE MADE LENIENT. Gmail can honestly
       // create a draft with the attachment missing and say so — a person reads it before it goes.
@@ -19116,6 +19195,9 @@ var DOC_SEND_PROVIDERS = {
       var who = esignSigner(spec.job);
       if (!who.email) { cb(false, 'no client email on this job'); return; }
       if (!who.name)  { cb(false, 'no client or representative name on this job — DocuSign needs someone to address the envelope to'); return; }
+      // The estate attorney is never the Client signer (P22): asked again here, where the envelope is made.
+      var _asClient = esignClientSignerRefusal(spec.job);
+      if (_asClient) { cb(false, _asClient.replace(/\.$/, '')); return; }
       // Every co-representative signs beside the client (P20), or the envelope does not go.
       var co = esignCoSigners(spec.job, spec.anchors);
       if (co.why) { cb(false, co.why.replace(/\.$/, '')); return; }
@@ -19322,8 +19404,6 @@ function docSend(spec) {
         msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _andJoin(g.names) + ' are on the envelope at one email address (' + g.email
           + '): make sure each of them signs for themselves.';
       });
-      var _counsel = provider === 'docusign' ? esignCounselSignsNote(spec.job) : '';
-      if (_counsel) msg = msg.replace(/\s+$/, '') + ' ⚠ ' + _counsel + '.';
       // ⚠ SENDING FILES IT. A document that has gone to a client is one the firm must be
       // able to produce afterwards, and until Slice 5 only the estimate managed that: the
       // agreement and packet filed on approval, and the INVOICE filed nowhere unless
@@ -19337,7 +19417,7 @@ function docSend(spec) {
       // It still shows in the sync badge, and the rail says which documents are filed.
       docAction(spec.job.id, spec.kind, 'file',
                 spec.stage ? { stage: spec.stage, auto: true } : { auto: true });
-      _docNotice((attached && !_staleLine && !_offEnv.length && !_shared.length && !_counsel) ? 'ok' : 'warn', msg, spec.job.id);
+      _docNotice((attached && !_staleLine && !_offEnv.length && !_shared.length) ? 'ok' : 'warn', msg, spec.job.id);
       if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
       showSyncBadge(provider === 'docusign' ? 'Sent for signature ✓' : provider === 'gmail' ? 'Gmail draft created ✓' : 'Email opened ✓');
     }
@@ -19672,16 +19752,13 @@ function esignSigner(job) {
   var r = clientRecipient(job);
   return { name: r.name, email: r.email };
 }
-// ⚠ WHEN THE ENVELOPE'S CLIENT SIGNER IS COUNSEL (P22, found in P20). clientRecipient's ladder ends at the estate
-// attorney, so on an estate with no email recorded for the representative the attorney is DocuSign's recipient 1 and is
-// sent the Client's signature line. Who signs is Anthony's call and is NOT changed here; the send's notice names it, so
-// nobody learns it from the attorney. Plain text, '' unless that is who the envelope went to.
-function esignCounselSignsNote(job) {
-  var r = clientRecipient(job);
-  if (r.who !== 'attorney') return '';
-  return (r.name || r.email) + ', the estate attorney, was sent the Client’s signature line: no email is recorded for '
-    + (String((job && job.executor) || '').trim() || 'the representative') + '. If the representative should sign, void the envelope in '
-    + ESIGN_PROVIDERS.docusign.label + ', add their email on Edit Client and send again';
+// ⚠⚠ THE ESTATE ATTORNEY NEVER SIGNS AS THE CLIENT (P22; Anthony, 2026-10-06). clientRecipient's ladder ends at the estate
+// attorney, so on an estate with no email recorded for the representative the attorney would be DocuSign's recipient 1 and
+// sent the Client's signature line. Refused by name instead, before anything is posted (DOC_SEND_PROVIDERS.docusign.refuse)
+// and again where the envelope is made (its `send`); the fix is the representative's email on Edit Client. It replaces P22
+// group B's amber note after the send (esignCounselSignsNote), which let the envelope go. '' when the envelope may go.
+function esignClientSignerRefusal(job) {
+  return clientRecipient(job).who === 'attorney' ? 'Add the representative’s email: the estate attorney can’t sign as the client.' : '';
 }
 
 // ⚠⚠ WHO SIGNS BESIDE THE CLIENT IN DOCUSIGN, AND WHAT STOPS THE ENVELOPE (2026-10-05, P20; Anthony, Q22: each
@@ -22461,7 +22538,7 @@ function renderClientDashboard(jobId) {
   var cos = changeOrders.filter(function(c){ return c.jobId===jobId; });
 
   // ── Status badge colours
-  var statusColors = {new:'#888780',pending:'#A67C45',approved:'#A67C45',won:'#1D9E75',active:'#1D9E75',closed:'#3C3489',closed_retained:'#3C3489',lost:'#B0413E'};
+  var statusColors = {new:'#888780',pending:'#A67C45',approved:'#A67C45',won:'#1D9E75',active:'#1D9E75',closed:'#3C3489',closed_retained:'#3C3489',closed_refunded:'#B0413E',lost:'#B0413E'};
   // (The chip's LABEL is `jobStatusView`'s — this function kept a second copy of the status vocabulary,
   // which is how a won job's chip and its row in the client list would come to disagree.)
 
@@ -23361,9 +23438,11 @@ function toggleWinLossList(kind) {
 // ⚠ "Closed — deposit retained" counts as WON and sits on the Won list, named: the client
 // accepted, paid the deposit and then walked, and confirmMarkLost keeps won=true on purpose.
 // It is shown with its own status rather than folded silently into the wins.
+// ⚠ CLOSED — REFUNDED COUNTS AS LOST (P22, jobClosedRefunded): it went back, so it is no win; it sits on the Lost list
+// with its own status and the net it kept.
 function winLossFigures() {
-  var won  = jobs.filter(isJobWon);
-  var lost = jobs.filter(function(j){ return j.status === 'lost'; });
+  var won  = jobs.filter(function(j){ return isJobWon(j) && !jobClosedRefunded(j); });
+  var lost = jobs.filter(function(j){ return j.status === 'lost' || jobClosedRefunded(j); });
   var decided = won.length + lost.length;
   return {
     won: won, lost: lost, decided: decided,
@@ -23491,7 +23570,8 @@ function winLossListHtml(kind, f, unread) {
     h += '<tr style="cursor:pointer;" onclick="openClientDashboard(' + j.id + ')">' + _wlClientCell(j)
       + '<td>' + esc(svcLabelOf(j)) + '</td>'
       + '<td>' + esc(j.tc || '—') + '</td>'
-      + '<td style="color:#B0413E;">' + (est ? money(est) : '—') + '</td>'
+      + '<td style="color:#B0413E;">' + (est ? money(est) : '—')
+        + (jobClosedRefunded(j) ? '<div style="font-size:10px;color:var(--gray);">Closed — Refunded · ' + money(closeoutRetainedTotal(j)) + ' kept</div>' : '') + '</td>'
       + '<td>' + esc(j.lostReasonLabel || j.lostReason || '—') + '</td>'
       + '<td style="color:var(--gray);">' + esc(j.lostNote || '—') + '</td>'
       + '<td style="white-space:nowrap;">' + (j.lostAt ? esc(fmtDate2(j.lostAt)) : '—') + '</td></tr>';
@@ -23663,7 +23743,7 @@ function openCloseoutModal(id) {
             + '<div class="jt-settle-row"><span>Earned: the deposit (' + fmt(_st.deposit) + ') or the work done (' + fmt(_st.work) + ')</span><span>' + fmt(_st.earned) + '</span></div>'
             + '<div class="jt-settle-row' + (_st.due > 0 ? ' jt-settle-due' : '') + '"><span>Refund due</span><span>' + fmt(_st.due) + '</span></div>'
             + '</div>'
-            + 'The work done is what the final invoice bills: the hours logged at the job’s rates, with the materials and fees.'
+            + esc(walkawayWorkNote(_st))
             + (_st.due > 0 ? ' Record the refund on the client’s card once it has been sent.' : '')
           : (_st && _st.basis === 'unknown')
           // An unread estimate is not an answer: nothing here may say what was earned, or that nothing is owed back.
@@ -24302,7 +24382,10 @@ var SIGNED_RECORD_KINDS = {
   // The agreement's signature page as the co-representatives signed it by hand (2026-10-05, P20; Q22): on the paper
   // route, or where an envelope did not carry them. Its signers in `signedBy`, '; ' between names; read by
   // agreementCoSignState.
-  agreement: { label: 'Co-signed agreement page' }
+  agreement: { label: 'Co-signed agreement page' },
+  // A vendor's pickup sheet (P22; Anthony, 2026-10-06): the auction house's, consignor's or buyer's list of what it took,
+  // photographed. Ref the vendor, stableIds the lines it covers; estates and living work alike (pickupGroups).
+  pickup:    { label: 'Vendor pickup list' }
 };
 var AGR_COSIGN_REF = 'agreement';   // signedRecords' ref for a co-signed agreement page — a stored value: never rename it
 var SIGNED_COPY_MAX_BYTES = 10 * 1024 * 1024;
@@ -24420,6 +24503,7 @@ function voidSignedRecord(jobId, id, after) {
   var why = (window.prompt('Why is this signed copy being voided? (for example: filed against the wrong paper). The file stays in Drive.', '') || '').trim();
   if (!why) return false;
   jobListVoid(job, 'signedRecords', id, why, _actor(job) || job.tc || '');
+  if (rec.kind === 'pickup') pickupVoidCustody(jobId, rec);   // its Released custody events come off with it (P22)
   showSyncBadge('Signed copy voided. It stays in Drive and on the record as voided.');
   if (after) after(rec); else _signedCopyRepaint(jobId, rec.kind);
   return true;
@@ -25961,6 +26045,7 @@ function savePhotoRefs(jobId) {
                // ⚠ P22: the person left in Channel / Recipient after the line came off Distribute, the item a detail
                // shot was binned with, and the merge's stamps on the signers (a hand edit, each name Record approval added).
                channelLeftover:r.channelLeftover, deletedWith:r.deletedWith, authBySetAt:r.authBySetAt, authAdds:r.authAdds,
+               lostAt:r.lostAt, lostBy:r.lostBy,   // an as-found shot marked lost (markShotLost, P22)
                clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
@@ -26045,6 +26130,32 @@ function _shotDesc(ref) {
   if (ref.objectName) return ref.objectName;
   var m = { before: 'As found', inventory: 'Item', detail: 'Detail', after: 'After' };
   return (m[ref.label] || 'Shot') + ' ' + (ref.seq || '');
+}
+
+// ⚠⚠ AN AS-FOUND SHOT WHOSE BYTES ARE GONE (P22; Anthony, 2026-10-06: "Mark lost" one tap, no reason; recorded who and
+// when; the entry stays as lost; the error clears; the room still needs an as-found shot to lock). Retry cannot resend it
+// (the image was not held) and the bin refuses an as-found shot (they stay), so its "⚠ not saved" stood for good. The one
+// rule for when the tap is offered, asked by the tile and again by markShotLost where the record is written.
+function shotMarkLostOffered(ref) {
+  return !!(ref && !ref.deletedAt && ref.label === 'before' && ref.status === 'failed' && !_photoRetryData[ref.stableId]);
+}
+function markShotLost(jobId, stableId) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!shotMarkLostOffered(ref)) return false;
+  ref.status = 'lost';
+  ref.lostAt = _todayStr();
+  // Who, as the as-found tick records it (setRoomFoundDone): the concierge accountable for the job.
+  ref.lostBy = (_invJob(jobId) || {}).tc || '';
+  _invTouch(ref);
+  _setPhotoRef(jobId, ref);
+  savePhotoRefs(jobId);
+  _savePendingPhotoData(jobId);
+  _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);   // the workspace and the room cards
+  return true;
+}
+// The tile's line for a lost shot: the word, then who and when.
+function shotLostText(ref) {
+  return 'Lost' + (ref && ref.lostAt ? ' · marked ' + fmtDate2(ref.lostAt) : '') + (ref && ref.lostBy ? ' by ' + ref.lostBy : '');
 }
 
 // ⚠⚠ THE ONE DISCARD, AND IT COVERS A SHOT THAT LANDED AS WELL AS ONE THAT DID NOT.
@@ -29507,6 +29618,137 @@ function invReleasedToPerson(ref, job) {
 // owed no ratification. A charity's receipt counts where it is filed covering the line (kind `donation`, its stableIds);
 // a statement where it is live, lists the line and its scan is filed (kind `statement`, ref the statement). A typed
 // Receipt / Doc is not a filed paper and counts for nothing here.
+// ═══ THE VENDOR PICKUP LIST (P22; Anthony, 2026-10-06: "photo of vendor's pickup sheet; app pre-ticks that vendor's
+// items, user unticks; counts as gone and closes custody; estates AND living; flag never block") ═══
+// A vendor that takes lines away (the auction house, the consignor, the buyer: a line on a selling disposition,
+// INV_SALE_DISPOSITIONS, naming them in Channel / Recipient) hands over a pickup sheet. One press on Releases & signed
+// papers, the photograph, the ticks: it is filed through fileSignedCopy (kind `pickup`, ref the vendor, stableIds the
+// lines ticked), and a line on a live pickup list is recorded as gone (invRecordedGone) and, where the job keeps a chain
+// of custody (custodyLogKept), carries a Released custody event tied to the list (`pickupId`), tombstoned if the list
+// is voided. The vendor is matched case- and space-insensitively (pickupKey), and named as the Vendor Directory names
+// it where the typed channel is a directory vendor (pickupVendorName). Nothing here refuses anything.
+function pickupKey(name) { return String(name || '').trim().replace(/\s+/g, ' ').toLowerCase(); }
+function pickupVendorName(channel) {
+  var k = pickupKey(channel);
+  if (!k) return '';
+  var dir = (typeof vendorDirectory !== 'undefined' && Array.isArray(vendorDirectory)) ? vendorDirectory : [];
+  var hit = dir.filter(function(v){ return v && pickupKey(v.vendor_name) === k; })[0];
+  return String(hit ? hit.vendor_name : channel).trim().replace(/\s+/g, ' ');
+}
+// Does this line leave with a vendor? A live line on a selling disposition with somebody named to take it.
+function invPickupLine(ref) {
+  return !!(ref && !ref.deletedAt && INV_SALE_DISPOSITIONS.indexOf(ref.disposition) >= 0 && pickupKey(ref.channel));
+}
+// The live pickup list covering this line, or null.
+function invPickupRecord(ref, job) {
+  if (!ref || !job) return null;
+  var sid = String(ref.stableId);
+  return signedRecordsOf(job, 'pickup').filter(function(s){ return (s.stableIds || []).map(String).indexOf(sid) >= 0; })[0] || null;
+}
+// The lines leaving with each vendor, in first-seen order: `lines` (every live line on that channel), `open` (on no
+// pickup list), and the lists filed for that vendor or covering its lines.
+function pickupGroups(job, items) {
+  var recs = job ? signedRecordsOf(job, 'pickup') : [];
+  var map = {}, order = [];
+  (items || []).forEach(function(r){
+    if (!invPickupLine(r)) return;
+    var k = pickupKey(r.channel);
+    if (!map[k]) { map[k] = { key: k, vendor: pickupVendorName(r.channel), lines: [], open: [], records: [] }; order.push(k); }
+    map[k].lines.push(r);
+    if (!invPickupRecord(r, job)) map[k].open.push(r);
+  });
+  return order.map(function(k){
+    var g = map[k], ids = g.lines.map(function(r){ return String(r.stableId); });
+    g.records = recs.filter(function(x){
+      return pickupKey(x.ref) === k || (x.stableIds || []).some(function(y){ return ids.indexOf(String(y)) >= 0; });
+    });
+    return g;
+  });
+}
+// The dialog: the vendor's lines, ticked where no list covers them yet, and the file picker that files what is chosen.
+var _pickupCtx = null;
+function openPickupDialog(jobId, key) {
+  var job = _invJob(jobId);
+  if (!job) return false;
+  var g = pickupGroups(job, _invAssignItemNos(jobId)).filter(function(x){ return x.key === pickupKey(key); })[0];
+  if (!g) { showSyncBadge('No line on the inventory goes to that vendor now.', true); return false; }
+  _pickupCtx = { jobId: jobId, key: g.key, vendor: g.vendor };
+  var sub = document.getElementById('ip-sub');
+  if (sub) sub.innerHTML = 'Photograph <strong>' + esc(g.vendor) + '</strong>&rsquo;s pickup sheet. Untick anything the sheet does not list.';
+  var body = document.getElementById('ip-body');
+  if (body) body.innerHTML = g.lines.map(function(r){
+    var on = invPickupRecord(r, job);
+    return '<label class="ip-line" style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;">'
+      + '<input type="checkbox" class="ip-tick" data-sid="' + esc(String(r.stableId)) + '"' + (on ? '' : ' checked')
+      + ' style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
+      + '<span>' + esc(_invNamed(r)) + (on ? ' <span style="color:var(--gray);">&middot; already on a pickup list</span>' : '') + '</span></label>';
+  }).join('');
+  var fb = document.getElementById('ip-fb');
+  if (fb) fb.innerHTML = '';
+  var m = document.getElementById('inv-pickup-modal');
+  if (m) m.style.display = 'flex';
+  return true;
+}
+function closePickupDialog() {
+  var m = document.getElementById('inv-pickup-modal');
+  if (m) m.style.display = 'none';
+  _pickupCtx = null;
+}
+// The file picker's change: the ticks, then the filing. Refuses only an empty selection (a list covering nothing).
+function pickupFileFromDialog(input) {
+  var file = input && input.files && input.files[0];
+  if (input) { try { input.value = ''; } catch (e) {} }
+  var ctx = _pickupCtx;
+  if (!ctx || !file) return false;
+  var ids = Array.prototype.slice.call(document.querySelectorAll('#ip-body .ip-tick'))
+    .filter(function(el){ return el.checked; }).map(function(el){ return el.getAttribute('data-sid'); });
+  if (!ids.length) { showFB('ip-fb', 'warn', 'Tick the lines the pickup sheet lists.'); return false; }
+  showFB('ip-fb', 'info', 'Filing ' + esc(ctx.vendor) + '’s pickup list…');
+  return fileSignedCopy(ctx.jobId, 'pickup', { ref: ctx.vendor, stableIds: ids, signedBy: ctx.vendor, signedOn: _todayStr(),
+      label: 'Vendor pickup list — ' + ctx.vendor }, file, function(ok, msg, rec){
+    if (!ok) { showFB('ip-fb', 'warn', esc(msg)); return; }
+    var n = pickupRecordCustody(ctx.jobId, rec);
+    closePickupDialog();
+    showSyncBadge(msg + ' ' + ids.length + ' line' + (ids.length > 1 ? 's' : '') + ' recorded as picked up'
+      + (n ? ', each with a Released custody event' : '') + '.');
+    _signedCopyRepaint(ctx.jobId, 'pickup');
+  });
+}
+// ⚠ WHERE THE JOB KEEPS A CHAIN OF CUSTODY, THE LIST CLOSES IT: a Released event on each line it covers, to the vendor,
+// on the day it was filed, tied to the list by `pickupId` so a void takes it back off (pickupVoidCustody). Returns how
+// many events it wrote; a line that already carries this list's event is not given a second.
+function pickupRecordCustody(jobId, rec) {
+  var job = _invJob(jobId);
+  if (!job || !rec || !custodyLogKept(job, (estimateStore[jobId] || {}).estimate)) return 0;
+  var n = 0;
+  (rec.stableIds || []).forEach(function(sid){
+    var ref = _getPhotoRef(jobId, String(sid));
+    if (!ref || ref.deletedAt) return;
+    if ((ref.custodyLog || []).some(function(e){ return e && !e.deletedAt && e.pickupId === rec.id; })) return;
+    if (!ref.custodyLog) ref.custodyLog = [];
+    // The custody vocabulary's own word (addCustodyEvent's default), held in a local so no source scan reads it as a
+    // backend action name.
+    var released = 'Released';
+    ref.custodyLog.push({ cid: _photoUid(), at: Date.now(), action: released, party: rec.ref || '', date: rec.signedOn || _todayStr(),
+      method: 'Vendor pickup', receipt: 'Pickup list filed to Drive', pickupId: rec.id });
+    _setPhotoRef(jobId, _invTouch(ref));
+    n++;
+  });
+  if (n) { savePhotoRefs(jobId); _scheduleInventorySync(jobId); }
+  return n;
+}
+function pickupVoidCustody(jobId, rec) {
+  var n = 0;
+  ((rec && rec.stableIds) || []).forEach(function(sid){
+    var ref = _getPhotoRef(jobId, String(sid));
+    if (!ref) return;
+    var hit = false;
+    (ref.custodyLog || []).forEach(function(e){ if (e && !e.deletedAt && e.pickupId === rec.id) { e.deletedAt = Date.now(); hit = true; } });
+    if (hit) { _setPhotoRef(jobId, _invTouch(ref)); n++; }
+  });
+  if (n) { savePhotoRefs(jobId); _scheduleInventorySync(jobId); }
+  return n;
+}
 function invRecordedGone(ref, job) {
   if (!ref || ref.deletedAt) return false;
   if (String(ref.dispDate || '').trim()) return true;
@@ -29515,6 +29757,7 @@ function invRecordedGone(ref, job) {
   if (!job) return false;
   var sid = String(ref.stableId);
   if (signedRecordsOf(job, 'donation').some(function(s){ return (s.stableIds || []).map(String).indexOf(sid) >= 0; })) return true;
+  if (invPickupRecord(ref, job)) return true;   // on a vendor's filed pickup list (P22)
   return jobListEntries(job, 'proceedsStatements').some(function(st){
     return (st.lines || []).some(function(l){ return String(l && l.stableId) === sid; }) && signedRecordsOf(job, 'statement', st.id).length > 0;
   });
@@ -29544,6 +29787,8 @@ function invGoneText(ref, job) {
   var sid = String(ref.stableId);
   var don = job ? signedRecordsOf(job, 'donation').filter(function(s){ return (s.stableIds || []).map(String).indexOf(sid) >= 0; })[0] : null;
   if (don) return 'Released: ' + (don.ref || 'the charity') + '’s receipt is on file';
+  var pk = invPickupRecord(ref, job);
+  if (pk) return 'Released: ' + (pk.ref || 'the vendor') + '’s pickup list is on file';
   var st = job ? jobListEntries(job, 'proceedsStatements').filter(function(x){
     return (x.lines || []).some(function(l){ return String(l && l.stableId) === sid; }) && signedRecordsOf(job, 'statement', x.id).length > 0;
   })[0] : null;
@@ -29744,28 +29989,6 @@ var INV_RELEASE_CAUTIONS = [
         + 'because the person works with us, it is a conflict of interest for Havellin, so we put it on the record before '
         + 'anything leaves. <strong>Initialling a line below confirms that you know who is receiving it.</strong> To send '
         + 'a line somewhere else instead, ask your concierge.' },
-  // ⚠⚠ ITS ESTATE MIRROR: A LINE ALREADY GOING TO ONE OF HAVELLIN'S PEOPLE (P22). The estate refuses the write
-  // (invStaffRefused), so nothing new gets here; a line written before P19's rule, or naming someone added to the
-  // directory since, was flagged nowhere. Flagged now, on the row, in the line's record and on the request, through this
-  // one rule; never refused or undone after the fact (the line was written when nothing refused it), and the request
-  // asks the representative not to initial it. `fid`: an estate only, as `staffRecipient` is living only.
-  // ⚠ THE BODY IS DRAFTED, NOT REVIEWED: it goes to counsel with the P22 hand-back.
-  { key: 'staffEstate', fid: true, badge: 'GOING TO SOMEONE WITH HAVELLIN', tone: '#8a5a1e',
-    test: function(r, jobId){ return !!invHavellinRecipient(r, _invJob(jobId)); },
-    badgeFor: function(r, jobId){
-      return 'GOING TO ' + String(invHavellinRecipient(r, _invJob(jobId))).toUpperCase() + ', WHO WORKS WITH HAVELLIN';
-    },
-    note: function(r, jobId){
-      return invHavellinRecipient(r, _invJob(jobId)) + ' works with Havellin; proposed: ' + (r.disposition || '');
-    },
-    desk: 'Havellin and its people never buy or receive estate or trust property, so this line cannot go to them. It was '
-        + 'recorded before that was refused here, or before they were listed with Havellin; change where it goes. The '
-        + 'release approval request names it and asks that it not be initialled.',
-    head: 'Property recorded as going to someone who works with Havellin',
-    body: 'Havellin and its people never purchase or receive estate or trust property, and take no share of the proceeds '
-        + 'of its sale. These lines are recorded as going to a person who works with Havellin, named against each line. '
-        + '<strong>Please do not initial them.</strong> Your concierge will change where each one goes and ask for your '
-        + 'approval again.' },
   // ⚠⚠ AND THIS ONE IS THE DEFECT THE OTHER TWO ALREADY TAUGHT US ABOUT. Until today
   // _invAwaitingApproval filtered on disposition-plus-no-approval-date and consulted the
   // appraisal track NOWHERE, so an object the app itself had flagged for a specialist — sitting
@@ -30369,6 +30592,23 @@ function _renderInvReleasesCard(job, all) {
           + signedRecordLinksHtml(jid, filed) + '</div></div>';
       }).join(''));
     }
+  }
+  // ⚠ VENDOR PICKUPS, ESTATE AND LIVING ALIKE (P22): each vendor taking lines away, what its filed lists cover, and the
+  // one press that files the next sheet. A line on no list is named, never refused.
+  var pickups = pickupGroups(job, all);
+  if (pickups.length) {
+    parts.push(head('Vendor pickups') + pickups.map(function(g){
+      var done = g.lines.filter(function(r){ return g.open.indexOf(r) < 0; });
+      return '<div class="inv-rel-row inv-pickup-row" style="' + row + '">'
+        + '<div><strong>' + esc(g.vendor) + '</strong> &middot; ' + g.lines.length + ' line' + (g.lines.length > 1 ? 's' : '') + ' (' + nums(g.lines) + ')'
+          + (done.length ? ' &middot; <span style="color:var(--ok-tx);">&#10003; on a pickup list: ' + nums(done) + '</span>' : '')
+          + (g.open.length && done.length ? ' &middot; <span style="color:#8a5a1e;">not on one: ' + nums(g.open) + '</span>' : '')
+        + '</div>'
+        + '<div class="inv-rel-ctl">'
+          + '<button class="btn-s" onclick="openPickupDialog(' + jid + ',' + _invJsArg(g.key) + ')">' + (g.records.length ? 'File another pickup list' : 'File pickup list') + '</button>'
+          + signedRecordLinksHtml(jid, g.records) + '</div>'
+        + '</div>';
+    }).join(''));
   }
   if (!parts.length) return '';
   return '<div class="card" id="inv-releases" style="margin-bottom:1rem;">'
@@ -32105,7 +32345,8 @@ function asFoundRecord(jobId) {
       last: shots.length ? shots[shots.length - 1].ts : null,
       // A shot that never reached Drive has no link, so the index points at nothing — and
       // a reader cannot tell that row from a shot nobody took. Counted and reported.
-      unsaved: shots.filter(function(x){ return x.status !== 'uploaded'; }).length,
+      unsaved: shots.filter(function(x){ return x.status !== 'uploaded' && x.status !== 'lost'; }).length,
+      lost: shots.filter(function(x){ return x.status === 'lost'; }).length,   // marked lost (markShotLost, P22)
       attestedAt: att ? (att.at || '') : '',
       attestedBy: att ? (att.by || '') : ''
     };
@@ -32118,6 +32359,7 @@ function asFoundRecord(jobId) {
     missing: rooms.filter(function(r){ return r.count === 0; }),
     unattested: shot.filter(function(r){ return !r.attestedAt; }),
     unsaved: rooms.reduce(function(n, r){ return n + r.unsaved; }, 0),
+    lost: rooms.reduce(function(n, r){ return n + r.lost; }, 0),
     total: rooms.reduce(function(n, r){ return n + r.count; }, 0)
   };
 }
@@ -32176,6 +32418,11 @@ function printAsFoundRecord(jobId) {
       + (rec.unsaved > 1 ? 'are' : 'is') + ' listed below with no link. The image is still on the device that '
       + 'took it; open the room on the Job Plan and press Retry.</div></div>';
   }
+  if (rec.lost) {
+    html += '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:10px 12px;margin-bottom:14px;font-size:11px;line-height:1.5;">'
+      + '<strong>' + rec.lost + ' photograph' + (rec.lost > 1 ? 's were' : ' was') + ' lost</strong> before reaching Drive, '
+      + 'and ' + (rec.lost > 1 ? 'are' : 'is') + ' listed below as lost, with who marked ' + (rec.lost > 1 ? 'them' : 'it') + ' and when.</div>';
+  }
 
   rec.shotRooms.forEach(function(r) {
     var att = r.attestedAt
@@ -32203,6 +32450,7 @@ function printAsFoundRecord(jobId) {
             + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(x.fieldNote || '') + '</td>'
             + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">'
               + (x.driveFileUrl ? '<a href="' + esc(x.driveFileUrl) + '">open</a>'
+                 : x.status === 'lost' ? '<span style="color:#8a6d3b;">' + esc(shotLostText(x)) + '</span>'
                                 : '<span style="color:#A32D2D;">not saved</span>') + '</td>'
             + '</tr>';
         }).join('')
@@ -34077,14 +34325,17 @@ function _renderInvRow(job, ref) {
   } else if (_gap) warn.push('<span title="' + esc(_gap) + '" style="color:var(--bronze);font-weight:700;">approval incomplete</span>');
   // ⚠ GOING TO ONE OF HAVELLIN'S PEOPLE ON A LIVING CLIENT'S JOB (P20, Q25): flagged on the row through the one rule,
   // invReleaseCautions (an estate refuses the write instead). Bronze: red on this strip is a held firearm.
-  // ⚠ AND ITS ESTATE MIRROR (P22): a line already recorded as going to one of them, written before anything refused it.
-  var _stC = _invStaffCaution(ref, jid);
+  var _stC = invReleaseCautions(ref, jid, 'staffRecipient')[0];
   if (_stC) warn.push('<span title="' + esc('Conflict of interest: ' + _stC.note(ref, jid) + '. ' + _stC.desk)
     + '" style="color:var(--bronze);font-weight:700;">&#9888; ' + esc(invHavellinRecipient(ref, job)) + ' works with Havellin</span>');
   // ⚠ A LINE TAKEN OFF To a person STILL NAMING THE PERSON (P22): flagged, never cleared (invChannelLeftover).
   var _left = invChannelLeftover(ref);
   if (_left) warn.push('<span class="inv-left-chip" title="' + esc(invChannelLeftoverText(ref))
     + '" style="color:var(--bronze);font-weight:700;">&#9888; still names ' + esc(_left) + '</span>');
+  // ⚠ ON A VENDOR'S FILED PICKUP LIST (P22): said on the row, in green, so the line reads as gone with the vendor.
+  var _pk = invPickupRecord(ref, job);
+  if (_pk) warn.push('<span class="inv-pickup-chip" title="' + esc('On ' + (_pk.ref || 'the vendor') + '’s pickup list, filed to Drive'
+    + (_pk.signedOn ? ' ' + fmtDate2(_pk.signedOn) : '') + '.') + '" style="color:var(--ok-tx);font-weight:700;">&#10003; picked up by ' + esc(_pk.ref || 'the vendor') + '</span>');
   if (invReceiptOwed(ref, job)) {
     warn.push('<span title="' + esc('Released to ' + (invRecipientName(ref.channel) || 'a person') + ' and no signed receipt is filed for it.'
       + (String(ref.receiptDoc || '').trim() ? ' Receipt / Doc reads “' + String(ref.receiptDoc).trim() + '”: a typed reference, not a filed receipt.' : '')
@@ -34247,15 +34498,10 @@ function _renderInvPanel(job, ref) {
 // ⚠ THE LIVING CLIENT'S CONFLICT OF INTEREST, IN THE LINE'S RECORD (P20, Q25), through the one rule, invReleaseCautions:
 // the same caution the row, the bulk bar and the request read. Nothing renders where it does not apply.
 function _invPanelCautionHtml(job, ref) {
-  var c = _invStaffCaution(ref, job.id);
+  var c = invReleaseCautions(ref, job.id, 'staffRecipient')[0];
   if (!c) return '';
   return '<div class="inv-panel-caution" style="margin-bottom:10px;font-size:11px;line-height:1.5;color:#8a5a1e;">&#9888; '
-    + '<strong>' + (c.key === 'staffEstate' ? 'Cannot go to Havellin&rsquo;s people.' : 'Conflict of interest.') + '</strong> '
-    + esc(c.note(ref, job.id)) + '. ' + esc(c.desk) + '</div>';
-}
-// The staff caution a line raises, through the one rule: the living client's conflict, or the estate's mirror (P22).
-function _invStaffCaution(ref, jobId) {
-  return invReleaseCautions(ref, jobId, 'staffRecipient')[0] || invReleaseCautions(ref, jobId, 'staffEstate')[0] || null;
+    + '<strong>Conflict of interest.</strong> ' + esc(c.note(ref, job.id)) + '. ' + esc(c.desk) + '</div>';
 }
 
 // ⚠ THE PERSON LEFT IN Channel / Recipient (P22), in the line's record, with the one press that says the name is right.
@@ -35322,7 +35568,11 @@ function _planRoomStatus(jobId, roomIdx) {
   var plan = jobPlanStore[jobId];
   return roomStatusNormalize(plan && plan.rooms && plan.rooms[roomIdx] && plan.rooms[roomIdx].status);
 }
-function _shotCount(jobId, roomIdx, label) { return _slotRefs(jobId, roomIdx, label).length; }
+// ⚠ A SHOT MARKED LOST IS NOT A SHOT (P22, shotMarkLostOffered): it stays on the strip and in the As-Found Record reading
+// "lost", but it shows nothing, so it never counts toward Lock's as-found requirement (lockRefusal) or any count.
+function _shotCount(jobId, roomIdx, label) {
+  return _slotRefs(jobId, roomIdx, label).filter(function(r){ return r.status !== 'lost'; }).length;
+}
 
 // ⚠⚠ THE AS-FOUND PASS IS THE ONE STEP WHOSE ORDER CAN NEVER BE REVERSED. Two to four wide
 // shots from the corners, then every drawer, cabinet and closet opened and shot with its
@@ -35444,6 +35694,11 @@ function _roomShotStripHtml(jobId, roomIdx) {
       var id = _invFileId(r);
       var bg = _roomShotThumbStyle(jobId, r);
       var status = r.status === 'uploaded' ? ''
+        : r.status === 'lost' ? '<div style="color:var(--gray-dk);font-weight:700;">' + esc(shotLostText(r)) + '</div>'
+        // An as-found shot with no bytes to resend: Mark lost in Retry's place (P22).
+        : shotMarkLostOffered(r)
+          ? '<div style="color:#c0392b;font-weight:700;">&#9888; not saved, image not held '
+            + '<button onclick="markShotLost(' + jobId + ',\'' + r.stableId + '\')" class="btn-s ws-lost" style="font-size:9px;padding:1px 5px;cursor:pointer;">Mark lost</button></div>'
         : (r.status === 'failed'
             // ⚠ RETRY ALONE. The ✕ that used to sit here did exactly what the bin on the
             // corner of the thumbnail now does for every shot, and two controls on one tile
@@ -36528,8 +36783,12 @@ function _srcPersistEstimates() {
 // has been logged yet. Each line carries isEstimate so the invoice can tag stale
 // numbers. Fees are recomputed on the resolved totals: SMF_PCT on third-party
 // vendors (0 since 2026-08-02), prepFeeRate() on home-prep vendors.
-function getVendorActuals(job, est) {
+// ⚠ `opt.actualOnly` (P22, the walkaway's work done; Anthony 2026-10-06: "only what was delivered/incurred"): a line with
+// no actual quote recorded is left out rather than carried at its estimate, so a vendor quoted and never engaged adds no
+// fee to what the job earned. Every other caller passes nothing and is unchanged.
+function getVendorActuals(job, est, opt) {
   job = job || {}; est = est || {};
+  var _actualOnly = !!(opt && opt.actualOnly);
   var vsrc = job.vendorSourcing || {};
   var psrc = job.prepSourcing || {};
   var vendors = est.vendors || [];
@@ -36544,6 +36803,7 @@ function getVendorActuals(job, est) {
       var hasActual = (rec.quote != null && rec.quote !== '');
       var budget = line.cost || 0;
       if (!hasActual && !(budget > 0)) return; // skip empty rows
+      if (!hasActual && _actualOnly) return;   // the walkaway's work done: incurred only (P22)
       var amount = hasActual ? Number(rec.quote) : budget;
       if (!hasActual) anyEst = true;
       total += amount;
@@ -37547,9 +37807,14 @@ function setInvStage(v) {
 // `invBlocked` / `invRequiresApproval` are set by whichever render ran LAST — for
 // whatever job and whatever stage that was. Printing while trusting them is printing
 // against another document's verdict.
-function invoiceHtml(job, stage) {
+// ⚠ `opt.workDone` (P22): the final priced on what was delivered or incurred and nothing quoted, for the walkaway's work
+// done (walkawaySettlement) — the logged hours as always, the moving-materials package only once it is recorded on site
+// (materialsDelivered), and the fees only on vendor quotes actually recorded (getVendorActuals' actualOnly). Its
+// servicesTotal is that figure; the client's final never passes it.
+function invoiceHtml(job, stage, opt) {
   if (!job) return null;
   var jobId = job.id;
+  var _workDone = !!(opt && opt.workDone);
 
   var logs = jobLogEntries(jobId);
   var actTC = 0, actPS = 0;
@@ -37580,12 +37845,13 @@ function invoiceHtml(job, stage) {
   var prepName = preparer ? preparer.name : ((est && est.preparedBy) || job.tc || '—');
   var prepEmail = preparer ? (preparer.email || '—') : '—';
   var pkgCost = est ? (est.pkgCost||0) : 0;
+  if (_workDone && !materialsDelivered(job)) pkgCost = 0;   // a package never delivered is not work done (P22)
   var pkgLabel = est ? (est.pkgLabel||'None') : 'None';
   stage = stage || currentInvStage || 'final';
   var vendors = est ? (est.vendors||[]) : [];
 
   // Resolved actuals from the Job Plan sourcing (fall back to estimate per line).
-  var act = getVendorActuals(job, est);
+  var act = getVendorActuals(job, est, _workDone ? { actualOnly: true } : null);
   // Estimate-basis fees (used only for the deposit, before any actuals exist).
   var smfEst = est ? (est.smf||0) : 0;
   var prepFeeEst = est ? (est.prepFee||0) : 0;
@@ -43857,6 +44123,13 @@ function docStandardEffect(job) {
     + spec;
 }
 
+// ⚠ THE ONE ANSWER TO "IS CHAIN OF CUSTODY KEPT ON THIS JOB?" (P22, lifted out of renderJobPlan so the vendor pickup
+// list asks the same question before it writes a Released event): formal documentation, a probate service, the probate
+// track or the trust track.
+function custodyLogKept(job, est) {
+  var ctx = planTaskCtx(job, est);
+  return !!(ctx.formal || ctx.isProbate || ctx.probateTrack || ctx.trustTrack);
+}
 function renderJobPlan(jobId, job, est) {
   var ctx = planTaskCtx(job, est);
   var isMM = ctx.isMM, isProbate = ctx.isProbate, isDocJob = ctx.isDocJob, isDisposal = ctx.isDisposal;
@@ -43867,7 +44140,7 @@ function renderJobPlan(jobId, job, est) {
   // ⚠ AND ON EVERY TRUST MATTER (P19; Anthony, 2026-10-03: chain of custody mandatory on trust jobs as on probate).
   // A successor trustee owes the beneficiaries the same account of every item a personal representative owes the
   // court (§736.08135), so the trust track is added beside the probate track, never in place of either test.
-  var custodyMandatory = formal || isProbate || ctx.probateTrack || ctx.trustTrack;
+  var custodyMandatory = custodyLogKept(job, est);
   var rooms = _planRooms(jobId).rooms;
 
   // Midpoint billing: "all rooms locked" = the contractual midpoint, and
@@ -45264,6 +45537,16 @@ function docEstateAuthority(job) {
 // is not given a second. ⚠ THE MONTH IS SPELLED OUT (P20, Q27; Anthony: yes): a legal title read "dated Mar 3, 2015"
 // through the app's short date; the long-date helper (fmtCEDate: local noon, never a UTC parse) reads it as an instrument
 // is cited.
+// §5.1's successor-trustee representation (P22; Anthony, 2026-10-06; counsel bundle). With the day the trustee accepted
+// recorded (job.trusteeAcceptedOn), it names the trust (trustInstrumentTitle, where its name is recorded) and that day;
+// without it, the sentence it has always been, byte for byte. Markup: both parts come escaped.
+function _agrTrusteeRepresentation(job) {
+  var acc = String((job && job.trusteeAcceptedOn) || '').trim();
+  if (!acc) return 'If acting as successor trustee, the Client has accepted the trusteeship and holds authority under the trust instrument to direct the disposition of the property described in this Agreement.';
+  var t = trustInstrumentTitle(job);
+  return 'If acting as successor trustee, the Client accepted the trusteeship' + (t ? ' of ' + t : '') + ' on ' + esc(fmtCEDate(acc))
+    + ' and holds authority under the trust instrument to direct the disposition of the property described in this Agreement.';
+}
 function trustInstrumentTitle(job, blank) {
   var n = String((job && job.trustName) || '').trim();
   var d = String((job && job.trustDate) || '').trim();
@@ -45777,7 +46060,7 @@ function probateAgreementHtml(job, est) {
   // this is the client's side of the same point. ADDED rather than substituted, so no existing
   // wording moves and a pour-over matter warrants both.
   if (matterDef(job) && matterDef(job).trust) {
-    reps.splice(2, 0, 'If acting as successor trustee, the Client has accepted the trusteeship and holds authority under the trust instrument to direct the disposition of the property described in this Agreement.');
+    reps.splice(2, 0, _agrTrusteeRepresentation(job));
   }
   // ⚠ AND WHERE A CO-REPRESENTATIVE IS RECORDED, THEIR JOINDER (P19; _agrCoRepRepresentation). Appended, so no rep moves.
   if (_agrCoRepRepresentation(job)) reps.push(_agrCoRepRepresentation(job));

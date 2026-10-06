@@ -81,7 +81,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
-  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'custodyEvents', 'invReceiptRecord', 'photoSharesLine', 'photoSharesOf'];
+  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'photoSharesLine', 'photoSharesOf'];
 const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
   '_agRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
@@ -458,9 +458,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(ctx.invReleaseCautions(both, 2).map((c) => c.key).indexOf(k) >= 0,
          k + ' fires on a living job too');
     });
-    // RESTATED P22: the estate's staff mirror (`staffEstate`) is fiduciary-only too.
-    eq(ctx.INV_RELEASE_CAUTIONS.filter((c) => c.fid).map((c) => c.key).join(','), 'staffEstate,needsAppraisal',
-       'the estate staff mirror and the appraisal caution are fiduciary-only');
+    eq(ctx.INV_RELEASE_CAUTIONS.filter((c) => c.fid).map((c) => c.key).join(','), 'needsAppraisal',
+       'exactly one caution is fiduciary-only');
   }
 
   group('⚠ A TRANSITION HAS A NEW HOME BEFORE ANYONE HAS TYPED THE ADDRESS');

@@ -201,7 +201,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(e.fixedPrice, true, 'the estimate is on a fixed price');
     eq(e.prepFee, prepFee, 'the prep fee is 30% of the prep package');
     const services = (e.tcFee || 0) + (e.psFee || 0) + (e.pkgCost || 0) + (e.smf || 0);
-    eq(e.fixedSuggested, Math.round(services * (1 + r.ctx.fixedPriceBuffer(e.svc))),
+    // RESTATED P22 E: then up to the next $100 (fixedFeeSuggested).
+    eq(e.fixedSuggested, Math.ceil(Math.round(services * (1 + r.ctx.fixedPriceBuffer(e.svc)) * 100) / 100 / 100 - 1e-9) * 100,
        '⚠ the suggestion is the services WITHOUT the prep fee, marked up by the contingency — so the contingency is never charged on it');
     eq(e.fixedAmount, e.fixedSuggested, 'and the fee field tracks it until a figure is typed');
     eq(e.havellinTotal, e.fixedAmount + prepFee, 'the saved total is the flat fee PLUS the prep fee');

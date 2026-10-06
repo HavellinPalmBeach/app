@@ -786,7 +786,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['_renderInvRow', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
+      fns: ['_renderInvRow', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
@@ -794,7 +794,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // P19: the row names a bequest, an incomplete approval and a receipt owed; the recipient box offers the roster.
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', '_invStaffCaution', 'invChannelLeftover', 'invChannelLeftoverText'],
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
              'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'],
