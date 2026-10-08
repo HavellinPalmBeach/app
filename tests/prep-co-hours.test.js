@@ -420,13 +420,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ THE FINAL INVOICE — the fee plus exactly the change-order hours logged');
   {
-    const invFns = ['invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+    const invFns = ['invoiceHtml', 'isCrewPlaceholder', 'docPartyIdent', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
       'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
       'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact',
       'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
-    const invVars = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    const invVars = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
       'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
     // Walk the engagement stage by stage, paying each invoice in full, and return the final.

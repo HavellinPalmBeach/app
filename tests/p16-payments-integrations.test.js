@@ -360,7 +360,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('B5(c) · the invoices read what counts: a voided cheque is not money received');
   {
     // The real invoice, over the real payment helpers — the "received" row and the final's balance.
-    const IFNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine',
+    const IFNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine',
       'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift',
       'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs',
@@ -368,7 +368,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'discountOnLabor', 'estFixedFee',
       'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds',
       'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'agrBillingRates', 'estDeclutterHrs', 'escLines', 'roundCents', 'fmtHrs'];
-    const IVARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    const IVARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
       'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
     const EST = { jobId: 1, tcFee: 12000, psFee: 6000, pkgCost: 1940, smf: 0, prepFee: 0, havellinTotal: 19940, havellinTotalFull: 19940,

@@ -32,7 +32,7 @@ const FNS = [
   'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate',
   'fmt', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones',
   'conciergePhonesText', 'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit',
-  'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection',
+  'clientEstimateHtml', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection',
   '_cePhases', 'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted',
   'proposedPlanRow', 'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml',
   'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
@@ -43,7 +43,7 @@ const FNS = [
   '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
   'matterTypeOf', 'invFiduciaryMode',
   // the three invoices
-  'invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+  'invoiceHtml', 'isCrewPlaceholder', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
   'coHoursLabel', '_coMoney', 'getVendorActuals', '_srcLineKey', '_invVendorFeeSentence', 'vendorGroupOfLine',
   'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'vendorCats', 'vendorPrimaryCat',
   'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estimateFigures',
@@ -51,7 +51,7 @@ const FNS = [
   'buildInvoiceEmailText', 'buildInvoiceEmailHtml', 'buildInvoiceMailto', 'invoiceBalanceWords', '_emMoney',
   '_emHtml', 'bestClientGreetingName', 'firstName', 'bestClientEmail', 'mailtoBody', 'mailtoSignoff', 'invoiceEmailSubject', 'clientRecipient', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'discountOnFixedFee', 'coRushPct', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', '_agrOtherAppraisalsBy', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'coPrepVendorsOn', 'roundCents', 'fmtHrs',
   'docEstateAuthority', 'invProbateRows', 'estateProceedsHolder', '_agrTrustIsParty', '_agrCounsel', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
-const VARS = ['PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'CE_FOUND_PAPERS_TXT', 'TIME_INCREMENT_TXT', 'DEPT_EMAILS',
+const VARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'CE_FOUND_PAPERS_TXT', 'TIME_INCREMENT_TXT', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
   'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES',
   'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',

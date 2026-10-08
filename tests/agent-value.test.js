@@ -478,7 +478,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const { ctx } = rig(ESTATE(), [agent()]);
     let r = ctx._getPhotoRef(7, 's1'); r.fmv = 700; ctx._avTakeValue(r, 'typed');
     eq([r.valuedBy, r.valConf], ['desk', undefined], 'a value typed over the agent\'s is the desk\'s, its confidence cleared');
-    eq(r.valSource, 'Auction comps', 'the source is left for the person to change');
+    // RESTATED 2026-10-08 (the job-flow audit): this pinned "the source is left for the person to change", and the agent's
+    // source and basis sentence then printed under a figure the desk typed ($60 of ammunition read basis "auction comps"
+    // on the Estate Inventory Report). They describe the agent's comparables, so they go with its figure; a source a
+    // person recorded stays (job-flow-audit.test.js drives both, and the appraisal's arm).
+    eq([r.valSource, r.valNote], [undefined, undefined], '⚠ the agent\'s source and basis sentence go with its figure');
     const { ctx: c2 } = rig(ESTATE(), [agent()]);
     r = c2._getPhotoRef(7, 's1'); r.valSource = 'Appraisal'; c2._avTakeValue(r, 'appraisal');
     eq(r.valuedBy, 'appraiser', 'a source set to Appraisal takes the line');

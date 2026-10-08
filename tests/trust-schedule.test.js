@@ -9,7 +9,7 @@
 const { sandbox, source, fn, domStub } = require('./harness.js');
 
 const FNS = [
-  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', '_invScheduleSection', 'invValBasisWord',
+  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
   '_invTrack', '_invTrackDefault', '_invOnTrustSchedule', '_invOnProbateSchedule',
   '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue',
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror',

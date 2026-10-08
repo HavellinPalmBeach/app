@@ -537,12 +537,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(S.printBeneficiaryReceipt(7, 'Mary Smith (niece)'), 'the receipt prints');
     const p = S.__log.printed[S.__log.printed.length - 1] || {}, ph = p.html || '', pt = text(ph);
     has(pt, 'Receipt for Property Released', 'titled');
-    has(pt, 'Released to Mary Smith from the trustee of Ellsworth Family Trust', '⚠ who it came from, by matter: the trustee of the trust');
+    // RESTATED 2026-10-08 (the job-flow audit): the trust is named by its title, through trustInstrumentTitle (the agreement's
+    // and the Trust Schedule's namer), and "the trustees" where more than one fiduciary is recorded (job-flow-audit.test.js).
+    has(pt, 'Released to Mary Smith from the trustee of The Ellsworth Family Trust', '⚠ who it came from, by matter: the trustee of the trust');
     ['Tea service', 'Silver tray', 'Clock'].forEach((x) => has(pt, x, 'lists ' + x));
     lacks(pt, 'Lamp', 'not the line awaiting approval');
     has(ph, '>Excellent<', 'with its condition');
     has(ph, 'text-align:right;">2<', 'and quantity');
-    has(pt, 'I acknowledge that I received the property listed above, in the condition described, from the trustee of Ellsworth Family Trust, delivered to me by Havellin Palm Beach, LLC as directed in writing by Ruth Adler.',
+    has(pt, 'I acknowledge that I received the property listed above, in the condition described, from the trustee of The Ellsworth Family Trust, delivered to me by Havellin Palm Beach, LLC as directed in writing by Ruth Adler.',
         'the acknowledgment, naming who directed the delivery');
     has(pt, 'it does not decide who owns the property or what it is worth, and it does not release or waive any right or claim concerning the trust.', 'and what it is not');
     has(pt, 'Signature of Mary Smith', 'the recipient\'s signature');
@@ -558,7 +560,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text((E.__log.printed[0] || {}).html), 'concerning the estate.', 'and the estate');
     const B = desk(['printBeneficiaryReceipt'], Object.assign(TRUST(), { matterType: 'both', coFiduciaries: [] }), lines);
     B.printBeneficiaryReceipt(7, 'Mary Smith');
-    has(text((B.__log.printed[0] || {}).html), 'from the Estate of Walter Ellsworth or the trustee of Ellsworth Family Trust, as the property is held', 'a pour-over: either, as held');
+    has(text((B.__log.printed[0] || {}).html), 'from the Estate of Walter Ellsworth or the trustee of The Ellsworth Family Trust, as the property is held', 'a pour-over: either, as held');
     // Refusals. A living client's line released to a person is owed no receipt and prints none.
     const vline = LINE('v', 1, { objectName: 'Armchair', disposition: 'Distribute', channel: 'Sarah Ellsworth', authBy: 'Margaret Ellsworth', approvalDate: '2026-10-02' });
     const V = desk(['printBeneficiaryReceipt', 'invReceiptOwed', 'invReleasedToPerson'], LIVING(), [vline]);

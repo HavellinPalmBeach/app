@@ -18,7 +18,7 @@ const FNS = ['matterDef', 'matterTypeOf', 'invProbateRows', '_invTrackDefault', 
   'gateDispute', '_gateYes', '_invJob', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat',
   // The Estate Inventory Report, so its twin of this document's defect can be driven — see
   // the last group in this file. Nothing in the suite had ever called it.
-  'printEstateInventoryReport', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invGroupItems', '_invDispLabel', '_invIsExempt',
+  'printEstateInventoryReport', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invGroupItems', '_invDispLabel', '_invIsExempt',
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
   'resolveValBasis',
 ];

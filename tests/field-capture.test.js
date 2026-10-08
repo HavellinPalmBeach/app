@@ -139,7 +139,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(before.filename, 'HVL-0007_Kitchen_before_1_2026-09-19_101500.jpg', 'an as-found shot is named for its pass');
     ok(!('disposition' in before), 'and carries no disposition — it is not an item');
     eq(r.ctx._jobInvRefs(1).length, 1, '⚠ evidence shots never become inventory lines');
-    eq(r.synced.length, 1, 'and only the inventory line schedules the manifest sync');
+    // RESTATED 2026-10-08 (the job-flow audit): this pinned "only the inventory line schedules the manifest sync", which
+    // left an as-found pass on the device alone (a room locked on the synced plan while the sheet held none of its shots).
+    // Every shot reaches the sheet now; they are evidence, never lines (asserted above).
+    eq(r.synced.length, 3, '⚠ and every shot schedules the manifest sync, as-found and after included');
   }
 
   group('⚠⚠ NO CHIP CHOSEN FILES AS UNDECIDED, NEVER AS KEEP — and every pile maps to a desk value');
@@ -396,7 +399,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                   sent: { 'invoice:midpoint': '2026-09-20' }, paid: { midpoint: 0 }, vendorSourcing: { La: { status: 'Confirmed' } } };
     d.jobPlanStore[7] = { rooms: { 0: { status: 'locked' }, 1: { status: 'packed' } } };
 
-    const p0 = d.planDerivedLines(7, job, est, 'p0');
+    // ⚠ `today` handed in (2026-10-08): the deadline line reads the day now (red once it has passed), and a test never reads the clock.
+    const p0 = d.planDerivedLines(7, job, est, 'p0', '2026-10-01');
     const k = (lines) => lines.map((l) => l.key + ':' + (l.ok ? 'ok' : 'open'));
     eq(k(p0), ['agreement_signed:open', 'deposit_received:open', 'letters:ok', 'attorney_on_file:ok', 'deadline_733604:ok'],
        'Phase 0 reads the signature, the deposit, the Letters, the attorney and the deadline');

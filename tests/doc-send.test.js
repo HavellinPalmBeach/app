@@ -594,7 +594,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const n = noComments(fn('_docNotice'));
     has(n, "document.getElementById('dash-fb')", 'it prefers the drilldown strip');
     has(n, 'dashNotice(type, msg)', 'through the notice that survives the redraw');
-    has(n, 'alert(msg)', 'and falls back to an alert when the drilldown is not open');
+    // RESTATED 2026-10-08 (the job-flow audit): the fallback is the sync toast, never a blocking alert(). What reaches it is a
+    // background answer (a DocuSign or Stripe arrival check, a filing landing) with no client on screen, and the alert froze
+    // the client list, or a phone in the field.
+    has(n, 'showSyncBadge(', 'and falls back to the sync toast when the drilldown is not open');
+    lacks(n, 'alert(', '…never a blocking alert');
     eq((noComments(fn('docSend')).match(/showFB\(/g) || []).length, 0,
       'nothing in the send path writes to a tab strip');
   }

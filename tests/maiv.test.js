@@ -15,7 +15,7 @@ const FNS = [
   'invCatMeta', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'invAppraisalThreshold',
   '_gateYes', '_gate706', 'gateDispute', 'isDecedentJob',
   'invMAIVDefaultCat', 'invIsMAIV', 'invMAIVCategory', 'maivAggregate',
-  'maivFilingApplies', 'maivStatement', 'maivStatement_', '_maivWorklistBlock',
+  'maivFilingApplies', 'maivStatement', 'maivStatement_', '_maivWorklistBlock', 'matterTypeOf', 'matterDef', 'jobOnProbateTrack',
   // §20.2031-6(a) — built 2026-09-22, lifted rather than stubbed: the whole point is that
   // (a) and (b) read ONE gate, and a stub of `maivFilingApplies` is exactly what would let them
   // come apart on the one document that states both.
@@ -23,7 +23,7 @@ const FNS = [
   'invLotsUntestable', '_lotSplitWorklistBlock', '_invItemNo', 'esc',
   '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull', '_vehicleLineName', 'roundCents', 'fmt'
 ];
-const VARS = [
+const VARS = ['MATTER_TYPES', 
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
   'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
   'INV_LOT_ARTICLE_CAP',

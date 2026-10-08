@@ -30,14 +30,14 @@ const text = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&mdash;/g,
 const noComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
 // ── the invoice ─────────────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'paymentStageWord', 'finalAwaitsHours', 'docSentAt', 'docKeyFor', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
+const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'paymentStageWord', 'finalAwaitsHours', 'docSentAt', 'docKeyFor', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
   'invFinalApproval', 'invFinalApprovalRecord', 'jobLogEntries', 'coHours', 'coHoursTotal',
   'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey',
   'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
   'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones',
   'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs',
   'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];
-const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+const INV_VARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
   'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
 

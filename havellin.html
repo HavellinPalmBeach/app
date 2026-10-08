@@ -689,6 +689,9 @@ body.field-mode #wl-block{display:none;}
 .ws-shot .n{font-weight:700;color:var(--gray-dk);margin-top:2px;}
 .ws-shot .note{font-style:italic;line-height:1.3;}
 #field-cam{position:fixed;inset:0;background:#000;z-index:1200;display:none;flex-direction:column;color:#fff;}
+/* The unsaved-changes chip sits bottom left at z-index 9999, over the camera's shutter on a phone (two lines of it blocked
+   the press outright; 2026-10-08, the job-flow audit). It steps aside while the camera is open and is back on Done. */
+body.field-cam-open #sync-pending{display:none !important;}
 .fc-top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(0,0,0,.7);font-size:13px;}
 .fc-top .fc-room{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .fc-done{background:var(--bronze);color:#fff;border:none;border-radius:6px;padding:10px 18px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;min-height:44px;}
@@ -11931,6 +11934,21 @@ function buildPrepEstimateBody(e, job) {
 // The client-facing estimate, as a string. Takes the estimate it is to render rather
 // than reading `currentEstimate`, so a caller can build ANY job's document without
 // touching the tab — see `_approvedEstimateHtml`, which had to borrow the tab to get one.
+
+// ⚠⚠ THE PARTY A CLIENT DOCUMENT'S HEADER NAMES, ONE ANSWER FOR THE ESTIMATE AND THE INVOICES (2026-10-08, the job-flow
+// audit). The estimate named the estate or the trust; every deposit, midpoint and final invoice printed "Client: <the
+// decedent>" and "Phone: —", billing the dead man. On a decedent job (isDecedentJob, the one rule for whom a document
+// addresses) the estate, or on a trust-only matter the trust by its own name where recorded (trustInstrumentTitle,
+// already escaped), else the decedent; a living client by name. `value` is HTML-ready.
+function docPartyIdent(job) {
+  var estate = isDecedentJob(job);
+  var trustParty = estate && _agrTrustIsParty(job);
+  var trustTitle = trustParty ? trustInstrumentTitle(job) : '';
+  var name = esc((job && job.name) || '\u2014');
+  return { estate: estate,
+    label: !estate ? 'Client' : !trustParty ? 'Estate' : trustTitle ? 'Trust' : 'Decedent',
+    value: !estate ? name : !trustParty ? 'Estate of ' + name : (trustTitle || name) };
+}
 function clientEstimateHtml(e, job) {
   if (!e) return '';
   job = job || e.job || jobs.find(function(j){ return j.id===e.jobId; });
@@ -11957,19 +11975,27 @@ function clientEstimateHtml(e, job) {
   var propAddr = esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—');
 
   // Estate job: show estate name + rep contact instead of deceased client's info
-  var isEstateJob = !!(job.executor && job.executor.trim());
+  // ⚠ ASKED OF isDecedentJob THROUGH docPartyIdent (2026-10-08, the job-flow audit), the one rule for whom a document
+  // addresses; it read `job.executor`, a second copy of the rule.
+  var _ceParty = docPartyIdent(job);
+  var isEstateJob = _ceParty.estate;
 
-  var _estDate = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  // ⚠ AN APPROVED ESTIMATE CARRIES THE DAY IT WAS APPROVED, NOT TODAY (2026-10-08, the job-flow audit). It printed the day it
+  // was viewed, so the Exhibit A in a signing packet carried a later date than the estimate the client accepted, and "valid
+  // for 30 days from the date above" moved with every View or Print. The approval's day (rec.approvedAt, written in these
+  // words by the manager's PIN) is fixed for the version approved; Edit estimate clears it and a re-approval dates the new
+  // version. A draft no manager has approved still reads today.
+  var _estRec = (typeof estimateStore !== 'undefined') ? estimateStore[job.id] : null;
+  var _estDate = (_estRec && _estRec.approved && _estRec.approvedAt && (!e.jobId || e.jobId === job.id))
+    ? esc(String(_estRec.approvedAt))
+    : new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   // ⚠ ON A TRUST-ONLY MATTER THE PARTY IS THE TRUST, NOT AN ESTATE (P19, found by the documents workstream). The identity
   // line read "Estate of <decedent>" on a successor trustee's estimate while the agreement it becomes Exhibit A to names
   // the trust (_agrTrustIsParty). The trust by its own name where it is recorded (trustInstrumentTitle, already
   // escaped), else the decedent, which is true either way; probate, Both, Neither and an unanswered matter keep
   // "Estate of", and a living client their own name.
-  var _ceTrustParty = isEstateJob && _agrTrustIsParty(job);
-  var _ceTrustTitle = _ceTrustParty ? trustInstrumentTitle(job) : '';
-  var _cePartyLbl = !isEstateJob ? 'Client' : !_ceTrustParty ? 'Estate' : _ceTrustTitle ? 'Trust' : 'Decedent';
-  var _cePartyVal = !isEstateJob ? esc(job.name||'\u2014') : !_ceTrustParty ? 'Estate of ' + esc(job.name||'\u2014')
-    : (_ceTrustTitle || esc(job.name||'\u2014'));
+  var _cePartyLbl = _ceParty.label;
+  var _cePartyVal = _ceParty.value;
   var html =
     '<div style="text-align:center;padding:0 0 .75rem;">' +
     '<div style="font-family:\'Cormorant Garamond\',serif;font-size:26px;font-weight:500;color:#A67C45;letter-spacing:.06em;">HAVELLIN PALM BEACH</div>' +
@@ -16445,8 +16471,13 @@ function acceptChangeOrder() {
     // ⚠ THE REVISED ESTIMATE MOVES BY WHAT THE FINAL WILL BILL FOR THEM (P16): coBaselineMove, the rule the final's
     // ±15% check reads, so the client list's figure and the invoice's baseline are one number. `shift` stays the
     // fixed-price fee change the notice below states.
-    b.job.havellinEst = baseTotal + coBaselineMove(accepted, b.est, b.tcRate, b.psRate);
-    b.job.totalEst = b.job.havellinEst;
+    var _coMove = coBaselineMove(accepted, b.est, b.tcRate, b.psRate);
+    b.job.havellinEst = baseTotal + _coMove;
+    // ⚠ THE CLIENT LIST'S TOTAL KEEPS THE VENDORS (2026-10-08, the job-flow audit): `totalEst` is the estimate's grand
+    // total (Havellin's services plus the vendors at cost, as Save writes it), and this set it to Havellin's figure
+    // alone, so one change order dropped $12,100 of vendors off the Total Est. column. It moves by the same amount.
+    var _gtBase = (b.est && b.est.grandTotal) ? b.est.grandTotal : baseTotal;
+    b.job.totalEst = roundCents(_gtBase + _coMove);
     b.job.updatedAt = Date.now();
     saveJobs();
     syncJobToSheets(b.job);
@@ -21251,7 +21282,10 @@ function _docNotice(type, msg, jobId) {
     if (typeof _dashRedraw === 'function') _dashRedraw(jobId);
     return;
   }
-  alert(msg);
+  // ⚠ NO CLIENT ON SCREEN: THE SYNC TOAST, NEVER A BLOCKING alert() (2026-10-08, the job-flow audit). What reaches here is
+  // a background answer (a DocuSign or Stripe arrival check on page load, a filing landing), and it froze the client list,
+  // or a phone in the field, behind "Signed agreement and certificate of completion filed to Drive."
+  showSyncBadge(String(msg == null ? '' : msg).replace(/<[^>]+>/g, '').replace(/&amp;/g, '&'), type === 'err' || type === 'warn');
 }
 
 // ─── THE WALKTHROUGH RECORD ──────────────────────────────────────────────────
@@ -25854,9 +25888,14 @@ function refreshPhotoRefs(jobId, cb) {
       // time. Reported 2026-09-11: "when i expand a job plan stage, it automatically shuts on
       // me within seconds. i can't do anything." It was latent until there were photos in the
       // sheet to come back — with an empty manifest the guard above short-circuits it.
-      var beforeJson = JSON.stringify(_photoRefs[jobId] || []);
+      // ⚠⚠ AND IT HAS TO IGNORE THE ORDER OF EACH ITEM'S KEYS (2026-10-08, the job-flow audit). On a tie the merge copies
+      // the incoming item, whose keys come in the order the sheet stored them, while this device's copy came back from
+      // localStorage in savePhotoRefs' order: the same item, two strings. So every refresh read as a change and the Job
+      // Plan re-rendered itself forever on any job whose photographs were on the sheet (193 renders in 6 s against a fast
+      // server, a pre-job call note lost mid-sentence against a slow one) — the defect above, back by another road.
+      var beforeJson = _stableJson(_photoRefs[jobId] || []);
       var merged = mergeMediaItems(_photoRefs[jobId] || [], remote);
-      var didChange = JSON.stringify(merged) !== beforeJson;
+      var didChange = _stableJson(merged) !== beforeJson;
       _photoRefs[jobId] = merged;
       // ⚠ Still SAVE either way: this device may not have written the merged copy locally
       // yet even when the merge was a no-op for the screen.
@@ -25864,6 +25903,14 @@ function refreshPhotoRefs(jobId, cb) {
       if (cb) cb(didChange);
     })
     .catch(function(){ if (cb) cb(false); });
+}
+
+// JSON with every object's keys in sorted order, so two copies of one record compare equal however each was built.
+function _stableJson(v) {
+  if (v === null || typeof v !== 'object') return JSON.stringify(v === undefined ? null : v);
+  if (Array.isArray(v)) return '[' + v.map(_stableJson).join(',') + ']';
+  return '{' + Object.keys(v).filter(function (k) { return v[k] !== undefined; }).sort()
+    .map(function (k) { return JSON.stringify(k) + ':' + _stableJson(v[k]); }).join(',') + '}';
 }
 
 function loadPhotoRefs(jobId) {
@@ -29304,10 +29351,15 @@ function printEstateInventoryReport(jobId, opt) {
     + (noPhoto ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
         + noPhoto + ' item' + (noPhoto > 1 ? 's have' : ' has') + ' no photograph available on this device. '
         + 'The photographs are filed in the estate&rsquo;s Drive folder; re-open this tab with a connection to include them.</div>' : '')
+    // ⚠ WHO REPORTS THE REST FOLLOWS THE MATTER (2026-10-08, the job-flow audit): this page goes in the trust package too,
+    // and named "the personal representative's filing" to a trustee's attorney. The probate track keeps its words; a
+    // trust-only matter takes the Trust Schedule's own (the trustee, under the instrument); anything else names counsel.
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
-      + 'Tangible personal property only. Real property, financial accounts, securities and business interests are reported '
-      + 'separately in the personal representative&rsquo;s filing, prepared with counsel. Photographs are reference-numbered '
-      + 'to the line items above and retained for seven years.</div>'
+      + 'Tangible personal property only. Real property, financial accounts, securities and business interests are '
+      + (jobOnProbateTrack(job) ? 'reported separately in the personal representative&rsquo;s filing, prepared with counsel.'
+        : (matterDef(job) && matterDef(job).trust) ? 'administered under the trust instrument and are reported separately by the trustee.'
+        : 'reported separately, with counsel.')
+      + ' Photographs are reference-numbered to the line items above and retained for seven years.</div>'
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Estate Inventory') };
@@ -30489,10 +30541,15 @@ function invRecordsNoun(job) {
 }
 // Who released the property, as a receipt names it (P19): the estate of the decedent, the trustee of the trust
 // (`job.trustName`, recorded on Edit Client), or either on a pour-over, as the property is held.
+// ⚠ HTML-READY (2026-10-08, the job-flow audit): the trust by its title, through the one namer (trustInstrumentTitle, already
+// escaped), and "the trustees" where more than one fiduciary is recorded. It read "from the trustee of Eleanor M. Whitcombe
+// Revocable Trust" on a trust with two co-trustees, a name the agreement and the Trust Schedule print as "The … Trust,
+// dated March 3, 2015".
 function invReceiptFrom(job) {
   var d = matterDef(job);
-  var estate = 'the Estate of ' + (String((job && job.name) || '').trim() || 'the decedent');
-  var trustee = 'the trustee of ' + (String((job && job.trustName) || '').trim() || 'the trust');
+  var estate = 'the Estate of ' + esc(String((job && job.name) || '').trim() || 'the decedent');
+  var many = jobFiduciaries(job).length > 1;
+  var trustee = 'the trustee' + (many ? 's' : '') + ' of ' + (trustInstrumentTitle(job) || 'the trust');
   if (d && d.trust) return d.onProbate ? estate + ' or ' + trustee + ', as the property is held' : trustee;
   return estate;
 }
@@ -30517,14 +30574,14 @@ function invReceiptHtml(job, name, lines) {
       + '<td style="' + td + '">' + esc(r.condition || '—') + '</td></tr>';
   }).join('');
   return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
-    + _invDocHead(job, 'Receipt for Property Released', 'Released to <strong>' + esc(name) + '</strong> from ' + esc(from))
+    + _invDocHead(job, 'Receipt for Property Released', 'Released to <strong>' + esc(name) + '</strong> from ' + from)
     + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
       + '<th style="' + th + '">Item #</th><th style="' + th + '">Description</th><th style="' + th + 'text-align:right;">Qty</th>'
       + '<th style="' + th + '">Condition</th></tr></thead><tbody>' + rows + '</tbody></table>'
     + '<div style="display:flex;justify-content:flex-end;font-size:12px;font-weight:700;margin-top:8px;border-top:2px solid #333;padding-top:6px;">'
       + lines.length + ' item' + (lines.length > 1 ? 's' : '') + '</div>'
     + '<div style="font-size:11.5px;line-height:1.6;margin-top:16px;">I acknowledge that I received the property listed above, '
-      + 'in the condition described, from ' + esc(from) + ', delivered to me by Havellin Palm Beach, LLC as directed in writing by '
+      + 'in the condition described, from ' + from + ', delivered to me by Havellin Palm Beach, LLC as directed in writing by '
       + esc(by) + '. This receipt records the delivery only: it does not decide who owns the property or what it is worth, '
       + 'and it does not release or waive any right or claim concerning ' + esc(holder) + '.</div>'
     + '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
@@ -32076,7 +32133,11 @@ function _maivWorklistBlock(job, items, maiv) {
     + '<td style="padding:3px 6px;text-align:right;">' + (maiv.unvalued || '—') + '</td>'
     + '<td style="padding:3px 6px;text-align:right;">' + _invMoney(maiv.total) + '</td></tr></tfoot></table>'
     + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">' + tail + '</div>'
-    + '<div style="font-size:10px;color:#888;font-style:italic;margin-top:5px;">Counted across the whole gross estate, including items tagged Trust or Non-probate that are outside the §733.604 probate schedule.</div>'
+    // ⚠ The probate schedule is named only where there is one (2026-10-08, the job-flow audit): the worklist goes in the
+    // trust package, and a trust-only matter has no §733.604 schedule for anything to sit outside of.
+    + '<div style="font-size:10px;color:#888;font-style:italic;margin-top:5px;">Counted across the whole gross estate, including '
+      + (jobOnProbateTrack(job) ? 'items tagged Trust or Non-probate that are outside the §733.604 probate schedule.'
+        : 'property held in a trust and other property that passes outside probate.') + '</div>'
     + '</div>';
 }
 
@@ -34731,17 +34792,28 @@ function agentValueApply(jobId, stableId, res, job, opts) {
 // (Anthony, 2026-10-06). It is the appraisal when the source says so, or when a value is typed over the
 // agent's on a line with an appraiser linked. Anything else typed is the desk's: `valuedBy:'desk'`, the
 // confidence cleared, as a desk edit of the name sets `namedBy:'desk'`.
+// ⚠ AND THE AGENT'S BASIS GOES WITH ITS FIGURE (2026-10-08, the job-flow audit). The source and the basis sentence Agent
+// Two wrote describe its comparables, so a figure the appraiser or the desk set printed "Appraisal" over "Three comparable
+// lots sold 2025-2026", and a $60 typed by the desk printed basis "auction comps" — on the Estate Inventory Report sent
+// to the attorney. Taken from the agent: the appraisal clears its sentence; a typed figure clears the source and the
+// sentence the agent wrote (AGENT_VALUE_SOURCES), so the line reads "not stated" until the desk names one. A source or a
+// sentence a person recorded is left alone.
 function _avTakeValue(ref, how) {
   if (!ref) return;
+  var wasAgent = ref.valuedBy === 'agent';
   var appraisal = how === 'appraisal' || ref.valSource === 'Appraisal'
-    || (how === 'typed' && ref.valuedBy === 'agent' && !!ref.apprId);
+    || (how === 'typed' && wasAgent && !!ref.apprId);
   if (appraisal) {
     ref.valuedBy = 'appraiser';
     ref.valSource = 'Appraisal';
+    if (wasAgent) delete ref.valNote;
     AGENT_VALUE_OWN.forEach(function(k) { delete ref[k]; });
     return;
   }
-  if (how === 'typed') { ref.valuedBy = 'desk'; delete ref.valConf; delete ref.valFailed; }
+  if (how === 'typed') {
+    if (wasAgent && AGENT_VALUE_SOURCES.indexOf(ref.valSource) >= 0) { delete ref.valSource; delete ref.valNote; }
+    ref.valuedBy = 'desk'; delete ref.valConf; delete ref.valFailed;
+  }
 }
 
 function _avStampReviewed(ref, job) {
@@ -36230,7 +36302,11 @@ function _captureShot(jobId, roomIdx, label, rawDataUrl, opts) {
       // The Inventory tab pulls this back from Drive on any device; caching the copy already
       // in hand just means it is there instantly on THIS one.
       _invCacheLocalThumb(jobId, stableId, dataUrl);
-      if (label === 'inventory' || label === 'detail') _scheduleInventorySync(jobId);
+      // ⚠ EVERY SHOT REACHES THE SHEET, AS-FOUND AND AFTER INCLUDED (2026-10-08, the job-flow audit). Only Items and
+      // detail shots scheduled the manifest write, so an as-found pass sat on this device alone until something else
+      // wrote: a room locked on the synced plan while the sheet held none of the shots Lock rests on, and the As-Found
+      // Record printed on another device without them. The manifest carries every label (buildMediaPayload).
+      _scheduleInventorySync(jobId);
       if (opts.onDone) opts.onDone(_getPhotoRef(jobId, stableId));
     });
   });
@@ -36247,7 +36323,7 @@ function _fieldNoteAppend(jobId, stableId, text) {
   _invTouch(ref);
   _setPhotoRef(jobId, ref);
   savePhotoRefs(jobId);
-  if (ref.label === 'inventory' || ref.label === 'detail') _scheduleInventorySync(jobId);
+  _scheduleInventorySync(jobId);   // a note on any shot is part of the record (see _captureShot)
   return true;
 }
 
@@ -36297,6 +36373,7 @@ function openFieldCamera(jobId, roomIdx, mode, opts) {
                 talking: false, recog: null, heard: '', noteDraft: '', noteFor: null };
   el.innerHTML = _fieldCamShellHtml();
   el.style.display = 'flex';
+  if (document.body && document.body.classList) document.body.classList.add('field-cam-open');   // the chip steps aside (CSS)
   _fieldCamPaint();
   var md = (typeof navigator !== 'undefined') && navigator.mediaDevices;
   if (!md || !md.getUserMedia) { _fieldCamGoNative('This browser has no in-page camera.'); return true; }
@@ -36628,6 +36705,7 @@ function closeFieldCamera() {
   st.open = false;
   var el = document.getElementById('field-cam');
   if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+  if (document.body && document.body.classList) document.body.classList.remove('field-cam-open');
   if (_roomWs.open && _roomWs.jobId === st.jobId) _paintRoomWorkspace();
   _repaintPlan(st.jobId);
 }
@@ -38220,7 +38298,13 @@ function confirmJobTeam(jobId) {
   crew.confirmedBy = crew.tc.name;
   crew.confirmedAt = new Date().toISOString();
   _lockCrewSlots(crew);      // named slots fix; empty slots stay open for a mid-job add
-  _crewSave(jobId, before);  // ONE save for the sign-off and the locks together
+  // ⚠ THE CONCIERGE CONFIRMED HERE IS THE JOB'S, WHERE INTAKE NAMED NOBODY (2026-10-08, the job-flow audit). The playbook
+  // tells the concierge to leave intake's Assigned TC blank until the team is picked, and this wrote only `crew.tc`: the
+  // dashboard went on reading "Transition Concierge: Unassigned", the job stayed under Unassigned TC, and Job active and
+  // Work complete were credited to the approver (_handoverBy reads job.tc). A concierge intake or Edit Client already
+  // named is never overwritten, and the placeholder is nobody. Set before the one save below, which moves the job's clock.
+  if (job && !String(job.tc || '').trim() && crew.tc.name !== CONTRACTOR_TC_NAME) job.tc = crew.tc.name;
+  _crewSave(jobId, before);  // ONE save for the sign-off, the locks and the concierge together
   buildLogTeamRows();
   _repaintPlanGates(jobId);   // the Job team chip at the top turns green now, not on the next redraw
   showFB('log-fb','ok','Job team confirmed. Hours can now be logged for this job.');
@@ -39264,10 +39348,13 @@ function invoiceHtml(job, stage, opt) {
     var top = inRole.reduce(function(best, n){ return teamMap[n].hours > teamMap[best].hours ? n : best; }, inRole[0]);
     _teamFee[top] = roundCents(_teamFee[top] + rf[1] - sum);
   });
+  // ⚠ A PLACEHOLDER IS NOBODY (2026-10-08, the job-flow audit): hours logged against "Contractor TBD" printed that name on
+  // the client's final as the person who worked 57 hours. The row names the role instead (isCrewPlaceholder, the crew's rule).
   var teamRows = _teamNames.map(function(name) {
     var t = teamMap[name];
     var rate = t.role === 'TC' ? tcRate : psRate;
-    return '<tr><td>' + esc(name) + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + fmtHrs(t.hours) + '</td><td style="text-align:right;">' + fmt(rate) + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(_teamFee[name]) + '</td></tr>';
+    var who = isCrewPlaceholder(name) ? (t.role === 'TC' ? 'Transition Concierge' : 'Property Specialist') : name;
+    return '<tr><td>' + esc(who) + '</td><td style="text-align:center;">' + t.role + '</td><td style="text-align:center;">' + fmtHrs(t.hours) + '</td><td style="text-align:right;">' + fmt(rate) + '/hr</td><td style="text-align:right;font-weight:600;">' + fmt(_teamFee[name]) + '</td></tr>';
   }).join('');
 
   // Vendor / prep rows — resolved actuals, with an "est." tag on any line still
@@ -39607,6 +39694,7 @@ function invoiceHtml(job, stage, opt) {
     '</div></div>'
     : '');
 
+  var _invParty = docPartyIdent(job);
   var html =
     // Branded header — wordmark · tagline (Job ID + date sit centered under the title).
     '<div style="text-align:center;padding:0 0 .75rem;">' +
@@ -39621,9 +39709,14 @@ function invoiceHtml(job, stage, opt) {
     '<div><div class="ce-meta-label">Invoice Date</div><div class="ce-meta-val">' + today + '</div></div>' +
     '</div>' +
     '<div class="ce-hdr-row ce-hdr-row-1">' +
-    '<div><div class="ce-meta-label">Client</div><div class="ce-meta-val">' + esc(job.name||'—') + '</div></div>' +
+    // ⚠ The estate or the trust, and the representative who pays, on a decedent job — never the decedent as the client
+    // (docPartyIdent, the estimate's own header rule).
+    '<div><div class="ce-meta-label">' + _invParty.label + '</div><div class="ce-meta-val">' + _invParty.value + '</div></div>' +
     '<div><div class="ce-meta-label">Property</div><div class="ce-meta-val">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—') + '</div></div>' +
-    '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + esc(job.phone||'—') + '</div></div>' +
+    (_invParty.estate
+      ? '<div><div class="ce-meta-label">Authorized Representative</div><div class="ce-meta-val">' + esc(job.executor||'—')
+        + (job.executorPhone ? '<br>' + esc(job.executorPhone) : '') + '</div></div>'
+      : '<div><div class="ce-meta-label">Phone</div><div class="ce-meta-val">' + esc(job.phone||'—') + '</div></div>') +
     '<div><div class="ce-meta-label">Service</div><div class="ce-meta-val">' + esc(docServiceTitle(job)) + '</div></div>' +
     '</div>' +
     '<div class="ce-divider"></div>' +
@@ -41065,8 +41158,13 @@ function planDerivedLines(jobId, job, est, phase, today) {
       var dl = !!job.probateDeadline;
       // ⚠ THE DATE RIDES IN THE LABEL once recorded (P22), as the Form 706 chip's does: a green chip shows its label
       // alone (planGateChipsHtml), so the recorded deadline was nowhere on the plan's chip row.
-      out.push({ key: 'deadline_733604', ok: dl, label: '§733.604 inventory deadline' + (dl ? ' ' + fmtDate2(job.probateDeadline) : ''),
-                 detail: dl ? fmtDate2(job.probateDeadline) + ' — 60 days from the Letters' : 'not recorded — enter the date the Letters issued under Edit Client and the deadline follows' });
+      // ⚠ AND RED ONCE THE DAY HAS PASSED (2026-10-08, the job-flow audit), as the Form 706 chip below turns: it read a green
+      // tick over a deadline six days gone. Havellin does not see the filing, so the chip says to confirm it with counsel.
+      var dlPast = dl && job.probateDeadline < day();
+      out.push({ key: 'deadline_733604', ok: dl && !dlPast, label: '§733.604 inventory deadline' + (dl ? ' ' + fmtDate2(job.probateDeadline) : ''),
+                 detail: !dl ? 'not recorded — enter the date the Letters issued under Edit Client and the deadline follows'
+                   : dlPast ? 'the date has passed. Havellin does not see the filing: confirm with the estate attorney that the inventory, or an extension, went in; counsel files it'
+                   : fmtDate2(job.probateDeadline) + ' — 60 days from the Letters' });
     }
     // ⚠⚠ THE FORM 706 DATE (P19; Anthony: track it where it applies), off `estateTaxReturn`, the one answer:
     // nine months after the date of death, firm on a 706 answered yes, unfirm while the question is unanswered,
@@ -45464,6 +45562,13 @@ function togglePlanTask(jobId, key, checked, el) {
   // The close-out card's steps gate on each other (the review ask waits on the call), so a tick
   // there repaints the card rather than only restyling the box.
   if (CLOSEOUT_TASK_KEYS[key]) _repaintCloseout(jobId);
+  // ⚠ AND THE STAGE'S "N of M ticked" FOLLOWS THE TICK (2026-10-08, the job-flow audit): it was drawn only by a full
+  // render, so ten ticks on Before Day 1 still read "0 of 10 ticked". Repainted by id, never the plan.
+  var _t = PLAN_TASKS.filter(function(t){ return t.key === key; })[0];
+  var _meta = _t ? document.getElementById('stage-meta-' + _t.phase) : null;
+  var _job = _meta ? jobs.find(function(j){ return j.id === jobId; }) : null;
+  var _rec = _job ? estimateStore[jobId] : null;
+  if (_meta && _rec && _rec.estimate) _meta.innerHTML = planStageMeta(jobId, _job, _rec.estimate, _t.phase);
 }
 
 // ⚠⚠ PRINT JOB PLAN IS RETIRED (2026-09-11). `printJobPlan` and `_jpExpandForPrint` are

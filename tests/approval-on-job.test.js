@@ -30,7 +30,7 @@ const { sandbox, domStub, source, matchBrace } = H;
 const SRC = source();
 
 // ─── the invoice sandbox ─────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'coHours', 'coHoursTotal',
+const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'isCrewPlaceholder', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'coHours', 'coHoursTotal',
   'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals',
   '_srcLineKey', 'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate',
   'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc',
@@ -40,7 +40,7 @@ const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', '
   'isJobWon', 'resolvePin', 'checkInvPin', 'dashApproveInvoice', 'openInvPinModal', 'invFinalApproval',
   'invFinalApprovalRecord', 'invFinalApprovalStaleTxt', 'recordInvFinalApproval', 'docState',
   'docKeyFor', '_jobTouch', 'docSpec', 'docAction', 'approvedEstimateFor', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
-const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',
+const INV_VARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
   'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES',
   'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'MANAGER_PINS', 'DOC_ACTIONS', 'DOC_READY_WHY',

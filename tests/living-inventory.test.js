@@ -53,7 +53,7 @@ const ITEM = (id, over) => Object.assign({
 }, over || {});
 
 const PRINT_FNS = [ 'invDocContractBlock',
-  'printContentsRecord', 'dispositionRecord', 'printApprovalRequest', 'printCourtInventory', '_avUnreviewedStamp',
+  'printContentsRecord', 'dispositionRecord', 'printApprovalRequest', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   'printDispositionLedger', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',

@@ -64,17 +64,17 @@ const FIXED = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20225, 
 const LEGACY = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20000, grandTotal: 20750 });
 
 // ── the real client estimate ────────────────────────────────────────────────
-const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
+const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'isDecedentJob', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor', 'prepFeeRate', 'estWorkingDays', 'estFixedFee',
                 'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'escLines', 'roundCents', 'fmtHrs'];
-const CE_VARS = ['EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
+const CE_VARS = ['DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const JOB = { id: 1, svc: 'downsizing_move', name: 'Pat Transition', address: '1 A St' };
 const ceDoc = (e) => sandbox({ fns: CE_FNS, vars: CE_VARS }).clientEstimateHtml(e, JOB);
 
 // ── the real invoice ────────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
                  'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
                  '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor',
                  'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones',
@@ -220,7 +220,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pct = { value: 10 };
     const a = sandbox({
       fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
-            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'roundCents'],
+            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'showSyncBadge', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'roundCents'],
       vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },
@@ -234,7 +234,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a.currentEstimate.havellinTotal, 18225, '⚠ and the $225 prep fee is still on top — not dropped by the discount');
     const b = sandbox({
       fns: ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker', 'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt',
-            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'roundCents'],
+            'estFixedFee', 'estPrepFeeOnTop', 'priceChangeBlocker', 'docKeyFor', 'estimateEventStatus', 'isJobWon', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'showSyncBadge', 'docDraftPending', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'roundCents'],
       vars: ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'],
       stubs: {
         document: { getElementById: (id) => (id === 'dm-pct' ? pct : null) },

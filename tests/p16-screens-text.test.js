@@ -314,7 +314,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                   bio: 'First line <i>it</i> & more\nSecond line' };
     const DOC_FNS = ['estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'escLines', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob',
       'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays',
-      'paymentSplit', 'clientEstimateHtml', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
+      'paymentSplit', 'clientEstimateHtml', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
       'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted', 'proposedPlanRow', 'estimateDocScope',
       'svcHasDocStep', 'fmtCEDate', '_pctWords', 'docTierOf', 'docTierDef', 'docTierScope', 'approvedEstimateFor', 'estFixedFee',
       'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords',
@@ -357,7 +357,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ce2.ok ? ce2.val : '', 'Rep Email</div><div class="ce-meta-val">j&lt;b&gt;@x.com', 'their email too');
     ['561<b>', 'j<b>@'].forEach((raw) => lacks(ce2.ok ? ce2.val : '', raw, 'the estate estimate never prints ' + raw + ' as markup'));
 
-    const INV_FNS = ['invoiceHtml', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
+    const INV_FNS = ['invoiceHtml', 'isCrewPlaceholder', 'docPartyIdent', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
       'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice',
       'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs',
@@ -365,7 +365,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments',
       'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee',
       'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];
-    const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    const INV_VARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
       'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
     ['deposit', 'midpoint', 'final'].forEach((stage) => {

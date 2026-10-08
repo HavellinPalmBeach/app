@@ -536,14 +536,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     eq(readers('docEstateAuthority'), { _cePhases: 1, probateAgreementHtml: 1 }, 'the documents\' paper: the agreement and Exhibit A');
     // The lead (P19, after the merge) gave the client estimate's identity line the same namer: one more reader.
-    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, clientEstimateHtml: 1, printTrustSchedule: 2, probateAgreementHtml: 2 },  // P22 E: §5.1's dated acceptance
+    // RESTATED 2026-10-08 (the job-flow audit): the client estimate's identity line reads docPartyIdent, which the invoices
+    // read too (they billed the decedent), so the namer's reader there is docPartyIdent; the beneficiary's receipt
+    // names the trust through it too (invReceiptFrom).
+    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 2, probateAgreementHtml: 2 },  // P22 E: §5.1's dated acceptance
        'the trust\'s namer: the agreement\'s two rows, the schedule\'s header and the client estimate\'s identity line');
     eq(readers('scheduleSigners'), { printCourtInventory: 2, printTrustSchedule: 2 }, 'who signs a schedule: the two schedules');
     eq(readers('scheduleSignLines'), { printCourtInventory: 1, printTrustSchedule: 1 }, 'and their lines');
     eq(readers('_agrCounsel'), { _agrScopeServices: 1, probateAgreementHtml: 2 }, 'counsel\'s names: §1.2, §2 and §2.1');
     eq(readers('_agrClientCapacity'), { probateAgreementHtml: 2 }, 'the Client\'s capacity: §6.3 and the signature page');
     eq(readers('_agrEstateNoun'), { probateAgreementHtml: 5 }, 'the estate noun: §3.1, §5.3, §7.1 twice (once as a possessive) and §10');
-    eq(readers('_agrTrustIsParty'), { _agrEstateNoun: 1, clientEstimateHtml: 1, probateAgreementHtml: 1 }, 'whether the trust is the party: §1.2, the noun and the client estimate\'s identity line');
+    eq(readers('_agrTrustIsParty'), { _agrEstateNoun: 1, docPartyIdent: 1, probateAgreementHtml: 1 },  // restated 2026-10-08, as above
+      'whether the trust is the party: §1.2, the noun and the client estimate\'s identity line');
     // RESTATED 2026-10-05 (P20): two more readers, the envelope's co-signers (esignCoSigners) and the one answer to whether
     // their signatures are on record (agreementCoSignState).
     // RESTATED 2026-10-05 (P21): one more, the sign-by-hand email's line that each co-representative signs too (Q31,

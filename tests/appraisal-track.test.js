@@ -535,7 +535,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: '', condition: 'Good' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',

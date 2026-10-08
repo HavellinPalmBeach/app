@@ -18,6 +18,29 @@
 //      header printed "Prepared by Havellin Palm Beach, LLC" twice.
 //   5. The fixed-fee blurb on the client estimate names moving materials only where a package is priced: a cleanout
 //      quoted with the package at None read "Moving materials and all vendor coordination are included".
+//   6. The Job Plan stops re-rendering itself: a manifest refresh read the same items as changed whenever the sheet's
+//      copy held its keys in another order than this device's, so the plan redrew forever on any job with photographs
+//      on the sheet (and a note being typed was lost).
+//   7. An estate's invoices bill the estate, or the trust, and name the representative: every deposit, midpoint and final
+//      printed "Client: <the decedent>" and "Phone: —". One rule (docPartyIdent) for the estimate's header and theirs.
+//   8. Every shot reaches the sheet, as-found and after included: only Items and detail shots scheduled the manifest write
+//      (field-capture.test.js holds it, restated).
+//   9. Agent Two's basis goes with its figure: a figure the appraiser or the desk set printed the agent's source ("auction
+//      comps") and its comparables sentence on the documents sent to the attorney.
+//  10. The trust package carries no probate words: the Estate Inventory Report named "the personal representative's
+//      filing" and the Appraisal Worklist "the §733.604 probate schedule" on a trust-only matter.
+//  11. An approved estimate (and so Exhibit A) carries the day it was approved: it printed the day it was viewed, so the
+//      signed packet's Exhibit A was dated after the estimate the client accepted and "valid for 30 days" moved.
+//  12. An accepted change order keeps the vendors in the client list's Total Est.: it set the total to Havellin's figure.
+//  13. The beneficiary's receipt names the trust by its title and "the trustees" where two are recorded: it read "from the
+//      trustee of Eleanor M. Whitcombe Revocable Trust" on a trust with two co-trustees.
+//  14. The concierge confirmed on the Job Plan is the job's where intake named nobody: the dashboard read "Unassigned"
+//      over a confirmed team, and Job active and Work complete were credited to the approver.
+//  15. A stage's "N of M ticked" follows each tick: it was drawn only by a full render ("0 of 10 ticked" after ten ticks).
+//  16. A background notice with no client on screen goes to the sync toast, never a blocking alert().
+//  17. The §733.604 deadline chip turns red once the day has passed, as the Form 706 chip does (it stayed a green tick).
+//  18. The unsaved-changes chip steps aside while the camera is open: it covered the shutter on a phone (browser step 71).
+//  19. The final invoice names the role, never "Contractor TBD", for hours logged against a placeholder.
 //
 // Everything is driven through the real functions; each sandbox is the root's own call graph, derived from the source,
 // with unrelated state supplied at named boundaries — never the rule under test.
@@ -57,7 +80,7 @@ function lift(roots, stop, stubs) {
 function attempt(f) { try { return { ok: true, val: f() }; } catch (e) { return { ok: false, err: String(e && e.message || e) }; } }
 
 // Markup → the text a reader sees.
-const ENT = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&mdash;': '—', '&middot;': '·', '&nbsp;': ' ', '&rarr;': '→' };
+const ENT = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&mdash;': '—', '&middot;': '·', '&nbsp;': ' ', '&rarr;': '→', '&rsquo;': '’', '&ldquo;': '“', '&rdquo;': '”', '&ndash;': '–' };
 const decode = (s) => String(s).replace(/&[a-z#0-9]+;/gi, (m) => (ENT[m] !== undefined ? ENT[m] : m));
 const textOf = (h) => decode(String(h).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
 
@@ -255,6 +278,267 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(prep, 'Moving materials', '…none at all');
     has(String(B._fixedFeeBlurb(e({ pkgCost: 850, prepFee: 900, prepFeeOnTop: true }))),
       'Moving materials and vendor coordination are included, apart from the home prep vendors', 'and with a package it keeps them');
+  }
+
+  // ═══ 6 · A REFRESH THAT MOVES NOTHING IS NOT A CHANGE, WHATEVER THE KEY ORDER ═══
+  group('6 · the manifest refresh reads the same items, in another key order, as no change — through the real merge');
+  {
+    const syncOk = (v) => ({ then(f) { const o = f(v); return (o && typeof o.then === 'function') ? o : syncOk(o); }, catch() { return this; } });
+    const rig = (local, remote) => lift(['refreshPhotoRefs'], ['_photoRefs', '_invCloudSeen', 'savePhotoRefs', 'SHEETS_SYNC_URL', 'fetch'],
+      { SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec', _photoRefs: { 7: local }, _invCloudSeen: {}, savePhotoRefs: () => {},
+        fetch: () => syncOk({ json: () => syncOk({ ok: true, media: { 7: { items: remote } } }) }) });
+    // One item as savePhotoRefs writes it, and as the sheet hands it back: the same fields in another order.
+    const mine = { stableId: 's1', label: 'inventory', roomIdx: 2, status: 'uploaded', objectName: 'Sideboard', updatedAt: 10, ts: 5,
+      custodyLog: [{ id: 'e1', kind: 'found', at: 5, by: 'Ashley Jerome' }] };
+    const theirs = { updatedAt: 10, ts: 5, objectName: 'Sideboard', status: 'uploaded', roomIdx: 2, label: 'inventory', stableId: 's1',
+      custodyLog: [{ by: 'Ashley Jerome', at: 5, kind: 'found', id: 'e1' }] };
+    const drive = (r, cap) => {
+      let n = 0;
+      try { (function again() { n++; if (n > cap) throw new Error('cap'); r.refreshPhotoRefs(7, (c) => { if (c) again(); }); })(); }
+      catch (e) { if (e.message !== 'cap') return 'threw: ' + e.message; return cap + 1; }
+      return n;
+    };
+    eq(drive(rig([Object.assign({}, mine)], [theirs]), 25), 1, '⚠⚠ the plan renders once and stops — it re-rendered forever');
+    let changed = null;
+    rig([Object.assign({}, mine)], [Object.assign({}, theirs, { objectName: 'Mahogany sideboard', updatedAt: 11 })]).refreshPhotoRefs(7, (c) => { changed = c; });
+    eq(changed, true, 'a real edit from the other device still reads as a change');
+    rig([Object.assign({}, mine)], [theirs, { stableId: 's2', label: 'inventory', roomIdx: 3, updatedAt: 12, ts: 12 }]).refreshPhotoRefs(7, (c) => { changed = c; });
+    eq(changed, true, 'and so does a new shot');
+  }
+
+  // ═══ 7 · AN ESTATE'S INVOICES NAME THE ESTATE OR THE TRUST, NEVER THE DECEDENT AS CLIENT ═══
+  group('7 · every invoice names the party the estimate names, and the representative on a decedent job');
+  {
+    const INV = lift(['invoiceHtml'], ['jobs', 'estimateStore', 'jobLogs', 'changeOrders', 'contractors', 'currentEstimate', 'currentInvStage'],
+      { jobs: [], estimateStore: {}, jobLogs: {}, changeOrders: [], contractors: [], currentEstimate: null, currentInvStage: 'deposit', vendorDirectory: [] });
+    const CE = lift(['clientEstimateHtml'], ['jobs', 'estimateStore', 'contractors', 'changeOrders', 'jobPlanStore'],
+      { jobs: [], estimateStore: {}, contractors: [], changeOrders: [], jobPlanStore: {} });
+    const EST = { jobId: 7, svc: 'cleanout', totTC: 20, totPS: 40, tcRate: 150, psRate: 100, tcFee: 3000, psFee: 4000, havellinTotal: 7000,
+      pkgCost: 0, smf: 0, vendors: [], prepItems: [], rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3 }], discountPct: 0, rush: false, fixedPrice: false };
+    const base = { id: 7, hvlId: 'HVL-0007', name: 'Harold Whitcombe', svc: 'cleanout', tc: 'Ashley Jerome', status: 'active', won: true, payments: [],
+      addr: '69 Beach Blvd', city: 'Palm Beach', executor: 'Thomas Whitcombe', executorRole: 'Personal Representative',
+      executorPhone: '(561) 555-0101', executorEmail: 't@example.com', deathDate: '2026-04-02' };
+    const header = (job, stage) => {
+      INV.jobs = [job]; INV.estimateStore = { 7: { estimate: Object.assign({}, EST, { svc: job.svc }), approved: true } }; INV.jobLogs = { 7: [] };
+      const r = attempt(() => INV.invoiceHtml(job, stage));
+      const h = String(r.val && r.val.html);
+      const row = (h.match(/<div class="ce-hdr-row ce-hdr-row-1">([\s\S]*?)<div class="ce-divider">/) || [])[1] || '';
+      return { err: r.ok ? '' : r.err, text: textOf(row) };
+    };
+    const probate = Object.assign({}, base, { svc: 'probate', matterType: 'probate', probateCase: '50-2026-CP-001234' });
+    ['deposit', 'midpoint', 'final'].forEach((st) => {
+      const h = header(probate, st);
+      ok(!h.err, 'fixture: the probate ' + st + ' invoice renders (' + (h.err || 'ok') + ')');
+      has(h.text, 'Estate Estate of Harold Whitcombe', '⚠⚠ the ' + st + ' invoice bills the estate');
+      lacks(h.text, 'Client Harold Whitcombe', '…never the decedent as the client');
+      has(h.text, 'Authorized Representative Thomas Whitcombe (561) 555-0101', '…and names the representative who pays, with their number');
+      lacks(h.text, 'Phone —', '…never a blank phone for a dead man');
+    });
+    const trust = Object.assign({}, base, { matterType: 'trust', trustName: 'Eleanor M. Whitcombe Revocable Trust', trustDate: '2015-03-03' });
+    has(header(trust, 'deposit').text, 'Trust The Eleanor M. Whitcombe Revocable Trust, dated March 3, 2015', '⚠ on a trust-only matter the invoice bills the trust, by its title');
+    const living = { id: 7, hvlId: 'HVL-0007', name: 'Pat Butler', svc: 'home_cleanout', tc: 'Ashley Jerome', status: 'active', won: true, payments: [],
+      addr: '1 A St', city: 'Palm Beach', phone: '(561) 555-0199' };
+    const lv = header(living, 'deposit');
+    has(lv.text, 'Client Pat Butler', 'a living client is the client');
+    has(lv.text, 'Phone (561) 555-0199', '…with their own number');
+    // The estimate and the invoice name the same party: one rule.
+    CE.jobs = [trust];
+    const ce = attempt(() => CE.clientEstimateHtml(Object.assign({}, EST, { svc: 'cleanout' }), trust));
+    has(textOf(ce.val), 'Trust The Eleanor M. Whitcombe Revocable Trust, dated March 3, 2015', 'the estimate names the trust the same way (' + (ce.err || 'ok') + ')');
+  }
+
+  // ═══ 9 · THE AGENT'S BASIS GOES WITH ITS FIGURE ═══════════════════════════
+  group('9 · a figure the appraiser or the desk sets carries none of Agent Two\'s basis; a person\'s source and note stay');
+  {
+    const T = lift(['_avTakeValue'], [], {});
+    const agentLine = (o) => Object.assign({ stableId: 's1', fmv: 640, valLow: 480, valHigh: 800, valuedBy: 'agent', valSource: 'Auction comps',
+      valNote: 'Three comparable lots sold 2025-2026', valConf: 'high', valComps: [{ title: 'x', price: 600 }] }, o || {});
+    let r = agentLine(); r.fmv = 60; attempt(() => T._avTakeValue(r, 'typed'));
+    eq([r.valuedBy, r.valSource, r.valNote], ['desk', undefined, undefined], '⚠⚠ a figure typed over the agent\'s drops the agent\'s source and sentence');
+    r = agentLine(); r.valSource = 'Appraisal'; attempt(() => T._avTakeValue(r, 'appraisal'));
+    eq([r.valuedBy, r.valSource, r.valNote], ['appraiser', 'Appraisal', undefined], '⚠⚠ the appraisal takes the line without the agent\'s comparables sentence');
+    r = agentLine({ apprId: 'a1' }); r.fmv = 5200; attempt(() => T._avTakeValue(r, 'typed'));
+    eq([r.valuedBy, r.valSource, r.valNote], ['appraiser', 'Appraisal', undefined], 'a figure typed over the agent\'s with an appraiser linked is the appraisal, no agent sentence');
+    r = { stableId: 's2', fmv: 900, valuedBy: 'desk', valSource: 'Dealer quote', valNote: 'Quote from Jupiter Arms, 10/2' }; r.fmv = 950;
+    attempt(() => T._avTakeValue(r, 'typed'));
+    eq([r.valSource, r.valNote], ['Dealer quote', 'Quote from Jupiter Arms, 10/2'], 'a source and a sentence a person recorded stay');
+    r = { stableId: 's3', fmv: 4000, valuedBy: 'desk', valNote: 'Report of 9/30' }; r.valSource = 'Appraisal'; attempt(() => T._avTakeValue(r, 'appraisal'));
+    eq(r.valNote, 'Report of 9/30', '…and a person\'s note survives the appraisal');
+  }
+
+  // ═══ 10 · THE TRUST PACKAGE CARRIES NO PROBATE WORDS ═══════════════════════
+  group('10 · the Estate Inventory Report and the worklist name the probate filing only on the probate track');
+  {
+    const R = lift(['printEstateInventoryReport', '_maivWorklistBlock'],
+      ['jobs', '_photoRefs', 'estimateStore', 'mediaStore', 'jobPlanStore', 'contractors', 'changeOrders', '_printDocument', '_invThumbCache', 'savePhotoRefs'],
+      { jobs: [], _photoRefs: {}, estimateStore: {}, mediaStore: {}, jobPlanStore: {}, contractors: [], changeOrders: [], _invThumbCache: () => ({}),
+        _printDocument: () => true, savePhotoRefs: () => {}, setTimeout: () => 0, clearTimeout: () => {}, document: domStub({}) });
+    const JOB = (matter) => ({ id: 7, hvlId: 'HVL-0007', name: 'Eleanor Whitcombe', svc: 'cleanout', matterType: matter, docTier: 'values',
+      deathDate: '2026-04-02', executor: 'Diane Marsh', status: 'active', won: true, addr: '1 Ocean Blvd', city: 'Palm Beach' });
+    const LINE = { stableId: 'a', label: 'inventory', roomIdx: 0, seq: 1, status: 'uploaded', objectName: 'Oil on canvas, harbour scene', category: 'Fine Art',
+      fmv: 4000, valSource: 'Dealer quote', disposition: 'Auction', itemNo: 1, ts: 1, driveFileId: 'f1', filename: 'x_INV_1.jpg' };
+    const report = (matter) => {
+      R.jobs = [JOB(matter)]; R._photoRefs = { 7: [Object.assign({}, LINE)] };
+      R.estimateStore = { 7: { estimate: { rooms: [{ idx: 0, name: 'Living Room', st: 'in' }] }, approved: true } };
+      const r = attempt(() => R.printEstateInventoryReport(7, { asHtml: true }));
+      return { err: r.ok ? '' : r.err, text: textOf((r.val && (r.val.html || r.val.why)) || '') };
+    };
+    const tr = report('trust');
+    ok(!tr.err && tr.text, 'fixture: the trust report renders (' + (tr.err || tr.text.slice(0, 60)) + ')');
+    lacks(tr.text, 'personal representative', '⚠⚠ the trust package\'s report never names a personal representative\'s filing');
+    has(tr.text, 'administered under the trust instrument and are reported separately by the trustee', 'it names the trustee, as the Trust Schedule does');
+    has(report('probate').text, 'reported separately in the personal representative’s filing, prepared with counsel', 'the probate track keeps its words');
+    has(report('neither').text, 'reported separately, with counsel', 'a matter with neither names counsel alone');
+    const maiv = { count: 1, total: 4000, unvalued: 0, over: true, settled: true };
+    const block = (matter) => textOf(String(attempt(() => R._maivWorklistBlock(JOB(matter), [Object.assign({}, LINE, { maivCat: 'Paintings' })], maiv)).val || ''));
+    lacks(block('trust'), '733.604', '⚠ the worklist names no §733.604 schedule on a trust-only matter');
+    has(block('trust'), 'property held in a trust and other property that passes outside probate', '…and says what it counts instead');
+    has(block('probate'), 'outside the §733.604 probate schedule', 'the probate track keeps its words');
+  }
+
+  // ═══ 11 · AN APPROVED ESTIMATE IS DATED BY ITS APPROVAL ════════════════════
+  group('11 · the estimate and Exhibit A carry the day the estimate was approved, never the day they are viewed');
+  {
+    const CE = lift(['clientEstimateHtml'], ['jobs', 'estimateStore', 'contractors', 'changeOrders', 'jobPlanStore'],
+      { jobs: [], estimateStore: {}, contractors: [], changeOrders: [], jobPlanStore: {} });
+    const job = { id: 7, hvlId: 'HVL-0007', name: 'Pat Butler', svc: 'home_cleanout', addr: '1 A St', city: 'Palm Beach', phone: '(561) 555-0199' };
+    const e = { jobId: 7, svc: 'home_cleanout', totTC: 20, totPS: 40, tcRate: 150, psRate: 100, tcFee: 3000, psFee: 4000, havellinTotal: 7000,
+      pkgCost: 0, smf: 0, vendors: [], prepItems: [], rooms: [{ idx: 0, name: 'Kitchen', vol: 3, cplx: 3 }], discountPct: 0, rush: false, fixedPrice: false };
+    const dateCell = (h) => ((String(h).match(/ce-meta-label">Date<\/div><div class="ce-meta-val"[^>]*>([^<]*)</) || [])[1] || '');
+    CE.jobs = [job];
+    CE.estimateStore = { 7: { estimate: e, approved: true, approvedBy: 'Anthony Graziano', approvedAt: 'September 14, 2026' } };
+    const a = attempt(() => CE.clientEstimateHtml(e, job));
+    eq(dateCell(a.val), 'September 14, 2026', '⚠⚠ an approved estimate is dated the day it was approved (' + (a.err || 'ok') + ')');
+    has(textOf(a.val), 'valid for 30 days from the date above', 'so its 30 days run from that day');
+    CE.estimateStore = { 7: { estimate: e, approved: false } };
+    const draft = dateCell(attempt(() => CE.clientEstimateHtml(e, job)).val);
+    ok(draft && draft !== 'September 14, 2026', 'a draft no manager has approved reads the day it is viewed, never a stale approval (' + draft + ')');
+  }
+
+  // ═══ 12 · AN ACCEPTED CHANGE ORDER KEEPS THE VENDORS IN TOTAL EST. ═════════
+  group('12 · accepting a change order moves Total Est. by what it adds, vendors at cost kept');
+  {
+    const dom = domStub({ 'coa-co-id': { value: '501' }, 'coa-client-name': { value: 'Pat Butler' } });
+    const job = { id: 1, name: 'Pat Butler', svc: 'downsizing_move', status: 'active', havellinEst: 24145, totalEst: 36245 };
+    const est = { jobId: 1, svc: 'downsizing_move', tcRate: 150, psRate: 100, totTC: 100, totPS: 86, havellinTotal: 24145, grandTotal: 36245,
+      tcFee: 15000, psFee: 8600, fixedPrice: false, rush: false, discountPct: 0, prepItems: [], vendors: [] };
+    const A = lift(['acceptChangeOrder'], ['jobs', 'changeOrders', 'estimateStore', 'currentEstimate', 'saveChangeOrders', 'fileChangeOrder', 'saveJobs',
+      'syncJobToSheets', 'renderJobs', 'showFB', '_docNotice', 'dashNotice', '_dashRedraw', 'closeCOAcceptModal', 'docNames'],
+      { document: dom, setTimeout: () => 0, jobs: [job], estimateStore: { 1: { estimate: est, approved: true } }, currentEstimate: null,
+        changeOrders: [{ id: 501, jobId: 1, addTC: 6, addPS: 14, tcHrs: 6, psHrs: 14, description: 'Pool cabana and a storage unit' }],
+        saveChangeOrders: () => {}, fileChangeOrder: () => {}, saveJobs: () => {}, syncJobToSheets: () => {}, renderJobs: () => {}, showFB: () => {},
+        _docNotice: () => {}, dashNotice: () => {}, _dashRedraw: () => {}, closeCOAcceptModal: () => {}, docNames: () => ({ printTitle: 'x' }) });
+    const r = attempt(() => A.acceptChangeOrder());
+    ok(r.ok, 'fixture: the change order is accepted (' + (r.err || 'ok') + ')');
+    const move = job.havellinEst - 24145;
+    ok(move > 0, 'fixture: the change order moves Havellin\'s figure (' + move + ')');
+    eq(job.totalEst, 36245 + move, '⚠⚠ Total Est. keeps the $12,100 of vendors and moves by the same amount');
+  }
+
+  // ═══ 13 · THE RECEIPT NAMES THE TRUST BY ITS TITLE, AND EVERY TRUSTEE ═════
+  group('13 · the receipt says who the property came from as the agreement names them');
+  {
+    const F = lift(['invReceiptFrom'], [], {});
+    const trust = (co) => ({ id: 7, name: 'Eleanor Whitcombe', svc: 'cleanout', matterType: 'trust', executor: 'Diane Marsh', executorRole: 'Successor Trustee',
+      trustName: 'Eleanor M. Whitcombe Revocable Trust', trustDate: '2015-03-03',
+      coFiduciaries: co ? [{ id: 'c1', name: 'James Marsh', role: 'Co-Trustee', at: 1 }] : [] });
+    const one = String(attempt(() => F.invReceiptFrom(trust(false))).val);
+    eq(one, 'the trustee of The Eleanor M. Whitcombe Revocable Trust, dated March 3, 2015', 'one trustee: the trust by its title');
+    const two = String(attempt(() => F.invReceiptFrom(trust(true))).val);
+    eq(two, 'the trustees of The Eleanor M. Whitcombe Revocable Trust, dated March 3, 2015', '⚠⚠ two co-trustees: "the trustees"');
+    const est = String(attempt(() => F.invReceiptFrom({ id: 8, name: 'Harold <b>Whitcombe', svc: 'probate', matterType: 'probate', executor: 'Thomas' })).val);
+    eq(est, 'the Estate of Harold &lt;b&gt;Whitcombe', 'a probate estate by name, escaped (the receipt prints it as HTML)');
+  }
+
+  // ═══ 14 · THE CONFIRMED CONCIERGE IS THE JOB'S WHERE INTAKE NAMED NOBODY ═══
+  group('14 · confirming the team names the job\'s concierge where intake left it blank, in the team\'s one save');
+  {
+    const run = (jobTc, tcName) => {
+      let saves = 0;
+      const crew = { tc: { name: tcName, locked: false }, tc2: { name: '', locked: false }, ps: [{ name: 'Dana Ruiz', locked: false }], confirmed: false };
+      const K = sandbox({ fns: ['confirmJobTeam', 'plannedTC2', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
+        '_lockCrewSlots', '_crewSave', '_saveJobEdit', '_jobTouch', '_stampChangedKeys', '_crewSnap'],
+        vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PERSON_NAME_ALIASES'],
+        stubs: { getJobCrew: () => crew, isJobWon: () => true, unfilledPlannedPS: () => [], plannedPSCount: () => 1, showFB: () => {}, confirm: () => true,
+          saveJobs: () => { saves++; }, syncJobToSheets: () => {}, buildLogTeamRows: () => {}, _repaintPlanGates: () => {}, estimateStore: {} } });
+      const job = { id: 7, tc: jobTc, crew: crew };
+      K.jobs = [job];
+      const r = attempt(() => K.confirmJobTeam(7));
+      return { err: r.ok ? '' : r.err, job, crew, saves };
+    };
+    const blank = run('', 'Ashley Jerome');
+    ok(!blank.err && blank.crew.confirmed, 'fixture: the team confirms (' + (blank.err || 'ok') + ')');
+    eq(blank.job.tc, 'Ashley Jerome', '⚠⚠ intake named nobody: the confirmed concierge is the job\'s');
+    eq(blank.saves, 1, '…in the team\'s one save');
+    eq(run('Anthony Graziano', 'Ashley Jerome').job.tc, 'Anthony Graziano', 'a concierge intake or Edit Client named is never overwritten');
+    eq(run('', 'Contractor — TC').job.tc, '', 'the concierge placeholder is nobody');
+  }
+
+  // ═══ 15 · THE STAGE COUNTER FOLLOWS THE TICK ═══════════════════════════════
+  group('15 · ticking a Before Day 1 box repaints the stage\'s count by id');
+  {
+    const dom = domStub({ 'stage-meta-p0': { innerHTML: '0 of 5 ticked' } });
+    const job = { id: 7, svc: 'home_cleanout', status: 'active' };
+    const est = { svc: 'home_cleanout', rooms: [], vendors: [], prepItems: [], pkgCost: 0 };
+    const P = lift(['togglePlanTask'], ['jobs', 'estimateStore', 'jobPlanStore', 'saveJobPlan', 'changeOrders', 'mediaStore', 'contractors'],
+      { document: dom, jobs: [job], estimateStore: { 7: { estimate: est, approved: true } }, jobPlanStore: {}, saveJobPlan: () => {},
+        changeOrders: [], mediaStore: {}, contractors: [], _todayStr: () => '2026-10-08' });
+    const before = String(attempt(() => P.planStageMeta(7, job, est, 'p0')).val || '');
+    ok(/^0 of \d+ ticked/.test(before), 'fixture: nothing ticked yet (' + before + ')');
+    const r = attempt(() => P.togglePlanTask(7, 'precall', true, null));
+    ok(r.ok, 'fixture: the tick saves (' + (r.err || 'ok') + ')');
+    has(dom.getElementById('stage-meta-p0').innerHTML, '1 of ', '⚠⚠ the stage reads one ticked straight away, not on the next full render');
+  }
+
+  // ═══ 16 · A BACKGROUND NOTICE NEVER BLOCKS THE SCREEN ══════════════════════
+  group('16 · with no client on screen, a notice is the sync toast and never an alert');
+  {
+    const alerts = [];
+    const badge = { textContent: '', style: {} };
+    const N = lift(['_docNotice'], ['_jobBandHost', 'dashNotice', '_dashRedraw'], {
+      _jobBandHost: () => null, dashNotice: () => { throw new Error('no strip on screen'); }, _dashRedraw: () => {},
+      alert: (m) => alerts.push(m), setTimeout: () => 0, clearTimeout: () => {},
+      document: { getElementById: (id) => (id === 'sync-status' ? badge : null) } });
+    const r = attempt(() => N._docNotice('ok', 'Signed agreement and certificate of completion filed to Drive.', 7));
+    ok(r.ok, 'fixture: the notice runs (' + (r.err || 'ok') + ')');
+    eq(alerts.length, 0, '⚠⚠ no blocking alert over the client list or the field');
+    eq(badge.textContent, 'Signed agreement and certificate of completion filed to Drive.', 'the toast carries it');
+  }
+
+  // ═══ 17 · THE §733.604 CHIP TURNS RED ONCE THE DEADLINE HAS PASSED ═════════
+  group('17 · the court deadline chip is green ahead of the day and red after it');
+  {
+    const D = lift(['planDerivedLines'], ['jobs', 'estimateStore', 'jobLogs', 'changeOrders', 'mediaStore', 'jobPlanStore', 'contractors'],
+      { jobs: [], estimateStore: {}, jobLogs: {}, changeOrders: [], mediaStore: {}, jobPlanStore: {}, contractors: [] });
+    const job = { id: 7, svc: 'probate', matterType: 'probate', status: 'active', payments: [], probateDeadline: '2026-10-02', executorAuth: 'received',
+      probateAttyName: 'Pressly' };
+    const est = { svc: 'probate', rooms: [], vendors: [], prepItems: [], fixedPrice: true };
+    D.jobs = [job]; D.estimateStore = { 7: { estimate: est, approved: true } };
+    const line = (today) => ((attempt(() => D.planDerivedLines(7, job, est, 'p0', today)).val || []).find((l) => l.key === 'deadline_733604') || {});
+    eq(line('2026-09-30').ok, true, 'two days ahead: green');
+    const past = line('2026-10-08');
+    eq(past.ok, false, '⚠⚠ six days past: no longer a green tick');
+    has(past.detail, 'the date has passed', '…and it says so, and to confirm the filing with counsel');
+  }
+
+  // ═══ 19 · A PLACEHOLDER ON THE FINAL IS A ROLE, NEVER A NAME ════════════════
+  group('19 · hours logged against a placeholder print as the role on the client\'s final');
+  {
+    const INV = lift(['invoiceHtml'], ['jobs', 'estimateStore', 'jobLogs', 'changeOrders', 'contractors', 'currentEstimate', 'currentInvStage'],
+      { jobs: [], estimateStore: {}, jobLogs: {}, changeOrders: [], contractors: [], currentEstimate: null, currentInvStage: 'final', vendorDirectory: [] });
+    const job = { id: 7, hvlId: 'HVL-0007', name: 'Pat Butler', svc: 'downsizing_move', tc: 'Ashley Jerome', status: 'closed', won: true, payments: [],
+      addr: '1 A St', city: 'Palm Beach', phone: '(561) 555-0199' };
+    INV.jobs = [job];
+    INV.estimateStore = { 7: { estimate: { jobId: 7, svc: 'downsizing_move', totTC: 20, totPS: 60, tcRate: 150, psRate: 100, tcFee: 3000, psFee: 6000,
+      havellinTotal: 9000, pkgCost: 0, smf: 0, vendors: [], prepItems: [], discountPct: 0, rush: false, fixedPrice: false }, approved: true } };
+    INV.jobLogs = { 7: [{ id: 1, date: '2026-10-06', members: [{ name: 'Ashley Jerome', role: 'TC', hours: 20 },
+      { name: 'Contractor TBD', role: 'PS', hours: 57 }, { name: 'Dana Ruiz', role: 'PS', hours: 3 }] }] };
+    const r = attempt(() => INV.invoiceHtml(job, 'final'));
+    const t = textOf(r.val && r.val.html);
+    ok(r.ok && t, 'fixture: the final renders (' + (r.err || 'ok') + ')');
+    lacks(t, 'Contractor TBD', '⚠⚠ the placeholder never prints as a person on the client\'s final');
+    has(t, 'Property Specialist PS 57', 'the hours print under the role');
+    has(t, 'Dana Ruiz PS 3', 'a named specialist keeps their name');
   }
 
   process.env.TZ = prevTZ;

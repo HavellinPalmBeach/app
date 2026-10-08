@@ -38,7 +38,7 @@ function syncOk(v) {
 function rig(remoteItems, localItems) {
   const saved = [];
   const ctx = sandbox({
-    fns: ['refreshPhotoRefs'],
+    fns: ['refreshPhotoRefs', '_stableJson'],
     vars: [],
     stubs: {
       SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
