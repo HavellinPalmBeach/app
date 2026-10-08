@@ -9,7 +9,7 @@ const { sandbox, source, domStub } = require('./harness.js');
 const FNS = ['_invScheduleSection', 'invValBasisWord', '_invTrackDefault', 
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   'printEstateInventoryReport', 'printCourtInventory', '_avUnreviewedStamp', 'printContentsList', 'contentsList',
-  'printContentsRecord', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
+  'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   '_clFlags', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms', '_invFileId',

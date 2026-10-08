@@ -346,7 +346,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       eq(ctx2.jobStageDoc(stage === 'final' ? 'final_paid' : stage + '_received'),
          { kind: 'invoice', stage: stage },
          `${stage}: and so does the row that records the payment for it`);
-      lacks(block, 'dashRecordPayment', `${stage}: the payment recorder does not`);
+      // RESTATED 2026-10-08 (the job-flow audit): the deposit row also offers the recorder, as a SECONDARY beside the send,
+      // for a cheque handed over with the signed agreement (job-flow-audit.test.js drives it, and that a deposit on file
+      // answers the invoice). The send stays the row's primary, and the other two invoice rows still carry no recorder.
+      if (stage === 'deposit') {
+        has(block, "if (live) out.primary = _jtSendAction(id, job, 'invoice', 'deposit'", 'deposit: the send is still the primary');
+        lacks(block, 'out.primary = { label: \'&#10003; Record payment\'', 'deposit: the recorder is never the primary here');
+      } else lacks(block, 'dashRecordPayment', `${stage}: the payment recorder does not`);
     });
     ['deposit_received', 'midpoint_received', 'final_paid'].forEach((key) => {
       const at = acts.indexOf(`case '${key}':`);

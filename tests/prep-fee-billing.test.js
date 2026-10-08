@@ -183,7 +183,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'charged on what these vendors actually bill rather than on these estimates', 'the prep section says the fee trues up');
     const l = text(ceDoc(LEGACY));
     lacks(l, 'which is not part of the fixed fee', 'a record saved before today claims no carve-out — its flat fee carries the fee');
-    has(l, 'Moving materials and all vendor coordination are included', 'and its blurb still says all coordination is included');
+    // RESTATED 2026-10-08 (the job-flow audit): the fixture prices no materials package (pkgCost 0), so the blurb no longer
+    // claims moving materials; job-flow-audit.test.js holds the package arm.
+    has(l, 'All vendor coordination is included.', 'and its blurb still says all coordination is included');
+    lacks(l, 'Moving materials and all vendor coordination', '…and claims no moving materials it does not price');
     lacks(l, 'Home Sale Preparation Fee line in Havellin Services above', 'nor points at a line it does not print');
   }
 

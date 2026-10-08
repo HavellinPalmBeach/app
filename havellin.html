@@ -11290,9 +11290,12 @@ function _fixedFeeBlurb(e) {
     // fee (2026-09-23, see estFixedFee): the home prep vendors are managed under their own 30%,
     // which is the very next line of this table. A record saved before then folded that fee
     // inside the flat fee, and there the old sentence is still true.
+    // ⚠ MOVING MATERIALS ONLY WHERE THE ESTIMATE PRICES A PACKAGE (2026-10-08, the job-flow audit): a cleanout quoted with
+    // the package at None printed "Moving materials … are included" over a fee that carries none.
     + ((estPrepFeeOnTop(e) && (e.prepFee || 0) > 0)
-      ? 'Moving materials and vendor coordination are included, apart from the home prep vendors, whose Home Sale Preparation Fee is the next line.'
-      : 'Moving materials and all vendor coordination are included.')
+      ? ((e.pkgCost || 0) > 0 ? 'Moving materials and vendor coordination are included' : 'Vendor coordination is included')
+        + ', apart from the home prep vendors, whose Home Sale Preparation Fee is the next line.'
+      : ((e.pkgCost || 0) > 0 ? 'Moving materials and all vendor coordination are included.' : 'All vendor coordination is included.'))
     + '<br><br><strong style="color:var(--gray-dk);">The price is firm.</strong> If the '
     + 'work takes more time or more people than we planned, that is Havellin\'s to absorb — not '
     + 'yours.' + scope + ' Third-party vendors are invoiced to you directly at cost.';
@@ -18586,8 +18589,12 @@ function jobTimeline(job, estRec, logs, cos, sched) {
     // cannot be answered honestly is worse than no row" — nothing recorded that an
     // invoice had been sent, so they would have been a guess wearing a milestone's face.
     // `docState` is that record, so they exist.
+    // ⚠ A DEPOSIT ALREADY IN HAND ANSWERS THE INVOICE (2026-10-08, the job-flow audit), as a midpoint payment on file
+    // answers the midpoint invoice: a client who hands over the cheque with the signed agreement was plainly asked for it.
+    // The playbook's "record a cheque they just handed you" was unreachable without first emailing an invoice for money
+    // already received; jobTimelineActions offers Record payment on this row too.
     row({ key: 'deposit_invoiced', group: 'Deposit & start', label: 'Deposit invoice sent',
-      done: !!docSentAt(job, 'invoice', 'deposit'), at: docSentAt(job, 'invoice', 'deposit'), atKind: 'iso',
+      done: !!docSentAt(job, 'invoice', 'deposit') || depPaid > 0, at: docSentAt(job, 'invoice', 'deposit'), atKind: 'iso',
       amount: hav ? split.deposit : null,
       sub: jtDraftLine(job, 'invoice:deposit', !docSentAt(job, 'invoice', 'deposit')) }),
 
@@ -21768,6 +21775,8 @@ function jobTimelineActions(row, job, estRec) {
 
     case 'deposit_invoiced':
       if (live) out.primary = _jtSendAction(id, job, 'invoice', 'deposit', 'deposit invoice');
+      // A cheque handed over with the signed agreement is recorded here and then, without an invoice first (see the row).
+      if (live) out.secondary.push({ label: '&#10003; Record payment', call: "dashRecordPayment(" + id + ",'deposit')" });
       // ⚠ IT READS BACK NOW, so the label no longer promises only a link. Beside the deposit,
       // never as the primary — the invoice is the thing to send, the link rides with it.
       if (live && SHEETS_SYNC_URL) {
@@ -32279,11 +32288,16 @@ function printContentsRecord(jobId) {
   if (!job || !document.getElementById('print-target')) return;
   var fid = invFiduciaryMode(job);
 
-  var head = _invDocHead(job, 'Contents Record', 'What stayed, what went, and where each piece went'
-    + ' &middot; Prepared by Havellin Palm Beach, LLC &middot; '
-    + new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }));
+  // ⚠ _invDocHead adds "Prepared by Havellin Palm Beach, LLC · <date>" itself; this passed it too, so the header printed
+  // it twice (2026-10-08, the job-flow audit).
+  var head = _invDocHead(job, 'Contents Record', 'What stayed, what went, and where each piece went');
   // ⚠ _invDocHead's default tail states the valuation basis and the date of death. The `extra`
   // argument is how this document avoids it — it must never assert a basis it does not carry.
+  // ⚠ WHAT THE FOOTER CLAIMS IS WHAT THE RECORD HOLDS (2026-10-08, the job-flow audit): it said every line was photographed
+  // (+ Add line item makes a line with none) and that the photographs are in a folder shared with the client (whether or
+  // not anyone shared it). Each is said only where it is true; a line with no photograph is named with the gaps.
+  var unshot = rec.items.filter(function(r){ return !_invHasPhoto(r); }).length;
+  var shared = !fid && photoShareLive(job).length > 0;
 
   // ⚠ THE GAP BLOCK GOES ABOVE THE INDEX, the As-Found Record's rule and the release-cautions
   // rule: a reader works down this page, so a caveat printed under the list has arrived after
@@ -32295,6 +32309,7 @@ function printContentsRecord(jobId) {
     + (rec.unnamed === 1 ? '' : 's') + ' not yet named');
   if (rec.noRecipient) gaps.push('<strong>' + rec.noRecipient + '</strong> item'
     + (rec.noRecipient === 1 ? ' that has' : 's that have') + ' left the property with no recipient recorded');
+  if (unshot) gaps.push('<strong>' + unshot + '</strong> item' + (unshot === 1 ? '' : 's') + ' listed with no photograph');
   var gapBlock = gaps.length
     ? '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#3c3228;line-height:1.55;">'
       + '<strong style="color:#8a6d3b;">This record is not yet complete.</strong><ul style="margin:5px 0 0 16px;padding:0;">'
@@ -32338,11 +32353,11 @@ function printContentsRecord(jobId) {
         ? body
         : '<div style="font-size:12px;color:#888;">Nothing has been photographed or listed on this job yet.</div>')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
-    + 'Every line was photographed in the room it came from. Amounts shown are what was actually '
+    + (rec.total && !unshot ? 'Every line was photographed in the room it came from. ' : '') + 'Amounts shown are what was actually '
     + 'received from a sale, consignment or auction, net of that partner’s fees — Havellin charges '
     + 'no commission on them, and Havellin’s own fees are billed separately and do not appear here. '
     + 'Blank means nothing has been received. This record does not state what anything is worth.'
-    + (fid ? '' : ' Photographs of every item are in the Drive folder shared with you.')
+    + (!shared ? '' : unshot ? ' The photographs are in the Drive folder shared with you.' : ' Photographs of every item are in the Drive folder shared with you.')
     + '</div></div>';
   _printDocument(html, _invDocName(job, 'Contents Record'));
 }
@@ -39330,11 +39345,22 @@ function invoiceHtml(job, stage, opt) {
 
   // Vendor / prep costs — shown in every stage (informational; paid directly by client).
   // FINAL stage — labor trued to logged hours, fees on actuals.
+  // ⚠ A FEE-ONLY HOME PREP BILLS NO HOURS (2026-10-08, the job-flow audit), and its agreement's §3.3 says so in bold:
+  // "No Transition Concierge or Property Specialist hours are billed on this engagement." Its final printed "Havellin
+  // Services — Actual Hours" over an empty hours table and "Final charges based on actual hours worked", and the
+  // deposit and second invoices a "Havellin labor (estimate) $0" row with "hours are still being logged". A page is
+  // fee-only only while nothing on it is an hour: a change order that added concierge hours (jobIsFeeOnly), or hours
+  // logged anyway, puts the hours table back, as the final bills them. ⚠ It reads what was QUOTED (estimateIsFeeOnly) and the
+  // change orders this page lists (coHrs), never jobIsFeeOnly: the documents the client holds keep saying what they signed.
+  var _coAddsHrs = !!(coHrs.tc || coHrs.ps);
+  var _feeOnlyFinal = !_fixedBasis && estimateIsFeeOnly(est, job) && !_coAddsHrs && !(actTC + actPS);
+  var _feeOnlyAdv = !_fixedBasis && estimateIsFeeOnly(est, job) && !estLaborNet;
   var finalServices =
-    '<div class="ce-section-hdr">Havellin Services — Actual Hours</div>' +
+    '<div class="ce-section-hdr">Havellin Services — ' + (_feeOnlyFinal ? 'Home Sale Preparation Fee' : 'Actual Hours') + '</div>' +
     '<table class="ce-tbl">' +
+    (_feeOnlyFinal ? '' :
     '<thead><tr><th>Team Member</th><th style="text-align:center;">Role</th><th style="text-align:center;">Hours</th><th style="text-align:right;">Rate</th><th style="text-align:right;">Amount</th></tr></thead>' +
-    '<tbody>' + teamRows + '</tbody>' +
+    '<tbody>' + teamRows + '</tbody>') +
     (pkgCost > 0 ? '<tr><td colspan="4">Moving materials — ' + pkgLabel + '</td><td style="text-align:right;font-weight:600;">' + fmt(pkgCost) + '</td></tr>' : '') +
     (smf > 0 ? '<tr><td colspan="4">Service Management Fee (' + Math.round(SMF_PCT*100) + '% — vendor coordination)' + (act.thirdPartyAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(smf) + '</td></tr>' : '') +
     (prepFee > 0 ? '<tr><td colspan="4">Home Sale Preparation Fee (' + Math.round(prepFeeRate()*100) + '%)' + (act.prepAnyEst?_estTag:'') + '</td><td style="text-align:right;font-weight:600;">' + fmt(prepFee) + '</td></tr>' : '') +
@@ -39342,7 +39368,8 @@ function invoiceHtml(job, stage, opt) {
     (discountPct > 0 ? '<tr style="color:var(--ok-tx);"><td colspan="4">Preferred Client Discount (' + discountPct + '% on labor' + (_rushRate > 0 ? ' and the expedited-delivery premium charged on it' : '') + ')</td><td style="text-align:right;font-weight:700;">− ' + fmt(discountAmt) + '</td></tr>' : '') +
     '<tr class="subtotal"><td colspan="4">Havellin Services Total</td><td style="text-align:right;">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
     '</table>' +
-    '<div class="ce-note">Final charges based on actual hours worked as logged by the Transition Concierge.</div>';
+    '<div class="ce-note">' + (_feeOnlyFinal ? 'No Transition Concierge or Property Specialist hours are billed on this engagement.'
+      : 'Final charges based on actual hours worked as logged by the Transition Concierge.') + '</div>';
 
   // ⚠ THIS SECTION EXPLAINS HOURS, IT DOES NOT CHARGE. On T&M the change orders' hours are
   // already inside the labour lines above — this is what says the client agreed to them, so
@@ -39431,7 +39458,7 @@ function invoiceHtml(job, stage, opt) {
   var advanceServices =
     '<div class="ce-section-hdr">Project Summary' + (stage === 'midpoint' ? ' — Fees Trued to Actuals' : ' — Estimate Basis') + '</div>' +
     '<table class="ce-tbl"><tbody>' +
-    '<tr><td>Havellin labor (estimate' + (discountPct > 0 ? ', net of ' + discountPct + '% discount' : '') + ')</td><td style="text-align:right;">' + fmt(estLaborNet) + '</td></tr>' +
+    (_feeOnlyAdv ? '' : '<tr><td>Havellin labor (estimate' + (discountPct > 0 ? ', net of ' + discountPct + '% discount' : '') + ')</td><td style="text-align:right;">' + fmt(estLaborNet) + '</td></tr>') +
     (materials > 0 ? '<tr><td>Moving materials — ' + pkgLabel + '</td><td style="text-align:right;">' + fmt(materials) + '</td></tr>' : '') +
     (advSmf > 0 ? '<tr><td>Service Management Fee (' + Math.round(SMF_PCT*100) + '% — vendor coordination)' + (stage === 'midpoint' && act.thirdPartyAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advSmf) + '</td></tr>' : '') +
     (advPrep > 0 ? '<tr><td>Home Sale Preparation Fee (' + Math.round(prepFeeRate()*100) + '%)' + (stage === 'midpoint' && act.prepAnyEst ? _estTag : '') + '</td><td style="text-align:right;">' + fmt(advPrep) + '</td></tr>' : '') +
@@ -39439,8 +39466,11 @@ function invoiceHtml(job, stage, opt) {
     '<tr class="subtotal"><td>Project Total' + (stage === 'midpoint' ? ' (fees on actuals)' : ' (estimate)') + '</td><td style="text-align:right;">' + fmt(advBasis) + '</td></tr>' +
     '</table>' +
     '<div class="ce-note">' + (stage === 'midpoint'
-      ? 'Labor remains on the original estimate until the final invoice (hours are still being logged). Vendor and home-prep fees are calculated on the actual quotes recorded in the Job Plan.'
-      : 'Deposit is based on the original estimate. Vendor and home-prep fees are trued to actuals at the midpoint and final invoices.') + '</div>';
+      ? (_feeOnlyAdv ? 'The Home Sale Preparation Fee is calculated on the actual quotes recorded in the Job Plan.'
+          + (_coAddsHrs ? ' Concierge hours added by change order are billed on the final invoice, as logged.' : '')
+        : 'Labor remains on the original estimate until the final invoice (hours are still being logged). Vendor and home-prep fees are calculated on the actual quotes recorded in the Job Plan.')
+      : 'Deposit is based on the original estimate. ' + (_feeOnlyAdv ? 'The Home Sale Preparation Fee is' : 'Vendor and home-prep fees are')
+        + ' trued to actuals at the ' + _mw.noun + ' and final invoices.') + '</div>';
 
   // Lean payment area — the Project Total already appears in the summary above, so the
   // deposit just shows the amount due (with the schedule as a one-line note); the
@@ -41176,9 +41206,15 @@ function planDerivedLines(jobId, job, est, phase, today) {
     // no change order can be withdrawn once accepted, so a refusal there could never be lifted if the
     // work turned out not to be needed. Its empty log bills the Home Sale Preparation Fee alone, and says so here.
     var coOnlyHrs = !feeOnly && estimateIsFeeOnly(est, job);
+    // ⚠ A FIXED PRICE LOGS HOURS FOR THE RECORD AND BILLS THE FEE (2026-10-08, the job-flow audit): its final never
+    // waits on the log (finalAwaitsHours), and these lines told the concierge it "trues to the log" and "cannot issue
+    // without them". The hours are still asked for (Anthony: for the discipline and the duration data).
+    var fixedFee = !!est.fixedPrice;
     if (!feeOnly) out.push({ key: 'hours_logged', ok: logs.length > 0, label: 'Hours logged',
-               detail: logs.length ? _hrsTxt(hrs) + ' hrs against ' + _hrsTxt(estHrs) + ' estimated — the final invoice trues to the log'
-                 : (coOnlyHrs ? 'none yet — a change order added hours; log them before the final goes out, or it bills the Home Sale Preparation Fee alone'
+               detail: logs.length ? _hrsTxt(hrs) + ' hrs against ' + _hrsTxt(estHrs) + ' estimated — '
+                   + (fixedFee ? 'for the record; the fixed fee does not move with them' : 'the final invoice trues to the log')
+                 : (fixedFee ? 'none yet — log them for the record; the fixed-price final does not wait on them'
+                   : coOnlyHrs ? 'none yet — a change order added hours; log them before the final goes out, or it bills the Home Sale Preparation Fee alone'
                               : 'none yet — the final invoice cannot issue without them') });
     var cos = (typeof changeOrders !== 'undefined' ? changeOrders : []).filter(function(c){ return c && c.jobId === jobId; });
     if (cos.length) {
@@ -41195,7 +41231,7 @@ function planDerivedLines(jobId, job, est, phase, today) {
     }
     var fin = !!docSentAt(job, 'invoice', 'final');
     out.push({ key: 'final_invoice_sent', ok: fin, label: 'Final invoice sent',
-               detail: fin ? 'sent' : 'the Next band at the top of this tab sends it' + (feeOnly ? '' : ', once the hours are in') });
+               detail: fin ? 'sent' : 'the Next band at the top of this tab sends it' + (feeOnly || fixedFee ? '' : ', once the hours are in') });
     // ⚠⚠ THE TWO ANSWERS THAT DECIDE WHAT THE REST OF THIS CARD SAYS. Since 2026-09-21 the
     // Florida court list keys on the matter type and the engagement tier, so an EMPTY court
     // section is now ambiguous on its face: the desk cannot tell "this estate has no probate in

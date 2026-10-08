@@ -486,7 +486,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const BAR = FNS.concat([
       'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
       '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
-      'printEstateInventoryReport', '_avUnreviewedStamp', 'printContentsRecord', '_invDispLabel',
+      'printEstateInventoryReport', '_avUnreviewedStamp', 'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
       'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval',
       'invProbateRows', 'matterDef', 'matterTypeOf', 'maivFilingApplies', '_gate706',
