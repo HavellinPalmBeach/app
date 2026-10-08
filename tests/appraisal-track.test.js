@@ -441,7 +441,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     ok(out.length > 0, 'the request renders');
     has(text, 'NOT YET APPRAISED', 'the unvalued line wears the badge');
-    has(text, 'Property on this request has not been valued yet', 'and the notice heads it');
+    // RESTATED 2026-10-08 (the job-flow audit): the heading says appraised: the lines it sits over can carry a value.
+    has(text, 'Property on this request has not been appraised yet', 'and the notice heads it');
     has(text, 'Sargent portrait', '⚠ NAMED, not counted — a count cannot be acted on');
 
     // ⚠ THE LINE IS STILL THERE. Dropping it would be the silent-omission defect this project
@@ -451,7 +452,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // ⚠ ABOVE THE TABLE, and that is arithmetic rather than typography: a caveat printed under
     // a list has arrived after the signature it existed to come before.
-    ok(out.indexOf('has not been valued yet') < out.indexOf('Sargent portrait'),
+    ok(out.indexOf('has not been appraised yet') < out.indexOf('Sargent portrait'),
        '⚠ the notice is read BEFORE the line it is about');
 
     // The ordinary line must not be dragged in with it.

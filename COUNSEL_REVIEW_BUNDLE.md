@@ -916,7 +916,8 @@ administration"* describe the matter correctly?
 **What changed.** Anthony (P19): every co-executor and co-trustee approves a release. The request is addressed to every
 fiduciary by name (with nobody recorded, by matter: *Personal Representative*, *Successor Trustee*, *Personal Representative
 or Successor Trustee*, *Authorized Representative*), asks *"…then each of you sign and date at the foot. Every co-trustee
-named below must sign: nothing on this list is approved until all 2 of you have."*, marks a line one of them has signed
+named below must sign: nothing on this list is approved until both of you have."* (*"all 3 of you"* with three; *"both"* since
+2026-10-08, the job-flow audit), marks a line one of them has signed
 (*"Signed so far by Ruth Adler (Oct 1, 2026); still to sign: Daniel Adler"*) and carries one signature line per fiduciary.
 Under the total: *"Havellin and its people never purchase or receive estate property, and take no share of the proceeds of
 its sale."* (*trust property* on a trust). The specific-bequest caution now reads *"designated by the will or the trust for a
@@ -942,8 +943,8 @@ the wording say so without admitting more than it should?
 ### D8. Receipt for property released to a person ⚠ NEW 2026-10-03
 
 **What it says.** The estate agreement's §5.3 asks for a *"signed receipt from recipient"*; the desk now prints one per
-recipient: *"Released to <name> from <the Estate of <decedent> | the trustee of <trust> | either, as the property is
-held>"*, the items, and *"I acknowledge that I received the property listed above, in the condition described, from <from>,
+recipient: *"Released to <name> from <the Estate of <decedent> | the trustee of <the trust by its title, *The … Trust, dated …*> |
+either, as the property is held>"* (*"the trustees"* where more than one fiduciary is recorded, since 2026-10-08, the job-flow audit), the items, and *"I acknowledge that I received the property listed above, in the condition described, from <from>,
 delivered to me by Havellin Palm Beach, LLC as directed in writing by <the fiduciaries>. This receipt records the delivery
 only: it does not decide who owns the property or what it is worth, and it does not release or waive any right or claim
 concerning <the estate | the trust>."*, with a signature, a printed name and a witness line for Havellin.

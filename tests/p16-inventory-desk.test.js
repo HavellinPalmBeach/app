@@ -315,14 +315,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(r.ok, 'the living request prints' + (r.ok ? '' : ': ' + r.err));
     const living = text(printed[printed.length - 1]);
     lacks(living, 'reported under oath', '⚠⚠ no "reported under oath" on a living client\'s request');
-    lacks(living, 'has not been valued yet', 'no valuation notice at all above the table');
+    // RESTATED 2026-10-08 (the job-flow audit): the heading says appraised (the lines can carry a value).
+    lacks(living, 'has not been appraised yet', 'no valuation notice at all above the table');
     lacks(living, 'NOT YET APPRAISED', 'and none on the row (as before)');
     has(living, 'Specific bequests on this request', 'the bequest caution is not fiduciary and still prints');
     has(living, 'Oil painting', 'the line is on the request, going where the family said');
     const E = docRig(ESTATE);
     E.printApprovalRequest(7, false);
     const estate = text(printed[printed.length - 1]);
-    has(estate, 'Property on this request has not been valued yet', 'an estate\'s request keeps the notice');
+    has(estate, 'Property on this request has not been appraised yet', 'an estate\'s request keeps the notice');
     has(estate, 'reported under oath', 'with the federal-return sentence');
     // The notice asks the one rule the badge asks, so notice and badge agree line by line.
     [L, E].forEach((s, i) => {

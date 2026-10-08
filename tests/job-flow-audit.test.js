@@ -41,6 +41,9 @@
 //  17. The §733.604 deadline chip turns red once the day has passed, as the Form 706 chip does (it stayed a green tick).
 //  18. The unsaved-changes chip steps aside while the camera is open: it covered the shutter on a phone (browser step 71).
 //  19. The final invoice names the role, never "Contractor TBD", for hours logged against a placeholder.
+//  20. A bequest line going To a person with nobody named yet is not "proposed to go elsewhere … to nobody recorded yet".
+//      (The release request's appraisal heading, "has not been appraised yet", and "both" for two signers are held in
+//      appraisal-track, p16-inventory-desk and p19-releases, restated.)
 //
 // Everything is driven through the real functions; each sandbox is the root's own call graph, derived from the source,
 // with unrelated state supplied at named boundaries — never the rule under test.
@@ -477,7 +480,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ 15 · THE STAGE COUNTER FOLLOWS THE TICK ═══════════════════════════════
   group('15 · ticking a Before Day 1 box repaints the stage\'s count by id');
   {
-    const dom = domStub({ 'stage-meta-p0': { innerHTML: '0 of 5 ticked' } });
+    // The stage card holds its count as `.stg-count` (planStageCard); the stub card answers the one query the repaint makes.
+    const count = { innerHTML: '0 of 5 ticked' };
+    const dom = domStub({ 'stage-p0': { querySelector: (q) => (q === '.stg-count' ? count : null) } });
     const job = { id: 7, svc: 'home_cleanout', status: 'active' };
     const est = { svc: 'home_cleanout', rooms: [], vendors: [], prepItems: [], pkgCost: 0 };
     const P = lift(['togglePlanTask'], ['jobs', 'estimateStore', 'jobPlanStore', 'saveJobPlan', 'changeOrders', 'mediaStore', 'contractors'],
@@ -487,7 +492,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(/^0 of \d+ ticked/.test(before), 'fixture: nothing ticked yet (' + before + ')');
     const r = attempt(() => P.togglePlanTask(7, 'precall', true, null));
     ok(r.ok, 'fixture: the tick saves (' + (r.err || 'ok') + ')');
-    has(dom.getElementById('stage-meta-p0').innerHTML, '1 of ', '⚠⚠ the stage reads one ticked straight away, not on the next full render');
+    has(count.innerHTML, '1 of ', '⚠⚠ the stage reads one ticked straight away, not on the next full render');
   }
 
   // ═══ 16 · A BACKGROUND NOTICE NEVER BLOCKS THE SCREEN ══════════════════════
@@ -539,6 +544,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(t, 'Contractor TBD', '⚠⚠ the placeholder never prints as a person on the client\'s final');
     has(t, 'Property Specialist PS 57', 'the hours print under the role');
     has(t, 'Dana Ruiz PS 3', 'a named specialist keeps their name');
+  }
+
+  // ═══ 20 · AN UNNAMED RECIPIENT IS NOT "ELSEWHERE" ══════════════════════════
+  group('20 · a bequest line To a person with nobody named carries no going-elsewhere caution');
+  {
+    const job = { id: 7, name: 'Eleanor Whitcombe', svc: 'cleanout', matterType: 'trust', executor: 'Diane Marsh',
+      beneficiaries: [{ id: 'b1', name: 'Sarah Whitcombe', at: 1 }],
+      bequests: [{ id: 'q1', description: 'The diamond ring', beneficiaryId: 'b1', stableIds: ['s1'], at: 1 }] };
+    const B = lift(['invBequestElsewhere'], ['jobs'], { jobs: [job] });
+    const line = (o) => Object.assign({ stableId: 's1', label: 'inventory', objectName: 'Diamond ring', flagBequest: true }, o);
+    const blank = attempt(() => B.invBequestElsewhere(line({ disposition: 'Distribute', channel: '' }), 7));
+    ok(blank.ok, 'fixture: the rule runs (' + (blank.err || 'ok') + ')');
+    eq(blank.val, null, '⚠⚠ To a person with nobody named: no "going elsewhere" caution');
+    eq(attempt(() => B.invBequestElsewhere(line({ disposition: 'Distribute', channel: 'Sarah Whitcombe' }), 7)).val, null, 'to its beneficiary: none');
+    ok(!!attempt(() => B.invBequestElsewhere(line({ disposition: 'Distribute', channel: 'Peter Whitcombe' }), 7)).val, 'to somebody else: the caution');
+    ok(!!attempt(() => B.invBequestElsewhere(line({ disposition: 'Auction', channel: '' }), 7)).val, 'to auction with no house named: still elsewhere');
   }
 
   process.env.TZ = prevTZ;

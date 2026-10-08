@@ -29693,6 +29693,9 @@ function invBequestElsewhere(ref, jobId) {
   var ben = invBequestBeneficiary(b, job);
   var name = ben ? invRecipientName(ben.name) : '';
   if (name && ref.disposition === 'Distribute' && samePerson(invRecipientName(ref.channel), name)) return null;
+  // ⚠ To a person with nobody named yet is not "elsewhere" (2026-10-08, the job-flow audit): the line read "proposed to go
+  // elsewhere … to nobody recorded yet" on the request. The missing recipient is its own flag (the no-recipient work flag).
+  if (ref.disposition === 'Distribute' && !invRecipientName(ref.channel)) return null;
   return { bequest: b, name: name || 'the person the bequest names' };
 }
 
@@ -30113,9 +30116,11 @@ var INV_RELEASE_CAUTIONS = [
   // it did it would tell a downsizing client their property is "reported under oath".
   { key: 'needsAppraisal', fid: true, badge: 'NOT YET APPRAISED', tone: '#8a5a1e',
     test: function(r, jobId){ return invAwaitingAppraisal(r, jobId); },
-    head: 'Property on this request has not been valued yet',
+    // ⚠ "APPRAISED", NOT "VALUED" (2026-10-08, the job-flow audit): the heading sat over lines that print a value (Agent Two's
+    // or the desk's) and told the representative they had none. What is missing is the specialist's appraisal.
+    head: 'Property on this request has not been appraised yet',
     body: 'These lines are flagged for a specialist appraisal and no appraiser has been engaged '
-        + 'and no waiver recorded. Releasing property before it is valued is a decision you can '
+        + 'and no waiver recorded. Releasing property before it is appraised is a decision you can '
         + 'properly make — a dealer\u2019s offer may itself be the market test, and not every '
         + 'article warrants a formal appraisal — but there is then no independent record '
         + 'of what the property was worth when it left. <strong>On an estate filing a federal '
@@ -30303,8 +30308,8 @@ function printApprovalRequest(jobId, selectedOnly) {
               : 'the items listed below have already left the property and are listed for your signature. '))
       + (_many
           ? 'Please initial each line you approve, then each of you sign and date at the foot. <strong>Every '
-            + invCoFiduciaryNoun(job) + ' named below must sign: nothing on this list is approved until all '
-            + fids.length + ' of you have.</strong> '
+            + invCoFiduciaryNoun(job) + ' named below must sign: nothing on this list is approved until '
+            + (fids.length === 2 ? 'both' : 'all ' + fids.length) + ' of you have.</strong> '
           : 'Please initial each line you approve, then sign and date at the foot. ')
       // ⚠ "Verbal approval is not accepted" STAYS ON BOTH ARMS. It is on the published
       // deliverables page, it is not decedent-specific, and it is the whole control.
@@ -30336,7 +30341,7 @@ function printApprovalRequest(jobId, selectedOnly) {
         + '</div>' : '')
     + '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
       + (_many ? '<div style="font-size:10.5px;line-height:1.5;margin-bottom:4px;">Every ' + invCoFiduciaryNoun(job)
-          + ' named below signs. A line is approved only when all ' + fids.length + ' signatures are here.</div>' : '')
+          + ' named below signs. A line is approved only when ' + (fids.length === 2 ? 'both' : 'all ' + fids.length) + ' signatures are here.</div>' : '')
       + (fids.length ? fids : [{ name: who, role: '' }]).map(function(f){
           return 'Approved by: __________________________________ &nbsp;&nbsp; Date: ______________<br>'
             + '<span style="color:#888;">' + esc(f.name) + (f.role ? ', ' + esc(f.role) : '') + (_fid ? ' / authorized fiduciary' : '') + '</span>';
@@ -45565,7 +45570,8 @@ function togglePlanTask(jobId, key, checked, el) {
   // ⚠ AND THE STAGE'S "N of M ticked" FOLLOWS THE TICK (2026-10-08, the job-flow audit): it was drawn only by a full
   // render, so ten ticks on Before Day 1 still read "0 of 10 ticked". Repainted by id, never the plan.
   var _t = PLAN_TASKS.filter(function(t){ return t.key === key; })[0];
-  var _meta = _t ? document.getElementById('stage-meta-' + _t.phase) : null;
+  var _card = _t ? document.getElementById('stage-' + _t.phase) : null;   // the stage card (planStageCard), and its count
+  var _meta = (_card && _card.querySelector) ? _card.querySelector('.stg-count') : null;
   var _job = _meta ? jobs.find(function(j){ return j.id === jobId; }) : null;
   var _rec = _job ? estimateStore[jobId] : null;
   if (_meta && _rec && _rec.estimate) _meta.innerHTML = planStageMeta(jobId, _job, _rec.estimate, _t.phase);

@@ -273,11 +273,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const h = (S.__log.printed[0] || {}).html || '';
     const t = text(h);
     has(h, 'To <strong>Ruth Adler and Daniel Adler</strong>', '⚠ addressed to both co-trustees');
-    has(t, 'Every co-trustee named below must sign: nothing on this list is approved until all 2 of you have.', 'and says every one must sign');
+    // RESTATED 2026-10-08 (the job-flow audit): two signers read "both", never "all 2".
+    has(t, 'Every co-trustee named below must sign: nothing on this list is approved until both of you have.', 'and says every one must sign');
     eq(count(h, 'Approved by: ____'), 2, '⚠⚠ one signature line per fiduciary');
     has(t, 'Ruth Adler, Trustee / authorized fiduciary', 'each named, with the role recorded');
     has(t, 'Daniel Adler, Co-trustee / authorized fiduciary', 'both of them');
-    has(t, 'Every co-trustee named below signs. A line is approved only when all 2 signatures are here.', 'above the signature block too');
+    has(t, 'Every co-trustee named below signs. A line is approved only when both signatures are here.', 'above the signature block too');
     has(t, 'Line 2', '⚠ a line one co-trustee approved is back on the request');
     has(t, 'Signed so far by Ruth Adler (Oct 1, 2026); still to sign: Daniel Adler', 'saying who has signed and who has not');
     lacks(t, 'Line 3', 'a line both approved is not asked for again');

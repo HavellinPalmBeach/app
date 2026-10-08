@@ -454,12 +454,14 @@ The buttons then appear one at a time, each in its own turn, each recording who 
 
 Do this in the wait between sending the agreement and the deposit landing. You know the job is happening; now find out who is actually free.
 
+> **Intake's concierge can stay blank until now (2026-10-08).** Confirming the team makes its concierge the client's *Transition Concierge*: the dashboard stops reading *Unassigned*, and *Job active* and *Work complete* carry their name.
+
 1. On the client's **Job Plan**, open **Hours & daily close**; the **Job Team & Hours** roster is inside it. It shows the crew the approved estimate was priced for — not a blank six slots — plus a concierge row and an optional second concierge row.
 2. Confirm each person's availability, then name them. Any empty planned slot is flagged **"needs a name."**
 3. Need somebody beyond what was quoted? **+ Add a specialist beyond plan**. Those rows are tagged *beyond plan*, because crew above plan eats margin against a fixed quote and the projection will say so.
 4. **Save & Confirm Job Team →**
 
-- **Placeholders are fine.** *Contractor TBD* and *Contractor — TC* mean a confirmed need with an unconfirmed person. They cost at a placeholder rate, so the app says out loud that margin is an estimate until you name them.
+- **Placeholders are fine.** *Contractor TBD* and *Contractor — TC* mean a confirmed need with an unconfirmed person. They cost at a placeholder rate, so the app says out loud that margin is an estimate until you name them. On the client's final their hours print under the role, never the placeholder's name (2026-10-08).
 - **Confirming locks the named people.** Empty slots stay open so you can add mid-job.
 - **Reload before you change the team on a client somebody else has touched today** — the Job Plan's refresh does not bring another device's team changes. Until the 2026-09-30 Apps Script redeploy is live, a change made on an older copy takes the whole client (see the red box in Step 10c); once it is, the team merges part by part (concierge, second concierge, specialists, sign-off), but reload anyway.
 - **Revise team** reopens the roster — but anyone who has already logged hours stays locked. You can add to a team mid-job; you can never retroactively remove somebody who worked. Hours stay shut until you re-confirm.
@@ -513,6 +515,8 @@ Worth knowing before they phone you about it. On the signing screen they are ask
 ## Step 9 · Record the deposit — Client Dashboard
 
 The deposit is **50% of the approved total** and it is **never waived or varied**. The same button records all three payments; a *Which payment is this?* picker at the top opens on the first unsatisfied stage, so in normal use you never touch it. Press **✓ Record payment** on a timeline row and it opens on that row's stage, with the stage in its title and on its button: *Record Deposit*, *Record Midpoint Payment*, *Record Final Payment* (*Record Second Payment* on Home Prep).
+
+> **A cheque handed over with the signed agreement (2026-10-08).** Press **✓ Record payment** beside **✉ Send deposit invoice** and record it there and then. There is no need to email an invoice for money already in your hand, and the band moves on to *Activate the job*.
 
 Recording a payment captures evidence, not a tick:
 
@@ -1140,6 +1144,8 @@ The **✕** on the client's row in the client list — or **Mark lost** beside t
 ## Home Prep for Sale — the short version
 
 A sell-side, show-ready service, mostly through Douglas Elliman referral agents. Havellin manages every trade — paint, repairs, landscaping, deep cleaning, staging — and charges a flat **30% Home Sale Preparation Fee** on the managed vendor spend — its name on every document and screen since 2026-10-01, where it used to be the *GC / Site Management Fee* or the *site management fee*; nothing about it changed but the name. No room scoring, no crew. **Since 2026-09-14 it can also carry concierge declutter hours** where the house needs clearing as well as trades — see step 3 below.
+
+> **A fee-only Home Prep bills no hours, and its invoices say so (2026-10-08).** The final heads its services with the Home Sale Preparation Fee and says no concierge or specialist hours are billed, as the agreement does; the deposit and second invoices carry no labour row. A change order that adds concierge hours puts the hours back.
 
 > **⚠** **The agreement is with the homeowner.** The referring agent is a referral channel, never our client. No document should suggest otherwise.
 

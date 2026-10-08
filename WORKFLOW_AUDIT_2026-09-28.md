@@ -8,6 +8,8 @@ Status of each fix pack lives in this file: when a session lands a pack, it mark
 
 **Status, 2026-10-06:** P16 to P21 landed on 2026-09-30 to 2026-10-05. On 2026-10-06 P22 cleared the known-bug list with Anthony's answers of that day (its backend half `2026-10-06`), and **P23, Agent Two (valuation), landed** (live once the Apps Script is redeployed, `2026-10-06b`). The same day **P24** added the room check and put walkthrough collections on the inventory by themselves, for the first mock job with a full inventory: Anthony redeployed `2026-10-06c` that day, and its first live room check read eight photographs in 32 seconds, so `2026-10-06d` reads a room in runs of 12 to answer inside Apps Script's limit (redeployed the same afternoon: six photographs in one run in 15 seconds). What comes next is the road to launch below: Anthony chose Agent Two first, then a freeze.
 
+**Status, 2026-10-08:** the job-flow audit below ran a whole job on every service through the real controls, fixed what met the triage bar's *fix now* and the cheap *fix if cheap* items, and left Q33 to Q56 for Anthony.
+
 ## Road to launch (Anthony, 2026-10-06)
 
 Anthony asked how to stop the whack-a-mole and reach an app that works for a transition concierge in the field and gives a trust attorney or personal representative what they need. The answer recommended, and his choice on the freeze (*"Agent Two first"*):
@@ -19,6 +21,44 @@ Anthony asked how to stop the whack-a-mole and reach an app that works for a tra
 5. **Real world:** a mock job in a real house (Ashley as concierge on her phone, real Drive and Gmail, the DocuSign sandbox with a co-signer, a Stripe test ACH), then an hour with a friendly trust and estate attorney on the trust package (*what is missing?*). The freeze also lets the counsel bundle go.
 6. **Exit:** all six pass twice running with nothing in *fix now*, the pilot is done and the attorney has read the package. Tag it v1.0; after that every change reruns the six.
 7. **The field method (2026-10-06).** Anthony asked for a best-practices manual for photographing a house so nothing is counted twice (*"if there is a blue vase and I take a picture of it on a dresser and then I take another picture zoomed in on the blue vase … the agent should realize it's the same"*: it does not, unless the zoom is a *Detail of last*). Built as `photography-guide.html`, *Photographing a House*, and rewritten the same day in plain words and shorter at Anthony's ask (*"write this in human speak and cut it down to size"*): three rules, the camera's four buttons, the vase done wrong and right, a room in six steps, its own photo or a group photo, close-ups, special situations, the review on the computer and a pocket card. Draft for Anthony to read; the six scripts and the pilot house follow it. Found writing it, for the triage bar (CLAUDE.md, Open work): a walkthrough collection shot in the house stays listed as not brought in, and bringing it in doubles it; a split frame's chip, ⚑ and close-ups stay on its first line; a note said over a close-up is read by nobody; *Possible duplicates* compares names only. Anthony took the room check over the guide's shot spot (*"Fix option 2 above with room level check. That's an obvious fix and will help with our fake client we are doing tomorrow with full inventory"*) and asked for collections on the inventory by themselves (*"definitely fix the collection double count. collections should automatically be in inventory and obviously need photo documentation"*): built as P24 the same day, below, which fixes the first and the last of those four. The guide's other two calls (the whole-house as-found pass first on an estate; cash never an Items shot) are still drafted for him to confirm.
+
+## Job-flow audit (2026-10-08)
+
+Anthony: *"run through a job in each category … make sure the actual operational job of the transition concierge and the property specialist is not overly complicated by unnecessary buttons and clicks … or tick boxes … fix any bugs … come back to me with a series of questions."* The first whole-job runs the road to launch asks for (step 2–3 above), done by five auditors on a frozen copy through the real controls: the field at 390 px, the desk at 1440, every tap, field and dialog counted.
+
+| Job | Reached | Money (to the cent) | Taps |
+|---|---|---|---|
+| Home Transition, hourly, 20 rooms, 47 lines, a change order, move day | Closed, final paid | $24,145 estimated; $12,072.50 + $6,047.50 + $7,115 = $25,235 billed (hours trued, change order +20 h) | ~790 (In the house 307; Move day 15; Close-out rooms 122) |
+| Home Editing | Intake to plan | — | as Transition, less Move day and new-home prep |
+| Home Cleanout, fixed, 14 rooms | Closed, final paid | $7,550 + $3,775 + $3,775 = $15,100 | 215 |
+| Home Prep, fee-only | Closed, final paid | fee $5,895 on $19,650 of quotes | 108 |
+| Home Prep, 6 declutter hours, change order adds a vendor | Closed, final paid | $2,700 | 108 |
+| Trust estate, two co-trustees, bequests, auction, donation, ledger | Closed, final paid | $22,750 + $11,375 + $11,375 = $45,500; auction net $31,200 reconciled | ~640 measured; ~2,550 at 15 rooms and 400 lines |
+| Probate, Letters, firearm via dealer + NFA, will and cash found, 706, appraisals | Closed, final paid | $25,600 + $12,800 + $12,800 = $51,200; Court Inventory $43,115 + exempt $2,700 | ~2,100 field + ~1,200 desk at full size |
+| Contested probate (Both), two co-PRs, hourly, partial approval and ratification | Closed, final paid (PIN at +26%) | $48,050 estimated; $60,500 billed | per room 8 fixed + 1.3 per item |
+| Hourly walkaway (trust) | Deposit Retained, refund recorded | kept $6,975, refunded $3,487.50 | 4 taps to close and refund |
+
+Zero page errors in every run; no horizontal overflow at 390 px except the contested desk's chips (188 px).
+
+**Where the taps go.** In the field: about 14 taps per room before a single item (open, As found, Done, the pass-complete tick, Items, Done, Lock, back; then After, Done, Cleared, back), 2 per close-up, and about 1.5 to 4.4 per item. At the desk: proceeds typed line by line (about 750 taps on 150 sold lots), appraisers linked one line at a time, recipients typed per line, hours typed from scratch daily. Tick boxes: Move Day's 13, and a set the app could derive (questions below).
+
+**Fixed in this pass** (`tests/job-flow-audit.test.js`, browser step 71; `BUILD_HISTORY.md` has the detail):
+- [x] The Job Plan re-rendered itself without end on any job whose photographs were on the sheet: three auditors were stopped by it (193 to 350 rewrites in a few seconds, every control detached, a note lost mid-sentence).
+- [x] Every estate invoice billed the decedent (*Client: Harold Whitcombe · Phone: —*); it now names the estate or the trust and the representative, as the estimate does.
+- [x] As-found and after shots never reached the sheet on their own.
+- [x] Agent Two's source and comparables sentence printed under figures the appraiser or the desk set (on the report sent to the attorney).
+- [x] The trust package carried probate words (*the personal representative's filing*, *the §733.604 probate schedule*).
+- [x] The estimate and Exhibit A were re-dated every time they were viewed; now the approval's date.
+- [x] A fee-only Home Prep's invoices billed "actual hours" against an agreement that says no hours are billed.
+- [x] An accepted change order dropped the vendors from the client list's Total Est.
+- [x] The beneficiary's receipt named one "trustee" of the trust's raw name on a trust with two co-trustees.
+- [x] The living Contents Record claimed every line photographed and the photos shared, whatever the record said.
+- [x] A deposit cheque handed over at signing could not be recorded until an invoice for it was emailed.
+- [x] The concierge confirmed on the Job Plan never reached the job (dashboard *Unassigned*; the handover credited to the approver).
+- [x] A fixed price was told its final waits on the hours; the fixed-fee blurb promised materials with none priced.
+- [x] Stage counts never repainted; background notices were blocking pop-ups; the unsaved chip covered the camera shutter; the §733.604 chip stayed green past the deadline; *Contractor TBD* printed as a person on the final; a bequest with no recipient yet read *going elsewhere*; the request said *not been valued* over valued lines, and *all 2 of you*.
+
+**Found and not fixed** (the triage bar's *fix if cheap*, listed in `CLAUDE.md`, Open work): Manager approval on every final; the rail's invoice rows show the planned split, not what went; a walkaway's row says *retained* before the refund due is recorded; the custody record leaves out releases made by receipt; the ledger prints appraisal cautions and an empty Date column; Home Prep's second invoice is the band's button from activation; change-order reasons are one list for every service; the desk's chips overflow at 390 px.
 
 ## TL;DR
 
@@ -883,6 +923,59 @@ Fixes: two of the four gaps found writing *Photographing a House* (a doubled wal
 - **Q32** Two signers on one email address (a couple sharing an inbox): the app neither refuses nor flags a co-representative recorded with the client's email, and how DocuSign handles it is unmeasured.  
   *Recommendation:* Try it once in the sandbox (below). If DocuSign takes it, allow it and say so on the send; if it refuses, refuse it in the app by name before anything is sent.  
   *Answer (2026-10-05):* Agreed. P21 built the first half: the envelope goes and the send says so. The sandbox test decides whether it stays that way. *(built by P21; the test is Anthony's)*
+
+### New, from the job-flow audit (2026-10-08)
+
+Ordered by what they protect: the client's and counsel's papers first, then the taps.
+
+- **Q33** Exhibit A promises what Havellin does not do: *"the whole package served on interested parties and filed within the statutory deadline"* and *"Complete when … the filing is complete"* (the agreement's §2.1 says the estate attorney files), and *"we take direction from you alone"* where two co-representatives must approve together (§5.1). §5.2 also promises appraisals *"within the 60-day inventory deadline"*, which nothing checks.
+  *Recommendation:* Reword to *"delivered to the estate attorney in time for the §733.604 filing; counsel serves and files"*, name *the representatives together* where co-representatives are recorded, and flag on Build Estimate a projected end after the §733.604 date. Counsel to confirm.
+- **Q34** The packet disagrees with itself on when money is due: the agreement's §3.2 says the deposit is due *within 7 calendar days of signing* and the final *prior to the final walk-through*; Exhibit A says the deposit is due *upon acceptance* and the final is generated after the walk-through from the logged hours (which is what the app does).
+  *Recommendation:* One rule: deposit within 7 days of signing; final on completion, from the logged hours; drop *"prior to final walk-through"*. Counsel to confirm.
+- **Q35** Firearms. *Cleared to carry* rests on the release approval, whose own paragraph says transport needs authority *"separately in writing, naming each firearm by serial"*, and the request prints no serial. The beneficiary's receipt says Havellin *delivered* a firearm that went through the dealer.
+  *Recommendation:* Make the release request the transport authority for firearms: each firearm line prints make, model, serial and dealer with the no-ownership sentence, initialled per line. Leave dealer-routed firearms off Havellin's receipt and file the dealer's receipt instead. Counsel to review.
+- **Q36** What counts as *appraised*? Today linking an appraiser to a line makes the Court Inventory FINAL and clears *NOT YET APPRAISED* while the value is still Agent Two's; and a line whose source is set to Appraisal with the report's figure typed, but no appraiser linked, still prints *NOT YET APPRAISED*.
+  *Recommendation:* The appraisal's figure on the line (source Appraisal with a value), linked appraiser or not; the link alone is the appraisal in progress.
+- **Q37** Co-representatives get no client email: the estimate, the invoices, the package and the review ask go to the representative alone, and on a contested matter the other side hears nothing but the DocuSign envelope.
+  *Recommendation:* Copy every co-representative with an email on every client email and the package, and share the photo folders with them.
+- **Q38** Which concierge do the client documents name? The estimate and invoices name whoever is in *Prepared by* (it defaults to the site-visit person), before the assigned concierge: one trust job's documents named Anthony while Ashley ran it.
+  *Recommendation:* The assigned concierge, with the preparer shown as *Walkthrough by*.
+- **Q39** Proceeds are typed twice: each sold lot's gross and fees in its own record (four taps a lot, about 750 on a full estate), then the statement's totals.
+  *Recommendation:* A lot-by-lot table inside the statement dialog, pre-ticked with that vendor's lines, writing gross and fees onto the lines; the to-the-cent reconciliation stays.
+- **Q40** About 14 taps per room before the first item. On living work the *As-found pass complete* tick only quiets a flag.
+  *Recommendation:* On living jobs the as-found shot stands as the pass (still flagged if missing); a *Next: Items* button in the camera; *Cleared* offered on the room's row. Estates keep the tick and the refusal.
+- **Q41** A close-up costs two taps (Detail, then the shutter) because Detail resets after every shot.
+  *Recommendation:* A separate one-tap *Close-up* shutter.
+- **Q42** Move Day has 13 tick boxes, four of them *"TC present / oversees"* rules and two the same walk as *Home confirmed empty*.
+  *Recommendation:* Four recorded facts (movers arrived, client walked the new home and approved, damage photographed or none, mover's sign-off); the rest as read-only procedure.
+- **Q43** Tick boxes the app can derive or that do not apply: the trust list's *delivered* and *records delivered* (the package records both), *settlement timeline* (every sold line on a paid statement), the Collection Partners' three per collection, Home Prep's *quotes collected* and *vendors booked*; *served*, *filed* and *final accounting* are counsel's acts; *Shredding*, *Certificate of Insurance to the attorney*, *valuables pickup* and *Moving materials on site* show on jobs they do not apply to.
+  *Recommendation:* Derive what the app records; replace the three court boxes with one derived line, *Court Inventory and Disposition Ledger delivered to counsel*; show the rest only where they apply.
+- **Q44** Recipients are typed per line even when the Job Plan already holds the one confirmed donation charity, hauler or auction house.
+  *Recommendation:* Default the line's recipient from the single confirmed vendor of that kind, marked as derived; flag when there are two.
+- **Q45** Submit opens a confirm listing every room with no walkthrough note (14 of 15 on one job), on every submit. Notes are optional.
+  *Recommendation:* Drop the dialog; a passive line under Submit.
+- **Q46** The release request asks two initials on every leaving line, a $20 paperback to junk included; the agreement's §5.3 asks written approval only for sales or disposals over $500, and donations.
+  *Recommendation:* List every line; one initial per destination group under $500; line initials for $500 and over, bequests, and anything carrying a caution.
+- **Q47** A second concierge nobody chose: the engine's recommendation pre-selects two on the estimate, and the team cannot be confirmed until a second is named.
+  *Recommendation:* Two only when the estimator picks two.
+- **Q48** Vendor ratings at close count only vendors confirmed on the Job Plan; an auction house or charity used as a line's channel is never asked, so the gate was passed with five vendors unrated.
+  *Recommendation:* Also every vendor named as a channel or on a pickup list.
+- **Q49** The walkaway. A refund above the computed amount (after Havellin's uncured breach, which §8.1 requires, or goodwill) cannot be recorded; and §8.1 promises a final invoice within 10 business days that the app never offers on Deposit Retained.
+  *Recommendation:* Allow a refund above the amount due, up to what the job holds, asked first with a required reason; offer a *work done* final on Deposit Retained that shows what was earned and the refund due.
+- **Q50** Condition is promised on the estimate, the agreement and the receipt (*"in the condition described"*) and never recorded: every schedule prints *—*.
+  *Recommendation:* Condition on the desk's bulk bar (set *Good* across a selection, mark the exceptions) and *as photographed* where blank.
+- **Q51** A living family gets two near-identical papers (the Contents Record, and the Disposition Ledger to sign at close), and the record says *Junk*.
+  *Recommendation:* One paper: the Contents Record with a signature line, the ledger only where there are proceeds; *Junk* reads *Disposed of*.
+- **Q52** The 30% Home Sale Preparation Fee trues to the *Quote $* typed on the Job Plan, while the documents say it trues to what the vendors actually invoice.
+  *Recommendation:* Reword to *"the vendor quotes recorded, updated if a vendor's invoice differs"*.
+- **Q53** The estate agreement prints *Court ____* and intake never asks for the court.
+  *Recommendation:* A Court field, defaulted from the case number (*50-* is Palm Beach County).
+- **Q54** Change-order reasons are one list for every service and open on *Accelerated timeline — rush adjustment*; a prep change order printed *Crew upgrade — Senior Property Specialist required*, a role the rate card does not have.
+  *Recommendation:* A list per service, no reason pre-picked, *Senior Property Specialist* gone.
+- **Q55** The Google review ask on a contested matter or a recorded dispute goes to one litigating sibling.
+  *Recommendation:* Suppress it there.
+- **Q56** Home Prep's second invoice is due *"once the vendor schedule is booked"* but is the band's button from activation day.
+  *Recommendation:* Due once every prep vendor is marked Confirmed, which the Job Plan already records.
 
 ## Only Anthony can do these
 
