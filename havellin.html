@@ -1334,7 +1334,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.06 · 11:47am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.08 · 7:11pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -30309,7 +30309,7 @@ function printApprovalRequest(jobId, selectedOnly) {
       + (_many
           ? 'Please initial each line you approve, then each of you sign and date at the foot. <strong>Every '
             + invCoFiduciaryNoun(job) + ' named below must sign: nothing on this list is approved until '
-            + (fids.length === 2 ? 'both' : 'all ' + fids.length) + ' of you have.</strong> '
+            + (fids.length === 2 ? 'both of you have.' : 'all ' + fids.length + ' of you have.') + '</strong> '
           : 'Please initial each line you approve, then sign and date at the foot. ')
       // ⚠ "Verbal approval is not accepted" STAYS ON BOTH ARMS. It is on the published
       // deliverables page, it is not decedent-specific, and it is the whole control.
@@ -30341,7 +30341,7 @@ function printApprovalRequest(jobId, selectedOnly) {
         + '</div>' : '')
     + '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
       + (_many ? '<div style="font-size:10.5px;line-height:1.5;margin-bottom:4px;">Every ' + invCoFiduciaryNoun(job)
-          + ' named below signs. A line is approved only when ' + (fids.length === 2 ? 'both' : 'all ' + fids.length) + ' signatures are here.</div>' : '')
+          + ' named below signs. A line is approved only when ' + (fids.length === 2 ? 'both signatures are here.' : 'all ' + fids.length + ' signatures are here.') + '</div>' : '')
       + (fids.length ? fids : [{ name: who, role: '' }]).map(function(f){
           return 'Approved by: __________________________________ &nbsp;&nbsp; Date: ______________<br>'
             + '<span style="color:#888;">' + esc(f.name) + (f.role ? ', ' + esc(f.role) : '') + (_fid ? ' / authorized fiduciary' : '') + '</span>';

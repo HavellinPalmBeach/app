@@ -26,6 +26,8 @@
 //   G. overflow at 1440 and 390 (the cards, the dialog), the request and the receipt at Letter width in print; no errors
 //
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step56.js [/abs/path/to/havellin.html]
+// RESTATED 2026-10-08 (the job-flow audit): two signers read "both", and the receipt names the trust by its title
+// (trustInstrumentTitle), as the agreement and the Trust Schedule do, and "the trustees" (a co-trustee is recorded here).
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
@@ -202,7 +204,7 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       await press('#inv-workbar button[onclick="printApprovalRequest(5601)"]', 'Approval Request');
       const h = (await lastPrint()).html, t = await T(h);
       has(h, 'To <strong>Ruth Adler and Daniel Adler</strong>', '⚠⚠ addressed to both co-trustees');
-      has(t, 'Every co-trustee named below must sign: nothing on this list is approved until all 2 of you have.', 'saying both must sign');
+      has(t, 'Every co-trustee named below must sign: nothing on this list is approved until both of you have.', 'saying both must sign');
       eq((h.match(/Approved by: _{10}/g) || []).length, 2, '⚠⚠ a signature line for each');
       has(t, 'Daniel Adler, Co-trustee / authorized fiduciary', 'the co-trustee\'s line');
       has(t, 'Designated items proposed to go elsewhere', 'the bequest notice');
@@ -265,7 +267,7 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       await press('#inv-releases button[onclick=\'printBeneficiaryReceipt(5601,"Mary Smith")\']', 'Print receipt for Mary');
       const r = await T((await lastPrint()).html);
       has(r, 'Receipt for Property Released', 'the receipt prints');
-      has(r, 'Released to Mary Smith from the trustee of Ellsworth Family Trust', '⚠ who it came from, by matter');
+      has(r, 'Released to Mary Smith from the trustees of The Ellsworth Family Trust', '⚠ who it came from, by matter');
       has(r, 'Tea service', 'its line');
       has(r, 'Excellent', 'with its condition');
       lacks(r, 'Locket', 'and not John\'s');
