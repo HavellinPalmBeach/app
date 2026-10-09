@@ -246,17 +246,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
-  G('8 · the ledger card reads the job it is given; living work asks for the client\'s signed ledger', () => {
+  // RESTATED (P25, Q51): living work asks for the client's signed Contents Record; nobody signs a living job's ledger.
+  G('8 · the ledger card reads the job it is given; living work asks for the client\'s signed Contents Record', () => {
     const onFile = PROBATE();
     const S = desk(['_renderLedgerCard', 'ledgerDerivedLines'], onFile, [LINE('a', 1, { disposition: 'Sell', gross: 100 })]);
     const handed = PROBATE({ matterType: 'trust' });
     has(text(S._renderLedgerCard(handed, S._photoRefs[8])), 'Net to the trust', '⚠⚠ the figures answer from the job handed over, as the rest of the card does');
     const V = desk(['ledgerDerivedLines'], LIVING(), [LINE('a', 1, { disposition: 'Donate' })]);
-    const l = V.ledgerDerivedLines(2, V.jobs[0], 'p4').filter((x) => x.key === 'ledger_signed')[0] || {};
-    eq([l.ok, l.label], [false, 'Disposition Ledger signed by the client'], '⚠⚠ living work asks for the client\'s signed copy');
+    const l = V.ledgerDerivedLines(2, V.jobs[0], 'p4').filter((x) => x.key === 'contents_signed')[0] || {};
+    eq([l.ok, l.label], [false, 'Contents Record signed by the client'], '⚠⚠ living work asks for the client\'s signed copy');
     has(l.detail, 'have the client sign it', 'worded for the client');
-    V.jobs[0].signedRecords = [{ id: 'x', kind: 'ledger', ref: 'ledger', filedAt: Date.UTC(2026, 9, 2, 16), filedBy: 'Ashley Jerome' }];
-    eq((V.ledgerDerivedLines(2, V.jobs[0], 'p4').filter((x) => x.key === 'ledger_signed')[0] || {}).ok, true, 'and is satisfied by the filed copy');
+    V.jobs[0].signedRecords = [{ id: 'y', kind: 'ledger', ref: 'ledger', filedAt: Date.UTC(2026, 9, 2, 16), filedBy: 'Ashley Jerome' }];
+    eq((V.ledgerDerivedLines(2, V.jobs[0], 'p4').filter((x) => x.key === 'contents_signed')[0] || {}).ok, false, '⚠ a signed ledger is not the family\'s paper');
+    V.jobs[0].signedRecords = [{ id: 'x', kind: 'contents', ref: 'contents', filedAt: Date.UTC(2026, 9, 2, 16), filedBy: 'Ashley Jerome' }];
+    eq((V.ledgerDerivedLines(2, V.jobs[0], 'p4').filter((x) => x.key === 'contents_signed')[0] || {}).ok, true, 'and is satisfied by the filed Contents Record');
     const E = desk(['ledgerDerivedLines'], LIVING(), []);
     eq(E.ledgerDerivedLines(2, E.jobs[0], 'p4').map((x) => x.key), [], 'no inventory, no ledger to sign: no line');
   });

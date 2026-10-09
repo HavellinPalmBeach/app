@@ -183,7 +183,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-05 (P20): three more read the one predicate, and none decides it on its own: what left before it was
     // complete (invRatificationOwed, Q23), an act's lines still open (invApprovalBatches) and what Record approval's dialog
     // says it will leave open (invApprovalLeftOpen, Q24).
-    eq(callers, ['_invAwaitingApproval', 'invApprovalBatches', 'invApprovalLeftOpen', 'invFirearmAuthorized', 'invRatificationOwed',
+    // P25 (Q43): the Collection Partners' *Release approved in writing* line asks it of the collection's lines.
+    eq(callers, ['_invAwaitingApproval', 'collectionPartnerLines', 'invApprovalBatches', 'invApprovalLeftOpen', 'invFirearmAuthorized', 'invRatificationOwed',
                  'invReleasedToPerson', 'planDerivedLines'].sort(),
        'the direct readers: the request\'s list, the desk\'s acts, the dialog, the firearm gate, ratification, what counts as released for a receipt, the Job Plan line');
     const viaFirearm = [...ALL_FNS].filter((n) => { try { return /\binvFirearmAuthorized\(/.test(noComments(fn(n))) && n !== 'invFirearmAuthorized'; } catch (e) { return false; } }).sort();

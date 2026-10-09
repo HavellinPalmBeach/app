@@ -83,25 +83,31 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   // RESTATED AGAIN at the P19 merge, NOT WEAKENED: `fin_proceeds` and `fin_donation_receipts` are lines the app reads now
   // (the proceeds statements reconciled, the donation receipts line by line; the ledger workstream), so every count below is
   // two lower again. Which boxes the matter and the tier decide is unchanged and still asserted list by list.
-  eq(estate.ct.join(' '), 'inventory nonprobate served filed accounting',
+  // ⚠ RESTATED (P25, Q43; Anthony, 2026-10-09), NOT WEAKENED: every court list below is without `served filed accounting`
+  // (counsel's acts; the delivery of the inventory and the ledger to counsel is a line the package answers), the settlement
+  // timeline is a line too, and the trust list's two delivery boxes are the trust package. So every count is lower again;
+  // which boxes the matter and the tier decide is unchanged and still asserted list by list.
+  eq(estate.ct.join(' '), 'inventory nonprobate',
      '⚠ the compliance list is there — on the service that had NONE at any tier');
-  ok(/0 of 8 ticked/.test(estate.count), 'counted: ' + JSON.stringify(estate.count));
+  ok(/0 of 4 ticked/.test(estate.count), 'counted: ' + JSON.stringify(estate.count));
+  ok(/delivered to counsel/.test(estate.txt), 'and the delivery to counsel is a line on the card');
   ok(/733\.604/.test(estate.txt), 'the §733.604 verification is on the rendered card');
   ok(/florida court/i.test(estate.txt), 'under the compliance heading (innerText applies text-transform, so match case-insensitively)');
 
   console.log('\n=== THE SAME ESTATE, CONTRACTED AT EACH TIER ===');
   const top = await read({ docTier: 'appraisals' });
-  eq(top.ct.join(' '), 'inventory appraisals nonprobate served filed accounting', 'the top tier attaches the reports too');
-  ok(/0 of 9 ticked/.test(top.count), 'nine: ' + JSON.stringify(top.count));
+  eq(top.ct.join(' '), 'inventory appraisals nonprobate', 'the top tier attaches the reports too');
+  ok(/0 of 5 ticked/.test(top.count), 'five: ' + JSON.stringify(top.count));
 
   const contents = await read({ docTier: 'contents' });
-  eq(contents.ct.join(' '), 'nonprobate served filed accounting', 'a contents list states no values, so nothing asks us to verify one');
+  eq(contents.ct.join(' '), 'nonprobate', 'a contents list states no values, so nothing asks us to verify one');
   ok(!/date-of-death FMV on every line/.test(contents.txt), 'the instruction is gone from the rendered card');
 
   const none = await read({ docTier: 'none' });
-  eq(none.ct.join(' '), 'served filed accounting', '⚠ contracted at None, the three deliverable checks are gone');
-  ok(/0 of 6 ticked/.test(none.count), 'six: ' + JSON.stringify(none.count));
-  ok(/proof of service/.test(none.txt), 'and the court procedure stays — it happens whoever built the schedule');
+  eq(none.ct.join(' '), '', '⚠ contracted at None, the three deliverable checks are gone, and counsel\'s procedure is not Havellin\'s to tick');
+  ok(/0 of 2 ticked/.test(none.count), 'two: ' + JSON.stringify(none.count));
+  ok(!/proof of service/.test(none.txt), 'nothing asks Havellin to serve or file');
+  ok(/Disposition Ledger delivered to counsel/.test(none.txt), 'and the line names only what Havellin delivers');
 
   console.log('\n=== A REPORT ON THE RECORD BRINGS THE ATTACH BOX BACK ===');
   const apprNo = await read({ docTier: 'contents', appraisers: null });
@@ -114,13 +120,14 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
   eq(trust.ct.length, 0, 'no §733.604 checklist on a matter with no probate in it');
   ok(!/733\.604/.test(trust.txt), '⚠ and nothing on the rendered card cites the wrong statute');
   ok(!/florida court/i.test(trust.txt), 'no court section at all');
-  ok(/0 of 7 ticked/.test(trust.count), 'the financial close, the trustee\'s list and the archive: ' + JSON.stringify(trust.count));
+  ok(/0 of 4 ticked/.test(trust.count), 'the financial close, the trustee\'s list and the archive: ' + JSON.stringify(trust.count));
   ok(/vendor invoices/.test(trust.txt), 'so the desk is not left with an empty card');
   ok(/trust administration/i.test(trust.txt), '⚠ and the trustee\'s own list, under a heading with no court in it (P19)');
-  ok(/Trust Schedule verified/.test(trust.txt) && /trustee.s accounting/.test(trust.txt), 'the schedule check and the records for the trustee\'s accounting');
+  ok(/Trust Schedule verified/.test(trust.txt), 'the schedule check');
+  ok(/Trust Schedule and Disposition Ledger delivered to the trustee/.test(trust.txt), 'and the delivery is a line the trust package answers (P25, Q43)');
 
   const both = await read({ matterType: 'both' });
-  eq(both.ct.join(' '), 'inventory nonprobate served filed accounting', 'a pour-over will keeps the probate half');
+  eq(both.ct.join(' '), 'inventory nonprobate', 'a pour-over will keeps the probate half');
 
   console.log('\n=== A JOB RECORDED BEFORE EITHER FIELD EXISTED ===');
   const legacy = await p.evaluate((id) => {
@@ -136,9 +143,9 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
     return { ct: boxes.filter(k => k.indexOf('ct_') === 0).map(k => k.slice(3)),
              count: card.querySelector('.ja-n').textContent.trim() };
   }, jobId);
-  eq(legacy.ct.join(' '), 'inventory nonprobate served filed accounting',
+  eq(legacy.ct.join(' '), 'inventory nonprobate',
      'a probate job with neither field keeps the checklist it has today');
-  ok(/0 of 8 ticked/.test(legacy.count), 'eight — the attach box the migration refuses to claim, the deleted sign-off and the two financial-close lines: ' + JSON.stringify(legacy.count));
+  ok(/0 of 4 ticked/.test(legacy.count), 'four — the attach box the migration refuses to claim, the deleted sign-off, the financial-close lines and counsel\'s three: ' + JSON.stringify(legacy.count));
 
   console.log('\n=== THE CARD SAYS WHY ITS LIST LOOKS THE WAY IT DOES ===');
   const line = (r, lbl) => r.derived.find(d => d.lbl === lbl);

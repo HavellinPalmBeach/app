@@ -215,8 +215,8 @@ const EST = 6601, LIVING = 6603;
       const h = await requestOf(LIVING);
       eq((h.match(/Prepared by Havellin Palm Beach, LLC/g) || []).length, 1, '⚠⚠ the living request says who prepared it once');
       await p.evaluate((id) => openJobPlanFor(id, 'hours'), LIVING); await p.waitForTimeout(900);
-      has(await p.evaluate(() => (document.getElementById('panel-job-plan') || { textContent: '' }).textContent.replace(/\s+/g, ' ')), 'Disposition Ledger signed by the client',
-          '⚠⚠ the plan asks for the client\'s signed ledger');
+      has(await p.evaluate(() => (document.getElementById('panel-job-plan') || { textContent: '' }).textContent.replace(/\s+/g, ' ')), 'Contents Record signed by the client',
+          '⚠⚠ the plan asks for the client\'s signed Contents Record (RESTATED, P25 Q51: nobody signs a living job\'s ledger)');
       await press('#log-history-toggle', 'View hours log');
       const wrap = await p.evaluate(() => { const w = document.getElementById('log-history-wrap');
         return { text: w.textContent.replace(/\s+/g, ' '), imgs: w.querySelectorAll('img').length, bold: w.querySelectorAll('td b').length }; });

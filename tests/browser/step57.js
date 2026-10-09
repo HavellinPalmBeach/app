@@ -224,7 +224,10 @@ const pretty = (ymd) => { const [y, m, d] = ymd.split('-').map(Number);
       const card = await txt('.ja-card');
       has(card, 'Trust administration', 'D3: the trustee\'s list, under a heading with no court in it (textContent: the stylesheet uppercases it)');
       has(card, 'Trust Schedule verified — date-of-death FMV on every line', 'the schedule check');
-      has(card, 'Disposition records delivered for the trustee’s accounting (§736.08135)', 'the records for the trustee\'s accounting');
+      // ⚠ RESTATED (P25, Q43): the schedule and the records delivered to the trustee are what the trust package records, so they
+      // are one line the package answers rather than two boxes.
+      has(card, 'Disposition Ledger delivered to the trustee', 'the delivery to the trustee is a line read off the package');
+      lacks(card, 'Disposition records delivered for the trustee', 'and the records box is gone');
       lacks(card, 'PR sign-off', '⚠ and no sign-off box');
       lacks(card, '733.604', 'nothing on a trust cites the court\'s statute');
     });

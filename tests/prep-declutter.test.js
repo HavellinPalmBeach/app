@@ -360,7 +360,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // exists — the trap CLAUDE.md records costing the `&amp;amp;` defect a whole round.
     ok(typeof fn('standingFlagsBlock') === 'string', 'standingFlagsBlock is real (stubbed here only)');
     ok(typeof fn('renderVendorSourcing') === 'string', 'renderVendorSourcing is real (stubbed here only)');
-    const planFns = ['renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2',
+    const planFns = ['derivedLinesHtml', 'prepVendorsConfirmed', 'renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2',
       'chkGrid', 'planChk', '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan',
       '_planTouch',
       // The prep plan opens with the firearms banner since 2026-09-20 (the brief under it no

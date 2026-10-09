@@ -133,7 +133,7 @@ const otherJob = () => ({ id: 8, hvlId: 'HVL-0008', name: 'Ellsworth', svc: 'cle
 
 const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', '_saveJobEdit', '_crewSave',
   '_srcLid', '_srcLineKey', '_srcAdoptLineIds', '_srcSlot', '_svcJob', '_prepJob', '_srcSetVendor',
-  'setJobVendor', 'setJobVendorQuote', 'setJobVendorStatus', 'setPrepVendor', 'setPrepVendorQuote', 'setPrepVendorStatus',
+  'setJobVendor', 'invFillPlanChannels', '_invJob', 'setJobVendorQuote', 'setJobVendorStatus', 'setPrepVendor', 'setPrepVendorQuote', 'setPrepVendorStatus',
   'setJobVendorCoordHrs', 'setPrepVendorCoordHrs', 'setLogisticsCoordHrs',
   '_collJob', 'setCollVendor', 'setCollFee', '_logiJob', 'setLogisticsVendor', 'setLogisticsQuote', 'setLogisticsStatus',
   'addLogisticsLine', 'removeLogisticsLine', 'getVendorActuals', 'prepFeeRate', 'logisticsCatsFor',

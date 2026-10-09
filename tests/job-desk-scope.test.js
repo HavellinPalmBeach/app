@@ -17,10 +17,10 @@
 
 const { sandbox, source, fn, decl } = require('./harness');
 
-const CTX_FNS = ['planTaskCtx', 'jobOnProbateTrack', 'planTasksFor', 'invFiduciaryMode', 'isDecedentJob',
+const CTX_FNS = ['planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'planTasksFor', 'invFiduciaryMode', 'isDecedentJob',
                  'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef',
                  'docTierOf', 'docTierDef', 'docTierProduces', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef'];
-const CTX_VARS = ['PLAN_TASKS', 'JOB_ADMIN_TASKS', 'DECEDENT_SERVICES', 'MATTER_TYPES',
+const CTX_VARS = ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'DECEDENT_SERVICES', 'MATTER_TYPES',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'HOUSE_FLAGS',
                   'FIREARMS_PROTOCOL_DOC', 'DOC_SCOPES'];
 
@@ -130,30 +130,34 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // obtained on the final disposition summary") is DELETED, because a tick said a signature existed without the paper.
   // The sign-off is now the filed signed copy of the Disposition Ledger, read as a derived line (the ledger workstream).
   // Everything else each list pins — which boxes the tier and the matter decide — is unchanged and still asserted.
+  // ⚠ RESTATED (P25, Q43; Anthony, 2026-10-09), NOT WEAKENED. Every list below lost `served filed accounting`: serving,
+  // filing and the final accounting are counsel's acts, so they are no longer boxes Havellin ticks; what Havellin does,
+  // delivering the inventory and the ledger to counsel, is a derived line the package answers (estateDeliveryLine, driven
+  // in p25-field.test.js). Which deliverable checks the tier and the matter decide is unchanged and still asserted.
   group('⚠⚠ THE COMPLIANCE LIST — the two defects D6 names, driven both ways');
   {
     // (a) THE UNDER-FIRE. An Estate Settlement administering a probate estate got nothing.
     eq(compliance({ svc: 'cleanout', docTier: 'values' }).length, 0,
        'an Estate Settlement with no matter recorded claims no court administration');
     eq(compliance({ svc: 'cleanout', matterType: 'probate', docTier: 'values' }).join(' '),
-       'inventory nonprobate served filed accounting',
+       'inventory nonprobate',
        '⚠ and gets the whole list the moment the matter says probate — it used to get NONE');
     eq(compliance({ svc: 'cleanout', matterType: 'both', docTier: 'appraisals' }).join(' '),
-       'inventory appraisals nonprobate served filed accounting',
-       'a pour-over will at the top tier gets all six');
+       'inventory appraisals nonprobate',
+       'a pour-over will at the top tier gets all three');
 
     // (b) THE OVER-FIRE. A probate estate contracted at None was told to do counsel's work.
     eq(compliance({ svc: 'probate', matterType: 'probate', docTier: 'none' }).join(' '),
-       'served filed accounting',
+       '',
        '⚠ contracted at None, the two deliverable checks and the carve-out are gone');
     eq(compliance({ svc: 'probate', matterType: 'probate', docTier: 'contents' }).join(' '),
-       'nonprobate served filed accounting',
+       'nonprobate',
        'on a contents list we state no values, so nothing asks us to verify one');
     eq(compliance({ svc: 'probate', matterType: 'probate', docTier: 'values' }).join(' '),
-       'inventory nonprobate served filed accounting',
+       'inventory nonprobate',
        'the valued tier verifies the FMV and still does not attach reports it was not engaged for');
     eq(compliance({ svc: 'probate', matterType: 'probate', docTier: 'appraisals' }).join(' '),
-       'inventory appraisals nonprobate served filed accounting',
+       'inventory appraisals nonprobate',
        'and the top tier attaches them');
 
     // ⚠ THE PROCEDURAL THREE NEVER MOVE WITH THE TIER. Serving, filing and the accounting happen on a
@@ -161,7 +165,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['contents', 'values', 'appraisals', 'none'].forEach((t) => {
       const got = compliance({ svc: 'probate', matterType: 'probate', docTier: t });
       ['served', 'filed', 'accounting'].forEach((k) => {
-        ok(got.indexOf(k) >= 0, 'ct_' + k + ' survives tier ' + t);
+        ok(got.indexOf(k) < 0, 'ct_' + k + ' is not a box on tier ' + t + ': counsel\'s act (P25, Q43)');
       });
       ok(got.indexOf('pr_signoff') < 0, '⚠ and no sign-off box on tier ' + t + ': the signed ledger is the record (P19)');
     });
@@ -203,10 +207,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Every probate job created before 2026-09-21 carries neither field.
     // RESTATED 2026-10-03 (P19): without `pr_signoff`, deleted (see the compliance group above).
     eq(compliance({ svc: 'probate' }).join(' '),
-       'inventory nonprobate served filed accounting',
-       'a probate job with no tier and no matter keeps its checklist');
+       'inventory nonprobate',
+       'a probate job with no tier and no matter keeps its checklist (less counsel\'s three, P25 Q43)');
     eq(compliance({ svc: 'contested_probate' }).join(' '),
-       'inventory nonprobate served filed accounting',
+       'inventory nonprobate',
        'and so does a contested one');
     eq(compliance({ svc: 'probate', docScope: 'full' }).join(' '),
        compliance({ svc: 'probate', docTier: 'values' }).join(' '),
@@ -221,8 +225,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // reconciled against the ledger, every donated line receipted; p19-ledger.test.js drives both), so neither is a box
     // on either list. Everything else on the two lists is exactly what it was.
     eq(admin({ svc: 'home_cleanout' }).join(' '),
-       'fin_vendor_invoices fin_settlement rec_archived',
-       'a Home Cleanout desk list is what it was, less the two boxes that became derived lines');
+       'fin_vendor_invoices rec_archived',
+       'a Home Cleanout desk list is what it was, less the three boxes that became derived lines (fin_settlement since P25, Q43)');
     eq(admin({ svc: 'downsizing' }).join(' '),
        'fin_vendor_invoices rec_archived',
        'and a Home Editing one');
@@ -259,12 +263,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const mk = () => {
       const a = sandbox({
-        fns: ['renderJobAdmin', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor',
-              '_planTaskDone', 'planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planDerivedHtml', 'planTaskSectionsHtml', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+        fns: ['renderJobAdmin', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor',
+              '_planTaskDone', 'planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planDerivedHtml', 'planTaskSectionsHtml', 'donationReceiptLine', 'ledgerDerivedLines', 'derivedLinesHtml', '_andJoin', 'invPrimaryDoc', 'invDocContractBlock', 'probatePackageDocs', 'estatePackageRoute', 'estateDeliveryLine', 'proceedsReceivedLine', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
               'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
               'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
               'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', '_jobAdminIsOpen', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-        vars: ['LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore',
+        vars: ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'PROBATE_PKG_TITLES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore',
                'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
                'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
                'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
@@ -284,28 +288,35 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // receipted). A trust matter is no longer the financial close and the archive alone: it renders the trustee's
     // own list. Re-measured off the real renderJobAdmin below, not worked by hand.
     const estate = render({ svc: 'cleanout', matterType: 'probate', docTier: 'values' });
-    has(estate, '0 of 8 ticked', '⚠ an Estate Settlement on a probate matter renders eight boxes — it rendered five before 2026-09-21');
-    has(estate, "'ct_filed'", 'the filing deadline is on it');
+    // RESTATED (P25, Q43): four lower again. Served, filed and the accounting are counsel's acts and the settlement
+    // timeline is read off the paid statements; the delivery to counsel is a line the package answers.
+    has(estate, '0 of 4 ticked', '⚠ an Estate Settlement on a probate matter renders four boxes');
+    lacks(estate, "'ct_filed'", 'counsel\'s filing is not a box');
+    has(estate, 'Court Inventory and Disposition Ledger delivered to counsel', 'the delivery to counsel is a derived line');
     has(estate, "'ct_inventory'", 'and the §733.604 verification');
     has(estate, 'Florida court &amp; legal compliance', 'under the compliance heading');
     lacks(estate, "'ct_pr_signoff'", 'and no sign-off box (P19)');
 
     const none = render({ svc: 'probate', matterType: 'probate', docTier: 'none' });
-    has(none, '0 of 6 ticked', 'a probate estate contracted at None renders six');
-    has(none, "'ct_filed'", 'the court procedure stays');
+    has(none, '0 of 2 ticked', 'a probate estate contracted at None renders two (P25, Q43: the court procedure is counsel\'s)');
+    has(none, 'Disposition Ledger delivered to counsel', 'and the delivery line names only what Havellin produces');
+    lacks(none, 'Court Inventory and Disposition Ledger', 'never the Court Inventory counsel prepares');
     lacks(none, "'ct_inventory'", '⚠ and it is no longer told to verify a value counsel states');
     lacks(none, "'ct_appraisals'", 'nor to attach reports counsel obtains');
     lacks(none, 'date-of-death FMV on every line', 'the instruction is gone from the rendered card, not just from the catalogue');
 
     const trust = render({ svc: 'probate', matterType: 'trust', docTier: 'values' });
-    has(trust, '0 of 7 ticked', 'a trust matter renders the financial close, the trustee\'s list and the archive');
+    // RESTATED (P25, Q43): the schedule and the records delivered are the trust package, derived; fin_settlement likewise.
+    has(trust, '0 of 4 ticked', 'a trust matter renders the financial close, the trustee\'s list and the archive');
+    has(trust, 'Trust Schedule and Disposition Ledger delivered to the trustee', 'the delivery is a derived line');
     has(trust, 'Trust administration', '⚠⚠ under its own heading (P19) — it rendered the financial close and the archive alone');
-    ["'tt_schedule'", "'tt_excluded'", "'tt_delivered'", "'tt_records'"].forEach((k) => has(trust, k, k + ' is on it'));
+    ["'tt_schedule'", "'tt_excluded'"].forEach((k) => has(trust, k, k + ' is on it'));
+    ["'tt_delivered'", "'tt_records'"].forEach((k) => lacks(trust, k, k + ' is a derived line now, not a box'));
     lacks(trust, 'Florida court &amp; legal compliance', 'and no court section at all');
     lacks(trust, '733.604', '⚠ nothing on it cites the wrong statute');
 
     const top = render({ svc: 'probate', matterType: 'probate', docTier: 'appraisals' });
-    has(top, '0 of 9 ticked', 'the top tier renders all nine');
+    has(top, '0 of 5 ticked', 'the top tier renders five (P25, Q43)');
     has(top, "'ct_appraisals'", 'including the reports it was engaged to attach');
   }
 
@@ -317,11 +328,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE DESK CARD SAYS WHY ITS LIST LOOKS THE WAY IT DOES');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+      fns: ['_andJoin', 'invPrimaryDoc', 'invDocContractBlock', 'probatePackageDocs', 'estatePackageRoute', 'estateDeliveryLine', 'proceedsReceivedLine', 'planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'planTaskApplies', 'logisticsLineOn', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
             '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
             'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-      vars: ['LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+      vars: ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'PROBATE_PKG_TITLES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
              'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
              'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
@@ -374,7 +385,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctLines = decl('JOB_ADMIN_TASKS').split('\n').filter((l) => l.indexOf("key:'ct_") >= 0);
     // RESTATED 2026-10-03 (P19): six, not seven — `ct_pr_signoff` is deleted (the signed ledger is the sign-off).
-    eq(ctLines.length, 6, 'six compliance boxes');
+    // RESTATED (P25, Q43): three — served, filed and the accounting are counsel's acts, a derived line now.
+    eq(ctLines.length, 3, 'three compliance boxes');
     ctLines.forEach((l) => {
       const key = l.match(/key:'(ct_\w+)'/)[1];
       ok(l.indexOf('c.isProbate') < 0, key + ' does not read the service type');

@@ -780,7 +780,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(d.blocked === false, 'and it is a flag, never a refusal');
     // … and the timeline's final row carries it on the dashboard, where the final is sent and approved.
     const TL = sandbox({
-      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs',
+      fns: ['agrApprovalWithdrawn', 'jobTimeline', 'estimateNoteGaps', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs',
         'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
         'resolveExecutorAuth', 'jobOnProbateTrack', 'matterDef', 'isDecedentJob', 'invFiduciaryMode', 'matterTypeOf', 'isJobWon', 'isJobFunded',
         'jobPayments', 'stagePaidTotal', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature',

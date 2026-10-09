@@ -242,7 +242,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     c.ctx.fieldCamToggleAppr();
     ok(/fc-tog on" onclick="fieldCamToggleAppr\(\)"/.test(c.ui()), 'Appraise paints lit');
     ok(/fc-tog on" onclick="fieldCamToggleDetail\(\)"/.test(c.ui()) === false, 'Detail is not lit');
-    has(c.ui(), 'onclick="fieldCamToggleDetail()" disabled', '⚠ and cannot be lit yet — there is no last item to be a detail of');
+    // ⚠ RESTATED (P25, Q41; Anthony, 2026-10-09): a close-up is its own one-tap shutter, not *+ Detail of last* and then the
+    // shutter. The same requirement: it is not offered before there is a last item to be a close-up of.
+    has(c.ui(), 'onclick="fieldCamShootDetail()" disabled', '⚠ the Close-up shutter cannot be pressed yet — there is no last item to be a detail of');
+    lacks(c.ui(), 'onclick="fieldCamToggleDetail()"', 'and the two-tap toggle is gone from the strip');
     ok(c.ctx._fieldCamCommit('data:image/jpeg;base64,AAA'), 'shot one');
     eq(c.ctx._fieldCam.open, true, '⚠⚠ THE CAMERA IS STILL OPEN');
     eq(c.overlay().style.display, 'flex', 'and still on screen');
@@ -255,7 +258,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(first.needsAppr, true, 'and so did the flag, on this shot only');
 
     // Shot two: same chip, no flag, as a detail of the first.
-    lacks(c.ui(), 'onclick="fieldCamToggleDetail()" disabled', 'Detail is offered now there is a last item');
+    lacks(c.ui(), 'onclick="fieldCamShootDetail()" disabled', 'Close-up is offered now there is a last item (RESTATED, P25 Q41)');
     c.ctx.fieldCamToggleDetail();
     eq(c.ctx._fieldCam.detail, true, 'toggled');
     c.ctx._fieldCamCommit('data:image/jpeg;base64,BBB');
@@ -376,9 +379,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const calls = [];
     const d = sandbox({
-      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'planDerivedHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'planDerivedHtml', 'derivedLinesHtml', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize', 'donationReceiptLine', 'ledgerDerivedLines', 'proceedsReceivedLine', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-      vars: ['DECEDENT_SERVICES', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'jobPlanStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
+      vars: ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'jobPlanStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
              'estimateStore', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'ESTATE_AUTHORITIES'],
       stubs: {
         isFormalDoc: () => false,
@@ -445,8 +448,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ CHECKBOXES ARE NAMED, NEVER prefix + array index');
   {
-    const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef'],
-                        vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'CLOSEOUT_TASK_KEYS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
+    const t = sandbox({ fns: ['planTasksFor', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake', 'houseFlagsOf', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef'],
+                        vars: ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'CLOSEOUT_TASK_KEYS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
                         stubs: { isFormalDoc: () => false } });
     const keys = t.PLAN_TASKS.map((x) => x.key);
     eq(new Set(keys).size, keys.length, 'every key is distinct');
@@ -464,8 +467,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const on = (job, est) => t.planTasksFor(t.PLAN_TASKS, null, t.planTaskCtx(job, est)).map((x) => x.key);
     const estate = on({ svc: 'cleanout', houseFlags: { firearms: { on: true, note: 'hall safe' } } }, { svc: 'cleanout' });
     ['precall', 'access_tested', 'crew_briefed', 'coi_provided', 'firearms_in_place', 'nfa_check',
-     'docs_sequestered', 'cash_logged', 'coc_pickup_present', 'shred_done', 'broom_clean', 'home_empty',
+     'docs_sequestered', 'cash_logged', 'coc_pickup_present', 'broom_clean', 'home_empty',
      ].forEach((key) => ok(estate.indexOf(key) >= 0, 'estate settlement keeps ' + key));
+    // ⚠ RESTATED (P25, Q43; Anthony, 2026-10-09: show it only where it applies): shredding is asked where a shredding
+    // vendor is on the job, an estimate line or the end-of-job line, not on every estate.
+    ok(estate.indexOf('shred_done') < 0, 'no shredding vendor on the job: no shredding box');
+    ok(on({ svc: 'cleanout' }, { svc: 'cleanout', vendors: [{ type: 'Document Shredding', cost: 200 }] }).indexOf('shred_done') >= 0,
+       'a shredding vendor on the estimate puts it on');
+    ok(on({ svc: 'cleanout', logisticsSourcing: { shred: { added: true } } }, { svc: 'cleanout' }).indexOf('shred_done') >= 0,
+       'and so does the end-of-job shredding line put on the job');
     // ⚠ RESTATED 2026-09-22, NOT DELETED. The satisfaction call, the review ask and the referral ask
     // were three boxes in a 'Client' section of the Close-out stage. They moved into the close-out
     // card, which is on EVERY service (Home Prep had none of them) and on both job tabs; the two tick
@@ -498,7 +508,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ but firearms flagged at intake puts them on any job');
 
     const move = on({ svc: 'downsizing_move', re: 'yes' }, { svc: 'downsizing_move' });
-    eq(move.filter((x) => x.indexOf('mv_') === 0).length, 13, 'Home Transition keeps the whole move-day sequence');
+    // ⚠ RESTATED (P25, Q42; Anthony, 2026-10-09): move day records four facts; the rest of the sequence is a procedure
+    // read under them (PLAN_PROCEDURE), never ticked. It kept thirteen boxes, four of them rules a box cannot witness.
+    eq(move.filter((x) => x.indexOf('mv_') === 0), ['mv_eta', 'mv_client_walk', 'mv_damage', 'mv_mover_signoff'], 'Home Transition records the four move-day facts');
     eq(move.filter((x) => x.indexOf('nh_') === 0).length, 5, 'and the new-home prep');
     ok(move.indexOf('re_handoff') >= 0 && move.indexOf('re_disclosed') >= 0, 'and the RE handoff when the client came through real estate');
 
@@ -511,10 +523,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ JOB ADMIN IS ON THE INVENTORY TAB, and reading a tick never mints a plan');
   {
     const a = sandbox({
-      fns: ['renderJobAdmin', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', '_planTaskDone', 'planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planDerivedHtml', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+      fns: ['renderJobAdmin', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', '_planTaskDone', 'planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planDerivedHtml', 'donationReceiptLine', 'ledgerDerivedLines', 'derivedLinesHtml', '_andJoin', 'invPrimaryDoc', 'invDocContractBlock', 'probatePackageDocs', 'estatePackageRoute', 'estateDeliveryLine', 'proceedsReceivedLine', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', '_jobAdminIsOpen', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-      vars: ['LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+      vars: ['PROBATE_PKG_TITLES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
              'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
       stubs: { isFormalDoc: () => false, isJobWon: (j) => !!j.won, docSentAt: () => null, jobLogEntries: () => [],
                isAgreementSigned: () => false, isJobFunded: () => false, depositPaidTotal: () => 0, stagePaidTotal: () => 0,
@@ -532,11 +544,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ RESTATED 2026-10-03 (P19): EIGHT — `ct_pr_signoff` is deleted (the representative's sign-off is the filed
     // signed Disposition Ledger, read as a derived line, never a tick), and fin_proceeds and fin_donation_receipts
     // are derived lines now (the proceeds reconciliation and the donation receipts).
-    has(folded, '0 of 8 ticked', 'counting the probate list at the tier a legacy job reads as');
+    // ⚠ RESTATED (P25, Q43): FOUR. Served, filed and the final accounting are counsel's acts and the settlement timeline
+    // is read off the paid statements: derived lines now (estateDeliveryLine, proceedsReceivedLine), never boxes.
+    has(folded, '0 of 4 ticked', 'counting the probate list at the tier a legacy job reads as');
     lacks(folded, 'type="checkbox"', 'no boxes until opened');
     a._jobAdminOpen[7] = true;
     const open = a.renderJobAdmin(7, { id: 7, svc: 'probate', won: true });
-    has(open, "'ct_filed'", 'opened, the court list is there');
+    has(open, "'ct_inventory'", 'opened, the court list is there');
+    lacks(open, "'ct_filed'", '⚠ and nothing asks Havellin to tick counsel\'s filing (P25, Q43)');
+    has(open, 'delivered to counsel', 'the delivery to counsel is a line the package answers');
     has(open, "'fin_vendor_invoices'", 'and the financial close');
     // ⚠ `admin`, NOT `p4`, SINCE 2026-09-21. The desk card and the Job Plan's Close-out stage
     // share the close-out facts and NOT the two lines naming the matter type and the engagement
@@ -558,14 +574,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const j = sandbox({
       fns: ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
-            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'derivedLinesHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', 'donationReceiptLine', 'ledgerDerivedLines', 'planTaskApplies', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             // The stages (2026-09-19, evening): the gate chips, the fold counts, the current stage.
             'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr', '_ymdLocal',
             // The open job body (2026-09-20): stage cards on a thread, marked off the stage the job is in.
             'planStageCard', 'planStageState', 'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'],
-      vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
+      vars: ['PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_PROCEDURE', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS'],
       stubs: {
         document: dom, isFormalDoc: () => false,
@@ -641,7 +657,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(out, '<span class="stg-count">0 of 2 locked &middot; 0 cleared</span>', 'the rooms card heading carries the locked count');
     ['p2', 'p4'].forEach((ph) => has(out, 'plan-derived-' + ph + '-7', ph + ' still has its derived lines'));
     lacks(out, 'plan-derived-p0-7', 'and Before Day 1 does not repeat the chips as lines');
-    ["'firearms_in_place'", "'nfa_check'", "'docs_sequestered'", "'cash_logged'", "'coc_pickup_present'", "'shred_done'",
+    // RESTATED (P25, Q43): shred_done is drawn only where a shredding vendor is on the job, and this one has none.
+    lacks(out, "'shred_done'", 'no shredding vendor, no shredding box');
+    ["'firearms_in_place'", "'nfa_check'", "'docs_sequestered'", "'cash_logged'", "'coc_pickup_present'",
      "'broom_clean'", "'home_empty'", "'satisfaction_call'", "'precall'", "'crew_briefed'"]
       .forEach((k) => has(out, k, k + ' is a real box'));
     // ⚠ RESTATED 2026-09-20: driven on the real plan, the per-job NDA box is not on it. See the
@@ -694,7 +712,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!w.INV_WORK_FLAGS[0].test({ objectName: 'Sideboard' }), 'and drops off once named');
 
     const rowCtx = sandbox({
-      fns: ['_renderInvRow', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
+      fns: ['invPlanChannel', '_renderInvRow', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
@@ -702,7 +720,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
             'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelCautionHtml', '_invPanelLeftoverHtml'],
-      vars: ['INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
+      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
              'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'],
       stubs: { _invInput: () => '', _invThumbHTML: (j, r, px) => '<div data-thumb-id="' + (r.driveFileId || '') + '" style="w:' + px + '"></div>',

@@ -68,9 +68,9 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       const d = document.getElementById('e-discount'); d.value = String(o.disc || 0);
       // Each build starts from the ordinary crew: one concierge, the recommended specialists. The
       // controls keep their last value across a rebuild of the same job, as they do for a person.
-      document.getElementById('e-tc-count').value = '1'; _tc2UserSet = false; _crewUserSet = false;
+      document.getElementById('e-tc-count').value = '1'; _crewUserSet = false;
       calcAll();
-      if (o.tc2) { document.getElementById('e-tc-count').value = '2'; _tc2UserSet = true; calcAll(); }
+      if (o.tc2) { document.getElementById('e-tc-count').value = '2'; calcAll(); }
       if (o.psExtra) {
         const rec = currentEstimate.psRecommended;
         document.getElementById('ps-crew-size').value = String(Math.min(6, rec + o.psExtra)); _crewUserSet = true; calcAll();

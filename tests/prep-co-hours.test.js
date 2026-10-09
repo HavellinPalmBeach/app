@@ -169,7 +169,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ THE PREP JOB PLAN — the Budget & Fee card and the checklist carry the change order’s hours');
   {
-    const planFns = ['renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2',
+    const planFns = ['derivedLinesHtml', 'prepVendorsConfirmed', 'renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2',
       'chkGrid', 'planChk', '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan', '_planTouch',
       'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody',
       'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
@@ -222,10 +222,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ THE DESK CARD — an hours line appears, and says what an empty log will do');
   {
-    const deskFns = ['planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+    const deskFns = ['planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize', 'donationReceiptLine', 'ledgerDerivedLines', 'proceedsReceivedLine', 'estateDeliveryLine', 'estatePackageRoute', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
       'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
       'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'].concat(CO);
-    const deskVars = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
+    const deskVars = ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES',
       'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'];
     const line = (job, est, cos, logged) => {
@@ -468,7 +468,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ THE BAND — the final-invoice step says an unlogged change order bills the fee alone');
   {
     const T = (cos) => sandbox({
-      fns: ['agrApprovalWithdrawn', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'prepVendorsConfirmed', '_srcLineKey', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon', 'depositVoidFlag', 'agreementHandedOverInPerson',
+      fns: ['agrApprovalWithdrawn', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'estimateNoteGaps', 'prepVendorsConfirmed', '_srcLineKey', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'paymentLive', 'isRefundRecord',
             'isAgreementSent', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'docDraftPending', 'estimateOutForApproval', 'priceAboveSent', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'].concat(CO),
       vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'JT_SHORT', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],

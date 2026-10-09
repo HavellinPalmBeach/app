@@ -292,7 +292,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Where it appears: an estate's desk and close-out stage, never a living job's.
     eq(c.ledgerDerivedLines(7, c.jobs[0], 'p4').map((l) => l.key), ['ledger_signed'], 'on the close-out stage (p4)');
     // RESTATED P22: living work with an inventory asks for the client's signed copy (p22-desk-c.test.js drives it).
-    eq((c.ledgerDerivedLines(7, LIVING(), 'p4')[0] || {}).label, 'Disposition Ledger signed by the client', 'and on living work, the client\'s');
+    // RESTATED (P25, Q51): on living work the client signs the Contents Record, not the ledger, so the line asks for that.
+    eq((c.ledgerDerivedLines(7, LIVING(), 'p4')[0] || {}).label, 'Contents Record signed by the client', 'and on living work, the client\'s Contents Record');
     const trust = c.ledgerDerivedLines(7, ESTATE({ matterType: 'trust' }), 'p4')[0] || {};
     eq(trust.label, 'Disposition Ledger signed by the successor trustee', 'a trust names the successor trustee');
   });
@@ -576,13 +577,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ── E4/E6: the desk boxes ────────────────────────────────────────────────
-  G('E4/E6 · fin_proceeds and fin_donation_receipts are derived lines now; fin_settlement and fin_vendor_invoices stay', () => {
+  // RESTATED (P25, Q43): fin_settlement is a derived line too now (proceedsReceivedLine: every sold line on a statement
+  // whose payment is recorded); fin_vendor_invoices, which nothing in the app can see, stays a box.
+  G('E4/E6 · fin_proceeds, fin_donation_receipts and fin_settlement are derived lines now; fin_vendor_invoices stays', () => {
     const c = lift(['planTaskCtx', 'planTasksFor', 'jobTakesProceedsStatements'], [], { jobs: [], estimateStore: {}, _photoRefs: {}, jobPlanStore: {} });
     const keys = sandbox({ vars: ['JOB_ADMIN_TASKS'] }).JOB_ADMIN_TASKS.map((t) => t.key);
     ok(keys.indexOf('fin_proceeds') < 0 && keys.indexOf('fin_donation_receipts') < 0, '⚠ the two boxes are gone from the catalogue');
-    ok(keys.indexOf('fin_vendor_invoices') >= 0 && keys.indexOf('fin_settlement') >= 0, 'the two actions nothing in the app can see stay');
+    ok(keys.indexOf('fin_vendor_invoices') >= 0, 'the action nothing in the app can see stays');
+    ok(keys.indexOf('fin_settlement') < 0, '⚠ and the settlement timeline is read off the statements (P25, Q43)');
     ['downsizing', 'downsizing_move', 'home_cleanout', 'prep', 'cleanout', 'probate', 'contested_probate'].forEach((svc) => {
-      eq(c.jobTakesProceedsStatements({ svc }), c.planTaskCtx({ svc }, { svc }).isDisposal, svc + ': statements are taken exactly where fin_settlement asks (isDisposal)');
+      eq(c.jobTakesProceedsStatements({ svc }), c.planTaskCtx({ svc }, { svc }).isDisposal, svc + ': statements are taken exactly on the disposal services (isDisposal), where proceedsReceivedLine asks');
     });
   });
 
@@ -804,8 +808,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     l = c.proceedsLine(ESTATE({ proceedsStatements: [STATEMENT()], signedRecords: filed }), all);
     eq(l.detail.slice(0, 51), '1 statement, 1 disagrees with the ledger; 0 sold li', 'one that disagrees');
     eq(c.proceedsLine(ESTATE(), rows.filter((r) => ['Auction', 'Consign', 'Sell'].indexOf(r.disposition) < 0)), null, 'nothing sold and no statements: no line');
-    eq(c.ledgerDerivedLines(7, ESTATE(), 'admin').map((l) => l.key), ['ledger_signed', 'donation_receipt', 'proceeds_reconciled'], 'an estate\'s desk carries all three lines');
-    eq(c.ledgerDerivedLines(7, LIVING({ svc: 'downsizing_move' }), 'admin').map((l) => l.key), ['ledger_signed', 'donation_receipt'],
+    // RESTATED (P25, Q43 and Q51): an estate's desk also reads the proceeds received and the delivery to counsel off their
+    // records, and a living job's first line is the client's signed Contents Record.
+    eq(c.ledgerDerivedLines(7, ESTATE(), 'admin').map((l) => l.key), ['ledger_signed', 'donation_receipt', 'proceeds_reconciled', 'proceeds_received', 'estate_delivered'], 'an estate\'s desk carries all five lines');
+    eq(c.ledgerDerivedLines(7, LIVING({ svc: 'downsizing_move' }), 'admin').map((l) => l.key), ['contents_signed', 'donation_receipt'],
        '⚠ a Home Transition that sells a line is not asked to reconcile statements it has no card to record (jobTakesProceedsStatements)');
     // The card.
     const card = c._renderLedgerCards(ESTATE({ proceedsStatements: [STATEMENT()] }), rows);
@@ -955,7 +961,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callers('ledgerDerivedLines'), ['planDerivedLines'], 'the derived lines are asked for once, by planDerivedLines');
     const saleReaders = Object.keys(BODY).filter((f) => /\bINV_SALE_DISPOSITIONS\b/.test(codeOnly(BODY[f]))).sort();
     // P25 (Q51): ledgerApplies reads it too, where the ledger is kept on living work (something sold).
-    eq(saleReaders, ['_renderProceedsCard', 'dispositionLedger', 'invHavellinRecipient', 'invPickupLine', 'ledgerApplies', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
+    // P25 (Q43): proceedsReceivedLine reads it too, for the sold lines a paid statement must cover.
+    eq(saleReaders, ['_renderProceedsCard', 'dispositionLedger', 'invHavellinRecipient', 'invPickupLine', 'ledgerApplies', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReceivedLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
     eq(count(live, "['Auction', 'Consign', 'Sell']"), 1, 'and no second copy of it written out');
   });
 };

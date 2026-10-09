@@ -32,13 +32,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     opts = opts || {};
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
-            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
-            '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
+      fns: ['renderJobPlan', 'planProcedureHtml', 'custodyLogKept', 'planTaskCtx', 'planTaskApplies', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'derivedLinesHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+            '_planRooms', '_planRoomStatus', '_planRoomListHtml', 'clearedFlag', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr', '_ymdLocal',
             'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'],
-      vars: ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
+      vars: ['PLAN_PROCEDURE', 'PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS'],
       stubs: {
         document: dom, isFormalDoc: () => false, _sfHost: () => '', renderVendorSourcing: () => '<i>SOURCING</i>',
@@ -220,15 +220,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const { out } = plan(JOB(), EST(), { plan: { rooms: { 0: { status: 'locked' } }, tasks: { crew_briefed: true } } });
     has(out, '<span class="stg-count">1 of 2 locked &middot; 0 cleared</span>', 'the house card counts the statuses');
-    has(out, '<span class="stg-count">1 of 5 ticked</span>',
-        'Before Day 1 counts its ticks (five boxes on an estate settlement — six until the per-job NDA went, 2026-09-20)');
+    // ⚠ RESTATED (P25, Q43): four on an estate settlement with no materials package priced, since *Moving materials on site*
+    // is asked only where the estimate prices one (planTaskApplies). The requirement is the count, read off the stage.
+    has(out, '<span class="stg-count">1 of 4 ticked</span>',
+        'Before Day 1 counts its ticks (four boxes on an estate settlement with no materials package)');
     has(out, 'nothing on the estimate</span>', 'Vendors says so when the estimate carries no lines');
     has(out, 'today 0 hrs &middot; 0 of 15 logged', 'the Hours fold reads today and the running total against the estimate');
     const logged = plan(JOB({ status: 'active' }), EST(), { logs: [{ date: '2026-01-01', members: [{ hours: 4 }] }] }).out;
     has(logged, 'stage-warn">no hours logged today</span> &middot; 4 of 15 logged', '⚠ an active job with nothing logged today says so in amber on the fold');
     lacks(plan(JOB({ status: 'won' }), EST()).out, 'stage-warn', 'not before the job is active');
     const p2 = plan(JOB(), EST()).out;
-    has(p2, '<span class="stg-count">0 of 2 ticked &middot; 2 still open</span>', 'Midpoint & pickups counts its ticks and its open derived lines');
+    // RESTATED (P25, Q43): one box, since *Shredding* is asked only where a shredding vendor is on the job.
+    has(p2, '<span class="stg-count">0 of 1 ticked &middot; 2 still open</span>', 'Midpoint & pickups counts its ticks and its open derived lines');
     lacks(p2, 'nothing to tick &middot;', 'the wording is one thing or the other');
   }
 
@@ -304,7 +307,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the checklists: a sentence, not a form label; a lone box spans the row');
   {
-    const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef'],
+    const c = sandbox({ fns: ['planChk', 'chkGrid', 'planTaskSectionsHtml', 'planSubsec', 'planTasksFor', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef'],
                         vars: ['DECEDENT_SERVICES', 'PLAN_TASKS', 'jobPlanStore', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'], stubs: { _planTaskDone: (j, k) => k === 'coi_provided', isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false } });
     const box = c.planChk(7, 'precall', 'Pre-job call placed');
     has(box, '<label class="plan-chk">', 'the box is a class, not seven inline properties');

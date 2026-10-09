@@ -33,7 +33,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // #7 — THE BAND SAYS WHAT TO DO NEXT, NOT WHAT THE MILESTONE WILL BE CALLED ONCE IT IS DONE
   // ═══════════════════════════════════════════════════════════════════════════
-  const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'prepVendorsConfirmed', 'depositVoidFlag', 'agreementHandedOverInPerson', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+  const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'estimateNoteGaps', 'prepVendorsConfirmed', 'depositVoidFlag', 'agreementHandedOverInPerson', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'];
@@ -325,7 +325,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const saved = []; const asked = []; const refreshed = [];
     // _saveJobEdit and _jobTouch are LIFTED, never stubbed — they are the stamp this change exists for.
-    const W = sandbox({ fns: ['addLogisticsLine', 'removeLogisticsLine', '_logiJob', 'setLogisticsVendor', '_saveJobEdit', '_jobTouch', 'roundCents', 'fmt'],
+    const W = sandbox({ fns: ['addLogisticsLine', 'removeLogisticsLine', '_logiJob', 'setLogisticsVendor', 'invFillPlanChannels', '_invJob', '_saveJobEdit', '_jobTouch', 'roundCents', 'fmt'],
       vars: ['LOGISTICS_CATEGORIES'],
       stubs: { saveJobs: () => saved.push(1), syncJobToSheets: () => {}, refreshVendorSourcing: (id) => refreshed.push(id),
                lookupVendorById: () => null, vendorIdOf: () => '', _vendorContact: () => '',

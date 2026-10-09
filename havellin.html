@@ -74,6 +74,8 @@ body{font-family:'Raleway',sans-serif;background:var(--cream);color:var(--gray-d
 /* Job Plan checklist grid — three columns on a desk, two on the iPad, one on a phone. A section
    holding ONE box spans the row: a lone sentence in a third of the width wrapped to four lines beside
    nothing (Anthony, 2026-09-20: "for this item, it should stretch all the way across"). */
+.plan-proc{margin:2px 0 6px 18px;padding:0;font-size:12px;line-height:1.55;color:var(--gray-dk);}
+.plan-proc li{margin:2px 0;}
 .chk-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px 18px;align-items:start;}
 .chk-grid > :only-child{grid-column:1 / -1;}
 @media (max-width:900px){.chk-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
@@ -600,6 +602,9 @@ body.field-mode #wl-block{display:none;}
 @media (max-width:820px){.inv-roll-grid{grid-template-columns:minmax(0,1fr) !important;}}
 .rl-row{display:flex;flex-direction:column;align-items:stretch;gap:4px;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--border-md);border-radius:6px;background:var(--white);cursor:pointer;font-family:inherit;color:var(--gray-dk);min-height:48px;}
 .rl-row:active{background:var(--cream);}
+.rl-cell{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.rl-clear{align-self:stretch;min-height:40px;border:1px solid var(--ok-tx);border-radius:6px;background:var(--white);color:var(--ok-tx);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+.rl-clear small{font-weight:400;color:var(--warn-tx);}
 .rl-name{flex:1 1 auto;min-width:0;font-size:13px;font-weight:700;line-height:1.3;}
 .rl-top{display:flex;align-items:center;gap:8px;min-width:0;}
 .rl-meta{font-size:11px;font-weight:600;color:var(--gray);text-transform:none;letter-spacing:0;}
@@ -714,6 +719,7 @@ body.field-cam-open #sync-pending{display:none !important;}
 .fc-shutter-row{display:flex;justify-content:center;padding-top:4px;}
 .fc-shutter{width:72px;height:72px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;padding:0;}
 .fc-shutter:disabled{opacity:.35;cursor:default;}
+.fc-shutter-row .fc-closeup{width:64px;height:64px;margin-left:18px;font-size:11px;font-weight:700;letter-spacing:.02em;}
 .fc-note-in{flex:1;min-width:120px;font-size:13px;padding:8px;border-radius:5px;border:1px solid #555;background:#222;color:#fff;}
 .pl-derived{border:1px solid var(--border);border-radius:5px;background:var(--white);margin:6px 0 10px;}
 .pl-line{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;padding:6px 10px;font-size:12px;border-top:1px solid var(--border);}
@@ -1334,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.09 · 2:23pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.09 · 3:24pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1914,7 +1920,7 @@ body.no-smf .smf-col{display:none;}
         <div class="grid2" id="crew-count-row" style="gap:.6rem;">
           <div>
             <label style="margin-top:0;">Concierges</label>
-            <select id="e-tc-count" onchange="_tc2UserSet=true;calcAll()">
+            <select id="e-tc-count" onchange="calcAll()">
               <option value="1">1 concierge</option>
               <option value="2">2 concierges</option>
             </select>
@@ -7154,9 +7160,8 @@ function estimateFigures(o) {
 // warns if it sits above what the scope needs.
 var _crewUserSet = false;
 
-// Same, for the concierge count. The engine raises it to 2 when the daily load says one
-// person cannot carry the schedule; once the estimator sets it by hand it is left alone.
-var _tc2UserSet = false;
+// (The concierge count had its own such flag, `_tc2UserSet`, while the engine set the count until somebody picked. Since
+// P25 (Q47) the count is the estimator's alone, so there is nothing for a flag to hold back and it is gone.)
 
 // Fixed-price toggle: on enable, prefill the amount from the latest suggested fee
 // (computed in calcAll's fixed-price panel) unless the manager already typed one.
@@ -7857,21 +7862,20 @@ function calcAll() {
   // probate and heavy-documentation estates are what trip this, which is correct.
   var tc2Hint = document.getElementById('e-tc2-hint');
   var tc2Sel = document.getElementById('e-tc-count');
-  // Track the recommendation until the estimator picks, exactly as the specialist
-  // dropdown does. Was a checkbox the engine could only ever tick ON — so a scope that
-  // stopped needing two concierges kept the second one, and the hint below then argued
-  // for a recommendation that had gone away.
-  if (tc2Sel && !_tc2UserSet) tc2Sel.value = String(crew.tcCount >= 2 ? 2 : 1);
+  // ⚠⚠ TWO CONCIERGES ONLY WHEN THE ESTIMATOR PICKS TWO (P25, Q47; Anthony, 2026-10-09). The dropdown tracked the
+  // engine's recommendation until somebody picked, so a heavy estate saved with a second concierge nobody chose, and the
+  // team could not be confirmed until a second person was named. The recommendation is a suggestion, said in the hint
+  // below; the count stays as the estimator left it (1 on a new estimate, the saved answer on a reopened one).
   var _tc2Chosen = tc2Sel ? (parseInt(tc2Sel.value, 10) || 1) : 1;
   if (tc2Hint) {
     if (crew.tcCount >= 2 && _tc2Chosen >= 2) {
       tc2Hint.innerHTML = '<span style="color:var(--bronze);font-weight:600;">2 concierges recommended</span> — '
         + crew.tcLoad.toFixed(1) + ' concierge hrs/day across ' + daysNeeded + ' working days is more than one person can carry. Name them on the Job Plan once the job is Won.';
     } else if (crew.tcCount >= 2 && _tc2Chosen < 2) {
-      // Chosen below the recommendation. Unlike the specialist crew this changes no
-      // number at all, so the only honest thing to report is the working day it implies.
-      tc2Hint.innerHTML = '<span style="color:var(--err-tx);font-weight:600;">1 concierge assigned, 2 recommended</span> — '
-        + crew.tcLoad.toFixed(1) + ' hrs/day for one person across ' + daysNeeded + ' working days. The fee and the timeline do not change; somebody works a 12-hour day.';
+      // Below the suggestion. Unlike the specialist crew this changes no number at all, so the only honest thing to
+      // report is the working day it implies, as a suggestion (P25, Q47), never a fault.
+      tc2Hint.innerHTML = '<span style="color:var(--warn-tx);font-weight:600;">A second concierge suggested</span> — '
+        + crew.tcLoad.toFixed(1) + ' hrs/day for one person across ' + daysNeeded + ' working days. Pick 2 above to staff one; the fee and the timeline do not change.';
     } else if (_tc2Chosen >= 2) {
       tc2Hint.textContent = 'The Job Plan roster will ask for a second concierge. Billing is total TC hours split between them, so a second concierge changes neither the fee nor the duration — it makes the schedule coverable without one person carrying 12-hour days.';
     } else {
@@ -11009,7 +11013,6 @@ function resetEstimateJobState(job) {
   var crew = el('ps-crew-size'); if (crew) crew.value = '2';
   _crewUserSet = false;
   var tcc = el('e-tc-count'); if (tcc) tcc.value = '1';
-  _tc2UserSet = false;
   var pkg = el('e-pkg'); if (pkg) pkg.value = '0';
   // A prep job opened straight after another prep job would otherwise price hours nobody walked.
   var dc = el('e-declutter-hrs'); if (dc) dc.value = '0';
@@ -13042,15 +13045,9 @@ function submitForApproval(opts) {
   // No declutter question here since P18: the figure the estimate saves is the whole hour it priced (getDeclutterTCHrs),
   // so there is nothing to refuse (P17 asked Save's quarter-hour question here too).
 
-  // The soft arm: with the Settings requirement off, a missing note is a one-click
-  // confirm rather than a refusal. It stays here rather than in the blocker because a
-  // question is not a blocker — the blocker function must be answerable without a user.
-  if (!REQUIRE_WALKTHROUGH_NOTES) {
-    var noteMissing = estimateNoteGaps(currentEstimate);
-    if (noteMissing.length > 0 && !confirm('No walkthrough note for: ' + noteMissing.join(', ') + '.\n\nContinue anyway?')) {
-      return { code:'cancelled', msg:'' };
-    }
-  }
+  // ⚠ NO QUESTION ABOUT NOTES (P25, Q45; Anthony, 2026-10-09). With the Settings requirement off a missing note asked a
+  // confirm on every submit, listing every room without one (14 of 15 on one job), though notes are optional. The rooms
+  // without a note are named under Submit on the Estimate approved row instead (jobTimeline), a line nobody has to answer.
 
   estimateSubmitted = true;
   // Clear any prior denial marker — this is a fresh submission of the revised estimate.
@@ -14405,9 +14402,6 @@ function restoreEstimateToUI(est) {
     // two, so a legacy name reads as the flag being set.
     var needsTC2El = document.getElementById('e-tc-count');
     if (needsTC2El) needsTC2El.value = (est.needsTC2 || est.preparedBy2) ? '2' : '1';
-    // A saved estimate carries a decision that was already made, so hold it rather than
-    // letting the engine re-derive it — same treatment the crew size gets below.
-    _tc2UserSet = true;
   }
 
 
@@ -18557,6 +18551,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   // (`submitForApproval` and `checkPin` both read it). It is the only reason a
   // built estimate cannot be put in front of a manager.
   var unscored = estBuilt ? unscoredRoomNames(est) : [];
+  var _noteGaps = estBuilt ? estimateNoteGaps(est) : [];   // named under Submit (P25, Q45)
 
   function row(o) {
     return {
@@ -18676,6 +18671,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       sub: estApproved ? ''
         : estSubmitted ? 'Submitted — waiting on a manager PIN'
         : (est && est.denyReason) ? ('Denied by ' + (est.deniedBy || 'a manager') + ' — ' + est.denyReason)
+        // The rooms with no walkthrough note, named under Submit (P25, Q45): notes are optional, so a line, never a question.
+        : (estBuilt && _noteGaps.length) ? ('No walkthrough note: ' + _noteGaps.slice(0, 6).join(', ') + (_noteGaps.length > 6 ? ' and ' + (_noteGaps.length - 6) + ' more' : ''))
         : '',
       // The only thing that stops a built estimate reaching a manager.
       blockedWhy: unscored.length
@@ -26304,6 +26301,7 @@ function savePhotoRefs(jobId) {
                // shot was binned with, and the merge's stamps on the signers (a hand edit, each name Record approval added).
                channelLeftover:r.channelLeftover, deletedWith:r.deletedWith, authBySetAt:r.authBySetAt, authAdds:r.authAdds,
                lostAt:r.lostAt, lostBy:r.lostBy,   // an as-found shot marked lost (markShotLost, P22)
+               channelFrom:r.channelFrom,   // the recipient taken from the one confirmed vendor of its kind (P25, Q44)
                clearedAt:r.clearedAt, status:r.status, ts:r.ts,
                updatedAt:r.updatedAt, deletedAt:r.deletedAt };
     });
@@ -28280,7 +28278,9 @@ function _invEdit(jobId, stableId, key, el) {
   // dealer arm stops reading it (invTransportDealer). Retyping the channel is the answer, so it retires the flag.
   var _leftNow = key === 'disposition' && invNoteDispositionMove(ref, _prevDisp);
   var _retired = key === 'channel' && !!ref.channelLeftover;
-  if (key === 'channel') delete ref.channelLeftover;
+  if (key === 'channel') { delete ref.channelLeftover; delete ref.channelFrom; }   // a recipient typed is the desk's (P25, Q44)
+  // A disposition set takes the one confirmed vendor of its kind where nobody is named (P25, Q44), redrawn below.
+  var _planFilled = key === 'disposition' && invFillPlanChannel(_invJob(jobId), estimateStore[jobId] && estimateStore[jobId].estimate, ref);
   // ⚠ A STICKY FIELD THAT HAS BEEN DELIBERATELY EMPTIED IS STAMPED, so the merge can tell it
   // apart from a device that simply never saw a value there. Without this the field could
   // never be cleared across two devices: the stale copy would restore it on the next sync.
@@ -28298,7 +28298,7 @@ function _invEdit(jobId, stableId, key, el) {
   }
   // ⚠ A FIGURE THAT STOPPED BEING THE AGENT'S REDRAWS ITS ROW (P23), so its badge and Accept go with it; and a name
   // edited under an agent's figure repaints the work bar's notices, where *made for an earlier name* is read first.
-  if (_wasAgentValue && ref.valuedBy !== 'agent') {
+  if ((_wasAgentValue && ref.valuedBy !== 'agent') || _planFilled) {
     var _rowEl = document.getElementById(_invRowDomId(stableId)), _rowJob = _invJob(jobId);
     if (_rowEl && _rowJob) _rowEl.outerHTML = _renderInvRow(_rowJob, ref);
   }
@@ -32280,20 +32280,57 @@ function ledgerDerivedLines(jobId, job, phase) {
                detail: last ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(last.filedAt)))) + (last.filedBy ? ' by ' + esc(last.filedBy) : '')
                             : 'not yet — print it from the Disposition Ledger card on Job Admin & Inv, have it signed, and file the signed copy there' });
   } else if (_jobInvRefs(jobId).length) {
-    // ⚠ ON LIVING WORK THE CLIENT SIGNS IT (P22): the card said so and nothing asked for the signed copy. Asked only where
-    // the job has an inventory, as the card is drawn only there; a reminder, never a gate (the close does not read it).
-    var lsc = ledgerSignedCopies(job), llast = lsc[lsc.length - 1];
-    out.push({ key: 'ledger_signed', ok: lsc.length > 0, label: 'Disposition Ledger signed by the client',
+    // ⚠ ON LIVING WORK THE CLIENT SIGNS THE CONTENTS RECORD (P25, Q51; P22 asked for a signed ledger here, which since
+    // Q51 nobody signs). Asked only where the job has an inventory, as its card is drawn only there; a reminder, never a
+    // gate (the close does not read it).
+    var lsc = signedRecordsOf(job, 'contents', CONTENTS_SIGNED_REF), llast = lsc[lsc.length - 1];
+    out.push({ key: 'contents_signed', ok: lsc.length > 0, label: 'Contents Record signed by the client',
                detail: llast ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(llast.filedAt)))) + (llast.filedBy ? ' by ' + esc(llast.filedBy) : '')
-                             : 'not yet — print it from the Disposition Ledger card on Job Admin & Inv, have the client sign it, and file the signed copy there' });
+                             : 'not yet — print it from the work bar on Job Admin & Inv, have the client sign it, and file the signed copy on the Contents Record card' });
   }
   if (phase === 'admin') {
     var items = _jobInvRefs(jobId);
     var don = donationReceiptLine(job, items);
     if (don) out.push(don);
-    if (jobTakesProceedsStatements(job)) { var pl = proceedsLine(job, items); if (pl) out.push(pl); }
+    if (jobTakesProceedsStatements(job)) {
+      var pl = proceedsLine(job, items); if (pl) out.push(pl);
+      var pr = proceedsReceivedLine(job, items); if (pr) out.push(pr);
+    }
+    var dl = estateDeliveryLine(job); if (dl) out.push(dl);
   }
   return out;
+}
+// ⚠ WHAT HAVELLIN DELIVERS TO COUNSEL OR THE TRUSTEE, READ OFF THE PACKAGE (P25, Q43). It replaces the court's three boxes
+// (served, filed, the final accounting: counsel's acts) and the trust's two (the schedule and the records delivered): the
+// package records what it carried and when it went. Green once a package confirmed sent carried every page now owed of
+// the instrument and the ledger; a package that carried fewer names what it left out. null with no route. DOM-free.
+function estateDeliveryLine(job) {
+  var R = job && estatePackageRoute(job);
+  if (!R) return null;
+  var owed = probatePackageDocs(job).filter(function (k) { return k === 'court' || k === 'trustee' || k === 'ledger'; });
+  var names = owed.map(function (k) { return PROBATE_PKG_TITLES[k]; });
+  var st = (job.docState && job.docState[PROBATE_PKG_KEY]) || null;
+  var went = (st && st.sentAt && st.pkg && st.pkg.docs) || null;
+  var missing = went ? owed.filter(function (k) { return went.indexOf(k) < 0; }) : owed;
+  var to = R.trust ? 'the trustee' : 'counsel';
+  return { key: 'estate_delivered', ok: !!went && !missing.length, label: _andJoin(names) + ' delivered to ' + to,
+           detail: !went ? 'not yet — press ' + R.send + ' at the foot of the ' + R.card + ' on the Client Dashboard'
+             : missing.length ? 'the ' + R.name + ' sent ' + _draftDay(st.sentAt) + ' did not carry the ' + _andJoin(missing.map(function (k) { return PROBATE_PKG_TITLES[k]; })) + ': send it again'
+             : 'in the ' + R.name + ' sent ' + _draftDay(st.sentAt) + ((st.pkg && st.pkg.to) ? ' to ' + esc(st.pkg.to) : '') };
+}
+// ⚠ PROCEEDS IN FOR EVERY SOLD LINE (P25, Q43): the *settlement timeline* box, derived. Every line marked to sell is on a
+// statement, and every statement records when its net was paid. Present where something sells or a statement is recorded.
+function proceedsReceivedLine(job, items) {
+  var sold = (items || []).filter(function (r) { return r && INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0; }).length;
+  if (!sold && !jobListEntries(job, 'proceedsStatements').length) return null;
+  var R = proceedsReconciliation(job, items);
+  var unpaid = R.statements.filter(function (x) { return !x.st.paidOn; }).length;
+  var bits = [];
+  if (R.unlisted.length) bits.push(R.unlisted.length + ' sold line' + (R.unlisted.length === 1 ? '' : 's') + ' on no statement yet');
+  if (unpaid) bits.push(unpaid + ' statement' + (unpaid === 1 ? '' : 's') + ' with no payment recorded');
+  var ok = !bits.length;
+  return { key: 'proceeds_received', ok: ok, label: 'Proceeds received for every sold line',
+           detail: ok ? 'every sold line is on a paid statement' : bits.join('; ') + ' — follow up with the selling partner, then record it on the Proceeds statements card' };
 }
 // The desk's close-out records, together under the inventory: the ledger, the statements and the donations.
 function _renderLedgerCards(job, all) {
@@ -32823,12 +32860,16 @@ function asFoundRecord(jobId) {
     };
   });
   var shot = rooms.filter(function(r){ return r.count > 0; });
+  // ⚠ THE PASS IS ATTESTED ON AN ESTATE ONLY (P25, Q40): on living work the as-found shot is the pass and no tick is
+  // offered, so no room there is "not confirmed complete".
+  var _job = _invJob(jobId), _attests = !!(_job && isDecedentJob(_job));
   return {
     rooms: rooms,
     excluded: rs.excluded,
     shotRooms: shot,
+    attests: _attests,
     missing: rooms.filter(function(r){ return r.count === 0; }),
-    unattested: shot.filter(function(r){ return !r.attestedAt; }),
+    unattested: _attests ? shot.filter(function(r){ return !r.attestedAt; }) : [],
     unsaved: rooms.reduce(function(n, r){ return n + r.unsaved; }, 0),
     lost: rooms.reduce(function(n, r){ return n + r.lost; }, 0),
     total: rooms.reduce(function(n, r){ return n + r.count; }, 0)
@@ -32896,14 +32937,15 @@ function printAsFoundRecord(jobId) {
   }
 
   rec.shotRooms.forEach(function(r) {
-    var att = r.attestedAt
+    var att = !rec.attests ? ''
+      : r.attestedAt
       ? 'Pass confirmed complete ' + esc(fmtDate2(r.attestedAt))
         + (r.attestedBy ? ' by ' + esc(r.attestedBy) : '')
       : '<span style="color:#8a6d3b;">Pass not confirmed complete</span>';
     html += '<div style="margin-bottom:16px;break-inside:avoid;">'
       + '<h3 style="font-family:\'Cormorant Garamond\',serif;color:#8a6d3b;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:4px;">'
         + esc(r.name) + ' <span style="font-size:12px;color:#888;">(' + r.count + ' photograph' + (r.count > 1 ? 's' : '') + ')</span></h3>'
-      + '<div style="font-size:10.5px;color:#888;margin-bottom:6px;">' + _afDate(r.first) + ' &middot; ' + att + '</div>'
+      + '<div style="font-size:10.5px;color:#888;margin-bottom:6px;">' + _afDate(r.first) + (att ? ' &middot; ' + att : '') + '</div>'
       + '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
       + '<thead><tr style="text-align:left;color:#888;">'
         + '<th style="padding:3px 6px;width:52px;"></th>'
@@ -34170,7 +34212,8 @@ function _invBulkApply(jobId, key, value) {
       if (key === 'valSource' && value === 'Appraisal') _avTakeValue(ref, 'appraisal');
     }
     if (key === 'disposition' && invNoteDispositionMove(ref, _prev)) _leftover.push(ref);
-    if (key === 'channel') delete ref.channelLeftover;
+    if (key === 'channel') { delete ref.channelLeftover; delete ref.channelFrom; }
+    if (key === 'disposition') invFillPlanChannel(job, estimateStore[jobId] && estimateStore[jobId].estimate, ref);   // P25, Q44
     _setPhotoRef(jobId, _invTouch(ref));
   });
   savePhotoRefs(jobId);
@@ -35722,14 +35765,70 @@ function _invBenListAttr(job, ref) {
   if (ref && ref.disposition !== 'Distribute') return '';
   return ' list="inv-ben-list-' + job.id + '"';
 }
+// ⚠⚠ THE ONE CONFIRMED VENDOR OF A LINE'S KIND IS ITS RECIPIENT (P25, Q44; Anthony, 2026-10-09). A Donate, Junk or
+// Auction line was typed by hand even where the Job Plan held the one confirmed charity, hauler or auction house. Where
+// exactly one vendor of that kind is Confirmed on the Job Plan (an estimate line or an end-of-job line), a line of that
+// kind with nobody named takes it, marked `channelFrom: 'plan'` (*from the Job Plan* beside the box) and editable: typing
+// a recipient takes the mark off. Two or more confirmed: nothing is filled and the line is flagged to name one. It is
+// written when a person sets the disposition (_invEdit, _invBulkApply) and when a person confirms the vendor on the Job
+// Plan (invFillPlanChannels, from the sourcing setters), so each write is that person's edit.
+var INV_PLAN_CHANNEL_KINDS = {
+  Donate:  { types: ['Donation Organization', 'Donation Pickup'], logistics: ['donation'] },
+  Junk:    { types: ['Junk Removal / Hauling', 'Junk Removal & Dumpster', 'Dumpster Rental'], logistics: ['junk', 'dumpster'] },
+  Auction: { types: ['Auction House', 'Online Auction House'], logistics: [] }
+};
+// {name} with exactly one confirmed vendor of the disposition's kind, {many: [names]} with two or more, null otherwise.
+function invPlanChannel(job, est, disposition) {
+  var k = INV_PLAN_CHANNEL_KINDS[disposition];
+  if (!k || !job) return null;
+  var names = [], seen = {};
+  var add = function (rec) {
+    var n = rec && rec.status === 'Confirmed' && String(rec.vendorName || '').trim();
+    if (n && !seen[n.toLowerCase()]) { seen[n.toLowerCase()] = 1; names.push(n); }
+  };
+  var vsrc = job.vendorSourcing || {};
+  ((est && est.vendors) || []).forEach(function (v, i) { if (v && k.types.indexOf(v.type) >= 0) add(vsrc[_srcLineKey(v, i)]); });
+  var lsrc = job.logisticsSourcing || {};
+  k.logistics.forEach(function (key) { add(lsrc[key]); });
+  return names.length === 1 ? { name: names[0] } : names.length ? { many: names } : null;
+}
+// Fills a live line of a kind with nobody named from the one confirmed vendor; true when it did. Never over a recipient,
+// and never a recipient the staff rule would refuse. The caller stamps and saves.
+function invFillPlanChannel(job, est, ref) {
+  if (!ref || ref.deletedAt || String(ref.channel || '').trim()) return false;
+  var pc = invPlanChannel(job, est, ref.disposition);
+  if (!pc || !pc.name) return false;
+  var nx = Object.assign({}, ref, { channel: pc.name });
+  if (invStaffRefused(nx, job)) return false;
+  ref.channel = pc.name;
+  ref.channelFrom = 'plan';
+  return true;
+}
+// After a person confirms a vendor (or names one on a confirmed line) on the Job Plan: every line of its kind with nobody
+// named takes it. Returns how many it filled.
+function invFillPlanChannels(jobId) {
+  var job = _invJob(jobId);
+  var est = estimateStore[jobId] && estimateStore[jobId].estimate;
+  if (!job || !est) return 0;
+  var n = 0;
+  (_photoRefs[jobId] || []).forEach(function (ref) {
+    if (ref.label !== 'inventory' || ref.collId) return;
+    if (invFillPlanChannel(job, est, ref)) { _setPhotoRef(jobId, _invTouch(ref)); n++; }
+  });
+  if (n) { savePhotoRefs(jobId); _scheduleInventorySync(jobId); showSyncBadge(n + ' line' + (n === 1 ? '' : 's') + ' took the confirmed vendor as recipient.'); }
+  return n;
+}
+
 // Reads `channel`, the column already headed "Channel / Recipient". ⚠ NOT a new manifest key:
 // a key not on the savePhotoRefs whitelist is dropped silently on every save, and this file
 // records that costing four separate builds. Reusing it also means the Disposition Ledger, the
 // approval request, the CSV, the workbook and the search blob all already carry it.
 function _invRecipientInput(jid, ref, job) {
   var isMove = ref.disposition === 'Move';
-  var ph = isMove ? (_jobDestLabel(job) || 'the new home') : 'Who took it?';
   var empty = !String(ref.channel || '').trim();
+  // Two confirmed vendors of the kind (P25, Q44): named in the empty box, and the row's strip flags it.
+  var _pc = empty ? invPlanChannel(job, estimateStore[jid] && estimateStore[jid].estimate, ref.disposition) : null;
+  var ph = isMove ? (_jobDestLabel(job) || 'the new home') : (_pc && _pc.many) ? (_pc.many.join(' or ') + '?') : 'Who took it?';
   return '<input type="text" value="' + esc(ref.channel || '') + '"' + _invBenListAttr(job, ref)
     + ' title="' + esc(ref.channel || ph) + '" placeholder="' + esc(ph) + '"'
     + ' onchange="_invEdit(' + jid + ',\'' + ref.stableId + '\',\'channel\',this)"'
@@ -35737,7 +35836,8 @@ function _invRecipientInput(jid, ref, job) {
     // Bronze while a LEAVING row has nobody named, quiet on a Move (the address is known) and
     // once filled — the same rule the object-name box follows, so the two piles read alike.
     + ((empty && !isMove) ? 'border:1px solid var(--bronze);background:#fffdf9;'
-                          : 'border:1px solid transparent;background:transparent;') + '">';
+                          : 'border:1px solid transparent;background:transparent;') + '">'
+    + (ref.channelFrom === 'plan' && !empty ? '<div class="inv-chan-plan" style="font-size:9.5px;color:var(--gray);">from the Job Plan</div>' : '');
 }
 
 function _renderInvRow(job, ref) {
@@ -35756,6 +35856,8 @@ function _renderInvRow(job, ref) {
       ? '<span title="' + esc(invDealerRouteText(ref)) + '" style="color:var(--gray-dk);">via ' + esc(invDealerRoute(ref)) + '</span>'
       : '<span title="Going to a named person: a licensed dealer makes the transfer. Open the line (&#9662;) and record the route." style="color:var(--bronze);font-weight:700;">no dealer route</span>');
   }
+  var _pcRow = !String(ref.channel || '').trim() ? invPlanChannel(job, estimateStore[jid] && estimateStore[jid].estimate, ref.disposition) : null;
+  if (_pcRow && _pcRow.many) warn.push('<span title="' + esc(_pcRow.many.join(', ')) + ' are all confirmed on the Job Plan: name the one this went to" style="color:var(--bronze);font-weight:700;">' + _pcRow.many.length + ' confirmed: name one</span>');
   if (invAwaitingAppraisal(ref, jid)) warn.push(invAppraisalInProgress(ref, jid)
     ? '<span title="An appraiser is linked; the line is appraised once the report\u2019s figure is on it with source Appraisal" style="color:var(--bronze);font-weight:700;">&#9873; appraisal in progress</span>'
     : '<span title="Flagged for a specialist appraisal \u2014 no appraisal figure on the line yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
@@ -36809,7 +36911,6 @@ function _fieldCamPaint() {
     }).join('') + '</div>';
     h += '<div class="fc-row">'
       + '<button type="button" class="fc-tog' + (st.appr ? ' on' : '') + '" onclick="fieldCamToggleAppr()" title="Flag the next shot for a specialist valuation">&#9873; Appraise</button>'
-      + '<button type="button" class="fc-tog' + (st.detail ? ' on' : '') + '" onclick="fieldCamToggleDetail()"' + (st.last ? '' : ' disabled') + ' title="The next shot is a close-up of the last item, not a new item">+ Detail of last</button>'
       + '</div>';
     // ⚠ THE WALKTHROUGH'S COLLECTIONS STILL WAITING FOR A PHOTOGRAPH (P24): tap one and the next shot is its line's
     // photograph. Per shot, like ⚑ Appraise and the detail toggle, and gone once the collection is photographed.
@@ -36844,13 +36945,26 @@ function _fieldCamPaint() {
     + ' value="' + esc(st.noteDraft || '') + '" oninput="fieldCamNoteDraft(this.value)"'
     + ' onkeydown="if(event.key===\'Enter\')fieldCamTypedNote()"' + (st.lastAny ? '' : ' disabled') + '>'
     + '</div>';
+  // ⚠⚠ THE CLOSE-UP IS ITS OWN SHUTTER, ONE TAP (P25, Q41; Anthony, 2026-10-09). A close-up cost two taps, *+ Detail of
+  // last* and then the shutter, because the toggle reset after every shot. It shoots a close-up of the last item, filed with
+  // it and never a new item, exactly as the toggle did (fieldCamToggleDetail arms it, _fieldCamCommit files it). Offered on
+  // the Items pass once there is an item to be close to.
+  var _closeOk = st.mode === 'inventory' && !!st.last;
   h += '<div class="fc-shutter-row">';
   if (st.native) {
     h += '<label class="fc-shutter" title="Take a photo"><input type="file" accept="image/*" capture="environment" id="fc-native" style="display:none;" onchange="fieldCamNativeShot(this)">&#128247;</label>';
+    if (st.mode === 'inventory') h += _closeOk
+      ? '<label class="fc-shutter fc-closeup" title="A close-up of the last item: the back, a mark, a label"><input type="file" accept="image/*" capture="environment" id="fc-native-close" style="display:none;" onchange="fieldCamNativeShot(this, true)">Close-up</label>'
+      : '<button type="button" class="fc-shutter fc-closeup" disabled title="Photograph an item first">Close-up</button>';
   } else {
     h += '<button type="button" class="fc-shutter" onclick="fieldCamShoot()"' + (st.ready ? '' : ' disabled') + ' title="Take a photo">&#128247;</button>';
+    if (st.mode === 'inventory') h += '<button type="button" class="fc-shutter fc-closeup" onclick="fieldCamShootDetail()"' + (st.ready && _closeOk ? '' : ' disabled')
+      + ' title="A close-up of the last item: the back, a mark, a label">Close-up</button>';
   }
   h += '</div>';
+  // ⚠ NEXT: ITEMS (P25, Q40): the as-found pass ends by going on to the Items pass, one tap, on the same room. It ticks
+  // nothing: on an estate the as-found tick is still the concierge's word, under the cameras.
+  if (st.mode === 'before') h += '<div class="fc-row" style="justify-content:center;"><button type="button" class="fc-tog fc-next" onclick="fieldCamNextItems()">Next: Items &#8594;</button></div>';
   ui.innerHTML = h;
 }
 
@@ -36914,6 +37028,25 @@ function _fieldCamCommit(dataUrl) {
   });
 }
 
+// One tap, a close-up of the last item (P25, Q41): arm it the one way (fieldCamToggleDetail) and shoot. A shot that does
+// not go leaves nothing armed.
+function fieldCamShootDetail() {
+  var st = _fieldCam;
+  if (!st.open || st.mode !== 'inventory' || !st.last) return false;
+  if (!st.detail) fieldCamToggleDetail();
+  var ok = fieldCamShoot();
+  if (!ok) { st.detail = false; _fieldCamPaint(); }
+  return ok;
+}
+// From the as-found pass straight to the Items pass on the same room (P25, Q40): the camera reopens in Items.
+function fieldCamNextItems() {
+  var st = _fieldCam;
+  if (!st.open || st.mode !== 'before') return false;
+  var jobId = st.jobId, roomIdx = st.roomIdx;
+  closeFieldCamera();
+  return openFieldCamera(jobId, roomIdx, 'inventory');
+}
+
 function fieldCamShoot() {
   var st = _fieldCam;
   if (!st.open || st.native || !st.ready) return false;
@@ -36928,9 +37061,11 @@ function fieldCamShoot() {
   return _fieldCamCommit(dataUrl);
 }
 
-function fieldCamNativeShot(input) {
+function fieldCamNativeShot(input, closeUp) {
   var file = input && input.files && input.files[0];
   if (!file) return;
+  // The native Close-up (P25, Q41): armed as the in-page one is, at the moment the photo comes back.
+  if (closeUp && _fieldCam.open && _fieldCam.last && !_fieldCam.detail) fieldCamToggleDetail();
   var reader = new FileReader();
   reader.onload = function(ev) { _fieldCamCommit(ev.target.result); };
   reader.readAsDataURL(file);
@@ -37117,10 +37252,11 @@ function lockRefusal(job, jobId, roomIdx) {
 }
 function lockFlag(job, jobId, roomIdx) {
   if (!job || isDecedentJob(job)) return '';
-  if (_shotCount(jobId, roomIdx, 'before') === 0) return 'No as-found shots on this room. Shoot it before anything moves.';
   // Flags and never refuses on a living-client job, the standing rule: the owner is alive and
   // can be asked what was in the drawer, so the evidence is worth having and is not load-bearing.
-  if (!_roomFoundDone(jobId, roomIdx)) return 'The as-found pass is not confirmed complete — drawers, cabinets and closets.';
+  // ⚠ THE AS-FOUND SHOT IS THE PASS THERE (P25, Q40; Anthony, 2026-10-09): the *As-found pass complete* tick only
+  // quieted a second flag on living work, so it is not offered there (_roomFoundDoneHtml) and nothing flags its absence.
+  if (_shotCount(jobId, roomIdx, 'before') === 0) return 'No as-found shots on this room. Shoot it before anything moves.';
   return '';
 }
 function clearedFlag(jobId, roomIdx) {
@@ -37309,6 +37445,7 @@ function _paintRoomWorkspace() {
 // once on the plan checkboxes, where a stage of thirteen boxes read as a wall of shouting.
 // Inline wins over the global rule; a class would work too but this control has one site.
 function _roomFoundDoneHtml(jobId, roomIdx, decedent) {
+  if (!decedent) return '';   // living work: the as-found shot is the pass (P25, Q40; lockFlag)
   var plan = jobPlanStore[jobId];
   var r = plan && plan.rooms && plan.rooms[roomIdx];
   var fd = r && r.foundDone;
@@ -37343,8 +37480,12 @@ function _planRoomListHtml(jobId) {
       + '<span class="rl-counts">' + nB + ' found \u00b7 ' + nI + ' items \u00b7 ' + nA + ' after'
       + (failed ? ' <span class="rl-fail">&#9888; not saved</span>' : '') + '</span>'
       + (r.note ? '<span class="rl-note">' + esc(r.note) + '</span>' : '')
-      + '</button>';
-  }).join('');
+      + '</button>'
+      // ⚠ CLEARED ON THE ROOM'S ROW (P25, Q40): a locked room is marked cleared from the list, on every job, without
+      // opening the room; the setter asks what the workspace's button asks, and an after photo still missing is named.
+      + (st === 'locked' ? '<button type="button" class="rl-clear" onclick="setPlanRoomStatus(' + jobId + ',' + r.idx + ',\'cleared\')">&#10003; Mark cleared'
+          + (clearedFlag(jobId, r.idx) ? ' <small>(no after photo yet)</small>' : '') + '</button>' : '');
+  }).map(function (h) { return '<div class="rl-cell">' + h + '</div>'; }).join('');
   var excl = rs.excluded.length
     ? '<div class="rl-excl"><strong>Not in scope \u2014 homeowner is handling:</strong> '
       + rs.excluded.map(function(r){ return esc(r.name) + (r.note ? ' <em>(' + esc(r.note) + ')</em>' : ''); }).join(' \u00b7 ') + '</div>'
@@ -41279,12 +41420,12 @@ var PLAN_TASKS = [
   // Phase 0 — before Day 1
   { key:'precall',            phase:'p0', sec:'Pre-job call',
     label:'Pre-job call placed 3–5 days before Day 1 — daily rhythm set, who decides asked and written down, logistics confirmed (the script is in the playbook, Step 10)' },
-  { key:'materials_onsite',   phase:'p0', sec:'Access &amp; crew', label:'Moving materials on site for Day 1 morning' },
+  { key:'materials_onsite',   phase:'p0', sec:'Access &amp; crew', when:function(c){ return c.materials; }, label:'Moving materials on site for Day 1 morning' },
   { key:'access_tested',      phase:'p0', sec:'Access &amp; crew', label:'Keys and access codes tested; elevator and parking confirmed', mm:' (and the moving truck)' },
   { key:'crew_briefed',       phase:'p0', sec:'Access &amp; crew', label:'Crew confirmed by name and briefed — standing job flags read aloud' },
   // ⚠ "THE REPRESENTATIVE", NOT "PR" (P19): the job may be a trust (a successor trustee) or a family distribution,
   // and the box renders on every labour service. The key is unchanged, so a tick made under the old words stays.
-  { key:'coi_provided',       phase:'p0', sec:'Access &amp; crew', label:'Certificate of Insurance provided to the attorney, the representative or the HOA, as required' },
+  { key:'coi_provided',       phase:'p0', sec:'Access &amp; crew', when:function(c){ return c.coi; }, label:'Certificate of Insurance provided to the attorney, the representative or the HOA, as required' },
   // ⚠ THE SAME DEFECT ONE LIST OVER, and it is one word: a personal representative is a fact
   // about the MATTER, not about which service was sold. An Estate Settlement administering a
   // probate estate has a PR whose authority is full or limited and never got asked; a probate
@@ -41329,24 +41470,19 @@ var PLAN_TASKS = [
   { key:'cash_logged',        phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
     label:'Jewelry and other valuables found logged and set aside, never removed without the representative’s written authority — cash is counted and handed over under Found on site, below' },
   // Phase 2 — pickups and disposal
-  { key:'coc_pickup_present', phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.isDisposal || c.hasCOC; },
+  { key:'coc_pickup_present', phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.valuablesPickup; },
     label:'TC present for every valuables pickup; the handoff is signed for' },
-  { key:'shred_done',         phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.isDisposal; },
+  { key:'shred_done',         phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.shredding; },
     label:'Shredding completed, or the vendor confirmed on schedule' },
-  // Phase 3 — move day (Home Transition only). The whole supervision sequence survives.
-  { key:'mv_eta',             phase:'p3', sec:'Pre-move',    when:function(c){ return c.isMM; }, label:'Moving company arrival confirmed; ETA logged' },
-  { key:'mv_tc_onsite',       phase:'p3', sec:'Pre-move',    when:function(c){ return c.isMM; }, label:'TC on site before the movers arrive' },
-  { key:'mv_crew_briefed',    phase:'p3', sec:'Pre-move',    when:function(c){ return c.isMM; }, label:'Moving crew briefed: fragile and high-value items pointed out; floor plan shared' },
-  { key:'mv_load_supervised', phase:'p3', sec:'Origin',      when:function(c){ return c.isMM; }, label:'TC present and supervising throughout loading' },
-  { key:'mv_fragile_load',    phase:'p3', sec:'Origin',      when:function(c){ return c.isMM; }, label:'Fragile and high-value items: TC directly oversees — does not leave the area' },
-  { key:'mv_origin_walked',   phase:'p3', sec:'Origin',      when:function(c){ return c.isMM; }, label:'Every room, closet, attic, garage and outdoor space walked before the truck departs' },
-  { key:'mv_origin_photos',   phase:'p3', sec:'Origin',      when:function(c){ return c.isMM; }, label:'Origin final walkthrough complete and photographed' },
-  { key:'mv_dest_ahead',      phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'TC at the new home ahead of the truck where possible' },
-  { key:'mv_dest_plan',       phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Movers directed per the approved floor plan' },
-  { key:'mv_fragile_unload',  phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Fragile and high-value items: TC oversees unloading' },
-  { key:'mv_client_walk',     phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Client walkthrough of the new home; approval confirmed and noted' },
-  { key:'mv_damage',          phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Any damage photographed and reported the same day' },
-  { key:'mv_mover_signoff',   phase:'p3', sec:'Destination', when:function(c){ return c.isMM; }, label:'Moving company final sign-off' },
+  // Phase 3 — move day (Home Transition only).
+  // ⚠⚠ FOUR RECORDED FACTS; THE REST IS THE PROCEDURE, READ, NOT TICKED (P25, Q42; Anthony, 2026-10-09). Thirteen boxes,
+  // four of them "TC present / oversees" rules a box cannot witness and two the same walk Close-out's *Home confirmed empty*
+  // records. A box now records what happened, the four facts below; how the day runs is PLAN_PROCEDURE, drawn as a list.
+  // Keys kept, so a tick made under the old words stays (mv_eta was "arrival confirmed; ETA logged").
+  { key:'mv_eta',             phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Movers arrived' },
+  { key:'mv_client_walk',     phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Client walked the new home and approved it' },
+  { key:'mv_damage',          phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Damage photographed and reported the same day, or none' },
+  { key:'mv_mover_signoff',   phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Moving company’s final sign-off' },
   // Phase 4 — close-out
   { key:'broom_clean',        phase:'p4', sec:'Close-out', when:function(c){ return c.isDisposal; }, label:'Property broom-clean; final photographs taken inside and out' },
   { key:'home_empty',         phase:'p4', sec:'Close-out', when:function(c){ return c.isDisposal || c.isMM; },
@@ -41357,6 +41493,23 @@ var PLAN_TASKS = [
   // close-out card on 2026-09-22, which is on EVERY service and on both job tabs. The two tick
   // keys survive there unchanged; the review box became a drafted email. See renderCloseoutBody.)
 ];
+
+// How a stage runs, read and never ticked (P25, Q42): the rules a box cannot witness. Drawn under the stage's boxes by
+// planTaskSectionsHtml's caller (planProcedureHtml), never counted in a stage's *N of M ticked*.
+var PLAN_PROCEDURE = [
+  { phase:'p3', when:function(c){ return c.isMM; }, sec:'How move day runs', items: [
+    'Confirm the movers’ arrival window the day before, and be on site before they arrive.',
+    'Brief the crew: point out the fragile and high-value pieces and share the floor plan.',
+    'Stay with the loading throughout; stay beside the fragile and high-value pieces while they are carried.',
+    'Walk every room, closet, attic, garage and outdoor space before the truck leaves (Close-out records the house empty).',
+    'Be at the new home ahead of the truck where you can; direct the movers by the approved floor plan, and watch the fragile pieces come off.'
+  ] }
+];
+function planProcedureHtml(phase, ctx) {
+  return PLAN_PROCEDURE.filter(function (p) { return p.phase === phase && (!p.when || p.when(ctx)); }).map(function (p) {
+    return planSubsec(p.sec) + '<ul class="plan-proc">' + p.items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>';
+  }).join('');
+}
 
 // Desk paperwork. Rendered on the Job Admin & Inv tab (the desk), under the client header and the
 // band and above the inventory, not on the Job Plan, because that
@@ -41370,8 +41523,8 @@ var JOB_ADMIN_TASKS = [
   // records each one vouched for — every proceeds statement, checked against the ledger to the cent, and every
   // charity's receipt, line by line — so a tick beside them would be a second store of one fact (ledgerDerivedLines).
   // A tick already stored under either key is left where it is, read by nothing.
-  { key:'fin_settlement',        sec:'Financial close', when:function(c){ return c.isDisposal; },
-    label:'Settlement timeline confirmed with any auction house or consignment vendor for proceeds not yet received' },
+  // ⚠ fin_settlement IS A DERIVED LINE SINCE P25 (Q43): every sold line on a statement with its payment recorded
+  // (proceedsReceivedLine). A tick already stored under the key is left where it is, read by nothing.
   // ⚠⚠ THE COMPLIANCE LIST IS KEYED ON WHICH INSTRUMENT THE ESTATE FEEDS AND ON WHAT WE ARE
   // CONTRACTED TO PRODUCE — never on the service type, which records what Havellin was HIRED to
   // do rather than what it promised. Keyed on `isProbate` it failed in both directions at once,
@@ -41403,9 +41556,10 @@ var JOB_ADMIN_TASKS = [
   // vanishes off a job holding three appraisals would be the silent omission this step removes.
   { key:'ct_appraisals',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack && (c.weAppraise || c.hasAppraisers); }, label:'All professional appraisals attached as supporting documentation' },
   { key:'ct_nonprobate',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack && c.weInventory; }, label:'Non-probate assets excluded (joint with survivorship, POD/TOD, trust, beneficiary-designated)' },
-  { key:'ct_served',      sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Inventory served on all interested parties; proof of service filed' },
-  { key:'ct_filed',       sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Filed within the 60-day deadline, or an extension petitioned for cause' },
-  { key:'ct_accounting',  sec:'Florida court &amp; legal compliance', when:function(c){ return c.probateTrack; }, label:'Final accounting prepared: sale proceeds, donations, disposal costs, professional fees' },
+  // ⚠⚠ SERVED, FILED AND THE FINAL ACCOUNTING ARE COUNSEL'S ACTS, NOT BOXES (P25, Q43; Anthony, 2026-10-09). ct_served,
+  // ct_filed and ct_accounting asked Havellin to tick what the estate attorney does; what Havellin does is deliver the
+  // inventory and the ledger, and the package records that. One derived line now, estateDeliveryLine. Ticks stored
+  // under the old keys are left where they are, read by nothing.
   // ⚠⚠ THE TRUSTEE'S LIST (P19). The heading names no court, because there is none. The same split as above:
   // the schedule check, the appraisals and the exclusion follow the tier (Havellin's own deliverable); delivering
   // the schedule and the records for the trustee's accounting happen whoever built it. Our schedule SUPPORTS a
@@ -41415,8 +41569,8 @@ var JOB_ADMIN_TASKS = [
   { key:'tt_schedule',    sec:'Trust administration', when:function(c){ return c.trustTrack && c.weValue; }, label:'Trust Schedule verified — date-of-death FMV on every line' },
   { key:'tt_appraisals',  sec:'Trust administration', when:function(c){ return c.trustTrack && !c.probateTrack && (c.weAppraise || c.hasAppraisers); }, label:'All professional appraisals attached to the Trust Schedule' },
   { key:'tt_excluded',    sec:'Trust administration', when:function(c){ return c.trustTrack && c.weInventory; }, label:'Property the trust does not hold excluded (probate property, joint with survivorship, POD/TOD, beneficiary-designated)' },
-  { key:'tt_delivered',   sec:'Trust administration', when:function(c){ return c.trustTrack; }, label:'Trust Schedule delivered to the successor trustee or their counsel' },
-  { key:'tt_records',     sec:'Trust administration', when:function(c){ return c.trustTrack; }, label:'Disposition records delivered for the trustee’s accounting (§736.08135): sale proceeds, donations, disposal costs' },
+  // ⚠ tt_delivered AND tt_records ARE THE TRUST PACKAGE, DERIVED (P25, Q43): estateDeliveryLine reads what the package
+  // carried and when it went. Ticks stored under the old keys are left where they are, read by nothing.
   { key:'rec_archived',   sec:'Records', label:'Job folder complete and archived in Drive — 7-year retention' }
 ];
 
@@ -41467,7 +41621,37 @@ function planTaskCtx(job, est) {
            hasPlaybook: isDownsizing || isDisposal, formal: formal,
            hasCOC: formal || collections.length > 0 || isDocJob,
            firearms: firearmsFlaggedAtIntake(job), re: !!(job && job.re === 'yes'),
+           // ⚠ WHERE FOUR BOXES APPLY (P25, Q43; Anthony, 2026-10-09: show them only where they apply). planTaskApplies.
+           shredding: planTaskApplies(job, est, 'shredding'), coi: planTaskApplies(job, est, 'coi'),
+           valuablesPickup: (formal || collections.length > 0 || isDocJob) || planTaskApplies(job, est, 'valuables'),
+           materials: planTaskApplies(job, est, 'materials'),
            job: job, est: est };
+}
+// Whether a box that only some jobs need applies to this one (P25, Q43). DOM-free.
+//   shredding  a shredding vendor is on the job: an estimate line, or the end-of-job line put on it
+//   coi        someone who asks for a Certificate of Insurance: an estate's attorney or representative, a building or an
+//              association (an apartment, town home or patio home), or one the intake's access row names
+//   valuables  valuables go out with a vendor: flagged at intake, or a seller or appraiser on the estimate
+//   materials  the estimate prices a moving-materials package
+var PLAN_COI_PTYPES = ['Apartment', 'Town Home', 'Patio Home'];
+var PLAN_COI_ACCESS_RE = /\b(hoa|association|condo|building|management|doorman|concierge desk|gated)\b/i;
+var PLAN_VALUABLES_VENDOR_TYPES = ['Auction House', 'Online Auction House', 'Estate Sale Company', 'Appraiser(s)'];
+function planTaskApplies(job, est, what) {
+  var vendors = (est && est.vendors) || [];
+  var hasType = function (list) { return vendors.some(function (v) { return list.indexOf(v && v.type) >= 0; }); };
+  if (what === 'shredding') return hasType(['Document Shredding']) || logisticsLineOn(((job && job.logisticsSourcing) || {}).shred);
+  if (what === 'coi') {
+    if (job && isDecedentJob(job)) return true;
+    if (job && PLAN_COI_PTYPES.indexOf(job.ptype) >= 0) return true;
+    var acc = houseFlagsOf(job).access;
+    return !!(acc && acc.note && PLAN_COI_ACCESS_RE.test(acc.note));
+  }
+  if (what === 'valuables') {
+    var vf = houseFlagsOf(job).valuables;
+    return !!(vf && vf.on) || hasType(PLAN_VALUABLES_VENDOR_TYPES) || estimateAppraiserLines({ vendors: vendors }).length > 0;
+  }
+  if (what === 'materials') return (Number(est && est.pkgCost) || 0) > 0;
+  return true;
 }
 function planTasksFor(list, phase, ctx) {
   return list.filter(function(t){ return (!phase || t.phase === phase) && (!t.when || t.when(ctx)); });
@@ -41752,9 +41936,12 @@ function planDerivedLines(jobId, job, est, phase, today) {
   return out;
 }
 function planDerivedHtml(jobId, job, est, phase) {
-  var lines = planDerivedLines(jobId, job, est, phase);
-  if (!lines.length) return '';
-  return '<div class="pl-derived" id="plan-derived-' + phase + '-' + jobId + '">' + lines.map(function(l) {
+  return derivedLinesHtml(planDerivedLines(jobId, job, est, phase), 'plan-derived-' + phase + '-' + jobId);
+}
+// The markup for any list of derived lines (planDerivedHtml's, the Collection Partners' and Home Prep's since P25). DOM-free.
+function derivedLinesHtml(lines, id) {
+  if (!lines || !lines.length) return '';
+  return '<div class="pl-derived"' + (id ? ' id="' + id + '"' : '') + '>' + lines.map(function(l) {
     // `red` (P19): open and past due, or Havellin holding what it must not (an original will, estate cash).
     return '<div class="pl-line ' + (l.ok ? 'pl-ok' : (l.red ? 'pl-open pl-red' : 'pl-open')) + '">'
       + '<span class="pl-dot">' + (l.ok ? '&#10003;' : (l.red ? '&#9679;' : '&#9675;')) + '</span>'
@@ -42793,11 +42980,9 @@ function renderVendorSourcing(jobId, job, est) {
           '<input type="number" value="' + esc(String(fee)) + '" min="0" onchange="setCollFee(' + jobId + ',\'' + c.id + '\',this.value)" style="width:90px;font-size:12px;' + _fldBg(fee !== '') + '">' +
         '</div>' +
         '<div id="coll-status-btns-' + c.id + '" style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">' + planCollectionStatusBtns(jobId, c.id, cstatus) + '</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 16px;margin-top:6px;">' +
-          planChk(jobId, 'coll_' + c.id + '_2', 'Inventoried &amp; photographed before items move') +
-          planChk(jobId, 'coll_' + c.id + '_3', 'Disposition confirmed with client in writing') +
-          planChk(jobId, 'coll_' + c.id + '_4', 'Chain of custody documented — TC present; receipt captured') +
-        '</div>' +
+        // ⚠ READ OFF THE COLLECTION'S LINES, NEVER TICKED (P25, Q43): the photograph, the written approval and the release
+        // on record are all on the inventory, so three boxes there were a second store of three facts (collectionPartnerLines).
+        derivedLinesHtml(collectionPartnerLines(jobId, job, c), 'coll-derived-' + c.id) +
         (hint ? '<div style="margin-top:4px;">' + hint + '</div>' : '') + _vendorRefLine(rec) +
         _renderCollPhotoCapture(jobId, c.id) +
       '</div>';
@@ -42805,6 +42990,25 @@ function renderVendorSourcing(jobId, job, est) {
   }
   html += coordHrsRollup(job, est);
   return html;
+}
+// A walkthrough collection's three facts, off its lines on the inventory (P25, Q43; they were the boxes coll_<id>_2 to _4,
+// whose stored ticks are left where they are, read by nothing): photographed, released in writing, and gone on the record.
+// DOM-free.
+function collectionPartnerLines(jobId, job, c) {
+  var live = _collLinesOf(jobId, c.id).filter(function (r) { return !r.deletedAt; });
+  var shot = live.length > 0 && live.some(_invHasPhoto);
+  var leaving = live.filter(function (r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
+  var approved = leaving.filter(function (r) { return invApprovalComplete(r, job); }).length;
+  var gone = leaving.filter(function (r) { return invRecordedGone(r, job); }).length;
+  var n = function (k, t) { return k + ' of ' + t; };
+  return [
+    { key: 'coll_photo', ok: shot, label: 'Photographed on the inventory',
+      detail: shot ? '' : 'not yet — tap it on the room’s brief, then photograph it with Items' },
+    { key: 'coll_approved', ok: leaving.length > 0 && approved === leaving.length, label: 'Release approved in writing',
+      detail: !leaving.length ? 'no line of it is set to leave yet' : n(approved, leaving.length) + ' — the release approval request, on Job Admin &amp; Inv' },
+    { key: 'coll_released', ok: leaving.length > 0 && gone === leaving.length, label: 'Released, with its receipt on record',
+      detail: !leaving.length ? 'nothing has left' : n(gone, leaving.length) + ' — a filed pickup list or receipt records it' }
+  ];
 }
 function refreshVendorSourcing(jobId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -42861,6 +43065,7 @@ function _srcSetVendor(slot, val) {
 function setJobVendor(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
   _srcSetVendor(slot, val); refreshVendorSourcing(jobId);
+  invFillPlanChannels(jobId);   // a vendor named on a line already Confirmed (P25, Q44)
 }
 function setJobVendorQuote(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
@@ -42869,6 +43074,7 @@ function setJobVendorQuote(jobId, i, val) {
 function setJobVendorStatus(jobId, i, val) {
   var slot = _svcJob(jobId, i); if (!slot) return;
   slot.rec.status = val; _saveJobEdit(slot.job, slot.bucket, slot.key); refreshVendorSourcing(jobId);
+  invFillPlanChannels(jobId);   // confirming a charity, hauler or auction house names it on its lines (P25, Q44)
 }
 function setPrepVendor(jobId, i, val) {
   var slot = _prepJob(jobId, i); if (!slot) return;
@@ -42917,6 +43123,7 @@ function setLogisticsVendor(jobId, key, val) {
   rec.vendorId = v ? vendorIdOf(v) : ''; rec.vendorName = v ? (v.vendor_name||'') : '';
   rec.contact = v ? _vendorContact(v) : ''; rec.phone = v ? (v.phone||'') : ''; rec.pricing = v ? (v.pricing_structure||'') : '';
   _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
+  invFillPlanChannels(jobId);   // P25, Q44
 }
 function setLogisticsQuote(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
@@ -42925,6 +43132,7 @@ function setLogisticsQuote(jobId, key, val) {
 function setLogisticsStatus(jobId, key, val) {
   var job = _logiJob(jobId, key); if (!job) return;
   job.logisticsSourcing[key].status = val; _saveJobEdit(job, 'logisticsSourcing', key); refreshVendorSourcing(jobId);
+  invFillPlanChannels(jobId);   // P25, Q44
 }
 // Put an end-of-job category on this job (the add menu under the sourcing list). Refuses anything
 // that is not a catalogue key — the value arrives from a <select>, and a stray one must not mint a
@@ -45474,15 +45682,21 @@ function renderPrepJobPlan(jobId, job, est) {
     '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>',
     quotedCount + ' of ' + prepLines.length + ' quoted');
 
+  // ⚠ QUOTES AND BOOKINGS ARE READ, NOT TICKED (P25, Q43): the sourcing card records every quote and every Confirmed,
+  // so prep_quotes and prep_booked were a second store of two facts. Their stored ticks are left, read by nothing.
+  var _prepPC = prepVendorsConfirmed(job, est);
+  var _prepDerived = derivedLinesHtml([
+    { key: 'prep_quoted', ok: allQuoted, label: 'Quotes recorded from every prep vendor', detail: quotedCount + ' of ' + prepLines.length },
+    { key: 'prep_confirmed', ok: _prepPC.total > 0 && _prepPC.done === _prepPC.total, label: 'Every prep vendor booked (Confirmed)',
+      detail: _prepPC.done + ' of ' + _prepPC.total + ' — status on the sourcing card below' }
+  ], 'prep-derived-' + jobId);
   var checklistCard = '<div class="card" style="margin-bottom:1rem;">' +
-    '<div class="sec">Coordination Checklist</div>' +
+    '<div class="sec">Coordination Checklist</div>' + _prepDerived +
     chkGrid(
       planChk(jobId, 'prep_wt', 'Scope of prep work confirmed with homeowner') +
       (_dcAuth > 0 ? planChk(jobId, 'prep_declutter', _dcCO
         ? 'Declutter complete (' + fmtHrs(_dcAuth) + ' hrs authorised, ' + coHoursLabel({ tc: _dcCO, ps: 0 }) + ' by change order) &mdash; log the hours below'
         : 'Pre-prep declutter complete (' + fmtHrs(_dcQuoted) + ' hrs quoted) &mdash; log the hours below') : '') +
-      planChk(jobId, 'prep_quotes', 'Quotes collected from all prep vendors') +
-      planChk(jobId, 'prep_booked', 'Vendors booked and scheduled') +
       planChk(jobId, 'prep_progress', 'Work underway — site checks &amp; quality control') +
       planChk(jobId, 'prep_done', 'All prep work completed and inspected show-ready') +
       planChk(jobId, 'prep_invoiced', 'Final vendor invoices collected; ' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee invoiced to homeowner')
@@ -45868,7 +46082,7 @@ function renderJobPlan(jobId, job, est) {
   var p2 = planDerivedHtml(jobId, job, est, 'p2') + planTasksHtml(jobId, 'p2', ctx);
 
   // ── Move day (Home Transition only) ─────────────────────────────────────────────────
-  var p3 = isMM ? planTasksHtml(jobId, 'p3', ctx) : '';
+  var p3 = isMM ? planTasksHtml(jobId, 'p3', ctx) + planProcedureHtml('p3', ctx) : '';
 
   // ── Close-out ────────────────────────────────────────────────────────────────────────
   var p4 = planDerivedHtml(jobId, job, est, 'p4') +

@@ -39,7 +39,7 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNe
                   'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf', 'invHavellinRecipient',
                   // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
                   'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
-const APPR_VARS = ['INV_DISP_DOC_WORDS', 'INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
+const APPR_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_DISP_DOC_WORDS', 'INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                    'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
@@ -511,7 +511,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ];
     let badge = '';
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invBulkApply', 'invNoteDispositionMove', 'invReleaseCautions', '_invNamed', '_invItemNo',
+      fns: APPR_FNS.concat(['_invBulkApply', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseCautions', '_invNamed', '_invItemNo',
                             '_invPicked', '_jobInvRefs', '_invTouch', '_invMatchesFilter',
                             '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invRoomName']),
       vars: APPR_VARS.concat(['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS']),

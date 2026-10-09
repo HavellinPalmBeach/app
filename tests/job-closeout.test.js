@@ -308,11 +308,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the desk card stops asking a prep job questions that do not apply to it');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'donationReceiptLine', 'donationGroups', 'invDonationReceipted', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
+      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'donationReceiptLine', 'donationGroups', 'invDonationReceipted', 'ledgerDerivedLines', 'proceedsReceivedLine', 'estateDeliveryLine', 'estatePackageRoute', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly',
             'planTasksFor', 'jobListEntries', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-      vars: ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
+      vars: ['CONTENTS_SIGNED_REF', 'PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
              'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
              'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'JOB_ADMIN_TASKS', 'DOC_SCOPES'],
       stubs: { isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [], stagePaidTotal: () => 0,

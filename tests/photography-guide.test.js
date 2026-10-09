@@ -5,7 +5,7 @@
 //
 // ⚠⚠ WHY THIS EXISTS. Anthony, 2026-10-06: *"if there is a blue vase and I take a picture of it on a dresser and then I
 // take another picture zoomed in on the blue vase … the agent should realize it's the same [vase]."* It does not, unless
-// the zoom is a close-up (+ Detail of last): the app names each item photo on its own and lists everything in it. The
+// the zoom is a close-up (the Close-up shutter, since P25): the app names each item photo on its own and lists everything in it. The
 // guide teaches the method, and to do that it says how the app treats a photo: the first four close-ups are read, a
 // close-up never adds an item, the destination and the Appraise flag stick to one thing per photo, a note said after a
 // close-up stays on it, the $100 rule on a Form 706 estate, the duplicate check's batches of 12 sharing 6, and a
@@ -264,5 +264,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         ok(!m, 'no ' + what + (m ? ' (found: "…' + words.slice(Math.max(0, m.index - 30), m.index + 30) + '…")' : ''));
       });
     ok(guide.split(/\s+/).length < 2000, 'and it is short: ' + guide.split(/\s+/).length + ' words, from 2,770 before the rewrite');
+  }
+
+  // P25 (Q40, Q41; Anthony, 2026-10-09): the camera's controls the guide names are the camera's.
+  group('the camera as the guide names it: one press of Close-up, Next: Items, and the as-found tick on an estate only');
+  {
+    const paint = fn('_fieldCamPaint');
+    has(guide, 'press Close-up', 'the guide says to press Close-up');
+    eq(count(guide, 'Detail of last'), 0, '⚠ and never the two-tap toggle it replaced');
+    has(paint, '>Close-up</button>', 'the camera has a Close-up button');
+    has(paint, 'onclick="fieldCamShootDetail()"', 'which takes a close-up of the last thing in one press');
+    has(guide, 'in the camera, goes straight on to the item photos of the same room', 'the guide names Next: Items');
+    has(paint, 'Next: Items', 'and the camera offers it');
+    has(guide, 'On an estate, then tick As-found pass complete', 'the tick is an estate\'s');
+    has(fn('_roomFoundDoneHtml'), "if (!decedent) return '';", 'and the app offers it on an estate only');
   }
 };

@@ -519,10 +519,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
      'invApprovalLeftOpen', 'invApprovalOpenText', 'invApprovalDialogNote', 'invHavellinRecipient', 'invApprovalBatches']
       .forEach((n) => eq((SRC.match(new RegExp('\\nfunction ' + n + '\\(', 'g')) || []).length, 1, n + ' is defined once'));
     eq(callers('invApprovalWithSigners'), ['invApprovalLeftOpen', 'invSaveApproval'], 'the writer\'s rule: the save and what the dialog says it will leave open');
-    eq(callers('invRecordedGone'), ['invRatificationOwed', 'invReleasedToPerson'], '⚠ recorded as gone: one definition, two readers');
+    // P25 (Q43): the Collection Partners' *Released, with its receipt on record* line reads it of the collection's lines.
+    eq(callers('invRecordedGone'), ['collectionPartnerLines', 'invRatificationOwed', 'invReleasedToPerson'], '⚠ recorded as gone: one definition, three readers');
     eq(callers('invRatificationOwed'), ['_renderInvReleasesCard', '_renderInvRow', 'planDerivedLines', 'printApprovalRequest'],
        '⚠⚠ left before every fiduciary approved: the request, the desk row, the desk\'s approvals list, the Job Plan');
-    eq(callers('invStaffRefused'), ['_invBulkApply', '_invEdit'], 'the estate\'s refusal: both handlers that write a channel or a disposition');
+    // P25 (Q44): and the one writer that names a line's recipient from the confirmed vendor of its kind asks it before writing.
+    eq(callers('invStaffRefused'), ['_invBulkApply', '_invEdit', 'invFillPlanChannel'], 'the estate\'s refusal: every handler that writes a channel or a disposition');
     eq(callers('invHavellinRecipient'), ['_renderInvRow', 'invStaffRefused'], 'the one definition: the estate\'s refusal and the row\'s name (the caution reads it too)');
     has(noComments(decl('INV_RELEASE_CAUTIONS')), 'invHavellinRecipient(r, _invJob(jobId))', 'the living caution reads the same definition');
     ['_invEdit', '_invBulkApply'].forEach((n) => lacks(noComments(fn(n)), 'invHavellinRecipient(', n + ' never asks the definition bare (the estate refusal is invStaffRefused)'));

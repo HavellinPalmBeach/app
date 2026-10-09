@@ -37,7 +37,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: [
-      'agrApprovalWithdrawn', 'jobTimeline', 'prepVendorsConfirmed', 'jobPrepLines', 'coPrepVendorLines', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'paymentSplit', 'depositVoidFlag', 'agreementHandedOverInPerson',
+      'agrApprovalWithdrawn', 'jobTimeline', 'estimateNoteGaps', 'prepVendorsConfirmed', 'jobPrepLines', 'coPrepVendorLines', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'paymentSplit', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded',
       'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor',
       'docSentAt', 'docKeyFor', 'agreementSignature',

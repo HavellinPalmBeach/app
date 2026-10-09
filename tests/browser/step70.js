@@ -184,10 +184,11 @@ const COIN_LINE = J + '_col' + COIN, STAMP_LINE = J + '_col' + STAMP;
       await press('#plan-rooms-' + J + ' .rl-row[onclick="openRoomWorkspace(' + J + ',4)"]', 'the Kitchen\'s room card');
       has(await txt('#room-ws .ws-colls'), 'From the walkthrough, not photographed yet.', 'the room\'s brief names them');
       await press('#room-ws .ws-coll', 'the stamp albums\' button');
-      await p.waitForFunction(() => { const s = document.querySelector('#field-cam .fc-shutter'); return s && !s.disabled; }, null, { timeout: 8000 }).catch(() => {});
+      await p.waitForFunction(() => { const s = document.querySelector('#field-cam .fc-shutter:not(.fc-closeup)'); return s && !s.disabled; }, null, { timeout: 8000 }).catch(() => {});
       has(await txt('#field-cam .fc-colls .fc-tog.on'), 'Stamp albums', 'the camera opens with them armed');
       const before = await p.evaluate((j) => _jobInvRefs(j).length, J);
-      await press('#field-cam .fc-shutter', 'the shutter');
+      // (P25, Q41: the Close-up shutter shares the class; the main shutter is the other one.)
+      await press('#field-cam .fc-shutter:not(.fc-closeup)', 'the shutter');
       await p.waitForTimeout(2500);
       const st = await ref(STAMP_LINE);
       eq(st && [st.roomIdx, st.label, st.status, st.manual, st.objectName, String(st.sourceCollId), st.needsAppr],

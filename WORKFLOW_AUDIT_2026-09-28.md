@@ -8,7 +8,7 @@ Status of each fix pack lives in this file: when a session lands a pack, it mark
 
 **Status, 2026-10-06:** P16 to P21 landed on 2026-09-30 to 2026-10-05. On 2026-10-06 P22 cleared the known-bug list with Anthony's answers of that day (its backend half `2026-10-06`), and **P23, Agent Two (valuation), landed** (live once the Apps Script is redeployed, `2026-10-06b`). The same day **P24** added the room check and put walkthrough collections on the inventory by themselves, for the first mock job with a full inventory: Anthony redeployed `2026-10-06c` that day, and its first live room check read eight photographs in 32 seconds, so `2026-10-06d` reads a room in runs of 12 to answer inside Apps Script's limit (redeployed the same afternoon: six photographs in one run in 15 seconds). What comes next is the road to launch below: Anthony chose Agent Two first, then a freeze.
 
-**Status, 2026-10-09:** the job-flow audit below ran a whole job on every service through the real controls (2026-10-08) and fixed what met the triage bar's *fix now* and the cheap *fix if cheap* items. Anthony answered Q33 to Q56 on 2026-10-09: 23 to build as P25, Q55 kept as it is. P25 group 1 (papers and money: Q33 Q34 Q35 Q36 Q37 Q38 Q49 Q51 Q52 Q53 Q54 Q56) landed 2026-10-09; group 2 (field taps: Q40 Q41 Q42 Q43 Q44 Q45 Q47) and group 3 (desk: Q39 Q46 Q48 Q50) follow.
+**Status, 2026-10-09:** the job-flow audit below ran a whole job on every service through the real controls (2026-10-08) and fixed what met the triage bar's *fix now* and the cheap *fix if cheap* items. Anthony answered Q33 to Q56 on 2026-10-09: 23 to build as P25, Q55 kept as it is. P25 group 1 (papers and money: Q33 Q34 Q35 Q36 Q37 Q38 Q49 Q51 Q52 Q53 Q54 Q56) and group 2 (field taps: Q40 Q41 Q42 Q43 Q44 Q45 Q47) landed 2026-10-09; group 3 (desk: Q39 Q46 Q48 Q50) follows.
 
 ## Road to launch (Anthony, 2026-10-06)
 
@@ -951,28 +951,28 @@ Ordered by what they protect: the client's and counsel's papers first, then the 
   *Answer (2026-10-09):* Agreed: a lot-by-lot table inside the statement dialog, pre-ticked with that vendor's lines, writing gross and fees onto the lines; the to-the-cent reconciliation stays. *(to build: P25)*
 - **Q40** About 14 taps per room before the first item. On living work the *As-found pass complete* tick only quiets a flag.
   *Recommendation:* On living jobs the as-found shot stands as the pass (still flagged if missing); a *Next: Items* button in the camera; *Cleared* offered on the room's row. Estates keep the tick and the refusal.
-  *Answer (2026-10-09):* Agreed: on living jobs the as-found shot stands as the pass (still flagged if missing); *Next: Items* in the camera and *Cleared* on the room's row on every job; estates keep the tick and the refusal. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: on living jobs the as-found shot stands as the pass (still flagged if missing); *Next: Items* in the camera and *Cleared* on the room's row on every job; estates keep the tick and the refusal. *(built by P25 group 2, 2026-10-09)*
 - **Q41** A close-up costs two taps (Detail, then the shutter) because Detail resets after every shot.
   *Recommendation:* A separate one-tap *Close-up* shutter.
-  *Answer (2026-10-09):* Agreed: a separate one-tap *Close-up* shutter for a detail of the last item. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: a separate one-tap *Close-up* shutter for a detail of the last item. *(built by P25 group 2, 2026-10-09)*
 - **Q42** Move Day has 13 tick boxes, four of them *"TC present / oversees"* rules and two the same walk as *Home confirmed empty*.
   *Recommendation:* Four recorded facts (movers arrived, client walked the new home and approved, damage photographed or none, mover's sign-off); the rest as read-only procedure.
-  *Answer (2026-10-09):* Agreed: four recorded facts (movers arrived; client walked the new home and approved; damage photographed, or none; mover's sign-off); the rest read-only procedure. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: four recorded facts (movers arrived; client walked the new home and approved; damage photographed, or none; mover's sign-off); the rest read-only procedure. *(built by P25 group 2, 2026-10-09)*
 - **Q43** Tick boxes the app can derive or that do not apply: the trust list's *delivered* and *records delivered* (the package records both), *settlement timeline* (every sold line on a paid statement), the Collection Partners' three per collection, Home Prep's *quotes collected* and *vendors booked*; *served*, *filed* and *final accounting* are counsel's acts; *Shredding*, *Certificate of Insurance to the attorney*, *valuables pickup* and *Moving materials on site* show on jobs they do not apply to.
   *Recommendation:* Derive what the app records; replace the three court boxes with one derived line, *Court Inventory and Disposition Ledger delivered to counsel*; show the rest only where they apply.
-  *Answer (2026-10-09):* Agreed: derive what the app records; the three court boxes become one derived line, *Court Inventory and Disposition Ledger delivered to counsel*; *Shredding*, the Certificate of Insurance to the attorney, *valuables pickup* and *Moving materials on site* show only where they apply. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: derive what the app records; the three court boxes become one derived line, *Court Inventory and Disposition Ledger delivered to counsel*; *Shredding*, the Certificate of Insurance to the attorney, *valuables pickup* and *Moving materials on site* show only where they apply. *(built by P25 group 2, 2026-10-09)*
 - **Q44** Recipients are typed per line even when the Job Plan already holds the one confirmed donation charity, hauler or auction house.
   *Recommendation:* Default the line's recipient from the single confirmed vendor of that kind, marked as derived; flag when there are two.
-  *Answer (2026-10-09):* Agreed: a Donate, Junk or Auction line takes the single confirmed vendor of that kind as its recipient, marked derived and editable; flagged where there are two. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: a Donate, Junk or Auction line takes the single confirmed vendor of that kind as its recipient, marked derived and editable; flagged where there are two. *(built by P25 group 2, 2026-10-09)*
 - **Q45** Submit opens a confirm listing every room with no walkthrough note (14 of 15 on one job), on every submit. Notes are optional.
   *Recommendation:* Drop the dialog; a passive line under Submit.
-  *Answer (2026-10-09):* Agreed: no dialog; a passive line under Submit names the rooms with no note. (A first tap of *Only special rooms* was a mis-tap; Anthony corrected it.) *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: no dialog; a passive line under Submit names the rooms with no note. (A first tap of *Only special rooms* was a mis-tap; Anthony corrected it.) *(built by P25 group 2, 2026-10-09)*
 - **Q46** The release request asks two initials on every leaving line, a $20 paperback to junk included; the agreement's §5.3 asks written approval only for sales or disposals over $500, and donations.
   *Recommendation:* List every line; one initial per destination group under $500; line initials for $500 and over, bequests, and anything carrying a caution.
   *Answer (2026-10-09):* Agreed: every leaving line listed; one initial per destination group under $500; line initials for $500 and over, bequests and anything carrying a caution. *(to build: P25)*
 - **Q47** A second concierge nobody chose: the engine's recommendation pre-selects two on the estimate, and the team cannot be confirmed until a second is named.
   *Recommendation:* Two only when the estimator picks two.
-  *Answer (2026-10-09):* Agreed: two concierges only when the estimator picks two; the engine's recommendation stays a suggestion. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: two concierges only when the estimator picks two; the engine's recommendation stays a suggestion. *(built by P25 group 2, 2026-10-09)*
 - **Q48** Vendor ratings at close count only vendors confirmed on the Job Plan; an auction house or charity used as a line's channel is never asked, so the gate was passed with five vendors unrated.
   *Recommendation:* Also every vendor named as a channel or on a pickup list.
   *Answer (2026-10-09):* Agreed: the close also asks a rating of every vendor named as a line's channel or on a pickup list. *(to build: P25)*

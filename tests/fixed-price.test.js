@@ -220,12 +220,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // is driven against that: the basis goes to zero with the flag, on every job switch.
     {
       const rs = sandbox({ fns: ['resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
-        vars: ['_tc2UserSet', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'DECEDENT_SERVICES', 'JOB_STEPS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', '_estimateDocTier'],
+        vars: ['_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'DECEDENT_SERVICES', 'JOB_STEPS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', '_estimateDocTier'],
         stubs: { document: domStub(), seedDocScopeFromJob: () => 'full', paintVolPreset() {}, renderVendors() {},
                  renderCollections() {}, renderVehicles() {}, clearAllRooms() {} } });
-      rs._tc2UserSet = true; rs._fixedAmountUserSet = true; rs._fixedAmountBasis = 21600;
+      // RESTATED (P25, Q47): the concierge count has no "set by hand" flag any more (the count is the estimator's alone);
+      // the reset puts the count itself back to one, which p25-field.test.js holds.
+      rs._fixedAmountUserSet = true; rs._fixedAmountBasis = 21600;
       rs.resetEstimateJobState({ id: 8 });
-      eq([rs._tc2UserSet, rs._fixedAmountUserSet, rs._fixedAmountBasis], [false, false, 0],
+      eq([rs._fixedAmountUserSet, rs._fixedAmountBasis], [false, 0],
          'the job-switch reset zeroes the basis with the flag — a basis leaking across jobs would warn about the wrong estimate');
       ['neutralizeEstimateView', 'applyOpenedEstimate', 'clearEstimateTab'].forEach((name) =>
         has(fn(name), 'resetEstimateJobState(', `${name} runs it`));
@@ -251,7 +253,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         // The fresh branch runs the ONE reset (2026-09-29), so it is lifted rather than stubbed: a stub
         // of it would let this group pass with nothing cleared at all.
         fns: ['applyOpenedEstimate', 'resetEstimateJobState', 'estimateOpensFixed', 'isDecedentJob', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
-        vars: ['_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_crewUserSet', '_tc2UserSet',
+        vars: ['_estimateAlphaPin', '_estimateCostPin', '_estimateDocScope', '_crewUserSet',
                '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', 'estimateApproved', 'approvedBy', 'approvedAt', 'DECEDENT_SERVICES',
                'JOB_STEPS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', '_estimateDocTier'],
         stubs: { document: dom, currentEstimate: saved ? { jobId: 2, fixedPrice: true } : null,

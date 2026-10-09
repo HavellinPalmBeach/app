@@ -297,6 +297,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       probatePackageCardHtml: 'the row\'s label and button',
       noDraftToConfirm: 'the confirming tap\'s refusal',
       estatePackageOrphanDraftNote: 'a package draft named where the card was, once there is none (P22)',
+      estateDeliveryLine: 'the desk\'s line that the instrument and the ledger reached counsel or the trustee (P25, Q43)',
     };
     eq(readers('estatePackageRoute'), Object.keys(ROUTE_READERS).sort(), '⚠⚠ estatePackageRoute is read by exactly these');
     eq(readers('probatePackageAddressee'), ['_pkgGreeting', 'probatePackageBlocker', 'probatePackageCardHtml', 'probatePackageRecipients'],

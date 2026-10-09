@@ -380,7 +380,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // matched. The client's "FMV by Category" therefore dropped the seven categories an
     // estate's value actually sits in, and the rows did not sum to the total above them.
     const p2 = sandbox({
-      fns: ['buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
+      fns: ['_invJob', 'buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
             '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs',
             '_warnPhotoStoreFull', 'resolveValBasis', 'estateValueDate', '_avdDate',
             'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat',

@@ -263,11 +263,11 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       await p.evaluate(() => openJobPlanFor(4702)); await p.waitForTimeout(900);
       await press('#plan-rooms-4702 .rl-row[onclick="openRoomWorkspace(4702,1)"]', 'the Study\'s room card');
       await press('#room-ws .ws-cam[onclick="openFieldCamera(4702,1,\'inventory\')"]', 'the Items camera');
-      await p.waitForFunction(() => { const s = document.querySelector('#field-cam .fc-shutter'); return s && !s.disabled; }, null, { timeout: 8000 }).catch(() => {});
-      await press('#field-cam .fc-shutter', 'the shutter (an item)');
+      await p.waitForFunction(() => { const s = document.querySelector('#field-cam .fc-shutter:not(.fc-closeup)'); return s && !s.disabled; }, null, { timeout: 8000 }).catch(() => {});
+      await press('#field-cam .fc-shutter:not(.fc-closeup)', 'the shutter (an item)');
       await p.waitForTimeout(1500);
-      await press('#field-cam button[onclick="fieldCamToggleDetail()"]', '+ Detail of last');
-      await press('#field-cam .fc-shutter', 'the shutter (a detail of it)');
+      // ⚠ RESTATED (P25, Q41): a close-up is one press of its own shutter, Close-up, not the toggle and then the shutter.
+      await press('#field-cam .fc-closeup', 'Close-up (a detail of it)');
       await p.waitForTimeout(2500);
       await press('#field-cam .fc-done', 'Done');
       const shots = await p.evaluate(() => (_photoRefs[4702] || []).map((r) => ({ id: r.stableId, label: r.label, status: r.status })));
@@ -289,12 +289,11 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       lacks(await txt('#plan-rooms-4702'), 'not saved', '⚠⚠ and the room card stops reading "not saved"');
       // A second failed detail, binned.
       await press('#room-ws .ws-cam[onclick="openFieldCamera(4702,1,\'inventory\')"]', 'the Items camera again');
-      await p.waitForFunction(() => { const s = document.querySelector('#field-cam .fc-shutter'); return s && !s.disabled; }, null, { timeout: 8000 }).catch(() => {});
-      await press('#field-cam .fc-shutter', 'the shutter (a second item, with a signal)');
+      await p.waitForFunction(() => { const s = document.querySelector('#field-cam .fc-shutter:not(.fc-closeup)'); return s && !s.disabled; }, null, { timeout: 8000 }).catch(() => {});
+      await press('#field-cam .fc-shutter:not(.fc-closeup)', 'the shutter (a second item, with a signal)');
       await p.waitForTimeout(1500);
       net.upload = 'abort';
-      await press('#field-cam button[onclick="fieldCamToggleDetail()"]', '+ Detail of last');
-      await press('#field-cam .fc-shutter', 'the shutter (its detail, with no signal)');
+      await press('#field-cam .fc-closeup', 'Close-up (its detail, with no signal)');
       await p.waitForTimeout(2500);
       await press('#field-cam .fc-done', 'Done');
       const det2 = await p.evaluate(() => ((_photoRefs[4702] || []).filter((r) => r.label === 'detail' && r.status === 'failed')[0] || {}).stableId);

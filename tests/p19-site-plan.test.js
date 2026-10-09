@@ -25,13 +25,13 @@ function attempt(f) { try { return { ok: true, val: f() }; } catch (e) { return 
 // Live source of one function: comment lines stripped (a needle must not match the comment that explains it).
 const live = (name) => fn(name).split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n');
 
-const CTX_FNS = ['planTaskCtx', 'jobOnProbateTrack', 'planTasksFor', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake',
+const CTX_FNS = ['planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'planTasksFor', 'invFiduciaryMode', 'isDecedentJob', 'firearmsFlaggedAtIntake',
   'houseFlagsOf', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'docTierScope', 'docTierScopeMirror',
   'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef'];
-const CTX_VARS = ['PLAN_TASKS', 'JOB_ADMIN_TASKS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
+const CTX_VARS = ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'PLAN_TASKS', 'JOB_ADMIN_TASKS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
   'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DOC_SCOPES'];
 // planDerivedLines and what it reads, as job-desk-scope lifts it, plus the P19 answers it now asks.
-const DERIVED_FNS = ['planDerivedLines', 'prepVendorsConfirmed', 'planDerivedHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+const DERIVED_FNS = ['invPrimaryDoc', 'invDocContractBlock', 'probatePackageDocs', 'estatePackageRoute', 'estateDeliveryLine', 'proceedsReceivedLine', 'derivedLinesHtml', 'logisticsLineOn', 'planTaskApplies', 'planDerivedLines', 'prepVendorsConfirmed', 'planDerivedHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
   'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf',
   'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal',
   'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef',
@@ -39,7 +39,7 @@ const DERIVED_FNS = ['planDerivedLines', 'prepVendorsConfirmed', 'planDerivedHtm
   'estateAuthority', 'estateTaxReturn', '_ymdLocal', 'fmtDate2', 'esc', 'escLines', 'jobListEntries', 'jobFiduciaries', 'signedRecordsOf',
   'siteFindLines', 'siteFindsOf', 'siteFindDefaultHolder', 'willDepositDue',
   'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine'];
-const DERIVED_VARS = ['DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
+const DERIVED_VARS = ['PROBATE_PKG_TITLES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
   'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
   'JOB_STEPS', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS', 'WILL_DEPOSIT_DAYS', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS'];
 const DERIVED_STUBS = () => ({ isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [], stagePaidTotal: () => 0,
@@ -58,29 +58,33 @@ const FIND_VARS = ['JOB_RECORD_LISTS', 'SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_B
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 1 ─────────────────────────────────────────────────────────────────────
+  // ⚠ RESTATED (P25, Q43; Anthony, 2026-10-09), NOT WEAKENED: `delivered records` left every trustee's list and `served
+  // filed accounting` the court's. Delivering the schedule and the records is what the trust package records (one derived
+  // line, estateDeliveryLine, driven in p25-field.test.js); serving, filing and the accounting are counsel's acts. Which
+  // deliverable checks the tier and the matter decide is unchanged and asserted below.
   group('D3 — the trustee\'s list, and the court\'s without its sign-off box: pinned cases');
   {
     const c = sandbox({ fns: CTX_FNS, vars: CTX_VARS, stubs: { isFormalDoc: () => false } });
     const admin = (job) => c.planTasksFor(c.JOB_ADMIN_TASKS, null, c.planTaskCtx(job, { svc: job.svc })).map((t) => t.key);
     const tt = (job) => admin(job).filter((k) => k.indexOf('tt_') === 0).map((k) => k.slice(3)).join(' ');
     const ct = (job) => admin(job).filter((k) => k.indexOf('ct_') === 0).map((k) => k.slice(3)).join(' ');
-    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'values' }), 'schedule excluded delivered records',
+    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'values' }), 'schedule excluded',
        'a trust at Inventory with values: the schedule checked, other property excluded, the schedule and the records delivered');
-    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'appraisals' }), 'schedule appraisals excluded delivered records',
+    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'appraisals' }), 'schedule appraisals excluded',
        'at Inventory + appraisals the reports are ours to attach as well');
-    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'contents' }), 'excluded delivered records',
+    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'contents' }), 'excluded',
        'on a contents list we state no values, so nothing asks us to verify one');
-    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'none' }), 'delivered records',
+    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'none' }), '',
        'at None the two deliverable checks and the exclusion are gone; delivery and the accounting records stay');
-    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'contents', appraisers: [{ id: 1 }] }), 'appraisals excluded delivered records',
+    eq(tt({ svc: 'cleanout', matterType: 'trust', docTier: 'contents', appraisers: [{ id: 1 }] }), 'appraisals excluded',
        '⚠ an appraiser on the record brings the attach box back at any tier, as on the court list');
-    eq(tt({ svc: 'probate', matterType: 'trust', docTier: 'values' }), 'schedule excluded delivered records',
+    eq(tt({ svc: 'probate', matterType: 'trust', docTier: 'values' }), 'schedule excluded',
        'a Probate service recorded as a trust administration gets the same list');
-    eq(tt({ svc: 'cleanout', matterType: 'trust' }), 'schedule excluded delivered records',
+    eq(tt({ svc: 'cleanout', matterType: 'trust' }), 'schedule excluded',
        'an unanswered tier reads as Inventory with values (the migration\'s map), as the court list does');
-    eq(tt({ svc: 'cleanout', matterType: 'both', docTier: 'appraisals' }), 'schedule excluded delivered records',
+    eq(tt({ svc: 'cleanout', matterType: 'both', docTier: 'appraisals' }), 'schedule excluded',
        '⚠ a pour-over at the top tier: no second appraisals box — the court list already asks it');
-    eq(ct({ svc: 'cleanout', matterType: 'both', docTier: 'appraisals' }), 'inventory appraisals nonprobate served filed accounting',
+    eq(ct({ svc: 'cleanout', matterType: 'both', docTier: 'appraisals' }), 'inventory appraisals nonprobate',
        'and the court list beside it, which does');
     ['', 'probate', 'neither'].forEach((m) => {
       eq(tt({ svc: 'probate', matterType: m || undefined, docTier: 'values' }), '', 'a probate service recorded ' + (m || 'unanswered') + ' gets no trustee\'s list');
@@ -89,19 +93,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['downsizing', 'downsizing_move', 'home_cleanout', 'prep'].forEach((svc) => {
       eq(tt({ svc: svc, matterType: 'trust', docTier: 'appraisals' }), '', svc + ' gets none even with a trust matter written onto it');
     });
-    eq(ct({ svc: 'probate' }), 'inventory nonprobate served filed accounting', 'the court list, without the PR\'s sign-off box');
+    eq(ct({ svc: 'probate' }), 'inventory nonprobate', 'the court list, without the PR\'s sign-off box');
     eq(admin({ svc: 'cleanout', matterType: 'trust', docTier: 'values' }).slice(-1)[0], 'rec_archived', 'the archive box still closes the card');
 
     const tasks = c.JOB_ADMIN_TASKS.filter((t) => t.key.indexOf('tt_') === 0);
-    eq(tasks.length, 5, 'five trustee\'s boxes');
+    eq(tasks.length, 3, 'three trustee\'s boxes (P25, Q43: the schedule and the records delivered are the trust package, a derived line)');
     tasks.forEach((t) => {
       eq(t.sec, 'Trust administration', t.key + ' sits under "Trust administration"');
       ok(!/court|733\.604|\bPR\b/i.test(t.sec + ' ' + t.label), t.key + ' names no court, no §733.604 and no PR');
     });
     ok(!c.JOB_ADMIN_TASKS.some((t) => t.key === 'ct_pr_signoff'), '⚠ ct_pr_signoff is deleted');
     ok(!c.JOB_ADMIN_TASKS.some((t) => /sign-?off/i.test(t.key + ' ' + t.label)), '⚠⚠ and no sign-off box on either list: the signed ledger is the record');
-    has(c.JOB_ADMIN_TASKS.filter((t) => t.key === 'tt_records')[0].label, '§736.08135', 'the records box names the trustee\'s accounting statute');
-    has(c.JOB_ADMIN_TASKS.filter((t) => t.key === 'tt_records')[0].label, 'sale proceeds, donations, disposal costs', 'and what the records are');
+    ok(!c.JOB_ADMIN_TASKS.some((t) => t.key === 'tt_records' || t.key === 'tt_delivered'), '⚠ the delivery boxes are gone: the trust package records it (P25, Q43)');
   }
 
   // ── 2 ─────────────────────────────────────────────────────────────────────
@@ -128,11 +131,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const tag = svc + '/' + (m || '-') + '/' + (t || '-') + (appr ? '/appr' : '');
       n++;
       const hasTT = a.some((k) => k.indexOf('tt_') === 0), hasCT = a.some((k) => k.indexOf('ct_') === 0);
-      if (hasTT !== trust) bad.push(tag + ': trustee\'s list ' + hasTT);
-      if (hasCT !== probate) bad.push(tag + ': court list ' + hasCT);
+      // ⚠ RESTATED (P25, Q43): at None nothing on either list is Havellin's to tick any more (serving, filing, the accounting
+      // and the deliveries are counsel's acts or the package's record), so a list may be empty on its own track. The rule
+      // that stays is the one that matters: neither list ever renders off its track, and on the track every tier with a
+      // deliverable asks it (the exact lists are pinned in the cases above).
+      if (hasTT && !trust) bad.push(tag + ': trustee\'s list off its track');
+      if (hasCT && !probate) bad.push(tag + ': court list off its track');
+      if (trust && t !== 'none' && !hasTT) bad.push(tag + ': trustee\'s list missing');
+      if (probate && t !== 'none' && !hasCT) bad.push(tag + ': court list missing');
       if ((p.indexOf('trustee_authority') >= 0) !== trust) bad.push(tag + ': trustee_authority');
       if ((p.indexOf('pr_authority') >= 0) !== probate) bad.push(tag + ': pr_authority');
-      if (trust && (a.indexOf('tt_delivered') < 0 || a.indexOf('tt_records') < 0)) bad.push(tag + ': delivery or records missing');
+      if (a.indexOf('tt_delivered') >= 0 || a.indexOf('tt_records') >= 0) bad.push(tag + ': a delivery box (the trust package records it, P25 Q43)');
       const asks = (a.indexOf('ct_appraisals') >= 0 ? 1 : 0) + (a.indexOf('tt_appraisals') >= 0 ? 1 : 0);
       if (asks > 1) bad.push(tag + ': the appraisals asked twice');
       // An appraiser on the record is attached on a trust exactly where it would be on a probate estate.
@@ -238,7 +247,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 7 ─────────────────────────────────────────────────────────────────────
   group('D4 — chain of custody is mandatory on the trust track, as on the probate track');
   {
-    const PLAN_FNS = ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
+    const PLAN_FNS = ['derivedLinesHtml', 'planTaskApplies', 'renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
       'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'prepVendorsConfirmed',
       'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
       'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', '_planRoomListHtml',
@@ -251,7 +260,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal',
       'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope',
       'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'];
-    const PLAN_VARS = ['DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS',
+    const PLAN_VARS = ['PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS',
       'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
       'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES',
       'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS'];

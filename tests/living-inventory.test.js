@@ -963,7 +963,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ── AND THE APP ACTUALLY SENDS IT — the join a source check cannot see. A build that derives
     // the flag and never puts it on the payload contains every string a grep would look for.
     const pay = sandbox({
-      fns: ['buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
+      fns: ['_invJob', 'buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
             '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs', '_warnPhotoStoreFull',
             'resolveValBasis', 'estateValueDate', '_avdDate', 'invIsFirearm', 'invIsMAIV',
             'invMAIVCategory', 'invMAIVDefaultCat', 'invFiduciaryMode', 'isDecedentJob',
