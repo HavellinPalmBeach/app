@@ -438,7 +438,8 @@ const PARTNERS = [{ uid: 'u-ann', partner_name: 'Ann Lowe', partner_type: 'Estat
       await p.waitForTimeout(800);
       const plan = await txt('#panel-job-plan');
       // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; this read "site management fee".
-      has(plan, 'Havellin’s 30% Home Sale Preparation Fee is billed on the actual vendor spend logged here', '⚠ the budget card names the Home Sale Preparation Fee');
+      // ⚠ RESTATED (P25, Q52; Anthony, 2026-10-09: "quotes, then trued"): the prep fee's basis reads what the app bills, the quotes recorded, updated if an invoice differs.
+      has(plan, 'Havellin’s 30% Home Sale Preparation Fee is billed on the quotes recorded here: update a quote when the vendor’s invoice differs', '⚠ the budget card names the Home Sale Preparation Fee');
       has(plan, 'Havellin\'s 30% Home Sale Preparation Fee is calculated on these actuals', 'and the sourcing card');
       lacks(plan, 'GC / Site', 'not a GC fee');
       // The referral leaderboard.

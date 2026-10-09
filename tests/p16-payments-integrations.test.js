@@ -360,7 +360,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('B5(c) · the invoices read what counts: a voided cheque is not money received');
   {
     // The real invoice, over the real payment helpers — the "received" row and the final's balance.
-    const IFNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine',
+    const IFNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine',
       'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift',
       'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs',
@@ -368,7 +368,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'discountOnLabor', 'estFixedFee',
       'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds',
       'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'agrBillingRates', 'estDeclutterHrs', 'escLines', 'roundCents', 'fmtHrs'];
-    const IVARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    const IVARS = ['PREP_FEE_BASIS_SHORT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
       'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
     const EST = { jobId: 1, tcFee: 12000, psFee: 6000, pkgCost: 1940, smf: 0, prepFee: 0, havellinTotal: 19940, havellinTotalFull: 19940,
@@ -749,7 +749,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal',
         'paymentCounts', 'depositPaidTotal', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'paymentLive', 'isRefundRecord',
         'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', '_localDateOf', '_ymdLocal', 'finalCrewOnlyWarn', 'agrBillingRates', 'fmt', 'estDeclutterHrs', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'],
-      vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
+      vars: ['PREP_FEE_BASIS_SHORT', 'JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual', REQUIRE_WALKTHROUGH_NOTES: false } });
     const rj = Object.assign({ name: 'Butler', created: 'Sep 8, 2026', svc: 'cleanout', status: 'won', walkthrough: '2020-01-01', approved: true, won: true,
       estimateSentDate: 'Sep 8, 2026', agrApproved: true, agrApprovedBy: 'Anthony Graziano', agrSignedAt: '2026-09-28' }, j);

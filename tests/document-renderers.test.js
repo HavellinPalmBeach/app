@@ -97,18 +97,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // EST_TOLERANCE_PCT so the invoice row, the change order modal and this gate cannot
     // drift apart. State the REQUIREMENT: the gate is final-only, needs hours, and measures
     // against the shared constant rather than a literal of its own.
-    has(inv, "requiresApproval: !_noHours && (stage === 'final') && (_variancePct > EST_TOLERANCE_PCT)",
+    // RESTATED (P25, Q49): a walkaway's work-done final is not measured against the estimate (driven in p25-papers.test.js).
+    has(inv, "requiresApproval: !_noHours && !_walkaway && (stage === 'final') && (_variancePct > EST_TOLERANCE_PCT)",
       'and approval is a separate question, final-only, outside ±15%');
     // ⚠ RESTATED 2026-09-29 (audit P10): the no-hours test is `finalAwaitsHours`, shared with the rail so
     // a final nobody can issue is not offered for View/Print. Same exclusions, one place.
-    has(inv, "var _noHours = (stage === 'final') && finalAwaitsHours(job, est, actTC + actPS)",
+    has(inv, "var _noHours = (stage === 'final') && !_walkaway && finalAwaitsHours(job, est, actTC + actPS)",   // RESTATED (P25, Q49)
       'the no-hours test is the shared definition');
     const _fah = fn('finalAwaitsHours');
     has(_fah, 'est.fixedPrice', 'which excludes fixed price …');
     has(_fah, 'estimateIsFeeOnly(est, job)', '… and fee-only, which bill no hours at all');
     has(inv, 'variancePct: _variancePct', 'the variance comes back so the banner can state it');
     has(inv, 'warnHtml: _warnBanner', 'so does the soft under-billing warning');
-    has(inv, 'amtDue: stageAmtDue', 'and the amount, so the mailto cannot re-derive it');
+    has(inv, 'amtDue: _wk ? (_wk.owed > 0 ? _wk.owed : -_wk.due) : stageAmtDue', 'and the amount, so the mailto cannot re-derive it (RESTATED P25, Q49: a walkaway settles)');
 
     // ⚠ THE GATE TRAVELS WITH THE DOCUMENT because it cannot be re-derived cheaply —
     // `requiresApproval` needs `overUnder`, which needs the actual hours, the change

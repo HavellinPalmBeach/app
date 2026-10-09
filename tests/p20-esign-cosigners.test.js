@@ -240,14 +240,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'a co-signer the page carries neither marker for is not reported, and the ones after it still are (esignCoSigners refuses the gap by name)');
     lacks(noComments(fn('esignAnchorsPresent')), "'/", 'no marker string is typed into the measurer: it asks the namer');
     // ⚠⚠ A JOB WITH NO CO-REPRESENTATIVE RENDERS EXACTLY AS IT DID: the two forms, byte for byte against 456d0cb.
-    eq(sha(A.agreementHtml(GOLD_LIVING, GOLD_EST)), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20');
+    // RESTATED (P25, Q34; Anthony, 2026-10-09: "Upon acceptance"): the agreement follows Exhibit A on when the deposit and
+    // the final are due. Put the old timing back and each page is still 456d0cb's byte for byte, so the timing is the only
+    // change (this fixture records no case number, so the Court row Q53 fills stays the blank line).
+    const P25_BACK = [
+      ['Due upon acceptance, on signing this Agreement — Services will not commence until received', 'Due within 7 calendar days of signing — Services will not commence until received'],
+      ['Invoiced after the final property walk-through, from the actual logged hours; due within 7 calendar days of the invoice date</td>', 'Due upon substantial completion, prior to final property walk-through</td>'],
+      ['Due upon acceptance, on signing this Agreement — before any work begins', 'Due upon signing this Agreement — before any work begins'],
+      ['Invoiced after the final property walk-through, from the actual logged hours and the materials used; due within 7 calendar days of the invoice date', 'Due within 7 days of final invoice delivery — reflects actual hours and materials vs. estimate'],
+    ];
+    const p25Back = (h) => P25_BACK.reduce((t, x) => t.split(x[0]).join(x[1]), h);
+    const _std = A.agreementHtml(GOLD_LIVING, GOLD_EST);
+    ok(_std.indexOf(P25_BACK[0][0]) >= 0 && _std.indexOf(P25_BACK[1][0]) >= 0, 'the standard form carries the new deposit and final timing');
+    eq(sha(p25Back(_std)), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20 but for that timing');
     // RESTATED 2026-10-05 (P21; Anthony's answer to Q30): the signature page's sentence names who signs before the work
     // begins ("until the Client and Havellin have signed") where it counted "both signatures". Put the old words back and
     // the page is still 456d0cb's byte for byte, so that sentence is the only change and nothing else moved.
     const _q30 = A.probateAgreementHtml(GOLD_PROBATE, GOLD_EST);
     const _q30New = 'No work will begin until the Client and Havellin have signed and the deposit has been received.';
     eq(count(_q30, _q30New), 1, 'the estate form carries the new sentence once');
-    eq(sha(_q30.replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
+    ok(_q30.indexOf(P25_BACK[2][0]) >= 0 && _q30.indexOf(P25_BACK[3][0]) >= 0, 'the estate form carries the new deposit and final timing');
+    eq(sha(p25Back(_q30).replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
        '⚠⚠ the estate form with no co-representative, byte for byte as before P20 but for that sentence');
   });
 

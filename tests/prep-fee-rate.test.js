@@ -95,7 +95,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
               'paymentSplit', 'estimateIsFeeOnly', 'estDeclutterHrs', 'clientJobPlanSection', '_cePhases',
               'materialsBasisNote', 'materialsPackageQuoted', 'vendorEstimateNote', 'vendorFeeNote', '_pctWords',
               'conciergePhones', 'conciergePhonesText', 'prepLineTCHrs', 'coordHrsFor', 'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'roundCents', 'fmtHrs'],
-        vars: ['CE_FOUND_PAPERS_TXT', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
+        vars: ['PREP_FEE_BASIS_TXT', 'CE_FOUND_PAPERS_TXT', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'COORD_TOUCHES',
                'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
       });
@@ -108,8 +108,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ce35 = at(0.35, (c) => c.buildPrepEstimateBody(EST, JOB));
     has(ce30, '(30% of vendor spend)', 'at 0.30 the fee row reads 30%');
     has(ce35, '(35% of vendor spend)', '⚠ and at 0.35 it reads 35% — the row follows the rate');
-    has(ce30, 'The final fee is 30% of actual vendor spend', 'the note reads 30%');
-    has(ce35, 'The final fee is 35% of actual vendor spend', '⚠ …and follows too');
+    has(ce30, 'The fee is 30% of the vendor quotes recorded', 'the note reads 30%'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(ce35, 'The fee is 35% of the vendor quotes recorded', '⚠ …and follows too'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(ce35, '30%', '⚠⚠ NOTHING on a 35% estimate still says 30%');
 
     // The narrative paragraph, which is prose the client reads first.

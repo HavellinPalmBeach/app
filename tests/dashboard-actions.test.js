@@ -50,7 +50,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docSentAt', 'docKeyFor',
       // Slice 6: the rail reads the signature RECORD, not the boolean.
       'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', 'isAgreementSent', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estimateEditBlocker', 'priceChangeBlocker', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'esignFiledCopies', 'agreementHandOverDraftNote'],
-    vars: ['JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
+    vars: ['PREP_FEE_BASIS_SHORT', 'JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY',
       'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
       'DECEDENT_SERVICES', 'JOB_STEPS', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'],
@@ -255,14 +255,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ But the CC to agreements@ on what the CLIENT is sent is a different thing and
     // stays: that is the firm's own record of what went out, and it was a defect that it
     // was ever missing.
-    has(src, "cc: function () { return DEPT_EMAILS.agreements; },",
-      'the client-facing send still copies agreements@');
+    has(src, "cc: function (spec) { return docCcLine(spec && spec.job, spec && spec.to, DEPT_EMAILS.agreements); },",
+      'the client-facing send still copies agreements@ (RESTATED P25, Q37: after the co-representatives)');
     // It is the registry that carries it now, and `docSend` reads `spec.cfg.cc()` — so
     // every document CCs the department that owns it, by construction. The estimate has
     // always CC'd estimates@ and the agreement never did, which was the defect.
-    has(src, 'to: spec.to, cc: spec.cfg.cc(),', 'through the one send path, which reads the registry');
+    has(src, 'to: spec.to, cc: spec.cfg.cc(spec),', 'through the one send path, which reads the registry');
     ['estimates', 'agreements', 'billing'].forEach((d) =>
-      has(src, `cc: function () { return DEPT_EMAILS.${d}; },`, `${d}@ is CC'd on its own document`));
+      has(src, `cc: function (spec) { return docCcLine(spec && spec.job, spec && spec.to, DEPT_EMAILS.${d}); },`, `${d}@ is CC'd on its own document`));
   }
 
   // ───────────────────────────────────────────────────────────────────────────

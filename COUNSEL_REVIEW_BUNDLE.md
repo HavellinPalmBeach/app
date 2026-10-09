@@ -404,6 +404,26 @@ do not open the estate's legal file."*
 **The question.** Is handing an original will to the representative, where no attorney is recorded, consistent with
 §732.901's custodian duty (D9), and is *"as Florida law requires"* the right level of reference on a client document?
 
+### A18. Exhibit A on a probate estate — counsel files; the representatives direct together ⚠ NEW P25 (2026-10-09)
+
+**What changed (Anthony, 2026-10-09: *"Reword it"*).** Exhibit A (the client estimate attached to the estate agreement)
+promised *"the whole package served on interested parties and filed within the statutory deadline"* and titled its last
+stage *"Close-Out & Court Filing"*, while §2.1 excludes court filings. It now reads *"…and the whole package delivered to the
+estate attorney in time for the §733.604 filing; counsel serves and files it"* (on a contents-list engagement: *"The
+photographed, room-by-room list is delivered to counsel in time for the §733.604 filing, in a form their office can value;
+counsel serves and files it"*), the stage is *"Close-Out & Court Inventory"*, and its outcome line says *"the inventory is
+delivered to the estate attorney for filing"* where it said *"the filing is complete"*. The app now also flags, internally,
+an estimate whose plan ends after the §733.604 deadline.
+
+Where co-representatives are recorded, *"we take direction from you alone and nothing is released to anyone without your
+written authority"* reads *"we take direction from the representatives together and nothing is released to anyone without
+the written authority of each of them"* (and the same in the line on interested parties), matching D7.
+
+**The question.** (1) Is *"in time for the §733.604 filing"* a promise Havellin should make, given that the appraisals it
+depends on are third parties' and counsel may seek an extension? Would *"in time for counsel to file within the §733.604
+period, or any extension counsel obtains"* be safer? (2) With co-representatives, is *"together"* right, or should it allow
+for an instrument or order that lets one act alone?
+
 ## B. Standard (living-client) services agreement
 
 ### B1. Two confidentiality standards in one contract
@@ -725,6 +745,54 @@ hours. Both forms now carry one sentence wherever time is billed, never on a fix
 **The question.** Is the sentence enough as written, or should it say how a part of a half hour is treated (the app
 refuses to log one, so a person records the half hour they worked)?
 
+### B13. When the deposit and the final are due — both forms ⚠ NEW P25 (2026-10-09)
+
+**What changed (Anthony, 2026-10-09: the deposit is due upon acceptance; the agreement follows Exhibit A).** The packet
+disagreed with itself: Exhibit A said the deposit was due upon acceptance and the final *"upon completion"*; the standard
+form's §3.2 said the deposit was *"Due within 7 calendar days of signing"* and the final *"Due upon substantial completion,
+prior to final property walk-through"*; the estate form's §3.3 said *"Due upon signing this Agreement — before any work
+begins"* and *"Due within 7 days of final invoice delivery"*. Both forms now read, in one sentence each:
+- Deposit: **"Due upon acceptance, on signing this Agreement"** (standard: *"— Services will not commence until received"*;
+  estate: *"— before any work begins"*).
+- Final: **"Invoiced after the final property walk-through, from the actual logged hours; due within 7 calendar days of the
+  invoice date"** (hourly; the estate form adds *"and the materials used"*), or *"…, completing the fixed price; due within 7
+  calendar days of the invoice date"* on a fixed price (with the prep fee and change orders where they apply).
+- Exhibit A's final row: *"Due after the final walk-through"*.
+
+**The question.** Does *"due upon acceptance, on signing"* with *"will not commence until received"* create any gap (signed
+but unpaid) that §12.4 / §8.1's deposit-earned-on-signature language should address? Is seven calendar days from the invoice
+date the right term, with the final walk-through as the trigger for invoicing?
+
+### B14. The Home Sale Preparation Fee is measured on the vendor quotes recorded — both forms ⚠ NEW P25 (2026-10-09)
+
+**What changed (Anthony, 2026-10-09: *"Quotes, then trued"*).** Every document said the 30% fee was charged on *"actual
+vendor spend"* or *"what the preparation vendors actually invoice"*, while the invoices have always billed it on each vendor's
+quote as recorded on the job, updated when the vendor's invoice differs. The documents now say what the app does:
+- Standard §3.5: *"…equal to thirty percent (30%) of the total third-party vendor costs managed under this Agreement,
+  **measured on the vendor quotes recorded, updated if a vendor’s invoice differs**."*
+- Both forms' payment notes: *"That fee follows **the vendor quotes recorded, updated if a vendor’s invoice differs**, so the
+  midpoint and final payments are adjusted to it."* (it said *"…follows what the preparation vendors actually invoice, so
+  the midpoint and final payments are adjusted to the actual amount"*).
+- The estate form's fixed-fee paragraph and final row, the change-order forms (*"charged on its quote as recorded, updated if
+  its invoice differs"*), the estimate's terms and the invoices carry the same words.
+
+**The question.** Is *"quotes recorded, updated if an invoice differs"* precise enough for a fee charged on someone else's
+costs, or should the forms say the fee is trued to the invoice at the final, and that the client may see the vendor's invoice
+on request?
+
+### B15. A walkaway's final invoice, and a refund above what is due — both hourly clauses ⚠ NEW P25 (2026-10-09)
+
+**What changed (Anthony, 2026-10-09: *"Fix both"*).** Standard §12.4 and estate §8.1 promise, on an hourly termination, a final
+invoice for the services performed, the deposit applied against it and any excess refunded. The app produced no such invoice. It
+now does: on a job closed with the deposit retained, the final invoice bills the hours worked and the materials delivered, takes
+off everything received and ends under *"Settlement — the engagement ended early"* with *"Balance Due"*, *"Refund Due to You"* or
+*"Nothing Further Is Due"*, the deposit kept where it exceeds the work done. A refund of more than the computed amount (for
+example after Havellin's uncured breach, or as goodwill) can be recorded with a written reason; on a fixed price, which keeps its
+stage earn-out and computes nothing due, a refund is recorded the same way.
+
+**The question.** Same as the open item on §12.4/§8.1 (*Waiting on Anthony*): does the final for the work done, with the
+deposit as the floor, match the clause as written? Should the clause name the final invoice as the settlement document?
+
 ---
 
 ## C. Estate Firearms Protocol
@@ -815,6 +883,31 @@ person the representative names."*
 **The question.** (1) Does C1's chain hold where the dealer acts as the transfer agent for an heir rather than as
 buyer or consignee? (2) Is a dealer transfer required for a distribution to an heir, or only the firm's chosen
 practice? (3) Should the client-facing sentence change as proposed?
+
+### C7. The release request as the written transport authority, under one initial ⚠ NEW P25 (2026-10-09) · PRIORITY 3
+
+**What changed (Anthony, 2026-10-09: *"I don't think every line needs an initial. Just one for the batch"*).** C1 lets the
+named principal carry a non-NFA firearm to a dealer under written authority *"naming each firearm by serial and the receiving
+dealer"*, and the request said that authority was given *"separately in writing"*. No such paper existed in the app: the gate
+read the request's own approval. The request now is that paper. Each firearm's line prints *"Serial <n> · to <dealer>, a
+licensed dealer"* (or *"through"* for a transfer to a person; *"licensed dealer not named yet"*), and a block under the table
+reads:
+
+> *"Firearms: written authority. <N> firearms are on this list. Every one goes to a licensed dealer, named by you on counsel's
+> advice. Your initial below, with your signature at the foot, is your written authority for Havellin's named principal to
+> transport each non-NFA firearm listed here, by the serial and to the licensed dealer printed against it, directly to that
+> dealer. Title stays with <the Estate of …> throughout; Havellin takes no ownership of any firearm."* — then the NFA sentence
+> where one is listed, *"<n> of them have no serial or no dealer recorded yet, and are not covered for transport until both are
+> recorded on a request you sign"*, a table of Ref, Firearm, Serial and Licensed dealer, and *"Initial once for all <N>
+> firearms above: ______"* (with co-representatives: *"with every signature at the foot"*).
+
+A firearm going to a person through a dealer is now receipted by the dealer, not the person: the desk files *"the dealer's
+receipt"* for it, and no beneficiary receipt (D8) is printed for it.
+
+**The question.** (1) Does one initial over a listed batch, with the signature, satisfy C1's *"naming each firearm by serial and
+the receiving dealer"*? (2) Is the dealer's acknowledgement the right receipt for a firearm the dealer transfers to an heir (C6),
+or should the heir's receipt from the dealer also be kept? (3) Known gap: a serial recorded after the request was signed
+satisfies the app's gate without being on the signed paper; should a fresh request be required?
 
 ---
 
@@ -1030,6 +1123,21 @@ schedule is not held at DRAFT for it); and where the engagement gives valuation 
    appraisal *by item, without a figure* amount to an opinion of value?
 4. On a living client's job the figure reaches the client's CSV and workbook. Does the standard agreement need a sentence
    that these are estimates for planning a sale, not appraisals?
+
+### D14. A living client signs the Contents Record, not a ledger ⚠ NEW P25 (2026-10-09)
+
+**What changed (Anthony, 2026-10-09: *"One paper"*).** A living client was asked to sign both a Disposition Ledger and the
+Contents Record at close-out. Now the Contents Record carries the only sign-off: *"Sign-off. Reviewed and accepted as the record
+of what stayed and what left the property, and where each item went."*, a signature line naming the client and a date, withheld
+while any line has no destination. The ledger appears on living work only where something was sold, as the record of what it
+brought, with *"This ledger records what the sold items brought. The Contents Record is the paper the client signs at
+close-out."* and no signature. Exhibit A's close-out line for a living client asks for *"your signature on the Contents Record,
+the record of what stayed and what went"*, and every family-facing paper prints *"Disposed of"* where the desk records
+*"Junk"*. An appraised line (D4) is now one carrying the appraisal's own figure: an appraiser linked with no report no longer
+lets a Court Inventory or Trust Schedule read as appraised.
+
+**The question.** Is *"reviewed and accepted"* the right weight for a living client's sign-off (an acknowledgement, not a
+release of claims)? Should it say anything about items the client took themselves before the work began?
 
 ## E. What is deliberately NOT being asked
 

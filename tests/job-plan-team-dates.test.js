@@ -33,7 +33,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // #7 — THE BAND SAYS WHAT TO DO NEXT, NOT WHAT THE MILESTONE WILL BE CALLED ONCE IT IS DONE
   // ═══════════════════════════════════════════════════════════════════════════
-  const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'depositVoidFlag', 'agreementHandedOverInPerson', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
+  const TL_FNS = ['agrApprovalWithdrawn', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobTimeline', 'prepVendorsConfirmed', 'depositVoidFlag', 'agreementHandedOverInPerson', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'];
@@ -221,8 +221,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const calls = { plan: [], redraw: [], dash: [], filed: [] };
     const A = sandbox({ fns: ['activateOrCycle'],
-                        // P19: a close files the Disposition Ledger to Drive (driven in p19-ledger.test.js); recorded here.
+                        // P19: a close files the Disposition Ledger to Drive (driven in p19-ledger.test.js); recorded here. P25: and
+                        // the Contents Record (each decides for itself whether its paper applies; p25-papers.test.js).
                         stubs: { saveJobs: () => {}, syncJobToSheets: () => {}, fileDispositionLedger: (id, o) => { calls.filed.push([id, !!(o && o.auto)]); },
+                                 fileContentsRecord: (id, o) => { calls.filed.push(['contents', id, !!(o && o.auto)]); },
                                  applyJobTransition: (j) => { j.status = A.__to; return true; },
                                  openJobPlanFor: (id) => { calls.plan.push(id); return A.__planOk; },
                                  _dashRedraw: (id) => { calls.redraw.push(id); return true; },
@@ -243,7 +245,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const before = calls.plan.length;
     A.activateOrCycle(9);   // closed -> active (Re-open)
     eq(calls.plan.length, before + 1, 're-opening a closed job starts it again, so it lands on the plan too');
-    eq(calls.filed, [[8, true]], 'P19: the close, and only the close, files the Disposition Ledger, in the background');
+    // RESTATED (P25, Q51): the close also asks the Contents Record to file itself (it stands down on an estate).
+    eq(calls.filed, [[8, true], ['contents', 8, true]], 'P19: the close, and only the close, files the Disposition Ledger and (P25) the Contents Record, in the background');
 
     // openJobPlanFor: the one way onto a client's Job Plan from another screen. DOM-heavy (it
     // presses the real nav), so pinned here and proven in tests/browser/step20.js.
@@ -544,7 +547,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('#6, driven through the real chip row — and repainted IN PLACE when the team or a vendor moves');
   {
     const P = sandbox({ fns: ['planGateChipsHtml', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
-                              'vendorSourcingProgress', '_srcLineKey', 'planVendorsMeta', '_repaintPlanGates', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(LOGI_FNS),
+                              'vendorSourcingProgress', 'prepVendorsConfirmed', '_srcLineKey', 'planVendorsMeta', '_repaintPlanGates', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(LOGI_FNS),
       vars: CREW_VARS.concat(['LOGISTICS_CATEGORIES']),
       stubs: { planDerivedLines: () => [{ key: 'agreement_signed', ok: true, label: 'Agreement signed' }] } });
     const est = { vendors: [{ lid: 'a', type: 'Mover' }], collections: [], prepItems: [] };

@@ -210,10 +210,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ar = fn('printApprovalRequest');
     lacks(ar, 'Havellin does not transport them',
           'the blanket claim is gone from the request');
-    has(ar, 'may transport a non-NFA firearm',
+    // RESTATED (P25, Q35): this request IS the written authority now, under one initial for the batch, so it says so and
+    // lists each firearm by serial and dealer (driven in p25-papers.test.js).
+    has(ar, 'to transport each non-NFA firearm listed here',
         'and the narrower, true claim is in its place');
-    has(ar, 'naming each firearm by serial',
-        'it names the document that makes the carry lawful, not just the permission');
+    has(ar, 'by the serial and to the licensed dealer',
+        'it names what makes the carry lawful, firearm by firearm, not just the permission');
     has(ar, 'does not take custody of an NFA item',
         'and the NFA carve-out is stated where it applies');
 

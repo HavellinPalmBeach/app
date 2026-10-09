@@ -186,7 +186,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(d.getElementById('ec-probate-deadline').value, '2026-11-30', '⚠ a deadline set by hand (an extension the court granted) is never recounted over');
   }
 
-  const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
+  const EC_FNS = ['showEditClient', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
     'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
     'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
     'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -274,7 +274,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ M5 — the Job Plan asks the court questions on a probate matter, and the attorney only where there is one to name');
   {
     const P = sandbox({
-      fns: ['planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coAcceptedHours',
             'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
@@ -324,14 +324,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // M6 / Q12 — THE RECORDER AND THE ACH LINK ASK FOR WHAT IS STILL OWED, OFF THE INVOICE ITSELF
   // ═══════════════════════════════════════════════════════════════════════════
-  const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'isCrewPlaceholder', 'docPartyIdent', '_agrTrustIsParty', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'docSentAt', 'paymentSplit', 'rushScopeLine',
+  const INV_FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'docPartyIdent', '_agrTrustIsParty', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'docSentAt', 'paymentSplit', 'rushScopeLine',
     'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal',
     'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson',
     'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs',
     'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
     'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'paymentCounts', 'paymentLive', 'isRefundRecord',
     'estFixedFee', 'estPrepFeeOnTop', 'estDeclutterHrs', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
-  const INV_VARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+  const INV_VARS = ['PREP_FEE_BASIS_SHORT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
     'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
     'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
   // 80 TC @150 + 60 PS @100 + $1,940 materials = $19,940; the logged hours reproduce it exactly.
@@ -535,7 +535,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(F.finalAwaitsHours(job, EST), false, 'asked with no hours figure, it sums the log itself — the invoice\'s way');
     F.jobLogs = { 1: [] };
     eq(F.finalAwaitsHours(job, EST), true, '…and an empty log is an empty log');
-    has(liveFn('invoiceHtml'), "var _noHours = (stage === 'final') && finalAwaitsHours(job, est, actTC + actPS);",
+    has(liveFn('invoiceHtml'), "var _noHours = (stage === 'final') && !_walkaway && finalAwaitsHours(job, est, actTC + actPS);",   // RESTATED (P25, Q49)
         '⚠ the invoice blocks on the same predicate the rail withholds on, so the two cannot disagree');
     has(liveFn('_jtDocSecondaries'), "d.stage === 'final' && finalAwaitsHours(", 'the strip under the rail asks it');
     has(liveFn('jobTimelineActions'), "_d.stage === 'final' && finalAwaitsHours(", '…and the band\'s tray');
@@ -553,7 +553,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the rail, driven: the retained row names what was kept; Home Prep names its second payment');
   {
     const TL_FNS = ['estimateOutForApproval', '_approvedPriceAbove', 'priceAboveSent', 'priceAboveAcceptance', 'docDraftPending',
-      'agrApprovalWithdrawn', 'jobTimeline', 'jobClosedRefunded', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries',
+      'agrApprovalWithdrawn', 'jobTimeline', 'prepVendorsConfirmed', '_srcLineKey', 'jobPrepLines', 'coPrepVendorLines', 'jobClosedRefunded', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries',
       'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'resolveExecutorAuth', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'jobPaidTotal',
       'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
@@ -561,7 +561,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
       'workingDaysInclusive', 'coWorkingDays', '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf',
       'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt', 'estateAuthority', 'agreementHandOverDraftNote'];
-    const TL_VARS = ['JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS',
+    const TL_VARS = ['PREP_FEE_BASIS_SHORT', 'JT_SHORT', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS',
       'ESIGN_PROVIDERS', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META',
       'ROOM_STATUS_LEGACY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'EXECUTOR_AUTH_OPTIONS'];
     const R = sandbox({ fns: TL_FNS, vars: TL_VARS, stubs: { Intl: global.Intl, _todayStr: () => '2026-09-29' } });
@@ -584,7 +584,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(pr.midpoint_invoiced.label, 'Second invoice sent', '⚠ Home Prep\'s middle invoice row reads Second invoice sent');
     eq(pr.midpoint_received.label, 'Second payment', '…and its payment row Second payment');
     eq(pr.midpoint_received.todo, 'Collect the second payment', '…with the band\'s step in the same words');
-    eq(pr.final_paid.sub, 'Balance of the fee on actual vendor spend', 'its final is the balance of the fee on the vendors\' actual invoices');
+    eq(pr.final_paid.sub, 'Balance of the fee on the vendor quotes recorded', 'its final is the balance of the fee on the vendor quotes recorded'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     const es = rows(JOB1(), EST);
     eq(es.midpoint_invoiced.label, 'Midpoint invoice sent', 'every other service keeps its midpoint');
     eq(es.final_paid.sub, 'Balance of actual hours', '…and an hourly final is the balance of actual hours');

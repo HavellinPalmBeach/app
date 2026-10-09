@@ -65,7 +65,7 @@ function closureLift(roots, stop, stubs) {
     for (const m of body.matchAll(/[(,]\s*([A-Za-z_$][\w$]*)\s*[,)]/g)) if (ALL_FNS.has(m[1]) && !stopSet.has(m[1])) queue.push(['f', m[1]]);
     for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) if (ALL_VARS.has(m[1]) && !stopSet.has(m[1])) queue.push(['v', m[1]]);
   }
-  return sandbox({ fns: [...fns], vars: [...vars], stubs: stubs || {} });
+  return sandbox({ fns: [...fns], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', ...vars], stubs: stubs || {} });
 }
 
 // ── Edit Client, opened and saved the way a browser would (edit-client-intake-rules.test.js's pattern) ──
@@ -94,8 +94,8 @@ const TIER_FNS = ['docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 's
   'docScopeDef', 'docTierWord', 'docScopeWord', 'activeDocScope'];
 const ROUTE_FNS = ['estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval',
   'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor'];
-const TIER_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DOC_SCOPES', 'JOB_STEPS'];
-const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'jobListEntries', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
+const TIER_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DOC_SCOPES', 'JOB_STEPS'];
+const EC_FNS = ['showEditClient', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'jobListEntries', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
   'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
   'docTierOptionsHtml', 'docTierScopeMirror', 'esc', 'onDocGateChange',
   'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -106,7 +106,7 @@ const EC_FNS = ['showEditClient', 'courtRecordRequired', 'courtRecordShown', 'jo
   'canonPersonName', 'executorRoleOptionsHtml', 'dateChainConflicts', 'dateChainFlagHtml', 'intakeAsksHouseContents', 'houseFlagAsked',
   'clientMissingFields', 'readReferralInputs', 'showHouseFlagRows', 'onReferralSourceChange', 'populateReferralPicker',
   '_stampChangedKeys', '_jobTouch', 'docTierChangeNotice', 'followDocTier', 'roundCents', 'fmt', 'propertySaleAsked', 'trustRecordShown', 'executorAuthField', 'coFiduciaryBlockHtml', 'jobListEntries', 'readCoFiduciaryRows', 'saveCoFiduciaryRows', 'estateAuthority', '_coFidRowNums'].concat(TIER_FNS, ROUTE_FNS);
-const EC_VARS = ['EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
+const EC_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'FL_PROBATE_COUNTIES', 'EXECUTOR_AUTH_OPTIONS', 'SVC_LABELS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DECEDENT_SERVICES',
   'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES', 'REFERRAL_SOURCES', 'SVC_ORDER', 'EXECUTOR_ROLES',
   'DEFAULT_CONTRACTORS', 'PERSON_NAME_ALIASES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT',
   '_estimateDocScope', '_estimateDocTier', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'].concat(TIER_VARS);
@@ -197,7 +197,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = [];
     const S = attempt(() => sandbox({ fns: ['saveEstimateAndPreview', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob',
       'matterTypeOf', 'matterDef', 'unscoredRoomNames', 'estimateRepriceRoute', 'roomScoreOf', 'roundCents', 'fmtHrs', 'fmt'].concat(TIER_FNS, ROUTE_FNS),
-      vars: ['ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'].concat(TIER_VARS),
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'].concat(TIER_VARS),
       stubs: { document: d, jobs: [{ id: 7, svc: 'downsizing', name: 'Pat' }], estimateStore: {}, estimateApproved: false,
         currentEstimate: { svc: 'downsizing', havellinTotal: 0, rooms: [] }, showFB: (id, k, m) => said.push({ id, k, m }) } }));
     ok(S.ok, 'the save handler lifts' + (S.ok ? '' : ' — ' + S.err));
@@ -231,7 +231,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays',
       'jobProgress', 'roomStatusNormalize', 'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobProbateCourt', 'courtFromCaseNo', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker',
@@ -239,7 +239,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance',
       '_approvedPriceAbove', 'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'esc', 'dot', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'finalCrewOnlyWarn', 'agreementChipFix', 'jobPaymentsListHtml',
       'probatePackageCardHtml', 'probatePackageBlocker', 'probatePackageAddressee', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'trustRecordShown', 'estateTaxReturnLineHtml', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote', 'photoSharesLine', 'photoSharesOf'];
-    const VARS = ['_driveFolderInFlight', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS',
+    const VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_driveFolderInFlight', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS',
       'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS',
       '_dashNotice', '_jobsWatch', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META',
@@ -314,13 +314,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                   bio: 'First line <i>it</i> & more\nSecond line' };
     const DOC_FNS = ['estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt', 'esc', 'escLines', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob',
       'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays',
-      'paymentSplit', 'clientEstimateHtml', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
+      'paymentSplit', 'clientEstimateHtml', 'docConciergeName', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
       'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted', 'proposedPlanRow', 'estimateDocScope',
       'svcHasDocStep', 'fmtCEDate', '_pctWords', 'docTierOf', 'docTierDef', 'docTierScope', 'approvedEstimateFor', 'estFixedFee',
       'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords',
       'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'matterDef', 'matterTypeOf',
       'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'docScopeDef', 'addWorkingDays', '_ymdLocal', 'roundCents', 'fmtHrs'];
-    const DOC_VARS = ['PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    const DOC_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE',
       'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES'];
     const JOB = { id: 1, hvlId: 'HVL-<b>11</b>', name: 'Marston', svc: 'downsizing', addr: '12 Seabreeze Ln', city: 'Palm Beach',
@@ -357,7 +357,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ce2.ok ? ce2.val : '', 'Rep Email</div><div class="ce-meta-val">j&lt;b&gt;@x.com', 'their email too');
     ['561<b>', 'j<b>@'].forEach((raw) => lacks(ce2.ok ? ce2.val : '', raw, 'the estate estimate never prints ' + raw + ' as markup'));
 
-    const INV_FNS = ['invoiceHtml', 'isCrewPlaceholder', 'docPartyIdent', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
+    const INV_FNS = ['invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'docPartyIdent', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
       'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice',
       'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
       '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs',
@@ -365,7 +365,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'vendorPrimaryCat', 'estimateIsFeeOnly', 'estDeclutterHrs', 'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments',
       'discountOnLabor', 'estTolerancePctTxt', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee',
       'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];
-    const INV_VARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    const INV_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
       'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
     ['deposit', 'midpoint', 'final'].forEach((stage) => {
@@ -404,7 +404,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const mk = (state) => {
       const c = sandbox({ fns: ['followDocTier', 'estimateTierMoved'].concat(TIER_FNS),
-        vars: ['_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS),
+        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS),
         stubs: { estimateApproved: false, estimateSubmitted: false } });
       Object.assign(c, state || {});
       return c;
@@ -482,7 +482,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
                 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
                 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'roundCents', 'fmt'].concat(TIER_FNS),
-          vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
+          vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
                  'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory',
                  'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES', '_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS),
           stubs: { document: domStub({}), calcAll: noop, paintEstimateService: noop, svcTypeChanged: noop, toggleRoom: noop, setRoomState: noop,
@@ -511,7 +511,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const run = (state) => {
       const log = [];
       const r = attempt(() => {
-        const c = sandbox({ fns: ['openEstimateScreen', 'followJobService', 'followDocTier'].concat(TIER_FNS), vars: ['_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS),
+        const c = sandbox({ fns: ['openEstimateScreen', 'followJobService', 'followDocTier'].concat(TIER_FNS), vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_estimateDocScope', '_estimateDocTier'].concat(TIER_VARS),
           stubs: { document: domStub({ 'e-job': { value: '9' }, 'e-svc': { value: ESTATE.svc }, 'est-loading-bar': { style: { display: 'none' } } }),
                    currentEstimate: { jobId: 9 }, jobs: [Object.assign({}, ESTATE, { docTier: 'contents' })],
                    _showDashScreen() {}, calcAll: () => log.push('calc:' + c._estimateDocScope), applyEstimateLock() {},
@@ -603,7 +603,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const S = sandbox({ fns: ['estimateSubmitBlocker', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'matterTypeOf',
       'matterDef', 'invFiduciaryMode', 'unscoredRoomNames', 'estimateNoteGaps', 'roomScoreOf', 'estimateTierMoved', 'docTierFollowNote'].concat(TIER_FNS, ROUTE_FNS),
-      vars: ['ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'REQUIRE_WALKTHROUGH_NOTES'].concat(TIER_VARS) });
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'REQUIRE_WALKTHROUGH_NOTES'].concat(TIER_VARS) });
     const E = (o) => Object.assign({ svc: 'cleanout', havellinTotal: 19450, rooms: [{ name: 'Kitchen', vol: 3, cplx: 3 }], docScope: 'full', docTier: 'values' }, o || {});
     const JOB = Object.assign({}, ESTATE, { docTier: 'contents' });
     const blk = S.estimateSubmitBlocker(E(), JOB);
@@ -645,14 +645,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
   group('The route to reprice an approved estimate is one answer, and every surface that names it reads it');
   {
-    const R = sandbox({ fns: ROUTE_FNS, vars: ['ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'] });
+    const R = sandbox({ fns: ROUTE_FNS, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'] });
     has(R.estimateRepriceRoute({ id: 1, approved: true }, { approved: true }), '✎ Edit estimate', 'approved, packet not out: ✎ Edit estimate');
     has(R.estimateRepriceRoute({ id: 1, approved: true, agrSent: true }, { approved: true }), 'change order', 'the packet out: a change order');
     has(R.estimateRepriceRoute({ id: 1, approved: true, agrSigned: true }, { approved: true }), 'signed the agreement', 'signed: locked, a change order');
     eq(R.estimateRepriceRoute({ id: 1, status: 'pending' }, { submitted: true }), R.ESTIMATE_OUT_FOR_APPROVAL_TXT, 'out for approval: the manager');
     // Build Estimate's save refusal on an approved estimate.
     const said = [];
-    const S = sandbox({ fns: ['saveEstimateAndPreview', 'roundCents', 'fmtHrs', 'fmt'].concat(ROUTE_FNS), vars: ['ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
+    const S = sandbox({ fns: ['saveEstimateAndPreview', 'roundCents', 'fmtHrs', 'fmt'].concat(ROUTE_FNS), vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
       stubs: { document: domStub({ 'e-job': '7' }), jobs: [{ id: 7, approved: true }], estimateStore: { 7: { approved: true } },
                estimateApproved: true, showFB: (id, k, m) => said.push(m) } });
     S.saveEstimateAndPreview();
@@ -713,7 +713,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const V = { vendor_name: 'Acme Hauling', phone: '5615550100', contact_first: 'Andy', contact_last: 'Ramirez', contact_mobile: '5615550199',
                 contact2_first: 'Bea', contact2_last: 'Cole', contact2_email: 'bea@acme.test', _row: 5, category: 'Junk Removal' };
     const mk = (dir) => sandbox({ fns: ['_vendorRefLine', 'resolveJobVendor', 'lookupVendorById', 'vendorIdOf', 'vendorContacts', 'fmtPhoneDisplay', 'esc'],
-      vars: ['VENDOR_CONTACT_SLOTS'], stubs: { vendorDirectory: dir, saveJobs() {} } });
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'VENDOR_CONTACT_SLOTS'], stubs: { vendorDirectory: dir, saveJobs() {} } });
     const line = (dir, rec) => { const a = attempt(() => mk(dir)._vendorRefLine(rec)); return a.ok ? a.val : 'THREW ' + a.err; };
     const h = line([V], { vendorId: 5, vendorName: 'Acme Hauling' });
     lacks(h, 'THREW', 'the line renders' + (h.indexOf('THREW') === 0 ? ' — ' + h : ''));
@@ -736,7 +736,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const worksheet = (est, job) => {
       let out = null;
       const r = attempt(() => sandbox({ fns: ['exportEstimateToDrive', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estDeclutterHrsQuoted', 'prepFeeRate', 'fmt', 'esc', 'estimateDocNames', '_todayStr', '_ymdLocal', 'roundCents', 'fmtHrs'],
-        vars: ['PREP_FEE_RATE'], stubs: { jobs: [job], resolveSubfolderId: (j, name, cb) => cb('F1'),
+        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'PREP_FEE_RATE'], stubs: { jobs: [job], resolveSubfolderId: (j, name, cb) => cb('F1'),
           uploadHtmlToDrive: (folder, name, html) => { out = { name, html }; }, showSyncBadge() {} } }).exportEstimateToDrive(job.id, est));
       return r.ok ? out : { html: 'THREW ' + r.err };
     };
@@ -842,7 +842,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = [];
     const C = attempt(() => {
       const d = domStub({ 'e-svc': 'cleanout', 'e-job': '1' });
-      const c = sandbox({ fns: ['changeEstimateService', 'sameSvcFamily', 'svcFamily', 'isDecedentJob'], vars: ['DECEDENT_SERVICES', 'SVC_LABELS', 'SVC_ORDER', '_svcSelPrev'],
+      const c = sandbox({ fns: ['changeEstimateService', 'sameSvcFamily', 'svcFamily', 'isDecedentJob'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DECEDENT_SERVICES', 'SVC_LABELS', 'SVC_ORDER', '_svcSelPrev'],
         stubs: { document: d, jobs: [{ id: 1, svc: 'prep' }], showFB: (id, k, m) => said.push(m) } });
       c._svcSelPrev = 'prep';
       c.changeEstimateService();
@@ -855,7 +855,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // removeLogisticsLine: vendors are pass-through, so the quote was never billed.
     let msg = '';
     const job = { id: 4, logisticsSourcing: { dumpster: { vendorName: 'Acme', quote: 1200, added: true } } };
-    sandbox({ fns: ['removeLogisticsLine', 'roundCents', 'fmt'], vars: ['LOGISTICS_CATEGORIES'],
+    sandbox({ fns: ['removeLogisticsLine', 'roundCents', 'fmt'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES'],
       stubs: { jobs: [job], confirm: (m) => { msg = m; return false; }, _saveJobEdit() {}, refreshVendorSourcing() {} } }).removeLogisticsLine(4, 'dumpster');
     has(msg, 'Acme comes off it, and its $1,200 quote comes off the vendor costs the invoices list.', '⚠ the confirm says what the quote does');
     lacks(msg, 'no longer billed', 'not that Havellin stops billing what it never billed');
@@ -885,7 +885,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
       'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorContacts', 'fmtPhoneDisplay', 'roundCents', 'fmtHrs'];
-    const s = attempt(() => sandbox({ fns: SRC_FNS, vars: ['LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale',
+    const s = attempt(() => sandbox({ fns: SRC_FNS, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale',
       'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES', 'VENDOR_CONTACT_SLOTS'],
       stubs: { changeOrders: [], jobs: [PREP_JOB], estimateStore: {}, document: domStub({}), contractors: [], vendorDirectory: [] } })
       .renderVendorSourcing(1, PREP_JOB, { svc: 'prep', prepEnabled: true, prepItems: [{ type: 'Staging', cost: 3000, lid: 'st' }], vendors: [] }));
@@ -902,12 +902,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'];
     const EST = { jobId: 1, svc: 'prep', prepEnabled: true, prepCost: 3000, prepFee: 900, declutterTCHrs: 0, tcRate: 150,
       prepItems: [{ type: 'Staging', cost: 3000, lid: 'st' }], vendors: [] };
-    const p = attempt(() => sandbox({ fns: planFns, vars: ['DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
+    const p = attempt(() => sandbox({ fns: planFns, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { jobs: [PREP_JOB], jobLogs: { 1: [] }, jobPlans: {}, jobPlanStore: {}, vendorDirectory: [], contractors: [], changeOrders: [],
                estimateStore: { 1: { estimate: EST } }, _photoRefs: {}, standingFlagsBlock: () => '', _sfHost: () => '',
                renderVendorSourcing: () => '', document: domStub({}) } }).renderPrepJobPlan(1, PREP_JOB, EST));
     ok(p.ok, 'the prep plan renders' + (p.ok ? '' : ' — ' + p.err));
-    has(text(p.ok ? p.val : ''), 'Havellin’s 30% Home Sale Preparation Fee is billed on the actual vendor spend logged here', '⚠ the budget card names the Home Sale Preparation Fee');
+    has(text(p.ok ? p.val : ''), 'Havellin’s 30% Home Sale Preparation Fee is billed on the quotes recorded here', '⚠ the budget card names the Home Sale Preparation Fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(p.ok ? p.val : '', 'GC / Site', 'not a GC fee');
 
     // The vendor card's subtitle on a Home Prep estimate: declutter hours ARE billed.

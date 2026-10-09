@@ -73,7 +73,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('estWorkingDays — ONE proposed length, replacing two that disagreed');
   {
-    const e = sandbox({ fns: ['estWorkingDays'], vars: ['PRODUCTIVE_HRS_PER_DAY'] });
+    const e = sandbox({ fns: ['estWorkingDays'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'PRODUCTIVE_HRS_PER_DAY'] });
 
     eq(e.estWorkingDays({ days: 6, totTC: 40, totPS: 120, psCount: 2 }), 6,
        'a quoted figure wins — it is the number the estimator stood behind');
@@ -102,7 +102,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const S = sandbox({
       fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
-      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
     });
     const EST = { days: 6, svc: 'cleanout' };
     const sched = (job, today) => S.jobSchedule(Object.assign({ id: 7, svc: 'cleanout' }, job), EST, today);
@@ -356,7 +356,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const G = sandbox({
       fns: ['docReadiness', 'docDraftOnly', 'agreementReady', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'fmt', 'roundCents'],
-      vars: ['DOC_READY_WHY'],
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_READY_WHY'],
     });
     const JOB = { id: 7 };
     const DRAFT = { estimate: { jobId: 7 } };
@@ -445,7 +445,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'maybeStartJobsWatch', 'stopJobsWatch', 'calcRECommission', 'formatPropVal', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'coWorkingDays', '_coPaceFix', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',
       // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
       'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote'];
-    const DVARS = ['_driveFolderInFlight', 'PROBATE_PKG_KEY', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
+    const DVARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_ONE_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', '_driveFolderInFlight', 'PROBATE_PKG_KEY', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD',
       'DOC_STAGE_WORD', 'DOC_ACTIONS', 'PRODUCTIVE_HRS_PER_DAY',
       'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
@@ -618,7 +618,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠ the row → document map, and the document in play right now');
   {
-    const M = sandbox({ fns: ['jobStageDoc'], vars: ['JT_ROW_DOC'] });
+    const M = sandbox({ fns: ['jobStageDoc'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'JT_ROW_DOC'] });
     eq(M.jobStageDoc('estimate_built'), { kind: 'estimate', stage: '' }, 'the estimate runs from built…');
     eq(M.jobStageDoc('client_accepted'), { kind: 'estimate', stage: '' }, '…through the client accepting it');
     eq(M.jobStageDoc('agreement_signed'), { kind: 'agreement', stage: '' }, 'the packet through signing');
@@ -640,7 +640,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'docDraftOnly', 'docTitle', 'paymentStageWord', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink',
             '_jtDriveLink', '_jtSendAction', 'docKeyFor', 'docSentAt', 'agreementReady', 'isJobWon',
             'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'esignFiledCopies'],
-      vars: ['JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'ESIGN_PROVIDERS'],
     });
     const REC = { estimate: { jobId: 7 }, approved: true };
 
@@ -722,7 +722,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                               'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents', 'estateAuthority',
                               // P19: the close names an estate's unsigned Disposition Ledger.
                               'ledgerCloseFlag'],
-                        vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
+                        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES'],
                         // ⚠ Closing with no midpoint payment asks first (2026-09-29); this job has none,
                         // and the question is answered yes so the close this check is about happens.
                         stubs: { approvedBy: 'Anthony Graziano', confirm: () => true } });
@@ -818,7 +818,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor',
             'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
             'docSentAt', 'docKeyFor', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'],
-      vars: ['JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'JT_SHORT', 'DOC_STAGE_WORD', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_KIND_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false },
     });
     const JOB = { id: 7, name: 'Butler', svc: 'cleanout', status: 'won', won: true, approved: true,
@@ -884,7 +884,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
         'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix',
         'estateTaxReturnDue', 'estateTaxReturn', 'estateTaxReturnWords', 'esc'],
-      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY', 'ESTATE_TAX_RETURN_WARN_DAYS'],
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY', 'ESTATE_TAX_RETURN_WARN_DAYS'],
       stubs: { fmtDate2: (d) => 'D:' + d },
     });
     const strip = (job, est, today) => {

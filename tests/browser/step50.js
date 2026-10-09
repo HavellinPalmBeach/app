@@ -326,7 +326,9 @@ const SYNC = 'https://script.google.com/macros/s/STEP50/exec';
       const card2 = await settleRows(dash + ' .jt-settle');
       has(card2, 'Refunded (' + await money(s.due) + ')', 'the card shows the refund');
       has(card2, 'Refund due ' + await money(0), 'and nothing more due');
-      eq(await p.locator(dash + ' .jt-settle button[onclick^="openRefundModal("]').count(), 0, 'Record refund is gone');
+      // ⚠ RESTATED (P25, Q49; Anthony, 2026-10-09): a refund above what is due may be recorded, with its reason, while the job
+      // still holds money, so Record refund stays (it went once nothing was due). Above what is due the save asks the reason.
+      eq(await p.locator(dash + ' .jt-settle button[onclick^="openRefundModal("]').count(), 1, 'Record refund stays while the job holds money (a further refund needs its reason)');
       const list = await txt(dash + ' .jt-pays');
       has(list, 'Payments and refunds recorded', 'the list heads itself for both');
       has(list, 'Refund · Cheque · #2201 · to Ellsworth Family Trust', 'and lists the refund');

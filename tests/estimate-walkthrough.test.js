@@ -271,7 +271,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'THE CLAIM IS GONE FROM THE FILE — it was not true of how the work is actually run');
 
     const ctx = sandbox({
-      fns: ['_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
+      fns: ['_cePhases', 'estateDirectionWords', 'jobFiduciaries', 'jobListEntries', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
             'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'invProbateRows', 'estateProceedsHolder'],
       vars: ['CE_FOUND_PAPERS_TXT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES', 'ESTATE_AUTHORITIES'],
       stubs: { isFormalDoc: () => true },
@@ -297,7 +297,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('vendorEstimateNote — the figures are good faith, and the client sees the real bill');
   {
-    const ctx = sandbox({ fns: ['vendorEstimateNote', 'prepFeeRate'], vars: ['PREP_FEE_RATE'] });
+    const ctx = sandbox({ fns: ['vendorEstimateNote', 'prepFeeRate'], vars: ['PREP_FEE_BASIS_TXT', 'PREP_FEE_RATE'] });
     const plain = ctx.vendorEstimateNote();
 
     has(plain, 'good-faith estimates taken at the walkthrough', 'it says what kind of number these are');
@@ -315,8 +315,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // hardcodes the digits is how the agreements went on selling a 15% vendor fee for five
     // weeks after SMF_PCT went to zero.
     const withFee = ctx.vendorEstimateNote({ feeTruesUp: true });
-    has(withFee, 'charged on what these vendors actually bill', 'the prep arm says the fee follows the actuals');
-    has(withFee, 'rather than on these estimates', 'and explicitly not this page\'s figure');
+    has(withFee, 'charged on the vendor quotes recorded, updated if a vendor’s invoice differs', 'the prep arm says what the fee is charged on'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    lacks(withFee, 'actually bill', '⚠ and never that it follows invoices the app does not read'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     // ⚠ SINCE 2026-09-24 THE FEE IS NOT UNDER THIS NOTE: it is a line inside the Havellin Services
     // table, which is the total it counts in. A note that mentioned the fee without saying where it
     // is would send the reader looking for a line that is not in this section.

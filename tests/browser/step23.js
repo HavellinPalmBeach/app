@@ -117,6 +117,10 @@ let b = null;
       reason: await p.evaluate(() => document.getElementById('co-reason').value),
       basis: await text('#co-basis-note'), readout: await text('#co-hrs-note'),
     };
+    // ⚠ P25 (Q54): no reason is pre-picked and Create refuses without one, so a person picks it: Scope addition where the
+    // service offers it, else the first on the service's own list.
+    await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean);
+      s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; s.dispatchEvent(new Event('change')); });
     await p.click('#change-order-modal .btn-p'); await p.waitForTimeout(200);
     seen.coId = await p.evaluate(([id, desc]) => { const c = changeOrders.filter(c => c.jobId === id && c.description === desc).pop(); return c ? c.id : null; }, [id, desc]);
     seen.closed = await p.evaluate(() => document.getElementById('change-order-modal').style.display === 'none');
@@ -167,7 +171,10 @@ let b = null;
 
   const c1 = await raise(idF, 20, 20, 'Added the pool house to scope.');
   ok(c1.shown === 'flex', 'the change-order modal opens');
-  ok(c1.reasons.length === 6 && c1.reason === 'scope_add', 'six reasons, filled from the one list, defaulting to scope addition');
+  // ⚠ RESTATED (P25, Q54; Anthony, 2026-10-09): the list is the service's own (living: five reasons) behind a *Choose a
+  // reason…* placeholder, and nothing is pre-picked: it opened on scope addition, so a change order could go out with a reason
+  // nobody chose. The helper above picks one, as a person must.
+  ok(c1.reasons.length === 6 && c1.reasons[0].indexOf('|Choose a reason') === 0 && c1.reason === '', 'a placeholder and the living family\'s five reasons, none picked (' + c1.reasons.length + ', ' + JSON.stringify(c1.reason) + ')');
   ok(c1.reasons.indexOf('scope_add|Scope addition — new rooms or services') >= 0, 'each option carries its label');
   has(c1.basis, 'On a fixed price the change order is the charge', 'the note above the boxes says the change order is the charge');
   has(c1.basis, 'The trigger is a change in scope, never the hours.', 'and that the trigger is scope');

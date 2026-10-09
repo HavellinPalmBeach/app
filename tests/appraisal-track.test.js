@@ -26,7 +26,7 @@ const noComments = (s) => String(s)
 
 // The chain behind invAwaitingAppraisal is lifted for real rather than stubbed. Stubbing the
 // predicate would be testing the stub — the lesson this project paid for on `_cePhases`.
-const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', '_invHasAppraisal',
+const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', '_invHasAppraisal',
                   '_jobAppraisers', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
                   'invIsIntrinsic', 'invCatMeta', '_invJob',
                   // P16: the documents name a firearm's dealer route, the worklist counts only what the
@@ -38,8 +38,8 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invNeedsAppraisal', 'invFiduciaryMode
                   'invApprovalComplete', 'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', '_andJoin',
                   'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf', 'invHavellinRecipient',
                   // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-                  'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
-const APPR_VARS = ['INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
+                  'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
+const APPR_VARS = ['INV_DISP_DOC_WORDS', 'INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                    'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
@@ -140,14 +140,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ no job means no answer, never a guessed one');
   }
 
-  group('a linked appraiser is what closes it, and only a REAL one');
+  // ⚠ RESTATED (P25, Q36; Anthony, 2026-10-09: "Appraisal figure on line"). This was "a linked appraiser is what closes
+  // it": a link cleared NOT YET APPRAISED while the line's value was still Agent Two's. A line is appraised once the
+  // appraisal's figure is on it (source Appraisal, with a value), linked or not; the link alone is the appraisal in progress.
+  group('the appraisal\'s figure on the line is what closes it; a link alone is the appraisal in progress');
   {
     const s = ctx([], { jobs: [Object.assign({}, JOB, {
       appraisers: [{ id: 'ap1', name: 'M. Wayland', firm: 'Wayland Fine Art' }] })] });
     const row = mk({ category: 'Art & Décor', fmv: '' });
     ok(s.invAwaitingAppraisal(row, 1), 'unlinked, it is waiting');
-    ok(!s.invAwaitingAppraisal(Object.assign({}, row, { apprId: 'ap1' }), 1),
-       'linked to a roster appraiser, it is not');
+    ok(s.invAwaitingAppraisal(Object.assign({}, row, { apprId: 'ap1' }), 1),
+       '⚠⚠ linked to a roster appraiser with no figure yet, it is still waiting (in progress)');
+    ok(!s.invAwaitingAppraisal(Object.assign({}, row, { apprId: 'ap1', valSource: 'Appraisal', fmv: '6500' }), 1),
+       'the report\'s figure on the line, source Appraisal, closes it');
+    ok(!s.invAwaitingAppraisal(Object.assign({}, row, { valSource: 'Appraisal', fmv: '6500' }), 1),
+       '⚠ with no appraiser linked too (counsel\'s appraiser)');
     // ⚠ A DANGLING ID IS NOT COVERAGE. Removing an appraiser from the roster clears the links,
     // but a merge from another device can land a row pointing at one this device never had.
     ok(s.invAwaitingAppraisal(Object.assign({}, row, { apprId: 'gone' }), 1),
@@ -424,7 +431,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: 'Auction' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocName', 'printApprovalRequest', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
@@ -467,11 +474,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rows = [
       mk({ stableId: 'a', itemNo: 1, objectName: 'Dining chairs', category: 'Furniture',
            fmv: '4000', disposition: 'Auction' }),
+      // Appraised: the report's figure on the line, source Appraisal (P25, Q36; it was the link alone).
       mk({ stableId: 'b', itemNo: 2, objectName: 'Tabriz rug', category: 'Rugs & Carpets',
-           fmv: '9000', disposition: 'Sell', apprId: 'ap1' }),
+           fmv: '9000', disposition: 'Sell', apprId: 'ap1', valSource: 'Appraisal' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocName', 'printApprovalRequest', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',

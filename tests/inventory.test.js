@@ -11,7 +11,7 @@
 const { sandbox } = require('./harness');
 
 const INV_FNS = [ 'invDocContractBlock', 'docTierProduces',
-  'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
+  'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invAppraisalInProgress', 'invFiduciaryMode', 'isDecedentJob',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems', 'invMergeApprovals', '_invApprovalEntries', '_invApprovalSetAt',
   'mergeCustodyLogs', '_custodyEventId', 'invStickyValue', '_invHasVal',
@@ -220,7 +220,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_invMoney', '_invDocName', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
-      '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
+      '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal', '_jobAppraisers',
       'matterDef', 'matterTypeOf', 'invFiduciaryMode',
       // Who arranges an appraisal, job-level (Q20, 2026-09-30): the tier, or the approved estimate's appraiser lines.
       'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines',
@@ -404,7 +404,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the appraisal guardrail lets you link an appraiser from the panel');
   {
     const g = sandbox({
-      fns: ['_renderAppraisalGuardrail', '_invGuardrailItems', 'invAwaitingAppraisal', '_invHasAppraisal',
+      fns: ['_renderAppraisalGuardrail', 'invAppraisalInProgress', '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal',
             '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
@@ -436,9 +436,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'an empty roster says so instead of offering an empty dropdown');
     lacks(empty, '<select', 'and renders no picker at all');
 
-    // Linking clears the item off the panel — that is the whole loop.
+    // ⚠ RESTATED (P25, Q36; Anthony, 2026-10-09: "Appraisal figure on line"). Linking cleared the item off the panel; the
+    // link alone is now the appraisal in progress, said on its row, and the report's figure on the line closes the loop.
     g._photoRefs[5][0].apprId = 77;
-    eq(g._invGuardrailItems(5).length, 0, 'a linked item leaves the guardrail');
+    eq(g._invGuardrailItems(5).length, 1, '⚠⚠ a linked item with no appraisal figure stays on the guardrail');
+    has(g._renderAppraisalGuardrail(job), 'Appraisal in progress', '…its row says the appraisal is in progress');
+    has(g._renderAppraisalGuardrail(job), '<option value="77" selected>', '…with its appraiser selected in the picker');
+    g._photoRefs[5][0].valSource = 'Appraisal'; g._photoRefs[5][0].fmv = '480000';
+    eq(g._invGuardrailItems(5).length, 0, 'the report\'s figure on the line, source Appraisal, takes it off');
     eq(g._renderAppraisalGuardrail(job), '', 'and the panel disappears once nothing is outstanding');
   }
 
@@ -869,7 +874,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'stamped newer than the tombstone, so the undelete wins the merge on every device');
   }
 
-  group('linking an appraiser answers the valuation-source question');
+  // ⚠ RESTATED (P25, Q36). Linking filled an empty source with "Appraisal", and a line is appraised once source Appraisal
+  // carries a value, so a link put on a line already carrying anybody's figure made that figure the appraisal's. The link
+  // writes no source now, and unlinking leaves a source of Appraisal alone (an appraisal on the line stands without a link).
+  group('linking an appraiser writes no valuation source (P25, Q36)');
   {
     const a = sandbox({ fns: ['_invSetAppraiser', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
                               '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch'],
@@ -879,8 +887,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     a._photoRefs[1] = [{ stableId: 'x', label: 'inventory', collId: null }];
 
     a._invSetAppraiser(1, 'x', 7);
-    eq(a._photoRefs[1][0].valSource, 'Appraisal',
-       'linking a credentialed appraiser IS the valuation source — it fills itself in');
+    eq(a._photoRefs[1][0].valSource, undefined,
+       '⚠⚠ linking writes no source: the link is the appraisal in progress, not its figure');
+    eq(a._photoRefs[1][0].apprId, 7, '…it records the link');
 
     a._photoRefs[1][0].valSource = 'Dealer quote';
     a._invSetAppraiser(1, 'x', 7);
@@ -889,9 +898,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     a._photoRefs[1][0].valSource = 'Appraisal';
     a._invSetAppraiser(1, 'x', '');
-    eq(a._photoRefs[1][0].valSource, '',
-       'unlinking clears it — "Appraisal" with no appraiser is the unsupported claim the '
-       + 'guardrail exists to catch');
+    eq(a._photoRefs[1][0].valSource, 'Appraisal',
+       '⚠ unlinking leaves an appraisal\'s source alone: the report on the line stands with or without a link');
   }
 
   group('the firm is named once, not twice');

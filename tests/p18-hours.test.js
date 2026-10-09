@@ -347,10 +347,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const co = (tc, ps) => {
       const dom = domStub({ 'co-jobid': { value: '1' }, 'co-description': { value: 'Garage' }, 'co-tc-hrs': { value: tc }, 'co-ps-hrs': { value: ps },
                             'co-reason': { value: 'scope_add' } });
-      const c = sandbox({ fns: ['saveChangeOrder', '_coJobBasis', 'agrBillingRates', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estFixedFee',
+      const c = sandbox({ fns: ['saveChangeOrder', 'coReasonsFor', 'isDecedentJob', 'coReasonLabel', '_coJobBasis', 'agrBillingRates', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estFixedFee',
           'estPrepFeeOnTop', 'estFixedLines', 'coRushPctFor', 'coPriorHours', '_coPriorAccepted', 'coHours', 'coScopeLabel', 'coHoursLabel',
           'coVendorAdds', 'coVendorAddsTxt', 'isWholeHours', 'roundCents', 'fmtHrs', 'fmt', 'esc', 'prepFeeRate'],
-        vars: ['RUSH_PCT', 'PREP_FEE_RATE'],
+        vars: ['CO_REASONS_BY_FAMILY', 'CO_REASONS', 'DECEDENT_SERVICES', 'RUSH_PCT', 'PREP_FEE_RATE'],
         stubs: { document: dom, jobs: [{ id: 1, svc: 'cleanout', status: 'active' }], changeOrders: [],
                  estimateStore: { 1: { estimate: EST_TM, approved: true } }, currentEstimate: null, saveChangeOrders() {}, renderJobs() {},
                  _docNotice() {}, _srcLid: () => 'L1', coDraftVendorAdd: () => null } });

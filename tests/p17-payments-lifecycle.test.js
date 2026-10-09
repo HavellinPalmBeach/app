@@ -450,7 +450,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const card2 = text(inZone(() => w.C.walkawaySettlementHtml(w.job)));
     has(card2, 'Refunded (' + w.C.fmt(s.due) + ')', 'the card shows the refund');
     has(card2, 'Refund due ' + w.C.fmt(0), 'and nothing more due');
-    lacks(inZone(() => w.C.walkawaySettlementHtml(w.job)), 'openRefundModal(', 'with no Record refund once nothing is due');
+    // RESTATED (P25, Q49; Anthony, 2026-10-09: "Fix both"): a refund above what is due may still be recorded, with its reason,
+    // up to what the job holds, so Record refund stays while the job holds anything.
+    has(inZone(() => w.C.walkawaySettlementHtml(w.job)), 'openRefundModal(', 'Record refund stays: one above what is due is recorded with its reason');
     const list = inZone(() => w.C.jobPaymentsListHtml(w.job));
     has(list, 'Payments and refunds recorded', 'the list heads itself for both');
     has(text(list), w.C.fmt(s.due) + ' · Refund · Cheque · #2201 · to Pressly Family Trust', 'the refund is listed as money that went back');
@@ -472,16 +474,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has((a.seen.fb[0] || {}).msg, 'closed out with the deposit retained', 'and says why');
     inZone(() => a.C.openRefundModal(7));
     has((a.seen.notices[0] || {}).msg, 'closed out with the deposit retained', 'the door says the same');
-    // Fixed price: refused.
+    // RESTATED (P25, Q49): a fixed price and a job with nothing due back record a refund too (after Havellin's uncured breach,
+    // or as goodwill), up to what the job holds, but only with the reason, and asked first.
     const f = closed({ est: FIXED_EST }); ready(f); fill(f, GOOD);
     inZone(() => f.C.saveRefund());
-    eq(f.job.payments.length, 2, 'a fixed price records none');
-    has((f.seen.fb[0] || {}).msg, 'stage earn-out', 'because it keeps its stage earn-out');
-    // Nothing due: refused.
+    eq(f.job.payments.length, 2, 'a fixed price records none without a reason');
+    has((f.seen.fb[0] || {}).msg, 'Give the reason', '⚠⚠ it asks for the reason, since nothing is due back on a fixed price');
+    const f2 = closed({ est: FIXED_EST }); ready(f2); fill(f2, Object.assign({ 'rf-reason': 'goodwill' }, GOOD));
+    inZone(() => f2.C.saveRefund());
+    eq(f2.job.payments.length, 3, '…with one, it is recorded');
+    eq((f2.job.payments[2] || {}).reason, 'goodwill', '…carrying its reason');
     const n = closed({ logs: [], midpoint: false }); ready(n); fill(n, GOOD);
     inZone(() => n.C.saveRefund());
-    eq(n.job.payments.length, 1, 'nothing due, nothing recorded');
-    has((n.seen.fb[0] || {}).msg, 'Nothing is due back', 'and it says so');
+    eq(n.job.payments.length, 1, 'nothing due: nothing recorded without a reason');
+    has((n.seen.fb[0] || {}).msg, 'Give the reason', 'and it asks for one');
     // The fields.
     const k = closed(); ready(k);
     const due = inZone(() => k.C.walkawaySettlement(k.job)).due;
@@ -492,14 +498,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(tryWith({ 'rf-amount': '100', 'rf-date': '2026-10-01', 'rf-method': 'stripe' }), 'Select how the refund was sent', 'a method not on the list: refused');
     has(tryWith({ 'rf-amount': '999999', 'rf-date': '2026-10-01', 'rf-method': 'wire' }), 'this job holds', '⚠ more than the job holds: refused');
     eq(k.job.payments.length, 2, 'and none of those wrote anything');
-    // More than is due: asked, and a no writes nothing.
-    const d = closed({ decline: true }); ready(d); fill(d, { 'rf-amount': String(due + 500), 'rf-date': '2026-10-01', 'rf-method': 'wire' });
+    // More than is due: the reason first (P25, Q49), then asked, and a no writes nothing.
+    const d0 = closed(); ready(d0); fill(d0, { 'rf-amount': String(due + 500), 'rf-date': '2026-10-01', 'rf-method': 'wire' });
+    inZone(() => d0.C.saveRefund());
+    eq([d0.job.payments.length, d0.seen.confirms.length], [2, 0], '⚠⚠ more than is due with no reason: refused before anything is asked');
+    has((d0.seen.fb[0] || {}).msg, 'is more than the ' + d0.C.fmt(due) + ' due back', '…naming the amount due');
+    const d = closed({ decline: true }); ready(d); fill(d, { 'rf-amount': String(due + 500), 'rf-date': '2026-10-01', 'rf-method': 'wire', 'rf-reason': 'uncured breach' });
     inZone(() => d.C.saveRefund());
     has(d.seen.confirms[0] || '', 'is more than the ' + d.C.fmt(due) + ' due back', '⚠ more than is due is asked about');
+    has(d.seen.confirms[0] || '', 'Reason: uncured breach', '…with the reason in the question');
     eq(d.job.payments.length, 2, 'and declined, nothing is written');
-    const y = closed(); ready(y); fill(y, { 'rf-amount': String(due + 500), 'rf-date': '2026-10-01', 'rf-method': 'wire' });
+    const y = closed(); ready(y); fill(y, { 'rf-amount': String(due + 500), 'rf-date': '2026-10-01', 'rf-method': 'wire', 'rf-reason': 'uncured breach' });
     inZone(() => y.C.saveRefund());
     eq(y.job.payments.length, 3, 'accepted, it is recorded as entered');
+    eq((y.job.payments[2] || {}).reason, 'uncured breach', '…with its reason');
     eq(inZone(() => y.C.walkawaySettlement(y.job)).due, 0, 'and nothing is due');
     // P17 merge: the amount is kept to the cent, as saveDeposit keeps a payment's (roundCents).
     const ct = closed(); ready(ct); fill(ct, { 'rf-amount': '100.005', 'rf-date': '2026-10-01', 'rf-method': 'check' });
@@ -573,7 +585,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const w = walker({ logs: logsFor(0.7) });
     eq(inZone(() => w.C.walkawaySettlementHtml(w.job)), '', 'an active job has no settlement card');
     const wf = walker({ est: FIXED_EST, logs: logsFor(0.7) }); wf.job.status = 'closed_retained';
-    eq(inZone(() => wf.C.walkawaySettlementHtml(wf.job)), '', 'nor does a fixed-price walkaway');
+    // RESTATED (P25, Q49): a fixed-price walkaway has a card now: its stage earn-out computes nothing due, and a refund on it
+    // may be recorded with its reason.
+    const wfCard = inZone(() => wf.C.walkawaySettlementHtml(wf.job));
+    has(wfCard, 'A fixed price keeps its stage earn-out', 'a fixed-price walkaway\'s card says it keeps its earn-out');
+    has(wfCard, 'openRefundModal(7)', '…and offers Record refund');
+    lacks(wfCard, 'Refund due', '…computing nothing due');
     has(live(fn('renderClientDashboard')), 'walkawaySettlementHtml(job)', 'the dashboard draws it, above the payments list');
     ok(live(fn('renderClientDashboard')).indexOf('walkawaySettlementHtml(job)') < live(fn('renderClientDashboard')).indexOf('jobPaymentsListHtml(job)'),
       'in that order');

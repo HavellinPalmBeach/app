@@ -300,13 +300,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const F = desk(['printApprovalRequest'], TRUST(), [gun]);
     F.printApprovalRequest(7);
     const ft = text((F.__log.printed[0] || {}).html || '');
-    has(ft, 'title stays with the trust throughout.', '⚠ on a trust, title stays with the trust');
+    has(ft, 'Title stays with the trust throughout;', '⚠ on a trust, title stays with the trust (RESTATED P25, Q35: its own sentence now)');
     lacks(ft, 'neither purchases estate firearms', 'the firearms-only purchase clause gave way to the general rule');
     has(ft, 'never purchase or receive trust property', 'which is printed');
     const P = desk(['printApprovalRequest'], PROBATE(), [gun]);
     P.printApprovalRequest(8);
     const pt = text((P.__log.printed[0] || {}).html || '');
-    has(pt, 'title stays with the estate throughout.', 'on probate, the estate');
+    has(pt, 'Title stays with the estate throughout;', 'on probate, the estate');
     has(pt, 'never purchase or receive estate property', 'and estate property');
     has(pt, 'filed with the estate record and retained for seven years', 'filed with the estate record, as before');
     eq(count((P.__log.printed[0] || {}).html, 'Approved by: ____'), 1, 'one representative: one line, as before');

@@ -42,7 +42,7 @@ function closure(roots, stop) {
     for (const m of body.matchAll(/[(,]\s*([A-Za-z_$][\w$]*)\s*[,)]/g)) if (ALL_FNS.has(m[1]) && !stopSet.has(m[1])) queue.push(['f', m[1]]);
     for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) if (ALL_VARS.has(m[1]) && !stopSet.has(m[1])) queue.push(['v', m[1]]);
   }
-  return { fns: [...fns].filter((n) => ALL_FNS.has(n)), vars: [...vars] };
+  return { fns: [...fns].filter((n) => ALL_FNS.has(n)), vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', ...vars] };
 }
 function lift(roots, stubs) {
   const c = closure(roots, Object.keys(stubs || {}));
@@ -144,8 +144,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(s0.work, 3500, '⚠⚠ the work done is the hours logged alone: no package on site, no vendor engaged');
     eq([s0.pkg, s0.pkgCounted], [800, false], 'the package is named as not counted');
     has(c0.walkawayWorkNote(s0), 'The $800 materials package is not counted: “Moving materials on site” is not ticked on the Job Plan.', 'and says why');
+    // RESTATED (P25, Q49; Anthony, 2026-10-09: "Fix both"): on a walkaway (closed, deposit retained, hourly) the client's final
+    // IS the work done, so it agrees with the settlement; the full final (package and quoted fee) is an active job's.
     const fullFinal = inEastern(() => c0.invoiceHtml(j0, 'final'));
-    ok(fullFinal.servicesTotal > s0.work, 'fixture: the client\'s final still bills the package and the quoted fee (' + fullFinal.servicesTotal + ')');
+    eq(fullFinal.servicesTotal, s0.work, '⚠⚠ a walkaway\'s final bills the work done, the figure the settlement reads');
+    const activeFinal = inEastern(() => c0.invoiceHtml(job({ status: 'active' }), 'final'));
+    ok(activeFinal.servicesTotal > s0.work, 'fixture: an active job\'s final still bills the package and the quoted fee (' + activeFinal.servicesTotal + ')');
     // The package on site.
     const c1 = make({ 6: { tasks: { materials_onsite: true } } });
     const s1 = inEastern(() => c1.walkawaySettlement(j0));
@@ -233,9 +237,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('E5 · the client estimate says where an original will goes, in every sorting arm', () => {
     const want = 'An original will or codicil we find is handed, unopened, to the estate attorney the same day (or to you where no attorney is recorded), against a signed receipt, for deposit with the clerk as Florida law requires. Deeds, titles and financial records go to you and counsel against a signed receipt';
     const ctx = sandbox({
-      fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
+      fns: ['estTolerancePctTxt', '_cePhases', 'estateDirectionWords', 'jobFiduciaries', 'jobListEntries', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
             'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'invProbateRows', 'estateProceedsHolder'],
-      vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'ESTATE_AUTHORITIES', 'CE_FOUND_PAPERS_TXT'],
       stubs: { isFormalDoc: () => true },
     });
@@ -389,7 +393,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!ALL_FNS.has('esignCounselSignsNote'), 'group B\'s amber note is gone');
     lacks(noComments(SRC), 'esignCounselSignsNote(', 'and nothing reads it');
     // Driven: the provider's refuse and send.
-    const S = sandbox({ fns: closure(['esignClientSignerRefusal', 'esignCoSigners', 'esignSigner']).fns, vars: ['DOC_SEND_PROVIDERS'].concat(closure(['esignCoSigners']).vars),
+    const S = sandbox({ fns: closure(['esignClientSignerRefusal', 'esignCoSigners', 'esignSigner']).fns, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_SEND_PROVIDERS'].concat(closure(['esignCoSigners']).vars),
       stubs: { SHEETS_SYNC_URL: 'https://x/exec', _appsScriptPost() { S.__posted = true; } } });
     const spec = { job: est(), anchors: [], names: { attachment: 'a.pdf' }, cfg: { subject: () => 's' } };
     eq(S.DOC_SEND_PROVIDERS.docusign.refuse(spec), 'Add the representative’s email: the estate attorney can’t sign as the client.', '⚠⚠ the provider refuses');

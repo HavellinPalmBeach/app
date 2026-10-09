@@ -401,15 +401,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pro = phases(JOB('', Object.assign({ svc: 'probate' }, formal)), E);
     const tr = phases(JOB('trust', Object.assign({ svc: 'probate' }, formal)), E);
     const close = (P) => P.find((p) => /^Close-Out/.test(p.title)) || {};
-    eq(close(pro).title, 'Close-Out &amp; Court Filing', 'fixture: an unanswered Probate service closes with a court filing, as before');
-    has(close(pro).body, 'filed within the statutory deadline', 'and promises the filing');
+    // RESTATED (P25, Q33; Anthony, 2026-10-09): Havellin delivers the inventory in time for the §733.604 filing and counsel
+    // serves and files it. It promised "the whole package served on interested parties and filed within the statutory
+    // deadline" and called the stage "Court Filing", while the agreement's §2.1 excludes court filings.
+    eq(close(pro).title, 'Close-Out &amp; Court Inventory', 'fixture: an unanswered Probate service closes with the court inventory');
+    has(close(pro).body, 'delivered to the estate attorney in time for the §733.604 filing; counsel serves and files it.', 'and delivers it to counsel for the filing');
+    lacks(close(pro).body, 'served on interested parties', '⚠⚠ never that Havellin serves or files');
     has(JSON.stringify(close(pro).receive), 'A verified inventory to the standard the court requires', 'to the court\'s standard');
-    has(close(pro).done, 'the filing is complete', 'and calls it complete');
+    has(close(pro).done, 'the inventory is delivered to the estate attorney for filing', 'and calls it done once delivered for filing');
     eq(close(tr).title, 'Close-Out', '⚠⚠ recorded as a trust: no "Court Filing" stage');
     lacks(close(tr).body, 'statutory deadline', '⚠⚠ and no filing within a statutory deadline');
     lacks(JSON.stringify(close(tr).receive), 'the court requires', 'no court\'s standard');
     has(JSON.stringify(close(tr).receive), 'A verified inventory to a formal documentation standard, carrying date-of-death fair market value for every asset', 'the formal standard instead');
-    lacks(close(tr).done, 'the filing is complete', 'and no filing to complete');
+    lacks(close(tr).done, 'for filing', 'and no filing to deliver for');
     const capT = phases(JOB('trust', Object.assign({ svc: 'probate' }, formal)), EST({ svc: 'probate', docScope: 'capture', docTier: 'contents' }));
     lacks(phaseText(capT), 'statutory deadline', 'at capture scope too');
     // Living work: none of it.
@@ -417,8 +421,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const L = phases(living, EST({ svc: 'downsizing', docScope: 'none' }));
     const lt = phaseText(L);
     ['Certification of Trust', 'Disposition Ledger', 'trust account', 'Letters'].forEach((w) => lacks(lt, w, 'living work: no "' + w + '"'));
-    has(close(L).need, 'A final walkthrough with us, and sign-off on the disposition summary.', 'living work signs off its disposition summary, as before');
-    has(close(L).done, 'the filing is complete', '⚠ a living job on the formal standard keeps its words unchanged (out of P19\'s scope)');
+    // RESTATED (P25, Q51 and Q33): a living family signs the Contents Record, and a living job has no filing to complete.
+    has(close(L).need, 'A final walkthrough with us, and your signature on the Contents Record, the record of what stayed and what went.', 'living work signs the Contents Record');
+    lacks(close(L).done, 'filing', '⚠ a living job on the formal standard promises no filing');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════

@@ -280,6 +280,7 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Family Room / Great Roo
       eq(await p.evaluate(() => [document.getElementById('co-tc-hrs').getAttribute('step'), document.getElementById('co-ps-hrs').getAttribute('step')]), ['1', '1'],
          'both hours boxes step by 1');
       await type('#co-description', 'Garage added to scope.', 'the description');
+      await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });   // P25 (Q54): no reason is pre-picked; a person picks one
       await type('#co-tc-hrs', '2.3', '2.3 concierge hours');
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create Change Order');
       has(await txt('#co-fb'), 'Change orders are in whole hours (1, 2, 3 …): concierge 2.3 is not a whole hour. Nothing was saved.', '⚠⚠ refused, naming the figure');

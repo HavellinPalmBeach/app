@@ -64,24 +64,24 @@ const FIXED = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20225, 
 const LEGACY = est({ fixedPrice: true, fixedAmount: 20000, havellinTotal: 20000, grandTotal: 20750 });
 
 // ── the real client estimate ────────────────────────────────────────────────
-const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'isDecedentJob', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
+const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'samePerson', 'canonPersonName', 'docConciergeName', 'isCrewPlaceholder', 'isDecedentJob', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor', 'prepFeeRate', 'estWorkingDays', 'estFixedFee',
                 'estPrepFeeOnTop', '_fixedFeeBlurb', 'vendorEstimateNote', 'vendorFeeNote', 'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'escLines', 'roundCents', 'fmtHrs'];
-const CE_VARS = ['DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
+const CE_VARS = ['PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PREP_FEE_BASIS_TXT', 'PERSON_NAME_ALIASES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const JOB = { id: 1, svc: 'downsizing_move', name: 'Pat Transition', address: '1 A St' };
 const ceDoc = (e) => sandbox({ fns: CE_FNS, vars: CE_VARS }).clientEstimateHtml(e, JOB);
 
 // ── the real invoice ────────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
+const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal',
                  'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
                  '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor', 'coordHrsFor',
                  'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'conciergePhones',
                  'conciergePhonesText', 'assignedTCContact', 'vendorCats', 'vendorPrimaryCat', 'estimateIsFeeOnly',
                  'isDecedentJob', 'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'paymentCounts', 'paymentLive', 'isRefundRecord',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'];
-const INV_VARS = ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+const INV_VARS = ['PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
                   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP',
                   'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'];
 function invoice(e, stage, payments, prepSourcing) {
@@ -106,12 +106,12 @@ const actuals = () => ({ La1: { quote: 900, status: 'Confirmed', vendorName: 'Br
 // ── the real agreements ─────────────────────────────────────────────────────
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate',
                  'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
-const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
+const AGR_VARS = ['PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', '_PCT_WORDS',
                   'PREP_FEE_RATE', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
 const agr = (job, e) => text(sandbox({ fns: AGR_FNS, vars: AGR_VARS,
@@ -176,11 +176,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const t = text(ceDoc(FIXED));
     has(t, 'The fixed project fee is firm for the scope of work described', 'the Terms name the fixed project fee, not the services total');
-    has(t, 'which is not part of the fixed fee and is charged on what those vendors actually bill',
+    has(t, 'which is not part of the fixed fee and is charged on the vendor quotes recorded, updated if a vendor’s invoice differs', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'and carve the prep fee out of it');
     // RESTATED 2026-10-01 (P17, answer 5): it read "whose site management fee is the next line".
     has(t, 'apart from the home prep vendors, whose Home Sale Preparation Fee is the next line', 'the fixed row\'s blurb carves them out too');
-    has(t, 'charged on what these vendors actually bill rather than on these estimates', 'the prep section says the fee trues up');
+    has(t, 'charged on the vendor quotes recorded, updated if a vendor’s invoice differs', 'the prep section says the fee trues up'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     const l = text(ceDoc(LEGACY));
     lacks(l, 'which is not part of the fixed fee', 'a record saved before today claims no carve-out — its flat fee carries the fee');
     // RESTATED 2026-10-08 (the job-flow audit): the fixture prices no materials package (pkgCost 0), so the blurb no longer
@@ -316,7 +316,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-01 (P17, answer 5): the row read "Home Prep for Sale — GC / Site Management Fee (30%)".
     has(dep.t, 'Home Sale Preparation Fee (30%) $225', 'and itemises the prep fee on the quotes');
     has(dep.t, 'Havellin Services Total $20,225', 'with a total that adds up');
-    has(dep.t, "shown here on the prep vendors' quotes and trued to their actual invoices", 'and says it trues up');
+    has(dep.t, "shown here on the prep vendors' quotes, and updated at the midpoint and final if a vendor’s invoice differs", 'and says it trues up'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
 
     const received = [pay('deposit', 10112.5)];
     const mid = invoice(FIXED, 'midpoint', received, actuals());
@@ -337,7 +337,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const iFee = fin.t.indexOf('Home Sale Preparation Fee (30%)');
     ok(iFee >= 0 && iFee < fin.t.indexOf('Havellin Services Total $20,345'),
        'above the services total it is part of (a missing row reads -1, which is not "above")');
-    has(fin.t, "Home Sale Preparation Fee — on the prep vendors' actual invoices $345", 'the payment summary names the fee');
+    has(fin.t, "Home Sale Preparation Fee — on the vendor quotes recorded $345", 'the payment summary names the fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(fin.t, "Havellin's fee on the home preparation vendors is the 30% Home Sale Preparation Fee shown above",
         'the vendor note points at a line that is on the page');
     lacks(fin.t, 'billed in the hours above', 'no hours claim on a fixed-price invoice');
@@ -383,7 +383,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(a, 'fixed project fee of $20,000', '§3.3 states the flat fee');
     has(a, 'is not part of the fixed project fee and is charged in addition to it', '§3.3 carves the prep fee out');
     has(a, 'is included in the fixed project fee under Section 3.3', '⚠ §3.5: coordination is inside the flat fee, not billed as time');
-    has(a, 'calculated on what those vendors actually invoice and charged in addition to the fixed project fee', '§3.5 states the fee on top');
+    has(a, 'calculated on the vendor quotes recorded, updated if a vendor’s invoice differs and charged in addition to the fixed project fee', '§3.5 states the fee on top'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(a, 'at its estimated amount of $225', '§3.2 says the schedule carries the estimated fee');
     // RESTATED 2026-10-01 (P17, answer 6): to the cent, as the deposit invoice asks (it read $10,113).
     has(a, 'Deposit (50%) $10,112.50', 'the schedule splits flat + estimated fee — the same figure the deposit invoice asks for');
@@ -422,17 +422,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(a, 'the concierge time spent coordinating them is included in the fixed project fee below',
         '⚠ the vendor row no longer bills coordination at the TC rate on a fixed fee');
     has(a, 'which is not part of the fixed project fee below: it is charged in addition to it', 'the prep row is outside the flat fee');
-    has(a, 'It is charged in addition to it, at thirty percent (30%) of what the home sale preparation vendors',
+    has(a, 'It is charged in addition to it, at thirty percent (30%) of the quotes recorded for the home sale preparation vendors', // RESTATED (P25, Q52)
         'the Fixed Project Fee paragraph carries the prep fee');
     has(a, '(estimated in Exhibit A at $225)', 'with its estimated amount');
-    has(a, 'together with the Home Sale Preparation Fee on the preparation vendors\' actual invoices', '§3.2 IMPORTANT names it');
+    has(a, 'together with the Home Sale Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', '§3.2 IMPORTANT names it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(a, '(50% of fixed price + est. prep fee)', 'the payment rows name both parts');
     // RESTATED 2026-10-01 (P17, answer 6): half of $30,225 to the cent (it read $15,113).
     has(a, '$15,112.50 (50% of fixed price + est. prep fee)', 'and split the same figure the deposit invoice asks for');
-    has(a, 'completes the fixed price and the Home Sale Preparation Fee on actual vendor invoices', 'the final payment says the fee trues up');
+    has(a, 'completing the fixed price and the Home Sale Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', 'the final payment says the fee trues up'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(a, 'The payment amounts above include the Home Sale Preparation Fee at its estimated amount of $225',
         'the estate schedule says its amounts carry the estimated fee');
-    has(a, 'so the midpoint and final payments are adjusted to the actual amount', 'and that the later payments follow the actual bills');
+    has(a, 'so the midpoint and final payments are adjusted to it', 'and that the later payments follow the actual bills'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(a, 'The Home Sale Preparation Fee is earned as the preparation work is performed', '§8.1 earns it on the work');
     has(a, 'and the Home Sale Preparation Fee owed will be issued', '§8.1 invoices it on termination');
     has(a, 'The deposit is earned in full on signature of this Agreement and is not refundable', 'the deposit stays protected');
@@ -464,7 +464,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const m = fn('buildEstimateMailto'), t = fn('buildEstimateEmailText'), h = fn('buildEstimateEmailHtml');
     [m, t, h].forEach((b, i) => has(b, 'estimateHavellinLines(', ['mailto', 'text', 'html'][i] + ' email reads the shared lines'));
     has(h, 'The fixed project fee above is firm', 'the HTML email calls only the flat fee firm');
-    has(h, 'charged on what those vendors actually bill', 'and says the prep fee follows the bills');
+    has(h, "charged on ' + PREP_FEE_BASIS_TXT", 'and says what the prep fee is charged on (the source text: the email reads the one wording)'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
   }
 
   // ───────────────────────────────────────────────────────────────────────────

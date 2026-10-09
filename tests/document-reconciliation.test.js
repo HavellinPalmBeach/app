@@ -32,10 +32,10 @@ const FNS = [
   'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate',
   'fmt', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones',
   'conciergePhonesText', 'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit',
-  'clientEstimateHtml', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection',
-  '_cePhases', 'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted',
-  'proposedPlanRow', 'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml',
-  'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
+  'clientEstimateHtml', 'docConciergeName', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection',
+  '_cePhases', 'estateDirectionWords', 'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted',
+  'proposedPlanRow', 'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml', 'agrFinalDueTxt',
+  'agrPriceAdjustments', 'probateAgreementHtml', 'jobProbateCourt', 'courtFromCaseNo', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
   '_agrProbateCompliance', '_agrMidpointTrigger', '_fixedFeeBlurb', 'docStandardEffect', 'isFormalDoc',
   'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason', 'docTierOf',
   'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection', 'approvedEstimateFor', 'esignAnchor',
@@ -48,10 +48,10 @@ const FNS = [
   'resolveJobVendor', 'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'vendorCats', 'vendorPrimaryCat',
   'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estimateFigures',
   // the invoice emails, all three parts
-  'buildInvoiceEmailText', 'buildInvoiceEmailHtml', 'buildInvoiceMailto', 'invoiceBalanceWords', '_emMoney',
+  'buildInvoiceEmailText', 'buildInvoiceEmailHtml', 'buildInvoiceMailto', 'docCcLine', 'clientCopyEmails', 'invoiceBalanceWords', '_emMoney',
   '_emHtml', 'bestClientGreetingName', 'firstName', 'bestClientEmail', 'mailtoBody', 'mailtoSignoff', 'invoiceEmailSubject', 'clientRecipient', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'discountOnFixedFee', 'coRushPct', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', '_agrOtherAppraisalsBy', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'coPrepVendorsOn', 'roundCents', 'fmtHrs',
   'docEstateAuthority', 'invProbateRows', 'estateProceedsHolder', '_agrTrustIsParty', '_agrCounsel', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
-const VARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'CE_FOUND_PAPERS_TXT', 'TIME_INCREMENT_TXT', 'DEPT_EMAILS',
+const VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PAYMENT_STAGES', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'CE_FOUND_PAPERS_TXT', 'TIME_INCREMENT_TXT', 'DEPT_EMAILS',
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
   'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES',
   'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
@@ -303,7 +303,7 @@ module.exports = function ({ group, ok, eq, has }) {
     // A fixed price saved from 2026-09-30 carries its premium and its discount as payment-summary lines too
     // (lower-case "delivery" / "client", which the services table above them does not use).
     const billed = e.fixedPrice
-      ? ((C(rowAmt(fh, /^Fixed Project Fee/) || 0) + C(rowAmt(fh, /^Home Sale Preparation Fee — on the prep/) || 0) + C(rowAmt(fh, /^Approved Change Orders/) || 0)
+      ? ((C(rowAmt(fh, /^Fixed Project Fee/) || 0) + C(rowAmt(fh, /^Home Sale Preparation Fee — on /) || 0) + C(rowAmt(fh, /^Approved Change Orders/) || 0)
         + C(rowAmt(fh, /^Expedited delivery \(/) || 0) + C(rowAmt(fh, /^Preferred client discount/) || 0)) / 100)
       // A Home Prep final heads the same row "Services total (Home Sale Preparation Fee on actual vendor spend …)"
       // (audit P14, Anthony's wording; RESTATED 2026-10-01, P17, answer 5: it read "site management fee", and the

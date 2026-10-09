@@ -316,7 +316,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The probate card keeps its word, "Authorization", and its court grid.
     const pc = text(cardAt(renderDash(PROBATE()), 'Probate Information'));
     has(pc, 'Probate Information Authorization pending — blocker', 'the Probate card\'s chip, as before');
-    has(pc, 'Case number 2026-CP-001234 Court deadline Nov 20, 2026 Property sale yes Authorization Pending', 'its court grid, as before');
+    // RESTATED (P25, Q53): the court grid names the Court (recorded, else read off the case number; this one has no county code).
+    has(pc, 'Case number 2026-CP-001234 Court — Court deadline Nov 20, 2026 Property sale yes Authorization Pending', 'its court grid, as before, with the Court');
     has(pc, 'Role Personal Representative Authorization Pending', 'and beside the executor');
     has(text(cardAt(renderDash(PROBATE({ executorAuth: 'notneeded' })), 'Probate Information')), 'Authorization not required', '⚠ not required, never "received"');
     lacks(pc, 'Certification of Trust', 'and no Certification of Trust on a probate matter');

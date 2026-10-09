@@ -134,7 +134,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   await press('#client-dashboard-view button[onclick="openChangeOrder(' + idH + ')"]'); await p.waitForTimeout(200);
   ok(await p.evaluate(() => document.getElementById('change-order-modal').style.display === 'flex'), '+ New opens the change-order modal');
   await p.fill('#co-tc-hrs', '8'); await p.fill('#co-ps-hrs', '8');
-  await p.fill('#co-description', 'Added the pool house to scope.');
+  // P25 (Q54): nothing is pre-picked and Create refuses without a reason; each raise below picks one, as a person does.
+  await p.fill('#co-description', 'Added the pool house to scope.'); await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });
   await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
   const coId = await p.evaluate((id) => { const c = changeOrders.filter(c => c.jobId === id).pop(); return c ? c.id : null; }, idH);
   ok(!!coId, 'Create writes the change order');
@@ -205,7 +206,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
 
   // ── E. A SECOND, PENDING CHANGE ORDER BESIDE IT ──────────────────────────
   await press('#client-dashboard-view button[onclick="openChangeOrder(' + idH + ')"]'); await p.waitForTimeout(200);
-  await p.fill('#co-tc-hrs', '2'); await p.fill('#co-description', 'Cleared the storage unit as well.');
+  await p.fill('#co-tc-hrs', '2'); await p.fill('#co-description', 'Cleared the storage unit as well.'); await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });
   await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
   const co2 = await p.evaluate((id) => changeOrders.filter(c => c.jobId === id).pop().id, idH);
   const c3 = await card();
@@ -223,7 +224,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   ok(eF.fixedPrice === true && eF.fixedAmount === 24000 && eF.rush === true, 'a $24,000 fixed fee, expedited');
   await openDash(idF);
   await press('#client-dashboard-view button[onclick="openChangeOrder(' + idF + ')"]'); await p.waitForTimeout(200);
-  await p.fill('#co-tc-hrs', '8'); await p.fill('#co-ps-hrs', '8'); await p.fill('#co-description', 'Added the pool house to scope.');
+  await p.fill('#co-tc-hrs', '8'); await p.fill('#co-ps-hrs', '8'); await p.fill('#co-description', 'Added the pool house to scope.'); await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });
   await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
   const coF = await p.evaluate((id) => changeOrders.filter(c => c.jobId === id).pop().id, idF);
   await p.evaluate(() => { window.__prints = []; });
@@ -248,7 +249,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   await build(idN, { fixed: 24000 });
   await openDash(idN);
   await press('#client-dashboard-view button[onclick="openChangeOrder(' + idN + ')"]'); await p.waitForTimeout(200);
-  await p.fill('#co-tc-hrs', '4'); await p.fill('#co-description', 'Garage shelving.');
+  await p.fill('#co-tc-hrs', '4'); await p.fill('#co-description', 'Garage shelving.'); await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });
   await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
   const coN = await p.evaluate((id) => changeOrders.filter(c => c.jobId === id).pop().id, idN);
   await p.evaluate(() => { window.__prints = []; });

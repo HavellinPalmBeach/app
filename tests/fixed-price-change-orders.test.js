@@ -49,7 +49,7 @@ function co(tc, ps, id, extra) {
 function accepted(tc, ps, id) { return co(tc, ps, id, { clientApproved: true, clientName: 'Tripp Butler', clientAcceptedAt: 'September 25, 2026' }); }
 
 const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel', '_coMoney', 'fmt', 'esc',
-                'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonLabel', 'estFixedFee',
+                'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonsFor', 'isDecedentJob', 'coReasonLabel', 'estFixedFee',
                 'estTolerancePctTxt', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'openCOAcceptModal',
                 'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'prepFeeRate',
                 // Lifted, never stubbed: _coJobBasis reads its rates through the agreements' one definition.
@@ -61,7 +61,7 @@ function coCtx(est, cos, seed) {
   const dom = domStub(seed || {});
   const said = [];
   const c = sandbox({
-    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'RUSH_PCT'],
+    fns: CO_FNS, vars: ['DECEDENT_SERVICES', 'CO_REASONS_BY_FAMILY', 'EST_TOLERANCE_PCT', 'CO_REASONS', 'RUSH_PCT'],
     stubs: {
       document: dom, setTimeout: () => 0,
       jobs: [Object.assign({}, JOB)], changeOrders: cos || [],
@@ -84,7 +84,7 @@ function coCtx(est, cos, seed) {
 // The invoice sandbox, as change-order-billing.test.js builds it.
 function inv(stubs) {
   return sandbox({
-    fns: ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+    fns: ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack',
@@ -148,8 +148,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(c.coReasonLabel('scope_add'), 'Scope addition — new rooms or services', 'a key prints its label');
     eq(c.coReasonLabel('mystery'), 'mystery', 'an unknown key prints as itself rather than vanishing');
     eq(c.coReasonLabel(undefined), '', 'and a missing one prints nothing');
-    eq(c.CO_REASONS.map((r) => r.v).join(','), 'timeline,crew,scope_add,scope_remove,vendor,other',
-       'the six reasons the modal has always offered, in its order');
+    // ⚠ RESTATED (P25, Q54; Anthony, 2026-10-09: "Per service, none picked"). One list of six served every service, and a
+    // prep change order printed "Crew upgrade — Senior Property Specialist required", a role the rate card does not have.
+    // The catalogue labels every key; each service family offers its own (coReasonsFor, driven in p25-papers.test.js).
+    eq(c.CO_REASONS.map((r) => r.v).join(','), 'scope_add,scope_remove,timeline,conditions,discovery,prep_hours,vendor_add,vendor,other',
+       'the catalogue of every reason, labelled');
+    ok(!c.CO_REASONS.some((r) => /Senior Property Specialist/.test(r.l)), '⚠⚠ "Senior Property Specialist" is gone');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -187,8 +191,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(note, 'carries no price and bills nothing', '⚠ and not the T&M sentence it used to carry');
     const opts = f.__dom.getElementById('co-reason').innerHTML;
     has(opts, 'Scope addition — new rooms or services', 'the reasons are filled from CO_REASONS');
-    eq((opts.match(/<option /g) || []).length, 6, 'all six of them');
-    eq(f.__dom.getElementById('co-reason').value, 'scope_add', 'defaulting to a scope addition');
+    // RESTATED (P25, Q54): this job's list (an Estate Settlement: five) behind a placeholder, and none pre-picked.
+    eq((opts.match(/<option /g) || []).length, 6, 'the placeholder and the five an estate offers');
+    has(opts, '<option value="">Choose a reason', '…opening on the placeholder');
+    eq(f.__dom.getElementById('co-reason').value, '', '⚠⚠ nothing pre-picked');
 
     f.__dom.getElementById('co-tc-hrs').value = '20';
     f.__dom.getElementById('co-ps-hrs').value = '20';

@@ -127,9 +127,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A test that names a behaviour should pin the line that IMPLEMENTS it. The rate is a
     // constant with ONE definition; a document restating the digits is a second copy.
     // RESTATED 2026-10-01 (P17): the fee is named the Home Sale Preparation Fee everywhere a client reads it.
-    has(ce, "Home Sale Preparation Fee on actual vendor spend</strong>",
+    has(ce, "Home Sale Preparation Fee on ' + PREP_FEE_BASIS_TXT + '</strong>", // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
        'prep states the fee it actually charges');
-    has(ce, "Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on actual vendor spend",
+    has(ce, "Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on ' + PREP_FEE_BASIS_TXT", // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
        '⚠ …and reads the rate rather than printing a 30 the day the rate moves');
     has(ce, 'It is not billed hourly.', 'and says plainly that it is not hourly');
     has(ce, 'it is re-quoted and agreed with you in writing', 'scope changes are a re-quote, not an hours change order');
@@ -322,7 +322,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'estimateIsFeeOnly', 'estDeclutterHrs', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText',
             // Both emails state the vendor-fee rule through the one shared sentence (2026-09-10).
             'vendorFeeNote', 'prepFeeRate', 'estFixedFee', 'estPrepFeeOnTop', 'estimateHavellinLines', 'estFixedLines', 'roundCents', 'fmt'],
-      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'RUSH_PCT'],
+      vars: ['PREP_FEE_BASIS_TXT', 'EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'RUSH_PCT'],
       stubs: {
         assignedTCContact: () => ({ name: 'Ashley Graziano', phone: '(561) 370-4700', email: 'ashley@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -368,7 +368,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const phtml = ctx.buildEstimateEmailHtml(prep, { ...job, svc: 'prep' });
     // RESTATED 2026-10-01 (P17): the email's line was "Havellin Management Fee".
     has(phtml, 'Home Sale Preparation Fee', 'a prep email names the fee');
-    has(phtml, '30% of what the vendors actually invoice', 'and states the basis');
+    has(phtml, '30% of the vendor quotes recorded, updated if a vendor’s invoice differs', 'and states the basis'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(phtml, 'hours actually worked', 'and never mentions hours');
 
     // A fixed-price job says the third thing.
@@ -817,7 +817,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the estimate and the three invoices get it too.
     has(fn('emailAgreementToClient'), "docAction(currentAgrJobId, 'agreement', 'send')",
       'the button routes through the one document action');
-    has(src, 'cc: function () { return DEPT_EMAILS.agreements; },', "CC'd to agreements@ — the thing that was missing");
+    has(src, 'cc: function (spec) { return docCcLine(spec && spec.job, spec && spec.to, DEPT_EMAILS.agreements); },', "CC'd to agreements@ — the thing that was missing (RESTATED P25, Q37)");
     // The gate is the same two conditions; what changed is that meeting them STAMPS the
     // approval rather than requiring a separate one — and that stamp is now the registry's
     // `commit`, run by docAction on every verb but 'view'.
@@ -851,7 +851,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fb, 'Attach the signing packet before sending', 'and says to attach the packet, since mailto: cannot');
 
     // Estimates and invoices must not have lost theirs.
-    has(src, 'cc: function () { return DEPT_EMAILS.estimates; },', "the estimate still CC's estimates@");
+    has(src, 'cc: function (spec) { return docCcLine(spec && spec.job, spec && spec.to, DEPT_EMAILS.estimates); },', "the estimate still CC's estimates@ (RESTATED P25, Q37)");
     has(fn('buildEstimateMailto'), 'DEPT_EMAILS.estimates', 'on the fallback too');
     has(fn('buildInvoiceMailto'), 'DEPT_EMAILS.billing', "and invoices still CC billing@");
   }

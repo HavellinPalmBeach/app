@@ -31,7 +31,7 @@ const CTX_FNS = ['planTaskCtx', 'jobOnProbateTrack', 'planTasksFor', 'invFiducia
 const CTX_VARS = ['PLAN_TASKS', 'JOB_ADMIN_TASKS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
   'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'DOC_SCOPES'];
 // planDerivedLines and what it reads, as job-desk-scope lifts it, plus the P19 answers it now asks.
-const DERIVED_FNS = ['planDerivedLines', 'planDerivedHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
+const DERIVED_FNS = ['planDerivedLines', 'prepVendorsConfirmed', 'planDerivedHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms',
   'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf',
   'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'coAcceptedHours', 'coHoursTotal',
   'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef',
@@ -220,7 +220,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('D5 — the two chips drawn: the red one carries its fix under the row, the green one its date');
   inEastern(() => {
     // The chip row passes no date, so planDerivedLines asks _todayStr: pinned here, never the clock.
-    const d = sandbox({ fns: DERIVED_FNS.concat(['planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor',
+    const d = sandbox({ fns: DERIVED_FNS.concat(['planGateChipsHtml', 'vendorSourcingProgress', 'prepVendorsConfirmed', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor',
       'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName']),
       vars: DERIVED_VARS.concat(['LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES']),
       stubs: Object.assign(DERIVED_STUBS(), { _todayStr: () => '2026-10-03' }) });
@@ -239,7 +239,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('D4 — chain of custody is mandatory on the trust track, as on the probate track');
   {
     const PLAN_FNS = ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
-      'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines',
+      'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'prepVendorsConfirmed',
       'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
       'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', '_planRoomListHtml',
       '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow',

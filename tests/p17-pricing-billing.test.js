@@ -236,13 +236,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const hit = OLD.exec(text(pages[k]));
       eq(hit ? hit[0] : null, null, '⚠⚠ Home Prep ' + k + ': and no older name for it');
     });
-    has(text(pages.final), 'Services total (Home Sale Preparation Fee on actual vendor spend + logged concierge hours)',
+    has(text(pages.final), 'Services total (Home Sale Preparation Fee on the vendor quotes recorded + logged concierge hours)', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         '⚠ the Home Prep final heads its total in the fee\'s name (Anthony\'s wording, P14, renamed)');
     // A fee-only Home Prep job (no declutter hours): its final, and the fee-only arm of the agreement.
     const fb = attempt(() => { const d = driveCalcAll({ svc: 'prep', sqft: 3500, rooms: [] });
       d.ctx.prepItems.push({ type: 'Staging', cost: 10000, note: '', lid: 'p2' }); d.ctx.calcAll(); return d.ctx.currentEstimate; });
     const w0 = walk(fb.ok ? fb.val : {}, Object.assign({}, PJOB), []);
-    has(text(w0.inv.final.html), 'Services total (Home Sale Preparation Fee on actual vendor spend)', 'and drops the hours when none are logged');
+    has(text(w0.inv.final.html), 'Services total (Home Sale Preparation Fee on the vendor quotes recorded)', 'and drops the hours when none are logged'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     const OLD0 = OLD.exec(text(w0.inv.final.html) + ' ' + text(html(w0.agreement)) + ' ' + text(html(w0.estimate)));
     eq(OLD0 ? OLD0[0] : null, null, 'the fee-only job\'s estimate, agreement and final carry no older name either');
     // The agreement's clauses that name it (legal text: counsel bundle).
@@ -406,10 +406,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const dom = domStub({ 'co-jobid': { value: '1' }, 'co-description': { value: 'Garage' }, 'co-tc-hrs': { value: tc }, 'co-ps-hrs': { value: ps },
                             'co-reason': { value: 'scope_add' } });
       const said = [];
-      const c = sandbox({ fns: ['saveChangeOrder', '_coJobBasis', 'agrBillingRates', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estFixedFee',
+      const c = sandbox({ fns: ['saveChangeOrder', 'coReasonsFor', 'isDecedentJob', 'coReasonLabel', '_coJobBasis', 'agrBillingRates', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estFixedFee',
           'estPrepFeeOnTop', 'estFixedLines', 'coRushPctFor', 'coPriorHours', '_coPriorAccepted', 'coHours', 'coScopeLabel', 'coHoursLabel',
           'coVendorAdds', 'coVendorAddsTxt', 'isWholeHours', 'roundCents', 'fmtHrs', 'fmt', 'esc', 'prepFeeRate'],
-        vars: ['RUSH_PCT', 'PREP_FEE_RATE'],
+        vars: ['CO_REASONS_BY_FAMILY', 'CO_REASONS', 'DECEDENT_SERVICES', 'RUSH_PCT', 'PREP_FEE_RATE'],
         stubs: { document: dom, jobs: [{ id: 1, svc: 'cleanout', status: 'active' }], changeOrders: [],
                  estimateStore: { 1: { estimate: EST_TM, approved: true } }, currentEstimate: null, saveChangeOrders() {}, renderJobs() {},
                  _docNotice: (k, m) => said.push(m), _srcLid: () => 'L1', coDraftVendorAdd: () => null } });

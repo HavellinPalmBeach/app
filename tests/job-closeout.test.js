@@ -23,7 +23,7 @@ const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')
 
 const CARD_FNS = ['renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
   '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
-  'bestClientEmail', '_coFmt', '_localDateOf', '_ymdLocal', 'renderVendorScorecard', 'computeVendorAvg', 'planChk',
+  'bestClientEmail', 'jobFiduciaries', 'invFiduciaryMode', '_coFmt', '_localDateOf', '_ymdLocal', 'renderVendorScorecard', 'computeVendorAvg', 'planChk',
   '_planTaskDone', 'chkGrid', 'jobCloseBlockers', 'clientRecipient', 'isDecedentJob', 'firstName'];
 
 // A prep job: four trades sourced, three confirmed (one twice — the same firm on two lines), one
@@ -186,7 +186,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const drafts = [], notices = [];
     const t = sandbox({
-      fns: ['draftReviewRequest', 'markReviewRequestSent', 'buildReviewEmailText', 'buildReviewEmailHtml',
+      fns: ['draftReviewRequest', 'clientCopyEmails', 'jobFiduciaries', 'invFiduciaryMode', 'markReviewRequestSent', 'buildReviewEmailText', 'buildReviewEmailHtml',
             'reviewEmailSubject', '_reviewPlace', '_reviewMailtoUrl', 'bestClientEmail', 'bestClientGreetingName',
             'firstName', 'isDecedentJob', '_emHtml', '_planTaskDone', 'conciergePhonesText', 'conciergePhones', 'clientRecipient', '_stampChangedKeys', '_jobTouch'],
       vars: ['GOOGLE_REVIEW_URL', 'EMAIL_BRAND', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS'],
@@ -308,7 +308,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the desk card stops asking a prep job questions that do not apply to it');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'donationReceiptLine', 'donationGroups', 'invDonationReceipted', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
+      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'donationReceiptLine', 'donationGroups', 'invDonationReceipted', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly',
             'planTasksFor', 'jobListEntries', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],

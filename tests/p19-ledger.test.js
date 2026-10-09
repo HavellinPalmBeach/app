@@ -230,8 +230,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(count(trust, 'Signature: __'), 1, 'no representative recorded: one line');
     has(text(trust), 'Date: ______________ successor trustee', 'labelled with the matter\'s approver (_agrApprover)');
     const living = ledgerRig(LIVING(), LINES({ undecided: false })).printDispositionLedger(7, { asHtml: true }).html;
-    eq(count(living, 'Signature: __'), 1, 'living work: one line');
-    has(text(living), 'Ann Smith, Client', 'for the client');
+    // RESTATED (P25, Q51; Anthony, 2026-10-09: "One paper"): a living family signs the Contents Record, so the ledger kept on
+    // living work (where something was sold) carries no signature, and says which paper they sign.
+    eq(count(living, 'Signature: __'), 0, '⚠⚠ living work: no signature line on the ledger');
+    has(text(living), 'The Contents Record is the paper the client signs at close-out.', '…it names the paper the client signs');
     const open = ledgerRig(ESTATE(), LINES()).printDispositionLedger(7, { asHtml: true }).html;
     eq(count(open, 'Signature: __'), 0, '⚠⚠ a line with no disposition: no signature line is offered');
     has(text(open), 'The sign-off is withheld. This page cannot be approved as the final record of the disposition of the property while 1 line has no disposition recorded.',
@@ -505,9 +507,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(email, '  - Estate Inventory Report\n  - Disposition Ledger\n  - Appraisal Worklist', 'the email\'s list of what is attached says so');
     // One file in Drive: the package files the ledger under the name the close does.
     has(noComments(fn('_pkgFileAll')), '_invDocDriveName(job, d.title)', 'fixture: the package files each page under _invDocDriveName(job, its title)');
-    has(noComments(fn('fileDispositionLedger')), '_invDocDriveName(job, title)', 'the close files under the same namer');
-    has(noComments(fn('fileDispositionLedger')), 'var title = PROBATE_PKG_TITLES.ledger;', 'with the package\'s title for the ledger');
-    has(noComments(fn('fileDispositionLedger')), 'resolveSubfolderId(job, PHOTO_SUBFOLDER,', 'into the folder the package files to');
+    // RESTATED (P25, Q51): the ledger files through the one close-out paper path, its title and builder from CLOSEOUT_PAPERS.
+    has(noComments(fn('_fileCloseoutPaper')), '_invDocDriveName(job, title)', 'the close files under the same namer');
+    has(noComments(fn('_fileCloseoutPaper')), 'var title = P.title;', 'with the paper\'s title');
+    has(noComments(decl('CLOSEOUT_PAPERS')), 'title: PROBATE_PKG_TITLES.ledger', '…the package\'s title for the ledger');
+    has(noComments(fn('fileDispositionLedger')), '_fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.ledger)', '…which fileDispositionLedger hands it');
+    has(noComments(fn('_fileCloseoutPaper')), 'resolveSubfolderId(job, PHOTO_SUBFOLDER,', 'into the folder the package files to');
   });
 
   // ── E4: donations ────────────────────────────────────────────────────────
@@ -949,7 +954,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callers('fileDispositionLedger'), ['activateOrCycle'], 'the close files the ledger (the desk\'s button is the other caller)');
     eq(callers('ledgerDerivedLines'), ['planDerivedLines'], 'the derived lines are asked for once, by planDerivedLines');
     const saleReaders = Object.keys(BODY).filter((f) => /\bINV_SALE_DISPOSITIONS\b/.test(codeOnly(BODY[f]))).sort();
-    eq(saleReaders, ['_renderProceedsCard', 'dispositionLedger', 'invHavellinRecipient', 'invPickupLine', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
+    // P25 (Q51): ledgerApplies reads it too, where the ledger is kept on living work (something sold).
+    eq(saleReaders, ['_renderProceedsCard', 'dispositionLedger', 'invHavellinRecipient', 'invPickupLine', 'ledgerApplies', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
     eq(count(live, "['Auction', 'Consign', 'Sell']"), 1, 'and no second copy of it written out');
   });
 };

@@ -56,9 +56,9 @@ const DISCOUNT_FNS = ['estTolerancePctTxt', 'discountPreview', 'estPreDiscountTo
 const DISCOUNT_VARS = ['EST_TOLERANCE_PCT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId'];
 
 // ── the real client estimate, so the document a client reads is what is asserted ─────
-const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'estateProceedsHolder', 'invProbateRows', 'docEstateAuthority', 'isDecedentJob', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
+const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'samePerson', 'canonPersonName', 'docConciergeName', 'estateProceedsHolder', 'invProbateRows', 'docEstateAuthority', 'isDecedentJob', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'fmt', 'esc', 'paymentSplit', 'conciergePhonesText',
                 'conciergePhones', 'estimateIsFeeOnly', 'clientJobPlanSection', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
-                'proposedPlanRow', '_cePhases', 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor',
+                'proposedPlanRow', '_cePhases', 'estateDirectionWords', 'jobFiduciaries', 'jobListEntries', 'materialsBasisNote', 'materialsPackageQuoted', 'discountOnLabor',
                 // proposedPlanRow's prep narrative reads the rate rather than printing a 30.
                 'prepFeeRate',
                 // The client's stated job length is the shared definition now, not a second
@@ -67,7 +67,7 @@ const CE_FNS = ['estTolerancePctTxt', 'clientEstimateHtml', 'estateProceedsHolde
                 // Who arranges the appraisals is the tier's answer (weArrangeAppraisals). This sandbox
                 // carries no JOB_STEPS, so the scope is never `full` here and the chain is never reached.
                 'weArrangeAppraisals', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'escLines', 'roundCents', 'fmtHrs'];
-const CE_VARS = ['CE_FOUND_PAPERS_TXT', 'ESTATE_AUTHORITIES', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
+const CE_VARS = ['PERSON_NAME_ALIASES', 'CE_FOUND_PAPERS_TXT', 'ESTATE_AUTHORITIES', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'HAVELLIN_OFFICE_PHONE',
                  'NON_MOBILE_NUMBERS', 'PREP_FEE_RATE', 'PRODUCTIVE_HRS_PER_DAY'];
 const CE_JOB = { id: 1, svc: 'cleanout', name: 'Butler Estate', address: '69 Beach Blvd' };
 function ceDoc(e) {
@@ -80,7 +80,7 @@ const JOB = { id: 1, hvlId: 'HVL-0007', client: 'Butler Estate', svc: 'cleanout'
               premium: false, executor: 'Tripp Butler' };
 function invCtx(e, logs) {
   return sandbox({
-    fns: ['invoiceHtml', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+    fns: ['invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'finalAwaitsHours', 'paymentStageWord', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack',

@@ -63,13 +63,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // `isFixedAgr` is false on prep — the fixed-price toggle is not reachable there — so the
   // HOURLY arm is what a prep client would have signed. The estimate's Terms were corrected
   // for exactly this on 2026-09-08 and the agreement was never given the same arm.
-  const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp', 'isDecedentJob', 'prepFeeRate',
+  const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'agrFinalDueTxt', '_agrApprovedStamp', 'isDecedentJob', 'prepFeeRate',
                    '_pctWords', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted', '_agrHasPrepVendors',
                    '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
                    'estimateDocScope', 'svcHasDocStep', 'fmt', 'esc', 'paymentSplit',
                    'conciergePhones', 'assignedTCContact', 'samePerson', 'canonPersonName',
                    'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'estimateIsFeeOnly', 'estDeclutterHrs', 'agrSection', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docTierProduces', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs'];
-  const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'PREP_FEE_RATE', 'SVC_LABELS', 'DECEDENT_SERVICES', '_PCT_WORDS',
+  const AGR_VARS = ['PREP_FEE_BASIS_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'PREP_FEE_RATE', 'SVC_LABELS', 'DECEDENT_SERVICES', '_PCT_WORDS',
                     'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS',
                     'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'JOB_STEPS', 'ESIGN_ANCHORS', 'RUSH_PCT'];
   function agrDoc(svc, over) {

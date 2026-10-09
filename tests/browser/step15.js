@@ -90,8 +90,12 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   // ⚠ RESTATED 2026-09-29 (audit P10 low): this is a HOME PREP job, and Home Prep has no project midpoint — its middle
   // payment is its SECOND payment on every surface now (paymentStageWord). The requirement is unchanged: the band names
   // the step to take on that invoice, as its one filled button.
-  eq(plan.bandStep, 'Send the second invoice', 'the Job Plan band names the second invoice as the step to take');
-  ok(/Send second invoice/.test(plan.prim), 'with Send second invoice as its one filled button (' + plan.prim + ')');
+  // ⚠ RESTATED (P25, Q56; Anthony, 2026-10-09): Home Prep's second invoice is due once every prep vendor is confirmed, and
+  // this job has one still at *Quote requested* (the scorecard check below needs it). So the step to take is booking the
+  // vendors, named with the invoice it unlocks, and its one filled button opens the Job Plan on them. Same requirement:
+  // the band names the step to take as its one filled button.
+  eq(plan.bandStep, 'Book the prep vendors — the second invoice is due once every one is confirmed', 'the Job Plan band names the step to take: book the vendors, for the second invoice');
+  ok(/Book the vendors/.test(plan.prim), 'with Book the vendors as its one filled button (' + plan.prim + ')');
   ok(!/midpoint/i.test(plan.bandStep + ' ' + plan.prim), 'and never calls a Home Prep payment a midpoint');
   eq(plan.nPrim, 1, 'exactly one filled button in the band');
   ok(plan.trackVis, 'the timeline track shows at 1440');
@@ -158,7 +162,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   });
   eq(admin.job, '901', 'Job Admin follows the job picked on the Job Plan');
   ok(admin.hdr, 'Job Admin carries the client header — client, service, property');
-  eq(admin.band, 'Send the second invoice', 'and the same band, reminding the second invoice');
+  eq(admin.band, 'Book the prep vendors — the second invoice is due once every one is confirmed', 'and the same band (RESTATED, P25 Q56: the vendors first)');
   ok(admin.order, 'in order: header, band, desk paperwork, close-out');
   eq(admin.contents, false, '⚠⚠ no inventory on a prep job — no Contents Record, Approval Request, line items or appraisers');
   eq(admin.rooms, false, 'no "All rooms cleared — 0 of 0"');

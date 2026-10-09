@@ -386,11 +386,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The estimate always CC'd estimates@ and invoices CC billing@; the AGREEMENT never
     // did, which was a defect — that CC is the firm's own record of what went out.
+    // RESTATED (P25, Q37; Anthony, 2026-10-09: "Copy on everything"): each kind's Cc is the co-representatives, then its
+    // department (docCcLine), so the rule now takes the send's spec; driven in p25-papers.test.js.
     ['estimates', 'agreements', 'billing'].forEach((d) =>
-      has(src, `cc: function () { return DEPT_EMAILS.${d}; },`, `${d}@ is CC'd on its own document`));
-    has(src, 'to: spec.to, cc: spec.cfg.cc(),', 'and the one send path reads it from the registry');
+      has(src, `cc: function (spec) { return docCcLine(spec && spec.job, spec && spec.to, DEPT_EMAILS.${d}); },`, `${d}@ is CC'd on its own document`));
+    has(src, 'to: spec.to, cc: spec.cfg.cc(spec),', 'and the one send path reads it from the registry');
     // Which means the count is three — one per kind, no more and no fewer.
-    eq((decl('DOC_ACTIONS').match(/cc: function \(\)/g) || []).length, 3, 'one CC rule per document kind');
+    eq((decl('DOC_ACTIONS').match(/cc: function \(spec\)/g) || []).length, 3, 'one CC rule per document kind');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

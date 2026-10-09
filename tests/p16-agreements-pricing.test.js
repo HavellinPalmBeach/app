@@ -67,7 +67,7 @@ const LANDSCAPER = { type: 'Landscaper', cost: 9000, lid: 'co-land' };
 
 // The change-order modal, save, readout, acceptance and print — P15's list, with the P16 rule and its reader.
 const CO_FNS = ['_coJobBasis', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel',
-                '_coMoney', 'fmt', 'esc', 'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonLabel', 'estFixedFee',
+                '_coMoney', 'fmt', 'esc', 'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonsFor', 'isDecedentJob', 'coReasonLabel', 'estFixedFee',
                 'estTolerancePctTxt', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'openCOAcceptModal', 'closeCOAcceptModal',
                 'acceptChangeOrder', 'printChangeOrder', 'saveChangeOrder', '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt',
                 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates', 'coRateModsLine', 'coRushPct', 'coRushPctFor', 'estFixedLines',
@@ -78,7 +78,7 @@ function coCtx(est, job, cos, seed) {
   const said = [];
   const theJob = Object.assign({}, job || BP_JOB);
   const c = sandbox({
-    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'PREP_FEE_RATE', 'RUSH_PCT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', '_srcLidSeq'],
+    fns: CO_FNS, vars: ['DECEDENT_SERVICES', 'CO_REASONS_BY_FAMILY', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'EST_TOLERANCE_PCT', 'CO_REASONS', 'PREP_FEE_RATE', 'RUSH_PCT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', '_srcLidSeq'],
     stubs: {
       document: dom, setTimeout: () => 0, vendorDirectory: DIR,
       jobs: [theJob], changeOrders: cos || [],
@@ -109,7 +109,7 @@ function createCO(c, f) {
 }
 
 // The invoice sandbox (P15's list, with the P16 rules).
-const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'isCrewPlaceholder', 'docPartyIdent', 'docSentAt', 'paymentSplit',
+const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'docPartyIdent', 'docSentAt', 'paymentSplit',
   'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor',
   'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
   '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
@@ -121,7 +121,7 @@ const INV_FNS = ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', '
   'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct',
   'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs',
   'coBaselineMove', 'finalCrewOnlyWarn', 'agrBillingRates', 'paymentCounts', 'escLines', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'];
-const INV_VARS = ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+const INV_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
   'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
   'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE', 'INV_FINAL_NO_HOURS_WHY'];
 function inv(stubs, extraFns) {
@@ -151,16 +151,16 @@ function finalDoc(est, job, cos, logged) {
 // Both agreement forms (P15's lists).
 const TIER_FNS = ['weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep',
                   'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames'];
-const TIER_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
+const TIER_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                  '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy',
                  'prepFeeRate', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
-const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
+const AGR_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'PREP_FEE_RATE', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
 const EST_ESTATE = { svc: 'probate', jobId: 1, docScope: 'full', tcFee: 18500, psFee: 12500, pkgCost: 1500,
@@ -273,7 +273,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                                             payments: [{ uid: 'd', stage: 'deposit', amount: 11470, date: '2026-09-01', method: 'wire' }] });
     const dom = domStub({ 'closeout-reason': 'client_changed_mind', 'closeout-note': '' });
     const c = sandbox({ fns: ['confirmMarkLost', 'closeoutRetainedTotal', 'jobPaidTotal', 'jobPayments', 'closeCloseoutModal', 'paymentCounts', 'roundCents', 'jobRefundedTotal', 'refundCounts', 'paymentLive', 'isRefundRecord'],
-                        vars: ['LOSS_REASONS'],
+                        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOSS_REASONS'],
                         stubs: { document: dom, jobs: [job], closeoutJobId: 1, saveJobs: () => said.push('save'),
                                  syncJobToSheets: () => {}, renderJobs: () => {} } });
     c.confirmMarkLost();
@@ -321,12 +321,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(note, 'A change order carries no price and bills nothing on its own', 'the hourly note keeps its rule');
     // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee's one name is the Home Sale Preparation Fee, in this group and the
     // A3 groups below (they read "site management fee"; the estate fee row read "General contractor / site management fee").
-    has(note, 'A change order can also add a preparation vendor found mid-job, with or without hours: it bills the client directly at cost, and the 30% Home Sale Preparation Fee applies to what it actually charges. It books no concierge hours.',
+    has(note, 'A change order can also add a preparation vendor found mid-job, with or without hours: it bills the client directly at cost, and the 30% Home Sale Preparation Fee applies to its quote as recorded, updated if its invoice differs. It books no concierge hours.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'and says a vendor can be added, and on what terms');
     const f = coCtx(EST_BPF, BP_JOB, [], { 'co-jobid': '1' });
     f.openChangeOrder(1);
     eq(f.__dom.getElementById('co-vendor-wrap').style.display, 'grid', 'on the fixed price with the fee on top too');
-    has(text(f.__dom.getElementById('co-basis-note').innerHTML), 'applies to what it actually charges, on top of the fixed project fee.', 'where the fee sits on top of the flat fee');
+    has(text(f.__dom.getElementById('co-basis-note').innerHTML), 'applies to its quote as recorded, updated if its invoice differs, on top of the fixed project fee.', 'where the fee sits on top of the flat fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     [[EST_LAB, 'a labour job with no prep'], [EST_BPI, 'an older fixed fee with the prep fee inside']].forEach(([e, why]) => {
       const x = coCtx(e, BP_JOB, [], { 'co-jobid': '1', 'co-vendor-wrap': { style: { display: 'grid' } } });
       x.openChangeOrder(1);
@@ -371,7 +371,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const only = coCtx(EST_BP, BP_JOB, [], { 'co-jobid': '1', 'co-vendor-type': 'Landscaper', 'co-vendor-cost': '$9,000' });
     only.updateCOHours();
     const t1 = text(only.__dom.getElementById('co-hrs-note').innerHTML);
-    has(t1, 'Adds Landscaper to the preparation vendors. It bills the client directly at cost, and the 30% Home Sale Preparation Fee applies to what it actually charges — about $2,700 at the estimated $9,000.',
+    has(t1, 'Adds Landscaper to the preparation vendors. It bills the client directly at cost, and the 30% Home Sale Preparation Fee applies to its quote as recorded, updated if its invoice differs — about $2,700 at the estimated $9,000.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'a vendor alone reads out, with its fee at the estimate');
     lacks(t1, 'hrs on the estimate', 'and no hours readout');
     const both = coCtx(EST_BP, BP_JOB, [], { 'co-jobid': '1', 'co-tc-hrs': '4', 'co-ps-hrs': '8', 'co-vendor-type': 'Painting', 'co-vendor-cost': '4500' });
@@ -396,10 +396,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     a.openCOAcceptModal(100);
     const s = text(a.__dom.getElementById('coa-summary').innerHTML);
     has(s, 'Added vendor Landscaper, est. $9,000, billed to you directly', 'the panel names the vendor');
-    has(s, '30% Home Sale Preparation Fee on it about $2,700, on its actual invoice', 'and the fee on it');
+    has(s, '30% Home Sale Preparation Fee on it about $2,700, on its quote as recorded, updated if its invoice differs', 'and the fee on it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(s, 'No charge is created by this change order', '⚠ never "no charge", which a vendor\'s fee would make false');
     has(text(a.__dom.getElementById('coa-terms').innerHTML),
-        'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope, and the addition of Landscaper to the preparation vendors, billed to them directly at cost, with the 30% Home Sale Preparation Fee on what it actually charges.',
+        'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope, and the addition of Landscaper to the preparation vendors, billed to them directly at cost, with the 30% Home Sale Preparation Fee on its quote as recorded, updated if its invoice differs.', // RESTATED (P25, Q52)
         'and the client agrees to it in words');
     const h = coCtx(EST_BP, BP_JOB, [co({ tcHrs: 4, psHrs: 8, vendorAdds: [LANDSCAPER] })], { 'coa-co-id': '100' });
     h.openCOAcceptModal(100);
@@ -447,8 +447,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const v = P(EST_BP, co({ vendorAdds: [LANDSCAPER] }));
     has(v, 'This change order adds Landscaper to the preparation vendors.', '⚠⚠ the page says what it adds');
     has(v, 'Added preparation vendor: Landscaper billed to you directly by the vendor, at cost $9,000 estimated', 'the table names the vendor and its estimate');
-    has(v, 'Home Sale Preparation Fee (30%) on its actual invoice about $2,700', 'and the fee on it');
-    has(v, 'The vendor bills you directly, at cost, and the 30% Home Sale Preparation Fee in your agreement is billed on what it actually charges — about $2,700 at the estimated $9,000.',
+    has(v, 'Home Sale Preparation Fee (30%) on its quote as recorded, updated if its invoice differs about $2,700', 'and the fee on it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(v, 'The vendor bills you directly, at cost, and the 30% Home Sale Preparation Fee in your agreement is billed on its quote as recorded, updated if its invoice differs — about $2,700 at the estimated $9,000.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'the terms, in the Home Prep page\'s words');
     has(v, 'That fee covers coordinating and supervising the preparation work, which is not billed as hours.', 'as §3.5 says it');
     lacks(v, 'Third-party vendor costs are unaffected', '⚠ not the line this change makes false');
@@ -488,7 +488,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a1.overUnder, 0, '⚠⚠ and the baseline moved by exactly that fee: no variance');
     ok(a1.requiresApproval === false, 'so the accepted vendor never sends the final to a manager');
     has(text(a1.html), 'Adds Landscaper (est. $9,000) — it bills you directly, and the Home Sale Preparation Fee on it is in the fee above', 'the change-order row names it');
-    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on what it actually charged is in the fee above.', 'the section note says where its fee is');
+    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', 'the section note says where its fee is'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(text(a1.html), 'These hours are not billed separately', 'and says nothing of hours it did not add');
     has(text(a1.html), 'adds Landscaper, in the Home Sale Preparation Fee above', 'the payment summary names it');
     const quoted = finalDoc(EST_BP, Object.assign({}, BP_JOB, { prepSourcing: { 'Lco-land': { quote: 12000 } } }), COS, { tc: 80, ps: 60 });
@@ -503,7 +503,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(fh.html), '+ $600; adds Landscaper, in the Home Sale Preparation Fee above', 'with hours: the signed price, then the vendor');
     // The change-order section's note on the fixed final: where the vendor's fee is, and a price sentence only for a
     // change order that carries a price (a vendor-only one carries none).
-    has(text(f1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on what it actually charged is in the fee above.',
+    has(text(f1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         '⚠ the fixed final\'s change-order note says where the added vendor\'s fee is');
     lacks(text(f1.html), 'Each is charged at the price on the change order you accepted', 'and claims no price for a change order that carries none');
     has(text(fh.html), 'because a fixed fee does not otherwise move with the hours worked. A vendor a change order added bills you directly',
@@ -514,15 +514,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
       'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'estimateAppraiserLines', 'vendorLineTCHrs', 'roundCents', 'fmtHrs'];
-    const sourcing = (cos) => String(sandbox({ fns: SRC_FNS, vars: ['LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES'],
+    const sourcing = (cos) => String(sandbox({ fns: SRC_FNS, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES'],
       stubs: { changeOrders: cos, jobs: [BP_JOB], estimateStore: {}, document: domStub({}), contractors: [],
                vendorDirectory: [{ vendor_name: 'Green Thumb Landscaping', category_group: 'Property Preparation', category: 'Landscaper', status: 'Active', _row: 3 }] } })
       .renderVendorSourcing(1, BP_JOB, EST_BP));
     ok(sourcing(COS).indexOf('Landscaper') >= 0, '⚠⚠ the labour job\'s sourcing list draws the vendor the change order added');
     ok(sourcing(COS).indexOf('Green Thumb Landscaping') >= 0, 'with the directory\'s landscaper offered to book');
     ok(sourcing([co({ vendorAdds: [LANDSCAPER] })]).indexOf('Landscaper') < 0, 'and an unaccepted change order draws nothing');
-    const V = sandbox({ fns: ['vendorSourcingProgress', '_srcLineKey', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor',
-                              'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'], vars: ['LOGISTICS_CATEGORIES'], stubs: { changeOrders: COS } });
+    const V = sandbox({ fns: ['vendorSourcingProgress', 'prepVendorsConfirmed', '_srcLineKey', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor',
+                              'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES'], stubs: { changeOrders: COS } });
     eq(V.vendorSourcingProgress(1, Object.assign({}, BP_JOB, { prepSourcing: { 'Lco-land': { status: 'Confirmed' } } }), EST_BP),
        { done: 1, total: 2 }, 'the "lined up" count includes it');
   }
@@ -542,7 +542,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         '⚠⚠ the estate fee row, hourly arm');
     const fx = es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 40000, prepFeeOnTop: true, havellinTotal: 43000 }));
     has(fx, 'on the home sale preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost', 'the fee row, fixed arm');
-    has(fx, 'of what the home sale preparation vendors identified in Exhibit A or added by Change Order actually invoice', 'and the Fixed Project Fee paragraph');
+    has(fx, 'of the quotes recorded for the home sale preparation vendors identified in Exhibit A or added by Change Order, updated if a vendor’s invoice differs', 'and the Fixed Project Fee paragraph'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 43000, havellinTotal: 43000 })), 'added by Change Order', 'an older inside-fee estate form keeps its words');
   }
 
@@ -557,13 +557,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const hourly = es(prepE);
     const f42 = (t) => { const i = t.indexOf('4.2 Change Order Documentation'); return i < 0 ? '' : t.slice(i, t.indexOf('Havellin Authorization', i)); };
     ok(f42(hourly).length > 100, 'fixture: the hourly estate form prints §4.2');
-    has(f42(hourly), 'Added Preparation Vendor (the vendor and its estimated cost. It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on what it actually invoices.)',
+    has(f42(hourly), 'Added Preparation Vendor (the vendor and its estimated cost. It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on its quote as recorded, updated if its invoice differs.)', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         '⚠⚠ the form has a row for the vendor, saying who pays it and where its fee is');
-    has(f42(hourly), 'The additional hours are billed as worked, at the hourly rates in Section 3.1. A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on what it actually invoices; this Change Order creates no other charge.',
+    has(f42(hourly), 'The additional hours are billed as worked, at the hourly rates in Section 3.1. A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on its quote as recorded, updated if its invoice differs; this Change Order creates no other charge.', // RESTATED (P25, Q52)
         '⚠⚠ the hourly Billing row names the vendor\'s fee');
     lacks(f42(hourly), 'does not itself create a charge', 'and no longer says the change order creates no charge');
     const fx = f42(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 40000, prepFeeOnTop: true, havellinTotal: 43000 })));
-    has(fx, 'is charged on what it actually invoices, in addition to the fixed project fee.)', 'on a fixed fee with the prep fee on top, the fee is in addition to it');
+    has(fx, 'is charged on its quote as recorded, updated if its invoice differs, in addition to the fixed project fee.)', 'on a fixed fee with the prep fee on top, the fee is in addition to it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(fx, 'Price of This Change', 'beside the fixed arm\'s own rows');
     lacks(f42(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 43000, havellinTotal: 43000 }))), 'Added Preparation Vendor',
           'never on an older fixed fee with the prep fee inside it (no change order can add a vendor there)');
@@ -669,7 +669,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
       'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'estimateAppraiserLines', 'vendorLineTCHrs', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'roundCents', 'fmtHrs'];
-    const srcCard = (prem) => text(sandbox({ fns: SRC, vars: ['LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES', 'COORD_TOUCHES_DEFAULT'],
+    const srcCard = (prem) => text(sandbox({ fns: SRC, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES', 'COORD_TOUCHES_DEFAULT'],
       stubs: { changeOrders: [], jobs: [{ id: 1, svc: 'cleanout' }], estimateStore: {}, document: domStub({}), contractors: [], vendorDirectory: [] } })
       .renderVendorSourcing(1, { id: 1, svc: 'cleanout' }, { svc: 'cleanout', prem, vendors: [Object.assign({}, ART)], prepItems: [], collections: [] }));
     has(srcCard(true), 'Art Appraiser', 'fixture: the sourcing card draws the appraiser line');
@@ -702,7 +702,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(notices.pop().msg, 'inside the ±15% tolerance', 'hours at the estimate: inside the tolerance, as before');
     mk(EST_LAB, logOf(160, 120)).dashApproveInvoice(1, 'final');
     eq(pins, [1], 'far over the estimate: the PIN is asked for');
-    const reg = sandbox({ vars: ['INV_FINAL_NO_HOURS_WHY'] });
+    const reg = sandbox({ vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'INV_FINAL_NO_HOURS_WHY'] });
     has(noComments(fn('dashApproveInvoice')), 'INV_FINAL_NO_HOURS_WHY', 'one sentence …');
     ok(src.indexOf('if (d.blocked) return INV_FINAL_NO_HOURS_WHY;') >= 0, '… which the send\'s own refusal returns');
     ok(typeof reg.INV_FINAL_NO_HOURS_WHY === 'string' && reg.INV_FINAL_NO_HOURS_WHY.length > 20, 'and it is a real sentence');
@@ -718,7 +718,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ER.havellinTotal, 19940 + 3988 - D.discountOnLabor(18000, 0.2, 10), 'fixture: the estimate carries calcAll\'s arithmetic');
     const CO40 = [accepted({ tcHrs: 40, psHrs: 40 })];
     const M = sandbox({ fns: ['coBaselineMove', 'coPrice', 'coRushPct', 'coBaselineShift', 'coHours', 'discountOnLabor', 'coVendorAdds',
-                              'estPrepFeeOnTop', 'prepFeeRate', 'roundCents'], vars: ['RUSH_PCT', 'PREP_FEE_RATE'] });
+                              'estPrepFeeOnTop', 'prepFeeRate', 'roundCents'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'RUSH_PCT', 'PREP_FEE_RATE'] });
     eq(M.coBaselineMove(CO40, ER, 150, 100), 10000 + 2000 - 1200, '⚠⚠ $10,000 of hours carry the 20% premium and the 10% discount, as the final bills them: $10,800');
     eq(M.coBaselineMove(CO40, EST_LAB, 150, 100), 10000, 'on a job with neither, the plain value');
     // Driven: log exactly the estimate plus the change order's hours, and the final lands on its baseline.
@@ -787,7 +787,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jtDraftLine', 'staleDraftNote',
         'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent',
         'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coHours', '_ymdLocal', 'paymentCounts', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord', 'estateAuthority', 'agreementHandOverDraftNote'],
-      vars: ['JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'DECEDENT_SERVICES', 'DOC_STAGE_WORD'],
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'JT_SHORT', 'EXECUTOR_AUTH_OPTIONS', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'DECEDENT_SERVICES', 'DOC_STAGE_WORD'],
       stubs: { REQUIRE_WALKTHROUGH_NOTES: false, SHEETS_SYNC_URL: '' } });
     // A job closed with every step before the final recorded, so the final is the one lit step (checked below).
     const closedJob = (over) => Object.assign({}, BP_JOB, { status: 'closed', deliveredOn: '2026-09-29', activatedOn: '2026-09-01', won: true,
@@ -841,7 +841,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const G = sandbox({ fns: ['agreementChipFix', 'docReadiness', 'agreementReady', 'isJobWon', 'priceAboveAcceptance', '_approvedPriceAbove',
                               'fmt', 'isAgreementSent', 'isAgreementSigned', 'agreementSignature', 'docSentAt', 'docKeyFor', 'esignJobWatches',
                               'esignProviderKey', 'esignAvailable', 'roundCents'],
-                        vars: ['DOC_READY_WHY', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY'], stubs: { estimateStore: {}, SHEETS_SYNC_URL: '' } });
+                        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_READY_WHY', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY'], stubs: { estimateStore: {}, SHEETS_SYNC_URL: '' } });
     const EST = { estimate: { havellinTotal: 20000 }, approved: true };
     const J = (over) => Object.assign({ id: 1, name: 'Harper', svc: 'downsizing_move', status: 'won', won: true, acceptedTotal: 20000 }, over || {});
     has(G.agreementChipFix(J(), null), 'No estimate has been built', 'no estimate: says so');

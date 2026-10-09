@@ -70,7 +70,7 @@ const prepAdd = (extra) => co(Object.assign({ tcHrs: 0, psHrs: 0, description: '
 
 // The change-order modal, acceptance and print sandbox (prep-co-hours.test.js's list).
 const CO_FNS = ['_coJobBasis', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coHoursLabel', '_coMoney', 'fmt', 'esc',
-                'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonLabel', 'estFixedFee',
+                'coPrice', 'coPriceTotal', 'coFixedTerms', 'coRateBasisTxt', 'coReasonsFor', 'isDecedentJob', 'coReasonLabel', 'estFixedFee',
                 'estTolerancePctTxt', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'openCOAcceptModal',
                 'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', 'saveChangeOrder', '_coPriorAccepted',
                 'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates',
@@ -82,7 +82,7 @@ function coCtx(est, cos, seed, dir) {
   const said = [];
   const job = Object.assign({}, est && est.svc === 'prep' ? PREP_JOB : LAB_JOB);
   const c = sandbox({
-    fns: CO_FNS, vars: ['EST_TOLERANCE_PCT', 'CO_REASONS', 'PREP_FEE_RATE', 'RUSH_PCT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', '_srcLidSeq'],
+    fns: CO_FNS, vars: ['PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_DEPOSIT_DUE_TXT', 'DECEDENT_SERVICES', 'CO_REASONS_BY_FAMILY', 'EST_TOLERANCE_PCT', 'CO_REASONS', 'PREP_FEE_RATE', 'RUSH_PCT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', '_srcLidSeq'],
     stubs: {
       document: dom, setTimeout: () => 0, vendorDirectory: dir || [],
       jobs: [job], changeOrders: cos || [],
@@ -106,7 +106,9 @@ function createCO(c, f) {
   d.getElementById('co-description').value = f.desc || 'Scope added';
   d.getElementById('co-tc-hrs').value = f.tc == null ? '' : String(f.tc);
   d.getElementById('co-ps-hrs').value = f.ps == null ? '' : String(f.ps);
-  d.getElementById('co-reason').value = 'scope_add';
+  // A reason this job's list offers (P25, Q54: per service, none pre-picked, and the save refuses one not offered).
+  const offered = c.coReasonsFor(1);
+  d.getElementById('co-reason').value = offered.indexOf('scope_add') >= 0 ? 'scope_add' : (f.vendor ? 'vendor_add' : 'prep_hours');
   d.getElementById('co-vendor-type').value = f.vendor || '';
   d.getElementById('co-vendor-cost').value = f.cost || '';
   c.saveChangeOrder();
@@ -116,7 +118,7 @@ function createCO(c, f) {
 // The invoice sandbox, as fixed-price-change-orders.test.js builds it.
 function inv(stubs) {
   return sandbox({
-    fns: ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit',
+    fns: ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit',
           'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor',
           'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
@@ -127,7 +129,7 @@ function inv(stubs) {
           'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop',
           'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct',
           'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'jobIsFeeOnly', 'coAcceptedHours', 'estDeclutterHrs', 'escLines', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs'],
-    vars: ['MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT',
            'TOUCH_HRS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'],
     stubs: Object.assign({ jobLogs: {}, estimateStore: {}, changeOrders: [], contractors: [],
@@ -155,19 +157,19 @@ function finalDoc(est, job, cos, logged) {
 // The estate agreement and Exhibit A sandboxes (appraisal-tier.test.js's lists).
 const TIER_FNS = ['weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep',
                   'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames'];
-const TIER_VARS = ['DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
+const TIER_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrFinalDueTxt', 'jobProbateCourt', 'courtFromCaseNo', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                  '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
-const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
+const AGR_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
-const ceCtx = () => sandbox({ fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'isDecedentJob', 'esc', 'estimateAppraiserNames', 'estimateAppraiserLines', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', 'estateProceedsHolder'].concat(TIER_FNS),
-                              vars: ['CE_FOUND_PAPERS_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'ESTATE_AUTHORITIES'].concat(TIER_VARS),
+const ceCtx = () => sandbox({ fns: ['estTolerancePctTxt', '_cePhases', 'estateDirectionWords', 'jobFiduciaries', 'jobListEntries', 'samePerson', 'invFiduciaryMode', 'estimateDocScope', 'docScopeDef', 'isDecedentJob', 'esc', 'estimateAppraiserNames', 'estimateAppraiserLines', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', 'estateProceedsHolder'].concat(TIER_FNS),
+                              vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CE_FOUND_PAPERS_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'DOC_SCOPES', 'DECEDENT_SERVICES', 'ESTATE_AUTHORITIES'].concat(TIER_VARS),
                               stubs: { isFormalDoc: () => true } });
 const EST_ESTATE = { svc: 'probate', jobId: 1, docScope: 'full', tcFee: 18500, psFee: 12500, pkgCost: 1500,
                      pkgLabel: 'Estate Premium — $1,500', smf: 0, prepFee: 0, havellinTotal: 32500, totTC: 100, totPS: 100,
@@ -420,7 +422,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const mk = (store) => sandbox({ fns: ['jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'docScopeDef',
                                           'svcHasDocStep', 'estimateAppraiserLines', 'docTierProduces', 'docTierOf', 'docTierDef'],
-                                    vars: ['DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'], stubs: { estimateStore: store } });
+                                    vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'], stubs: { estimateStore: store } });
     const job = ESTATE_JOB({ docTier: 'values' });
     eq(mk({}).jobAppraisalDuty(job), '', 'before an estimate is approved the tier answers: values is counsel\'s');
     eq(mk({}).jobAppraisalDuty(ESTATE_JOB({ docTier: 'appraisals' })), 'all', '…and appraisals is ours');
@@ -481,7 +483,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d = text(p.__printed);
     has(d, 'This change order adds Painting to the preparation vendors.', '⚠ the printed page says what it adds');
     // RESTATED 2026-10-01 (P17): the fee's one name is the Home Sale Preparation Fee (it read "site management fee"), here and below.
-    has(d, 'The vendor bills you directly, at cost, and the 30% Home Sale Preparation Fee in your agreement is billed on what it actually charges — about $1,350 at the estimated $4,500.',
+    has(d, 'The vendor bills you directly, at cost, and the 30% Home Sale Preparation Fee in your agreement is billed on its quote as recorded, updated if its invoice differs — about $1,350 at the estimated $4,500.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'and on what terms');
     lacks(d, 'Third-party vendor costs are unaffected', '⚠ and not the line that would now be false');
     has(d, 'Added preparation vendor: Painting', 'the table names the vendor');
@@ -526,7 +528,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a2._collected - a0._collected, 1500, '…and on its actual quote once one is recorded: 30% of $5,000');
     has(text(a1.html), 'Adds Painting (est. $4,500) — it bills you directly, and the Home Sale Preparation Fee on it is in the fee above', 'the change-order row names it, and where its fee is');
     lacks(text(a1.html), 'preparation vendors above', '⚠ and never points at a vendor list this invoice does not print');
-    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on what it actually charged is in the fee above.',
+    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'the section\'s note says where its fee is, too');
     has(text(a1.html), 'adds Painting, in the Home Sale Preparation Fee above', '⚠ the payment summary names the vendor — it read "no hours change, billed in the hours above"');
     lacks(text(a1.html), 'no hours change, billed in the hours above', 'not that');
@@ -553,7 +555,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
       'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorContacts', 'fmtPhoneDisplay', 'roundCents', 'fmtHrs'];
-    const sourcing = (cos) => sandbox({ fns: SRC_FNS, vars: ['LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES'],
+    const sourcing = (cos) => sandbox({ fns: SRC_FNS, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES'],
       stubs: { changeOrders: cos, jobs: [PREP_JOB], estimateStore: {}, document: domStub({}), contractors: [],
                vendorDirectory: [{ vendor_name: 'Brushworks Painting', category_group: 'Property Preparation', category: 'Painting', status: 'Active', _row: 3 }] } })
       .renderVendorSourcing(1, PREP_JOB, { svc: 'prep', prepEnabled: true, prepItems: [{ type: 'Staging', cost: 3000, lid: 'st' }], vendors: [] });
@@ -563,9 +565,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(String(sourcing([prepAdd()])).indexOf('Painting') < 0, 'and an unaccepted change order draws nothing');
 
     // "Lined up" counts it.
-    const V = sandbox({ fns: ['vendorSourcingProgress', '_srcLineKey', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor',
+    const V = sandbox({ fns: ['vendorSourcingProgress', 'prepVendorsConfirmed', '_srcLineKey', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor',
                               'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
-                        vars: ['LOGISTICS_CATEGORIES'], stubs: { changeOrders: cos } });
+                        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES'], stubs: { changeOrders: cos } });
     eq(V.vendorSourcingProgress(1, Object.assign({}, PREP_JOB, { prepSourcing: { 'Lco-paint': { status: 'Confirmed' } } }), est),
        { done: 1, total: 5 }, 'the sourcing count includes it, confirmed');
   }
@@ -574,7 +576,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the small items — the desk\'s All filter stays chosen');
   {
     let open = 1, captured = true, C = null;
-    C = sandbox({ fns: ['_invApplyWhenDefault', 'setInvWhen', 'invClearFilters'], vars: ['_invFilter', '_invWhenJob'],
+    C = sandbox({ fns: ['_invApplyWhenDefault', 'setInvWhen', 'invClearFilters'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_invFilter', '_invWhenJob'],
                   stubs: { _invCapturedToday: () => captured, renderInventoryTab: () => C._invApplyWhenDefault(open, []) } });
     C.renderInventoryTab();
     eq(C._invFilter.when, 'today', 'a desk opened on a day with a capture opens on Today');
@@ -659,7 +661,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const dom = domStub({});
       const c = sandbox({ fns: ['renderVendorGroupCards', 'vendorDirectoryReady', 'vendorGroupCategories', 'directoryCategories', 'vendorCats',
                                 'vendorGroupOfLine', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'prepFeeRate', 'esc', 'fmt', 'estimateAppraiserLines', 'roundCents'],
-                          vars: ['VENDOR_GROUP_CARDS', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'PREP_FEE_RATE', 'COORD_TOUCHES',
+                          vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'VENDOR_GROUP_CARDS', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'PREP_FEE_RATE', 'COORD_TOUCHES',
                                  'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
                           stubs: { document: dom, vendorDirectory: dir, vendors: vendors, prepItems: [], currentSvc: () => svc || 'cleanout' } });
       c.renderVendorGroupCards();

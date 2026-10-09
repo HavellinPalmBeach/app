@@ -173,6 +173,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   has(note, 'Coordinating the vendors is covered by the fee and is never billed as hours', 'vendor coordination stays inside the fee');
   await fill('#co-tc-hrs', '8');
   await fill('#co-description', 'Clear the garage so the painters can start.');
+  // P25 (Q54): nothing is pre-picked and Create refuses without a reason, so pick Home Prep's own, as a person does.
+  await p.selectOption('#co-reason', 'prep_hours');
   const readout = await text('#co-hrs-note');
   has(readout, '+8.0 concierge hrs at $150 an hour', '⚠⚠ the readout states the hours and the rate');
   has(readout, 'about $1,200 at the estimated hours', 'and what they come to');

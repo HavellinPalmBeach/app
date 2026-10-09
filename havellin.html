@@ -1334,7 +1334,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.08 · 7:11pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.09 · 2:23pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1777,11 +1777,11 @@ body.no-smf .smf-col{display:none;}
         <div class="row">
           <div><label>Letters issued</label>
             <input type="date" id="i-letters-date" onchange="computeInventoryDeadline()"></div>
-          <div><label>Case number <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234"></div>
+          <div><label>Case number <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234" oninput="fillCourtFromCase('i')"></div>
         </div>
         <div class="row">
           <div><label>§733.604 inventory deadline</label><input type="date" id="i-probate-deadline" oninput="this.dataset.userEdited='1'"><div id="i-deadline-fb" class="fb"></div></div>
-          <div></div>
+          <div><label>Court</label><input type="text" id="i-probate-court" placeholder="filled from the case number" oninput="this.dataset.userEdited='1'"></div>
         </div>
       </div>
       <!-- ⚠ THE TRUST ITSELF (P19, 2026-10-03): asked wherever the matter holds a trust — Trust, and Both — by
@@ -2843,6 +2843,9 @@ body.no-smf .smf-col{display:none;}
     <input type="text" id="rf-reference" placeholder="e.g. cheque #2201">
     <label>Paid to <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— the client, trust or estate account it went back to</span></label>
     <input type="text" id="rf-payee" placeholder="e.g. Pressly Family Trust">
+    <!-- P25, Q49: a refund above the amount due is recorded with its reason (Havellin's uncured breach, goodwill). -->
+    <label>Reason <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— required when more than the amount due</span></label>
+    <input type="text" id="rf-reason" placeholder="e.g. goodwill, agreed with the client">
     <input type="hidden" id="rf-job">
     <div style="font-size:10px;color:var(--gray);margin-top:3px;">
       The refund is recorded on the payments list. It is never deleted: one recorded in error is voided, with the reason.
@@ -4708,6 +4711,43 @@ function estimateAppraiserNames(est) {
 }
 // ⚠ THE TOP TIER PROMISES APPRAISALS AND NO LONGER PRICES THEIR SCHEDULING BY ITSELF (Q20), so Build Estimate
 // says so while no appraiser is on the estimate. A flag, never a refusal: nothing is mandatory.
+// ⚠⚠ THE §733.604 DEADLINE, MEASURED WHERE THE PLAN IS PRICED (P25, Q33; Anthony, 2026-10-09). Exhibit A promises the
+// inventory to the estate attorney in time for the §733.604 filing, and §5.2 promises the appraisals within the 60-day
+// deadline from the Letters, and nothing checked either against the plan being quoted: the Job Plan's strip compares
+// its end with the court deadline (jobSchedule's `fit`) only once the job is won. A flag on Build Estimate under the
+// projected completion, never a refusal: the representative and counsel may well plan an extension. DOM-free; ''
+// when the matter is off the probate track, no deadline is recorded, or the plan ends on or before it.
+// ⚠⚠ THE COURT, READ OFF THE CASE NUMBER (P25, Q53; Anthony, 2026-10-09: "Default from case no."). The estate agreement
+// printed "Court ____" on every probate matter and nothing asked for it. A Florida uniform case number opens with the
+// county's two-digit code (50 is Palm Beach), so the court is known the moment the case number is typed: intake and Edit
+// Client fill the Court field from it until somebody types over it, and the agreement prints the field, else the
+// derivation, else the blank line. The counties Havellin works in and beside; any other code derives nothing.
+var FL_PROBATE_COUNTIES = { '06': 'Broward', '13': 'Miami-Dade', '22': 'Glades', '26': 'Hendry', '31': 'Indian River',
+                            '43': 'Martin', '47': 'Okeechobee', '50': 'Palm Beach', '56': 'St. Lucie' };
+function courtFromCaseNo(caseNo) {
+  var m = String(caseNo || '').match(/^\s*(\d{2})[-\s]?(?:19|20)\d{2}/);
+  var county = m ? FL_PROBATE_COUNTIES[m[1]] : '';
+  return county ? 'Circuit Court for ' + county + ' County, Florida, Probate Division' : '';
+}
+// The court a document names: what was recorded, else what the case number says, else ''.
+function jobProbateCourt(job) {
+  return String((job && job.probateCourt) || '').trim() || courtFromCaseNo(job && job.probateCase);
+}
+// Fills the Court field from the case number as it is typed, on intake ('i') or Edit Client ('ec'), until somebody types
+// over the court (data-user-edited), as the §733.604 deadline follows the Letters.
+function fillCourtFromCase(prefix) {
+  var cs = document.getElementById(prefix + '-probate-case');
+  var ct = document.getElementById(prefix + '-probate-court');
+  if (!cs || !ct || (ct.dataset && ct.dataset.userEdited)) return;
+  ct.value = courtFromCaseNo(cs.value);
+}
+function courtDeadlineFlag(job, projectedEnd) {
+  if (!job || !projectedEnd || !jobOnProbateTrack(job)) return '';
+  var dl = String(job.probateDeadline || '');
+  if (!dl || projectedEnd <= dl) return '';
+  return 'This plan ends ' + fmtDate2(projectedEnd) + ', after the §733.604 inventory deadline of ' + fmtDate2(dl)
+    + '. The estimate promises the inventory, with its appraisals, in time for that filing: add specialists, move the start, or confirm with counsel that an extension will be sought.';
+}
 function appraisalTierNote(job, vendorLines) {
   if (docTierOf(job) !== 'appraisals') return '';
   if (estimateAppraiserLines({ vendors: vendorLines }).length) return '';
@@ -7002,6 +7042,23 @@ function estTolerancePctTxt(){ return Math.round(EST_TOLERANCE_PCT * 100) + '%';
 // change order, and states the increment in that clause's own words. Never on a fixed fee, where time is not billed.
 // One sentence, read by both forms. Drafted, not reviewed: it goes to counsel with the bundle.
 var TIME_INCREMENT_TXT = 'Time is recorded and billed in half-hour increments, as worked.';
+// ⚠⚠ WHEN THE DEPOSIT AND THE FINAL ARE DUE: ONE ANSWER FOR THE WHOLE PACKET (P25, Q34; Anthony, 2026-10-09). Exhibit A
+// (the client estimate's Payment Schedule) says the deposit is due upon acceptance and the final follows the walk-through,
+// issued from the logged hours; the standard form's §3.2 said "within 7 calendar days of signing" and "prior to final
+// property walk-through". The agreement follows Exhibit A. Read by the standard form's §3.2 table, the estate form's §3.3
+// table (deposit) and the estimate's own Payment Schedule (final). Drafted, not reviewed: counsel bundle B13.
+var AGR_DEPOSIT_DUE_TXT = 'Due upon acceptance, on signing this Agreement';
+function agrFinalDueTxt(fixed, tail) {
+  return 'Invoiced after the final property walk-through' + (fixed ? ', completing the fixed price' : ', from the actual logged hours')
+    + (tail || '') + '; due within 7 calendar days of the invoice date';
+}
+// ⚠⚠ WHAT THE 30% HOME SALE PREPARATION FEE IS CHARGED ON, IN THE WORDS EVERY DOCUMENT USES (P25, Q52; Anthony, 2026-10-09:
+// "Quotes, then trued"). The documents said the fee follows "what the vendors actually invoice" / "actual vendor spend",
+// while the invoices compute it on the Quote $ recorded for each preparation vendor on the Job Plan (getVendorActuals),
+// which the concierge updates when a vendor's invoice comes in different. This is what the fee is charged on.
+var PREP_FEE_BASIS_TXT = 'the vendor quotes recorded, updated if a vendor’s invoice differs';
+var PREP_FEE_BASIS_SHORT = 'the vendor quotes recorded';
+var PREP_FEE_ONE_TXT = 'its quote as recorded, updated if its invoice differs';
 
 // ⚠⚠ THE PREFERRED-CLIENT DISCOUNT COMES OFF THE LABOUR **INCLUDING THE EXPEDITED-DELIVERY
 // PREMIUM CHARGED ON THAT LABOUR**, and that is Anthony's arithmetic verbatim rather than an
@@ -7880,6 +7937,9 @@ function calcAll() {
         var htNote = hardTarget ? ' Hard target ' + new Date(hardTarget + 'T12:00:00').toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ✓' : '';
         timelineBadge.innerHTML = '<div class="alert ' + (overFixable ? 'a-warn' : 'a-ok') + '" style="margin-top:0;">Projected completion: <strong>' + projDateFmt + '</strong> (' + crew.tcDays + ' working days, ' + crewNote + ')' + htNote + overNote + '</div>';
       }
+      // The court's deadline under the projected completion (P25, Q33): flagged, never refused.
+      var _cdlFlag = courtDeadlineFlag(loadedJob, projectedEnd);
+      if (_cdlFlag) timelineBadge.innerHTML += '<div class="alert a-warn" id="e-court-deadline-flag" style="margin-top:6px;">&#9888; ' + esc(_cdlFlag) + '</div>';
     }
   }
   // Rendered here, after the badge it sits under and after daysNeeded is final. It used
@@ -8198,7 +8258,7 @@ function calcAll() {
     // Said on the panel because the figure no longer contains it: a manager comparing the fixed
     // fee against the estimate total would otherwise read the missing 30% as a mistake.
     var _fpPrepNote = prepFee > 0
-      ? ' The ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee (' + fmt(prepFee) + ' on these estimates) is not in this figure — it is billed on top of the fixed fee, on the prep vendors\' actual invoices.'
+      ? ' The ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee (' + fmt(prepFee) + ' on these estimates) is not in this figure — it is billed on top of the fixed fee, on ' + PREP_FEE_BASIS_TXT + '.'
       : '';
     if (fpLabel) fpLabel.textContent = 'Suggested fixed-price fee — Havellin services' + (prepFee > 0 ? ' excluding the Home Sale Preparation Fee' : '') + ' × ' + Math.round(buf * 100) + '% contingency, rounded up to the next $100';
     if (fpVal)   fpVal.textContent   = fmt(fpFee);
@@ -9227,8 +9287,7 @@ function vendorEstimateNote(opts) {
   // reader looking for a line that is not under it.
   if (opts.feeTruesUp) {
     s += ' Havellin\'s ' + Math.round(prepFeeRate() * 100) + '% fee on this work is the Home Sale Preparation Fee '
-       + 'line in Havellin Services above, charged on what these vendors actually bill rather than on '
-       + 'these estimates.';
+       + 'line in Havellin Services above, charged on ' + PREP_FEE_BASIS_TXT + '.';
   }
   return s;
 }
@@ -9685,6 +9744,7 @@ function saveIntake() {
     houseFlags:  readHouseFlagInputs('i', svc, null),
     destAddr:destAddr, destCity:destCity, destSqft:destSqft,
     probateCase: document.getElementById('i-probate-case') ? document.getElementById('i-probate-case').value : '',
+    probateCourt: document.getElementById('i-probate-court') ? document.getElementById('i-probate-court').value.trim() : '',
     probateDeadline: document.getElementById('i-probate-deadline') ? document.getElementById('i-probate-deadline').value : '',
     deathDate:  document.getElementById('i-date-of-death') ? document.getElementById('i-date-of-death').value : '',
     lettersDate:document.getElementById('i-letters-date')  ? document.getElementById('i-letters-date').value  : '',
@@ -10489,7 +10549,7 @@ var INTAKE_FIELDS = [
   'i-executor-auth',
   'i-probate-atty-fname', 'i-probate-atty-lname', 'i-probate-atty-firm',
   'i-probate-atty-phone', 'i-probate-atty-email',
-  'i-date-of-death', 'i-letters-date', 'i-probate-case', 'i-probate-deadline', 'i-probate-sale',
+  'i-date-of-death', 'i-letters-date', 'i-probate-case', 'i-probate-court', 'i-probate-deadline', 'i-probate-sale',
   'i-trust-name', 'i-trust-date', 'i-trustee-accepted',
   'i-mustfind', 'i-safety', 'i-notes', 'i-ptype', 'i-tc',
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
@@ -10545,6 +10605,7 @@ function resetIntakeFields() {
   // the next client's crew brief.
   clearHouseFlagInputs('i');
   var pd = document.getElementById('i-probate-deadline'); if (pd) delete pd.dataset.userEdited;
+  var pcourt = document.getElementById('i-probate-court'); if (pcourt) delete pcourt.dataset.userEdited;
   // ⚠ WHAT THE LAST CLIENT LEFT ON THE CONTROLS THEMSELVES, not in their values (audit M14 and the
   // intake lows): the documentation level's borrowed hand-set answer (dataset.preGate, which gave a
   // hand-picked Strict back to the next client), the start picker's minimum from the last walkthrough,
@@ -11329,6 +11390,25 @@ function _fixedFeeBlurb(e) {
 // read by all three of _cePhases' sorting arms. It said wills were "turned over to you and counsel", where the will procedure
 // (Found on site, siteFindRefusal) hands an original will to the estate attorney the same day for deposit with the clerk.
 var CE_FOUND_PAPERS_TXT = 'An original will or codicil we find is handed, unopened, to the estate attorney the same day (or to you where no attorney is recorded), against a signed receipt, for deposit with the clerk as Florida law requires. Deeds, titles and financial records go to you and counsel against a signed receipt — we do not open the estate\'s legal file.';
+// ⚠⚠ WHOM HAVELLIN TAKES DIRECTION FROM ON AN ESTATE, ONE ANSWER (P25, Q33; Anthony, 2026-10-09). Exhibit A said "we take
+// direction from you alone" and the release request's dispute caution "takes direction from you alone" on matters with two
+// co-representatives, who must approve together (§5.1, and every fiduciary signs a release, P19). With a co-representative
+// recorded it is the representatives together, and a release needs the written authority of each of them. Read by
+// Exhibit A's Before we start stage and the release request's dispute caution.
+// ⚠⚠ THE TRANSITION CONCIERGE A CLIENT DOCUMENT NAMES (P25, Q38; Anthony, 2026-10-09: "Assigned concierge"). The estimate
+// and the invoices named whoever was in Prepared by (the site-visit person by default) before the job's assigned
+// concierge, so a trust's documents named Anthony while Ashley ran the job. The assigned concierge (job.tc; a crew
+// placeholder is nobody), else who walked the house; the estimate shows the walker as "Walkthrough by" where they differ.
+function docConciergeName(job, est) {
+  var tc = String((job && job.tc) || '').trim();
+  if (tc && !isCrewPlaceholder(tc)) return tc;
+  return String((est && est.preparedBy) || '').trim();
+}
+function estateDirectionWords(job) {
+  var many = jobFiduciaries(job).length > 1;
+  return { who: many ? 'the representatives together' : 'you alone',
+           auth: many ? 'the written authority of each of them' : 'your written authority' };
+}
 function _cePhases(e, job) {
   var svc = e.svc || '';
   var steps = (typeof JOB_STEPS !== 'undefined' && JOB_STEPS[svc]) ? JOB_STEPS[svc] : {};
@@ -11428,7 +11508,7 @@ function _cePhases(e, job) {
       + (!_ceAuth ? 'who is authorized to direct the work and approve releases, confirmed in writing, and a direct channel opened with any attorney advising you.'
         : _ceAuth === ESTATE_AUTHORITIES.certification ? 'the successor trustee’s Certification of Trust on file, any limits on the trustee’s powers noted in writing, and a direct channel opened with your attorney.'
         : 'a certified copy of the Letters of Administration or Testamentary on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.')
-      + ' <strong>We work for you.</strong> If family members or beneficiaries will be at the property while we are there, tell us who to expect — we will be courteous to everyone present, but we take direction from you alone and nothing is released to anyone without your written authority.';
+      + ' <strong>We work for you.</strong> If family members or beneficiaries will be at the property while we are there, tell us who to expect — we will be courteous to everyone present, but we take direction from ' + estateDirectionWords(job).who + ' and nothing is released to anyone without ' + estateDirectionWords(job).auth + '.';
   } else if (isDownsizing) {
     beforeBody = 'Three to five days before the first crew day your Transition Concierge calls to walk you through exactly how the work will run — the daily rhythm, who will be in your home, and the decisions you will be asked to make in every room. We confirm access, parking, elevator and building rules, and brief the crew on the property before anyone arrives.';
   } else {
@@ -11448,7 +11528,7 @@ function _cePhases(e, job) {
   beforeNeed += ' Keys or codes, parking, and any building, HOA or elevator rules, confirmed before the first day.';
   if (e.heirs) {
     beforeNeed += isDeceased
-      ? ' Several interested parties are involved on this matter — the estimate accounts for that coordination. We still take instruction from you alone; tell us how you want questions from anyone else routed.'
+      ? ' Several interested parties are involved on this matter — the estimate accounts for that coordination. We still take instruction from ' + estateDirectionWords(job).who + '; tell us how you want questions from anyone else routed.'
       : ' Several people are involved in decisions here — the estimate accounts for that coordination, but we need one point of contact who speaks for the group.';
   }
   if (e.access) {
@@ -11603,9 +11683,11 @@ function _cePhases(e, job) {
   if (hasLegal && docScope === 'full' && _ceCourt) {
     closeBody += ' The verified inventory is prepared with date-of-death fair market value for every asset, '
       + (weAppraise ? 'appraisals attached as supporting documentation, ' : '')
-      + 'non-probate assets excluded, and the whole package served on interested parties and filed within the statutory deadline.';
+      // ⚠⚠ COUNSEL SERVES AND FILES, NOT HAVELLIN (P25, Q33): it promised "the whole package served on interested parties
+      // and filed within the statutory deadline", and the agreement's §2.1 excludes court filings (the estate attorney files).
+      + 'non-probate assets excluded, and the whole package delivered to the estate attorney in time for the §733.604 filing; counsel serves and files it.';
   } else if (hasLegal && captureOnly && _ceCourt) {
-    closeBody += ' The photographed, room-by-room list is delivered to counsel in a form their office can value and file within the statutory deadline.';
+    closeBody += ' The photographed, room-by-room list is delivered to counsel in time for the §733.604 filing, in a form their office can value; counsel serves and files it.';
   }
   // What the client is left holding. This used to be a separate section after the
   // stages; it belongs here, because this is the stage at which they receive it.
@@ -11644,13 +11726,14 @@ function _cePhases(e, job) {
     records.push('The complete record retained for seven years');
   }
   P.push({
-    title: 'Close-Out' + (hasLegal && _ceCourt ? ' &amp; Court Filing' : ''),
+    title: 'Close-Out' + (hasLegal && _ceCourt ? ' &amp; Court Inventory' : ''),
     body: closeBody,
     need: isDeceased
       ? 'Sign-off on the Disposition Ledger, the final record of where every item went. A closing walkthrough with us if you want one — on an estate it is often the attorney or a family member standing in, and the records do not depend on anyone attending.'
-      : 'A final walkthrough with us, and sign-off on the disposition summary.',
+      : 'A final walkthrough with us, and your signature on the Contents Record, the record of what stayed and what went.',
     done: deep
-      ? 'The property is confirmed clear and photographed, the financial close reconciles, ' + (_ceCourt ? 'the filing is complete, ' : '') + 'and the full documentation package is complete and retained.'
+      // A living client has no court and no estate attorney (P25: it read "the filing is complete" on a living formal job).
+      ? 'The property is confirmed clear and photographed, the financial close reconciles, ' + (_ceCourt && isDeceased ? 'the inventory is delivered to the estate attorney for filing, ' : '') + 'and the full documentation package is complete and retained.'
       : 'The property is confirmed clear and photographed, the financial close reconciles, and the complete documentation package is handed over to you.',
     receive: records
   });
@@ -11919,7 +12002,7 @@ function buildPrepEstimateBody(e, job) {
       '</tbody>' +
       '<tr class="subtotal"><td>Havellin Services Total</td><td class="r">' + fmt(e.havellinTotal) + '</td></tr>' +
       '</table>' +
-      '<div class="ce-note" style="margin-top:6px;">The final fee is ' + Math.round(prepFeeRate()*100) + '% of actual vendor spend. We review each vendor’s quote with you before booking, so the cost is confirmed before any work begins.' +
+      '<div class="ce-note" style="margin-top:6px;">The fee is ' + Math.round(prepFeeRate()*100) + '% of ' + PREP_FEE_BASIS_TXT + '. We review each vendor’s quote with you before booking, so the cost is confirmed before any work begins.' +
         (_dc > 0 ? ' The declutter hours are an estimate and are billed as actually worked.' : '') + '</div>';
     })() +
 
@@ -11967,8 +12050,12 @@ function clientEstimateHtml(e, job) {
 
   // Preparer contact info from contractor directory
   var allContractors = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
-  var preparer = allContractors.find(function(c){ return samePerson(c.name, e.preparedBy || job.tc); });
-  var prepName = preparer ? preparer.name : (e.preparedBy || job.tc || '—');
+  var _ceTC = docConciergeName(job, e);
+  var preparer = allContractors.find(function(c){ return samePerson(c.name, _ceTC); });
+  var prepName = preparer ? preparer.name : (_ceTC || '—');
+  // Who walked the house, named only where it was somebody else (P25, Q38).
+  var _ceWalkBy = String(e.preparedBy || '').trim();
+  if (_ceWalkBy && samePerson(_ceWalkBy, prepName)) _ceWalkBy = '';
   var prepEmail = preparer ? (preparer.email || '—') : '—';
 
   // Property address: street + city, FL
@@ -12070,6 +12157,7 @@ function clientEstimateHtml(e, job) {
     '<div style="font-size:12px;color:var(--gray);">Questions about this estimate? Contact <strong style="color:var(--gray-dk);">' + esc(prepName) + '</strong>' +
     ' &nbsp;·&nbsp; ' + esc(conciergePhonesText(preparer, ' \u00a0\u00b7\u00a0 ')) +
     (prepEmail !== '—' ? ' &nbsp;·&nbsp; <a href="mailto:' + esc(prepEmail) + '" style="color:var(--bronze);text-decoration:none;">' + esc(prepEmail) + '</a>' : '') +
+    (_ceWalkBy ? '<div class="ce-walk-by" style="font-size:11px;margin-top:2px;">Walkthrough by ' + esc(_ceWalkBy) + '</div>' : '') +
     '</div>' +
     '</div>' +
 
@@ -12431,7 +12519,7 @@ function clientEstimateHtml(e, job) {
       : '<table class="pay-tbl">' +
         '<tr><td><strong>50% Deposit</strong> — Due upon acceptance</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.deposit) + '</td></tr>' +
         '<tr><td><strong>25% Midpoint</strong> — Due at project midpoint</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.midpoint) + '</td></tr>' +
-        '<tr><td><strong>25% Final</strong> — Due upon completion</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.final) + '</td></tr>' +
+        '<tr><td><strong>25% Final</strong> — Due after the final walk-through</td><td style="font-style:italic;color:var(--gray);">Havellin services only</td><td class="r">' + fmt(_eSplit.final) + '</td></tr>' +
         '</table>') + '</div>' +
 
     '<div class="ce-terms" style="margin-top:1.5rem;"><div class="ce-terms-title">Terms &amp; Conditions</div>' +
@@ -12448,8 +12536,8 @@ function clientEstimateHtml(e, job) {
     // renderInvoice, which exempts prep from every hours gate); the estimate had no
     // equivalent, so one surface was right and the other was not. Same test, same shape.
     (_isFeeOnlyEst
-      ? '<li>Havellin\'s fee for this project is a <strong>' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on actual vendor spend</strong> — sourcing, scheduling, on-site oversight and quality control. It is not billed hourly.</li>' +
-        '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins. The fee trues up to what the vendors actually invoice.</li>' +
+      ? '<li>Havellin\'s fee for this project is a <strong>' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on ' + PREP_FEE_BASIS_TXT + '</strong> — sourcing, scheduling, on-site oversight and quality control. It is not billed hourly.</li>' +
+        '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins.</li>' +
         '<li>' + vendorFeeNote(e, {feeAlreadyStated:true}) + '</li>' +
         '<li>Adding or removing work changes the vendor scope, so it is re-quoted and agreed with you in writing before that work proceeds.</li>'
       // ⚠ PREP WITH DECLUTTER HOURS IS ITS OWN ARM AND MUST NOT FALL THROUGH TO THE T&M ONE.
@@ -12460,10 +12548,10 @@ function clientEstimateHtml(e, job) {
       // note on a job that has no materials package. This arm states the TWO bases the client is
       // actually charged on, in the order they appear in the fee table above.
       : _isPrepEst
-      ? '<li>Havellin is paid on two bases for this project, both shown above: a <strong>' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on actual vendor spend</strong>, and <strong>concierge hours at $' + (e.tcRate || 150) + '/hour</strong> for the hands-on decluttering described in the estimate.</li>' +
+      ? '<li>Havellin is paid on two bases for this project, both shown above: a <strong>' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on ' + PREP_FEE_BASIS_TXT + '</strong>, and <strong>concierge hours at $' + (e.tcRate || 150) + '/hour</strong> for the hands-on decluttering described in the estimate.</li>' +
         '<li>The Home Sale Preparation Fee is not billed hourly and covers sourcing, scheduling, on-site oversight and quality control of the trades. The concierge hours are separate from it and cover hands-on work in the rooms themselves.</li>' +
         '<li>The declutter hours shown are an estimate. Final charges reflect actual hours worked, and if they exceed the estimate by more than ' + estTolerancePctTxt() + ' Havellin will notify you before proceeding.</li>' +
-        '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins. The fee trues up to what the vendors actually invoice.</li>' +
+        '<li>Every vendor quote is reviewed with you before the vendor is booked, so the cost is confirmed before any work begins.</li>' +
         '<li>' + vendorFeeNote(e, {feeAlreadyStated:true}) + '</li>' +
         '<li>Adding or removing work changes the vendor scope, so it is re-quoted and agreed with you in writing before that work proceeds.</li>'
       : (e.fixedPrice
@@ -12477,7 +12565,7 @@ function clientEstimateHtml(e, job) {
         '<li>Any change to the agreed scope will be documented in a written change order, with any price adjustment agreed in writing before the additional work proceeds.</li>' +
         '<li>Third-party vendor costs are estimated and billed separately at cost via direct vendor invoices; Havellin\'s coordination of those vendors is included in the fixed fee.'
           + ((e.prepEnabled && (e.prepCost||0) > 0 && estPrepFeeOnTop(e))
-             ? ' Home preparation vendors are the exception: those carry the separate ' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee shown above, which is not part of the fixed fee and is charged on what those vendors actually bill.'
+             ? ' Home preparation vendors are the exception: those carry the separate ' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee shown above, which is not part of the fixed fee and is charged on ' + PREP_FEE_BASIS_TXT + '.'
              : '') + '</li>'
       : '<li>This is an estimate based on the initial property assessment. Final charges reflect actual hours worked.</li>' +
         '<li>If actual hours exceed the estimate by more than ' + estTolerancePctTxt() + ', Havellin will notify the client before proceeding.</li>' +
@@ -14803,14 +14891,35 @@ function coRateBasisTxt(co, tcRate, psRate) {
 // ONE list of change-order reasons. The select in the modal ships EMPTY and is filled from
 // this, and every document prints the LABEL \u2014 the printed change order and the acceptance
 // modal used to print the raw key, so a client signed a page reading "Reason: scope_add".
+// ⚠⚠ A LIST PER SERVICE, AND NONE PRE-PICKED (P25, Q54; Anthony, 2026-10-09). One list served every service and opened on a
+// reason already chosen, so a Home Prep change order adding a painter printed "Crew upgrade \u2014 Senior Property Specialist
+// required", a role the rate card does not have (gone). The catalogue labels every key; `coReasonsFor` says which keys a
+// job's dialog offers, the dialog opens on none, and the save refuses a reason not offered on this job.
 var CO_REASONS = [
-  { v: 'timeline',     l: 'Accelerated timeline \u2014 rush adjustment' },
-  { v: 'crew',         l: 'Crew upgrade \u2014 Senior Property Specialist required' },
   { v: 'scope_add',    l: 'Scope addition \u2014 new rooms or services' },
   { v: 'scope_remove', l: 'Scope reduction \u2014 rooms removed' },
-  { v: 'vendor',       l: 'Vendor cost change' },
+  { v: 'timeline',     l: 'Accelerated timeline \u2014 rush adjustment' },
+  { v: 'conditions',   l: 'Site conditions \u2014 more work than assessed' },
+  { v: 'discovery',    l: 'Discovery on site \u2014 property or conditions outside the scope' },
+  { v: 'prep_hours',   l: 'Concierge hours \u2014 hands-on preparation work' },
+  { v: 'vendor_add',   l: 'Preparation vendor added' },
+  { v: 'vendor',       l: 'Vendor scope or cost change' },
   { v: 'other',        l: 'Other' }
 ];
+var CO_REASONS_BY_FAMILY = {
+  living: ['scope_add', 'scope_remove', 'timeline', 'conditions', 'other'],
+  estate: ['scope_add', 'scope_remove', 'timeline', 'discovery', 'other'],
+  prep:   ['prep_hours', 'vendor_add', 'vendor', 'scope_remove', 'other']
+};
+// The reasons this job's change order offers, in order: Home Prep's own, else the estate's or the living family's, with
+// "Preparation vendor added" before Other on a labour job that may add a preparation vendor (coPrepVendorsOn).
+function coReasonsFor(jobId) {
+  var b = _coJobBasis(jobId);
+  if (b.prep) return CO_REASONS_BY_FAMILY.prep.slice();
+  var out = CO_REASONS_BY_FAMILY[b.job && isDecedentJob(b.job) ? 'estate' : 'living'].slice();
+  if (b.prepVendors) out.splice(out.indexOf('other'), 0, 'vendor_add');
+  return out;
+}
 function coReasonLabel(v) {
   var r = CO_REASONS.filter(function(x){ return x.v === v; })[0];
   return r ? r.l : String(v || '');
@@ -15024,10 +15133,10 @@ function openChangeOrder(jobId) {
   var _vCost = document.getElementById('co-vendor-cost');
   if (_vCost) _vCost.value = '';
   // Options before the value: a <select> silently rejects a value it has no option for.
-  document.getElementById('co-reason').innerHTML = CO_REASONS.map(function(r){
-    return '<option value="' + r.v + '">' + r.l + '</option>';
+  document.getElementById('co-reason').innerHTML = '<option value="">Choose a reason\u2026</option>' + coReasonsFor(jobId).map(function(v){
+    return '<option value="' + v + '">' + esc(coReasonLabel(v)) + '</option>';
   }).join('');
-  document.getElementById('co-reason').value = 'scope_add';
+  document.getElementById('co-reason').value = '';   // none pre-picked (P25, Q54)
   document.getElementById('co-basis-note').innerHTML = coBasisNoteHtml(b.fixed, b.prep ? b : null, b.rushPct, b.prepVendors);
   document.getElementById('co-fb').innerHTML = '';
   updateCOHours();
@@ -15047,9 +15156,9 @@ function coBasisNoteHtml(fixed, prep, rushPct, prepVendors) {
   if (prep) return 'On Home Prep a change order adds <strong>concierge hours for hands-on work</strong> &mdash; decluttering, clearing a room the vendors need empty. ' +
     'They are billed as they are worked, at ' + fmt(Number(prep.tcRate)) + ' an hour, on the final invoice on top of the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee, and that rate is printed on the change order the client signs. ' +
     '<strong>Coordinating the vendors is covered by the fee and is never billed as hours</strong>, and the engagement has no specialists, so the hours are concierge hours only. ' +
-    'A change order can also <strong>add a preparation vendor</strong> found mid-job: it bills the client directly at cost, and the fee applies to what it actually charges.';
+    'A change order can also <strong>add a preparation vendor</strong> found mid-job: it bills the client directly at cost, and the fee applies to ' + PREP_FEE_ONE_TXT + '.';
   var _vendorTxt = prepVendors
-    ? ' A change order can also <strong>add a preparation vendor</strong> found mid-job, with or without hours: it bills the client directly at cost, and the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee applies to what it actually charges' + (fixed ? ', on top of the fixed project fee' : '') + '. It books no concierge hours.'
+    ? ' A change order can also <strong>add a preparation vendor</strong> found mid-job, with or without hours: it bills the client directly at cost, and the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee applies to ' + PREP_FEE_ONE_TXT + (fixed ? ', on top of the fixed project fee' : '') + '. It books no concierge hours.'
     : '';
   return (fixed
     ? 'Estimate the extra hours the added scope will take. <strong>On a fixed price the change order is the charge:</strong> those hours are priced at the job&rsquo;s rates' +
@@ -15090,7 +15199,7 @@ function coPrepReadoutHtml(b, tc, prior) {
   var amt = roundCents(Math.abs(tc) * rate);
   return coHoursLabel({ tc: tc, ps: 0 }) + ' at ' + fmt(rate) + ' an hour' +
     (tc > 0
-      ? ' \u2014 about ' + fmt(amt) + ' at the estimated hours, billed as they are worked on the final invoice, on top of the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on the prep vendors\u2019 invoices.'
+      ? ' \u2014 about ' + fmt(amt) + ' at the estimated hours, billed as they are worked on the final invoice, on top of the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on ' + PREP_FEE_BASIS_SHORT + '.'
       : ' \u2014 about ' + fmt(amt) + ' less at the estimated hours.') +
     (base > 0
       ? ' Concierge hours on this job go from ' + fmtHrs(base) + ' to ' + fmtHrs(Math.max(0, base + tc)) + '.'
@@ -15108,12 +15217,12 @@ function coDraftVendorAdd() {
   return { type: type, cost: costEl ? (moneyToNumber(costEl.value) || 0) : 0 };
 }
 // What an added prep vendor brings, in the terms the client is asked to agree to: it bills them directly at
-// cost, and the Home Sale Preparation Fee applies to its actual invoice — an estimate of it at the stated cost.
+// cost, and the Home Sale Preparation Fee applies to its quote as recorded (PREP_FEE_ONE_TXT, P25) — an estimate of it at the stated cost.
 function coPrepVendorReadout(v) {
   var pct = Math.round(prepFeeRate() * 100);
   var cost = roundCents(Number(v && v.cost) || 0);
   return 'Adds <strong>' + esc(v.type) + '</strong> to the preparation vendors. It bills the client directly at cost, and the ' + pct +
-    '% Home Sale Preparation Fee applies to what it actually charges' +
+    '% Home Sale Preparation Fee applies to ' + PREP_FEE_ONE_TXT +
     (cost > 0 ? ' &mdash; about ' + fmt(roundCents(cost * prepFeeRate())) + ' at the estimated ' + fmt(cost) + '.' : '.') +
     ' Once the client accepts, it joins the prep vendors on the Job Plan to be booked and quoted.';
 }
@@ -15201,6 +15310,10 @@ function saveChangeOrder() {
   var reason = document.getElementById('co-reason').value;
 
   if (!desc) { document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Describe what changed in the scope.</div>'; return; }
+  // The reason is chosen, from this job's list (P25, Q54): asked where the record is written, as the dialog offers it.
+  if (coReasonsFor(jobId).indexOf(reason) < 0) {
+    document.getElementById('co-fb').innerHTML = '<div class="alert a-warn">Choose the reason for this change order.</div>'; return;
+  }
   // ⚠ WHOLE HOURS, EITHER ROLE, EITHER SIGN (2026-10-02, P18; Anthony: "change orders whole hours."). A change order is
   // an estimate of added scope, so it is in the estimate's unit, the whole hour; the boxes step by 1, and this is the
   // same rule where the record is written, because a change order's hours move the budget, the plan and (on a fixed
@@ -16169,7 +16282,7 @@ function jobPaymentsListHtml(job) {
     if (live && safe) acts += '<button class="jt-ghost jt-ghost-d" onclick="openVoidPayment(' + job.id + ",'" + key + "')\">Void</button>";
     var what = refund
       ? 'Refund' + (p.method ? ' · ' + esc(refundMethodLabel(p.method)) : '') + (p.reference ? ' · ' + esc(p.reference) : '')
-        + (p.payee ? ' · to ' + esc(p.payee) : '')
+        + (p.payee ? ' · to ' + esc(p.payee) : '') + (p.reason ? ' · ' + esc(p.reason) : '')
       : esc(paymentStageLabel(job, p.stage)) + (p.method ? ' · ' + esc(paymentMethodLabel(p.method)) : '')
         + (p.receivedOn ? ' · received ' + fmtDate2(_localDateOf(p.receivedOn)) : '')
         + (p.payer ? ' · ' + esc(p.payer) : '')
@@ -16219,6 +16332,16 @@ function walkawayWorkNote(s) {
   if (s && s.pkg > 0 && !s.pkgCounted) t += ' The ' + fmt(s.pkg) + ' materials package is not counted: “Moving materials on site” is not ticked on the Job Plan.';
   return t;
 }
+// ⚠ WHAT AN HOURLY WALKAWAY EARNED AND OWES, FROM ITS THREE FIGURES — ONE RULE (P25, Q49): the deposit or the work done,
+// whichever is more, is earned; anything held above that is due back, and anything below it is still owed. Read by
+// walkawaySettlement and by the work-done final (invoiceHtml), so the card and the client's invoice cannot differ.
+function walkawayNet(deposit, work, held) {
+  var c = roundCents;
+  var earned = Math.max(c(deposit), c(work));
+  return { earned: earned, due: Math.max(0, c(held - earned)), owed: Math.max(0, c(earned - held)), retained: c(held - Math.max(0, c(held - earned))) };
+}
+// The deposit a walkaway is measured against: the one this job asks for (depositTargetFor), or what was paid toward it.
+function walkawayDeposit(job) { return roundCents(depositTargetFor(job) || depositPaidTotal(job)); }
 function walkawaySettlement(job) {
   if (!job) return null;
   // The one cents rule (P17 merge): this had its own Math.round(v * 100) / 100, which rounds 1.005 down. Belt-and-braces:
@@ -16232,7 +16355,7 @@ function walkawaySettlement(job) {
   if (!est) return out;
   if (est.fixedPrice) { out.basis = 'fixed'; out.earned = held; return out; }
   out.basis = 'hourly';
-  out.deposit = c(depositTargetFor(job) || depositPaidTotal(job));
+  out.deposit = walkawayDeposit(job);
   // ⚠ AN UNREAD HOURS LOG IS NOT ZERO HOURS (P22): the work done is the final's sum of the hours logged, so until the log
   // has answered (hoursLogReady) the settlement is unknown, as it is without the estimate. `wait` names what it waits on.
   if (!hoursLogReady()) { out.basis = 'unknown'; out.wait = 'its hours log'; return out; }
@@ -16244,22 +16367,24 @@ function walkawaySettlement(job) {
   out.work = c(inv.servicesTotal);
   out.pkg = c(est.pkgCost || 0);
   out.pkgCounted = out.pkg > 0 && materialsDelivered(job);
-  out.earned = Math.max(out.deposit, out.work);
-  out.due = Math.max(0, c(held - out.earned));
-  out.retained = c(held - out.due);
+  var nw = walkawayNet(out.deposit, out.work, held);
+  out.earned = nw.earned; out.due = nw.due; out.owed = nw.owed; out.retained = nw.retained;
   return out;
 }
 
 // ⚠ THE ONE QUESTION "MAY A REFUND BE RECORDED HERE?", asked by the Record refund button and again by saveRefund where the
-// record is written. '' when it may; otherwise the sentence that says why not. Only a job closed out as a walkaway with
-// money kept (Closed — Deposit Retained), on an hourly basis, with something due back.
+// record is written. '' when it may; otherwise the sentence that says why not. A job closed out as a walkaway with money
+// kept (Closed — Deposit Retained), whose settlement is known, holding something to send back.
+// ⚠⚠ NOT ONLY WHAT IS DUE (P25, Q49; Anthony, 2026-10-09: "Fix both"). It refused a refund on a job with nothing due back, and
+// on every fixed price, so a refund after Havellin's uncured breach (which both hourly clauses provide for) or one given
+// as goodwill could not be recorded at all. Any amount up to what the job holds may be recorded; above what is due, the
+// save asks first and requires the reason (saveRefund).
 function refundBlocker(job, s) {
   if (!job) return 'This job could not be found.';
   if (job.status !== 'closed_retained') return 'A refund is recorded once the job has been closed out with the deposit retained.';
   s = s || walkawaySettlement(job);
   if (!s || s.basis === 'unknown') return 'What this job earned cannot be worked out on this device yet: ' + ((s && s.wait) || 'its estimate') + ' has not loaded. Reload, then try again.';
-  if (s.basis === 'fixed') return 'A fixed-price job keeps its stage earn-out under the agreement, so there is no refund to work out.';
-  if (!(s.due > 0)) return 'Nothing is due back on this job: it holds no more than it has earned.';
+  if (!(s.held > 0)) return 'This job holds nothing to refund: every payment on it has been refunded or voided.';
   return '';
 }
 
@@ -16275,19 +16400,33 @@ function walkawaySettlementHtml(job) {
       + '<div class="jt-settle-note">What this job has earned, and any refund due, cannot be worked out until ' + esc(s.wait || 'its estimate')
       + ' loads on this device.</div></div>';
   }
-  if (!s || s.basis !== 'hourly') return '';
+  if (!s || (s.basis !== 'hourly' && s.basis !== 'fixed')) return '';
   var row = function (l, v, cls) {
     return '<div class="jt-settle-row' + (cls ? ' ' + cls : '') + '"><span>' + l + '</span><span>' + v + '</span></div>';
   };
+  var btn = function (a, cls) { return '<button class="' + (cls || 'jt-ghost') + '" onclick="' + a.call + '">' + a.label + '</button>'; };
+  var refundBtn = refundBlocker(job, s) ? '' : '<button class="jt-btn" onclick="openRefundModal(' + job.id + ')">Record refund</button>';
   var h = '<div class="jt-settle" id="jt-settle-' + job.id + '"><div class="jt-pays-hd">Walkaway settlement</div>';
+  // ⚠ A FIXED PRICE KEEPS ITS STAGE EARN-OUT (P17), and since P25 (Q49) a refund on one may still be recorded, with its reason.
+  if (s.basis === 'fixed') {
+    h += row('Received', fmt(s.received));
+    if (s.refunded > 0) h += row('Refunded', '(' + fmt(s.refunded) + ')');
+    h += '<div class="jt-settle-note">A fixed price keeps its stage earn-out under the agreement, so nothing is computed as due back. '
+      + 'A refund after Havellin’s uncured breach, or as goodwill, is recorded with its reason.</div>';
+    return h + (refundBtn ? '<div class="jt-acts">' + refundBtn + '</div>' : '') + '</div>';
+  }
   h += row('Received', fmt(s.received));
   h += row('Earned: the deposit (' + fmt(s.deposit) + ') or the work done (' + fmt(s.work) + '), whichever is more', fmt(s.earned));
   if (s.refunded > 0) h += row('Refunded', '(' + fmt(s.refunded) + ')');
-  h += row('Refund due', fmt(s.due), s.due > 0 ? 'jt-settle-due' : '');
+  h += s.owed > 0 ? row('Still owed by the client', fmt(s.owed), 'jt-settle-due') : row('Refund due', fmt(s.due), s.due > 0 ? 'jt-settle-due' : '');
   h += '<div class="jt-settle-note">' + esc(walkawayWorkNote(s)) + '</div>';
-  if (!refundBlocker(job, s)) {
-    h += '<div class="jt-acts"><button class="jt-btn" onclick="openRefundModal(' + job.id + ')">Record refund</button></div>';
-  }
+  // ⚠⚠ THE FINAL INVOICE THE AGREEMENT PROMISES, FOR THE WORK DONE (P25, Q49). Both hourly clauses (standard §12.4, estate
+  // §8.1) promise a final invoice for the services performed, and Deposit Retained offered none. On a walkaway the final is
+  // the work done (invoiceHtml prices it so on a closed_retained job) and states what was earned and the refund due, through
+  // the one document path: view, print, and send with its confirming tap.
+  var views = _jtDocViews(job.id, 'invoice', 'final', false, job);
+  var send = _jtSendAction(job.id, job, 'invoice', 'final', docWord('invoice', 'final', job));
+  h += '<div class="jt-acts jt-settle-final">' + views.map(function (a) { return btn(a); }).join('') + btn(send) + refundBtn + '</div>';
   return h + '</div>';
 }
 
@@ -16298,13 +16437,16 @@ function openRefundModal(jobId) {
   if (blk) { dashNotice('warn', blk); _dashRedraw(jobId); return; }
   document.getElementById('rf-job').value = String(jobId);
   document.getElementById('rf-summary').textContent = 'Received ' + fmt(s.received) + (s.refunded > 0 ? ', ' + fmt(s.refunded) + ' already refunded' : '')
-    + '. Earned ' + fmt(s.earned) + ': the deposit (' + fmt(s.deposit) + ') or the work done (' + fmt(s.work) + '), whichever is more. Due back: '
-    + fmt(s.due) + '.';
+    + (s.basis === 'fixed'
+      ? '. A fixed price keeps its stage earn-out, so nothing is due back; a refund (after Havellin’s uncured breach, or as goodwill) is recorded with its reason.'
+      : '. Earned ' + fmt(s.earned) + ': the deposit (' + fmt(s.deposit) + ') or the work done (' + fmt(s.work) + '), whichever is more. Due back: '
+        + fmt(s.due) + '.' + (s.due > 0 ? '' : ' A refund above that is recorded with its reason.'));
   document.getElementById('rf-amount').value = String(s.due);
   document.getElementById('rf-date').value = _todayStr();
   document.getElementById('rf-method').value = '';
   document.getElementById('rf-reference').value = '';
   document.getElementById('rf-payee').value = '';
+  if (document.getElementById('rf-reason')) document.getElementById('rf-reason').value = '';
   document.getElementById('rf-fb').innerHTML = '';
   document.getElementById('refund-modal').style.display = 'flex';
 }
@@ -16333,8 +16475,15 @@ function saveRefund() {
   if (!date) { showFB('rf-fb', 'warn', 'Enter the date the refund was sent.'); return; }
   if (!REFUND_METHODS.some(function (m) { return m.v === method; })) { showFB('rf-fb', 'warn', 'Select how the refund was sent.'); return; }
   if (amount > s.held + 0.005) { showFB('rf-fb', 'warn', fmt(amount) + ' is more than the ' + fmt(s.held) + ' this job holds.'); return; }
-  if (amount > s.due + 0.005 && !confirm(fmt(amount) + ' is more than the ' + fmt(s.due) + ' due back on this job.\n\n'
-      + 'Record it anyway? The job then keeps less than it has earned.')) return;
+  // Above what is due (P25, Q49): the reason is required, then the save asks.
+  var reason = (((document.getElementById('rf-reason') || {}).value) || '').trim();
+  var aboveDue = amount > s.due + 0.005;
+  if (aboveDue && !reason) {
+    showFB('rf-fb', 'warn', fmt(amount) + ' is more than the ' + fmt(s.due) + ' due back on this job. Give the reason (for example Havellin&rsquo;s uncured breach, or goodwill) to record it.');
+    return;
+  }
+  if (aboveDue && !confirm(fmt(amount) + ' is more than the ' + fmt(s.due) + ' due back on this job.\n\nReason: ' + reason + '\n\n'
+      + 'Record it? The job then keeps less than it has earned.')) return;
   var list = jobPayments(job);
   var refund = {
     id: (list.reduce(function (m, x) { return Math.max(m, x.id || 0); }, 0) + 1),
@@ -16345,6 +16494,7 @@ function saveRefund() {
     method: method,
     reference: reference,
     payee: payee,
+    reason: reason,          // required above what was due (P25, Q49); kept on any refund that gives one
     recordedBy: _actor(job),   // as a payment's recordedBy is (saveDeposit): the app has no sign-in
     recordedAt: new Date().toISOString()
   };
@@ -16385,9 +16535,9 @@ function openCOAcceptModal(coId) {
   // one (Home Prep, and since P16 a labour job whose estimate bundles prep), so the two panels cannot word it apart.
   var _vRows = coVendorAdds(co).map(function(v){
     return '<div style="display:flex;justify-content:space-between;"><span>Added vendor</span><span>' + esc(v.type) + ', est. ' + fmt(Number(v.cost) || 0) + ', billed to you directly</span></div>' +
-      '<div style="display:flex;justify-content:space-between;"><span>' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on it</span><span>about ' + fmt(roundCents((Number(v.cost) || 0) * prepFeeRate())) + ', on its actual invoice</span></div>';
+      '<div style="display:flex;justify-content:space-between;"><span>' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on it</span><span>about ' + fmt(roundCents((Number(v.cost) || 0) * prepFeeRate())) + ', on ' + PREP_FEE_ONE_TXT + '</span></div>';
   }).join('');
-  var _vSentence = coVendorAdds(co).length ? 'The added vendor bills you directly at cost; the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee is billed on what it actually charges. ' : '';
+  var _vSentence = coVendorAdds(co).length ? 'The added vendor bills you directly at cost; the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee is billed on ' + PREP_FEE_ONE_TXT + '. ' : '';
   // A change order that adds only a vendor moves no hours and no fixed fee, and on a labour job says neither.
   var _coHasHrs = !!(coHours(co).tc || coHours(co).ps);
   document.getElementById('coa-summary').innerHTML =
@@ -16402,7 +16552,7 @@ function openCOAcceptModal(coId) {
           : '') +
         _vRows +
         '<div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;color:var(--gray);">' +
-          (_prepTC ? 'Billed on the final invoice for the hours actually worked, at the rate above, on top of the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on the prep vendors&rsquo; invoices. ' : '') +
+          (_prepTC ? 'Billed on the final invoice for the hours actually worked, at the rate above, on top of the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on ' + PREP_FEE_BASIS_SHORT + '. ' : '') +
           _vSentence +
           'Coordinating the vendors stays inside that fee.</div>'
       : fx
@@ -16422,7 +16572,7 @@ function openCOAcceptModal(coId) {
             ? (_coHasHrs ? 'These hours are billed on the final invoice as they are actually worked. ' : '') + _vSentence.replace(/ $/, '')
             : 'No charge is created by this change order. These hours are billed on the final invoice as they are actually worked.') + '</div>');
   var _vTerms = coVendorAdds(co).map(function(v){ return esc(v.type); }).join(', ');
-  var _vClause = _vTerms ? ', and the addition of ' + _vTerms + ' to the preparation vendors, billed to them directly at cost, with the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on what it actually charges' : '';
+  var _vClause = _vTerms ? ', and the addition of ' + _vTerms + ' to the preparation vendors, billed to them directly at cost, with the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on ' + PREP_FEE_ONE_TXT : '';
   document.getElementById('coa-terms').innerHTML = (pb.prep && !fx)
     ? 'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope' +
       (_prepTC ? ', the additional concierge hours it is expected to take, and the rate of ' + fmt(_prepRate) + ' an hour at which those hours are billed on the final invoice as they are actually worked' : '') +
@@ -16561,13 +16711,13 @@ function printChangeOrder(coId, opt) {
     return adds.map(function(v){
       var c = roundCents(Number(v.cost) || 0);
       return '<tr><td style="' + _td + '">Added preparation vendor: <strong>' + esc(v.type) + '</strong><br><span style="color:#6B6B72;font-size:11px;">billed to you directly by the vendor, at cost</span></td><td style="' + _td + 'text-align:right;font-weight:600;">' + fmt(c) + ' estimated</td></tr>' +
-        '<tr><td style="' + _td + '">Home Sale Preparation Fee (' + Math.round(prepFeeRate() * 100) + '%) on its actual invoice</td><td style="' + _td + 'text-align:right;">about ' + fmt(roundCents(c * prepFeeRate())) + '</td></tr>';
+        '<tr><td style="' + _td + '">Home Sale Preparation Fee (' + Math.round(prepFeeRate() * 100) + '%) on ' + PREP_FEE_ONE_TXT + '</td><td style="' + _td + 'text-align:right;">about ' + fmt(roundCents(c * prepFeeRate())) + '</td></tr>';
     }).join('');
   }
   function _vendorTerms(adds) {
     var cost = adds.reduce(function(a, v){ return a + (Number(v.cost) || 0); }, 0);
-    return (adds.length === 1 ? 'The vendor bills' : 'Each vendor bills') + ' you directly, at cost, and the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee in your agreement is billed on what ' +
-      (adds.length === 1 ? 'it actually charges' : 'each actually charges') +
+    return (adds.length === 1 ? 'The vendor bills' : 'Each vendor bills') + ' you directly, at cost, and the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee in your agreement is billed on ' +
+      (adds.length === 1 ? PREP_FEE_ONE_TXT : 'each one’s quote as recorded, updated if its invoice differs') +
       (cost > 0 ? ' &mdash; about ' + fmt(roundCents(cost * prepFeeRate())) + ' at the estimated ' + fmt(cost) : '') + '. ';
   }
 
@@ -16596,7 +16746,7 @@ function printChangeOrder(coId, opt) {
         : '<strong>This change order reduces the concierge hours on this engagement.</strong> ') +
       'You are billed for the hours actually worked, at ' + fmt(_pRate) + ' an hour, on the final invoice' +
       (_pTC > 0 ? ' &mdash; at the estimated hours, about ' + fmt(roundCents(_pTC * _pRate)) + ' &mdash;' : '') +
-      ' in addition to the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on the preparation vendors&rsquo; invoices, which this change does not alter. ' +
+      ' in addition to the ' + Math.round(prepFeeRate() * 100) + '% Home Sale Preparation Fee on ' + PREP_FEE_BASIS_SHORT + ', which this change does not alter. ' +
       'Coordinating the vendors remains covered by that fee. ' +
       'Third-party vendor costs are unaffected: those are billed to you directly by the vendor and are not part of this change.';
     // ⚠⚠ A PREP CHANGE ORDER THAT ADDS A VENDOR (2026-09-30) is priced on a different page: the vendor bills the
@@ -16992,6 +17142,8 @@ function probatePackageRecipients(job) {
   var to = String((job && (probatePackageAddressee(job) === 'trustee' ? job.executorEmail : job.probateAttyEmail)) || '').trim();
   var cc = [], pr = String((job && job.executorEmail) || '').trim();
   if (pr && pr.toLowerCase() !== to.toLowerCase()) cc.push(pr);
+  // Every co-representative too (P25, Q37), after the representative, never the addressee twice.
+  clientCopyEmails(job, to).forEach(function (e) { if (cc.map(function (x) { return x.toLowerCase(); }).indexOf(e.toLowerCase()) < 0) cc.push(e); });
   cc.push(DEPT_EMAILS.agreements);
   return { to: to, cc: cc };
 }
@@ -18487,6 +18639,14 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   var _midNotYet = !!(_sc && !_midSent && !_midDrafted && !_closed && _sc.state === 'running'
     && _sc.halfway && _sc.today && _sc.today < _sc.halfway
     && !(_sc.progress && (_sc.workPct >= 0.5 || _sc.roomsLocked)));
+  // ⚠⚠ HOME PREP'S SECOND INVOICE WAITS ON THE VENDOR BOOKING (P25, Q56; Anthony, 2026-10-09: "Once vendors confirmed"). The
+  // estimate and the agreement bill it "once the vendor schedule is booked", and it was the band's one filled button from the
+  // day the job went active. Until every prep vendor on the job is Confirmed on the Job Plan (prepVendorsConfirmed) it is
+  // not yet due, and the band says to book the vendors; a draft somebody chose to make is never "not yet".
+  var _prepPC = _mw.renamed ? prepVendorsConfirmed(job, est) : null;
+  var _prepNotYet = !!(_prepPC && _prepPC.total > 0 && _prepPC.done < _prepPC.total
+    && job.status === 'active' && !_midSent && !_midDrafted && !_closed);
+  if (_prepNotYet) _midNotYet = true;
 
   var rows = [
     // `created` is stamped short form ("Sep 22, 2026"), so raw happened to read right — but a
@@ -18671,9 +18831,11 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       open: _closed && !_midSent && !(midPaid > 0 || _finSent || finPaid > 0),
       at: docSentAt(job, 'invoice', 'midpoint'), atKind: 'iso',
       amount: hav ? split.midpoint : null,
-      notYet: _midNotYet, dueOn: _midNotYet ? _sc.halfway : '',
-      todo: _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point' : (_mw.renamed ? 'Send the ' + _mw.invoice : ''),
-      sub: _midSent ? ''
+      notYet: _midNotYet, dueOn: (_midNotYet && !_prepNotYet) ? _sc.halfway : '',
+      todo: _prepNotYet ? 'Book the prep vendors \u2014 the ' + _mw.invoice + ' is due once every one is confirmed'
+        : _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point' : (_mw.renamed ? 'Send the ' + _mw.invoice : ''),
+      sub: _prepNotYet ? _prepPC.done + ' of ' + _prepPC.total + ' prep vendor' + (_prepPC.total > 1 ? 's' : '') + ' confirmed on the Job Plan'
+        : _midSent ? ''
         : _closed ? (midPaid > 0 ? '' : (_finSent || finPaid > 0) ? 'Billed on the final invoice' : 'Not sent \u2014 the final invoice bills it')
         : jtDraftLine(job, 'invoice:midpoint', true) }, _sc && _sc.halfway, 'halfway point')),
 
@@ -18716,7 +18878,7 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       done: finPaid > 0, amount: hav ? split.final : null,
       sub: finPaid > 0 ? (fmt(finPaid) + ' received')
         : (est && est.fixedPrice) ? 'Balance of the fixed fee'
-        : estimateIsFeeOnly(est, job) ? 'Balance of the fee on actual vendor spend' : 'Balance of actual hours' })
+        : estimateIsFeeOnly(est, job) ? 'Balance of the fee on ' + PREP_FEE_BASIS_SHORT : 'Balance of actual hours' })
   ];
 
   // A job that died collapses the whole rail to one honest line. Neither `lost`
@@ -19193,7 +19355,7 @@ var DOC_SEND_PROVIDERS = {
     carriesAttachment: true,
     send: function (spec, pdf, cb) {
       var mime = buildMimeMessage({
-        to: spec.to, cc: spec.cfg.cc(),
+        to: spec.to, cc: spec.cfg.cc(spec),
         subject: spec.cfg.subject(spec),
         text: spec.cfg.text(spec),
         html: spec.cfg.emailHtml(spec),
@@ -20875,7 +21037,7 @@ var DOC_ACTIONS = {
   estimate: {
     label: 'Client Estimate',
     driveSub: 'Estimate',
-    cc: function () { return DEPT_EMAILS.estimates; },
+    cc: function (spec) { return docCcLine(spec && spec.job, spec && spec.to, DEPT_EMAILS.estimates); },
     subject: function (spec) { return estimateEmailSubject(spec.job); },
     text: function (spec) { return buildEstimateEmailText(spec.est, spec.job); },
     emailHtml: function (spec) { return buildEstimateEmailHtml(spec.est, spec.job); },
@@ -20904,7 +21066,7 @@ var DOC_ACTIONS = {
   agreement: {
     label: 'Signing Packet',
     driveSub: 'Agreement',
-    cc: function () { return DEPT_EMAILS.agreements; },
+    cc: function (spec) { return docCcLine(spec && spec.job, spec && spec.to, DEPT_EMAILS.agreements); },
     subject: function (spec) { return agreementEmailSubject(spec.job); },
     text: function (spec) { return buildAgreementEmailText(spec.job); },
     emailHtml: function (spec) { return buildAgreementEmailHtml(spec.job); },
@@ -20941,7 +21103,7 @@ var DOC_ACTIONS = {
     // ⚠ THE INVOICE HAD NONE OF THIS. Its only email was a `mailto:` whose body reads
     // "Please find attached your invoice" — with nothing attached, because RFC 6068
     // carries plain text and nothing else.
-    cc: function () { return DEPT_EMAILS.billing; },
+    cc: function (spec) { return docCcLine(spec && spec.job, spec && spec.to, DEPT_EMAILS.billing); },
     subject: function (spec) { return invoiceEmailSubject(spec.job, spec.stage); },
     text: function (spec) { return buildInvoiceEmailText(spec.job, spec.stage, _docAmtDue(spec)); },
     emailHtml: function (spec) { return buildInvoiceEmailHtml(spec.job, spec.stage, _docAmtDue(spec)); },
@@ -21855,7 +22017,12 @@ function jobTimelineActions(row, job, estRec) {
       // is the point of that builder, and a second call here would be a second opinion of its label.
       if (live) {
         var _mid = _jtSendAction(id, job, 'invoice', 'midpoint', docWord('invoice', 'midpoint', job));
-        if (row.notYet) out.secondary.push({ label: _mid.label + ' &mdash; due around ' + fmtDate2(row.dueOn), call: _mid.call });
+        // On Home Prep it waits on the vendor booking, not a date (P25, Q56): the band's button opens the vendors to book.
+        if (row.notYet && !row.dueOn) {
+          out.primary = { label: '&#9654; Book the vendors', call: "openJobPlanFor(" + id + ",'vendors')" };
+          out.secondary.push({ label: _mid.label + ' &mdash; once the vendors are confirmed', call: _mid.call });
+        }
+        else if (row.notYet) out.secondary.push({ label: _mid.label + ' &mdash; due around ' + fmtDate2(row.dueOn), call: _mid.call });
         else out.primary = _mid;
       }
       break;
@@ -22843,6 +23010,7 @@ function renderClientDashboard(jobId) {
     if (_court) {
       h += '<div class="d-grid4">';
       h += field('Case number', esc(job.probateCase||'—'));
+      h += field('Court', esc(jobProbateCourt(job) || '—'));
       h += field('Court deadline', job.probateDeadline ? '<span style="color:#A32D2D;font-weight:600;">'+fmtDate2(job.probateDeadline)+'</span>' : '—');
       h += field('Property sale', esc(job.probateSale||'—'));
       h += field('Authorization', _authVal);
@@ -23381,7 +23549,9 @@ function activateOrCycle(jobId) {
   // ⚠ THE DISPOSITION LEDGER GOES TO DRIVE AS THE JOB CLOSES (P19). `closed` after a transition can only mean it just
   // closed (closed → active is the Re-open). It runs in the background and reports through the sync badge, the way an
   // accepted change order files itself; a failure leaves File to Drive on the desk's Disposition Ledger card.
-  if (j.status === 'closed') fileDispositionLedger(jobId, { auto: true });
+  // ⚠ AND THE CONTENTS RECORD ON LIVING WORK (P25, Q51): the family's signed paper. Each filing decides for itself, once
+  // the inventory is read from the sheet, whether its paper applies (CLOSEOUT_PAPERS); one that does not files nothing, silently.
+  if (j.status === 'closed') { fileDispositionLedger(jobId, { auto: true }); fileContentsRecord(jobId, { auto: true }); }
   // ⚠⚠ AN ACTIVATION LANDS ON THE JOB PLAN (2026-09-23). Anthony: *"the activate job button on the
   // client dashboard should take you to the job plan."* Activating is starting the job, and the Job
   // Plan is where a started job is worked — so the press that starts it takes you there, on this
@@ -24431,7 +24601,9 @@ var SIGNED_RECORD_KINDS = {
   agreement: { label: 'Co-signed agreement page' },
   // A vendor's pickup sheet (P22; Anthony, 2026-10-06): the auction house's, consignor's or buyer's list of what it took,
   // photographed. Ref the vendor, stableIds the lines it covers; estates and living work alike (pickupGroups).
-  pickup:    { label: 'Vendor pickup list' }
+  pickup:    { label: 'Vendor pickup list' },
+  // The client's signed Contents Record (P25, Q51): the one paper a living family signs at close-out. Ref CONTENTS_SIGNED_REF.
+  contents:  { label: 'Signed Contents Record' }
 };
 var AGR_COSIGN_REF = 'agreement';   // signedRecords' ref for a co-signed agreement page — a stored value: never rename it
 var SIGNED_COPY_MAX_BYTES = 10 * 1024 * 1024;
@@ -25074,6 +25246,25 @@ function clientRecipient(job) {
   return none;
 }
 function bestClientEmail(job) { return clientRecipient(job).email; }
+// ⚠⚠ EVERY CO-REPRESENTATIVE IS COPIED (P25, Q37; Anthony, 2026-10-09: "Copy on everything"). The estimate, the invoices, the
+// sign-by-hand agreement, the estate package and the review ask went to the representative alone, so on a contested matter
+// the other side heard nothing but the DocuSign envelope. On an estate, every fiduciary with an email (jobFiduciaries) other
+// than whoever the message is addressed to, once each, in the fiduciary order. Read by every client email's Cc, its
+// plain-email fallback, the package's recipients and the photograph shares.
+function clientCopyEmails(job, to) {
+  var seen = [String(to || '').trim().toLowerCase()], out = [];
+  jobFiduciaries(job).forEach(function (f) {
+    var e = String(f.email || '').trim();
+    if (!e || seen.indexOf(e.toLowerCase()) >= 0) return;
+    seen.push(e.toLowerCase());
+    out.push(e);
+  });
+  return out;
+}
+// A client document's Cc line: the co-representatives, then the department's inbox.
+function docCcLine(job, to, dept) {
+  return clientCopyEmails(job, to).concat(dept ? [dept] : []).join(', ');
+}
 // First name of whoever the email is actually going to, so the greeting matches the recipient.
 function bestClientGreetingName(job) { return clientRecipient(job).fname || 'there'; }
 // The assigned Transition Concierge's contact, for the email signature ("from").
@@ -25271,7 +25462,7 @@ function buildAgreementMailto(job) {
   body.splice(4, 0, '** Attach the signing packet before sending — use "Print Signing Packet" in the app. **', '');
   body = body.concat(mailtoSignoff(assignedTCContact(job)));
   return 'mailto:' + encodeURIComponent(bestClientEmail(job))
-    + '?cc=' + encodeURIComponent(DEPT_EMAILS.agreements)
+    + '?cc=' + encodeURIComponent(docCcLine(job, bestClientEmail(job), DEPT_EMAILS.agreements).replace(/, /g, ','))
     + '&subject=' + encodeURIComponent(agreementEmailSubject(job))
     + '&body=' + mailtoBody(body);
 }
@@ -25605,13 +25796,13 @@ function buildEstimateEmailHtml(e, job) {
     : '';
 
   var basis = feeOnly
-    ? 'Our fee is ' + Math.round(prepFeeRate()*100) + '% of what the vendors actually invoice. Every quote is reviewed with you before anyone is booked.'
+    ? 'Our fee is ' + Math.round(prepFeeRate()*100) + '% of ' + PREP_FEE_BASIS_TXT + '. Every quote is reviewed with you before anyone is booked.'
     : (e.fixedPrice
         // "The FIXED PROJECT FEE", not "the Havellin fee": with prep vendors the Havellin lines
-        // above are two, and the second one follows the vendors' actual invoices.
+        // above are two, and the second one follows the vendor quotes recorded (PREP_FEE_BASIS_TXT, P25).
         ? 'The fixed project fee above is firm for the scope described. It does not move with the hours worked.'
           + ((estPrepFeeOnTop(e) && (e.prepFee || 0) > 0)
-             ? ' The Home Sale Preparation Fee beside it is charged on what those vendors actually bill.' : '')
+             ? ' The Home Sale Preparation Fee beside it is charged on ' + PREP_FEE_BASIS_TXT + '.' : '')
         : 'Final charges reflect the hours actually worked and logged. If they look like exceeding this estimate by more than ' + estTolerancePctTxt() + ', we will tell you before continuing.');
 
   return '' +
@@ -25778,7 +25969,7 @@ function buildEstimateMailto(e, job) {
     'Please take your time reviewing everything, and never hesitate to reach out — I am always happy to walk through any part of it with you personally. Whenever you feel ready to move forward, I will send over the service agreement for your signature.'
   ].concat(mailtoSignoff(tc))));
   // CC the central department inbox so every outbound client email is captured.
-  var cc = encodeURIComponent(DEPT_EMAILS.estimates);
+  var cc = encodeURIComponent(docCcLine(job, bestClientEmail(job), DEPT_EMAILS.estimates).replace(/, /g, ','));
   return 'mailto:' + to + '?cc=' + cc + '&subject=' + subject + '&body=' + body;
 }
 
@@ -25802,7 +25993,7 @@ function buildInvoiceMailto(job, balance, stage) {
     '',
     'Thank you for trusting Havellin Palm Beach with this transition. It has been our honor to serve your family.'
   ].concat(mailtoSignoff(tc)));
-  var cc = encodeURIComponent(DEPT_EMAILS.billing);
+  var cc = encodeURIComponent(docCcLine(job, bestClientEmail(job), DEPT_EMAILS.billing).replace(/, /g, ','));
   return 'mailto:' + to + '?cc=' + cc + '&subject=' + subject + '&body=' + body;
 }
 
@@ -26440,6 +26631,17 @@ function invNeedsAppraisal(ref, job){
 // warrants a specialist; this says nobody has been engaged and nobody has waived it. ONE
 // definition, so the badge on screen, the panel that chases it and the document that releases
 // the property cannot disagree about whether an item is still outstanding.
+// ⚠⚠ WHAT COUNTS AS APPRAISED, ONE ANSWER (P25, Q36; Anthony, 2026-10-09: "Appraisal figure on line"). Linking an appraiser
+// cleared NOT YET APPRAISED and made the Court Inventory FINAL while the value on the line was still Agent Two's, and a line
+// whose source was set to Appraisal with the report's figure typed, no appraiser linked (counsel's appraiser), still read
+// NOT YET APPRAISED. A line is appraised once the appraisal's figure is on it: source Appraisal, with a value. Linked or not.
+// The link alone is the appraisal in progress (invAppraisalInProgress).
+function invAppraised(ref) {
+  return !!ref && ref.valSource === 'Appraisal' && _invHasValue(ref);
+}
+function invAppraisalInProgress(ref, jobId) {
+  return !!ref && !invAppraised(ref) && _invHasAppraisal(jobId, ref);
+}
 function invAwaitingAppraisal(ref, jobId) {
   if (!ref) return false;
   // ⚠ NO JOB MEANS NO ANSWER, AND SILENCE IS THE SAFE ONE — a false positive here cries
@@ -26451,7 +26653,8 @@ function invAwaitingAppraisal(ref, jobId) {
   var job = _invJob(jobId);
   if (!job) return false;
   if (!invNeedsAppraisal(ref, job)) return false;
-  return !_invHasAppraisal(jobId, ref) && !ref.apprWaived;
+  // The appraisal's figure on the line, not a link (P25, Q36): a linked line with no figure yet is still awaiting it.
+  return !invAppraised(ref) && !ref.apprWaived;
 }
 
 // ⚠⚠ APPRAISE IS DELIBERATELY NOT ON THIS LIST, AND ADDING IT WOULD BE A CATEGORY ERROR.
@@ -29899,12 +30102,20 @@ function invGoneText(ref, job) {
   })[0] : null;
   return 'Released' + (st ? ': ' + (st.vendor || 'the selling partner') + '’s statement is on file' : '');
 }
+// ⚠⚠ A FIREARM GOING TO A PERSON THROUGH A LICENSED DEALER IS NOT ON HAVELLIN'S RECEIPT (P25, Q35; Anthony, 2026-10-09). The
+// receipt says the property was "delivered to me by Havellin", and a dealer-routed firearm is transferred by the dealer, with
+// the background check and the paperwork; Havellin never hands one to anyone. Its receipt is the dealer's, filed under the
+// dealer's name (kind `receipt`, ref the dealer). One test, read by the receipt record, the groups and the card.
+function invViaDealer(ref) {
+  return !!ref && invIsFirearm(ref) && ref.disposition === 'Distribute' && !!invDealerRoute(ref);
+}
 // The live filed receipt that lists this line, signed by the person it is released to now, or null. ⚠ A receipt one
 // person signed never clears a line since re-routed to somebody else: that person's signature is not on file.
+// A dealer-routed firearm's receipt is the dealer's (invViaDealer).
 function invReceiptRecord(ref, job) {
   if (!ref || !job) return null;
   var sid = String(ref.stableId);
-  var who = invRecipientName(ref.channel);
+  var who = invViaDealer(ref) ? invDealerRoute(ref) : invRecipientName(ref.channel);
   return signedRecordsOf(job, 'receipt').filter(function(s){
     return (s.stableIds || []).map(String).indexOf(sid) >= 0 && (!who || samePerson(s.ref, who));
   })[0] || null;
@@ -29920,10 +30131,14 @@ function invReceiptGroups(job, refs) {
   var out = [];
   (refs || []).forEach(function(r){
     if (!r || r.deletedAt || r.disposition !== 'Distribute') return;
-    var name = invRecipientName(r.channel);
+    // A dealer-routed firearm groups under its dealer, whose receipt is filed for it (P25, Q35), naming who it goes to.
+    var viaDealer = invViaDealer(r);
+    var name = viaDealer ? invDealerRoute(r) : invRecipientName(r.channel);
     if (!name) return;
-    var g = out.filter(function(x){ return samePerson(x.name, name); })[0];
-    if (!g) { g = { name: name, released: [], owed: [], waiting: [] }; out.push(g); }
+    var g = out.filter(function(x){ return samePerson(x.name, name) && !!x.dealer === viaDealer; })[0];
+    if (!g) { g = { name: name, released: [], owed: [], waiting: [], dealer: viaDealer, persons: [] }; out.push(g); }
+    var person = invRecipientName(r.channel);
+    if (viaDealer && person && !g.persons.some(function(p){ return samePerson(p, person); })) g.persons.push(person);
     if (!invReleasedToPerson(r, job)) { g.waiting.push(r); return; }
     g.released.push(r);
     if (!invReceiptRecord(r, job)) g.owed.push(r);
@@ -30046,10 +30261,14 @@ var INV_RELEASE_CAUTIONS = [
   { key: 'flagDisputed', badge: 'DISPUTED', tone: '#A32D2D',
     test: function(r){ return !!r.flagDisputed; },
     head: 'Disputed property on this request',
-    body: 'A recorded dispute means beneficiaries disagree about what happens to the property. '
-        + 'Havellin holds disputed property and takes direction from you alone — nothing moves on '
+    // ⚠ A FUNCTION OF THE JOB (P25, Q33): with a co-representative recorded it names the representatives together, never
+    // "you alone" (estateDirectionWords). _invCautionNotices calls a body that is a function with the job's id.
+    body: function(jobId) {
+      return 'A recorded dispute means beneficiaries disagree about what happens to the property. '
+        + 'Havellin holds disputed property and takes direction from ' + estateDirectionWords(_invJob(jobId)).who + ' — nothing moves on '
         + 'a verbal request from anyone, family included. <strong>Initialling a line below is your '
-        + 'written instruction to release it notwithstanding the dispute.</strong>' },
+        + 'written instruction to release it notwithstanding the dispute.</strong>';
+    } },
   // ⚠⚠ A DESIGNATED ITEM PROPOSED TO GO ELSEWHERE, NAMING THE PERSON IT IS DESIGNATED FOR (P19, call 7). Matched by
   // the desk to a bequest on the list the representative or counsel gave us (`invBequestElsewhere`), and proposed to be
   // sold, donated, removed or released to somebody else. It flags and explains, like the two above: a designated item
@@ -30119,8 +30338,10 @@ var INV_RELEASE_CAUTIONS = [
     // ⚠ "APPRAISED", NOT "VALUED" (2026-10-08, the job-flow audit): the heading sat over lines that print a value (Agent Two's
     // or the desk's) and told the representative they had none. What is missing is the specialist's appraisal.
     head: 'Property on this request has not been appraised yet',
-    body: 'These lines are flagged for a specialist appraisal and no appraiser has been engaged '
-        + 'and no waiver recorded. Releasing property before it is appraised is a decision you can '
+    // ⚠ "NO APPRAISAL FIGURE", NOT "NO APPRAISER ENGAGED" (P25, Q36): a line with an appraiser linked and no report yet is
+    // still awaiting it, and the sentence has to be true of that line too.
+    body: 'These lines are flagged for a specialist appraisal, carry no appraisal figure yet, '
+        + 'and have no waiver recorded. Releasing property before it is appraised is a decision you can '
         + 'properly make — a dealer\u2019s offer may itself be the market test, and not every '
         + 'article warrants a formal appraisal — but there is then no independent record '
         + 'of what the property was worth when it left. <strong>On an estate filing a federal '
@@ -30174,7 +30395,7 @@ function _invCautionNotices(items, jobId) {
       + 'padding:8px 10px;margin-bottom:10px;font-size:11px;line-height:1.55;color:#3c3228;">'
       + '<div style="font-weight:700;color:' + c.tone + ';margin-bottom:3px;">&#9888; ' + esc(c.head) + '</div>'
       + '<div style="font-weight:700;margin-bottom:3px;">' + named + '</div>'
-      + c.body + '</div>';
+      + (typeof c.body === 'function' ? c.body(jobId) : c.body) + '</div>';
   }).join('');
 }
 
@@ -30220,11 +30441,17 @@ function printApprovalRequest(jobId, selectedOnly) {
         + _invCautionBadges(r, jobId) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
       + (showVal ? '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>' : '')
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.disposition || '—')
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.disposition ? invDispDocWord(r.disposition) : '—')
         + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '')
         // ⚠ A FIREARM GOING TO A PERSON NAMES ITS ROUTE ON ITS OWN LINE (P16), so the representative
         // initials the dealer it goes through, not only the person it ends with.
-        + (invDealerRoute(r) ? '<div style="color:#888;font-size:10px;">through ' + esc(invDealerRoute(r)) + ', a licensed dealer</div>' : '')
+        // ⚠⚠ AND EVERY FIREARM PRINTS ITS SERIAL AND ITS DEALER (P25, Q35): this request is the written authority to carry it
+        // (invFirearmAuthorized reads its approval), and its own paragraph said that authority names each firearm by serial
+        // and the receiving dealer, while the line printed neither.
+        + (invIsFirearm(r) ? '<div class="inv-fa-line" style="color:#888;font-size:10px;">Serial '
+            + (String(r.serial || '').trim() ? '<span style="font-family:monospace;">' + esc(String(r.serial).trim()) + '</span>' : 'not recorded')
+            + ' &middot; ' + (invTransportDealer(r) ? (r.disposition === 'Distribute' ? 'through ' : 'to ') + esc(invTransportDealer(r)) + ', a licensed dealer'
+              : 'licensed dealer not named yet') + '</div>' : '')
         // ⚠ A LINE THAT HAS ALREADY GONE (P20) says when it went.
         + (gone ? '<div style="color:#8a5a1e;font-size:10px;">' + esc(invGoneText(r, job)) + '</div>' : '')
         // ⚠ A LINE ONE FIDUCIARY HAS ALREADY SIGNED FOR (P19) says so, and who is still to sign it, each signer with their
@@ -30234,7 +30461,9 @@ function printApprovalRequest(jobId, selectedOnly) {
           : gone ? '<div style="color:#8a5a1e;font-size:10px;">No written approval recorded; to sign: '
             + esc(_andJoin(invApprovalMissing(r, job)) || 'the ' + invRepresentativeTitle(job)) + '</div>' : '')
         + '</td>'
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">&nbsp;</td>'
+      // A firearm asked for is initialled once, with every firearm on the list, under the firearms paragraph (P25, Q35).
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">'
+        + (invIsFirearm(r) && !gone ? '<span class="inv-fa-init" style="font-size:9px;color:#888;">initialled once, with the firearms below</span>' : '&nbsp;') + '</td>'
       + '</tr>';
   };
   var rows = asked.map(rowOf).join('');
@@ -30328,17 +30557,42 @@ function printApprovalRequest(jobId, selectedOnly) {
     // client's request the same line is flagged instead, through the `staffRecipient` caution above the table (P20).
     + (_fid ? '<div style="font-size:10.5px;color:#3c3228;margin-top:8px;">Havellin and its people never purchase or receive '
         + invPropertyNoun(job) + ', and take no share of the proceeds of its sale.</div>' : '')
-    + (firearms ? '<div style="font-size:10.5px;color:#A32D2D;font-style:italic;margin-top:8px;">'
-        + firearms + ' firearm' + (firearms > 1 ? 's are' : ' is') + ' on this list. Every one goes to a '
-        + '<strong>licensed dealer</strong>, named by you on counsel&rsquo;s advice. Where you authorise it separately in writing, '
-        + 'naming each firearm by serial and the receiving dealer, Havellin&rsquo;s named principal may transport a non-NFA firearm '
-        + 'directly to that dealer; title stays with ' + _holder + (_holder.indexOf(',') >= 0 ? ',' : '') + ' throughout.'
-        + (toPerson ? ' A firearm going to a named person goes to the dealer as well, and the dealer makes the transfer to '
-            + 'that person, with the background check and the paperwork; Havellin never hands a firearm to anyone.' : '')
-        + (nfaRows ? ' ' + nfaRows + ' of them ' + (nfaRows > 1 ? 'are' : 'is') + ' flagged <strong>NFA</strong> and '
-            + (nfaRows > 1 ? 'are' : 'is') + ' collected by the dealer &mdash; Havellin does not take custody of an NFA item '
-            + 'under any authority.' : '')
-        + '</div>' : '')
+    // ⚠⚠ THIS REQUEST IS THE WRITTEN AUTHORITY TO CARRY A FIREARM, UNDER ONE INITIAL FOR THE BATCH (P25, Q35; Anthony,
+    // 2026-10-09: "I don't think every line needs an initial. Just one for the batch"). It said transport needed authority
+    // given "separately in writing, naming each firearm by serial and the receiving dealer", and nothing the app records
+    // was that paper: the gate (invFirearmAuthorized) reads this request's approval. So it says it is the authority, lists
+    // every firearm with its serial and dealer, and asks one initial for all of them. A firearm with no serial or no dealer
+    // recorded is listed as not covered for transport. Drafted, not reviewed: counsel bundle C7.
+    + (firearms ? (function () {
+        var fRows = gunRows.map(function (r) {
+          var ser = String(r.serial || '').trim(), dl = invTransportDealer(r);
+          return '<tr><td style="padding:2px 6px;">' + esc(_invItemNo(r)) + '</td><td style="padding:2px 6px;">' + esc(r.objectName || '—') + '</td>'
+            + '<td style="padding:2px 6px;font-family:monospace;">' + (ser ? esc(ser) : '<span style="font-family:Raleway,sans-serif;">not recorded</span>') + '</td>'
+            + '<td style="padding:2px 6px;">' + (r.flagNFA ? 'NFA: collected by the dealer' : (dl ? esc(dl) : 'not named yet')) + '</td></tr>';
+        }).join('');
+        var gap = gunRows.filter(function (r) { return !r.flagNFA && (!String(r.serial || '').trim() || !invTransportDealer(r)); }).length;
+        var carry = firearms - nfaRows;
+        return '<div class="inv-firearms-auth" style="font-size:10.5px;color:#3c3228;margin-top:10px;border:1px solid #A32D2D;border-radius:3px;padding:8px 10px;">'
+          + '<div style="color:#A32D2D;font-weight:700;margin-bottom:3px;">Firearms: written authority</div>'
+          + firearms + ' firearm' + (firearms > 1 ? 's are' : ' is') + ' on this list. Every one goes to a '
+          + '<strong>licensed dealer</strong>, named by you on counsel&rsquo;s advice. '
+          + (carry ? 'Your initial below, with ' + (_many ? 'every signature' : 'your signature') + ' at the foot, is your written authority for '
+              + 'Havellin&rsquo;s named principal to transport each non-NFA firearm listed here, by the serial and to the licensed dealer '
+              + 'printed against it, directly to that dealer. ' : '')
+          + 'Title stays with ' + _holder + (_holder.indexOf(',') >= 0 ? ',' : '') + ' throughout; Havellin takes no ownership of any firearm.'
+          + (toPerson ? ' A firearm going to a named person goes to the dealer as well, and the dealer makes the transfer to '
+              + 'that person, with the background check and the paperwork; Havellin never hands a firearm to anyone.' : '')
+          + (nfaRows ? ' ' + nfaRows + ' of them ' + (nfaRows > 1 ? 'are' : 'is') + ' flagged <strong>NFA</strong> and '
+              + (nfaRows > 1 ? 'are' : 'is') + ' collected by the dealer &mdash; Havellin does not take custody of an NFA item '
+              + 'under any authority.' : '')
+          + (gap ? ' <strong>' + gap + ' of them ' + (gap > 1 ? 'have' : 'has') + ' no serial or no dealer recorded yet, and '
+              + (gap > 1 ? 'are' : 'is') + ' not covered for transport until both are recorded on a request you sign.</strong>' : '')
+          + '<table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-top:6px;"><thead><tr style="color:#888;text-align:left;">'
+            + '<th style="padding:2px 6px;">Ref</th><th style="padding:2px 6px;">Firearm</th><th style="padding:2px 6px;">Serial</th><th style="padding:2px 6px;">Licensed dealer</th>'
+            + '</tr></thead><tbody>' + fRows + '</tbody></table>'
+          + '<div style="margin-top:8px;font-size:11px;">Initial once for ' + (firearms > 1 ? 'all ' + firearms + ' firearms' : 'the firearm') + ' above: ______________</div>'
+          + '</div>';
+      })() : '')
     + '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
       + (_many ? '<div style="font-size:10.5px;line-height:1.5;margin-bottom:4px;">Every ' + invCoFiduciaryNoun(job)
           + ' named below signs. A line is approved only when ' + (fids.length === 2 ? 'both signatures are here.' : 'all ' + fids.length + ' signatures are here.') + '</div>' : '')
@@ -30604,7 +30858,7 @@ function printBeneficiaryReceipt(jobId, name) {
   var job = _invJob(jobId);
   if (!job) return false;
   if (!invFiduciaryMode(job)) { alert('A receipt is kept for property released from an estate. The living-client agreement has no receipt requirement.'); return false; }
-  var g = invReceiptGroups(job, _invAssignItemNos(jobId)).filter(function(x){ return samePerson(x.name, invRecipientName(name)); })[0];
+  var g = invReceiptGroups(job, _invAssignItemNos(jobId)).filter(function(x){ return !x.dealer && samePerson(x.name, invRecipientName(name)); })[0];
   var lines = g ? (g.owed.length ? g.owed : g.released) : [];
   if (!lines.length) {
     alert('Nothing has been released to ' + (invRecipientName(name) || 'that person') + ' yet. A receipt lists the lines going To a person '
@@ -30667,8 +30921,9 @@ function _renderInvReleasesCard(job, all) {
       parts.push(head('Receipts for property released to a person') + groups.map(function(g){
         var reprint = !g.owed.length;
         var typed = g.owed.filter(function(r){ return String(r.receiptDoc || '').trim(); });
-        return '<div class="inv-rel-row" style="' + row + '">'
+        return '<div class="inv-rel-row' + (g.dealer ? ' inv-rel-dealer' : '') + '" style="' + row + '">'
           + '<div><strong>' + esc(g.name) + '</strong>'
+            + (g.dealer ? ' <span style="color:var(--gray);">(licensed dealer' + (g.persons.length ? ', transferring to ' + esc(_andJoin(g.persons)) : '') + ')</span>' : '')
             + (g.released.length ? ' &middot; released: ' + nums(g.released) : '')
             + (g.owed.length ? ' &middot; <span style="color:#8a5a1e;font-weight:600;">&#9888; no signed receipt filed for ' + nums(g.owed) + '</span>'
                : g.released.length ? ' &middot; <span style="color:var(--ok-tx);">&#10003; every one receipted</span>' : '')
@@ -30679,11 +30934,14 @@ function _renderInvReleasesCard(job, all) {
           + (typed.length ? '<div style="color:var(--gray);">' + typed.map(function(r){
                 return '#' + esc(_invItemNo(r)) + '’s Receipt / Doc reads “' + esc(String(r.receiptDoc).trim()) + '”';
               }).join('; ') + ': a typed reference, not a signed receipt filed to Drive.</div>' : '')
+          + (g.dealer ? '<div style="color:var(--gray);">The dealer makes the transfer, so Havellin prints no receipt for '
+              + (g.released.length + g.waiting.length > 1 ? 'these' : 'it') + ': file the dealer&rsquo;s receipt once the transfer is done.</div>' : '')
           + '<div class="inv-rel-ctl">'
-            + (g.released.length ? '<button class="btn-s" onclick="printBeneficiaryReceipt(' + jid + ',' + _invJsArg(g.name) + ')">'
+            + (g.released.length && !g.dealer ? '<button class="btn-s" onclick="printBeneficiaryReceipt(' + jid + ',' + _invJsArg(g.name) + ')">'
                 + (reprint ? 'Reprint receipt' : 'Print receipt') + '</button>' : '')
             + (g.owed.length ? signedCopyControlHtml(jid, 'receipt', { ref: g.name, stableIds: sids(g.owed), signedBy: g.name,
-                label: 'Signed receipt — ' + g.name }, 'File signed receipt (' + g.owed.map(function(r){ return '#' + _invItemNo(r); }).join(', ') + ')') : '')
+                label: (g.dealer ? 'Dealer receipt — ' : 'Signed receipt — ') + g.name },
+                (g.dealer ? 'File the dealer’s receipt (' : 'File signed receipt (') + g.owed.map(function(r){ return '#' + _invItemNo(r); }).join(', ') + ')') : '')
             + signedRecordLinksHtml(jid, g.filed) + '</div>'
           + '</div>';
       }).join(''));
@@ -31370,6 +31628,9 @@ var INV_SALE_DISPOSITIONS = ['Auction', 'Consign', 'Sell'];
 var LEDGER_DOC_KEY = 'dispositionLedger';   // docState key for the filed page — a stored key: never rename it
 var LEDGER_SIGNED_REF = 'ledger';           // signedRecords' ref for a signed copy of the page
 var _ledgerFiling = {};                     // never saved: one filing per client at a time
+var CONTENTS_DOC_KEY = 'contentsRecord';     // docState key for the filed Contents Record (P25) — a stored key: never rename it
+var CONTENTS_SIGNED_REF = 'contents';        // signedRecords' ref for the client's signed Contents Record (P25)
+var _contentsFiling = {};                   // never saved: one Contents Record filing per client at a time
 
 // The ledger's figures, DOM-free: read by the page, the desk card and the tests. `items` defaults to the numbered list.
 // ⚠ `jobIn` (P22): a caller holding the job hands it over, so the figures and the card's other reads answer from the
@@ -31404,9 +31665,18 @@ function dispositionLedger(jobId, items, jobIn) {
 function ledgerSignedCopies(job) { return job ? signedRecordsOf(job, 'ledger', LEDGER_SIGNED_REF) : []; }
 // Who signs: each fiduciary on an estate (the representative, then every co-representative); the role named by the
 // matter where none is recorded; the client on living work.
+// ⚠⚠ ONE SIGNED PAPER FOR A LIVING FAMILY (P25, Q51; Anthony, 2026-10-09: "One paper"). A living job printed the Contents
+// Record and asked the family to sign a near-identical Disposition Ledger at close. The Contents Record is the paper a
+// living family signs; the ledger is kept on living work only where something was sold (a line on a selling disposition,
+// INV_SALE_DISPOSITIONS), as the record of what it brought, and it carries no signature there. Every estate keeps it.
+function ledgerApplies(job, refs) {
+  if (!job) return false;
+  if (invFiduciaryMode(job)) return true;
+  return (refs || []).some(function (r) { return r && !r.deletedAt && INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
+}
 function ledgerSigners(job) {
   if (!job) return [];
-  if (!invFiduciaryMode(job)) return [{ name: String(job.name || '').trim(), role: 'Client' }];
+  if (!invFiduciaryMode(job)) return [];   // the family signs the Contents Record (P25, Q51)
   var f = jobFiduciaries(job);
   if (!f.length) return [{ name: '', role: _agrApprover(job) }];
   return f.map(function (x) { return { name: x.name, role: x.role || _agrApprover(job) }; });
@@ -31458,7 +31728,7 @@ function printDispositionLedger(jobId, opt) {
     return '<tr>'
       + '<td style="' + td + 'font-weight:700;color:#666;white-space:nowrap;">' + esc(_invItemNo(r)) + '</td>'
       + '<td style="' + td + '">' + esc(r.objectName || '—') + _invCautionBadges(r, jobId) + '</td>'
-      + '<td style="' + td + '">' + esc(r.disposition || 'Not yet decided') + '</td>'
+      + '<td style="' + td + '">' + esc(invDispDocWord(r.disposition)) + '</td>'
       + '<td style="' + td + '">' + esc(_invRecipient(job, r) || '—') + '</td>'
       // Who authorized it, each signer with their own day (P20): the one readable form, never the raw field.
       + '<td style="' + td + '">' + esc(invApprovalSignedText(r, job) || '—') + '</td>'
@@ -31509,9 +31779,13 @@ function printDispositionLedger(jobId, opt) {
             + '<td style="' + td + '">' + (x.agrees ? 'Agrees' : '<span style="color:#A32D2D;">Differs &mdash; see above</span>') + '</td></tr>';
         }).join('') + '</tbody></table>';
   }
-  // The sign-off: one line per signer, or withheld while a line has no disposition.
+  // The sign-off: one line per signer, or withheld while a line has no disposition. On living work nobody signs the ledger:
+  // the family signs the Contents Record (P25, Q51), and the page says so.
   var signers = ledgerSigners(job);
-  var signoff = L.undecided.length
+  var signoff = !invFiduciaryMode(job)
+    ? '<div class="ledger-living-note" style="margin-top:18px;font-size:11px;line-height:1.55;color:#555;">This ledger records what the sold items brought. '
+      + 'The Contents Record is the paper the client signs at close-out.</div>'
+    : L.undecided.length
     ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;">'
       + '<strong>The sign-off is withheld.</strong> This page cannot be approved as the final record of the disposition of the property while '
       + n(L.undecided.length, 'line has', 'lines have') + ' no disposition recorded. Record one on every line, then print the ledger again.</div>'
@@ -31558,7 +31832,7 @@ function printDispositionLedger(jobId, opt) {
 // that walks docState's keys (outstandingDrafts) asks for a draft, which this record never has. It is A PERSON'S EDIT,
 // stamped and synced: the press that caused it (Close job, or File to Drive) is a person's, and the record learns
 // something new (the file's link), the rule a completed envelope follows.
-function fileDispositionLedger(jobId, opt) {
+function _fileCloseoutPaper(jobId, opt, P) {
   var auto = !!(opt && opt.auto);
   var job = _invJob(jobId);
   var say = function (type, msg) {
@@ -31567,40 +31841,42 @@ function fileDispositionLedger(jobId, opt) {
   };
   if (!job) { say('warn', 'This client could not be found.'); return false; }
   if (job.svc === 'prep') return false;
-  if (_ledgerFiling[jobId]) { say('warn', 'The Disposition Ledger is being filed now — give it a moment.'); return false; }
-  if (!SHEETS_SYNC_URL) { say('warn', 'The Disposition Ledger was not filed to Drive: this device has no Apps Script URL in Settings.' + (auto ? ' Press File to Drive on the Disposition Ledger card (Job Admin & Inv) once one is set.' : '')); return false; }
-  if (!job.driveFolder) { say('warn', 'The Disposition Ledger was not filed to Drive: this client has no Drive folder yet. Create the Drive folder on the client dashboard, then press File to Drive on the Disposition Ledger card.'); return false; }
-  var release = _armFiling(_ledgerFiling, jobId, function () {
-    say('warn', 'No answer from Drive after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes while the Disposition Ledger was filed. It may still have been filed: press File to Drive on the Disposition Ledger card (Job Admin & Inv) to try again.');
+  if (P.jobOnly && !P.applies(job)) return false;   // e.g. no Contents Record to file on an estate (P25)
+  if (P.flight[jobId]) { say('warn', 'The ' + P.name + ' is being filed now — give it a moment.'); return false; }
+  if (!SHEETS_SYNC_URL) { say('warn', 'The ' + P.name + ' was not filed to Drive: this device has no Apps Script URL in Settings.' + (auto ? ' Press File to Drive on the ' + P.card + ' (Job Admin & Inv) once one is set.' : '')); return false; }
+  if (!job.driveFolder) { say('warn', 'The ' + P.name + ' was not filed to Drive: this client has no Drive folder yet. Create the Drive folder on the client dashboard, then press File to Drive on the ' + P.card + '.'); return false; }
+  var release = _armFiling(P.flight, jobId, function () {
+    say('warn', 'No answer from Drive after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes while the ' + P.name + ' was filed. It may still have been filed: press File to Drive on the ' + P.card + ' (Job Admin & Inv) to try again.');
   });
   _invEnsureLoaded(jobId);
   refreshPhotoRefs(jobId, function () {
     if (!_invCloudSeen[jobId]) {
       if (!release()) return;
-      say('err', 'The Disposition Ledger was not filed to Drive: the inventory could not be read from the sheet, and a ledger built without it would be empty. Check the connection, then press File to Drive on the Disposition Ledger card (Job Admin & Inv).');
+      say('err', 'The ' + P.name + ' was not filed to Drive: the inventory could not be read from the sheet, and a page built without it would be empty. Check the connection, then press File to Drive on the ' + P.card + ' (Job Admin & Inv).');
       return;
     }
     if (!_jobInvRefs(jobId).length) {
       if (!release()) return;
-      if (!auto) say('warn', 'The inventory holds no lines, so there is no ledger to file yet.');
+      if (!auto) say('warn', 'The inventory holds no lines, so there is no ' + P.word + ' to file yet.');
       return;
     }
-    var page = printDispositionLedger(jobId, { asHtml: true });
-    if (!page || !page.html) { if (!release()) return; say('err', 'The Disposition Ledger could not be built on this device, so it was not filed.'); return; }
-    var title = PROBATE_PKG_TITLES.ledger;
+    if (P.applies && !P.applies(job, _jobInvRefs(jobId))) { release(); return; }
+    var page = P.build(jobId);
+    if (!page || !page.html) { if (!release()) return; say('err', 'The ' + P.name + ' could not be built on this device, so it was not filed.'); return; }
+    var title = P.title;
     resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
       var target = folderId || _jobRootFolderId(job);
-      if (!target) { if (!release()) return; say('warn', 'The Disposition Ledger was not filed to Drive: this client has no Drive folder yet.'); return; }
+      if (!target) { if (!release()) return; say('warn', 'The ' + P.name + ' was not filed to Drive: this client has no Drive folder yet.'); return; }
       uploadHtmlToDrive(target, _invDocDriveName(job, title), _exportDoc(title + ' – ' + (job.hvlId || ''), page.html, ''), function (ok, fileUrl, meta) {
         var mine = release();
         if (!ok) {
           if (!mine) return;   // the watchdog has already said so
-          say('err', 'The Disposition Ledger was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the Disposition Ledger card (Job Admin & Inv) to try again.');
+          say('err', 'The ' + P.name + ' was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the ' + P.card + ' (Job Admin & Inv) to try again.');
           return;
         }
         // The store may have been replaced by a load while the upload was out: write to the record held now.
         var j2 = _invJob(jobId) || job;
-        var st = docState(j2, LEDGER_DOC_KEY);
+        var st = docState(j2, P.key);
         st.filedAt = new Date().toISOString();
         st.filedUrl = fileUrl || st.filedUrl || '';
         st.filedId = (meta && meta.fileId) || st.filedId || '';
@@ -31609,14 +31885,29 @@ function fileDispositionLedger(jobId, opt) {
         j2.updatedAt = Date.now();
         saveJobs();
         syncJobToSheets(j2);
-        if (auto) showSyncBadge('Disposition Ledger filed to Drive ✓');
-        else say('ok', 'Disposition Ledger filed to the client’s Estate Inventory folder in Drive.');
+        if (auto) showSyncBadge('' + P.name + ' filed to Drive ✓');
+        else say('ok', '' + P.name + ' filed to the client’s Estate Inventory folder in Drive.');
         _ledgerCardRepaint(jobId);
       });
     });
   });
   return true;
 }
+// ⚠⚠ THE TWO CLOSE-OUT PAPERS FILE THROUGH ONE PATH (P25, Q51): the Disposition Ledger on every estate, and on living work
+// where something was sold (ledgerApplies); the Contents Record on living work, the paper the family signs. Each is filed as
+// the job closes and from its desk card, under its undated name, one filing per client at a time, its record on its own
+// docState key (a stored key: never rename either). The words and the record differ; the path is one.
+var CLOSEOUT_PAPERS = {
+  ledger: { name: 'Disposition Ledger', word: 'ledger', card: 'Disposition Ledger card', key: LEDGER_DOC_KEY, flight: _ledgerFiling,
+            title: PROBATE_PKG_TITLES.ledger, applies: function (job, refs) { return ledgerApplies(job, refs); },
+            build: function (jobId) { return printDispositionLedger(jobId, { asHtml: true }); } },
+  // `jobOnly`: whether the paper applies is known from the job alone, so an estate's close never reads the sheet for it.
+  contents: { name: 'Contents Record', word: 'record', card: 'Contents Record card', key: CONTENTS_DOC_KEY, flight: _contentsFiling,
+              title: 'Contents Record', jobOnly: true, applies: function (job) { return !invFiduciaryMode(job); },
+              build: function (jobId) { return printContentsRecord(jobId, { asHtml: true }); } }
+};
+function fileDispositionLedger(jobId, opt) { return _fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.ledger); }
+function fileContentsRecord(jobId, opt) { return _fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.contents); }
 // After a filing lands, the desk's records repaint by id and nothing else, and only while the desk still shows this
 // client: the answer may land while somebody types on the desk, and a whole-tab redraw would take the field from under them.
 function _ledgerCardRepaint(jobId) {
@@ -31645,7 +31936,7 @@ function _renderLedgerCard(job, all) {
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:7px;">'
       + '<button class="btn-s" onclick="printDispositionLedger(' + jid + ')">Print</button>'
       + '<button class="btn-s" onclick="fileDispositionLedger(' + jid + ')">' + (filed ? 'Update the filed copy' : 'File to Drive') + '</button>'
-      + signedCopyControlHtml(jid, 'ledger', { ref: LEDGER_SIGNED_REF, label: SIGNED_RECORD_KINDS.ledger.label }, 'File signed copy')
+      + (invFiduciaryMode(job) ? signedCopyControlHtml(jid, 'ledger', { ref: LEDGER_SIGNED_REF, label: SIGNED_RECORD_KINDS.ledger.label }, 'File signed copy') : '')
     + '</div>'
     + '<div style="font-size:11px;margin-top:6px;">' + (filed
         ? 'Filed to Drive ' + esc(fmtDate2(_localDateOf(st.filedAt))) + (st.filedHow === 'close' ? ', as the job closed' : '')
@@ -31653,7 +31944,8 @@ function _renderLedgerCard(job, all) {
         : '<span style="color:var(--gray);">Not in Drive yet' + (job.status === 'closed' ? '.' : ' &mdash; it is filed when the job closes, or now with File to Drive.') + '</span>')
     + '</div>'
     + (signed.length ? signedRecordLinksHtml(jid, signed)
-        : '<div style="font-size:11px;color:var(--gray);margin-top:3px;">No signed copy on file &mdash; ' + (invFiduciaryMode(job) ? 'the ' + esc(_agrApprover(job)) : 'the client') + ' signs it at close-out.</div>')
+        : invFiduciaryMode(job) ? '<div style="font-size:11px;color:var(--gray);margin-top:3px;">No signed copy on file &mdash; the ' + esc(_agrApprover(job)) + ' signs it at close-out.</div>'
+        : '<div style="font-size:11px;color:var(--gray);margin-top:3px;">The client signs the Contents Record, not this ledger.</div>')
     + '</div>';
 }
 
@@ -32006,7 +32298,33 @@ function ledgerDerivedLines(jobId, job, phase) {
 // The desk's close-out records, together under the inventory: the ledger, the statements and the donations.
 function _renderLedgerCards(job, all) {
   if (!all || !all.length) return '';
-  return _renderLedgerCard(job, all) + _renderProceedsCard(job, all) + _renderDonationsCard(job, all);
+  return (ledgerApplies(job, all) ? _renderLedgerCard(job, all) : '') + _renderContentsCard(job, all)
+    + _renderProceedsCard(job, all) + _renderDonationsCard(job, all);
+}
+// ⚠ THE LIVING FAMILY'S SIGNED PAPER, ON ITS OWN DESK CARD (P25, Q51): whether it is in Drive, and its signed copy filed back
+// through the foundation's control. No Print here: the work bar's Contents Record button prints it (no control twice).
+function _renderContentsCard(job, all) {
+  if (!job || invFiduciaryMode(job) || !all || !all.length) return '';
+  var jid = job.id;
+  var st = (job.docState && job.docState[CONTENTS_DOC_KEY]) || null;
+  var filed = !!(st && st.filedAt);
+  var signed = signedRecordsOf(job, 'contents', CONTENTS_SIGNED_REF);
+  var undecided = all.filter(function (r) { return !r.disposition; }).length;
+  return '<div class="card" id="inv-contents-card" style="margin-bottom:1rem;">'
+    + '<div class="sec" style="margin-bottom:4px;">Contents Record <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the record the client signs at close-out)</span></div>'
+    + (undecided ? '<div style="font-size:10.5px;color:#8a6d3b;">' + undecided + ' item' + (undecided === 1 ? ' has' : 's have') + ' no destination yet &mdash; the sign-off is withheld until every item has one.</div>' : '')
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:7px;">'
+      + '<button class="btn-s" onclick="fileContentsRecord(' + jid + ')">' + (filed ? 'Update the filed copy' : 'File to Drive') + '</button>'
+      + signedCopyControlHtml(jid, 'contents', { ref: CONTENTS_SIGNED_REF, label: SIGNED_RECORD_KINDS.contents.label }, 'File signed copy')
+    + '</div>'
+    + '<div style="font-size:11px;margin-top:6px;">' + (filed
+        ? 'Filed to Drive ' + esc(fmtDate2(_localDateOf(st.filedAt))) + (st.filedHow === 'close' ? ', as the job closed' : '')
+          + (st.filedUrl ? ' &middot; <a href="' + esc(st.filedUrl) + '" target="_blank" rel="noopener" style="color:var(--bronze);">Filed copy</a>' : '')
+        : '<span style="color:var(--gray);">Not in Drive yet' + (job.status === 'closed' ? '.' : ' &mdash; it is filed when the job closes, or now with File to Drive.') + '</span>')
+    + '</div>'
+    + (signed.length ? signedRecordLinksHtml(jid, signed)
+        : '<div style="font-size:11px;color:var(--gray);margin-top:3px;">No signed copy on file &mdash; the client signs it at close-out.</div>')
+    + '</div>';
 }
 
 // The aggregate block on the printed worklist. It renders whether or not any individual
@@ -32322,7 +32640,7 @@ function dispositionRecord(jobId) {
   var groups = [];
   order.forEach(function(d){
     if (!byDisp[d]) return;
-    groups.push({ disposition: d, label: _invDispLabel(d), rows: byDisp[d].slice().sort(function(a, b){
+    groups.push({ disposition: d, label: invDispDocWord(d), rows: byDisp[d].slice().sort(function(a, b){
       var ra = (a.roomIdx == null) ? 9999 : a.roomIdx, rb = (b.roomIdx == null) ? 9999 : b.roomIdx;
       return ra - rb || (_invItemNo(a) || 0) - (_invItemNo(b) || 0);
     }) });
@@ -32331,7 +32649,7 @@ function dispositionRecord(jobId) {
   // Anything the catalogue does not know still prints — dropping a row because its value is
   // unrecognised is how property goes missing from the one record that says where it went.
   Object.keys(byDisp).sort().forEach(function(d){
-    groups.push({ disposition: d, label: _invDispLabel(d), rows: byDisp[d] });
+    groups.push({ disposition: d, label: invDispDocWord(d), rows: byDisp[d] });
   });
   var leaving = items.filter(function(r){ return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
   return {
@@ -32348,10 +32666,12 @@ function dispositionRecord(jobId) {
   };
 }
 
-function printContentsRecord(jobId) {
+function printContentsRecord(jobId, opt) {
   var rec = dispositionRecord(jobId);
   var job = rec.job;
-  if (!job || !document.getElementById('print-target')) return;
+  var asHtml = !!(opt && opt.asHtml);
+  if (!job || !job.id) return asHtml ? { why: 'this client could not be found on this device' } : undefined;
+  if (!asHtml && !document.getElementById('print-target')) return;
   var fid = invFiduciaryMode(job);
 
   // ⚠ _invDocHead adds "Prepared by Havellin Palm Beach, LLC · <date>" itself; this passed it too, so the header printed
@@ -32424,8 +32744,29 @@ function printContentsRecord(jobId) {
     + 'no commission on them, and Havellin’s own fees are billed separately and do not appear here. '
     + 'Blank means nothing has been received. This record does not state what anything is worth.'
     + (!shared ? '' : unshot ? ' The photographs are in the Drive folder shared with you.' : ' Photographs of every item are in the Drive folder shared with you.')
-    + '</div></div>';
+    + '</div>'
+    + contentsRecordSignoff(job, rec)
+    + '</div>';
+  if (asHtml) return { html: html, title: _invDocName(job, 'Contents Record') };
   _printDocument(html, _invDocName(job, 'Contents Record'));
+}
+// ⚠⚠ THE PAPER A LIVING FAMILY SIGNS (P25, Q51; Anthony, 2026-10-09: "One paper"). The client's signature under the record
+// of what stayed and what went, withheld while any line has no destination (as the Disposition Ledger withholds its
+// sign-off), and on living work only: an estate signs its Disposition Ledger. DOM-free markup; '' on an estate or with
+// nothing recorded.
+function contentsRecordSignoff(job, rec) {
+  if (!job || invFiduciaryMode(job) || !rec || !rec.total) return '';
+  if (rec.undecided) {
+    return '<div class="contents-signoff-held" style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;">'
+      + '<strong>The sign-off is withheld.</strong> ' + rec.undecided + ' item' + (rec.undecided === 1 ? ' has' : 's have')
+      + ' no destination recorded yet. Record one on every item, then print this record again for signature.</div>';
+  }
+  return '<div class="contents-signoff" style="margin-top:20px;font-size:11px;line-height:1.6;break-inside:avoid;">'
+    + '<div style="font-weight:700;">Sign-off</div>'
+    + '<div>Reviewed and accepted as the record of what stayed and what left the property, and where each item went.</div>'
+    + '<div style="margin-top:20px;">Signature: __________________________________ &nbsp; Date: ______________<br>'
+    + '<span style="color:#888;">' + esc([String(job.name || '').trim(), 'Client'].filter(Boolean).join(', ')) + '</span></div>'
+    + '</div>';
 }
 // Our two words need glossing on a page a family reads; the five that are ordinary English do
 // not, and a gloss on every heading would read as an app explaining itself.
@@ -33027,13 +33368,10 @@ function _invSetAppraiser(jobId, stableId, apprId) {
   var a = _jobAppraisers(jobId).find(function(x){ return String(x.id) === String(apprId); });
   ref.apprId = apprId || '';
   ref.apprDoc = a ? _apprLabel(a) : '';
-  // Reported as "if Marie Wayland is attached to the coin collection, do i need a drop
-  // down for valuation source?" — no. Linking a credentialed appraiser IS the answer to
-  // that question, so it fills itself in. It does not OVERWRITE a source somebody chose
-  // deliberately; and unlinking clears it, because "Appraisal" with no appraiser behind
-  // it is precisely the unsupported claim the guardrail exists to catch.
-  if (a) { if (!ref.valSource) ref.valSource = 'Appraisal'; }
-  else if (ref.valSource === 'Appraisal') { ref.valSource = ''; }
+  // ⚠⚠ THE LINK WRITES NO SOURCE (P25, Q36). It filled an empty source with "Appraisal", so linking an appraiser to a line
+  // carrying a figure from anybody made that figure the appraisal's, and a line is appraised once source Appraisal carries a
+  // value (invAppraised). The link is the appraisal in progress; the source and figure arrive with the report. Nor does
+  // unlinking clear a source of Appraisal: an appraisal whose report is on the line stands with or without a link.
   _setPhotoRef(jobId, _invTouch(ref)); savePhotoRefs(jobId);
   // Full redraw: the link can be made from the guardrail panel OR from the Appraisal Doc
   // cell, and each has to reflect the other. It is a select change, not typing, so there
@@ -33257,21 +33595,25 @@ function _renderAppraisalGuardrail(job) {
   var apprs = _jobAppraisers(job.id);
   var rows = items.map(function(r){
     var fmv = (r.fmv != null && r.fmv !== '') ? fmt(Number(r.fmv)) : 'no value yet';
+    var _inProg = invAppraisalInProgress(r, job.id);
     var link = apprs.length
       ? '<select onchange="_invSetAppraiser(' + job.id + ',\'' + r.stableId + '\',this.value)" style="font-size:11px;padding:2px 4px;max-width:200px;" title="Link this item to a roster appraiser">'
           + '<option value="">&mdash; link an appraiser &mdash;</option>'
-          + apprs.map(function(a){ return '<option value="' + a.id + '">' + esc(_apprLabel(a)) + '</option>'; }).join('')
+          + apprs.map(function(a){ return '<option value="' + a.id + '"' + (String(a.id) === String(r.apprId) ? ' selected' : '') + '>' + esc(_apprLabel(a)) + '</option>'; }).join('')
         + '</select>'
       : '<span style="font-size:10px;color:var(--gray);font-style:italic;">Add an appraiser to the roster above first</span>';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;flex-wrap:wrap;">'
-      + '<span style="min-width:0;flex:1 1 auto;">' + esc(r.objectName || '(unnamed)') + ' <span style="color:var(--gray);">· ' + esc(r.category || '') + ' · ' + fmv + ' · ' + esc(invAppraiserFor(r.category) || 'specialist') + '</span></span>'
+      + '<span style="min-width:0;flex:1 1 auto;">' + esc(r.objectName || '(unnamed)') + ' <span style="color:var(--gray);">· ' + esc(r.category || '') + ' · ' + fmv + ' · ' + esc(invAppraiserFor(r.category) || 'specialist') + '</span>'
+        // Linked, no figure yet (P25, Q36): the appraisal is in progress, and what clears it is the report's figure.
+        + (_inProg ? '<span class="inv-appr-prog" style="display:block;color:var(--bronze);">Appraisal in progress: type the report&rsquo;s figure on the line with source Appraisal when it lands.</span>' : '')
+        + '</span>'
       + '<span style="display:flex;align-items:center;gap:6px;flex:0 0 auto;">' + link
       + '<button class="btn-s" onclick="waiveAppraisal(' + job.id + ',\'' + r.stableId + '\')" title="Log a reason and waive the requirement for this item">Waive</button></span>'
       + '</div>';
   }).join('');
   var head = formal
-    ? '&#9888; <strong>Formal documentation:</strong> ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' need a qualified appraiser record before this estate&rsquo;s inventory is complete. Link each to an appraiser on its own row below, or Waive with a logged reason.'
-    : '&#9873; ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' flagged for a specialist appraisal don&rsquo;t have an appraiser record yet. Link one on its own row below &mdash; add them to the roster above first if the roster is empty &mdash; or leave as reasonable estimates on a standard job.';
+    ? '&#9888; <strong>Formal documentation:</strong> ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' need an appraisal before this estate&rsquo;s inventory is complete. Link each to an appraiser on its own row below, then put the report&rsquo;s figure on the line with source Appraisal; or Waive with a logged reason.'
+    : '&#9873; ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' flagged for a specialist appraisal ' + (items.length > 1 ? 'have' : 'has') + ' no appraisal figure yet. Link an appraiser on its own row below &mdash; add them to the roster above first if the roster is empty &mdash; then put the report&rsquo;s figure on the line with source Appraisal, or leave as reasonable estimates on a standard job.';
   return '<div class="card" style="margin-bottom:1rem;border:1px solid ' + (formal ? '#E3B7B7' : 'var(--border-md)') + ';">'
     + '<div class="alert ' + (formal ? 'a-err' : 'a-warn') + '" style="font-size:11.5px;margin-bottom:8px;">' + head + '</div>'
     + rows + '</div>';
@@ -33615,6 +33957,11 @@ var _invPick      = {};   // stableId -> selected for a bulk action
 var _invShowRoll  = false;
 
 function _invDispLabel(d) { return d || INV_UNDECIDED; }
+// ⚠ THE WORD A CLIENT OR A REPRESENTATIVE READS FOR A DISPOSITION (P25, Q51; Anthony, 2026-10-09). The family's Contents
+// Record headed a pile "Junk", the desk's word; on the papers people read and sign it is "Disposed of". The stored value
+// and the desk keep their word. Read by the Contents Record, the Disposition Ledger and the release approval request.
+var INV_DISP_DOC_WORDS = { Junk: 'Disposed of' };
+function invDispDocWord(d) { return d ? (INV_DISP_DOC_WORDS[d] || d) : INV_UNDECIDED; }
 function _invDayStart(offsetDays) {
   var d = new Date(); d.setHours(0,0,0,0);
   return d.getTime() - (offsetDays || 0) * 86400000;
@@ -35409,7 +35756,9 @@ function _renderInvRow(job, ref) {
       ? '<span title="' + esc(invDealerRouteText(ref)) + '" style="color:var(--gray-dk);">via ' + esc(invDealerRoute(ref)) + '</span>'
       : '<span title="Going to a named person: a licensed dealer makes the transfer. Open the line (&#9662;) and record the route." style="color:var(--bronze);font-weight:700;">no dealer route</span>');
   }
-  if (invAwaitingAppraisal(ref, jid)) warn.push('<span title="Flagged for a specialist appraisal \u2014 no appraiser engaged yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
+  if (invAwaitingAppraisal(ref, jid)) warn.push(invAppraisalInProgress(ref, jid)
+    ? '<span title="An appraiser is linked; the line is appraised once the report\u2019s figure is on it with source Appraisal" style="color:var(--bronze);font-weight:700;">&#9873; appraisal in progress</span>'
+    : '<span title="Flagged for a specialist appraisal \u2014 no appraisal figure on the line yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
   // ⚠ A BEQUEST ON THE LIST NAMES ITS PERSON ON THE ROW (P19, call 7), and a matched line proposed to go elsewhere
   // carries the caution the release request prints, through invReleaseCautions (the one rule). A flag no bequest on
   // the list covers says so on an estate whose list has been started.
@@ -39021,13 +39370,22 @@ function invoiceHtml(job, stage, opt) {
   var _invEstRec = estimateStore[jobId];
   var est = (_invEstRec && _invEstRec.estimate) ? _invEstRec.estimate
           : ((currentEstimate && currentEstimate.jobId === jobId) ? currentEstimate : null);
+  // ⚠⚠ AN HOURLY WALKAWAY'S FINAL IS THE WORK DONE, AND IT SETTLES (P25, Q49; Anthony, 2026-10-09). On a job closed out as
+  // Deposit Retained, hourly, the final prices what was delivered (the workDone pricing walkawaySettlement reads) and its
+  // payment summary is the settlement: the deposit or the work done, whichever is more, against what came in and what was
+  // refunded, ending in the balance still owed, the refund due, or nothing further. It is not measured against the
+  // estimate (no ±15% PIN) and does not wait on logged hours (the deposit is earned on signature either way).
+  var _walkaway = (stage || currentInvStage || 'final') === 'final' && job.status === 'closed_retained' && !!est && !est.fixedPrice;
+  if (_walkaway) _workDone = true;
+  var _wk = null;
   var tcRate = (est ? est.tcRate : null) || (job.premium ? 185 : 150);
   var psRate = (est ? est.psRate : null) || (job.premium ? 125 : 100);
 
   // Preparer (Transition Concierge) contact — used by the signature/bio footer.
   var _allInvC = (typeof DEFAULT_CONTRACTORS !== 'undefined' ? DEFAULT_CONTRACTORS : []).concat(typeof contractors !== 'undefined' ? contractors : []);
-  var preparer = _allInvC.find(function(c){ return samePerson(c.name, (est && est.preparedBy) || job.tc); });
-  var prepName = preparer ? preparer.name : ((est && est.preparedBy) || job.tc || '—');
+  var _invTC = docConciergeName(job, est);   // the assigned concierge (P25, Q38)
+  var preparer = _allInvC.find(function(c){ return samePerson(c.name, _invTC); });
+  var prepName = preparer ? preparer.name : (_invTC || '—');
   var prepEmail = preparer ? (preparer.email || '—') : '—';
   var pkgCost = est ? (est.pkgCost||0) : 0;
   if (_workDone && !materialsDelivered(job)) pkgCost = 0;   // a package never delivered is not work done (P22)
@@ -39144,7 +39502,7 @@ function invoiceHtml(job, stage, opt) {
   // predicate exists to prevent.
   var _feeOnly = estimateIsFeeOnly(est, job);
   // ⚠ ONE RULE, TWO READERS: the timeline withholds the final's View and Print on this same answer.
-  var _noHours = (stage === 'final') && finalAwaitsHours(job, est, actTC + actPS);
+  var _noHours = (stage === 'final') && !_walkaway && finalAwaitsHours(job, est, actTC + actPS);
   // Crew hours with no concierge hours is almost always a logging slip rather than a
   // real shift: under the working-supervisor model the concierge is on site for every
   // crew hour, so PS time without TC time means someone logged the crew and forgot
@@ -39476,7 +39834,7 @@ function invoiceHtml(job, stage, opt) {
   // change order stated and where the hours sit on this page.
   var _prepCoJob = ((est && est.svc) || job.svc) === 'prep';
   var _coVendNote = jobCOs.some(function(c){ return coVendorAdds(c).length; })
-    ? 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on what it actually charged is in the fee above.' : '';
+    ? 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on it (on ' + PREP_FEE_ONE_TXT + ') is in the fee above.' : '';
   var coSection = (jobCOs.length > 0 ?
     '<div class="ce-section-hdr" style="margin-top:1rem;">Approved Change Orders</div>' +
     '<table class="ce-tbl"><thead><tr><th>Change Order</th><th>Change in scope</th><th style="text-align:right;">Additional hours</th>' +
@@ -39525,7 +39883,7 @@ function invoiceHtml(job, stage, opt) {
   // fee on what the vendors actually charged plus only the concierge hours logged, often none at all. So
   // prep says exactly that, and drops the hours when none were logged. Every other service keeps its heading.
   var _finTotalLbl = _prepCoJob
-    ? 'Services total (Home Sale Preparation Fee on actual vendor spend' + ((actTC + actPS) > 0 ? ' + logged concierge hours' : '') + ')'
+    ? 'Services total (Home Sale Preparation Fee on ' + PREP_FEE_BASIS_SHORT + ((actTC + actPS) > 0 ? ' + logged concierge hours' : '') + ')'
     : 'Actual Havellin services total (logged hours + actual fees)';
   var finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
     '<table class="pay-tbl">' +
@@ -39539,6 +39897,26 @@ function invoiceHtml(job, stage, opt) {
     _amtDueBox('Balance Due Upon Completion', balanceDue) +
     '</table>' +
     '</div>';
+
+  // The walkaway's settlement replaces the payment summary (P25, Q49): walkawayNet, the rule the Deposit Retained card reads.
+  if (_walkaway) {
+    var _wRefunded = roundCents(jobRefundedTotal(job));
+    var _wDep = walkawayDeposit(job);
+    _wk = walkawayNet(_wDep, havellinTotalDiscounted, roundCents(receivedAll - _wRefunded));
+    finalPayment = '<div class="inv-walkaway-settle" style="margin-top:1rem;"><div class="ce-section-hdr">Settlement — the engagement ended early</div>' +
+      '<table class="pay-tbl">' +
+      '<tr><td colspan="2">Work done (the services above)</td><td class="r">' + fmt(havellinTotalDiscounted) + '</td></tr>' +
+      '<tr><td colspan="2">Deposit — earned on signature, not refundable</td><td class="r">' + fmt(_wDep) + '</td></tr>' +
+      '<tr style="background:var(--tan);"><td colspan="2"><strong>Earned: the deposit or the work done, whichever is more</strong></td><td class="r"><strong>' + fmt(_wk.earned) + '</strong></td></tr>' +
+      '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(receivedAll) + ')</td></tr>' +
+      (_wRefunded > 0 ? '<tr><td colspan="2" style="color:var(--gray);font-size:12px;">Refunded to you</td><td class="r" style="font-size:12px;">' + fmt(_wRefunded) + '</td></tr>' : '') +
+      (_wk.owed > 0 ? _amtDueBox('Balance Due', _wk.owed)
+        : _amtDueBox(_wk.due > 0 ? 'Refund Due to You' : 'Nothing Further Is Due', _wk.due)) +
+      '</table>' +
+      '<div class="ce-note">The engagement ended before the work was complete. As the agreement provides, the deposit is earned on signature '
+        + 'and applied against the hours worked and the materials delivered; anything received above what was earned is refunded.</div>' +
+      '</div>';
+  }
 
   // ADVANCE stages (deposit / midpoint) — labor on estimate; fees on actuals from midpoint.
   var advSmf  = (stage === 'deposit') ? smfEst : smf;
@@ -39619,16 +39997,16 @@ function invoiceHtml(job, stage, opt) {
       '<tr class="subtotal"><td>Havellin Services Total</td><td style="text-align:right;">' + fmt(_finalServices + finalRushAmt) + '</td></tr>' +
       '</table>' +
       '<div class="ce-note">This engagement is billed at the agreed fixed price; charges do not vary with the hours worked.'
-      + (_fxPrepFinal ? ' The Home Sale Preparation Fee is not part of the fixed price and is charged on what the prep vendors actually billed.' : '') + '</div>';
+      + (_fxPrepFinal ? ' The Home Sale Preparation Fee is not part of the fixed price and is charged on ' + PREP_FEE_BASIS_TXT + '.' : '') + '</div>';
     finalPayment = '<div style="margin-top:1rem;"><div class="ce-section-hdr">Payment Summary</div>' +
       '<table class="pay-tbl">' +
       '<tr style="background:var(--tan);"><td colspan="2"><strong>Fixed Project Fee</strong></td><td class="r"><strong>' + fmt(_fixedTotal) + '</strong></td></tr>' +
-      (_fxPrepFinal ? '<tr><td colspan="2">Home Sale Preparation Fee — on the prep vendors\' actual invoices</td><td class="r">' + fmt(prepFee) + '</td></tr>' : '') +
+      (_fxPrepFinal ? '<tr><td colspan="2">Home Sale Preparation Fee — on ' + PREP_FEE_BASIS_SHORT + '</td><td class="r">' + fmt(prepFee) + '</td></tr>' : '') +
       (_fixedRush > 0 ? '<tr><td colspan="2">Expedited delivery (' + Math.round(_rushRate * 100) + '% of the fixed project fee)</td><td class="r">+' + fmt(_fixedRush) + '</td></tr>' : '') +
       (_fixedDisc > 0 ? '<tr><td colspan="2">Preferred client discount (' + discountPct + '%)</td><td class="r">(' + fmt(_fixedDisc) + ')</td></tr>' : '') +
       _coPayRow +
       '<tr><td>50% deposit — invoiced on acceptance</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFeeEst > 0 ? 'Fixed price + Home Sale Preparation Fee on quotes' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(deposit) + '</td></tr>' +
-      '<tr><td>' + (_midBilled ? '25% ' + _mw.noun + ' — invoiced ' + _mw.due : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + Home Sale Preparation Fee on actuals' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
+      '<tr><td>' + (_midBilled ? '25% ' + _mw.noun + ' — invoiced ' + _mw.due : _midHereLbl) + '</td><td style="font-style:italic;color:var(--gray);">' + (_fixedPrepOnTop && prepFee > 0 ? 'Fixed price + Home Sale Preparation Fee on the quotes recorded' : 'Fixed price') + '</td><td class="r" style="color:var(--gray);">' + fmt(midpoint) + '</td></tr>' +
       '<tr style="border-top:1px solid var(--border-md);"><td colspan="2" style="color:var(--gray);font-size:12px;">Payments received to date</td><td class="r" style="color:var(--ok-tx);font-size:12px;">(' + fmt(alreadyPaid) + ')</td></tr>' +
       _paymentGapRow(paymentGap, _priorInvoices, 'the balance below') +
       _amtDueBox('Balance Due Upon Completion', balanceDue) +
@@ -39649,7 +40027,7 @@ function invoiceHtml(job, stage, opt) {
       '<div class="ce-note">This engagement is billed at the agreed fixed price.'
       + (_fxPrepAdv
          ? ' The Home Sale Preparation Fee is not part of the fixed price: ' + (stage === 'deposit'
-             ? 'it is shown here on the prep vendors\' quotes and trued to their actual invoices at the midpoint and final.'
+             ? 'it is shown here on the prep vendors\' quotes, and updated at the midpoint and final if a vendor’s invoice differs.'
              : 'it is calculated on the actual quotes recorded for the prep vendors and trued again at the final.')
          : '') + '</div>';
   }
@@ -39752,10 +40130,10 @@ function invoiceHtml(job, stage, opt) {
     // figure (walkawaySettlement, 2026-10-01, P17).
     servicesTotal: finalDue + receivedAll,
     blocked: _noHours,
-    requiresApproval: !_noHours && (stage === 'final') && (_variancePct > EST_TOLERANCE_PCT),
+    requiresApproval: !_noHours && !_walkaway && (stage === 'final') && (_variancePct > EST_TOLERANCE_PCT),
     variancePct: _variancePct,
     overUnder: overUnder,
-    amtDue: stageAmtDue,
+    amtDue: _wk ? (_wk.owed > 0 ? _wk.owed : -_wk.due) : stageAmtDue,   // a refund due reads as a credit, as a client ahead does
     // ⚠⚠ WHAT IS STILL OWED AGAINST THIS STAGE, NET OF WHAT HAS ALREADY COME IN AGAINST IT (2026-09-29,
     // audit M6 / Q12). `amtDue` is what the stage's invoice ASKS for, and the three stages net payments
     // differently on purpose: the deposit asks for the full 50% (a part payment does not rewrite the
@@ -39763,8 +40141,10 @@ function invoiceHtml(job, stage, opt) {
     // balance a person is recording a cheque against — or asking the bank for — is a question of its
     // own. Answered here, beside the figures, so the payment recorder and the ACH link cannot each
     // work it out their own way.
-    outstanding: Math.max(0, stage === 'final' ? finalDue
+    outstanding: _wk ? _wk.owed : Math.max(0, stage === 'final' ? finalDue
       : roundCents(stageAmtDue - stagePaidTotal(job, stage))),
+    // The walkaway's settlement, where this final is one (P25, Q49): {earned, due, owed, retained}.
+    walkaway: _wk,
     warnHtml: _warnBanner
   };
 }
@@ -40656,13 +41036,22 @@ function planStageState(id, cur) {
 // count: a job with no dumpster is not a job with a vendor missing. They used to be standing
 // placeholders and were excluded wholesale for that reason; since 2026-09-23 a logistics line
 // exists only because somebody said the job needs it, so one that does is a vendor to line up.
+// ⚠ THE PREP VENDORS CONFIRMED ON THE JOB PLAN, ONE COUNT (P25, Q56): every prep line the job carries (jobPrepLines, a
+// change order's included) at Confirmed. Read by the sourcing progress, the close-out's prep line and the timeline, where
+// Home Prep's second invoice waits on it.
+function prepVendorsConfirmed(job, est) {
+  var psrc = (job && job.prepSourcing) || {};
+  var lines = jobPrepLines(job, est);
+  var done = lines.filter(function (p, i) { var rec = psrc[_srcLineKey(p, i)]; return rec && rec.status === 'Confirmed'; }).length;
+  return { done: done, total: lines.length };
+}
 function vendorSourcingProgress(jobId, job, est) {
   var done = 0, total = 0;
   var vsrc = (job && job.vendorSourcing) || {}, csrc = (job && job.collSourcing) || {}, psrc = (job && job.prepSourcing) || {};
   var lsrc = (job && job.logisticsSourcing) || {};
   ((est && est.vendors) || []).forEach(function(v, i) { total++; var rec = vsrc[_srcLineKey(v, i)]; if (rec && rec.status === 'Confirmed') done++; });
   ((est && est.collections) || []).forEach(function(c) { total++; var rec = csrc[c.id]; if (rec && rec.vendorId) done++; });
-  jobPrepLines(job, est).forEach(function(p, i) { total++; var rec = psrc[_srcLineKey(p, i)]; if (rec && rec.status === 'Confirmed') done++; });
+  var _pc = prepVendorsConfirmed(job, est); total += _pc.total; done += _pc.done;
   if (!(job && job.svc === 'prep')) {
     logisticsLinesFor(job, (est && est.vendors) || []).forEach(function(cat) { total++; if (lsrc[cat.key].status === 'Confirmed') done++; });
   }
@@ -41325,12 +41714,10 @@ function planDerivedLines(jobId, job, est, phase, today) {
       out.push({ key: 'change_orders', ok: nAcc === cos.length, label: 'Change orders accepted by the client',
                  detail: nAcc + ' of ' + cos.length + (nAcc < cos.length ? ' — an unaccepted change order is never billed' : '') });
     }
-    var _pLines = jobPrepLines(job, est);   // with any a change order added (2026-09-30)
-    if (_pLines.length) {
-      var psrc = job.prepSourcing || {};
-      var nP = _pLines.filter(function(pi, i){ var rec = psrc[_srcLineKey(pi, i)]; return rec && rec.status === 'Confirmed'; }).length;
-      out.push({ key: 'prep_vendors', ok: nP === _pLines.length, label: 'Prep vendors confirmed',
-                 detail: nP + ' of ' + _pLines.length });
+    var _pc = prepVendorsConfirmed(job, est);   // with any a change order added (2026-09-30)
+    if (_pc.total) {
+      out.push({ key: 'prep_vendors', ok: _pc.done === _pc.total, label: 'Prep vendors confirmed',
+                 detail: _pc.done + ' of ' + _pc.total });
     }
     var fin = !!docSentAt(job, 'invoice', 'final');
     out.push({ key: 'final_invoice_sent', ok: fin, label: 'Final invoice sent',
@@ -42954,7 +43341,8 @@ function _reviewMailtoUrl(job) {
   // ⚠ The mailto fallback keeps a signature, deliberately — it fires exactly when Gmail is NOT in
   // play, so there is nothing to append one. The same rule as the other three emails.
   var body = buildReviewEmailText(job) + '\n\n' + tc.name + '\nHavellin Palm Beach\n' + conciergePhonesText(tc, '\n');
-  return 'mailto:' + encodeURIComponent(bestClientEmail(job)) + '?subject=' + encodeURIComponent(reviewEmailSubject(job))
+  var cc = clientCopyEmails(job, bestClientEmail(job)).join(',');   // every co-representative (P25, Q37)
+  return 'mailto:' + encodeURIComponent(bestClientEmail(job)) + '?' + (cc ? 'cc=' + encodeURIComponent(cc) + '&' : '') + 'subject=' + encodeURIComponent(reviewEmailSubject(job))
     + '&body=' + encodeURIComponent(body);
 }
 function _coNotice(jobId, type, msg) {
@@ -42985,7 +43373,8 @@ function draftReviewRequest(jobId) {
     _coNotice(jobId, 'warn', (why ? why + ' — ' : '') + 'opened a plain email instead. Send it, then tap “I’ve sent it”.');
   }
   if (!gmailConfigured()) { viaMailto(''); return; }
-  var mime = buildMimeMessage({ to: to, subject: reviewEmailSubject(job), text: buildReviewEmailText(job), html: buildReviewEmailHtml(job) });
+  var _revCc = clientCopyEmails(job, to).join(', ');   // every co-representative (P25, Q37)
+  var mime = buildMimeMessage({ to: to, cc: _revCc, subject: reviewEmailSubject(job), text: buildReviewEmailText(job), html: buildReviewEmailHtml(job) });
   gmailCreateDraft(mime, function(ok, d) {
     if (!ok) { viaMailto('Gmail draft failed (' + ((d && d.error) || 'unknown error') + ')'); return; }
     var url = gmailDraftUrl(d.messageId);
@@ -45064,9 +45453,9 @@ function renderPrepJobPlan(jobId, job, est) {
     (_dcOver ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">⚠ Logged ' + (_dcCO ? 'concierge' : 'declutter') + ' hours are more than ' + estTolerancePctTxt() + ' over the ' +
       (_dcCO ? fmtHrs(_dcAuth) + ' authorised (quoted and by change order). Tell the homeowner before going further — more hours need another change order they accept.'
              : fmtHrs(_dcQuoted) + ' quoted. Tell the homeowner before going further — the estimate’s terms promise notice at that threshold.') + '</div>' : '') +
-    (overBudget ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Quoted total is over the estimated budget. Confirm the change with the homeowner — the ' + Math.round(prepFeeRate()*100) + '% fee follows actual vendor spend.</div>' : '') +
+    (overBudget ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Quoted total is over the estimated budget. Confirm the change with the homeowner — the ' + Math.round(prepFeeRate()*100) + '% fee follows the quotes recorded here.</div>' : '') +
     (allQuoted ? '<div class="alert a-ok" style="margin-top:8px;font-size:11px;">All prep vendors have quotes — the fee shown is final at these quotes.</div>' : '') +
-    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s ' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee is billed on the actual vendor spend logged here.</div>';
+    '<div style="font-size:10px;color:var(--gray);margin-top:6px;">Vendors are paid directly by the homeowner at cost. Havellin’s ' + Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee is billed on the quotes recorded here: update a quote when the vendor’s invoice differs.</div>';
 
   // ⚠ BUDGET & FEE AND SOURCING FOLD (2026-09-22), on planPhaseWrap — the same left-caret bar
   // as Vendors & partners and Hours on the labour plan, and Build Estimate's room sections.
@@ -47054,7 +47443,7 @@ function probateAgreementHtml(job, est) {
   // matter keeps them, as Probate and Both have them; a trust-only matter and Neither have no court to name).
   if (invProbateRows(job)) {
     content += dRow('Probate Case Number', probateCase);
-    content += dRow('Court','_______________________________________________');
+    content += dRow('Court', esc(jobProbateCourt(job)) || '_______________________________________________');
   }
   content += '</table>';
   // SECTION 2: SCOPE
@@ -47108,7 +47497,7 @@ function probateAgreementHtml(job, est) {
   if (_agrHasPrepVendors(est)) {
     feeRows.push(['Home Sale Preparation Fee', Math.round(prepFeeRate()*100)+'% of prep vendor cost',
       'Charged on the home sale preparation vendors identified in Exhibit A' + (_agrPrepInside ? '' : ' or added by Change Order') + '. Those vendors bill at cost; this fee covers Havellin\'s coordination and site supervision of that work, '
-      + (_agrPrepOnTop ? 'which is not part of the fixed project fee below: it is charged in addition to it, on what those vendors actually invoice.'
+      + (_agrPrepOnTop ? 'which is not part of the fixed project fee below: it is charged in addition to it, on ' + PREP_FEE_BASIS_TXT + '.'
          : _agrPrepInside ? 'which on this engagement is included in the fixed project fee below.'
          : 'which is not additionally billed at the TC rate above.')]);
   }
@@ -47120,14 +47509,14 @@ function probateAgreementHtml(job, est) {
   if (!isFixedAgr && agrPriceAdjustments(est, 'Havellin')) content += pp(agrPriceAdjustments(est, 'Havellin'));
   if (isFixedAgr) {
     content += pp(bb('Fixed Project Fee.')+'  Notwithstanding the hourly rates above, the Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of ' + fmt(_agrFlat))+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates above apply only to Change-Order work authorized beyond that scope.'
-      + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of what the home sale preparation vendors identified in Exhibit A or added by Change Order actually invoice (estimated in Exhibit A at ' + fmt(_agrPrepEst)+').' : '')
+      + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of the quotes recorded for the home sale preparation vendors identified in Exhibit A or added by Change Order, updated if a vendor’s invoice differs (estimated in Exhibit A at ' + fmt(_agrPrepEst)+').' : '')
       // The premium and the discount Exhibit A itemises on the fee (a record saved from 2026-09-30).
       + (agrPriceAdjustments(est, 'Havellin') ? '  ' + agrPriceAdjustments(est, 'Havellin') : ''));
   }
   content += subHdr('3.2 Project Estimate');
   content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and third-party vendor costs based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
   content += pp(isFixedAgr
-    ? bb('IMPORTANT:')+'  This engagement is billed at the fixed price stated above'+(_agrPrepOnTop ? ', together with the Home Sale Preparation Fee on the preparation vendors\' actual invoices' : '')+', not on actual hours. Any work beyond the scope described in Exhibit A requires a signed Change Order before Havellin proceeds; the fixed price does not otherwise change.'
+    ? bb('IMPORTANT:')+'  This engagement is billed at the fixed price stated above'+(_agrPrepOnTop ? ', together with the Home Sale Preparation Fee on ' + PREP_FEE_BASIS_TXT : '')+', not on actual hours. Any work beyond the scope described in Exhibit A requires a signed Change Order before Havellin proceeds; the fixed price does not otherwise change.'
     : bb('IMPORTANT:')+'  Final billing reflects actual hours worked and materials used. '+TIME_INCREMENT_TXT+' If actual hours are projected to exceed the estimate by more than '+estTolerancePctTxt()+', Havellin will notify the Client and obtain written approval before continuing. No additional work proceeds without a signed Change Order.');
   content += subHdr('3.3 Payment Schedule');
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.6rem;">';
@@ -47136,19 +47525,19 @@ function probateAgreementHtml(job, est) {
   // fee (paymentSplit over havTotal, the same figure the invoices split), so the label says so.
   var _fxOf = _agrPrepOnTop ? ' of fixed price + est. prep fee)' : ' of fixed price)';
   var payRows = isFixedAgr ? [
-    ['Deposit', havTotal>0?fmt(dep)+' (50%'+_fxOf:'50% of fixed price', 'Due upon signing this Agreement — before any work begins'],
+    ['Deposit', havTotal>0?fmt(dep)+' (50%'+_fxOf:'50% of fixed price', AGR_DEPOSIT_DUE_TXT + ' — before any work begins'],
     ['Midpoint Payment', havTotal>0?fmt(mid)+' (25%'+_fxOf:'25% of fixed price', _agrMidpointTrigger(docScope)],
-    ['Final Payment', havTotal>0?fmt(fin)+' (25%'+_fxOf:'25% of fixed price', 'Due within 7 days of final invoice delivery — completes the fixed price'+(_agrPrepOnTop ? ' and the Home Sale Preparation Fee on actual vendor invoices' : '')+' (plus any approved Change Orders)']
+    ['Final Payment', havTotal>0?fmt(fin)+' (25%'+_fxOf:'25% of fixed price', agrFinalDueTxt(true, (_agrPrepOnTop ? ' and the Home Sale Preparation Fee on ' + PREP_FEE_BASIS_TXT : '') + ' (plus any approved Change Orders)')]
   ] : [
-    ['Deposit', havTotal>0?fmt(dep)+' (50% of estimate)':'50% of estimate', 'Due upon signing this Agreement — before any work begins'],
+    ['Deposit', havTotal>0?fmt(dep)+' (50% of estimate)':'50% of estimate', AGR_DEPOSIT_DUE_TXT + ' — before any work begins'],
     ['Midpoint Payment', havTotal>0?fmt(mid)+' (25% of estimate)':'25% of estimate', _agrMidpointTrigger(docScope)],
-    ['Final Invoice', havTotal>0?fmt(fin)+' + actual variance':'25% of estimate + actual variance', 'Due within 7 days of final invoice delivery — reflects actual hours and materials vs. estimate']
+    ['Final Invoice', havTotal>0?fmt(fin)+' + actual variance':'25% of estimate + actual variance', agrFinalDueTxt(false, ' and the materials used')]
   ];
   payRows.forEach(function(r){
     content += '<tr><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;">'+r[0]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;font-weight:600;color:var(--bronze);">'+r[1]+'</td><td style="padding:6px 8px;border:0.5px solid var(--border);font-size:11px;">'+r[2]+'</td></tr>';
   });
   content += '</tbody></table>';
-  if (_agrPrepOnTop) content += pp('The payment amounts above include the Home Sale Preparation Fee at its estimated amount of ' + fmt(_agrPrepEst)+'. That fee follows what the preparation vendors actually invoice, so the midpoint and final payments are adjusted to the actual amount.');
+  if (_agrPrepOnTop) content += pp('The payment amounts above include the Home Sale Preparation Fee at its estimated amount of ' + fmt(_agrPrepEst)+'. That fee follows ' + PREP_FEE_BASIS_TXT + ', so the midpoint and final payments are adjusted to it.');
   content += pp(bb('Late Payment:')+'  Invoices unpaid after 7 days accrue interest at 1.5% per month. Havellin reserves the right to suspend work on any engagement with an outstanding balance exceeding 30 days.');
   // SECTION 4: CHANGE ORDERS
   content += secHdr(4,'Change Orders &amp; Scope Modifications');
@@ -47190,7 +47579,7 @@ function probateAgreementHtml(job, est) {
   var _coVendorRow = coPrepVendorsOn(est, job);
   if (_coVendorRow)
     content += dRow('Added Preparation Vendor', '&nbsp; <span style="color:var(--gray);font-size:10px;">(the vendor and its estimated cost. '
-      + 'It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on what it actually invoices'
+      + 'It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on ' + PREP_FEE_ONE_TXT
       + (isFixedAgr ? ', in addition to the fixed project fee' : '') + '.)</span>');
   // ⚠⚠ THE FORM FOLLOWS THE BILLING BASIS, LIKE THE CHANGE ORDER THE APP PRINTS (2026-09-25). It
   // carried "Additional Cost Estimate $" and "Revised Total Estimate $" on BOTH bases. On time and
@@ -47206,7 +47595,7 @@ function probateAgreementHtml(job, est) {
   } else {
     content += dRow('Revised Estimated Hours','&nbsp;');
     content += dRow('Billing','The additional hours are billed as worked, at the hourly rates in Section 3.1. ' + (_coVendorRow
-      ? 'A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on what it actually invoices; this Change Order creates no other charge.'
+      ? 'A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on ' + PREP_FEE_ONE_TXT + '; this Change Order creates no other charge.'
       : 'This Change Order does not itself create a charge.'));
   }
   content += dRow('Client Approval','Signature: _________________________________ &nbsp;&nbsp; Date: _________________');
@@ -47791,16 +48180,20 @@ function agreementHtml(job, est) {
     // engagement, since the vendors invoice the client directly and there are no phases to
     // sit between. One staple, two answers, on the middle payment. The rows name the same
     // three events the estimate names now.
-    '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Deposit (50%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">'+dep+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due within 7 calendar days of signing — Services will not commence until received</td></tr>' +
+    // ⚠⚠ THE AGREEMENT FOLLOWS EXHIBIT A ON WHEN MONEY IS DUE (P25, Q34; Anthony, 2026-10-09: "Upon acceptance"). This row
+    // said the deposit was due "within 7 calendar days of signing" and the final "prior to final property walk-through",
+    // while the estimate stapled behind it as Exhibit A says the deposit is due upon acceptance and the final is issued
+    // after the walk-through from the logged hours, which is what the app does. One packet, one answer: Exhibit A's.
+    '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Deposit (50%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">'+dep+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">' + AGR_DEPOSIT_DUE_TXT + ' — Services will not commence until received</td></tr>' +
     (isPrepAgr
       ? '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Second Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">'+mid+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due once the vendor schedule is booked</td></tr>' +
         '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Final Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">'+fin+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due at show-ready handover of the property</td></tr>'
       : '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Midpoint Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">'+mid+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon Contractor\'s determination that approximately 50% of scope is complete</td></tr>' +
-        '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Final Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">'+fin+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">Due upon substantial completion, prior to final property walk-through</td></tr>') +
+        '<tr><td style="padding:5px 8px;border:0.5px solid var(--border);">Final Payment (25%)</td><td style="padding:5px 8px;border:0.5px solid var(--border);font-weight:600;">'+fin+'</td><td style="padding:5px 8px;border:0.5px solid var(--border);">' + agrFinalDueTxt(isFixedAgr) + '</td></tr>') +
     '</tbody></table></div>'+
     // The amounts above are shares of the flat fee AND the estimated prep fee (paymentSplit over
     // havTotal, the figure the invoices split), and the prep fee moves with the vendors' bills.
-    (_agrPrepOnTop ? p('The payment amounts above include the Home Sale Preparation Fee in Section 3.5 at its estimated amount of ' + fmt(_agrPrepEst)+'. That fee follows what the preparation vendors actually invoice, so the midpoint and final payments are adjusted to the actual amount.') : '')+
+    (_agrPrepOnTop ? p('The payment amounts above include the Home Sale Preparation Fee in Section 3.5 at its estimated amount of ' + fmt(_agrPrepEst)+'. That fee follows ' + PREP_FEE_BASIS_TXT + ', so the midpoint and final payments are adjusted to it.') : '')+
     // ⚠⚠ A STANDALONE HOME PREP AGREEMENT PRINTED AN HOURLY RATE CARD ON AN ENGAGEMENT
     // THAT BILLS NO HOURS. Measured on the real builder: "Transition Concierge services are
     // billed at $150/hour. Property Specialist services are billed at $100/hour" — on a
@@ -47854,7 +48247,7 @@ function agreementHtml(job, est) {
     (SMF_PCT > 0
       ? p(b('3.5 Service Management Fee (GC/SMF).')+'  Where Contractor coordinates third-party vendors on Client\'s behalf, Contractor charges a General Contractor / Site Management Fee: (a) '+Math.round(SMF_PCT*100)+'% of vendor invoices for Estate Settlement, Home Editing and Home Transition engagements; and (b) ' + Math.round(prepFeeRate()*100) + '% of contractor invoices for Home Sale Preparation engagements, when applicable.')
       : isPrepAgr
-        ? p(b('3.5 Home Sale Preparation Fee.')+'  Contractor\'s fee for the Services is the Home Sale Preparation Fee stated in Section 1.2, equal to '+_pctWords(prepFeeRate())+' of the total third-party vendor costs managed under this Agreement. No other fee or markup is applied to vendor invoices.')
+        ? p(b('3.5 Home Sale Preparation Fee.')+'  Contractor\'s fee for the Services is the Home Sale Preparation Fee stated in Section 1.2, equal to '+_pctWords(prepFeeRate())+' of the total third-party vendor costs managed under this Agreement, measured on ' + PREP_FEE_BASIS_TXT + '. No other fee or markup is applied to vendor invoices.')
         : _agrHasPrepVendors(est)
           // ⚠ ON A FIXED FEE "BILLED AS TRANSITION CONCIERGE TIME UNDER SECTION 3.3" NAMES A
           // CLAUSE THAT BILLS NO TIME — §3.3 is the flat fee there, inclusive of coordination. And
@@ -47863,7 +48256,7 @@ function agreementHtml(job, est) {
           // ⚠ "OR ADDED BY CHANGE ORDER" (P16; counsel bundle B9): a change order may add a preparation vendor to this
           // engagement (coPrepVendorsOn), except on the older fee that carries the prep fee inside it.
           ? p(b('3.5 Vendor Coordination and Home Sale Preparation Fee.')+'  Contractor adds no fee or markup to third-party vendor invoices, and the Transition Concierge time spent sourcing, scheduling, and supervising those vendors is '+(isFixedAgr ? 'included in the fixed project fee under Section 3.3' : 'billed as Transition Concierge time under Section 3.3')+'.  Home sale preparation vendors identified in the Estimate'+(_agrPrepInside ? '' : ' or added by Change Order')+' are the exception: those are billed to Client at cost, and Contractor charges a Home Sale Preparation Fee of '+_pctWords(prepFeeRate())+' of those vendor costs'
-              + (_agrPrepOnTop ? ', calculated on what those vendors actually invoice and charged in addition to the fixed project fee.  That fee covers Contractor\'s coordination and site supervision of the preparation work.'
+              + (_agrPrepOnTop ? ', calculated on ' + PREP_FEE_BASIS_TXT + ' and charged in addition to the fixed project fee.  That fee covers Contractor\'s coordination and site supervision of the preparation work.'
                  : _agrPrepInside ? '.  On this engagement that fee is included in the fixed project fee under Section 3.3.'
                  : '.  That fee covers Contractor\'s coordination and site supervision of the preparation work, which is not additionally billed as Transition Concierge time.'))
           : p(b('3.5 Vendor Coordination.')+'  Contractor adds no fee or markup to third-party vendor invoices. The Transition Concierge time spent sourcing, scheduling, and supervising vendors is '+(isFixedAgr ? 'included in the fixed project fee under Section 3.3.' : 'billed as Transition Concierge time under Section 3.3.')))+
@@ -49422,7 +49815,12 @@ function showEditClient(jobId) {
   html += '<div id="ec-probate-fields" style="display:'+(courtRecordShown(job.svc, matterTypeOf(job))?'block':'none')+';">';
   html += '<div class="sec" style="margin-top:14px;">Probate Information</div>';
   html += '<div class="d-grid2" style="gap:8px 20px;">';
-  html += fld('Probate Case Number', txt('probate-case', job.probateCase, 'e.g. 50-2026-CP-001234'), 'probate');
+  html += fld('Probate Case Number', txt('probate-case', job.probateCase, 'e.g. 50-2026-CP-001234').replace('<input ', '<input oninput="fillCourtFromCase(\'ec\')" '), 'probate');
+  // The court (P25, Q53): what was recorded, else what the case number says; typed over, it stays as typed.
+  var _ecCourtDerived = courtFromCaseNo(job.probateCase);
+  html += fld('Court', '<input type="text" id="ec-probate-court" value="' + esc(String(job.probateCourt || '').trim() || _ecCourtDerived) + '"'
+    + ((String(job.probateCourt || '').trim() && String(job.probateCourt).trim() !== _ecCourtDerived) ? ' data-user-edited="1"' : '')
+    + ' oninput="this.dataset.userEdited=\'1\'" placeholder="filled from the case number" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   // ⚠ THE LETTERS DATE WAS ASKED ONLY AT INTAKE, and Letters normally issue WEEKS after the first call —
   // so on most estates it could never be recorded: the §733.604 deadline had nothing to count from and the
   // workbook's Letters Issued row stayed blank for the life of the job (audit M5). The deadline follows it
@@ -49780,6 +50178,7 @@ function saveClientEdit(jobId) {
   // throw away a case number typed into a block the modal had just displayed.
   if (courtRecordShown(svc, (document.getElementById('ec-matter-type') || {}).value || '')) {
     job.probateCase      = document.getElementById('ec-probate-case').value;
+    job.probateCourt     = ((document.getElementById('ec-probate-court') || {}).value || '').trim();
     job.probateDeadline  = document.getElementById('ec-probate-deadline').value;
     job.lettersDate      = (document.getElementById('ec-letters-date') || {}).value || '';
   }

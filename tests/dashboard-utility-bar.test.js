@@ -53,7 +53,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
     'roomStatusNormalize',
     'workingDaysInclusive', 'approvedEstimateFor',
-    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'hoursLogReady', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
+    'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'walkawayDeposit', 'hoursLogReady', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
     'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls', 'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jobClosedRefunded', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove',
     // A closed job's lit row offers Re-open (2026-09-29), behind the one answer to whether it can be.
     'jobReopenBlocker', 'coScopeLabel', 'coVendorAddsTxt', 'coVendorAdds', 'coHoursLabel', 'finalCrewOnlyWarn', 'agreementChipFix', 'escLines',
@@ -61,7 +61,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'closeoutRetainedTotal', 'jobPaidTotal', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'jobListEntries', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote',
     // P22: jobSchedule reads the estate's dates before it asks for an estimate, so a job with none reaches them too.
     'estateTaxReturnDue', 'estateTaxReturn'];
-  const VARS = ['_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'DEPOSIT_VOID_STEP',
+  const VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_ONE_TXT', 'PREP_FEE_BASIS_SHORT', '_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'DEPOSIT_VOID_STEP',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',
@@ -102,7 +102,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // The bar for a job, without rendering anything — dashUtilityBar is DOM-free.
   function bar(jobOver, driveRoot) {
     if (driveRoot === undefined) return ctx.dashUtilityBar(Object.assign({ id: 7 }, jobOver || {}));
-    const c = sandbox({ fns: ['dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending'], vars: ['_driveFolderInFlight'],
+    const c = sandbox({ fns: ['dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_driveFolderInFlight'],
       stubs: { document: domStub({}), DRIVE_FOLDER_ID: driveRoot } });
     return c.dashUtilityBar(Object.assign({ id: 7 }, jobOver || {}));
   }
@@ -139,7 +139,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // "the one thing to do next" is the wrong home for it. Ashley's report is what asked for
   // it; `walkthrough-view.test.js` owns what the page itself says.
   const bWt = (function () {
-    const c = sandbox({ fns: ['dashUtilityBar', 'driveFolderPending'], vars: ['_driveFolderInFlight'],
+    const c = sandbox({ fns: ['dashUtilityBar', 'driveFolderPending'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_driveFolderInFlight'],
       stubs: { document: domStub({}), estimateStore: { 7: { estimate: EST(), approved: true } },
                _estStoreState: 'ready' } });
     return c.dashUtilityBar({ id: 7, driveFolder: 'https://drive.google.com/x' });

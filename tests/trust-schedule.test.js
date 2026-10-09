@@ -16,7 +16,7 @@ const FNS = [
   'svcHasDocStep', 'matterDef', 'matterTypeOf', 'invProbateRows', 'invFiduciaryMode',
   'isDecedentJob', '_invAssignItemNos', '_jobInvRefs', '_invTouch', 'savePhotoRefs',
   '_warnPhotoStoreFull', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'gateDispute',
-  '_gateYes', '_gate706', '_invGuardrailItems', 'invAwaitingAppraisal', '_invJob',
+  '_gateYes', '_gate706', '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invJob',
   'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
   '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney',
   '_invDocName', '_invItemNo', '_invGroupItems', '_invDispLabel', '_invRoomName', '_planRooms',

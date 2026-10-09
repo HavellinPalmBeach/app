@@ -163,8 +163,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(src, 'allPS.find(function(c){ return c.name === name; })', 'nor the specialist cost rate');
     lacks(src, 'allTC.find(function(c){ return c.name === name; })', 'nor the concierge cost rate');
 
-    has(src, 'samePerson(c.name, e.preparedBy || job.tc)', 'estimate preparer resolves across the rename');
-    has(src, 'samePerson(c.name, (est && est.preparedBy) || job.tc)', 'invoice preparer too');
+    // RESTATED (P25, Q38): the documents name the assigned concierge first (docConciergeName), still through samePerson.
+    has(src, 'samePerson(c.name, _ceTC)', 'estimate concierge resolves across the rename');
+    has(src, 'samePerson(c.name, _invTC)', 'invoice concierge too');
     has(src, 'samePerson(c.name, job.tc)', 'assignedTCContact too');
   }
 

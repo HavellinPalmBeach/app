@@ -114,7 +114,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(fin.html, '<th>Team Member</th>', '⚠ and no empty hours table');
     has(fin.text, 'No Transition Concierge or Property Specialist hours are billed on this engagement.', '⚠⚠ it says what §3.3 says');
     lacks(fin.text, 'Final charges based on actual hours worked', 'never that charges follow the hours');
-    has(fin.text, 'Services total (Home Sale Preparation Fee on actual vendor spend)', 'Anthony\'s heading on the total stays');
+    has(fin.text, 'Services total (Home Sale Preparation Fee on the vendor quotes recorded)', 'the heading on the total names what the fee is charged on'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(fin.text, '$3,000', 'over the fee it bills');
 
     const dep = page(EST(0), [], 'deposit');

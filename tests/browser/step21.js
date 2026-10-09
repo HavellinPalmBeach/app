@@ -127,7 +127,9 @@ const money = (n) => { const c = CT(n); const r = Math.abs(c) % 100; return '$' 
   ok(ceB.rowsSum === ceB.total, 'fixed: the rows add up (' + ceB.rowsSum + ' vs ' + ceB.total + ')');
   ok(ceB.rows.some(r => /Fixed Project Fee/.test(r[0]) && r[1] === 20000), 'the fixed row states the flat fee alone');
   ok(ceB.rows.some(r => /Home Sale Preparation Fee on the home prep vendors/.test(r[0]) && r[1] === sB.prepFee), 'the prep fee is its own row');
-  has(ceB.text, 'which is not part of the fixed fee and is charged on what those vendors actually bill', 'the fixed Terms say the fee is outside the flat fee');
+  // ⚠ RESTATED (P25, Q52; Anthony, 2026-10-09: "quotes, then trued"): the prep fee's basis reads what the app bills, the vendor
+  // quotes recorded, updated if a vendor's invoice differs; it said "actual" invoices. The checks below hold the new words.
+  has(ceB.text, 'which is not part of the fixed fee and is charged on the vendor quotes recorded, updated if a vendor’s invoice differs', 'the fixed Terms say the fee is outside the flat fee');
   has(ceB.text, 'apart from the home prep vendors', 'the fixed-fee blurb carves the prep vendors out');
 
   // Agreement — living client, standard form
@@ -137,7 +139,7 @@ const money = (n) => { const c = CT(n); const r = Math.abs(c) % 100; return '$' 
   has(agrB, 'fixed project fee of $20,000', '§3.3 states the flat fee');
   has(agrB, 'is not part of the fixed project fee and is charged in addition to it', '§3.3 carves the prep fee out');
   has(agrB, 'included in the fixed project fee under Section 3.3', '§3.5 no longer says coordination is billed as TC time');
-  has(agrB, 'calculated on what those vendors actually invoice and charged in addition to the fixed project fee', '§3.5 states the fee on top');
+  has(agrB, 'calculated on the vendor quotes recorded, updated if a vendor’s invoice differs and charged in addition to the fixed project fee', '§3.5 states the fee on top');
   has(agrB, 'at its estimated amount of $' + sB.prepFee.toLocaleString(), '§3.2 names the estimated prep fee in the schedule');
   has(agrB, 'is earned as the preparation work is performed', '§12.2 earns the prep fee on the vendor work');
   has(agrB, 'and the Home Sale Preparation Fee owed under that Section', '§12.4 invoices it on termination');
@@ -167,13 +169,13 @@ const money = (n) => { const c = CT(n); const r = Math.abs(c) % 100; return '$' 
   ok(CT(inv.dep.amt) === Math.round(CT(20000 + sB.prepFee) / 2), 'deposit = 50% of flat + prep fee on the quotes, to the cent (' + inv.dep.amt + ')');
   has(inv.dep.t, 'Fixed project fee — full scope of work per agreement $20,000', 'deposit invoice states the flat fee');
   has(inv.dep.t, 'Home Sale Preparation Fee (30%) ' + money(sB.prepFee), 'deposit invoice itemises the prep fee on the quotes');
-  has(inv.dep.t, 'shown here on the prep vendors\' quotes and trued to their actual invoices', 'and says it trues up');
+  has(inv.dep.t, 'shown here on the prep vendors\' quotes, and updated at the midpoint and final if a vendor’s invoice differs', 'and says it trues up');
   ok(CT(inv.mid.amt) === Math.round(CT(20000 + prepAct) * 3 / 4) - CT(inv.dep.amt), 'midpoint = 75% of flat + ACTUAL prep fee, less the deposit received, to the cent (' + inv.mid.amt + ')');
   // Two of the three prep lines are still on their estimates, so the line carries the est. tag.
   ok(/Home Sale Preparation Fee \(30%\) est\. \$345/.test(inv.mid.t), 'midpoint invoice bills the prep fee on the actual painter quote, tagged est. while two lines still are');
   ok(CT(inv.fin.amt) === CT(20000 + prepAct) - CT(inv.dep.amt) - CT(inv.mid.amt), 'final closes out flat + actual prep fee exactly (' + inv.fin.amt + ')');
   has(inv.fin.t, 'Havellin Services Total $' + (20000 + prepAct).toLocaleString(), 'final services total = flat + actual prep fee');
-  has(inv.fin.t, 'Home Sale Preparation Fee — on the prep vendors\' actual invoices $' + prepAct, 'payment summary names the prep fee');
+  has(inv.fin.t, 'Home Sale Preparation Fee — on the vendor quotes recorded $' + prepAct, 'payment summary names the prep fee');
   has(inv.fin.t, 'Havellin\'s fee on the home preparation vendors is the 30% Home Sale Preparation Fee shown above', 'the vendor note points at a line that is there');
   ok(!inv.fin.blocked, 'a fixed final is never blocked for hours');
   lacks(inv.fin.t, 'billed in the hours above', 'no hours claim on a fixed-price invoice');
@@ -183,7 +185,7 @@ const money = (n) => { const c = CT(n); const r = Math.abs(c) % 100; return '$' 
   has(em.txt, 'Fixed Project Fee: $20,000', 'text email states the flat fee');
   has(em.txt, 'Home Sale Preparation Fee (30%): ' + money(sB.prepFee), 'and the prep fee as its own line');
   has(em.html, 'The fixed project fee above is firm', 'HTML email: only the flat fee is called firm');
-  has(em.html, 'charged on what those vendors actually bill', 'and the prep fee follows the bills');
+  has(em.html, 'charged on the vendor quotes recorded, updated if a vendor’s invoice differs', 'and the prep fee follows the bills');
 
   // ── C. Estate Settlement, fixed, estate form ──────────────────────────────
   console.log('\n## C. Estate Settlement, fixed price, estate form');
@@ -196,9 +198,9 @@ const money = (n) => { const c = CT(n); const r = Math.abs(c) % 100; return '$' 
   has(agrC, 'fixed price of $30,000', 'the estate form states the flat fee');
   has(agrC, 'the concierge time spent coordinating them is included in the fixed project fee below', 'vendor row: coordination inside the flat fee');
   has(agrC, 'which is not part of the fixed project fee below: it is charged in addition to it', 'prep row: fee outside the flat fee');
-  has(agrC, 'It is charged in addition to it, at thirty percent (30%) of what the home sale preparation vendors', 'Fixed Project Fee paragraph carries the prep fee');
+  has(agrC, 'It is charged in addition to it, at thirty percent (30%) of the quotes recorded for the home sale preparation vendors', 'Fixed Project Fee paragraph carries the prep fee');
   has(agrC, '(50% of fixed price + est. prep fee)', 'payment labels name both parts');
-  has(agrC, 'and the Home Sale Preparation Fee on actual vendor invoices', 'final payment trigger names the prep fee');
+  has(agrC, 'and the Home Sale Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', 'final payment trigger names the prep fee');
   has(agrC, 'The Home Sale Preparation Fee is earned as the preparation work is performed', '§8.1 earns it on the work');
   has(agrC, 'and the Home Sale Preparation Fee owed will be issued', '§8.1 final invoice names it');
   lacks(agrC, 'billed at the TC rate above, except', 'no TC-rate billing claim on the fixed estate form');

@@ -82,7 +82,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ jobProgress — HOURS against the authorised budget, WORK DONE on the estimate’s rooms');
   {
     const P = sandbox({ fns: ['jobProgress', 'roomStatusNormalize'],
-                        vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'] });
+                        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'] });
     const PLAN = { rooms: { 0: { status: 'cleared' }, 1: { status: 'cleared' } } };
     const base = P.jobProgress(EST_TM, PLAN, LOG(100, 70));
     const withCO = P.jobProgress(EST_TM, PLAN, LOG(100, 70), { tc: 20, ps: 20 });
@@ -119,7 +119,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const C = sandbox({
         fns: ['renderProjection', 'computeProjection', 'jobProgress', 'getJobPlan', 'roomStatusNormalize', 'projBandHtml',
               'estTolerancePctTxt', 'coHoursLabel', 'fmtHrs'].concat(CO),
-        vars: ['PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'jobPlanStore', 'estimateStore', 'currentEstimate',
+        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'jobPlanStore', 'estimateStore', 'currentEstimate',
                'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'EST_TOLERANCE_PCT'],
         stubs: { document: dom, saveJobPlan: (id) => saved.push(id), changeOrders: cos,
                  // Half the room work done (the kitchen cleared) on 60 TC + 45 PS: a rate that projects
@@ -160,7 +160,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ coWorkingDays — an accepted change order lengthens the plan by its MARGINAL days');
   {
-    const W = sandbox({ fns: ['coWorkingDays', 'estWorkingDays'], vars: ['PRODUCTIVE_HRS_PER_DAY'] });
+    const W = sandbox({ fns: ['coWorkingDays', 'estWorkingDays'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'PRODUCTIVE_HRS_PER_DAY'] });
     const est = { svc: 'cleanout', days: 6, totTC: 42, totPS: 70, psCount: 2 };
     eq(W.coWorkingDays(est, 14, 28), 2, '+14 TC / +28 PS takes both legs from 6 to 8 days: two more');
     eq(W.coWorkingDays(est, 0, 0), 0, 'none adds none');
@@ -185,7 +185,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const S = sandbox({
       fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor',
             'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
-      vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
     });
     const EST = { svc: 'cleanout', days: 6, totTC: 42, totPS: 70, psCount: 2 };
     const JOBR = { id: 7, svc: 'cleanout', start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' };
@@ -262,12 +262,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'agreementReady', 'jobTimelineDoc',
       'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', '_ymdLocal', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
+      'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobProbateCourt', 'courtFromCaseNo', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'dot', 'coWorkingDays', '_coPaceFix', 'coInclTxt', 'esc',
       'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'coScopeLabel', 'coHours', 'coVendorAddsTxt', 'coVendorAdds', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote'].concat(CO);
-    const VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
+    const VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_ONE_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_BASIS_SHORT', '_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
       '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
       'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
       'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice'];
@@ -326,7 +326,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     function summary(cos, tol) {
       const dom = domStub({});
       const S = sandbox({ fns: ['updateLogSummary', 'jobLogEntries', 'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'fmtHrs'].concat(CO),
-                          vars: ['EST_TOLERANCE_PCT'],
+                          vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'EST_TOLERANCE_PCT'],
                           stubs: { document: dom, jobs: [Object.assign({}, JOB)], jobLogs: { 7: LOG(100, 70) },
                                    changeOrders: cos, estimateStore: { 7: { estimate: Object.assign({}, EST_TM) } } } });
       if (tol != null) S.EST_TOLERANCE_PCT = tol;
@@ -388,8 +388,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['planDerivedLines', 'jobListEntries', 'jobOnProbateTrack', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
               'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
               '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
-              'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'].concat(CO),
-        vars: ['LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+              'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'prepVendorsConfirmed', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'].concat(CO),
+        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
                'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
                'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES',
                'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],
@@ -419,7 +419,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['updateCOHours', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'estFixedFee', 'estTolerancePctTxt', 'coNoHoursBaseTxt',
               'prepFeeRate', 'coPrepReadoutHtml', 'agrBillingRates', 'coRushPct', 'coRushPctFor', 'estFixedLines', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'roundCents', 'fmtHrs'].concat(CO),
-        vars: ['EST_TOLERANCE_PCT', 'PREP_FEE_RATE', 'RUSH_PCT'],
+        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'EST_TOLERANCE_PCT', 'PREP_FEE_RATE', 'RUSH_PCT'],
         stubs: { document: dom, jobs: [Object.assign({}, JOB, jobOver || {})], changeOrders: cos,
                  estimateStore: est ? { 7: { estimate: Object.assign({}, est), approved: true } } : {}, currentEstimate: null },
       });
@@ -471,7 +471,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
               'agrBillingRates', 'coRateModsLine', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coVendorAdds', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'roundCents', 'fmtHrs'].concat(CO),
-        vars: ['CO_REASONS', 'RUSH_PCT'],
+        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CO_REASONS', 'RUSH_PCT'],
         stubs: { jobs: [Object.assign({}, JOB)], changeOrders: cos, currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, EST_TM), approved: true } },
                  docNames: () => ({ printTitle: 'Havellin Change Order' }) },
@@ -503,12 +503,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ §4.2 OF THE ESTATE AGREEMENT — the blank change-order form follows the billing basis');
   {
     const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf',
-      'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords',
-      'probateAgreementHtml', 'docServiceTitle', 'probateSvcOffTrack', 'jobOnProbateTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
+      'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrFinalDueTxt', 'agrPriceAdjustments', '_pctWords',
+      'probateAgreementHtml', 'jobProbateCourt', 'courtFromCaseNo', 'docServiceTitle', 'probateSvcOffTrack', 'jobOnProbateTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
       '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger',
       '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',
       'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
-    const AGR_VARS = ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
+    const AGR_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
     const A = sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
     const PROB = { id: 7, hvlId: 'HVL-0007', name: 'Margaret Doe', svc: 'probate', executor: 'Tripp Butler',
                    addr: '69 Beach Blvd', city: 'Palm Beach', zip: '33480', deathDate: '2026-01-15', docLevel: 'formal' };

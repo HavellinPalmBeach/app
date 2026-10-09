@@ -260,9 +260,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = attempt(() => q.printApprovalRequest(7, false));
     ok(r.ok, 'the request prints' + (r.ok ? '' : ': ' + r.err));
     const req = text((printed[printed.length - 1] || {}).html);
-    has(req, 'Marie Delgado (daughter) through Palm Beach Arms (FFL), a licensed dealer',
+    // RESTATED (P25, Q35): every firearm line prints its serial and its dealer, the request being the transport authority;
+    // the routed line still names the dealer it goes through, and a line with no dealer says so.
+    has(req, 'Marie Delgado (daughter) Serial RS12345678 · through Palm Beach Arms (FFL), a licensed dealer',
         '⚠⚠ the routed line names the dealer it goes through, on the line the representative initials');
-    eq(count(req, ', a licensed dealer'), 1, 'only the routed line carries a route');
+    has(req, 'Serial C99 · licensed dealer not named yet', '…an unrouted line says it has no dealer yet');
+    eq(count(req, 'through Palm Beach Arms (FFL), a licensed dealer'), 1, 'only the routed line carries a route');
     has(req, 'A firearm going to a named person goes to the dealer as well, and the dealer makes the transfer to that person',
         'and the firearms note says how a firearm reaches a person');
     has(req, 'Havellin never hands a firearm to anyone', 'including that Havellin hands none over');

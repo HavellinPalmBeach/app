@@ -168,7 +168,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the client estimate follows the scope it priced, once, in the stage');
   {
     const ctx = sandbox({
-      fns: ['estTolerancePctTxt', '_cePhases', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
+      fns: ['estTolerancePctTxt', '_cePhases', 'estateDirectionWords', 'jobFiduciaries', 'jobListEntries', 'estimateDocScope', 'docScopeDef', 'svcHasDocStep', 'isDecedentJob',
             'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'appraisalDuty', 'estimateAppraiserLines', 'esc', 'estimateAppraiserNames', 'docEstateAuthority', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'invProbateRows', 'estateProceedsHolder'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'EST_TOLERANCE_PCT', 'JOB_STEPS', 'DOC_SCOPES', 'DECEDENT_SERVICES',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'ESTATE_AUTHORITIES'],
@@ -211,7 +211,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Close-out on a probate job.
     const closeOut = (P) => P.find((p) => p.title.indexOf('Close-Out') === 0);
     has(closeOut(full).body, 'date-of-death fair market value', 'full prepares the verified inventory for filing');
-    has(closeOut(cap).body, 'delivered to counsel in a form their office can value', 'capture hands counsel the list to file');
+    has(closeOut(cap).body, 'delivered to counsel in time for the §733.604 filing, in a form their office can value; counsel serves and files it', 'capture hands counsel the list to file (RESTATED P25, Q33)');
     lacks(closeOut(none).body, 'inventory', 'none says nothing about an inventory at close-out');
 
     // The estate rules that must NOT move with the scope.

@@ -53,7 +53,7 @@ const ITEM = (id, over) => Object.assign({
 }, over || {});
 
 const PRINT_FNS = [ 'invDocContractBlock',
-  'printContentsRecord', 'dispositionRecord', 'printApprovalRequest', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
+  'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   'printDispositionLedger', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
@@ -68,7 +68,7 @@ const PRINT_FNS = [ 'invDocContractBlock',
   '_maivSummaryNotice', 'maivFilingApplies', '_gate706', 'invIsMAIV', 'invMAIVCategory',
   'invMAIVDefaultCat',
   'invReleaseBlocked', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalThreshold',
-  'gateDispute', '_gateYes', 'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers',
+  'gateDispute', '_gateYes', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal', '_jobAppraisers',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
   '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
   // P16: the dealer route, the one field-on-this-job rule, and the photo folders the share names.
@@ -77,14 +77,14 @@ const PRINT_FNS = [ 'invDocContractBlock',
   'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete',
   'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'inventoryNetLabel', 'invRepresentativeTitle',
   // P19: the Disposition Ledger's card on the desk, on living work as on an estate.
-  '_renderLedgerCards', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
+  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
-  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'photoSharesLine', 'photoSharesOf',
+  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'photoSharesLine', 'photoSharesOf',
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive'];
-const PRINT_VARS = [ 'INV_CONTRACT_DOCS',
+const PRINT_VARS = ['INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
   'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'INV_WORK_FLAGS', 'FIELD_DISPOSITIONS',
@@ -163,10 +163,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // summary the client signs, on its own card under the inventory, on living work as on an estate (the client signs it
     // there); the strip carries it on neither (no control renders twice).
     lacks(bar, 'printDispositionLedger(', '⚠ no ledger on the strip');
+    // RESTATED (P25, Q51; Anthony, 2026-10-09: "One paper"): a living family signs the Contents Record, and the ledger is kept
+    // on living work only where something was sold. With nothing sold its card is the Contents Record's; with a sale it is back.
     const lcard = ctx._renderLedgerCards(Object.assign({}, LIVING), ctx._jobInvRefs(2));
-    has(lcard, 'printDispositionLedger(2)', 'the ledger is offered on its card, to the client');
-    has(lcard, 'Net to the client', 'its proceeds net to the client');
-    lacks(lcard, 'the estate', 'never to an estate');
+    lacks(lcard, 'printDispositionLedger(2)', '⚠⚠ nothing sold: no ledger card on living work');
+    has(lcard, 'id="inv-contents-card"', '…the Contents Record\'s card instead, the paper the client signs');
+    const sold = rig(LIVING, [ITEM('a', { disposition: 'Donate' }), ITEM('b', { disposition: 'Sell', gross: '400' })]).ctx;
+    const scard = sold._renderLedgerCards(Object.assign({}, LIVING), sold._jobInvRefs(2));
+    has(scard, 'printDispositionLedger(2)', 'something sold: the ledger is offered on its card, to the client');
+    has(scard, 'Net to the client', 'its proceeds net to the client');
+    has(scard, 'The client signs the Contents Record, not this ledger.', '…and it says the client signs the Contents Record');
+    lacks(lcard + scard, 'the estate', 'never to an estate');
     lacks(bar, 'takeInventorySnapshot(', '⚠ no amended-inventory snapshot trail');
     has(bar, 'printContentsRecord(2)', 'the primary is the record the family is promised');
     has(bar, 'Contents Record', 'and it is named for what it is');

@@ -120,6 +120,10 @@ let b = null;
     if (ps) await p.fill('#co-ps-hrs', String(ps));
     await p.fill('#co-description', desc);
     const seen = { readout: await text('#co-hrs-note'), base: await text('#co-original-hrs'), rev: await text('#co-new-hrs') };
+    // ⚠ P25 (Q54): no reason is pre-picked and Create refuses without one, so a person picks it: Scope addition where the
+    // service offers it, else the first on the service's own list.
+    await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean);
+      s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; s.dispatchEvent(new Event('change')); });
     await p.click('#change-order-modal .btn-p'); await p.waitForTimeout(200);
     seen.coId = await p.evaluate(([id, desc]) => { const c = changeOrders.filter(c => c.jobId === id && c.description === desc).pop(); return c ? c.id : null; }, [id, desc]);
     return seen;

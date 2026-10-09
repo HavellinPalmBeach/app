@@ -33,7 +33,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const j = sandbox({
       fns: ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
-            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+            'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr', '_ymdLocal',
@@ -190,7 +190,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('vendorSourcingProgress — what "lined up" means');
   {
-    const v = sandbox({ fns: ['vendorSourcingProgress', '_srcLineKey', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
+    const v = sandbox({ fns: ['vendorSourcingProgress', 'prepVendorsConfirmed', '_srcLineKey', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
                         vars: ['LOGISTICS_CATEGORIES'] });
     // prepEnabled rides every snapshot that carries prep lines (calcAll sets it); the sourcing list, its writers and
     // this count read one list since 2026-09-30 (jobPrepLines), and that list honours it as the invoice always did.
@@ -234,7 +234,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('planCurrentStage marks; only Vendors ever opens by itself');
   {
-    const c = sandbox({ fns: ['planCurrentStage', 'planVendorsOpenOnLoad', 'vendorSourcingProgress', '_srcLineKey', '_planRooms', '_planRoomStatus',
+    const c = sandbox({ fns: ['planCurrentStage', 'planVendorsOpenOnLoad', 'vendorSourcingProgress', 'prepVendorsConfirmed', '_srcLineKey', '_planRooms', '_planRoomStatus',
                               'roomStatusNormalize', '_planOpenStageFor', 'planStageState', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'],
       vars: ['jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', '_planOpenPhases', '_planLastJob', 'PLAN_FLOW', 'LOGISTICS_CATEGORIES'],
       stubs: { stagePaidTotal: () => 0 } });

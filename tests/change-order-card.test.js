@@ -67,7 +67,7 @@ const DASH_FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriv
   'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
   'hoursOverText', 'estTolerancePctTxt', 'coHoursLabel', 'dot', 'coWorkingDays', '_coPaceFix', 'coInclTxt', 'esc',
   'roomStatusNormalize', 'estimateIsFeeOnly', 'estDeclutterHrs', 'estimateEditBlocker', 'priceChangeBlocker', 'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', '_dashNoticeHtml', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coScopeLabel', 'coHours', 'coVendorAddsTxt', 'coVendorAdds', 'coDraftVendorAdd', 'coPrepVendorReadout', 'moneyToNumber', '_srcLid', 'escLines', 'finalCrewOnlyWarn', 'agreementChipFix', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'estateTaxReturnDue', 'jobListEntries', 'estateTaxReturn', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote'].concat(CO);
-const DASH_VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
+const DASH_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CO_REASONS_BY_FAMILY', '_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'PAYMENT_STAGE_LABELS',
   '_dashNotice', '_jobsWatch', 'jobLogs', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
   'PRODUCTIVE_HRS_PER_DAY', 'jobPlanStore', 'PROJ_CREW_DAY', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'EST_TOLERANCE_PCT',
   'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', '_dashShown', '_dashKeepNotice', 'RUSH_PCT'];
@@ -75,12 +75,12 @@ const DASH_VARS = ['_driveFolderInFlight', 'MATTER_TYPES', 'DECEDENT_SERVICES', 
 // The change-order modal, acceptance and print functions (prep-co-hours.test.js's list), plus the real
 // notice chain: _docNotice → dashNotice → _dashRedraw → the lifted renderClientDashboard.
 const CO_FNS = ['_coJobBasis', 'coBaselineShift', '_coMoney', 'fmt', 'coPrice', 'coPriceTotal', 'coFixedTerms',
-  'coRateBasisTxt', 'coReasonLabel', 'estFixedFee', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder',
+  'coRateBasisTxt', 'coReasonsFor', 'coReasonLabel', 'estFixedFee', 'coBasisNoteHtml', 'updateCOHours', 'openChangeOrder', 'isDecedentJob',
   'openCOAcceptModal', 'closeCOAcceptModal', 'acceptChangeOrder', 'printChangeOrder', 'saveChangeOrder',
   '_coPriorAccepted', 'coPriorHours', 'coNoHoursBaseTxt', 'coPrepReadoutHtml', 'prepFeeRate', 'agrBillingRates',
   'coRateModsLine', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'coBaselineMove', 'discountOnLabor', 'coVendorAdds', 'roundCents', 'isWholeHours', 'fmtHrs'];
 const NOTICE_FNS = ['_docNotice', 'dashNotice', '_dashRedraw', '_jobBandHost'];
-const CO_VARS = ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE', '_dashboardJobId', '_srcLidSeq'];
+const CO_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE', '_dashboardJobId', '_srcLidSeq'];
 
 // The whole screen: a dashboard open on job 7, the modals, and the stores behind them.
 function screen(cos, opts) {
@@ -130,14 +130,14 @@ function buttons(rowHtml) {
 // The invoice sandbox, as change-order-billing.test.js builds it.
 function inv(stubs) {
   return sandbox({
-    fns: ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+    fns: ['estTolerancePctTxt', 'finalAwaitsHours', 'paymentStageWord', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
           '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
           '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
           'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack',
           'conciergePhones', 'conciergePhonesText', 'assignedTCContact', 'vendorCats',
           'vendorPrimaryCat', 'estimateIsFeeOnly', 'isDecedentJob',
           'stagePaidTotal', 'jobPaidTotal', 'jobPayments', 'discountOnLabor', 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'rushBaseWords', 'coRushPct', 'coVendorAdds', 'coVendorAddsTxt', 'jobPrepLines', 'coPrepVendorLines', 'escLines', 'paymentCounts', 'finalCrewOnlyWarn', 'coBaselineMove', 'roundCents', 'fmtHrs', 'paymentLive', 'isRefundRecord'],
-    vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
+    vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
            'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'COORD_TOUCHES',
            'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
            'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'PREP_FEE_RATE'],
@@ -250,6 +250,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     c.__dom.getElementById('co-description').value = 'Pool house added to scope';
     c.__dom.getElementById('co-tc-hrs').value = '8';
     c.__dom.getElementById('co-ps-hrs').value = '8';
+    c.__dom.getElementById('co-reason').value = 'scope_add';   // none is pre-picked (P25, Q54): the person chooses one
     c.saveChangeOrder();
     eq(c.changeOrders.length, 1, 'Create writes the change order');
     const id = c.changeOrders[0].id;
@@ -337,7 +338,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fns: ['printChangeOrder', '_coJobBasis', 'coHoursLabel', 'coFixedTerms', '_coPriorAccepted', 'coPriorHours', 'coPrice',
               'coPriceTotal', 'coBaselineShift', '_coMoney', 'fmt', 'esc', 'estFixedFee', 'coReasonLabel', 'coRateBasisTxt',
               'agrBillingRates', 'coRateModsLine', 'prepFeeRate', 'coHours', 'coHoursTotal', 'estFixedLines', 'coRushPct', 'coRushPctFor', 'coVendorAdds', 'coPrepVendorsOn', '_agrHasPrepVendors', 'estPrepFeeOnTop', 'roundCents', 'fmtHrs'],
-        vars: ['CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE'],
+        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'CO_REASONS', 'RUSH_PCT', 'PREP_FEE_RATE'],
         stubs: { jobs: [Object.assign({}, JOB, (extra && extra.job) || {})], changeOrders: [co(10, 0, ID_P)], currentEstimate: null,
                  estimateStore: { 7: { estimate: Object.assign({}, est), approved: true } },
                  docNames: () => ({ printTitle: 'Havellin Change Order' }) },
@@ -391,7 +392,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(printed(Object.assign({}, PREP, { discountPct: 0 }), { job: { svc: 'prep' } }), 'preferred-client',
           'a prep job with no discount prints no line');
 
-    const L = sandbox({ fns: ['coRateModsLine', 'estFixedLines', 'coRushPct'], vars: ['RUSH_PCT'] });
+    const L = sandbox({ fns: ['coRateModsLine', 'estFixedLines', 'coRushPct'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'RUSH_PCT'] });
     eq(L.coRateModsLine(null, false), '', 'no estimate, no line');
   }
 

@@ -591,12 +591,12 @@ function run({ group, ok, eq, has, lacks }) {
     ok(withHrs.ok && withHrs.val && !withHrs.val.blocked, 'fixture: a prep final with concierge hours logged renders (' + (withHrs.err || 'ok') + ')');
     // ⚠ RESTATED 2026-10-01 (P17, Anthony's answer 5): the heading names the Home Sale Preparation Fee, in exactly the
     // words Anthony gave: "Services total (Home Sale Preparation Fee on actual vendor spend + logged concierge hours)".
-    eq(finalRow(withHrs.val && withHrs.val.html).label, 'Services total (Home Sale Preparation Fee on actual vendor spend + logged concierge hours)',
+    eq(finalRow(withHrs.val && withHrs.val.html).label, 'Services total (Home Sale Preparation Fee on the vendor quotes recorded + logged concierge hours)', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
        '⚠⚠ with hours logged: the fee and the hours, in those words');
     eq(finalRow(withHrs.val && withHrs.val.html).amount, '$3,900', 'over the figure it bills — $3,000 on the painter plus 6 hours at $150');
     const feeOnly = invoice(PJ, PREP_EST(0), []);
     ok(feeOnly.ok && feeOnly.val && !feeOnly.val.blocked, 'fixture: a fee-only prep final renders');
-    eq(finalRow(feeOnly.val && feeOnly.val.html).label, 'Services total (Home Sale Preparation Fee on actual vendor spend)',
+    eq(finalRow(feeOnly.val && feeOnly.val.html).label, 'Services total (Home Sale Preparation Fee on the vendor quotes recorded)', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
        '⚠⚠ with no hours logged: the fee alone');
     lacks(textOf(feeOnly.val && feeOnly.val.html), 'logged hours + actual fees', 'and never "logged hours" on a job that logged none');
     const CJ = { id: 7, name: 'Ellsworth', hvlId: 'HVL-0008', svc: 'cleanout', tc: 'Anthony Graziano', status: 'active', won: true, payments: [] };

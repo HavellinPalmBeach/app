@@ -153,6 +153,7 @@ const PARTNERS = [{ uid: 'p-dana', partner_name: 'Dana Broker', partner_type: 'R
       has(ro, 'plus the 20% expedited-delivery premium, as this job is expedited', 'the readout names it');
       has(ro, '$2,400', '⚠⚠ and prices 8 + 8 hours at $2,400: the rate card\'s $2,000 plus 20%');
       await p.fill('#co-description', 'Added the pool house to scope.');
+      await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });   // P25 (Q54): no reason is pre-picked; a person picks one
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create Change Order');
       const co = await coOf(idF);
       ok(!!co && co.rushPct === 0.2, '⚠ the premium is pinned on the change order (' + (co && co.rushPct) + ')');
@@ -279,12 +280,14 @@ const PARTNERS = [{ uid: 'p-dana', partner_name: 'Dana Broker', partner_type: 'R
       has(await txt('#co-basis-note'), 'A change order can also add a preparation vendor found mid-job', 'and the note says it can');
       await p.selectOption('#co-vendor-type', 'Painting');
       await p.fill('#co-description', 'Repaint the guest house before listing.');
+      await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });   // P25 (Q54): no reason is pre-picked; a person picks one
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create, with no cost typed');
       has(await txt('#co-fb'), 'Enter the added vendor’s estimated cost, so the client sees the fee it carries.', '⚠ a vendor with no cost is refused, by name');
       ok(!(await coOf(4404)), 'and nothing is recorded');
       await p.fill('#co-vendor-cost', '4500'); await p.waitForTimeout(200);
       // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; this read "site management fee".
-      has(await txt('#co-hrs-note'), 'the 30% Home Sale Preparation Fee applies to what it actually charges — about $1,350 at the estimated $4,500',
+      // ⚠ RESTATED (P25, Q52; Anthony, 2026-10-09: "quotes, then trued"): the prep fee's basis reads what the app bills, the quotes recorded, updated if an invoice differs.
+      has(await txt('#co-hrs-note'), 'the 30% Home Sale Preparation Fee applies to its quote as recorded, updated if its invoice differs — about $1,350 at the estimated $4,500',
           'the readout names the fee at the estimated cost');
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create');
       const co = await coOf(4404);

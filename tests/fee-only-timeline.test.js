@@ -37,7 +37,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   const ctx = sandbox({
     fns: [
-      'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'paymentSplit', 'depositVoidFlag', 'agreementHandedOverInPerson',
+      'agrApprovalWithdrawn', 'jobTimeline', 'prepVendorsConfirmed', 'jobPrepLines', 'coPrepVendorLines', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'paymentSplit', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'unscoredRoomNames', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'isJobWon', 'isJobFunded',
       'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor',
       'docSentAt', 'docKeyFor', 'agreementSignature',
@@ -49,7 +49,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStageDoc', 'docReadiness', 'docTitle', 'docDraftOnly', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', '_jtDraftLink', '_jtDocViews', '_jtDriveLink', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'priceAboveAcceptance', '_approvedPriceAbove'
     , 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'esignFiledCopies', 'agreementHandOverDraftNote'],
-    vars: ['JT_SHORT', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
+    vars: ['PREP_FEE_BASIS_SHORT', 'JT_SHORT', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'DECEDENT_SERVICES', 'JT_NEXT', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS',
            'JT_ROW_DOC', 'DOC_ACTIONS', 'DOC_KIND_WORD'],
   });
   const { jobTimeline, jobTimelineNext, jobTimelineActions } = ctx;
