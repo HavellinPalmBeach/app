@@ -1340,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.09 · 3:24pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.09 · 4:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2949,12 +2949,13 @@ body.no-smf .smf-col{display:none;}
     <div class="modal-title">Record a proceeds statement</div>
     <div class="modal-sub">An auction house, consignment shop or estate sale company&rsquo;s statement, or a buyer&rsquo;s bill of sale.</div>
     <label>From <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--gray);">— who issued it</span></label>
-    <input type="text" id="ps-vendor" list="ps-vendor-list" placeholder="e.g. Kodner Galleries">
+    <input type="text" id="ps-vendor" list="ps-vendor-list" placeholder="e.g. Kodner Galleries" oninput="psTickVendor(this.value)">
     <datalist id="ps-vendor-list"></datalist>
     <label>Statement date</label>
     <input type="date" id="ps-date">
     <label>Items it covers</label>
-    <div id="ps-lines" style="max-height:190px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:4px 8px;"></div>
+    <div id="ps-lines" style="max-height:240px;overflow-y:auto;border:1px solid var(--border);border-radius:4px;padding:4px 8px;"></div>
+    <div id="ps-lots-sum" style="font-size:11px;color:var(--gray);margin-top:4px;"></div>
     <div class="grid2" style="gap:10px;">
       <div>
         <label>Gross</label>
@@ -26914,6 +26915,11 @@ function _invRefs(jobId, roomIdx) {
 // photo time; app-manage columns (valuation, disposition detail, proceeds) become
 // editable in the next build. Mirrors Havellin_Estate_Inventory_Master.xlsx.
 var INV_CONDITIONS  = ['Excellent','Good','Fair','Poor','Salvage'];
+// ⚠ A CONDITION NOBODY SET READS "as photographed" (P25, Q50; Anthony, 2026-10-09): the estimate, the agreement and the
+// receipt promise property "in the condition described", and every schedule printed "—". The photograph is the description
+// where no condition is set; the desk's bulk bar sets one across a selection (Good, then the exceptions). One reader for
+// every document that prints it.
+function invConditionText(ref) { return String((ref && ref.condition) || '').trim() || 'as photographed'; }
 // ⚠ 'General estimate' AND 'WorthPoint comps' ARE AGENT TWO'S (P23): an ordinary lot's going rate, and a sale a person
 // checked on WorthPoint. Each has its word on the schedules in INV_VAL_BASIS_WORDS, and a test holds the two lists together.
 var INV_VAL_SOURCES = ['Appraisal','Auction comps','Dealer quote','General estimate','Online comps','PR estimate','WorthPoint comps'];
@@ -29263,9 +29269,6 @@ function contentsList(jobId) {
     // and the unassigned group is not a room, so neither can land here.
     empty: groups.filter(function(g){ return !g.offPlan && g.key !== '~' && !g.items.length; }),
     unnamed: items.filter(function(r){ return !r.objectName; }).length,
-    // Condition is one of the three fields this document is contracted to carry, so a blank
-    // one is a gap in the deliverable rather than an empty cell.
-    noCondition: items.filter(function(r){ return !r.condition; }).length,
     // A photographed row whose file never reached Drive. Distinct from a thumbnail this
     // device has not fetched: that is a network fact, this is a missing photograph.
     unsaved: items.filter(function(r){ return !r.manual && !_invFileId(r); }).length
@@ -29312,8 +29315,7 @@ function printContentsList(jobId, opt) {
     + esc(rec.empty.map(function(g){ return g.name; }).join(', ')));
   if (rec.unnamed) gaps.push('<strong>' + rec.unnamed + '</strong> photographed item'
     + (rec.unnamed === 1 ? '' : 's') + ' not yet named');
-  if (rec.noCondition) gaps.push('<strong>' + rec.noCondition + '</strong> item'
-    + (rec.noCondition === 1 ? '' : 's') + ' with no condition recorded');
+  // (No gap for a line with no condition set since P25, Q50: it reads "as photographed", which is what the photograph shows.)
   if (rec.unsaved) gaps.push('<strong>' + rec.unsaved + '</strong> item'
     + (rec.unsaved === 1 ? '' : 's') + ' whose photograph has not reached the estate’s Drive folder');
   var gapBlock = gaps.length
@@ -29348,7 +29350,7 @@ function printContentsList(jobId, opt) {
       + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">'
-        + (r.condition ? esc(r.condition) : '<span style="color:#8a6d3b;">not recorded</span>') + '</td>'
+        + esc(invConditionText(r)) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + flags + '</td>'
       + '</tr>';
   }
@@ -29470,7 +29472,7 @@ function printEstateInventoryReport(jobId, opt) {
       + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.condition || '—') + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(invConditionText(r)) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv) + '</td>'
       // A value with no stated source is exactly what the deliverables page promises never
       // to hand over, so the blank is called out rather than left looking like a gap.
@@ -30399,6 +30401,29 @@ function _invCautionNotices(items, jobId) {
   }).join('');
 }
 
+// ⚠⚠ WHICH LINES ARE INITIALLED ON THEIR OWN (P25, Q46; Anthony, 2026-10-09). The request asked an initial on every leaving
+// line, a $20 paperback to junk included, where the agreement's §5.3 asks written approval for sales or disposals over $500
+// and for donations. Every leaving line is still listed; a line is initialled on its own at $500 and over
+// (INV_LINE_INITIAL_MIN), when it is a specific bequest, or when it carries any caution; the rest are initialled once per
+// destination (the disposition and the recipient together), under the group. A firearm is initialled with the firearms
+// block (Q35). One rule, read by the request's rows and its group lines. DOM-free.
+var INV_LINE_INITIAL_MIN = 500;
+function invOwnInitial(ref, job) {
+  if (!ref || !job) return true;
+  var v = parseFloat(ref.fmv);
+  if (!isNaN(v) && v >= INV_LINE_INITIAL_MIN) return true;
+  if (ref.flagBequest || invBequestFor(ref, job)) return true;
+  return invReleaseCautions(ref, job.id).length > 0;
+}
+// The destination a group initial covers: what happens to the line and who takes it, in the reader's words.
+function invInitialGroupKey(ref) {
+  return invDispDocWord(ref.disposition || '') + (String(ref.channel || '').trim() ? ' · ' + String(ref.channel).trim() : '');
+}
+// The group's words on its initial line: "going to Goodwill (Donate)", or "marked Donate, with no recipient named yet".
+function invInitialGroupWords(ref) {
+  var w = invDispDocWord(ref.disposition || ''), c = String(ref.channel || '').trim();
+  return c ? 'going to ' + c + ' (' + w + ')' : 'marked ' + w + ', with no recipient named yet';
+}
 function printApprovalRequest(jobId, selectedOnly) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
@@ -30461,12 +30486,26 @@ function printApprovalRequest(jobId, selectedOnly) {
           : gone ? '<div style="color:#8a5a1e;font-size:10px;">No written approval recorded; to sign: '
             + esc(_andJoin(invApprovalMissing(r, job)) || 'the ' + invRepresentativeTitle(job)) + '</div>' : '')
         + '</td>'
-      // A firearm asked for is initialled once, with every firearm on the list, under the firearms paragraph (P25, Q35).
+      // A firearm asked for is initialled once, with every firearm on the list, under the firearms paragraph (P25, Q35); a
+      // line under $500 with no caution and no bequest, once with its destination group (P25, Q46).
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">'
-        + (invIsFirearm(r) && !gone ? '<span class="inv-fa-init" style="font-size:9px;color:#888;">initialled once, with the firearms below</span>' : '&nbsp;') + '</td>'
+        + (invIsFirearm(r) && !gone ? '<span class="inv-fa-init" style="font-size:9px;color:#888;">initialled once, with the firearms below</span>'
+          : (!gone && !invOwnInitial(r, job)) ? '<span class="inv-grp-init" style="font-size:9px;color:#888;">initialled with its group</span>' : '&nbsp;') + '</td>'
       + '</tr>';
   };
-  var rows = asked.map(rowOf).join('');
+  // ⚠ GROUPED BY DESTINATION (P25, Q46): the lines asked for run destination by destination, and under each group whose
+  // lines are not all initialled on their own (or with the firearms) a row asks one initial for them together.
+  var _grpOrder = [], _grp = {};
+  asked.forEach(function (r) { var k = invInitialGroupKey(r); if (!_grp[k]) { _grp[k] = []; _grpOrder.push(k); } _grp[k].push(r); });
+  asked = [].concat.apply([], _grpOrder.map(function (k) { return _grp[k]; }));
+  var rows = _grpOrder.map(function (k) {
+    var list = _grp[k];
+    var together = list.filter(function (r) { return !invIsFirearm(r) && !invOwnInitial(r, job); });
+    return list.map(rowOf).join('') + (together.length
+      ? '<tr class="inv-grp-row"><td colspan="' + (showVal ? 7 : 6) + '" style="padding:5px 6px 9px;border-bottom:1px solid #ccc;font-size:11px;text-align:right;">'
+        + 'Initial once for the ' + (together.length > 1 ? together.length + ' items' : 'item') + ' above ' + esc(invInitialGroupWords(list[0]))
+        + ', each under ' + _invMoney(INV_LINE_INITIAL_MIN) + ': ______________</td></tr>' : '');
+  }).join('');
   // The head of a table of lines: the disposition is proposed for a line asked for, and recorded for one already gone.
   var theadOf = function(gone) {
     return '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
@@ -30830,7 +30869,7 @@ function invReceiptHtml(job, name, lines) {
     return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
       + '<td style="' + td + '">' + esc(r.objectName || '—') + '</td>'
       + '<td style="' + td + 'text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
-      + '<td style="' + td + '">' + esc(r.condition || '—') + '</td></tr>';
+      + '<td style="' + td + '">' + esc(invConditionText(r)) + '</td></tr>';
   }).join('');
   return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'Receipt for Property Released', 'Released to <strong>' + esc(name) + '</strong> from ' + from)
@@ -31259,7 +31298,7 @@ function _invScheduleSection(title, list) {
       // magnitude on a court filing. Say which it is on the row and in the header.
       var _q = parseInt(r.qty, 10);
       return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (_q > 1 ? ' <span style="color:#888;">(' + _q.toLocaleString() + ' items, valued as a lot)</span>' : '') + '</td>'
-        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.condition || '—') + '</td>'
+        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(invConditionText(r)) + '</td>'
         // ⚠ THE BASIS ON EACH LINE (P23, Anthony's answer to the spec's §12.3): what the figure rests on, in the reader's words.
         + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(invValBasisWord(r) || '—') + '</td>'
         + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td></tr>'; }).join('');
@@ -32016,7 +32055,7 @@ function printDonationRecord(jobId, stableId, opt) {
     return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
       + '<td style="' + td + '">' + esc(r.objectName || '—') + (r.category ? '<div style="color:#888;font-size:10px;">' + esc(r.category) + '</div>' : '') + '</td>'
       + '<td style="' + td + 'text-align:right;">' + q + '</td>'
-      + '<td style="' + td + '">' + esc(r.condition || '—') + '</td>'
+      + '<td style="' + td + '">' + esc(invConditionText(r)) + '</td>'
       + '<td style="' + td + 'white-space:nowrap;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
       + (showVal ? '<td style="' + td + 'text-align:right;">' + _invMoney(r.fmv) + '</td>' : '') + '</tr>';
   }).join('');
@@ -32205,18 +32244,56 @@ function openProceedsStatement(jobId) {
   var vend = [];
   sold.forEach(function (r) { var c = String(r.channel || '').trim(); if (c && vend.indexOf(c) < 0) vend.push(c); });
   g('ps-vendor-list').innerHTML = vend.map(function (v) { return '<option value="' + esc(v) + '"></option>'; }).join('');
+  // ⚠⚠ ONE TABLE, LOT BY LOT (P25, Q39; Anthony, 2026-10-09). Proceeds were typed twice: each lot's gross and fees in its
+  // own record (four taps a lot, about 750 on a full estate), then the statement's totals. Each sold line is a row with its
+  // gross and fees, typed here from the statement and written onto the line when it is saved; typing who it is from ticks
+  // that vendor's lines not already on a statement (psTickVendor). The statement's own totals are still typed from the
+  // paper, and the reconciliation still checks them against the lots to the cent; the sum of the ticked lots shows under
+  // the table as they are typed.
+  var _num = function (v) { return (v === '' || v == null || isNaN(parseFloat(v))) ? '' : String(roundCents(parseFloat(v))); };
   g('ps-lines').innerHTML = sold.length
     ? sold.map(function (r) {
-        return '<label class="ps-line" style="display:flex;gap:6px;align-items:flex-start;font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;margin:0;padding:3px 0;color:var(--gray-dk);">'
-          + '<input type="checkbox" data-sid="' + esc(String(r.stableId)) + '" style="width:auto;margin-top:2px;">'
-          + '<span>' + esc(_invNamed(r)) + ' &middot; ' + esc(r.disposition) + (r.channel ? ' &middot; ' + esc(r.channel) : '')
-          + (on[String(r.stableId)] ? ' <span style="color:#8a6d3b;">(on the ' + esc(on[String(r.stableId)]) + ' statement)</span>' : '') + '</span></label>';
+        var sid = esc(String(r.stableId));
+        // A <label>, as before P25, so tapping the line's name ticks it; the global label rule is overridden inline.
+        return '<label class="ps-line" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;font-weight:400;text-transform:none;letter-spacing:0;margin:0;padding:3px 0;color:var(--gray-dk);border-bottom:0.5px solid var(--border);">'
+          + '<input type="checkbox" data-sid="' + sid + '" data-ch="' + esc(String(r.channel || '').trim().toLowerCase()) + '"' + (on[String(r.stableId)] ? ' data-on="1"' : '')
+          + ' onchange="psLotsSum()" style="width:auto;flex:0 0 auto;">'
+          + '<span style="flex:1 1 160px;min-width:0;">' + esc(_invNamed(r)) + ' &middot; ' + esc(r.disposition) + (r.channel ? ' &middot; ' + esc(r.channel) : '')
+          + (on[String(r.stableId)] ? ' <span style="color:#8a6d3b;">(on the ' + esc(on[String(r.stableId)]) + ' statement)</span>' : '') + '</span>'
+          + '<input type="number" class="ps-lot-g" data-sid="' + sid + '" min="0" step="0.01" placeholder="gross" value="' + esc(_num(r.gross)) + '" oninput="psLotsSum()" style="width:84px;flex:0 0 auto;font-size:11px;">'
+          + '<input type="number" class="ps-lot-f" data-sid="' + sid + '" min="0" step="0.01" placeholder="fees" value="' + esc(_num(r.fees)) + '" oninput="psLotsSum()" style="width:74px;flex:0 0 auto;font-size:11px;">'
+          + '</label>';
       }).join('')
     : '<div style="font-size:11px;color:#8a6d3b;">No line is marked Auction, Consign or Sell yet. Set the disposition on the lines the statement covers first.</div>';
+  psLotsSum();
   m.style.display = 'flex';
   return true;
 }
 function closeProceedsStatement() { var m = document.getElementById('ps-modal'); if (m) m.style.display = 'none'; }
+// Typing who the statement is from ticks that vendor's lines (Channel / Recipient, case and spaces aside) that are not on
+// another statement; a line ticked or unticked by hand stays as the person left it once the name stops matching it.
+function psTickVendor(name) {
+  var want = String(name || '').trim().toLowerCase();
+  var box = document.getElementById('ps-lines');
+  if (!box || !box.querySelectorAll) return 0;
+  var n = 0;
+  Array.prototype.slice.call(box.querySelectorAll('input[type=checkbox]')).forEach(function (c) {
+    if (want && c.getAttribute('data-ch') === want && !c.getAttribute('data-on')) { if (!c.checked) { c.checked = true; n++; } }
+  });
+  psLotsSum();
+  return n;
+}
+// The ticked lots added up, to the cent, under the table: what the statement's own totals should agree with.
+function psLotsSum() {
+  var box = document.getElementById('ps-lines'), out = document.getElementById('ps-lots-sum');
+  if (!box || !out || !box.querySelectorAll) return null;
+  var on = {}, g = 0, f = 0, n = 0;
+  Array.prototype.slice.call(box.querySelectorAll('input[type=checkbox]')).forEach(function (c) { if (c.checked) { on[c.getAttribute('data-sid')] = 1; n++; } });
+  Array.prototype.slice.call(box.querySelectorAll('input.ps-lot-g')).forEach(function (i) { var v = parseFloat(i.value); if (on[i.getAttribute('data-sid')] && !isNaN(v)) g = roundCents(g + roundCents(v)); });
+  Array.prototype.slice.call(box.querySelectorAll('input.ps-lot-f')).forEach(function (i) { var v = parseFloat(i.value); if (on[i.getAttribute('data-sid')] && !isNaN(v)) f = roundCents(f + roundCents(v)); });
+  out.textContent = n ? n + ' lot' + (n === 1 ? '' : 's') + ' ticked: gross ' + fmt(g) + ', fees ' + fmt(f) + ', net ' + fmt(roundCents(g - f)) + '. The statement\u2019s totals should agree.' : '';
+  return { n: n, gross: g, fees: f };
+}
 function saveProceedsStatement() {
   var g = function (id) { return document.getElementById(id); };
   var fb = g('ps-fb');
@@ -32238,9 +32315,28 @@ function saveProceedsStatement() {
   if (bad(gross)) miss.push('the gross');
   if (fees !== null && bad(fees)) miss.push('the commission and fees as a figure');
   if (bad(net)) miss.push('the net paid');
+  // The lots' figures, as typed in the table (P25, Q39): a negative one is refused with the rest.
+  var lotVal = function (cls, sid) {
+    var el = Array.prototype.slice.call(box.querySelectorAll('input.' + cls)).filter(function (i) { return String(i.getAttribute('data-sid')) === sid; })[0];
+    var v = el ? String(el.value || '').trim() : '';
+    return v === '' ? null : Number(v);
+  };
+  var lots = sids.map(function (sid) { return { sid: sid, gross: lotVal('ps-lot-g', sid), fees: lotVal('ps-lot-f', sid) }; });
+  if (lots.some(function (l) { return (l.gross !== null && bad(l.gross)) || (l.fees !== null && bad(l.fees)); })) miss.push('each lot\u2019s gross and fees as figures');
   if (miss.length) return refuse('To record this statement, enter ' + _andJoin(miss) + '. Nothing was saved.');
   var byId = {};
   _jobInvRefs(jobId).forEach(function (r) { byId[String(r.stableId)] = r; });
+  // Each lot's figures onto its line, as the person's edit (a line whose figures did not change is left as it was).
+  var _lotsWritten = 0;
+  lots.forEach(function (l) {
+    var r = byId[l.sid];
+    if (!r) return;
+    var changed = false;
+    if (l.gross !== null && (r.gross === '' || r.gross == null || roundCents(l.gross) !== roundCents(r.gross))) { r.gross = roundCents(l.gross); changed = true; }
+    if (l.fees !== null && (r.fees === '' || r.fees == null || roundCents(l.fees) !== roundCents(r.fees))) { r.fees = roundCents(l.fees); changed = true; }
+    if (changed) { _setPhotoRef(jobId, _invTouch(r)); _lotsWritten++; }
+  });
+  if (_lotsWritten) { savePhotoRefs(jobId); _scheduleInventorySync(jobId); }
   var rec = jobListPut(job, 'proceedsStatements', {
     vendor: val('ps-vendor'), statementDate: val('ps-date'),
     lines: sids.map(function (sid) { return { stableId: sid, itemNo: (byId[sid] && byId[sid].itemNo) || '' }; }),
@@ -32550,7 +32646,7 @@ function printAppraisalWorklist(jobId, opt) {
           // the two avenues are not alternatives — this line is on the worklist AND already
           // routed, which is the whole point of appraise not being a disposition.
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.disposition || 'Not yet decided') + '</td>'
-          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.condition || '—') + '</td>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(invConditionText(r)) + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + (r.driveFileUrl ? '<a href="' + esc(r.driveFileUrl) + '">photo</a>' : '—') + '</td>'
           + '</tr>';
       }).join('');
@@ -34259,6 +34355,7 @@ function _invBulkApply(jobId, key, value) {
   }
   else if (key === 'roomIdx')      what = items + ' moved to ' + _invRoomName(jobId, picked[0].roomIdx) + '.';
   else if (key === 'valSource')    what = 'Valuation source set to ' + value + ' on ' + items + '.';
+  else if (key === 'condition')    what = 'Condition set to ' + value + ' on ' + items + '.';
   // ⚠ ONLY WHERE NOTHING ABOVE SAID WHAT CHANGED (P22): this `else` overwrote the first chain's sentence, so Keep, Move
   // or Hold swept across a selection, and Mark reviewed, both confirmed as "N items updated". Accept values (P23) keeps
   // its own sentence the same way.
@@ -36240,6 +36337,8 @@ function _renderInvBulk(job) {
     + menu('disposition', 'Set disposition…', _invDispOptions(job, _invBulkCommon(picked, 'disposition')), _invBulkCommon(picked, 'disposition'))
     // Only where the field itself shows (an estate): `_invKeyOnJob` is the panel's own rule.
     + (_invKeyOnJob(job, 'valSource') ? menu('valSource', 'Set valuation source…', INV_VAL_SOURCES, _invBulkCommon(picked, 'valSource')) : '')
+    // Condition across a selection (P25, Q50): Good on forty lines, then the exceptions in their own rows.
+    + (_invKeyOnJob(job, 'condition') ? menu('condition', 'Set condition…', INV_CONDITIONS, _invBulkCommon(picked, 'condition')) : '')
     + menu('roomIdx',     'Move to room…', roomVals, _invBulkRoomCommon(picked))
     // ⚠ A DISTRIBUTION IS DOZENS OF ITEMS TO ONE PERSON — clearing a child's bedroom is forty
     // rows and one name. menu() builds a <select>; a recipient is free text, so it is its own
@@ -43294,6 +43393,22 @@ function _assignedVendorsForJob(job) {
   });
   var cs = job.collSourcing || {};
   Object.keys(cs).forEach(function(k){ add(cs[k], false); });
+  // ⚠⚠ AND EVERY DIRECTORY VENDOR A LINE NAMES (P25, Q48; Anthony, 2026-10-09). An auction house, consigner, charity or hauler
+  // named as a leaving line's Channel / Recipient, or on a filed pickup list, did the work, and the close counted only the
+  // vendors confirmed on the Job Plan: one job closed with five such vendors unrated. A name is matched to the Vendor
+  // Directory (trimmed, case aside); a name the directory does not hold (a private buyer, a person) is nobody to rate.
+  var _dir = (typeof vendorDirectory !== 'undefined' && vendorDirectory) || [];
+  var byName = function(name) {
+    var want = String(name || '').trim().toLowerCase();
+    if (!want) return null;
+    return _dir.filter(function(v){ return String(v.vendor_name || '').trim().toLowerCase() === want; })[0] || null;
+  };
+  var addNamed = function(name) { var v = byName(name); if (v) add({ vendorId: vendorIdOf(v), vendorName: v.vendor_name }, false); };
+  (_photoRefs[job.id] || []).forEach(function(r){
+    if (r.deletedAt || r.label !== 'inventory' || r.disposition === 'Distribute') return;
+    if (INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0) addNamed(r.channel);
+  });
+  jobListEntries(job, 'signedRecords').forEach(function(rec){ if (rec.kind === 'pickup') addNamed(rec.ref); });
   return out;
 }
 // The vendors on this job still without a score. The close gate and the card both ask this one
@@ -43330,7 +43445,7 @@ function computeVendorAvg(vendorId) {
 function renderVendorScorecard(jobId, job) {
   var vlist = _assignedVendorsForJob(job);
   if (!vlist.length) {
-    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No vendors were confirmed on this job, so there is nobody to rate.</div>';
+    return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No vendor was confirmed on the Job Plan or named on a line, so there is nobody to rate.</div>';
   }
   var ratings = job.vendorRatings || {};
   return vlist.map(function(v){

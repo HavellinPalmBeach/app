@@ -431,14 +431,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: 'Auction' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_setPhotoRef', 'savePhotoRefs',
                             '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt']),
-      vars: APPR_VARS.concat(['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
+      vars: APPR_VARS.concat(['INV_LINE_INITIAL_MIN', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
       stubs: { jobs: [Object.assign({}, JOB)], _photoRefs: { 1: rows },
                _invPick: {}, _invFilter: { when: 'all', room: '', q: '', flag: '' } },
     });
@@ -479,14 +479,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '9000', disposition: 'Sell', apprId: 'ap1', valSource: 'Appraisal' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_setPhotoRef', 'savePhotoRefs',
                             '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt']),
-      vars: APPR_VARS.concat(['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
+      vars: APPR_VARS.concat(['INV_LINE_INITIAL_MIN', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
       stubs: { jobs: [Object.assign({}, JOB, {
                  appraisers: [{ id: 'ap1', name: 'M. Wayland', firm: 'Wayland Fine Art' }] })],
                _photoRefs: { 1: rows },
@@ -544,7 +544,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: '', condition: 'Good' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['invConditionText', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',

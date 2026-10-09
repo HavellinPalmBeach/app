@@ -894,7 +894,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(s.ok ? s.val : ''), 'Havellin\'s 30% Home Sale Preparation Fee is calculated on these actuals', '⚠ the sourcing card names the Home Sale Preparation Fee');
     lacks(s.ok ? s.val : '', 'GC / Site', 'not a GC fee');
 
-    const planFns = ['prepVendorsConfirmed', 'derivedLinesHtml', 'renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2', 'chkGrid', 'planChk',
+    const planFns = ['jobListEntries', 'prepVendorsConfirmed', 'derivedLinesHtml', 'renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2', 'chkGrid', 'planChk',
       '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan', '_planTouch', 'firearmsBannerHtml',
       'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
       '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard',

@@ -21,7 +21,7 @@
 const { sandbox, fn } = require('./harness');
 const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
-const CARD_FNS = ['renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
+const CARD_FNS = ['jobListEntries', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
   '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
   'bestClientEmail', 'jobFiduciaries', 'invFiduciaryMode', '_coFmt', '_localDateOf', '_ymdLocal', 'renderVendorScorecard', 'computeVendorAvg', 'planChk',
   '_planTaskDone', 'chkGrid', 'jobCloseBlockers', 'clientRecipient', 'isDecedentJob', 'firstName'];
@@ -166,7 +166,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(h, 'not yet saved to the directory', 'and one that did not says so too — never silently');
     has(t.renderCloseoutCard(7, j, 'admin'), 'id="closeout-admin-7"', 'the card carries its host in its id');
     has(t.renderCloseoutCard(7, j, 'plan'), 'id="closeout-plan-7"', 'so both tabs can be repainted');
-    has(t.renderVendorScorecard(7, { id: 7 }), 'No vendors were confirmed', 'a job with nobody to rate says so');
+    // RESTATED (P25, Q48): the vendors to rate include those named on a line, so the empty card says both.
+    has(t.renderVendorScorecard(7, { id: 7 }), 'No vendor was confirmed on the Job Plan or named on a line', 'a job with nobody to rate says so');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

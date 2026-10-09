@@ -6,7 +6,7 @@
 // capture tier's own contract says is counsel's and not ours.
 const { sandbox, source, domStub } = require('./harness.js');
 
-const FNS = ['matterDef', 'matterTypeOf', 'invProbateRows', '_invTrackDefault',  'invDocContractBlock',
+const FNS = ['invConditionText', 'matterDef', 'matterTypeOf', 'invProbateRows', '_invTrackDefault',  'invDocContractBlock',
   'contentsList', 'printContentsList', '_clFlags',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms',
   '_invFileId', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
@@ -280,7 +280,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ]);
     const rec = ctx.contentsList(7);
     eq(rec.unnamed, 1, 'an unnamed item is a gap — counsel cannot value “—”');
-    eq(rec.noCondition, 1, 'a blank condition is a gap — it is one of the three promised fields');
+    // ⚠ RESTATED (P25, Q50; Anthony, 2026-10-09): a blank condition is no longer a gap. It reads "as photographed", which
+    // is what the photograph shows; the bulk bar sets one across a selection where a word is wanted.
+    eq(rec.noCondition, undefined, 'a blank condition is not counted as a gap');
     eq(rec.unsaved, 1, 'a photograph that never reached Drive is a gap');
     eq(rec.empty.length, 1, 'and so is a room in scope with nothing in it');
     ctx.printContentsList(7);
@@ -289,7 +291,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'This list is not yet complete.', 'the block says so plainly');
     has(t, '1 room in scope with nothing listed — Study', 'naming the room');
     has(t, '1 photographed item not yet named', 'the unnamed line');
-    has(t, '1 item with no condition recorded', 'the condition line');
+    lacks(t, 'with no condition recorded', 'and the block has no condition line');
     has(t, 'has not reached the estate’s Drive folder', 'and the missing photograph');
     // ⚠ POSITION, measured on the rendered page rather than argued. A reader works down this
     // page; a caveat printed under the list has arrived after they took it as complete.
@@ -302,7 +304,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const { ctx, last } = rig(ESTATE,
       [IT('a', { roomIdx: 1 }), IT('b', { roomIdx: 4 }), IT('c', { roomIdx: 9 })]);
     const rec = ctx.contentsList(7);
-    eq(rec.unnamed + rec.noCondition + rec.unsaved + rec.empty.length, 0, 'no gaps');
+    eq(rec.unnamed + rec.unsaved + rec.empty.length, 0, 'no gaps (a blank condition is not one since P25, Q50)');
     ctx.printContentsList(7);
     lacks(text(last().html), 'This list is not yet complete', 'and no block on the page');
   }
@@ -408,12 +410,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Photo', 'and a photograph column');
   }
 
+  // RESTATED (P25, Q50): still never an em dash; a blank reads "as photographed", as on every document.
   group('a blank condition says so rather than printing an em dash');
   {
     const { ctx, last } = rig(ESTATE, [IT('a', { condition: '' })]);
     ctx.printContentsList(7);
-    has(text(last().html), 'not recorded',
-        '⚠ a promised field left blank is named, not left looking like an empty cell');
+    has(text(last().html), 'as photographed',
+        '⚠ a promised field left blank says what describes it, not left looking like an empty cell');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

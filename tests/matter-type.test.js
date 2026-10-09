@@ -198,7 +198,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the Court Inventory stops being signed on a matter with no probate in it');
   {
-    const FNS = ['_invScheduleSection', 'invValBasisWord', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
+    const FNS = ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
                  'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
                  'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invFiduciaryMode',

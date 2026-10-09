@@ -1139,6 +1139,25 @@ lets a Court Inventory or Trust Schedule read as appraised.
 **The question.** Is *"reviewed and accepted"* the right weight for a living client's sign-off (an acknowledgement, not a
 release of claims)? Should it say anything about items the client took themselves before the work began?
 
+### D15. The release request initialled by destination, and "as photographed" ⚠ NEW P25 (2026-10-09)
+
+**What changed (Anthony, 2026-10-09: Q46 and Q50 as recommended).** The release approval request (D7) asked an initial on every
+leaving line, a $20 paperback to junk included, while the agreement's §5.3 asks written approval for sales or disposals over
+$500 and for donations. Every leaving line is still listed, grouped by destination (the disposition and the recipient). A line is
+initialled on its own at $500 and over, when it is a specific bequest, or when it carries any caution (disputed, a designated item
+going elsewhere, not yet appraised, going to someone who works with Havellin); the others read *"initialled with its group"*, and
+under each group: *"Initial once for the 2 items above going to Goodwill Palm Beach (Donate), each under $500: ______"*. Firearms
+are initialled once together (C7).
+
+Separately, a line with no condition recorded now prints *"as photographed"* in the condition column of every schedule, receipt
+and record, where it printed *"—"* or *"not recorded"*; the estimate, the agreement and the receipt release property *"in the
+condition described"*.
+
+**The question.** (1) Is one initial per destination group, with the signature at the foot, written approval of each line in it
+for §5.3's purposes, and should the $500 line be stated on the request itself rather than only in the group line? (2) Does *"as
+photographed"* serve as the condition described, where the photograph is attached or linked, or should a condition be required
+on lines above some value?
+
 ## E. What is deliberately NOT being asked
 
 So counsel does not spend time on settled ground:

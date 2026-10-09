@@ -658,7 +658,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(liveLines(fn('printCourtInventory')), '_avUnreviewedStamp(onSched)', 'the Court Inventory counts its own lines');
     has(liveLines(fn('printTrustSchedule')), '_avUnreviewedStamp(onSched)', 'the Trust Schedule too');
     has(liveLines(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all)', 'and the Estate Inventory Report');
-    const sec = sandbox({ fns: ['_invScheduleSection', 'invValBasisWord', '_invHasValue', '_invMoney', 'fmt', 'roundCents'],
+    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', '_invHasValue', '_invMoney', 'fmt', 'roundCents'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property',
       [ROW({ fmv: 640, valSource: 'Auction comps' }), ROW({ stableId: 'b', fmv: 40, valSource: 'General estimate', category: 'General/Household', qty: 60 })]);
     has(sec.html, '<th style="padding:2px 6px;">Basis</th>', 'the table has a Basis column');

@@ -758,7 +758,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(c.openProceedsStatement(7), 'the modal opens on the client');
     eq(dom.getElementById('ps-modal').style.display, 'flex', 'shown');
     const listed = dom.getElementById('ps-lines').innerHTML;
-    eq((listed.match(/data-sid="([^"]+)"/g) || []).map((s) => s.slice(10, -1)), ['a', 'b', 'c'], 'its sold lines listed to tick, and nothing else');
+    // RESTATED (P25, Q39): each sold line is a row with its tick and its gross and fees boxes, so read the ticks.
+    eq((listed.match(/type="checkbox" data-sid="([^"]+)"/g) || []).map((s) => s.replace(/^.*data-sid="/, '').slice(0, -1)), ['a', 'b', 'c'], 'its sold lines listed to tick, and nothing else');
+    eq((listed.match(/class="ps-lot-g" data-sid="/g) || []).length, 3, 'each with its gross box (P25, Q39)');
     has(dom.getElementById('ps-vendor-list').innerHTML, '<option value="Kodner Galleries">', 'the channels on them offered as who it is from');
     // Refused by name, everything missing at once.
     c.saveProceedsStatement();

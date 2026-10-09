@@ -6,7 +6,7 @@
 // *Estate Inventory — Asset Schedule*.
 const { sandbox, source, domStub } = require('./harness.js');
 
-const FNS = ['_invScheduleSection', 'invValBasisWord', '_invTrackDefault', 
+const FNS = ['invConditionText', '_invScheduleSection', 'invValBasisWord', '_invTrackDefault', 
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   'printEstateInventoryReport', 'jobOnProbateTrack', 'printCourtInventory', '_avUnreviewedStamp', 'printContentsList', 'contentsList',
   'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',

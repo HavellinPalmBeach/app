@@ -131,7 +131,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // not match its shape — so the card could go back to summing by position with the
     // whole suite passing. It is the concierge's own fee readout, in the field, on money.
     const plan = (est, job, cos) => sandbox({
-      fns: ['renderPrepJobPlan', 'derivedLinesHtml', 'prepVendorsConfirmed', 'planPhaseWrap', 'secCaret', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
+      fns: ['jobListEntries', 'renderPrepJobPlan', 'derivedLinesHtml', 'prepVendorsConfirmed', 'planPhaseWrap', 'secCaret', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
             'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt',
             // The prep plan carries the firearms banner since 2026-09-20.
             'firearmsBannerHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'planChk', '_planTaskDone', 'esc',

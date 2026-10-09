@@ -8,7 +8,7 @@ Status of each fix pack lives in this file: when a session lands a pack, it mark
 
 **Status, 2026-10-06:** P16 to P21 landed on 2026-09-30 to 2026-10-05. On 2026-10-06 P22 cleared the known-bug list with Anthony's answers of that day (its backend half `2026-10-06`), and **P23, Agent Two (valuation), landed** (live once the Apps Script is redeployed, `2026-10-06b`). The same day **P24** added the room check and put walkthrough collections on the inventory by themselves, for the first mock job with a full inventory: Anthony redeployed `2026-10-06c` that day, and its first live room check read eight photographs in 32 seconds, so `2026-10-06d` reads a room in runs of 12 to answer inside Apps Script's limit (redeployed the same afternoon: six photographs in one run in 15 seconds). What comes next is the road to launch below: Anthony chose Agent Two first, then a freeze.
 
-**Status, 2026-10-09:** the job-flow audit below ran a whole job on every service through the real controls (2026-10-08) and fixed what met the triage bar's *fix now* and the cheap *fix if cheap* items. Anthony answered Q33 to Q56 on 2026-10-09: 23 to build as P25, Q55 kept as it is. P25 group 1 (papers and money: Q33 Q34 Q35 Q36 Q37 Q38 Q49 Q51 Q52 Q53 Q54 Q56) and group 2 (field taps: Q40 Q41 Q42 Q43 Q44 Q45 Q47) landed 2026-10-09; group 3 (desk: Q39 Q46 Q48 Q50) follows.
+**Status, 2026-10-09:** the job-flow audit below ran a whole job on every service through the real controls (2026-10-08) and fixed what met the triage bar's *fix now* and the cheap *fix if cheap* items. Anthony answered Q33 to Q56 on 2026-10-09: 23 to build as P25, Q55 kept as it is. P25 landed in full on 2026-10-09: group 1 (papers and money: Q33 Q34 Q35 Q36 Q37 Q38 Q49 Q51 Q52 Q53 Q54 Q56), group 2 (field taps: Q40 Q41 Q42 Q43 Q44 Q45 Q47) and group 3 (desk: Q39 Q46 Q48 Q50).
 
 ## Road to launch (Anthony, 2026-10-06)
 
@@ -948,7 +948,7 @@ Ordered by what they protect: the client's and counsel's papers first, then the 
   *Answer (2026-10-09):* Agreed: client documents name the job's assigned concierge; the preparer shows as *Walkthrough by*. *(built by P25 group 1, 2026-10-09)*
 - **Q39** Proceeds are typed twice: each sold lot's gross and fees in its own record (four taps a lot, about 750 on a full estate), then the statement's totals.
   *Recommendation:* A lot-by-lot table inside the statement dialog, pre-ticked with that vendor's lines, writing gross and fees onto the lines; the to-the-cent reconciliation stays.
-  *Answer (2026-10-09):* Agreed: a lot-by-lot table inside the statement dialog, pre-ticked with that vendor's lines, writing gross and fees onto the lines; the to-the-cent reconciliation stays. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: a lot-by-lot table inside the statement dialog, pre-ticked with that vendor's lines, writing gross and fees onto the lines; the to-the-cent reconciliation stays. *(built by P25 group 3, 2026-10-09)*
 - **Q40** About 14 taps per room before the first item. On living work the *As-found pass complete* tick only quiets a flag.
   *Recommendation:* On living jobs the as-found shot stands as the pass (still flagged if missing); a *Next: Items* button in the camera; *Cleared* offered on the room's row. Estates keep the tick and the refusal.
   *Answer (2026-10-09):* Agreed: on living jobs the as-found shot stands as the pass (still flagged if missing); *Next: Items* in the camera and *Cleared* on the room's row on every job; estates keep the tick and the refusal. *(built by P25 group 2, 2026-10-09)*
@@ -969,19 +969,19 @@ Ordered by what they protect: the client's and counsel's papers first, then the 
   *Answer (2026-10-09):* Agreed: no dialog; a passive line under Submit names the rooms with no note. (A first tap of *Only special rooms* was a mis-tap; Anthony corrected it.) *(built by P25 group 2, 2026-10-09)*
 - **Q46** The release request asks two initials on every leaving line, a $20 paperback to junk included; the agreement's §5.3 asks written approval only for sales or disposals over $500, and donations.
   *Recommendation:* List every line; one initial per destination group under $500; line initials for $500 and over, bequests, and anything carrying a caution.
-  *Answer (2026-10-09):* Agreed: every leaving line listed; one initial per destination group under $500; line initials for $500 and over, bequests and anything carrying a caution. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: every leaving line listed; one initial per destination group under $500; line initials for $500 and over, bequests and anything carrying a caution. *(built by P25 group 3, 2026-10-09)*
 - **Q47** A second concierge nobody chose: the engine's recommendation pre-selects two on the estimate, and the team cannot be confirmed until a second is named.
   *Recommendation:* Two only when the estimator picks two.
   *Answer (2026-10-09):* Agreed: two concierges only when the estimator picks two; the engine's recommendation stays a suggestion. *(built by P25 group 2, 2026-10-09)*
 - **Q48** Vendor ratings at close count only vendors confirmed on the Job Plan; an auction house or charity used as a line's channel is never asked, so the gate was passed with five vendors unrated.
   *Recommendation:* Also every vendor named as a channel or on a pickup list.
-  *Answer (2026-10-09):* Agreed: the close also asks a rating of every vendor named as a line's channel or on a pickup list. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: the close also asks a rating of every vendor named as a line's channel or on a pickup list. *(built by P25 group 3, 2026-10-09)*
 - **Q49** The walkaway. A refund above the computed amount (after Havellin's uncured breach, which §8.1 requires, or goodwill) cannot be recorded; and §8.1 promises a final invoice within 10 business days that the app never offers on Deposit Retained.
   *Recommendation:* Allow a refund above the amount due, up to what the job holds, asked first with a required reason; offer a *work done* final on Deposit Retained that shows what was earned and the refund due.
   *Answer (2026-10-09):* Agreed: a refund above the amount due may be recorded, up to what the job holds, asked first with a required reason; a *work done* final is offered on Deposit Retained, showing what was earned and the refund due. *(built by P25 group 1, 2026-10-09)*
 - **Q50** Condition is promised on the estimate, the agreement and the receipt (*"in the condition described"*) and never recorded: every schedule prints *—*.
   *Recommendation:* Condition on the desk's bulk bar (set *Good* across a selection, mark the exceptions) and *as photographed* where blank.
-  *Answer (2026-10-09):* Agreed: condition on the desk's bulk bar (set *Good* across a selection, mark the exceptions); a blank prints *as photographed*. *(to build: P25)*
+  *Answer (2026-10-09):* Agreed: condition on the desk's bulk bar (set *Good* across a selection, mark the exceptions); a blank prints *as photographed*. *(built by P25 group 3, 2026-10-09)*
 - **Q51** A living family gets two near-identical papers (the Contents Record, and the Disposition Ledger to sign at close), and the record says *Junk*.
   *Recommendation:* One paper: the Contents Record with a signature line, the ledger only where there are proceeds; *Junk* reads *Disposed of*.
   *Answer (2026-10-09):* Agreed: the Contents Record carries a signature line and is the paper a living family signs; the Disposition Ledger prints on living work only where there are sale proceeds; *Junk* reads *Disposed of*. *(built by P25 group 1, 2026-10-09)*

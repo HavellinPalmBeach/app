@@ -144,7 +144,8 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
      '⚠ and ABOVE the first room heading');
   ok(/1 room in scope with nothing listed — Study/.test(txt), 'naming the empty room');
   ok(/1 photographed item not yet named/.test(txt), 'the unnamed item');
-  ok(/1 item with no condition recorded/.test(txt), 'the blank condition');
+  // P25 Q50: a blank condition is no longer a gap; the line reads "as photographed".
+  ok(!/no condition recorded/.test(txt), '⚠ a blank condition is not a gap (P25, Q50)');
   ok(/has not reached the estate’s Drive folder/.test(txt), 'and the photograph that never uploaded');
 
   // The three promised fields plus the flags.
@@ -152,7 +153,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   ok(/Art & Décor/.test(txt), 'with the category under it');
   ok(/Serial VIN-4471/.test(txt), 'and a serial where one exists');
   ok(/Fair/.test(txt), 'condition');
-  ok(/not recorded/.test(txt), 'a blank condition says so');
+  ok(/as photographed/.test(txt), 'a blank condition reads as photographed (P25, Q50)');
   ok(/DESIGNATED TO A NAMED PERSON/.test(txt), 'the bequest flag');
   ok(/DISPUTED — HELD/.test(txt), 'the dispute flag');
   ok(/SPECIALIST SUGGESTED/.test(txt), 'the specialist flag');
