@@ -87,7 +87,7 @@ const phaseText = (P) => JSON.stringify(P);
 
 // ── The two schedules: the Trust Schedule suite's lift list, the real date formatter, and the signers.
 const SCH_FNS = ['invConditionText', 
-  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
+  '_invDocPartyHead', 'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
   '_invOnProbateSchedule', '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue', 'invDocContractBlock',
   'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'matterDef', 'matterTypeOf',
   'invProbateRows', 'invFiduciaryMode', 'isDecedentJob', '_invAssignItemNos', '_jobInvRefs', '_invTouch', 'savePhotoRefs',
@@ -484,7 +484,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(sched('trust', JOB('trust', { trustName: '<b>X</b> Trust' }), items()), 'The &lt;b&gt;X&lt;/b&gt; Trust', '⚠ escaped');
     // One line, unchanged, without co-trustees.
     const OLD = '<div style="margin-top:18px;font-size:11px;">Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Successor Trustee</span></div>';
-    has(h, OLD, 'no co-trustee: the one blank line, byte for byte as before');
+    // RESTATED (2026-10-10, the core-jobs run): the one recorded trustee is named on the line too; the blank line is for nobody recorded.
+    lacks(h, OLD, 'no co-trustee: the line is no longer blank');
+    has(h, 'Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Ruth Adler &middot; Successor Trustee</span>', '…it names the trustee');
     eq(count(h, 'Received for the trust&rsquo;s records by'), 1, 'and only one');
     // Co-trustees: a line apiece, named.
     const co = sched('trust', JOB('trust', Object.assign({ coFiduciaries: CO2 }, TRUST)), items());
@@ -518,7 +520,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const OLD = '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>';
     const one = sched('court', JOB('probate'), items());
     ok(one.indexOf('#357a50') > 0, 'fixture: a FINAL court schedule');
-    has(one, OLD, 'one personal representative: the one blank line, byte for byte as before');
+    // RESTATED (2026-10-10): the one recorded representative is named on the adoption line too.
+    lacks(one, OLD, 'one personal representative: the line is no longer blank');
+    has(one, 'Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Ruth Adler &middot; Personal Representative / authorized fiduciary</span>', '…it names the representative');
     eq(sched('court', JOB(''), items()), one, '⚠ an unanswered matter renders the court schedule exactly as probate');
     const COPR = [{ id: 'c1', name: 'Paul Adler', role: 'Personal Representative' }];
     const two = sched('court', JOB('probate', { coFiduciaries: COPR }), items());
@@ -544,7 +548,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-08 (the job-flow audit): the client estimate's identity line reads docPartyIdent, which the invoices
     // read too (they billed the decedent), so the namer's reader there is docPartyIdent; the beneficiary's receipt
     // names the trust through it too (invReceiptFrom).
-    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 2, probateAgreementHtml: 2 },  // P22 E: §5.1's dated acceptance
+    // RESTATED (2026-10-10): the Trust Schedule asks the title a third time, to print its own trust line only where the head does not already carry it.
+    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 3, probateAgreementHtml: 2 },  // P22 E: §5.1's dated acceptance
        'the trust\'s namer: the agreement\'s two rows, the schedule\'s header and the client estimate\'s identity line');
     eq(readers('scheduleSigners'), { printCourtInventory: 2, printTrustSchedule: 2 }, 'who signs a schedule: the two schedules');
     eq(readers('scheduleSignLines'), { printCourtInventory: 1, printTrustSchedule: 1 }, 'and their lines');

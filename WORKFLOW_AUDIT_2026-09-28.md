@@ -10,6 +10,8 @@ Status of each fix pack lives in this file: when a session lands a pack, it mark
 
 **Status, 2026-10-09:** the job-flow audit below ran a whole job on every service through the real controls (2026-10-08) and fixed what met the triage bar's *fix now* and the cheap *fix if cheap* items. Anthony answered Q33 to Q56 on 2026-10-09: 23 to build as P25, Q55 kept as it is. P25 landed in full on 2026-10-09: group 1 (papers and money: Q33 Q34 Q35 Q36 Q37 Q38 Q49 Q51 Q52 Q53 Q54 Q56), group 2 (field taps: Q40 Q41 Q42 Q43 Q44 Q45 Q47) and group 3 (desk: Q39 Q46 Q48 Q50).
 
+**Status, 2026-10-10:** the core-jobs run below (five whole jobs, the second pass the road to launch asks for) found two wrong-money finals and a list of cheap friction, all fixed the same day; three questions, Q57 to Q59, wait on Anthony.
+
 ## Road to launch (Anthony, 2026-10-06)
 
 Anthony asked how to stop the whack-a-mole and reach an app that works for a transition concierge in the field and gives a trust attorney or personal representative what they need. The answer recommended, and his choice on the freeze (*"Agent Two first"*):
@@ -21,6 +23,40 @@ Anthony asked how to stop the whack-a-mole and reach an app that works for a tra
 5. **Real world:** a mock job in a real house (Ashley as concierge on her phone, real Drive and Gmail, the DocuSign sandbox with a co-signer, a Stripe test ACH), then an hour with a friendly trust and estate attorney on the trust package (*what is missing?*). The freeze also lets the counsel bundle go.
 6. **Exit:** all six pass twice running with nothing in *fix now*, the pilot is done and the attorney has read the package. Tag it v1.0; after that every change reruns the six.
 7. **The field method (2026-10-06).** Anthony asked for a best-practices manual for photographing a house so nothing is counted twice (*"if there is a blue vase and I take a picture of it on a dresser and then I take another picture zoomed in on the blue vase … the agent should realize it's the same"*: it does not, unless the zoom is a *Detail of last*). Built as `photography-guide.html`, *Photographing a House*, and rewritten the same day in plain words and shorter at Anthony's ask (*"write this in human speak and cut it down to size"*): three rules, the camera's four buttons, the vase done wrong and right, a room in six steps, its own photo or a group photo, close-ups, special situations, the review on the computer and a pocket card. Draft for Anthony to read; the six scripts and the pilot house follow it. Found writing it, for the triage bar (CLAUDE.md, Open work): a walkthrough collection shot in the house stays listed as not brought in, and bringing it in doubles it; a split frame's chip, ⚑ and close-ups stay on its first line; a note said over a close-up is read by nobody; *Possible duplicates* compares names only. Anthony took the room check over the guide's shot spot (*"Fix option 2 above with room level check. That's an obvious fix and will help with our fake client we are doing tomorrow with full inventory"*) and asked for collections on the inventory by themselves (*"definitely fix the collection double count. collections should automatically be in inventory and obviously need photo documentation"*): built as P24 the same day, below, which fixes the first and the last of those four. The guide's other two calls (the whole-house as-found pass first on an estate; cash never an Items shot) are still drafted for him to confirm.
+
+## Core-jobs run (2026-10-10)
+
+Anthony: *"run through a series of jobs again. not fringe weird situations, just core havellin jobs. confirm all workflows, app functionality, all paperwork, from Estimate, to agreement, to invoices and any inventory/disposition documentation … prioritize TC usability … fewer tic boxes … on estate jobs, pay particular attention to the photo documentation work flow."* Five auditors, each one whole job on a frozen copy through the real controls (the field at 390 px and 1440, every document read as its reader would), against a stateful fake Apps Script.
+
+| Job | Reached | Money (to the cent) | Taps |
+|---|---|---|---|
+| Home Transition, hourly, 12 rooms, a change order (+6/+8 h), move day, the Contents Record signed | Closed; the final a refund (fixed below) | $21,700 estimated; deposit $10,850, midpoint $5,425, final $6,225 of work | ≈270; ≈17 a room of three items |
+| Home Cleanout, fixed price, 7 rooms, a pickup list, the Contents Record signed | Closed, final paid | $17,300 fee (hourly basis $14,400 + 20% → next $100), $8,650 / $4,325 / $4,325 | ≈220; 13 a room + 2 an item |
+| Trust estate, one trustee, a coin collection, auction and donation, the signed ledger, the trust package | Closed, final paid | $32,700 fixed; $16,350 / $8,175 / $8,175; auction $13,518 gross reconciled; Trust Schedule FINAL $16,165 | 467; 30 a room |
+| Probate estate, Letters, an appraisal, a bequest and receipt, proceeds, the Court Inventory FINAL with §732.402 exempt, the probate package | Closed, final paid | $49,000 fixed; $24,500 / $12,250 / $12,250; Court Inventory $23,370 + exempt $400 | 415; 21–26 a room of 4–5 items |
+| Home Prep, fee-only, three vendors, a change order adding a fourth | Closed, final paid | fee $4,620 on $15,400 of quotes → $4,935 on $16,450; the final restated the second invoice (fixed below) | 124 |
+
+Zero page errors in every run; no overflow at 390 px but the probate desk's appraisal guardrail (213 px; fixed).
+
+**Where the taps go.** The field is lean: 11–13 fixed taps a room (the card, As found, the shots, Next: Items, Done, After, the shot, Done, the as-found tick on an estate, Lock, back, Mark cleared) and 1.3–2 a line; the chip latches, so a pile of ten costs ten shutter taps and one chip. Cleared is already offered in the workspace after Lock, so the ← Rooms + Mark cleared pair is avoidable. The desk without Agent One is the heaviest cost: 17 to 35 names and values typed by hand on a small house. The close sends the concierge to another tab to rate the vendors and back (7 taps). Only four to six dialogs in a whole job, none redundant.
+
+**Fixed in this pass** (`tests/core-jobs-run.test.js`, browser step 75; `BUILD_HISTORY.md` has the detail):
+- [x] A finished hourly job under the deposit and midpoint had no way forward: the final printed the whole excess as *Credit*, the band asked to collect $-10,050, the recorder refused every amount. The final settles (the deposit earned, the rest due back) and the rail's last step is the refund.
+- [x] The Home Prep final restated the second invoice at today's figure and told a client who had paid in full they were in arrears: what each invoice asked is recorded at send.
+- [x] The invoice page and the emails say when each stage is due, in the agreement's words; a $0 final says nothing further is due; the midpoint shows the 75% it brings the client to.
+- [x] The agreement email's schedule names a Home Prep's own stages; a fee-only dashboard says no hours are billed and offers no discount; the vendors fold opens on an active Home Prep while a vendor is unconfirmed.
+- [x] The hauler the estimate priced is offered on its own slot; the hours fold's second-concierge row follows the estimator's pick.
+- [x] Reviewed is read off a line a person named and decided (the family's papers stopped reading *IN PROGRESS — 0 of 25*).
+- [x] A line shot in the field takes the confirmed vendor at capture; a Sell line takes the one selling vendor; arming a collection drops the latched chip; a note said over a close-up goes on its item.
+- [x] Save Estimate no longer refuses on a blank home value (a five-tap detour); flagged.
+- [x] Every desk paper heads with the estate or the trust; the Court Inventory names the court; a schedule names the one recorded fiduciary; the request's group initial names a line with no value; an appraiser with no fee reads *Quote to follow*; the worklist drops appraised and waived lines; a Keep line reads *kept by the client*; the close names rooms not cleared and lines with no recipient; the Releases card repaints as a buyer is typed; the guardrail fits a phone.
+
+**Questions for Anthony** (built as the reading; a one-line change either way):
+- Q57 A finished hourly job whose payments exceed the work keeps the deposit, as a walkaway does (both agreements: earned on signature, applied against the hours), and refunds only what came in above it. The alternative is refunding the whole excess, as the final printed before. *Recommended: keep the deposit (built).*
+- Q58 A line a person named and decided on the desk counts as reviewed; the Reviewed tick stays for the names Agent One gave. *Recommended: yes (built).*
+- Q59 Field acts (a packet handed over in person, a cheque recorded, a signed copy filed) are attributed to the agreement's approver (`_actor`), so a packet Ashley handed over reads *Anthony Graziano · Handed over in person* on the timeline. Stamp the job's concierge on field acts instead? *Recommended: yes; not built (a rule in CLAUDE.md).*
+
+**Found and not fixed** (the triage bar; listed in `CLAUDE.md`, Open work): the standard form's §12.1 *Effective Date* is undefined (counsel bundle); the Court Inventory is offered on a trust-only desk (it refuses on its face, by design); More ▾ closes on every desk redraw; the bulk bar takes half a phone screen; an early Home Prep second invoice sends with no word that it is early; the ledger's and the Contents Record's Date column; two sentences for when the midpoint goes; hours logged on a future date; each paper uploaded twice (harmless by name); the conditional Letters representation on a trust-only agreement (counsel); three $0 rows on a fee-only Build Estimate summary; *—* against *not stated* for a basis.
 
 ## Job-flow audit (2026-10-08)
 

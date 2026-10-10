@@ -6,11 +6,11 @@
 // capture tier's own contract says is counsel's and not ours.
 const { sandbox, source, domStub } = require('./harness.js');
 
-const FNS = ['invConditionText', 'matterDef', 'matterTypeOf', 'invProbateRows', '_invTrackDefault',  'invDocContractBlock',
+const FNS = ['invLineReviewed', '_invDocPartyHead', 'invConditionText', 'matterDef', 'matterTypeOf', 'invProbateRows', '_invTrackDefault',  'invDocContractBlock',
   'contentsList', 'printContentsList', '_clFlags',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms',
   '_invFileId', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
-  '_invDocHead', '_invDocName', '_invPrintThumb', '_invProgressStamp', '_invReviewStats',
+  '_invDocHead', '_invDocName', '_invPrintThumb', '_invProgressStamp', '_invReviewStats', 'invLineReviewed',
   '_invThumbFor', '_invThumbCache', '_invThumbKey',
   'invFiduciaryMode', 'isDecedentJob', 'svcFamily',
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
@@ -245,7 +245,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ THE PROGRESS STAMP NAMES WHAT THIS DOCUMENT CARRIES');
   {
-    const p = sandbox({ fns: ['_invProgressStamp', '_invReviewStats'] });
+    const p = sandbox({ fns: ['_invProgressStamp', '_invReviewStats', 'invLineReviewed'] });
     const plain = p._invProgressStamp([{ reviewed: true }, {}]);
     const noVal = p._invProgressStamp([{ reviewed: true }, {}], { noValues: true });
     has(plain, 'Values and dispositions on unreviewed lines may still change',

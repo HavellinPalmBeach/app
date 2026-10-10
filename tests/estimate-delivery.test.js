@@ -35,7 +35,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // because `uploadHtmlToDrive` overwrites by filename: a changed name would orphan
     // every estimate already in Drive rather than replacing it.
     has(client, "docAction(jobId, 'estimate', 'file'", 'the client copy files through the one action');
-    const nm = sandbox({ fns: ['docNames', 'docKeyFor', 'estimateDocNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD'] });
+    const nm = sandbox({ fns: ['paymentStageWord', 'docNames', 'docKeyFor', 'estimateDocNames'], vars: ['EST_TOLERANCE_PCT', 'DOC_STAGE_WORD'] });
     const j = { hvlId: 'HVL-0007', addr: '69 Beach Blvd, Palm Beach FL', name: 'Butler' };
     eq(nm.docNames(j, 'estimate', {}).drive, nm.estimateDocNames(j).driveClient,
       'and lands on the same filename, so a re-file replaces rather than accumulates');
@@ -859,11 +859,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the agreement email states the schedule and reads as a covering note');
   {
     const ctx = sandbox({
-      fns: ['buildAgreementEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'buildAgreementEmailText', 'agreementEmailSubject',
+      fns: ['buildAgreementEmailHtml', 'paymentStageWord', 'docServiceTitle', 'probateSvcOffTrack', 'buildAgreementEmailText', 'agreementEmailSubject',
             'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt',
             // P21: the co-representatives' line (Q31) and the list it asks
             'agreementEmailCoSignLine', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode', 'isDecedentJob'],
-      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DECEDENT_SERVICES'],
+      vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DECEDENT_SERVICES'],
       stubs: {
         assignedTCContact: () => ({ name: 'Anthony Graziano', phone: '(561) 370-4700', email: 'anthony@havellinpalmbeach.com' }),
         bestClientGreetingName: () => 'Margaret',
@@ -891,10 +891,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // A job with no approved estimate must not print a $0 schedule.
     const ctx2 = sandbox({
-      fns: ['buildAgreementEmailHtml', 'docServiceTitle', 'probateSvcOffTrack', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt',
+      fns: ['buildAgreementEmailHtml', 'paymentStageWord', 'docServiceTitle', 'probateSvcOffTrack', 'paymentSplit', '_emHtml', '_emMoney', '_emPhoneLines', 'conciergePhones', 'conciergePhonesText', 'roundCents', 'fmt',
             // P21: the co-representatives' line (Q31) and the list it asks
             'agreementEmailCoSignLine', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode', 'isDecedentJob'],
-      vars: ['EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DECEDENT_SERVICES'],
+      vars: ['DOC_STAGE_WORD', 'EST_TOLERANCE_PCT', 'EMAIL_BRAND', 'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DECEDENT_SERVICES'],
       stubs: {
         assignedTCContact: () => ({ name: 'A', phone: 'p', email: 'e' }),
         bestClientGreetingName: () => 'X', svcLabelOf: () => 'S',

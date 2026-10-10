@@ -795,6 +795,43 @@ deposit as the floor, match the clause as written? Should the clause name the fi
 
 ---
 
+### B16. A finished hourly job whose payments exceed the work: the deposit kept, the rest refunded ⚠ NEW 2026-10-10
+
+**What changed (the core-jobs run, 2026-10-10).** A job that finishes with its hours under what the deposit and the midpoint
+already collected (both are taken on the estimate) is a normal end. The final invoice printed the whole excess as a credit, the
+deposit included. It now settles as a terminated job does under B15: *"Settlement — the payments received exceed the work done"*,
+the deposit earned on signature and applied against the hours (standard §12.4, estate §8.1), what was earned is the deposit or the
+work done, whichever is more, and only what came in above that is refunded.
+
+**The question.** Both hourly deposit clauses sit in the termination sections. Does *"earned in full on signature … no part of it
+is returned where it exceeds the hours worked"* govern a job completed as agreed, or only a termination? If the former, should §3
+say so beside the payment schedule, so a client reading the final is not surprised; if the latter, the app refunds the whole excess
+on a completed job and this item names the one-line change.
+
+---
+
+### B17. Standard §12.1 names an "Effective Date" the form never defines ⚠ NEW 2026-10-10
+
+**What it says.** *"12.1 Term. This Agreement commences on the Effective Date and continues until Services are completed, unless
+earlier terminated."* The term appears nowhere else in the standard form; the header carries only an Estimated Start Date, and the
+signature page carries each party's signature date.
+
+**The question.** Define it (the later of the two signature dates), or say *"commences on signature by both Parties"*.
+
+---
+
+### B18. Two sentences riding on the wrong engagement ⚠ NEW 2026-10-10
+
+- The estate form prints the conditional representation *"If acting as Personal Representative … Letters of Administration"*
+  beside the trust representation on a trust-only matter, where no Letters exist.
+- The standard form's §4.1 (*"direct disposition of the contents of the property"*) and §4.2 (*"identify in writing any items
+  that must not be removed, donated, or discarded … on behalf of all heirs, beneficiaries"*) print on a Home Prep for Sale
+  agreement, a listing-preparation engagement with no disposition in it.
+
+**The question.** Drop each where it does not apply, or keep them as harmless boilerplate.
+
+---
+
 ## C. Estate Firearms Protocol
 
 The full protocol is `firearms-protocol.html` in the repository and is linked from the app;

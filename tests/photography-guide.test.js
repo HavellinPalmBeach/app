@@ -8,7 +8,7 @@
 // the zoom is a close-up (the Close-up shutter, since P25): the app names each item photo on its own and lists everything in it. The
 // guide teaches the method, and to do that it says how the app treats a photo: the first four close-ups are read, a
 // close-up never adds an item, the destination and the Appraise flag stick to one thing per photo, a note said after a
-// close-up stays on it, the $100 rule on a Form 706 estate, the duplicate check's batches of 12 sharing 6, and a
+// close-up goes on its item, the $100 rule on a Form 706 estate, the duplicate check's batches of 12 sharing 6, and a
 // walkthrough collection already on the list.
 //
 // ⚠ EACH OF THOSE IS A SENTENCE A PERSON ACTS ON, so each is held here to the code that makes it true, driven where it
@@ -180,13 +180,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(live(fn('fieldCamSetDisp')), '_fieldCam.disp = key;', 'which only a tap on a destination changes');
   }
 
-  group('step 5: a note said after a close-up stays on the close-up, where nobody sees it');
+  // RESTATED (2026-10-10, the core-jobs run): a note said after a close-up goes on the item the close-up is of
+  // (_fieldNoteAppend), so the desk and Agent One read it; a note already on a detail record is still not sent.
+  group('step 5: a note said after a close-up goes on the item it is a close-up of');
   {
-    has(guide, 'stays on the close-up', 'the guide says so');
+    has(guide, 'goes on the thing the close-up is of', 'the guide says so');
+    lacks(guide, 'stays on the close-up', '⚠ and no longer says it is lost');
     const ctx = rig([ROW({ fieldNote: 'Venetian glass' }), DETAIL({ fieldNote: 'promised to Karen' })]);
     const payload = ctx._agShotPayload(7, { srcId: 's1', rows: ['s1'] });
     eq(payload && payload.fieldNote, 'Venetian glass', 'the app is sent the item’s own note');
-    eq(JSON.stringify(payload).includes('Karen'), false, 'and nothing said over its close-up');
+    eq(JSON.stringify(payload).includes('Karen'), false, 'a note sitting on a detail record is not sent');
     eq(ctx._jobInvRefs(7).map((r) => r.fieldNote), ['Venetian glass'], 'the list carries the item’s note alone');
   }
 

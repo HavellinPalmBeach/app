@@ -22,7 +22,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('grouping — disposition first, undecided at the top, rooms in walkthrough order');
   {
     const ctx = sandbox({
-      fns: ['_invDispLabel', '_invGroupItems'],
+      fns: ['invLineReviewed', '_invDispLabel', '_invGroupItems'],
       vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED'],
       stubs: { _invRoomName: (jobId, idx) => (idx == null ? 'Unassigned / estate-wide' : 'Room ' + idx) },
     });
@@ -56,7 +56,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('review state gates nothing and locks nothing');
   {
-    const ctx = sandbox({ fns: ['_invReviewStats', '_invProgressStamp'] });
+    const ctx = sandbox({ fns: ['invLineReviewed', '_invReviewStats', '_invProgressStamp'] });
 
     eq(ctx._invReviewStats([{ reviewed: true }, {}, {}]), { done: 1, total: 3, complete: false },
        'progress is counted');

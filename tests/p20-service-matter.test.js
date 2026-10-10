@@ -511,7 +511,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('fmtCEDate')), "new Date(d+'T12:00:00')", 'which reads the day at local noon');
     // RESTATED 2026-10-08 (the job-flow audit): the estimate's and the invoices' identity line is docPartyIdent,
     // and the beneficiary's receipt names the trust through it (invReceiptFrom).
-    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 2, probateAgreementHtml: 2 }, 'the documents the title reaches (P22: §5.1\'s dated acceptance too)');
+    // RESTATED (2026-10-10): the Trust Schedule asks it a third time, to print its own trust line only where the head does not already carry it.
+    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 3, probateAgreementHtml: 2 }, 'the documents the title reaches (P22: §5.1\'s dated acceptance too)');
     // On each of them, rendered.
     const d = render('probate', 'trust');
     has(text(d.agr), 'Trust The Adler Family Trust, dated March 3, 2015', '⚠⚠ the agreement\'s §1.2');
@@ -524,6 +525,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = attempt(() => S.printTrustSchedule(7, { asHtml: true }));
     const sh = typeof r === 'string' ? r : (r && (r.html || ('WHY ' + r.why))) || '';
     ok(sh.indexOf('Schedule of Tangible Personal Property Held in Trust') >= 0, 'fixture: the Trust Schedule rendered (' + sh.slice(0, 40) + ')');
-    has(sh, '<div style="font-size:12px;margin-bottom:2px;">The Adler Family Trust, dated March 3, 2015</div>', '⚠⚠ the Trust Schedule\'s header');
+    // RESTATED (2026-10-10, the core-jobs run): the schedule heads with the trust (the one party rule, _invDocPartyHead), the
+    // decedent in brackets after it, and prints no second trust line under it.
+    has(sh, '<strong>The Adler Family Trust, dated March 3, 2015 (', '⚠⚠ the Trust Schedule\'s header names the trust');
+    lacks(sh, '<div style="font-size:12px;margin-bottom:2px;">The Adler Family Trust, dated March 3, 2015</div>', '…and not a second time under it');
   });
 };

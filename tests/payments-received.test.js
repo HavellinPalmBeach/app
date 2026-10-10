@@ -20,7 +20,7 @@
 
 const { sandbox, fn } = require('./harness');
 
-const FNS = ['estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
+const FNS = ['walkawayNet', 'depositTargetFor', 'walkawayDeposit', 'refundCounts', 'jobRefundedTotal', 'estTolerancePctTxt', 'paymentStageWord', 'finalAwaitsHours', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'docSentAt', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded', 'jobLogEntries', 'invFinalApproval', 'invFinalApprovalRecord', 'docKeyFor', 'coHours', 'coHoursTotal', 'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel',
              '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey', 'samePerson', 'canonPersonName',
              '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
              'coordHrsFor', 'prepLineTCHrs', 'vendorLineTCHrs', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack',
@@ -142,7 +142,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Paid MORE than the job came to: a real credit, and _amtDueBox renders it as one.
     const credit = [pay('deposit', TOTAL + 500)];
     eq(Math.round(doc(credit).amtDue), -500, 'beyond the total it goes negative');
-    has(doc(credit).html, 'Credit:', 'and prints as a credit rather than a negative demand');
+    // RESTATED (2026-10-10, the core-jobs run): an hourly final under what was received settles, the deposit earned and the rest
+    // due back (walkawayNet), rather than printing the excess as a credit.
+    has(text(doc(credit).html), 'Refund Due to You', 'and prints the refund due rather than a negative demand');
+    lacks(doc(credit).html, 'Credit:', '…never a bare credit of the excess');
   }
 
   group('nothing recorded at all is answered honestly');

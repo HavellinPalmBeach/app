@@ -52,7 +52,7 @@ const CO = ['coAcceptedHours', 'coHoursTotal', 'coHours'];
 
 // The real dashboard, lifted exactly as change-order-hours.test.js lifts it — never stubbed: a stub of the
 // card is precisely what would let this suite pass while the screen offers nothing.
-const DASH_FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
+const DASH_FNS = ['jobIsFeeOnly', '_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
   'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
   'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field',
   'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',

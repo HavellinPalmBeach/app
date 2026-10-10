@@ -10,7 +10,7 @@
 
 const { sandbox } = require('./harness');
 
-const INV_FNS = [ 'invDocContractBlock', 'docTierProduces',
+const INV_FNS = ['invAppraised',  'invDocContractBlock', 'docTierProduces',
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invAppraisalInProgress', 'invFiduciaryMode', 'isDecedentJob',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems', 'invMergeApprovals', '_invApprovalEntries', '_invApprovalSetAt',
@@ -216,7 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 3. Court inventory: exempt subtotal, cap, and the track/exempt overlap ──
   group('court inventory: exempt property');
   {
-    const COURT_FNS = INV_FNS.concat(['invConditionText', 
+    const COURT_FNS = INV_FNS.concat(['_invDocPartyHead', 'invConditionText', 
       '_invMoney', '_invDocName', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
@@ -456,7 +456,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // an item renumbered everything below it between one printing and the next.
   group('appraisal worklist: the permanent item number, not the row position');
   {
-    const WL_FNS = INV_FNS.concat(['invConditionText', 
+    const WL_FNS = INV_FNS.concat(['_invDocPartyHead', 'invConditionText', 
       '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'jobOnProbateTrack', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob',
       // P16: the gate reads the dealer route, and the flags count only what the import panel still offers.
       'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', 'invChannelLeftover', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
@@ -544,7 +544,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // it.itemNo || (i + 1) — a snapshot row taken before item numbers existed carries
     // none, and a position printed in that column reads as a number that was issued.
-    const snapFns = ['printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime', 'roundCents', 'fmt', '_snapVoidedBlock'];
+    const snapFns = ['_invDocPartyHead', 'printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime', 'roundCents', 'fmt', '_snapVoidedBlock'];
     const sctx = sandbox({ fns: snapFns, vars: [] });
     sctx.jobs.push({ id: 1, name: 'Estate of Doe', hvlId: 'HVL-1001', invSnapshots: [{
       ts: 1757000000000, label: 'At filing', count: 2, totalFMV: 5100,

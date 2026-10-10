@@ -286,12 +286,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the refusals send you somewhere that can actually fix it');
   {
     const est = fn('saveEstimateAndPreview');
-    has(est, 'Property value is required', 'the property-value refusal still fires');
-    has(est, 'New home sq ft is required', 'so does the new home sq ft one');
+    // RESTATED (2026-10-10, the core-jobs run): the home value no longer refuses (it prices nothing); a blank is flagged
+    // in amber and the estimate saves. The new-home sq ft refusal stands.
+    lacks(est, 'Property value is required', 'the property-value refusal no longer fires');
+    has(est, 'No home value on file: set it on Edit Client when you have one.', '…a blank home value is a flag that names the control that sets it');
+    has(est, 'New home sq ft is required', 'the new home sq ft refusal still fires');
     // ⚠ CLIENT INTAKE ONLY CREATES NEW CLIENTS. Naming it is what made both of these dead
     // ends: there is no route back into that form for a job that already exists.
     lacks(est, 'in Client Intake for this client', 'neither sends you to a form that cannot reach an existing client');
-    ['Property value is required', 'New home sq ft is required'].forEach((lead) => {
+    ['New home sq ft is required'].forEach((lead) => {
       const line = est.slice(est.indexOf(lead), est.indexOf('\n', est.indexOf(lead)));
       has(line, 'Edit Client', lead + ' — names the control that fixes it');
       has(line, 'walkthrough on this screen is kept', lead + ' — and says the scoring is not lost');

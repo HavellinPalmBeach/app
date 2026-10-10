@@ -30,7 +30,7 @@ const text = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&mdash;/g,
 const noComments = (s) => s.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
 // ── the invoice ─────────────────────────────────────────────────────────────
-const INV_FNS = ['estTolerancePctTxt', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'paymentStageWord', 'finalAwaitsHours', 'docSentAt', 'docKeyFor', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
+const INV_FNS = ['walkawayNet', 'depositTargetFor', 'walkawayDeposit', 'refundCounts', 'jobRefundedTotal', 'estTolerancePctTxt', 'invoiceHtml', 'docConciergeName', 'isCrewPlaceholder', 'invFiduciaryMode', 'matterTypeOf', 'matterDef', '_agrTrustIsParty', 'docPartyIdent', 'paymentStageWord', 'finalAwaitsHours', 'docSentAt', 'docKeyFor', 'paymentSplit', 'rushScopeLine', 'rushCrewAdded',
   'invFinalApproval', 'invFinalApprovalRecord', 'jobLogEntries', 'coHours', 'coHoursTotal',
   'coBaselineShift', 'coPrice', 'coPriceTotal', 'coHoursLabel', '_coMoney', 'fmt', 'getVendorActuals', '_srcLineKey',
   'samePerson', 'canonPersonName', '_invVendorFeeSentence', 'prepFeeRate', 'vendorGroupOfLine', 'resolveJobVendor',
@@ -74,7 +74,7 @@ function midRow(t) {
 }
 
 // ── the rail, the transition and the band ───────────────────────────────────
-const TL_FNS = ['jobTimeline', 'estimateNoteGaps', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
+const TL_FNS = ['refundCounts', 'jobRefundedTotal', 'jobTimeline', 'estimateNoteGaps', 'depositVoidFlag', 'agreementHandedOverInPerson', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobLogEntries', 'estimateIsFeeOnly', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers', 'isJobWon',
   'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor', 'docSentAt',
   'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay',
   '_andJoin', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
@@ -258,7 +258,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const body = noComments(fn('invoiceHtml'));
     has(body, "var _midBilled     = !!docSentAt(job, 'invoice', 'midpoint') || stagePaidTotal(job, 'midpoint') > 0;",
         'a midpoint invoice was issued when it was sent, or when a midpoint payment is on file');
-    has(body, 'var invoicedBefore = _midBilled ? midCumTarget : depositAmt;', 'the gap is measured against what was invoiced');
+    // RESTATED (2026-10-10): what the earlier invoices asked is read off the record where one went out (invoiceAskedAmt).
+    has(body, 'var invoicedBefore = _midBilled ? ((_midAsked !== null) ? roundCents(_depStated + _midAsked) : midCumTarget) : _depStated;', 'the gap is measured against what was invoiced');
     // RESTATED 2026-10-01 (P17): the balance is taken to the cent (roundCents), where it rounded the basis to the dollar.
     has(body, 'var finalDue     = roundCents(totalFinalBasis - receivedAll);', '⚠ and the balance still reads only what arrived');
     eq((body.match(/_paymentGapRow\(/g) || []).length, 4, 'one gap renderer: its definition and three callers');
@@ -524,7 +525,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the rendered Client Dashboard: one Re-open on a closed job, one Close once re-opened, nothing twice');
   {
-    const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction', 'activeHouseFlags',
+    const FNS = ['jobIsFeeOnly', 'walkawayNet', 'walkawayDeposit', '_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction', 'activeHouseFlags',
       'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin',
       '_dashNoticeHtml',

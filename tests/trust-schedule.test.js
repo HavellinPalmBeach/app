@@ -8,7 +8,7 @@
 // one with no path through the app.
 const { sandbox, source, fn, domStub } = require('./harness.js');
 
-const FNS = ['invConditionText', 
+const FNS = ['invLineReviewed', '_invDocPartyHead', 'invConditionText', 
   'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
   '_invTrack', '_invTrackDefault', '_invOnTrustSchedule', '_invOnProbateSchedule',
   '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue',

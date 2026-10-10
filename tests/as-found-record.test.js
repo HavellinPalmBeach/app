@@ -71,7 +71,7 @@ function rig(over) {
   over = over || {};
   const printed = [];
   const ctx = sandbox({
-    fns: ['_invJob', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_roomFoundDone',
+    fns: ['_invDocPartyHead', '_invJob', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_roomFoundDone',
           '_afTime', '_afDate', '_asFoundRows', 'printAsFoundRecord', '_invDocName',
           '_invDocHead', '_invPrintThumb', 'resolveValBasis', 'estateValueDate', '_avdDate',
           'buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',

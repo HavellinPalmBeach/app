@@ -534,7 +534,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // Everything lifted verbatim — the list the utility-bar suite resolved by driving the renderer —
     // with the REAL date formatter and a pinned today, so "due around" reads a real day.
-    const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
+    const FNS = ['jobIsFeeOnly', '_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',

@@ -320,7 +320,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
   const round2 = (v) => Math.round(v * 100) / 100;
   const finalTotalOnPage = (html) => {
-    const m = /Actual Havellin services total \(logged hours \+ actual fees\)<\/td><td class="r"><strong>([^<]+)<\/strong>/.exec(String(html));
+    const m = /Actual Havellin services total \(logged hours \+ actual fees\)<\/td><td class="r"><strong>([^<]+)<\/strong>/.exec(String(html))
+      // RESTATED (2026-10-10): a final under what was received settles, and prints the work as "Work done (the services above)".
+      || /Work done \(the services above\)<\/td><td class="r">([^<]+)<\/td>/.exec(String(html));
     return m ? m[1] : null;
   };
 

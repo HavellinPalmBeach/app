@@ -213,7 +213,8 @@ const HOUSE = ['Entryway / Foyer', 'Living Room', 'Dining Room', 'Family Room / 
   await press('#client-dashboard-view .jt-next button[onclick="docAction(7391,\'invoice\',\'view\',{stage:\'midpoint\'})"]',
     'the band\'s View midpoint invoice');
   const invText = await p.evaluate(() => document.getElementById('doc-viewer-body').textContent);
-  const m = /Midpoint Payment Due Now \(25%\)\s*\$([\d,]+)/.exec(invText);
+  // RESTATED (2026-10-10, the core-jobs run): the box reads *(to 75%)*, with the 75% to date on a row above it.
+  const m = /Midpoint Payment Due Now \(to 75%\)\s*\$([\d,]+)/.exec(invText);
   ok(!!m, 'the invoice states its Midpoint Payment Due Now');
   const due = m ? Number(m[1].replace(/,/g, '')) : -1;
   eq(due, Math.round(total * 0.75) - depPay.amount, 'the 75% due by the midpoint, less the deposit received — $' + due);

@@ -431,7 +431,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: 'Auction' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
@@ -479,7 +479,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '9000', disposition: 'Sell', apprId: 'ap1', valSource: 'Appraisal' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
@@ -544,7 +544,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: '', condition: 'Good' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['invConditionText', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invConditionText', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',
@@ -573,7 +573,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the empty state no longer names an action the app does not offer');
   {
     const s = sandbox({
-      fns: APPR_FNS.concat(['_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['_invDocPartyHead', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',

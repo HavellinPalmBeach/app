@@ -386,7 +386,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('⚠⚠ 5 · THE CLIENT DASHBOARD, DRIVEN — the Hours Log card on each basis');
   {
-    const FNS = ['coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt',   // the card's label for a change order (2026-09-30)
+    const FNS = ['jobIsFeeOnly', 'coScopeLabel', 'coVendorAdds', 'coVendorAddsTxt',   // the card's label for a change order (2026-09-30)
                  '_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field',

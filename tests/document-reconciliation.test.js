@@ -27,7 +27,7 @@
 
 const { sandbox, domStub } = require('./harness');
 
-const FNS = [
+const FNS = ['walkawayNet', 'depositTargetFor', 'walkawayDeposit', 'refundCounts', 'jobRefundedTotal', 
   // the estimate and both agreement forms
   'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate',
   'fmt', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones',
@@ -295,8 +295,11 @@ module.exports = function ({ group, ok, eq, has }) {
     // 5. The final's payment summary: the estimate as the estimate, and a balance that is its own
     //    arithmetic — the services it bills, plus any priced change order, less what was received.
     const fh = docs.final;
+    // RESTATED (2026-10-10, the core-jobs run): an hourly final under what was received settles (the deposit earned on
+    // signature or the work done, whichever is more, and the rest due back) in place of the payment summary.
+    const settled = !e.fixedPrice && /Settlement — the payments received exceed the work done/.test(text(fh));
     seen('final original estimate');
-    if (!e.fixedPrice && C(rowAmt(fh, /^Original Estimate/)) !== C(e.havellinTotal))
+    if (!settled && !e.fixedPrice && C(rowAmt(fh, /^Original Estimate/)) !== C(e.havellinTotal))
       fail('final original estimate', L(`Original Estimate ${rowAmt(fh, /^Original Estimate/)} ≠ estimate ${e.havellinTotal}`));
     const received = -rowAmt(fh, /^Payments received to date/);
     const balance = rowAmt(fh, /^Balance Due Upon Completion/);
@@ -310,7 +313,13 @@ module.exports = function ({ group, ok, eq, has }) {
       // fixed final's prep row read "Home prep site management fee"); the figure on it is the same one.
       : rowAmt(fh, /^(Actual Havellin services total|Services total \(Home Sale Preparation Fee)/);
     seen('final balance');
-    if (C(balance) !== C(billed) - C(received) || C(fin.amtDue) !== C(balance))
+    if (settled) {
+      const work = rowAmt(fh, /^Work done \(the services above\)/), dep = rowAmt(fh, /^Deposit — earned on signature/);
+      const got = -rowAmt(fh, /^Payments received/), refund = rowAmt(fh, /^Refund Due to You/);
+      const earned = Math.max(C(dep), C(work));
+      if (C(refund) !== C(got) - earned || C(fin.amtDue) !== -C(refund) || /Original Estimate/.test(text(fh)))
+        fail('final balance', L(`settlement refund ${refund} (amtDue ${fin.amtDue}) ≠ received ${got} − earned ${earned}`));
+    } else if (C(balance) !== C(billed) - C(received) || C(fin.amtDue) !== C(balance))
       fail('final balance', L(`balance ${balance} (amtDue ${fin.amtDue}) ≠ billed ${billed} − received ${received}`));
 
     // 6. With the job run exactly as quoted and each invoice paid, the three invoices ARE the signed
@@ -330,9 +339,10 @@ module.exports = function ({ group, ok, eq, has }) {
                      decodeURIComponent(ctx.buildInvoiceMailto(j, a, st).split('body=')[1] || '')];
       parts.forEach((p, pi) => {
         if (/\$-|-\$/.test(p)) fail('emails word the balance', L(`${st} email part ${pi} prints a negative amount`));
-        if (a < 0 && (!/Credit to you/.test(p) || /calendar days/.test(p) || /Balance due/i.test(p)))
-          fail('emails word the balance', L(`${st} credit of ${a} not worded as a credit (part ${pi})`));
-        if (a > 0 && (!/Balance due/i.test(p) || !/7 calendar days/.test(p)))
+        // RESTATED (2026-10-10): a refund due reads as one; the deposit is due upon acceptance, the rest in seven days.
+        if (a < 0 && (!/Refund due to you/.test(p) || /calendar days/.test(p) || /Balance due/i.test(p)))
+          fail('emails word the balance', L(`${st} refund of ${a} not worded as one (part ${pi})`));
+        if (a > 0 && (!/Balance due/i.test(p) || !(st === 'deposit' ? /Due upon acceptance/ : /7 calendar days/).test(p)))
           fail('emails word the balance', L(`${st} balance of ${a} lost its terms (part ${pi})`));
       });
     });

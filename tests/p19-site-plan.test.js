@@ -46,7 +46,7 @@ const DERIVED_STUBS = () => ({ isFormalDoc: () => false, docSentAt: () => null, 
   isAgreementSigned: () => false, isJobFunded: () => false, depositPaidTotal: () => 0, _photoRefs: { 7: [], 41: [] },
   estimateStore: { 7: { estimate: { rooms: [{ idx: 0, name: 'Kitchen' }] } } } });
 // The Found on site card and its dialog, the foundation's list writers and the signed-copy path, on top.
-const FIND_FNS = ['siteFindsCardHtml', '_siteFindRowHtml', '_repaintSiteFinds', 'openSiteFind', 'closeSiteFind', 'saveSiteFind', 'voidSiteFind',
+const FIND_FNS = ['_invDocPartyHead', 'siteFindsCardHtml', '_siteFindRowHtml', '_repaintSiteFinds', 'openSiteFind', 'closeSiteFind', 'saveSiteFind', 'voidSiteFind',
   'siteFindRefusal', 'siteFindHandFlag', 'siteFindHolderFlag', 'siteFindDay', '_siteFindTeamNames', '_siteFindHolderNames',
   'willReceiptHtml', 'cashReceiptHtml', 'printSiteFindReceipt', '_siteFindFormRow', '_siteFindSigLine', '_invDocHead', '_invDocName',
   'jobListPut', 'jobListGet', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', 'samePerson', 'canonPersonName',

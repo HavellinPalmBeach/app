@@ -83,7 +83,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // A driven sandbox for the pop-up, the rail's door and the write.
-  const DISC_FNS = ['discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker',
+  const DISC_FNS = ['estimateIsFeeOnly', 'discountPreview', 'estPreDiscountTotal', 'discountOnLabor', 'applyDiscountRevision', 'discountOfferBlocker',
     'discountPctInput', '_discountModalSays', 'revokeAgreementApproval', '_dashFbTarget', '_jobBandHost', '_dashRedraw',
     'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'estFixedFee', 'estPrepFeeOnTop',
     'updateDiscountModal', 'openDiscountModal', 'closeDiscountModal', 'dashOfferDiscount', 'dashNotice', '_primeEstimateFor',
@@ -204,7 +204,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('M3 — discountOfferBlocker is the one rule, and it reads the RECORD');
   {
-    const b = sandbox({ fns: ['discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'priceChangeBlocker'],
+    const b = sandbox({ fns: ['estimateIsFeeOnly', 'discountOfferBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'priceChangeBlocker'],
       vars: ['currentInvStage'] });
     eq(b.discountOfferBlocker({ id: 1 }), '', 'a job whose packet has not gone out may still be offered one');
     has(b.discountOfferBlocker({ id: 1, agrSent: true }), 'signing packet has gone to the client', 'sent (the boolean) refuses');
@@ -474,14 +474,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('lows — a credit final is emailed as a credit');
   {
     const w = sandbox({ fns: ['invoiceBalanceWords', '_emMoney', 'roundCents', 'fmt'] });
-    const cr = w.invoiceBalanceWords(-2741);
-    eq(cr.label, 'Credit to you', 'a negative balance is a credit');
+    // RESTATED (2026-10-10, the core-jobs run): a negative balance is a refund the final states (the finished job settles as a
+    // walkaway does), and the words take the job and the stage so the deposit's sentence can differ.
+    const cr = w.invoiceBalanceWords(-2741, { id: 1 }, 'final');
+    eq(cr.label, 'Refund due to you', 'a negative balance is a refund due');
     eq(cr.amount, '$2,741', 'stated as a positive amount');
     has(cr.terms, 'Nothing is due on this invoice', 'and nothing is asked for');
     lacks(cr.terms, 'calendar days', 'no payment terms on a credit');
-    const due = w.invoiceBalanceWords(2741);
+    const due = w.invoiceBalanceWords(2741, { id: 1 }, 'final');
     eq([due.label, due.amount, due.terms], ['Balance due', '$2,741', 'Payment is due within 7 calendar days.'], 'a balance is a balance');
-    eq(w.invoiceBalanceWords(0).amount, 'see attached', 'a zero reads as before');
+    has(w.invoiceBalanceWords(2741, { id: 1 }, 'deposit').terms, 'Due upon acceptance', 'the deposit is due upon acceptance (2026-10-10)');
+    eq(w.invoiceBalanceWords(0, { id: 1 }, 'final').label, 'Nothing further is due', 'a zero says nothing further is due (2026-10-10; it read "see attached")');
     ['buildInvoiceEmailText(', 'buildInvoiceEmailHtml(', 'buildInvoiceMailto('].forEach((f) =>
       has(liveBody(f), 'invoiceBalanceWords(', `${f.replace('(', '')} words its balance through the one helper`));
     lacks(liveBody('buildInvoiceMailto('), "'Balance due: ' + bal", 'the mailto keeps no private copy');

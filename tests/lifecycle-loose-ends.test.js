@@ -511,7 +511,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const inv = c.invoiceHtml(JOB1({ svc: 'prep', payments: [pay('deposit', 1500)] }), 'midpoint');
     const t = text(inv.html);
     has(t, 'Second Invoice', '⚠ the invoice a Home Prep client receives is headed Second Invoice');
-    has(t, 'Second Payment Due Now (25%)', '…and asks for the Second Payment');
+    // RESTATED (2026-10-10, the core-jobs run): the box reads *to 75%* and a row above it states the 75% to date, so the
+    // rows add up to the amount asked (midpointAmt is the cumulative 75% less what arrived, not 25% of anything on the page).
+    has(t, 'Second Payment Due Now (to 75%)', '…and asks for the Second Payment, to 75%');
+    has(t, '75% of the', '…with the 75% to date on its own row');
     lacks(t, 'Midpoint', '⚠ and says "midpoint" nowhere — its own estimate never stated one');
   }
 

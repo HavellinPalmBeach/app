@@ -223,7 +223,8 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       ok(pr.html.indexOf('Schedule of Tangible Personal Property Held in Trust') >= 0, 'fixture: the Trust Schedule printed');
       // RESTATED 2026-10-05 (P20, Q27): the month spelled out, as on the agreement.
       has(pr.text, 'The Adler Family Trust, dated March 3, 2015', '⚠⚠ the header names the trust');
-      ok(pr.text.indexOf('The Adler Family Trust') > pr.text.indexOf('Margaret Doe'), 'under the decedent\'s line');
+      // RESTATED (2026-10-10): the schedule heads with the trust (the one party rule), the decedent in brackets after it.
+      ok(pr.text.indexOf('The Adler Family Trust') < pr.text.indexOf('Margaret Doe'), 'the trust heads the page, the decedent after it');
       eq(count(pr.text, 'Received for the trust’s records by'), 2, '⚠⚠ two trustees recorded: two lines');
       has(pr.text, 'Ruth Adler · Successor Trustee', 'the representative named under hers');
       has(pr.text, 'Daniel Adler · Successor Trustee', 'and the co-trustee under his');

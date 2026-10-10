@@ -64,7 +64,12 @@ const same = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [go
     await p.waitForTimeout(1500); return id;
   }
   const open = async (id) => { await p.evaluate((id) => dashGoEstimate(id), id); await p.waitForTimeout(900); };
-  const back = async () => { await p.click('#est-back'); await p.waitForTimeout(600); };
+  // ← Clients from the estimate screen; from a dashboard (where a Save lands) the list is reached through its own back.
+  const back = async () => {
+    if (await p.locator('#est-back').isVisible().catch(() => false)) await p.click('#est-back');
+    else await p.evaluate(() => { try { closeClientDashboard(); } catch (e) {} });
+    await p.waitForTimeout(600);
+  };
 
   // Everything a person can leave on this screen, read the way they would see it.
   const screen = () => p.evaluate(() => {
@@ -192,10 +197,20 @@ const same = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [go
     'B\'s own estimate record carries none of it');
   await p.evaluate(() => { document.getElementById('e-fb').innerHTML = ''; });
   await p.evaluate(() => document.querySelector('button[onclick="saveEstimateAndPreview()"]').click());
-  await p.waitForTimeout(300);
-  has(await p.evaluate(() => document.getElementById('e-fb').textContent), 'Property value is required',
-    '⚠ B\'s Save is refused on B\'s own missing home value');
-  ok(!(await p.evaluate((id) => !!estimateStore[id], idB)), 'and nothing is saved for B');
+  await p.waitForTimeout(1500);
+  // RESTATED (2026-10-10, the core-jobs run): a blank home value no longer refuses the Save (it prices nothing; it is flagged
+  // in amber and the estimate saves). Whether B's Save lands or is refused for a reason of B's own, nothing of A's is in what
+  // B saved — the Save path's half of the leak test.
+  const fbB = await p.evaluate(() => ((document.getElementById('e-fb') || {}).textContent || '') + ' ' + ((document.getElementById('dash-fb') || {}).textContent || ''));
+  lacks(fbB, 'Property value is required', '⚠ B\'s Save is no longer refused on a blank home value');
+  has(fbB, 'No home value on file', '…it is flagged');
+  const savedB = await p.evaluate((id) => { const r = estimateStore[id] && estimateStore[id].estimate;
+    return r ? { disc: r.discountPct || 0, sty: !!r.moveStyling, note: r.privateNote || '', cols: (r.collections || []).length, vehs: (r.vehicles || []).length } : null; }, idB);
+  ok(!savedB || (savedB.disc === 0 && !savedB.sty && savedB.note === '' && savedB.cols === 0 && savedB.vehs === 0),
+    'and whatever B saved carries none of A\'s (' + JSON.stringify(savedB) + ')');
+  // B's own save is cleared again, so E measures A's leak alone (the Save lands on B's dashboard: back to B's estimate first).
+  await p.evaluate((id) => { delete estimateStore[id]; try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch (e) {} }, idB);
+  if (!(await p.locator('#e-fixed').isVisible().catch(() => false))) { await open(idB); await p.evaluate(() => { for (let i = 0; i < 6; i++) document.getElementById('chk-r' + i).click(); calcAll(); }); }
   const fxB = await p.evaluate(() => {
     const f = document.getElementById('e-fixed'); f.click(); calcAll();
     const flat = _fxAmtGet(); const sug = window._fixedPriceSuggested;

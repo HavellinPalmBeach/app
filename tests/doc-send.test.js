@@ -365,7 +365,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ A ZERO OR UNKNOWN BALANCE MUST NOT PRINT "$0". A final invoice can legitimately be
     // a credit, and "Balance due: $0" on a job that overcollected is simply wrong.
     const noAmt = ctx.buildInvoiceEmailText(job, 'final', 0);
-    has(noAmt, 'see attached', 'no figure means the email points at the document rather than asserting one');
+    // RESTATED (2026-10-10, the core-jobs run): a balance of exactly nothing says so, rather than pointing at the document.
+    has(noAmt, 'Nothing further is due', 'no figure means the email says nothing further is due');
     lacks(ctx.buildInvoiceEmailHtml(job, 'final', 0), 'Balance due', 'and the HTML drops the balance box entirely');
 
     // An unknown stage must not print "undefined Invoice" on a client's screen.

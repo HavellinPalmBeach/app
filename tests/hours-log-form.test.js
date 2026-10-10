@@ -84,7 +84,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The rows, drawn through the real buildLogTeamRows into a stub screen.
     const seedDom = () => domStub({ 'log-job': { value: '21' } });
     const mk = (dom, crew) => sandbox({
-      fns: ['buildLogTeamRows', 'rebuildLogDropdowns', 'roundCents'].concat(OPTS_FNS),
+      fns: ['rushCrewAdded', 'plannedTC2', 'buildLogTeamRows', 'rebuildLogDropdowns', 'roundCents'].concat(OPTS_FNS),
       vars: OPTS_VARS.concat(['_logExtraPSSlots']),
       stubs: {
         document: dom, jobs: [{ id: 21, status: 'active' }], estimateStore: { 21: { estimate: { psCount: 2 } } },

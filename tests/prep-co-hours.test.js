@@ -163,7 +163,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // The net: the definition and the two job surfaces, and nothing else.
     const calls = noComments(src).match(/jobIsFeeOnly\(/g) || [];
-    eq(calls.length, 3, 'jobIsFeeOnly( appears exactly three times — its definition, the Job Plan, the desk card');
+    // RESTATED (2026-10-10): the dashboard's Hours Log card asks it too (no hours are billed on a fee-only Home Prep).
+    eq(calls.length, 4, 'jobIsFeeOnly( appears exactly four times — its definition, the Job Plan, the desk card, the dashboard\'s Hours Log card');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
