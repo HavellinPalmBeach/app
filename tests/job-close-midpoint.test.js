@@ -46,7 +46,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'fmtDate2',
     // The transition behind every Close button, and the one handler both buttons call.
     'applyJobTransition', 'activateOrCycle', 'fileContentsRecord', '_fileCloseoutPaper', 'showSyncBadge', '_invJob', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob',
-    'lookupVendorById', 'vendorIdOf', '_actor', '_handoverBy', 'estimateEditBlocker', 'priceChangeBlocker', 'agreementSignature', 'isAgreementSent', 'docKeyFor', 'draftOutstanding', 'docDraftPending', 'draftIsStale',
+    'lookupVendorById', 'vendorIdOf', '_actor', '_invStampBy', 'deviceUser', '_handoverBy', 'estimateEditBlocker', 'priceChangeBlocker', 'agreementSignature', 'isAgreementSent', 'docKeyFor', 'draftOutstanding', 'docDraftPending', 'draftIsStale',
     // The Re-open (2026-09-29): the same door, its own branch. Lifted, never stubbed — a stub of "can this job
     // be re-opened" is exactly what would let the rail's button and the transition's refusal disagree.
     'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch', 'roundCents',

@@ -130,7 +130,7 @@ function rig(refs, over) {
           '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_agDupIndex', '_agDupHtml',
           '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo',
           // P16: the desk's one removal writer, which records who removed the line.
-          '_invTombstoneLine', '_invStampBy', '_invJob',
+          '_invTombstoneLine', '_invStampBy', 'deviceUser', '_invJob',
           // P24: the room check's links join the same-name rule in one grouping.
           '_arDupEligible'],
     vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',

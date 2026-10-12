@@ -522,10 +522,12 @@ function run({ group, ok, eq, has, lacks }) {
     eq(j.activatedBy, 'Carla Mendes', '⚠⚠ activated under the assigned concierge — it recorded the price\'s approver');
     ok((attempt(() => A.applyJobTransition(j)).val) === true, 'fixture: and closes');
     eq(j.deliveredBy, 'Carla Mendes', '⚠⚠ handed over under the assigned concierge');
-    eq(A._actor(j), 'Anthony Graziano', '_actor itself is unchanged: the approver, for its other callers');
+    // RESTATED 2026-10-12 (Q59): `_actor` reads the device's user, then the job's concierge, then the approver, so with
+    // no device user set its other callers name the concierge; the approver is reached only with nobody assigned.
+    eq(A._actor(j), 'Carla Mendes', '_actor for its other callers: the concierge, with no device user set');
     ok((attempt(() => A.applyJobTransition(j)).val) === true, 'fixture: a re-open');
     const ro = (j.reopens || [])[0] || {};
-    eq([ro.closedBy, ro.reopenedBy], ['Carla Mendes', 'Anthony Graziano'], 'the re-open keeps the close\'s name and still stamps _actor');
+    eq([ro.closedBy, ro.reopenedBy], ['Carla Mendes', 'Carla Mendes'], 'the re-open keeps the close\'s name and still stamps _actor (the concierge, with no device user)');
     j.tc = 'Dana Ruiz';
     attempt(() => A.applyJobTransition(j));
     eq(j.activatedBy, 'Carla Mendes', 'write-once: a reassigned concierge does not rewrite who started it');

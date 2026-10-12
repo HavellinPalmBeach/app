@@ -716,7 +716,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('B16 · a DocuSign signature carries the signer\'s own day and the address DocuSign authenticated');
   {
     const S = sandbox({ fns: ['agreementSignature', 'isAgreementSigned', 'recordAgreementSignature', 'esignProviderKey', 'docState', '_jobTouch',
-      'applyEsignStatus', '_localDateOf', '_ymdLocal', '_todayStr', '_actor', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docStateBare', '_saveArrivalCheck'],
+      'applyEsignStatus', '_localDateOf', '_ymdLocal', '_todayStr', '_actor', '_invStampBy', 'deviceUser', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docStateBare', '_saveArrivalCheck'],
       vars: ['AGR_SIG_METHODS', 'ESIGN_PROVIDERS'],
       stubs: { Date: clockAt(NOW), saveJobs() {}, syncJobToSheets() {}, _dashRedraw() {}, renderJobs() {}, esignArchiveSigned() {} } });
     const env = (over) => ({ id: 1, agrSent: true, docState: { agreement: { sentAt: '2026-09-25T12:00:00Z', esign: { envelopeId: 'env1' } } } });

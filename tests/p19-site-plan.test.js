@@ -49,7 +49,7 @@ const DERIVED_STUBS = () => ({ isFormalDoc: () => false, docSentAt: () => null, 
 const FIND_FNS = ['_invDocPartyHead', 'siteFindsCardHtml', '_siteFindRowHtml', '_repaintSiteFinds', 'openSiteFind', 'closeSiteFind', 'saveSiteFind', 'voidSiteFind',
   'siteFindRefusal', 'siteFindHandFlag', 'siteFindHolderFlag', 'siteFindDay', '_siteFindTeamNames', '_siteFindHolderNames',
   'willReceiptHtml', 'cashReceiptHtml', 'printSiteFindReceipt', '_siteFindFormRow', '_siteFindSigLine', '_invDocHead', '_invDocName',
-  'jobListPut', 'jobListGet', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', 'samePerson', 'canonPersonName',
+  'jobListPut', 'jobListGet', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'samePerson', 'canonPersonName',
   'isCrewPlaceholder', '_andJoin', 'showFB', 'fileSignedCopy', '_signedCopyName', '_jobRootFolderId', 'signedCopyControlHtml',
   'fileSignedCopyFromInput', 'signedRecordLinksHtml'];
 const FIND_VARS = ['JOB_RECORD_LISTS', 'SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_BYTES', '_signedFiling', 'SIGNED_RECORDS_SUBFOLDER',

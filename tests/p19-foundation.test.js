@@ -215,7 +215,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           self.readAsDataURL = function (file) { log.reads++; self.result = 'data:' + file.type + ';base64,QUJD'; if (self.onload) self.onload(); };
         },
       };
-      const S = sandbox({ fns: ['fileSignedCopy', '_signedCopyName', 'signedRecordsOf', '_jobRootFolderId', '_ymdLocal', '_actor'].concat(LIST_FNS),
+      const S = sandbox({ fns: ['fileSignedCopy', '_signedCopyName', 'signedRecordsOf', '_jobRootFolderId', '_ymdLocal', '_actor', '_invStampBy', 'deviceUser'].concat(LIST_FNS),
         vars: ['SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_BYTES', '_signedFiling', 'SIGNED_RECORDS_SUBFOLDER', 'JOB_RECORD_LISTS'], stubs });
       S.jobs = state.jobs;
       return { S, log, job };
@@ -335,7 +335,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('The filed copies listed, and a void that keeps the record and its file');
   {
     let prompt = '', repaint = 0, badge = '';
-    const S = sandbox({ fns: ['signedRecordLinksHtml', 'voidSignedRecord', 'jobListVoid', 'jobListGet', 'jobListEntries', '_saveJobEdit', '_jobTouch', '_actor', 'esc', 'fmtDate2'],
+    const S = sandbox({ fns: ['signedRecordLinksHtml', 'voidSignedRecord', 'jobListVoid', 'jobListGet', 'jobListEntries', '_saveJobEdit', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'esc', 'fmtDate2'],
       stubs: { saveJobs() {}, syncJobToSheets() {}, showSyncBadge(m) { badge = m; }, _signedCopyRepaint() { repaint++; } } });
     S.window.prompt = () => prompt;
     const job = { id: 9, tc: 'Ashley Jerome', signedRecords: [{ id: 's<1>', kind: 'receipt', label: 'Signed receipt <b>', signedBy: 'Mary <i>', signedOn: '2026-10-02', fileUrl: 'https://drive.google.com/file/d/A/view' }] };

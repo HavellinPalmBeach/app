@@ -521,7 +521,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function actorCtx() {
     const said = { notices: [], alerts: [] };
     const ctx = sandbox({
-      fns: AGR_FNS.concat(['_actor', '_handoverBy', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
+      fns: AGR_FNS.concat(['_actor', '_invStampBy', 'deviceUser', '_handoverBy', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
         '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'paymentCounts', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending', 'roundCents', 'paymentLive', 'isRefundRecord',
         // P19: an estate's close names its unsigned Disposition Ledger.
         'ledgerCloseFlag', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover']),
@@ -561,12 +561,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The page global that also named her is gone (2026-09-30, audit P14): nothing is left to fall back to.
     eq(ctx.agrApprovedBy, undefined, 'and the page keeps no copy of it');
     eq(C.agrApprovedBy, undefined, 'fixture: C has no agreement approval of its own');
-    eq(ctx._actor(C), '', '⚠⚠ C gets NOBODY — it used to get Ashley Jerome, B\'s approver');
+    // RESTATED 2026-10-12 (Q59): with no device user set, a job with no approver names its OWN concierge
+    // (`_actor` reads `_invStampBy` first), never B's approver and never the page's.
+    eq(ctx._actor(C), 'Carla Ortiz', '⚠⚠ C gets its own concierge — it used to get Ashley Jerome, B\'s approver');
     eq(ctx._actor(A), 'Anthony Graziano', 'A still gets its own approver, though the page names Ashley');
     eq(ctx._actor(B), 'Ashley Jerome', 'and B its own');
     eq([ctx._actor(null), ctx._actor(undefined)], ['', ''], 'no job, nobody');
     ctx.agrApprovedBy = 'Mallory';
-    eq([ctx._actor(A), ctx._actor(C)], ['Anthony Graziano', ''], 'whatever the page global holds, it is never the answer');
+    eq([ctx._actor(A), ctx._actor(C)], ['Anthony Graziano', 'Carla Ortiz'], 'whatever the page global holds, it is never the answer');
   }
 
   group('⚠⚠ _actor driven: an estimate drafted and sent for a job with no approval names its own concierge');

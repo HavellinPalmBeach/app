@@ -500,7 +500,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let posted = null;
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
-            'docState', '_jobTouch', '_actor', 'esignSigner', 'esignClientSignerRefusal', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending', 'clientRecipient', 'isDecedentJob', 'firstName',
+            'docState', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'esignSigner', 'esignClientSignerRefusal', 'isAgreementSent', 'docSentAt', 'docKeyFor', '_stamp', 'draftIsStale', 'docDraftPending', 'clientRecipient', 'isDecedentJob', 'firstName',
             'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'DOC_SEND_PROVIDERS'],
       stubs: {
@@ -564,7 +564,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const posts = [];
     const c = sandbox({
       fns: ['docRecordSent', 'outstandingEnvelopes', 'isAgreementSigned', 'agreementSignature',
-            'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_stamp',
+            'isAgreementSent', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', '_stamp',
             'esignSigner', 'esignClientSignerRefusal', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'applyEsignStatus',
             'recordAgreementSignature', 'esignProviderKey', 'esignJobWatches', 'agrApprovalWithdrawn', 'jobTimeline', 'estimateNoteGaps', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames',
@@ -659,7 +659,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['isAgreementSent', '_localDateOf', '_ymdLocal', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'docSentAt', 'docKeyFor', 'outstandingEnvelopes',
             'isAgreementSigned', 'agreementSignature', 'recordAgreementSignature', 'applyEsignStatus',
-            'docState', '_jobTouch', '_actor', 'esignProviderKey', 'esignJobWatches',
+            'docState', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'esignProviderKey', 'esignJobWatches',
             'agrApprovalWithdrawn', 'jobTimeline', 'estimateNoteGaps', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'depositVoidFlag', 'agreementHandedOverInPerson',
             'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
             'depositPaidTotal', 'depositTargetFor', 'esignAvailable', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'fmt', 'docWord', 'priceAboveAcceptance', '_approvedPriceAbove', 'docStateBare', '_saveArrivalCheck', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'estateAuthority', 'agreementHandOverDraftNote'],
@@ -899,7 +899,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes', 'applyEsignStatus', '_localDateOf', '_ymdLocal',
             'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature', 'docState',
-            '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docStateBare', '_saveArrivalCheck', '_armFiling'],
+            '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'esignArchiveSigned', 'esignProviderKey', 'esignAvailable', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docStateBare', '_saveArrivalCheck', '_armFiling'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.example/exec',
@@ -1389,7 +1389,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     function driveSend(html) {
       let posted = null;
       const c = sandbox({
-        fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor',
+        fns: ['docSend', 'esignAnchorsPresent', 'docRecordSent', 'docState', '_jobTouch', '_actor', '_invStampBy', 'deviceUser',
               'esignSigner', 'esignClientSignerRefusal', 'docKeyFor', '_stamp', 'docSentAt', 'isAgreementSent', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'docDraftPending', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'clientRecipient', 'isDecedentJob', 'firstName',
               'esignCoSignerAnchors', 'esignCoSigners', '_agrCoSigners', 'jobFiduciaries', 'invFiduciaryMode',
               'esignSharedEmails', 'esignCoSignerTop'],  // P21: the send names signers sharing one address (Q32)
@@ -1538,7 +1538,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // stubs it to 'manual', which is exactly the value that cannot tell the two implementations apart.
     const c = sandbox({
       fns: ['recordAgreementSignature', 'agreementSignature', 'isAgreementSigned', 'docState',
-            '_jobTouch', '_actor', 'esignProviderKey', 'esignAvailable', 'applyEsignStatus', '_localDateOf', '_ymdLocal',
+            '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'esignProviderKey', 'esignAvailable', 'applyEsignStatus', '_localDateOf', '_ymdLocal',
             'esignJobWatches', 'isAgreementSent', 'docSentAt', 'docKeyFor', 'docStateBare', '_saveArrivalCheck'],
       vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'ESIGN_PROVIDER_KEY', 'AGR_SIG_MANUAL_METHODS'],
       stubs: {
@@ -1630,7 +1630,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const c = sandbox({
         fns: ['dashCheckEsign', 'esignRefresh', '_esignDue', 'esignNextCheckAt', 'outstandingEnvelopes',
               'applyEsignStatus', '_localDateOf', '_ymdLocal', 'recordAgreementSignature', 'isAgreementSigned', 'agreementSignature',
-              'docState', '_jobTouch', '_actor', 'esignArchiveSigned', 'esignProviderKey',
+              'docState', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'esignArchiveSigned', 'esignProviderKey',
               'isAgreementSent', 'docSentAt', 'docKeyFor', '_esignRecordBlockerText', 'docStateBare', '_saveArrivalCheck', '_armFiling'],
         vars: ['AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_RECHECK_MINS', 'ESIGN_PROVIDERS'],
         stubs: {

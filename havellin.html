@@ -1340,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.10 · 2:35pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.11 · 9:44pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2422,6 +2422,8 @@ body.no-smf .smf-col{display:none;}
       <div class="cl-title">Clients</div>
       <button type="button" class="btn-bronze" id="btn-add-client" onclick="openIntakeScreen()">+ Add New Client</button>
     </div>
+    <!-- Who uses this device, while Settings has not been told (deviceUserNoteHtml): a flag, never a block. -->
+    <div id="device-user-note"></div>
     <!-- ⚠ margin-bottom is the grid's own 10px gap, not 1.25rem: the Win / Loss row sits directly
          under this one and the eight tiles read as one block of figures about the pipeline. -->
     <div class="grid4" style="margin-bottom:10px;">
@@ -3095,6 +3097,13 @@ body.no-smf .smf-col{display:none;}
     <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Off by default: missing notes show a one-click-override warning. On: missing notes block submit until added.</div>
 
     <div class="sec" style="margin-top:14px;">This Device</div>
+    <label for="set-device-user">Who uses this device</label>
+    <select id="set-device-user"></select>
+    <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:12px;">
+      Set once on each phone and laptop. What you record here (a packet handed over, a cheque, a signed copy filed, a line
+      reviewed on the desk, a tick in a room) is stamped with this name; until it is set, the record names the job&rsquo;s
+      concierge. The client&rsquo;s papers always name the job&rsquo;s concierge, whoever pressed the button.
+    </div>
     <div style="font-size:11px;color:var(--gray);margin-bottom:6px;">
       Clears the jobs, estimates, job plans, change orders, hours and photo manifests held in
       <strong>this browser</strong>, then reloads from the sheet. Your Apps Script URLs, rates and
@@ -10482,9 +10491,9 @@ function _repaintStandingFlags(jobId) {
 // never a deletion — so the stale copy would put it straight back. Until that deployment lands
 // the tick merges the way the intake flags themselves do: newer whole record wins.
 //
-// `by` is the concierge ASSIGNED to the job at the moment of the tick. The app has no sign-in;
-// the assigned concierge is the person accountable for the brief, and freezing the name here
-// means a later reassignment does not rewrite who found what.
+// `by` is who ticked it (`_invStampBy`: the device's user as Settings records it, else the concierge
+// ASSIGNED to the job at the moment of the tick, who is accountable for the brief), frozen here so a
+// later reassignment does not rewrite who found what.
 function toggleMustFound(jobId, handle) {
   var job = _invJob(jobId);
   if (!job) return;
@@ -10495,7 +10504,7 @@ function toggleMustFound(jobId, handle) {
   if (!key || !live) { _repaintStandingFlags(jobId); return; }
   if (!job.mustFound || typeof job.mustFound !== 'object') job.mustFound = {};
   if (job.mustFound[key]) delete job.mustFound[key];
-  else job.mustFound[key] = { at: _todayStr(), by: job.tc || '' };
+  else job.mustFound[key] = { at: _todayStr(), by: _invStampBy(job) };
   _jobTouch(job, 'mustFound', key);
   saveJobs(); syncJobToSheets(job);
   _repaintStandingFlags(jobId);
@@ -15445,9 +15454,53 @@ function _agrJob() {
 function _stamp() {
   return new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
 }
-// Who is acting. There is no session identity in the app, so the agreement's approver is
-// the best available attribution — it is a real, PIN-resolved person (see resolvePin).
-//
+// Who is acting (2026-10-12, Anthony's answer to Q59). The app has no sign-in, so two questions get two
+// answers, each one rule:
+//   WHO IS RESPONSIBLE TO THE CLIENT: the job's concierge (`docConciergeName` on every client paper,
+//   `_handoverBy` on the activation and the handover). Never the person at the device.
+//   WHO DID IT, on every internal stamp (a document drafted or sent, a payment recorded, cleared or
+//   voided, a signature recorded, a signed copy filed, a re-open, the desk's reviews and ticks): the
+//   device's user, as Settings records it (`deviceUser`, one pick per phone or laptop), else the job's
+//   concierge, else this job's agreement approver (`_actor`; the desk's `_invStampBy` stops at the
+//   concierge). Anthony: a client whose concierge is Ashley must never read Anthony's name on their
+//   job because he reviewed a line at night, and the record must say who really did it.
+// Until the device is told, the stamp names the concierge, the client list says so in amber
+// (`deviceUserNoteHtml`), and nothing is refused.
+function deviceUser() {
+  try { return String(localStorage.getItem('hav_device_user') || '').trim(); } catch (e) { return ''; }
+}
+// Everyone who could be holding a device: the active roster, concierges and specialists, and the
+// managers, each once (`samePerson`); the current pick marked, and a pick no longer on the roster kept
+// as recorded, as `conciergeOptionsHtml` keeps one. Crew placeholders are nobody.
+function deviceUserOptionsHtml(current) {
+  var cur = String(current || '').trim(), names = [];
+  var add = function (n) {
+    n = String(n || '').trim();
+    if (!n || (typeof isCrewPlaceholder === 'function' && isCrewPlaceholder(n))) return;
+    if (!names.some(function (x) { return samePerson(x, n); })) names.push(n);
+  };
+  ((typeof getAllActiveTC === 'function') ? getAllActiveTC() : []).forEach(function (c) { add(c && c.name); });
+  ((typeof getAllActivePS === 'function') ? getAllActivePS() : []).forEach(function (c) { add(c && c.name); });
+  ((typeof MANAGER_PINS !== 'undefined') ? MANAGER_PINS : []).forEach(function (m) { add(m && m.name); });
+  names.sort(function (a, b) { return a.localeCompare(b); });
+  var have = false;
+  var out = '<option value="">Not set</option>' + names.map(function (n) {
+    var on = !!cur && samePerson(n, cur);
+    if (on) have = true;
+    return '<option value="' + esc(n) + '"' + (on ? ' selected' : '') + '>' + esc(n) + '</option>';
+  }).join('');
+  if (cur && !have) out += '<option value="' + esc(cur) + '" selected>' + esc(cur) + ' (not on the active roster)</option>';
+  return out;
+}
+function deviceUserNoteHtml() {
+  if (deviceUser()) return '';
+  return '<div style="color:var(--warn-tx);font-size:11.5px;font-weight:600;margin:-6px 0 12px;">&#9888; Who uses this device is not set, '
+    + 'so what you record here is stamped with the job&rsquo;s concierge. Set it once in Settings.</div>';
+}
+function _paintDeviceUserNote() {
+  var el = document.getElementById('device-user-note');
+  if (el) el.innerHTML = deviceUserNoteHtml();
+}
 // ⚠⚠ THIS JOB'S APPROVER OR NOBODY — NEVER A PAGE GLOBAL. `agrApprovedBy` (deleted 2026-09-30) was
 // whichever job `loadAgreement` or `ensureAgreementApproved` touched LAST, so falling back to it
 // stamped another client's approver on this one: an estimate drafted or sent before this job's
@@ -15459,15 +15512,16 @@ function _stamp() {
 // answer here — the callers that have a better one (`|| job.tc`) now reach it, and the global only
 // ever held some job's `agrApprovedBy`, so no correct name was lost.
 function _actor(job) {
-  return (job && job.agrApprovedBy) || '';
+  return _invStampBy(job) || (job && job.agrApprovedBy) || '';
 }
 
 // ⚠ WHOSE JOB IT WAS, ON THE TWO STAMPS THAT MARK ITS START AND ITS HANDOVER (2026-09-30, audit P14;
 // Anthony's answer to the question P10 left open). `activatedBy` and `deliveredBy` recorded `_actor`, the
 // manager who approved the PRICE, so every activation and every close on a job Carla ran read as the
 // approver's. Anthony: *the assigned concierge.* With no concierge assigned, the stamp falls back to what
-// it recorded before. ONLY these two stamps: `_actor`'s other callers (a document drafted or sent, a
-// payment or signature recorded, the review ask, a re-open) keep the approver.
+// it recorded before. ONLY these two stamps name the job's concierge first: `_actor`'s other callers (a
+// document drafted or sent, a payment or signature recorded, the review ask, a re-open) record who did it
+// (the device's user first; see `deviceUser` above), never the person responsible for the job.
 function _handoverBy(job) {
   var tc = (job && job.tc) ? String(job.tc).trim() : '';
   return tc || _actor(job);
@@ -26507,8 +26561,9 @@ function markShotLost(jobId, stableId) {
   if (!shotMarkLostOffered(ref)) return false;
   ref.status = 'lost';
   ref.lostAt = _todayStr();
-  // Who, as the as-found tick records it (setRoomFoundDone): the concierge accountable for the job.
-  ref.lostBy = (_invJob(jobId) || {}).tc || '';
+  // Who, as the as-found tick records it (setRoomFoundDone): the person at this device, else the concierge
+  // accountable for the job (_invStampBy).
+  ref.lostBy = _invStampBy(_invJob(jobId));
   _invTouch(ref);
   _setPhotoRef(jobId, ref);
   savePhotoRefs(jobId);
@@ -28681,10 +28736,15 @@ function invDealerRouteRefusal(ref) {
   if (ref.disposition !== 'Distribute') return 'The dealer route is for a firearm going to a named person. Set its disposition to Distribute first; a firearm a dealer buys or consigns names that dealer in Channel / Recipient.';
   return '';
 }
-// Who a desk record is stamped with: the concierge assigned to the job, the same answer
-// `_invSetReviewed` and the must-find and as-found ticks record. The app has no session identity,
-// and the concierge is who is accountable for the job's record.
-function _invStampBy(job) { return (job && job.tc) || ''; }
+// Who a desk record is stamped with: the device's user as Settings records it (`deviceUser`; 2026-10-12,
+// Q59), else the concierge assigned to the job. The one answer for every desk and room stamp (a line
+// reviewed, a value accepted, a line removed, a dealer route, a beneficiary or bequest, the must-find and
+// as-found ticks) and the first rung of `_actor`. The app has no sign-in: the device is told once who
+// uses it, and until then the concierge, who is accountable for the job's record, is the best answer.
+function _invStampBy(job) {
+  var tc = (job && job.tc) ? String(job.tc).trim() : '';
+  return deviceUser() || tc;
+}
 function invSetDealerRoute(jobId, stableId, on) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref || ref.deletedAt) return false;
@@ -34368,7 +34428,7 @@ function _invSetReviewed(jobId, stableId, on) {
   var job = _invJob(jobId);
   ref.reviewed = !!on;
   ref.reviewedAt = on ? Date.now() : null;
-  ref.reviewedBy = on ? ((job && job.tc) || '') : '';
+  ref.reviewedBy = on ? _invStampBy(job) : '';
   _setPhotoRef(jobId, _invTouch(ref));
   savePhotoRefs(jobId);
   _scheduleInventorySync(jobId);
@@ -34444,7 +34504,7 @@ function _invBulkApply(jobId, key, value) {
     }
     var _prev = ref.disposition;
     if (key === 'reviewed') {
-      ref.reviewed = true; ref.reviewedAt = Date.now(); ref.reviewedBy = (job && job.tc) || '';
+      ref.reviewed = true; ref.reviewedAt = Date.now(); ref.reviewedBy = _invStampBy(job);
     } else if (key === 'roomIdx') {
       // '__none' is the explicit "estate-wide" choice, which is a real destination and has
       // to stay distinguishable from "nothing picked".
@@ -35458,7 +35518,7 @@ function _avTakeValue(ref, how) {
 function _avStampReviewed(ref, job) {
   ref.valReviewed = true;
   ref.valReviewedAt = Date.now();
-  ref.valReviewedBy = (job && job.tc) || '';
+  ref.valReviewedBy = _invStampBy(job);
 }
 
 // ─── THE RUN ────────────────────────────────────────────────────────────────────
@@ -41166,10 +41226,11 @@ function setRoomFoundDone(jobId, roomIdx, on) {
   var plan = getJobPlan(jobId);
   if (!plan.rooms[roomIdx]) plan.rooms[roomIdx] = {};
   // Stamped with WHO, because this is an attestation about the property rather than a
-  // preference, and the concierge assigned to the job is who is accountable for it. Frozen at
-  // the tick, so a later reassignment does not rewrite who stood in the room.
+  // preference: the person at this device (`_invStampBy`: the device's user as Settings records
+  // it, else the concierge assigned to the job, who is accountable for it). Frozen at the tick, so
+  // a later reassignment does not rewrite who stood in the room.
   plan.rooms[roomIdx].foundDone = on
-    ? { at: _todayStr(), by: (_invJob(jobId) || {}).tc || '' }
+    ? { at: _todayStr(), by: _invStampBy(_invJob(jobId)) }
     : null;
   _planTouch(plan, 'rooms', roomIdx);
   saveJobPlan(jobId);
@@ -47285,6 +47346,9 @@ function openSettings() {
   setReferralDirStatus(REFERRAL_SYNC_URL ? (referralDirectory.length ? ('✓ ' + referralDirectory.length + ' partners loaded') : 'URL set — click Reload partners to load') : 'No URL set yet', false);
   var reqEl = document.getElementById('set-require-notes');
   if (reqEl) reqEl.checked = REQUIRE_WALKTHROUGH_NOTES;
+  // Who uses this device: the roster as it stands, the stored pick marked (deviceUserOptionsHtml).
+  var duEl = document.getElementById('set-device-user');
+  if (duEl) duEl.innerHTML = deviceUserOptionsHtml(deviceUser());
   var alphaEl = document.getElementById('set-tc-alpha');
   if (alphaEl) alphaEl.value = Math.round(TC_ONSITE_ALPHA * 100);
   COST_RATE_FIELDS.forEach(function(f){
@@ -47320,8 +47384,8 @@ var COST_RATE_FIELDS = [
 // kept, so a new store cannot be added and quietly missed here.
 var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
 // Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
-// contractor roster (your crew, not practice data), and the two directory caches.
-var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_gmail_client_id|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
+// contractor roster (your crew, not practice data), the two directory caches, and who uses the device.
+var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_gmail_client_id|hav_device_user|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
 function clearLocalJobData() {
   var keys = [];
   try {
@@ -47360,6 +47424,10 @@ function saveSettings() {
   var rUrlEl2 = document.getElementById('set-referral-url'); if (rUrlEl2) REFERRAL_SYNC_URL = rUrlEl2.value.trim();
   var reqEl = document.getElementById('set-require-notes');
   REQUIRE_WALKTHROUGH_NOTES = reqEl ? !!reqEl.checked : REQUIRE_WALKTHROUGH_NOTES;
+  // Who uses this device (deviceUser): a name off the picker, or blank for not set. Read back by
+  // every stamp as it is made, so nothing here holds it. A control not on the form keeps the record.
+  var duEl2 = document.getElementById('set-device-user');
+  var _deviceUser = duEl2 ? String(duEl2.value || '').trim() : null;
   // Concierge production rate. Clamped to 0–100%: past 100 the concierge would be
   // outproducing a full-time specialist while also running the job.
   var alphaEl = document.getElementById('set-tc-alpha');
@@ -47382,6 +47450,7 @@ function saveSettings() {
     localStorage.setItem('hav_gmail_client_id', GMAIL_CLIENT_ID);
     localStorage.setItem('hav_referral_url',  REFERRAL_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
+    if (_deviceUser !== null) localStorage.setItem('hav_device_user', _deviceUser);
     localStorage.setItem('hav_tc_alpha',      String(TC_ONSITE_ALPHA));
     COST_RATE_FIELDS.forEach(function(f){ localStorage.setItem(f.ls, String(COST_RATES[f.key])); });
   } catch(e) {}
@@ -47389,6 +47458,7 @@ function saveSettings() {
   // estimate loaded from a saved record stays pinned to the α it was priced under
   // (see _estimateAlphaPin), so a settings change can't silently restate a live quote.
   if (typeof calcAll === 'function') calcAll();
+  _paintDeviceUserNote();
   document.getElementById('settings-modal').style.display = 'none';
   showSyncBadge('Settings saved \u2713');
   loadVendorDirectory();   // pull the directory right away when the URL is set/changed
@@ -51162,6 +51232,7 @@ if (jobs.length === 0) {
   try { localStorage.removeItem('havellin_est_v3'); localStorage.removeItem('havellin_est_v4'); } catch(e) {}
 }
 loadSettings();
+_paintDeviceUserNote();
 loadVendorDirectory();
 loadReferralDirectory();
 buildRoomTable();

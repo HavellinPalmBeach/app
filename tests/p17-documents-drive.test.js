@@ -714,7 +714,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const st = (r.job().docState || {}).probatePackage || {};
     ok(!!st.draftedAt && !st.sentAt, '⚠⚠ a draft is recorded (draftedAt), never a send the app did not see');
     eq([st.provider, st.mailbox, st.draftUrl], ['gmail', BOX, 'https://mail.google.com/mail/u/0/#drafts?compose=m-1'], 'which mailbox it is in, and the link to it');
-    eq(st.draftedBy, 'Anthony Graziano', 'who drafted it');
+    // RESTATED 2026-10-12 (Q59): with no device user set, who did it is the job's concierge, never the price's approver.
+    eq(st.draftedBy, 'Ashley Jerome', 'who drafted it: the job\'s concierge, with no device user set');
     // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
     // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
     eq(JSON.parse(JSON.stringify(st.pkg)), { owed: ['court', 'schedule', 'ledger', 'worklist'], docs: ['court', 'schedule', 'ledger', 'worklist'], to: 'ann@lowe.law',
@@ -730,13 +731,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(card), 'I’ve sent it', 'labelled as everywhere else');
     has(card, 'openDocDraft(7,\'probatePackage\')', 'and the draft');
     lacks(card, 'sendProbatePackage(7)', 'and no second send while a draft waits');
-    has(text(card), 'Anthony Graziano · ' + BOX + ' · to ann@lowe.law', 'who and to whom');
+    has(text(card), 'Ashley Jerome · ' + BOX + ' · to ann@lowe.law', 'who and to whom');
     has(text(card), 'Drafted — read it, send it, then confirm', 'the draft\'s own line');
     r.c.markDocSent(7, 'probatePackage');
     const st2 = r.job().docState.probatePackage;
-    ok(!!st2.sentAt && st2.sentBy === 'Anthony Graziano', '"I\'ve sent it" records the send, and who');
+    ok(!!st2.sentAt && st2.sentBy === 'Ashley Jerome', '"I\'ve sent it" records the send, and who');
     const card2 = text(r.c.probatePackageCardHtml(r.job()));
-    has(card2, 'Sent ' + new Date(st2.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' by Anthony Graziano, to ann@lowe.law', 'the card says who sent it, when, and to whom');
+    has(card2, 'Sent ' + new Date(st2.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' by Ashley Jerome, to ann@lowe.law', 'the card says who sent it, when, and to whom');
     has(r.c.probatePackageCardHtml(r.job()), 'sendProbatePackage(7)', 'and offers a fresh package');
   });
 

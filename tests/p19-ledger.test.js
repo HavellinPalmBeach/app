@@ -377,7 +377,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(up.html || '', 'Disposition Ledger', 'the ledger page');
     has(up.html || '', 'Sargent portrait', 'built from the manifest the sheet returned');
     const st = (r.job.docState || {}).dispositionLedger || {};
-    eq([st.filedUrl, st.filedId, st.filedHow, st.filedBy], ['https://drive.google.com/file/d/LEDGER/view', 'LEDGER', 'close', 'Anthony Graziano'], '⚠⚠ recorded on docState.dispositionLedger');
+    eq([st.filedUrl, st.filedId, st.filedHow, st.filedBy], ['https://drive.google.com/file/d/LEDGER/view', 'LEDGER', 'close', 'Ashley Jerome'], '⚠⚠ recorded on docState.dispositionLedger (filed by the concierge, with no device user set; Q59)');
     ok(/^\d{4}-\d{2}-\d{2}T/.test(st.filedAt || ''), 'with when');
     ok(typeof (r.job.at || {})['docState:dispositionLedger'] === 'number', '⚠ stamped on its own key, so a stale device cannot drop it');
     ok(r.log.syncs >= 2, 'and synced (the close, then the filing)');
@@ -628,7 +628,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.reply('  taken before the rug was recorded  ');
     delete r.job.at['invSnapshots:' + snap.ts];
     eq(r.c.voidInventorySnapshot(7, snap.ts), true, 'with a reason it is voided');
-    eq([r.job.invSnapshots.length, snap.voidReason, snap.voidedBy], [1, 'taken before the rug was recorded', 'Anthony Graziano'], '⚠⚠ the snapshot stays, with why and by whom');
+    eq([r.job.invSnapshots.length, snap.voidReason, snap.voidedBy], [1, 'taken before the rug was recorded', 'Ashley Jerome'], '⚠⚠ the snapshot stays, with why and by whom (the concierge, with no device user set; Q59)');
     ok(typeof snap.voidedAt === 'number', 'and when');
     ok(typeof r.job.at['invSnapshots:' + snap.ts] === 'number', '⚠ stamped on its own key (invSnapshots:<ts>), the key the sheet merges it on');
     eq(r.c.voidInventorySnapshot(7, snap.ts), false, 'a void is not voided twice');
@@ -789,7 +789,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!st.voidedAt, 'nothing changed');
     c.window.prompt = () => 'recorded against the wrong sale';
     eq(c.voidProceedsStatement(7, st.id), true, 'with a reason: voided');
-    eq([job.proceedsStatements.length, st.voidReason, st.voidedBy], [1, 'recorded against the wrong sale', 'Anthony Graziano'], '⚠ the statement stays on the record, marked void');
+    eq([job.proceedsStatements.length, st.voidReason, st.voidedBy], [1, 'recorded against the wrong sale', 'Ashley Jerome'], '⚠ the statement stays on the record, marked void (by the concierge, with no device user set; Q59)');
   });
 
   G('E6 · the derived line and the card', () => {

@@ -546,7 +546,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.c.markDocSent(7, 'probatePackage');
     ok(!!r.job().docState.probatePackage.sentAt, '"I\'ve sent it" records the send');
     const after = r.c.probatePackageCardHtml(r.job());
-    has(text(after), 'Sent Oct 2 by Anthony Graziano, to ann@lowe.law', 'who sent it, when, and to whom');
+    // RESTATED 2026-10-12 (Q59): with no device user set, who did it is the job's concierge, never the price's approver.
+    has(text(after), 'Sent Oct 2 by Ashley Jerome, to ann@lowe.law', 'who sent it, when, and to whom');
     has(after, '&#128231; Send trust package', 'and a fresh trust package can go');
   });
 

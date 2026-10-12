@@ -108,7 +108,7 @@ const CTXP = { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06
 // ─── THE REAL APP SIDE ───────────────────────────────────────────────────────
 const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite',
-  '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', 'agentValueRun', 'agentRevalue', '_avStart',
+  '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAccept', 'agentValueUseSale',
   'agentValueNotices', '_avNoticesHtml', '_avSummary', '_avRowBadges', '_avAcceptButtonHtml', '_avPanelHtml',
   'invValBasisWord', '_avUnreviewedStamp',
@@ -748,7 +748,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The bulk bar's sentence: Accept values keeps its own, the catch-all never overwrites it.
     const picks = [ROW({ stableId: 'a', fmv: 640, valuedBy: 'agent', valHigh: 800 }), ROW({ stableId: 'd', fmv: 900, valuedBy: 'desk', updatedAt: 9 })];
     const B = sandbox({
-      fns: ['_invBulkApply', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
+      fns: ['_invBulkApply', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
             '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob'],
       vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN'],
       stubs: { jobs: [ESTATE()], _photoRefs: { 7: picks }, _invPicked: (j) => picks, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },

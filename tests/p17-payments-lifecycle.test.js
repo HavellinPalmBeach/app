@@ -427,8 +427,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     inZone(() => w.C.saveRefund());
     const r = w.job.payments[w.job.payments.length - 1];
     eq([r.stage, r.amount, r.refundedOn, r.method, r.reference, r.payee, r.recordedBy],
-       ['refund', s.due, '2026-10-01', 'check', '#2201', 'Pressly Family Trust', 'Anthony Graziano'],
-       '⚠⚠ the refund is its own record: amount, day, method, reference, payee and who');
+       ['refund', s.due, '2026-10-01', 'check', '#2201', 'Pressly Family Trust', 'Ashley Jerome'],
+       '⚠⚠ the refund is its own record: amount, day, method, reference, payee and who (the concierge, with no device user set; Q59)');
     ok(!!r.uid && r.id === 3, 'with its own uid and id');
     eq(w.job.payments.length, 3, 'and the payments it is measured against are untouched');
     ok(w.job.at && w.job.at['payments:' + r.uid] > 0, '⚠ stamped on its own key, so the sheet merges it alone');
@@ -639,7 +639,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     inZone(() => C.dashMarkAgreementSent(7));
     has(b.seen.confirms[0] || '', 'Record the signing packet as handed to Tripp Butler in person today?', '⚠ it asks first, naming who it went to');
     const st = (job.docState || {}).agreement || {};
-    eq([st.sentAt, st.sentBy, st.sentHow], ['2026-10-01T18:00:00.000Z', 'Anthony Graziano', 'in_person'],
+    // RESTATED 2026-10-12 (Q59): with no device user set, who did it is the job's concierge, never the price's approver.
+    eq([st.sentAt, st.sentBy, st.sentHow], ['2026-10-01T18:00:00.000Z', 'Ashley Jerome', 'in_person'],
        '⚠⚠ the send is on the document record: when, who, and how');
     eq(st.sentHowAt, st.sentAt, 'the route names the send it describes');
     eq([job.agrSent, job.agrApproved], [true, true], 'the legacy mirror is written and the approval stamped (markAgreementSent, the send\'s gate)');
@@ -648,7 +649,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(job.updatedAt > before && b.seen.synced > 0, 'the job\'s clock moves and it syncs');
     eq(((b.seen.lastSynced || {}).docState || {}).agreement && b.seen.lastSynced.docState.agreement.sentHow, 'in_person',
        '⚠ and what reaches the sheet carries the in-person send (synced after it was written)');
-    has((b.seen.notices[b.seen.notices.length - 1] || {}).msg, 'Recorded as handed over in person by Anthony Graziano', 'the notice says what was recorded');
+    has((b.seen.notices[b.seen.notices.length - 1] || {}).msg, 'Recorded as handed over in person by Ashley Jerome', 'the notice says what was recorded');
     const rows = inZone(() => C.jobTimeline(job, C.estimateStore[7], [], []));
     const sent = byKey(rows, 'agreement_sent');
     eq([sent.done, sent.sub], [true, 'Handed over in person'], '⚠⚠ the step is done, and says how');

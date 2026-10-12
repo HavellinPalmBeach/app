@@ -90,7 +90,7 @@ const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimeline
   // The REAL date formatter: the question names the handover day, and a passthrough would hide its format.
   'fmtDate2',
   'applyJobTransition', 'activateOrCycle', 'fileContentsRecord', '_fileCloseoutPaper', 'showSyncBadge', '_invJob', 'jobCloseBlockers', 'unratedVendorsForJob', '_assignedVendorsForJob',
-  'lookupVendorById', 'vendorIdOf', '_actor', '_handoverBy',
+  'lookupVendorById', 'vendorIdOf', '_actor', '_invStampBy', 'deviceUser', '_handoverBy',
   // Lifted, never stubbed — the button, the refusal and the undo are one rule read three ways.
   'jobReopenBlocker', '_reopenTransition', 'docState', '_jobTouch',
   // The two readers of the handover stamp outside the rail.

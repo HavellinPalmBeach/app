@@ -168,7 +168,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ #3 — activating AHEAD of the target start asks first, because the stamp is write-once');
   {
     const asked = [];
-    const T = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', '_handoverBy', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
+    const T = sandbox({ fns: ['applyJobTransition', 'jobActivationBlockers', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_actor', '_invStampBy', 'deviceUser', '_handoverBy', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
                               'depositPaidTotal', 'isAgreementSigned', 'agreementSignature', 'jobCloseBlockers', 'unratedVendorsForJob',
                               '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
                               // The Re-open is its own branch of the transition (2026-09-29).
