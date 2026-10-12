@@ -326,6 +326,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ev = (lines[0].custodyLog || []).filter((e) => !e.deletedAt);
     eq(ev.map((e) => [e.action, e.party, e.method, e.date]), [['Released', "Sotheby's Palm Beach", 'Vendor pickup', '2026-10-06']],
       '⚠⚠ a trust keeps custody: a Released event to the vendor');
+    // 2026-10-12: the event names who filed the list (_invStampBy: the device's user, else the job's concierge; no device here).
+    eq(ev[0].by, 'Ashley Jerome', '⚠ recorded by the person at the device, the concierge with no device user set');
     ok(c.__log.syncs >= 1 && c.__log.saves >= 1, 'saved and synced');
     has(c.__log.badges.join(' '), '1 line recorded as picked up, each with a Released custody event', 'the notice says what it did');
     // The card and the row.

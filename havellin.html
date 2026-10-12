@@ -1340,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.11 · 9:44pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.12 · 9:21am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -17285,7 +17285,7 @@ function probatePackageRecordHtml(jobId) {
   var custTable = !held.length ? none
     : '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
       + '<th style="' + th + '">Item #</th><th style="' + th + '">Item</th><th style="' + th + '">Date</th><th style="' + th + '">Event</th>'
-      + '<th style="' + th + '">Party</th><th style="' + th + '">Method</th><th style="' + th + '">Receipt / reference</th></tr></thead><tbody>'
+      + '<th style="' + th + '">Party</th><th style="' + th + '">Method</th><th style="' + th + '">Receipt / reference</th><th style="' + th + '">Recorded by</th></tr></thead><tbody>'
       + held.map(function (r) {
           return custodyEvents(r).map(function (e, i) {
             return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + (i ? '' : esc(_invItemNo(r))) + '</td>'
@@ -17294,7 +17294,10 @@ function probatePackageRecordHtml(jobId) {
               + '<td style="' + td + '">' + esc(e.action || '') + '</td>'
               + '<td style="' + td + '">' + esc(e.party || '') + '</td>'
               + '<td style="' + td + '">' + esc(e.method || '') + '</td>'
-              + '<td style="' + td + '">' + esc(e.receipt || '') + '</td></tr>';
+              + '<td style="' + td + '">' + esc(e.receipt || '') + '</td>'
+              // The Havellin person who recorded the event (2026-10-12): the device's user, else the job's concierge.
+              // An event written before it was stamped prints a dash: the record never names someone it did not witness.
+              + '<td style="' + td + '">' + esc(e.by || '\u2014') + '</td></tr>';
           }).join('');
         }).join('') + '</tbody></table>';
   return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
@@ -29086,7 +29089,8 @@ function _renderCustodyList() {
   if (!el) return;
   el.innerHTML = log.length ? log.map(function(e){
     return '<div style="display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:3px 0;border-bottom:0.5px solid var(--border);">'
-      + '<span><strong>' + esc(e.action) + '</strong>' + (e.party ? ' &middot; ' + esc(e.party) : '') + (e.date ? ' &middot; ' + esc(fmtDate2(e.date)) : '') + (e.method ? ' &middot; ' + esc(e.method) : '') + (e.receipt ? ' &middot; ' + esc(e.receipt) : '') + '</span>'
+      + '<span><strong>' + esc(e.action) + '</strong>' + (e.party ? ' &middot; ' + esc(e.party) : '') + (e.date ? ' &middot; ' + esc(fmtDate2(e.date)) : '') + (e.method ? ' &middot; ' + esc(e.method) : '') + (e.receipt ? ' &middot; ' + esc(e.receipt) : '')
+      + (e.by ? ' &middot; recorded by ' + esc(e.by) : '') + '</span>'
       + '<a href="#" onclick="removeCustodyEvent(\'' + _custodyHandle(e) + '\');return false;" style="color:#c0392b;text-decoration:none;">&#10007;</a></div>';
   }).join('') : '<div style="font-size:11px;color:var(--gray);font-style:italic;">No custody events logged yet.</div>';
 }
@@ -29101,8 +29105,11 @@ function addCustodyEvent() {
   // genuinely identical events — same party, same day, same receipt — stay two events.
   // `at` is when it was RECORDED, which is not `date`, when it HAPPENED: an event logged the
   // following morning must still sort where it belongs on the chain.
+  // `by` is who recorded it: the device's user, else the job's concierge (`_invStampBy`, as every desk stamp; 2026-10-12).
+  // It is what the app witnessed, so the record prints it as *Recorded by*, never as who carried the item.
   ref.custodyLog.push({ cid: _photoUid(), at: Date.now(),
-    action: (document.getElementById('cust-action')||{}).value || 'Released', party: party, date: g('cust-date'), method: g('cust-method'), receipt: g('cust-receipt') });
+    action: (document.getElementById('cust-action')||{}).value || 'Released', party: party, date: g('cust-date'), method: g('cust-method'), receipt: g('cust-receipt'),
+    by: _invStampBy(_invJob(_custodyCtx.jobId)) });
   _setPhotoRef(_custodyCtx.jobId, _invTouch(ref)); savePhotoRefs(_custodyCtx.jobId);
   ['cust-party','cust-date','cust-method','cust-receipt'].forEach(function(id){ var el = document.getElementById(id); if (el) el.value = ''; });
   _renderCustodyList();
@@ -30229,7 +30236,7 @@ function pickupRecordCustody(jobId, rec) {
     // backend action name.
     var released = 'Released';
     ref.custodyLog.push({ cid: _photoUid(), at: Date.now(), action: released, party: rec.ref || '', date: rec.signedOn || _todayStr(),
-      method: 'Vendor pickup', receipt: 'Pickup list filed to Drive', pickupId: rec.id });
+      method: 'Vendor pickup', receipt: 'Pickup list filed to Drive', pickupId: rec.id, by: _invStampBy(job) });
     _setPhotoRef(jobId, _invTouch(ref));
     n++;
   });

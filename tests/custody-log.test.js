@@ -13,12 +13,46 @@
 // events need identity, removal has to tombstone rather than splice, and what a reader sees
 // has to be ordered by when the event happened rather than by which device synced last.
 
-const { sandbox, source, fn } = require('./harness');
+const { sandbox, source, fn, decl } = require('./harness');
 
 const VARS = ['_photoUidSeq'];
+// 2026-10-12: an event records who logged it (`by`, off `_invStampBy`: the device's user, else the job's concierge).
 const FNS = ['addCustodyEvent', 'removeCustodyEvent', 'custodyEvents', '_renderCustodyList',
              '_custodyEventId', 'mergeCustodyLogs', '_getPhotoRef', '_setPhotoRef',
-             '_invTouch', '_photoUid', 'esc', 'fmtDate2', '_custodyHandle', '_custodyUnhandle'];
+             '_invTouch', '_photoUid', 'esc', 'fmtDate2', '_custodyHandle', '_custodyUnhandle',
+             '_invJob', '_invStampBy', 'deviceUser'];
+
+// The root's own call graph, derived from the source (as device-user.test.js lifts), for the package record.
+const SRC = source();
+const ALL_FNS = new Set((SRC.match(/(^|\n)function\s+([A-Za-z0-9_$]+)\s*\(/g) || []).map((s) => s.replace(/^\n?function\s+/, '').replace(/\s*\($/, '')));
+const ALL_VARS = new Set((SRC.match(/(^|\n)var\s+([A-Za-z0-9_$]+)\s*=/g) || []).map((s) => s.replace(/^\n?var\s+/, '').replace(/\s*=$/, '')));
+const codeOnly = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n');
+const liveOnly = (t) => codeOnly(t).replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, "''");
+function closure(roots, stop) {
+  const stopSet = new Set(stop || []);
+  const fns = new Set(), vars = new Set();
+  const queue = roots.map((r) => ['f', r]);
+  while (queue.length) {
+    const [k, name] = queue.shift();
+    if (stopSet.has(name)) continue;
+    let body;
+    if (k === 'f') { if (fns.has(name)) continue; fns.add(name); try { body = liveOnly(fn(name)); } catch (e) { continue; } }
+    else { if (vars.has(name)) continue; vars.add(name); try { body = liveOnly(decl(name)); } catch (e) { continue; } }
+    for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) if (ALL_FNS.has(m[1]) && !stopSet.has(m[1])) queue.push(['f', m[1]]);
+    for (const m of body.matchAll(/[(,]\s*([A-Za-z_$][\w$]*)\s*[,)]/g)) if (ALL_FNS.has(m[1]) && !stopSet.has(m[1])) queue.push(['f', m[1]]);
+    for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) {
+      if (stopSet.has(m[1])) continue;
+      if (ALL_VARS.has(m[1])) queue.push(['v', m[1]]);
+      else if (ALL_FNS.has(m[1])) queue.push(['f', m[1]]);
+    }
+  }
+  return { fns: [...fns], vars: [...vars] };
+}
+function lift(roots, stubs) {
+  const c = closure(roots, Object.keys(stubs || {}));
+  return sandbox({ fns: c.fns, vars: c.vars, stubs: stubs || {} });
+}
+const text = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();
 
 function ctx(log, form) {
   const el = {};
@@ -32,6 +66,7 @@ function ctx(log, form) {
     fns: FNS, vars: VARS,
     stubs: {
       _custodyCtx: { jobId: 1, stableId: 'b' },
+      jobs: [{ id: 1, tc: 'Ashley Jerome' }],
       _photoRefs: { 1: [{ stableId: 'b', label: 'inventory', objectName: 'Sargent portrait',
                           ts: 1, updatedAt: 1, custodyLog: log }] },
       document: { getElementById: (id) => el[id] || null },
@@ -243,6 +278,61 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ───────────────────────────────────────────────────────────────────────────
+  group('⚠ WHO RECORDED IT (2026-10-12): the event carries the device\'s user, else the job\'s concierge, and the readers print it');
+  {
+    // The party, the date, the method and the receipt said what left and to whom; nothing said who at Havellin
+    // logged it, so the package's *Release Approvals and Chain of Custody* record could not name the releasing
+    // person to a trust officer. Found building Q59; Anthony, 2026-10-12: build it now.
+    const d = ctx([]);
+    d.localStorage.setItem('hav_device_user', 'Anthony Graziano');
+    d.addCustodyEvent();
+    eq(d.__ref().custodyLog[0].by, 'Anthony Graziano',
+       '⚠⚠ the event names the device\'s user, as every desk stamp does (_invStampBy), not the job\'s concierge');
+    const c = ctx([]);
+    c.addCustodyEvent();
+    eq(c.__ref().custodyLog[0].by, 'Ashley Jerome', 'with no device user set, the job\'s concierge');
+    const n = ctx([]);
+    n.jobs[0].tc = '';
+    n.addCustodyEvent();
+    eq(n.__ref().custodyLog[0].by, '', 'nobody on the device and no concierge records nobody, never a guess');
+    ok(n.__ref().custodyLog[0].cid, 'and the event is still recorded');
+
+    // The dialog's list says who, and says nothing on an event with nobody.
+    const l = ctx([{ cid: 'e1', action: 'Released', party: "Sotheby's", date: '2026-09-10', by: 'Ashley Jerome' },
+                   { cid: 'e0', action: 'Received', party: 'Storage', date: '2026-09-01' }]);
+    l._renderCustodyList();
+    const lh = l.__el['custody-list'].innerHTML;
+    has(lh, 'recorded by Ashley Jerome', 'the list prints who recorded the event');
+    eq((lh.match(/recorded by/g) || []).length, 1, 'and nothing on the event that carries nobody');
+    const x = ctx([{ cid: 'e2', action: 'Released', party: 'X', date: '2026-09-10', by: '<b>Ash</b>' }]);
+    x._renderCustodyList();
+    has(x.__el['custody-list'].innerHTML, 'recorded by &lt;b&gt;Ash&lt;/b&gt;', 'escaped: the name is text');
+
+    // The pickup list's Released event (pickupRecordCustody) stamps the same rule: read as source here, driven in
+    // p22-group-e (E7), where the whole filing runs.
+    const live = codeOnly(SRC);
+    const writers = (live.match(/custodyLog\.push\(\{[\s\S]{0,600}?\}\);/g) || []);
+    eq(writers.length, 2, 'fixture: two custody writers in the file (the dialog and the pickup list)');
+    writers.forEach((w) => has(w, 'by: _invStampBy(', '⚠ each custody writer stamps who through _invStampBy'));
+    lacks(codeOnly(fn('addCustodyEvent')), 'job.tc', 'the dialog never reads the concierge on its own');
+    lacks(codeOnly(fn('pickupRecordCustody')), 'job.tc', 'nor does the pickup list');
+
+    // The package's record: a *Recorded by* column, the name on the event, a dash on an event with nobody.
+    const job = { id: 7, hvlId: 'HVL-0007', name: 'Estate of Harold Adler', fname: 'Harold', lname: 'Adler', svc: 'probate', matterType: 'probate',
+      probateCase: '50-2026-CP-004412', executor: 'Ruth Adler', executorRole: 'Personal Representative', deathDate: '2026-04-02',
+      won: true, status: 'active', tc: 'Ashley Jerome', updatedAt: 1, signedRecords: [], at: {} };
+    const lines = [{ stableId: 'a', itemNo: 1, label: 'inventory', collId: null, objectName: 'Sargent portrait', disposition: 'Auction', ts: 1, updatedAt: 1,
+      custodyLog: [{ cid: 'e1', action: 'Released', party: "Sotheby's", date: '2026-09-10', method: 'Collected on site', receipt: 'SBY-4471', by: 'Ashley Jerome' },
+                   { cid: 'e0', action: 'Received', party: 'Havellin storage', date: '2026-09-01', method: 'Hand-carry', receipt: '' }] }];
+    const R = lift(['probatePackageRecordHtml'], { jobs: [job], _photoRefs: { 7: lines }, estimateStore: {}, contractors: [], vendorDirectory: [],
+      jobPlanStore: {}, changeOrders: [], savePhotoRefs() {}, _scheduleInventorySync() {} });
+    let rec = '';
+    try { rec = text(R.probatePackageRecordHtml(7)); } catch (e) { rec = 'threw: ' + e.message; }
+    has(rec, 'Receipt / reference Recorded by', '⚠⚠ the record\'s custody table has a Recorded by column, after the receipt');
+    has(rec, 'Sep 10, 2026 Released Sotheby\'s Collected on site SBY-4471 Ashley Jerome', '⚠⚠ and each event names who at Havellin recorded it' + (rec.indexOf('SBY-4471') < 0 ? ' [' + rec.slice(0, 400) + ']' : ''));
+    has(rec, 'Sep 1, 2026 Received Havellin storage Hand-carry —', 'an event with nobody recorded prints a dash, never a name the app did not witness');
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
   group('one rule, stated once');
   {
