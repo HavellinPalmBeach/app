@@ -481,24 +481,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ss = { getSheetByName: () => sheet, insertSheet: () => sheet };
 
     // The real header list, straight out of the app.
-    // RESTATED 2026-10-03 (P19): the columns go on the wire as buildInventoryPayload sends them, under `sheetHeader` where a
-    // column has one. The Net column reads "Net Proceeds" on the app's own surfaces now, and keeps "Net to Estate" on the
-    // wire because this script resolves its formula by that name; the check below is still the two ends held together.
+    // RESTATED 2026-10-13: the columns go on the wire as buildInventoryPayload sends them, under each column's own `header`
+    // (the Net column's second wire name, "Net to Estate", went once the deployment that finds either name was live); the
+    // check below is still the two ends held together.
     const p3 = sandbox({ vars: ['INVENTORY_COLUMNS'] });
-    const columns = ['Job ID'].concat(p3.INVENTORY_COLUMNS.map((c) => c.sheetHeader || c.header));
-    has(fn('buildInventoryPayload'), 'return c.sheetHeader || c.header;', 'fixture: the payload sends the same names');
+    const columns = ['Job ID'].concat(p3.INVENTORY_COLUMNS.map((c) => c.header));
+    has(fn('buildInventoryPayload'), 'return c.header;', 'fixture: the payload sends the same names');
     const col = (h) => columns.indexOf(h) + 1;
     gctx._writeInventorySheet(ss, { columns, rows: [columns.map(() => '')] });
 
     eq(cap.formulas.length, 1, 'exactly one block of formulas is written');
-    eq(cap.formulas[0].c, col('Net to Estate'),
-       'and it lands on Net to Estate — not on whatever column happens to sit at index 24');
+    eq(cap.formulas[0].c, col('Net Proceeds'),
+       'and it lands on Net Proceeds — not on whatever column happens to sit at index 24');
     has(cap.formulas[0].f[0][0], _letter(col('Gross Proceeds')) + '2',
         'the formula reads the Gross Proceeds column');
     has(cap.formulas[0].f[0][0], _letter(col('Fees')) + '2', 'and the Fees column');
 
     const moneyCols = cap.formats.filter((f) => f.f === '$#,##0.00').map((f) => f.c).sort((a, b) => a - b);
-    eq(moneyCols, [col('Estimated FMV'), col('Gross Proceeds'), col('Fees'), col('Net to Estate')].sort((a, b) => a - b),
+    eq(moneyCols, [col('Estimated FMV'), col('Gross Proceeds'), col('Fees'), col('Net Proceeds')].sort((a, b) => a - b),
        'the currency formats land on the four money columns and nothing else');
 
     lacks(pick('_writeInventorySheet'), 'getRange(2, 24',

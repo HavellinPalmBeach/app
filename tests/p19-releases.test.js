@@ -510,6 +510,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const uploads = [];
     const S = desk(['invReleasedToPerson', 'invReceiptOwed', 'invReceiptGroups', 'printBeneficiaryReceipt', 'fileSignedCopy', 'voidSignedRecord',
                     '_renderInvReleasesCard', 'planDerivedLines'], job, lines, {
+      setTimeout: () => 1, clearTimeout() {},   // the filing's watchdog (2026-10-13)
       resolveSubfolderId(j, name, cb) { cb('SIGNED7'); },
       uploadToDrive(folderId, filename, dataUrl, cb) { uploads.push({ folderId, filename }); cb(true, 'https://drive.google.com/file/d/R' + uploads.length + '/view', 'R' + uploads.length); },
       FileReader: function () { const self = this; self.readAsDataURL = function (f) { self.result = 'data:' + f.type + ';base64,QUJD'; if (self.onload) self.onload(); }; },

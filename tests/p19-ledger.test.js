@@ -267,6 +267,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = lift(['_renderLedgerCard', 'fileSignedCopyFromInput', 'ledgerDerivedLines', 'ledgerSignedCopies'],
       ['savePhotoRefs', 'saveJobs', 'syncJobToSheets', 'showSyncBadge', '_signedCopyRepaint', 'resolveSubfolderId', 'uploadToDrive'], {
         savePhotoRefs() {}, saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {}, _signedCopyRepaint() {}, SHEETS_SYNC_URL: SYNC,
+        setTimeout: () => 1, clearTimeout() {},   // the filing's watchdog (2026-10-13)
         resolveSubfolderId: (j, name, cb) => cb(name === 'Signed Records' ? 'SR7' : null),
         uploadToDrive: (folder, name, data, cb) => { uploads.push({ folder, name }); cb(true, 'https://drive.google.com/file/d/SIGNED/view', 'SIGNED'); },
         FileReader: function () { const self = this; self.readAsDataURL = function () { self.result = 'data:application/pdf;base64,QUJD'; self.onload(); }; },
@@ -854,17 +855,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ── E7 ───────────────────────────────────────────────────────────────────
-  G('E7 · the Net column is neutral wherever a person reads it; the workbook keeps the name its script resolves', () => {
+  G('E7 · the Net column is neutral wherever a person reads it, the workbook included (one name since 2026-10-13)', () => {
     const c = sandbox({ vars: ['INVENTORY_COLUMNS'] });
     const net = c.INVENTORY_COLUMNS.filter((x) => x.key === 'net')[0] || {};
     eq(net.header, 'Net Proceeds', '⚠ "Net Proceeds", true on an estate, a trust and a living job');
-    eq(net.sheetHeader, 'Net to Estate', 'the workbook\'s wire name, held until saveInventory.gs accepts the neutral one');
+    eq(net.sheetHeader, undefined, 'and no second name for the wire (2026-10-13: the deployment that finds either name is live)');
     // The real payload and the real CSV.
     const p = lift(['buildInventoryPayload', 'buildInventoryCSV'], ['savePhotoRefs'], { savePhotoRefs() {}, document: domStub({}),
       jobs: [ESTATE()], _photoRefs: { 7: LINES() }, estimateStore: {}, jobPlanStore: {} });
     p.jobs = [ESTATE()]; p._photoRefs = { 7: LINES() };
     const cols = p.buildInventoryPayload(7).columns;
-    ok(cols.indexOf('Net to Estate') > 0 && cols.indexOf('Net Proceeds') < 0, 'the payload sends the name the workbook resolves');
+    ok(cols.indexOf('Net Proceeds') > 0 && cols.indexOf('Net to Estate') < 0, 'the payload sends Net Proceeds, the one name (2026-10-13)');
     const head = (p.buildInventoryCSV(7).split('\r\n')[0] || '').split(',');
     ok(head.indexOf('Net Proceeds') > 0 && head.indexOf('Net to Estate') < 0, '⚠ the CSV a person opens reads Net Proceeds');
     eq(head.length, cols.length, 'with every column of the payload');
@@ -875,7 +876,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const sheet = { clear() {}, setFrozenRows() {}, autoResizeColumns() {},
       getRange(r, col) { return { setValues() { return this; }, setFormulas(f) { cap.push(col); return this; }, setNumberFormat() { return this; }, setFontWeight() { return this; }, setBackground() { return this; } }; } };
     g._writeInventorySheet({ getSheetByName: () => sheet, insertSheet: () => sheet }, { columns: cols, rows: [cols.map(() => '')] });
-    eq(cap, [cols.indexOf('Net to Estate') + 1], '⚠⚠ the deployed workbook still writes its Net formula on the Net column');
+    eq(cap, [cols.indexOf('Net Proceeds') + 1], '⚠⚠ the deployed workbook writes its Net formula on the Net column under that name');
     // The panel reads the header.
     has(noComments(fn('_renderInvPanel')), '+ c.header +', 'the item panel heads the field with `header`');
   });
@@ -914,7 +915,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     P.jobs = [ESTATE({ matterType: 'trust' })]; P._photoRefs = { 7: LINES() };
     const pay = P.buildInventoryPayload(7);
     eq(pay.netLabel, 'Net to Trust', 'the payload carries the heading');
-    ok(pay.columns.indexOf('Net to Estate') > 0, 'and still sends the Net column under the name every deployment resolves');
+    ok(pay.columns.indexOf('Net Proceeds') > 0 && pay.columns.indexOf('Net to Estate') < 0, 'and sends the Net column as Net Proceeds, the one name (2026-10-13; the deployment that finds either is live)');
 
     // The real server: the Summary's heading is the app's, an older app's payload (no netLabel) keeps the old one, and
     // the net SUM points at the Net column under either name.

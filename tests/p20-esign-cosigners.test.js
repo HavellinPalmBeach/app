@@ -591,6 +591,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const log = { uploads: [], badges: [], redraws: 0 };
     const S = lift(['agreementCoSignHtml', 'fileSignedCopyFromInput', 'voidSignedRecord'], [], {
       SHEETS_SYNC_URL: 'https://script.google.com/macros/s/P20/exec', saveJobs() {}, syncJobToSheets() {}, Date: FixedDate(NOW),
+      setTimeout: () => 1, clearTimeout() {},   // the filing's watchdog (2026-10-13)
       resolveSubfolderId(j, name, cb) { cb('SIGNED60'); },
       uploadToDrive(folderId, filename, dataUrl, cb) { log.uploads.push({ folderId, filename }); cb(true, 'https://drive.google.com/file/d/F' + log.uploads.length + '/view', 'F' + log.uploads.length); },
       FileReader: function () { const self = this; self.readAsDataURL = function (file) { self.result = 'data:' + file.type + ';base64,QUJD'; if (self.onload) self.onload(); }; },

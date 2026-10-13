@@ -200,6 +200,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       stubs: {
         document: dom, jobs: [{ id: 21, status: 'active', payments: [{ stage: 'deposit', amount: 11500 }] }],
         getJobCrew: () => crew, isJobFunded: () => funded, depositTargetFor: () => 11500, depositPaidTotal: () => 0, fmt: (n) => '$' + n,
+        _todayStr: () => '2026-10-13',   // the date gate (2026-10-13): the entry's day is in the past
         showFB: (id, kind, msg) => calls.push(kind + ':' + msg.slice(0, 40)), saveLogData: () => calls.push('saveLogData'),
         lockAssignedCrew: () => calls.push('lock'), clearLogEntry: () => calls.push('clear'), buildLogTeamRows: () => calls.push('rows'),
         updateLogSummary: () => {}, renderLogHistory: () => {}, renderProjection: () => {},

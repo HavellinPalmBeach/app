@@ -302,7 +302,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const dom = domStub(Object.assign({ 'log-job': { value: '21' }, 'log-date': { value: '2026-10-02' }, 'log-activity': { value: 'Kitchen sort' } }, seed));
       const c = sandbox({ fns: ['saveLogEntry', 'isCrewPlaceholder', 'roundCents', 'isHalfHours', 'esc'], vars: ['CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'jobLogs'],
         stubs: { document: dom, jobs: [{ id: 21, status: 'active' }], getJobCrew: () => crew, isJobFunded: () => true,
-                 depositTargetFor: () => 0, depositPaidTotal: () => 0, fmt: (n) => '$' + n,
+                 depositTargetFor: () => 0, depositPaidTotal: () => 0, fmt: (n) => '$' + n, _todayStr: () => '2026-10-13',
                  showFB: (id, kind, msg) => said.push(kind + ':' + msg), saveLogData() {}, lockAssignedCrew() {}, clearLogEntry() {},
                  buildLogTeamRows() {}, updateLogSummary() {}, renderLogHistory() {}, renderProjection() {}, _repaintHoursReadouts() {}, Date } });
       c.saveLogEntry();

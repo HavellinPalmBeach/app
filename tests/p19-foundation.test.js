@@ -215,8 +215,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           self.readAsDataURL = function (file) { log.reads++; self.result = 'data:' + file.type + ';base64,QUJD'; if (self.onload) self.onload(); };
         },
       };
-      const S = sandbox({ fns: ['fileSignedCopy', '_signedCopyName', 'signedRecordsOf', '_jobRootFolderId', '_ymdLocal', '_actor', '_invStampBy', 'deviceUser'].concat(LIST_FNS),
-        vars: ['SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_BYTES', '_signedFiling', 'SIGNED_RECORDS_SUBFOLDER', 'JOB_RECORD_LISTS'], stubs });
+      // The filing's watchdog (2026-10-13) arms a timer: a no-op here, so a hanging upload keeps its mark for this rig.
+      stubs.setTimeout = () => 1; stubs.clearTimeout = () => {};
+      const S = sandbox({ fns: ['fileSignedCopy', '_signedCopyName', 'signedRecordsOf', '_jobRootFolderId', '_ymdLocal', '_actor', '_invStampBy', 'deviceUser', '_armFiling'].concat(LIST_FNS),
+        vars: ['SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_BYTES', '_signedFiling', 'SIGNED_RECORDS_SUBFOLDER', 'JOB_RECORD_LISTS', 'FILING_WATCHDOG_MS'], stubs });
       S.jobs = state.jobs;
       return { S, log, job };
     }

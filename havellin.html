@@ -1340,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.12 · 9:21am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.13 · 11:54am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -8174,8 +8174,14 @@ function calcAll() {
   // ⚠ ON A FIXED PRICE THE FEE ROWS GIVE WAY TO THE FEE (audit M10). They summed to the hourly basis while
   // the total under them printed the hourly figure too, so a $21,840 fixed quote read "Total project
   // estimate $18,200". The hourly basis is still on the fixed-price panel below, labelled as the basis.
+  // ⚠ AND ON HOME PREP THE ROWS THE SERVICE HIDES STAY HIDDEN (2026-10-13; the core-jobs run): this reset re-showed the three
+  // at $0 under a fee-only estimate. applyEstimateServiceMode hides them on a prep job and shows the concierge fee row only
+  // with declutter hours; the same answer is asked here.
+  var _dcShown = isPrep && declutterTCHrs > 0;
   ['s-tc-fee-row', 's-ps-fee-row', 's-pkg-row'].forEach(function(id){
-    var _r = document.getElementById(id); if (_r) _r.style.display = isFixed ? 'none' : '';
+    var _r = document.getElementById(id); if (!_r) return;
+    var _prepHides = isPrep && !(id === 's-tc-fee-row' && _dcShown);
+    _r.style.display = (isFixed || _prepHides) ? 'none' : '';
   });
   var sFixedRow = document.getElementById('s-fixed-row');
   if (sFixedRow) { sFixedRow.style.display = isFixed ? '' : 'none'; document.getElementById('s-fixed-fee').textContent = fmt(fixedAmount); }
@@ -18547,7 +18553,7 @@ function jtDraftLine(job, key, unsent) {
   return drafted && stale ? drafted + '. ' + stale : (drafted || stale);
 }
 
-function jobTimeline(job, estRec, logs, cos, sched) {
+function jobTimeline(job, estRec, logs, cos, sched, settle) {
   if (!job) return [];
 
   var est = (estRec && estRec.estimate) || null;
@@ -18919,7 +18925,9 @@ function jobTimeline(job, estRec, logs, cos, sched) {
       amount: hav ? split.midpoint : null,
       notYet: _midNotYet, dueOn: (_midNotYet && !_prepNotYet) ? _sc.halfway : '',
       todo: _prepNotYet ? 'Book the prep vendors \u2014 the ' + _mw.invoice + ' is due once every one is confirmed'
-        : _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point' : (_mw.renamed ? 'Send the ' + _mw.invoice : ''),
+        // One sentence for when it falls due (2026-10-13; the core-jobs run): the band said the halfway point and the Job Plan
+        // said every room locked. All three readings are the rule (jobSchedule's `notYet`), so the band names them.
+        : _midNotYet ? 'Do the work \u2014 the midpoint invoice is due at the halfway point, or sooner once half the work is done or every room is locked' : (_mw.renamed ? 'Send the ' + _mw.invoice : ''),
       sub: _prepNotYet ? _prepPC.done + ' of ' + _prepPC.total + ' prep vendor' + (_prepPC.total > 1 ? 's' : '') + ' confirmed on the Job Plan'
         : _midSent ? ''
         : _closed ? (midPaid > 0 ? '' : (_finSent || finPaid > 0) ? 'Billed on the final invoice' : 'Not sent \u2014 the final invoice bills it')
@@ -18983,6 +18991,14 @@ function jobTimeline(job, estRec, logs, cos, sched) {
   if (terminalKind) {
     var retained = terminalKind === 'retained';
     var refundedOut = retained && jobClosedRefunded(job);   // P22: the net kept is named even at $0
+    // ⚠ "RETAINED" IS A CLAIM, AND UNTIL THE REFUND DUE HAS GONE IT IS NOT YET TRUE (2026-10-13; the job-flow audit): the
+    // row said the whole sum received was retained while the Walkaway settlement card under it showed a refund due. The
+    // caller hands in `walkawaySettlement(job)` (`settle`; the rail is DOM-free and prices nothing itself): with a refund
+    // due the row names what is kept and what goes back; while the settlement is unknown (no estimate on the device, the
+    // hours log unread) the money is "held", never "retained"; a fixed price, a settled hourly job, or no settlement handed
+    // in reads as before.
+    var _due = retained && settle && settle.basis === 'hourly' && settle.due > 0;
+    var _unk = retained && settle && settle.basis === 'unknown' && settle.held > 0;
     return [row({
       key: 'terminal', group: 'Close-out',
       label: refundedOut ? 'Closed — refunded' : retained ? 'Closed — deposit retained' : 'Lost',
@@ -18995,6 +19011,8 @@ function jobTimeline(job, estRec, logs, cos, sched) {
         // Everything received, not the deposit stage alone: a job abandoned after its midpoint was
         // paid kept both, and naming only the deposit understated what the firm holds (audit M4).
         + (refundedOut ? ' · ' + fmt(closeoutRetainedTotal(job)) + ' kept after refunds'
+          : _due ? ' · ' + fmt(settle.retained) + ' retained · ' + fmt(settle.due) + ' refund due'
+          : _unk ? ' · ' + fmt(settle.held) + ' held · the settlement waits on ' + settle.wait
           : retained && closeoutRetainedTotal(job) > 0 ? ' · ' + fmt(closeoutRetainedTotal(job)) + ' retained' : '')
     })].map(function (r) { r.state = 'terminal'; return r; });
   }
@@ -19687,6 +19705,10 @@ function docSend(spec) {
               : ' — a plain email carries NO attachment, so attach a printed copy before sending'))
         + '. ' + (needsTap ? 'Read it, send it, then tap “I’ve sent it”.' : '');
       msg = lead + msg;
+      // A document's registry entry may add a word to the send's notice (`sentNote`, 2026-10-13): the Home Prep second
+      // invoice sent before every preparation vendor is booked says so. A flag, never a refusal: somebody chose to send early.
+      var _sentNote = (spec.cfg && typeof spec.cfg.sentNote === 'function') ? spec.cfg.sentNote(spec) : '';
+      if (_sentNote) msg = msg.replace(/\s+$/, '') + ' \u26a0 ' + _sentNote;
       // ⚠ A DRAFT A PRICE CHANGE LEFT BEHIND IS NAMED NOW, WHILE THERE ARE TWO. The new one is at the new
       // price; the old one is still in a mailbox unless somebody deleted it, and the next person to open
       // the drafts folder has to know which is which. ⚠ READ BEFORE docRecordSent: DocuSign writes
@@ -21222,6 +21244,16 @@ var DOC_ACTIONS = {
     // The "Approved for Release" band on a PIN-approved final is ours, not the client's.
     pdfCss: '.approved-stamp{display:none!important;}',
     html: function (spec) { var d = invoiceHtml(spec.job, spec.stage); return d ? d.html : ''; },
+    // ⚠ HOME PREP'S SECOND INVOICE SENT EARLY SAYS SO (2026-10-13; the core-jobs run). The estimate and the agreement bill it
+    // once the vendor schedule is booked (P25, Q56), and the band withholds its filled button until every preparation vendor
+    // is Confirmed on the Job Plan (prepVendorsConfirmed); the send itself said nothing. Read by docSend after the draft is
+    // made; a flag, never a refusal.
+    sentNote: function (spec) {
+      if (spec.stage !== 'midpoint' || !paymentStageWord(spec.job, 'midpoint').renamed) return '';
+      var pc = prepVendorsConfirmed(spec.job, approvedEstimateFor(spec.job.id));
+      if (!(pc.total > 0 && pc.done < pc.total)) return '';
+      return 'Sent before every preparation vendor is booked: ' + pc.done + ' of ' + pc.total + ' confirmed on the Job Plan.';
+    },
     blocker: function (spec) {
       // ⚠ THE SHARED GATE FIRST, AND IT IS THE HALF THAT WAS MISSING. This blocker only ever
       // refused a FINAL, so a deposit or midpoint invoice opened and PRINTED on a job whose
@@ -22828,7 +22860,7 @@ function jobProgressBlockHtml(jobId, host) {
   var est = approvedEstimateFor(jobId) || estRec.estimate;
   var prog = jobProgress(est, jobPlanStore[jobId], logs, coAcceptedHours(jobId));
   var sched = jobSchedule(job, est, _todayStr(), prog);
-  var rows = jobTimeline(job, estRec, logs, cos, sched);
+  var rows = jobTimeline(job, estRec, logs, cos, sched, job.status === 'closed_retained' ? walkawaySettlement(job) : null);
   var band = jtBandHtml(job, estRec, rows, jobTimelineNext(rows));
   var work = jtWorkRows(rows);
   // A message a handler set for THIS band is shown once and cleared, exactly as the dashboard
@@ -22913,7 +22945,8 @@ function renderClientDashboard(jobId) {
   // ── Build svcLabel
   var svcLabelsMap = SVC_LABELS;
   var svcLabel = svcLabelsMap[job.svc] || job.svc || '—';
-  var isEstateDash = (job.svc === 'cleanout' || job.svc === 'probate' || job.svc === 'contested_probate');
+  // One rule (2026-10-13; the job-flow audit): the service catalogue's decedent flag, never a list of its own beside it.
+  var isEstateDash = isDecedentJob(job);
 
   // ── Blocker checks. `short` is the compact top-row chip label; `fix` is the
   // hover tooltip / detail so the chips stay tight without losing the how-to.
@@ -23242,7 +23275,7 @@ function renderClientDashboard(jobId) {
   var _jtEst = approvedEstimateFor(jobId) || est;
   var _jtProg = jobProgress(_jtEst, jobPlanStore[jobId], logs, coAcceptedHours(jobId));
   var _jtSched = jobSchedule(job, _jtEst, _todayStr(), _jtProg);
-  var _jtRows = jobTimeline(job, estRec, logs, cos, _jtSched);
+  var _jtRows = jobTimeline(job, estRec, logs, cos, _jtSched, job.status === 'closed_retained' ? walkawaySettlement(job) : null);
   var _jtNext = jobTimelineNext(_jtRows);
 
 
@@ -24794,18 +24827,25 @@ function fileSignedCopy(jobId, kind, meta, file, cb) {
   if (!SHEETS_SYNC_URL) return done(false, 'This device has no Apps Script URL in Settings, so it cannot file to Drive.');
   var key = jobId + '|' + kind + '|' + String(meta.ref || '');
   if (_signedFiling[key]) return done(false, 'This signed copy is being filed now. Give it a moment.');
-  _signedFiling[key] = true;
+  // ⚠ THE ONE WATCHDOG THE OTHER FILINGS HAVE (2026-10-13; found in P22, left open): `uploadToDrive` is a bare fetch with no
+  // timeout, so a request that never answered left this flag set until the page was reloaded, and every later press of
+  // File signed copy on that paper was refused as "being filed now". `release()` answers whether the flag is still this
+  // request's; a late answer still records a copy that landed and says nothing about a failure already reported.
+  var release = _armFiling(_signedFiling, key, function () {
+    done(false, SIGNED_RECORD_KINDS[kind].label + ': no answer from Drive after ' + (FILING_WATCHDOG_MS / 60000)
+      + ' minutes. It may still have been filed: check the client\u2019s Signed Records folder, then file it again if it is not there.');
+  });
   var reader = new FileReader();
-  reader.onerror = function () { delete _signedFiling[key]; done(false, 'That file could not be read on this device.'); };
+  reader.onerror = function () { if (release()) done(false, 'That file could not be read on this device.'); };
   reader.onload = function () {
     var dataUrl = reader.result;
     resolveSubfolderId(job, SIGNED_RECORDS_SUBFOLDER, function (folderId) {
       var target = folderId || _jobRootFolderId(job);
-      if (!target) { delete _signedFiling[key]; done(false, 'This client has no Drive folder yet. Create the Drive folder on the client, then file the signed copy.'); return; }
+      if (!target) { if (release()) done(false, 'This client has no Drive folder yet. Create the Drive folder on the client, then file the signed copy.'); return; }
       var name = _signedCopyName(job, kind, meta, file);
       uploadToDrive(target, name, dataUrl, function (ok, fileUrl, fileId) {
-        delete _signedFiling[key];
-        if (!ok) { done(false, 'The signed copy was not filed to Drive. Try again.'); return; }
+        var mine = release();
+        if (!ok) { if (mine) done(false, 'The signed copy was not filed to Drive. Try again.'); return; }
         // The store may have been replaced by a load while the upload was out: write to the record held now.
         var j2 = jobs.find(function (j) { return j.id === jobId; }) || job;
         var rec = jobListPut(j2, 'signedRecords', {
@@ -27254,10 +27294,10 @@ var INVENTORY_COLUMNS = [
   {key:'approvalDate', header:'Approval Date',       kind:'manage',  edit:'date',      group:'disp'},
   {key:'gross',        header:'Gross Proceeds',      kind:'manage',  edit:'currency',  group:'disp'},
   {key:'fees',         header:'Fees',                kind:'manage',  edit:'currency',  group:'disp'},
-  // ⚠ NEUTRAL SINCE P19: "Net to Estate" was false on a trust and on every living client. `sheetHeader` is the name the
-  // client's workbook resolves this column by (saveInventory.gs finds its Net formula and its Summary total by header),
-  // held until that script accepts the neutral one; the app's own surfaces, the CSV included, read `header`.
-  {key:'net',          header:'Net Proceeds',        kind:'formula', group:'disp', sheetHeader:'Net to Estate'},
+  // Neutral since P19 ("Net to Estate" was false on a trust and on every living client). It went on the wire as "Net to
+  // Estate" (`sheetHeader`) until the deployment that finds either name (`2026-10-03`) was live; since 2026-10-13 the
+  // workbook, the CSV and the desk read the one name.
+  {key:'net',          header:'Net Proceeds',        kind:'formula', group:'disp'},
   {key:'dispDate',     header:'Date of Disposition', kind:'manage',  edit:'date',      group:'disp'},
   {key:'receiptDoc',   header:'Receipt / Doc',       kind:'manage',  edit:'text',      group:'disp'}
 ];
@@ -29777,10 +29817,9 @@ function _csvCell(v) {
 }
 function buildInventoryCSV(jobId) {
   var p = buildInventoryPayload(jobId);
-  // The rows are the workbook's; the header row is the columns' own names, which is where the workbook's wire name for
-  // a column (`sheetHeader`) and the name a person reads part (P19).
-  var head = ['Job ID'].concat(INVENTORY_COLUMNS.map(function(c){ return c.header; }));
-  return [head].concat(p.rows).map(function(row){
+  // The rows and the header row are the workbook's own (2026-10-13; until then the file kept a header row of its own, for
+  // the Net column's old wire name).
+  return [p.columns].concat(p.rows).map(function(row){
     return row.map(_csvCell).join(',');
   }).join('\r\n');
 }
@@ -31496,7 +31535,8 @@ function _invScheduleSection(title, list) {
       return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (_q > 1 ? ' <span style="color:#888;">(' + _q.toLocaleString() + ' items, valued as a lot)</span>' : '') + '</td>'
         + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(invConditionText(r)) + '</td>'
         // ⚠ THE BASIS ON EACH LINE (P23, Anthony's answer to the spec's §12.3): what the figure rests on, in the reader's words.
-        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(invValBasisWord(r) || '—') + '</td>'
+        // A line with no basis reads *not stated*, as the Estate Inventory Report prints it (2026-10-13; it printed a dash).
+        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + (invValBasisWord(r) ? esc(invValBasisWord(r)) : '<span style="color:#A32D2D;">not stated</span>') + '</td>'
         + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td></tr>'; }).join('');
     total += sub;
     h += '<div style="font-size:11px;font-weight:700;color:#555;margin:7px 0 1px;">' + esc(cat) + '</div>'
@@ -35889,6 +35929,8 @@ function invPrimaryDoc(job) {
 
 function _renderInvWorkbar(job, all) {
   var st = _invReviewStats(all);
+  var _moreEl = document.getElementById('inv-more');
+  var _moreOpen = !!(_moreEl && _moreEl.open);
   var jid = job.id;
   var fid = invFiduciaryMode(job);
   var _agNameables = agentShotGroups(jid).length;
@@ -35961,7 +36003,9 @@ function _renderInvWorkbar(job, all) {
       + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', fid
           ? 'Add an asset with no photo (cash, vehicle, account)'
           : 'Add something with no photo — a vehicle, a rug already rolled, anything in storage')
-      + '<details style="position:relative;"><summary class="btn-s" style="list-style:none;cursor:pointer;display:inline-block;">More &#9662;</summary>'
+      // ⚠ THE MENU KEEPS ITS STATE ACROSS A REDRAW (2026-10-13; the core-jobs run): the desk repaints whole on many edits, and
+      // the menu closed under every one. The markup reads the menu that is on screen now and draws the new one the same way.
+      + '<details id="inv-more" style="position:relative;"' + (_moreOpen ? ' open' : '') + '><summary class="btn-s" style="list-style:none;cursor:pointer;display:inline-block;">More &#9662;</summary>'
         + '<div style="position:absolute;z-index:50;right:0;margin-top:4px;background:var(--paper,#fff);border:1px solid var(--border-md);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px;">'
         + btn('printAsFoundRecord(' + jid + ')', 'As-Found Record', 'Room-by-room index of the property as it was found — every as-found photograph, when it was taken and a link to the file. Names any room in scope that carries none.')
         + (fid && !invDocContractBlock(job, 'court') ? btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory') : '')
@@ -36710,9 +36754,9 @@ var AS_FOUND_COLUMNS = ['Room', '#', 'Date', 'Time', 'File', 'Link', 'Pass confi
 function buildInventoryPayload(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; }) || {};
   var items = _invAssignItemNos(jobId);
-  // Column A = Job ID, then the 25 manifest columns (includes the on-screen-hidden ones). A column the workbook resolves
-  // under another name goes on the wire under that name (`sheetHeader`, P19).
-  var columns = ['Job ID'].concat(INVENTORY_COLUMNS.map(function(c){ return c.sheetHeader || c.header; }));
+  // Column A = Job ID, then the 25 manifest columns (includes the on-screen-hidden ones), each under the name a person
+  // reads; the CSV's header row is this list too (buildInventoryCSV).
+  var columns = ['Job ID'].concat(INVENTORY_COLUMNS.map(function(c){ return c.header; }));
   var rows = items.map(function(ref, i){
     var row = [job.hvlId || String(jobId)];
     INVENTORY_COLUMNS.forEach(function(c){ row.push(_invExportValue(ref, c, job, i + 1)); });
@@ -39516,6 +39560,9 @@ function saveLogEntry() {
   }
   var date = document.getElementById('log-date').value;
   if (!date) { showFB('log-fb','warn','Enter a date.'); return; }
+  // The log is a record of work done (2026-10-13; the core-jobs run): a day after today is refused by name, since nobody has
+  // worked it yet. Local calendar days compare as text.
+  if (date > _todayStr()) { showFB('log-fb','warn','That date is after today. Hours are logged for days already worked.'); return; }
   var activity = document.getElementById('log-activity').value.trim();
 
   var members = [];

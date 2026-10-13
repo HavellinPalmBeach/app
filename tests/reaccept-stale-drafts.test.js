@@ -902,7 +902,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       lacks(b, '!st.sentAt', sig + ' keeps no private copy of the old "nothing sent" test');
     });
     // Every reader of "is this estimate waiting on a manager" asks the one rule.
-    ['jobTimeline(job, estRec, logs, cos, sched)', 'jobTimelineActions(row, job, estRec)', 'dashEditEstimate(jobId)', 'editEstimateFromCE()']
+    ['jobTimeline(job, estRec, logs, cos, sched, settle)', 'jobTimelineActions(row, job, estRec)', 'dashEditEstimate(jobId)', 'editEstimateFromCE()']
       .forEach((sig) => {
         const from = src.indexOf('function ' + sig);
         const rest = from < 0 ? '' : src.slice(from + 10);

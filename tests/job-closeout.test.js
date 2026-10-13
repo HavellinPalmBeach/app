@@ -355,7 +355,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const b = noComments(fn('jobProgressBlockHtml'));
     has(b, 'jtBandHtml(job, estRec, rows, jobTimelineNext(rows))', 'the same band renderer, fed the same rows');
-    has(b, 'jobTimeline(job, estRec, logs, cos, sched)', 'from the same state machine');
+    has(b, "jobTimeline(job, estRec, logs, cos, sched, job.status === 'closed_retained' ? walkawaySettlement(job) : null)", 'from the same state machine (with the walkaway settlement on a retained job, 2026-10-13)');
     has(b, 'var work = jtWorkRows(rows);', 'and only the second leg of the track is drawn');
     has(b, 'jtTrackHtml(work, [work]) + jtRailHtml(work)', 'on a desk and on a phone');
     lacks(b, 'getJobPlan(', '⚠ never the minting accessor — this paints on every redraw');

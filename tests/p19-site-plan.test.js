@@ -50,9 +50,9 @@ const FIND_FNS = ['_invDocPartyHead', 'siteFindsCardHtml', '_siteFindRowHtml', '
   'siteFindRefusal', 'siteFindHandFlag', 'siteFindHolderFlag', 'siteFindDay', '_siteFindTeamNames', '_siteFindHolderNames',
   'willReceiptHtml', 'cashReceiptHtml', 'printSiteFindReceipt', '_siteFindFormRow', '_siteFindSigLine', '_invDocHead', '_invDocName',
   'jobListPut', 'jobListGet', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'samePerson', 'canonPersonName',
-  'isCrewPlaceholder', '_andJoin', 'showFB', 'fileSignedCopy', '_signedCopyName', '_jobRootFolderId', 'signedCopyControlHtml',
+  'isCrewPlaceholder', '_andJoin', 'showFB', 'fileSignedCopy', '_armFiling', '_signedCopyName', '_jobRootFolderId', 'signedCopyControlHtml',
   'fileSignedCopyFromInput', 'signedRecordLinksHtml'];
-const FIND_VARS = ['JOB_RECORD_LISTS', 'SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_BYTES', '_signedFiling', 'SIGNED_RECORDS_SUBFOLDER',
+const FIND_VARS = ['JOB_RECORD_LISTS', 'SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_BYTES', '_signedFiling', 'FILING_WATCHDOG_MS', 'SIGNED_RECORDS_SUBFOLDER',
   '_signedCopySpecs', '_signedCopyKeys', 'PERSON_NAME_ALIASES', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', '_SITE_FIND_BLANK',
   'WILL_RECEIPT_STATEMENT', 'CASH_RECEIPT_STATEMENT'];
 
@@ -313,7 +313,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const S = sandbox({
       fns: DERIVED_FNS.concat(FIND_FNS), vars: DERIVED_VARS.concat(FIND_VARS),
       stubs: Object.assign(DERIVED_STUBS(), {
-        document: dom, setTimeout: () => 0,
+        document: dom, setTimeout: () => 0, clearTimeout() {},
         _todayStr: () => o.today || '2026-10-03',
         saveJobs: () => { log.saves++; }, syncJobToSheets: () => { log.syncs++; },
         showSyncBadge: (m, err) => { log.badges.push({ m: m, err: !!err }); },

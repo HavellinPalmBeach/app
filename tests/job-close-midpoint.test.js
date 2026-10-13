@@ -117,7 +117,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(s.next && s.next.key, 'midpoint_invoiced', 'the lit step is still the midpoint invoice — it IS the next milestone');
     ok(s.by.midpoint_invoiced.notYet, 'but it is not yet due');
     eq(s.by.midpoint_invoiced.dueOn, '2026-09-25', 'and it knows the day it falls due, as a yyyy-mm-dd the renderer formats');
-    eq((s.next && s.next.todo), 'Do the work — the midpoint invoice is due at the halfway point',
+    eq((s.next && s.next.todo), 'Do the work — the midpoint invoice is due at the halfway point, or sooner once half the work is done or every room is locked',
        'the band says to do the work, and when the invoice falls due');
     ok((s.next && s.next.todo) !== (s.next && s.next.label) && /^Do /.test((s.next && s.next.todo)), 'still a step in the imperative, never the milestone name');
 
