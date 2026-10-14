@@ -1340,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.13 · 11:54am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.14 · 7:11pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6372,6 +6372,13 @@ function paintEstimateAlpha() {
     : '<strong>' + cur + '%</strong> on this estimate &mdash; the firm default is ' + dflt + '%. Higher means fewer specialist hours and a shorter job.';
 }
 var TC_DAY_CAP = 10;              // concierge hrs/day above which a 2nd TC is recommended
+// ⚠ The home value prices nothing (intake calls it an optional ballpark; it reaches the internal worksheet
+// and this one hint). The hint suggests Premium Estate rates on a home valued at this much or more while the
+// box is unticked. It was $5M until 2026-10-14; on a coastal Palm Beach County job ($1,500 to $3,000 a square
+// foot, Anthony) nearly every home clears $5M, so it fired on almost every estimate and carried nothing.
+// Anthony, 2026-10-14: "Raise the Premium hint threshold to $10M." Intake's value picker has a bucket
+// boundary at exactly $10M ($5M – $10M below it, $10M – $20M above), so the hint follows the pick.
+var PREMIUM_HINT_VALUE = 10000000;
 // Off-site coordination doesn't compress into the crew days — a two-day condo
 // downsizing still carries weeks of attorney, vendor and disposition contact around
 // it. Spread it over at least this many working days when testing concierge load, or
@@ -7451,7 +7458,7 @@ function calcAll() {
   // decision. Surface a soft hint for high-value homes instead of an hours multiplier.
   var propBadge = document.getElementById('prop-mult-badge');
   if (propBadge) {
-    propBadge.innerHTML = (propVal >= 5000000 && !prem) ?
+    propBadge.innerHTML = (propVal >= PREMIUM_HINT_VALUE && !prem) ?
       '<div class="alert a-info" style="margin-top:6px;">High-value property ('+formatPropVal(propVal)+') — consider the Premium Estate rate.</div>' : '';
   }
 
