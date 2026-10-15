@@ -202,7 +202,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
                  'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invFiduciaryMode',
-                 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', '_invHasAppraisal',
+                 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', '_invHasAppraisal', 'invAppraised',
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
                  'matterDef', 'matterTypeOf', 'invDocContractBlock',
@@ -211,7 +211,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                   'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS', 'DOC_SCOPES'];
     const item = (id, name, fmv, track) => ({ stableId: id, label: 'inventory', jobId: 7,
-      objectName: name, category: 'Furniture', fmv: fmv, assetTrack: track, condition: 'Good',
+      // Appraised (source Appraisal with the figure): since 2026-10-14 a $4,000 sofa awaits an appraisal in any category,
+      // which would hold this schedule at DRAFT; the group is about the matter type, not the worklist.
+      objectName: name, category: 'Furniture', fmv: fmv, valSource: 'Appraisal', assetTrack: track, condition: 'Good',
       ts: Number(id.slice(1)) });
 
     function render(matterType, track, items) {

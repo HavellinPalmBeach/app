@@ -508,7 +508,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.invNeedsAppraisal(ROW({ valHigh: 3500, valuedBy: 'agent' }), ESTATE({ docTier: 'contents' })), true, 'on an internal tier the range alone recommends the appraisal to counsel');
     eq(ctx.invNeedsAppraisal(ROW({ valHigh: 900, valuedBy: 'agent' }), ESTATE({ docTier: 'contents' })), false, 'and clears a line it puts under the threshold');
     eq(ctx.invNeedsAppraisal(ROW({ fmv: 300, valHigh: 600, valuedBy: 'agent' }), ESTATE({ gateDispute: 'yes' })), true, 'a disputed estate\'s $500');
-    eq(ctx.invNeedsAppraisal(ROW({ fmv: 2800, valHigh: 9000, valuedBy: 'agent', category: 'Furniture' }), J), false, 'the category gate is unchanged: furniture is never flagged by value');
+    // ⚠ RESTATED 2026-10-14 (Anthony: "any category at $3,000+"): the category gate is gone, so the range flags furniture too.
+    eq(ctx.invNeedsAppraisal(ROW({ fmv: 2800, valHigh: 9000, valuedBy: 'agent', category: 'Furniture' }), J), true, 'a $2,800 to $9,000 range on furniture is an appraisal (it was never flagged by value until 2026-10-14)');
+    eq(ctx.invNeedsAppraisal(ROW({ fmv: 2800, valHigh: 9000, valuedBy: 'agent', category: 'Vehicles & Watercraft' }), J), false, 'vehicles route only by their collector flag');
     eq(ctx.invNeedsAppraisal(ROW({ fmv: 2800, valHigh: 9000, valuedBy: 'agent' }), LIVING()), false, '⚠ a living job stays the explicit tick');
     eq(ctx.agentValueSpecialistWorth(ROW({ fmv: 2800, valHigh: 9000, valuedBy: 'agent' }), LIVING()), true, 'and there the range is a notice: worth a specialist');
     eq(ctx.agentValueSpecialistWorth(ROW({ fmv: 2800, valHigh: 9000, valuedBy: 'agent' }), J), false, 'never on an estate (the appraisal flag is the answer there)');

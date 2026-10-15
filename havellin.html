@@ -1340,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.14 · 7:11pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.14 · 7:57pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -26787,7 +26787,7 @@ var INV_TAXONOMY = [
   {cat:'Firearms',               appraiser:'Firearms Specialist (FFL)',      intrinsic:true},
   {cat:'Wine & Spirits',         appraiser:'Wine Appraiser',                 intrinsic:true},
   {cat:'Musical Instruments',    appraiser:'Specialized Dealer',             intrinsic:true},
-  {cat:'Vehicles & Watercraft',  appraiser:'Vehicle / Boat Appraiser',       intrinsic:false},
+  {cat:'Vehicles & Watercraft',  appraiser:'Vehicle / Boat Appraiser',       intrinsic:false, apprByFlagOnly:true},  // the collector flag is its only route to the worklist (invNeedsAppraisal)
   {cat:'Furniture',              appraiser:'',                               intrinsic:false},
   {cat:'Electronics & Appliances',appraiser:'',                              intrinsic:false},
   {cat:'General/Household',      appraiser:'',                               intrinsic:false}
@@ -26802,8 +26802,8 @@ function invCatMeta(cat){
 }
 function invAppraiserFor(cat){ return invCatMeta(cat).appraiser; }
 function invIsIntrinsic(cat){ return !!invCatMeta(cat).intrinsic; }
-// Should this item go to a specialist? Intrinsic category with no value entered yet,
-// or any value at/above the formal-appraisal threshold. (Vehicles route via their own
+// Should this item go to a specialist? Any category with a value at/above the formal-appraisal
+// threshold, or an intrinsic category with no value entered yet. (Vehicles route via their own
 // collector flag, not here, so an ordinary car doesn't nag for an appraisal.)
 // `job` is REQUIRED in practice, not optional: G6 halves the threshold, so a caller that
 // omits it silently evaluates a disputed estate at the ordinary $3,000 and under-flags
@@ -26823,7 +26823,14 @@ function invNeedsAppraisal(ref, job){
   // ⚠ THE `job &&` GUARD IS LOAD-BEARING: with no job the estate behaviour must survive, which
   // is also the safe direction — the same rule invAwaitingAppraisal states two functions down.
   if (job && !invFiduciaryMode(job)) return false;
-  if (!invIsIntrinsic(ref.category)) return false;
+  // ⚠⚠ ANY CATEGORY AT THE THRESHOLD (Anthony, 2026-10-14, asked on the pricing grid's open item: "Any category at
+  // $3,000+"). Until then only the nine intrinsic categories routed on value, so a $9,000 sofa Agent Two valued reached
+  // no appraiser and the Court Inventory never said it was waiting for one. Now a known value, or the top of the
+  // agent's range, at or above the threshold flags a line whatever its category. Two edges are deliberate: vehicles
+  // keep the collector flag as their only route (`apprByFlagOnly` on the taxonomy: a $30,000 daily driver never nags),
+  // and the no-value arm stays intrinsic-only (an unvalued sofa is not an appraisal; an unvalued painting is).
+  if (invCatMeta(ref.category).apprByFlagOnly) return false;
+  var intrinsic = invIsIntrinsic(ref.category);
   var v = parseFloat(ref.fmv);
   // ⚠⚠ AGENT TWO'S RANGE (P23, spec §6; Anthony's decision 4): on a figure the agent made, the top of its range is read,
   // so a $2,500 to $4,000 range is an appraisal whatever its point value says. It is read on a tier where counsel values
@@ -26833,6 +26840,7 @@ function invNeedsAppraisal(ref, job){
     var _hi = parseFloat(ref.valHigh);
     if (!isNaN(_hi) && (isNaN(v) || _hi > v)) v = _hi;
   }
+  if (!intrinsic) return !isNaN(v) && v >= invAppraisalThreshold(job);
   return isNaN(v) || v >= invAppraisalThreshold(job);
 }
 // ⚠ "NEEDS AN APPRAISAL" AND "IS STILL WAITING FOR ONE" ARE DIFFERENT QUESTIONS, and three

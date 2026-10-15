@@ -401,8 +401,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(raise({ category: 'Art & Décor', fmv: '', disposition: 'Auction' }).join(),
        'needsAppraisal',
        '⚠⚠ an unvalued painting proposed for auction raises it — it raised NOTHING before today');
-    eq(raise({ category: 'Furniture', fmv: '4000', disposition: 'Auction' }).join(), '',
+    eq(raise({ category: 'Furniture', fmv: '900', disposition: 'Auction' }).join(), '',
        'an ordinary valued line raises nothing');
+    eq(raise({ category: 'Furniture', fmv: '4000', disposition: 'Auction' }).join(), 'needsAppraisal',
+       '⚠ since 2026-10-14 a $4,000 line raises it in any category (Anthony: "any category at $3,000+"); furniture never did before');
     eq(raise({ category: 'Art & Décor', fmv: '', disposition: 'Auction', apprWaived: true }).join(), '',
        'a logged waiver closes it');
 
@@ -426,7 +428,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const rows = [
       mk({ stableId: 'a', itemNo: 1, objectName: 'Dining chairs', category: 'Furniture',
-           fmv: '4000', disposition: 'Auction' }),
+           fmv: '900', disposition: 'Auction' }),   // under the threshold, which since 2026-10-14 reads every category
       mk({ stableId: 'b', itemNo: 2, objectName: 'Sargent portrait', category: 'Art & Décor',
            fmv: '', disposition: 'Auction' }),
     ];
@@ -473,7 +475,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const rows = [
       mk({ stableId: 'a', itemNo: 1, objectName: 'Dining chairs', category: 'Furniture',
-           fmv: '4000', disposition: 'Auction' }),
+           fmv: '900', disposition: 'Auction' }),   // under the threshold, which since 2026-10-14 reads every category
       // Appraised: the report's figure on the line, source Appraisal (P25, Q36; it was the link alone).
       mk({ stableId: 'b', itemNo: 2, objectName: 'Tabriz rug', category: 'Rugs & Carpets',
            fmv: '9000', disposition: 'Sell', apprId: 'ap1', valSource: 'Appraisal' }),
@@ -506,7 +508,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The release request names them too, but that document is read by the representative;
     // this is read by the person who did it, while they are still looking at the screen.
     const rows = [
-      mk({ stableId: 'a', itemNo: 1, objectName: 'Dining chairs', category: 'Furniture', fmv: '4000' }),
+      mk({ stableId: 'a', itemNo: 1, objectName: 'Dining chairs', category: 'Furniture', fmv: '900' }),   // under the threshold, which since 2026-10-14 reads every category
       mk({ stableId: 'b', itemNo: 2, objectName: 'Sargent portrait', category: 'Art & Décor', fmv: '' }),
     ];
     let badge = '';

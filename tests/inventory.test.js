@@ -396,8 +396,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.EXEMPT_CAP_732_402, 20000, '§732.402 cap is $20,000');
     ok(ctx.invNeedsAppraisal({ category: 'Firearms', fmv: '' }),
        'an intrinsic item with no value yet still needs a specialist');
-    ok(!ctx.invNeedsAppraisal({ category: 'Furniture', fmv: '50000' }),
-       'a non-intrinsic category does not route on value alone (per the existing rule)');
+    ok(ctx.invNeedsAppraisal({ category: 'Furniture', fmv: '50000' }),
+       'any category at the threshold routes on its value (Anthony, 2026-10-14; Furniture never did before)');
+    ok(!ctx.invNeedsAppraisal({ category: 'Furniture', fmv: '' }),
+       'but an unvalued line outside the intrinsic categories is not an appraisal');
   }
 
   // ── The guardrail has to offer the FIX, not only the escape hatch ───────────

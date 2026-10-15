@@ -57,8 +57,9 @@ const mk = (o) => Object.assign({ label: 'inventory', jobId: 1, roomIdx: null, q
 // The estate from the measurement: an ordinary line, a bequest proposed for auction, a
 // disputed line proposed for sale, and one carrying both.
 const ROWS = () => [
+  // ⚠ $900, not $4,000, since 2026-10-14: the appraisal flag reads the value in every category, so the ordinary line stays under it.
   mk({ stableId: 'a', ts: 1, itemNo: 1, objectName: 'Dining chairs (set of 8)', category: 'Furniture',
-       fmv: '4000', disposition: 'Auction' }),
+       fmv: '900', disposition: 'Auction' }),
   mk({ stableId: 'b', ts: 2, itemNo: 2, objectName: 'Sargent portrait', category: 'Art & Decor',
        fmv: '48000', disposition: 'Auction', flagBequest: true }),
   mk({ stableId: 'c', ts: 3, itemNo: 3, objectName: 'Tabriz rug', category: 'Rugs & Carpets',
@@ -196,7 +197,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const s = ctx([
       mk({ stableId: 'a', ts: 1, objectName: 'Dining chairs', category: 'Furniture',
-           fmv: '4000', disposition: 'Auction' }),
+           fmv: '900', disposition: 'Auction' }),   // under the threshold, which since 2026-10-14 reads every category
       mk({ stableId: 'b', ts: 2, objectName: 'Side table', category: 'Furniture',
            fmv: '600', disposition: 'Donate' }),
     ]);
