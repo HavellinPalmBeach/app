@@ -64,7 +64,7 @@ The recurring lessons, each learned from a defect that shipped.
 - `WORKFLOW_AUDIT_2026-09-28.md`: the tracker for open work (fix packs, questions and answers, Anthony's own items). Read it before building a pack.
 - `COUNSEL_REVIEW_BUNDLE.md`: every legal text drafted here, collected for counsel.
 - `JOB_SCRIPTS.md`: the six scripted whole-job runs (the launch gate), drafted 2026-10-13 for Anthony to correct.
-- Specs, each still the best explanation of its area: `ESTATE_SCOPE_SPEC.md`, `ESTATE_DOCUMENTATION_SPEC.md`, `INVENTORY_WORKSPACE_SPEC.md`, `AGENT_ONE_SPEC.md`, `AGENT_TWO_SPEC.md` (valuation; built in P23, its §13 says where the build departs from it), `STRIPE_PAYMENTS_SPEC.md`, `LIFECYCLE_AUDIT.md`, `UNEARNED_REVENUE_SPEC.md` and `TIME_TRACKING_INTEGRATION_SPEC.md` (QuickBooks; not built). `PRICING_SCHEMA.md` is historical: price from the engine.
+- Specs, each still the best explanation of its area: `ESTATE_SCOPE_SPEC.md`, `ESTATE_DOCUMENTATION_SPEC.md`, `INVENTORY_WORKSPACE_SPEC.md`, `AGENT_ONE_SPEC.md`, `AGENT_TWO_SPEC.md` (valuation; built in P23, its §13 says where the build departs from it), `STRIPE_PAYMENTS_SPEC.md`, `LIFECYCLE_AUDIT.md`, `UNEARNED_REVENUE_SPEC.md` and `TIME_TRACKING_INTEGRATION_SPEC.md` (QuickBooks; not built). `KEY_CUSTODY_SPEC.md` (keys, fobs and access items: proposed 2026-10-16, not built; its three questions are Q61 to Q63 in the tracker). `PRICING_SCHEMA.md` is historical: price from the engine.
 
 ## Testing
 ### The harness
@@ -378,6 +378,7 @@ Decided with Anthony. Change them only with Anthony, and record the new answer h
 - `WORKFLOW_AUDIT_2026-09-28.md` is the tracker. Every pack (P1 to P25) has landed and every question to Q56 is answered (Q32's last step is Anthony's sandbox test; Q33 to Q56, from the job-flow audit, answered 2026-10-09, built by P25); Anthony's own items are listed there (the redeploy above, a Stripe test ACH link, the counsel bundle, the insurance and bond).
 - Agent Two (P23) is proved only against stubs: the live model, web search, the dynamic filter's result shapes (the URL guard reads every tool result block for that reason) and UrlFetchApp's per-request limit (60 seconds is the commonly reported figure; Google's docs could not be read from the build environment) are first met by `testAgentValue()`, which can run now that `2026-10-06c` is live (no result reported yet). Tune the effort, the searches per depth and `AGENT_VALUE_GENERAL_CEILING` on the first real estate.
 - Waiting on Anthony:
+  - The key and access custody log (`KEY_CUSTODY_SPEC.md`, 2026-10-16): Q61 (no codes in the app; recommended), Q62 (a Lost or Deposit Retained job holding items: flag) and Q63 (the lost alert: a prefilled text the field person sends). Build it as the spec says once he answers, adjusting for his answers.
   - The walkaway refund rests on the final invoice for services performed; both hourly clauses (standard §12.4, estate §8.1) state a refund above the amount owed only after Havellin's uncured breach. Counsel to confirm the reading or add a sentence (bundle).
 - Decided, not to build: intake sanity checks on square footage and room counts (Anthony, 2026-09-30: "no sanity check is needed").
 - Known, not fixed:
