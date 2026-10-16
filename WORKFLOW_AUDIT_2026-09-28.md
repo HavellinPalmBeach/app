@@ -1073,6 +1073,17 @@ Anthony asked for both agreement forms as PDFs to review and read the estate for
 - **Q63** §7's bullet *"Destroy or return all Client documents upon project completion or written request"* sits above the seven-year retention of the Project Records; §7.1 carves the Project Records out two pages later. Anthony: *"we say we will destroy client docs at the end of the job, but we also keep client records for 7yrs."* Recommendation: say it in the bullet itself (the client's own documents are returned or destroyed; the Project Records are retained for seven years under §7.1). The seven-year figure stays with counsel (bundle A3). **Open.**
 
 
+### Incident reporting (2026-10-16)
+Anthony asked for incident reporting on every job (injury, property damage, missing item, discovered valuable, hazardous condition, client complaint, vulnerable adult concern; who, when, where, what, who was present, photographs; open / resolved with a resolution note; entries never edited or deleted; no close with an open incident; in the final project records; injury, missing item and vulnerable adult concern alert him at once) and for a proposal before any build. The proposal is `INCIDENT_REPORTING_SPEC.md`: a seventh job record list (`incidents`, the Found on site pattern), an Incidents card on the Job Plan on every service, a one-button dialog, derived reminders (the estate form's §6.3 deadlines on a damage incident), the close gate in `jobCloseBlockers`, an Incident Record filed at close and carried in the estate package. Its eight decisions, recommendation first in the spec's §9:
+- **Q64** The alert route: the prefilled text and Gmail draft the reporter sends, recorded on confirmation, plus a red banner on every device until acknowledged (recommended); or an automatic send from the Apps Script (reverses a decision; a redeploy); or both. **Open.**
+- **Q65** Who is alerted: Anthony alone (recommended); Anthony and Ashley; or the job's concierge too. **Open.**
+- **Q66** A vulnerable adult concern stays off the client's Incident Record and out of the package, on its own page for Anthony (recommended; §415.107 confidentiality); or prints like the rest. **Open.**
+- **Q67** Voiding an incident: with a reason, attributed, kept and printed as VOID (recommended); none at all; or behind a manager PIN. **Open.**
+- **Q68** The close gate's reach: Close job and Deposit Retained blocked, Lost flagged (recommended); or Close job alone. **Open.**
+- **Q69** An open injury or hazard red in the Job Plan header, where firearms are the only red today (recommended); or amber. **Open.**
+- **Q70** Add the estate form's §6.3 Damage Incident Protocol to the standard form through counsel, so the derived deadlines are promised to living clients too (recommended); or derive them on estates only. **Open.**
+- **Q71** Build it now, before the six scripted runs, with an incident added to each script (recommended; the record supports the insurance and bond work on the list below); or after the runs. **Open.**
+
 ## Only Anthony can do these
 
 - [x] **Redeploy the Apps Script.** The repo is at `2026-09-22b`; the last recorded deploy is `22a`. Add `ANTHROPIC_API_KEY` in Script Properties and run `testAgentIdentify()` once. Until then, Agent One (photo naming) can't run. *You report this done (2026-09-29). To confirm: no "out of date" banner when the app loads means the 22b deployment is live, and pressing Name N shots on a job with photos (or running `testAgentIdentify()` in the editor) proves the key.*
