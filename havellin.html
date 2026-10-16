@@ -1340,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.14 · 7:57pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.16 · 3:27pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -48139,13 +48139,25 @@ function probateAgreementHtml(job, est) {
   content += pp('Unless specifically added by written Change Order, the following are excluded from all Havellin engagements: ' + _agrCounsel(job).exclusion + '; tax preparation or filing; financial account management; real property sales (a separate real estate services agreement applies if Team Ashley &amp; Anthony at Douglas Elliman is engaged); structural repairs, renovation, or construction; and any work requiring a Florida contractor license.');
   // SECTION 3: FEES
   content += secHdr(3,'Fees, Billing &amp; Payment Terms');
-  // The rate card below STAYS on a fixed-fee engagement and is load-bearing there: the
-  // Fixed Project Fee paragraph under this table says the hourly rates "apply only to
-  // Change-Order work authorized beyond that scope", so removing them would leave a signed
-  // contract with a change-order mechanism and no rate to price it at. Only the heading
-  // moves — a section called "Hourly Rate Structure" on a contract whose fee is firm is the
-  // kind of internal contradiction this file records being construed against the drafter.
-  content += subHdr(isFixedAgr ? '3.1 Fee Structure' : '3.1 Hourly Rate Structure');
+  // ⚠ ON A FIXED FEE THE FEE LEADS AND THE RATE CARD FOLLOWS (Anthony, 2026-10-16, reading the rendered
+  // form: *"why do we list hourly rates when quoting a fixed price contract?"*). The card stays, and is
+  // load-bearing: the Fixed Project Fee paragraph says the hourly rates "apply only to Change-Order work
+  // authorized beyond that scope", and the §4.2 change-order form prices a change at "the rates in
+  // Section 3.1", so removing it would leave a signed contract with a change-order mechanism and no rate
+  // to price it at. Until this build the card came first under "3.1 Fee Structure" and the client read
+  // $150 / hour before the firm figure. Now §3.1 opens with the fixed price and the card sits under its own
+  // heading, *Rates for Change-Order Work*, still inside §3.1 so the §4.2 cross-reference holds. The
+  // table's rows say the fee is "above" on this arm. The hourly arm is untouched.
+  if (isFixedAgr) {
+    content += subHdr('3.1 Fixed Project Fee');
+    content += pp('The Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of ' + fmt(_agrFlat))+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates in the table below apply only to Change-Order work authorized beyond that scope.'
+      + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table below is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of the quotes recorded for the home sale preparation vendors identified in Exhibit A or added by Change Order, updated if a vendor’s invoice differs (estimated in Exhibit A at ' + fmt(_agrPrepEst)+').' : '')
+      // The premium and the discount Exhibit A itemises on the fee (a record saved from 2026-09-30).
+      + (agrPriceAdjustments(est, 'Havellin') ? '  ' + agrPriceAdjustments(est, 'Havellin') : ''));
+    content += subHdr('Rates for Change-Order Work');
+  } else {
+    content += subHdr('3.1 Hourly Rate Structure');
+  }
   content += '<table style="width:100%;border-collapse:collapse;margin-bottom:.8rem;">';
   content += '<thead><tr><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Role</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Billing Rate</th><th style="padding:5px 8px;background:var(--tan);border:0.5px solid var(--border);text-align:left;font-size:9.5px;font-weight:600;color:var(--gray);">Description</th></tr></thead><tbody>';
   // ⚠ READ FROM THE ESTIMATE — see agrBillingRates. A literal here is how this table came to
@@ -48168,7 +48180,7 @@ function probateAgreementHtml(job, est) {
       : ['Third-Party Vendors', 'At cost — no fee',
          'Vendors bill ' + _agrEstateNoun(job) + ' directly at cost. Havellin adds no markup to any vendor invoice; the concierge time spent coordinating them is '
          // On a fixed fee there is no TC rate billing anything — the coordination is inside the flat fee.
-         + (isFixedAgr ? 'included in the fixed project fee below' : 'billed at the TC rate above')
+         + (isFixedAgr ? 'included in the fixed project fee above' : 'billed at the TC rate above')
          + (_agrHasPrepVendors(est) ? ', except for the home sale preparation vendors in the row below.' : '.')])
   ];
   // Home sale preparation is the one exception to the row above, and it only earns a row when
@@ -48182,8 +48194,8 @@ function probateAgreementHtml(job, est) {
   if (_agrHasPrepVendors(est)) {
     feeRows.push(['Home Sale Preparation Fee', Math.round(prepFeeRate()*100)+'% of prep vendor cost',
       'Charged on the home sale preparation vendors identified in Exhibit A' + (_agrPrepInside ? '' : ' or added by Change Order') + '. Those vendors bill at cost; this fee covers Havellin\'s coordination and site supervision of that work, '
-      + (_agrPrepOnTop ? 'which is not part of the fixed project fee below: it is charged in addition to it, on ' + PREP_FEE_BASIS_TXT + '.'
-         : _agrPrepInside ? 'which on this engagement is included in the fixed project fee below.'
+      + (_agrPrepOnTop ? 'which is not part of the fixed project fee above: it is charged in addition to it, on ' + PREP_FEE_BASIS_TXT + '.'
+         : _agrPrepInside ? 'which on this engagement is included in the fixed project fee above.'
          : 'which is not additionally billed at the TC rate above.')]);
   }
   feeRows.forEach(function(r){
@@ -48192,12 +48204,6 @@ function probateAgreementHtml(job, est) {
   content += '</tbody></table>';
   // The premium and the discount Exhibit A itemizes, named on the contract — see agrPriceAdjustments.
   if (!isFixedAgr && agrPriceAdjustments(est, 'Havellin')) content += pp(agrPriceAdjustments(est, 'Havellin'));
-  if (isFixedAgr) {
-    content += pp(bb('Fixed Project Fee.')+'  Notwithstanding the hourly rates above, the Parties expressly agree that Havellin\'s fee for this engagement is a '+bb('fixed price of ' + fmt(_agrFlat))+' for the scope of work described in Exhibit A. This fixed price is firm and does not vary with the actual hours worked. The hourly rates above apply only to Change-Order work authorized beyond that scope.'
-      + (_agrPrepOnTop ? '  The Home Sale Preparation Fee in the table above is not part of the fixed price. It is charged in addition to it, at '+_pctWords(prepFeeRate())+' of the quotes recorded for the home sale preparation vendors identified in Exhibit A or added by Change Order, updated if a vendor’s invoice differs (estimated in Exhibit A at ' + fmt(_agrPrepEst)+').' : '')
-      // The premium and the discount Exhibit A itemises on the fee (a record saved from 2026-09-30).
-      + (agrPriceAdjustments(est, 'Havellin') ? '  ' + agrPriceAdjustments(est, 'Havellin') : ''));
-  }
   content += subHdr('3.2 Project Estimate');
   content += pp('The project estimate for this engagement is generated from the Havellin Job Estimator and is attached to this Agreement as Exhibit A. The estimate details projected TC hours, PS hours, materials, and third-party vendor costs based on the initial property assessment. '+bb('This Agreement is not valid without the attached estimate.'));
   content += pp(isFixedAgr

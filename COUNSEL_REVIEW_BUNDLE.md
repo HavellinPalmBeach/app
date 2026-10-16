@@ -210,6 +210,15 @@ enough when the standard form's fixed arm never states those rates — or should
 added to that form's fixed arm so the client has seen the rates before signing a change order
 priced from them?
 
+**Added 2026-10-16 — the estate form's fixed arm now leads with the fee.** Reading the rendered
+form, Anthony asked why a fixed-price contract lists hourly rates. The rate card stays, because
+§4.2 prices a change order from it; what changed is the order. §3.1 is headed *Fixed Project Fee*
+and opens with the firm figure; the card follows under its own heading, *Rates for Change-Order
+Work*, still inside §3.1 so the §4.2 cross-reference holds. The paragraph reads *"The hourly rates
+in the table below apply only to Change-Order work authorized beyond that scope"* (it read
+*"Notwithstanding the hourly rates above …"*), and the table's rows say the fee is *above*. No
+clause changed meaning. **The question:** none new; counsel reads the fixed arm in this order.
+
 ---
 
 ### A9. The appraisals Exhibit A lists — §2, §5 and the §5.3 table ⚠ NEW 2026-09-30

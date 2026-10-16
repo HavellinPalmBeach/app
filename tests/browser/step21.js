@@ -194,10 +194,12 @@ const money = (n) => { const c = CT(n); const r = Math.abs(c) % 100; return '$' 
   console.log('   estate job', idC, (await p.evaluate((id) => (jobs.find(j => j.id === id) || {}).svc, idC)));
   await build(idC, 'suggested'); const C = await build(idC, 30000); const sC = C.snap;
   const agrC = await p.evaluate(([id, e]) => { const d = document.createElement('div'); d.innerHTML = agreementHtml(jobs.find(j => j.id === id), e); return d.textContent.replace(/\s+/g, ' '); }, [idC, sC]);
-  has(agrC, 'Fee Structure', 'estate form, fixed arm');
+  has(agrC, '3.1 Fixed Project Fee', 'estate form, fixed arm: the fee leads (2026-10-16)');
+  ok(agrC.indexOf('fixed price of $30,000') > 0 && agrC.indexOf('fixed price of $30,000') < agrC.indexOf('/ hour'), 'the fixed price is read before the first hourly rate');
+  has(agrC, 'Rates for Change-Order Work', 'and the rate card sits under its own heading');
   has(agrC, 'fixed price of $30,000', 'the estate form states the flat fee');
-  has(agrC, 'the concierge time spent coordinating them is included in the fixed project fee below', 'vendor row: coordination inside the flat fee');
-  has(agrC, 'which is not part of the fixed project fee below: it is charged in addition to it', 'prep row: fee outside the flat fee');
+  has(agrC, 'the concierge time spent coordinating them is included in the fixed project fee above', 'vendor row: coordination inside the flat fee');
+  has(agrC, 'which is not part of the fixed project fee above: it is charged in addition to it', 'prep row: fee outside the flat fee');
   has(agrC, 'It is charged in addition to it, at thirty percent (30%) of the quotes recorded for the home sale preparation vendors', 'Fixed Project Fee paragraph carries the prep fee');
   has(agrC, '(50% of fixed price + est. prep fee)', 'payment labels name both parts');
   has(agrC, 'and the Home Sale Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', 'final payment trigger names the prep fee');

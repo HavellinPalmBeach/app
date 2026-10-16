@@ -127,9 +127,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const fixed = probateDoc(PROBATE, est({ fixedPrice: true, fixedAmount: 50000, havellinTotal: 50000, prepFeeOnTop: true }));
     const tm    = probateDoc(PROBATE, est({ fixedPrice: false }));
 
-    has(fixed, 'Fee Structure', '§3.1 is headed Fee Structure on a firm fee');
+    // ⚠ THE FEE LEADS (Anthony, 2026-10-16, reading the rendered form: "why do we list hourly rates when
+    // quoting a fixed price contract?"). §3.1 opens with the fixed price; the rate card follows under
+    // *Rates for Change-Order Work*, still inside §3.1 so §4.2's "the rates in Section 3.1" holds.
+    has(fixed, '3.1 Fixed Project Fee', '§3.1 is headed Fixed Project Fee on a firm fee');
+    lacks(fixed, '3.1 Fee Structure', 'not Fee Structure, which put the rate card first');
     lacks(fixed, 'Hourly Rate Structure', 'and no longer calls itself an hourly rate structure');
+    has(fixed, 'Rates for Change-Order Work', 'the rate card has its own heading on a firm fee');
+    ok(fixed.indexOf('fixed price of $50,000') > 0 && fixed.indexOf('fixed price of $50,000') < fixed.indexOf('$185 / hour'),
+       '⚠ the fixed price is read BEFORE the first hourly rate');
+    ok(fixed.indexOf('Rates for Change-Order Work') < fixed.indexOf('$185 / hour'), 'and the heading sits above the card');
+    has(fixed, 'The hourly rates in the table below apply only to Change-Order work', 'the paragraph points down at the card');
+    lacks(fixed, 'Notwithstanding the hourly rates above', 'and no longer argues with a card the reader has not reached');
     has(tm, 'Hourly Rate Structure', 'while the T&M form is untouched');
+    lacks(tm, 'Rates for Change-Order Work', 'with no change-order heading on an hourly engagement');
+    ok(tm.indexOf('$185 / hour') > 0 && tm.indexOf('$185 / hour') < tm.indexOf('3.2 Project Estimate'), 'whose card still opens §3');
 
     // ⚠ THE RATE CARD STAYS, and that is load-bearing rather than an oversight: the Fixed
     // Project Fee paragraph says the hourly rates "apply only to Change-Order work", so

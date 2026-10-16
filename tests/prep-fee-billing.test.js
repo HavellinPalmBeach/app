@@ -417,11 +417,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const eFx = Object.assign({}, FIXED, { svc: 'cleanout', fixedAmount: 30000, havellinTotal: 30225 });
     const a = agr(ESTATE, eFx);
-    has(a, 'Fee Structure', 'the estate form, fixed arm');
+    has(a, '3.1 Fixed Project Fee', 'the estate form, fixed arm: §3.1 leads with the fee (2026-10-16)');
     has(a, 'fixed price of $30,000', 'the flat fee alone');
-    has(a, 'the concierge time spent coordinating them is included in the fixed project fee below',
+    has(a, 'the concierge time spent coordinating them is included in the fixed project fee above',
         '⚠ the vendor row no longer bills coordination at the TC rate on a fixed fee');
-    has(a, 'which is not part of the fixed project fee below: it is charged in addition to it', 'the prep row is outside the flat fee');
+    has(a, 'which is not part of the fixed project fee above: it is charged in addition to it', 'the prep row is outside the flat fee');
     has(a, 'It is charged in addition to it, at thirty percent (30%) of the quotes recorded for the home sale preparation vendors', // RESTATED (P25, Q52)
         'the Fixed Project Fee paragraph carries the prep fee');
     has(a, '(estimated in Exhibit A at $225)', 'with its estimated amount');
@@ -438,7 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(a, 'The deposit is earned in full on signature of this Agreement and is not refundable', 'the deposit stays protected');
 
     const l = agr(ESTATE, Object.assign({}, LEGACY, { svc: 'cleanout' }));
-    has(l, 'which on this engagement is included in the fixed project fee below', 'a record saved before today: the fee is inside');
+    has(l, 'which on this engagement is included in the fixed project fee above', 'a record saved before today: the fee is inside');
     lacks(l, 'est. prep fee', 'and the schedule claims no separate fee');
 
     const tm = agr(ESTATE, Object.assign({}, BASE, { svc: 'cleanout' }));
