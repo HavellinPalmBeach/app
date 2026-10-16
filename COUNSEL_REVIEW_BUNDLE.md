@@ -125,6 +125,13 @@ record naming who took what) are held for **seven years**.
 
 **Why.** It was chosen to match the images. There is no analysis behind the number.
 
+**Added 2026-10-16 (Q63).** Anthony, reading §7: *"we say we will destroy client docs at the end of the job, but we also keep
+client records for 7yrs."* §7's bullet read *"Destroy or return all Client documents upon project completion or written
+request"* and the carve-out for the Project Records sat two pages later in §7.1. The bullet now reads *"Return or destroy the
+Client's own documents (the will, deeds, financial and legal papers Havellin encounters) on completion of the engagement or
+on written request; Havellin's Project Records are retained for seven years under Section 7.1"*; §7.1 is unchanged. The
+seven-year question above stands.
+
 **The question.** What retention period is right for a Florida fiduciary engagement — and is
 there a period after which holding this material becomes a liability rather than a protection?
 
@@ -325,8 +332,27 @@ anything else is a conflict of interest.) The app refuses such a sale or release
 approval request says *"Havellin and its people never purchase or receive estate property, and take no share of the
 proceeds of its sale."*
 
-**The questions.** (a) Q21's agreed referral-fee disclosure: a partner fee computed on sale proceeds would be a "share of the
-proceeds"; reconcile before either goes out. (b) *Contractors* means Havellin's own crew; third-party vendors (an estate-sale
+**Restated 2026-10-16 (Q62, with Q21).** Anthony: *"we will never charge the client a percentage, but we may have referral
+agreements with vendors like auction houses that will pay us a referral fee, which may itself be a % of the property sold"*;
+the old ending would have been false the day one was paid. The clause now ends *"will take no part of the proceeds of any
+sale of that property"*, the subsection is *5.4 No Purchase by Havellin; Referral Fees*, and this paragraph follows it:
+*"Havellin may receive a referral fee from a vendor it recommends. Any such fee is paid by the vendor out of the vendor's own
+commission or charges; it is never deducted from the Client's proceeds, never added to the vendor's invoice and never taken
+on a firearm. The Client may engage any vendor of the Client's choosing. Where a vendor that sells the contents pays such a
+fee, the Estimate says so on that vendor's line and the close-out record of sales names the vendor."* The estimate's
+auction-house, online-auction-house and estate-sale-company rows carry *"Havellin may receive a referral fee from this
+vendor, paid out of the vendor's own commission and never from your proceeds"*; the Disposition Ledger and the Contents
+Record name each fee-paying vendor a line names (off a tick in the vendor directory); the release approval request's staff
+rule reads *"take no part of the proceeds of its sale; a referral fee a selling vendor pays Havellin out of its own
+commission is disclosed in the agreement"*. Never a schedule of every vendor (Anthony: a hauler's $20 is the general
+sentence's). The Disposition Ledger's footer still says *"Havellin charges no commission on sales"*: charges the estate none,
+which stays true.
+
+**The questions.** (a) Is a general disclosure plus the selling vendors named on the estimate (by type) and the close-out
+record (by name) enough on a fiduciary matter, or must the fee's amount or basis be stated? Is a fee that is itself a
+percentage of the hammer price acceptable where the estate's representative chose the vendor on Havellin's recommendation?
+(a, as first put) Q21's agreed referral-fee disclosure: a partner fee computed on sale proceeds would be a "share of the
+proceeds"; reconciled as above. (b) *Contractors* means Havellin's own crew; third-party vendors (an estate-sale
 company's commission) are not bound and are not meant to be. (c) It is limited to tangible personal property because §2.1
 sends real property to a separate agreement. Is the clause right on all three?
 
@@ -879,6 +905,20 @@ signature page carries each party's signature date.
   agreement, a listing-preparation engagement with no disposition in it.
 
 **The question.** Drop each where it does not apply, or keep them as harmless boilerplate.
+
+---
+
+### B19. §8 — the standard form no longer says Contractor takes no percentage of sale proceeds ⚠ NEW 2026-10-16
+
+**What changed (Anthony, 2026-10-16: *"section 8 too"*).** §8 *Valuation, Sales, and No Guarantee of Prices* said, in bold,
+*"Contractor does not take a percentage of auction or sale proceeds."* It now says *"Contractor takes no part of the Client's
+sale proceeds."* and is followed by the same referral-fee paragraph as the estate form's §5.4 (A12), in the standard form's
+party names: *"Contractor may receive a referral fee from a vendor it recommends …"*. The client estimate's selling-vendor
+rows and the Contents Record (the paper a living client signs) carry the same disclosures as on an estate.
+
+**The question.** On a living client's engagement, is the general sentence enough, or does Florida's Deceptive and Unfair
+Trade Practices Act want the arrangement named at the point of recommendation (the estimate names the vendor's type, not the
+firm, because the firm is chosen on the Job Plan after signing)?
 
 ---
 

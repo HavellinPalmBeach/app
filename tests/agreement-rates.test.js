@@ -22,7 +22,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrTrusteeRepresentation', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
+const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrTrusteeRepresentation', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
                  '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
@@ -408,8 +408,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(a, 'counsel of record', '…a living client\'s record is theirs and nobody else\'s');
     has(pr, 'not Client documents for the purposes of the return-or-destroy provision',
         '⚠⚠ and only the estate form carves itself out of §7\'s return-or-destroy bullet');
-    has(pr, 'Destroy or return all Client documents',
-        '…which is a live conflict rather than a hypothetical: the bullet is still there');
+    // Q63 (2026-10-16): the bullet itself draws the line, where the reader meets it.
+    has(pr, 'Return or destroy the Client\u2019s own documents (the will, deeds, financial and legal papers Havellin encounters) on completion of the engagement or on written request; Havellin\u2019s Project Records are retained for seven years under Section 7.1',
+        '\u26a0\u26a0 the bullet says which documents go back and which are kept, and for how long');
+    lacks(pr, 'Destroy or return all Client documents', 'the bullet that read as a contradiction is gone');
+    lacks(a, 'Project Records are retained for seven years under Section 7.1', 'the living form keeps its own §7');
 
     // The heading had to grow on both, and §10\'s stopped being about photography.
     has(a, '10. Documentation and Records Authorization',

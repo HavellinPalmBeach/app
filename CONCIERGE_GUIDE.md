@@ -1128,7 +1128,8 @@ On the Job Plan's Close-out stage and on Job Admin & Inv, on **every** job, Home
 1. **Call the client.** A call, not a text. Tick *Satisfaction call* once they have told you they are happy.
 2. **Ask for the Google review.** Press *Draft review request*: a short thank-you with our review link lands in **your** Gmail drafts. Read it, send it, tap *I've sent it*. When the review shows up, tick *Review posted on Google*.
 3. **Ask for a referral.** Who else could use us? Tick it.
-4. **Rate every vendor.** One to five stars and a note on each vendor you used — prep trades and haulers included. The star saves itself to the Vendor Directory.
+4. **Tick the vendors that pay Havellin a referral fee (2026-10-16).** On the Vendors tab, Edit the firm and set *Pays Havellin a referral fee* to Yes. The agreement already tells the client such fees exist; this tick is what names the firm on the Disposition Ledger and the Contents Record at close. A hauler's $20 needs no tick: the agreement's sentence covers it.
+5. **Rate every vendor.** One to five stars and a note on each vendor you used — prep trades and haulers included. The star saves itself to the Vendor Directory.
 
 > **Rate the vendors on the lines too (2026-10-09).** The scorecard now lists every directory vendor named as a line's recipient or on a pickup list (the auction house, the charity, the hauler), not only those confirmed on the Job Plan, and the job will not close until each has a rating.
 

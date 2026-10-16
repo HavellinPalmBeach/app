@@ -284,7 +284,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Signed so far by Ruth Adler (Oct 1, 2026); still to sign: Daniel Adler', 'saying who has signed and who has not');
     lacks(t, 'Line 3', 'a line both approved is not asked for again');
     // C6 on a trust: the property, the records, no court words.
-    has(t, 'Havellin and its people never purchase or receive trust property, and take no share of the proceeds of its sale.', '⚠⚠ the staff rule for all property, in the trust\'s words');
+    has(t, 'Havellin and its people never purchase or receive trust property, and take no part of the proceeds of its sale; a referral fee a selling vendor pays Havellin out of its own commission is disclosed in the agreement.', '⚠⚠ the staff rule for all property, in the trust\'s words');
     has(t, 'it is filed with the trust’s records', 'filed with the trust\'s records');
     lacks(t, 'Personal Representative', 'no Personal Representative on a trust');
     lacks(t, 'estate record', 'nor an estate record');

@@ -160,7 +160,7 @@ const TIER_FNS = ['weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTie
 const TIER_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrFinalDueTxt', 'jobProbateCourt', 'courtFromCaseNo', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrReferralFeeTxt', 'agrFinalDueTxt', 'jobProbateCourt', 'courtFromCaseNo', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                  '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',

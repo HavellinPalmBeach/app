@@ -320,7 +320,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
   group('B1 · §5.4 staff never buy, on every estate form and never on the standard one');
   {
-    const CLAUSE = 'Havellin, its owners, team members and contractors will not purchase or otherwise acquire any of the contents of the property, or any other tangible personal property of the estate or the trust, whether directly or through any other person, and will take no commission, percentage or other share of the proceeds of any sale of that property.';
+    const CLAUSE = 'Havellin, its owners, team members and contractors will not purchase or otherwise acquire any of the contents of the property, or any other tangible personal property of the estate or the trust, whether directly or through any other person, and will take no part of the proceeds of any sale of that property.';   // Q62 (2026-10-16): no part, and the referral-fee disclosure follows it
     eq(docCtx().AGR_NO_PURCHASE, CLAUSE, 'the clause, word for word (drafted; counsel bundle)');
     MATTERS.forEach((m) => {
       const h = agr(JOB(m, TRUST));
@@ -565,7 +565,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-05 (P21): one more, the sign-by-hand email's line that each co-representative signs too (Q31,
     // agreementEmailCoSignLine), asked of the same list the signature page prints.
     eq(readers('_agrCoSigners'), { _agrCoRepRepresentation: 1, agreementCoSignState: 1, agreementEmailCoSignLine: 1, esignCoSigners: 1, probateAgreementHtml: 1 }, 'the co-signers: the signature page, §5.1, the envelope, the record and the email');
-    const body = noComments(fn('probateAgreementHtml'));
+    const body = noComments(fn('probateAgreementHtml', 'agrReferralFeeTxt'));
     ok(body.length > 20000, 'fixture: the estate form\'s live source (' + body.length + ')');
     ["dRow('Estate Attorney'", "dRow('Letters of Administration'", ">Client / Personal Representative<", "Notify Client / Personal Representative", "anyone the Personal Representative authorizes",
      "prepared for the Personal Representative", "Vendors bill the estate directly", "on behalf of the estate, subject", "employees of the Client or the estate", "(handled by estate attorney)",

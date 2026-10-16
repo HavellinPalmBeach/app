@@ -106,7 +106,7 @@ const actuals = () => ({ La1: { quote: 900, status: 'Confirmed', vendorName: 'Br
 // ── the real agreements ─────────────────────────────────────────────────────
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'svcHasDocStep', 'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', '_pctWords', 'prepFeeRate',

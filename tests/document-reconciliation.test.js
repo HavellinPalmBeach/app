@@ -35,7 +35,7 @@ const FNS = ['walkawayNet', 'depositTargetFor', 'walkawayDeposit', 'refundCounts
   'clientEstimateHtml', 'docConciergeName', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection',
   '_cePhases', 'estateDirectionWords', 'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted',
   'proposedPlanRow', 'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml', 'agrFinalDueTxt',
-  'agrPriceAdjustments', 'probateAgreementHtml', 'jobProbateCourt', 'courtFromCaseNo', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
+  'agrPriceAdjustments', 'probateAgreementHtml', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
   '_agrProbateCompliance', '_agrMidpointTrigger', '_fixedFeeBlurb', 'docStandardEffect', 'isFormalDoc',
   'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason', 'docTierOf',
   'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection', 'approvedEstimateFor', 'esignAnchor',
@@ -55,7 +55,8 @@ const VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT
   'HAVELLIN_OFFICE_PHONE', 'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES',
   'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE', 'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES',
   'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS',
-  'DOC_STAGE_WORD', 'EMAIL_BRAND', 'MAX_DISCOUNT_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
+  'DOC_STAGE_WORD', 'EMAIL_BRAND', 'MAX_DISCOUNT_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE',
+  'PROCEEDS_PAID_VENDOR_TYPES', 'CE_REFERRAL_NOTE', 'CE_REFERRAL_SHORT'];   // Q62 (2026-10-16): the estimate's referral-fee note
 
 // ── Reading money back off a rendered document ────────────────────────────────
 const ENT = { '&amp;': '&', '&nbsp;': ' ', '&times;': '×', '&mdash;': '—', '&ndash;': '–', '&rsquo;': '’',

@@ -1340,7 +1340,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.16 · 3:27pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.16 · 6:19pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3264,6 +3264,14 @@ body.no-smf .smf-col{display:none;}
           <option value="Active">Active — cleared for jobs</option>
           <option value="Backup">Backup — secondary option</option>
           <option value="Do Not Use">Do Not Use — off the list</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label>Pays Havellin a referral fee <span class="lbl-hint">— named on the close-out record of sales</span></label>
+        <select id="v-reffee">
+          <option value="">Not recorded</option>
+          <option value="Yes">Yes — a referral agreement is in place</option>
+          <option value="No">No</option>
         </select>
       </div>
       <div class="fld">
@@ -11336,7 +11344,7 @@ function collectionsDispositionNote(cols) {
   var costDisps = {appraise:1, firearms:1};
   var hasSale = (cols || []).some(function(c){ return saleDisps[c.disp]; });
   var hasCost = (cols || []).some(function(c){ return costDisps[c.disp]; });
-  var sale = ' For items sold through auction, consignment, or a dealer, Havellin takes no commission — proceeds go to you, less any fees the partner charges.';
+  var sale = ' For items sold through auction, consignment, or a dealer, Havellin takes no commission — proceeds go to you, less any fees the partner charges.' + CE_REFERRAL_SHORT;
   var cost = ' Professional services such as appraisal or licensed firearms transfer are billed at the provider’s cost, shown under third-party vendor costs.';
   return (hasSale ? sale : '') + (hasCost ? cost : '');
 }
@@ -11674,7 +11682,7 @@ function _cePhases(e, job) {
       + ' — are sourced, booked, scheduled and supervised by us, and we are on site when they are.';
   }
   if (hasColl) {
-    dispBody += ' On anything sold through auction, consignment or a dealer, Havellin takes no commission — the proceeds are yours, less whatever fee that partner charges.';
+    dispBody += ' On anything sold through auction, consignment or a dealer, Havellin takes no commission — the proceeds are yours, less whatever fee that partner charges.' + CE_REFERRAL_SHORT;
   }
   P.push({ title: dispTitle, body: dispBody, need: dispNeed, done: dispDone });
 
@@ -12209,9 +12217,10 @@ function clientEstimateHtml(e, job) {
     // is collected/proceeds-based, but the client should still see they're engaged.
     // ⚠ "No direct cost" ONLY WHERE THE VENDOR IS PAID FROM THE PROCEEDS (2026-10-10, the core-jobs run): an appraiser whose
     // fee nobody typed printed it too, and the representative read a promise that the appraisal costs nothing.
-    var _proceedsPaid = ['Auction House', 'Online Auction House', 'Estate Sale Company'].indexOf(v.type) >= 0;
+    var _proceedsPaid = PROCEEDS_PAID_VENDOR_TYPES.indexOf(v.type) >= 0;
     var amt = v.cost > 0 ? fmt(v.cost) : '<span style="color:var(--gray);font-style:italic;">' + (_proceedsPaid ? 'No direct cost' : 'Quote to follow') + '</span>';
-    vendorRows += '<tr><td>' + esc(v.type) + '</td><td class="r">' + amt + '</td></tr>';
+    // Q62 (2026-10-16): the referral-fee note on the rows that sell the client's property, and on no other.
+    vendorRows += '<tr><td>' + esc(v.type) + (_proceedsPaid ? '<div style="font-size:10.5px;color:var(--gray);font-style:italic;margin-top:2px;">' + CE_REFERRAL_NOTE + '</div>' : '') + '</td><td class="r">' + amt + '</td></tr>';
   });
   // Collection-attached vendors (appraisers, FFLs, auction houses) — listed here so the
   // third-party total reconciles; the collection itself shows in the Disposition Plan.
@@ -30845,7 +30854,7 @@ function printApprovalRequest(jobId, selectedOnly) {
     // people on any line of an estate (invStaffRefused), and the page the representative signs says so. On a living
     // client's request the same line is flagged instead, through the `staffRecipient` caution above the table (P20).
     + (_fid ? '<div style="font-size:10.5px;color:#3c3228;margin-top:8px;">Havellin and its people never purchase or receive '
-        + invPropertyNoun(job) + ', and take no share of the proceeds of its sale.</div>' : '')
+        + invPropertyNoun(job) + ', and take no part of the proceeds of its sale; a referral fee a selling vendor pays Havellin out of its own commission is disclosed in the agreement.</div>' : '')
     // ⚠⚠ THIS REQUEST IS THE WRITTEN AUTHORITY TO CARRY A FIREARM, UNDER ONE INITIAL FOR THE BATCH (P25, Q35; Anthony,
     // 2026-10-09: "I don't think every line needs an initial. Just one for the batch"). It said transport needed authority
     // given "separately in writing, naming each firearm by serial and the receiving dealer", and nothing the app records
@@ -32106,6 +32115,7 @@ function printDispositionLedger(jobId, opt) {
     // ⚠ THE FOOTER FOLLOWS WHOSE THE PROCEEDS ARE (P19). It said "net to the estate" on a trust and on a living client.
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Gross is what an item sold for and Fees the selling partner&rsquo;s commission and charges; Net, the difference, is the proceeds to '
       + esc(holder) + '. Havellin charges no commission on sales, consignments or auction results, and Havellin&rsquo;s own service fees are billed separately and do not appear here. '
+      + referralFeeVendorsNote(job, L.rows)   // Q62: the selling vendors that pay Havellin a referral fee, by name
       + 'This ledger records where each item went and what it brought; it does not state what anything is worth.</div>'
     + signoff
     + '</div>';
@@ -33134,6 +33144,7 @@ function printContentsRecord(jobId, opt) {
     + (rec.total && !unshot ? 'Every line was photographed in the room it came from. ' : '') + 'Amounts shown are what was actually '
     + 'received from a sale, consignment or auction, net of that partner’s fees — Havellin charges '
     + 'no commission on them, and Havellin’s own fees are billed separately and do not appear here. '
+    + referralFeeVendorsNote(job, rec.items)   // Q62
     + 'Blank means nothing has been received. This record does not state what anything is worth.'
     + (!shared ? '' : unshot ? ' The photographs are in the Drive folder shared with you.' : ' Photographs of every item are in the Drive folder shared with you.')
     + '</div>'
@@ -44686,7 +44697,7 @@ function vendorCardHtml(v) {
 
   var pricing = _vLine([['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]]);
   var timing = _vLine([['Lead time', v.lead_time], ['Quote turnaround', v.estimate_turnaround]]);
-  var meta = _vLine([['COI', v.coi_on_file], ['Reciprocity', v.reciprocity], ['License', v.license_cert]]);
+  var meta = _vLine([['COI', v.coi_on_file], ['Reciprocity', v.reciprocity], ['License', v.license_cert], ['Referral fee', v.referral_fee]]);
   var lcNote = String(v.last_contact_note || '').trim();
   // Highlighted last-contact bar — sits right under the log box so you see the prior
   // contact before you dial. Cream when there's a history, amber when never contacted.
@@ -44773,7 +44784,7 @@ var VENDOR_FORM_MAP = {
   'v-contact2-first':'contact2_first', 'v-contact2-last':'contact2_last',
   'v-contact2-title':'contact2_title', 'v-contact2-mobile':'contact2_mobile', 'v-contact2-email':'contact2_email',
   'v-website':'website', 'v-address':'physical_address', 'v-area':'service_area',
-  'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity',
+  'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity', 'v-reffee':'referral_fee',
   'v-license':'license_cert',
   // reviews_rating_source (bulk-imported) and last_contacted are intentionally NOT in
   // this map: they're read-only in the form, so a vetting edit can never overwrite the
@@ -47764,7 +47775,43 @@ function _agrCoRepRepresentation(job) {
 // §5.4, after the disposition table, on the estate form only: the standard form is untouched (living clients are out of
 // scope). ⚠ IT IS LIMITED TO THE CONTENTS AND OTHER TANGIBLE PERSONAL PROPERTY because §2.1 leaves real property sales to
 // a separate agreement (Team Ashley & Anthony at Douglas Elliman), whose commission this must not be read to forbid.
-var AGR_NO_PURCHASE = 'Havellin, its owners, team members and contractors will not purchase or otherwise acquire any of the contents of the property, or any other tangible personal property of the estate or the trust, whether directly or through any other person, and will take no commission, percentage or other share of the proceeds of any sale of that property.';
+var AGR_NO_PURCHASE = 'Havellin, its owners, team members and contractors will not purchase or otherwise acquire any of the contents of the property, or any other tangible personal property of the estate or the trust, whether directly or through any other person, and will take no part of the proceeds of any sale of that property.';
+// ⚠⚠ THE REFERRAL-FEE DISCLOSURE (Anthony, 2026-10-16, Q62 and Q21): "we will never charge the client a percentage,
+// but we may have referral agreements with vendors like auction houses that will pay us a referral fee, which may itself
+// be a % of the property sold" — and §5.4 above, with the standard form's §8, said Havellin took "no commission,
+// percentage or other share of the proceeds", which would be false the day such a fee is paid ("obviously we can't say
+// we don't take a fee because that would be lying if we do"). What is required is one general sentence in the
+// agreement, never a schedule of every vendor ("why am I obligated to … list every single vendor … even if it's a
+// garbage hauler that pays me 20 bucks"); the vendors that SELL the client's property are the ones a fiduciary's
+// attorney asks about, so the client estimate says so on those rows (CE_REFERRAL_NOTE, by type: the estimate names no
+// firm, the Job Plan picks one later) and the close-out record of sales names the firm (referralFeeVendorsNote, off the
+// directory's referral_fee tick). One text for both forms; `who` is the party the form calls Havellin.
+function agrReferralFeeTxt(who) {
+  return who + ' may receive a referral fee from a vendor it recommends. Any such fee is paid by the vendor out of the vendor\u2019s own commission or charges; it is never deducted from the Client\u2019s proceeds, never added to the vendor\u2019s invoice and never taken on a firearm. The Client may engage any vendor of the Client\u2019s choosing. Where a vendor that sells the contents pays such a fee, the Estimate says so on that vendor\u2019s line and the close-out record of sales names the vendor.';
+}
+// The vendor types paid from the proceeds of what they sell: the client estimate prints No direct cost on their rows
+// (never Quote to follow) and the referral-fee note under their names. One list, read by both.
+var PROCEEDS_PAID_VENDOR_TYPES = ['Auction House', 'Online Auction House', 'Estate Sale Company'];
+var CE_REFERRAL_NOTE = 'Havellin may receive a referral fee from this vendor, paid out of the vendor\u2019s own commission and never from your proceeds.';
+var CE_REFERRAL_SHORT = ' Where that partner pays Havellin a referral fee, it comes out of the partner\u2019s fee, not your proceeds.';
+// The directory's tick: `referral_fee` is Yes on a vendor that pays Havellin one. Read by the vendor card and the
+// close-out records; nothing else guesses it.
+function vendorPaysReferral(v) { return !!v && String(v.referral_fee || '').trim().toLowerCase() === 'yes'; }
+// The sentence the Disposition Ledger and the Contents Record print: every directory vendor ticked `referral_fee`
+// that a line names as its Channel / Recipient, once each, trimmed and case aside (the directory's own name).
+// '' where none is named: the record never claims that no fee was paid, which the app cannot witness.
+function referralFeeVendorsNote(job, rows) {
+  var names = [], seen = {};
+  (rows || []).forEach(function (r) {
+    var ch = String(r && r.channel || '').trim(); if (!ch) return;
+    var v = _vendorByName(ch); if (!v || !vendorPaysReferral(v)) return;
+    var nm = String(v.vendor_name || ch).trim(), k = nm.toLowerCase();
+    if (seen[k]) return; seen[k] = 1; names.push(nm);
+  });
+  if (!names.length) return '';
+  return _andJoin(names.map(esc)) + (names.length > 1 ? ' pay' : ' pays') + ' Havellin a referral fee out of '
+    + (names.length > 1 ? 'their' : 'its') + ' own commission; no figure here is reduced by it. ';
+}
 // The paper a document names as the representative's authority (P19): estateAuthority, the foundation's one answer,
 // once the matter is answered (the Letters on the probate track, Both included; the Certification of Trust on a
 // trust-only matter; nothing on Neither). ⚠ AN UNANSWERED MATTER KEEPS THE LETTERS ON THE DOCUMENTS, where
@@ -48357,8 +48404,9 @@ function probateAgreementHtml(job, est) {
   content += '</tbody></table>';
   // ⚠⚠ §5.4: STAFF NEVER BUY (P19, Anthony's call 6) — see AGR_NO_PURCHASE. A new last subsection of §5, so nothing is
   // renumbered: Termination, Dispute Resolution and General Provisions keep the numbers agreements already issued cite.
-  content += subHdr('5.4 No Purchase by Havellin');
+  content += subHdr('5.4 No Purchase by Havellin; Referral Fees');
   content += pp(AGR_NO_PURCHASE);
+  content += pp(agrReferralFeeTxt('Havellin'));   // Q62: the general disclosure, never a schedule of vendors
   // SECTION 6: LIABILITY
   content += secHdr(6,'Liability, Insurance &amp; Damage Protocol');
   content += subHdr('6.1 Havellin Insurance Coverage');
@@ -48412,7 +48460,9 @@ function probateAgreementHtml(job, est) {
     // this is still a flat bar on publishing, with one stated exception.
     'Not post or publish content related to the property or estate on social media or any public platform, except as expressly authorized under Section 7.2 below',
     'Maintain all Client and estate records in secure storage with access limited to authorized Havellin personnel only',
-    'Destroy or return all Client documents upon project completion or written request'
+    // Q63 (Anthony, 2026-10-16: "we say we will destroy client docs at the end of the job, but we also keep client records for
+    // 7yrs"): the bullet itself says which is which, where the reader meets it; §7.1's carve-out stays.
+    'Return or destroy the Client\u2019s own documents (the will, deeds, financial and legal papers Havellin encounters) on completion of the engagement or on written request; Havellin\u2019s Project Records are retained for seven years under Section 7.1'
   ];
   content += '<ul style="font-size:11px;line-height:1.75;margin:.3rem 0 .6rem 1.4rem;color:var(--gray-dk);">';
   conf.forEach(function(c){ content += '<li style="margin-bottom:.2rem;">'+c+'</li>'; });
@@ -48458,8 +48508,9 @@ function probateAgreementHtml(job, est) {
   // and a new number anywhere else renumbers Termination, Dispute Resolution and General
   // Provisions against agreements already issued citing them. Only the heading grew.
   // ⚠⚠ AND IT CARVES ITSELF OUT OF §7'S RETURN-OR-DESTROY BULLET, which is a live conflict
-  // rather than belt and braces: *Destroy or return all Client documents upon project
-  // completion or written request* sits five bullets above a seven-year fiduciary retention.
+  // rather than belt and braces: §7's return-or-destroy bullet sits five bullets above a seven-year
+  // fiduciary retention. Since Q63 (2026-10-16) the bullet itself draws the line (the Client's own papers
+  // go back; the Project Records stay seven years under §7.1), and this paragraph still says so.
   // It reads to me as covering the estate's OWN documents we encounter — the will, deeds,
   // financial records — rather than records we create, but a contract is construed against
   // its drafter and that is not a thing to leave to inference on a matter a court may read.
@@ -49010,7 +49061,8 @@ function agreementHtml(job, est) {
 
   // ── SECTION 8 ─────────────────────────────────────────────────────────────
   content += agrSection('8. Valuation, Sales, and No Guarantee of Prices',
-    p('Contractor is not a licensed appraiser or auctioneer and does not provide formal valuations unless performed by or through a licensed appraiser. Any informal guidance on whether items may have value is opinion only and not a guarantee of sale price or marketability. '+b('Contractor does not take a percentage of auction or sale proceeds.')+'  Actual sale prices may be higher or lower than any preliminary indication, and Contractor is not responsible for the outcome of such sales.')
+    p('Contractor is not a licensed appraiser or auctioneer and does not provide formal valuations unless performed by or through a licensed appraiser. Any informal guidance on whether items may have value is opinion only and not a guarantee of sale price or marketability. '+b('Contractor takes no part of the Client\'s sale proceeds.')+'  Actual sale prices may be higher or lower than any preliminary indication, and Contractor is not responsible for the outcome of such sales.')+
+    p(agrReferralFeeTxt('Contractor'))
   );
 
   // ── SECTION 9 ─────────────────────────────────────────────────────────────

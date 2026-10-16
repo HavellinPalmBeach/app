@@ -27,7 +27,7 @@ const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'est
   'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit',
   'clientEstimateHtml', 'docConciergeName', 'isCrewPlaceholder', 'docPartyIdent', 'rushScopeLine', 'rushCrewAdded', 'buildPrepEstimateBody', 'clientJobPlanSection', '_cePhases',
   'vendorEstimateNote', 'vendorFeeNote', 'materialsBasisNote', 'materialsPackageQuoted', 'proposedPlanRow',
-  'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', '_agrApprovedStamp',
+  'estimateDocScope', 'svcHasDocStep', 'fmtCEDate', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'agrReferralFeeTxt', '_agrApprovedStamp',
   'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices', '_agrProbateCompliance',
   '_agrMidpointTrigger', '_fixedFeeBlurb', 'docStandardEffect', 'isFormalDoc', 'gateDispute',
   '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel', 'docLevelFloorReason',

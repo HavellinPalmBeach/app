@@ -101,7 +101,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 // ─── the agreement sandbox ───────────────────────────────────────────────────
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable',
   'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas',
-  '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', 'agrBillingRates',
+  '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', 'agrBillingRates',
   'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
   '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
   '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
@@ -675,7 +675,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Contents Record too; still one _exportDoc call, so the count holds, and neither paper prints an approval band.
     for (const f of ['fileChangeOrder', '_pkgFileAll', '_fileCloseoutPaper']) has(H.fn(f), '_exportDoc(', f + ' is one of the three');
     for (const f of ['printChangeOrder', 'printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport',
-                     'printContentsList', 'printAppraisalWorklist', 'probatePackageRecordHtml', 'printDispositionLedger', 'printContentsRecord'])
+                     'printContentsList', 'printAppraisalWorklist', 'probatePackageRecordHtml', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', 'printContentsRecord'])
       lacks(H.fn(f), 'approved-stamp', f + ' prints no approval band, so filing it needs no pdfCss');
     has(H.fn('docPdfBase64'), 'spec.cfg.pdfCss', 'docPdfBase64 passes the kind\'s pdfCss');
     has(H.fn('docFile'), 'spec.cfg.pdfCss', 'docFile passes the kind\'s pdfCss');

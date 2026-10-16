@@ -347,7 +347,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const IT = (id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: 1, status: 'uploaded', objectName: 'Sofa', category: 'Furniture',
       ts: Date.UTC(2026, 9, 1), updatedAt: 1, driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view', namedBy: 'desk' }, o || {});
     const printed = [];
-    const mk = (job, items, extra) => lift(['printApprovalRequest', 'printContentsRecord', 'printTrustSchedule', 'printCourtInventory', '_apprGroups', '_invDocHead', 'clientEstimateHtml'],
+    const mk = (job, items, extra) => lift(['printApprovalRequest', 'printContentsRecord', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', 'printTrustSchedule', 'printCourtInventory', '_apprGroups', '_invDocHead', 'clientEstimateHtml'],
       STATE.concat(['_printDocument', 'alert']),
       Object.assign(BASE(), { jobs: [job], _photoRefs: { 7: items }, estimateStore: { 7: { approved: true, estimate: Object.assign({}, EST_HR, { rooms: [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }] }) } },
         _printDocument: (h, t) => printed.push(h), alert: (m) => printed.push('ALERT ' + m) }, extra || {}));
@@ -362,7 +362,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the client estimate: an appraiser with no fee typed
     const ce = textOf(attempt(() => liv.clientEstimateHtml(Object.assign({}, EST_HR, { vendors: [{ type: 'Appraiser(s)', cost: 0 }, { type: 'Auction House', cost: 0 }] }), LIVING())).val);
     has(ce, 'Appraiser(s) Quote to follow', '⚠ an appraiser with no fee typed is a quote to follow');
-    has(ce, 'Auction House No direct cost', 'an auction house is paid from the proceeds: no direct cost, as before');
+    has(ce, 'Auction House Havellin may receive a referral fee from this vendor, paid out of the vendor’s own commission and never from your proceeds. No direct cost', 'an auction house is paid from the proceeds: no direct cost, as before, under the referral-fee note (Q62)');
     // the worklist drops appraised and waived lines
     const pr = mk(PROBATE(), [IT('p', { objectName: 'Oil on canvas', category: 'Art & Décor', fmv: '7200', valSource: 'Appraisal' }),
       IT('q', { objectName: 'Pearls', category: 'Jewelry & Watches', fmv: '', apprWaived: true, apprWaiveReason: 'under $3,000 at comps' }),

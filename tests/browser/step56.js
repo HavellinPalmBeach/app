@@ -210,7 +210,7 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       has(t, 'Designated items proposed to go elsewhere', 'the bequest notice');
       has(t, '#1 Sargent portrait (bequest to Mary Smith; proposed: Auction)', '⚠ naming the line and the beneficiary');
       has(h, 'BEQUEST TO MARY SMITH', 'and the row\'s badge');
-      has(t, 'Havellin and its people never purchase or receive trust property, and take no share of the proceeds of its sale.', '⚠ the staff rule, in the trust\'s words');
+      has(t, 'Havellin and its people never purchase or receive trust property, and take no part of the proceeds of its sale; a referral fee a selling vendor pays Havellin out of its own commission is disclosed in the agreement.', '⚠ the staff rule, in the trust\'s words');
       has(t, 'filed with the trust’s records', 'filed with the trust\'s records');
       lacks(t, 'Personal Representative', 'no Personal Representative on a trust');
     });

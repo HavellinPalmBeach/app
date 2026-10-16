@@ -179,7 +179,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // The agreement forms, their call graph lifted once.
   let _agr = null;
-  const agr = () => _agr || (_agr = lift(['agreementHtml', 'probateAgreementHtml', 'esignAnchorsPresent', 'esignCoSignerAnchors'], [],
+  const agr = () => _agr || (_agr = lift(['agreementHtml', 'probateAgreementHtml', 'agrReferralFeeTxt', 'esignAnchorsPresent', 'esignCoSignerAnchors'], [],
     { estimateStore: {}, currentEstimate: null, jobs: [], document: domStub({}) }));
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -250,9 +250,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['Invoiced after the final property walk-through, from the actual logged hours and the materials used; due within 7 calendar days of the invoice date', 'Due within 7 days of final invoice delivery — reflects actual hours and materials vs. estimate'],
     ];
     const p25Back = (h) => P25_BACK.reduce((t, x) => t.split(x[0]).join(x[1]), h);
+    // RESTATED 2026-10-16 (Q62, with Q21; Anthony: a vendor may pay Havellin a referral fee, never the client): the no-percentage
+    // sentences became "no part of the proceeds" and the referral-fee paragraph follows them on both forms. Put the old words back
+    // and each page is still 456d0cb's byte for byte, so those are the only changes.
+    const Q62_BACK = [
+      ["<p style=\"font-size:11.5px;line-height:1.65;margin-bottom:.55rem;\">" + A.agrReferralFeeTxt('Contractor') + "</p>", ''],
+      ["<strong>Contractor takes no part of the Client's sale proceeds.</strong>", '<strong>Contractor does not take a percentage of auction or sale proceeds.</strong>'],
+      ["<p style=\"font-size:11px;line-height:1.65;margin-bottom:.5rem;\">" + A.agrReferralFeeTxt('Havellin') + "</p>", ''],
+      ['5.4 No Purchase by Havellin; Referral Fees', '5.4 No Purchase by Havellin'],
+      ['and will take no part of the proceeds of any sale of that property.', 'and will take no commission, percentage or other share of the proceeds of any sale of that property.'],
+      // Q63, the same day: §7's bullet draws the line between the Client's own papers and the Project Records.
+      ['Return or destroy the Client\u2019s own documents (the will, deeds, financial and legal papers Havellin encounters) on completion of the engagement or on written request; Havellin\u2019s Project Records are retained for seven years under Section 7.1', 'Destroy or return all Client documents upon project completion or written request'],
+    ];
+    const q62Back = (h) => Q62_BACK.reduce((t, x) => t.split(x[0]).join(x[1]), h);
     const _std = A.agreementHtml(GOLD_LIVING, GOLD_EST);
     ok(_std.indexOf(P25_BACK[0][0]) >= 0 && _std.indexOf(P25_BACK[1][0]) >= 0, 'the standard form carries the new deposit and final timing');
-    eq(sha(p25Back(_std)), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20 but for that timing');
+    ok(_std.indexOf(Q62_BACK[0][0]) >= 0 && _std.indexOf(Q62_BACK[1][0]) >= 0, 'the standard form carries Q62\'s §8 sentence and paragraph');
+    eq(sha(q62Back(p25Back(_std))), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20 but for that timing and Q62');
     // RESTATED 2026-10-05 (P21; Anthony's answer to Q30): the signature page's sentence names who signs before the work
     // begins ("until the Client and Havellin have signed") where it counted "both signatures". Put the old words back and
     // the page is still 456d0cb's byte for byte, so that sentence is the only change and nothing else moved.
@@ -260,7 +274,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const _q30New = 'No work will begin until the Client and Havellin have signed and the deposit has been received.';
     eq(count(_q30, _q30New), 1, 'the estate form carries the new sentence once');
     ok(_q30.indexOf(P25_BACK[2][0]) >= 0 && _q30.indexOf(P25_BACK[3][0]) >= 0, 'the estate form carries the new deposit and final timing');
-    eq(sha(p25Back(_q30).replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
+    ok(_q30.indexOf(Q62_BACK[2][0]) >= 0 && _q30.indexOf(Q62_BACK[3][0]) >= 0 && _q30.indexOf(Q62_BACK[4][0]) >= 0, 'the estate form carries Q62\'s §5.4 heading, clause and paragraph');
+    eq(sha(q62Back(p25Back(_q30)).replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
        '⚠⚠ the estate form with no co-representative, byte for byte as before P20 but for that sentence');
   });
 

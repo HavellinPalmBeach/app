@@ -220,7 +220,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       clientEstimateHtml: 1, invoiceHtml: 1, probateAgreementHtml: 1 },
        '⚠ its readers: both agreement forms, the client estimate, the invoices and the three client emails');
     // No client document names the service any other way.
-    const CLIENT = ['clientEstimateHtml', 'buildPrepEstimateBody', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases', 'probateAgreementHtml',
+    const CLIENT = ['clientEstimateHtml', 'buildPrepEstimateBody', 'clientJobPlanSection', 'proposedPlanRow', '_cePhases', 'probateAgreementHtml', 'agrReferralFeeTxt',
       'agreementHtml', 'invoiceHtml', 'buildInvoiceEmailHtml', 'buildInvoiceEmailText', 'buildAgreementEmailHtml', 'buildAgreementEmailText',
       'buildEstimateEmailHtml', 'buildEstimateEmailText', 'signingPacketHtml', 'buildSigningPacketHtml', 'invoiceEmailSubject', 'agreementEmailSubject',
       'estimateEmailSubject', 'docNames', 'printChangeOrder'];
