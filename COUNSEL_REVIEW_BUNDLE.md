@@ -1245,6 +1245,35 @@ for §5.3's purposes, and should the $500 line be stated on the request itself r
 photographed"* serve as the condition described, where the photograph is attached or linked, or should a condition be required
 on lines above some value?
 
+### D16. Incident reporting: the Incident Record, the vulnerable adult statement, and the Project Records ⚠ NEW P26 (2026-10-16)
+
+**What changed (Anthony, 2026-10-16).** Every job now records incidents (injury, property damage, missing item, discovered valuable,
+hazardous condition, client complaint, vulnerable adult concern): who reported it, when, where, what happened, who was present,
+photographs, every later entry with who and when, and the resolution; nothing edited or deleted. A job cannot close with one open.
+An **Incident Record**, one page per job, is filed to the client's Drive folder at the close and carried in the estate package; it
+is what a claim, the client or counsel is answered from. Its footer reads: *"A record of what was reported and done, written at the
+time; it is not an admission of liability or a statement of value."*
+
+The **vulnerable adult concern** is internal: never on the record the client or counsel receives, never in the package (Anthony,
+Q66: the concern is often about the client or a family member, and §415.107 keeps reports confidential). The dialog and the card
+state: *"Anyone who knows or has reasonable cause to suspect that a vulnerable adult is being abused, neglected or exploited reports
+it at once to the Florida Abuse Hotline, 1-800-962-2873 (§415.1034)."*
+
+The estate form's §6.3 *Damage Incident Protocol* is now kept by the app: on a property damage incident the card derives the client
+told within 24 hours, the written report to Anthony within 24 hours, and the carrier engaged with its contact given to the client
+within 48 hours where the value is above $500. The standard form has no such protocol (Q70).
+
+**Proposed wording, for both forms' Project Records clauses (estate §7.1, standard §10.1b):** after the sentence describing the
+itemized list, add *"…and a record of any incident reported during the engagement (an injury, damage to or loss of an item, a
+hazardous condition found, or a complaint), the entries made on it at the time and its resolution."* **For the standard form:** add
+the estate form's §6.3 protocol, with *the Client* for the party notified.
+
+**The question.** (1) Is the Incident Record's footer sentence enough to keep a contemporaneous record from reading as an admission,
+or should it say more (or less)? (2) Is keeping a vulnerable adult concern off the client's record, and off the attorney's package,
+right under §415.107, and should the app say anything to a client whose concern it is? (3) Does the §415.1034 sentence state the
+duty correctly for Havellin's people (the statute names any person; some are mandatory reporters by profession)? (4) The Project
+Records sentence above, and §6.3 on the standard form.
+
 ## E. What is deliberately NOT being asked
 
 So counsel does not spend time on settled ground:

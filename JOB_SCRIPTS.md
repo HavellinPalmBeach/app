@@ -116,6 +116,7 @@ Expect: the Drive folder creates itself after save; the dashboard reads *Creatin
 - Day 1: *Standing job flags* read aloud; tick *Keys and access codes tested* and *Crew confirmed by name and briefed* under *Before Day 1*; tick *Moving materials on site for Day 1 morning* when the boxes arrive.
 - Shoot every ticked room. Per room: as-found from the door and the closets, **Next: Items →**, then three to six items with the chip set per thing (**New home** for the keepers; **To a person** for the dining set, note *to daughter Megan*; **Donate** for the books; **Remove** for the broken chair; **Sell** for the sideboard, **⚑ Appraise** on it). One **Close-up** of the sideboard's maker's label. Find the ring: press **Found it** on its line in the room brief.
 - Try to lock a room with no as-found shot: on a living job it lets you through and flags it in amber. Shoot the as-found anyway.
+- Day 2, the study: a decanter breaks while it is wrapped. On the phone, the *Incidents* card under the in-house boxes, **Report an incident**, *Property damage*, where, what, who was present, the item and $1,250, two photographs, **Record**. Read the card: the photographs arrive as an entry; the three §6.3 lines (client told, report to Anthony, the carrier above $500). Tell Margaret, press **Client notified**; press **I called Anthony**. Leave the carrier line open and watch it turn red two days later. Before the close, **Resolve** it with what was done (new 2026-10-16, P26).
 - Log hours every evening: Ashley 7, each specialist 7. Type 7.25 once and read the refusal; correct it.
 - Day 3: Robert asks for the garage after all. On the laptop, dashboard, *Change Orders* card **+ New**: *What changed in the scope* "Garage added to scope", *Reason for change* "Scope addition — new rooms or services", *Additional concierge hours* 6, *Additional specialist hours* 8, **Create Change Order**. Press **PDF** and read it: hours, no price. Press **Get Acceptance** and hand Robert the laptop: he types his name under **✓ I Accept This Change Order**. The row reads *Accepted* and then **📁 Filed copy**. Type 2.5 hours first and read the refusal.
 - The garage has no room card on the Job Plan: it was marked out of scope, and a change order carries hours, not rooms. Do not shoot it in another room's workspace. Log the garage hours in the day's *Activity summary*, and write in the tracker that a room added by change order has no card (a *fix if cheap* candidate for Anthony to call).
@@ -214,6 +215,8 @@ Two cards only: *Home Prep for Sale — Managed Vendors* and *Pre-Prep Declutter
 Approve (Anthony's PIN), send, confirm, mark won (*Email reply*, paste a line). **Offer discount** is not offered on a fee-only job. Packet by **✉ Send for signature — DocuSign** to Patricia; read §3.3 before sending: no concierge or specialist hours are billed. Sign in the sandbox. Record the deposit, a *Personal cheque* for $2,310 (half the fee), *Paid by* Patricia Nwosu, photo. **▶ Activate job** on 2026-11-03. Expect the dashboard's Hours Log card to say no hours are billed and to offer no **+ Log Hours Today**.
 
 ### 5. The field work (phone, Job Plan)
+
+The painter's ladder chips a counter top: the *Incidents* card is on the prep plan too. **Report an incident**, *Property damage*, the vendor named among those present, $900, a photograph; **Client notified**; **Resolve** once the painter has made good. The Incident Record files at the close, on a prep job as on any other (P26).
 
 There is no inventory on a prep job. The Job Plan is *Budget & Fee*, *Home Prep Vendors — Sourcing & Status*, the *Coordination Checklist* and the Close-out card. The *Vendors & partners* fold opens by itself while a prep vendor is unconfirmed. For each line: pick the vendor from the directory (*Active* vendors only are offered), move the status *To contact → Quote requested → Quote received → Confirmed*, type **Quote $** (painter 9,500, stager 4,200, pressure 900, cleaning 800). Watch the band: it reads *Book the prep vendors* with **▶ Book the vendors** until every line is *Confirmed*; then **✉ Send second invoice** is the filled button. Never log time on the trades.
 
@@ -329,6 +332,7 @@ Expected on the estimate: the estate form of the document, written to the repres
 - Shoot all thirteen rooms. Per room on an estate: as-found including every drawer, tick **As-found pass complete**, **Next: Items →**, items with chips (**Sell** for the furniture going to auction, **Donate** for the household, **Remove** for the rest, **To a person** for the Steinway with the note *Owen's*, **Keep** for nothing), **Close-up** on the Steinway's serial plate and the silver's hallmark. In the dining room tap the *Silver flatware service* chip in the brief and shoot it; in the living room the *Lladró figurines* chip. Try **🔒 Lock — sorted & shot** before the tick: greyed, *Confirm the as-found pass first*. Try to delete an as-found shot: it cannot be deleted.
 - Tick the four in-house boxes on the estate plan (firearms where they lie; NFA check; papers sequestered; valuables logged). Hand the trust papers from the study to Laura Pell against a signed receipt and tick *Deeds, titles, trust papers…*.
 - Log the hours every day, half hours, fixed price or not.
+- Day 2: the gold pocket watch (item 22) is not where it was photographed. **Report an incident**, *Missing item*, the item number, last seen. The header turns red, *CALL ANTHONY IMMEDIATELY (617) 650-6588*: call him from the banner, then press **I called Anthony**. It turns up in the car on day 3: **Resolve** with where it was found (P26).
 - Lock every room; the plan moves to *Midpoint & pickups*; the band offers the midpoint invoice.
 
 ### 6. The Job Admin & Inv tab (step L, laptop)
@@ -441,6 +445,7 @@ Approve with Ashley's PIN. Send to Susan (copies agreements@; no co-representati
 - Day 2: $2,340 in a coat pocket. **Record cash found**: *Amount counted* 2340.00, *Counted by* Anthony Graziano *And by* Ashley Jerome, *Sealed bag number* HB-0001. Try Anthony twice: refused, *Two different people count the cash*. **Print Cash Count and Receipt**; Susan signs for the bag today; **Record the hand-over**; **File signed receipt**.
 - Press **Found it** on the watch and the lithograph when found. Tick the four in-house boxes. Log hours daily.
 - Lock all sixteen rooms; the midpoint falls due.
+- An injury on day 2: a specialist cuts a hand on a broken frame. **Report an incident**, *Injury*, who was hurt, medical help *No*, a photograph. The red banner; call; **I called Anthony**. **Resolve** that evening. Check at the close that the Incident Record is in the estate package, after the ledger (P26).
 
 ### 6. The Job Admin & Inv tab (step L, laptop)
 
@@ -542,6 +547,7 @@ Approve, send (copies Marco, Elena, agreements@), mark won (*Email reply* from R
 ### 5. The house (phone, three days)
 
 Rooms as in Job 3. The Rolex: one item shot, **⚑ Appraise** before it, note *both children claim it*, chip **Undecided**. The dining set: one shot of the table, one of the chairs as a set, chip **Sell**. Jewellery: own photo each, **⚑ Appraise** on anything over $500 (the disputed threshold). Lock every room. Hours daily.
+- A beneficiary complains by phone that a room was entered before she arrived. **Report an incident**, *Client complaint*, who and how it reached us, what she asked for. No banner (a complaint does not alert). **Resolve** with the call back and what was agreed. The record goes to counsel in the package; read it as the attorney would (P26).
 
 ### 6. The Job Admin & Inv tab (laptop)
 
@@ -629,6 +635,7 @@ Approve, send, mark won (*Phone call*, Dennis). Packet by **✉ Send for signatu
 ### 5. The house (phone, one day)
 
 Day 1: as-found and items in the Living Room, the Kitchen and Bedroom 2 (chips **Remove** and **Donate**, the photographs **Keep**, **Found it** on the Navy photographs). Lock the three rooms. Log the day: Anthony 6, each specialist 6. That evening Dennis calls: the place fell through, stop.
+- Mold behind the garage shelving: **Report an incident**, *Hazardous condition*, work stopped *Yes*, photographs. The header reads red while it is open. Then try the close-out with the deposit retained: it is refused until the incident is resolved; mark it resolved with what was done and close (P26, Q68).
 
 ### 6. The Job Admin & Inv tab (laptop)
 

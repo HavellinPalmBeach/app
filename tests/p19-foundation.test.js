@@ -167,7 +167,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const p19 = S.JOB_KEYED_LISTS.filter((k) => ['payments', 'appraisers', 'invSnapshots'].indexOf(k) < 0);
     eq(p19.slice().sort(), A.JOB_RECORD_LISTS.slice().sort(), 'and the backend lists nothing the app does not name');
-    eq(A.JOB_RECORD_LISTS.length, 8, 'eight lists (the six of P19, and the two key custody lists of 2026-10-16)');
+    eq(A.JOB_RECORD_LISTS.length, 9, 'nine lists (the six of P19, the two key custody lists of 2026-10-16, and incidents since P26)');
     // Two devices, each holding the morning copy, each add one co-trustee. The second one saved is newer.
     const desk = { id: 1, updatedAt: 100, coFiduciaries: [{ id: 'c1', name: 'Desk Added' }], at: { 'coFiduciaries:c1': 100 } };
     const field = { id: 1, updatedAt: 200, coFiduciaries: [{ id: 'c2', name: 'Field Added' }], at: { 'coFiduciaries:c2': 200 } };
@@ -364,7 +364,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const posted = [];
     const sp = (v) => ({ then(f) { try { return sp(f(v)); } catch (e) { return { then() { return this; }, catch(h) { h(e); return this; } }; } }, catch() { return this; } });
-    const S = sandbox({ fns: ['createDriveJobFolder'], vars: ['SIGNED_RECORDS_SUBFOLDER', '_driveFolderInFlight'],
+    const S = sandbox({ fns: ['createDriveJobFolder'], vars: ['SIGNED_RECORDS_SUBFOLDER', 'INCIDENT_SUBFOLDER', '_driveFolderInFlight'],
       stubs: { SHEETS_SYNC_URL: 'https://script.google.com/macros/s/P19/exec', DRIVE_FOLDER_ID: 'ROOT', saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {},
                _driveFolderLanded() {}, _driveFolderFailed() {}, _backendErrorKind() { return ''; },
                fetch(url, init) { posted.push(JSON.parse(init.body)); return sp({ json: () => ({ ok: true, folderUrl: 'https://drive.google.com/drive/folders/NEW', subfolders: {} }) }); } } });

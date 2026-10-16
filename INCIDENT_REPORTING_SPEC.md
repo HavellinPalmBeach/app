@@ -1,6 +1,6 @@
 # Incident reporting: proposal (2026-10-16)
 
-Status: **proposal, nothing built.** Anthony asked for incident reporting on every job and for a proposal before any build. The decisions this needs are in §9, each with a recommendation first. Once answered, the build is one pack (P26) and this file becomes the spec, with §13 recording where the build departs from it.
+Status: **built, P26, 2026-10-16.** Anthony asked for incident reporting on every job and for a proposal first; he answered the two critical questions (Q64, Q66) and asked to get on with it, so the rest was built on the recommendations in §9. §13 records where the build departs from §§3 to 8. `tests/incidents.test.js` and browser step 81 drive it.
 
 ## 1. What was asked
 Capture anything that goes wrong or needs attention on a job, the same day, in enough detail to support an insurance or bond claim and to answer a client, attorney or trustee.
@@ -116,4 +116,12 @@ Tests: `tests/incidents.test.js` holds the app's and the server's lists level (t
 - Per-incident email threads or a dashboard across jobs (the Clients list can gain an *Open incidents* filter later if wanted).
 
 ## 13. Where the build departs from this
-Empty until P26 lands.
+- **The alert (Q64).** Anthony: *"how about just a red banner - Call Anthony Immediately (617)650-6588. that's what is probably going to happen anyway for another TC. if i'm logged into the ipad and creating the report, obviously i don't need that notification."* So §7's text and Gmail draft, the Clients-tab banner and the `acknowledged` entry were not built. The alert is the red banner in the Job Plan header and on the row with his number as a tap-to-call link; **I called Anthony** writes the `alerted` entry (`how`: call, text, in person); a report recorded on Anthony's own device (the device's user) writes it at once as `self`. The call is also offered plainly on property damage, for §6.3's written report.
+- **Who is alerted (Q65), void (Q67), the gate's reach (Q68), red in the header (Q69), the standard form (Q70), the freeze (Q71):** built on the recommendations, not asked; the tracker says so under each.
+- **The kinds' fields (§4).** Each kind asks one required fact (`f1`) and at most one more: `f2` (missing, valuable, complaint), a yes/no (`yn`: injury's medical help, hazard's work stopped, vulnerable's hotline) or an estimated value (`estValue`, damage). The hotline can also be recorded later as a `hotline` entry; the acts gained `hotline`.
+- **Status (§3).** The `resolved` and `reopened` acts carry the status; `incidentStatus` reads the last live update with one. Entries carry `afterClose` when written after the close.
+- **Where (§5).** The place is free text with the plan's rooms, Garage, Driveway, Yard, The truck and (on a Home Transition) New home offered; no `roomIdx` is stored.
+- **Photographs (§5).** As planned, one `photos` entry per batch; the report's own photographs upload after it lands. No per-photo retry: Add photos again.
+- **The record (§8).** Filed into *Incident Reports* (not the Estate Inventory folder) under `_invDocDriveName`, recorded on `docState.incidentRecord`; the card offers File to Drive and Re-file. The desk's line chips for a line reported damaged or missing, and the ledger's and Contents Record's cross-reference, are **not built** (Open work).
+- **The close-out catalogue** carries literals for the record's name, key and folder, because `CLOSEOUT_PAPERS` is evaluated before the `INCIDENT_*` constants are assigned; a test holds them equal.
+- **Numbering (§3).** Positional, as planned; the printed record carries the id as the reference.
