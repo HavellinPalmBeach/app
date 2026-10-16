@@ -122,7 +122,7 @@ Then tick what is in the house and **write down what you are told** — the tick
 | **Safes & lockboxes** | Where it is, whether they have the combination or key, whether they know what is inside. |
 | **Documents & digital** | Will or trust, deeds, insurance, statements, passports — and the digital ones people forget: crypto wallets, thumb drives, seed phrases, old laptops and phones. What they are looking for, and where it might be. |
 | **Sentimental must-finds** — photos, letters, specific heirlooms | Name them. "Sentimental things" is not findable; "the blue photo album from the Navy years" is. |
-| **Access & security** | Alarm and codes, cameras, smart locks, who else has keys — caregivers, cleaners, family — and any gate or HOA. Anything we need to disarm. |
+| **Access & security** | Alarm, cameras, smart locks, who else has keys — caregivers, cleaners, family — any gate or HOA, and the alarm company or gate contact. Anything we need to disarm. **Not the codes** (since 2026-10-16): they go on the Job Plan's *Keys & access* card, on the item, never in a note (Step 10h). |
 
 > **⚠** **Everything you write here is read out to the crew before Day 1. That is the whole point of asking.** It comes back as a **Standing job flags** panel at the top of the Job Plan, in every room's workspace and on the dashboard, so the two people emptying the house know about the cash in the freezer and the ring in the blue box. If you tick a row and leave the note blank, the crew sees *"Ticked at intake, no detail recorded — ask the client before Day 1"* — which is honest, but it means somebody has to make the call you should have made.
 >
@@ -602,9 +602,9 @@ The Job Plan runs in the order you work a job, and the stages are named, not num
 2. **Gates** — one row of chips: agreement signed, deposit received, on probate the Letters and the §733.604 deadline (with its date once recorded, new P22), on a trust the Certification of Trust (new 2026-10-03), the attorney, the Form 706 date on an estate whose 706 is not answered *No* (new 2026-10-03), vendors lined up, and the job team (new 2026-09-23). Green or red, read off the record, nothing to tick. A red one says underneath what clears it.
 3. **Vendors & partners** — a tool, folded, with *2 of 4 confirmed* on the bar. It opens by itself while the job is not yet active and anything on it is unconfirmed, and on an active Home Prep while a prep vendor is still unconfirmed (2026-10-10). Step 10c.
 4. **Hours & daily close** — a tool, folded, with today's hours on the bar; you open it to log the day. Step 10b.
-5. **Before Day 1** — the pre-job call and its notes, materials on site, keys tested, crew briefed, COI; on probate the PR's authority confirmed, and on a trust the Certification of Trust read, with any limits on the trustee's powers noted (new 2026-10-03). Open, ticks counted in the heading.
+5. **Before Day 1** — the pre-job call and its notes, materials on site, keys tested, crew briefed, COI; on probate the PR's authority confirmed, and on a trust the Certification of Trust read, with any limits on the trustee's powers noted (new 2026-10-03); and the **Keys & access** card (new 2026-10-16, Step 10h). Open, ticks counted in the heading.
    ⚠ **The NDA box went on 2026-09-20.** Havellin does not take a per-job NDA — confidentiality is in the contractor agreement every crew member signs before they work an engagement at all, so there is nothing to collect on the day and nothing to tick.
-6. **In the house** — the room cards, and the in-house boxes under them: four on an estate job (firearms photographed where they lie, each checked for NFA, the papers sequestered, valuables logged), and under them the **Found on site** card for an original will or cash (new 2026-10-03, Step 10g); one on a living-client job (every room photographed and every item of consequence logged before it is moved), plus the two firearms boxes when intake flagged firearms. Step 10a.
+6. **In the house** — the room cards, and the in-house boxes under them: four on an estate job (firearms photographed where they lie, each checked for NFA, the papers sequestered, valuables logged), and under them the **Found on site** card for an original will or cash (new 2026-10-03, Step 10g) and, on every job, the **Incidents** card (new 2026-10-16, Step 10i); one on a living-client job (every room photographed and every item of consequence logged before it is moved), plus the two firearms boxes when intake flagged firearms. Step 10a.
 7. **Midpoint & pickups** — the midpoint invoice lines, release authority, receipts, pickups, shredding. Open.
 8. **Move day** — Home Transition only.
 9. **Close-out** — the final walk, the empty-house check, the handoff, then the **Close-out card**: satisfaction call, Google review email, referral ask, and the vendor scorecard, which is required (Step 13). Open.
@@ -1066,6 +1066,35 @@ Two things turn up in an estate's house that Havellin must never hold, and each 
 
 > A record made in error is never edited or deleted: press **Void** on it, give the reason, and record it again. It stays on the card, struck through, with the reason. A record made on the other device shows after a reload. Both receipts are drafted for counsel and not yet reviewed.
 
+### h. Keys & access — every key, fob, remote and code (new 2026-10-16)
+
+From the moment a client hands you a key, somebody at Havellin is responsible for it, and the app says who. The **Keys & access** card is on the Job Plan's *Before Day 1* stage on every job (on a Home Prep, above the rooms). Record what you were handed the day you get it, on the phone at the door if you can.
+
+1. Press **Record what we received**: who handed them over, the day, and one row per item — what it is (a key, a fob, a garage remote, a gate card, a lockbox key, an alarm or access code), which one (*front door, brass*), how many, and the code if the item carries one. Your name is filled in as the one who took them. Four keys are one dialog, not four. The app refuses it without the day, who handed them over and who took them.
+2. When a key changes hands on the team, press **Hand off**: what you hold is pre-ticked, name who has it now. The card reads *Held by …* for every item, always one name.
+3. At handover press **Return to client**: everything still held is pre-ticked, and the client (the representative on an estate) is filled in. Anybody else is recorded and flagged, never refused.
+4. Lost one? Press **Mark lost** on it and say what happened; the app refuses it without the explanation. It turns **red** on the card, on Close-out, on the desk and on the client dashboard, on every device, and stays red until **Recovered** puts it back in somebody's hands. The app sends no message: tell Anthony yourself.
+5. *Close job* refuses while any item is still held, and names each one and who holds it (Step 13). An item marked lost with its explanation does not block.
+6. **Print the custody record** gives the client, an attorney or an insurer the whole history. It is filed to the client's Drive folder when the job closes, and it is printed inside the Disposition Ledger and the Contents Record before the signature, so the client signs that the keys came back.
+
+> **⚠** **Codes go on the item on this card and nowhere else**: never in a note, a text or a photo. Both concierges can read them there, and the app wipes the digits when the job closes. Ask the client for a job code and tell them to change it at handover.
+
+> Nothing on this card is edited or deleted: a wrong entry is voided with the reason (the ✗ beside it under *History*), stays struck through, and the right one is recorded after it. Voiding a handoff puts the item back in the hands it was in before. A day after today is refused.
+
+### i. Incidents — anything that goes wrong (new 2026-10-16)
+
+Something breaks, somebody is hurt, a thing cannot be found, the house holds a hazard, the client is unhappy, or you are worried about an older person in the house. The **Incidents** card records it: it is on the Job Plan's *In the house* stage, under the in-house boxes, on every job (on an estate it sits beside Found on site; the Home Prep plan has it too). Record it the day it happens, on the phone in the house, with photographs: it is what an insurance or bond claim, the client, their attorney or the trustee will be answered from.
+
+> **⚠** **An injury, a missing item or a worry about a vulnerable adult: call Anthony at once, (617) 650-6588.** The header turns red and says so until you press **I called Anthony**.
+
+1. Press **Report an incident**. Tap the kind. Today is filled in; add the time. Say where (the room, the garage, the driveway, the truck), what happened in plain words as you saw it, who was present (names are offered; `;` between them), and answer the kind's own question (who was hurt; the item and a rough value; the hazard and whether work stopped there). Add photographs. Press **Record**. The app refuses only what it cannot record without: the day (never after today), where, what, who reported it and the kind's fact.
+2. Nothing you record is edited or deleted. To add to it, press **Add a note** or **Add photos** on the incident: each is a new entry with your name and the time. A photograph that did not reach Drive is named; add it again.
+3. **Property damage:** photograph it and leave it where it is. The card then tracks the agreement's promises for you: the client told within 24 hours (press **Client notified**), the written report to Anthony (press **I called Anthony**), and above $500 the carrier engaged with its contact given to the client within 48 hours (press **Carrier engaged** with the claim number). Each line turns red once its day has passed.
+4. **A vulnerable adult concern** is internal: it never goes on anything the client or their attorney receives. Anyone who knows or suspects that a vulnerable adult is being abused, neglected or exploited reports it at once to the Florida Abuse Hotline, 1-800-962-2873. Say on the report whether the call was made, or press **Hotline called** later; the line stays red until then. Then call Anthony.
+5. When it is dealt with, press **Resolve** and say what was done and how it ended. The app refuses a resolution with no note. **Reopen** if it comes back; that is a new entry too.
+6. **The job will not close with an open incident.** *Close job* names each one; the dashboard's *Work complete* row and the Job Plan header count them. Resolve them first. One recorded by mistake is **Void**ed with a reason; it stays on the record, struck through.
+7. At the close the **Incident Record** is filed to the client's *Incident Reports* folder by itself, and goes in the estate package. Print it from the card or from More ▾ on Job Admin & Inv. The vulnerable adult concern has its own internal page, for Anthony only.
+
 ## Step 11 & 12 · Invoices — Client Dashboard
 
 Open the client. **Each invoice has its own row on the timeline** — *Deposit invoice sent*, *Midpoint invoice sent*, *Final invoice sent* — so there is no stage to pick any more: the row you are on *is* the stage, and the lit one is the invoice due. Each sends exactly like the estimate did (**✉ Send…** → **✓ I've sent it**), and each is filed to Drive as it goes out.
@@ -1136,6 +1165,8 @@ On the Job Plan's Close-out stage and on Job Admin & Inv, on **every** job, Home
 > **⚠** **The review button stays grey until the call is ticked, on purpose.** Never send a review request to a client you have not spoken to first — if something went wrong, you want to hear it on the phone, not read it on Google.
 
 > **⚠** **You cannot close the job until every vendor you used is rated.** *Close job* will refuse and name who is left. It takes a minute, and it is the only way next month's concierge knows which painter to call.
+
+> **⚠** **Nor until every key, fob, remote and code is back with the client, or marked lost with what happened (new 2026-10-16).** *Close job* names each item still held and who holds it; record the return on the Job Plan's *Keys & access* card (Step 10h).
 
 ### If the job dies instead
 
@@ -1243,6 +1274,8 @@ What it was: an indicative profitability readout with a flag on it, **not a disc
 | **_Original will deposited with the clerk_ has gone red** | More than ten days since the hand-over and no deposit recorded. Ask whoever holds it, usually the estate attorney, whether it went to the clerk, and record the day with **Confirm the deposit with the clerk**. |
 | **_Record cash found_ says _Two different people count the cash_** | Both counters are the same person, however the name is spelt. Two of you count it together: name the second. |
 | **A find has no _File signed receipt_** | It appears once the hand-over is recorded, because the receipt is signed at the hand-over. Press **Record the hand-over** first. |
+| **The Job Plan header is red: _CALL ANTHONY IMMEDIATELY_** | An injury, a missing item or a vulnerable adult concern was recorded and nobody has confirmed the call. Call Anthony, (617) 650-6588 (tap the number), then press **I called Anthony** on the banner or the incident (Step 10i). |
+| **_Close job_ says _Resolve the open incident with a resolution note_** | An incident on the Incidents card (Job Plan, In the house) has no resolution. Press **Resolve** on it and say what was done and how it ended, then close. Deposit Retained is refused the same way; marking a job Lost with nothing paid is allowed and names them. |
 | **The _Form 706_ chip is red** | The 706 question is unanswered (the chip ends _…, if one is filed_), or the due date has passed. Ask the estate attorney and answer _Form 706 being filed?_ on Edit Client; once the date has passed, confirm with them that the return or an extension went in. We never file it (2026-10-03). |
 | **A trust job says _Chain of custody is mandatory_** | Correct (2026-10-03): it is mandatory on every trust administration, as on probate. Log a custody event on every item that leaves. |
 | **_Activate job_ refuses on an Estate Settlement: _Executor authorization must be received_** | Correct (2026-09-29). The estate is going through probate — you answered *Probate* or *Both* to how it is administered — and a probate estate cannot start without its Letters, whatever the service. When the certified copy is in hand, set it to *Received* under **&#9998; Edit Client**, with the date the Letters issued. If the estate is really a trust matter, correct the matter there instead: since 2026-10-03 (P19) it then waits on the Certification of Trust (next row). |

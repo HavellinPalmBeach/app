@@ -64,7 +64,12 @@
 // ⚠ 2026-10-06d (P24, after the first live run): the room check reads runs of 12 photographs, not 24, so one request
 // answers inside UrlFetchApp's limit; its sentence is short, plain and cut at a word; testAgentRoomCheck times one full
 // run. No action or type changes: an older deployment still answers, and a big room there fails as *took too long*.
-var BACKEND_VERSION = '2026-10-06d';
+// ⚠ 2026-10-16: the job's two key and access custody lists (`accessItems`, `accessEvents`; KEY_CUSTODY_SPEC.md) merge entry
+// by entry on their id like the six record lists before them, so a receipt on one device and a handoff on another both
+// survive. No action or type changes; the app's BACKEND_MIN_VERSION names it.
+// ⚠ 2026-10-16 (P26): `incidents` (anything that goes wrong on a job: INCIDENT_REPORTING_SPEC.md) joins the record lists
+// merged entry by entry (JOB_KEYED_LISTS, JOB_LIST_KEY). No action or type changes; the app names an older deployment by version.
+var BACKEND_VERSION = '2026-10-16';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -879,9 +884,10 @@ function pruneOrphanRecordsConfirm(force) {
 // ⚠ AND THE JOB'S RECORD LISTS (2026-10-03, P19): co-representatives, beneficiaries, specific bequests, signed
 // copies filed to Drive, finds on site (an original will, cash) and proceeds statements, each entry keyed on its
 // own `id`. Two people add to these at once, so riding the whole record would let the newer copy drop the other's
-// entry. The app's JOB_RECORD_LISTS names the same six, and a test holds the two lists level.
+// entry; incidents (P26, 2026-10-16) too. The app's JOB_RECORD_LISTS names the same seven, and a test holds the two lists level.
 var JOB_KEYED_LISTS = ['payments', 'appraisers', 'invSnapshots',
-                       'coFiduciaries', 'beneficiaries', 'bequests', 'signedRecords', 'siteFinds', 'proceedsStatements'];
+                       'coFiduciaries', 'beneficiaries', 'bequests', 'signedRecords', 'siteFinds', 'proceedsStatements',
+                       'accessItems', 'accessEvents', 'incidents'];   // the keys and access items, and every act on them (2026-10-16)
 // `mustFound` (2026-09-19): the Found ticks against intake's must-find list, one key per
 // line — ticked in the house, corrected at the desk, which is exactly the two-device shape
 // docState has. The app stamps every tick AND every untick (an untick with no stamp would
@@ -901,7 +907,8 @@ var JOB_KEYED_MAPS  = ['docState', 'mustFound', 'vendorSourcing', 'prepSourcing'
 // payments into one. The app mints a uid now; `id` stays the fallback so a payment written
 // before this deployment still has a key, exactly as _srcLineKey keeps its index fallback.
 var JOB_LIST_KEY = { payments: 'uid', appraisers: 'id', invSnapshots: 'ts',
-                     coFiduciaries: 'id', beneficiaries: 'id', bequests: 'id', signedRecords: 'id', siteFinds: 'id', proceedsStatements: 'id' };
+                     coFiduciaries: 'id', beneficiaries: 'id', bequests: 'id', signedRecords: 'id', siteFinds: 'id', proceedsStatements: 'id',
+                     accessItems: 'id', accessEvents: 'id', incidents: 'id' };
 
 // ⚠⚠ WHAT A PAYMENT KEEPS ONCE EITHER COPY HAS IT (2026-09-30b, P16). A payment merges as one value on its
 // `payments:<uid>` stamp, and the stamp alone lets a device that had NOT seen a void — an iPad offline in

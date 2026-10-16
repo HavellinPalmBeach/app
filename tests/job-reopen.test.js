@@ -97,7 +97,7 @@ const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimeline
   'jobIsSettled', 'planCurrentStage', '_planRooms', '_planRoomStatus', 'docReadOnlyWord', 'docPreviewOnly', 'estimateEditBlocker', 'priceChangeBlocker', 'discountOfferBlocker', 'roundCents',
   // P19: an estate's close names its unsigned Disposition Ledger.
   'ledgerCloseFlag', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'esignFiledCopies']);
-const VARS = ['SHEETS_SYNC_URL', '_contentsFiling', 'CONTENTS_DOC_KEY', 'PROBATE_PKG_TITLES', '_ledgerFiling', 'LEDGER_DOC_KEY', 'CLOSEOUT_PAPERS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_READY_WHY',
+const VARS = ['SHEETS_SYNC_URL', '_contentsFiling', 'CONTENTS_DOC_KEY', 'PROBATE_PKG_TITLES', '_ledgerFiling', 'LEDGER_DOC_KEY', '_incidentFiling', 'CLOSEOUT_PAPERS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_STAGE_WORD', 'JT_SHORT', 'JT_NEXT', 'JT_LEG_BREAK', 'JT_ROW_DOC', 'AGR_SIG_METHODS', 'ESIGN_PROVIDERS', 'DOC_READY_WHY',
   'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SVC_LABELS', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
   'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'PROJ_CREW_DAY', 'PRODUCTIVE_HRS_PER_DAY', 'JOB_TRANSITIONS', 'jobPlanStore', 'LEDGER_SIGNED_REF'];
 

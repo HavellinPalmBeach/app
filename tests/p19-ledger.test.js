@@ -514,7 +514,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('_fileCloseoutPaper')), 'var title = P.title;', 'with the paper\'s title');
     has(noComments(decl('CLOSEOUT_PAPERS')), 'title: PROBATE_PKG_TITLES.ledger', '…the package\'s title for the ledger');
     has(noComments(fn('fileDispositionLedger')), '_fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.ledger)', '…which fileDispositionLedger hands it');
-    has(noComments(fn('_fileCloseoutPaper')), 'resolveSubfolderId(job, PHOTO_SUBFOLDER,', 'into the folder the package files to');
+    has(noComments(fn('_fileCloseoutPaper')), 'resolveSubfolderId(job, P.folder || PHOTO_SUBFOLDER,', 'into the folder the package files to, unless the paper names its own (P26: the Incident Record)');
+    lacks(noComments(decl('CLOSEOUT_PAPERS')).split('incidents:')[0], 'folder:', '…and the ledger names none, so it files to Estate Inventory as before');
   });
 
   // ── E4: donations ────────────────────────────────────────────────────────

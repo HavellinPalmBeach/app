@@ -744,6 +744,23 @@ body.field-cam-open #sync-pending{display:none !important;}
 .fos-acts label.btn-s{margin:0;}
 .fos-void{font-size:11px;color:var(--gray);border-top:1px dashed var(--border);padding-top:6px;margin-top:6px;}
 .fos-note{font-size:11px;color:var(--gray);line-height:1.5;margin-top:8px;}
+/* ── Incidents (P26, 2026-10-16): the card shares the Found on site classes; these are its own. */
+.inc-kinds{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px;}
+.inc-kind{font-size:11px;padding:6px 10px;border:1px solid var(--border-md);border-radius:14px;background:var(--white);cursor:pointer;color:var(--gray-dk);width:auto;}
+.inc-kind-on{background:var(--bronze);color:#fff;border-color:var(--bronze);}
+.inc-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.inc-st{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:1px 7px;border-radius:9px;background:#f3e7c9;color:#8a6d3b;}
+.inc-st-resolved{background:#e3efe3;color:#2f6b3a;}
+.inc-int{font-size:10px;color:var(--gray);border:1px dashed var(--border-md);border-radius:9px;padding:1px 7px;}
+.inc-what{margin:3px 0;}
+.inc-entries{border-left:2px solid var(--border);margin:6px 0 2px;padding-left:8px;font-size:11.5px;}
+.inc-entry{margin:2px 0;}
+.inc-act{font-weight:700;}
+.inc-alert{background:#8b1e1e;color:#fff;border-radius:5px;padding:8px 12px;margin:6px 0;font-weight:700;}
+.inc-alert a{color:#fff;}
+.inc-banner{background:#8b1e1e;color:#fff;border-radius:6px;padding:12px 16px;margin-bottom:12px;}
+.inc-banner .fos-acts .btn-s{background:#fff;color:#8b1e1e;border-color:#fff;}
+.inc-call-btn{border-color:#8b1e1e;color:#8b1e1e;font-weight:700;}
 .ja-card{border:1px solid var(--border-md);border-radius:6px;background:var(--white);margin-bottom:12px;}
 .ja-hd{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;font-size:12.5px;font-weight:700;}
 .ja-hd .ja-n{font-size:11px;color:var(--gray);font-weight:600;margin-left:auto;}
@@ -1340,7 +1357,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.16 · 6:19pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.16 · 6:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2942,6 +2959,100 @@ body.no-smf .smf-col{display:none;}
     </div>
   </div>
 </div>
+<div class="modal-overlay" id="acc-modal" style="display:none;">
+  <div class="modal-box" style="width:520px;">
+    <div class="modal-title" id="acc-title">Record what we received</div>
+    <div class="modal-sub" id="acc-summary"></div>
+    <input type="hidden" id="acc-job"><input type="hidden" id="acc-mode"><input type="hidden" id="acc-item">
+    <div class="grid2" style="gap:10px;">
+      <div id="acc-from-wrap">
+        <label style="margin-top:0;">Handed over by</label>
+        <input type="text" id="acc-from" list="acc-parties" autocomplete="off" placeholder="the client, the representative, the realtor">
+      </div>
+      <div>
+        <label style="margin-top:0;">On</label>
+        <input type="date" id="acc-on">
+      </div>
+    </div>
+    <div id="acc-to-wrap">
+      <label id="acc-to-lbl">Taken for Havellin by</label>
+      <input type="text" id="acc-to" list="acc-team" autocomplete="off">
+    </div>
+    <div id="acc-rows-wrap">
+      <label>Items received</label>
+      <div id="acc-rows" data-rows="0"></div>
+      <button type="button" class="btn-s" style="margin-top:8px;" onclick="accessAddRow()">+ Another item</button>
+    </div>
+    <div id="acc-ticks-wrap">
+      <label>Items</label>
+      <div id="acc-ticks"></div>
+    </div>
+    <div id="acc-code-wrap">
+      <label>Code</label>
+      <input type="text" id="acc-code" autocomplete="off" placeholder="the digits, as the client gave them">
+    </div>
+    <div id="acc-note-wrap">
+      <label id="acc-note-lbl">Note (optional)</label>
+      <textarea id="acc-note" rows="2"></textarea>
+    </div>
+    <datalist id="acc-team"></datalist><datalist id="acc-parties"></datalist>
+    <div id="acc-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeAccessDialog()">Cancel</button>
+      <button class="btn-p" id="acc-save-btn" style="flex:1;" onclick="saveAccessDialog()">Record</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT AN INCIDENT (P26, 2026-10-16). Opened from Report an incident on the Job Plan's Incidents card, and for every later act
+     on an incident (a note, the resolution, a reopening, the client told, the carrier engaged, the hotline called). Nothing recorded
+     is edited or deleted: each act is a new entry (saveIncident). -->
+<div class="modal-overlay" id="inc-modal" style="display:none;">
+  <div class="modal-box" style="width:480px;">
+    <div class="modal-title" id="inc-title">Report an incident</div>
+    <div class="modal-sub" id="inc-summary"></div>
+    <input type="hidden" id="inc-job"><input type="hidden" id="inc-mode"><input type="hidden" id="inc-id"><input type="hidden" id="inc-act"><input type="hidden" id="inc-kind">
+    <div id="inc-sec-report">
+      <div class="inc-kinds" id="inc-kinds"></div>
+      <div id="inc-fields">
+        <div class="grid2" style="gap:10px;">
+          <div><label style="margin-top:0;">Day</label><input type="date" id="inc-date"></div>
+          <div><label style="margin-top:0;">Time</label><input type="time" id="inc-time"></div>
+        </div>
+        <label>Where</label>
+        <input type="text" id="inc-where" list="inc-rooms" autocomplete="off" placeholder="the room, the garage, the driveway, the truck">
+        <label>What happened</label>
+        <textarea id="inc-what" rows="4" placeholder="what you saw, in order, as it happened"></textarea>
+        <label>Who was present</label>
+        <input type="text" id="inc-present" list="inc-people" autocomplete="off" placeholder="names, with ; between them">
+        <label>Reported by</label>
+        <input type="text" id="inc-reported-by" list="inc-team" autocomplete="off">
+        <label id="inc-f1-lbl"></label>
+        <input type="text" id="inc-f1">
+        <div id="inc-f2-wrap"><label id="inc-f2-lbl"></label><input type="text" id="inc-f2"></div>
+        <div id="inc-yn-wrap"><label id="inc-yn-lbl"></label>
+          <select id="inc-yn"><option value="">&mdash;</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+        <div id="inc-money-wrap"><label>Estimated value</label><input type="text" id="inc-money" inputmode="decimal" placeholder="$"></div>
+        <label>Photographs</label>
+        <input type="file" id="inc-photos" accept="image/*" multiple>
+        <div id="inc-kind-note" style="font-size:10.5px;color:var(--gray);margin-top:6px;line-height:1.5;"></div>
+      </div>
+    </div>
+    <div id="inc-sec-update">
+      <div id="inc-on-wrap"><label style="margin-top:0;" id="inc-on-lbl">On</label><input type="date" id="inc-on"></div>
+      <div id="inc-how-wrap"><label>How</label>
+        <select id="inc-how"><option value="call">By phone</option><option value="text">By text</option><option value="in_person">In person</option></select></div>
+      <label id="inc-note-lbl">Note</label>
+      <textarea id="inc-note" rows="3"></textarea>
+    </div>
+    <datalist id="inc-rooms"></datalist><datalist id="inc-people"></datalist><datalist id="inc-team"></datalist>
+    <div id="inc-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="btn-s" style="flex:1;" onclick="closeIncident()">Cancel</button>
+      <button class="btn-p" id="inc-save-btn" style="flex:1;" onclick="saveIncident()">Record</button>
+    </div>
+  </div>
+</div>
 
 <!-- RECORD A PROCEEDS STATEMENT (P19, 2026-10-03). Opened from + Record a statement on the desk's Proceeds statements card.
      The statement is checked against the Disposition Ledger to the cent (proceedsReconciliation) and is never deleted:
@@ -3534,7 +3645,7 @@ body.no-smf .smf-col{display:none;}
   <div style="background:var(--white);border-radius:10px;padding:1.5rem;max-width:520px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.2);">
     <div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;" id="notes-modal-title">Walkthrough Note</div>
     <div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Record key details — contents, condition, valuable items, family instructions, access issues.</div>
-    <textarea id="notes-modal-text" style="width:100%;height:180px;font-size:13px;line-height:1.6;padding:10px;border:1px solid var(--border);border-radius:6px;resize:vertical;font-family:Arial,sans-serif;" placeholder="e.g. Large art collection — 12 framed pieces, some appear valuable. Family wants art appraiser before disposal. Heavy armoire needs 3 people. Key in lockbox code 4521."></textarea>
+    <textarea id="notes-modal-text" style="width:100%;height:180px;font-size:13px;line-height:1.6;padding:10px;border:1px solid var(--border);border-radius:6px;resize:vertical;font-family:Arial,sans-serif;" placeholder="e.g. Large art collection — 12 framed pieces, some appear valuable. Family wants art appraiser before disposal. Heavy armoire needs 3 people. Key in the lockbox by the side door."></textarea>
     <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end;">
       <button class="btn-s" onclick="closeNotesModal()">Cancel</button>
       <button class="btn-p" onclick="saveNotesModal()">Save Notes</button>
@@ -6143,7 +6254,9 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // 2026-10-06 (P22): saveInventory.gs merges a line's release signers from both copies (`_invMergeApprovals`, held equal to
 // the app's `invMergeApprovals`) and formats the workbook's money to the cent. An older deployment keeps only the newer
 // copy's signers, so a co-trustee's signature recorded on another device can drop.
-var BACKEND_MIN_VERSION = '2026-10-06';
+// 2026-10-16 (P26): `incidents` joins the record lists merged entry by entry. An older deployment rides it on the whole record,
+// so an incident reported on one device can be dropped by another device saving an older copy of the job.
+var BACKEND_MIN_VERSION = '2026-10-16';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -6201,7 +6314,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -9932,8 +10045,10 @@ var HOUSE_FLAGS = [
   // prep:true — asked on Home Prep for Sale too (Q17): vendors go through the house, so the alarm,
   // the keys and who else comes and goes matter there; what is IN the house does not.
   { key:'access', label:'Access & security', prep:true,
-    detail:'Alarm system and codes, cameras, smart locks, who else has keys (caregivers, cleaners, family), gated or HOA.',
-    ask:'Codes, contact, anything we need to disarm.' }
+    // ⚠ NO CODES HERE (2026-10-16, Q72): a note reaches the Jobs sheet, the estimate, Agent One's request and the worksheet in
+    // Drive. A code goes on the Job Plan's Keys & access card, on its item, which the app clears when the job closes.
+    detail:'Alarm system, cameras, smart locks, who else has keys (caregivers, cleaners, family), gated or HOA.',
+    ask:'The alarm company, gate or HOA contact, and anything we need to disarm. Not the codes: those go on the Keys & access card on the Job Plan, which clears them at close.' }
 ];
 
 // Normalise whatever a record holds into { key:{on,note} } for every catalogue row.
@@ -17123,7 +17238,7 @@ var PROBATE_PKG_KEY = 'probatePackage';
 // `ledger` (P19): the Disposition Ledger. Its title is also the name the close-out filing files it under
 // (fileDispositionLedger), so the package's copy and the close's are one file in Drive.
 var PROBATE_PKG_TITLES = { court: 'Court Inventory', trustee: 'Trust Schedule', schedule: 'Estate Inventory Report',
-                           contents: 'Contents List', ledger: 'Disposition Ledger', worklist: 'Appraisal Worklist' };
+                           contents: 'Contents List', ledger: 'Disposition Ledger', incidents: 'Incident Record', worklist: 'Appraisal Worklist' };
 var PROBATE_PKG_RECORD_TITLE = 'Release Approvals and Chain of Custody';
 // Up to thirteen Apps Script calls run one after another (two folder shares, the record, and a filing and a PDF for each
 // of up to five documents, the Disposition Ledger's two since P19) before Gmail is asked, so the watchdog is longer than
@@ -17182,6 +17297,8 @@ function probatePackageDocs(job) {
   var p = invPrimaryDoc(job);
   if (p === 'schedule' || p === 'contents') out.push(p);
   out.push('ledger');
+  // The Incident Record where the job has an incident the client may read (P26); never a vulnerable adult concern.
+  if (typeof incidentReportsOf === 'function' && incidentReportsOf(job, { client: true }).length) out.push('incidents');
   out.push('worklist');
   return out;
 }
@@ -17193,6 +17310,7 @@ function probatePackagePage(jobId, key) {
         : key === 'schedule' ? printEstateInventoryReport(jobId, o)
         : key === 'contents' ? printContentsList(jobId, o)
         : key === 'ledger' ? printDispositionLedger(jobId, o)
+        : key === 'incidents' ? printIncidentRecord(jobId, o)
         : key === 'worklist' ? printAppraisalWorklist(jobId, o) : null;
   return (r && (r.html || r.why)) ? r : { why: 'it could not be built on this device' };
 }
@@ -17329,6 +17447,7 @@ function probatePackageRecordHtml(jobId) {
     + apprTable
     + head('Chain of custody')
     + custTable
+    + ((typeof accessCustodyRecordHtml === 'function') ? accessCustodyRecordHtml(job) : '')   // the keys and access items (2026-10-16)
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Item numbers are the ones every inventory document cites.</div>'
     + '</div>';
 }
@@ -18698,6 +18817,9 @@ function jobTimeline(job, estRec, logs, cos, sched, settle) {
   // ⚠ It takes the ROW OBJECT and returns it, so there is one helper rather than a merge
   // function beside a builder — a second helper here is a second place to forget the guard.
   var _sc = sched || null;
+  // ⚠ OPEN INCIDENTS FLAG THE WORK COMPLETE ROW (P26): the close refuses them (jobCloseBlockers), and the rail says so where Close job sits.
+  var _incOpenN = (typeof openIncidents === 'function' && job) ? openIncidents(job).length : 0;
+  var _incFlag = _incOpenN ? _incOpenN + ' open incident' + (_incOpenN === 1 ? '' : 's') + ' \u2014 the job cannot close until each is resolved with a note on the Incidents card (Job Plan, In the house)' : '';
   function _plan(o, dateStr, lbl) {
     if (!_sc || !dateStr || o.done || o.open || _sc.state === 'dead' || _sc.state === 'none' || _sc.state === 'vendor') return o;
     o.plan = dateStr; o.planLbl = lbl;
@@ -18963,7 +19085,7 @@ function jobTimeline(job, estRec, logs, cos, sched, settle) {
     // FILE, so "Work completed" has been blank on every job this app has ever had.
     // ⚠ A RE-OPENED JOB SAYS SO HERE (2026-09-29), until it is closed again — somebody who remembers it
     // closed would otherwise find it in progress with nothing on the timeline explaining why.
-    row(_plan({ key: 'work_complete', group: 'Work', label: 'Work complete',
+    row(_plan({ key: 'work_complete', group: 'Work', label: 'Work complete', flag: _incFlag,
       done: !!job.deliveredOn, at: job.deliveredOn || '', atKind: 'date', by: job.deliveredBy || '',
       sub: (!job.deliveredOn && job.reopens && job.reopens.length) ? 'Re-opened — the earlier close was undone' : '' },
       _sc && _sc.planEnd, 'end')),
@@ -23506,6 +23628,8 @@ function renderClientDashboard(jobId) {
   }
   }
   h += '</div>';
+  // KEYS & ACCESS (2026-10-16): under the hours, once an item is recorded; red while one is lost (Q74).
+  if (typeof accessDashHtml === 'function') h += accessDashHtml(job);
 
   document.getElementById('client-dashboard-view').innerHTML = h;
   maybeStartJobsWatch();   // keep the dashboard live while this job is Pending Approval
@@ -23758,7 +23882,12 @@ function activateOrCycle(jobId) {
   // accepted change order files itself; a failure leaves File to Drive on the desk's Disposition Ledger card.
   // ⚠ AND THE CONTENTS RECORD ON LIVING WORK (P25, Q51): the family's signed paper. Each filing decides for itself, once
   // the inventory is read from the sheet, whether its paper applies (CLOSEOUT_PAPERS); one that does not files nothing, silently.
-  if (j.status === 'closed') { fileDispositionLedger(jobId, { auto: true }); fileContentsRecord(jobId, { auto: true }); }
+  if (j.status === 'closed') {
+    // ⚠ AND THE KEYS (2026-10-16, Q72): the codes are wiped as the job closes, then the custody record is filed beside the papers.
+    if (typeof accessClearCodes === 'function') { accessClearCodes(j); fileAccessRecord(jobId, { auto: true }); }
+    fileDispositionLedger(jobId, { auto: true }); fileContentsRecord(jobId, { auto: true });
+    if (typeof fileIncidentRecord === 'function') fileIncidentRecord(jobId, { auto: true });   // the Incident Record (P26)
+  }
   // ⚠⚠ AN ACTIVATION LANDS ON THE JOB PLAN (2026-09-23). Anthony: *"the activate job button on the
   // client dashboard should take you to the job plan."* Activating is starting the job, and the Job
   // Plan is where a started job is worked — so the press that starts it takes you there, on this
@@ -24155,7 +24284,8 @@ function openCloseoutModal(id) {
   // itself is recorded on the card once it has gone (saveRefund). A fixed price keeps its stage earn-out: unchanged.
   var _st = _kept > 0 ? walkawaySettlement(j) : null;
   var _hourly = !!(_st && _st.basis === 'hourly');
-  if (sub) sub.innerHTML = _kept > 0
+  var _incOpenN = (typeof openIncidents === 'function') ? openIncidents(j).length : 0;
+  if (sub) sub.innerHTML = (_kept > 0
     ? 'Close out <strong>' + esc(j.name||'this client') + '</strong>. <strong>' + fmt(_kept) + '</strong> has already been '
       + 'received on this job, so this is recorded as <strong>closed — deposit retained</strong>, '
       + (_hourly
@@ -24174,7 +24304,12 @@ function openCloseoutModal(id) {
           : 'with the ' + fmt(_kept) + ' kept, not as a loss.')
       + ' The record is archived, never erased.'
     : 'Mark <strong>' + esc(j.name||'this client') + '</strong> as Lost with a reason. The record is '
-      + 'archived — never erased — so we keep a win/loss history.';
+      + 'archived — never erased — so we keep a win/loss history.')
+    // An open incident on a job marked Lost stays open on the record, and is named here (P26, Q68: a flag; Deposit Retained is refused in confirmMarkLost).
+    + (_incOpenN && !(_kept > 0) ? ' <span style="color:var(--err-tx);">' + _incOpenN + ' open incident' + (_incOpenN === 1 ? ' stays' : 's stay') + ' open on the record.</span>' : '');
+  // ⚠ KEYS STILL HELD (2026-10-16, Q73): flagged here, never refused; the dashboard line stays red until they go back.
+  var _ak = (sub && typeof accessTerminalFlag === 'function') ? accessTerminalFlag(j) : '';
+  if (_ak) sub.innerHTML += '<div class="fos-flag" style="margin-top:8px;font-size:12px;">&#9888; ' + esc(_ak) + '</div>';
   var _btn = document.querySelector('#closeout-modal button[onclick="confirmMarkLost()"]');
   if (_btn) _btn.textContent = !(_kept > 0) ? 'Mark as Lost'
     : (_hourly && _st.due > 0) ? 'Close — Retain ' + fmt(_st.retained) + ' · refund ' + fmt(_st.due)
@@ -24197,6 +24332,14 @@ function confirmMarkLost() {
   // ordinary losses. See LIFECYCLE_AUDIT.md §8.6 — the agreements now say the deposit is earned
   // on signature, which is what makes keeping it the record rather than a claim.
   var _kept = closeoutRetainedTotal(j);
+  // ⚠ DEPOSIT RETAINED IS A CLOSE, AND AN OPEN INCIDENT HOLDS IT (P26, Q68): money came in and work happened. A loss with
+  // nothing paid is recorded, with the open incidents named in the dialog as a flag.
+  if (_kept > 0 && typeof openIncidents === 'function' && openIncidents(j).length) {
+    var _oi = openIncidents(j);
+    document.getElementById('closeout-fb').innerHTML = '<span style="color:var(--err-tx);font-size:12px;">Resolve ' + (_oi.length === 1 ? 'the open incident' : 'the ' + _oi.length + ' open incidents')
+      + ' first (Incident ' + _oi.map(function(r){ return incidentNo(j, r.id) + ', ' + esc(INCIDENT_KINDS[r.kind].label.toLowerCase()); }).join('; ') + '): the Incidents card is on the Job Plan, under In the house.</span>';
+    return;
+  }
   j.status = _kept > 0 ? 'closed_retained' : 'lost';
   if (!(_kept > 0)) j.won = false;   // won-then-withdrawn with nothing paid is not a win
   j.lostReason = reason;
@@ -24738,7 +24881,8 @@ function _saveJobEdit(job, kind, key) {
 // helpers, which stamp the entry (`_saveJobEdit(job, kind, id)`): a person's edit. A removal is the entry gone
 // AND its stamp (a stamped removal, which the sheet keeps winning); a record of something that happened (a
 // filed signed copy, a find, a statement) is never removed, only voided with a reason (`jobListVoid`).
-var JOB_RECORD_LISTS = ['coFiduciaries', 'beneficiaries', 'bequests', 'signedRecords', 'siteFinds', 'proceedsStatements'];
+// `accessItems` and `accessEvents` (2026-10-16): the keys and access items a client hands over, and every act on them (KEY_CUSTODY_SPEC.md).
+var JOB_RECORD_LISTS = ['coFiduciaries', 'beneficiaries', 'bequests', 'signedRecords', 'siteFinds', 'proceedsStatements', 'accessItems', 'accessEvents', 'incidents'];
 function newJobListId(kind) {
   return String(kind || 'r').slice(0, 2) + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -32117,6 +32261,7 @@ function printDispositionLedger(jobId, opt) {
       + esc(holder) + '. Havellin charges no commission on sales, consignments or auction results, and Havellin&rsquo;s own service fees are billed separately and do not appear here. '
       + referralFeeVendorsNote(job, L.rows)   // Q62: the selling vendors that pay Havellin a referral fee, by name
       + 'This ledger records where each item went and what it brought; it does not state what anything is worth.</div>'
+    + ((typeof accessCustodyRecordHtml === 'function') ? accessCustodyRecordHtml(job) : '')   // the keys (2026-10-16), before the sign-off
     + signoff
     + '</div>';
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Disposition Ledger') };
@@ -32144,38 +32289,27 @@ function _fileCloseoutPaper(jobId, opt, P) {
     _docNotice(type, msg, jobId);
   };
   if (!job) { say('warn', 'This client could not be found.'); return false; }
-  if (job.svc === 'prep') return false;
+  if (job.svc === 'prep' && !P.noInventory) return false;   // a prep job has no inventory; an Incident Record files on it too (P26)
   if (P.jobOnly && !P.applies(job)) return false;   // e.g. no Contents Record to file on an estate (P25)
   if (P.flight[jobId]) { say('warn', 'The ' + P.name + ' is being filed now — give it a moment.'); return false; }
-  if (!SHEETS_SYNC_URL) { say('warn', 'The ' + P.name + ' was not filed to Drive: this device has no Apps Script URL in Settings.' + (auto ? ' Press File to Drive on the ' + P.card + ' (Job Admin & Inv) once one is set.' : '')); return false; }
+  if (!SHEETS_SYNC_URL) { say('warn', 'The ' + P.name + ' was not filed to Drive: this device has no Apps Script URL in Settings.' + (auto ? ' Press File to Drive on the ' + P.card + _cpWhere(P) + ' once one is set.' : '')); return false; }
   if (!job.driveFolder) { say('warn', 'The ' + P.name + ' was not filed to Drive: this client has no Drive folder yet. Create the Drive folder on the client dashboard, then press File to Drive on the ' + P.card + '.'); return false; }
   var release = _armFiling(P.flight, jobId, function () {
-    say('warn', 'No answer from Drive after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes while the ' + P.name + ' was filed. It may still have been filed: press File to Drive on the ' + P.card + ' (Job Admin & Inv) to try again.');
+    say('warn', 'No answer from Drive after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes while the ' + P.name + ' was filed. It may still have been filed: press File to Drive on the ' + P.card + _cpWhere(P) + ' to try again.');
   });
-  _invEnsureLoaded(jobId);
-  refreshPhotoRefs(jobId, function () {
-    if (!_invCloudSeen[jobId]) {
-      if (!release()) return;
-      say('err', 'The ' + P.name + ' was not filed to Drive: the inventory could not be read from the sheet, and a page built without it would be empty. Check the connection, then press File to Drive on the ' + P.card + ' (Job Admin & Inv).');
-      return;
-    }
-    if (!_jobInvRefs(jobId).length) {
-      if (!release()) return;
-      if (!auto) say('warn', 'The inventory holds no lines, so there is no ' + P.word + ' to file yet.');
-      return;
-    }
-    if (P.applies && !P.applies(job, _jobInvRefs(jobId))) { release(); return; }
+  // ⚠ A PAPER THAT READS THE JOB ALONE (P26, the Incident Record: P.noInventory) is built at once; the others wait for the sheet's manifest.
+  var go = function () {
     var page = P.build(jobId);
     if (!page || !page.html) { if (!release()) return; say('err', 'The ' + P.name + ' could not be built on this device, so it was not filed.'); return; }
     var title = P.title;
-    resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
+    resolveSubfolderId(job, P.folder || PHOTO_SUBFOLDER, function (folderId) {
       var target = folderId || _jobRootFolderId(job);
       if (!target) { if (!release()) return; say('warn', 'The ' + P.name + ' was not filed to Drive: this client has no Drive folder yet.'); return; }
       uploadHtmlToDrive(target, _invDocDriveName(job, title), _exportDoc(title + ' – ' + (job.hvlId || ''), page.html, ''), function (ok, fileUrl, meta) {
         var mine = release();
         if (!ok) {
           if (!mine) return;   // the watchdog has already said so
-          say('err', 'The ' + P.name + ' was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the ' + P.card + ' (Job Admin & Inv) to try again.');
+          say('err', 'The ' + P.name + ' was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the ' + P.card + _cpWhere(P) + ' to try again.');
           return;
         }
         // The store may have been replaced by a load while the upload was out: write to the record held now.
@@ -32190,14 +32324,33 @@ function _fileCloseoutPaper(jobId, opt, P) {
         saveJobs();
         syncJobToSheets(j2);
         if (auto) showSyncBadge('' + P.name + ' filed to Drive ✓');
-        else say('ok', '' + P.name + ' filed to the client’s Estate Inventory folder in Drive.');
+        else say('ok', '' + P.name + ' filed to the client’s ' + (P.folder || PHOTO_SUBFOLDER) + ' folder in Drive.');
         _ledgerCardRepaint(jobId);
+        if (typeof _repaintIncidents === 'function') _repaintIncidents(jobId);
       });
     });
+  };
+  if (P.noInventory) { go(); return true; }
+  _invEnsureLoaded(jobId);
+  refreshPhotoRefs(jobId, function () {
+    if (!_invCloudSeen[jobId]) {
+      if (!release()) return;
+      say('err', 'The ' + P.name + ' was not filed to Drive: the inventory could not be read from the sheet, and a page built without it would be empty. Check the connection, then press File to Drive on the ' + P.card + _cpWhere(P) + '.');
+      return;
+    }
+    if (!_jobInvRefs(jobId).length) {
+      if (!release()) return;
+      if (!auto) say('warn', 'The inventory holds no lines, so there is no ' + P.word + ' to file yet.');
+      return;
+    }
+    if (P.applies && !P.applies(job, _jobInvRefs(jobId))) { release(); return; }
+    go();
   });
   return true;
 }
-// ⚠⚠ THE TWO CLOSE-OUT PAPERS FILE THROUGH ONE PATH (P25, Q51): the Disposition Ledger on every estate, and on living work
+function _cpWhere(P) { return ' (' + (P.where || 'Job Admin & Inv') + ')'; }
+var _incidentFiling = {};   // never saved: one Incident Record filing per client at a time (P26)
+// ⚠⚠ THE THREE CLOSE-OUT PAPERS FILE THROUGH ONE PATH (P25, Q51; the Incident Record since P26): the Disposition Ledger on every estate, and on living work
 // where something was sold (ledgerApplies); the Contents Record on living work, the paper the family signs. Each is filed as
 // the job closes and from its desk card, under its undated name, one filing per client at a time, its record on its own
 // docState key (a stored key: never rename either). The words and the record differ; the path is one.
@@ -32208,7 +32361,15 @@ var CLOSEOUT_PAPERS = {
   // `jobOnly`: whether the paper applies is known from the job alone, so an estate's close never reads the sheet for it.
   contents: { name: 'Contents Record', word: 'record', card: 'Contents Record card', key: CONTENTS_DOC_KEY, flight: _contentsFiling,
               title: 'Contents Record', jobOnly: true, applies: function (job) { return !invFiduciaryMode(job); },
-              build: function (jobId) { return printContentsRecord(jobId, { asHtml: true }); } }
+              build: function (jobId) { return printContentsRecord(jobId, { asHtml: true }); } },
+  // The Incident Record (P26, 2026-10-16): every service, filed where the job has an incident the client may read, into the
+  // Incident Reports folder beside the photographs; it reads the job alone (`noInventory`), so a prep close files it too.
+  // ⚠ Literals, not the INCIDENT_* constants: this catalogue is evaluated before they are assigned (var hoists as undefined);
+  // incidents.test.js holds each literal to its constant.
+  incidents: { name: 'Incident Record', word: 'record', card: 'Incidents card', where: 'Job Plan, In the house', key: 'incidentRecord', flight: _incidentFiling,
+               title: 'Incident Record', folder: 'Incident Reports', jobOnly: true, noInventory: true,
+               applies: function (job) { return incidentReportsOf(job, { client: true }).length > 0; },
+               build: function (jobId) { return printIncidentRecord(jobId, { asHtml: true }); } }
 };
 function fileDispositionLedger(jobId, opt) { return _fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.ledger); }
 function fileContentsRecord(jobId, opt) { return _fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.contents); }
@@ -33148,6 +33309,7 @@ function printContentsRecord(jobId, opt) {
     + 'Blank means nothing has been received. This record does not state what anything is worth.'
     + (!shared ? '' : unshot ? ' The photographs are in the Drive folder shared with you.' : ' Photographs of every item are in the Drive folder shared with you.')
     + '</div>'
+    + ((typeof accessCustodyRecordHtml === 'function') ? accessCustodyRecordHtml(job) : '')   // the keys (2026-10-16), before the sign-off
     + contentsRecordSignoff(job, rec)
     + '</div>';
   if (asHtml) return { html: html, title: _invDocName(job, 'Contents Record') };
@@ -36047,6 +36209,8 @@ function _renderInvWorkbar(job, all) {
         + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', fid
             ? 'Per-specialist packet of every item flagged for appraisal'
             : 'Per-specialist packet of everything going out to an appraiser, auction house or dealer')
+        // The Incident Record (P26): where the job has an incident the client, counsel or an insurer may read.
+        + ((typeof incidentReportsOf === 'function' && incidentReportsOf(job, { client: true }).length) ? btn('printIncidentRecord(' + jid + ')', 'Incident Record', 'Every incident reported on this job, each entry as written, with its photographs linked: for the client, counsel and the insurer') : '')
         + (fid ? btn('takeInventorySnapshot(' + jid + ')', 'Snapshot', 'Point-in-time copy of the inventory') : '')
         // ⚠ BOTH FOLDERS (P16): `_invShareFolders` shares the item shots' folder and the as-found folder,
         // named here by the one rule that files the shots, `photoSubfolder`. It said one folder.
@@ -42233,6 +42397,15 @@ function planDerivedLines(jobId, job, est, phase, today) {
       return l;
     }));
   }
+  // ⚠ KEYS AND ACCESS ITEMS (2026-10-16): on the Keys & access card itself ('access'), on Close-out ('p4', amber while one is
+  // held: the close waits on it) and on the desk's Job Admin card ('admin'), each open line with the way to the card. Red
+  // for a lost item (Q74). Guarded for a sandbox that lifts this function alone; the suite that proves the join lifts both.
+  if ((phase === 'access' || phase === 'p4' || phase === 'admin') && typeof accessLines === 'function' && accessItemsOf(job).length) {
+    out = out.concat(accessLines(job, day()).map(function(l) {
+      if (phase !== 'access' && !l.ok) l.action = { label: 'Open Keys &amp; access', call: 'goToAccessCard(' + jobId + ')' };
+      return l;
+    }));
+  }
   if (phase === 'p2') {
     var sent = !!docSentAt(job, 'invoice', 'midpoint');
     // ⚠ NOT ON A CLOSED JOB (2026-09-29). From the close the final bills an unsent midpoint's share and the
@@ -42386,6 +42559,14 @@ function planDerivedLines(jobId, job, est, phase, today) {
   // for a paper the app now files), and at the desk the donation receipts and the sale proceeds reconciled (they replace
   // fin_donation_receipts and fin_proceeds). Derived, never ticked; ledgerDerivedLines words them.
   if (phase === 'p4' || phase === 'admin') ledgerDerivedLines(jobId, job, phase).forEach(function(l){ out.push(l); });
+  // ⚠ INCIDENTS (P26): on the Incidents card ('incidents') and on the desk's Job Admin card ('admin'), where each open line
+  // carries Open Incidents. The clock is read only on a job that has one.
+  if ((phase === 'incidents' || phase === 'admin') && typeof incidentLines === 'function' && typeof incidentReportsOf === 'function' && incidentReportsOf(job).length) {
+    incidentLines(job, day()).forEach(function(l) {
+      if (phase === 'admin' && !l.ok) l.action = { label: 'Open Incidents', call: 'goToIncidents(' + jobId + ')' };
+      out.push(l);
+    });
+  }
   return out;
 }
 function planDerivedHtml(jobId, job, est, phase) {
@@ -42403,6 +42584,602 @@ function derivedLinesHtml(lines, id) {
       + (l.action && !l.ok ? '<button type="button" class="btn-s" style="font-size:10px;margin-left:auto;" onclick="' + l.action.call + '">' + l.action.label + '</button>' : '')
       + '</div>';
   }).join('') + '</div>';
+}
+
+// ═══════════════════════ KEYS AND ACCESS ITEMS: THE CUSTODY LOG (2026-10-16) ═════════════════════════
+// ⚠⚠ EVERY KEY, FOB, REMOTE, GATE CARD, LOCKBOX KEY AND CODE A CLIENT HANDS HAVELLIN, from the day it is received until it
+// goes back (Anthony, 2026-10-16; KEY_CUSTODY_SPEC.md, Q72 to Q74). Two record lists on the job, both through the
+// record-list helpers (JOB_RECORD_LISTS; the sheet merges each entry on its id, so two devices can record at once):
+//   · `accessItems`: one entry per physical item, written once (kind, label, quantity, received from and on, and since Q72
+//     the code it carries, if any). Voided with a reason when recorded on the wrong job; never removed.
+//   · `accessEvents`: append only, one entry per act (received, handoff, returned, lost, recovered, a code recorded or
+//     cleared), each naming its item. Nothing edits an event after it is saved: a wrong one is voided with a reason and the
+//     right one recorded, and the void stays on the printed history struck through. Two lists rather than events nested in
+//     the item because the sheet merges each list ENTRY whole: two devices appending to one item's nested list would drop
+//     one of them; two devices appending separate event entries never do.
+// Who holds an item is DERIVED from its latest live event (accessItemState), never stored, so one named person is always
+// responsible and nobody changes the holder without an entry saying so.
+// ⚠ Q72 (Anthony, 2026-10-16: "if it's a password protected iPad that transition Concierge controls I hope that's a
+// sufficient level of control to have a code in there for the front door"): the code is a field on the item, read by both
+// concierges, and the digits are WIPED WHEN THE JOB CLOSES (accessClearCodes, from activateOrCycle's close): the record
+// keeps that a code was held and cleared. No printed record ever carries the digits (accessCustodyRecordHtml prints *held*
+// or *cleared at close*), and the intake access row and the walkthrough notes no longer invite a code into free
+// text, which reached the sheet, the estimate, Agent One's request and the worksheet in Drive.
+// ⚠ Q73: a job marked Lost or closed as Deposit Retained while an item is held is FLAGGED in the dialog (accessTerminalFlag)
+// and its dashboard line stays red; only Close job refuses (accessCloseBlocker, through jobCloseBlockers).
+// ⚠ Q74 (Anthony: "Red on every device only, no message"): a lost item turns red on the card, the Close-out stage, the desk
+// and the client dashboard on every device within the 15-second tick. The app sends nothing.
+var ACCESS_ITEM_KINDS = {
+  key:     { label: 'Key' },
+  fob:     { label: 'Fob' },
+  remote:  { label: 'Garage remote' },
+  gate:    { label: 'Gate card or clicker' },
+  lockbox: { label: 'Lockbox key' },
+  code:    { label: 'Alarm or access code' },
+  other:   { label: 'Other access item' }
+};
+// `moves`: the event moves the item into somebody's hands (`to` is the holder after it). The three that do not change the
+// holder (returned, lost: the item leaves Havellin's hands; the two code events: a note on the history) say so.
+var ACCESS_EVENT_KINDS = {
+  received:     { label: 'Received', moves: true,  words: 'received from {from} by {to}' },
+  handoff:      { label: 'Handed off', moves: true, words: 'handed off by {from} to {to}' },
+  returned:     { label: 'Returned to the client', words: 'returned by {from} to {to}' },
+  lost:         { label: 'Lost', words: 'lost while held by {from}' },
+  recovered:    { label: 'Recovered', moves: true, words: 'recovered, now held by {to}' },
+  code_set:     { label: 'Code recorded', words: 'code recorded by {to}' },
+  code_cleared: { label: 'Code cleared', words: 'code cleared at close' }
+};
+var ACCESS_DOC_KEY = 'accessRecord';            // docState key for the filed record: a stored key, never rename it
+var ACCESS_RECORD_TITLE = 'Key and Access Custody Record';
+var _accessFiling = {};                          // never saved: one filing per client at a time
+
+function accessItemsOf(job, withVoided) { return jobListEntries(job, 'accessItems', withVoided); }
+// An item's live events in the order they HAPPENED (the day, then the moment recorded), never the order the merge met them.
+function accessEventsOf(job, itemId, withVoided) {
+  return jobListEntries(job, 'accessEvents', withVoided)
+    .filter(function (e) { return String(e.itemId) === String(itemId); })
+    .sort(function (a, b) {
+      return String(a.on || '').localeCompare(String(b.on || '')) || (Number(a.recordedAt) || 0) - (Number(b.recordedAt) || 0);
+    });
+}
+function accessItemLabel(it) {
+  if (!it) return '';
+  var k = ACCESS_ITEM_KINDS[it.kind] || ACCESS_ITEM_KINDS.other;
+  var txt = String(it.label || '').trim() || k.label;
+  var q = Number(it.qty) || 1;
+  return txt + (q > 1 ? ' ×' + q : '');
+}
+// ⚠⚠ THE ONE ANSWER TO "WHO HAS IT?": held (and by whom), returned (and to whom), lost, or none (every event voided). The
+// holder is the `to` of the latest live event that moves the item. DOM-free.
+function accessItemState(job, item) {
+  var st = { state: 'none', holder: '', to: '', on: '', why: '', from: '', last: null };
+  if (!item) return st;
+  accessEventsOf(job, item.id).forEach(function (e) {
+    var K = ACCESS_EVENT_KINDS[e.kind];
+    if (!K) return;
+    if (K.moves) { st.state = 'held'; st.holder = String(e.to || '').trim(); st.on = e.on; st.to = ''; st.why = ''; st.from = e.from || ''; }
+    else if (e.kind === 'returned') { st.state = 'returned'; st.holder = ''; st.to = String(e.to || '').trim(); st.on = e.on; st.from = e.from || ''; }
+    else if (e.kind === 'lost') { st.state = 'lost'; st.holder = ''; st.on = e.on; st.why = String(e.note || '').trim(); st.from = e.from || ''; }
+    else return;   // a code event changes nobody's hands
+    st.last = e;
+  });
+  return st;
+}
+// Open means Havellin still answers for it: held, or with no live event at all (its receipt voided and nothing recorded
+// since). Returned and lost are the two ways an item leaves the list the close waits on.
+function accessItemOpen(st) { return !!st && st.state !== 'returned' && st.state !== 'lost'; }
+function accessStateText(st) {
+  if (!st) return '';
+  if (st.state === 'held') return 'held by ' + (st.holder || 'nobody named');
+  if (st.state === 'returned') return 'returned to ' + (st.to || 'the client') + (st.on ? ' on ' + fmtDate2(st.on) : '');
+  if (st.state === 'lost') return 'lost' + (st.on ? ' ' + fmtDate2(st.on) : '');
+  return 'no holder recorded';
+}
+// Who may be offered as Havellin's hands: the device's user first, the job's concierge, the confirmed crew.
+function accessTeamNames(job) {
+  var out = [];
+  var add = function (n) { n = String(n || '').trim(); if (n && !isCrewPlaceholder(n) && !out.some(function (x) { return samePerson(x, n); })) out.push(n); };
+  add(deviceUser());
+  add(job && job.tc);
+  var c = job && job.crew;
+  if (c) { add(c.tc && c.tc.name); add(c.tc2 && c.tc2.name); (c.ps || []).forEach(function (p) { add(p && p.name); }); }
+  return out;
+}
+// The client's side: the client (a living one), the representative and every co-representative, counsel, the referral
+// partner. A return to anybody else is recorded and FLAGGED (accessEventFlags), never refused.
+function accessClientParties(job) {
+  var out = [];
+  var add = function (n) { n = String(n || '').trim(); if (n && !out.some(function (x) { return samePerson(x, n); })) out.push(n); };
+  if (!job) return out;
+  if (!isDecedentJob(job)) add(job.name);
+  add(job.executor);
+  jobListEntries(job, 'coFiduciaries').forEach(function (c) { add(c.name); });
+  add(job.probateAttyName);
+  add(job.refPartnerName); add(job.referredByName);
+  return out;
+}
+function accessDefaultHolder(job) { return String(deviceUser() || (job && job.tc) || '').trim(); }
+function accessDefaultReturnee(job) {
+  if (!job) return '';
+  return String((isDecedentJob(job) ? job.executor : job.name) || '').trim();
+}
+// ⚠⚠ THE RULES, WHERE THE RECORD IS WRITTEN: saveAccessDialog asks this of every event before it writes any. Refused, by
+// name, only what would leave the item with no holder or no explanation: nobody has standing to override those. `today`
+// is an argument (never the clock in a test). An item being received for the first time has no entry yet: pass it as it
+// will be recorded, with no events, and its state reads `none`. '' when the event may be written.
+function accessRefusal(job, ev, item, today) {
+  var K = ACCESS_EVENT_KINDS[ev && ev.kind];
+  if (!K) return 'That is not something the Keys & access card records.';
+  if (!item || item.voidedAt) return 'That item is no longer on this job.';
+  var has = function (v) { return !!String(v || '').trim(); };
+  var miss = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ev.on || ''))) miss.push('the day');
+  else if (today && String(ev.on) > String(today)) return 'The day cannot be after today: the log records what has happened.';
+  if (ev.kind === 'received') { if (!has(ev.from)) miss.push('who handed it over'); if (!has(ev.to)) miss.push('who took it for Havellin'); }
+  if (ev.kind === 'handoff' || ev.kind === 'recovered') { if (!has(ev.to)) miss.push('who has it now'); }
+  if (ev.kind === 'returned') { if (!has(ev.to)) miss.push('who received it for the client'); }
+  if (ev.kind === 'lost') { if (!has(ev.note)) miss.push('what happened'); }
+  if (miss.length) return 'Enter ' + _andJoin(miss) + '.';
+  var st = accessItemState(job, item), name = esc(accessItemLabel(item));
+  if (ev.kind === 'received' && st.state === 'held') return name + ' is already ' + esc(accessStateText(st)) + '. Record a handoff instead.';
+  if ((ev.kind === 'handoff' || ev.kind === 'returned' || ev.kind === 'lost') && st.state !== 'held') {
+    return name + ' is ' + esc(accessStateText(st)) + ', so it cannot be ' + (ev.kind === 'handoff' ? 'handed off' : ev.kind === 'returned' ? 'returned' : 'marked lost') + '.';
+  }
+  if (ev.kind === 'recovered' && st.state !== 'lost') return 'Only a lost item is recovered: ' + name + ' is ' + esc(accessStateText(st)) + '.';
+  if (ev.kind === 'handoff' && samePerson(ev.to, st.holder)) return esc(st.holder) + ' already holds ' + name + '.';
+  return '';
+}
+// ⚠ FLAGGED, NEVER REFUSED: a return to somebody not recorded as the client or a party on the job, and a handoff `from`
+// somebody the log did not hold it with (a correction is somebody's to make, and the paper shows the gap rather than hiding
+// it). Derived from the events in order, keyed on the event's id; nothing is stored.
+function accessEventFlags(job, item) {
+  var flags = {}, holder = '';
+  var parties = accessClientParties(job);
+  accessEventsOf(job, item && item.id).forEach(function (e) {
+    var K = ACCESS_EVENT_KINDS[e.kind];
+    if (!K) return;
+    var f = '';
+    if (e.kind === 'returned' && String(e.to || '').trim() && !parties.some(function (p) { return samePerson(p, e.to); })) f = 'not recorded as the client or a party on this job';
+    if ((e.kind === 'handoff' || e.kind === 'returned') && holder && String(e.from || '').trim() && !samePerson(e.from, holder)) f = (f ? f + '; ' : '') + 'recorded from ' + e.from + ', the log held ' + holder;
+    if (f) flags[String(e.id)] = f;
+    if (K.moves) holder = String(e.to || '').trim(); else if (e.kind === 'returned' || e.kind === 'lost') holder = '';
+  });
+  return flags;
+}
+// The derived lines (Q74: red on every device): one red line per lost item, then the count. On the card itself ('access'),
+// on Close-out ('p4') and first on the desk's Job Admin card ('admin') through planDerivedLines, and on the client
+// dashboard. DOM-free and clock-free (`today` is an argument). Person-typed values are escaped: the lines are drawn as markup.
+function accessLines(job, today) {
+  var items = accessItemsOf(job);
+  if (!items.length) return [];
+  var held = [], lost = [], ret = 0;
+  items.forEach(function (it) {
+    var st = accessItemState(job, it);
+    if (st.state === 'returned') ret++; else if (st.state === 'lost') lost.push({ it: it, st: st }); else held.push({ it: it, st: st });
+  });
+  var out = [];
+  lost.forEach(function (x) {
+    out.push({ key: 'access_lost_' + x.it.id, ok: false, red: true, label: 'Access item lost: ' + esc(accessItemLabel(x.it)),
+               detail: 'lost ' + fmtDate2(x.st.on) + (x.st.from ? ' while held by ' + esc(x.st.from) : '') + (x.st.why ? ' &mdash; ' + esc(x.st.why) : '') });
+  });
+  var holders = [];
+  held.forEach(function (x) { var n = x.st.holder || 'nobody named'; if (!holders.some(function (h) { return samePerson(h, n); })) holders.push(n); });
+  out.push({ key: 'access_items', ok: !held.length, label: 'Keys and access items',
+             detail: items.length + ' received &middot; ' + ret + ' returned to the client'
+               + (held.length ? ' &middot; ' + held.length + ' held by ' + esc(holders.join(', ')) : '')
+               + (lost.length ? ' &middot; ' + lost.length + ' lost' : '')
+               + (held.length ? ' &mdash; every item goes back to the client before the job closes' : '') });
+  return out;
+}
+// ⚠⚠ CLOSE JOB REFUSES WHILE AN ITEM IS HELD (the one must-have Anthony made a refusal). Asked by jobCloseBlockers, which
+// applyJobTransition asks in the handler, so the button and the handler agree. A lost item with its explanation does not block.
+function accessCloseBlocker(job) {
+  var open = accessItemsOf(job).map(function (it) { return { it: it, st: accessItemState(job, it) }; }).filter(function (x) { return accessItemOpen(x.st); });
+  if (!open.length) return '';
+  return 'Return every key and access item to the client — ' + open.length + ' still ' + (open.length === 1 ? 'is' : 'are') + ' not ('
+    + open.map(function (x) { return accessItemLabel(x.it) + ': ' + accessStateText(x.st); }).join('; ')
+    + '). Record the return on the Job Plan’s Keys & access card, or mark one lost with an explanation.';
+}
+// Q73: Mark lost and Deposit Retained are flagged, never refused. The sentence the close-out dialog shows.
+function accessTerminalFlag(job) {
+  var open = accessItemsOf(job).map(function (it) { return { it: it, st: accessItemState(job, it) }; }).filter(function (x) { return accessItemOpen(x.st); });
+  if (!open.length) return '';
+  return 'Havellin still holds ' + open.length + ' access item' + (open.length === 1 ? '' : 's') + ' ('
+    + open.map(function (x) { return accessItemLabel(x.it) + ', ' + accessStateText(x.st); }).join('; ')
+    + '). The keys go back to the client whatever happens to the job: record the return on the Job Plan’s Keys & access card. The client’s dashboard stays red until then.';
+}
+// ⚠ Q72: THE DIGITS ARE WIPED WHEN THE JOB CLOSES. Each live item carrying a code is written once more with the code gone and
+// `codeClearedAt` set, and a `code_cleared` event goes on its history (recordedBy the person who pressed Close). The
+// person's edit stamps the item, so the wipe wins the merge against a device still holding the digits.
+function accessClearCodes(job) {
+  var n = 0, who = _actor(job) || (job && job.tc) || '', today = _todayStr();
+  accessItemsOf(job).forEach(function (it) {
+    if (!String(it.code || '').trim()) return;
+    var rec = JSON.parse(JSON.stringify(it));
+    rec.code = ''; rec.codeClearedAt = Date.now(); rec.codeClearedBy = who;
+    jobListPut(job, 'accessItems', rec);
+    jobListPut(job, 'accessEvents', { itemId: String(it.id), kind: 'code_cleared', on: today, from: '', to: who, note: 'the job closed', recordedBy: who, recordedAt: Date.now() });
+    n++;
+  });
+  return n;
+}
+
+// ── The card: Keys & access, on Before Day 1 on every service (Home Prep's plan included: vendors go through that house too).
+function _accessEventLineHtml(jobId, job, e, flag) {
+  var K = ACCESS_EVENT_KINDS[e.kind] || { label: e.kind, words: '' };
+  var words = String(K.words || '').replace('{from}', esc(e.from || '—')).replace('{to}', esc(e.to || '—'));
+  var txt = '<strong>' + esc(K.label) + '</strong> &middot; ' + fmtDate2(e.on) + ' &middot; ' + words
+    + (e.note && e.kind !== 'code_cleared' ? ' &middot; ' + esc(e.note) : '')
+    + (e.recordedBy ? ' <span style="color:var(--gray);">&middot; recorded by ' + esc(e.recordedBy) + '</span>' : '');
+  if (e.voidedAt) {
+    return '<div class="acc-ev acc-ev-void" style="font-size:11px;color:var(--gray);padding:2px 0;"><s>' + txt + '</s> &middot; void: ' + esc(e.voidReason || '') + (e.voidedBy ? ' (' + esc(e.voidedBy) + ')' : '') + '</div>';
+  }
+  return '<div class="acc-ev" style="font-size:11px;padding:2px 0;display:flex;justify-content:space-between;gap:8px;"><span>' + txt
+    + (flag ? '<div class="fos-flag">&#9888; ' + esc(flag) + '</div>' : '') + '</span>'
+    + '<a href="#" onclick="voidAccessEvent(' + jobId + ',\'' + esc(String(e.id)) + '\');return false;" title="Void this entry (it stays on the record)" style="color:#c0392b;text-decoration:none;">&#10007;</a></div>';
+}
+function _accessItemRowHtml(jobId, job, it) {
+  var st = accessItemState(job, it), K = ACCESS_ITEM_KINDS[it.kind] || ACCESS_ITEM_KINDS.other;
+  var idq = '\'' + esc(String(it.id)) + '\'';
+  var facts = '<span class="fos-kind">' + esc(accessItemLabel(it)) + '</span>'
+    + (String(it.label || '').trim() ? ' <span style="color:var(--gray);">' + esc(K.label) + '</span>' : '')
+    + ' &mdash; received from ' + esc(it.receivedFrom || '—') + ' on ' + fmtDate2(it.receivedOn);
+  var state = st.state === 'held' ? '<br>Held by <strong>' + esc(st.holder || 'nobody named') + '</strong>' + (st.on ? ' since ' + fmtDate2(st.on) : '')
+    : st.state === 'returned' ? '<br>Returned to <strong>' + esc(st.to || 'the client') + '</strong> on ' + fmtDate2(st.on)
+    : st.state === 'lost' ? '<br><span class="fos-flag">LOST ' + fmtDate2(st.on) + (st.from ? ' while held by ' + esc(st.from) : '') + ': ' + esc(st.why) + '</span>'
+    : '<br><span class="fos-flag">No holder recorded: every entry on it was voided. Record it again, or void the item.</span>';
+  var code = String(it.code || '').trim()
+    ? '<br>Code: <strong>' + esc(it.code) + '</strong> <span style="color:var(--gray);">(on this item only; cleared when the job closes)</span>'
+    : it.codeClearedAt ? '<br><span style="color:var(--gray);">Code cleared at close, ' + fmtDate2(_ymdLocal(new Date(it.codeClearedAt))) + '</span>' : '';
+  var evs = accessEventsOf(job, it.id, true), flags = accessEventFlags(job, it);
+  var hist = '<details class="acc-hist" style="margin-top:4px;"><summary style="font-size:11px;color:var(--gray);cursor:pointer;">History (' + evs.length + ')</summary>'
+    + evs.map(function (e) { return _accessEventLineHtml(jobId, job, e, flags[String(e.id)]); }).join('') + '</details>';
+  var acts = [];
+  if (st.state === 'held') {
+    acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'handoff\',' + idq + ')">Hand off</button>');
+    acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'return\',' + idq + ')">Return to client</button>');
+    acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'code\',' + idq + ')">' + (String(it.code || '').trim() ? 'Change code' : 'Record a code') + '</button>');
+    acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'lost\',' + idq + ')">Mark lost</button>');
+  }
+  if (st.state === 'lost') acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'recovered\',' + idq + ')">Recovered</button>');
+  if (st.state === 'none' || st.state === 'returned') acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'receive\',' + idq + ')">Received again</button>');
+  acts.push('<button type="button" class="btn-s" onclick="voidAccessItem(' + jobId + ',' + idq + ')">Void item</button>');
+  return '<div class="fos-find acc-item' + (st.state === 'lost' ? ' acc-lost' : '') + '" data-access="' + esc(String(it.id)) + '">' + facts + state + code + hist
+    + '<div class="fos-acts">' + acts.join('') + '</div></div>';
+}
+function accessCardHtml(jobId, job, est) {
+  if (!job) return '';
+  var all = accessItemsOf(job, true);
+  var live = all.filter(function (it) { return !it.voidedAt; });
+  var voided = all.filter(function (it) { return !!it.voidedAt; });
+  var anyHeld = live.some(function (it) { return accessItemState(job, it).state === 'held'; });
+  var acts = ['<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'receive\')">Record what we received</button>'];
+  if (anyHeld) {
+    acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'handoff\')">Hand off</button>');
+    acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'return\')">Return to client</button>');
+  }
+  if (live.length) {
+    acts.push('<button type="button" class="btn-s" onclick="printAccessRecord(' + jobId + ')">Print the custody record</button>');
+    var fst = (job.docState && job.docState[ACCESS_DOC_KEY]) || {};
+    acts.push('<button type="button" class="btn-s" onclick="fileAccessRecord(' + jobId + ')">' + (fst.filedAt ? 'Re-file to Drive' : 'File to Drive') + '</button>');
+    if (fst.filedUrl) acts.push('<a class="btn-s" href="' + esc(fst.filedUrl) + '" target="_blank" rel="noopener" style="text-decoration:none;">Filed copy</a>');
+  }
+  return '<div class="fos-card acc-card" id="plan-access-' + jobId + '">'
+    + '<div class="fos-hd">Keys &amp; access <small>every key, fob, remote and code: who holds it, from the day we receive it until it goes back</small></div>'
+    + derivedLinesHtml(accessLines(job, _todayStr()), 'plan-derived-access-' + jobId)
+    + live.map(function (it) { return _accessItemRowHtml(jobId, job, it); }).join('')
+    + '<div class="fos-acts">' + acts.join('') + '</div>'
+    + voided.map(function (it) {
+        return '<div class="fos-void"><s>' + esc(accessItemLabel(it)) + ', received ' + fmtDate2(it.receivedOn) + '</s> &middot; void: ' + esc(it.voidReason || '') + (it.voidedBy ? ' (' + esc(it.voidedBy) + ')' : '') + '</div>';
+      }).join('')
+    + '<div class="fos-note"><strong>Every item has one named holder</strong>, and the job does not close until each is returned to the client or marked lost with what happened. '
+      + 'A wrong entry is voided with the reason and recorded again; nothing is edited or deleted. '
+      + '<strong>Codes</strong> go on the item here and nowhere else (never a note, a text or a photo): both concierges can read them, and the app clears the digits when the job closes. Ask the client for a job code and to change it at handover.</div>'
+    + '</div>';
+}
+function _repaintAccessCard(jobId) {
+  var el = document.getElementById('plan-access-' + jobId);
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!el || !job) return false;
+  var rec = estimateStore[jobId];
+  el.outerHTML = accessCardHtml(jobId, job, rec && rec.estimate);
+  return true;
+}
+// The desk's and the dashboard's way to the card: the Job Plan on this client, the card in view.
+function goToAccessCard(jobId) {
+  if (!openJobPlanFor(jobId)) return false;
+  var el = document.getElementById('plan-access-' + jobId);
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+  return true;
+}
+// The client dashboard's card, under the Hours Log: only once an item is recorded; red through pl-red when one is lost.
+function accessDashHtml(job) {
+  if (!job || !accessItemsOf(job).length) return '';
+  return '<div class="card acc-dash" id="dash-access-' + job.id + '" style="margin-bottom:12px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' + sectionHdr('Keys &amp; access')
+    + '<button class="btn-s" style="font-size:11px;padding:4px 12px;" onclick="goToAccessCard(' + job.id + ')">Open Keys &amp; access</button></div>'
+    + derivedLinesHtml(accessLines(job, _todayStr()), 'dash-derived-access-' + job.id)
+    + '</div>';
+}
+
+// ── The dialog: one modal (#acc-modal) for every act. The handler asks every question again where the record is written.
+function _accessRowHtml(n) {
+  var opts = Object.keys(ACCESS_ITEM_KINDS).map(function (k) { return '<option value="' + k + '">' + esc(ACCESS_ITEM_KINDS[k].label) + '</option>'; }).join('');
+  return '<div class="acc-row" data-row="' + n + '" style="border-top:1px dashed var(--border);padding-top:6px;margin-top:6px;">'
+    + '<div class="grid2" style="gap:10px;"><div><label style="margin-top:0;">What it is</label><select id="acc-kind-' + n + '">' + opts + '</select></div>'
+    + '<div><label style="margin-top:0;">Which one</label><input type="text" id="acc-label-' + n + '" placeholder="e.g. front door, brass" autocomplete="off"></div></div>'
+    + '<div class="grid2" style="gap:10px;"><div><label>How many</label><input type="number" id="acc-qty-' + n + '" min="1" step="1" value="1"></div>'
+    + '<div><label>Code, if any</label><input type="text" id="acc-code-' + n + '" placeholder="the digits, as given" autocomplete="off"></div></div>'
+    + '</div>';
+}
+function accessAddRow() {
+  var box = document.getElementById('acc-rows');
+  if (!box) return 0;
+  var n = (parseInt(box.getAttribute('data-rows'), 10) || 0) + 1;
+  box.setAttribute('data-rows', String(n));
+  box.insertAdjacentHTML('beforeend', _accessRowHtml(n));
+  return n;
+}
+function openAccessDialog(jobId, mode, itemId) {
+  mode = mode || 'receive';
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var modes = { receive: 1, handoff: 1, 'return': 1, lost: 1, recovered: 1, code: 1 };
+  if (!job || !modes[mode]) { showSyncBadge('This client could not be found.', true); return false; }
+  var el = function (i) { return document.getElementById(i); };
+  var set = function (i, v) { var e = el(i); if (e) e.value = v; };
+  var show = function (i, on) { var e = el(i); if (e) e.style.display = on ? '' : 'none'; };
+  var txt = function (i, v) { var e = el(i); if (e) e.textContent = v; };
+  var opts = function (names) { return names.map(function (n) { return '<option value="' + esc(n) + '">'; }).join(''); };
+  var item = itemId ? jobListGet(job, 'accessItems', itemId) : null;
+  if (itemId && (!item || item.voidedAt)) { showSyncBadge('That item is no longer on this job.', true); _repaintAccessCard(jobId); return false; }
+  var held = accessItemsOf(job).filter(function (it) { return accessItemState(job, it).state === 'held'; });
+  if ((mode === 'handoff' || mode === 'return') && !held.length) { showSyncBadge('Nothing is held: record what was received first.', true); return false; }
+  var today = _todayStr(), me = accessDefaultHolder(job);
+  set('acc-job', String(jobId)); set('acc-mode', mode); set('acc-item', item ? String(item.id) : '');
+  set('acc-on', today); set('acc-from', ''); set('acc-to', ''); set('acc-note', ''); set('acc-code', '');
+  var tl = el('acc-team'); if (tl) tl.innerHTML = opts(accessTeamNames(job));
+  var pl = el('acc-parties'); if (pl) pl.innerHTML = opts(accessClientParties(job));
+  var rows = el('acc-rows'); if (rows) { rows.innerHTML = ''; rows.setAttribute('data-rows', '0'); }
+  var ticks = el('acc-ticks'); if (ticks) ticks.innerHTML = '';
+  show('acc-from-wrap', mode === 'receive'); show('acc-to-wrap', mode !== 'lost' && mode !== 'code');
+  show('acc-rows-wrap', mode === 'receive' && !item); show('acc-ticks-wrap', mode === 'handoff' || mode === 'return');
+  show('acc-code-wrap', mode === 'code'); show('acc-note-wrap', mode !== 'code');
+  var fromIn = el('acc-from'); if (fromIn) fromIn.setAttribute('list', 'acc-parties');
+  var toIn = el('acc-to'); if (toIn) toIn.setAttribute('list', mode === 'return' ? 'acc-parties' : 'acc-team');
+  var titles = { receive: 'Record what we received', handoff: 'Hand off', 'return': 'Return to the client', lost: 'Mark lost', recovered: 'Recovered', code: item && item.code ? 'Change the code' : 'Record a code' };
+  txt('acc-title', titles[mode]);
+  txt('acc-to-lbl', mode === 'return' ? 'Received for the client by' : mode === 'handoff' ? 'Now held by' : 'Taken for Havellin by');
+  txt('acc-note-lbl', mode === 'lost' ? 'What happened' : 'Note (optional)');
+  var sb = el('acc-save-btn'); if (sb) sb.textContent = mode === 'receive' ? 'Record' : mode === 'handoff' ? 'Record the handoff' : mode === 'return' ? 'Record the return' : mode === 'lost' ? 'Record it as lost' : mode === 'recovered' ? 'Record the recovery' : 'Save the code';
+  var sum = el('acc-summary');
+  var itemWords = item ? accessItemLabel(item) + ' (' + accessStateText(accessItemState(job, item)) + ')' : '';
+  if (mode === 'receive') {
+    set('acc-to', me);
+    if (item) { set('acc-from', ''); if (sum) sum.textContent = itemWords + ': the client is handing it over again.'; }
+    else { accessAddRow(); if (sum) sum.textContent = 'Who handed them over, the day, and one row per item. Every item lands in one person’s hands.'; }
+  } else if (mode === 'handoff' || mode === 'return') {
+    if (mode === 'return') set('acc-to', accessDefaultReturnee(job));
+    var mine = held.filter(function (it) { return samePerson(accessItemState(job, it).holder, me); });
+    var pre = item ? [item] : (mode === 'handoff' && mine.length ? mine : held);
+    if (ticks) ticks.innerHTML = held.map(function (it) {
+      var on = pre.some(function (p) { return String(p.id) === String(it.id); });
+      return '<label style="display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0;font-weight:400;text-transform:none;letter-spacing:0;">'
+        + '<input type="checkbox" id="acc-tick-' + esc(String(it.id)) + '" style="width:auto;"' + (on ? ' checked' : '') + '> '
+        + esc(accessItemLabel(it)) + ' <span style="color:var(--gray);">' + esc(accessStateText(accessItemState(job, it))) + '</span></label>';
+    }).join('');
+    if (sum) sum.textContent = mode === 'handoff' ? 'Tick what changes hands and name who has it now.' : 'Tick what goes back and name who received it for the client. Anybody not recorded on the job is flagged, never refused.';
+  } else if (mode === 'lost') {
+    if (sum) sum.textContent = itemWords + '. Say what happened: the item turns red on every device, and the record keeps it.';
+  } else if (mode === 'recovered') {
+    set('acc-to', me);
+    if (sum) sum.textContent = itemWords + '. Name who holds it now.';
+  } else if (mode === 'code') {
+    set('acc-code', item.code || '');
+    if (sum) sum.textContent = itemWords + '. The code stays on this item, readable by the concierges, and is cleared when the job closes.';
+  }
+  var fb = el('acc-fb'); if (fb) fb.innerHTML = '';
+  var m = el('acc-modal'); if (m) m.style.display = 'flex';
+  return true;
+}
+function closeAccessDialog() {
+  var m = document.getElementById('acc-modal');
+  if (m) m.style.display = 'none';
+}
+function saveAccessDialog() {
+  var v = function (i) { var e = document.getElementById(i); return e ? String(e.value || '').trim() : ''; };
+  var jobId = parseInt(v('acc-job'), 10) || 0, mode = v('acc-mode'), itemId = v('acc-item');
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { showFB('acc-fb', 'warn', 'This client could not be found.'); return false; }
+  var who = _actor(job) || job.tc || '', today = _todayStr(), on = v('acc-on'), now = Date.now();
+  var writes = [];   // [{item, event}] in order; nothing is written until every event passes
+  var item = itemId ? jobListGet(job, 'accessItems', itemId) : null;
+  if (itemId && (!item || item.voidedAt)) { showFB('acc-fb', 'warn', 'That item is no longer on this job: it may have been voided on another device.'); return false; }
+  if (mode === 'receive') {
+    var from = v('acc-from'), to = v('acc-to');
+    if (item) {
+      writes.push({ item: item, event: { itemId: String(item.id), kind: 'received', on: on, from: from, to: to, note: v('acc-note'), recordedBy: who, recordedAt: now } });
+    } else {
+      var box = document.getElementById('acc-rows'), nRows = box ? (parseInt(box.getAttribute('data-rows'), 10) || 0) : 0;
+      for (var r = 1; r <= nRows; r++) {
+        if (!document.getElementById('acc-kind-' + r)) continue;
+        var kind = v('acc-kind-' + r) || 'other', label = v('acc-label-' + r), code = v('acc-code-' + r);
+        if (!label && !code && nRows > 1 && r > 1) continue;   // an empty extra row
+        var it = { id: newJobListId('accessItems'), kind: ACCESS_ITEM_KINDS[kind] ? kind : 'other', label: label, qty: Math.max(1, parseInt(v('acc-qty-' + r), 10) || 1),
+                   code: code, receivedOn: on, receivedFrom: from, recordedBy: who, recordedAt: now };
+        if (code) { it.codeSetAt = now; it.codeSetBy = who; }
+        writes.push({ item: it, isNew: true, event: { itemId: String(it.id), kind: 'received', on: on, from: from, to: to, note: v('acc-note'), recordedBy: who, recordedAt: now } });
+      }
+      if (!writes.length) { showFB('acc-fb', 'warn', 'Add at least one item.'); return false; }
+    }
+  } else if (mode === 'handoff' || mode === 'return') {
+    var to2 = v('acc-to');
+    accessItemsOf(job).forEach(function (it) {
+      var cb = document.getElementById('acc-tick-' + it.id);
+      if (!cb || !cb.checked) return;
+      var st = accessItemState(job, it);
+      writes.push({ item: it, event: { itemId: String(it.id), kind: mode === 'handoff' ? 'handoff' : 'returned', on: on, from: st.holder, to: to2, note: v('acc-note'), recordedBy: who, recordedAt: now } });
+    });
+    if (!writes.length) { showFB('acc-fb', 'warn', 'Tick at least one item.'); return false; }
+  } else if (mode === 'lost' || mode === 'recovered') {
+    if (!item) { showFB('acc-fb', 'warn', 'Nothing to record.'); return false; }
+    var st2 = accessItemState(job, item);
+    writes.push({ item: item, event: { itemId: String(item.id), kind: mode, on: on, from: st2.holder || st2.from || '', to: mode === 'recovered' ? v('acc-to') : '', note: v('acc-note'), recordedBy: who, recordedAt: now } });
+  } else if (mode === 'code') {
+    if (!item) { showFB('acc-fb', 'warn', 'Nothing to record.'); return false; }
+    if (accessItemState(job, item).state !== 'held') { showFB('acc-fb', 'warn', 'A code is recorded on an item Havellin holds.'); return false; }
+    var rec = JSON.parse(JSON.stringify(item));
+    rec.code = v('acc-code'); rec.codeSetAt = now; rec.codeSetBy = who; delete rec.codeClearedAt; delete rec.codeClearedBy;
+    jobListPut(job, 'accessItems', rec);
+    jobListPut(job, 'accessEvents', { itemId: String(item.id), kind: 'code_set', on: today, from: '', to: who, note: rec.code ? '' : 'code removed', recordedBy: who, recordedAt: now });
+    closeAccessDialog(); _repaintAccessCard(jobId); _dashRedraw(jobId);
+    showSyncBadge(rec.code ? 'Code recorded on ' + accessItemLabel(item) + '. It is cleared when the job closes.' : 'Code removed from ' + accessItemLabel(item) + '.');
+    return true;
+  } else { showFB('acc-fb', 'warn', 'Nothing to record.'); return false; }
+  for (var i = 0; i < writes.length; i++) {
+    var why = accessRefusal(job, writes[i].event, writes[i].item, today);
+    if (why) { showFB('acc-fb', 'warn', why); return false; }
+  }
+  var flagged = [];
+  writes.forEach(function (w) {
+    if (w.isNew) jobListPut(job, 'accessItems', w.item);
+    var ev = jobListPut(job, 'accessEvents', w.event);
+    var f = accessEventFlags(job, w.item)[String(ev.id)];
+    if (f) flagged.push(accessItemLabel(w.item) + ': ' + f);
+  });
+  closeAccessDialog(); _repaintAccessCard(jobId); _dashRedraw(jobId);
+  var n = writes.length, what = n + ' item' + (n === 1 ? '' : 's');
+  var said = mode === 'receive' ? what + ' received, held by ' + (writes[0].event.to || '')
+    : mode === 'handoff' ? what + ' handed off to ' + (writes[0].event.to || '')
+    : mode === 'return' ? what + ' returned to ' + (writes[0].event.to || '')
+    : mode === 'lost' ? accessItemLabel(item) + ' recorded as lost: it reads red on every device until it is recovered.'
+    : accessItemLabel(item) + ' recovered, held by ' + (writes[0].event.to || '');
+  showSyncBadge(said + (flagged.length ? ' ⚠ Flagged: ' + flagged.join('; ') : ''), flagged.length > 0);
+  return true;
+}
+function voidAccessEvent(jobId, evId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var e = job ? jobListGet(job, 'accessEvents', evId) : null;
+  if (!e || e.voidedAt) return false;
+  var why = (window.prompt('Why is this entry being voided? (for example: the wrong person, or the wrong day). It stays on the record, marked void; record the right entry after.', '') || '').trim();
+  if (!why) return false;
+  jobListVoid(job, 'accessEvents', evId, why, _actor(job) || job.tc || '');
+  showSyncBadge('Voided. It stays on the record, marked void, with the reason.');
+  _repaintAccessCard(jobId); _dashRedraw(jobId);
+  return true;
+}
+function voidAccessItem(jobId, itemId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var it = job ? jobListGet(job, 'accessItems', itemId) : null;
+  if (!it || it.voidedAt) return false;
+  var why = (window.prompt('Why is this item being voided? (for example: recorded twice, or on the wrong client). It and its history stay on the record, marked void.', '') || '').trim();
+  if (!why) return false;
+  jobListVoid(job, 'accessItems', itemId, why, _actor(job) || job.tc || '');
+  showSyncBadge('Voided. It stays on the record, marked void, with the reason.');
+  _repaintAccessCard(jobId); _dashRedraw(jobId);
+  return true;
+}
+
+// ── The record. One builder, read in four places: its own page (the card's Print, and the file at close), the Disposition
+// Ledger, the Contents Record and the package's Release Approvals and Chain of Custody record. ⚠ NO DIGITS: the record goes
+// to a client, counsel, an insurer or a bond carrier, so a code prints as *held* or *cleared at close*.
+function accessCustodyRecordHtml(job, opt) {
+  var items = accessItemsOf(job, true);
+  if (!job || !items.length) return '';
+  var td = 'padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top;', th = 'padding:2px 6px;';
+  var head = function (t) {
+    return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + t + '</div>';
+  };
+  var codeWord = function (it) { return String(it.code || '').trim() ? 'held' : it.codeClearedAt ? 'cleared at close' : '—'; };
+  var itemRows = items.map(function (it) {
+    var st = accessItemState(job, it), s = it.voidedAt ? 'text-decoration:line-through;color:#888;' : '';
+    return '<tr><td style="' + td + s + 'font-weight:700;">' + esc(accessItemLabel(it)) + '</td>'
+      + '<td style="' + td + s + '">' + esc((ACCESS_ITEM_KINDS[it.kind] || ACCESS_ITEM_KINDS.other).label) + '</td>'
+      + '<td style="' + td + s + '">' + esc(it.receivedFrom || '—') + (it.receivedOn ? '<div style="color:#888;font-size:10px;">' + esc(fmtDate2(it.receivedOn)) + '</div>' : '') + '</td>'
+      + '<td style="' + td + s + '">' + (it.voidedAt ? 'void: ' + esc(it.voidReason || '') : esc(accessStateText(st)))
+        + (st.state === 'lost' && st.why && !it.voidedAt ? '<div style="color:#A32D2D;font-size:10px;">' + esc(st.why) + '</div>' : '') + '</td>'
+      + '<td style="' + td + s + '">' + esc(codeWord(it)) + '</td></tr>';
+  }).join('');
+  var evRows = [];
+  items.forEach(function (it) {
+    var flags = accessEventFlags(job, it);
+    accessEventsOf(job, it.id, true).forEach(function (e) {
+      var K = ACCESS_EVENT_KINDS[e.kind] || { label: e.kind }, s = (e.voidedAt || it.voidedAt) ? 'text-decoration:line-through;color:#888;' : '';
+      evRows.push({ on: e.on, at: e.recordedAt, html: '<tr><td style="' + td + s + '">' + (e.on ? esc(fmtDate2(e.on)) : '—') + '</td>'
+        + '<td style="' + td + s + '">' + esc(accessItemLabel(it)) + '</td><td style="' + td + s + '">' + esc(K.label) + '</td>'
+        + '<td style="' + td + s + '">' + esc(e.from || '—') + '</td><td style="' + td + s + '">' + esc(e.to || '—') + '</td>'
+        + '<td style="' + td + s + '">' + esc(e.note || '') + (flags[String(e.id)] ? '<div style="color:#8a6d3b;font-size:10px;">⚠ ' + esc(flags[String(e.id)]) + '</div>' : '')
+          + (e.voidedAt ? '<div style="color:#888;font-size:10px;">void: ' + esc(e.voidReason || '') + (e.voidedBy ? ' (' + esc(e.voidedBy) + ')' : '') + '</div>' : '') + '</td>'
+        + '<td style="' + td + s + '">' + esc(e.recordedBy || '—') + '</td></tr>' });
+    });
+  });
+  evRows.sort(function (a, b) { return String(a.on || '').localeCompare(String(b.on || '')) || (Number(a.at) || 0) - (Number(b.at) || 0); });
+  return '<div class="acc-record">' + head('Keys and access items')
+    + '<div style="font-size:10.5px;color:#666;margin-bottom:4px;">Every key, fob, remote and access code received for the property, who held it, and when it went back. A code is recorded as held or cleared; the digits are never printed.</div>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+    + '<th style="' + th + '">Item</th><th style="' + th + '">Kind</th><th style="' + th + '">Received from</th><th style="' + th + '">Now</th><th style="' + th + '">Code</th></tr></thead><tbody>' + itemRows + '</tbody></table>'
+    + head('Custody history')
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+    + '<th style="' + th + '">Date</th><th style="' + th + '">Item</th><th style="' + th + '">Event</th><th style="' + th + '">From</th><th style="' + th + '">To</th><th style="' + th + '">Note</th><th style="' + th + '">Recorded by</th></tr></thead><tbody>'
+    + evRows.map(function (r) { return r.html; }).join('') + '</tbody></table>'
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:6px;line-height:1.5;">An entry is never edited or deleted: one recorded in error is struck through with the reason, and the correction follows it.</div>'
+    + '</div>';
+}
+function printAccessRecord(jobId, opt) {
+  var asHtml = !!(opt && opt.asHtml);
+  var job = _invJob(jobId);
+  if (!job) return asHtml ? { why: 'this client could not be found on this device' } : undefined;
+  var items = accessItemsOf(job);
+  if (!items.length) { if (asHtml) return { why: 'no key or access item is recorded on this job' }; showSyncBadge('No key or access item is recorded on this job yet.', true); return undefined; }
+  var open = items.filter(function (it) { return accessItemOpen(accessItemState(job, it)); }).length;
+  var stamp = open
+    ? '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#8a6d3b;border-radius:3px;padding:1px 8px;margin-bottom:12px;">IN PROGRESS &mdash; ' + open + ' of ' + items.length + ' still held</div>'
+    : '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#357a50;border-radius:3px;padding:1px 8px;margin-bottom:12px;">COMPLETE &mdash; every item returned or accounted for</div>';
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, ACCESS_RECORD_TITLE, 'Every key, fob, remote and access code received for the property: who held it, and when it went back')
+    + stamp + accessCustodyRecordHtml(job) + '</div>';
+  if (asHtml) return { html: html, title: _invDocName(job, ACCESS_RECORD_TITLE) };
+  _printDocument(html, _invDocName(job, ACCESS_RECORD_TITLE));
+  return true;
+}
+// Filed to the client's Drive folder as the job closes (activateOrCycle, every job with an item recorded) and from the card,
+// under its undated name so a re-file replaces. Recorded on docState.accessRecord. Refused by name: no item, a filing out,
+// no URL, no folder. The watchdog lets a stuck filing go (_armFiling).
+function fileAccessRecord(jobId, opt) {
+  var auto = !!(opt && opt.auto);
+  var job = _invJob(jobId);
+  var say = function (type, msg) { if (auto) { showSyncBadge(msg, type !== 'ok'); return; } _docNotice(type, msg, jobId); };
+  if (!job) { say('warn', 'This client could not be found.'); return false; }
+  if (!accessItemsOf(job).length) { if (!auto) say('warn', 'No key or access item is recorded on this job, so there is no record to file.'); return false; }
+  if (_accessFiling[jobId]) { say('warn', 'The ' + ACCESS_RECORD_TITLE + ' is being filed now — give it a moment.'); return false; }
+  if (!SHEETS_SYNC_URL) { say('warn', 'The ' + ACCESS_RECORD_TITLE + ' was not filed to Drive: this device has no Apps Script URL in Settings.'); return false; }
+  var target = _jobRootFolderId(job);
+  if (!target) { say('warn', 'The ' + ACCESS_RECORD_TITLE + ' was not filed to Drive: this client has no Drive folder yet. Create the Drive folder on the client dashboard, then press File to Drive on the Keys & access card.'); return false; }
+  var page = printAccessRecord(jobId, { asHtml: true });
+  if (!page || !page.html) { say('err', 'The ' + ACCESS_RECORD_TITLE + ' could not be built on this device, so it was not filed.'); return false; }
+  var release = _armFiling(_accessFiling, jobId, function () {
+    say('warn', 'No answer from Drive after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes while the ' + ACCESS_RECORD_TITLE + ' was filed. It may still have been filed: press File to Drive on the Keys & access card to try again.');
+  });
+  uploadHtmlToDrive(target, _invDocDriveName(job, ACCESS_RECORD_TITLE), _exportDoc(ACCESS_RECORD_TITLE + ' – ' + (job.hvlId || ''), page.html, ''), function (ok, fileUrl, meta) {
+    var mine = release();
+    if (!ok) {
+      if (!mine) return;
+      say('err', 'The ' + ACCESS_RECORD_TITLE + ' was not filed to Drive' + ((meta && meta.error) ? ' — ' + meta.error : '') + '. Press File to Drive on the Keys & access card to try again.');
+      return;
+    }
+    var j2 = _invJob(jobId) || job;
+    var st = docState(j2, ACCESS_DOC_KEY);
+    st.filedAt = new Date().toISOString();
+    st.filedUrl = fileUrl || st.filedUrl || '';
+    st.filedId = (meta && meta.fileId) || st.filedId || '';
+    st.filedBy = _actor(j2) || j2.tc || '';
+    st.filedHow = auto ? 'close' : 'card';
+    j2.updatedAt = Date.now();
+    saveJobs();
+    syncJobToSheets(j2);
+    say('ok', ACCESS_RECORD_TITLE + ' filed to the client’s Drive folder ✓');
+    _repaintAccessCard(jobId);
+  });
+  return true;
 }
 
 // ═══════════════════════ FOUND ON SITE — AN ORIGINAL WILL, OR CASH (P19, 2026-10-03) ═══════════════════════
@@ -42802,6 +43579,673 @@ function printSiteFindReceipt(jobId, id) {
   var html = f.kind === 'will' ? willReceiptHtml(job, f) : cashReceiptHtml(job, f);
   return _printDocument(html, _invDocName(job, SITE_FIND_KINDS[f.kind].doc));
 }
+
+// ═══════════════════════ INCIDENTS — ANYTHING THAT GOES WRONG ON A JOB (P26, 2026-10-16) ═══════════════════════
+// ⚠⚠ ANTHONY, 2026-10-16: capture anything that goes wrong or needs attention on a job, the same day, with enough detail
+// to support an insurance or bond claim and to answer a client, attorney or trustee (INCIDENT_REPORTING_SPEC.md). Built on
+// the Found on site pattern: each incident is an entry on `job.incidents` (JOB_RECORD_LISTS: merged on the sheet entry by
+// entry), written once through jobListPut and NEVER rewritten. A note, a photograph, the resolution, a reopening, the call
+// to Anthony, the client told, the carrier engaged and the hotline called are each a NEW entry (`entry: 'update'`, `of` the
+// report's id, `act` what it records). Status is derived from the entries (incidentStatus), never stored. One recorded in
+// error is voided with a reason (jobListVoid) and stays, printed VOID. On every service and every won job: a hazard or a
+// complaint happens before activation too. Writes after the close are allowed and flagged: a claim resolves months later.
+// ⚠ THE ALERT (Q64; Anthony: "just a red banner - Call Anthony Immediately (617) 650-6588"): an injury, a missing item or
+// a vulnerable adult concern reads red, in the Job Plan header and on its row, until the person confirms the call
+// (`alerted`, one tap). A report Anthony records himself (the device's user) carries the entry at once. The app sends
+// nothing: no text, no draft, no server mail.
+// ⚠ A VULNERABLE ADULT CONCERN IS INTERNAL (Q66): never on the Incident Record the client or counsel receives, never in the
+// package (incidentReportsOf(job, {client: true}) leaves it out); its own page for Anthony ({internal: true}). Florida's
+// duty to report (§415.1034) is stated on the dialog and the card with the hotline's number; a flag, never a block.
+// ⚠ PROPERTY DAMAGE CARRIES THE ESTATE FORM'S OWN §6.3 PROMISES as derived lines (the client told within 24 hours, the
+// written report to Anthony within 24 hours, the carrier engaged above INCIDENT_CARRIER_FLOOR and its contact given to the
+// client within 48 hours), on living work too (Q70: the standard form gains the protocol through counsel).
+var INCIDENT_KINDS = {
+  injury:     { label: 'Injury',                   alert: true,
+                f1: 'Who was hurt', yn: 'Medical help called?' },
+  damage:     { label: 'Property damage',          alert: false,
+                f1: 'The item (its inventory number where it has one)', money: 'Estimated value' },
+  missing:    { label: 'Missing item',             alert: true,
+                f1: 'The item (inventory numbers, or a description)', f2: 'When and where it was last seen' },
+  valuable:   { label: 'Discovered valuable',      alert: false,
+                f1: 'Where it is now and how it is secured', f2: 'Who was told' },
+  hazard:     { label: 'Hazardous condition',      alert: false,
+                f1: 'The hazard (mold, structural, biohazard, chemicals, animals, utilities, other)', yn: 'Work stopped in that area?' },
+  complaint:  { label: 'Client complaint',         alert: false,
+                f1: 'Who complained, and how it reached us', f2: 'What they asked for' },
+  vulnerable: { label: 'Vulnerable adult concern', alert: true, internal: true,
+                f1: 'What was observed', yn: 'Florida Abuse Hotline called?' }
+};
+var INCIDENT_KIND_ORDER = ['injury', 'damage', 'missing', 'valuable', 'hazard', 'complaint', 'vulnerable'];
+// Each act an update records, in the words the card and the record print. `client_notified`, `carrier` and `hotline` carry
+// the day the act happened (`on`); `alerted` carries how; `resolved` and `note` carry a note; `photos` carries its files.
+var INCIDENT_ACTS = {
+  note:            { label: 'Note',                        needsNote: true },
+  photos:          { label: 'Photographs added' },
+  resolved:        { label: 'Resolved',                    needsNote: true,  status: 'resolved' },
+  reopened:        { label: 'Reopened',                    needsNote: true,  status: 'open' },
+  alerted:         { label: 'Anthony called' },
+  client_notified: { label: 'Client notified',             needsOn: true },
+  carrier:         { label: 'Insurance carrier engaged',   needsOn: true,  noteLabel: 'Claim number, and the carrier contact given to the client' },
+  hotline:         { label: 'Florida Abuse Hotline called', needsOn: true }
+};
+// The Managing Member, whom the red banner says to call. One definition; the number is the one DEFAULT_CONTRACTORS records.
+var INCIDENT_ALERT_TO = { name: 'Anthony Graziano', phone: '(617) 650-6588', tel: 'tel:+16176506588' };
+var INCIDENT_CARRIER_FLOOR = 500;        // the estate form's §6.3: "Engage insurance carrier if damage exceeds $500"
+var INCIDENT_HOTLINE = '1-800-962-2873'; // the Florida Abuse Hotline (1-800-96-ABUSE), §415.1034
+var INCIDENT_SUBFOLDER = 'Incident Reports';
+var INCIDENT_DOC_KEY = 'incidentRecord';   // docState key for the filed Incident Record: a stored key, never rename it
+var INCIDENT_RECORD_TITLE = 'Incident Record';
+var INCIDENT_INTERNAL_TITLE = 'Internal Incident Record';
+var INCIDENT_PHOTO_MAX_PX = 1600;
+var INCIDENT_PHOTO_QUALITY = 0.85;
+var _incidentPhotoFlight = {};   // never saved: one photograph batch per incident at a time
+
+// The reports on a job, in the order recorded. `opt.withVoided` keeps voided ones; `opt.client` leaves the internal kinds
+// out (the page the client or counsel receives); `opt.internal` keeps only them.
+function incidentReportsOf(job, opt) {
+  opt = opt || {};
+  return jobListEntries(job, 'incidents', !!opt.withVoided).filter(function (e) {
+    var K = INCIDENT_KINDS[e.kind];
+    if (!K || e.entry !== 'report') return false;
+    if (opt.client && K.internal) return false;
+    if (opt.internal && !K.internal) return false;
+    return true;
+  }).sort(function (a, b) { return (Number(a.recordedAt) || 0) - (Number(b.recordedAt) || 0); });
+}
+// The live updates on one report, oldest first.
+function incidentUpdatesOf(job, id) {
+  return jobListEntries(job, 'incidents').filter(function (e) {
+    return e.entry === 'update' && String(e.of) === String(id) && !!INCIDENT_ACTS[e.act];
+  }).sort(function (a, b) { return (Number(a.at) || 0) - (Number(b.at) || 0); });
+}
+// The report's number on this job: its place among every report recorded, voided ones included, so a number is never
+// reused. Positional: a report that syncs late from another device renumbers those after it, so the printed record carries
+// the day and the id beside the number.
+function incidentNo(job, id) {
+  var all = incidentReportsOf(job, { withVoided: true });
+  for (var i = 0; i < all.length; i++) if (String(all[i].id) === String(id)) return i + 1;
+  return 0;
+}
+// ⚠ ONE DEFINITION OF THE STATUS, read off the entries: the last live update that carries one, else open. A voided report
+// is `void`. Read by the card, the header, the close gate, the rail and the record.
+function incidentStatus(job, id) {
+  var rep = jobListGet(job, 'incidents', id);
+  if (!rep || rep.entry !== 'report') return '';
+  if (rep.voidedAt) return 'void';
+  var st = 'open';
+  incidentUpdatesOf(job, id).forEach(function (u) { var a = INCIDENT_ACTS[u.act]; if (a && a.status) st = a.status; });
+  return st;
+}
+function openIncidents(job) {
+  return incidentReportsOf(job).filter(function (r) { return incidentStatus(job, r.id) === 'open'; });
+}
+function incidentResolution(job, id) {
+  var last = null;
+  incidentUpdatesOf(job, id).forEach(function (u) { if (u.act === 'resolved') last = u; });
+  return last;
+}
+function incidentHasAct(job, id, act) {
+  return incidentUpdatesOf(job, id).some(function (u) { return u.act === act; });
+}
+// The call to Anthony is owed on an alert kind until an `alerted` entry records it.
+function incidentAlertOwed(job, rep) {
+  return !!(rep && INCIDENT_KINDS[rep.kind] && INCIDENT_KINDS[rep.kind].alert && !rep.voidedAt && !incidentHasAct(job, rep.id, 'alerted'));
+}
+// Whether the hotline is recorded as called: on the report (`yn`), or by a later `hotline` entry.
+function incidentHotlineCalled(job, rep) {
+  return !!rep && (rep.yn === 'yes' || incidentHasAct(job, rep.id, 'hotline'));
+}
+// A local calendar day plus n days, built from parts (a bare yyyy-mm-dd parses as UTC midnight).
+function incidentDayPlus(ymd, n) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ''));
+  if (!m) return '';
+  return _ymdLocal(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + (Number(n) || 0)));
+}
+function _incTime(t) {
+  var m = /^(\d{1,2}):(\d{2})/.exec(String(t || ''));
+  if (!m) return '';
+  var h = Number(m[1]), ap = h >= 12 ? 'pm' : 'am';
+  h = h % 12; if (h === 0) h = 12;
+  return h + ':' + m[2] + ' ' + ap;
+}
+function _incWhen(rep) {
+  return fmtDate2(rep.occurredOn) + (rep.occurredTime ? ', ' + _incTime(rep.occurredTime) : '');
+}
+function _incStampTxt(ms) {
+  if (!ms) return '';
+  var d = new Date(Number(ms));
+  return fmtDate2(_ymdLocal(d)) + ', ' + _incTime(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'));
+}
+
+// ⚠ THE RULES, WHERE THE RECORD IS WRITTEN: saveIncident asks this of the entry it is about to put, so no control can reach
+// around it. `mode` is 'report' or 'update'. '' or the refusal, every missing piece named at once. DOM-free; `today` is an
+// argument. A report's day after today is refused, as the hours log refuses one: the record is of something that happened.
+function incidentRefusal(rec, mode, today, job) {
+  var has = function (v) { return !!String(v || '').trim(); };
+  var ymd = function (v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')); };
+  var miss = [];
+  if (mode === 'report') {
+    var K = rec && INCIDENT_KINDS[rec.kind];
+    if (!K) return 'Choose what kind of incident this is.';
+    if (!ymd(rec.occurredOn)) miss.push('the day it happened');
+    else if (today && String(rec.occurredOn) > String(today)) return 'The day is after today. An incident is recorded on or after the day it happened.';
+    if (!has(rec.where)) miss.push('where it happened');
+    if (!has(rec.what)) miss.push('what happened');
+    if (!has(rec.reportedBy)) miss.push('who reported it');
+    if (!has(rec.f1)) miss.push(K.f1.replace(/\s*\(.*$/, '').toLowerCase());
+    if (K.money && rec.estValue !== null && rec.estValue !== undefined && rec.estValue !== '' && !(Number(rec.estValue) >= 0)) miss.push('an estimated value that is a number, or blank');
+  } else if (mode === 'update') {
+    var A = rec && INCIDENT_ACTS[rec.act];
+    if (!A) return 'That is not something the Incidents card records.';
+    var rep = job ? jobListGet(job, 'incidents', rec.of) : null;
+    if (!rep || rep.entry !== 'report') return 'That incident is no longer on this job.';
+    if (rep.voidedAt) return 'That incident was voided (' + esc(rep.voidReason || '') + '), so nothing more is recorded on it.';
+    var st = incidentStatus(job, rep.id);
+    if (rec.act === 'resolved' && st === 'resolved') return 'This incident is already resolved. Add a note, or reopen it.';
+    if (rec.act === 'reopened' && st !== 'resolved') return 'This incident is open, so there is nothing to reopen.';
+    if (A.needsNote && !has(rec.note)) miss.push(rec.act === 'resolved' ? 'the resolution note: what was done and how it ended' : 'the note');
+    if (A.needsOn && !ymd(rec.on)) miss.push('the day');
+    else if (A.needsOn && today && String(rec.on) > String(today)) return 'The day is after today.';
+    if (rec.act === 'photos' && !(Array.isArray(rec.photos) && rec.photos.length)) miss.push('at least one photograph that reached Drive');
+    if (rec.act === 'alerted' && !has(rec.how)) miss.push('how Anthony was reached');
+  } else return 'Nothing to record.';
+  if (miss.length) return 'Enter ' + _andJoin(miss) + '.';
+  return '';
+}
+
+// ⚠⚠ THE REMINDERS: the derived lines planDerivedLines returns on the Incidents card ('incidents') and on the desk's Job
+// Admin card ('admin'). DOM-free and clock-free (`today` is an argument). Every open incident is a line; the call to Anthony
+// still owed on an alert kind is RED; a damage incident carries §6.3's deadlines, red once past; a vulnerable adult concern
+// with the hotline not recorded as called is red. Every person-typed value is escaped: a line is drawn as markup.
+function incidentLines(job, today) {
+  var out = [];
+  var day = String(today || '');
+  incidentReportsOf(job).forEach(function (rep) {
+    var K = INCIDENT_KINDS[rep.kind], n = incidentNo(job, rep.id), st = incidentStatus(job, rep.id);
+    var name = 'Incident ' + n + ' (' + K.label.toLowerCase() + ')';
+    if (incidentAlertOwed(job, rep)) {
+      out.push({ key: 'inc_call_' + rep.id, ok: false, red: true, label: 'Call Anthony immediately: ' + INCIDENT_ALERT_TO.phone,
+                 detail: name + ', ' + esc(rep.where) + ', ' + esc(_incWhen(rep)) + ' &mdash; then press <strong>I called Anthony</strong> on the incident' });
+    }
+    if (st === 'open') {
+      out.push({ key: 'inc_open_' + rep.id, ok: false, red: false, label: name + ' open',
+                 detail: esc(rep.where) + ', ' + esc(_incWhen(rep)) + ' &mdash; resolve it with a note on the Incidents card; the job cannot close while it is open' });
+    }
+    if (rep.kind === 'damage') {
+      var cn = incidentHasAct(job, rep.id, 'client_notified'), cnDue = incidentDayPlus(rep.occurredOn, 1);
+      out.push({ key: 'inc_client_' + rep.id, ok: cn, red: !cn && !!day && day > cnDue, label: name + ': client notified within 24 hours',
+                 detail: cn ? 'recorded' : 'by ' + fmtDate2(cnDue) + ' (the agreement&rsquo;s &sect;6.3) &mdash; press <strong>Client notified</strong> on the incident once they have been told' });
+      var al = incidentHasAct(job, rep.id, 'alerted');
+      out.push({ key: 'inc_report_' + rep.id, ok: al, red: !al && !!day && day > cnDue, label: name + ': written report to Anthony within 24 hours',
+                 detail: al ? 'recorded' : 'by ' + fmtDate2(cnDue) + ' &mdash; this record is the report; press <strong>I called Anthony</strong> once he has it' });
+      if (Number(rep.estValue) > INCIDENT_CARRIER_FLOOR) {
+        var cr = incidentHasAct(job, rep.id, 'carrier'), crDue = incidentDayPlus(rep.occurredOn, 2);
+        out.push({ key: 'inc_carrier_' + rep.id, ok: cr, red: !cr && !!day && day > crDue, label: name + ': insurance carrier engaged, its contact given to the client',
+                   detail: cr ? 'recorded' : 'the damage is estimated above ' + fmt(INCIDENT_CARRIER_FLOOR) + ': engage the carrier, and give the client its contact and the claim process by ' + fmtDate2(crDue) + ' (&sect;6.3)' });
+      }
+    }
+    if (rep.kind === 'vulnerable' && st === 'open' && !incidentHotlineCalled(job, rep)) {
+      out.push({ key: 'inc_hotline_' + rep.id, ok: false, red: true, label: name + ': Florida Abuse Hotline not recorded as called',
+                 detail: 'anyone who knows or suspects that a vulnerable adult is abused, neglected or exploited reports it at once to ' + INCIDENT_HOTLINE + ' (&sect;415.1034). Press <strong>Hotline called</strong> once it is made' });
+    }
+  });
+  return out;
+}
+
+// The names offered as the dialog is filled in (typed names are taken as typed): the team for who reported it; for who was
+// present, the team, every vendor on the job and the client or the fiduciaries. The places: the plan's rooms and the
+// places outside them.
+function _incidentPeople(job) {
+  var out = [];
+  var add = function (n) { n = String(n || '').trim(); if (n && !out.some(function (x) { return samePerson(x, n); })) out.push(n); };
+  _siteFindTeamNames(job).forEach(add);
+  (typeof _assignedVendorsForJob === 'function' ? _assignedVendorsForJob(job) : []).forEach(function (v) { add(v && v.name); });
+  if (typeof invFiduciaryMode === 'function' && invFiduciaryMode(job)) jobFiduciaries(job).forEach(function (p) { add(p.name); });
+  else add(job && job.name);
+  return out;
+}
+function _incidentPlaces(jobId, job) {
+  var out = (typeof _planRooms === 'function' ? _planRooms(jobId).rooms : []).map(function (r) { return String(r.name || '').trim(); }).filter(Boolean);
+  ['Garage', 'Driveway', 'Yard', 'The truck'].forEach(function (p) { out.push(p); });
+  if (job && job.svc === 'downsizing_move') out.push('New home');
+  return out;
+}
+
+// One incident on the card: its number, kind, when and where, status; the account; the facts; every entry in order; the
+// photographs; and its acts. The acts offered follow the status and the kind, and the handlers ask the same questions.
+function _incidentRowHtml(jobId, job, rep) {
+  var K = INCIDENT_KINDS[rep.kind], n = incidentNo(job, rep.id), st = incidentStatus(job, rep.id);
+  var idq = '\'' + esc(String(rep.id)) + '\'';
+  var owed = incidentAlertOwed(job, rep);
+  var facts = '<div class="inc-head"><span class="fos-kind">Incident ' + n + ' &middot; ' + esc(K.label) + '</span>'
+    + ' <span class="inc-st inc-st-' + st + '">' + (st === 'resolved' ? 'Resolved' : 'Open') + '</span>'
+    + (K.internal ? ' <span class="inc-int">internal</span>' : '') + '</div>'
+    + '<div>' + esc(_incWhen(rep)) + ' &middot; ' + esc(rep.where) + ' &middot; reported by ' + esc(rep.reportedBy) + '</div>'
+    + '<div class="inc-what">' + escLines(rep.what) + '</div>'
+    + (rep.present ? '<div><span style="color:var(--gray);">Present:</span> ' + esc(rep.present) + '</div>' : '')
+    + '<div><span style="color:var(--gray);">' + esc(K.f1.replace(/\s*\(.*$/, '')) + ':</span> ' + esc(rep.f1) + '</div>'
+    + (K.f2 && rep.f2 ? '<div><span style="color:var(--gray);">' + esc(K.f2) + ':</span> ' + esc(rep.f2) + '</div>' : '')
+    + (K.yn ? '<div><span style="color:var(--gray);">' + esc(K.yn) + '</span> ' + (rep.yn === 'yes' ? 'Yes' : rep.yn === 'no' ? 'No' : 'not recorded') + '</div>' : '')
+    + (K.money ? '<div><span style="color:var(--gray);">' + esc(K.money) + ':</span> ' + (Number(rep.estValue) >= 0 && rep.estValue !== '' && rep.estValue !== null && rep.estValue !== undefined ? fmt(Number(rep.estValue)) : 'not estimated') + '</div>' : '')
+    + '<div style="color:var(--gray);font-size:11px;">Recorded ' + esc(_incStampTxt(rep.recordedAt)) + ' by ' + esc(rep.recordedBy || '') + (rep.afterClose ? ' &middot; recorded after the job closed' : '') + '</div>';
+  var ups = incidentUpdatesOf(job, rep.id);
+  var entries = ups.map(function (u) {
+    var A = INCIDENT_ACTS[u.act];
+    var photos = (u.photos || []).map(function (p, i) {
+      return p.fileUrl ? '<a href="' + esc(p.fileUrl) + '" target="_blank" rel="noopener">photo ' + (i + 1) + '</a>' : 'photo ' + (i + 1);
+    }).join(', ');
+    return '<div class="inc-entry"><span class="inc-act">' + esc(A.label) + '</span>'
+      + (u.on ? ' ' + esc(fmtDate2(u.on)) : '') + (u.how ? ' (' + esc(_incHowWord(u.how)) + ')' : '')
+      + (u.note ? ' &mdash; ' + escLines(u.note) : '') + (photos ? ' &mdash; ' + photos : '')
+      + ' <span style="color:var(--gray);">&middot; ' + esc(_incStampTxt(u.at)) + ', ' + esc(u.by || '') + (u.afterClose ? ', after the close' : '') + '</span></div>';
+  }).join('');
+  var acts = [];
+  // The call: owed in red on an alert kind; offered plainly on property damage, whose §6.3 report line asks for it.
+  if (owed || (rep.kind === 'damage' && !incidentHasAct(job, rep.id, 'alerted'))) acts.push('<button type="button" class="btn-s' + (owed ? ' inc-call-btn' : '') + '" onclick="incidentRecordCall(' + jobId + ',' + idq + ')">I called Anthony</button>');
+  acts.push('<button type="button" class="btn-s" onclick="openIncident(' + jobId + ',\'update\',' + idq + ',\'note\')">Add a note</button>');
+  acts.push(incidentPhotoControlHtml(jobId, rep.id, 'Add photos'));
+  if (rep.kind === 'damage' && !incidentHasAct(job, rep.id, 'client_notified')) acts.push('<button type="button" class="btn-s" onclick="openIncident(' + jobId + ',\'update\',' + idq + ',\'client_notified\')">Client notified</button>');
+  if (rep.kind === 'damage' && Number(rep.estValue) > INCIDENT_CARRIER_FLOOR && !incidentHasAct(job, rep.id, 'carrier')) acts.push('<button type="button" class="btn-s" onclick="openIncident(' + jobId + ',\'update\',' + idq + ',\'carrier\')">Carrier engaged</button>');
+  if (rep.kind === 'vulnerable' && !incidentHotlineCalled(job, rep)) acts.push('<button type="button" class="btn-s" onclick="openIncident(' + jobId + ',\'update\',' + idq + ',\'hotline\')">Hotline called</button>');
+  if (st === 'open') acts.push('<button type="button" class="btn-p" style="font-size:10px;padding:6px 10px;" onclick="openIncident(' + jobId + ',\'update\',' + idq + ',\'resolved\')">Resolve</button>');
+  else acts.push('<button type="button" class="btn-s" onclick="openIncident(' + jobId + ',\'update\',' + idq + ',\'reopened\')">Reopen</button>');
+  acts.push('<button type="button" class="btn-s" onclick="voidIncident(' + jobId + ',' + idq + ')">Void</button>');
+  return '<div class="fos-find inc-row' + (owed ? ' inc-owed' : '') + '" data-incident="' + esc(String(rep.id)) + '">' + facts
+    + (owed ? '<div class="inc-alert">&#9888; CALL ANTHONY IMMEDIATELY &mdash; <a href="' + INCIDENT_ALERT_TO.tel + '">' + INCIDENT_ALERT_TO.phone + '</a></div>' : '')
+    + (entries ? '<div class="inc-entries">' + entries + '</div>' : '')
+    + '<div class="fos-acts">' + acts.join('') + '</div></div>';
+}
+function _incHowWord(how) {
+  return how === 'self' ? 'recorded by Anthony' : how === 'text' ? 'by text' : how === 'in_person' ? 'in person' : 'by phone';
+}
+// The card, on the In the house stage of every won job's Job Plan (renderJobPlan): its lines first, then each live
+// incident, newest last, the one button, any voided report (kept on the record, struck through), and the two notes.
+function incidentsCardHtml(jobId, job, est) {
+  if (!job) return '';
+  var all = incidentReportsOf(job, { withVoided: true });
+  var live = all.filter(function (r) { return !r.voidedAt; });
+  var voided = all.filter(function (r) { return !!r.voidedAt; });
+  var internal = live.filter(function (r) { return INCIDENT_KINDS[r.kind].internal; }).length;
+  var client = live.length - internal;
+  var filed = job.docState && job.docState[INCIDENT_DOC_KEY] && job.docState[INCIDENT_DOC_KEY].filedAt;
+  return '<div class="fos-card inc-card" id="plan-incidents-' + jobId + '">'
+    + '<div class="fos-hd">Incidents <small>anything that goes wrong or needs attention: record it the day it happens</small></div>'
+    + (typeof planDerivedHtml === 'function' && est ? planDerivedHtml(jobId, job, est, 'incidents') : derivedLinesHtml(incidentLines(job, _todayStr()), 'plan-derived-incidents-' + jobId))
+    + live.map(function (r) { return _incidentRowHtml(jobId, job, r); }).join('')
+    + '<div class="fos-acts">'
+      + '<button type="button" class="btn-p" style="font-size:11px;" onclick="openIncident(' + jobId + ',\'report\')">Report an incident</button>'
+      + (client ? '<button type="button" class="btn-s" onclick="printIncidentRecord(' + jobId + ')">Print ' + INCIDENT_RECORD_TITLE + '</button>'
+        + '<button type="button" class="btn-s" onclick="fileIncidentRecord(' + jobId + ',{auto:true})">' + (filed ? 'Re-file to Drive' : 'File to Drive') + '</button>' : '')
+      + (internal ? '<button type="button" class="btn-s" onclick="printIncidentRecord(' + jobId + ',{internal:true})">Print ' + INCIDENT_INTERNAL_TITLE + '</button>' : '')
+    + '</div>'
+    + (filed ? '<div style="font-size:11px;color:var(--gray);margin-top:4px;">' + INCIDENT_RECORD_TITLE + ' filed to Drive ' + esc(fmtDate2(_ymdLocal(new Date(job.docState[INCIDENT_DOC_KEY].filedAt))))
+        + (job.docState[INCIDENT_DOC_KEY].filedUrl ? ' &middot; <a href="' + esc(job.docState[INCIDENT_DOC_KEY].filedUrl) + '" target="_blank" rel="noopener">open</a>' : '') + '</div>' : '')
+    + voided.map(function (r) {
+        return '<div class="fos-void"><s>Incident ' + incidentNo(job, r.id) + ' &middot; ' + esc(INCIDENT_KINDS[r.kind].label) + ' &middot; ' + esc(_incWhen(r)) + '</s>'
+          + ' &middot; void: ' + esc(r.voidReason) + (r.voidedBy ? ' (' + esc(r.voidedBy) + ')' : '') + '</div>';
+      }).join('')
+    + '<div class="fos-note"><strong>Record it today,</strong> with photographs, in enough detail to answer the client, their attorney and the insurer: who, when, where, what happened, who was present. '
+      + 'Nothing here is edited or deleted: a note, a photograph or the resolution is a new entry. '
+      + '<strong>An injury, a missing item or a vulnerable adult concern:</strong> call Anthony at once, ' + INCIDENT_ALERT_TO.phone + '. '
+      + (typeof invFiduciaryMode === 'function' && invFiduciaryMode(job) ? '<strong>An original will or cash</strong> goes on Found on site, above, not here. ' : '')
+      + 'A vulnerable adult concern stays internal: it is never on the record the client or counsel receives.</div>'
+    + '</div>';
+}
+// The header banner, over the Job Plan: red while a call to Anthony is owed (Q64) or an injury or a hazard is open (Q69),
+// amber with the count otherwise. Always drawn inside its own element so the card's repaint can repaint it in place.
+function incidentHeaderHtml(job) {
+  var inner = '';
+  if (job) {
+    var open = openIncidents(job);
+    var owed = incidentReportsOf(job).filter(function (r) { return incidentAlertOwed(job, r); });
+    var redOpen = open.filter(function (r) { return r.kind === 'injury' || r.kind === 'hazard'; });
+    if (owed.length) {
+      var r0 = owed[0];
+      inner = '<div class="inc-banner"><div class="fa-hd">&#9888; CALL ANTHONY IMMEDIATELY &mdash; <a href="' + INCIDENT_ALERT_TO.tel + '" style="color:#fff;">' + INCIDENT_ALERT_TO.phone + '</a></div>'
+        + '<div class="fa-rule">Incident ' + incidentNo(job, r0.id) + ': ' + esc(INCIDENT_KINDS[r0.kind].label.toLowerCase()) + ', ' + esc(r0.where) + ', ' + esc(_incWhen(r0))
+        + (owed.length > 1 ? ' (and ' + (owed.length - 1) + ' more)' : '') + '. Then press <strong>I called Anthony</strong> on the incident.</div>'
+        + '<div class="fos-acts"><button type="button" class="btn-s inc-call-btn" onclick="incidentRecordCall(' + job.id + ',\'' + esc(String(r0.id)) + '\')">I called Anthony</button>'
+        + '<button type="button" class="btn-s" onclick="goToIncidents(' + job.id + ')">Open Incidents</button></div></div>';
+    } else if (redOpen.length) {
+      inner = '<div class="inc-banner"><div class="fa-hd">&#9888; ' + redOpen.map(function (r) { return 'Incident ' + incidentNo(job, r.id) + ': ' + esc(INCIDENT_KINDS[r.kind].label.toLowerCase()) + ', ' + esc(r.where); }).join(' &middot; ') + '</div>'
+        + '<div class="fa-rule">Open until it is resolved with a note on the Incidents card.</div>'
+        + '<div class="fos-acts"><button type="button" class="btn-s" onclick="goToIncidents(' + job.id + ')">Open Incidents</button></div></div>';
+    } else if (open.length) {
+      inner = '<div class="alert a-warn inc-chip" style="margin-bottom:12px;font-size:12px;display:flex;flex-wrap:wrap;align-items:center;gap:8px;">'
+        + '<span>&#9888; ' + open.length + ' open incident' + (open.length === 1 ? '' : 's') + ' on this job. The job cannot close until each is resolved.</span>'
+        + '<button type="button" class="btn-s" style="font-size:10px;" onclick="goToIncidents(' + job.id + ')">Open Incidents</button></div>';
+    }
+  }
+  return '<div id="inc-hdr-' + (job ? job.id : 0) + '">' + inner + '</div>';
+}
+// The desk's and the banner's way to the card: the Job Plan on this client, In the house open, the card in view.
+function goToIncidents(jobId) {
+  if (!openJobPlanFor(jobId, 'p1')) return false;
+  var el = document.getElementById('plan-incidents-' + jobId);
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+  return true;
+}
+// Repaint the card and the header banner in place, never the plan (an innerHTML write over #job-plan-content takes the
+// hours form and a half-typed note with it). Only while the plan shows this client.
+function _repaintIncidents(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return false;
+  var h = document.getElementById('inc-hdr-' + jobId);
+  if (h) h.outerHTML = incidentHeaderHtml(job);
+  var el = document.getElementById('plan-incidents-' + jobId);
+  var rec = estimateStore[jobId];
+  if (!el) return false;
+  el.outerHTML = incidentsCardHtml(jobId, job, rec && rec.estimate);
+  return true;
+}
+
+// ── The dialog: one modal (#inc-modal) for the report and for every later act. The handler asks every question again where
+// the record is written (saveIncident).
+function openIncident(jobId, mode, id, act) {
+  mode = mode || 'report';
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { showSyncBadge('This client could not be found.', true); return false; }
+  var rep = null;
+  if (mode === 'update') {
+    rep = jobListGet(job, 'incidents', id);
+    if (!rep || rep.entry !== 'report' || rep.voidedAt || !INCIDENT_ACTS[act]) { showSyncBadge('That incident is no longer on this job.', true); _repaintIncidents(jobId); return false; }
+  }
+  var today = _todayStr();
+  var el = function (i) { return document.getElementById(i); };
+  var set = function (i, v) { var e = el(i); if (e) e.value = v; };
+  var show = function (i, on) { var e = el(i); if (e) e.style.display = on ? '' : 'none'; };
+  var opts = function (names) { return names.map(function (n) { return '<option value="' + esc(n) + '">'; }).join(''); };
+  set('inc-job', String(jobId)); set('inc-mode', mode); set('inc-id', rep ? String(rep.id) : ''); set('inc-act', mode === 'update' ? act : '');
+  ['inc-kind', 'inc-time', 'inc-where', 'inc-what', 'inc-present', 'inc-f1', 'inc-f2', 'inc-yn', 'inc-money', 'inc-note', 'inc-on'].forEach(function (i) { set(i, ''); });
+  var ph = el('inc-photos'); if (ph) { try { ph.value = ''; } catch (e) {} }
+  set('inc-date', today);
+  set('inc-reported-by', deviceUser() || (job.tc && !isCrewPlaceholder(job.tc) ? job.tc : ''));
+  set('inc-how', 'call');
+  show('inc-sec-report', mode === 'report');
+  show('inc-sec-update', mode === 'update');
+  var t = el('inc-title'), s = el('inc-summary'), b = el('inc-save-btn'), fb = el('inc-fb');
+  if (fb) fb.innerHTML = '';
+  if (mode === 'report') {
+    var kinds = el('inc-kinds');
+    if (kinds) kinds.innerHTML = INCIDENT_KIND_ORDER.map(function (k) {
+      return '<button type="button" class="inc-kind" id="inc-kind-' + k + '" onclick="incPickKind(\'' + k + '\')">' + esc(INCIDENT_KINDS[k].label) + '</button>';
+    }).join('');
+    incPickKind('');
+    if (t) t.textContent = 'Report an incident';
+    if (s) s.innerHTML = 'Record it today, as it happened. Who, when, where, what, who was present, photographs. Nothing recorded here can be edited or deleted; a note or the resolution is added as a new entry.';
+    var rl = el('inc-rooms'); if (rl) rl.innerHTML = opts(_incidentPlaces(jobId, job));
+    var pl = el('inc-people'); if (pl) pl.innerHTML = opts(_incidentPeople(job));
+    var tl = el('inc-team'); if (tl) tl.innerHTML = opts(_siteFindTeamNames(job));
+    if (b) b.textContent = 'Record';
+  } else {
+    var A = INCIDENT_ACTS[act];
+    if (t) t.textContent = A.label + ' — Incident ' + incidentNo(job, rep.id);
+    if (s) s.innerHTML = esc(INCIDENT_KINDS[rep.kind].label + ', ' + _incWhen(rep) + ', ' + rep.where) + '. A new entry on the record; the report itself is never changed.';
+    show('inc-on-wrap', !!A.needsOn);
+    show('inc-how-wrap', act === 'alerted');
+    if (A.needsOn) set('inc-on', today);
+    var ol = el('inc-on-lbl'); if (ol) ol.textContent = act === 'client_notified' ? 'Client told on' : act === 'carrier' ? 'Carrier engaged on' : act === 'hotline' ? 'Hotline called on' : 'On';
+    var nl = el('inc-note-lbl'); if (nl) nl.textContent = A.noteLabel || (act === 'resolved' ? 'Resolution: what was done and how it ended' : act === 'reopened' ? 'Why it is reopened' : act === 'client_notified' ? 'Who was told, and how (optional)' : act === 'hotline' ? 'Who called, and the reference given (optional)' : 'Note');
+    if (b) b.textContent = act === 'resolved' ? 'Record the resolution' : act === 'reopened' ? 'Reopen' : 'Record';
+  }
+  var m = el('inc-modal'); if (m) m.style.display = 'flex';
+  return true;
+}
+// The kind, picked as a chip: the kind's own fields are shown and labelled; the rest hidden.
+function incPickKind(k) {
+  var el = function (i) { return document.getElementById(i); };
+  var show = function (i, on) { var e = el(i); if (e) e.style.display = on ? '' : 'none'; };
+  var K = INCIDENT_KINDS[k] || null;
+  var h = el('inc-kind'); if (h) h.value = K ? k : '';
+  INCIDENT_KIND_ORDER.forEach(function (x) { var c = el('inc-kind-' + x); if (c) c.classList.toggle('inc-kind-on', x === k); });
+  show('inc-fields', !!K);
+  if (!K) return;
+  var l1 = el('inc-f1-lbl'); if (l1) l1.textContent = K.f1;
+  show('inc-f2-wrap', !!K.f2); var l2 = el('inc-f2-lbl'); if (l2) l2.textContent = K.f2 || '';
+  show('inc-yn-wrap', !!K.yn); var ly = el('inc-yn-lbl'); if (ly) ly.textContent = K.yn || '';
+  show('inc-money-wrap', !!K.money);
+  var note = el('inc-kind-note');
+  if (note) note.innerHTML = k === 'vulnerable'
+    ? '<strong>Internal:</strong> this never goes on the record the client or counsel receives. Anyone who knows or has reasonable cause to suspect that a vulnerable adult is being abused, neglected or exploited reports it at once to the Florida Abuse Hotline, <strong>' + INCIDENT_HOTLINE + '</strong> (&sect;415.1034). Then call Anthony.'
+    : K.alert ? '<strong>Call Anthony at once:</strong> ' + INCIDENT_ALERT_TO.phone + '. The record stays red until the call is confirmed.'
+    : k === 'damage' ? 'Photograph it and leave it where it is: nothing is moved, repaired or disposed of without the client&rsquo;s say. The client is told within 24 hours; above ' + fmt(INCIDENT_CARRIER_FLOOR) + ' the carrier is engaged (&sect;6.3). The card tracks both.'
+    : k === 'valuable' ? 'An original will or cash goes on <strong>Found on site</strong> on an estate, not here. On an estate, photograph the thing itself into the inventory as a line; this records the discovery and where it is now.'
+    : k === 'hazard' ? 'Firearms follow their own protocol and banner. Stop work in the area if anyone could be hurt, and say so here.'
+    : '';
+}
+function closeIncident() {
+  var m = document.getElementById('inc-modal');
+  if (m) m.style.display = 'none';
+}
+// The report, or an update: every question asked here, of the entry about to be written. On an alert kind recorded by
+// anyone but Anthony the call stays owed (red) until incidentRecordCall; recorded by Anthony himself it is recorded at once.
+// Photographs chosen with the report upload after the report lands and arrive as one `photos` entry per batch, so a failed
+// upload loses nothing already written.
+function saveIncident() {
+  var v = function (i) { var e = document.getElementById(i); return e ? String(e.value || '').trim() : ''; };
+  var jobId = parseInt(v('inc-job'), 10) || 0, mode = v('inc-mode') || 'report';
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { showFB('inc-fb', 'warn', 'This client could not be found.'); return false; }
+  var who = _actor(job) || job.tc || '';
+  var today = _todayStr();
+  var closed = !!job.deliveredOn || job.status === 'closed' || job.status === 'closed_retained' || job.status === 'lost';
+  var rec;
+  if (mode === 'report') {
+    var kind = v('inc-kind'), K = INCIDENT_KINDS[kind];
+    rec = { entry: 'report', kind: kind, occurredOn: v('inc-date'), occurredTime: v('inc-time'), where: v('inc-where'), what: v('inc-what'),
+            present: v('inc-present'), reportedBy: v('inc-reported-by'), f1: v('inc-f1'), recordedBy: who, recordedAt: Date.now() };
+    if (K && K.f2) rec.f2 = v('inc-f2');
+    if (K && K.yn) rec.yn = v('inc-yn');
+    if (K && K.money) { var m = v('inc-money'); rec.estValue = m === '' ? '' : (typeof moneyToNumber === 'function' ? moneyToNumber(m) : parseFloat(m.replace(/[^0-9.\-]/g, ''))); }
+    if (closed) rec.afterClose = true;
+  } else {
+    var act = v('inc-act');
+    rec = { entry: 'update', of: v('inc-id'), act: act, by: who, at: Date.now() };
+    var A = INCIDENT_ACTS[act];
+    if (A && (A.needsNote || act === 'client_notified' || act === 'carrier' || act === 'hotline' || act === 'alerted')) rec.note = v('inc-note');
+    if (A && A.needsOn) rec.on = v('inc-on');
+    if (act === 'alerted') rec.how = v('inc-how') || 'call';
+    if (closed) rec.afterClose = true;
+  }
+  var why = incidentRefusal(rec, mode, today, job);
+  if (why) { showFB('inc-fb', 'warn', why); return false; }
+  jobListPut(job, 'incidents', rec);
+  var files = null;
+  if (mode === 'report') {
+    var ph = document.getElementById('inc-photos');
+    files = ph && ph.files && ph.files.length ? Array.prototype.slice.call(ph.files) : null;
+    if (INCIDENT_KINDS[rec.kind].alert && samePerson(deviceUser(), INCIDENT_ALERT_TO.name)) {
+      jobListPut(job, 'incidents', { entry: 'update', of: rec.id, act: 'alerted', how: 'self', by: who, at: Date.now(), note: '' });
+    }
+  }
+  closeIncident();
+  var K2 = mode === 'report' ? INCIDENT_KINDS[rec.kind] : null;
+  var owed = mode === 'report' && incidentAlertOwed(job, rec);
+  showSyncBadge(mode === 'report'
+    ? ('Incident ' + incidentNo(job, rec.id) + ' recorded (' + K2.label.toLowerCase() + ')' + (owed ? '. CALL ANTHONY IMMEDIATELY: ' + INCIDENT_ALERT_TO.phone : '') + (closed ? ' — after the job closed, and flagged so' : '') + '.')
+    : (INCIDENT_ACTS[rec.act].label + ' recorded on Incident ' + incidentNo(job, rec.of) + '.'), owed);
+  _repaintIncidents(jobId);
+  if (files && files.length) incidentUploadPhotos(jobId, rec.id, files);
+  return true;
+}
+// The call confirmed: one tap, recorded as a person's edit with how it was made.
+function incidentRecordCall(jobId, id) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var rep = job ? jobListGet(job, 'incidents', id) : null;
+  if (!job || !rep || rep.entry !== 'report' || rep.voidedAt) { showSyncBadge('That incident is no longer on this job.', true); return false; }
+  if (incidentHasAct(job, rep.id, 'alerted')) { showSyncBadge('The call is already recorded on this incident.', true); return false; }
+  var rec = { entry: 'update', of: rep.id, act: 'alerted', how: 'call', by: _actor(job) || job.tc || '', at: Date.now(), note: '' };
+  var why = incidentRefusal(rec, 'update', _todayStr(), job);
+  if (why) { showSyncBadge(why, true); return false; }
+  jobListPut(job, 'incidents', rec);
+  showSyncBadge('Call to Anthony recorded on Incident ' + incidentNo(job, rep.id) + '.');
+  _repaintIncidents(jobId);
+  return true;
+}
+// A report recorded in error is VOIDED with a reason and stays on the record; nothing removes one, and its entries stay with it.
+function voidIncident(jobId, id) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var rep = job ? jobListGet(job, 'incidents', id) : null;
+  if (!rep || rep.entry !== 'report' || rep.voidedAt) return false;
+  var why = (window.prompt('Why is this incident being voided? (for example: recorded twice, or on the wrong client). It stays on the record, marked void.', '') || '').trim();
+  if (!why) return false;
+  jobListVoid(job, 'incidents', id, why, _actor(job) || job.tc || '');
+  showSyncBadge('Voided. It stays on the record, marked void, with the reason.');
+  _repaintIncidents(jobId);
+  return true;
+}
+
+// ── Photographs: shrunk on the device (compressImage), uploaded through the photo upload's action into the client's
+// Incident Reports folder (the root folder on an older client folder), and recorded as ONE `photos` entry per batch
+// naming every file that landed. A file that did not land is named, never retried on its own: Add photos again.
+var _incidentPhotoSpecs = [];
+var _incidentPhotoKeys = [];
+function incidentPhotoControlHtml(jobId, id, label) {
+  var key = jobId + '|' + String(id);
+  var i = _incidentPhotoKeys.indexOf(key);
+  if (i < 0) { i = _incidentPhotoKeys.length; _incidentPhotoKeys.push(key); }
+  _incidentPhotoSpecs[i] = { jobId: jobId, id: id };
+  return '<label class="btn-s" style="cursor:pointer;position:relative;">' + esc(label || 'Add photos')
+    + '<input type="file" accept="image/*" multiple onchange="incidentPhotosFromInput(this,' + i + ')"'
+    + ' style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;left:0;top:0;"></label>';
+}
+function incidentPhotosFromInput(input, i) {
+  var spec = _incidentPhotoSpecs[i];
+  var files = input && input.files && input.files.length ? Array.prototype.slice.call(input.files) : [];
+  if (input) { try { input.value = ''; } catch (e) {} }
+  if (!spec || !files.length) return;
+  incidentUploadPhotos(spec.jobId, spec.id, files);
+}
+function _incidentPhotoName(job, n, kind, k) {
+  var t = new Date(), p2 = function (x) { return String(x).padStart(2, '0'); };
+  return [job.hvlId || ('job ' + job.id), 'Incident ' + n, INCIDENT_KINDS[kind] ? INCIDENT_KINDS[kind].label : kind,
+          _ymdLocal(t) + ' ' + p2(t.getHours()) + p2(t.getMinutes()) + p2(t.getSeconds()) + '-' + (k + 1)].join(' - ').replace(/[\\\/:*?"<>|]+/g, '-') + '.jpg';
+}
+function incidentUploadPhotos(jobId, id, files, cb) {
+  var done = function (ok, msg) { showSyncBadge(msg, !ok); if (cb) cb(ok, msg); return ok; };
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var rep = job ? jobListGet(job, 'incidents', id) : null;
+  if (!job || !rep || rep.entry !== 'report') return done(false, 'That incident is no longer on this job.');
+  if (rep.voidedAt) return done(false, 'That incident was voided, so nothing more is recorded on it.');
+  files = (files || []).filter(function (f) { return f && /^image\//.test(String(f.type || '')); });
+  if (!files.length) return done(false, 'Choose one or more photographs.');
+  if (!SHEETS_SYNC_URL) return done(false, 'This device has no Apps Script URL in Settings, so it cannot file photographs to Drive.');
+  var key = jobId + '|' + String(id);
+  if (_incidentPhotoFlight[key]) return done(false, 'Photographs for this incident are being filed now. Give them a moment.');
+  var release = _armFiling(_incidentPhotoFlight, key, function () {
+    done(false, 'No answer from Drive after ' + (FILING_WATCHDOG_MS / 60000) + ' minutes while the photographs were filed. Check the client’s Incident Reports folder, then add again any that are not there.');
+  });
+  var n = incidentNo(job, id);
+  resolveSubfolderId(job, INCIDENT_SUBFOLDER, function (folderId) {
+    var target = folderId || _jobRootFolderId(job);
+    if (!target) { if (release()) done(false, 'This client has no Drive folder yet. Create the Drive folder on the client, then add the photographs.'); return; }
+    var landed = [], failed = 0, left = files.length;
+    var finish = function () {
+      if (--left > 0) return;
+      var mine = release();
+      if (!mine) { if (landed.length) _incidentWritePhotos(jobId, id, landed); return; }
+      if (landed.length) _incidentWritePhotos(jobId, id, landed);
+      done(failed === 0, landed.length + ' photograph' + (landed.length === 1 ? '' : 's') + ' filed on Incident ' + n
+        + (failed ? '; ' + failed + ' did not reach Drive — add ' + (failed === 1 ? 'it' : 'them') + ' again' : '') + '.');
+    };
+    files.forEach(function (f, k) {
+      var reader = new FileReader();
+      reader.onerror = function () { failed++; finish(); };
+      reader.onload = function () {
+        compressImage(reader.result, INCIDENT_PHOTO_MAX_PX, INCIDENT_PHOTO_QUALITY, function (dataUrl) {
+          uploadToDrive(target, _incidentPhotoName(job, n, rep.kind, k), dataUrl, function (ok, fileUrl, fileId) {
+            if (ok) landed.push({ fileId: fileId || '', fileUrl: fileUrl || '', name: f.name || '' }); else failed++;
+            finish();
+          });
+        });
+      };
+      reader.readAsDataURL(f);
+    });
+  });
+  return true;
+}
+function _incidentWritePhotos(jobId, id, photos) {
+  var j2 = jobs.find(function (j) { return j.id === jobId; });
+  if (!j2) return;
+  var rec = { entry: 'update', of: String(id), act: 'photos', photos: photos, by: _actor(j2) || j2.tc || '', at: Date.now() };
+  if (incidentRefusal(rec, 'update', _todayStr(), j2)) return;
+  jobListPut(j2, 'incidents', rec);
+  _repaintIncidents(jobId);
+}
+
+// ── The Incident Record: a pure builder, one page per job. `opt.internal` prints the internal kinds alone (for Anthony);
+// otherwise the kinds the client, counsel and the insurer receive. Each incident with every entry in order and its
+// photographs linked; a voided report marked VOID with its reason; a footer that counts what the page lists.
+function incidentRecordHtml(job, opt) {
+  opt = opt || {};
+  var reps = incidentReportsOf(job, { withVoided: true }).filter(function (r) { return !!INCIDENT_KINDS[r.kind].internal === !!opt.internal; });
+  if (!reps.length) return '';
+  var title = opt.internal ? INCIDENT_INTERNAL_TITLE : INCIDENT_RECORD_TITLE;
+  var row = function (label, value) {
+    return '<tr><td style="padding:3px 12px 3px 0;color:#666;vertical-align:top;white-space:nowrap;">' + label + '</td><td style="padding:3px 0;vertical-align:top;">' + value + '</td></tr>';
+  };
+  var live = reps.filter(function (r) { return !r.voidedAt; });
+  var nOpen = live.filter(function (r) { return incidentStatus(job, r.id) === 'open'; }).length;
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, title, (opt.internal ? 'Internal: for Havellin’s Managing Member only, never for the client or counsel. ' : '')
+        + 'Every incident reported on this engagement, each entry as it was written, in the order recorded')
+    + reps.map(function (rep) {
+        var K = INCIDENT_KINDS[rep.kind], n = incidentNo(job, rep.id), st = incidentStatus(job, rep.id), res = incidentResolution(job, rep.id);
+        var ups = incidentUpdatesOf(job, rep.id);
+        var block = '<div style="break-inside:avoid;margin:14px 0 6px;border-top:1px solid #ccc;padding-top:8px;">'
+          + '<div style="font-size:13px;font-weight:700;">Incident ' + n + ' &middot; ' + esc(K.label) + ' &middot; ' + esc(_incWhen(rep))
+          + (rep.voidedAt ? ' &middot; <span style="color:#A32D2D;">VOID</span>' : ' &middot; ' + (st === 'resolved' ? 'Resolved' : 'Open')) + '</div>'
+          + '<table style="border-collapse:collapse;font-size:11.5px;margin:4px 0 6px;">'
+          + row('Where', esc(rep.where))
+          + row('What happened', escLines(rep.what))
+          + row('Who was present', rep.present ? esc(rep.present) : '&mdash;')
+          + row('Reported by', esc(rep.reportedBy))
+          + row(esc(K.f1.replace(/\s*\(.*$/, '')), esc(rep.f1))
+          + (K.f2 ? row(esc(K.f2), rep.f2 ? esc(rep.f2) : '&mdash;') : '')
+          + (K.yn ? row(esc(K.yn), rep.yn === 'yes' ? 'Yes' : rep.yn === 'no' ? 'No' : 'not recorded') : '')
+          + (K.money ? row(esc(K.money), (rep.estValue !== '' && rep.estValue !== null && rep.estValue !== undefined && Number(rep.estValue) >= 0) ? fmt(Number(rep.estValue)) : 'not estimated') : '')
+          + row('Recorded', esc(_incStampTxt(rep.recordedAt)) + ' by ' + esc(rep.recordedBy || '') + (rep.afterClose ? ' (after the job closed)' : '') + ' &middot; ref ' + esc(String(rep.id)))
+          + (rep.voidedAt ? row('Void', esc(rep.voidReason || '') + ' &middot; ' + esc(_incStampTxt(rep.voidedAt)) + (rep.voidedBy ? ' by ' + esc(rep.voidedBy) : '')) : '')
+          + (res ? row('Resolution', escLines(res.note) + ' &middot; ' + esc(_incStampTxt(res.at)) + ' by ' + esc(res.by || '')) : '')
+          + '</table>';
+        if (ups.length) {
+          block += '<table style="border-collapse:collapse;font-size:11px;width:100%;">'
+            + '<tr><th style="text-align:left;padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">When</th><th style="text-align:left;padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">By</th><th style="text-align:left;padding:3px 8px 3px 0;border-bottom:1px solid #ccc;">Entry</th></tr>'
+            + ups.map(function (u) {
+                var A = INCIDENT_ACTS[u.act];
+                var photos = (u.photos || []).map(function (p, i) { return p.fileUrl ? '<a href="' + esc(p.fileUrl) + '">photograph ' + (i + 1) + '</a>' : 'photograph ' + (i + 1); }).join(', ');
+                return '<tr><td style="padding:3px 8px 3px 0;vertical-align:top;white-space:nowrap;">' + esc(_incStampTxt(u.at)) + '</td>'
+                  + '<td style="padding:3px 8px 3px 0;vertical-align:top;">' + esc(u.by || '') + '</td>'
+                  + '<td style="padding:3px 0;vertical-align:top;">' + esc(A.label) + (u.on ? ', ' + esc(fmtDate2(u.on)) : '') + (u.how ? ' (' + esc(_incHowWord(u.how)) + ')' : '')
+                  + (u.note ? ': ' + escLines(u.note) : '') + (photos ? ' &mdash; ' + photos : '') + (u.afterClose ? ' (after the job closed)' : '') + '</td></tr>';
+              }).join('')
+            + '</table>';
+        }
+        return block + '</div>';
+      }).join('')
+    + '<div style="font-size:11px;color:#666;margin-top:14px;border-top:1px solid #ccc;padding-top:6px;">' + reps.length + ' incident' + (reps.length === 1 ? '' : 's') + ' listed: '
+      + nOpen + ' open, ' + (live.length - nOpen) + ' resolved' + (reps.length - live.length ? ', ' + (reps.length - live.length) + ' void' : '') + '. '
+      + 'A record of what was reported and done, written at the time; it is not an admission of liability or a statement of value.</div>'
+    + '</div>';
+  return html;
+}
+// Print it, or return it ({html, title}, or {why}) with opt.asHtml, as the package and the close-out filer read it.
+function printIncidentRecord(jobId, opt) {
+  opt = opt || {};
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var title = opt.internal ? INCIDENT_INTERNAL_TITLE : INCIDENT_RECORD_TITLE;
+  if (!job) { if (opt.asHtml) return { why: 'the client could not be found' }; showSyncBadge('This client could not be found.', true); return false; }
+  var html = incidentRecordHtml(job, opt);
+  if (!html) {
+    var why = opt.internal ? 'no internal incident is recorded on this job' : 'no incident is recorded on this job';
+    if (opt.asHtml) return { why: why };
+    showSyncBadge('There is no ' + title + ' to print: ' + why + '.', true);
+    return false;
+  }
+  if (opt.asHtml) return { html: html, title: _invDocName(job, title) };
+  return _printDocument(html, _invDocName(job, title));
+}
+function fileIncidentRecord(jobId, opt) { return _fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.incidents); }
 
 // ═══════════════════════ JOB ADMIN — the desk paperwork on the Job Admin & Inv tab ═══════════════════════
 var _jobAdminOpen = {};
@@ -43785,6 +45229,18 @@ function jobCloseBlockers(j) {
   if (un.length) {
     out.push('Rate every vendor used on this job — ' + un.length + ' not yet rated (' +
       un.map(function(v){ return v.name; }).join(', ') + '). The scorecard is in the Close-out card on the Job Plan and on Job Admin & Inv.');
+  }
+  // ⚠ EVERY KEY AND ACCESS ITEM BACK TO THE CLIENT, OR MARKED LOST WITH WHAT HAPPENED (2026-10-16, Anthony's one refusal).
+  var ak = (typeof accessCloseBlocker === 'function') ? accessCloseBlocker(j) : '';
+  if (ak) out.push(ak);
+  // ⚠ NO CLOSE WITH AN OPEN INCIDENT (P26, 2026-10-16; Anthony's rule). Each is resolved with a note on the Incidents card.
+  if (typeof openIncidents === 'function') {
+    var oi = openIncidents(j);
+    if (oi.length) {
+      out.push('Resolve ' + (oi.length === 1 ? 'the open incident' : 'the ' + oi.length + ' open incidents') + ' with a resolution note (Incident '
+        + oi.map(function(r){ return incidentNo(j, r.id) + ', ' + INCIDENT_KINDS[r.kind].label.toLowerCase(); }).join('; ')
+        + '). The Incidents card is on the Job Plan, under In the house.');
+    }
   }
   return out;
 }
@@ -46084,7 +47540,8 @@ function renderPrepJobPlan(jobId, job, est) {
   ];
   // The firearms banner first, exactly as on the labour plan: sf-host-plan drops the red row
   // from the brief on the strength of the banner being above it, so the banner has to be here.
-  var hdr = firearmsBannerHtml(job) +
+  // ⚠ THE INCIDENTS BANNER UNDER IT (P26): red while a call to Anthony is owed or an injury or a hazard is open, amber with the count otherwise.
+  var hdr = firearmsBannerHtml(job) + (typeof incidentHeaderHtml === 'function' ? incidentHeaderHtml(job) : '') +
     '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
     '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
     hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
@@ -46179,7 +47636,8 @@ function renderPrepJobPlan(jobId, job, est) {
   // Order (Anthony, 2026-09-22): the hours log (parked above this container by the loader),
   // then the checklist, then the two folds. The checklist is what gets worked; the folds are
   // reference.
-  return checklistCard + budgetCard + sourcingCard + renderCloseoutCard(jobId, job, 'plan');
+  // Incidents on a Home Prep too (P26): a vendor's damage or a complaint is recorded where it happens.
+  return checklistCard + budgetCard + sourcingCard + (typeof incidentsCardHtml === 'function' ? incidentsCardHtml(jobId, job, est) : '') + renderCloseoutCard(jobId, job, 'plan');
 }
 
 // Documentation rigor: 'standard' (reasonable estimates, dealer/auction assessments)
@@ -46478,7 +47936,8 @@ function renderJobPlan(jobId, job, est) {
   // ⚠ THE FIREARMS BANNER IS THE FIRST THING ON THE TAB when intake ticked it — above the
   // client line, above everything. It IS the firearms row here: the brief below carries the
   // other flags and the two intake answers, and not firearms a second time (SF_HOSTS.banner).
-  var hdr = firearmsBannerHtml(job) +
+  // ⚠ THE INCIDENTS BANNER UNDER IT (P26): red while a call to Anthony is owed or an injury or a hazard is open, amber with the count otherwise.
+  var hdr = firearmsBannerHtml(job) + (typeof incidentHeaderHtml === 'function' ? incidentHeaderHtml(job) : '') +
     '<div style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">' +
     '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
     _hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
@@ -46516,7 +47975,8 @@ function renderJobPlan(jobId, job, est) {
         + '<div class="sec" style="margin-bottom:10px;">Vendor &amp; Partner Sourcing</div>'
         + '<div id="vendor-sourcing-' + jobId + '">' + renderVendorSourcing(jobId, job, est) + '</div>'
         + '</div>';
-    return placeholder + sourcingCard + roomDocsCard;
+    // Incidents are recorded on every service, a playbook or not (P26); the keys (2026-10-16): vendors go through a Home Prep house too.
+    return placeholder + sourcingCard + ((typeof accessCardHtml === 'function') ? accessCardHtml(jobId, job, est) : '') + roomDocsCard + (typeof incidentsCardHtml === 'function' ? incidentsCardHtml(jobId, job, est) : '');
   }
 
   // ── Gates: the facts the app already knows, as one row of chips ─────────────────────
@@ -46543,7 +48003,8 @@ function renderJobPlan(jobId, job, est) {
   // a second heading over the first read as two headings stacked on the card (seen in the browser, 2026-09-20).
   // ⚠ FOUND ON SITE, UNDER THE BOXES, ON AN ESTATE (P19): an original will or cash found in the house, recorded the
   // day it is found, with its reminder (siteFindsCardHtml). The two boxes above point down at it.
-  var roomsBody = roomsCard + inHouse + (ctx.fid ? siteFindsCardHtml(jobId, job, est) : '');
+  // ⚠ AND INCIDENTS, ON EVERY SERVICE (P26, 2026-10-16): anything that went wrong or needs attention, recorded the day it happens.
+  var roomsBody = roomsCard + inHouse + (ctx.fid ? siteFindsCardHtml(jobId, job, est) : '') + (typeof incidentsCardHtml === 'function' ? incidentsCardHtml(jobId, job, est) : '');
   var roomsMeta = nLocked + ' of ' + rooms.length + ' locked &middot; ' + nCleared + ' cleared';
 
   // ── Hours & daily close: the loader moves #plan-log-section into this slot ──────────
@@ -46598,7 +48059,7 @@ function renderJobPlan(jobId, job, est) {
   // does. `cur` is the stage the job is in and each card's node reads done / NOW / ahead off it.
   var cur = planCurrentStage(jobId, job, est);
   var flow = '<div class="plan-flow" id="plan-flow-' + jobId + '">'
-    + planStageCard('p0', 'Before Day 1', p0, planStageMeta(jobId, job, est, 'p0', ctx), planStageState('p0', cur))
+    + planStageCard('p0', 'Before Day 1', p0 + ((typeof accessCardHtml === 'function') ? accessCardHtml(jobId, job, est) : ''), planStageMeta(jobId, job, est, 'p0', ctx), planStageState('p0', cur))
     + planStageCard('rooms', 'In the house', roomsBody, roomsMeta, planStageState('rooms', cur), 'Tap a room to shoot it and lock it.')
     + planStageCard('p2', 'Midpoint &amp; pickups', p2, planStageMeta(jobId, job, est, 'p2', ctx), planStageState('p2', cur))
     + (isMM ? planStageCard('p3', 'Move day', p3, planStageMeta(jobId, job, est, 'p3', ctx), planStageState('p3', cur)) : '')
@@ -47280,7 +48741,8 @@ function createDriveJobFolder(job) {
       clientName: job.name || '',
       svc: job.svc || '',
       // Signed Records since P19 (fileSignedCopy); a folder made before it has none, and filing falls back to the root.
-      subfolders: ['Estate Inventory','As-Found Record','Estimates','Agreement','Change Orders','Invoice', SIGNED_RECORDS_SUBFOLDER]
+      // Incident Reports since P26 (incidentUploadPhotos, fileIncidentRecord); older folders fall back to the root the same way.
+      subfolders: ['Estate Inventory','As-Found Record','Estimates','Agreement','Change Orders','Invoice', SIGNED_RECORDS_SUBFOLDER, INCIDENT_SUBFOLDER]
     })
   })
   .then(function(r){ return r.json(); })
