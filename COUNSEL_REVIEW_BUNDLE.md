@@ -433,6 +433,47 @@ depends on are third parties' and counsel may seek an extension? Would *"in time
 period, or any extension counsel obtains"* be safer? (2) With co-representatives, is *"together"* right, or should it allow
 for an instrument or order that lets one act alone?
 
+### A19. §6.2 — liability for contents in a high-value house: the cap follows the policy ⚠ NEW 2026-10-16 · PRIORITY 1
+
+**What it says now.** *"Havellin's liability for damage to or loss of any single item is limited to the lesser of: (a)
+the professionally appraised fair market value of the item at the time of loss or damage, or (b) $10,000 per item,
+unless the Client has separately declared a higher value in writing prior to the engagement,"* and for items over
+$10,000 *"the Client must provide a written declaration of value prior to project start."* The standard form caps
+differently (§11.2: total fees paid; §11.4 fragile items at repair cost or FMV under that cap).
+
+**The problem (Anthony, 2026-10-16, reading the rendered form).** *"In high value homes, there will be many items
+>$10k so this is not likely to work for our high end clientele. How do we deal with liability?"* In a Palm Beach house
+dozens of items clear $10,000; a written declaration per item before day one is never produced, so in practice
+everything above the cap is uncovered; and *lesser of appraised value or $10,000* reads as a refusal to stand behind
+the contents at all. Four directions were put to him (the cap follows the insurance, recommended; raise the cap and
+keep the declaration; route everything over a threshold to insured specialists and exclude it; hold for the broker):
+**insurance-led.**
+
+**The draft, to be filled from the policy once the broker quotes it.** §6.1 already promises bailee's coverage with no
+figure behind it. The intended §6.2:
+
+> *Havellin is responsible for loss of or damage to an item of the property's contents caused by its negligence while
+> the item is in its care, custody or control, up to the item's documented value: the appraised value where an
+> appraisal has been obtained, otherwise the value recorded for it on the Project Records or declared by the Client in
+> writing; and in no case more than $[per-item limit] for any one item or $[per-occurrence limit] for any one
+> occurrence, the limits of the coverage stated in Section 6.1. An item whose documented value exceeds the per-item
+> limit is, before it is moved, either scheduled with Havellin's insurer for this engagement or handled and transported
+> by a specialist vendor carrying its own coverage; Havellin names those items to the Client before work begins.
+> Jewelry, cash, negotiable instruments and original legal documents are secured with the Client, counsel or a bank at
+> the walkthrough and before any work begins.* The existing exclusions paragraph (pre-existing damage, instructions
+> advised against in writing, items removed by others, digital assets) stays.
+
+The declaration comes off the app, not off the client: the inventory values every line and routes a line at $3,000 or
+more to an appraiser, so the lines above the per-item limit are a list the desk can print for the insurer. The standard
+form's §11.2 and §11.4 are to be aligned to the same structure.
+
+**The question.** (1) Is *documented value up to the policy limit* the right measure, and does naming the limits in the
+contract (rather than *"the limits of the coverage"*) create a warranty of coverage? (2) On a fiduciary matter, is a
+per-occurrence cap below the documented value of what is moved enforceable against the estate, or does it need the
+representative's separate acknowledgement for the scheduled items? (3) Does the *secured at the walkthrough* sentence
+shift the risk of unsecured jewelry and cash cleanly enough, or should those classes be excluded by name as the digital
+assets are? Not built into the form until the per-item and per-occurrence figures exist.
+
 ## B. Standard (living-client) services agreement
 
 ### B1. Two confidentiality standards in one contract
