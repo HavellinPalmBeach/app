@@ -275,7 +275,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     has(gsVar('BACKEND_ACTIONS'), "'agentRoomCheck'", 'BACKEND_ACTIONS lists it');
     has(GS, "if (data.action === 'agentRoomCheck') { return jsonOut(agentCheckRooms(data)); }", 'doPost dispatches it');
-    eq(/var BACKEND_VERSION = '([^']+)'/.exec(GS)[1], '2026-10-06d', 'the version moved');
+    ok(/var BACKEND_VERSION = '([^']+)'/.exec(GS)[1] >= '2026-10-06d', 'the version moved (2026-10-06d; 2026-10-16 since the key custody lists)');
     const c = gs();
     const a = app([]).ctx;
     eq(JSON.stringify(a.AGENT_ROOM_CONF_RANK), JSON.stringify(c.AGENT_ROOM_CONF_RANK), 'the app ranks confidence as the server does');

@@ -1,6 +1,8 @@
 # Key and access custody: proposal (2026-10-16)
 
-Status: **proposed, not built.** Anthony asked how a key and access custody log would fit the app before anything is built, and whether access and alarm codes belong in the app. §1 answers the second question first because it changes what the first one records. §7 lists the three decisions this needs.
+Status: **built 2026-10-16**, the day it was proposed, on Anthony's answers (§7). Where an answer departs from a recommendation the build follows the answer: §1 recommended no codes in the app and Anthony kept them in (Q72), so the code is a field on its item, read by both concierges and wiped when the job closes; the alert (Q74) is red on every device and no message. The rest is as written. The rules as they stand are in `CLAUDE.md` (*Keys and access items*); this file keeps the reasoning.
+
+Anthony asked how a key and access custody log would fit the app before anything is built, and whether access and alarm codes belong in the app. §1 answers the second question first because it changes what the first one records. §7 lists the three decisions this needed.
 
 ## 1. Access codes and alarm codes: keep them out of the app
 Recommendation: **no digits in the app.** The app records *that* a code exists, who was given it and when it was handed back or the client was told to change it. The digits live in each person's phone or iPad password manager (iCloud Keychain, or a shared 1Password vault), which is built for exactly this.
@@ -80,10 +82,11 @@ Flag, never refuse:
 - As a third section of the **Release Approvals and Chain of Custody** record, so the estate package carries it to counsel.
 - From the card's **Print** at any time, for a client, insurer or bond carrier mid-job. IN PROGRESS stamped while any item is held.
 
-## 7. Decisions for Anthony
-1. **Codes.** Keep them out of the app and change the two strings that invite them (recommended), or build the encrypted per-job field.
-2. **A job marked Lost or Deposit Retained while items are held.** Flag and keep the line red until they are returned (recommended), or refuse that transition too as Close job does.
-3. **The lost alert.** A prefilled text and Gmail draft the field person sends, with *I've sent it* recorded (recommended, inside the rules), or a `MailApp.sendEmail` from the backend to Anthony alone, which reopens the no-mail-from-Apps-Script rule for one internal case.
+## 7. Decisions, and Anthony's answers (2026-10-16)
+1. **Codes.** Recommended: out of the app, and the two strings that invite them changed. **Answer: in the app.** *"If it's a password protected iPad that transition Concierge controls I hope that's a sufficient level of control to have a code in there for the front door, otherwise people are gonna write it on a piece of paper."* Built as one Code box per item on the card, synced like the rest, the digits wiped when the job closes (the record keeps *code held, cleared at close*); no printed record carries the digits; the two strings changed.
+2. **A job marked Lost or Deposit Retained while items are held.** Recommended and answered: flag it and keep the line red until they are returned; only Close job refuses.
+3. **The lost alert.** Recommended: a prefilled text and Gmail draft the field person sends. **Answer: red on every device only, no message.** Built so; the playbook tells the concierge to tell Anthony.
+4. **Timing.** Build now, under the freeze, as P24 was (the pilot house will have keys).
 
 ## 8. What the build touches
 `havellin.html` (the two lists, the card and dialogs, `accessEventRefusal`, `accessLines`, the dashboard line, `jobCloseBlockers`, the record builder and its three readers, the two intake strings, the `access` signed-record kind), `apps-script/main-sync.gs` (`JOB_KEYED_LISTS`, `JOB_LIST_KEY`, `BACKEND_VERSION`: a redeploy is owed and until it lands two devices recording at once could drop an entry), `manual.html` / `MANUAL.md` and `concierge-guide.html` / `CONCIERGE_GUIDE.md` (the card, the gate, the two operating rules), a unit suite (`tests/key-custody.test.js`: the refusals, the derived holder, the close gate, the record's rows adding up, the app's and server's list names level, no code digits in the intake strings) and a browser step driving the card through the real controls on a phone viewport.

@@ -167,7 +167,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const p19 = S.JOB_KEYED_LISTS.filter((k) => ['payments', 'appraisers', 'invSnapshots'].indexOf(k) < 0);
     eq(p19.slice().sort(), A.JOB_RECORD_LISTS.slice().sort(), 'and the backend lists nothing the app does not name');
-    eq(A.JOB_RECORD_LISTS.length, 6, 'six lists');
+    eq(A.JOB_RECORD_LISTS.length, 8, 'eight lists (the six of P19, and the two key custody lists of 2026-10-16)');
     // Two devices, each holding the morning copy, each add one co-trustee. The second one saved is newer.
     const desk = { id: 1, updatedAt: 100, coFiduciaries: [{ id: 'c1', name: 'Desk Added' }], at: { 'coFiduciaries:c1': 100 } };
     const field = { id: 1, updatedAt: 200, coFiduciaries: [{ id: 'c2', name: 'Field Added' }], at: { 'coFiduciaries:c2': 200 } };
