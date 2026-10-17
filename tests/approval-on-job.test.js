@@ -670,10 +670,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // change order (fileChangeOrder) and the probate package's pages (_pkgFileAll). Still exact, so a sixth fails here.
     // RESTATED 2026-10-03 (P19): a third such caller, the Disposition Ledger filed as the job closes (fileDispositionLedger);
     // the ledger prints no approval band either. Still exact, so a seventh fails here.
-    eq((SRC.match(/_exportDoc\(/g) || []).length, 7, '_exportDoc: the definition, the two client-document paths, the two P17 filings, the P19 ledger and the key custody record (2026-10-16)');
+    // RESTATED 2026-10-17: an eighth, the Release Approval Request filed as it is sent (sendApprovalRequest); the request
+    // prints no approval band either. Still exact, so a ninth fails here.
+    eq((SRC.match(/_exportDoc\(/g) || []).length, 8, '_exportDoc: the definition, the two client-document paths, the two P17 filings, the P19 ledger, the key custody record (2026-10-16) and the approval request\'s send (2026-10-17)');
     // RESTATED (P25, Q51): the ledger's filing became the one close-out paper path (_fileCloseoutPaper), which files the
     // Contents Record too; still one _exportDoc call, so the count holds, and neither paper prints an approval band.
-    for (const f of ['fileChangeOrder', '_pkgFileAll', '_fileCloseoutPaper']) has(H.fn(f), '_exportDoc(', f + ' is one of the three');
+    for (const f of ['fileChangeOrder', '_pkgFileAll', '_fileCloseoutPaper', 'sendApprovalRequest']) has(H.fn(f), '_exportDoc(', f + ' is one of the four');
+    lacks(H.fn('printApprovalRequest'), 'approved-stamp', 'the request prints no approval band, so filing it needs no pdfCss');
     for (const f of ['printChangeOrder', 'printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport',
                      'printContentsList', 'printAppraisalWorklist', 'probatePackageRecordHtml', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', 'printContentsRecord'])
       lacks(H.fn(f), 'approved-stamp', f + ' prints no approval band, so filing it needs no pdfCss');
@@ -726,6 +729,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     _approvalWatch: 'the estimate approval POLL (a timer handle and a job id) — not an approval',
     MANAGER_APPROVAL_EMAIL: 'the mailbox approval requests go to — a constant address, not an approval',
     ESTIMATE_OUT_FOR_APPROVAL_TXT: 'the sentence a door prints while a manager has the estimate — a constant, not an approval',
+    // The release approval REQUEST's send (2026-10-17): the record's key, the paper's title and the watchdog — constants
+    // about the fiduciary's paper, never a manager's approval of anything.
+    APPROVAL_REQ_KEY: 'the docState key the sent request is recorded under — a constant, not an approval',
+    APPROVAL_REQ_TITLE: 'the paper\'s title — a constant, not an approval',
+    APPROVAL_REQ_WATCHDOG_MS: 'how long the send waits for its chain of calls — a constant, not an approval',
   };
 
   group('⚠⚠ THE NET: no client-document builder reads a page-level approval variable');

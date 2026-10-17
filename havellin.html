@@ -1357,7 +1357,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.16 · 6:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.17 · 10:36am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -19350,6 +19350,8 @@ function docDraftPending(st) {
 // an inventory changed since the draft was made, or a different set of documents now owed, makes that draft out of
 // date (probatePackageMovedSince); a discount never does.
 function draftIsStale(job, st) {
+  // The approval request's draft (2026-10-17, `st.req`) is overtaken when every line it carried has been approved.
+  if (st && st.req) return !!(docDraftPending(st) && job && approvalRequestOvertaken(job, st));
   if (st && st.pkg) return !!(docDraftPending(st) && job && probatePackageMovedSince(job, st));
   return !!(st && docDraftPending(st) && job && job.priceChangedAt && st.draftedAt < job.priceChangedAt);
 }
@@ -19364,7 +19366,7 @@ function draftOutstanding(job, key) {
 // probate package's carries no price, so a discount neither flags it nor warns about it (2026-10-01, P17).
 function outstandingDrafts(job) {
   if (!job || !job.docState) return [];
-  return Object.keys(job.docState).filter(function (key) { return draftOutstanding(job, key) && !job.docState[key].pkg; });
+  return Object.keys(job.docState).filter(function (key) { return draftOutstanding(job, key) && !job.docState[key].pkg && !job.docState[key].req; });
 }
 // The out-of-date drafts of one document, oldest first: those a later draft replaced (docRecordSent keeps
 // them) or a Re-open retired (_reopenTransition keeps a final drafted at the close), then the current one if a
@@ -19383,13 +19385,14 @@ function staleDraftsOf(job, key) {
   });
   if (draftIsStale(job, st)) {
     list = list.concat([{ draftedAt: st.draftedAt, provider: st.provider || '', mailbox: st.mailbox || '',
-                          why: st.pkg ? 'inventory' : (job.priceChangeWhy || 'discount') }]);
+                          why: st.pkg ? 'inventory' : st.req ? 'approved' : (job.priceChangeWhy || 'discount') }]);
   }
   return list;
 }
 // The document a sentence names: 'signing packet', 'estimate', 'deposit invoice'.
 function staleDocName(key) {
   if (key === 'agreement') return 'signing packet';
+  if (key === 'approvalRequest') return 'approval request';   // APPROVAL_REQ_KEY, as a literal: a test holds them equal
   if (String(key).indexOf('invoice:') === 0) return String(key).slice(8) + ' invoice';
   return String(key);
 }
@@ -19423,7 +19426,8 @@ function staleDraftNote(job, key, fresh, named) {
   var why = !one ? 'are out of date'
     : (list[0].why === 'edit' ? 'was made before the estimate was edited'
       : list[0].why === 'reopen' ? 'was made before the job was re-opened'
-      : list[0].why === 'inventory' ? 'was made before the inventory changed' : 'has the old price');
+      : list[0].why === 'inventory' ? 'was made before the inventory changed'
+      : list[0].why === 'approved' ? 'was made before every line on it was approved' : 'has the old price');
   if (fresh) return (gmail ? 'Delete' : 'Discard') + ' the older ' + what + ' — ' + (one ? 'it ' : 'they ') + why;
   var act = gmail ? (one ? 'delete it, don’t send it' : 'delete them, don’t send them')
                   : (one ? 'if it was never sent, discard it' : 'if they were never sent, discard them');
@@ -19471,7 +19475,7 @@ function noDraftToConfirm(job, key) {
   if (st.sentAt && !docDraftPending(st)) return 'The ' + name + ' is already recorded as sent.';
   var stale = staleDraftNote(job, key, false);
   return 'There is no draft of the ' + name + ' waiting to be confirmed.' + (stale ? ' ' + stale + '.' : '')
-    + (st.pkg && !W ? '' : ' Send a fresh one from the ' + (st.pkg ? W.card : 'timeline') + '.');
+    + (st.pkg && !W ? '' : ' Send a fresh one from the ' + (st.pkg ? W.card : (st.req || key === 'approvalRequest') ? 'desk (Job Admin & Inv, under Releases & signed papers)' : 'timeline') + '.');
 }
 
 // ─── THE INVOICE'S FIRST REAL EMAIL ──────────────────────────────────────────
@@ -21174,11 +21178,12 @@ function docRecordSent(spec, res) {
   if (draftIsStale(spec.job, st)) {
     st.staleDrafts = (Array.isArray(st.staleDrafts) ? st.staleDrafts : []).concat([{
       draftedAt: st.draftedAt, provider: st.provider || '', mailbox: st.mailbox || '',
-      why: st.pkg ? 'inventory' : (spec.job.priceChangeWhy || 'discount') }]);
+      why: st.pkg ? 'inventory' : st.req ? 'approved' : (spec.job.priceChangeWhy || 'discount') }]);
   }
   // The probate package says what it carried and to whom (2026-10-01, P17), which is also what marks its draft as one
-  // the inventory overtakes rather than a price (draftIsStale).
+  // the inventory overtakes rather than a price (draftIsStale); the approval request likewise (`req`, 2026-10-17).
   if (res.pkg) st.pkg = res.pkg;
+  if (res.req) st.req = res.req;
   st.draftedAt = new Date().toISOString();
   st.draftedBy = _actor(spec.job) || spec.job.tc || '';
   // ⚠⚠ WHAT THIS INVOICE ASKED FOR, RECORDED AS IT GOES (2026-10-10, the core-jobs run). The final restated the second
@@ -23630,6 +23635,8 @@ function renderClientDashboard(jobId) {
   h += '</div>';
   // KEYS & ACCESS (2026-10-16): under the hours, once an item is recorded; red while one is lost (Q74).
   if (typeof accessDashHtml === 'function') h += accessDashHtml(job);
+  // THE RELEASE APPROVAL REQUEST (2026-10-17): once one has gone from the app, what it asked and of whom.
+  if (typeof approvalRequestDashHtml === 'function') h += approvalRequestDashHtml(job);
 
   document.getElementById('client-dashboard-view').innerHTML = h;
   maybeStartJobsWatch();   // keep the dashboard live while this job is Pending Approval
@@ -28699,10 +28706,7 @@ function _invEdit(jobId, stableId, key, el) {
   // ⚠ AND THE RELEASES CARD (2026-10-10, the core-jobs run): a buyer typed on a Sell line is a vendor pickup to file, and
   // *File pickup list* appeared only after leaving and reopening the tab. Repainted by id, whole, on the two edits that
   // move a line onto or off a list; a card the render would not draw is left for the next full render.
-  if (key === 'channel' || key === 'disposition') {
-    var _relEl = document.getElementById('inv-releases'), _relJob = _invJob(jobId);
-    if (_relEl && _relJob) { var _relHtml = _renderInvReleasesCard(_relJob, _jobInvRefs(jobId)); if (_relHtml) _relEl.outerHTML = _relHtml; }
-  }
+  if (key === 'channel' || key === 'disposition') _invRefreshReleases(jobId);
   // Forcing MAIV on or off changes whether the class beside it is editable at all, so
   // that row has to be redrawn rather than left showing a control that no longer applies.
   // Changing the disposition moves the item into a different section, and changing the
@@ -30827,15 +30831,20 @@ function invInitialGroupWords(ref) {
   var w = invDispDocWord(ref.disposition || ''), c = String(ref.channel || '').trim();
   return c ? 'going to ' + c + ' (' + w + ')' : 'marked ' + w + ', with no recipient named yet';
 }
-function printApprovalRequest(jobId, selectedOnly) {
+// ⚠ `opt.asHtml` (2026-10-17, the send): the page comes back as {html, title, items, asked, ratify} for the send to file,
+// convert and attach, and a refusal as {why}, so the one printer builds the paper whichever way it leaves the desk.
+function printApprovalRequest(jobId, selectedOnly, opt) {
+  var _asHtml = !!(opt && opt.asHtml);
   var job = jobs.find(function(j){ return j.id === jobId; });
-  if (!job) return;
+  if (!job) return _asHtml ? { why: 'This job could not be found.' } : undefined;
   var items = selectedOnly ? _invPicked(jobId) : _invAwaitingApproval(jobId);
   if (!items.length) {
-    alert(selectedOnly
+    var _none = selectedOnly
       ? 'Select the items you want approval for first.'
       : 'Nothing is waiting on approval. An item needs a disposition of '
-        + INV_RELEASE_DISPOSITIONS.join(', ') + ' and no complete written approval yet.');
+        + INV_RELEASE_DISPOSITIONS.join(', ') + ' and no complete written approval yet.';
+    if (_asHtml) return { why: _none };
+    alert(_none);
     return;
   }
   // Re-resolve through _invAssignItemNos so every line prints its permanent item number.
@@ -31048,7 +31057,390 @@ function printApprovalRequest(jobId, selectedOnly) {
       + (_fid ? (_holder === 'the trust' ? 'the trust\u2019s records' : _holder === 'the estate' ? 'the estate record' : 'the estate and trust records')
           + ' and retained for seven years.' : 'your job record.') + '</div>'
     + '</div>';
-  _printDocument(html, _invDocName(job, 'Release Approval Request'));
+  var _title = _invDocName(job, 'Release Approval Request');   // APPROVAL_REQ_TITLE, as a literal: sandboxes lift this printer alone
+  if (_asHtml) return { html: html, title: _title, items: items, asked: asked, ratify: ratify };
+  _printDocument(html, _title);
+}
+
+// ═══ SENDING THE RELEASE APPROVAL REQUEST (2026-10-17; Anthony: "Build the send button") ═══
+// The request was print-only: a paper handed over, or a PDF saved and attached by hand, and nothing on screen said
+// whether one had gone, to whom, or for which lines. It now goes the way every client document goes (docSend's rule,
+// on the estate package's path): the manifest is read from the sheet first, the request is built by the one printer
+// (printApprovalRequest, asHtml) over the lines as the sheet holds them, filed to the Estate Inventory folder under a
+// DATED name (each round is its own paper, and the signed copy that comes back answers this one), made a PDF through
+// the one builder (docPdfBase64), and a Gmail draft is made to every fiduciary with an email, the estate attorney
+// copied where recorded and agreements@ always; a Gmail failure falls back to a plain email with the filed copy linked.
+// It is recorded on docState.approvalRequest (APPROVAL_REQ_KEY, a stored key: never rename it) through docRecordSent,
+// with `req` ({to, cc, noEmail, viaCounsel, stableIds, asked, ratify, filedUrl}) as the package records `pkg`, and
+// confirmed by the one confirming tap (markDocSent, pressed on the desk through invMarkRequestSent). A draft is
+// overtaken when every line it carried has since been approved (approvalRequestOvertaken), never by a price:
+// outstandingDrafts leaves it out, as it leaves the package out. The app sends nothing itself: the Gmail scope is
+// drafts only, and a person presses Send.
+// ⚠ A FIDUCIARY WITH NO EMAIL IS NEVER A REFUSAL: the request goes to those who have one, and the notice, the email and
+// the card name who signs the printed copy. With no fiduciary email at all it is addressed to the estate attorney
+// (`viaCounsel`), who holds the representative's signature in hand more often than the app holds their email. Refused
+// by name only with nobody to send it to, no Drive folder or no Apps Script URL (approvalRequestBlocker).
+var APPROVAL_REQ_KEY = 'approvalRequest';     // docState key: a stored key, never rename it (staleDocName carries the literal)
+var APPROVAL_REQ_TITLE = 'Release Approval Request';
+var APPROVAL_REQ_WATCHDOG_MS = 90000;         // the manifest read, a filing, a PDF and the draft, one after another
+
+// To whom. On an estate every fiduciary with an email (jobFiduciaries, in their order), the estate attorney copied where
+// recorded; where no fiduciary has one, the attorney is addressed instead (viaCounsel). On living work the client
+// (clientRecipient, which is the client there). agreements@ always, for the record. `noEmail` names the fiduciaries
+// who have none and sign the printed copy. Each address once.
+function approvalRequestRecipients(job) {
+  var to = [], cc = [], noEmail = [], seen = {}, viaCounsel = false;
+  var add = function (list, e) {
+    var a = String(e || '').trim();
+    if (!a || seen[a.toLowerCase()]) return;
+    seen[a.toLowerCase()] = 1; list.push(a);
+  };
+  if (job && invFiduciaryMode(job)) {
+    jobFiduciaries(job).forEach(function (f) { if (String(f.email || '').trim()) add(to, f.email); else noEmail.push(f.name); });
+    if (!to.length && String(job.probateAttyEmail || '').trim()) { add(to, job.probateAttyEmail); viaCounsel = true; }
+    else add(cc, job.probateAttyEmail);
+  } else if (job) {
+    add(to, clientRecipient(job).email);
+  }
+  add(cc, DEPT_EMAILS.agreements);
+  return { to: to, cc: cc, noEmail: noEmail, viaCounsel: viaCounsel };
+}
+// Refused by name, everything missing at once. Asked by the card and again by the send.
+function approvalRequestBlocker(job) {
+  if (!job) return 'This job could not be found.';
+  var miss = [];
+  if (!approvalRequestRecipients(job).to.length) miss.push(invFiduciaryMode(job)
+    ? 'an email for the ' + invRepresentativeTitle(job) + ', a co-representative or the estate attorney (Edit Client)'
+    : 'the client’s email (Edit Client)');
+  if (!job.driveFolder) miss.push('the client’s Drive folder (Create Drive folder, on the dashboard)');
+  if (!SHEETS_SYNC_URL) miss.push('the Apps Script URL in Settings');
+  return miss.length ? 'The approval request cannot be sent yet: it needs ' + _andJoin(miss) + '.' : '';
+}
+// A line still waiting on written approval: live, leaving the property, not yet approved by every fiduciary
+// (invApprovalComplete, the one answer). The request's own list (_invAwaitingApproval) asks the same two questions.
+function _approvalLineOpen(r, job) {
+  return !!(r && !r.deletedAt && INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invApprovalComplete(r, job));
+}
+// ⚠ WHEN A REQUEST DRAFT IS OVERTAKEN: every line it carried has since been approved (or removed), so there is nothing
+// left for its signature. Read off the manifest, never written into the record (the two-device reason notePriceChange
+// gives); a device that has not loaded this job's manifest sees no line and claims nothing, as probatePackageMovedSince.
+function approvalRequestOvertaken(job, st) {
+  var ids = (st && st.req && Array.isArray(st.req.stableIds)) ? st.req.stableIds.map(String) : [];
+  if (!job || !ids.length) return false;
+  var rows = (typeof _photoRefs !== 'undefined' && _photoRefs[job.id]) || null;
+  if (!rows) return false;
+  return !rows.some(function (r) { return r && ids.indexOf(String(r.stableId)) >= 0 && _approvalLineOpen(r, job); });
+}
+// The last request against the inventory now (DOM-free): `open`, the lines it carried that still wait; `fresh`, the
+// lines waiting that it never carried (a fresh request is owed for them); `carried`, how many it asked for.
+function approvalRequestState(job, refs) {
+  var st = (job && job.docState && job.docState[APPROVAL_REQ_KEY]) || null;
+  var ids = (st && st.req && Array.isArray(st.req.stableIds)) ? st.req.stableIds.map(String) : null;
+  var open = [], fresh = [];
+  (refs || []).forEach(function (r) {
+    if (!_approvalLineOpen(r, job)) return;
+    if (ids && ids.indexOf(String(r.stableId)) >= 0) open.push(r); else fresh.push(r);
+  });
+  return { st: st, req: (st && st.req) || null, carried: ids ? ids.length : 0, open: open, fresh: fresh };
+}
+function approvalRequestSubject(job) {
+  var street = String((job && job.addr) || '').split(',')[0].trim();
+  return 'Havellin Palm Beach — ' + APPROVAL_REQ_TITLE + ' for ' + (street || (job && job.name) || 'the property');
+}
+// Each round's copy in Drive, DATED (unlike _invDocDriveName's undated names, which a re-file replaces): the request a
+// signed copy answers must stay on file beside the next one.
+function approvalRequestDriveName(job) {
+  var stamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
+  return _invDocDriveName(job, APPROVAL_REQ_TITLE + ' - ' + stamp);
+}
+function _approvalWhat(job) {
+  if (invFiduciaryMode(job)) return _pkgEstateLine(job);
+  var where = [job.addr, job.city].filter(Boolean).join(', ');
+  return 'your property' + (where ? ' at ' + where : '');
+}
+// Whoever it is addressed to, by first name: the fiduciaries emailed, the attorney where it goes through counsel, the
+// client on living work.
+function _approvalGreeting(job, rcpt) {
+  if (!invFiduciaryMode(job)) return clientRecipient(job).fname || 'there';
+  var tos = (rcpt && rcpt.to || []).map(function (e) { return e.toLowerCase(); });
+  var fids = jobFiduciaries(job).filter(function (f) { return tos.indexOf(String(f.email || '').trim().toLowerCase()) >= 0; });
+  if (fids.length) return _andJoin(fids.map(function (f) { return firstName(f.name); }));
+  var n = String(job.probateAttyFname || job.probateAttyName || '').trim();
+  return n ? firstName(n) : 'Counsel';
+}
+// The email's paragraphs, plain strings, read by the text part, the HTML part and the mailto fallback so the three cannot
+// word one request three ways. `ctx`: {job, rcpt, asOf, asked, ratify, noEmail, viaCounsel, attached, link}.
+function _approvalEmailParas(ctx) {
+  var job = ctx.job, fid = invFiduciaryMode(job), P = [];
+  var n = function (k) { return k + ' line' + (k === 1 ? '' : 's'); };
+  var what = ctx.asked
+    ? n(ctx.asked) + ' proposed to leave the property' + (ctx.ratify ? ', and ' + n(ctx.ratify) + ' already released, listed for your signature' : '')
+    : n(ctx.ratify) + ' already released, listed for your signature';
+  P.push((ctx.attached ? 'Attached is' : 'Below is a link to') + ' Havellin’s ' + APPROVAL_REQ_TITLE + ' for ' + _approvalWhat(job)
+    + ', as of ' + ctx.asOf + ': ' + what + '.');
+  var fids = fid ? jobFiduciaries(job) : [];
+  P.push('Please initial each line or group where marked, sign where shown, and return the signed copy to us; a scan or a photograph by reply is fine.'
+    + (ctx.asked ? ' Nothing on it will be moved, sold, donated or disposed of until it comes back signed.' : '')
+    + (fids.length > 1 ? ' Every ' + invCoFiduciaryNoun(job) + ' named on it signs.' : ''));
+  if (ctx.viaCounsel && ctx.noEmail.length) {
+    P.push('We have no email on file for ' + _andJoin(ctx.noEmail) + ', whose signature' + (ctx.noEmail.length > 1 ? 's it needs' : ' it needs') + ', so we are sending it through you.');
+  } else if (ctx.noEmail.length) {
+    P.push(_andJoin(ctx.noEmail) + (ctx.noEmail.length > 1 ? ' have' : ' has') + ' no email on file with us and will receive a printed copy to sign.');
+  }
+  if (ctx.link) P.push('The request is in Google Drive: ' + ctx.link);
+  P.push('If anything on it is not as you expect, reply here before signing and we will put it right.');
+  return P;
+}
+function buildApprovalRequestEmailText(ctx) {
+  return ['Dear ' + _approvalGreeting(ctx.job, ctx.rcpt) + ',', ''].concat(_approvalEmailParas(ctx).join('\n\n').split('\n')).join('\n');
+}
+function buildApprovalRequestEmailHtml(ctx) {
+  var B = EMAIL_BRAND, job = ctx.job;
+  var p = function (t, last) { return '<p style="font-size:15px;line-height:1.65;color:' + B.ink + ';margin:0 0 ' + (last ? '26' : '14') + 'px;">' + t + '</p>'; };
+  var street = String(job.addr || '').split(',')[0].trim();
+  var paras = _approvalEmailParas(ctx);
+  var body = paras.map(function (t, i) {
+    var at = ctx.link ? t.indexOf(ctx.link) : -1;
+    var inner = at >= 0 ? _emHtml(t.slice(0, at)) + '<a href="' + _emHtml(ctx.link) + '" style="color:' + B.bronzeDk + ';">' + _emHtml(APPROVAL_REQ_TITLE) + '</a>' : _emHtml(t);
+    return p(inner, i === paras.length - 1);
+  }).join('');
+  return '' +
+  '<div style="margin:0;padding:0;background:#f4f1ea;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">' +
+  '<tr><td align="center" style="padding:24px 12px;">' +
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ' + B.line + ';">' +
+  '<tr><td style="background:' + B.ink + ';padding:26px 22px;">' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:23px;letter-spacing:.16em;color:#ffffff;text-transform:uppercase;">Havellin</div>' +
+    '<div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:' + B.bronzeLt + ';margin-top:5px;">Palm Beach</div>' +
+  '</td></tr>' +
+  '<tr><td style="padding:28px 22px 0;font-family:Helvetica,Arial,sans-serif;">' +
+    '<div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:' + B.bronzeDk + ';">' + _emHtml(APPROVAL_REQ_TITLE) + '</div>' +
+    '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:21px;color:' + B.ink + ';margin-top:6px;line-height:1.3;">' +
+      _emHtml(street || job.name || 'The property') + '</div>' +
+    '<div style="font-size:13px;color:' + B.gray + ';margin-top:4px;">' + _emHtml(_approvalWhat(job).replace(/^(the|your)\s/, function (m) { return m.charAt(0).toUpperCase() + m.slice(1); })) + '</div>' +
+    '<div style="height:1px;background:' + B.line + ';margin:22px 0;"></div>' +
+    p('Dear ' + _emHtml(_approvalGreeting(job, ctx.rcpt)) + ',') +
+    body +
+  '</td></tr>' +
+  '<tr><td style="background:' + B.cream + ';padding:18px 22px;border-top:1px solid ' + B.line + ';">' +
+    '<div style="font-size:10px;line-height:1.9;letter-spacing:.06em;text-transform:uppercase;color:' + B.gray + ';text-align:center;">' +
+      'Havellin Palm Beach &nbsp;&middot;&nbsp; White-Glove Estate Transition Services<br>' +
+      '515 N Flagler Drive, Suite 350 &nbsp;&middot;&nbsp; West Palm Beach, FL 33401<br>' +
+      'Insured &amp; Bonded' +
+    '</div>' +
+  '</td></tr>' +
+  '</table></td></tr></table></div>';
+}
+// The plain-email fallback (a Gmail draft that failed): no attachment, so the filed copy is linked in its body.
+function approvalRequestMailto(ctx) {
+  var body = buildApprovalRequestEmailText(ctx).split('\n').concat(mailtoSignoff(assignedTCContact(ctx.job)));
+  return 'mailto:' + encodeURIComponent(ctx.rcpt.to.join(',')) + '?cc=' + encodeURIComponent(ctx.rcpt.cc.join(','))
+    + '&subject=' + encodeURIComponent(approvalRequestSubject(ctx.job)) + '&body=' + mailtoBody(body);
+}
+
+// The send: the work bar's Send request (every line awaiting approval) and the bulk bar's (the selection). One send at a
+// time, app-wide (_docBusy), with a watchdog, because a draft may exist when an answer never comes.
+function sendApprovalRequest(jobId, selectedOnly) {
+  var job = _invJob(jobId);
+  var why = approvalRequestBlocker(job);
+  if (why) { _docNotice('warn', why, jobId); return false; }
+  var picked = selectedOnly ? _invPicked(jobId) : _invAwaitingApproval(jobId);
+  if (!picked.length) {
+    _docNotice('warn', selectedOnly ? 'Select the lines you want approval for first.'
+      : 'Nothing is waiting on approval: every line leaving the property has its written approval, or has no disposition yet.', jobId);
+    return false;
+  }
+  if (_docBusy) { _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
+  _docBusy = { jobId: jobId, docKey: APPROVAL_REQ_KEY };
+  var over = false;
+  var watchdog = setTimeout(function () {
+    if (over) return;
+    over = true; _docBusy = null;
+    _docNotice('warn', 'The approval request took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send request again.', jobId);
+  }, APPROVAL_REQ_WATCHDOG_MS);
+  var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; };
+  var step = function (label) { if (!over) _dashSendState(APPROVAL_REQ_KEY, label); };
+  var rcpt = approvalRequestRecipients(job);
+
+  step('Reading the inventory…');
+  _invEnsureLoaded(jobId);
+  refreshPhotoRefs(jobId, function () {
+    if (over) return;
+    if (!_invCloudSeen[jobId]) {
+      finish();
+      _docNotice('warn', 'The inventory could not be read from the sheet, so the request could ask for lines another device has already had approved. Check the connection, then press Send request again.', jobId);
+      return;
+    }
+    // The paper as the printer builds it, over the lines as the sheet now holds them.
+    var r = printApprovalRequest(jobId, selectedOnly, { asHtml: true });
+    if (!r || !r.html) { finish(); _docNotice('warn', (r && r.why) || 'The request could not be built.', jobId); return; }
+    var items = r.items, asked = r.asked.length, ratify = r.ratify.length;
+    step('Filing the request to Drive…');
+    resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
+      if (over) return;
+      uploadHtmlToDrive(folderId || _jobRootFolderId(job), approvalRequestDriveName(job), _exportDoc(r.title + ' – ' + (job.hvlId || ''), r.html, ''), function (fok, furl) {
+        if (over) return;
+        var filedUrl = fok ? String(furl || '') : '';
+        step('Building the PDF…');
+        docPdfBase64({ cfg: { label: APPROVAL_REQ_TITLE, pdfCss: '' }, job: job }, r.html, function (b64, perr) {
+          if (over) return;
+          if (!b64 && !filedUrl) {
+            finish();
+            _docNotice('err', 'The request could be neither made into a PDF (' + (perr || 'no answer from the server') + ') nor filed to Drive, so there is nothing to send. Check the connection and the Apps Script, then press Send request again; Approval Request still prints it.', jobId);
+            return;
+          }
+          step('Creating the draft…');
+          var asOf = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+          var ctx = { job: job, rcpt: rcpt, asOf: asOf, asked: asked, ratify: ratify, noEmail: rcpt.noEmail, viaCounsel: rcpt.viaCounsel,
+                      attached: !!b64, link: b64 ? '' : filedUrl };
+          var tail = function (provider, draftUrl, lead) {
+            if (over) return;
+            finish();
+            var gmail = provider === 'gmail';
+            docRecordSent({ job: job, key: APPROVAL_REQ_KEY }, { provider: provider, draftUrl: draftUrl || '', pdfOk: gmail && !!b64,
+              req: { to: rcpt.to, cc: rcpt.cc, noEmail: rcpt.noEmail, viaCounsel: !!rcpt.viaCounsel,
+                     stableIds: items.map(function (x) { return String(x.stableId); }), asked: asked, ratify: ratify, filedUrl: filedUrl } });
+            var bits = [lead + (gmail ? 'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox') : 'Email opened') + ' for ' + _andJoin(rcpt.to)
+              + (rcpt.cc.length ? ', copied to ' + _andJoin(rcpt.cc) : '')
+              + (gmail && b64 ? ', with the ' + APPROVAL_REQ_TITLE + ' attached (' + items.length + ' line' + (items.length === 1 ? '' : 's') + ')'
+                              : ', with the request linked from Drive' + (gmail ? '' : ' (a plain email carries no attachment)'))
+              + '. Read it, send it, then tap “I’ve sent it” on the Releases & signed papers card.'];
+            if (rcpt.viaCounsel) bits.push('No fiduciary has an email on file, so it is addressed to the estate attorney; ' + _andJoin(rcpt.noEmail) + ' sign through counsel or on the printed copy.');
+            else if (rcpt.noEmail.length) bits.push(_andJoin(rcpt.noEmail) + ' ' + (rcpt.noEmail.length > 1 ? 'have' : 'has') + ' no email on file: print the request for them to sign (Approval Request).');
+            if (gmail && !b64) bits.push('The PDF could not be built (' + (perr || 'no answer from the server') + '), so the draft links the filed copy instead of attaching it.');
+            if (!filedUrl) bits.push('Not filed to Drive: the request.');
+            _docNotice(gmail && b64 && filedUrl && !rcpt.noEmail.length ? 'ok' : 'warn', bits.join(' '), jobId);
+            if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
+            showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
+            _invRefreshReleases(jobId);
+          };
+          var mime = buildMimeMessage({ to: rcpt.to.join(', '), cc: rcpt.cc.join(', '), subject: approvalRequestSubject(job),
+            text: buildApprovalRequestEmailText(ctx), html: buildApprovalRequestEmailHtml(ctx),
+            attachments: b64 ? [{ name: r.title + '.pdf', base64: b64 }] : [] });
+          gmailCreateDraft(mime, function (ok, d) {
+            if (over) return;
+            if (ok) { tail('gmail', gmailDraftUrl(d.messageId || d.draftId), ''); return; }
+            // A failed draft falls back to a plain email, the rule every client document follows (docSend), recorded as
+            // what it is: an email opened, with the filed copy linked since it can carry no attachment.
+            if (!filedUrl) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + ' — and the request is not in Drive, so a plain email would carry nothing. Press Send request again.', jobId); return; }
+            var plain = {}; Object.keys(ctx).forEach(function (k) { plain[k] = ctx[k]; });
+            plain.attached = false; plain.link = filedUrl;
+            DOC_SEND_PROVIDERS.mailto.send({ cfg: { mailto: function () { return approvalRequestMailto(plain); } } }, null, function (ok2) {
+              if (!ok2) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + '.', jobId); return; }
+              tail('mailto', '', 'Gmail draft failed — ' + ((d && d.error) || 'unknown') + '. ');
+            });
+          });
+        });
+      });
+    });
+  });
+  return true;
+}
+// The one confirming tap, pressed on the desk: the client documents' own (markDocSent), then the card repainted.
+function invMarkRequestSent(jobId) {
+  var job = _invJob(jobId);
+  if (!job) return false;
+  if (!draftOutstanding(job, APPROVAL_REQ_KEY)) { _docNotice('warn', noDraftToConfirm(job, APPROVAL_REQ_KEY), jobId); _invRefreshReleases(jobId); return false; }
+  markDocSent(jobId, APPROVAL_REQ_KEY);
+  _invRefreshReleases(jobId);
+  return true;
+}
+// The Releases card's first section: what the last request asked and of whom, the draft waiting on its tap, what is
+// still unsigned, the lines a fresh request is owed for, and the send. DOM-free markup; every person-entered value
+// escaped. Nothing where no line waits and nothing was ever sent.
+function approvalRequestCardHtml(job, all) {
+  var jid = job.id, K = APPROVAL_REQ_KEY, S = approvalRequestState(job, all), st = S.st;
+  var waiting = S.open.length + S.fresh.length;
+  if (!st && !waiting) return '';
+  var live = draftOutstanding(job, K);
+  var btn = function (call, label, primary) { return '<button class="' + (primary ? 'btn-bronze' : 'btn-s') + '" onclick="' + call + '">' + label + '</button>'; };
+  var n = function (k) { return k + ' line' + (k === 1 ? '' : 's'); };
+  var who = (S.req && S.req.to && S.req.to.length) ? ' to ' + _andJoin(S.req.to) : '';
+  var lines = [], btns = '';
+  var paper = (S.req && S.req.noEmail && S.req.noEmail.length)
+    ? esc(_andJoin(S.req.noEmail) + ' had no email: ' + (S.req.viaCounsel ? 'it went through the estate attorney.' : 'they sign the printed copy.')) : '';
+  if (live) {
+    lines.push(esc(['Drafted ' + _draftDay(st.draftedAt), st.draftedBy || '', st.mailbox || ''].filter(Boolean).join(' · ') + who + ', ' + n(S.carried)));
+    lines.push(esc(jtDraftLine(job, K, true)));
+    if (paper) lines.push(paper);
+    btns = btn('invMarkRequestSent(' + jid + ')', '&#10003; I&rsquo;ve sent it', true)
+      + (st.draftUrl ? btn('openDocDraft(' + jid + ",'" + K + "')", '&#8599; Open the draft') : '');
+  } else {
+    if (st && st.sentAt) {
+      lines.push(esc('Sent ' + _draftDay(st.sentAt) + (st.sentBy ? ' by ' + st.sentBy : '') + who + ', ' + n(S.carried)
+        + (S.carried ? ' · ' + (S.open.length ? n(S.open.length) + ' still unsigned' : 'every line on it approved') : '')));
+      if (paper) lines.push(paper);
+    }
+    var stale = st ? staleDraftNote(job, K, false) : '';
+    if (stale) lines.push(esc(stale));
+    if (S.fresh.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(n(S.fresh.length)
+      + (st && st.sentAt ? ' now await approval and were not on it: send a fresh request.' : ' await written approval; nothing has been sent from the app.')) + '</span>');
+    if (waiting) {
+      var blk = approvalRequestBlocker(job);
+      if (blk) lines.push('<span style="color:#A32D2D;">' + esc(blk) + '</span>');
+      else {
+        var rc = approvalRequestRecipients(job);
+        lines.push(esc('Goes as a PDF to ' + _andJoin(rc.to) + (rc.cc.length ? ', copied to ' + _andJoin(rc.cc) : '')
+          + (rc.noEmail.length ? '; ' + _andJoin(rc.noEmail) + (rc.noEmail.length > 1 ? ' have' : ' has') + ' no email and sign' + (rc.noEmail.length > 1 ? '' : 's') + ' the printed copy' : '') + '.'));
+        btns = btn('sendApprovalRequest(' + jid + ')', '&#128231; Send request', true);
+      }
+    }
+  }
+  return '<div class="inv-rel-row inv-req-row" id="inv-req-row" style="padding:7px 0;border-bottom:0.5px solid var(--border);font-size:11.5px;line-height:1.5;">'
+    + lines.map(function (l) { return '<div>' + l + '</div>'; }).join('')
+    + (btns ? '<div class="inv-rel-ctl">' + btns + '</div>' : '')
+    + '</div>';
+}
+// The dashboard's card, under Keys & access: only once a request has gone from the app. What is still unsigned is read
+// off the manifest where this device holds it, and not claimed where it does not.
+function approvalRequestDashHtml(job) {
+  var st = job && job.docState && job.docState[APPROVAL_REQ_KEY];
+  if (!st || !st.req) return '';
+  var K = APPROVAL_REQ_KEY, live = draftOutstanding(job, K);
+  var refs = (typeof _photoRefs !== 'undefined' && _photoRefs[job.id]) ? _jobInvRefs(job.id) : null;
+  var S = approvalRequestState(job, refs);
+  var n = function (k) { return k + ' line' + (k === 1 ? '' : 's'); };
+  var who = (st.req.to && st.req.to.length) ? ' to ' + _andJoin(st.req.to) : '';
+  var lines = [], btns = '';
+  if (live) {
+    lines.push(esc('Drafted ' + _draftDay(st.draftedAt) + (st.draftedBy ? ' by ' + st.draftedBy : '') + who + ', ' + n(S.carried) + ' · ' + jtDraftLine(job, K, true)));
+    btns = '<button class="btn-bronze" style="font-size:11px;padding:4px 10px;" onclick="markDocSent(' + job.id + ",'" + K + "')\">&#10003; I&rsquo;ve sent it</button>"
+      + (st.draftUrl ? '<button class="btn-s" style="font-size:11px;padding:4px 10px;" onclick="openDocDraft(' + job.id + ",'" + K + "')\">&#8599; Open the draft</button>" : '');
+  } else {
+    if (st.sentAt) lines.push(esc('Sent ' + _draftDay(st.sentAt) + (st.sentBy ? ' by ' + st.sentBy : '') + who + ', ' + n(S.carried)
+      + (refs ? ' · ' + (S.open.length ? n(S.open.length) + ' still unsigned' : 'every line on it approved') : '')));
+    var stale = staleDraftNote(job, K, false);
+    if (stale) lines.push(esc(stale));
+    if (refs && S.fresh.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(n(S.fresh.length) + ' now await approval and were not on it: send a fresh request from the desk.') + '</span>');
+    btns = '<button class="btn-s" style="font-size:11px;padding:4px 12px;" onclick="openJobDeskFor(' + job.id + ')">Open the desk</button>';
+  }
+  return '<div class="card req-dash" id="dash-approval-' + job.id + '" style="margin-bottom:12px;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">' + sectionHdr('Release approval request')
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + btns + '</div></div>'
+    + lines.map(function (l) { return '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.5;">' + l + '</div>'; }).join('')
+    + '</div>';
+}
+// Opens Job Admin & Inv on this client and scrolls to the Releases card: openJobPlanFor's twin for the desk.
+function openJobDeskFor(jobId) {
+  var nb = document.querySelector('.nb[onclick*="showPanel(\'inventory\'"]');
+  if (!nb || !jobs.some(function (x) { return x.id === jobId; })) return false;
+  if (document.getElementById('clients-list-view') && document.getElementById('client-dashboard-view')) closeClientDashboard();
+  setCurrentJob(jobId);
+  nb.click();
+  var sel = document.getElementById('inv-job');
+  if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
+  var el = document.getElementById('inv-releases');
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+  return true;
+}
+// The Releases card repainted by id, whole (the rule _invEdit set, 2026-10-10): a card the render would not draw is
+// left for the next full render.
+function _invRefreshReleases(jobId) {
+  var el = document.getElementById('inv-releases'), job = _invJob(jobId);
+  if (!el || !job) return false;
+  var html = _renderInvReleasesCard(job, _jobInvRefs(jobId));
+  if (html) el.outerHTML = html;
+  return !!html;
 }
 // The other half of the same transaction: the signed request comes back, and the approval
 // is written onto every item it covered in ONE action. Typing a name into twenty rows by
@@ -31328,6 +31720,9 @@ function _renderInvReleasesCard(job, all) {
   var sids = function(list){ return list.map(function(r){ return String(r.stableId); }); };
   // ⚠ EACH SIGNING ACT, AND EVERY COPY FILED FOR ONE, STAYS LISTED (P20, Q24): a day one co-trustee signed is its own row
   // after the other signs a week later, with the copy filed for it, and its lines say whether they are still open.
+  // The request itself, first (2026-10-17): what the last one asked and of whom, and the send.
+  var _reqHtml = approvalRequestCardHtml(job, all);
+  if (_reqHtml) parts.push(head('Approval request') + _reqHtml);
   var batches = invApprovalBatches(job, all);
   if (batches.length) {
     parts.push(head('Signed release approvals') + batches.map(function(b){
@@ -36188,6 +36583,10 @@ function _renderInvWorkbar(job, all) {
       + (_primary === 'approval' ? '' : btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
           ? 'Written, itemised release approval for the representative to sign. Nothing of value leaves the property without it.'
           : 'Written, itemised list of everything leaving the property, for the client to sign off.'))
+      // The same paper, sent (2026-10-17): a Gmail draft with the PDF attached, to every fiduciary with an email.
+      + btn('sendApprovalRequest(' + jid + ')', '&#128231; Send request', fid
+          ? 'Email the Release Approval Request as a PDF, through a Gmail draft, to every fiduciary with an email, the estate attorney copied. The Releases & signed papers card shows what went and what is still unsigned.'
+          : 'Email the Release Approval Request as a PDF, through a Gmail draft, to the client. The Releases & signed papers card shows what went and what is still unsigned.')
       + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', fid
           ? 'Add an asset with no photo (cash, vehicle, account)'
           : 'Add something with no photo — a vehicle, a rug already rolled, anything in storage')
@@ -36805,6 +37204,7 @@ function _renderInvBulk(job) {
     // Agent Two's figures, accepted together (P23): only while the selection holds one nobody has accepted.
     + (picked.some(agentValueUnreviewed) ? '<button onclick="_invBulkApply(' + jid + ',\'valReviewed\',1)" style="' + btnStyle + '" title="Accept Agent Two\u2019s value on every selected line that carries one">Accept values</button>' : '')
     + '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
+    + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
     + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
     + '<button onclick="_invClearPicks()" style="' + btnStyle + 'background:none;color:var(--cream);">Clear</button>'
     + result

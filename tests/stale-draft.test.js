@@ -693,6 +693,10 @@ function run({ group, ok, eq, has, lacks }) {
       // in person left in the mailbox, and a package draft whose card a moved matter took away.
       agreementHandOverDraftNote: 'the draft a hand-over in person left in the mailbox',
       estatePackageOrphanDraftNote: 'a package draft with no card left to name it',
+      // The release approval request's send (2026-10-17): its card on the desk and its card on the dashboard print when the
+      // draft was made, as the package's card does; the tap and the draft link on both read draftOutstanding.
+      approvalRequestCardHtml: 'the Releases card\'s who-and-when line for the request',
+      approvalRequestDashHtml: 'the dashboard card\'s who-and-when line for the request',
     };
     const names = [...new Set([...src.matchAll(/(^|\n)function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[2]))];
     const readers = names.filter((n) => { let b; try { b = fn(n); } catch (e) { return false; } return /draftedAt/.test(live(b)); });
