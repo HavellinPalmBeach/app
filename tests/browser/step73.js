@@ -180,11 +180,13 @@ const BIG = 7301, NEWJ = 7302, LIVE = 7303, MOVE = 7304, EST = 7305;
     });
 
     // ── D ───────────────────────────────────────────────────────────────────
-    await section('D. Home Transition\'s move day: four boxes and a procedure', async () => {
+    // ⚠ THREE BOXES AND FOURTEEN LINES SINCE P27 (2026-10-17): the damage box became the stage's derived line off the Incidents
+    // card, and the procedure grew a second block, How move-in runs (step 85 drives both). The rule pinned is unchanged.
+    await section('D. Home Transition\'s move day: three boxes and a procedure', async () => {
       await p.evaluate((j) => openJobPlanFor(j), MOVE); await p.waitForTimeout(2000);
-      eq(await p.locator('#stage-p3 input[type=checkbox]').count(), 4, '⚠⚠ four boxes on move day');
-      has(await txt('#stage-p3 .stg-count'), '0 of 4 ticked', 'the stage counts them');
-      eq(await p.locator('#stage-p3 .plan-proc li').count(), 5, 'and the procedure, five lines to read');
+      eq(await p.locator('#stage-p3 input[type=checkbox]').count(), 3, '⚠⚠ three boxes on move day');
+      has(await txt('#stage-p3 .stg-count'), '0 of 3 ticked', 'the stage counts them');
+      eq(await p.locator('#stage-p3 .plan-proc li').count(), 14, 'and the procedure, fourteen lines to read in two blocks');
       has(await txt('#stage-p3 .plan-proc'), 'be on site before they arrive', 'with the presence rules');
     });
 

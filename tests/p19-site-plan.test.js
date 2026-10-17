@@ -247,7 +247,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 7 ─────────────────────────────────────────────────────────────────────
   group('D4 — chain of custody is mandatory on the trust track, as on the probate track');
   {
-    const PLAN_FNS = ['derivedLinesHtml', 'planTaskApplies', 'renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
+    const PLAN_FNS = ['derivedLinesHtml', 'planTaskApplies', 'renderJobPlan', 'planProcedureHtml', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
       'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'prepVendorsConfirmed',
       'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
       'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', '_planRoomListHtml',
@@ -260,7 +260,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal',
       'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope',
       'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'];
-    const PLAN_VARS = ['PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS',
+    const PLAN_VARS = [ 'PLAN_PROCEDURE', 'BOL_SIGNED_REF', '_signedCopySpecs', '_signedCopyKeys','PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS',
       'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
       'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES',
       'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS'];

@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The First Night &middot; Havellin Palm Beach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#faf8f4;
+  --surface:#f3efe6;
+  --ink:#2a241d;
+  --ink-soft:#5c5347;
+  --grey:#8a8078;
+  --bronze:#7a5a2e;
+  --bronze-bright:#a67c45;
+  --red:#8f2323;
+  --red-ground:#f7eaea;
+  --green:#4f6b2a;
+  --green-ground:#eef2e4;
+  --rule:#e3ddd1;
+  --rule-strong:#cec5b4;
+
+  --ff-display:'Spectral', Georgia, 'Times New Roman', serif;
+  --ff-body:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --ff-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#17140f;
+    --surface:#211c16;
+    --ink:#ece5d9;
+    --ink-soft:#b5aa99;
+    --grey:#8d8375;
+    --bronze:#c9a36a;
+    --bronze-bright:#dbb987;
+    --red:#e89393;
+    --red-ground:#33191a;
+    --green:#a6c478;
+    --green-ground:#1e2516;
+    --rule:#332c23;
+    --rule-strong:#4a4034;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#17140f;
+  --surface:#211c16;
+  --ink:#ece5d9;
+  --ink-soft:#b5aa99;
+  --grey:#8d8375;
+  --bronze:#c9a36a;
+  --bronze-bright:#dbb987;
+  --red:#e89393;
+  --red-ground:#33191a;
+  --green:#a6c478;
+  --green-ground:#1e2516;
+  --rule:#332c23;
+  --rule-strong:#4a4034;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--ff-body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:760px;
+  margin:0 auto;
+  padding-inline:22px;
+  padding-block:56px 96px;
+}
+
+/* ---- masthead ---- */
+.mast{border-bottom:2px solid var(--bronze);padding-bottom:26px;}
+.eyebrow{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:600;color:var(--bronze);margin:0 0 14px;
+}
+h1{
+  font-family:var(--ff-display);
+  font-size:clamp(34px,6.5vw,50px);
+  line-height:1.06;font-weight:700;margin:0;
+  text-wrap:balance;letter-spacing:-.015em;
+}
+.standfirst{
+  font-family:var(--ff-display);
+  font-size:18px;font-style:italic;line-height:1.55;
+  color:var(--ink-soft);margin:16px 0 0;max-width:60ch;
+}
+.meta{
+  display:flex;flex-wrap:wrap;gap:8px 26px;
+  margin-top:22px;font-size:12px;color:var(--grey);
+}
+.meta b{color:var(--ink-soft);font-weight:600;}
+
+/* ---- shared blocks ---- */
+section{margin-top:52px;}
+h2{
+  font-family:var(--ff-display);
+  font-size:26px;font-weight:600;line-height:1.2;
+  margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em;
+}
+h3{
+  font-size:13px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:700;color:var(--bronze);margin:30px 0 10px;
+}
+p{margin:0 0 14px;max-width:66ch;}
+.lede{color:var(--ink-soft);margin-bottom:26px;max-width:64ch;}
+strong{font-weight:700;}
+a{color:var(--bronze);}
+.btn{
+  font-family:var(--ff-body);font-size:.88em;font-weight:600;white-space:nowrap;
+  border:1px solid var(--rule-strong);border-radius:4px;padding:0 5px;background:var(--surface);
+}
+ul.plain{margin:0;padding-left:0;list-style:none;}
+ul.plain li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:64ch;
+}
+ul.plain li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+
+/* ---- the three rules ---- */
+.rules{
+  margin-top:44px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);
+}
+.rule-card{background:var(--surface);padding:20px 22px;}
+.rule-card .tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--bronze);font-weight:500;
+  display:block;margin-bottom:8px;
+}
+.rule-card h4{
+  font-family:var(--ff-display);font-size:19px;font-weight:600;
+  margin:0 0 8px;line-height:1.25;
+}
+.rule-card p{font-size:13.5px;margin:0;color:var(--ink-soft);line-height:1.55;}
+
+/* ---- tables ---- */
+.tbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:14.5px;}
+.tbl th{
+  text-align:left;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--grey);font-weight:700;padding:0 12px 8px 0;
+  border-bottom:1px solid var(--rule-strong);
+}
+.tbl td{padding:11px 12px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top;}
+.tbl td:first-child{font-weight:600;width:26%;}
+.tbl td.how{color:var(--ink-soft);font-size:13.5px;width:24%;}
+.tbl th:last-child,.tbl td:last-child{padding-right:0;}
+@media screen{ .tbl-scroll{overflow-x:auto;} }
+
+/* ---- the vase, three ways ---- */
+.ways{display:grid;gap:14px;margin-top:6px;}
+.way{border:1px solid var(--rule-strong);border-left-width:4px;padding:18px 20px 16px;background:var(--paper);}
+.way.bad{border-left-color:var(--red);}
+.way.ok{border-left-color:var(--bronze-bright);}
+.way.best{border-left-color:var(--green);background:var(--green-ground);}
+.way .tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:500;display:block;margin-bottom:4px;
+}
+.way.bad .tag{color:var(--red);}
+.way.ok .tag{color:var(--bronze);}
+.way.best .tag{color:var(--green);}
+.way h4{font-family:var(--ff-display);font-size:19px;font-weight:600;margin:0 0 10px;line-height:1.25;}
+.way ol{margin:0 0 12px;padding-left:22px;}
+.way li{font-size:14.5px;line-height:1.55;margin-bottom:5px;max-width:62ch;}
+.way .result{font-size:14px;line-height:1.55;margin:0;padding-top:10px;border-top:1px solid var(--rule);color:var(--ink-soft);}
+.way .result b{color:var(--ink);}
+.test{
+  margin-top:18px;font-family:var(--ff-display);font-size:18px;font-style:italic;line-height:1.5;
+  color:var(--bronze);max-width:60ch;
+}
+
+/* ---- staged sequence ---- */
+.stages{margin-top:10px;}
+.stage{
+  position:relative;
+  padding-left:52px;
+  padding-bottom:34px;
+  border-left:2px solid var(--rule-strong);
+  margin-left:14px;
+}
+.stage:last-child{border-left-color:transparent;padding-bottom:4px;}
+.stage::before{
+  content:attr(data-n);
+  position:absolute;left:-15px;top:0;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--bronze);color:var(--paper);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+.stage-h{
+  font-family:var(--ff-display);font-size:21px;font-weight:600;
+  margin:0 0 3px;line-height:1.25;
+}
+.stage-when{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--grey);font-weight:600;margin:0 0 14px;
+}
+.stage ul{margin:0;padding-left:0;list-style:none;}
+.stage li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:62ch;
+}
+.stage li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+.stage li.crit::before{background:var(--red);}
+
+/* ---- own frame or shared ---- */
+.split{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);margin-top:6px;
+}
+.side{background:var(--paper);padding:18px 20px 10px;}
+.side h4{font-family:var(--ff-display);font-size:19px;font-weight:600;margin:0 0 12px;line-height:1.25;}
+.side.own h4{color:var(--bronze);}
+
+/* ---- tricky spots ---- */
+.tricky{margin:6px 0 0;}
+.tricky dt{font-weight:700;font-size:15px;margin-top:16px;}
+.tricky dd{margin:4px 0 0;font-size:14.5px;line-height:1.6;color:var(--ink-soft);max-width:64ch;}
+
+/* ---- the review on the computer ---- */
+ol.desk{margin:6px 0 0;padding-left:0;list-style:none;counter-reset:d;}
+ol.desk li{
+  counter-increment:d;position:relative;padding-left:40px;
+  margin-bottom:14px;font-size:15px;line-height:1.55;max-width:64ch;
+}
+ol.desk li::before{
+  content:counter(d);
+  position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;
+  border:1.5px solid var(--bronze);color:var(--bronze);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ---- what the app cannot catch yet ---- */
+.gaps{
+  margin-top:52px;background:var(--surface);border-left:3px solid var(--bronze);
+  padding:22px 24px 12px;
+}
+.gaps h2{font-size:22px;}
+.gaps p{font-size:14.5px;color:var(--ink-soft);}
+
+/* ---- field card ---- */
+.card{
+  margin-top:56px;border:2px solid var(--ink);padding:24px 26px 14px;background:var(--paper);
+}
+.card .eyebrow{margin-bottom:6px;}
+.card h2{font-size:28px;margin-bottom:16px;}
+.card ol{margin:0;padding-left:0;list-style:none;counter-reset:c;}
+.card li{
+  counter-increment:c;position:relative;padding-left:38px;
+  margin-bottom:11px;font-size:15.5px;line-height:1.45;
+}
+.card li::before{
+  content:counter(c,decimal-leading-zero);
+  position:absolute;left:0;top:2px;
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;color:var(--bronze);
+}
+.card li b{font-weight:700;}
+
+/* ---- footer ---- */
+footer{
+  margin-top:64px;padding-top:22px;border-top:1px solid var(--rule-strong);
+  font-size:12.5px;color:var(--grey);line-height:1.65;
+}
+footer p{max-width:66ch;}
+
+@media screen and (max-width:600px){
+  .wrap{padding-inline:16px;padding-block:38px 64px;}
+  .stage{padding-left:36px;margin-left:10px;}
+  .stage::before{left:-14px;width:26px;height:26px;font-size:11px;}
+  .tbl td:first-child{width:34%;}
+  .card{padding:20px 18px 10px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+}
+
+@media print{
+  @page{margin:.6in .6in;}
+  :root{--paper:#fff;--surface:#f4f1ec;--ink:#1a1a1a;--ink-soft:#333;--grey:#555;
+        --rule:#ccc;--rule-strong:#999;--red-ground:#f6eded;--green-ground:#f1f4ea;}
+  body{background:#fff;}
+  .wrap{max-width:100%;padding-block:0;padding-inline:0;}
+  h1{font-size:28px;}
+  h2,h3,.stage-h,.rule-card h4,.way h4,.side h4{page-break-after:avoid;break-after:avoid;}
+  /* Keep a rule, a way, a stage, a side and the card whole; never a long list. */
+  .rule-card,.way,.stage,.side,.tbl tr,.gaps{page-break-inside:avoid;break-inside:avoid;}
+  .card{page-break-before:always;break-before:page;page-break-inside:avoid;break-inside:avoid;}
+  p,li{orphans:3;widows:3;}
+  .tbl{font-size:11.5px;}
+  footer{page-break-before:avoid;break-before:avoid;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Havellin Palm Beach &middot; Field Guide</p>
+    <h1>The First Night</h1>
+    <p class="standfirst">Move-in, the first hour, and the first thirty days. The client arrives to a home, not to a wall
+      of boxes.</p>
+    <div class="meta">
+      <span><b>For</b> The concierge at the new home on move day, and after</span>
+      <span><b>In the app</b> Job Plan, <em>Move day</em>, and the client dashboard after the close</span>
+      <span><b>Status</b> Draft for Anthony</span>
+      <span><b>Issued</b> 17 Oct 2026</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Before the truck arrives</h2>
+    <ul class="plain">
+      <li>Door and hallway widths were checked against the furniture plan before move-in day; a sofa that does not turn the
+        corner is found out in the planning, not on the landing.</li>
+      <li>Floors protected before anything comes in. The floor plan the client approved is in your hand, and the movers
+        place furniture by it.</li>
+      <li>Meet the move-in contact (the Director of Resident Services, the Social Worker or the Wellness Director in a
+        community; the building manager otherwise). Get their <strong>direct line</strong>, not the front desk. This is the
+        person the family calls with questions in the first weeks, so it goes on Edit Client under the destination.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>The first hour</h2>
+    <ol>
+      <li>A basic wipe-down of the bathroom and kitchen before anything is unpacked.</li>
+      <li>Shower curtain up, toilet paper out, towels on the rail.</li>
+      <li>Beds assembled and made, with the client's own bedding.</li>
+      <li>The cooler and the first-night kit unpacked; the kettle or coffee maker working.</li>
+      <li>The to-go bag and the personal things in from the car, straight to the bedroom. The medications found and put where
+        they will live.</li>
+    </ol>
+  </section>
+
+  <div class="rules">
+    <div class="rule-card">
+      <span class="tag">Rule 1</span>
+      <h4>Bedroom, bathroom, kitchen</h4>
+      <p>These three are finished before anything else is touched: daily essentials unpacked, furniture placed so the client
+        can move safely, packing paper out of the room.</p>
+    </div>
+    <div class="rule-card">
+      <span class="tag">Rule 2</span>
+      <h4>Familiar things do the work</h4>
+      <p>Before the crew leaves: their own bedding on the bed, a few framed photographs where they can be seen from the bed
+        and the chair, toiletries arranged the way they had them. The first night is the hardest, and familiar objects carry
+        it.</p>
+    </div>
+    <div class="rule-card">
+      <span class="tag">Rule 3</span>
+      <h4>Unpack in priority order, paced</h4>
+      <p>Not everything on day one. The OPEN FIRST boxes, then the rest over the following days at a pace the client sets.
+        Declutter again as you unpack: what does not earn its place goes.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>Settle-in list</h2>
+    <ul class="plain">
+      <li>Groceries and essentials in; the dietary needs and preferences handed to the dining team in a community.</li>
+      <li>Smoke detectors checked. The locks changed or the spare keys made, if the client wants them. The keys and codes for
+        the new home handed to the client and recorded on the <em>Keys &amp; access</em> card.</li>
+      <li>The activities calendar in hand, a neighbour or two met, the address confirmed with the people and places that need it.</li>
+      <li>Packing debris collected: book the pickup before you leave.</li>
+      <li>Anything lost or damaged on the move is on the <em>Incidents</em> card already (<a href="move-day-guide.html">Move Day</a>).
+        The claim is made against the mover's paperwork; the community is not responsible for a resident's belongings.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>The first thirty days</h2>
+    <p>The move is not over when the truck leaves. The engagement ends at the handover, but one call makes the difference
+      between a client who settled and one who did not, and it is the call that earns the referral.</p>
+    <div class="stages">
+      <div class="stage">
+        <div class="stage-h">Days 1 to 7</div>
+        <div class="stage-when">Build predictability</div>
+        <ul><li>People, places, routines and where things are. Familiar rituals (the morning coffee, the evening call) are kept,
+          adapted or replaced only with the client's say.</li></ul>
+      </div>
+      <div class="stage">
+        <div class="stage-h">Days 8 to 14</div>
+        <div class="stage-when">Open doors without pushing</div>
+        <ul><li>Invite, do not insist. The activities calendar, a meal in the dining room, a neighbour's name.</li>
+          <li><strong>Your check-in call lands here.</strong> The client dashboard reminds you from ten days after the move. Short and
+          specific: how the days are going, meals, sleep, getting around, anything they want changed.</li></ul>
+      </div>
+      <div class="stage">
+        <div class="stage-h">Days 15 to 30</div>
+        <div class="stage-when">Review what actually works</div>
+        <ul><li>Meals, sleep, mobility and concerns, with the community's staff where there is one. Short, frequent check-ins beat
+          one long visit.</li></ul>
+      </div>
+    </div>
+    <p><strong>When to say more.</strong> Distress that is severe, that lasts, or that comes with a sudden change in health or
+      thinking is not homesickness. Say so to the family and point them to a doctor rather than waiting it out.</p>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Pocket card &middot; print it and keep it in the kit</p>
+    <h2>Move-in</h2>
+    <ol>
+      <li><b>Floors covered. Floor plan in hand.</b></li>
+      <li><b>Meet the move-in contact.</b> Direct line.</li>
+      <li><b>Wipe down, shower curtain, beds made.</b></li>
+      <li><b>To-go bag to the bedroom.</b> Medications placed.</li>
+      <li><b>Bedroom, bathroom, kitchen first.</b></li>
+      <li><b>Their bedding, their photographs.</b></li>
+      <li><b>OPEN FIRST boxes opened,</b> paper out.</li>
+      <li><b>Keys and codes to the client.</b> Record it.</li>
+      <li><b>Debris pickup booked.</b></li>
+      <li><b>Check-in call in two weeks.</b></li>
+    </ol>
+  </section>
+  <footer>
+    <p><strong>Draft for Anthony, 17 October 2026.</strong> Part of the field guides the Job Plan links to under each stage:
+      <a href="sorting-guide.html">Sorting a House</a>, <a href="packing-guide.html">Packing a House</a>,
+      <a href="move-day-guide.html">Move Day</a> and <a href="first-night-guide.html">The First Night</a>, beside
+      <a href="photography-guide.html">Photographing a House</a> and the <a href="firearms-protocol.html">Firearms Protocol</a>.
+      The <a href="concierge-guide.html">Concierge Guide</a> explains each screen and button.</p>
+  </footer>
+
+</div>
+</body>
+</html>

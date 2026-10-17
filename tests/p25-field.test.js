@@ -155,15 +155,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const P = liftV(['planTasksFor', 'planTaskCtx', 'planProcedureHtml', 'planStageMeta'], ['PLAN_TASKS'], STATE.concat(['_planTaskDone', 'planDerivedLines']),
       Object.assign(BASE(), { _planTaskDone: () => false, planDerivedLines: () => [] }));
     const mm = P.planTaskCtx({ id: 7, svc: 'downsizing_move' }, { svc: 'downsizing_move' });
-    eq(P.planTasksFor(P.PLAN_TASKS, 'p3', mm).map((t) => t.key), ['mv_eta', 'mv_client_walk', 'mv_damage', 'mv_mover_signoff'], '⚠⚠ four boxes, the four facts');
+    // ⚠ THREE SINCE P27 (2026-10-17): mv_damage became the Move day stage's derived line off the Incidents card (Q80), and the
+    // mover's sign-off box names the Bill of Lading and the mover's inventory, filed under it (Q79). Keys unchanged.
+    eq(P.planTasksFor(P.PLAN_TASKS, 'p3', mm).map((t) => t.key), ['mv_eta', 'mv_client_walk', 'mv_mover_signoff'], '⚠⚠ three boxes, the three facts');
     eq(P.planTasksFor(P.PLAN_TASKS, 'p3', mm).map((t) => t.label),
-      ['Movers arrived', 'Client walked the new home and approved it', 'Damage photographed and reported the same day, or none', 'Moving company’s final sign-off'], 'in Anthony\'s words');
+      ['Movers arrived', 'Client walked the new home and approved it', 'Bill of Lading and the mover’s inventory signed'], 'in Anthony\'s words');
     const proc = P.planProcedureHtml('p3', mm);
-    eq(count(proc, '<li>'), 5, 'the procedure, five lines');
+    // Nine lines for the day and five for move-in since P27 (two blocks on the stage); it was one block of five.
+    eq(count(proc, '<li>'), 14, 'the procedure: how move day runs (9) and how move-in runs (5)');
     lacks(proc, 'type="checkbox"', '⚠ and no box in it');
     has(textOf(proc), 'be on site before they arrive', 'the presence rules are there, to read');
     has(textOf(proc), 'Close-out records the house empty', 'the walk Close-out already records is named, not ticked twice');
-    eq(P.planStageMeta(7, { id: 7, svc: 'downsizing_move' }, { svc: 'downsizing_move' }, 'p3', mm), '0 of 4 ticked', 'the stage counts the four facts only');
+    eq(P.planStageMeta(7, { id: 7, svc: 'downsizing_move' }, { svc: 'downsizing_move' }, 'p3', mm), '0 of 3 ticked', 'the stage counts the three facts only (P27: damage is a line)');
     eq(P.planProcedureHtml('p3', P.planTaskCtx({ id: 7, svc: 'home_cleanout' }, { svc: 'home_cleanout' })), '', 'no move day, no procedure');
     // The Job Plan draws it under the stage's boxes (browser step 73 drives the rendered stage: four boxes, five lines).
     has(codeOnly(fn('renderJobPlan')).replace(/''/g, "'p3'"), "planTasksHtml(jobId, 'p3', ctx) + planProcedureHtml('p3', ctx)", 'the move-day stage draws the procedure under its boxes');

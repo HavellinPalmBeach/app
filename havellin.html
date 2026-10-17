@@ -1357,7 +1357,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.17 · 10:36am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.17 · 4:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1614,6 +1614,11 @@ body.no-smf .smf-col{display:none;}
           <div><label>City</label><input type="text" id="i-dest-city" placeholder="e.g. Boca Raton"></div>
           <div><label>New home sq ft</label><input type="number" id="i-dest-sqft" placeholder="e.g. 1800" min="0"></div>
         </div>
+        <!-- The move-in contact (P27, Q81; Anthony, 2026-10-17): the one person at the new building or community who runs
+             move-ins, with their direct line. Its readers: the Job Plan header on a Home Transition and the move-day
+             procedure. Optional, because intake rarely knows it; Edit Client holds it for the day the client says who. -->
+        <label>Move-in contact <span style="font-size:10px;font-weight:400;color:var(--gray);">(optional — who runs move-ins at the new building or community, and their direct line)</span></label>
+        <input type="text" id="i-dest-contact" placeholder="e.g. Maria Lopez, Director of Resident Services, 561-555-0142">
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Move day is priced off the NEW home, not the old one — a Home Transition estimate will not save without the sq ft. It is correctable later under Edit Client.</div>
       </div>
     </div>
@@ -4297,6 +4302,10 @@ var ROOMS = [
     {name:'Garage (2-car)',tc:0.85,ps:2.25},
     {name:'Garage (3+ car)',tc:1.05,ps:3.00},
     {name:'Storage Room / Oversized Closets',tc:0.70,ps:1.45},
+    // ⚠ A STORAGE UNIT OFF THE PROPERTY (P27, Q76). Its contents are not inside the house's square footage, so it is an
+    // EXTERIOR row: its load is added on top of the sqft-anchored interior rather than averaged into it (engineIsExterior).
+    // Weighted as the storage room above; score it by how full the unit is. Intake asks about it on the house list.
+    {name:'Storage Unit (offsite)',tc:0.70,ps:1.45},
     {name:'Mechanical / Utility Room',tc:0.22,ps:0.35},
     {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
@@ -4404,7 +4413,7 @@ var ROOM_WEIGHT = {
   'Additional Bedroom(s)':1.5,'Additional Bathroom(s)':0.5,
   'Bonus Room':1.8,'Additional Office':1.8,'Additional Sitting Room':1.6,
   'Garage (1-car)':2.5,'Garage (2-car)':3.5,'Garage (3+ car)':4.5,
-  'Storage Room / Oversized Closets':2.5,'Mechanical / Utility Room':0.5,
+  'Storage Room / Oversized Closets':2.5,'Storage Unit (offsite)':2.5,'Mechanical / Utility Room':0.5,
   'Balcony':0.5,'Boat House':2.0,'Furnished Patio':2.2,'Outdoor Kitchen':1.0,
   // Cabana powder room: towels, toiletries, a small cabinet. Sits between the interior
   // Half Bath (0.4, which only modulates the sqft baseline) and a full bath in guest
@@ -4434,7 +4443,7 @@ var ROOM_WEIGHT = {
 var EXTERIOR_ROOMS = {
   'Garage (1-car)':1,'Garage (2-car)':1,'Garage (3+ car)':1,'Balcony':1,'Boat House':1,
   'Furnished Patio':1,'Outdoor Kitchen':1,'Pool / Cabana Half Bath':1,
-  'Pool House — with living quarters':1,'Screened Porch':1,'Shed':1,
+  'Pool House — with living quarters':1,'Screened Porch':1,'Shed':1,'Storage Unit (offsite)':1,
   'Guest House — 1 bedroom':1,'Guest House — 2 bedroom':1,'Guest House — 3 bedroom':1,
   "Caretaker's Cottage — 1 bedroom":1,"Caretaker's Cottage — 2 bedroom":1,"Caretaker's Cottage — 3 bedroom":1,
   'Additional Outbuilding Room':1
@@ -9835,6 +9844,7 @@ function saveIntake() {
   var destAddr = (document.getElementById('i-dest-addr')||{}).value ? document.getElementById('i-dest-addr').value.trim() : '';
   var destCity = (document.getElementById('i-dest-city')||{}).value ? document.getElementById('i-dest-city').value.trim() : '';
   var destSqft = (document.getElementById('i-dest-sqft')||{}).value ? document.getElementById('i-dest-sqft').value.trim() : '';
+  var destContact = String((document.getElementById('i-dest-contact')||{}).value || '').trim();
 
   var isEstate = isDecedentJob(null, svc);
   var _iv = function(id){ var el = document.getElementById(id); return el ? String(el.value || '').trim() : ''; };
@@ -9890,7 +9900,7 @@ function saveIntake() {
     mustFind:    intakeAsksHouseContents(svc) ? ((document.getElementById('i-mustfind')||{}).value||'') : '',
     safetyNotes: (document.getElementById('i-safety')||{}).value||'',
     houseFlags:  readHouseFlagInputs('i', svc, null),
-    destAddr:destAddr, destCity:destCity, destSqft:destSqft,
+    destAddr:destAddr, destCity:destCity, destSqft:destSqft, destContact:destContact,
     probateCase: document.getElementById('i-probate-case') ? document.getElementById('i-probate-case').value : '',
     probateCourt: document.getElementById('i-probate-court') ? document.getElementById('i-probate-court').value.trim() : '',
     probateDeadline: document.getElementById('i-probate-deadline') ? document.getElementById('i-probate-deadline').value : '',
@@ -10042,13 +10052,27 @@ var HOUSE_FLAGS = [
   { key:'sentimental', label:'Sentimental must-finds',
     detail:'Photos, letters, specific heirlooms.',
     ask:'Name them.' },
+  // ⚠ OFFSITE STORAGE OR A SECOND PROPERTY (P27, Q76; Anthony, 2026-10-17: "they might have a storage bin. We have to add
+  // that to the intake"). The industry's first-visit rule is to walk every space that holds belongings, storage units
+  // included, because volume hides there. Asked on every service but Home Prep, like the other rows; the walkthrough grid's
+  // *Storage Unit (offsite)* row prices what is found there and gives it a room card for the photographs.
+  { key:'storage', label:'Offsite storage or a second property',
+    detail:'A storage unit, a second home, a boat, a relative’s garage holding their things.',
+    ask:'Where it is, roughly how full, and who has the key or the gate card. Not the code: that goes on the Keys & access card.' },
   // prep:true — asked on Home Prep for Sale too (Q17): vendors go through the house, so the alarm,
   // the keys and who else comes and goes matter there; what is IN the house does not.
   { key:'access', label:'Access & security', prep:true,
     // ⚠ NO CODES HERE (2026-10-16, Q72): a note reaches the Jobs sheet, the estimate, Agent One's request and the worksheet in
     // Drive. A code goes on the Job Plan's Keys & access card, on its item, which the app clears when the job closes.
     detail:'Alarm system, cameras, smart locks, who else has keys (caregivers, cleaners, family), gated or HOA.',
-    ask:'The alarm company, gate or HOA contact, and anything we need to disarm. Not the codes: those go on the Keys & access card on the Job Plan, which clears them at close.' }
+    ask:'The alarm company, gate or HOA contact, and anything we need to disarm. Not the codes: those go on the Keys & access card on the Job Plan, which clears them at close.' },
+  // ⚠ WHO DECIDES FOR THE FAMILY, ON A LIVING CLIENT'S JOB (P27, Q77). `living:true`: never asked on a decedent service, where
+  // the authorized representative is the answer (houseFlagAsked hides it there, and readHouseFlagInputs keeps the record's
+  // value). The crew brief carries it, so the concierge knows before Day 1 whose word settles a drawer, and whose does not:
+  // the pre-job call box asked for it to be "written down" and there was nowhere structured to write it.
+  { key:'decider', label:'Who decides for the family', living:true,
+    detail:'When the client and the family disagree, whose word settles it.',
+    ask:'The name, how they are related, and a phone number. Who else will be in the house and should be heard, but does not decide.' }
 ];
 
 // Normalise whatever a record holds into { key:{on,note} } for every catalogue row.
@@ -10168,7 +10192,13 @@ function jobHasStandingFlags(job) { return standingFlagLines(job).length > 0; }
 // exists to prevent, so both build their rows from here rather than from markup.
 // Is this row asked on this service? Every row on every service but Home Prep, which asks only the
 // rows marked prep:true (Q17). One rule for both forms' rendering and both saves.
-function houseFlagAsked(f, svc) { return svc !== 'prep' || !!(f && f.prep); }
+// ⚠ AND A ROW MARKED living:true IS ASKED ON A LIVING CLIENT'S SERVICE ONLY (P27, Q77): on a decedent service the representative
+// decides, so the question has an answer already. The same rule hides it on both forms and keeps it off both saves.
+function houseFlagAsked(f, svc) {
+  if (svc === 'prep') return !!(f && f.prep);
+  if (f && f.living && svc && DECEDENT_SERVICES[svc]) return false;
+  return true;
+}
 // svc, when given, hides the rows that service is not asked (showHouseFlagRows repaints on a switch).
 function houseFlagInputsHtml(prefix, job, svc) {
   var st = houseFlagsOf(job);
@@ -10706,7 +10736,7 @@ var INTAKE_FIELDS = [
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
   'i-pri', 'i-re', 'i-prem', 'i-doclevel',
   'i-gate-706', 'i-gate-dispute', 'i-doc-tier', 'i-matter-type',
-  'i-dest-addr', 'i-dest-city', 'i-dest-sqft'
+  'i-dest-addr', 'i-dest-city', 'i-dest-sqft', 'i-dest-contact'
 ];
 
 // ⚠ WARN, NEVER BLOCK, WHEN A NEW CLIENT MATCHES A STREET ADDRESS ALREADY ON FILE (Q16). The
@@ -23635,6 +23665,8 @@ function renderClientDashboard(jobId) {
   h += '</div>';
   // KEYS & ACCESS (2026-10-16): under the hours, once an item is recorded; red while one is lost (Q74).
   if (typeof accessDashHtml === 'function') h += accessDashHtml(job);
+  // THE SETTLE-IN CHECK-IN (P27, 2026-10-17): on a closed Home Transition, from ten days after the move to three weeks.
+  if (typeof moveCheckinDashHtml === 'function') h += moveCheckinDashHtml(job);
   // THE RELEASE APPROVAL REQUEST (2026-10-17): once one has gone from the app, what it asked and of whom.
   if (typeof approvalRequestDashHtml === 'function') h += approvalRequestDashHtml(job);
 
@@ -24961,7 +24993,9 @@ var SIGNED_RECORD_KINDS = {
   // photographed. Ref the vendor, stableIds the lines it covers; estates and living work alike (pickupGroups).
   pickup:    { label: 'Vendor pickup list' },
   // The client's signed Contents Record (P25, Q51): the one paper a living family signs at close-out. Ref CONTENTS_SIGNED_REF.
-  contents:  { label: 'Signed Contents Record' }
+  contents:  { label: 'Signed Contents Record' },
+  // The Bill of Lading and the mover's inventory, signed on move day (P27, Q79): a photograph, filed from the Move day stage. Ref BOL_SIGNED_REF.
+  bol:       { label: 'Bill of Lading and mover’s inventory' }
 };
 var AGR_COSIGN_REF = 'agreement';   // signedRecords' ref for a co-signed agreement page — a stored value: never rename it
 var SIGNED_COPY_MAX_BYTES = 10 * 1024 * 1024;
@@ -30722,6 +30756,22 @@ var INV_RELEASE_CAUTIONS = [
         + 'because the person works with us, it is a conflict of interest for Havellin, so we put it on the record before '
         + 'anything leaves. <strong>Initialling a line below confirms that you know who is receiving it.</strong> To send '
         + 'a line somewhere else instead, ask your concierge.' },
+  // ⚠ FLAGGED FOR APPRAISAL AND PUT UP FOR SALE WITH NO VALUE, ON A LIVING CLIENT'S JOB (P27, Q82; Anthony, 2026-10-17: flag it
+  // on the paper). On an estate `needsAppraisal` below does this work. On living work nothing is valued and the ⚑ pressed in
+  // the house means the piece is going out to a specialist, so a ⚑ line put up for sale with no figure on it was a quiet desk
+  // note (agentValueSpecialistWorth) and nothing on the paper the client initials. The industry rule is appraise before
+  // selling, on every job; here it is a flag the client initials knowing, never a refusal (it is their property), and it
+  // never prints on an estate's request (`living`). The same badge rides the Contents Record's and the ledger's rows.
+  { key: 'flaggedUnvalued', living: true, badge: 'FLAGGED FOR APPRAISAL, NO VALUE RECORDED', tone: '#8a5a1e',
+    test: function(r){ return !!r.needsAppr && INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !_invHasValue(r) && !r.apprWaived; },
+    note: function(r){ return 'flagged for appraisal in the house; proposed: ' + (r.disposition || '') + ', with no value recorded'; },
+    panelHead: 'Flagged for appraisal, no value recorded.',
+    desk: 'The client may sell their own things unappraised, so it is not refused: the release approval request names it above the line the client initials.',
+    head: 'Property flagged for appraisal and proposed for sale with no value recorded',
+    body: 'These lines were flagged in the house as worth a specialist\u2019s look, and each is proposed for sale with no value '
+        + 'recorded yet. Selling before an appraisal is your decision, and a dealer\u2019s offer is often the market test, but '
+        + 'you would then have no independent record of what the piece was worth. <strong>Initialling a line below confirms '
+        + 'that you choose to sell it without an appraisal.</strong> To have it looked at first, ask your concierge.' },
   // ⚠⚠ AND THIS ONE IS THE DEFECT THE OTHER TWO ALREADY TAUGHT US ABOUT. Until today
   // _invAwaitingApproval filtered on disposition-plus-no-approval-date and consulted the
   // appraisal track NOWHERE, so an object the app itself had flagged for a specialist — sitting
@@ -37030,10 +37080,14 @@ function _renderInvPanel(job, ref) {
 // ⚠ THE LIVING CLIENT'S CONFLICT OF INTEREST, IN THE LINE'S RECORD (P20, Q25), through the one rule, invReleaseCautions:
 // the same caution the row, the bulk bar and the request read. Nothing renders where it does not apply.
 function _invPanelCautionHtml(job, ref) {
-  var c = invReleaseCautions(ref, job.id, 'staffRecipient')[0];
-  if (!c) return '';
-  return '<div class="inv-panel-caution" style="margin-bottom:10px;font-size:11px;line-height:1.5;color:#8a5a1e;">&#9888; '
-    + '<strong>Conflict of interest.</strong> ' + esc(c.note(ref, job.id)) + '. ' + esc(c.desk) + '</div>';
+  // ⚠ EVERY CAUTION WITH DESK WORDS (P27, Q82): the living client's staff caution (P20) and the ⚑ line sold unvalued, each
+  // saying why it is flagged and not refused. An estate's cautions carry no `desk` and print on the papers alone.
+  // Asked one caution at a time, by the keys the catalogue marks with `desk`, so only those tests run here (a pinned
+  // sandbox lifts the panel without the bequest rules; the row chip asks the same way).
+  return INV_RELEASE_CAUTIONS.filter(function (c) { return !!c.desk; }).map(function (c) { return invReleaseCautions(ref, job.id, c.key)[0]; }).filter(Boolean).map(function (c) {
+    return '<div class="inv-panel-caution" style="margin-bottom:10px;font-size:11px;line-height:1.5;color:#8a5a1e;">&#9888; '
+      + '<strong>' + esc(c.panelHead || 'Conflict of interest.') + '</strong> ' + (c.note ? esc(c.note(ref, job.id)) + '. ' : '') + esc(c.desk) + '</div>';
+  }).join('');
 }
 
 // ⚠ THE PERSON LEFT IN Channel / Recipient (P22), in the line's record, with the one press that says the name is right.
@@ -42492,14 +42546,18 @@ var PLAN_TASKS = [
   { key:'shred_done',         phase:'p2', sec:'Pickups &amp; disposal', when:function(c){ return c.shredding; },
     label:'Shredding completed, or the vendor confirmed on schedule' },
   // Phase 3 — move day (Home Transition only).
-  // ⚠⚠ FOUR RECORDED FACTS; THE REST IS THE PROCEDURE, READ, NOT TICKED (P25, Q42; Anthony, 2026-10-09). Thirteen boxes,
+  // ⚠⚠ THREE RECORDED FACTS; THE REST IS THE PROCEDURE, READ, NOT TICKED (P25, Q42; Anthony, 2026-10-09). Thirteen boxes,
   // four of them "TC present / oversees" rules a box cannot witness and two the same walk Close-out's *Home confirmed empty*
-  // records. A box now records what happened, the four facts below; how the day runs is PLAN_PROCEDURE, drawn as a list.
+  // records. A box now records what happened, the facts below; how the day runs is PLAN_PROCEDURE, drawn as a list.
   // Keys kept, so a tick made under the old words stays (mv_eta was "arrival confirmed; ETA logged").
+  // ⚠ mv_damage IS GONE (P27, Q80; Anthony, 2026-10-17): damage on the move is a property-damage incident (P26), with its
+  // photographs and the §6.3 notices, and the Move day stage reads it as a derived line (planDerivedLines 'p3'). A tick
+  // stored under the old key is left where it is, read by nothing.
+  // ⚠ mv_mover_signoff NAMES THE PAPERS (P27, Q79): the Bill of Lading and the mover's own inventory, signed on the day; a
+  // photograph of them is filed under the boxes through fileSignedCopy (planBolHtml). The key is unchanged.
   { key:'mv_eta',             phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Movers arrived' },
   { key:'mv_client_walk',     phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Client walked the new home and approved it' },
-  { key:'mv_damage',          phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Damage photographed and reported the same day, or none' },
-  { key:'mv_mover_signoff',   phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Moving company’s final sign-off' },
+  { key:'mv_mover_signoff',   phase:'p3', sec:'Move day',    when:function(c){ return c.isMM; }, label:'Bill of Lading and the mover’s inventory signed' },
   // Phase 4 — close-out
   { key:'broom_clean',        phase:'p4', sec:'Close-out', when:function(c){ return c.isDisposal; }, label:'Property broom-clean; final photographs taken inside and out' },
   { key:'home_empty',         phase:'p4', sec:'Close-out', when:function(c){ return c.isDisposal || c.isMM; },
@@ -42513,19 +42571,74 @@ var PLAN_TASKS = [
 
 // How a stage runs, read and never ticked (P25, Q42): the rules a box cannot witness. Drawn under the stage's boxes by
 // planTaskSectionsHtml's caller (planProcedureHtml), never counted in a stage's *N of M ticked*.
+// ⚠⚠ THE INDUSTRY'S PRACTICE, AS PROCEDURE LINES AND PAGES, NEVER BOXES (P27; Anthony, 2026-10-17: "let's not complicate the
+// app too much by creating more tick boxes ... we want to follow these industry best practices"). Each block is the 3 to 9
+// things that must happen at that stage, read under its boxes, and `doc` is the short page that teaches the method
+// (sorting-guide.html, packing-guide.html, move-day-guide.html, first-night-guide.html), linked under the list the way the
+// firearms protocol hangs off its flag. Choosing the mover (p0) is on a Home Transition; the sorting block on every service
+// that keeps an item record; packing on the downsizing services, which keep things; move day and move-in on a Home Transition.
 var PLAN_PROCEDURE = [
-  { phase:'p3', when:function(c){ return c.isMM; }, sec:'How move day runs', items: [
+  // Q78 (Anthony): the coverage question is asked of the mover when one is chosen, during the job, never on the pre-call.
+  { phase:'p0', when:function(c){ return c.isMM; }, sec:'Choosing the mover', items: [
+    'Ask the mover what the load is insured for. If the client thinks their things are worth more than that, have the mover quote the extra coverage before the date is fixed; the new building insures nothing.',
+    'Confirm the move-in contact at the new building or community (the name and number are on Edit Client), the elevator reservation, the loading dock and the parking at both ends, and any Certificate of Insurance the building wants from the mover.'
+  ] },
+  { phase:'p1', when:function(c){ return c.hasItemRecord; }, sec:'How the sorting runs', doc:'sorting-guide.html', docLabel:'Read Sorting a House', items: [
+    'Easy rooms first, sentimental last: garage and utility, guest rooms, kitchen, office and papers, bedrooms and closets, living and dining, then the photographs, letters and heirlooms.',
+    'Two to three hours of decisions, once a day. Tired people keep everything and argue; stop while it is still going well.',
+    'The client decides first; the family asks after. Nobody claims a thing before the client has said what happens to it, and nothing leaves the house as a surprise.',
+    'Quick wins first in every room: the expired, the broken, the duplicates. Then the one-year test on each Keep: not used or loved in a year, it goes in another pile.',
+    'Undecided is allowed with a day to come back to it, never as a pile that stays. Photograph a sentimental piece before it goes; the memory lives in the picture.',
+    'Worn or broken is disposal, not a donation. Keep pathways and exits clear as the piles grow.'
+  ] },
+  { phase:'p2', when:function(c){ return c.isDownsizing; }, sec:'Packing', doc:'packing-guide.html', docLabel:'Read Packing a House', items: [
+    'Pack from a zone out of the sorting path: storage areas and nonessentials first, the rooms they live in last.',
+    'Label the sides of every box, not the top: the room it goes to, what is in it, FRAGILE or HEAVY. A few boxes marked OPEN FIRST.',
+    'Furniture hardware in a labelled bag per piece, every bag in one parts box that stays with the concierge.',
+    'Fragile and high-value pieces wrapped on their own and marked; jewelry and the irreplaceable stay with the family, never on the truck.',
+    'The DO NOT LOAD closet: the to-go bag, the documents, the valuables and the keys go in it, the door is marked, and nothing in it is loaded.',
+    'The day before: fridge and freezer emptied and defrosted, propane tanks off, gas tools drained. Paint, chemicals and fuel are never packed; houseplants find a home.'
+  ] },
+  { phase:'p3', when:function(c){ return c.isMM; }, sec:'How move day runs', doc:'move-day-guide.html', docLabel:'Read Move Day', items: [
     'Confirm the movers’ arrival window the day before, and be on site before they arrive.',
+    'The to-go bag (medications, documents, chargers, a change of clothes) and the keys to the new home ride with the client, never on the truck.',
+    'Floors protected and pathways clear before anything moves. One family member stays with the client all day, not directing the movers; everyone else keeps clear of the crew.',
     'Brief the crew: point out the fragile and high-value pieces and share the floor plan.',
     'Stay with the loading throughout; stay beside the fragile and high-value pieces while they are carried.',
+    'Pace the day: breaks, water, a quiet room to sit in. Move days run longer than planned.',
     'Walk every room, closet, attic, garage and outdoor space before the truck leaves (Close-out records the house empty).',
+    'Sign the Bill of Lading and the mover’s inventory, photograph both and file them below.',
     'Be at the new home ahead of the truck where you can; direct the movers by the approved floor plan, and watch the fragile pieces come off.'
+  ] },
+  { phase:'p3', when:function(c){ return c.isMM; }, sec:'How move-in runs', doc:'first-night-guide.html', docLabel:'Read The First Night', items: [
+    'Floors protected before anything comes in; boxes to the rooms their labels name.',
+    'Bedroom, bathroom, kitchen first: the bed made with their own bedding, the shower curtain up, toiletries where they want them, the medications found and put where they live.',
+    'Before the crew leaves: a few familiar photographs where they can be seen, the OPEN FIRST boxes opened, packing paper out of the rooms they will use tonight.',
+    'Meet the move-in contact or the Director of Resident Services and get their direct line, not the front desk. The keys and codes for the new home go to the client.',
+    'A check-in call about two weeks on: the client dashboard reminds you.'
   ] }
 ];
 function planProcedureHtml(phase, ctx) {
   return PLAN_PROCEDURE.filter(function (p) { return p.phase === phase && (!p.when || p.when(ctx)); }).map(function (p) {
-    return planSubsec(p.sec) + '<ul class="plan-proc">' + p.items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>';
+    return planSubsec(p.sec) + '<ul class="plan-proc">' + p.items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>'
+      // The page that teaches the method, under the list (P27, Q75): a link a tap away, never a step.
+      + (p.doc ? '<div class="plan-proc-doc" style="font-size:11px;margin:-2px 0 8px 18px;"><a href="' + esc(p.doc) + '" target="_blank" rel="noopener" style="color:var(--bronze);font-weight:600;">'
+          + esc(p.docLabel || 'Read the guide') + ' &rarr;</a></div>' : '');
   }).join('');
+}
+// ⚠ THE BILL OF LADING AND THE MOVER'S INVENTORY, FILED LIKE EVERY SIGNED PAPER (P27, Q79): a photograph of the signed pages
+// through fileSignedCopy (kind `bol`, ref BOL_SIGNED_REF) into the client's Signed Records folder, listed with a Void for one
+// filed against the wrong paper. Drawn under the Move day boxes on a Home Transition; the box above records the signing.
+var BOL_SIGNED_REF = 'bol';   // signedRecords' ref for the Bill of Lading: a stored value, never rename it
+function bolSignedCopies(job) { return job ? signedRecordsOf(job, 'bol', BOL_SIGNED_REF) : []; }
+function planBolHtml(jobId, job) {
+  var recs = bolSignedCopies(job);
+  return '<div class="plan-bol" id="plan-bol-' + jobId + '" style="margin:8px 0 4px;">'
+    + signedRecordLinksHtml(jobId, recs)
+    + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px;">'
+    + signedCopyControlHtml(jobId, 'bol', { ref: BOL_SIGNED_REF }, recs.length ? 'File another copy' : 'File the Bill of Lading')
+    + '<span style="font-size:11px;color:var(--gray);">a photo of the signed Bill of Lading and the mover’s inventory, to the client’s Signed Records folder</span>'
+    + '</div></div>';
 }
 
 // Desk paperwork. Rendered on the Job Admin & Inv tab (the desk), under the client header and the
@@ -42805,6 +42918,19 @@ function planDerivedLines(jobId, job, est, phase, today) {
       if (phase !== 'access' && !l.ok) l.action = { label: 'Open Keys &amp; access', call: 'goToAccessCard(' + jobId + ')' };
       return l;
     }));
+  }
+  // ⚠ MOVE-DAY DAMAGE IS READ OFF THE INCIDENTS CARD, NEVER TICKED (P27, Q80; Anthony, 2026-10-17). The box *Damage photographed
+  // and reported the same day, or none* recorded the same fact a property-damage incident records with its photographs and the
+  // §6.3 notices (P26), and could read "none" beside an incident saying otherwise. One record now, and this line reads it.
+  if (phase === 'p3' && ctx.isMM && typeof incidentReportsOf === 'function') {
+    var _dmg = incidentReportsOf(job).filter(function (r) { return r.kind === 'damage'; });
+    var _dmgOpen = _dmg.filter(function (r) { return incidentStatus(job, r.id) === 'open'; }).length;
+    out.push({ key: 'move_damage', ok: !_dmgOpen, red: _dmgOpen > 0,
+               label: _dmg.length ? 'Damage reported: ' + _dmg.length + ' incident' + (_dmg.length === 1 ? '' : 's') : 'No damage reported',
+               detail: _dmg.length
+                 ? (_dmgOpen ? _dmgOpen + ' open &mdash; the Incidents card under In the house holds the photographs and the 24-hour notices' : 'all resolved &mdash; the Incidents card holds the record')
+                 : 'anything broken or scratched on the move goes on the Incidents card the same day, with photographs; the card tracks the 24-hour notices',
+               action: _dmgOpen ? { label: 'Open Incidents', call: 'goToIncidents(' + jobId + ')' } : null });
   }
   if (phase === 'p2') {
     var sent = !!docSentAt(job, 'invoice', 'midpoint');
@@ -43293,6 +43419,31 @@ function goToAccessCard(jobId) {
   return true;
 }
 // The client dashboard's card, under the Hours Log: only once an item is recorded; red through pl-red when one is lost.
+// ═══ THE SETTLE-IN CHECK-IN (P27, Q81; Anthony, 2026-10-17) ═══════════════════════════════════════════════════════════════
+// A Home Transition's client is called about two weeks after the move: the industry's first thirty days are short, frequent
+// check-ins, and distress that is more than homesickness is heard early. One grey line on the closed job's dashboard, read off
+// the delivery day the way the Form 706 reminder is read off the death: shown from MOVE_CHECKIN_FROM to MOVE_CHECKIN_TO days
+// after, nothing to tick, gone after. DOM-free and clock-free (`today` is an argument). The Google review ask stays where it
+// is (Q55). Nothing is sent.
+var MOVE_CHECKIN_FROM = 10;   // the first day the line shows
+var MOVE_CHECKIN_DAY = 14;    // the day it names
+var MOVE_CHECKIN_TO = 21;     // the last day it shows
+function moveCheckinLine(job, today) {
+  if (!job || job.svc !== 'downsizing_move' || !job.deliveredOn) return null;
+  var d = String(today || '');
+  var from = incidentDayPlus(job.deliveredOn, MOVE_CHECKIN_FROM), to = incidentDayPlus(job.deliveredOn, MOVE_CHECKIN_TO);
+  if (!from || !d || d < from || d > to) return null;
+  return { key: 'move_checkin', ok: false, label: 'Check-in call due around ' + fmtDate2(incidentDayPlus(job.deliveredOn, MOVE_CHECKIN_DAY)),
+           detail: 'two weeks after the move: how the days are going, meals, sleep, getting around, anything they want changed. '
+             + 'Distress that is severe, lasts, or comes with a sudden change in health or thinking is for a doctor, not for waiting out: say so to the family' };
+}
+function moveCheckinDashHtml(job, today) {
+  var l = moveCheckinLine(job, today || _todayStr());
+  if (!l) return '';
+  return '<div class="card" id="dash-checkin-' + job.id + '" style="margin-bottom:12px;">' + sectionHdr('Settling in')
+    + derivedLinesHtml([l], 'dash-derived-checkin-' + job.id) + '</div>';
+}
+
 function accessDashHtml(job) {
   if (!job || !accessItemsOf(job).length) return '';
   return '<div class="card acc-dash" id="dash-access-' + job.id + '" style="margin-bottom:12px;">'
@@ -44334,6 +44485,9 @@ function _repaintIncidents(jobId) {
   if (h) h.outerHTML = incidentHeaderHtml(job);
   var el = document.getElementById('plan-incidents-' + jobId);
   var rec = estimateStore[jobId];
+  // The Move day stage's damage line reads the card (P27, Q80): repainted with it, by id, so a report lands on the stage at once.
+  var d3 = document.getElementById('plan-derived-p3-' + jobId);
+  if (d3 && rec && rec.estimate && typeof planDerivedHtml === 'function') d3.outerHTML = planDerivedHtml(jobId, job, rec.estimate, 'p3');
   if (!el) return false;
   el.outerHTML = incidentsCardHtml(jobId, job, rec && rec.estimate);
   return true;
@@ -48330,6 +48484,8 @@ function renderJobPlan(jobId, job, est) {
   if (isMM && job.destAddr) {
     _hdrBits.push(['New Home', esc([job.destAddr, job.destCity ? job.destCity+', FL':''].filter(Boolean).join(', ') + (job.destSqft ? ' · '+job.destSqft+' sqft':''))]);
   }
+  // The move-in contact (P27, Q81): the person who runs move-ins at the new building, on the screen the concierge has open on move day.
+  if (isMM && String(job.destContact || '').trim()) _hdrBits.push(['Move-in contact', esc(String(job.destContact).trim())]);
   if (formal || isDocJob) {
     _hdrBits.push(['Documentation', formal ? 'Formal (court / attorney grade)' : 'Standard']);
   }
@@ -48393,12 +48549,13 @@ function renderJobPlan(jobId, job, est) {
     '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:4px;">Pre-Job Call Notes</div>' +
     '<textarea id="p0-call-notes-'+jobId+'" rows="4" style="width:100%;font-size:12px;padding:7px 9px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:Raleway,sans-serif;background:var(--cream);box-sizing:border-box;" placeholder="Emotional tone, family dynamics, anything the client mentioned that isn\'t in a checkbox..." oninput="savePlanNote('+jobId+',\'p0_call_notes\',this.value)">'+p0CallNote+'</textarea>' +
     '</div>' +
-    planTasksHtml(jobId, 'p0', ctx, null, ['Pre-job call']);
+    planTasksHtml(jobId, 'p0', ctx, null, ['Pre-job call']) +
+    planProcedureHtml('p0', ctx);   // choosing the mover, on a Home Transition (P27)
 
   // ── In the house: the room cards, the four in-house boxes under the grid ────────────
   var nLocked = rooms.filter(function(r){ return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   var nCleared = rooms.filter(function(r){ return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
-  var inHouse = planTasksHtml(jobId, 'p1', ctx);
+  var inHouse = planTasksHtml(jobId, 'p1', ctx) + planProcedureHtml('p1', ctx);   // how the sorting runs (P27), read under the boxes
   // The in-house boxes carry their own section heading (the catalogue's `sec`), so nothing is added here —
   // a second heading over the first read as two headings stacked on the card (seen in the browser, 2026-09-20).
   // ⚠ FOUND ON SITE, UNDER THE BOXES, ON AN ESTATE (P19): an original will or cash found in the house, recorded the
@@ -48413,10 +48570,11 @@ function renderJobPlan(jobId, job, est) {
     + '<div style="font-size:11px;color:var(--gray);margin-top:8px;line-height:1.5;">' + planHoursRuleTxt(!!(est && est.fixedPrice)) + '</div>';
 
   // ── Midpoint & pickups ───────────────────────────────────────────────────────────────
-  var p2 = planDerivedHtml(jobId, job, est, 'p2') + planTasksHtml(jobId, 'p2', ctx);
+  var p2 = planDerivedHtml(jobId, job, est, 'p2') + planTasksHtml(jobId, 'p2', ctx) + planProcedureHtml('p2', ctx);   // packing (P27)
 
   // ── Move day (Home Transition only) ─────────────────────────────────────────────────
-  var p3 = isMM ? planTasksHtml(jobId, 'p3', ctx) + planProcedureHtml('p3', ctx) : '';
+  // Damage on the move is read off the Incidents card (the derived line), the Bill of Lading is filed under the boxes (P27).
+  var p3 = isMM ? planDerivedHtml(jobId, job, est, 'p3') + planTasksHtml(jobId, 'p3', ctx) + planProcedureHtml('p3', ctx) + planBolHtml(jobId, job) : '';
 
   // ── Close-out ────────────────────────────────────────────────────────────────────────
   var p4 = planDerivedHtml(jobId, job, est, 'p4') +
@@ -52338,6 +52496,8 @@ function showEditClient(jobId) {
   html += fld('New Home Address', txt('dest-addr', job.destAddr, '123 New Address Blvd'), false);
   html += fld('City', txt('dest-city', job.destCity, 'e.g. Boca Raton'), false);
   html += fld('New Home Sq Ft <span style="font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the estimate will not save without it)</span>', txt('dest-sqft', job.destSqft, 'e.g. 1800', 'number'), false);
+  // The move-in contact (P27): optional on both forms, never held, so it can be filled in on site when the client says who.
+  html += fld('Move-in contact <span style="font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(who runs move-ins at the new building or community, and their direct line)</span>', txt('dest-contact', job.destContact, 'e.g. Maria Lopez, Director of Resident Services, 561-555-0142'), false);
   html += '</div>';
   html += '<div style="font-size:10px;color:var(--gray);margin:2px 0 6px;">Move day is priced off the <strong>new</strong> home, not the old one — the sq ft sets the supervision day and the unpack crew\'s hours. Like the other pricing inputs it is held once the estimate goes for approval; the save says how to reprice it.</div>';
   html += '</div>'; // end move destination
@@ -52735,6 +52895,8 @@ function saveClientEdit(jobId) {
   job.destAddr  = (document.getElementById('ec-dest-addr')||{}).value || '';
   job.destCity  = (document.getElementById('ec-dest-city')||{}).value || '';
   if (!_locked) job.destSqft = (document.getElementById('ec-dest-sqft')||{}).value || '';
+  var _ecDestContact = document.getElementById('ec-dest-contact');
+  if (_ecDestContact) job.destContact = String(_ecDestContact.value || '').trim();   // never held (P27)
 
   var isEstateEdit = ecIsEstateSvc(svc);
   // ⚠ EVERY DECEDENT FACT IS READ HERE, ON ALL THREE ESTATE SERVICES — not in the probate

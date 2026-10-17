@@ -510,7 +510,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const move = on({ svc: 'downsizing_move', re: 'yes' }, { svc: 'downsizing_move' });
     // ⚠ RESTATED (P25, Q42; Anthony, 2026-10-09): move day records four facts; the rest of the sequence is a procedure
     // read under them (PLAN_PROCEDURE), never ticked. It kept thirteen boxes, four of them rules a box cannot witness.
-    eq(move.filter((x) => x.indexOf('mv_') === 0), ['mv_eta', 'mv_client_walk', 'mv_damage', 'mv_mover_signoff'], 'Home Transition records the four move-day facts');
+    // ⚠ THREE SINCE P27 (2026-10-17, Q80): damage on the move is an incident, read as a derived line, never a box.
+    eq(move.filter((x) => x.indexOf('mv_') === 0), ['mv_eta', 'mv_client_walk', 'mv_mover_signoff'], 'Home Transition records the three move-day facts');
     eq(move.filter((x) => x.indexOf('nh_') === 0).length, 5, 'and the new-home prep');
     ok(move.indexOf('re_handoff') >= 0 && move.indexOf('re_disclosed') >= 0, 'and the RE handoff when the client came through real estate');
 
@@ -573,7 +574,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'custodyLogKept', 'planProcedureHtml', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'derivedLinesHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', 'donationReceiptLine', 'ledgerDerivedLines', 'planTaskApplies', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
@@ -581,7 +582,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr', '_ymdLocal',
             // The open job body (2026-09-20): stage cards on a thread, marked off the stage the job is in.
             'planStageCard', 'planStageState', 'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'],
-      vars: ['PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_PROCEDURE', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
+      vars: ['PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_PROCEDURE', 'BOL_SIGNED_REF', '_signedCopySpecs', '_signedCopyKeys', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS'],
       stubs: {
         document: dom, isFormalDoc: () => false,

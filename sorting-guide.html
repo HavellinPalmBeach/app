@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sorting a House &middot; Havellin Palm Beach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#faf8f4;
+  --surface:#f3efe6;
+  --ink:#2a241d;
+  --ink-soft:#5c5347;
+  --grey:#8a8078;
+  --bronze:#7a5a2e;
+  --bronze-bright:#a67c45;
+  --red:#8f2323;
+  --red-ground:#f7eaea;
+  --green:#4f6b2a;
+  --green-ground:#eef2e4;
+  --rule:#e3ddd1;
+  --rule-strong:#cec5b4;
+
+  --ff-display:'Spectral', Georgia, 'Times New Roman', serif;
+  --ff-body:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --ff-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#17140f;
+    --surface:#211c16;
+    --ink:#ece5d9;
+    --ink-soft:#b5aa99;
+    --grey:#8d8375;
+    --bronze:#c9a36a;
+    --bronze-bright:#dbb987;
+    --red:#e89393;
+    --red-ground:#33191a;
+    --green:#a6c478;
+    --green-ground:#1e2516;
+    --rule:#332c23;
+    --rule-strong:#4a4034;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#17140f;
+  --surface:#211c16;
+  --ink:#ece5d9;
+  --ink-soft:#b5aa99;
+  --grey:#8d8375;
+  --bronze:#c9a36a;
+  --bronze-bright:#dbb987;
+  --red:#e89393;
+  --red-ground:#33191a;
+  --green:#a6c478;
+  --green-ground:#1e2516;
+  --rule:#332c23;
+  --rule-strong:#4a4034;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--ff-body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:760px;
+  margin:0 auto;
+  padding-inline:22px;
+  padding-block:56px 96px;
+}
+
+/* ---- masthead ---- */
+.mast{border-bottom:2px solid var(--bronze);padding-bottom:26px;}
+.eyebrow{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:600;color:var(--bronze);margin:0 0 14px;
+}
+h1{
+  font-family:var(--ff-display);
+  font-size:clamp(34px,6.5vw,50px);
+  line-height:1.06;font-weight:700;margin:0;
+  text-wrap:balance;letter-spacing:-.015em;
+}
+.standfirst{
+  font-family:var(--ff-display);
+  font-size:18px;font-style:italic;line-height:1.55;
+  color:var(--ink-soft);margin:16px 0 0;max-width:60ch;
+}
+.meta{
+  display:flex;flex-wrap:wrap;gap:8px 26px;
+  margin-top:22px;font-size:12px;color:var(--grey);
+}
+.meta b{color:var(--ink-soft);font-weight:600;}
+
+/* ---- shared blocks ---- */
+section{margin-top:52px;}
+h2{
+  font-family:var(--ff-display);
+  font-size:26px;font-weight:600;line-height:1.2;
+  margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em;
+}
+h3{
+  font-size:13px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:700;color:var(--bronze);margin:30px 0 10px;
+}
+p{margin:0 0 14px;max-width:66ch;}
+.lede{color:var(--ink-soft);margin-bottom:26px;max-width:64ch;}
+strong{font-weight:700;}
+a{color:var(--bronze);}
+.btn{
+  font-family:var(--ff-body);font-size:.88em;font-weight:600;white-space:nowrap;
+  border:1px solid var(--rule-strong);border-radius:4px;padding:0 5px;background:var(--surface);
+}
+ul.plain{margin:0;padding-left:0;list-style:none;}
+ul.plain li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:64ch;
+}
+ul.plain li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+
+/* ---- the three rules ---- */
+.rules{
+  margin-top:44px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);
+}
+.rule-card{background:var(--surface);padding:20px 22px;}
+.rule-card .tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--bronze);font-weight:500;
+  display:block;margin-bottom:8px;
+}
+.rule-card h4{
+  font-family:var(--ff-display);font-size:19px;font-weight:600;
+  margin:0 0 8px;line-height:1.25;
+}
+.rule-card p{font-size:13.5px;margin:0;color:var(--ink-soft);line-height:1.55;}
+
+/* ---- tables ---- */
+.tbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:14.5px;}
+.tbl th{
+  text-align:left;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--grey);font-weight:700;padding:0 12px 8px 0;
+  border-bottom:1px solid var(--rule-strong);
+}
+.tbl td{padding:11px 12px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top;}
+.tbl td:first-child{font-weight:600;width:26%;}
+.tbl td.how{color:var(--ink-soft);font-size:13.5px;width:24%;}
+.tbl th:last-child,.tbl td:last-child{padding-right:0;}
+@media screen{ .tbl-scroll{overflow-x:auto;} }
+
+/* ---- the vase, three ways ---- */
+.ways{display:grid;gap:14px;margin-top:6px;}
+.way{border:1px solid var(--rule-strong);border-left-width:4px;padding:18px 20px 16px;background:var(--paper);}
+.way.bad{border-left-color:var(--red);}
+.way.ok{border-left-color:var(--bronze-bright);}
+.way.best{border-left-color:var(--green);background:var(--green-ground);}
+.way .tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:500;display:block;margin-bottom:4px;
+}
+.way.bad .tag{color:var(--red);}
+.way.ok .tag{color:var(--bronze);}
+.way.best .tag{color:var(--green);}
+.way h4{font-family:var(--ff-display);font-size:19px;font-weight:600;margin:0 0 10px;line-height:1.25;}
+.way ol{margin:0 0 12px;padding-left:22px;}
+.way li{font-size:14.5px;line-height:1.55;margin-bottom:5px;max-width:62ch;}
+.way .result{font-size:14px;line-height:1.55;margin:0;padding-top:10px;border-top:1px solid var(--rule);color:var(--ink-soft);}
+.way .result b{color:var(--ink);}
+.test{
+  margin-top:18px;font-family:var(--ff-display);font-size:18px;font-style:italic;line-height:1.5;
+  color:var(--bronze);max-width:60ch;
+}
+
+/* ---- staged sequence ---- */
+.stages{margin-top:10px;}
+.stage{
+  position:relative;
+  padding-left:52px;
+  padding-bottom:34px;
+  border-left:2px solid var(--rule-strong);
+  margin-left:14px;
+}
+.stage:last-child{border-left-color:transparent;padding-bottom:4px;}
+.stage::before{
+  content:attr(data-n);
+  position:absolute;left:-15px;top:0;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--bronze);color:var(--paper);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+.stage-h{
+  font-family:var(--ff-display);font-size:21px;font-weight:600;
+  margin:0 0 3px;line-height:1.25;
+}
+.stage-when{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--grey);font-weight:600;margin:0 0 14px;
+}
+.stage ul{margin:0;padding-left:0;list-style:none;}
+.stage li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:62ch;
+}
+.stage li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+.stage li.crit::before{background:var(--red);}
+
+/* ---- own frame or shared ---- */
+.split{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);margin-top:6px;
+}
+.side{background:var(--paper);padding:18px 20px 10px;}
+.side h4{font-family:var(--ff-display);font-size:19px;font-weight:600;margin:0 0 12px;line-height:1.25;}
+.side.own h4{color:var(--bronze);}
+
+/* ---- tricky spots ---- */
+.tricky{margin:6px 0 0;}
+.tricky dt{font-weight:700;font-size:15px;margin-top:16px;}
+.tricky dd{margin:4px 0 0;font-size:14.5px;line-height:1.6;color:var(--ink-soft);max-width:64ch;}
+
+/* ---- the review on the computer ---- */
+ol.desk{margin:6px 0 0;padding-left:0;list-style:none;counter-reset:d;}
+ol.desk li{
+  counter-increment:d;position:relative;padding-left:40px;
+  margin-bottom:14px;font-size:15px;line-height:1.55;max-width:64ch;
+}
+ol.desk li::before{
+  content:counter(d);
+  position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;
+  border:1.5px solid var(--bronze);color:var(--bronze);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ---- what the app cannot catch yet ---- */
+.gaps{
+  margin-top:52px;background:var(--surface);border-left:3px solid var(--bronze);
+  padding:22px 24px 12px;
+}
+.gaps h2{font-size:22px;}
+.gaps p{font-size:14.5px;color:var(--ink-soft);}
+
+/* ---- field card ---- */
+.card{
+  margin-top:56px;border:2px solid var(--ink);padding:24px 26px 14px;background:var(--paper);
+}
+.card .eyebrow{margin-bottom:6px;}
+.card h2{font-size:28px;margin-bottom:16px;}
+.card ol{margin:0;padding-left:0;list-style:none;counter-reset:c;}
+.card li{
+  counter-increment:c;position:relative;padding-left:38px;
+  margin-bottom:11px;font-size:15.5px;line-height:1.45;
+}
+.card li::before{
+  content:counter(c,decimal-leading-zero);
+  position:absolute;left:0;top:2px;
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;color:var(--bronze);
+}
+.card li b{font-weight:700;}
+
+/* ---- footer ---- */
+footer{
+  margin-top:64px;padding-top:22px;border-top:1px solid var(--rule-strong);
+  font-size:12.5px;color:var(--grey);line-height:1.65;
+}
+footer p{max-width:66ch;}
+
+@media screen and (max-width:600px){
+  .wrap{padding-inline:16px;padding-block:38px 64px;}
+  .stage{padding-left:36px;margin-left:10px;}
+  .stage::before{left:-14px;width:26px;height:26px;font-size:11px;}
+  .tbl td:first-child{width:34%;}
+  .card{padding:20px 18px 10px;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+}
+
+@media print{
+  @page{margin:.6in .6in;}
+  :root{--paper:#fff;--surface:#f4f1ec;--ink:#1a1a1a;--ink-soft:#333;--grey:#555;
+        --rule:#ccc;--rule-strong:#999;--red-ground:#f6eded;--green-ground:#f1f4ea;}
+  body{background:#fff;}
+  .wrap{max-width:100%;padding-block:0;padding-inline:0;}
+  h1{font-size:28px;}
+  h2,h3,.stage-h,.rule-card h4,.way h4,.side h4{page-break-after:avoid;break-after:avoid;}
+  /* Keep a rule, a way, a stage, a side and the card whole; never a long list. */
+  .rule-card,.way,.stage,.side,.tbl tr,.gaps{page-break-inside:avoid;break-inside:avoid;}
+  .card{page-break-before:always;break-before:page;page-break-inside:avoid;break-inside:avoid;}
+  p,li{orphans:3;widows:3;}
+  .tbl{font-size:11.5px;}
+  footer{page-break-before:avoid;break-before:avoid;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Havellin Palm Beach &middot; Field Guide</p>
+    <h1>Sorting a House</h1>
+    <p class="standfirst">How to help a family decide what stays and what goes, without the day going wrong.
+      Written for someone doing it for the first time.</p>
+    <div class="meta">
+      <span><b>For</b> The concierge running the sorting days</span>
+      <span><b>In the app</b> Job Plan, <em>In the house</em>, under the boxes</span>
+      <span><b>Status</b> Draft for Anthony</span>
+      <span><b>Issued</b> 17 Oct 2026</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>Why the order matters</h2>
+    <p class="lede">Families that start with the photographs stall. Families that build momentum through the easy
+      rooms finish. So the house is sorted from the least emotional room to the most, whatever order it was
+      walked in for the estimate.</p>
+    <ol>
+      <li><strong>Garage, utility and storage.</strong> Tools, paint, boxes nobody has opened in years. Fast decisions, visible progress.</li>
+      <li><strong>Guest rooms.</strong> Furniture the client does not sleep in and linen nobody uses.</li>
+      <li><strong>Kitchen.</strong> Duplicates, expired food, gadgets. Keep the set they cook with.</li>
+      <li><strong>Office and papers.</strong> See <em>Papers</em> below: there is always more than it looks.</li>
+      <li><strong>Bedrooms and closets.</strong> Clothes are personal but not sentimental for most people.</li>
+      <li><strong>Living and dining rooms.</strong> The big pieces, and the first real conversations about the new home.</li>
+      <li><strong>Sentimental things last.</strong> Photographs, letters, heirlooms, holiday decorations. By now the family has practice.</li>
+    </ol>
+    <p>If the plan's rooms are in a different order, that is the order the house was walked for the estimate.
+      Work them in the order above anyway.</p>
+  </section>
+
+  <div class="rules">
+    <div class="rule-card">
+      <span class="tag">Rule 1</span>
+      <h4>Two to three hours, once a day</h4>
+      <p>Decisions tire people out. Tired people keep everything, or panic and throw out what they will miss, and
+        long sessions end in arguments. Stop while it is still going well.</p>
+    </div>
+    <div class="rule-card">
+      <span class="tag">Rule 2</span>
+      <h4>The client decides first</h4>
+      <p>The family advises. Nobody claims a piece before the client has said what happens to it, and nothing is
+        cleared out as a surprise. Ever.</p>
+    </div>
+    <div class="rule-card">
+      <span class="tag">Rule 3</span>
+      <h4>Sort by use and space, not price</h4>
+      <p>Never debate what something is worth standing in the room. Valuing is a separate job, done on the computer afterwards and by
+        specialists. Press the Appraise flag when you shoot it and move on.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>Four decisions for everything</h2>
+    <p>Every object gets one of four answers, and the destinations you tap in the camera are those answers: <strong>Keep</strong>
+      (or <strong>New home</strong> on a move), <strong>To a person</strong>, <strong>Sell</strong> or <strong>Donate</strong>,
+      and <strong>Remove</strong>.</p>
+    <ul class="plain">
+      <li><strong>Undecided is allowed, with a date.</strong> A "not sure" pile is fine when the family agrees on the day they
+        will come back to it. It is not a fifth answer that lives in the garage until move day.</li>
+      <li><strong>Gifts to family have a claim date.</strong> "Anything you want, tell us by Friday." After that, what is
+        unclaimed goes to sale or donation. Say the date on the pre-job call and again on the first sorting day.</li>
+      <li><strong>Quick wins first in every room.</strong> Expired products, broken things, duplicates (keep the best one,
+        donate the rest). Ten minutes of this gets a room moving.</li>
+      <li><strong>The one-year test for every Keep.</strong> Not used or loved in the past year? It almost certainly belongs
+        in another pile. Ask the question gently and let the client answer it.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Keep the memory, not the volume</h2>
+    <p>Most sentimental things are kept for the memory, not the object. Photograph the piece before it goes, with the
+      client holding it if they like, and the memory lives in the picture. A single curated memory box, a labelled album
+      or a family journal does what six boxes of loose keepsakes cannot.</p>
+    <p>Where a piece really is going to a family member, record who it goes to in the camera (<strong>To a person</strong>)
+      so the record says so, and it leaves the house with its name on it.</p>
+  </section>
+
+  <section>
+    <h2>Papers</h2>
+    <ul class="plain">
+      <li><strong>Paper is always more than it looks.</strong> Plan a session for it on its own.</li>
+      <li><strong>Financial records older than seven years</strong> can usually go to the shredder. Tax returns, deeds, titles,
+        insurance policies, wills and trust papers, military records and anything with a court on it stay, and on an estate
+        they go to the representative or the attorney against a signed receipt.</li>
+      <li><strong>Digitise what matters</strong> (photographs, letters the family wants to keep) rather than boxing it.</li>
+      <li><strong>What travels with the client</strong> is set aside now: the documents they will need in the first week at the
+        new home. They go in the to-go bag, never on the truck (<a href="move-day-guide.html">Move Day</a>).</li>
+      <li>Shredding is a vendor's job: the Job Plan's <em>Midpoint &amp; pickups</em> stage has the box for it when a shredding
+        vendor is on the job.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Donations are not disposal</h2>
+    <p>Worn, broken or stained is not a donation. Dropping it at a charity passes the problem on to volunteers, and the
+      receipt is worth nothing. Dispose of it honestly and donate what somebody can use. Gently used furniture and
+      household goods go to the furniture charities; many collect for free. Book the pickups as the piles grow, not the
+      week of the move.</p>
+  </section>
+
+  <section>
+    <h2>Safety while you sort</h2>
+    <ul class="plain">
+      <li>Pathways clear, boxes out of walkways, exits never blocked. Piles grow faster than anyone expects.</li>
+      <li>Nothing stacked on the stairs. Nothing heavy on a high shelf because it was "going anyway".</li>
+      <li>Anything that worries you, from a hazard in the house to a person in it, goes on the Incidents card the same day.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Pocket card &middot; print it and keep it in the kit</p>
+    <h2>The sorting day</h2>
+    <ol>
+      <li><b>Easy rooms first,</b> sentimental last.</li>
+      <li><b>Two to three hours.</b> Then stop.</li>
+      <li><b>The client decides,</b> the family advises.</li>
+      <li><b>No claiming, no surprises.</b></li>
+      <li><b>Quick wins first:</b> expired, broken, duplicates.</li>
+      <li><b>Not used in a year?</b> Another pile.</li>
+      <li><b>Undecided needs a date.</b></li>
+      <li><b>Photograph it before it goes.</b></li>
+      <li><b>Never price it in the room.</b> Flag it.</li>
+      <li><b>Broken is not a donation.</b></li>
+    </ol>
+  </section>
+  <footer>
+    <p><strong>Draft for Anthony, 17 October 2026.</strong> Part of the field guides the Job Plan links to under each stage:
+      <a href="sorting-guide.html">Sorting a House</a>, <a href="packing-guide.html">Packing a House</a>,
+      <a href="move-day-guide.html">Move Day</a> and <a href="first-night-guide.html">The First Night</a>, beside
+      <a href="photography-guide.html">Photographing a House</a> and the <a href="firearms-protocol.html">Firearms Protocol</a>.
+      The <a href="concierge-guide.html">Concierge Guide</a> explains each screen and button.</p>
+  </footer>
+
+</div>
+</body>
+</html>

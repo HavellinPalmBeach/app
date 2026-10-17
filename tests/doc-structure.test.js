@@ -32,6 +32,11 @@ const DOCS = [
   { file: 'concierge-guide.html', wrapper: 'page', minH2: 10, minBoxes: 50 },
   { file: 'firearms-protocol.html', wrapper: 'wrap', minH2: 3, minBoxes: 0 },
   { file: 'photography-guide.html', wrapper: 'wrap', minH2: 8, minBoxes: 0 },
+  // The four stage guides the Job Plan links to (2026-10-17, P27), in the photography guide's shape.
+  { file: 'sorting-guide.html', wrapper: 'wrap', minH2: 6, minBoxes: 0 },
+  { file: 'packing-guide.html', wrapper: 'wrap', minH2: 6, minBoxes: 0 },
+  { file: 'move-day-guide.html', wrapper: 'wrap', minH2: 6, minBoxes: 0 },
+  { file: 'first-night-guide.html', wrapper: 'wrap', minH2: 5, minBoxes: 0 },
 ];
 
 // The boxes a reader sees as a callout. None of them may hold a section heading or another box.

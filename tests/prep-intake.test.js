@@ -54,7 +54,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', 'probate', 'contested_probate'].forEach((svc) => {
       const r = run(svc);
       eq([r.find, r.level], ['', ''], svc + ' still shows the must-find question and the level');
-      eq(Object.keys(r.rows).filter((k) => r.rows[k] !== ''), [], svc + ' shows every row');
+      // P27 (2026-10-17, Q77): *Who decides for the family* is a living client's row, hidden on a decedent service, where
+      // the representative is the answer. Every other row is shown on every service but prep.
+      eq(Object.keys(r.rows).filter((k) => r.rows[k] !== ''), /^(cleanout|probate|contested_probate)$/.test(svc) ? ['decider'] : [], svc + ' shows every row' + (/probate|cleanout$/.test(svc) ? ' but the decider' : ''));
     });
   }
 

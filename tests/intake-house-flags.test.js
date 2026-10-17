@@ -48,13 +48,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // A job created before this shipped. Nobody was asked, and that is a real answer.
   const LEGACY = { id: 7, name: 'Ellsworth', notes: 'Old free-text note' };
 
-  group('the catalogue — seven rows, and every one of them earns a notes box');
+  group('the catalogue — nine rows, and every one of them earns a notes box');
   {
-    eq(HOUSE_FLAGS.length, 7, 'seven rows, the seven Anthony named');
+    // Seven Anthony named on 2026-09-10; offsite storage (Q76) and who decides for the family (Q77) joined on 2026-10-17 (P27).
+    eq(HOUSE_FLAGS.length, 9, 'nine rows: the seven Anthony named, storage and the decider');
     eq(HOUSE_FLAGS.map((f) => f.key),
-       ['cash', 'valuables', 'firearms', 'safes', 'documents', 'sentimental', 'access'],
+       ['cash', 'valuables', 'firearms', 'safes', 'documents', 'sentimental', 'storage', 'access', 'decider'],
        'in the order they are asked on the call');
-    eq(new Set(HOUSE_FLAGS.map((f) => f.key)).size, 7, 'keys are distinct — a collision would overwrite a row silently');
+    eq(new Set(HOUSE_FLAGS.map((f) => f.key)).size, 9, 'keys are distinct — a collision would overwrite a row silently');
 
     // `ask` is the whole value of a row. "Firearms ✓" tells a crew in the driveway nothing.
     HOUSE_FLAGS.forEach((f) => {
@@ -88,7 +89,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('houseFlagsOf — a record from before this shipped reads as "nobody was asked"');
   {
     const legacy = ctx.houseFlagsOf(LEGACY);
-    eq(Object.keys(legacy).length, 7, 'every catalogue row is present');
+    eq(Object.keys(legacy).length, 9, 'every catalogue row is present');
     ok(HOUSE_FLAGS.every((f) => legacy[f.key].on === false), 'nothing is ticked');
     ok(HOUSE_FLAGS.every((f) => legacy[f.key].note === ''), 'and no note is invented');
 

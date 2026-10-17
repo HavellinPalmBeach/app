@@ -124,9 +124,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-05 (P20, Q25): a fifth caution, `staffRecipient` (a living client's line sold or given to one of
     // Havellin's people: flagged, never refused, so the client signs knowing), is a question about whom the property goes
     // to, so it sits with the authority cautions and before the price one. The rule pinned is unchanged.
+    // RESTATED 2026-10-17 (P27, Q82): a sixth caution, `flaggedUnvalued` (a living client's ⚑ line put up for sale with no
+    // value recorded: flagged on the paper, never refused), is a PRICE question, so it sits after the authority cautions
+    // and beside the estate's price caution, which it mirrors for living work. Authority first, valuation last, unchanged.
     eq(s.INV_RELEASE_CAUTIONS.map((c) => c.key).join(','),
-       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,needsAppraisal',
-       'authority cautions first, the valuation one last');
+       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,flaggedUnvalued,needsAppraisal',
+       'authority cautions first, the valuation ones last');
     s.INV_RELEASE_CAUTIONS.forEach((c) => {
       ok(c.head && c.body && c.badge && c.tone, c.key + ' carries a heading, a body and a badge');
       eq(typeof c.test, 'function',

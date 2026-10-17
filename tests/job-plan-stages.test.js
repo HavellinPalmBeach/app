@@ -32,13 +32,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     opts = opts || {};
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'planProcedureHtml', 'custodyLogKept', 'planTaskCtx', 'planTaskApplies', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'planProcedureHtml', 'custodyLogKept', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'planTaskCtx', 'planTaskApplies', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'derivedLinesHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', 'clearedFlag', '_shotCount', '_slotRefs', 'roomStatusNormalize',
             'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
             'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr', '_ymdLocal',
             'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'],
-      vars: ['PLAN_PROCEDURE', 'PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
+      vars: ['PLAN_PROCEDURE', 'PLAN_VALUABLES_VENDOR_TYPES', 'BOL_SIGNED_REF', '_signedCopySpecs', '_signedCopyKeys', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
              'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES', 'CONTRACTOR_TC_NAME', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'ESTATE_AUTHORITIES', 'SITE_FIND_KINDS'],
       stubs: {
         document: dom, isFormalDoc: () => false, _sfHost: () => '', renderVendorSourcing: () => '<i>SOURCING</i>',
@@ -119,7 +119,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const fid = /\bPR\b|pr_|representative|trustee|disposition|ledger/i;
       const signoff = all.filter((t) => { const w = String(t.key) + ' ' + String(t.label); return /sign-?off/i.test(w) && fid.test(w); });
       eq(signoff.map((t) => t.key), [], '⚠⚠ no task on the plan or the desk is a fiduciary\'s sign-off box: the signed Disposition Ledger is the sign-off (P19)');
-      ok(all.some((t) => /sign-?off/i.test(String(t.label))), '(the pattern still finds a sign-off where one is: the mover\'s)');
+      // P27 (2026-10-17): the mover's box names the papers, *Bill of Lading and the mover’s inventory signed*, so the sanity
+      // check reads that label; the net above is unchanged.
+      ok(all.some((t) => /Bill of Lading/.test(String(t.label))), '(the mover\'s paper is still a box on move day, under its own name)');
       const prBoxes = (plan(JOB({ svc: 'probate', matterType: 'probate' }), EST({ svc: 'probate' })).out.match(/<label class="plan-chk[^>]*>[\s\S]*?<\/label>/g) || []);
       ok(prBoxes.length > 5, 'a probate plan draws its boxes');
       eq(prBoxes.filter((b) => /sign-?off/i.test(b)), [], '⚠ and none of them is a sign-off');
