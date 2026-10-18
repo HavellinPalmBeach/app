@@ -814,6 +814,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .modal-box{background:var(--white);border-radius:10px;padding:2rem;width:340px;border-top:3px solid var(--bronze);max-height:90vh;overflow-y:auto;}
 .modal-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:500;margin-bottom:6px;}
 .modal-sub{font-size:12px;color:var(--gray);margin-bottom:1.25rem;}
+/* The field guides over the plan (P27, 2026-10-18): a page in a panel with a Close, never a new tab. */
+.guide-box{background:var(--white);border-radius:10px;border-top:3px solid var(--bronze);width:min(920px,calc(100vw - 24px));height:92vh;display:flex;flex-direction:column;overflow:hidden;}
+.guide-hd{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border);}
+.guide-hd .modal-title{margin:0;flex:1;font-size:18px;}
+.guide-hd a{font-size:11px;color:var(--bronze);white-space:nowrap;}
+.guide-box iframe{flex:1;width:100%;border:0;background:#faf8f4;}
 .pin-input{font-size:20px;letter-spacing:.3em;text-align:center;padding:12px;border:1.5px solid var(--border-md);border-radius:6px;background:var(--cream);}
 .pin-input:focus{border-color:var(--bronze);}
 
@@ -1015,6 +1021,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   /* Modals become bottom sheets — anchored to the thumb, full width, and always
      scrollable. The inline width:NNNpx on individual boxes has to be overridden. */
   .modal-overlay{align-items:flex-end;}
+  .guide-box{width:100vw;height:100vh;border-radius:0;}
   .modal-box{width:100%!important;max-width:100%!important;padding:1.1rem 1rem 1.4rem;
     border-radius:12px 12px 0 0;max-height:92vh;}
 
@@ -1357,7 +1364,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.17 · 4:00pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.17 · 9:36pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3009,6 +3016,17 @@ body.no-smf .smf-col{display:none;}
   </div>
 </div>
 
+<!-- THE FIELD GUIDES, OVER THE APP (P27, 2026-10-18; Anthony: open them like the room-score info box, not a new tab). openGuidePage
+     loads the page into the frame and shows this; closeGuidePage empties the frame and hides it. The page keeps its own address
+     for printing the pocket card ("Open in its own tab" in the header). -->
+<div class="modal-overlay" id="guide-modal" style="display:none;" onclick="if(event.target===this)closeGuidePage()">
+  <div class="guide-box">
+    <div class="guide-hd"><div class="modal-title" id="guide-title">Guide</div>
+      <a id="guide-open" href="#" target="_blank" rel="noopener">Open in its own tab &rarr;</a>
+      <button type="button" class="btn-s" onclick="closeGuidePage()">Close</button></div>
+    <iframe id="guide-frame" title="Field guide" src="about:blank"></iframe>
+  </div>
+</div>
 <!-- REPORT AN INCIDENT (P26, 2026-10-16). Opened from Report an incident on the Job Plan's Incidents card, and for every later act
      on an incident (a note, the resolution, a reopening, the client told, the carrier engaged, the hotline called). Nothing recorded
      is edited or deleted: each act is a new entry (saveIncident). -->
@@ -10595,10 +10613,9 @@ function _sfRowHtml(job, l) {
     '<span class="sf-lbl">' + esc(l.label) + '</span>' +
     '<span class="sf-txt">' + esc(l.note) + '</span>' + tick +
     (l.rule ? '<span class="sf-rule">' + esc(l.rule) + '</span>' : '') +
-    // target=_blank so a tap on the brief never navigates away from the Job Plan the
+    // Over the plan (guideLinkHtml, P27), so a tap on the brief never navigates away from the Job Plan the
     // crew is working from — losing the tab mid-room is how somebody stops opening it.
-    (l.doc ? '<span class="sf-rule"><a href="' + esc(l.doc) + '" target="_blank" rel="noopener">'
-             + esc(l.docLabel || 'Read the protocol') + ' &rarr;</a></span>' : '') +
+    (l.doc ? '<span class="sf-rule">' + guideLinkHtml(l.doc, l.docLabel || 'Read the protocol') + '</span>' : '') +
   '</div>';
 }
 
@@ -10698,14 +10715,14 @@ function firearmsBannerHtml(job) {
     + '<div class="fa-rule">' + esc(row.crewRule || 'Nothing moves without written authority.') + '</div>'
     + (f.note ? '<div class="fa-note">Intake: \u201c' + esc(f.note) + '\u201d</div>'
               : '<div class="fa-note">Ticked at intake, no detail recorded &mdash; ask the client before Day 1.</div>')
-    + (row.doc ? '<a class="fa-link" href="' + esc(row.doc) + '" target="_blank" rel="noopener">' + esc(row.docLabel || 'Read the firearms protocol') + ' &rarr;</a>' : '')
+    + (row.doc ? guideLinkHtml(row.doc, row.docLabel || 'Read the firearms protocol').replace('<a ', '<a class="fa-link" ') : '')
     + '</div>';
 }
 function firearmsWorkspaceLine(job) {
   if (!firearmsFlaggedAtIntake(job)) return '';
   var row = _firearmsRow();
   return '<div class="fa-line">&#9888; Firearms flagged on this job &mdash; photograph in place, nothing moves.'
-    + (row.doc ? ' <a href="' + esc(row.doc) + '" target="_blank" rel="noopener">Protocol &rarr;</a>' : '') + '</div>';
+    + (row.doc ? ' ' + guideLinkHtml(row.doc, 'Protocol') : '') + '</div>';
 }
 
 // Every field on the Client Intake form, and the three that reset to something other
@@ -33549,7 +33566,7 @@ function printAppraisalWorklist(jobId, opt) {
       html += '<div style="font-size:11px;color:#3c3228;line-height:1.5;"><strong>' + tr.ready.length
         + ' cleared to carry.</strong> Non-NFA, authorised in writing, serial and dealer on the record. '
         + 'Locked case, unloaded, not on your person, direct route &mdash; and an itemised receipt signed at the counter before you leave. '
-        + '<a href="' + esc(FIREARMS_PROTOCOL_DOC) + '" target="_blank" rel="noopener">Full protocol &rarr;</a></div>'
+        + guideLinkHtml(FIREARMS_PROTOCOL_DOC, 'Full protocol') + '</div>'
         + '<div style="font-size:11px;color:#666;margin-top:6px;">'
         + tr.ready.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)')
             + ' &middot; <span style="font-family:monospace;">' + esc(r.serial) + '</span>'
@@ -42618,12 +42635,34 @@ var PLAN_PROCEDURE = [
     'A check-in call about two weeks on: the client dashboard reminds you.'
   ] }
 ];
+// ⚠ A GUIDE OPENS OVER THE APP, NEVER IN A NEW TAB (P27, 2026-10-18; Anthony, asked whether the links were "like the info icon
+// … or literally a new tab": the info icon). One opener for every page the app links (the four stage guides and the firearms
+// protocol): the href stays, so a long press still opens the page on its own, and the click loads it into #guide-frame instead.
+// closeGuidePage empties the frame so a page is never left loaded behind a hidden overlay.
+function guideLinkHtml(doc, label) {
+  return '<a href="' + esc(doc) + '" rel="noopener" onclick="return openGuidePage(event, this.getAttribute(\'href\'), this.textContent)">' + esc(label) + ' &rarr;</a>';
+}
+function openGuidePage(ev, doc, title) {
+  var ov = document.getElementById('guide-modal'), fr = document.getElementById('guide-frame');
+  if (!ov || !fr || !doc) return true;   // no panel on this page: let the link open as a link
+  if (ev && ev.preventDefault) ev.preventDefault();
+  var t = document.getElementById('guide-title'), o = document.getElementById('guide-open');
+  if (t) t.textContent = String(title || 'Guide').replace(/\s*→\s*$/, '').replace(/^Read\s+/, '');
+  if (o) o.setAttribute('href', doc);
+  fr.setAttribute('src', doc);
+  ov.style.display = 'flex';
+  return false;
+}
+function closeGuidePage() {
+  var ov = document.getElementById('guide-modal'), fr = document.getElementById('guide-frame');
+  if (fr) fr.setAttribute('src', 'about:blank');
+  if (ov) ov.style.display = 'none';
+}
 function planProcedureHtml(phase, ctx) {
   return PLAN_PROCEDURE.filter(function (p) { return p.phase === phase && (!p.when || p.when(ctx)); }).map(function (p) {
     return planSubsec(p.sec) + '<ul class="plan-proc">' + p.items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul>'
-      // The page that teaches the method, under the list (P27, Q75): a link a tap away, never a step.
-      + (p.doc ? '<div class="plan-proc-doc" style="font-size:11px;margin:-2px 0 8px 18px;"><a href="' + esc(p.doc) + '" target="_blank" rel="noopener" style="color:var(--bronze);font-weight:600;">'
-          + esc(p.docLabel || 'Read the guide') + ' &rarr;</a></div>' : '');
+      // The page that teaches the method, under the list (P27, Q75): a link a tap away, never a step; it opens over the plan.
+      + (p.doc ? '<div class="plan-proc-doc" style="font-size:11px;margin:-2px 0 8px 18px;font-weight:600;">' + guideLinkHtml(p.doc, p.docLabel || 'Read the guide') + '</div>' : '');
   }).join('');
 }
 // ⚠ THE BILL OF LADING AND THE MOVER'S INVENTORY, FILED LIKE EVERY SIGNED PAPER (P27, Q79): a photograph of the signed pages

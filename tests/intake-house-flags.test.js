@@ -30,7 +30,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines', 'jobHasStandingFlags',
       'houseFlagInputsHtml', '_houseFlagRowClass', 'standingFlagsBlock',
       // The must-find items and the Found tick (2026-09-19), and the hosts the brief renders through.
-      '_sfRowHtml', '_sfHost', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', '_mfUnhandle',
+      '_sfRowHtml', 'guideLinkHtml', '_sfHost', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', '_mfUnhandle',
     ],
   });
   const { HOUSE_FLAGS } = ctx;
@@ -390,7 +390,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const dom = domStub({ 'sf-host-plan': { attrs: { 'data-job': '7' } }, 'sf-host-dash': { attrs: { 'data-job': '8' } } });
     const r = sandbox({
-      fns: ['_repaintStandingFlags', '_invJob', 'standingFlagsBlock', '_sfRowHtml', 'standingFlagLines', 'activeHouseFlags',
+      fns: ['_repaintStandingFlags', '_invJob', 'standingFlagsBlock', '_sfRowHtml', 'guideLinkHtml', 'standingFlagLines', 'activeHouseFlags',
             'houseFlagsOf', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', 'esc'],
       vars: ['SF_HOSTS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: dom, jobs: [JOB()] },
@@ -408,7 +408,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({ 'sf-host-plan': { attrs: { 'data-job': '7' } } });
     const t = sandbox({
       fns: ['toggleMustFound', '_invStampBy', 'deviceUser', '_repaintStandingFlags', '_invJob', '_jobTouch', '_todayStr', '_ymdLocal', 'mustFindItems', 'mustFoundOf',
-            '_mustFindKey', '_mfHandle', '_mfUnhandle', 'standingFlagsBlock', '_sfRowHtml', 'standingFlagLines', 'activeHouseFlags',
+            '_mustFindKey', '_mfHandle', '_mfUnhandle', 'standingFlagsBlock', '_sfRowHtml', 'guideLinkHtml', 'standingFlagLines', 'activeHouseFlags',
             'houseFlagsOf', 'esc'],
       vars: ['SF_HOSTS', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
       stubs: { document: dom, jobs: [j], saveJobs: () => calls.push('saveJobs'), syncJobToSheets: (job) => calls.push('sync:' + job.id) },

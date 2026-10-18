@@ -243,7 +243,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('A5 · the release approval request and the worklist name the route', () => {
     const printed = [];
-    const docRig = (job, refs) => lift(['printApprovalRequest', 'printAppraisalWorklist'],
+    const docRig = (job, refs) => lift(['printApprovalRequest', 'printAppraisalWorklist', 'guideLinkHtml'],
       ['_printDocument', '_invPrintThumb', 'maivAggregate'], {
         jobs: [Object.assign({}, job)], _photoRefs: { [job.id]: refs },
         _printDocument: (html, title) => { printed.push({ html, title }); return true; },
@@ -598,7 +598,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('stale text · the worklist counts only a collection with no photograph yet, and says where to take it', () => {
     const printed = [];
     const est = { rooms: ROOMS, collections: [{ id: 11, name: 'Silver service', disp: 'appraise' }], vehicles: [] };
-    const s = lift(['printAppraisalWorklist'], ['_printDocument', '_invPrintThumb', 'maivAggregate'], {
+    const s = lift(['printAppraisalWorklist', 'guideLinkHtml'], ['_printDocument', '_invPrintThumb', 'maivAggregate'], {
       jobs: [Object.assign({}, ESTATE)], _photoRefs: { 7: [LINE('a')] },
       _printDocument: (html) => { printed.push(html); return true; }, _invPrintThumb: () => '',
       maivAggregate: () => ({ count: 0, total: 0, settled: true, over: false, unvalued: 0 }),

@@ -247,7 +247,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 7 ─────────────────────────────────────────────────────────────────────
   group('D4 — chain of custody is mandatory on the trust track, as on the probate track');
   {
-    const PLAN_FNS = ['derivedLinesHtml', 'planTaskApplies', 'renderJobPlan', 'planProcedureHtml', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
+    const PLAN_FNS = ['derivedLinesHtml', 'planTaskApplies', 'renderJobPlan', 'planProcedureHtml', 'guideLinkHtml', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
       'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'prepVendorsConfirmed',
       'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
       'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', '_planRoomListHtml',

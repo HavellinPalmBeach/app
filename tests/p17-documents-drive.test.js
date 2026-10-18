@@ -557,7 +557,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The package asks each inventory printer for its page (opt.asHtml). Where the tier puts a document with counsel,
     // or there is nothing to list, the answer is the printer's own sentence, which the package's notice repeats.
     const alerts = [];
-    const g = lift(['printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport', 'printContentsList', 'printAppraisalWorklist'],
+    const g = lift(['printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport', 'printContentsList', 'printAppraisalWorklist', 'guideLinkHtml'],
       ['_printDocument', 'alert'], { jobs: [Object.assign(ESTATE(), { docTier: 'contents' })], estimateStore: { 7: EST() }, jobPlanStore: {},
         _photoRefs: { 7: [] }, document: domStub({}), alert: (m) => alerts.push(String(m)), _printDocument: () => alerts.push('printed') });
     const court = g.printCourtInventory(7, { asHtml: true }) || {};

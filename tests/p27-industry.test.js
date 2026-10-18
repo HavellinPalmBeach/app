@@ -190,7 +190,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const c = sandbox({
       vars: ['PLAN_PROCEDURE', 'PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'DECEDENT_SERVICES'],
-      fns: ['planProcedureHtml', 'planSubsec', 'planTaskCtx', 'planTaskApplies', 'isDecedentJob', 'houseFlagsOf', 'esc'],
+      fns: ['planProcedureHtml', 'guideLinkHtml', 'planSubsec', 'planTaskCtx', 'planTaskApplies', 'isDecedentJob', 'houseFlagsOf', 'esc'],
       stubs: { matterDef: () => null, matterTypeOf: () => '', jobOnProbateTrack: () => false, docTierOf: () => '', docTierProduces: () => false,
                jobAppraisalDuty: () => '', invFiduciaryMode: () => false, isFormalDoc: () => false, firearmsFlaggedAtIntake: () => false,
                logisticsLineOn: () => false, estimateAppraiserLines: () => [], HOUSE_FLAGS: [] },
@@ -238,9 +238,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(c.PLAN_PROCEDURE.filter((p) => p.doc).map((p) => p.doc).sort(), PAGES.slice().sort(), 'each of the four pages is linked from exactly one block');
     const html = c.planProcedureHtml('p3', ctxOf('downsizing_move'));
     eq(count(html, '<li>'), 14, 'move day draws 9 + 5 lines');
-    has(html, '<a href="move-day-guide.html" target="_blank" rel="noopener"', 'Move Day linked');
-    has(html, 'Read Move Day &rarr;', 'by its label');
-    has(html, '<a href="first-night-guide.html" target="_blank" rel="noopener"', 'The First Night linked');
+    // 2026-10-18 (Anthony: like the room-score info box, not a new tab): the link keeps its href and opens over the plan.
+    has(html, '<a href="move-day-guide.html" rel="noopener" onclick="return openGuidePage(event, this.getAttribute(\'href\'), this.textContent)">Read Move Day &rarr;</a>', 'Move Day linked, opening over the plan');
+    has(html, '<a href="first-night-guide.html" rel="noopener" onclick="return openGuidePage(', 'The First Night linked the same way');
+    lacks(html, 'target="_blank"', '⚠ no link on the plan opens a new tab');
+    {
+      const dom = domStub({});
+      const g = sandbox({ fns: ['openGuidePage', 'closeGuidePage', 'guideLinkHtml', 'esc'], stubs: { document: dom } });
+      const ev = { prevented: 0, preventDefault() { this.prevented++; } };
+      eq(g.openGuidePage(ev, 'move-day-guide.html', 'Read Move Day →'), false, 'the click is taken by the panel');
+      eq(ev.prevented, 1, 'and the link does not navigate');
+      eq(dom.getElementById('guide-frame').getAttribute('src'), 'move-day-guide.html', 'the page is loaded into the frame');
+      eq(dom.getElementById('guide-modal').style.display, 'flex', 'the panel is shown');
+      eq(dom.getElementById('guide-title').textContent, 'Move Day', 'headed by the page’s name');
+      eq(dom.getElementById('guide-open').getAttribute('href'), 'move-day-guide.html', 'with Open in its own tab pointing at the page');
+      g.closeGuidePage();
+      eq(dom.getElementById('guide-modal').style.display, 'none', 'Close hides it');
+      eq(dom.getElementById('guide-frame').getAttribute('src'), 'about:blank', 'and empties the frame');
+      has(SRC, '<div class="modal-overlay" id="guide-modal" style="display:none;"', 'the panel is in the markup');
+      has(SRC, '<iframe id="guide-frame" title="Field guide" src="about:blank"></iframe>', 'with its frame');
+      // Every page the app links goes through the one opener: the firearms protocol too.
+      const live = SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+      eq((live.match(/esc\((?:l|row)\.doc\) \+ '" target="_blank"/g) || []).length, 0, 'no protocol link opens a new tab');
+      eq((live.match(/guideLinkHtml\(/g) || []).length, 6, 'the one opener has its definition and five readers (the procedure, the brief, the banner, the room line, the transport panel)');
+    }
     eq(count(html, 'type="checkbox"'), 0, '⚠⚠ no box in a procedure block');
     eq(c.planProcedureHtml('p1', ctxOf('prep')), '', 'a prep plan draws no sorting block');
 

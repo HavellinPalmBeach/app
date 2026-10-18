@@ -149,6 +149,18 @@ const PHOTO = { name: 'bol.png', mimeType: 'image/png', buffer: Buffer.from('895
       has(await txt('#plan-bol-' + MM), 'File the Bill of Lading', 'offering File the Bill of Lading');
       eq(await p.locator('#stage-p3 .plan-proc li').count(), 14, 'fourteen procedure lines on the stage');
       eq(await p.locator('.plan-proc input[type=checkbox]').count(), 0, '⚠⚠ no box inside any procedure block');
+      // 2026-10-18: a guide opens over the plan, never in a new tab (Anthony: like the room-score info box).
+      const pagesBefore = ctx.pages().length;
+      await press('#stage-p3 a[href="move-day-guide.html"]', 'Read Move Day');
+      eq(ctx.pages().length, pagesBefore, 'no new tab opened');
+      ok(await p.evaluate(() => document.getElementById('guide-modal').checkVisibility()), 'the guide panel is over the plan');
+      eq(await p.evaluate(() => document.getElementById('guide-title').textContent), 'Move Day', 'headed Move Day');
+      ok(/move-day-guide\.html$/.test(await p.evaluate(() => document.getElementById('guide-frame').getAttribute('src'))), 'with the page in its frame');
+      await p.waitForTimeout(800);
+      has(await p.frameLocator('#guide-frame').locator('h1').textContent().catch(() => ''), 'Move Day', 'and the page itself rendered inside it');
+      await press('#guide-modal button', 'Close');
+      ok(!(await p.evaluate(() => document.getElementById('guide-modal').checkVisibility())), 'Close hides the panel');
+      eq(await p.evaluate(() => document.getElementById('guide-frame').getAttribute('src')), 'about:blank', 'and empties the frame');
       lacks(await txt('#panel-job-plan'), 'Move-in contact', 'no contact on the header before one is recorded');
     });
 

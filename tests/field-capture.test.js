@@ -574,7 +574,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const dom = domStub({});
     const j = sandbox({
-      fns: ['renderJobPlan', 'custodyLogKept', 'planProcedureHtml', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
+      fns: ['renderJobPlan', 'custodyLogKept', 'planProcedureHtml', 'guideLinkHtml', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'derivedLinesHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', 'donationReceiptLine', 'ledgerDerivedLines', 'planTaskApplies', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRoomListHtml', '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
             'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
@@ -686,7 +686,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ THE FIREARMS BANNER — big, red, and only when intake said so');
   {
-    const f = sandbox({ fns: ['firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf'],
+    const f = sandbox({ fns: ['firearmsBannerHtml', 'guideLinkHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf'],
                         vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'] });
     eq(f.firearmsBannerHtml({ houseFlags: {} }), '', 'nothing when not flagged');
     eq(f.firearmsBannerHtml({}), '', 'nothing on a job intake never asked');

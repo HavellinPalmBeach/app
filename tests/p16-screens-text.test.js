@@ -232,7 +232,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays',
       'jobProgress', 'roomStatusNormalize', 'workingDaysInclusive', 'approvedEstimateFor',
       'maybeStartJobsWatch', 'paymentSplit', 'jobIsFeeOnly', 'renderClientDashboard', 'jobProbateCourt', 'courtFromCaseNo', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
-      'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
+      'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'guideLinkHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker',
       'jobStatusView', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay',
@@ -895,7 +895,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(s.ok ? s.val : '', 'GC / Site', 'not a GC fee');
 
     const planFns = ['jobListEntries', 'prepVendorsConfirmed', 'derivedLinesHtml', 'renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2', 'chkGrid', 'planChk',
-      '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan', '_planTouch', 'firearmsBannerHtml',
+      '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan', '_planTouch', 'firearmsBannerHtml', 'guideLinkHtml',
       'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
       '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard',
       'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob',

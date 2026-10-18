@@ -285,7 +285,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(Q._renderInvPanel(Q.jobs[0], Q._photoRefs[7][1])), 'Signed: Ruth Adler (Oct 1, 2026); Sam Adler (Oct 3, 2026) · still to sign: Daniel Adler',
         'and, where it is open, who is still to sign');
     // The Appraisal Worklist's firearm line.
-    const Wk = desk(['printAppraisalWorklist'], TRUST(), lines(), { maivAggregate: () => ({ count: 0, total: 0, settled: true, over: false, unvalued: 0 }) });
+    const Wk = desk(['printAppraisalWorklist', 'guideLinkHtml'], TRUST(), lines(), { maivAggregate: () => ({ count: 0, total: 0, settled: true, over: false, unvalued: 0 }) });
     const wr = attempt(() => Wk.printAppraisalWorklist(7));
     const wt = wr.ok ? text((Wk.__log.printed[0] || {}).html) : 'threw: ' + wr.err;
     has(wt, '#4 Remington 870 — Written authority is not complete. Daniel Adler has not approved it, and every co-trustee must. Signed so far by Ruth Adler (Oct 1, 2026).',

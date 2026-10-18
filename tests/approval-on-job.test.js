@@ -678,7 +678,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     for (const f of ['fileChangeOrder', '_pkgFileAll', '_fileCloseoutPaper', 'sendApprovalRequest']) has(H.fn(f), '_exportDoc(', f + ' is one of the four');
     lacks(H.fn('printApprovalRequest'), 'approved-stamp', 'the request prints no approval band, so filing it needs no pdfCss');
     for (const f of ['printChangeOrder', 'printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport',
-                     'printContentsList', 'printAppraisalWorklist', 'probatePackageRecordHtml', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', 'printContentsRecord'])
+                     'printContentsList', 'printAppraisalWorklist', 'guideLinkHtml', 'probatePackageRecordHtml', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', 'printContentsRecord'])
       lacks(H.fn(f), 'approved-stamp', f + ' prints no approval band, so filing it needs no pdfCss');
     has(H.fn('docPdfBase64'), 'spec.cfg.pdfCss', 'docPdfBase64 passes the kind\'s pdfCss');
     has(H.fn('docFile'), 'spec.cfg.pdfCss', 'docFile passes the kind\'s pdfCss');

@@ -187,14 +187,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // REAL brief on a job with the flag ticked and read the anchor out of the markup.
     const b = sandbox({
       fns: ['standingFlagsBlock', 'standingFlagLines', 'activeHouseFlags', 'houseFlagsOf',
-            '_houseFlagRowClass', 'esc', '_sfRowHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle'],
+            '_houseFlagRowClass', 'esc', '_sfRowHtml', 'guideLinkHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle'],
       vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'],
     });
     const armed = { id: 1, houseFlags: { firearms: { on: true, note: 'Gun safe in the study, 4 long guns.' } } };
     const brief = b.standingFlagsBlock(armed);
     has(brief, 'href="firearms-protocol.html"', 'the crew brief renders the link');
     has(brief, 'Read the firearms protocol', 'under a label that says what it is');
-    has(brief, 'target="_blank"', 'opening it does not navigate off the Job Plan');
+    // 2026-10-18 (P27): the protocol opens over the plan (openGuidePage), so a tap never navigates off the Job Plan either.
+    has(brief, 'onclick="return openGuidePage(event, this.getAttribute(\'href\'), this.textContent)"', 'opening it does not navigate off the Job Plan: it opens over it');
+    lacks(brief, 'target="_blank"', 'and no longer in a new tab');
     has(brief, 'Gun safe in the study', 'beside the detail taken at intake');
 
     // A flag carrying no document renders no link rather than an empty one.

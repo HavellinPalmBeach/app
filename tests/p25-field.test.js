@@ -152,7 +152,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ Q42 · MOVE DAY: FOUR FACTS, THE REST A PROCEDURE ═══
   group('Q42 · move day records four facts; the procedure is read, never ticked, and never counted');
   {
-    const P = liftV(['planTasksFor', 'planTaskCtx', 'planProcedureHtml', 'planStageMeta'], ['PLAN_TASKS'], STATE.concat(['_planTaskDone', 'planDerivedLines']),
+    const P = liftV(['planTasksFor', 'planTaskCtx', 'planProcedureHtml', 'guideLinkHtml', 'planStageMeta'], ['PLAN_TASKS'], STATE.concat(['_planTaskDone', 'planDerivedLines']),
       Object.assign(BASE(), { _planTaskDone: () => false, planDerivedLines: () => [] }));
     const mm = P.planTaskCtx({ id: 7, svc: 'downsizing_move' }, { svc: 'downsizing_move' });
     // ⚠ THREE SINCE P27 (2026-10-17): mv_damage became the Move day stage's derived line off the Incidents card (Q80), and the
