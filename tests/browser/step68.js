@@ -98,9 +98,10 @@ const EST = 6801, GONE = 6802, COLD = 6803, NEW = 6804;
       estimateStore[EST] = est(EST, 'probate');
       estimateStore[GONE] = est(GONE, 'downsizing');
       _photoRefs[EST] = [
-        L('k1', { itemNo: 1, objectName: 'Sideboard', fmv: '900', disposition: 'Sell', channel: 'Kodner Galleries' }),
-        L('k2', { itemNo: 2, objectName: 'Hall mirror', fmv: '200', disposition: 'Auction', channel: '  kodner   galleries ' }),
-        L('j1', { itemNo: 3, objectName: 'Bookcase', fmv: '300', disposition: 'Sell', channel: 'Jane Buyer' }),
+        // P28 (2026-10-18): an estate's line is offered for sign-out only once the representative has approved it in writing.
+        L('k1', { itemNo: 1, objectName: 'Sideboard', fmv: '900', disposition: 'Sell', channel: 'Kodner Galleries', authBy: 'Tripp Butler', approvalDate: '2026-10-01' }),
+        L('k2', { itemNo: 2, objectName: 'Hall mirror', fmv: '200', disposition: 'Auction', channel: '  kodner   galleries ', authBy: 'Tripp Butler', approvalDate: '2026-10-01' }),
+        L('j1', { itemNo: 3, objectName: 'Bookcase', fmv: '300', disposition: 'Sell', channel: 'Jane Buyer', authBy: 'Tripp Butler', approvalDate: '2026-10-01' }),
         // The as-found shot that failed and whose image this device never held.
         { stableId: 'af1', roomIdx: 1, label: 'before', seq: 1, status: 'failed', filename: 'af1.jpg', ts: T0, updatedAt: T0 },
       ];
@@ -115,10 +116,11 @@ const EST = 6801, GONE = 6802, COLD = 6803, NEW = 6804;
     await section('A. the vendor pickup list: pre-ticked, one unticked, filed; the line reads picked up and its custody is closed', async () => {
       await toDesk(EST);
       const card = await txt('#inv-releases');
-      has(card, 'Vendor pickups', 'the Releases & signed papers card has the section');
-      has(card, 'Kodner Galleries · 2 lines (#1, #2)', '⚠⚠ the auction house\'s two lines, whatever the capitals or spacing');
-      has(card, 'Jane Buyer · 1 line (#3)', 'and the buyer\'s');
-      await press('#inv-releases button[onclick^="openPickupDialog(' + EST + ',&quot;kodner"], #inv-releases button[onclick^="openPickupDialog(' + EST + ',\\"kodner"]', 'File pickup list for Kodner Galleries');
+      // P28 (2026-10-18): the Vendor pickups section is the sign-out section, and its button opens the same dialog, now with the pad.
+      has(card, 'Leaving the property · sign out on the iPad', 'the Releases & signed papers card has the section');
+      has(card, 'Kodner Galleries · vendor pickup · 2 lines (#1, #2)', '⚠⚠ the auction house\'s two lines, whatever the capitals or spacing');
+      has(card, 'Jane Buyer · vendor pickup · 1 line (#3)', 'and the buyer\'s');
+      await press('#inv-releases button[onclick^=\'openSignoutDialog(' + EST + ',"pickup","Kodner\']', 'Sign out to Kodner Galleries');
       ok(await p.evaluate(() => document.getElementById('inv-pickup-modal').style.display === 'flex'), 'the dialog opens');
       const ticks = await p.evaluate(() => [...document.querySelectorAll('#ip-body .ip-tick')].map((x) => x.getAttribute('data-sid') + ':' + x.checked));
       eq(ticks, ['k1:true', 'k2:true'], '⚠⚠ every line on that vendor\'s channel is ticked');
@@ -137,8 +139,8 @@ const EST = 6801, GONE = 6802, COLD = 6803, NEW = 6804;
       const ev = ((await line(EST, 'k1')).custodyLog || []).filter((e) => !e.deletedAt).map((e) => [e.action, e.party, e.method]);
       eq(ev, [['Released', 'Kodner Galleries', 'Vendor pickup']], '⚠⚠ a probate estate keeps custody: a Released event to the vendor');
       const card2 = await txt('#inv-releases');
-      has(card2, 'on a pickup list: #1 · not on one: #2', 'the card says what the list covers and what it does not');
-      has(card2, 'File another pickup list', 'and offers the next sheet');
+      has(card2, '✓ signed for: #1', 'the card says what the list covers');
+      has(card2, 'Sign out 1 to Kodner Galleries', 'and offers the next sheet for the line it does not');
     });
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════

@@ -1364,7 +1364,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.18 · 10:30am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.18 · 11:35am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2717,17 +2717,26 @@ body.no-smf .smf-col{display:none;}
   </div>
 </div>
 
+<!-- ⚠ THE SIGN-OUT DIALOG (P28, 2026-10-18), grown from the vendor pickup dialog of P22 and keeping its ids: one dialog for
+     everything that leaves the house (a vendor, a charity, a person, an appraiser) and for the appraiser's return. The lines,
+     then who signs, then the pad; Sign and file makes the PDF and files it; the photograph route stays as the fallback. -->
 <div class="modal-overlay" id="inv-pickup-modal" style="display:none;">
-  <div class="modal-box" style="width:460px;max-width:94%;">
-    <div class="modal-title">File a vendor pickup list</div>
+  <div class="modal-box" style="width:540px;max-width:94%;">
+    <div class="modal-title" id="ip-title">Sign out on the iPad</div>
     <div class="modal-sub" id="ip-sub"></div>
-    <div id="ip-body" style="max-height:50vh;overflow-y:auto;"></div>
+    <div id="ip-body" style="max-height:30vh;overflow-y:auto;"></div>
+    <label style="margin-top:10px;">Signed by</label>
+    <input type="text" id="ip-signer" placeholder="Who is signing">
+    <div style="font-size:10px;color:var(--gray);margin:8px 0 2px;">Sign below with a finger.</div>
+    <canvas id="ip-pad" width="1000" height="280" style="width:100%;height:120px;border:1px dashed var(--border-md);border-radius:6px;background:#fff;touch-action:none;display:block;"></canvas>
+    <div style="display:flex;justify-content:flex-end;margin-top:4px;"><button type="button" class="btn-s" style="font-size:10px;padding:2px 8px;" onclick="signPadClear('ip-pad')">Clear</button></div>
     <div id="ip-fb" style="margin-top:8px;"></div>
-    <div style="display:flex;gap:8px;margin-top:1rem;">
+    <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;">
       <button class="btn-s" style="flex:1;" onclick="closePickupDialog()">Cancel</button>
-      <label class="btn-p" id="ip-file-btn" style="flex:1;cursor:pointer;position:relative;text-align:center;">Photograph or choose the sheet
+      <label class="btn-s" id="ip-file-btn" style="flex:1;cursor:pointer;position:relative;text-align:center;">Photograph a signed sheet instead
         <input type="file" accept="application/pdf,image/*" onchange="pickupFileFromDialog(this)"
           style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;left:0;top:0;"></label>
+      <button class="btn-p" id="ip-sign-btn" style="flex:1;" onclick="signoutFileFromPad()">Sign and file</button>
     </div>
   </div>
 </div>
@@ -23889,6 +23898,10 @@ function closeOpenWorkFlag(job) {
     return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !String(r.channel || '').trim();
   });
   if (noRecip.length) out.push(noRecip.length + ' line' + (noRecip.length === 1 ? '' : 's') + ' leaving the property ' + (noRecip.length === 1 ? 'has' : 'have') + ' no recipient recorded.');
+  // P28: a line handed to an appraiser and not checked back in is still out of the house.
+  var away = (typeof _jobInvRefs === 'function' && typeof invOutForAppraisal === 'function' ? _jobInvRefs(job.id) : []).filter(function (r) { return invOutForAppraisal(r, job); });
+  if (away.length) out.push(away.length + ' line' + (away.length === 1 ? ' is' : 's are') + ' still out with an appraiser ('
+    + away.slice(0, 4).map(function (r) { return '#' + _invItemNo(r) + ' with ' + (invOutForAppraisal(r, job).ref || 'the appraiser'); }).join(', ') + (away.length > 4 ? ' and ' + (away.length - 4) + ' more' : '') + ').');
   return out.join(' ');
 }
 function applyJobTransition(j) {
@@ -25065,7 +25078,14 @@ var SIGNED_RECORD_KINDS = {
   // The client's signed Contents Record (P25, Q51): the one paper a living family signs at close-out. Ref CONTENTS_SIGNED_REF.
   contents:  { label: 'Signed Contents Record' },
   // The Bill of Lading and the mover's inventory, signed on move day (P27, Q79): a photograph, filed from the Move day stage. Ref BOL_SIGNED_REF.
-  bol:       { label: 'Bill of Lading and mover’s inventory' }
+  bol:       { label: 'Bill of Lading and mover’s inventory' },
+  // Sign-out on the iPad (P28, 2026-10-18; Anthony: *"signing things on the ipad is genius. let's do that for anything that
+  // leaves the house, on estate, once the PR signs off on disposition"*). The pickup, donation and receipt kinds above are
+  // the papers a sign-out files, signed on the glass or photographed as before; these two are the appraiser's: the lines
+  // handed over for appraisal (ref the appraiser, stableIds the lines) and the same lines checked back in. A line is out
+  // until a later return covers it (invOutForAppraisal); it is never "gone" (invRecordedGone reads neither kind).
+  appraisal_out:  { label: 'Appraisal hand-off list' },
+  appraisal_back: { label: 'Appraisal items returned' }
 };
 var AGR_COSIGN_REF = 'agreement';   // signedRecords' ref for a co-signed agreement page — a stored value: never rename it
 var SIGNED_COPY_MAX_BYTES = 10 * 1024 * 1024;
@@ -25123,6 +25143,7 @@ function fileSignedCopy(jobId, kind, meta, file, cb) {
           id: newJobListId('signedRecords'), kind: kind, ref: String(meta.ref || ''),
           stableIds: (meta.stableIds || []).map(String), label: meta.label || SIGNED_RECORD_KINDS[kind].label,
           signedBy: meta.signedBy || '', signedOn: meta.signedOn || '',
+          glass: !!meta.glass,   // signed on the iPad and filed by the app (P28), never photographed
           fileName: name, fileUrl: fileUrl || '', fileId: fileId || '',
           filedAt: Date.now(), filedBy: _actor(j2) || j2.tc || ''
         });
@@ -25178,7 +25199,7 @@ function signedRecordLinksHtml(jobId, recs) {
   return (recs || []).map(function (r) {
     return '<div class="sc-rec" style="font-size:11px;line-height:1.5;">&#10003; '
       + (r.fileUrl ? '<a href="' + esc(r.fileUrl) + '" target="_blank" rel="noopener" style="color:var(--bronze);">' + esc(r.label) + '</a>' : esc(r.label))
-      + (r.signedBy ? ' &middot; signed by ' + esc(r.signedBy) : '')
+      + (r.signedBy ? ' &middot; signed by ' + esc(r.signedBy) + (r.glass ? ' on the iPad' : '') : '')
       + (r.signedOn ? ' &middot; ' + esc(fmtDate2(r.signedOn)) : '')
       + ' <button type="button" class="btn-s" style="font-size:9.5px;padding:1px 6px;margin-left:4px;" onclick="voidSignedRecord(' + jobId + ',\'' + esc(String(r.id)) + '\')">Void</button></div>';
   }).join('');
@@ -25190,7 +25211,7 @@ function voidSignedRecord(jobId, id, after) {
   var why = (window.prompt('Why is this signed copy being voided? (for example: filed against the wrong paper). The file stays in Drive.', '') || '').trim();
   if (!why) return false;
   jobListVoid(job, 'signedRecords', id, why, _actor(job) || job.tc || '');
-  if (rec.kind === 'pickup') pickupVoidCustody(jobId, rec);   // its Released custody events come off with it (P22)
+  if (rec.kind === 'pickup' || rec.kind === 'appraisal_out' || rec.kind === 'appraisal_back') pickupVoidCustody(jobId, rec);   // its custody events come off with it (P22; the appraiser's, P28)
   showSyncBadge('Signed copy voided. It stays in Drive and on the record as voided.');
   if (after) after(rec); else _signedCopyRepaint(jobId, rec.kind);
   return true;
@@ -30488,22 +30509,216 @@ function pickupGroups(job, items) {
 }
 // The dialog: the vendor's lines, ticked where no list covers them yet, and the file picker that files what is chosen.
 var _pickupCtx = null;
-function openPickupDialog(jobId, key) {
-  var job = _invJob(jobId);
-  if (!job) return false;
-  var g = pickupGroups(job, _invAssignItemNos(jobId)).filter(function(x){ return x.key === pickupKey(key); })[0];
-  if (!g) { showSyncBadge('No line on the inventory goes to that vendor now.', true); return false; }
-  _pickupCtx = { jobId: jobId, key: g.key, vendor: g.vendor };
-  var sub = document.getElementById('ip-sub');
-  if (sub) sub.innerHTML = 'Photograph <strong>' + esc(g.vendor) + '</strong>&rsquo;s pickup sheet. Untick anything the sheet does not list.';
-  var body = document.getElementById('ip-body');
-  if (body) body.innerHTML = g.lines.map(function(r){
-    var on = invPickupRecord(r, job);
-    return '<label class="ip-line" style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;">'
-      + '<input type="checkbox" class="ip-tick" data-sid="' + esc(String(r.stableId)) + '"' + (on ? '' : ' checked')
-      + ' style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
-      + '<span>' + esc(_invNamed(r)) + (on ? ' <span style="color:var(--gray);">&middot; already on a pickup list</span>' : '') + '</span></label>';
+function openPickupDialog(jobId, key) { return openSignoutDialog(jobId, 'pickup', key); }
+// ── Sign-out on the iPad (P28, 2026-10-18) ─────────────────────────────────────────────────────────────────────────────
+// Anthony: *"signing things on the ipad is genius. let's do that for anything that leaves the house, on estate, once the
+// PR signs off on disposition."* One dialog, one sheet, one signature on the glass, filed by the app under the paper the
+// desk already reads for that taker (SIGNOUT_KINDS): a vendor's pickup list, a charity's receipt, a beneficiary's receipt,
+// or the appraiser's hand-off and return. On an estate a leaving line is offered only once every fiduciary has approved
+// it in writing (invApprovalComplete); verbal approval is never accepted, so the gate is a refusal, not a flag. Firearms
+// never appear: they move on their own protocol. The photograph route stays beside it for a sheet signed on paper.
+var SIGNOUT_KINDS = {
+  pickup:         { title: 'Vendor Pickup List',            who: 'the vendor',    what: 'vendor pickup',       leaving: true },
+  donation:       { title: 'Donation Release',              who: 'the charity',   what: 'donation',            leaving: true },
+  receipt:        { title: 'Receipt for Property Released', who: 'the recipient', what: 'release to a person', leaving: true },
+  appraisal_out:  { title: 'Appraisal Hand-off',            who: 'the appraiser', what: 'appraisal hand-off',  leaving: false },
+  appraisal_back: { title: 'Appraisal Items Returned',      who: 'Havellin',      what: 'back from appraisal', leaving: false }
+};
+function signoutKey(kind, taker) { return kind + '|' + pickupKey(taker); }
+// The live hand-off covering this line with no later return covering it, else null. Never read as gone.
+function invOutForAppraisal(ref, job) {
+  if (!ref || !job) return null;
+  var sid = String(ref.stableId);
+  var covers = function(s){ return (s.stableIds || []).map(String).indexOf(sid) >= 0; };
+  var out = signedRecordsOf(job, 'appraisal_out').filter(covers).sort(function(a, b){ return Number(b.filedAt || 0) - Number(a.filedAt || 0); })[0];
+  if (!out) return null;
+  var back = signedRecordsOf(job, 'appraisal_back').filter(function(s){ return covers(s) && Number(s.filedAt || 0) >= Number(out.filedAt || 0); })[0];
+  return back ? null : out;
+}
+// The paper a line's leaving files: a vendor's pickup list on a selling line, a charity's receipt on a named donation, a
+// beneficiary's receipt on an estate's To-a-person line; '' for anything else, and always '' for a firearm.
+function signoutLineKind(ref, job) {
+  if (!ref || ref.deletedAt || invIsFirearm(ref)) return '';
+  if (invPickupLine(ref)) return 'pickup';
+  if (ref.disposition === 'Donate' && String(ref.channel || '').trim()) return 'donation';
+  if (ref.disposition === 'Distribute' && job && invFiduciaryMode(job) && invRecipientName(ref.channel)) return 'receipt';
+  return '';
+}
+function signoutTaker(ref, kind) {
+  if (kind === 'pickup') return pickupVendorName(ref.channel);
+  if (kind === 'donation') return String(ref.channel || '').trim().replace(/\s+/g, ' ');
+  return invRecipientName(ref.channel);
+}
+function signoutCovered(ref, job, kind) {
+  if (kind === 'pickup') return invPickupRecord(ref, job);
+  if (kind === 'receipt') return invReceiptRecord(ref, job);
+  if (kind === 'appraisal_out') return invOutForAppraisal(ref, job);
+  if (kind === 'donation') {
+    var sid = String(ref.stableId);
+    return signedRecordsOf(job, 'donation').filter(function(s){ return (s.stableIds || []).map(String).indexOf(sid) >= 0; })[0] || null;
+  }
+  return null;
+}
+// Every taker on the inventory and the lines each may sign for: ready (offered), waiting (an estate line not yet approved
+// in writing), done (already on a filed paper of that kind for that taker). The appraiser's groups ride the line's link
+// (apprId): out until checked back in, then a return group.
+function signoutGroups(job, items) {
+  var fid = !!(job && invFiduciaryMode(job)), map = {}, order = [];
+  var put = function(kind, taker, r, state){
+    var k = signoutKey(kind, taker);
+    if (!map[k]) { map[k] = { key: k, kind: kind, taker: taker, lines: [], ready: [], waiting: [], done: [] }; order.push(k); }
+    map[k].lines.push(r); map[k][state].push(r);
+  };
+  (items || []).forEach(function(r){
+    if (!r || r.deletedAt) return;
+    var kind = signoutLineKind(r, job);
+    if (kind) {
+      var taker = signoutTaker(r, kind);
+      if (taker) put(kind, taker, r, signoutCovered(r, job, kind) ? 'done' : (fid && !invApprovalComplete(r, job)) ? 'waiting' : 'ready');
+    }
+    if (!invIsFirearm(r) && r.apprId && !invAppraised(r) && !r.apprWaived) {
+      var a = ((job && job.appraisers) || []).filter(function(x){ return String(x.id) === String(r.apprId); })[0];
+      if (a && String(a.name || '').trim()) put(invOutForAppraisal(r, job) ? 'appraisal_back' : 'appraisal_out', String(a.name).trim(), r, 'ready');
+    }
+  });
+  return order.map(function(k){
+    var g = map[k];
+    g.records = signedRecordsOf(job, g.kind).filter(function(x){ return pickupKey(x.ref) === pickupKey(g.taker); });
+    return g;
+  });
+}
+function signoutGroupFor(job, kind, taker) {
+  return signoutGroups(job, _invAssignItemNos(job.id)).filter(function(x){ return x.kind === kind && pickupKey(x.taker) === pickupKey(taker); })[0] || null;
+}
+// The signature block: the image drawn on the glass, who, the day, and the concierge for Havellin. Without an image, the
+// blank lines a paper copy is signed on.
+function signoutSignatureHtml(sig, lead, witness) {
+  if (!sig || !sig.img) {
+    return '<div style="margin-top:22px;font-size:11px;line-height:2.2;">' + esc(lead) + ': __________________________________ &nbsp;&nbsp; Date: ______________<br>'
+      + 'Printed name: __________________________________</div>'
+      + (witness ? '<div style="margin-top:16px;font-size:11px;line-height:2.2;">Witnessed for Havellin Palm Beach, LLC: __________________________________ &nbsp;&nbsp; Date: ______________<br>'
+      + 'Printed name: __________________________________</div>' : '');
+  }
+  return '<div class="signout-sig" style="margin-top:18px;font-size:11px;line-height:1.6;">'
+    + '<img src="' + sig.img + '" alt="signature" style="display:block;height:64px;max-width:340px;border-bottom:1px solid #333;">'
+    + esc(lead) + ': <strong>' + esc(sig.name || '') + '</strong>, signed on the iPad &middot; ' + esc(fmtDate2(sig.date))
+    + (witness && sig.by ? '<br>Witnessed for Havellin Palm Beach, LLC: ' + esc(sig.by) + ' &middot; ' + esc(fmtDate2(sig.date)) : (sig.by ? '<br>For Havellin Palm Beach, LLC: ' + esc(sig.by) : ''))
+    + '</div>';
+}
+// The sheet, pure: the party's head, the lines (each with its written approval on an estate), what the signer
+// acknowledges, the signature. A release to a person is the receipt the estate already prints (invReceiptHtml).
+function signoutSheetHtml(job, g, lines, sig) {
+  var kd = SIGNOUT_KINDS[g.kind] || SIGNOUT_KINDS.pickup;
+  if (g.kind === 'receipt') return invReceiptHtml(job, g.taker, lines, sig);
+  var fid = invFiduciaryMode(job);
+  var party = _invDocPartyHead(job);
+  var td = 'padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;', th = 'padding:2px 6px;';
+  var approvalCol = fid && kd.leaving;
+  var rows = lines.map(function(r){
+    var q = parseInt(r.qty, 10);
+    return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="' + td + '">' + esc(r.objectName || '—') + '</td>'
+      + '<td style="' + td + 'text-align:right;">' + (q > 1 ? q.toLocaleString() : (q || 1)) + '</td>'
+      + '<td style="' + td + '">' + esc(_invRoomName(job.id, r.roomIdx)) + '</td>'
+      + '<td style="' + td + '">' + esc(invConditionText(r)) + '</td>'
+      + (approvalCol ? '<td style="' + td + '">' + esc(invApprovalSignedText(r, job) || '—') + '</td>' : '')
+      + '</tr>';
   }).join('');
+  var sub = {
+    pickup: 'Taken away by <strong>' + esc(g.taker) + '</strong>, for sale or disposal as recorded against each item',
+    donation: 'Donated to <strong>' + esc(g.taker) + '</strong>',
+    appraisal_out: 'Handed to <strong>' + esc(g.taker) + '</strong> for appraisal, to be returned to the property',
+    appraisal_back: 'Returned to the property by <strong>' + esc(g.taker) + '</strong>'
+  }[g.kind];
+  var ack = {
+    pickup: 'I received the items listed above from Havellin Palm Beach, LLC, acting for ' + party + ', for the purpose recorded against each item. This list records the handover only: it does not decide what the items are worth.',
+    donation: 'I received the items listed above as a charitable donation from ' + party + ', delivered by Havellin Palm Beach, LLC. This list records the delivery only; any valuation is the donor’s.',
+    appraisal_out: 'I received the items listed above from Havellin Palm Beach, LLC for appraisal, to be returned to the property in the condition received. Title stays with ' + party + '.',
+    appraisal_back: 'Havellin Palm Beach, LLC received the items listed above back at the property from ' + esc(g.taker) + '.'
+  }[g.kind];
+  return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, kd.title, sub)
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+      + '<th style="' + th + '">Item #</th><th style="' + th + '">Description</th><th style="' + th + 'text-align:right;">Qty</th>'
+      + '<th style="' + th + '">Room</th><th style="' + th + '">Condition</th>' + (approvalCol ? '<th style="' + th + '">Approved in writing by</th>' : '')
+      + '</tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<div style="display:flex;justify-content:flex-end;font-size:12px;font-weight:700;margin-top:8px;border-top:2px solid #333;padding-top:6px;">'
+      + lines.length + ' item' + (lines.length > 1 ? 's' : '') + '</div>'
+    + '<div style="font-size:11.5px;line-height:1.6;margin-top:16px;">' + ack + '</div>'
+    + signoutSignatureHtml(sig, g.kind === 'appraisal_back' ? 'Received for Havellin Palm Beach, LLC by' : 'Signed by', g.kind !== 'appraisal_back')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Filed by Havellin Palm Beach, LLC to the client&rsquo;s Drive folder. Item numbers are the ones every inventory document cites.</div>'
+    + '</div>';
+}
+// ── The pad ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+var _signPads = {};
+function signPadInit(id) {
+  var c = document.getElementById(id);
+  if (!c || !c.getContext) return null;
+  var st = _signPads[id];
+  if (st && st.canvas === c) return st;
+  st = { canvas: c, drawing: false, strokes: 0, last: null };
+  var ctx = c.getContext('2d');
+  var pos = function(ev){
+    var r = c.getBoundingClientRect(), p = (ev.touches && ev.touches[0]) || ev;
+    return { x: (p.clientX - r.left) * (c.width / (r.width || 1)), y: (p.clientY - r.top) * (c.height / (r.height || 1)) };
+  };
+  var down = function(ev){ st.drawing = true; st.last = pos(ev); if (ev.cancelable) ev.preventDefault(); };
+  var move = function(ev){
+    if (!st.drawing) return;
+    var p = pos(ev);
+    ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#1b2a4a';
+    ctx.beginPath(); ctx.moveTo(st.last.x, st.last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    st.last = p; st.strokes++;
+    if (ev.cancelable) ev.preventDefault();
+  };
+  var up = function(){ st.drawing = false; st.last = null; };
+  if (window.PointerEvent) {
+    c.addEventListener('pointerdown', down); c.addEventListener('pointermove', move);
+    c.addEventListener('pointerup', up); c.addEventListener('pointercancel', up); c.addEventListener('pointerleave', up);
+  } else {
+    c.addEventListener('mousedown', down); c.addEventListener('mousemove', move); window.addEventListener('mouseup', up);
+    c.addEventListener('touchstart', down, { passive: false }); c.addEventListener('touchmove', move, { passive: false }); c.addEventListener('touchend', up);
+  }
+  _signPads[id] = st;
+  return st;
+}
+function signPadClear(id) {
+  var st = signPadInit(id);
+  if (!st) return;
+  st.canvas.getContext('2d').clearRect(0, 0, st.canvas.width, st.canvas.height);
+  st.strokes = 0;
+}
+function signPadSigned(id) { var st = _signPads[id]; return !!(st && st.strokes >= 3); }   // a tap is not a signature
+function signPadDataUrl(id) { var st = _signPads[id]; return st ? st.canvas.toDataURL('image/png') : ''; }
+// ── The dialog ────────────────────────────────────────────────────────────────────────────────────────────────────────
+function openSignoutDialog(jobId, kind, taker) {
+  var job = _invJob(jobId);
+  if (!job || !SIGNOUT_KINDS[kind]) return false;
+  var g = signoutGroupFor(job, kind, taker);
+  if (!g) { showSyncBadge('No line on the inventory goes to them now.', true); return false; }
+  var kd = SIGNOUT_KINDS[kind], fid = invFiduciaryMode(job);
+  _pickupCtx = { jobId: jobId, kind: kind, key: g.key, vendor: g.taker, taker: g.taker };
+  var t = document.getElementById('ip-title');
+  if (t) t.textContent = kd.title + ' — ' + g.taker;
+  var sub = document.getElementById('ip-sub');
+  if (sub) sub.innerHTML = kind === 'appraisal_back'
+    ? 'Tick what came back from <strong>' + esc(g.taker) + '</strong>. You sign as the one receiving it.'
+    : 'Tick what <strong>' + esc(g.taker) + '</strong> is taking; ' + esc(kd.who) + ' signs below.'
+      + (fid && kd.leaving ? ' Only lines ' + esc(invEveryFiduciaryPhrase(job)) + ' has approved in writing are offered.' : '')
+      + ' Or photograph a sheet they signed on paper.';
+  var body = document.getElementById('ip-body');
+  var line = function(r, checked, disabled, note, tone){
+    return '<label class="ip-line" style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;' + (disabled ? 'opacity:.7;' : '') + '">'
+      + '<input type="checkbox" class="ip-tick" data-sid="' + esc(String(r.stableId)) + '"' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '')
+      + ' style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
+      + '<span>' + esc(_invNamed(r)) + (note ? ' <span style="color:' + (tone || 'var(--gray)') + ';">&middot; ' + note + '</span>' : '') + '</span></label>';
+  };
+  if (body) body.innerHTML = g.ready.map(function(r){ return line(r, true, false, ''); }).join('')
+    + g.done.map(function(r){ return line(r, false, false, 'already on ' + esc(SIGNED_RECORD_KINDS[kind].label.toLowerCase().replace(/^the /, 'a ')), ''); }).join('')
+    + g.waiting.map(function(r){ return line(r, false, true, 'awaiting written approval: not offered', '#8a5a1e'); }).join('');
+  var signer = document.getElementById('ip-signer');
+  if (signer) signer.value = kind === 'appraisal_back' ? ((typeof deviceUser === 'function' && deviceUser()) || job.tc || '') : g.taker;
+  signPadClear('ip-pad');
   var fb = document.getElementById('ip-fb');
   if (fb) fb.innerHTML = '';
   var m = document.getElementById('inv-pickup-modal');
@@ -30515,30 +30730,83 @@ function closePickupDialog() {
   if (m) m.style.display = 'none';
   _pickupCtx = null;
 }
-// The file picker's change: the ticks, then the filing. Refuses only an empty selection (a list covering nothing).
+function _signoutTicked() {
+  return Array.prototype.slice.call(document.querySelectorAll('#ip-body .ip-tick'))
+    .filter(function(el){ return el.checked && !el.disabled; }).map(function(el){ return el.getAttribute('data-sid'); });
+}
+function _signoutMeta(ctx, ids, signedBy, glass) {
+  return { ref: ctx.taker, stableIds: ids, signedBy: signedBy || ctx.taker, signedOn: _todayStr(), glass: !!glass,
+           label: SIGNED_RECORD_KINDS[ctx.kind].label + ' — ' + ctx.taker };
+}
+// The paper route: a sheet signed on paper, photographed, as P22 filed pickup lists.
 function pickupFileFromDialog(input) {
   var file = input && input.files && input.files[0];
   if (input) { try { input.value = ''; } catch (e) {} }
   var ctx = _pickupCtx;
   if (!ctx || !file) return false;
-  var ids = Array.prototype.slice.call(document.querySelectorAll('#ip-body .ip-tick'))
-    .filter(function(el){ return el.checked; }).map(function(el){ return el.getAttribute('data-sid'); });
-  if (!ids.length) { showFB('ip-fb', 'warn', 'Tick the lines the pickup sheet lists.'); return false; }
-  showFB('ip-fb', 'info', 'Filing ' + esc(ctx.vendor) + '’s pickup list…');
-  return fileSignedCopy(ctx.jobId, 'pickup', { ref: ctx.vendor, stableIds: ids, signedBy: ctx.vendor, signedOn: _todayStr(),
-      label: 'Vendor pickup list — ' + ctx.vendor }, file, function(ok, msg, rec){
+  var ids = _signoutTicked();
+  if (!ids.length) { showFB('ip-fb', 'warn', 'Tick the lines the sheet lists.'); return false; }
+  var signer = String((document.getElementById('ip-signer') || {}).value || '').trim() || ctx.taker;
+  showFB('ip-fb', 'info', 'Filing ' + esc(ctx.taker) + '’s sheet…');
+  return fileSignedCopy(ctx.jobId, ctx.kind, _signoutMeta(ctx, ids, signer, false), file, function(ok, msg, rec){
     if (!ok) { showFB('ip-fb', 'warn', esc(msg)); return; }
-    var n = pickupRecordCustody(ctx.jobId, rec);
-    closePickupDialog();
-    showSyncBadge(msg + ' ' + ids.length + ' line' + (ids.length > 1 ? 's' : '') + ' recorded as picked up'
-      + (n ? ', each with a Released custody event' : '') + '.');
-    _signedCopyRepaint(ctx.jobId, 'pickup');
+    _signoutAfterFile(ctx, rec, ids, msg);
   });
 }
-// ⚠ WHERE THE JOB KEEPS A CHAIN OF CUSTODY, THE LIST CLOSES IT: a Released event on each line it covers, to the vendor,
-// on the day it was filed, tied to the list by `pickupId` so a void takes it back off (pickupVoidCustody). Returns how
-// many events it wrote; a line that already carries this list's event is not given a second.
-function pickupRecordCustody(jobId, rec) {
+// The glass route: the sheet drawn with the signature on it, made into a PDF by the backend, filed by the app.
+function signoutFileFromPad() {
+  var ctx = _pickupCtx;
+  if (!ctx) return false;
+  var job = _invJob(ctx.jobId);
+  if (!job) return false;
+  var ids = _signoutTicked();
+  if (!ids.length) { showFB('ip-fb', 'warn', 'Tick the lines being signed for.'); return false; }
+  var signer = String((document.getElementById('ip-signer') || {}).value || '').trim();
+  if (!signer) { showFB('ip-fb', 'warn', 'Type the name of the person signing.'); return false; }
+  if (!signPadSigned('ip-pad')) { showFB('ip-fb', 'warn', 'Sign the sheet first: a signature, not a tap.'); return false; }
+  if (!SHEETS_SYNC_URL) { showFB('ip-fb', 'warn', 'This device has no Apps Script URL in Settings, so it cannot make the PDF. Photograph a printed sheet instead.'); return false; }
+  var g = signoutGroupFor(job, ctx.kind, ctx.taker);
+  if (!g) { showFB('ip-fb', 'warn', 'No line on the inventory goes to them now.'); return false; }
+  var lines = ids.map(function(sid){ return g.lines.filter(function(r){ return String(r.stableId) === String(sid); })[0]; }).filter(Boolean);
+  var html = signoutSheetHtml(job, g, lines, { img: signPadDataUrl('ip-pad'), name: signer, date: _todayStr(), by: _invStampBy(job) });
+  var btn = document.getElementById('ip-sign-btn');
+  if (btn) btn.disabled = true;
+  showFB('ip-fb', 'info', 'Making the signed PDF…');
+  _signoutPdf(job, SIGNOUT_KINDS[ctx.kind].title, html, function(file, err){
+    if (!file) { if (btn) btn.disabled = false; showFB('ip-fb', 'warn', esc(err)); return; }
+    showFB('ip-fb', 'info', 'Filing to Drive…');
+    fileSignedCopy(ctx.jobId, ctx.kind, _signoutMeta(ctx, ids, signer, true), file, function(ok, msg, rec){
+      if (btn) btn.disabled = false;
+      if (!ok) { showFB('ip-fb', 'warn', esc(msg)); return; }
+      _signoutAfterFile(ctx, rec, ids, msg);
+    });
+  });
+  return true;
+}
+// The PDF through the one conversion the backend has (htmlToPdf, the client documents' path), answered as a File the
+// signed-copy filer takes like any PDF chosen from the device. A failure names itself and offers the paper route.
+function _signoutPdf(job, title, html, cb) {
+  _appsScriptPost(SHEETS_SYNC_URL, { action: 'htmlToPdf', html: _exportDoc(title + ' – ' + (job.hvlId || ''), html) }, function(ok, d){
+    if (!ok || !d || !d.base64) { cb(null, ((d && d.error) ? String(d.error) + ': ' : '') + 'the PDF could not be made. Check the connection and try again, or photograph a printed sheet.'); return; }
+    var bin = atob(d.base64), arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    cb(new File([arr], title + '.pdf', { type: 'application/pdf' }));
+  }, true);
+}
+function _signoutAfterFile(ctx, rec, ids, msg) {
+  var n = 0;
+  if (ctx.kind === 'pickup') n = pickupRecordCustody(ctx.jobId, rec);
+  else if (ctx.kind === 'appraisal_out') n = _signoutRecordCustody(ctx.jobId, rec, 'Transferred', 'Out for appraisal', 'Hand-off list filed to Drive');
+  else if (ctx.kind === 'appraisal_back') n = _signoutRecordCustody(ctx.jobId, rec, 'Returned', 'Back from appraisal', 'Return list filed to Drive');
+  closePickupDialog();
+  showSyncBadge(msg + ' ' + ids.length + ' line' + (ids.length > 1 ? 's' : '') + ' recorded'
+    + (ctx.kind === 'appraisal_out' ? ' as out for appraisal' : ctx.kind === 'appraisal_back' ? ' as returned' : ctx.kind === 'receipt' || ctx.kind === 'donation' ? ' as receipted' : ' as picked up')
+    + (n ? ', each with a custody event' : '') + '.');
+  _signedCopyRepaint(ctx.jobId, ctx.kind);
+}
+// A custody event per line for the paper just filed, where the job keeps the log; keyed on the paper's id (`pickupId`,
+// P22's name, kept: the void reads it) so a void takes them off again.
+function _signoutRecordCustody(jobId, rec, action, method, receipt) {
   var job = _invJob(jobId);
   if (!job || !rec || !custodyLogKept(job, (estimateStore[jobId] || {}).estimate)) return 0;
   var n = 0;
@@ -30547,16 +30815,16 @@ function pickupRecordCustody(jobId, rec) {
     if (!ref || ref.deletedAt) return;
     if ((ref.custodyLog || []).some(function(e){ return e && !e.deletedAt && e.pickupId === rec.id; })) return;
     if (!ref.custodyLog) ref.custodyLog = [];
-    // The custody vocabulary's own word (addCustodyEvent's default), held in a local so no source scan reads it as a
-    // backend action name.
-    var released = 'Released';
-    ref.custodyLog.push({ cid: _photoUid(), at: Date.now(), action: released, party: rec.ref || '', date: rec.signedOn || _todayStr(),
-      method: 'Vendor pickup', receipt: 'Pickup list filed to Drive', pickupId: rec.id, by: _invStampBy(job) });
+    ref.custodyLog.push({ cid: _photoUid(), at: Date.now(), action: action, party: rec.ref || '', date: rec.signedOn || _todayStr(),
+      method: method, receipt: receipt, pickupId: rec.id, by: _invStampBy(job) });
     _setPhotoRef(jobId, _invTouch(ref));
     n++;
   });
   if (n) { savePhotoRefs(jobId); _scheduleInventorySync(jobId); }
   return n;
+}
+function pickupRecordCustody(jobId, rec) {
+  return _signoutRecordCustody(jobId, rec, 'Released', 'Vendor pickup', 'Pickup list filed to Drive');
 }
 function pickupVoidCustody(jobId, rec) {
   var n = 0;
@@ -31772,7 +32040,7 @@ function invReceiptFrom(job) {
 // Havellin; and who the property came from, by matter. ⚠ THE STATEMENT IS DRAFTED, NOT REVIEWED: it records a
 // delivery, and says it decides nothing about ownership or value and waives no claim, because a beneficiary's receipt
 // and release is counsel's paper, never ours. Filed back through the desk's File signed receipt (kind `receipt`).
-function invReceiptHtml(job, name, lines) {
+function invReceiptHtml(job, name, lines, sig) {
   var td = 'padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;';
   var th = 'padding:2px 6px;';
   var fids = jobFiduciaries(job);
@@ -31797,13 +32065,14 @@ function invReceiptHtml(job, name, lines) {
       + 'in the condition described, from ' + from + ', delivered to me by Havellin Palm Beach, LLC as directed in writing by '
       + esc(by) + '. This receipt records the delivery only: it does not decide who owns the property or what it is worth, '
       + 'and it does not release or waive any right or claim concerning ' + esc(holder) + '.</div>'
-    + '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
+    + (sig && sig.img ? signoutSignatureHtml(sig, 'Received by', true)
+      : '<div style="margin-top:22px;font-size:11px;line-height:2.2;">'
       + 'Received by: __________________________________ &nbsp;&nbsp; Date: ______________<br>'
       + '<span style="color:#888;">Signature of ' + esc(name) + '</span><br>'
       + 'Printed name: __________________________________</div>'
     + '<div style="margin-top:16px;font-size:11px;line-height:2.2;">'
       + 'Witnessed for Havellin Palm Beach, LLC: __________________________________ &nbsp;&nbsp; Date: ______________<br>'
-      + 'Printed name: __________________________________</div>'
+      + 'Printed name: __________________________________</div>')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Havellin keeps the signed receipt with '
       + esc(invRecordsNoun(job)) + ' and files a copy to the client&rsquo;s Drive folder. Item numbers are the ones every inventory document cites.</div>'
     + '</div>';
@@ -31922,17 +32191,25 @@ function _renderInvReleasesCard(job, all) {
   }
   // ⚠ VENDOR PICKUPS, ESTATE AND LIVING ALIKE (P22): each vendor taking lines away, what its filed lists cover, and the
   // one press that files the next sheet. A line on no list is named, never refused.
-  var pickups = pickupGroups(job, all);
-  if (pickups.length) {
-    parts.push(head('Vendor pickups') + pickups.map(function(g){
-      var done = g.lines.filter(function(r){ return g.open.indexOf(r) < 0; });
-      return '<div class="inv-rel-row inv-pickup-row" style="' + row + '">'
-        + '<div><strong>' + esc(g.vendor) + '</strong> &middot; ' + g.lines.length + ' line' + (g.lines.length > 1 ? 's' : '') + ' (' + nums(g.lines) + ')'
-          + (done.length ? ' &middot; <span style="color:var(--ok-tx);">&#10003; on a pickup list: ' + nums(done) + '</span>' : '')
-          + (g.open.length && done.length ? ' &middot; <span style="color:#8a5a1e;">not on one: ' + nums(g.open) + '</span>' : '')
+  // ⚠ SIGN-OUT ON THE IPAD (P28, 2026-10-18) took the place of P22's Vendor pickups section: every taker on the
+  // inventory (a vendor, a charity, a person, an appraiser), what each may sign for now, what is already signed for, and on
+  // an estate what waits on the written approval. The receipts section above keeps the printed receipt and the photograph
+  // route for a person; this row signs the same receipt on the glass.
+  var outs = signoutGroups(job, all);
+  if (outs.length) {
+    parts.push(head('Leaving the property &middot; sign out on the iPad') + outs.map(function(g){
+      var kd = SIGNOUT_KINDS[g.kind];
+      var btn = g.kind === 'appraisal_back'
+        ? 'Check ' + g.ready.length + ' back in from ' + g.taker
+        : 'Sign out ' + g.ready.length + ' to ' + g.taker;
+      return '<div class="inv-rel-row inv-signout-row" data-kind="' + esc(g.kind) + '" style="' + row + '">'
+        + '<div><strong>' + esc(g.taker) + '</strong> &middot; ' + esc(kd.what) + ' &middot; ' + g.lines.length + ' line' + (g.lines.length > 1 ? 's' : '') + ' (' + nums(g.lines) + ')'
+          + (g.done.length ? ' &middot; <span style="color:var(--ok-tx);">&#10003; signed for: ' + nums(g.done) + '</span>' : '')
+          + (g.waiting.length ? ' &middot; <span style="color:#8a5a1e;font-weight:600;">&#9888; awaiting written approval: ' + nums(g.waiting) + '</span>' : '')
         + '</div>'
         + '<div class="inv-rel-ctl">'
-          + '<button class="btn-s" onclick="openPickupDialog(' + jid + ',' + _invJsArg(g.key) + ')">' + (g.records.length ? 'File another pickup list' : 'File pickup list') + '</button>'
+          + (g.ready.length ? '<button class="btn-s" onclick="openSignoutDialog(' + jid + ',' + _invJsArg(g.kind) + ',' + _invJsArg(g.taker) + ')">' + esc(btn) + '</button>'
+             : g.waiting.length ? '<span style="color:var(--gray);">Nothing to sign out until the approval is on record.</span>' : '')
           + signedRecordLinksHtml(jid, g.records) + '</div>'
         + '</div>';
     }).join(''));
@@ -33577,7 +33854,8 @@ function printAppraisalWorklist(jobId, opt) {
       var rows = groups[a].map(function(r) {
         return '<tr>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
-          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '(unnamed)') + '</td>'
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '(unnamed)')
+            + (function(){ var o = invOutForAppraisal(r, job); return o ? ' <span style="color:#8a6d3b;">&middot; with ' + esc(o.ref || 'the appraiser') + (o.signedOn ? ' since ' + esc(fmtDate2(o.signedOn)) : '') + '</span>' : ''; })() + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.category || '') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
           // ⚠ WHAT THE ESTATE INTENDS TO DO WITH THE OBJECT CHANGES WHAT THE APPRAISER IS
@@ -36973,6 +37251,11 @@ function _renderInvRow(job, ref) {
   var _pk = invPickupRecord(ref, job);
   if (_pk) warn.push('<span class="inv-pickup-chip" title="' + esc('On ' + (_pk.ref || 'the vendor') + '’s pickup list, filed to Drive'
     + (_pk.signedOn ? ' ' + fmtDate2(_pk.signedOn) : '') + '.') + '" style="color:var(--ok-tx);font-weight:700;">&#10003; picked up by ' + esc(_pk.ref || 'the vendor') + '</span>');
+  // ⚠ OUT WITH AN APPRAISER (P28): the hand-off list is filed and no return covers the line yet. Bronze, not gone.
+  var _out = invOutForAppraisal(ref, job);
+  if (_out) warn.push('<span class="inv-out-chip" title="' + esc('On ' + (_out.ref || 'the appraiser') + '’s hand-off list, filed to Drive'
+    + (_out.signedOn ? ' ' + fmtDate2(_out.signedOn) : '') + '. Check it back in from the Releases card when it returns.')
+    + '" style="color:var(--bronze);font-weight:700;">&#9878; with ' + esc(_out.ref || 'the appraiser') + (_out.signedOn ? ' since ' + esc(fmtDate2(_out.signedOn)) : '') + '</span>');
   // ⚠ A WALKTHROUGH COLLECTION STILL WAITING FOR ITS PHOTOGRAPH (P24). Bronze: red on this strip is a held firearm.
   if (collectionLineUnshot(ref)) {
     warn.push('<span class="inv-coll-chip" title="' + esc('A collection from the estimate walkthrough, on the inventory and waiting for its photograph. '

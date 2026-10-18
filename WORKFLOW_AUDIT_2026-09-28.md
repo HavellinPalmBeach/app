@@ -876,6 +876,9 @@ Fixes: the gaps a senior-move industry reference (six sources: Vantage Point, Se
 - **Four pages** in the photography guide's shape: `sorting-guide.html`, `packing-guide.html`, `move-day-guide.html`, `first-night-guide.html`. `tests/p27-industry.test.js`, browser step 85.
 - **Found in passing:** in `CLAUDE.md`, Open work.
 
+### P28 · Sign-out on the iPad (2026-10-18)
+Anthony: *"signing things on the ipad is genius. let's do that for anything that leaves the house, on estate, once the PR signs off on disposition."* Built the same day: the sign-out dialog on the Releases card for every taker (a vendor, a charity, a person, an appraiser), a signature drawn on the iPad, the PDF made by the backend and filed by the app under the paper the desk already reads; the appraiser's hand-off and return (`appraisal_out`, `appraisal_back`, `invOutForAppraisal`); an estate's leaving line offered only once every fiduciary has approved it in writing; firearms never. `tests/p28-signout.test.js`, browser step 87. Open: whether `htmlToPdf` renders the embedded signature (first live sheet); counsel's D17; the package's *Release Approvals and Chain of Custody* record still lists pickup releases only (a hand-off's Transferred event is in the custody log but not named there).
+
 ## Questions for Anthony
 
 **Answered 2026-09-29, the last three on 2026-09-30, and Q22 to Q32 on 2026-10-05.** The recommendations stand except Q9 and Q20, which Anthony changed. Each answer is under its question.

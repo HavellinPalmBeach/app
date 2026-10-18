@@ -403,7 +403,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ THE ROW SAYS AN AGENT NAMED IT AND NOBODY HAS CHECKED IT');
   {
-    const row = liveLines(fn('_renderInvRow'));
+    const row = liveLines(fn('_renderInvRow', 'invOutForAppraisal'));
     has(row, "ref.namedBy === 'agent' && !ref.reviewed", 'the badge is on an unchecked agent guess');
     has(row, 'var(--bronze)', 'and it is bronze');
     // ⚠ NEVER RED. Red on this strip means "stop, do not touch" — a held firearm — and a
@@ -788,7 +788,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
+      fns: ['invLineReviewed', '_renderInvRow', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
@@ -821,7 +821,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(html2, 'possible duplicate', 'and an uncontested row renders none');
     has(html2, '>agent<', 'while still carrying its own unchecked badge');
 
-    const rowSrc = liveLines(fn('_renderInvRow'));
+    const rowSrc = liveLines(fn('_renderInvRow', 'invOutForAppraisal'));
     // ⚠⚠ O(n) INSIDE O(n). The grouper is a full pass over the manifest; calling it per row on
     // the one tab this file records repainting in 1,420 ms at 3,000 rows would be quadratic.
     lacks(rowSrc, 'agentDuplicateGroups', 'and never computes the grouping itself');

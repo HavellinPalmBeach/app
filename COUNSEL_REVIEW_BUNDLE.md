@@ -1314,6 +1314,17 @@ right under §415.107, and should the app say anything to a client whose concern
 duty correctly for Havellin's people (the statute names any person; some are mandatory reporters by profession)? (4) The Project
 Records sentence above, and §6.3 on the standard form.
 
+### D17. Sign-out on the iPad: the sheets a taker signs on the glass ⚠ NEW P28 (2026-10-18)
+
+Anyone taking property out of the house signs for it on the iPad, and the app files the PDF itself. Four sheets, each headed by the party (the estate, the trust, or the living client), listing the items by inventory number with room and condition, and on an estate the fiduciary's written approval of each line. The acknowledgements, drafted here and not reviewed:
+
+- **Vendor Pickup List** (an auction house, consignor or buyer): *"I received the items listed above from Havellin Palm Beach, LLC, acting for [the party], for the purpose recorded against each item. This list records the handover only: it does not decide what the items are worth."*
+- **Donation Release** (a charity): *"I received the items listed above as a charitable donation from [the party], delivered by Havellin Palm Beach, LLC. This list records the delivery only; any valuation is the donor's."*
+- **Appraisal Hand-off** (an appraiser taking items off site): *"I received the items listed above from Havellin Palm Beach, LLC for appraisal, to be returned to the property in the condition received. Title stays with [the party]."* And on their return, **Appraisal Items Returned**: *"Havellin Palm Beach, LLC received the items listed above back at the property from [the appraiser]."*
+- A release to a person uses the existing **Receipt for Property Released** (D-series, P19), signed on the glass in place of the blank lines.
+
+Each sheet ends *"Signed by [name], signed on the iPad · [date] · Witnessed for Havellin Palm Beach, LLC: [concierge]"*. Questions for counsel: (1) is a finger-drawn signature captured on the device and embedded in a PDF the firm files sufficient as the vendor's, charity's or appraiser's acknowledgement of receipt for the purposes these sheets serve (custody and the Disposition Ledger, never title or value); (2) should the appraisal hand-off state the appraiser's bailee responsibility for the items while out, or is that the appraiser's engagement letter's job; (3) whether the donation release should carry the IRS wording a donor's own acknowledgment letter needs, or stay a delivery record and leave that letter to the charity.
+
 ## E. What is deliberately NOT being asked
 
 So counsel does not spend time on settled ground:

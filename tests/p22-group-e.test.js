@@ -302,19 +302,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   G('E7 · the pickup list: grouped by the vendor\'s channel, pre-ticked, filed, gone, and custody closed where it is kept', () => {
-    const lines = [LINE('a', 1, { disposition: 'Auction', channel: "Sotheby's Palm Beach" }), LINE('b', 2, { disposition: 'Consign', channel: "  sotheby's   palm beach " }),
-      LINE('c', 3, { disposition: 'Sell', channel: 'Jane Buyer' }), LINE('d', 4, { disposition: 'Donate', channel: 'Goodwill' }),
-      LINE('e', 5, { disposition: 'Auction', channel: '' }), LINE('f', 6, { disposition: 'Auction', channel: "Sotheby's Palm Beach", deletedAt: 9 })];
+    // P28 (2026-10-18): on an estate the dialog offers a line only once every fiduciary has approved it in writing, so the
+    // vendor's lines carry the trustee's approval; `g` is the same vendor's line without it, listed as waiting and never ticked.
+    const OK = { authBy: 'Ruth Adler', approvalDate: '2026-10-05' };
+    const lines = [LINE('a', 1, Object.assign({ disposition: 'Auction', channel: "Sotheby's Palm Beach" }, OK)), LINE('b', 2, Object.assign({ disposition: 'Consign', channel: "  sotheby's   palm beach " }, OK)),
+      LINE('c', 3, Object.assign({ disposition: 'Sell', channel: 'Jane Buyer' }, OK)), LINE('d', 4, { disposition: 'Donate', channel: 'Goodwill' }),
+      LINE('e', 5, { disposition: 'Auction', channel: '' }), LINE('f', 6, { disposition: 'Auction', channel: "Sotheby's Palm Beach", deletedAt: 9 }),
+      LINE('g', 7, { disposition: 'Auction', channel: "Sotheby's Palm Beach" })];
     const job = TRUSTJ();
     const c = pick(job, lines);
     const g = c.pickupGroups(job, lines);
-    eq(g.map((x) => [x.vendor, x.lines.map((r) => r.stableId)]), [["Sotheby's Palm Beach", ['a', 'b']], ['Jane Buyer', ['c']]],
+    eq(g.map((x) => [x.vendor, x.lines.map((r) => r.stableId)]), [["Sotheby's Palm Beach", ['a', 'b', 'g']], ['Jane Buyer', ['c']]],
       '⚠⚠ a selling line with a vendor named, matched case- and space-insensitively; a donation, a blank channel and a removed line are not');
     eq(c.invRecordedGone(lines[0], job), false, 'fixture: not gone before the list');
     // The dialog: pre-ticked, untick one, choose the photo.
     ok(c.openPickupDialog(7, g[0].key), 'the dialog opens');
     const body = c.__doc.getElementById('ip-body').innerHTML;
-    eq((body.match(/ip-tick[^>]*checked/g) || []).length, 2, '⚠⚠ every live line on that channel pre-ticked');
+    eq((body.match(/ip-tick[^>]*checked/g) || []).length, 2, '⚠⚠ every approved live line on that channel pre-ticked');
+    ok(/data-sid="g"[^>]*disabled/.test(body) && /awaiting written approval: not offered/.test(body), '⚠⚠ P28: the unapproved line is listed, disabled, and says why');
     const ticks = [{ checked: true, getAttribute: () => 'a' }, { checked: false, getAttribute: () => 'b' }];
     c.document.querySelectorAll = () => ticks;
     const input = { files: [{ name: 'sheet.jpg', type: 'image/jpeg', size: 1000 }], value: 'x' };
@@ -329,12 +334,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 2026-10-12: the event names who filed the list (_invStampBy: the device's user, else the job's concierge; no device here).
     eq(ev[0].by, 'Ashley Jerome', '⚠ recorded by the person at the device, the concierge with no device user set');
     ok(c.__log.syncs >= 1 && c.__log.saves >= 1, 'saved and synced');
-    has(c.__log.badges.join(' '), '1 line recorded as picked up, each with a Released custody event', 'the notice says what it did');
+    has(c.__log.badges.join(' '), '1 line recorded as picked up, each with a custody event', 'the notice says what it did');
     // The card and the row.
     const card = text(c._renderInvReleasesCard(job, lines.filter((r) => !r.deletedAt)));
-    has(card, "Vendor pickups Sotheby's Palm Beach · 2 lines (#1, #2) · ✓ on a pickup list: #1 · not on one: #2", '⚠⚠ the card names what the list covers and what it does not');
-    has(card, 'File another pickup list', 'and offers the next sheet');
-    has(card, 'Jane Buyer · 1 line (#3) File pickup list', 'a vendor with nothing filed: one press');
+    // P28: the section is the sign-out section; it names what is signed for, what is offered and what waits on approval.
+    has(card, "Leaving the property · sign out on the iPad Sotheby's Palm Beach · vendor pickup · 3 lines (#1, #2, #7) · ✓ signed for: #1 · ⚠ awaiting written approval: #7", '⚠⚠ the card names what the list covers, what it does not, and what waits');
+    has(card, "Sign out 1 to Sotheby's Palm Beach", 'and offers the next sheet for the one line still offered');
+    has(card, 'Jane Buyer · vendor pickup · 1 line (#3) Sign out 1 to Jane Buyer', 'a vendor with nothing filed: one press');
     has(text(c._renderInvRow(job, lines[0], {})), "✓ picked up by Sotheby's Palm Beach", '⚠⚠ the row\'s status says so');
     lacks(text(c._renderInvRow(job, lines[1], {})), 'picked up by', 'and only on the lines it covers');
     // Void: the list and its custody events come off.
@@ -359,14 +365,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     c2.openPickupDialog(2, 'Kaminski Auctions');
     c2.document.querySelectorAll = () => [{ checked: false, getAttribute: () => 'a' }];
     eq(c2.pickupFileFromDialog({ files: [{ name: 's.pdf', type: 'application/pdf', size: 10 }] }), false, 'nothing ticked: not filed');
-    has(c2.__doc.getElementById('ip-fb').innerHTML, 'Tick the lines the pickup sheet lists.', 'and says so');
+    has(c2.__doc.getElementById('ip-fb').innerHTML, 'Tick the lines the sheet lists.', 'and says so');
     eq(c2.__log.filed, undefined, 'nothing reached Drive');
   });
 
   G('E7 · one rule: the kind is registered, custody asks custodyLogKept, and renderJobPlan reads the same answer', () => {
     has(noComments(decl('SIGNED_RECORD_KINDS')), "pickup:    { label: 'Vendor pickup list' }", 'the kind');
     has(noComments(fn('renderJobPlan')), 'var custodyMandatory = custodyLogKept(job, est);', 'the plan\'s banner and the pickup ask one question');
-    eq(readers('custodyLogKept'), ['pickupRecordCustody', 'renderJobPlan'], 'its readers');
+    eq(readers('custodyLogKept'), ['_signoutRecordCustody', 'renderJobPlan'], 'its readers (P28: the one custody writer every signed paper calls; pickupRecordCustody is its vendor call)');
     // Driven: each arm on its own (the 706 answered no, so the documentation level is not formal by default).
     const K = lift(['custodyLogKept'], {});
     const plain = { svc: 'cleanout', docTier: 'contents', gate706: 'no', deathDate: '2026-01-01' };

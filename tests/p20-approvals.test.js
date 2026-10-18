@@ -529,8 +529,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(decl('INV_RELEASE_CAUTIONS')), 'invHavellinRecipient(r, _invJob(jobId))', 'the living caution reads the same definition');
     ['_invEdit', '_invBulkApply'].forEach((n) => lacks(noComments(fn(n)), 'invHavellinRecipient(', n + ' never asks the definition bare (the estate refusal is invStaffRefused)'));
     // Every surface that prints who signed reads the one readable form.
-    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', '_invExportValue', 'invApprovalBoxText', 'invApprovalGap', 'printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml'],
-       '⚠ the request, the flag, the panel, the ledger, the package\'s record, the workbook');
+    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', '_invExportValue', 'invApprovalBoxText', 'invApprovalGap', 'printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml', 'signoutSheetHtml'],
+       '⚠ the request, the flag, the panel, the ledger, the package\'s record, the workbook, and the sign-out sheet (P28)');
     ['printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml', '_invExportValue', 'invApprovalGap'].forEach((n) =>
       ok(!/esc\(r\.authBy|String\(r\.authBy\)|String\(ref\.authBy\)\.trim\(\) \+ ', '/.test(noComments(fn(n))), n + ' never prints the stored field'));
     // The dialog's note and the save's confirmation say one sentence.
