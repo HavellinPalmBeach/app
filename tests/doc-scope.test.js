@@ -364,7 +364,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // from it, so the two can no longer be set independently and disagree.
     const q = src.indexOf('id="i-doc-tier"');
     ok(estateOpen > 0 && probateOpen > estateOpen, 'the estate block exists and precedes the probate block');
-    ok(q > estateOpen && q < probateOpen, 'the intake question sits in the estate block, not the probate one');
+    // ⚠ SINCE 2026-10-18 the tier sits with the two gates and their readout in #estate-doc-fields, the right-hand
+    // card's documentation block, which toggleIntakeFields shows and hides with #estate-fields: still a block shown
+    // on every decedent service, still never the court-only one. Containment, as before.
+    const docOpen = src.indexOf('id="estate-doc-fields"');
+    const docEnd  = src.indexOf('id="i-doclevel-block"', docOpen);
+    ok(docOpen > 0 && q > docOpen && q < docEnd, 'the intake question sits in the estate documentation block');
+    ok(!(q > probateOpen && q < src.indexOf('id="trust-fields"')), 'and not in the probate one');
+    has(src.slice(src.indexOf('function toggleIntakeFields('), src.indexOf('function toggleIntakeFields(') + 12000),
+        "edf.style.display = isEstate ? 'block' : 'none'", 'the documentation block follows the estate block in the one toggle');
     lacks(src, 'id="i-docscope"', 'and the old scope control is gone rather than left beside it — two controls answering one question is the drift');
     has(src, "docTier:            (document.getElementById('i-doc-tier')||{}).value||'',", 'intake saves the tier on the job');
     // ⚠ MIRRORED ONLY WHEN THERE IS SOMETHING TO MIRROR. `docTierScope('')` answers 'full' on

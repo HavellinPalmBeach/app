@@ -1364,7 +1364,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.17 · 9:36pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.18 · 9:50am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1513,6 +1513,142 @@ body.no-smf .smf-col{display:none;}
         </div>
         <div style="font-size:10px;color:var(--gray);margin-top:2px;">Optional — lists only the partners matching the referral source selected above, so the specific referrer is tracked. Manage the list in the Referral Partners tab.</div>
       </div>
+      <div id="estate-auth-fields" style="display:none;">
+        <div class="divider"></div>
+        <div class="sec" style="margin-bottom:6px;">Authorized Representative <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(person authorized to direct the estate)</span></div>
+        <div class="row">
+          <div><label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-fname" placeholder="First name"></div>
+          <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-lname" placeholder="Last name"></div>
+        </div>
+        <div class="row">
+          <div class="gate-cell"><label>Role / Authority <span style="color:#A32D2D;font-weight:700;">*</span></label>
+            <!-- Built from EXECUTOR_ROLES by buildExecutorRoleOptions() at load; Edit Client builds
+                 its own from the same list, so the two forms cannot offer different roles. -->
+            <select id="i-executor-role"></select>
+          </div>
+          <!-- Built from EXECUTOR_AUTH_OPTIONS by buildExecutorAuthOptions() at load, and
+               Edit Client builds its own from the same list. This <select> ships EMPTY on
+               purpose: a second hardcoded copy is how the two forms come to offer different
+               answers to one question. -->
+          <!-- ⚠ THE PAPER FOLLOWS THE MATTER (P19, 2026-10-03): the label and the hint are executorAuthField's, painted by
+               toggleIntakeFields as the matter type below changes — the Letters of Administration on the probate track, the
+               successor trustee's Certification of Trust on a trust-only matter, and no control at all where the matter
+               has no paper (Neither) or is not answered yet. The answer stays job.executorAuth. -->
+          <div class="gate-cell" id="i-executor-auth-cell">
+            <label id="i-executor-auth-lbl">Letters of Administration</label>
+            <select id="i-executor-auth"></select>
+            <div id="i-executor-auth-hint" style="font-size:10px;color:var(--gray);margin-top:2px;">Leave Pending unless a certified copy is already in hand. On probate the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.</div>
+          </div>
+        </div>
+        <div class="row">
+          <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" oninput="formatPhone(this)" maxlength="14"></div>
+          <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
+        </div>
+        <!-- ⚠ EVERY CO-REPRESENTATIVE (P19, Anthony's call 4): the block is coFiduciaryBlockHtml's, the one builder Edit
+             Client draws too, filled at load and by the reset (buildCoFiduciaryBlock), and saved with the new job through
+             the record list's writer (jobListPut). A row with nothing typed is no one; anything typed needs a name. -->
+        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Co-representatives <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(a co-executor, co-personal representative or co-trustee who serves with the representative)</span></div>
+        <div id="i-cofid-block"></div>
+      </div>
+      <!-- ⚠ THE PEOPLE READ TOGETHER (Anthony, 2026-10-18): the deceased, the representative who directs the estate and the
+           attorney who advises it are three contact blocks in a row, under Client Information, and the matter's own facts
+           follow them. What each block holds is unchanged; the containment tests (estate-intake, doc-scope) hold the ids
+           to their blocks, and the documentation questions (the tier, the two gates and the readout) sit in
+           #estate-doc-fields in the right-hand card, shown and hidden with this block. -->
+      <!-- ⚠⚠ THESE ARE FACTS ABOUT A DECEDENT, SO THEY BELONG ON ALL THREE DECEDENT
+           SERVICES — Estate Settlement, Probate and Contested Probate (isDecedentJob).
+           Every field in here used to sit inside #probate-fields, which renders on the two
+           PROBATE services alone, so an Estate Settlement was never asked one of them. It
+           took the 'full' documentation default and was priced at full documentation
+           whatever counsel had actually asked for; its 706 question was never answered, and
+           unknown counts as yes, so it sat in permanent Strict Mode with the explanation
+           rendering into a div nobody could see; and it carried no date of death, although
+           every valuation on an estate schedule is measured at one (estateValueDate).
+           What stays probate-only below is the COURT record and nothing else: the case
+           number, the Letters, the §733.604 clock. (The sale question left it in P19: a
+           trust matter is asked it too, from its own cell here — propertySaleAsked.)
+           ⚠ The attorney keys stay `i-probate-atty-*` / job.probateAtty* deliberately —
+           twenty-odd readers and every saved job are keyed on them, and a rename here buys
+           a label. Only the heading moved, to the name the Job Plan already uses. -->
+      <div id="estate-fields" style="display:none;">
+        <div class="divider"></div>
+        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Estate Attorney <span id="i-atty-req-note" style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(all fields required)</span></div>
+        <div class="row">
+          <div><label>First name <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-fname" placeholder="First name"></div>
+          <div><label>Last name <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-lname" placeholder="Last name"></div>
+        </div>
+        <div class="row">
+          <div><label>Firm <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-firm" placeholder="Law firm name"></div>
+          <div><label>Attorney phone <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" oninput="formatPhone(this)" maxlength="14"></div>
+        </div>
+        <div class="row">
+          <div><label>Attorney email <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-probate-atty-email" placeholder="Direct email"></div>
+          <div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="sec" style="margin:10px 0 6px;font-size:11px;">Estate Details</div>
+        <div class="row">
+          <div class="gate-cell"><label>Date of death <span style="color:#A32D2D;font-weight:700;">*</span></label>
+            <input type="date" id="i-date-of-death">
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Every value on this estate is a fair market value <em>at this date</em> — it is what the schedule, the 706 and a trustee’s opening carrying value all state. It is on the death certificate; ask for it on the call.</div>
+          </div>
+          <!-- Required (clientMissingFields, since P9), so it carries the mark every other required label does (P16). -->
+          <div class="gate-cell"><label>How is this estate being administered? <span style="color:#A32D2D;font-weight:700;">*</span></label>
+            <select id="i-matter-type" onchange="toggleIntakeFields()">
+              <option value="">Select &mdash; ask the attorney</option>
+              <option value="probate">Probate &mdash; administered through the court</option>
+              <option value="trust">Trust &mdash; a successor trustee administers it</option>
+              <option value="both">Both &mdash; pour-over will; some assets probate into the trust</option>
+              <option value="neither">Neither &mdash; family distribution, no court and no trust</option>
+            </select>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Which <em>instrument</em> the work feeds, not what we were hired to do. <strong>Deliberately has no default</strong> &mdash; guessing probate is what puts a court schedule in front of a successor trustee. A pour-over will is usually <em>Both</em>.</div>
+          </div>
+        </div>
+        <!-- A Probate service on a matter with no court (P20, Q26): flagged live as the service or the matter changes
+             (probateSvcFlag, painted by toggleIntakeFields). A flag; Save Client is never refused for it. -->
+        <div id="i-svc-flag"></div>
+        <div class="row">
+          <!-- ⚠ ASKED ON A TRUST AS ON A COURT MATTER (P19; Anthony, 2026-10-02: "yes"). It sat in #probate-fields, which a
+               trust matter never shows; propertySaleAsked shows it wherever the court record or a trust is. -->
+          <div class="gate-cell" id="i-sale-cell" style="display:none;"><label>Property sale required?</label>
+            <select id="i-probate-sale">
+              <option value="">Select</option>
+              <option value="yes">Yes &mdash; property must be sold</option>
+              <option value="no">No &mdash; heirs retaining property</option>
+              <option value="maybe">Under discussion</option>
+            </select>
+          </div>
+          <div></div>
+        </div>
+      </div>
+      <div id="probate-fields" style="display:none;">
+        <div class="divider"></div>
+        <div class="sec" style="margin-bottom:6px;">Probate Details <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the case, the Letters and the §733.604 clock)</span></div>
+        <div class="row">
+          <div><label>Letters issued</label>
+            <input type="date" id="i-letters-date" onchange="computeInventoryDeadline()"></div>
+          <div><label>Case number <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234" oninput="fillCourtFromCase('i')"></div>
+        </div>
+        <div class="row">
+          <div><label>§733.604 inventory deadline</label><input type="date" id="i-probate-deadline" oninput="this.dataset.userEdited='1'"><div id="i-deadline-fb" class="fb"></div></div>
+          <div><label>Court</label><input type="text" id="i-probate-court" placeholder="filled from the case number" oninput="this.dataset.userEdited='1'"></div>
+        </div>
+      </div>
+      <!-- ⚠ THE TRUST ITSELF (P19, 2026-10-03): asked wherever the matter holds a trust — Trust, and Both — by
+           trustRecordShown, which toggleIntakeFields reads as the matter type changes. Optional: what the successor
+           trustee's Certification of Trust states, and a card shows a blank as not recorded. -->
+      <div id="trust-fields" style="display:none;">
+        <div class="divider"></div>
+        <div class="sec" style="margin-bottom:6px;">Trust Details <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(from the Certification of Trust; optional)</span></div>
+        <div class="row">
+          <div><label>Name of the trust</label><input type="text" id="i-trust-name" placeholder="e.g. The Adler Family Revocable Trust"></div>
+          <div><label>Trust dated</label><input type="date" id="i-trust-date"></div>
+        </div>
+        <div class="row">
+          <div><label>Successor trustee accepted</label><input type="date" id="i-trustee-accepted"></div>
+          <div></div>
+        </div>
+      </div>
       <div class="divider"></div>
       <div class="sec">Job Details</div>
       <div class="row">
@@ -1647,83 +1783,14 @@ body.no-smf .smf-col{display:none;}
       <div id="i-houseflags"></div>
       </div>
       <div class="divider"></div>
-      <label>Notes <span class="lbl-hint">&mdash; anything the two questions above did not cover</span></label>
+      <label>Notes <span class="lbl-hint">&mdash; anything not covered above</span></label>
       <textarea id="i-notes" placeholder="Family situation, urgency, who actually makes the decisions, etc."></textarea>
-      <div id="estate-auth-fields" style="display:none;">
+      <!-- ⚠ THE DOCUMENTATION QUESTIONS, TOGETHER (Anthony, 2026-10-18): what we produce (the tier), how strictly (the two
+           gates and their readout) and the level under them. Shown with #estate-fields (toggleIntakeFields); the level
+           block below stays outside it, so the living services keep their route to Formal. -->
+      <div id="estate-doc-fields" style="display:none;">
         <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Authorized Representative <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(person authorized to direct the estate)</span></div>
-        <div class="row">
-          <div><label>First name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-fname" placeholder="First name"></div>
-          <div><label>Last name <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-executor-lname" placeholder="Last name"></div>
-        </div>
-        <div class="row">
-          <div class="gate-cell"><label>Role / Authority <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <!-- Built from EXECUTOR_ROLES by buildExecutorRoleOptions() at load; Edit Client builds
-                 its own from the same list, so the two forms cannot offer different roles. -->
-            <select id="i-executor-role"></select>
-          </div>
-          <!-- Built from EXECUTOR_AUTH_OPTIONS by buildExecutorAuthOptions() at load, and
-               Edit Client builds its own from the same list. This <select> ships EMPTY on
-               purpose: a second hardcoded copy is how the two forms come to offer different
-               answers to one question. -->
-          <!-- ⚠ THE PAPER FOLLOWS THE MATTER (P19, 2026-10-03): the label and the hint are executorAuthField's, painted by
-               toggleIntakeFields as the matter type below changes — the Letters of Administration on the probate track, the
-               successor trustee's Certification of Trust on a trust-only matter, and no control at all where the matter
-               has no paper (Neither) or is not answered yet. The answer stays job.executorAuth. -->
-          <div class="gate-cell" id="i-executor-auth-cell">
-            <label id="i-executor-auth-lbl">Letters of Administration</label>
-            <select id="i-executor-auth"></select>
-            <div id="i-executor-auth-hint" style="font-size:10px;color:var(--gray);margin-top:2px;">Leave Pending unless a certified copy is already in hand. On probate the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.</div>
-          </div>
-        </div>
-        <div class="row">
-          <div><label>Phone <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-executor-phone" oninput="formatPhone(this)" maxlength="14"></div>
-          <div><label>Email <span style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-executor-email" placeholder="Direct email"></div>
-        </div>
-        <!-- ⚠ EVERY CO-REPRESENTATIVE (P19, Anthony's call 4): the block is coFiduciaryBlockHtml's, the one builder Edit
-             Client draws too, filled at load and by the reset (buildCoFiduciaryBlock), and saved with the new job through
-             the record list's writer (jobListPut). A row with nothing typed is no one; anything typed needs a name. -->
-        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Co-representatives <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(a co-executor, co-personal representative or co-trustee who serves with the representative)</span></div>
-        <div id="i-cofid-block"></div>
-      </div>
-      <!-- ⚠⚠ THESE ARE FACTS ABOUT A DECEDENT, SO THEY BELONG ON ALL THREE DECEDENT
-           SERVICES — Estate Settlement, Probate and Contested Probate (isDecedentJob).
-           Every field in here used to sit inside #probate-fields, which renders on the two
-           PROBATE services alone, so an Estate Settlement was never asked one of them. It
-           took the 'full' documentation default and was priced at full documentation
-           whatever counsel had actually asked for; its 706 question was never answered, and
-           unknown counts as yes, so it sat in permanent Strict Mode with the explanation
-           rendering into a div nobody could see; and it carried no date of death, although
-           every valuation on an estate schedule is measured at one (estateValueDate).
-           What stays probate-only below is the COURT record and nothing else: the case
-           number, the Letters, the §733.604 clock. (The sale question left it in P19: a
-           trust matter is asked it too, from its own cell here — propertySaleAsked.)
-           ⚠ The attorney keys stay `i-probate-atty-*` / job.probateAtty* deliberately —
-           twenty-odd readers and every saved job are keyed on them, and a rename here buys
-           a label. Only the heading moved, to the name the Job Plan already uses. -->
-      <div id="estate-fields" style="display:none;">
-        <div class="divider"></div>
-        <div class="sec" style="margin:10px 0 6px;font-size:11px;">Estate Details</div>
-        <div class="row">
-          <div class="gate-cell"><label>Date of death <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <input type="date" id="i-date-of-death">
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Every value on this estate is a fair market value <em>at this date</em> — it is what the schedule, the 706 and a trustee’s opening carrying value all state. It is on the death certificate; ask for it on the call.</div>
-          </div>
-          <!-- Required (clientMissingFields, since P9), so it carries the mark every other required label does (P16). -->
-          <div class="gate-cell"><label>How is this estate being administered? <span style="color:#A32D2D;font-weight:700;">*</span></label>
-            <select id="i-matter-type" onchange="toggleIntakeFields()">
-              <option value="">Select &mdash; ask the attorney</option>
-              <option value="probate">Probate &mdash; administered through the court</option>
-              <option value="trust">Trust &mdash; a successor trustee administers it</option>
-              <option value="both">Both &mdash; pour-over will; some assets probate into the trust</option>
-              <option value="neither">Neither &mdash; family distribution, no court and no trust</option>
-            </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Which <em>instrument</em> the work feeds, not what we were hired to do. <strong>Deliberately has no default</strong> &mdash; guessing probate is what puts a court schedule in front of a successor trustee. A pour-over will is usually <em>Both</em>.</div>
-          </div>
-        </div>
-        <!-- A Probate service on a matter with no court (P20, Q26): flagged live as the service or the matter changes
-             (probateSvcFlag, painted by toggleIntakeFields). A flag; Save Client is never refused for it. -->
-        <div id="i-svc-flag"></div>
+        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Documentation <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(what we produce, and how strictly)</span></div>
         <div class="row">
           <!-- ⚠ THE OPTIONS ARE RENDERED FROM DOC_TIERS AT LOAD, NOT TYPED HERE. A menu written
                into the markup is a second copy of the catalogue, and this file records exactly
@@ -1733,32 +1800,8 @@ body.no-smf .smf-col{display:none;}
             <select id="i-doc-tier" onchange="onDocGateChange()"></select>
             <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal? And do you want appraisals arranged?</em> This is the <strong>deliverable the agreement promises</strong>; it also seeds the estimate&rsquo;s Documentation scope, which prices it, and the walkthrough can still override that there. Leave it blank only if they genuinely have not decided.</div>
           </div>
-          <!-- ⚠ ASKED ON A TRUST AS ON A COURT MATTER (P19; Anthony, 2026-10-02: "yes"). It sat in #probate-fields, which a
-               trust matter never shows; propertySaleAsked shows it wherever the court record or a trust is. -->
-          <div class="gate-cell" id="i-sale-cell" style="display:none;"><label>Property sale required?</label>
-            <select id="i-probate-sale">
-              <option value="">Select</option>
-              <option value="yes">Yes &mdash; property must be sold</option>
-              <option value="no">No &mdash; heirs retaining property</option>
-              <option value="maybe">Under discussion</option>
-            </select>
-          </div>
-        </div>
-        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Estate Attorney <span id="i-atty-req-note" style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(all fields required)</span></div>
-        <div class="row">
-          <div><label>First name <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-fname" placeholder="First name"></div>
-          <div><label>Last name <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-lname" placeholder="Last name"></div>
-        </div>
-        <div class="row">
-          <div><label>Firm <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-atty-firm" placeholder="Law firm name"></div>
-          <div><label>Attorney phone <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="tel" id="i-probate-atty-phone" oninput="formatPhone(this)" maxlength="14"></div>
-        </div>
-        <div class="row">
-          <div><label>Attorney email <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="email" id="i-probate-atty-email" placeholder="Direct email"></div>
           <div></div>
         </div>
-
-        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Documentation Standard</div>
         <div style="font-size:10.5px;color:var(--gray);margin-bottom:8px;line-height:1.5;">Answered once, at engagement. These set how strictly the estate is documented, and they are <strong>facts, not judgment calls</strong> &mdash; ask the attorney or the personal representative rather than guessing. The strictness they produce <strong>cannot be lowered</strong> later.</div>
         <div class="row">
           <div class="gate-cell"><label>Federal estate tax return (Form 706) being filed?</label>
@@ -1803,45 +1846,17 @@ body.no-smf .smf-col{display:none;}
           <option value="standard">Standard</option>
           <option value="formal">Formal &mdash; court &amp; attorney grade</option>
         </select>
-        <div style="font-size:10px;color:var(--gray);margin-top:2px;">On an estate the answers above decide this and grey it out &mdash; a Form 706, a recorded dispute, a contest or the <em>Inventory + appraisals</em> tier each force <strong>Formal</strong>, with the reason printed beside them. What is left here is the case they do not cover: raising an otherwise-standard job by hand. Formal makes <strong>chain of custody mandatory</strong> and turns the item-appraisal guardrail from a prompt into a block. It can never be set <em>lower</em> than the answers above require.</div>
+        <div id="i-doclevel-hint" style="font-size:10px;color:var(--gray);margin-top:2px;">On an estate the answers above decide this and grey it out &mdash; a Form 706, a recorded dispute, a contest or the <em>Inventory + appraisals</em> tier each force <strong>Formal</strong>, with the reason printed beside them. What is left here is the case they do not cover: raising an otherwise-standard job by hand. Formal makes <strong>chain of custody mandatory</strong> and turns the item-appraisal guardrail from a prompt into a block. It can never be set <em>lower</em> than the answers above require.</div>
       </div>
       </div>
-      <div id="probate-fields" style="display:none;">
-        <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Probate Details <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the case, the Letters and the §733.604 clock)</span></div>
-        <div class="row">
-          <div><label>Letters issued</label>
-            <input type="date" id="i-letters-date" onchange="computeInventoryDeadline()"></div>
-          <div><label>Case number <span class="req-probate" style="color:#A32D2D;font-weight:700;">*</span></label><input type="text" id="i-probate-case" placeholder="e.g. 50-2026-CP-001234" oninput="fillCourtFromCase('i')"></div>
-        </div>
-        <div class="row">
-          <div><label>§733.604 inventory deadline</label><input type="date" id="i-probate-deadline" oninput="this.dataset.userEdited='1'"><div id="i-deadline-fb" class="fb"></div></div>
-          <div><label>Court</label><input type="text" id="i-probate-court" placeholder="filled from the case number" oninput="this.dataset.userEdited='1'"></div>
-        </div>
-      </div>
-      <!-- ⚠ THE TRUST ITSELF (P19, 2026-10-03): asked wherever the matter holds a trust — Trust, and Both — by
-           trustRecordShown, which toggleIntakeFields reads as the matter type changes. Optional: what the successor
-           trustee's Certification of Trust states, and a card shows a blank as not recorded. -->
-      <div id="trust-fields" style="display:none;">
-        <div class="divider"></div>
-        <div class="sec" style="margin-bottom:6px;">Trust Details <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(from the Certification of Trust; optional)</span></div>
-        <div class="row">
-          <div><label>Name of the trust</label><input type="text" id="i-trust-name" placeholder="e.g. The Adler Family Revocable Trust"></div>
-          <div><label>Trust dated</label><input type="date" id="i-trust-date"></div>
-        </div>
-        <div class="row">
-          <div><label>Successor trustee accepted</label><input type="date" id="i-trustee-accepted"></div>
-          <div></div>
-        </div>
-      </div>
-      <div class="divider"></div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn-s" onclick="clearIntake()">Clear</button>
-        <button class="btn-p" onclick="saveIntake()">Save Client</button>
-      </div>
-      <div id="i-fb"></div>
     </div>
   </div>
+  <!-- Save under both columns (2026-10-18): the right card no longer ends the form, so the buttons sit under the grid. -->
+  <div style="display:flex;gap:8px;margin-top:14px;">
+    <button class="btn-s" onclick="clearIntake()">Clear</button>
+    <button class="btn-p" onclick="saveIntake()">Save Client</button>
+  </div>
+  <div id="i-fb"></div>
 </div>
 
 <!-- ══════════════════════════════ ESTIMATE ══════════════════════════════ -->
@@ -9672,6 +9687,40 @@ function computeInventoryDeadline(pfx){
 // service but Home Prep — a prep job empties nothing.
 function intakeAsksHouseContents(svc) { return svc !== 'prep'; }
 
+// ⚠ WHAT THE DOCUMENTATION LEVEL MEANS ON THIS SERVICE (Anthony, 2026-10-18): the control sat on every service with a
+// hint written for estates ("the answers above decide this and grey it out"), and the readout that explains it is
+// inside the estate block, so a Home Transition showed a control with an explanation that did not apply to it. On a
+// living service the gates never fire, so Auto IS Standard, and the first option says so; the explicit Standard
+// option is withheld there (two options reading Standard answer one question). The value saved is unchanged: '' is
+// still "not set by hand", which resolveDocLevel reads as Standard. One namer, read by the painter; the estate copy
+// is the markup's own, so a blank service reads as it always did. The living copy says what Formal does on such a
+// job, and nothing else: it does NOT decide whether the house is photographed (every won job but Home Prep is).
+function intakeDocLevelCopy(svc) {
+  if (svcFamily(svc) !== 'living') return null;
+  return {
+    auto: 'Standard — the normal job',
+    hint: 'Standard is the normal job: every room and item is photographed and inventoried, and a flagged item is an amber prompt.'
+      + ' Formal adds a mandatory chain-of-custody log and blocks a flagged item until it is appraised or waived:'
+      + ' pick it for a house with real valuables. Either way the house is photographed; this decides only the record kept of it.'
+  };
+}
+function paintIntakeDocLevel(svc) {
+  var sel = document.getElementById('i-doclevel'), hint = document.getElementById('i-doclevel-hint');
+  if (!sel || !sel.options || !sel.options.length) return;
+  var copy = intakeDocLevelCopy(svc);
+  var ds = sel.dataset || (sel.dataset = {});
+  if (ds.estateAuto == null) ds.estateAuto = sel.options[0].textContent;
+  if (hint && hint.dataset && hint.dataset.estateHint == null) hint.dataset.estateHint = hint.innerHTML;
+  sel.options[0].textContent = copy ? copy.auto : ds.estateAuto;
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === 'standard') sel.options[i].hidden = !!copy;
+  }
+  // A Standard picked on an estate reads as the same answer here; the withheld option would otherwise show blank.
+  if (copy && sel.value === 'standard') sel.value = '';
+  if (!hint) return;
+  if (copy) hint.textContent = copy.hint;                 // a constant, never a person's text
+  else if (hint.dataset && hint.dataset.estateHint != null) hint.innerHTML = hint.dataset.estateHint;
+}
 function toggleIntakeFields() {
   var svc = document.getElementById('i-svc') ? document.getElementById('i-svc').value : '';
   var isEstate = (svc === 'cleanout' || svc === 'probate' || svc === 'contested_probate');
@@ -9707,6 +9756,11 @@ function toggleIntakeFields() {
   // priced, documented and valued off three defaults nobody had ever been shown.
   var ef = document.getElementById('estate-fields');
   if (ef) ef.style.display = isEstate ? 'block' : 'none';
+  // The documentation questions (the tier, the two gates, the readout) sit in the right-hand card since 2026-10-18,
+  // in their own block, shown and hidden with the estate block: they are the same decedent facts.
+  var edf = document.getElementById('estate-doc-fields');
+  if (edf) edf.style.display = isEstate ? 'block' : 'none';
+  if (typeof paintIntakeDocLevel === 'function') paintIntakeDocLevel(svc);
   // Authorized rep (estate + probate)
   var af = document.getElementById('estate-auth-fields');
   if (af) af.style.display = isEstate ? 'block' : 'none';

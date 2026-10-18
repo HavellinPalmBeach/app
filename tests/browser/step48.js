@@ -123,6 +123,11 @@ const PARTNERS = [{ uid: 'u-ann', partner_name: 'Ann Lowe', partner_type: 'Estat
         const set = (id, v) => { const e = document.getElementById(id); if (e) { e.value = v; if (e.onchange) e.onchange(); } };
         set('i-walkthrough', wt); set('i-start', st); if (dod) set('i-date-of-death', dod);
       }, [wt, st, o.estate ? '2026-07-01' : '']);
+      // ⚠ SCROLLED TO THE MIDDLE FIRST (2026-10-18). Clear and Save Client sit under both intake cards now, and at
+      // 1024 × 1366 in field mode the page is 51 px taller than the viewport, so at scroll 0 the fixed bottom nav bar
+      // covered the button and the press landed on the bar. A person scrolls to it; so does this.
+      await p.evaluate(() => { const b = document.querySelector('#panel-intake button[onclick="saveIntake()"]'); if (b) b.scrollIntoView({ block: 'center' }); });
+      await p.waitForTimeout(150);
       await press('#panel-intake button[onclick="saveIntake()"]', 'Save Client');
       await p.waitForTimeout(1200);
       return p.evaluate(() => (jobs[0] || {}).id);

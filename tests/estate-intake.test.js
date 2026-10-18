@@ -18,11 +18,16 @@
 const { sandbox, domStub, source } = require('./harness');
 
 // Facts about a DECEDENT — every one of these must be reachable on Estate Settlement.
+// ⚠ TWO DECEDENT BLOCKS SINCE 2026-10-18 (Anthony: the people together, the columns balanced): the estate's facts and
+// the attorney sit in #estate-fields in the LEFT card, under the representative; the documentation questions (the
+// tier, the two gates and their readout) sit in #estate-doc-fields in the RIGHT card, under the two questions and
+// Notes. toggleIntakeFields shows and hides the two together, and the test below holds that.
 const ESTATE_IDS = [
-  'i-date-of-death', 'i-doc-tier', 'i-matter-type', 'i-gate-706', 'i-gate-dispute', 'i-gate-readout',
+  'i-date-of-death', 'i-matter-type',
   'i-probate-atty-fname', 'i-probate-atty-lname', 'i-probate-atty-firm',
   'i-probate-atty-phone', 'i-probate-atty-email'
 ];
+const ESTATE_DOC_IDS = ['i-doc-tier', 'i-gate-706', 'i-gate-dispute', 'i-gate-readout'];
 // Facts about a COURT CASE — these stay probate-only.
 // ⚠ RESTATED 2026-10-03 (P19): 'i-probate-sale' came off this list. Anthony ("yes", 2026-10-02) asked the property-sale
 // question on a trust matter too, which has no court record to show it in, so it sits in the estate block in its own
@@ -67,7 +72,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           if (depth === 0) {
             const tag = src.slice(i, src.indexOf('>', i) + 1);
             const m = /id="([a-z-]+)"/.exec(tag);
-            if (m && (m[1] === 'estate-fields' || m[1] === 'probate-fields' || m[1] === 'estate-auth-fields')) return m[1];
+            if (m && (m[1] === 'estate-fields' || m[1] === 'estate-doc-fields' || m[1] === 'probate-fields' || m[1] === 'estate-auth-fields')) return m[1];
           } else depth--;
         }
         i--;
@@ -79,13 +84,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ESTATE_IDS.forEach((id) => {
       eq(blockOf(id), 'estate-fields', id + ' is a decedent fact and sits in the estate block');
     });
+    ESTATE_DOC_IDS.forEach((id) => {
+      eq(blockOf(id), 'estate-doc-fields', id + ' is a documentation question and sits in the estate documentation block');
+    });
+    // The two blocks are one answer to "is this an estate?": both follow isEstate in the one toggle.
+    const tog = src.slice(src.indexOf('function toggleIntakeFields('), src.indexOf('function toggleIntakeFields(') + 12000);
+    has(tog, "ef.style.display = isEstate ? 'block' : 'none'", 'toggleIntakeFields shows the estate block on an estate');
+    has(tog, "edf.style.display = isEstate ? 'block' : 'none'", 'and the documentation block with it');
     PROBATE_IDS.forEach((id) => {
       eq(blockOf(id), 'probate-fields', id + ' is a court-case fact and stays probate-only');
     });
     // The converse, and it is the half that matters: neither block may swallow the other, so
     // a court fact can never be reached on an Estate Settlement and a decedent fact is never
     // withheld from one. Measured off the same walk rather than asserted separately.
-    ok(ESTATE_IDS.every((id) => blockOf(id) !== 'probate-fields'), 'no decedent fact is trapped in the probate block');
+    ok(ESTATE_IDS.concat(ESTATE_DOC_IDS).every((id) => blockOf(id) !== 'probate-fields'), 'no decedent fact is trapped in the probate block');
     ok(PROBATE_IDS.every((id) => blockOf(id) !== 'estate-fields'), 'no court fact has leaked into the estate block');
     // RESTATED 2026-10-03 (P19): the sale question is asked wherever the court record OR a trust is, so it is no longer a
     // court-case fact: it sits in the estate block, in a cell of its own that propertySaleAsked shows and hides.
@@ -103,7 +115,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // court record before reaching "how big is it". Reflowed 2026-09-22 on Anthony's reading:
   // LEFT is the standing facts (who, where, what kind of house), RIGHT is the conversation
   // (the two questions, then the parties on an estate). Property type now lands at y=1,020.
-  group('the intake columns: standing facts left, the conversation right');
+  // ⚠ REARRANGED 2026-10-18 (Anthony, reading the form on a desk: "the info on authorized rep and estate info should
+  // flow beneath client info … balance the intake fields so the left and right are closer to the same length …
+  // putting relevant info, like all of the contact info, next to each other"). LEFT is now the people and the matter:
+  // service, the client (or the deceased), the representative and co-representatives, the estate attorney, the estate
+  // details, the court record, the trust record, and THEN the property block and the move destination. RIGHT is the
+  // conversation and the documentation: the two questions and the tick list, Notes, then one block holding the tier,
+  // the two gates and the readout, and the level under it. Clear and Save Client sit under both cards. Measured at
+  // 1440px: a probate intake 2,264px tall (2,519 before), a living one unchanged. On a phone the left card still
+  // renders whole first, so on an estate the three contact blocks come before the property block: property type on
+  // a probate intake at 390px is at y=2,934 (1,020 since 2026-09-22; 4,235 before that); on a living job 978, as it was.
+  // Browser step 86 measures it; this holds which card each block is in.
+  group('the intake columns: the people and the matter left, the conversation and the documentation right');
   {
     const panel = src.slice(src.indexOf('id="panel-intake"'));
     const grid  = panel.slice(panel.indexOf('<div class="grid2">'));
@@ -123,21 +146,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(cards.length, 2, 'the intake grid is two cards');
     const col = (id) => cards.findIndex((c) => c.indexOf('id="' + id + '"') >= 0) + 1;
 
-    // LEFT — who the client is, where the property is, and what kind of property it is.
-    [['i-svc', 'the service type'], ['i-fname', 'the client name'], ['i-addr', 'the property address'],
+    // LEFT — the people (the client, the representative, the attorney), the matter, then the property.
+    [['i-svc', 'the service type'], ['i-fname', 'the client name'], ['i-phone', 'the client phone'], ['i-addr', 'the property address'],
+     ['i-executor-fname', 'the authorized representative'], ['i-executor-phone', 'the representative\'s phone'],
+     ['i-cofid-block', 'the co-representatives'], ['i-probate-atty-fname', 'the estate attorney'],
+     ['i-date-of-death', 'the date of death'], ['i-matter-type', 'the matter type'], ['i-probate-sale', 'the property sale'],
+     ['i-probate-case', 'the court case number'], ['i-trust-name', 'the trust record'],
      ['i-ptype', 'the property type'], ['i-sqft', 'the square footage'], ['i-beds', 'the bedroom count'],
      ['i-home-value', 'the home value'], ['i-walkthrough', 'the walkthrough date'],
      ['i-start', 'the target start'], ['i-prem', 'the premium flag'], ['i-dest-addr', 'the move destination']
     ].forEach(([id, what]) => eq(col(id), 1, 'LEFT column carries ' + what));
 
-    // RIGHT — the two questions asked on every call, then the parties on an estate.
+    // RIGHT — the two questions asked on every call, Notes, then the documentation questions.
     [['i-mustfind', 'the must-find question'], ['i-safety', 'the safety question'],
      ['i-houseflags', 'the house-flag ticks'], ['i-notes', 'the notes'],
-     ['i-executor-fname', 'the authorized representative'], ['i-date-of-death', 'the date of death'],
-     ['i-matter-type', 'the matter type'], ['i-doc-tier', 'the engagement tier'],
-     ['i-probate-atty-fname', 'the estate attorney'], ['i-gate-706', 'the 706 gate'],
-     ['i-probate-case', 'the court case number'], ['i-doclevel', 'the documentation level']
+     ['i-doc-tier', 'the engagement tier'], ['i-gate-706', 'the 706 gate'], ['i-gate-dispute', 'the dispute gate'],
+     ['i-gate-readout', 'the gate readout'], ['i-doclevel', 'the documentation level']
     ].forEach(([id, what]) => eq(col(id), 2, 'RIGHT column carries ' + what));
+    // The people read in a row, contact block after contact block, and the property after the matter.
+    const at1 = (id) => cards[0].indexOf('id="' + id + '"');
+    ok(at1('i-phone') < at1('i-executor-phone') && at1('i-executor-phone') < at1('i-probate-atty-phone'),
+       'the client, the representative and the attorney follow one another');
+    ok(at1('i-probate-atty-phone') < at1('i-date-of-death') && at1('i-probate-case') < at1('i-ptype'),
+       'then the estate details and the court record, then the property block');
+    // Save Client is under both cards, not at the foot of one: the right card no longer ends the form.
+    const afterGrid = panel.slice(panel.indexOf('</div>', grid.indexOf(cards[1]) + cards[1].length));
+    ok(!/onclick="saveIntake\(\)"/.test(cards[0]) && !/onclick="saveIntake\(\)"/.test(cards[1]), 'Save Client is in neither card');
+    ok(/onclick="saveIntake\(\)"/.test(afterGrid.slice(0, 1200)) && /id="i-fb"/.test(afterGrid.slice(0, 1200)), 'it sits under the grid, with #i-fb beside it');
 
     // ⚠ THE PROPERTY BLOCK MUST READ BEFORE THE QUESTIONS, which on a phone means being in
     // the earlier card — the whole point of the move. Stated as the requirement rather than as
@@ -149,31 +184,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(col('i-doclevel'), col('i-doc-tier'), 'the documentation level sits with the engagement tier');
     ok(cards[1].indexOf('id="i-gate-readout"') < cards[1].indexOf('id="i-doclevel"'),
        'and directly under the readout that explains it');
-    // ⚠ OUTSIDE #estate-fields, or the four living services lose the only route to Formal —
+    // ⚠ OUTSIDE #estate-doc-fields, or the four living services lose the only route to Formal —
     // which is what makes chain of custody mandatory on the Job Plan.
     // ⚠ THE WALK STARTS AT THE OPENING `<div`, NOT AT THE id INSIDE IT. Starting at the id
     // leaves depth at 0 inside the block, so the FIRST inner </div> closed it and every later
     // element read as outside — which came back GREEN on the revert that moved the control in.
-    const efOpen = cards[1].lastIndexOf('<div', cards[1].indexOf('id="estate-fields"'));
+    const efOpen = cards[1].lastIndexOf('<div', cards[1].indexOf('id="estate-doc-fields"'));
     let efEnd = cards[1].length, d = 0;
     for (let j = efOpen; j < cards[1].length; j++) {
       if (cards[1].startsWith('<div', j)) d++;
       else if (cards[1].startsWith('</div>', j)) { d--; if (d === 0) { efEnd = j; break; } }
     }
-    ok(efEnd < cards[1].length, 'the estate block closes inside the card');
-    ok(cards[1].indexOf('id="i-doclevel"') > efEnd, 'but outside the estate block, so a living job still reaches it');
-    // ⚠ STATED AGAINST ALL THREE CONDITIONALLY-HIDDEN BLOCKS, not just the estate one. Those
-    // are the only things toggleIntakeFields hides, so a control outside all three is on screen
-    // on every service — which is the requirement, since the four living services have no other
-    // route to Formal. The browser run drives the converse and reads the control on all seven.
-    ['estate-fields', 'estate-auth-fields', 'probate-fields'].forEach((blk) => {
-      const open = cards[1].lastIndexOf('<div', cards[1].indexOf('id="' + blk + '"'));
+    ok(efEnd < cards[1].length, 'the estate documentation block closes inside the card');
+    ok(cards[1].indexOf('id="i-doclevel"') > efEnd, 'but outside it, so a living job still reaches the level');
+    // ⚠ STATED AGAINST EVERY CONDITIONALLY-HIDDEN BLOCK, whichever card it is in. Those are the only things
+    // toggleIntakeFields hides, so a control outside all of them is on screen on every service — which is the
+    // requirement, since the four living services have no other route to Formal. The browser run drives the
+    // converse and reads the control on all seven.
+    const whole = cards[0] + cards[1];
+    ['estate-fields', 'estate-doc-fields', 'estate-auth-fields', 'probate-fields', 'trust-fields'].forEach((blk) => {
+      const open = whole.lastIndexOf('<div', whole.indexOf('id="' + blk + '"'));
+      ok(open >= 0, '#' + blk + ' is on the form');
       let end = -1, k = 0;
-      for (let j = open; j < cards[1].length; j++) {
-        if (cards[1].startsWith('<div', j)) k++;
-        else if (cards[1].startsWith('</div>', j)) { k--; if (k === 0) { end = j; break; } }
+      for (let j = open; j < whole.length; j++) {
+        if (whole.startsWith('<div', j)) k++;
+        else if (whole.startsWith('</div>', j)) { k--; if (k === 0) { end = j; break; } }
       }
-      const at = cards[1].indexOf('id="i-doclevel"');
+      const at = whole.indexOf('id="i-doclevel"');
       ok(at < open || at > end, 'the documentation level is outside #' + blk + ', so every service reaches it');
     });
   }
@@ -216,12 +253,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       c.toggleIntakeFields();
       return {
         estate:  d.getElementById('estate-fields').style.display,
+        doc:     d.getElementById('estate-doc-fields').style.display,
         probate: d.getElementById('probate-fields').style.display,
         auth:    d.getElementById('estate-auth-fields').style.display,
       };
     };
     ['cleanout', 'probate', 'contested_probate'].forEach((svc) => {
       eq(run(svc).estate, 'block', svc + ' is a decedent service, so it is asked the decedent facts');
+      eq(run(svc).doc, 'block', svc + ' is asked the documentation questions, in the right-hand card (2026-10-18)');
       eq(run(svc).auth, 'block', svc + ' names an authorized representative');
     });
     eq(run('cleanout').probate, 'none', 'an Estate Settlement is shown no court record — it may never open probate');
@@ -229,6 +268,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(run('contested_probate').probate, 'block', 'and so is contested probate');
     ['downsizing', 'downsizing_move', 'home_cleanout', 'prep'].forEach((svc) => {
       eq(run(svc).estate, 'none', svc + ' is living-client work and is asked none of it');
+      eq(run(svc).doc, 'none', svc + ' is shown no documentation questions either');
       eq(run(svc).probate, 'none', svc + ' gets no court record either');
     });
   }
@@ -547,11 +587,81 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // It used to live inside #probate-fields while `i-doclevel` sat outside it, so on an
     // Estate Settlement the dropdown was disabled with the explanation rendering into a
     // hidden div — a control that refuses you and cannot say why.
-    const estateOpen  = src.indexOf('id="estate-fields"');
-    const probateOpen = src.indexOf('id="probate-fields"');
+    // Since 2026-10-18 the gates and the readout share #estate-doc-fields, shown with the estate block on every decedent
+    // service (the containment group above holds both to it); here, only that the readout follows the gates.
+    const blockOpen = src.indexOf('id="estate-doc-fields"');
     const readout = src.indexOf('id="i-gate-readout"');
     const gate = src.indexOf('id="i-gate-706"');
     ok(readout > gate, 'the readout follows the gates it explains');
-    ok(readout > estateOpen && readout < probateOpen, 'and is shown on every service the gates are');
+    ok(gate > blockOpen && readout > blockOpen && readout < src.indexOf('id="i-doclevel-block"'), 'and sits in the same block, above the level');
+  }
+
+  // ⚠ WHAT THE LEVEL MEANS ON A LIVING SERVICE (Anthony, 2026-10-18: "if we are just doing a normal cleanout or home
+  // transition … does 'auto' work? what is 'standard'"). The control sat on every service with the estate's hint, and the
+  // readout that explains it is in the estate block. One namer, intakeDocLevelCopy: a living service gets its own first
+  // option and hint; an estate, Home Prep's hidden control and a blank service keep the markup's words. The painter
+  // withholds the explicit Standard option there (two options answering one question) and restores the estate's hint
+  // as HTML. The value saved does not change: '' stays "not set by hand".
+  group('the documentation level says what it means on the service in front of you');
+  {
+    const c = sandbox({
+      fns: ['intakeDocLevelCopy', 'paintIntakeDocLevel', 'svcFamily', 'isDecedentJob'],
+      vars: ['SVC_ORDER', 'DECEDENT_SERVICES'],
+      stubs: { document: domStub({}) },
+    });
+    ['downsizing', 'downsizing_move', 'home_cleanout', 'prep'].forEach((svc) => {
+      const copy = c.intakeDocLevelCopy(svc);
+      ok(copy && copy.auto === 'Standard \u2014 the normal job', svc + ': the first option reads Standard, the normal job');
+      ok(copy && /chain-of-custody/.test(copy.hint), svc + ': the hint names the custody log Formal adds');
+      ok(copy && /appraised or waived/.test(copy.hint), svc + ': and the appraisal block');
+      ok(copy && /Either way the house is photographed/.test(copy.hint), svc + ': and says the house is photographed either way');
+      ok(copy && !/706|grey|court/i.test(copy.hint), svc + ': and none of the estate\'s words');
+    });
+    ['cleanout', 'probate', 'contested_probate', '', 'nonsense'].forEach((svc) => {
+      eq(c.intakeDocLevelCopy(svc), null, JSON.stringify(svc) + ': the markup\'s own (estate) words');
+    });
+    // The painter against a select with the three options and the hint as the markup ships them.
+    const run = (svc, before) => {
+      const d = domStub({});
+      const opts = [{ value: '', textContent: 'Auto \u2014 set by the answers above', hidden: false },
+                    { value: 'standard', textContent: 'Standard', hidden: false },
+                    { value: 'formal', textContent: 'Formal \u2014 court & attorney grade', hidden: false }];
+      d.__seed('i-doclevel', { options: opts, value: (before && before.value) || '' });
+      // ⚠ A STUB WHOSE textContent AND innerHTML ARE ONE STRING, as a browser's are: writing text escapes it into the
+      // HTML, and reading text strips the tags. Two independent properties let a restore through textContent pass the
+      // HTML assertion below (the revert sweep caught it: the revert stayed green).
+      const hintEl = d.__seed('i-doclevel-hint', {});
+      let html = 'On an estate the <em>answers above</em> decide this';
+      Object.defineProperty(hintEl, 'innerHTML', { get() { return html; }, set(v) { html = String(v); }, configurable: true });
+      Object.defineProperty(hintEl, 'textContent', { get() { return html.replace(/<[^>]+>/g, ''); },
+        set(v) { html = String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }, configurable: true });
+      const s = sandbox({ fns: ['intakeDocLevelCopy', 'paintIntakeDocLevel', 'svcFamily', 'isDecedentJob'], vars: ['SVC_ORDER', 'DECEDENT_SERVICES'], stubs: { document: d } });
+      (before && before.first || []).forEach((sv) => s.paintIntakeDocLevel(sv));
+      s.paintIntakeDocLevel(svc);
+      const sel = d.getElementById('i-doclevel'), hint = d.getElementById('i-doclevel-hint');
+      return { opt0: sel.options[0].textContent, stdHidden: !!sel.options[1].hidden, value: sel.value, text: hint.textContent, html: hint.innerHTML };
+    };
+    let r = run('downsizing_move');
+    eq(r.opt0, 'Standard \u2014 the normal job', 'Home Transition: the first option is repainted');
+    eq(r.stdHidden, true, 'the explicit Standard option is withheld');
+    ok(/chain-of-custody/.test(r.text), 'the hint is the living copy');
+    r = run('downsizing_move', { value: 'standard' });
+    eq(r.value, '', 'a Standard carried over reads as the same answer, so the withheld option never shows blank');
+    r = run('cleanout', { first: ['downsizing_move'] });
+    eq(r.opt0, 'Auto \u2014 set by the answers above', 'back on an estate the first option reads Auto again');
+    eq(r.stdHidden, false, 'Standard is offered again');
+    eq(r.html, 'On an estate the <em>answers above</em> decide this', 'and the estate hint comes back as HTML, emphasis intact');
+    r = run('', { first: ['home_cleanout'] });
+    eq(r.opt0, 'Auto \u2014 set by the answers above', 'a blank service reads as the markup ships it');
+    // toggleIntakeFields calls it, guarded like onDocGateChange, so every sandbox that lifts the toggle keeps working.
+    has(src, "if (typeof paintIntakeDocLevel === 'function') paintIntakeDocLevel(svc);", 'the toggle paints the words on every service change');
+    // The markup: the level keeps its three options and the hint carries the id the painter reads.
+    const sel = src.slice(src.indexOf('<select id="i-doclevel"'), src.indexOf('</select>', src.indexOf('<select id="i-doclevel"')));
+    has(sel, '<option value="">Auto &mdash; set by the answers above</option>', 'the markup ships Auto first');
+    has(sel, '<option value="standard">Standard</option>', 'then Standard');
+    has(src, '<div id="i-doclevel-hint"', 'the hint has the id the painter reads');
+    // The Notes label counts no questions (the card holds two questions and nine rows).
+    has(src, '<label>Notes <span class="lbl-hint">&mdash; anything not covered above</span></label>', 'the Notes label reads "anything not covered above"');
+    lacks(src, 'the two questions above did not cover', 'and no longer counts two questions');
   }
 };
