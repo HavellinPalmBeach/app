@@ -53,7 +53,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(hidden.filter((k) => p.rows[k] !== 'none'), [], 'every contents row is hidden on prep');
     ['downsizing', 'downsizing_move', 'home_cleanout', 'cleanout', 'probate', 'contested_probate'].forEach((svc) => {
       const r = run(svc);
-      eq([r.find, r.level], ['', ''], svc + ' still shows the must-find question and the level');
+      // 2026-10-18: on a decedent service the unanswered 706 forces Formal, and the level block is then HIDDEN by
+      // onDocGateChange (the readout carries the level); a living service, which nothing forces, shows it.
+      const decedent = /^(cleanout|probate|contested_probate)$/.test(svc);
+      eq([r.find, r.level], ['', decedent ? 'none' : ''], svc + ' still shows the must-find question' + (decedent ? ', and the level block is hidden while the gates decide it' : ' and the level'));
       // P27 (2026-10-17, Q77): *Who decides for the family* is a living client's row, hidden on a decedent service, where
       // the representative is the answer. Every other row is shown on every service but prep.
       eq(Object.keys(r.rows).filter((k) => r.rows[k] !== ''), /^(cleanout|probate|contested_probate)$/.test(svc) ? ['decider'] : [], svc + ' shows every row' + (/probate|cleanout$/.test(svc) ? ' but the decider' : ''));

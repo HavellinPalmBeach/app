@@ -69,8 +69,9 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
          'the three contact blocks read in a row: the deceased, the representative, the attorney');
       ok(w['i-probate-atty-phone'].y < w['i-date-of-death'].y && w['i-probate-case'].y < w['i-ptype'].y,
          'then the estate details and the court record, then the property block');
-      ok(w['i-doc-tier'].y < w['i-gate-706'].y && w['i-gate-706'].y < w['i-gate-readout'].y && w['i-gate-readout'].y < w['i-doclevel'].y,
-         'the documentation questions read tier, gates, readout, level');
+      ok(w['i-doc-tier'].y < w['i-gate-706'].y && w['i-gate-706'].y < w['i-gate-readout'].y,
+         'the documentation questions read tier, gates, readout (the level is hidden here: the 706 is unanswered, so the gates decide it)');
+      eq(w['i-doclevel'].shown, false, 'the level control is not on screen while the answers decide it');
       ['i-probate-sale', 'i-probate-case', 'i-doc-tier', 'i-gate-706', 'i-executor-phone'].forEach((id) => ok(w[id].shown, id + ' is on screen on a probate intake'));
       const save = await p.evaluate(() => {
         const cards = Array.from(document.querySelectorAll('#panel-intake .grid2 > .card')).map((c) => c.getBoundingClientRect().bottom);
@@ -105,8 +106,25 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       eq(l.stdHidden, false, 'the Standard option is back');
       eq(l.disabled, true, 'the gates decide it (the 706 is unanswered)');
       eq(l.readout, true, 'and the readout is on screen, in the right card');
-      has(l.hint, 'Form 706', 'the estate hint is back, as HTML');
+      eq(l.block, 'none', 'and the level block is hidden: the readout says Formal, no greyed-out dropdown (2026-10-18)');
+      has(l.hint, 'answers above', 'the estate hint is back, as HTML');
       ok(await p.evaluate(() => /<em>|<strong>/.test(document.getElementById('i-doclevel-hint').innerHTML)), 'with its emphasis intact');
+      await p.selectOption('#i-gate-706', 'no'); await p.waitForTimeout(150);
+      l = await level();
+      eq(l.block, 'block', 'the 706 answered No: the level block comes back');
+      eq(l.disabled, false, 'live');
+      eq(l.opt0, 'Auto — set by the answers above', 'offering Auto');
+      await p.selectOption('#i-gate-706', ''); await p.waitForTimeout(150);
+      eq((await level()).block, 'none', 'and goes again when the answer is cleared');
+      // The documentation block reads in under 150 words, and the tier's hint runs the full card width.
+      // The words a person reads: labels, hints and the readout; never a select's option list, never a hidden block.
+      const words = await p.evaluate(() => {
+        const read = (root) => { let t = ''; root.querySelectorAll('label, div, span, strong, em').forEach(() => {}); const walk = (n) => { if (n.nodeType === 3) { t += ' ' + n.nodeValue; return; } if (n.nodeType !== 1 || n.tagName === 'SELECT' || !n.checkVisibility()) return; n.childNodes.forEach(walk); }; walk(root); return t; };
+        return (read(document.getElementById('estate-doc-fields')) + ' ' + read(document.getElementById('i-doclevel-block'))).trim().split(/\s+/).filter(Boolean).length;
+      });
+      ok(words < 150, 'the Documentation block and the level read in under 150 words (' + words + ')');
+      const tierW = await p.evaluate(() => { const h = document.getElementById('i-doc-tier').nextElementSibling; const c = h.closest('.card'); return h.getBoundingClientRect().width / c.getBoundingClientRect().width; });
+      ok(tierW > 0.8, 'the tier hint runs the width of the card, not half of it (' + tierW.toFixed(2) + ')');
       await pick('home_cleanout');
       l = await level();
       eq(l.value, 'formal', 'Home Cleanout: the Formal picked by hand comes back');
@@ -129,8 +147,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       ok((await overflow()) <= 0, 'no horizontal overflow at 390 (' + (await overflow()) + ')');
       let w = await where(['i-phone', 'i-executor-phone', 'i-probate-atty-phone', 'i-probate-case', 'i-ptype', 'i-mustfind', 'i-doclevel']);
       ok(w['i-phone'].y < w['i-executor-phone'].y && w['i-executor-phone'].y < w['i-probate-atty-phone'].y && w['i-probate-atty-phone'].y < w['i-probate-case'].y
-         && w['i-probate-case'].y < w['i-ptype'].y && w['i-ptype'].y < w['i-mustfind'].y && w['i-mustfind'].y < w['i-doclevel'].y,
-         'probate at 390: deceased, representative, attorney, court record, property, the two questions, the level (' + JSON.stringify(w) + ')');
+         && w['i-probate-case'].y < w['i-ptype'].y && w['i-ptype'].y < w['i-mustfind'].y,
+         'probate at 390: deceased, representative, attorney, court record, property, the two questions (' + JSON.stringify(w) + ')');
       console.log('  probate at 390: property type y=' + w['i-ptype'].y + ', must-find y=' + w['i-mustfind'].y);
       await pick('downsizing_move');
       w = await where(['i-phone', 'i-ptype', 'i-dest-addr', 'i-mustfind', 'i-doclevel']);

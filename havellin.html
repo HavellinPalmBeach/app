@@ -1364,7 +1364,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.18 · 9:50am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.18 · 10:30am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1790,19 +1790,16 @@ body.no-smf .smf-col{display:none;}
            block below stays outside it, so the living services keep their route to Formal. -->
       <div id="estate-doc-fields" style="display:none;">
         <div class="divider"></div>
-        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Documentation <span style="font-size:10px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(what we produce, and how strictly)</span></div>
-        <div class="row">
-          <!-- ⚠ THE OPTIONS ARE RENDERED FROM DOC_TIERS AT LOAD, NOT TYPED HERE. A menu written
-               into the markup is a second copy of the catalogue, and this file records exactly
-               that going wrong when the Edit Client modal kept its own hardcoded service list
-               and a rename missed it. buildDocTierOptions() fills both this and the label. -->
-          <div class="gate-cell"><label>What are we contracted to produce?</label>
-            <select id="i-doc-tier" onchange="onDocGateChange()"></select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal? And do you want appraisals arranged?</em> This is the <strong>deliverable the agreement promises</strong>; it also seeds the estimate&rsquo;s Documentation scope, which prices it, and the walkthrough can still override that there. Leave it blank only if they genuinely have not decided.</div>
-          </div>
-          <div></div>
+        <div class="sec" style="margin:12px 0 6px;font-size:11px;">Documentation</div>
+        <!-- ⚠ THE OPTIONS ARE RENDERED FROM DOC_TIERS AT LOAD, NOT TYPED HERE. A menu written into the markup is a second
+             copy of the catalogue, and this file records exactly that going wrong when the Edit Client modal kept its own
+             hardcoded service list and a rename missed it. buildDocTierOptions() fills both this and the label.
+             Full width (Anthony, 2026-10-18): in a two-cell row with nothing beside it the hint wrapped at half width. -->
+        <div>
+          <label>What are we contracted to produce?</label>
+          <select id="i-doc-tier" onchange="onDocGateChange()"></select>
+          <div style="font-size:10px;color:var(--gray);margin:2px 0 8px;">Ask the attorney: <em>do you want us to build the inventory, or does your paralegal? And do you want appraisals arranged?</em> This is what the agreement promises and the estimate prices.</div>
         </div>
-        <div style="font-size:10.5px;color:var(--gray);margin-bottom:8px;line-height:1.5;">Answered once, at engagement. These set how strictly the estate is documented, and they are <strong>facts, not judgment calls</strong> &mdash; ask the attorney or the personal representative rather than guessing. The strictness they produce <strong>cannot be lowered</strong> later.</div>
         <div class="row">
           <div class="gate-cell"><label>Federal estate tax return (Form 706) being filed?</label>
             <select id="i-gate-706" onchange="onDocGateChange()">
@@ -1810,14 +1807,14 @@ body.no-smf .smf-col{display:none;}
               <option value="yes">Yes</option>
               <option value="no">No</option>
             </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Unknown counts as yes. Do not downgrade this on a verbal &ldquo;probably not&rdquo; &mdash; portability elections mean estates well under the exemption still file.</div>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Unknown counts as yes. Estates under the exemption still file for portability.</div>
           </div>
           <div class="gate-cell"><label>Known dispute, contest, or elective share?</label>
             <select id="i-gate-dispute" onchange="onDocGateChange()">
               <option value="">No / not known</option>
               <option value="yes">Yes &mdash; contested or likely to be</option>
             </select>
-            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Contested Probate already counts as disputed whatever this says; tick it here when an <em>uncontested</em> matter turns. Ticking it drops the specialist-appraisal threshold to $500 per item.</div>
+            <div style="font-size:10px;color:var(--gray);margin-top:2px;">Contested Probate already counts. Ticking it drops the specialist-appraisal threshold to $500.</div>
           </div>
         </div>
         <div id="i-gate-readout" style="margin-bottom:6px;"></div>
@@ -1827,8 +1824,11 @@ body.no-smf .smf-col{display:none;}
            promises and the estimate prices. This is HOW STRICTLY the job is documented, and
            since 2026-08-24 it is a floor the gates set rather than a judgment call: a 706, a
            recorded dispute, a contest, or the `Inventory + appraisals` tier each force Formal
-           and disable this control (docLevelFloor). It sits here, under the readout that
-           explains it, rather than in Job Details where it read as a property fact.
+           (docLevelFloor); since 2026-10-18 the whole block is then HIDDEN by onDocGateChange and
+           the readout above says Formal and why (a disabled dropdown read as broken; Anthony:
+           "is it meant to be a drop down b/c it doesn't work or is hard coded"). It sits here,
+           under the readout that explains it, rather than in Job Details where it read as a
+           property fact.
            ⚠ IT IS OUTSIDE #estate-fields DELIBERATELY. On the four living services the gates
            never fire, so this is the ONLY way to reach Formal there — and Formal is what makes
            chain of custody mandatory on the Job Plan (renderJobPlan: custodyMandatory) and
@@ -1846,7 +1846,7 @@ body.no-smf .smf-col{display:none;}
           <option value="standard">Standard</option>
           <option value="formal">Formal &mdash; court &amp; attorney grade</option>
         </select>
-        <div id="i-doclevel-hint" style="font-size:10px;color:var(--gray);margin-top:2px;">On an estate the answers above decide this and grey it out &mdash; a Form 706, a recorded dispute, a contest or the <em>Inventory + appraisals</em> tier each force <strong>Formal</strong>, with the reason printed beside them. What is left here is the case they do not cover: raising an otherwise-standard job by hand. Formal makes <strong>chain of custody mandatory</strong> and turns the item-appraisal guardrail from a prompt into a block. It can never be set <em>lower</em> than the answers above require.</div>
+        <div id="i-doclevel-hint" style="font-size:10px;color:var(--gray);margin-top:2px;">Set by the answers above on most estates. Raise a standard job to <strong>Formal</strong> here; it can never be set <em>lower</em>.</div>
       </div>
       </div>
     </div>
@@ -9699,9 +9699,8 @@ function intakeDocLevelCopy(svc) {
   if (svcFamily(svc) !== 'living') return null;
   return {
     auto: 'Standard — the normal job',
-    hint: 'Standard is the normal job: every room and item is photographed and inventoried, and a flagged item is an amber prompt.'
-      + ' Formal adds a mandatory chain-of-custody log and blocks a flagged item until it is appraised or waived:'
-      + ' pick it for a house with real valuables. Either way the house is photographed; this decides only the record kept of it.'
+    hint: 'Standard is the normal job. Formal adds a mandatory chain-of-custody log and blocks a flagged item until it is'
+      + ' appraised or waived. Either way the house is photographed and inventoried.'
   };
 }
 function paintIntakeDocLevel(svc) {
@@ -48413,6 +48412,14 @@ function onDocGateChange(pfx, docLevelFallback) {
     // in Edit Client there is no control at all, so the job's own level is the only source.
     docLevel: (sel && sel.value) ? sel.value : (docLevelFallback || '')
   };
+  // ⚠ THE LEVEL CONTROL IS SHOWN ONLY WHEN IT HAS A CHOICE TO OFFER (Anthony, 2026-10-18: a disabled dropdown read as
+  // "hard coded"). When the gates force Formal the block is hidden and the readout carries the level and its reason;
+  // it comes back the moment the floor lifts (the 706 answered No, the dispute cleared, the tier changed). Edit Client
+  // has no such block, so this is a no-op there. The control is still disabled and set to formal while hidden, above,
+  // so a reader of the form (saveIntake) and the older checks see what they always saw.
+  // Home Prep has no level at all (toggleIntakeFields hides it first; this must not show it again).
+  var blk = document.getElementById(pfx + '-doclevel-block');
+  if (blk) blk.style.display = (floor === 'formal' || gates.svc === 'prep') ? 'none' : '';
   var out = document.getElementById(pfx + '-gate-readout');
   if (!out) return;
   var lvl    = resolveDocLevel(draft);
@@ -48425,16 +48432,13 @@ function onDocGateChange(pfx, docLevelFallback) {
     // chasing is the unanswered 706, and that is the only one left amber.
     var open = !gateDispute(draft) && !String(draft.gate706 || '');
     out.innerHTML = '<div class="alert ' + (open ? 'a-warn' : 'a-info') + '" style="font-size:11.5px;line-height:1.5;">'
-      + '&#9878; <strong>Formal documentation (Strict Mode).</strong> ' + esc(reason) + ' '
-      + esc(effect) + ' It cannot be lowered here; change the answer above if it is wrong.</div>';
+      + '&#9878; <strong>Formal documentation (Strict Mode).</strong> ' + esc(reason) + ' ' + esc(effect) + '</div>';
   } else if (lvl === 'formal') {
     out.innerHTML = '<div class="alert a-info" style="font-size:11.5px;line-height:1.5;">'
-      + '&#9878; <strong>Formal documentation, set by hand.</strong> ' + esc(effect)
-      + ' The gates do not require it &mdash; you can still return this to Standard.</div>';
+      + '&#9878; <strong>Formal documentation, set by hand.</strong> ' + esc(effect) + '</div>';
   } else {
     out.innerHTML = '<div style="font-size:11px;color:var(--gray);line-height:1.5;">'
-      + '<strong>Standard documentation.</strong> ' + esc(effect)
-      + ' You may raise this to Formal above; the gates never lower it.</div>';
+      + '<strong>Standard documentation.</strong> ' + esc(effect) + '</div>';
   }
 }
 
@@ -48509,8 +48513,7 @@ function docStandardEffect(job) {
   // The threshold is a fact about the ESTATE, not about this level, and the sentence says so
   // wherever the dispute has moved it. Stated here and nowhere else: `docLevelFloorReason`'s
   // dispute arm used to quote it too, which put one number in one box twice.
-  var spec = 'Anything at ' + fmt(invAppraisalThreshold(job)) + ' or above is routed'
-    + ' to a specialist'
+  var spec = 'Anything at ' + fmt(invAppraisalThreshold(job)) + ' or above goes to a specialist'
     // ⚠ NAME THE RIGHT CAUSE. `gateDispute` is true on a recorded dispute AND on contested
     // probate, where there may be no dispute answer at all — so a flat "the recorded dispute"
     // is false on the contested arm, which is the one matter type where a reader is most
@@ -48518,9 +48521,9 @@ function docStandardEffect(job) {
     + (job && job.svc === 'contested_probate' ? ' — the contest is what lowers that, not this level.'
        : gateDispute(job) ? ' — the recorded dispute is what lowers that, not this level.' : '.');
   return (isFormalDoc(job)
-    ? 'Every flagged item must be appraised or waived before the Court Inventory or the Trust Schedule'
-      + ' comes off DRAFT, the appraisal guardrail blocks rather than prompts, chain of custody is'
-      + ' mandatory, and the client estimate carries the court-grade records list. '
+    ? 'Flagged items are appraised or waived before a schedule leaves DRAFT, the appraisal guardrail'
+      + ' blocks rather than prompts, chain of custody is mandatory, and the client estimate carries'
+      + ' the court-grade records list. '
     : 'A flagged item is an amber prompt rather than a block, and no schedule is held for one. ')
     + spec;
 }

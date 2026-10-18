@@ -229,13 +229,38 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const hint = src.slice(at, at + 1600);
     const end  = hint.indexOf('</div>', hint.indexOf('</select>'));
     const copy = hint.slice(0, end < 0 ? hint.length : end);
-    ok(/answers above decide this|gates? (above )?(decide|set)/i.test(copy),
-       'it says the answers above decide this on an estate');
-    ok(/grey|disabl/i.test(copy), 'and that they grey it out');
+    // RESTATED 2026-10-18 (Anthony: "an awful lot of words and duplication"): the hint is two sentences, that the answers
+    // above set it and that it is escalate-only; what Formal does is the readout's to say, once. And the control is no
+    // longer greyed out in place when the gates decide: the whole block is hidden and the readout reads Formal.
+    ok(/answers above/i.test(copy), 'it says the answers above set this on an estate');
     lacks(copy, 'Choose <strong>Formal</strong> when the job needs court-grade records',
        'the retired instruction naming the three cases that disable it is gone');
-    ok(/chain of custody/i.test(copy), 'it still names what Formal actually does');
     ok(/lower/i.test(copy), 'and that it is escalate-only');
+    ok(copy.replace(/<[^>]+>/g, '').split(/\s+/).length < 40, 'in under forty words (' + copy.replace(/<[^>]+>/g, '').split(/\s+/).length + ')');
+    // The block is shown only when it has a choice to offer.
+    const shown = (seed) => {
+      const d = domStub(seed);
+      const c = sandbox({
+        fns: ['onDocGateChange', '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror',
+              'svcHasDocStep', 'docLevelFloorReason', 'resolveDocLevel', 'isDecedentJob', 'invAppraisalThreshold', 'docStandardEffect', 'isFormalDoc', 'roundCents', 'fmt', 'esc'],
+        vars: ['DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+        stubs: { document: d },
+      });
+      c.onDocGateChange();
+      return { block: d.getElementById('i-doclevel-block').style.display, out: String(d.getElementById('i-gate-readout').innerHTML || ''), disabled: d.getElementById('i-doclevel').disabled };
+    };
+    let r = shown({ 'i-svc': 'cleanout' });
+    eq(r.block, 'none', 'an Estate Settlement with the 706 unanswered: the level block is hidden');
+    ok(/Formal documentation/.test(r.out), 'and the readout carries the level');
+    eq(r.disabled, true, '(the control stays disabled at formal underneath, as the save reads it)');
+    r = shown({ 'i-svc': 'cleanout', 'i-gate-706': 'no' });
+    eq(r.block, '', 'the 706 answered No: the block is back');
+    eq(r.disabled, false, 'and live');
+    eq(shown({ 'i-svc': 'downsizing_move' }).block, '', 'a Home Transition: shown, as nothing forces it');
+    eq(shown({ 'i-svc': 'cleanout', 'i-gate-dispute': 'yes', 'i-gate-706': 'no' }).block, 'none', 'a recorded dispute hides it again');
+    // The readout and the hints say each thing once: no sentence about lowering in the readout, none about custody in the hint.
+    lacks(src, "It cannot be lowered here; change the answer above if it is wrong.", 'the readout no longer repeats the hint');
+    lacks(src, 'Answered once, at engagement. These set how strictly', 'and the intro paragraph above the gates is gone');
   }
 
   group('which blocks a service shows');
