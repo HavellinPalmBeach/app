@@ -39,7 +39,7 @@ Anthony, travelling: *"Is there anything you should be working on to improve the
 - [x] The midpoint described two ways. One sentence on the band, naming all three readings.
 - [x] The dashboard's `isEstateDash` beside `isDecedentJob`. One rule.
 - [ ] The desk's chips overflowing at 390 px: not reproduced on step 78's desk; measure it on the audit's job.
-- [x] **The six job scripts drafted:** `JOB_SCRIPTS.md`, for Anthony to correct (road to launch, item 2). The runs are next.
+- [x] **The six job scripts drafted:** `JOB_SCRIPTS.md`, for Anthony to correct (road to launch, item 2). The runs are next. **2026-10-19:** rewritten as one page per job after the first Ellison run (Anthony: too long to read, the room scores are not the point, "round to ✓" meant nothing). Found by that run: the draft sent an estate's baths to ✕, which prints *Excluded, you will handle these spaces* to the trustee; the scripts now mark nothing ✕ on an estate.
 
 ## Core-jobs run (2026-10-10)
 
