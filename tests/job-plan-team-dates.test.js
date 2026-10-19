@@ -534,6 +534,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!l0.ok, 'a job with no crew yet has no confirmed team');
     has(l0.detail, 'Save &amp; Confirm Job Team', '⚠ the fix is under the chip, not in a tooltip');
     has(l0.detail, 'Hours cannot be logged until it is', '…with what it holds up');
+    // ⚠ THE FIX NAMES THE FOLD BY THE TITLE THE PLAN DRAWS (2026-10-19). The roster is inside a fold that is shut until
+    // somebody opens it, and the fold was renamed "Job crew, hours & daily close" because nobody could find the crew
+    // under "Hours & daily close"; a chip still sending people to the old name would send them nowhere. The title is a
+    // literal in renderJobPlan (a pinned sandbox lifts jobTeamGateLine alone), so the two are held equal here.
+    {
+      const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
+      const m = src.match(/planPhaseWrap\('hours', '([^']+)'/);
+      const title = m ? m[1] : '';
+      eq(title, 'Job crew, hours &amp; daily close', '⚠⚠ the hours fold is titled for the crew it holds');
+      has(l0.detail, 'under ' + title + ', below', '⚠⚠ the unconfirmed chip sends people to that fold by its title');
+    }
     ok(!('crew' in none), '⚠⚠ drawing the chip wrote NOTHING to the job — getJobCrew mints a crew; a chip row must not');
     ok(!G.jobTeamGateLine({ crew: { tc: { name: 'Ashley Jerome' }, ps: [], confirmed: false } }).ok, 'an unconfirmed team is red');
     ok(G.jobTeamGateLine({ crew: { tc: { name: 'Ashley Jerome' }, ps: [{ name: 'Bob Smith' }], confirmed: true } }).ok, 'a confirmed team is green');
@@ -542,6 +553,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!bad.ok, '⚠⚠ a CONFIRMED team carrying one person in two slots is still RED — "confirmed" over it would be a false green');
     has(bad.detail, 'Anthony Graziano Jr is in 2 slots', '…and the chip says who');
     has(bad.detail, 'Revise team', '…and how to fix it');
+    has(bad.detail, 'under Job crew, hours &amp; daily close, below', '…under the fold by its title');
   }
 
   group('#6, driven through the real chip row — and repainted IN PLACE when the team or a vendor moves');

@@ -8,7 +8,7 @@
 // the main body should just be the job you're working and everything should flow logically."
 //
 // The order now: the header (with the dashboard's schedule strip) → gates (a chip row) → the two
-// TOOLS, folded: Vendors & partners, Hours & daily close → the JOB, open, on one thread: Before
+// TOOLS, folded: Vendors & partners; Job crew, hours & daily close → the JOB, open, on one thread: Before
 // Day 1 → In the house (the room cards, the in-house boxes) → Midpoint & pickups → Move day
 // (Transition only) → Close-out. Each card carries a node — green behind you, bronze NOW, grey
 // ahead. These drive the REAL renderer and read the REAL markup, because the browser is the only
@@ -77,7 +77,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('named stages, no numbers — two fold bars, four (five) cards');
   {
     const { out } = plan(JOB(), EST());
-    ['Vendors &amp; partners', 'Hours &amp; daily close'].forEach((t) => has(out, '>' + t + '</span>', 'the fold reads ' + t));
+    // ⚠ "Job crew, hours & daily close" since 2026-10-19 (Anthony: "we couldn't find where to log the crew"): the team
+    // roster and its sign-off are inside this fold, and a bar named for the hours alone hid them.
+    ['Vendors &amp; partners', 'Job crew, hours &amp; daily close'].forEach((t) => has(out, '>' + t + '</span>', 'the fold reads ' + t));
+    lacks(out, '>Hours &amp; daily close</span>', 'the old title, which said nothing about the crew, is gone');
     ['Before Day 1', 'In the house', 'Midpoint &amp; pickups', 'Close-out'].forEach((t) =>
       has(out, '<span class="stg-title">' + t, 'the card reads ' + t));
     has(out, 'class="stg-sub">Tap a room to shoot it and lock it.</span>', 'the rooms card says what to do with it');

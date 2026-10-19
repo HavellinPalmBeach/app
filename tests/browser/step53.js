@@ -221,7 +221,7 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Family Room / Great Roo
       ok(await p.evaluate(() => openJobPlanFor(5305)), 'the Job Plan opens on the job');
       await p.waitForTimeout(700);
       const open = await p.evaluate(() => { const e = document.getElementById('phase-body-hours'); return !!e && e.style.display !== 'none'; });
-      if (!open) await press('[onclick="togglePhase(\'hours\')"]', 'the Hours & daily close fold');
+      if (!open) await press('[onclick="togglePhase(\'hours\')"]', 'the Job crew, hours & daily close fold');
       for (const id of ['#log-m0-hrs', '#log-tc2-hrs', '#log-m1-hrs']) eq(await step(id), '0.5', '⚠ ' + id + ' steps by 0.5');
       const date = await p.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
       await p.evaluate((d) => { document.getElementById('log-date').value = d; }, date);

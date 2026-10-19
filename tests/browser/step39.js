@@ -181,7 +181,7 @@ const HOUSE = ['Entryway / Foyer', 'Living Room', 'Dining Room', 'Family Room / 
 
 
   // ── Q19: the estimate staffs two concierges; the team cannot be confirmed with the second slot empty. ──
-  await press('.sec-hdr.sec-toggle[onclick="togglePhase(\'hours\')"]', 'the Hours & daily close fold, where the team is signed off');
+  await press('.sec-hdr.sec-toggle[onclick="togglePhase(\'hours\')"]', 'the Job crew, hours & daily close fold, where the team is signed off');
   ok(await shown('#log-tc2-name'), 'the Job Plan offers a Transition Concierge 2 row, because the estimate staffs one');
   eq(await val('#log-tc2-name'), '', '…and it is empty');
   eq(await val('#log-m0-name'), 'Ashley Jerome', 'the concierge from intake is on the first row');
