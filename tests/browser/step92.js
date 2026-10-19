@@ -5,7 +5,8 @@
 // Drives the REAL page: an estate seeded with an as-found shot and four inventory lines (two split off one photograph);
 // the row boxes ticked through the real controls; the bar's Remove lines pressed with the question refused, then
 // accepted; the lines gone from the list and under Removed items with who removed them; the photograph and the as-found
-// shot untouched; the manifest saved once; overflow at 1440 and 390 with the bar up; zero page errors.
+// shot untouched; the manifest saved once; overflow at 1440 and 390 with the bar up; Read Photographing a House on the
+// In the house stage and in a room, opening over the app (2026-10-19); zero page errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step92.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -140,6 +141,25 @@ const EST = 9101;
       ok(await vis('button[onclick="invBulkRemove(' + EST + ')"]'), 'Remove lines is on the bar at 390');
       eq(await overflow(), 0, 'no horizontal overflow at 390 with the bar up');
       await p.evaluate(() => _invClearPicks());
+    });
+
+    // ── E ───────────────────────────────────────────────────────────────────
+    await section('E. Read Photographing a House: on the In the house stage and in the room, opening over the app', async () => {
+      await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(300);
+      await p.evaluate((id) => openJobPlanFor(id), EST); await p.waitForTimeout(1200);
+      const stage = await txt('#stage-rooms');
+      has(stage, 'Read Photographing a House', 'the In the house stage carries the link');
+      await press('#stage-rooms a[href="photography-guide.html"]', 'Read Photographing a House (on the stage)');
+      eq(await p.evaluate(() => document.getElementById('guide-modal').style.display), 'flex', 'the guide opens over the app');
+      ok(/photography-guide\.html$/.test(await p.evaluate(() => document.getElementById('guide-frame').getAttribute('src') || '')), 'and the frame holds the guide');
+      eq(await txt('#guide-title'), 'Photographing a House', 'titled Photographing a House');
+      await p.evaluate(() => closeGuidePage());
+      await press('[onclick="openRoomWorkspace(' + EST + ',0)"]', 'the Kitchen room card');
+      const room = await txt('#room-ws');
+      has(room, 'Read Photographing a House', 'the room workspace carries the link too');
+      await press('#room-ws a[href="photography-guide.html"]', 'Read Photographing a House (in the room)');
+      eq(await p.evaluate(() => document.getElementById('guide-modal').style.display), 'flex', 'and it opens from the room');
+      await p.evaluate(() => { closeGuidePage(); closeRoomWorkspace(); });
     });
 
     eq(errs, [], 'zero page errors');

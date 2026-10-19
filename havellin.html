@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 6:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 7:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -39300,6 +39300,7 @@ function _paintRoomWorkspace() {
     + (decedent ? '<strong>Mandatory on this job.</strong> ' : '')
     + '<strong>2. Sort, then Items</strong> \u2014 work the room, pick a chip, shoot the pile. '
     + '<strong>3. After</strong> \u2014 the room empty.</div>';
+  h += (typeof photoGuideLinkHtml === 'function' ? photoGuideLinkHtml() : '');
   h += '<div class="ws-cams">'
     + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'before\')">&#128247; As found<small>' + nB + ' shot' + (nB === 1 ? '' : 's') + '</small></button>'
     + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'inventory\')">&#128247; Items<small>' + nI + ' shot' + (nI === 1 ? '' : 's') + '</small></button>'
@@ -43480,6 +43481,12 @@ var PLAN_PROCEDURE = [
 function guideLinkHtml(doc, label) {
   return '<a href="' + esc(doc) + '" rel="noopener" onclick="return openGuidePage(event, this.getAttribute(\'href\'), this.textContent)">' + esc(label) + ' &rarr;</a>';
 }
+// Photographing a House in the app (2026-10-19; Anthony, with the Job Plan open: *"i see the link to 'sorting a house' but where is
+// the one to 'photographing a house'?"*: until then the method was linked from the manual and the playbook only). One line, at the
+// top of the In the house stage and under the room workspace's three steps, opening over the app like the other guides.
+function photoGuideLinkHtml() {
+  return '<div class="plan-proc-doc" style="font-size:11px;margin:0 0 8px;font-weight:600;">' + guideLinkHtml(PHOTO_GUIDE_DOC, 'Read Photographing a House') + '</div>';
+}
 function openGuidePage(ev, doc, title) {
   var ov = document.getElementById('guide-modal'), fr = document.getElementById('guide-frame');
   if (!ov || !fr || !doc) return true;   // no panel on this page: let the link open as a link
@@ -45061,6 +45068,7 @@ var INCIDENT_ALERT_TO = { name: 'Anthony Graziano', phone: '(617) 650-6588', tel
 var INCIDENT_CARRIER_FLOOR = 500;        // the estate form's §6.3: "Engage insurance carrier if damage exceeds $500"
 var INCIDENT_HOTLINE = '1-800-962-2873'; // the Florida Abuse Hotline (1-800-96-ABUSE), §415.1034
 var INCIDENT_SUBFOLDER = 'Incident Reports';
+var PHOTO_GUIDE_DOC = 'photography-guide.html';   // the field method, Photographing a House: linked from the In the house stage and the room workspace (2026-10-19)
 var INCIDENT_GUIDE_DOC = 'incident-guide.html';   // the field page, Reporting an Incident (2026-10-19): linked from the card through guideLinkHtml, opening over the app
 var INCIDENT_DOC_KEY = 'incidentRecord';   // docState key for the filed Incident Record: a stored key, never rename it
 var INCIDENT_RECORD_TITLE = 'Incident Record';
@@ -49398,7 +49406,8 @@ function renderJobPlan(jobId, job, est) {
   if (_jpHeader) _jpHeader.innerHTML = hdr;
 
   // The room list: one row per room, in walkthrough order, tap to open the workspace.
-  var roomsCard = '<div id="plan-rooms-' + jobId + '">' + _planRoomListHtml(jobId) + '</div>';
+  var roomsCard = (typeof photoGuideLinkHtml === 'function' ? photoGuideLinkHtml() : '')
+    + '<div id="plan-rooms-' + jobId + '">' + _planRoomListHtml(jobId) + '</div>';
 
   // For service types without the core playbook: the rooms, the sourcing, and a note.
   if (!hasPlaybook) {

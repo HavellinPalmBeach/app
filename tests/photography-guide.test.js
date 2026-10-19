@@ -109,6 +109,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Every time the page names the protocol a beginner has to follow, it is a link to it (the sweep's one green).
     eq(count(guideHtml, 'Firearms Protocol</a>'), count(guide, 'Firearms Protocol'), 'every mention of the Firearms Protocol is a link to it');
     has(guide, 'Shooting a room', 'the pocket card is on it');
+    // And from the app since 2026-10-19 (Anthony, with the Job Plan open: "where is the one to 'photographing a house'?"): one
+    // line at the top of the In the house stage and under the room workspace's three steps, opening over the app.
+    const link = sandbox({ fns: ['photoGuideLinkHtml', 'guideLinkHtml'], vars: ['PHOTO_GUIDE_DOC'], stubs: { esc: (s) => String(s) } });
+    eq(link.PHOTO_GUIDE_DOC, GUIDE_FILE, 'the app names the guide\'s file');
+    const a = link.photoGuideLinkHtml();
+    has(a, 'href="' + GUIDE_FILE + '"', 'the link points at it');
+    has(a, 'Read Photographing a House', 'and reads Read Photographing a House');
+    has(a, 'openGuidePage(event', 'and opens over the app, like the stage guides');
+    has(live(fn('renderJobPlan')), 'photoGuideLinkHtml()', 'the In the house stage carries it');
+    has(live(fn('_paintRoomWorkspace')), 'photoGuideLinkHtml()', 'and so does every room\'s workspace');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
