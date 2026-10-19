@@ -104,10 +104,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const html = A.probateAgreementHtml(job, EST(60, 'cleanout'));
     const before = A.esignAnchorsPresent(html);
     ok(['clientSig', 'havSig', 'coSig1', 'coSig2', 'mktOptOut'].every((k) => before.indexOf(k) >= 0), 'the estate form prints the markers for the client, Havellin, both co-signers and the opt-out box: ' + JSON.stringify(before));
-    const sigs = { client: { img: IMG('ruth'), date: '2026-10-19', name: 'Ruth Adler' }, hav: { img: IMG('ag'), date: '2026-10-19' },
-      co: [{ n: 2, img: IMG('mae'), date: '2026-10-19', name: 'Mae O\'Neil' }] };
+    const sigs = { client: { img: IMG('ruth'), date: '2026-10-19', name: 'Ruth Adler', role: 'Trustee' }, hav: { img: IMG('ag'), date: '2026-10-19' },
+      co: [{ n: 2, img: IMG('mae'), date: '2026-10-19', name: 'Mae O\'Neil', role: 'Co-Trustee' }] };
     const out = A.agreementSignedHtml(html, sigs);
     eq(A.esignAnchorsPresent(out), [], '⚠⚠ no DocuSign marker is left in the filed copy, signed or not');
+    // The Printed Name and Title / Role lines (2026-10-19, the first Ellison run: they came back blank on the filed PDF, the
+    // record's name only as the caption under the line). The form prints a fill slot per signer; the iPad route writes the
+    // name and role on the line for each who signed, and every slot nobody filled is gone.
+    eq(count(html, 'class="agr-fill"'), 6, 'the estate form prints six slots: the client\'s name and role, each co-signer\'s');
+    eq(count(html, 'data-fill="clientName"') + count(html, 'data-fill="clientRole"') + count(html, 'data-fill="coName1"') + count(html, 'data-fill="coRole1"') + count(html, 'data-fill="coName2"') + count(html, 'data-fill="coRole2"'), 6, 'one of each');
+    lacks(out, 'agr-fill', '⚠ no slot is left in the filed copy, filled or not');
+    const line = (t) => '<div class="sig-line"><span style="font-size:11px;">' + t + '</span></div>';
+    eq(count(out, line('Ruth Adler')), 1, 'the client\'s printed name is on her line');
+    eq(count(out, line('Trustee')), 1, 'and her role, as recorded');
+    eq(count(out, line('Mae O&#39;Neil')), 1, 'Mae\'s printed name on her line');
+    eq(count(out, line('Co-Trustee')), 1, 'and her role; Daniel, who did not sign, has neither');
+    const danBlk = out.slice(out.indexOf('Daniel Adler') - 400, out.indexOf('Daniel Adler'));
+    has(danBlk, '<div class="sig-line"></div>', 'Daniel\'s name line stays blank to print on by hand');
+    eq(count(out, 'Daniel Adler'), 1, 'his name is the caption under the line only');
     ['/hsc/', '/hdc/', '/hsh/', '/hdh/', '/hcs1/', '/hcd1/', '/hcs2/', '/hcd2/', '/mko/'].forEach((m) => lacks(out, m, 'marker gone: ' + m));
     has(out, '&#9744;', 'the opt-out box stays a box, unticked, where the client did not opt out');
     lacks(out, '&#9746;', 'and is not ticked');
@@ -195,6 +209,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(row.sub, 'Signed on the iPad', 'and says how');
     has(row.sub, 'Mae O\'Neil signed on the iPad', 'and that Mae did too');
     has(row.sub, 'countersigned for Havellin by Anthony Graziano', 'and that Havellin countersigned');
+    // The signed copy emailed to the client (2026-10-19): the rail says what the record holds and never "sent".
+    lacks(row.sub, 'signed copy', 'no copy drafted yet: nothing claimed');
+    job.docState.agreement.sig.copy = { draftedAt: '2026-10-19T15:00:00.000Z', provider: 'gmail', to: 'ruth@adler.example', cc: 'dan@adler.example, agreements@havellinpalmbeach.com', by: 'Ashley Jerome' };
+    const rowC = rowsOf(c.jobTimeline(job, REC(60, 'cleanout'), [], [], null, null)).filter((r) => r.key === 'agreement_signed')[0];
+    has(rowC.sub, 'signed copy drafted in Gmail for ruth@adler.example (send it)', 'a Gmail draft: drafted, for whom, and that a person sends it');
+    lacks(rowC.sub, 'sent to', 'never a send the app did not witness');
+    job.docState.agreement.sig.copy = { draftedAt: '2026-10-19T15:00:00.000Z', provider: 'none', to: '', cc: '' };
+    const rowN = rowsOf(c.jobTimeline(job, REC(60, 'cleanout'), [], [], null, null)).filter((r) => r.key === 'agreement_signed')[0];
+    has(rowN.sub, 'no email on file for the signed copy: send it from Drive', 'no email: said, a flag');
+    delete job.docState.agreement.sig.copy;
     has(row.flag, 'Daniel Adler', 'Daniel\'s signature flagged as owed, as on every route');
     has(text(c.agreementCoSignHtml(job)), 'Mae O\'Neil — signed on the iPad', 'the block under the timeline reads the same');
     has(text(c.agreementCoSignHtml(job)), 'or sign on the iPad', 'and offers the iPad for the one still owed');
@@ -252,7 +276,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       signingPacketHtml: () => '<div class="ce-page">PACKET ' + '<span style="color:#fff;font-size:6px;line-height:0;">/hsc/</span><span style="color:#fff;font-size:6px;line-height:0;">/hdc/</span>'
         + '<span style="color:#fff;font-size:6px;line-height:0;">/hsh/</span><span style="color:#fff;font-size:6px;line-height:0;">/hdh/</span>'
         + '<span style="color:#fff;font-size:6px;line-height:0;">/hcs1/</span><span style="color:#fff;font-size:6px;line-height:0;">/hcd1/</span>'
-        + '<span style="color:#fff;font-size:6px;line-height:0;">/hcs2/</span><span style="color:#fff;font-size:6px;line-height:0;">/hcd2/</span></div>',
+        + '<span style="color:#fff;font-size:6px;line-height:0;">/hcs2/</span><span style="color:#fff;font-size:6px;line-height:0;">/hcd2/</span>'
+        + '<span class="agr-fill" data-fill="clientName"></span><span class="agr-fill" data-fill="clientRole"></span><span class="agr-fill" data-fill="coRole1"></span><span class="agr-fill" data-fill="coRole2"></span></div>',
       _signPads: pads, deviceUser: () => 'Ashley Jerome',
       File: class { constructor(parts, name, o) { this.parts = parts; this.name = name; this.type = (o || {}).type; this.size = parts[0].length; } },
       atob: (b) => Buffer.from(b, 'base64').toString('binary'),
@@ -263,7 +288,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         cb(true, meta.label + ' filed to Drive.', { id: 'sr9', kind, fileUrl: 'https://drive/signed', fileId: 'F9' });
         return true;
       },
+      // The signed copy's email (2026-10-19): the draft measured, the mailbox stubbed.
+      gmailConfigured: () => !opt.noGmail, buildMimeMessage: (o) => o, gmailDraftUrl: () => 'https://mail.google.com/mail/u/0/#drafts/d1',
+      gmailCreateDraft(mime, cb) { log.drafts.push(mime); if (opt.gmailFails) { cb(false, { error: 'quota' }); return; } cb(true, { messageId: 'd1' }); },
+      window: { open(u) { log.opened.push(u); }, location: {} }, showSyncBadge() {}, _gmailUserEmail: 'ops@havellinpalmbeach.com',
+      docNames: () => ({ attachment: 'Havellin Services Agreement 2026-10-19.pdf' }),
+      assignedTCContact: () => ({ name: 'Ashley Jerome', phone: '', email: '' }), conciergePhonesText: () => '',
     });
+    log.drafts = []; log.opened = [];
     c.__log = log; c.__doc = doc;
     return c;
   }
@@ -312,10 +344,47 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(count(pdfHtml, 'data:image/png;base64,PAD'), 2, 'two signatures drawn into the packet (the client\'s and Mae\'s), none for Daniel or Havellin');
     lacks(pdfHtml, '/hcs1/', 'Daniel\'s marker removed'); lacks(pdfHtml, '/hsh/', 'Havellin\'s marker removed'); lacks(pdfHtml, '/hsc/', 'the client\'s replaced');
     has(pdfHtml, 'Execution Record', 'the execution record at the foot');
+    // The printed name and role lines, off the signers the dialog built (the role from the record, 2026-10-19).
+    has(pdfHtml, '<span style="font-size:11px;">Ruth Adler</span>', 'the representative\'s printed name on her line');
+    has(pdfHtml, '<span style="font-size:11px;">Trustee</span>', 'and her recorded role');
+    eq(count(pdfHtml, '<span style="font-size:11px;">Co-Trustee</span>'), 1, 'Mae\'s role on hers, none for Daniel');
+    lacks(pdfHtml, 'agr-fill', 'no slot left');
     has(pdfHtml, 'countersignature is not on this copy', 'and says Havellin did not countersign');
     const sig = jb.docState.agreement.sig;
     eq([sig.how, sig.signedBy, sig.filedUrl, (sig.coSigners || []).map((x) => x.name), sig.countersignedBy || ''], ['ipad', 'Ruth Adler', 'https://drive/signed', ['Mae O\'Neil'], ''], 'recorded off the filed copy');
     eq(cb.document.getElementById('agr-sign-modal').style.display, 'none', 'the dialog closes');
+    // The signed copy to the client (2026-10-19; Anthony: "if we sign on ipad, a signed copy should also be emailed to the
+    // client"): one Gmail draft to the representative, every co-representative and agreements@ copied, the PDF attached.
+    eq(cb.__log.drafts.length, 1, 'one draft');
+    const dr = cb.__log.drafts[0];
+    eq([dr.to, dr.cc], ['ruth@adler.example', 'dan@adler.example, mae@oneil.example, agreements@havellinpalmbeach.com'], 'to the representative; the co-representatives and agreements@ copied');
+    has(dr.subject, 'signed copy', 'the subject says what it is');
+    eq(dr.attachments.map((a) => [a.name, a.base64]), [['Havellin Services Agreement 2026-10-19 — signed.pdf', Buffer.from('%PDF-1.4 signed').toString('base64')]], 'the PDF the app filed, attached');
+    has(dr.text, 'Your signed copy is attached', 'the body says so');
+    lacks(dr.text, 'https://drive/signed', 'and does not link Drive when the PDF rides along');
+    has(dr.text, 'the property', 'an estate: the property, never your home');
+    has(dr.html, 'Havellin', 'the html body in the house shell');
+    const cpy = sig.copy;
+    eq([cpy.provider, cpy.to, cpy.cc, cpy.draftUrl, cpy.by, !!cpy.draftedAt], ['gmail', 'ruth@adler.example', 'dan@adler.example, mae@oneil.example, agreements@havellinpalmbeach.com', 'https://mail.google.com/mail/u/0/#drafts/d1', 'Ashley Jerome', true], 'recorded on the signature as a draft, never a send');
+    eq(cb.__log.opened, ['https://mail.google.com/mail/u/0/#drafts/d1'], 'the draft opened for the person to send');
+    has(cb.__log.notices[cb.__log.notices.length - 1], 'The signed copy is drafted in ops@havellinpalmbeach.com for ruth@adler.example, copied to dan@adler.example, mae@oneil.example, agreements@havellinpalmbeach.com, with the PDF attached: read it and send it.', 'the notice says where the draft is and that a person sends it');
+    // Gmail failing: the plain-email fallback with the filed copy linked, recorded as what it is.
+    const jg = JOB();
+    const cg = dlgRig(jg, { gmailFails: true });
+    cg.dashSignAgreementOnPad(60); here(cg, 'co1', false); here(cg, 'co2', false);
+    eq(cg.agreementSignOnPadDone(), true, 'goes');
+    eq([jg.docState.agreement.sig.copy.provider, jg.docState.agreement.sig.copy.to, !!jg.agrSigned], ['mailto', 'ruth@adler.example', true], 'Gmail failed: a plain email, the signature still recorded');
+    has(decodeURIComponent(cg.window.location.href), 'https://drive/signed', 'the plain email links the filed copy, since it can carry no attachment');
+    has(decodeURIComponent(cg.window.location.href), 'cc=dan@adler.example', 'copied the same');
+    has(cg.__log.notices[cg.__log.notices.length - 1], 'opened as a plain email for ruth@adler.example', 'said');
+    // No email on file: nothing drafted, recorded as none, flagged in the notice; the signing never refused for it.
+    const jn = JOB({ executorEmail: '', coFiduciaries: [] });
+    const cn = dlgRig(jn);
+    cn.dashSignAgreementOnPad(60);
+    eq(cn.agreementSignOnPadDone(), true, 'goes with no email');
+    eq([cn.__log.drafts.length, jn.docState.agreement.sig.copy.provider, !!jn.agrSigned], [0, 'none', true], 'no draft, recorded as none, the signature recorded');
+    has(cn.__log.notices[cn.__log.notices.length - 1], 'No email on file for Ruth Adler: send the signed copy from Drive', 'flagged by name');
+    eq(cn.__log.notices[cn.__log.notices.length - 1].slice(0, 5), 'warn:', 'as a warning');
     has(cb.__log.notices[cb.__log.notices.length - 1], 'Daniel Adler’s signature is not on record yet', 'the notice names the one still owed');
     has(cb.__log.notices[cb.__log.notices.length - 1], 'countersignature is not on the copy', 'and that Havellin did not countersign');
     // A failed PDF: nothing filed, nothing recorded, the paper route offered, the pads kept.

@@ -7,7 +7,9 @@
 // with the mouse for the representative and one co-representative, the other unticked, the opt-out box ticked; Sign and
 // file over a routed htmlToPdf and a stubbed upload; the record, the rail row, the flag for the one still owed, the filed
 // copy's link; a living client offered the same; a failed PDF named with the paper route; overflow at 1440 and 390 with
-// the dialog open; zero page errors.
+// the dialog open; zero page errors. Since 2026-10-19 (the first Ellison run): the signer's printed name and role written on
+// the estate form's lines in the filed copy, and the signed copy drafted to the representative in Gmail (stubbed) with the
+// PDF attached, recorded on the signature and read on the rail.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step88.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -141,6 +143,12 @@ const EST = 8801, LIV = 8802;
     });
 
     await section('C. signed by the representative and one co-representative, the other unticked, the opt-out ticked: filed and recorded', async () => {
+      // The signed copy's Gmail draft (2026-10-19): the mailbox stubbed on the page, the draft measured.
+      await p.evaluate(() => {
+        window.__drafts = [];
+        window.gmailCreateDraft = (mime, cb) => { window.__drafts.push(mime); cb(true, { messageId: 'd88' }); };
+        window.open = () => null;
+      });
       await draw('#as-pad-client');
       await p.evaluate(() => { document.getElementById('as-here-co1').checked = false; document.getElementById('as-mko').checked = true; });
       await draw('#as-pad-co2');
@@ -156,6 +164,19 @@ const EST = 8801, LIV = 8802;
       has(pdfs[0], 'Execution Record', 'the execution record at the foot');
       has(pdfs[0], 'in the presence of Ashley Jerome', 'naming who held the device');
       has(pdfs[0], 'countersignature is not on this copy', 'and that Havellin did not countersign');
+      // The printed name and role lines (2026-10-19): filled for each signer who signed, blank for Daniel, no slot left.
+      has(pdfs[0], '<div class="sig-line"><span style="font-size:11px;">Ruth Adler</span></div>', '⚠⚠ the representative\'s printed name on her line');
+      has(pdfs[0], '<div class="sig-line"><span style="font-size:11px;">Trustee</span></div>', 'and her role');
+      has(pdfs[0], '<div class="sig-line"><span style="font-size:11px;">Mae O&#39;Neil</span></div>', 'Mae\'s printed name on hers');
+      lacks(pdfs[0], 'agr-fill', 'no fill slot left in the filed copy');
+      // The signed copy to the client (2026-10-19): one draft, the representative, the co-representatives and agreements@ copied, the PDF attached.
+      const drafts = await p.evaluate(() => window.__drafts.map((m) => String(m)));
+      eq(drafts.length, 1, '⚠⚠ one Gmail draft for the signed copy');
+      has(drafts[0], 'To: ruth@adler.example', 'to the representative');
+      has(drafts[0], 'Cc: dan@adler.example, mae@oneil.example, agreements@havellinpalmbeach.com', 'the co-representatives and agreements@ copied');
+      const subj = (drafts[0].match(/^Subject: (.*)$/m) || [])[1] || '';
+      has(Buffer.from(subj.replace(/^=\?UTF-8\?B\?/i, '').replace(/\?=$/, ''), 'base64').toString('utf8'), 'signed copy', 'the subject says what it is');
+      has(drafts[0], 'Content-Type: application/pdf', 'the PDF attached');
       const j = await job(EST);
       const st = (j.docState || {}).agreement || {};
       eq([st.sentHow, st.sig && st.sig.how, st.sig && st.sig.signedBy, st.sig && st.sig.provider, !!(st.sig && st.sig.filedUrl), st.sig && st.sig.mktOptOut], ['ipad', 'ipad', 'Ruth Adler', 'ipad', true, true], '⚠⚠ the send and the signature on the record');
@@ -169,6 +190,9 @@ const EST = 8801, LIV = 8802;
       has(row, 'Mae O\'Neil signed on the iPad', 'and that Mae did');
       has(row, 'countersignature is not on the filed copy', 'and that Havellin did not countersign');
       has(row, 'Daniel Adler', 'and flags Daniel');
+      eq([st.sig.copy && st.sig.copy.provider, st.sig.copy && st.sig.copy.to], ['gmail', 'ruth@adler.example'], 'the draft recorded on the signature');
+      has(row, 'signed copy drafted in Gmail for ruth@adler.example (send it)', 'and the rail says so, never sent');
+      has(notice, 'The signed copy is drafted in', 'the notice says where the draft is');
       has(await txt(dash + ' .jt-next'), 'deposit', 'the band moves on to the deposit');
       ok(await p.locator(dash + ' button[onclick="openEsignFiled(' + EST + ',\'agreement\')"]').count() === 1, 'the filed signed packet is offered');
       has(await txt(dash + ' button[onclick="openEsignFiled(' + EST + ',\'agreement\')"]'), 'iPad', 'named as the iPad copy');

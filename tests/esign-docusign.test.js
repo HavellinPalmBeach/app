@@ -97,7 +97,7 @@ const FULL_PROPS = {
 };
 
 // ── the app side ──────────────────────────────────────────────────────────────
-const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'jobOnProbateTrack', 'svcLabelOf', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrApprovedStamp', 'esignAnchor', 'agrBillingRates',
+const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'jobOnProbateTrack', 'svcLabelOf', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrFillSlot', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrApprovedStamp', 'esignAnchor', 'agrBillingRates',
                  'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',

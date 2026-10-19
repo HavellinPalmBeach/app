@@ -697,6 +697,9 @@ function run({ group, ok, eq, has, lacks }) {
       // draft was made, as the package's card does; the tap and the draft link on both read draftOutstanding.
       approvalRequestCardHtml: 'the Releases card\'s who-and-when line for the request',
       approvalRequestDashHtml: 'the dashboard card\'s who-and-when line for the request',
+      // The signed copy emailed after an iPad signing (2026-10-19): its draft is recorded on the signature (sig.copy), a record
+      // of a draft made, never a draft to send or confirm; the rail reads its provider and address, not the stamp.
+      _agrIpadEmailCopy: 'the signed copy\'s record on the signature',
     };
     const names = [...new Set([...src.matchAll(/(^|\n)function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[2]))];
     const readers = names.filter((n) => { let b; try { b = fn(n); } catch (e) { return false; } return /draftedAt/.test(live(b)); });

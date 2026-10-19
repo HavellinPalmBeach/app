@@ -275,8 +275,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(count(_q30, _q30New), 1, 'the estate form carries the new sentence once');
     ok(_q30.indexOf(P25_BACK[2][0]) >= 0 && _q30.indexOf(P25_BACK[3][0]) >= 0, 'the estate form carries the new deposit and final timing');
     ok(_q30.indexOf(Q62_BACK[2][0]) >= 0 && _q30.indexOf(Q62_BACK[3][0]) >= 0 && _q30.indexOf(Q62_BACK[4][0]) >= 0, 'the estate form carries Q62\'s §5.4 heading, clause and paragraph');
-    eq(sha(q62Back(p25Back(_q30)).replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
-       '⚠⚠ the estate form with no co-representative, byte for byte as before P20 but for that sentence');
+    // 2026-10-19 (the iPad route's printed name and role): the Printed Name and Title / Role lines carry an empty fill
+    // slot per signer (agrFillSlot), nothing on paper; strip the two the client's block prints and the page is still the same.
+    eq(count(_q30, 'class="agr-fill"'), 2, 'the estate form with no co-representative prints the client\'s two fill slots');
+    const slotsBack = (h) => h.replace(/<span class="agr-fill" data-fill="[^"]*"><\/span>/g, '');
+    eq(sha(slotsBack(q62Back(p25Back(_q30))).replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
+       '⚠⚠ the estate form with no co-representative, byte for byte as before P20 but for that sentence and the slots');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
