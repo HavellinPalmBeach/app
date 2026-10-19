@@ -556,7 +556,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(readers('scheduleSigners'), { printCourtInventory: 2, printTrustSchedule: 2 }, 'who signs a schedule: the two schedules');
     eq(readers('scheduleSignLines'), { printCourtInventory: 1, printTrustSchedule: 1 }, 'and their lines');
     eq(readers('_agrCounsel'), { _agrScopeServices: 1, probateAgreementHtml: 2 }, 'counsel\'s names: §1.2, §2 and §2.1');
-    eq(readers('_agrClientCapacity'), { probateAgreementHtml: 2 }, 'the Client\'s capacity: §6.3 and the signature page');
+    eq(readers('_agrClientCapacity'), { agreementIpadSigners: 1, probateAgreementHtml: 2 }, 'the Client\'s capacity: §6.3 and the signature page, and the iPad dialog\'s client row (P29)');
     eq(readers('_agrEstateNoun'), { probateAgreementHtml: 5 }, 'the estate noun: §3.1, §5.3, §7.1 twice (once as a possessive) and §10');
     eq(readers('_agrTrustIsParty'), { _agrEstateNoun: 1, docPartyIdent: 1, probateAgreementHtml: 1 },  // restated 2026-10-08, as above
       'whether the trust is the party: §1.2, the noun and the client estimate\'s identity line');
@@ -564,7 +564,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // their signatures are on record (agreementCoSignState).
     // RESTATED 2026-10-05 (P21): one more, the sign-by-hand email's line that each co-representative signs too (Q31,
     // agreementEmailCoSignLine), asked of the same list the signature page prints.
-    eq(readers('_agrCoSigners'), { _agrCoRepRepresentation: 1, agreementCoSignState: 1, agreementEmailCoSignLine: 1, esignCoSigners: 1, probateAgreementHtml: 1 }, 'the co-signers: the signature page, §5.1, the envelope, the record and the email');
+    eq(readers('_agrCoSigners'), { _agrCoRepRepresentation: 1, agreementCoSignState: 1, agreementEmailCoSignLine: 1, agreementIpadSigners: 1, esignCoSigners: 1, probateAgreementHtml: 1 }, 'the co-signers: the signature page, §5.1, the envelope, the record and the email');
     const body = noComments(fn('probateAgreementHtml', 'agrReferralFeeTxt'));
     ok(body.length > 20000, 'fixture: the estate form\'s live source (' + body.length + ')');
     ["dRow('Estate Attorney'", "dRow('Letters of Administration'", ">Client / Personal Representative<", "Notify Client / Personal Representative", "anyone the Personal Representative authorizes",

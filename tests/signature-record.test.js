@@ -116,10 +116,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Driven: flip the provider and watch the primary disappear.
     const rail = sandbox({
-      fns: ['jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'docSentAt', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+      fns: ['jobTimelineActions', 'agreementIpadRefusal', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', 'docSentAt', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
         'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly', 'agreementReady', 'isJobWon',
             'docKeyFor', 'esignAvailable', 'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents', 'esignFiledCopies'],
-      vars: ['ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS'],
+      vars: ['ESIGN_PROVIDERS', 'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS', 'SHEETS_SYNC_URL'],
       stubs: { ESIGN_PROVIDER_KEY: 'manual' },
     });
     const row = { key: 'agreement_signed', state: 'current' };

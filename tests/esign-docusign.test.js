@@ -794,7 +794,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // a one-off."* Right, and the global version was a live defect for about an hour — see the
     // stranded-paper-job group below.
     const rail = (key) => sandbox({
-      fns: ['jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
+      fns: ['jobTimelineActions', 'agreementIpadRefusal', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'isAgreementSent', '_jtSendAction', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
             'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
             'agreementReady', 'isJobWon', 'docKeyFor', 'docSentAt', 'esignAvailable',
             'esignJobWatches', 'isAgreementSigned', 'agreementSignature', 'esignProviderKey', 'estimateEditBlocker', 'priceChangeBlocker', 'draftOutstanding', 'draftIsStale', 'estimateOutForApproval', 'priceAboveSent', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'fmt', 'roundCents', 'esignFiledCopies'],

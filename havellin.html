@@ -449,6 +449,11 @@ input:checked+.slider:before{transform:translateX(18px);}
    agreement instead of being 45KB above the fold. */
 .doc-viewer-body{overflow-y:auto;overflow-x:hidden;padding:18px;background:#f4f1ea;flex:1 1 auto;}
 .doc-viewer-body .ce-page{margin:0 auto;background:var(--white);}
+.as-doc{max-height:42vh;border:1px solid var(--border);border-radius:6px;margin-top:8px;padding:12px;}
+.as-signer{border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:8px;}
+.as-signer-hd{font-size:12px;color:var(--gray-dk);margin-bottom:6px;}
+.as-signer-hd .as-opt{font-size:10.5px;color:var(--gray);font-style:italic;}
+.as-pad{width:100%;height:96px;border:1px dashed var(--border-md);border-radius:6px;background:#fff;touch-action:none;display:block;}
 
 /* ─── THE HORIZONTAL TRACK ───────────────────────────────────────────────────
    On a desk the vertical rail "take[s] up a lot of real estate vertically and uses
@@ -1364,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.18 · 11:35am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.18 · 9:27pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2737,6 +2742,21 @@ body.no-smf .smf-col{display:none;}
         <input type="file" accept="application/pdf,image/*" onchange="pickupFileFromDialog(this)"
           style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;left:0;top:0;"></label>
       <button class="btn-p" id="ip-sign-btn" style="flex:1;" onclick="signoutFileFromPad()">Sign and file</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sign the agreement on the iPad (P29): the packet readable, a pad per signer -->
+<div class="modal-overlay" id="agr-sign-modal" style="display:none;">
+  <div class="modal-box" style="width:820px;max-width:96%;">
+    <div class="modal-title" id="as-title">Sign the agreement on the iPad</div>
+    <div class="modal-sub" id="as-sub"></div>
+    <div class="doc-viewer-body as-doc" id="as-doc"></div>
+    <div id="as-signers"></div>
+    <div id="as-fb" style="margin-top:8px;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;flex-wrap:wrap;">
+      <button class="btn-s" style="flex:1;" onclick="closeAgreementSignDialog()">Cancel</button>
+      <button class="btn-p" id="as-done-btn" style="flex:2;" onclick="agreementSignOnPadDone()">Sign and file</button>
     </div>
   </div>
 </div>
@@ -19101,8 +19121,12 @@ function jobTimeline(job, estRec, logs, cos, sched, settle) {
            : [((AGR_SIG_METHODS[_jtSig.how] || {}).label || ''), _jtSig.signerEmail || '']
                .concat(_jtCo ? _jtCo.coSigners.filter(function (c) { return c.how; }).map(function (c) {
                  return c.how === 'esign' ? c.name + ' signed in ' + ESIGN_PROVIDERS.docusign.label + (c.signedOn ? ' ' + fmtDate2(c.signedOn) : '')
+                   : c.how === 'ipad' ? c.name + ' signed on the iPad' + (c.signedOn ? ' ' + fmtDate2(c.signedOn) : '')
                    : c.name + ' on the co-signed page filed';
-               }) : []).filter(Boolean).join(' · '))
+               }) : [])
+               // Signed on the iPad (P29): whether Havellin countersigned on the device is on the filed copy, so the row says.
+               .concat(_jtSig.how === 'ipad' ? [_jtSig.countersignedBy ? 'countersigned for Havellin by ' + _jtSig.countersignedBy : 'Havellin’s countersignature is not on the filed copy'] : [])
+               .filter(Boolean).join(' · '))
         : (esignJobWatches(job) ? ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for it'
            + (_jtCo ? [_jtCo.coSigners.filter(function (c) { return c.onEnvelope; }), _jtCo.coSigners.filter(function (c) { return !c.onEnvelope; })]
                .map(function (g, i) {
@@ -20054,7 +20078,10 @@ var ESIGN_PROVIDER_KEY = 'docusign';
 var AGR_SIG_METHODS = {
   wet:      { label: 'Signed in person',      hint: 'Paper signed in front of you, or handed back at the property' },
   scanned:  { label: 'Signed copy returned',  hint: 'They printed, signed and emailed or posted it back' },
-  esign:    { label: 'Electronic signature',  hint: 'Completed through the e-signature provider' }
+  esign:    { label: 'Electronic signature',  hint: 'Completed through the e-signature provider' },
+  // Signed on the glass in the concierge's presence (P29, 2026-10-18): written by the iPad dialog only, never offered to
+  // the hand recorder (AGR_SIG_MANUAL_METHODS), which records paper.
+  ipad:     { label: 'Signed on the iPad',     hint: 'Read and signed on the screen of Havellin\u2019s device, in person' }
 };
 var AGR_SIG_MANUAL_METHODS = ['wet', 'scanned'];
 
@@ -20489,7 +20516,7 @@ function agreementCoSignState(job) {
       return String(r.signedBy || '').split(';').some(function (n) { return samePerson(n, f.name); });
     })[0] || null);
     var c = { id: f.id, name: f.name, email: f.email || '', onEnvelope: env.some(function (x) { return is(f, x); }),
-              how: e ? 'esign' : (p ? 'filed' : ''), signedOn: (e && e.signedOn) || '' };
+              how: e ? (e.how === 'ipad' ? 'ipad' : 'esign') : (p ? 'filed' : ''), signedOn: (e && e.signedOn) || '' };
     out.coSigners.push(c);
     if (!c.how) out.gaps.push(c);
   });
@@ -20541,6 +20568,9 @@ function recordAgreementSignature(jobId, sig) {
   // Each co-representative the provider reports signed beside the client, with their own day (2026-10-05, P20). Only
   // where it names any: a signature recorded by hand, or an envelope with no co-signer, keeps the record it always had.
   if (sig.coSigners && sig.coSigners.length) st.sig.coSigners = sig.coSigners;
+  // Signed on the iPad (P29): the filed copy's link and record, who countersigned for Havellin on the device, and who held
+  // it. Written only where the route gave them, so a DocuSign or paper record keeps the shape it always had.
+  ['filedUrl', 'filedId', 'recordId', 'countersignedBy', 'witnessedBy', 'mktOptOut'].forEach(function (k) { if (sig[k]) st.sig[k] = sig[k]; });
   job.agrSigned = true;
   job.agrSignedBy = st.sig.recordedBy;
   job.agrSignedAt = st.sig.signedOn;
@@ -20792,8 +20822,11 @@ function esignSignedCopyGaps(job) {
 // link to the agreement is. Only what was recorded, on an agreement executed through an envelope; [] otherwise.
 function esignFiledCopies(job) {
   var st = (job && job.docState && job.docState.agreement) || null;
-  if (!st || !st.esign || !st.esign.envelopeId) return [];
   var out = [];
+  // Signed on the iPad (P29): the packet the app filed, linked off the signature record.
+  var sig = agreementSignature(job);
+  if (sig && sig.how === 'ipad' && sig.filedUrl) out.push({ which: 'agreement', label: 'Filed signed ' + docWord('agreement') + ' (iPad)', url: sig.filedUrl });
+  if (!st || !st.esign || !st.esign.envelopeId) return out;
   if (st.esign.filedUrl) out.push({ which: 'agreement', label: 'Filed signed ' + docWord('agreement'), url: st.esign.filedUrl });
   if (st.esign.certUrl) out.push({ which: 'certificate', label: 'Filed certificate of completion', url: st.esign.certUrl });
   return out;
@@ -20925,12 +20958,13 @@ function agreementCoSignHtml(job) {
   cs.coSigners.forEach(function (c) {
     h += '<div class="jt-cosign-row' + (c.how ? '' : ' jt-warn') + '">' + (c.how ? '&#10003; ' : '&#9888; ') + esc(c.name) + ' &mdash; '
       + (c.how === 'esign' ? 'signed in ' + ESIGN_PROVIDERS.docusign.label + (c.signedOn ? ' ' + esc(fmtDate2(c.signedOn)) : '')
+         : c.how === 'ipad' ? 'signed on the iPad' + (c.signedOn ? ' ' + esc(fmtDate2(c.signedOn)) : '')
          : c.how === 'filed' ? 'on the co-signed page filed'
          : 'signature not on record') + '</div>';
   });
   if (cs.owed) {
     var names = cs.gaps.map(function (c) { return c.name; });
-    h += '<div class="jt-cosign-act"><span>Have ' + esc(_andJoin(names)) + ' sign the agreement’s printed signature page, then file it:</span>'
+    h += '<div class="jt-cosign-act"><span>Have ' + esc(_andJoin(names)) + ' sign the agreement’s printed signature page (or sign on the iPad, from the Agreement signed row), then file it:</span>'
       + signedCopyControlHtml(job.id, 'agreement', { ref: AGR_COSIGN_REF, label: SIGNED_RECORD_KINDS.agreement.label, signedBy: names.join('; ') },
                               'File the page signed by ' + _andJoin(names))
       + '</div>';
@@ -22338,6 +22372,10 @@ function jobTimelineActions(row, job, estRec) {
         // signing packet" with the packet already in the client's hands. Offered exactly where the send is, beside
         // the two routes that email it; its handler asks the send's own gate (markAgreementSent → agreementReady).
         out.secondary.push({ label: '&#129309; Handed over in person', call: 'dashMarkAgreementSent(' + id + ')' });
+        // ⚠ SIGN ON THE IPAD (P29, 2026-10-18; Anthony: every service, a fourth route beside the three). The packet is read
+        // and signed on the glass in the concierge's presence, so it is both the send and the signature; offered wherever
+        // the send is and again on the signed row below, withheld where agreementIpadRefusal would refuse it.
+        if (!agreementIpadRefusal(job, estRec)) out.secondary.push({ label: '&#9997;&#65039; Sign on the iPad', call: 'dashSignAgreementOnPad(' + id + ')' });
       }
       break;
 
@@ -22360,6 +22398,10 @@ function jobTimelineActions(row, job, estRec) {
       // cannot know on its own: that a person has just watched the envelope complete.
       else if (live) out.primary = { label: '&#8635; Check ' + ESIGN_PROVIDERS[esignProviderKey()].label + ' now',
                                      call: 'dashCheckEsign(' + id + ')' };
+      // A packet handed over or emailed and not yet back can still be signed on the iPad (P29): the control is on screen in
+      // every state where its rule applies. ⚠ After the if/else-if above, never between them: placed between, the DocuSign
+      // check took the hand recorder's place whenever the iPad route was refused (the first full run caught it).
+      if (live && !agreementIpadRefusal(job, estRec)) out.secondary.push({ label: '&#9997;&#65039; Sign on the iPad', call: 'dashSignAgreementOnPad(' + id + ')' });
       // ⚠ FILE SIGNED COPY (Anthony, 2026-10-01, P17): offered only while the executed agreement or its certificate of
       // completion is not in Drive (esignSignedCopyGaps), and gone once both are. The row is done by then, so the
       // button lands in the strip under the timeline with the row's other out-of-sequence actions.
@@ -22816,6 +22858,222 @@ function dashMarkAgreementSent(jobId) {
 function dashMarkAgreementSigned(jobId) {
   if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return; }
   markAgreementSigned();
+}
+
+// ─── SIGN THE AGREEMENT ON THE IPAD (P29, 2026-10-18) ─────────────────────────────────────────
+// Anthony: *"if we're dealing with older people and we're in person can we just show them the iPad and let them read the
+// agreement … should we just have the ability to sign an agreement on the iPad"*, and, asked which jobs: every service,
+// a fourth route beside DocuSign, the PDF to sign by hand and Handed over in person; DocuSign stays for anything sent.
+// The packet (the agreement with the estimate as Exhibit A) opens readable in the dialog, the client signs on P28's pad,
+// each co-representative present signs their own block, Havellin countersigns where Anthony is in the room, and the app
+// renders the signed packet to PDF through the one conversion it has (htmlToPdf, via _signoutPdf), files it to Signed
+// Records through the one filer (fileSignedCopy, kind AGR_IPAD_KIND, glass: true) and records the signature as a
+// DocuSign completion is recorded (recordAgreementSignature, how 'ipad', provider 'ipad'), with the filed copy's link on
+// the record. Nothing is recorded until the copy is in Drive: a signature with no copy on file is weaker than paper.
+var AGR_IPAD_KIND = 'signed_agreement';   // SIGNED_RECORD_KINDS key — a stored value: never rename it
+var AGR_IPAD_REF = 'packet';              // the record's ref: one paper, the signing packet
+var AGR_IPAD_COUNTERSIGNER = 'Anthony Graziano';   // the one person who executes for the LLC (the Havellin block's printed name)
+var _agrSignCtx = null;
+// The one rule for whether the agreement can be signed on the iPad now, asked where the button is offered and again by
+// the dialog and its Done. '' when it can; else the reason, in words the concierge reads.
+function agreementIpadRefusal(job, estRec) {
+  if (!job) return 'This client could not be found.';
+  if (isAgreementSigned(job)) return 'The agreement is already signed.';
+  if (esignJobWatches(job)) return ESIGN_PROVIDERS[esignProviderKey()].label + ' has this agreement out for signature: the client signs there, or the envelope is voided there first.';
+  var why = agreementReady(job, estRec);
+  if (why === 'estimate') return 'The estimate must be approved before the agreement can be signed.';
+  if (why === 'notwon') return 'Record the client’s acceptance first (Client accepted — mark won).';
+  if (why === 'reaccept') return 'The price rose after the client accepted it: record their acceptance of the revised price first.';
+  if (why) return 'The agreement is not ready to be signed.';
+  if (!SHEETS_SYNC_URL) return 'This device has no Apps Script URL in Settings, so it cannot make or file the signed PDF. Print the packet and press Handed over in person instead.';
+  return '';
+}
+// Who signs on the glass: the client (on an estate, the representative, as the signature page prints), each
+// co-representative recorded (present or not: the dialog asks), and Havellin's countersigner, optional.
+function agreementIpadSigners(job) {
+  var out = [];
+  var who = isDecedentJob(job) ? String(job.executor || '').trim() : String(job.name || '').trim();
+  out.push({ key: 'client', name: who, label: isDecedentJob(job) ? (_agrClientCapacity(job) || 'Authorized Representative') : 'Client', required: true });
+  _agrCoSigners(job).forEach(function (f, i) {
+    out.push({ key: 'co' + (i + 1), n: i + 1, name: f.name, email: f.email || '', label: 'Co-signer' + (f.role ? ' · ' + f.role : ''), optional: true, present: true });
+  });
+  out.push({ key: 'hav', name: AGR_IPAD_COUNTERSIGNER, label: 'Havellin Palm Beach, LLC · ' + AGR_IPAD_COUNTERSIGNER + ', Managing Member', optional: true });
+  return out;
+}
+function _agrSigImgHtml(img) {
+  return '<img src="' + img + '" alt="signature" style="display:block;height:34px;max-width:240px;">';
+}
+function _agrSigDateHtml(d) {
+  return '<span style="font-size:11px;">' + esc(fmtDate2(d)) + '</span>';
+}
+// The signed packet, pure: the e-signature markers both forms print in white text are replaced by the images drawn on the
+// glass and the day, each signer at their own block (the client's, Havellin's, the n-th co-signer's), and every marker
+// nobody signed is removed, so the filed PDF carries no DocuSign anchor in its text layer. `sigs`: {client:{img,date},
+// hav:{img,date}|null, co:[{n,img,date}]}.
+function agreementSignedHtml(html, sigs) {
+  html = String(html || '');
+  sigs = sigs || {};
+  var put = function (h, tag, repl) { return h.split(esignAnchor(tag)).join(repl || ''); };
+  var block = function (h, sigTag, dateTag, s) {
+    return put(put(h, sigTag, s && s.img ? _agrSigImgHtml(s.img) : ''), dateTag, s && s.img ? _agrSigDateHtml(s.date) : '');
+  };
+  html = block(html, ESIGN_ANCHORS.clientSig, ESIGN_ANCHORS.clientDate, sigs.client);
+  html = block(html, ESIGN_ANCHORS.havSig, ESIGN_ANCHORS.havDate, sigs.hav);
+  for (var n = 1; n <= 40; n++) {
+    var an = esignCoSignerAnchors(n);
+    if (html.indexOf(esignAnchor(an.sig)) < 0 && html.indexOf(esignAnchor(an.date)) < 0) break;
+    var s = (sigs.co || []).filter(function (c) { return Number(c.n) === n; })[0] || null;
+    html = block(html, an.sig, an.date, s);
+  }
+  // The marketing opt-out box (§7.2's, the client's alone): ticked on the page where the client said so in the dialog,
+  // as a client ticks it by hand on the paper route; its marker goes either way, with any other left.
+  if (sigs.mktOptOut) html = html.split('&#9744;' + esignAnchor(ESIGN_ANCHORS.mktOptOut)).join('&#9746;');
+  Object.keys(ESIGN_ANCHORS).forEach(function (k) { html = put(html, ESIGN_ANCHORS[k], ''); });
+  return html;
+}
+// The execution record at the foot of the filed packet: what the app witnessed and nothing else. Drafted, for counsel
+// (bundle D18).
+function agreementIpadAttestationHtml(job, sigs, witness, when) {
+  var who = (sigs && sigs.client && sigs.client.name) || '';
+  var day = (sigs && sigs.client && sigs.client.date) || '';
+  var co = ((sigs && sigs.co) || []).filter(function (c) { return c && c.img; });
+  var s = '<div class="ce-page agr-ipad-record" style="font-size:11px;line-height:1.65;">'
+    + '<div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gray-dk);margin-bottom:.5rem;">Execution Record — signed on the iPad</div>'
+    + '<p>' + esc(who) + ' read this Agreement, with the Estimate as Exhibit A, on the screen of Havellin’s device and signed it there with a finger on '
+    + esc(fmtDate2(day)) + (witness ? ', in the presence of ' + esc(witness) + ' for Havellin Palm Beach, LLC' : '') + '.</p>';
+  co.forEach(function (c) { s += '<p>' + esc(c.name) + ' signed the same way on ' + esc(fmtDate2(c.date)) + '.</p>'; });
+  s += sigs && sigs.hav && sigs.hav.img
+    ? '<p>Countersigned for Havellin Palm Beach, LLC by ' + esc(AGR_IPAD_COUNTERSIGNER) + ', Managing Member, on the device on ' + esc(fmtDate2(sigs.hav.date)) + '.</p>'
+    : '<p>Havellin’s countersignature is not on this copy.</p>';
+  s += '<p>The signatures above are the images captured on the device. This copy was made and filed to the client’s records by Havellin’s app'
+    + (when ? ' at ' + esc(when) : '') + '.</p></div>';
+  return s;
+}
+// The button: the gate first, then the packet in the dialog with a pad per signer.
+function dashSignAgreementOnPad(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var why = agreementIpadRefusal(job, (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null);
+  if (why) { dashNotice('warn', why); _dashRedraw(jobId); return false; }
+  if (!_primeAgreementFor(jobId)) { dashNotice('warn', 'Could not open the agreement for this job.'); _dashRedraw(jobId); return false; }
+  if (ensureAgreementApproved(jobId)) { dashNotice('warn', 'The estimate must be approved and the client’s acceptance recorded first.'); _dashRedraw(jobId); return false; }
+  var html = signingPacketHtml(jobId);
+  if (!html) { dashNotice('warn', 'The signing packet could not be built for this job.'); _dashRedraw(jobId); return false; }
+  _agrSignCtx = { jobId: jobId };
+  var signers = agreementIpadSigners(job);
+  var t = document.getElementById('as-title');
+  if (t) t.textContent = 'Sign the agreement on the iPad — ' + (job.hvlId || job.name || '');
+  var sub = document.getElementById('as-sub');
+  if (sub) sub.innerHTML = 'Hand the iPad to <strong>' + esc(signers[0].name || 'the client') + '</strong> to read the agreement and Exhibit A, then sign below.'
+    + ' Each co-representative in the room signs their own line; untick anyone who is not here, and they sign later.';
+  var doc = document.getElementById('as-doc');
+  if (doc) { doc.innerHTML = html; doc.scrollTop = 0; }
+  var box = document.getElementById('as-signers');
+  if (box) box.innerHTML = signers.map(function (s) {
+    var pad = 'as-pad-' + s.key;
+    return '<div class="as-signer" data-key="' + esc(s.key) + '">'
+      + '<div class="as-signer-hd">'
+      + (s.optional && s.key !== 'hav' ? '<label style="display:inline-flex;align-items:center;gap:6px;margin:0;font-size:12px;text-transform:none;letter-spacing:0;"><input type="checkbox" class="as-here" id="as-here-' + esc(s.key) + '" checked style="width:16px;height:16px;"> present today</label> ' : '')
+      + '<strong>' + esc(s.label) + '</strong>' + (s.key === 'hav' ? '' : ' · ' + esc(s.name))
+      + (s.key === 'hav' ? '<span class="as-opt"> · leave blank if Anthony is not here: the row will say so</span>' : '')
+      + '</div>'
+      + '<canvas id="' + pad + '" class="as-pad" width="1000" height="240"></canvas>'
+      + '<div style="display:flex;justify-content:flex-end;margin-top:2px;"><button type="button" class="btn-s" style="font-size:10px;padding:2px 8px;" onclick="signPadClear(\'' + pad + '\')">Clear</button></div>'
+      + '</div>';
+  }).join('')
+    + '<label style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;">'
+    + '<input type="checkbox" id="as-mko" style="width:16px;height:16px;flex:0 0 auto;margin-top:1px;">'
+    + '<span>The client ticks the marketing opt-out box on the signature page (<em>I DO NOT AUTHORIZE any marketing or promotional use</em>). Leave it unticked unless they say so.</span></label>';
+  signers.forEach(function (s) { signPadClear('as-pad-' + s.key); });
+  var fb = document.getElementById('as-fb');
+  if (fb) fb.innerHTML = '';
+  var btn = document.getElementById('as-done-btn');
+  if (btn) btn.disabled = false;
+  var m = document.getElementById('agr-sign-modal');
+  if (m) m.style.display = 'flex';
+  return true;
+}
+function closeAgreementSignDialog() {
+  var m = document.getElementById('agr-sign-modal');
+  if (m) m.style.display = 'none';
+  _agrSignCtx = null;
+}
+// Done: the signatures read off the pads, the signed packet made into a PDF and filed, and only then recorded.
+function agreementSignOnPadDone() {
+  var ctx = _agrSignCtx;
+  if (!ctx) return false;
+  var job = jobs.find(function (j) { return j.id === ctx.jobId; });
+  var why = agreementIpadRefusal(job, (typeof estimateStore !== 'undefined') ? estimateStore[ctx.jobId] : null);
+  if (why) { showFB('as-fb', 'warn', esc(why)); return false; }
+  var signers = agreementIpadSigners(job), today = _todayStr();
+  var sigs = { client: null, hav: null, co: [] }, names = [], missing = [];
+  signers.forEach(function (s) {
+    var pad = 'as-pad-' + s.key, here = document.getElementById('as-here-' + s.key);
+    var present = s.key === 'hav' ? true : (s.optional ? !!(here && here.checked) : true);
+    var signed = signPadSigned(pad);
+    if (s.key === 'client') { if (!signed) missing.push(s.name || 'the client'); else { sigs.client = { img: signPadDataUrl(pad), date: today, name: s.name }; names.push(s.name); } return; }
+    if (s.key === 'hav') { if (signed) sigs.hav = { img: signPadDataUrl(pad), date: today, name: s.name }; return; }
+    if (!present) return;
+    if (!signed) missing.push(s.name);
+    else { sigs.co.push({ n: s.n, img: signPadDataUrl(pad), date: today, name: s.name, email: s.email }); names.push(s.name); }
+  });
+  if (missing.length) { showFB('as-fb', 'warn', 'No signature yet from ' + esc(_andJoin(missing)) + ': a signature, not a tap. Untick anyone who is not here.'); return false; }
+  var mko = document.getElementById('as-mko');
+  sigs.mktOptOut = !!(mko && mko.checked);
+  var html = signingPacketHtml(ctx.jobId);
+  if (!html) { showFB('as-fb', 'warn', 'The signing packet could not be built.'); return false; }
+  var witness = _invStampBy(job);
+  html = agreementSignedHtml(html, sigs) + agreementIpadAttestationHtml(job, sigs, witness, new Date().toLocaleString());
+  var btn = document.getElementById('as-done-btn');
+  if (btn) btn.disabled = true;
+  showFB('as-fb', 'info', 'Making the signed PDF…');
+  _signoutPdf(job, 'Signed Agreement', html, function (file, err) {
+    if (!file) { if (btn) btn.disabled = false; showFB('as-fb', 'warn', esc(err) + ' Nothing was recorded: the signatures are still on the pads. Or print the packet and press Handed over in person.'); return; }
+    showFB('as-fb', 'info', 'Filing to Drive…');
+    var meta = { ref: AGR_IPAD_REF, stableIds: [], signedBy: names.join('; '), signedOn: today, glass: true,
+                 label: SIGNED_RECORD_KINDS[AGR_IPAD_KIND].label + ' — ' + (names[0] || '') };
+    fileSignedCopy(ctx.jobId, AGR_IPAD_KIND, meta, file, function (ok, msg, rec) {
+      if (btn) btn.disabled = false;
+      if (!ok) { showFB('as-fb', 'warn', esc(msg) + ' Nothing was recorded: try again.'); return; }
+      var blk = _agrIpadRecord(ctx.jobId, rec, sigs, witness);
+      if (blk) { showFB('as-fb', 'warn', 'The signed copy is in Drive but the signature could not be recorded (' + esc(blk) + '). Record it from the Agreement signed row.'); return; }
+      closeAgreementSignDialog();
+      var _co = agreementCoSignState(job), _coN = _andJoin(_co.gaps.map(function (c) { return c.name; }));
+      renderJobs();
+      dashNotice(_co.owed ? 'warn' : 'ok', 'Agreement signed on the iPad by ' + names.join(', ') + ' and filed to Signed Records.'
+        + (sigs.hav ? '' : ' Havellin’s countersignature is not on the copy.')
+        + (_co.owed ? ' ' + (_co.gaps.length > 1 ? 'The signatures of ' + _coN + ' are' : _coN + '’s signature is')
+           + ' not on record yet: have them sign the printed signature page, or on the iPad, then file it under the timeline.' : '')
+        + ' Record the deposit when it arrives.');
+      _dashRedraw(ctx.jobId);
+    });
+  });
+  return true;
+}
+// The record: the send (the packet was put in front of the client on the glass) where none is on record, then the
+// signature, as recordAgreementSignature writes every route's. The co-signers who signed carry `how: 'ipad'`, which
+// agreementCoSignState reads beside DocuSign's.
+function _agrIpadRecord(jobId, rec, sigs, witness) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return 'nojob';
+  if (!isAgreementSent(job)) {
+    if (!_primeAgreementFor(jobId)) return 'noprime';
+    markAgreementSent();
+    if (!isAgreementSent(job)) return 'notsent';
+    var st = docState(job, 'agreement');
+    st.sentAt = new Date().toISOString();
+    st.sentBy = _actor(job) || job.tc || '';
+    st.sentHow = 'ipad';
+    st.sentHowAt = st.sentAt;
+  }
+  return recordAgreementSignature(jobId, {
+    how: 'ipad', provider: 'ipad',
+    signedBy: (sigs.client && sigs.client.name) || '',
+    signedOn: (sigs.client && sigs.client.date) || _todayStr(),
+    recordedBy: _actor(job) || '',
+    coSigners: (sigs.co || []).map(function (c) { return { name: c.name, email: c.email || '', signedOn: c.date, how: 'ipad' }; }),
+    filedUrl: (rec && rec.fileUrl) || '', filedId: (rec && rec.fileId) || '', recordId: (rec && rec.id) || '',
+    countersignedBy: sigs.hav ? AGR_IPAD_COUNTERSIGNER : '', witnessedBy: witness || '', mktOptOut: !!sigs.mktOptOut
+  });
 }
 
 // ⚠⚠ THE ONE WAY A PERSON CAN ACT ON SOMETHING THE APP CANNOT KNOW: that the envelope has just
@@ -25072,6 +25330,10 @@ var SIGNED_RECORD_KINDS = {
   // route, or where an envelope did not carry them. Its signers in `signedBy`, '; ' between names; read by
   // agreementCoSignState.
   agreement: { label: 'Co-signed agreement page' },
+  // The whole signing packet executed on the iPad (P29, 2026-10-18): the agreement with Exhibit A, the signatures drawn on
+  // the glass in place, the execution record at its foot; filed by the app (glass: true), ref AGR_IPAD_REF, its signers in
+  // `signedBy`. The link is also on the signature record (sig.filedUrl), which the rail offers.
+  signed_agreement: { label: 'Signed agreement' },
   // A vendor's pickup sheet (P22; Anthony, 2026-10-06): the auction house's, consignor's or buyer's list of what it took,
   // photographed. Ref the vendor, stableIds the lines it covers; estates and living work alike (pickupGroups).
   pickup:    { label: 'Vendor pickup list' },

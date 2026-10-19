@@ -975,6 +975,21 @@ Intake → Walkthrough → Estimate → Manager Approval → Send to Client → 
       delete it, so a second copy is not sent.&rdquo;</em> Once pressed the draft is no longer one the app watches, but it is still in Gmail,
       so the row reads <em>Handed over in person.</em> with the same sentence after it (a plain email the app opened reads <em>may still be in
       your mail app unsent &mdash; discard it</em>). Until then the row said only <em>Handed over in person</em>, and nothing named the draft.</li>
+    <li><strong>Signing in front of you, on the iPad (since 2026-10-18, P29):</strong> press <strong>&#9997;&#65039; Sign on the iPad</strong> on the
+      same row. It is offered on every service beside the three routes above, and again on the <em>Agreement signed</em> row while a packet
+      handed over or emailed is still out. The dialog opens the packet itself (the agreement with the estimate as Exhibit A) to read on the
+      screen, with a signature pad for the client (on an estate, the representative), one for each co-representative recorded (untick
+      anyone not in the room: they sign later, on paper or the same way, and the row flags them until they do), one for Havellin&rsquo;s
+      countersignature (Anthony Graziano, Managing Member; leave it blank if Anthony is not there, and the row says so) and the marketing
+      opt-out box from the signature page. <strong>Sign and file</strong> renders the packet with the signatures in place of the signature
+      lines and an <em>Execution Record</em> at its foot (who read it on the screen, who signed, who held the device, the day), makes the
+      PDF through the backend, files it to the client&rsquo;s <em>Signed Records</em> folder as a <em>Signed agreement</em>, and only then
+      records the send (in person, on the iPad) and the signature (<em>Signed on the iPad</em>, the signer&rsquo;s name, the co-signers who
+      signed, the filed copy&rsquo;s link). A tap is not a signature; a failed PDF or filing records nothing and keeps the signatures on
+      the pads. The filed packet is offered in the strip as <em>Filed signed packet (iPad)</em>. It is refused by name while a DocuSign
+      envelope is out, before the estimate is approved or the acceptance recorded, after a raise the client has not re-accepted, on a
+      signed agreement, and on a device with no Apps Script URL. Nothing is emailed and nothing goes to DocuSign. The execution record is
+      drafted, for counsel (bundle D18).</li>
   </ol>
   <div class="note"><strong>&#128424; Print packet, in the tray, prints a copy to hand over &mdash; and does not send it.</strong> Printing
     stamps the approval and files the packet, but it does not record the packet as sent, and a signature can only be recorded on a
@@ -1159,6 +1174,12 @@ Intake → Walkthrough → Estimate → Manager Approval → Send to Client → 
     sits beside both buttons on every unsent agreement, for a printed packet given to the client across a table. It records the
     send itself (nothing is emailed, and nothing goes to DocuSign), the row reads <em>Handed over in person</em>, and the signature is
     recorded by hand, as on the PDF route (&sect;8).</p>
+  <p><strong>A fourth way, since 2026-10-18 (P29): signed on the iPad.</strong> <strong>&#9997;&#65039; Sign on the iPad</strong> sits beside the
+    three on every unsent agreement, on every service, and again on the <em>Agreement signed</em> row while a paper packet is out. The
+    client reads the whole packet on the screen and signs on the pad in front of the concierge, any co-representative present signs their
+    own block, Anthony countersigns on the pad when he is there, and the app files the signed PDF and records the send and the signature
+    together (&sect;8). It is both the send and the signature, so the rule below still holds: it is never offered while DocuSign has the
+    envelope.</p>
   <div class="note"><strong>&#9888;&#9888; THE ROUTE IS DECIDED WHEN YOU SEND, AND IT IS FIXED FROM THAT MOMENT.</strong> Both buttons
     are offered side by side until one of them is pressed; afterwards <strong>only the route you chose is offered</strong>. That is
     not tidiness: an agreement already sitting in somebody&rsquo;s DocuSign inbox must not also be recorded as signed by hand, or the
@@ -1367,7 +1388,7 @@ Intake → Walkthrough → Estimate → Manager Approval → Send to Client → 
     knowing there was another &mdash; and that is exactly what happened: an agreement went out as a plain email on one browser
     while another was on DocuSign. <strong>How a firm signs is not a per-browser preference.</strong> The per-job choice is
     unaffected: <strong>&#128196; Send as PDF to sign by hand</strong> is still on every unsent agreement, and so, since 2026-10-01,
-    is <strong>&#129309; Handed over in person</strong>.</p>
+    is <strong>&#129309; Handed over in person</strong>, and since 2026-10-18 <strong>&#9997;&#65039; Sign on the iPad</strong>.</p>
   <p>Five values must be set in the Apps Script project&rsquo;s <strong>Script Properties</strong>, where the Quo key lives:</p>
   <table>
     <tr><th>Property</th><th>Where it comes from</th></tr>
@@ -1542,7 +1563,7 @@ Intake → Walkthrough → Estimate → Manager Approval → Send to Client → 
     <tr><td>Estimate sent to client</td><td><strong>&#9993; Send estimate</strong> → <strong>&#10003; I&rsquo;ve sent it</strong>. Plus View / Print / the Drive copy, and <strong>Offer discount</strong> once the estimate is approved (never on a fee-only Home Prep, which has no labour to discount; 2026-10-10), until the signing packet goes out. Opens again, reading <strong>&#9993; Send revised estimate</strong>, when the approved price rises above the one that went (below).</td></tr>
     <tr><td>Client accepted</td><td><strong>&#10003; Client accepted — mark won</strong>, with <strong>Mark lost</strong> beside it. After a raise it reads <strong>&#10003; Client accepted the revised price</strong> (below).</td></tr>
     <tr><td>Signing packet sent</td><td><strong>&#9993; Send for signature &mdash; DocuSign</strong>, with <strong>&#128196; Send as PDF to sign by hand</strong> beside it until the packet has gone (&sect;8a). DocuSign records the send itself, so there is no <em>I&rsquo;ve sent it</em>; the PDF route makes a Gmail draft and asks for <strong>&#10003; I&rsquo;ve sent it</strong> like the other documents. <strong>&#129309; Handed over in person</strong> (since 2026-10-01) is beside both, for a printed packet given to the client: it asks, records the send, and the step reads <em>Handed over in person</em> once done (&sect;8).</td></tr>
-    <tr><td>Agreement signed</td><td>While a DocuSign envelope is out the row reads <em>DocuSign is watching for it</em> and the button is <strong>&#8635; Check DocuSign now</strong>; the signature records itself (&sect;8a). On the PDF route, or once the packet was handed over in person, <strong>&#10003; Record the signed agreement</strong> (&sect;8).</td></tr>
+    <tr><td>Agreement signed</td><td>While a DocuSign envelope is out the row reads <em>DocuSign is watching for it</em> and the button is <strong>&#8635; Check DocuSign now</strong>; the signature records itself (&sect;8a). On the PDF route, or once the packet was handed over in person, <strong>&#10003; Record the signed agreement</strong> (&sect;8), and <strong>&#9997;&#65039; Sign on the iPad</strong> (since 2026-10-18), which is also beside the three send routes on the row above: the client signs on the screen in front of you, the signed PDF is filed, and the send and the signature are recorded together.</td></tr>
     <tr><td>Deposit invoice sent</td><td><strong>&#9993; Send deposit invoice</strong>, <strong>&#127974; ACH payment link</strong> (&sect;8b).</td></tr>
     <tr><td>Deposit received</td><td><strong>&#10003; Record payment</strong>, with <strong>&#127974; ACH payment link</strong> beside it until the deposit is in &mdash; after a part cheque the link asks only for the balance (&sect;8b). <strong>Blocked, in red, when a void has taken the deposit below its target</strong> (since 2026-10-01), even on an active job: the band reads <em>Deposit voided: record the replacement payment</em>, with the payment, the day, the reason and the fix printed under it, and the same <strong>&#10003; Record payment</strong>. The job stays active and nothing rewinds (&sect;8, <em>The payments list</em>).</td></tr>
     <tr><td>Job active</td><td><strong>&#9654; Activate job</strong>. Blocks on the Letters on any estate administered through probate &mdash; the matter type decides, not the service (&sect;4) &mdash; and, since 2026-10-03 (P19), on the successor trustee&rsquo;s Certification of Trust on a trust-only matter; the band names the paper and whom to chase. Once it goes through you land on <strong>that client&rsquo;s Job Plan</strong> (2026-09-23), and pressing it before the target start asks first (&sect;9a-i). From here on, <strong>&#9632; Close job</strong> sits beside every lit step as an outline button (2026-09-29, below). <strong>Once done, the step shows the day the job was activated and the name that activation recorded</strong> (2026-09-30; until then it was the one done step with no date on it): the job&rsquo;s assigned concierge for an activation from 2026-09-30, and the manager who approved the price for an earlier one or on a job with nobody assigned.</td></tr>

@@ -60,8 +60,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A closed-retained job names what it kept (the payments list group below renders one).
     'closeoutRetainedTotal', 'jobPaidTotal', 'roundCents', 'fmtHrs', 'estateAuthority', 'jobFiduciaries', 'jobListEntries', 'esignFiledCopies', 'agreementHandOverDraftNote', 'estatePackageOrphanDraftNote',
     // P22: jobSchedule reads the estate's dates before it asks for an estimate, so a job with none reaches them too.
-    'estateTaxReturnDue', 'estateTaxReturn'];
-  const VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_ONE_TXT', 'PREP_FEE_BASIS_SHORT', '_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'DEPOSIT_VOID_STEP',
+    'estateTaxReturnDue', 'estateTaxReturn',
+    // P29: the band asks whether the agreement can be signed on the iPad (SHEETS_SYNC_URL is a top-level var, '' here, so the route is withheld).
+    'agreementIpadRefusal'];
+  const VARS = ['SHEETS_SYNC_URL', 'AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_ONE_TXT', 'PREP_FEE_BASIS_SHORT', '_driveFolderInFlight', 'PAYMENT_STAGE_LABELS', 'EXECUTOR_AUTH_OPTIONS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESIGN_PROVIDERS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'SF_HOSTS', 'JT_LEG_BREAK', 'JT_SHORT', 'JT_NEXT', 'SVC_LABELS', 'DEPOSIT_VOID_STEP',
     '_dashNotice', '_jobsWatch', 'jobLogs',
     'JT_ROW_DOC', 'DOC_READY_WHY', 'DOC_KIND_WORD', 'DOC_STAGE_WORD', 'DOC_ACTIONS',
     'PRODUCTIVE_HRS_PER_DAY',

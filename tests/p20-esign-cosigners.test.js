@@ -621,7 +621,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     S.jobs = [job];
     let h = S.agreementCoSignHtml(job);
     has(text(h), 'Co-representatives on the agreement ⚠ Daniel Adler — signature not on record', '⚠⚠ who is owed, in amber');
-    has(text(h), 'Have Daniel Adler sign the agreement’s printed signature page, then file it: File the page signed by Daniel Adler', 'and the one thing to do');
+    has(text(h), 'Have Daniel Adler sign the agreement’s printed signature page (or sign on the iPad, from the Agreement signed row), then file it: File the page signed by Daniel Adler', 'and the one thing to do');
     const m = /onchange="fileSignedCopyFromInput\(this,(\d+)\)"/.exec(h);
     ok(!!m, '⚠⚠ the control is the signed-copy file picker (signedCopyControlHtml)');
     has(h, 'accept="application/pdf,image/*"', 'a PDF or a photograph of the page');
@@ -699,10 +699,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══════════════════════════════════════════════════════════════════════════
   G('S9 · one definition, every reader counted', () => {
-    eq(readers(/(?<![\w.$])agreementCoSignState\(/g), { agreementCoSignHtml: 1, confirmAgreementSignature: 1, docSend: 1, jobTimeline: 1 },
+    eq(readers(/(?<![\w.$])agreementCoSignState\(/g), { agreementCoSignHtml: 1, agreementSignOnPadDone: 1, confirmAgreementSignature: 1, docSend: 1, jobTimeline: 1 },
        '⚠⚠ the one answer: the row, the block, the send\'s notice and the hand recorder\'s');
     eq(readers(/(?<![\w.$])esignCoSigners\(/g), { 'var DOC_SEND_PROVIDERS': 2 }, 'who signs beside the client: the provider\'s check before the PDF and its send');
-    eq(readers(/(?<![\w.$])esignCoSignerAnchors\(/g), { esignAnchorsPresent: 1, esignCoSigners: 1, probateAgreementHtml: 1 }, 'the markers\' one namer: the page, the measure, the envelope');
+    eq(readers(/(?<![\w.$])esignCoSignerAnchors\(/g), { agreementSignedHtml: 1, esignAnchorsPresent: 1, esignCoSigners: 1, probateAgreementHtml: 1 }, 'the markers\' one namer: the page, the measure, the envelope, and the iPad\'s signed copy (P29)');
     eq(readers(/(?<![\w.$])agreementCoSignHtml\(/g), { renderClientDashboard: 1 }, 'the block is drawn once, on the dashboard');
     // Nothing else reads the co-signature record or the filed pages.
     eq(readers(/\bsig\.coSigners\b/g), { agreementCoSignState: 2, recordAgreementSignature: 4 }, '⚠ the signature\'s co-signers: written by the recorder (from what the provider named), read by the one answer alone');
