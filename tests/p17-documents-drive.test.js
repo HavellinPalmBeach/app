@@ -156,7 +156,7 @@ function mimeParts(mime) {
     } else if (/application\/pdf/.test(p)) {
       const name = (/filename="([^"]+)"/.exec(p) || [])[1];
       const b64 = p.slice(p.indexOf('\r\n\r\n') + 4).trim();
-      out.pdfs.push({ name, b64, lines: b64.split('\r\n') });
+      out.pdfs.push({ name, b64, lines: b64.split('\r\n'), head: p.slice(0, p.indexOf('\r\n\r\n')) });
     }
   });
   return out;
@@ -551,6 +551,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(p.pdfs.every((x) => x.lines.every((l) => l.length <= 76)), 'every base64 line is at most 76 characters');
     eq(bareLF(three), 0, '⚠⚠ and every line break is CRLF — a bare LF is what dropped the attachment once');
     eq(Buffer.from(p.pdfs[1].lines.join(''), 'base64').toString(), 'cc'.repeat(40), 'each part decodes to its own bytes');
+    // ⚠⚠ EACH PART HAS ITS OWN ID, IN GMAIL'S OWN SHAPE (2026-10-19). Gmail rewrote an API draft's attachment parts with an
+    // empty `X-Attachment-Id:` and `Content-ID: <>` on send; two parts with one empty id are one attachment to Gmail (the
+    // package's parts could download as each other's bytes), and Apple Mail showed a one-page PDF, every invoice, as a
+    // blue box with a question mark. The id is per part: the three-PDF message carries two distinct ids on its two parts.
+    const ids = p.pdfs.map((x) => (/^X-Attachment-Id: (f_[0-9a-z]{10})$/m.exec(x.head) || [])[1]);
+    ok(ids.every((x) => !!x), 'every PDF part carries an X-Attachment-Id, f_ and ten characters (' + ids.join(', ') + ')');
+    eq(new Set(ids).size, ids.length, '⚠ and no two parts share one');
+    p.pdfs.forEach((x, i) => has(x.head, 'Content-ID: <' + ids[i] + '>', 'part ' + (i + 1) + '\'s Content-ID is its own X-Attachment-Id'));
+    has(mimeParts(one).pdfs[0].head, 'Content-ID: <' + mimeParts(one).pdfs[0].head.match(/^X-Attachment-Id: (\S+)$/m)[1] + '>', 'the one-document form carries the pair too');
   });
 
   G('11 · each printer asked for its page answers with the page or its refusal, never an alert', () => {

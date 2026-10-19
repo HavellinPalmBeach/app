@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 4:21pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 5:22pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -26457,12 +26457,26 @@ function buildMimeMessage(o) {
   L.push(_b64Wrap(o.html || ''));
   L.push('--' + alt + '--');
   var parts = (o.pdfBase64 ? [{ name: o.pdfName, base64: o.pdfBase64 }] : []).concat(o.attachments || []);
-  parts.forEach(function (a) {
+  // ⚠⚠ EVERY ATTACHMENT PART CARRIES THE ID GMAIL'S OWN COMPOSER WRITES (2026-10-19; Anthony, the first Ellison run:
+  // *"look how the pdf renders as a '?'. it's really not obvious that anything is attached"*). Gmail's composer stamps
+  // each attachment with `X-Attachment-Id: f_…` and the same id as its `Content-ID`; a draft made through the API
+  // carried neither, and when the draft was saved or sent from the Gmail window Gmail rewrote the part with EMPTY ones
+  // (`X-Attachment-Id:` and `Content-ID: <>`, read off the sent deposit invoice and the sent estimate of 2026-10-19).
+  // Apple Mail shows a one-page PDF inline, by that id, so every invoice (one page) arrived on a Mac as a blue box with
+  // a question mark and no name, while the four-page estimate, shown as a card, looked fine. Two attachments with the
+  // same empty id are also one attachment to Gmail (the package's six parts can be downloaded as each other's bytes).
+  // The id is Gmail's own shape, `f_` + 10 characters, unique within the message by the part's index; the disposition
+  // stays `attachment` and the part stays in multipart/mixed, so no client reads it as an inline image.
+  var attId = 'f_' + Date.now().toString(36);
+  parts.forEach(function (a, i) {
     if (!a || !a.base64) return;
+    var id = attId + ('0' + i.toString(36)).slice(-2);
     L.push('--' + mix);
     L.push('Content-Type: application/pdf; name="' + a.name + '"');
     L.push('Content-Disposition: attachment; filename="' + a.name + '"');
     L.push('Content-Transfer-Encoding: base64');
+    L.push('X-Attachment-Id: ' + id);
+    L.push('Content-ID: <' + id + '>');
     L.push('');
     // Apps Script hands back unwrapped base64; MIME wants lines of at most 76 chars.
     L.push(String(a.base64).replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n'));
