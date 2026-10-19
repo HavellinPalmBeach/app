@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 4:48pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 4:59pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -19125,7 +19125,7 @@ function jobTimeline(job, estRec, logs, cos, sched, settle) {
                    : c.name + ' on the co-signed page filed';
                }) : [])
                // Signed on the iPad (P29): whether Havellin countersigned on the device is on the filed copy, so the row says.
-               .concat(_jtSig.how === 'ipad' ? [_jtSig.countersignedBy ? 'countersigned for Havellin by ' + _jtSig.countersignedBy : 'Havellin’s countersignature is not on the filed copy'] : [])
+               .concat(_jtSig.how === 'ipad' ? [_jtSig.countersignedBy ? 'countersigned for Havellin by ' + _jtSig.countersignedBy : 'Havellin’s countersignature is not on the filed copy', agreementCopyWords(_jtSig)] : [])
                .filter(Boolean).join(' · '))
         : (esignJobWatches(job) ? ESIGN_PROVIDERS[esignProviderKey()].label + ' is watching for it'
            + (_jtCo ? [_jtCo.coSigners.filter(function (c) { return c.onEnvelope; }), _jtCo.coSigners.filter(function (c) { return !c.onEnvelope; })]
@@ -22893,9 +22893,9 @@ function agreementIpadRefusal(job, estRec) {
 function agreementIpadSigners(job) {
   var out = [];
   var who = isDecedentJob(job) ? String(job.executor || '').trim() : String(job.name || '').trim();
-  out.push({ key: 'client', name: who, label: isDecedentJob(job) ? (_agrClientCapacity(job) || 'Authorized Representative') : 'Client', required: true });
+  out.push({ key: 'client', name: who, role: isDecedentJob(job) ? String(job.executorRole || '').trim() : '', label: isDecedentJob(job) ? (_agrClientCapacity(job) || 'Authorized Representative') : 'Client', required: true });
   _agrCoSigners(job).forEach(function (f, i) {
-    out.push({ key: 'co' + (i + 1), n: i + 1, name: f.name, email: f.email || '', label: 'Co-signer' + (f.role ? ' · ' + f.role : ''), optional: true, present: true });
+    out.push({ key: 'co' + (i + 1), n: i + 1, name: f.name, role: String(f.role || '').trim(), email: f.email || '', label: 'Co-signer' + (f.role ? ' · ' + f.role : ''), optional: true, present: true });
   });
   out.push({ key: 'hav', name: AGR_IPAD_COUNTERSIGNER, label: 'Havellin Palm Beach, LLC · ' + AGR_IPAD_COUNTERSIGNER + ', Managing Member', optional: true });
   return out;
@@ -22906,25 +22906,42 @@ function _agrSigImgHtml(img) {
 function _agrSigDateHtml(d) {
   return '<span style="font-size:11px;">' + esc(fmtDate2(d)) + '</span>';
 }
+// The fill slot the estate form prints on its Printed Name and Title / Role lines (one per signer: clientName, clientRole,
+// coName1, coRole1, …): an empty span, so paper and DocuSign show a blank line to print on, and the iPad route fills it
+// from the record. Never a DocuSign anchor (esignAnchorsPresent does not read it).
+function agrFillSlot(key) {
+  return '<span class="agr-fill" data-fill="' + key + '"></span>';
+}
+function _agrFillHtml(text) {
+  return '<span style="font-size:11px;">' + esc(text) + '</span>';
+}
 // The signed packet, pure: the e-signature markers both forms print in white text are replaced by the images drawn on the
 // glass and the day, each signer at their own block (the client's, Havellin's, the n-th co-signer's), and every marker
-// nobody signed is removed, so the filed PDF carries no DocuSign anchor in its text layer. `sigs`: {client:{img,date},
-// hav:{img,date}|null, co:[{n,img,date}]}.
+// nobody signed is removed, so the filed PDF carries no DocuSign anchor in its text layer. `sigs`: {client:{img,date,name,role},
+// hav:{img,date}|null, co:[{n,img,date,name,role}]}. A signer who signed also has their printed name and role written on the
+// estate form's lines (agrFillSlot; 2026-10-19), since nobody prints by hand on the glass; every slot nobody filled is removed.
 function agreementSignedHtml(html, sigs) {
   html = String(html || '');
   sigs = sigs || {};
   var put = function (h, tag, repl) { return h.split(esignAnchor(tag)).join(repl || ''); };
+  var fill = function (h, key, s, field) {
+    var v = s && s.img ? String(s[field] || '').trim() : '';
+    return h.split(agrFillSlot(key)).join(v ? _agrFillHtml(v) : '');
+  };
   var block = function (h, sigTag, dateTag, s) {
     return put(put(h, sigTag, s && s.img ? _agrSigImgHtml(s.img) : ''), dateTag, s && s.img ? _agrSigDateHtml(s.date) : '');
   };
   html = block(html, ESIGN_ANCHORS.clientSig, ESIGN_ANCHORS.clientDate, sigs.client);
+  html = fill(fill(html, 'clientName', sigs.client, 'name'), 'clientRole', sigs.client, 'role');
   html = block(html, ESIGN_ANCHORS.havSig, ESIGN_ANCHORS.havDate, sigs.hav);
   for (var n = 1; n <= 40; n++) {
     var an = esignCoSignerAnchors(n);
     if (html.indexOf(esignAnchor(an.sig)) < 0 && html.indexOf(esignAnchor(an.date)) < 0) break;
     var s = (sigs.co || []).filter(function (c) { return Number(c.n) === n; })[0] || null;
     html = block(html, an.sig, an.date, s);
+    html = fill(fill(html, 'coName' + n, s, 'name'), 'coRole' + n, s, 'role');
   }
+  html = html.replace(/<span class="agr-fill" data-fill="[^"]*"><\/span>/g, '');
   // The marketing opt-out box (§7.2's, the client's alone): ticked on the page where the client said so in the dialog,
   // as a client ticks it by hand on the paper route; its marker goes either way, with any other left.
   if (sigs.mktOptOut) html = html.split('&#9744;' + esignAnchor(ESIGN_ANCHORS.mktOptOut)).join('&#9746;');
@@ -23010,11 +23027,11 @@ function agreementSignOnPadDone() {
     var pad = 'as-pad-' + s.key, here = document.getElementById('as-here-' + s.key);
     var present = s.key === 'hav' ? true : (s.optional ? !!(here && here.checked) : true);
     var signed = signPadSigned(pad);
-    if (s.key === 'client') { if (!signed) missing.push(s.name || 'the client'); else { sigs.client = { img: signPadDataUrl(pad), date: today, name: s.name }; names.push(s.name); } return; }
+    if (s.key === 'client') { if (!signed) missing.push(s.name || 'the client'); else { sigs.client = { img: signPadDataUrl(pad), date: today, name: s.name, role: s.role || '' }; names.push(s.name); } return; }
     if (s.key === 'hav') { if (signed) sigs.hav = { img: signPadDataUrl(pad), date: today, name: s.name }; return; }
     if (!present) return;
     if (!signed) missing.push(s.name);
-    else { sigs.co.push({ n: s.n, img: signPadDataUrl(pad), date: today, name: s.name, email: s.email }); names.push(s.name); }
+    else { sigs.co.push({ n: s.n, img: signPadDataUrl(pad), date: today, name: s.name, role: s.role || '', email: s.email }); names.push(s.name); }
   });
   if (missing.length) { showFB('as-fb', 'warn', 'No signature yet from ' + esc(_andJoin(missing)) + ': a signature, not a tap. Untick anyone who is not here.'); return false; }
   var mko = document.getElementById('as-mko');
@@ -23026,7 +23043,7 @@ function agreementSignOnPadDone() {
   var btn = document.getElementById('as-done-btn');
   if (btn) btn.disabled = true;
   showFB('as-fb', 'info', 'Making the signed PDF…');
-  _signoutPdf(job, 'Signed Agreement', html, function (file, err) {
+  _signoutPdf(job, 'Signed Agreement', html, function (file, err, b64) {
     if (!file) { if (btn) btn.disabled = false; showFB('as-fb', 'warn', esc(err) + ' Nothing was recorded: the signatures are still on the pads. Or print the packet and press Handed over in person.'); return; }
     showFB('as-fb', 'info', 'Filing to Drive…');
     var meta = { ref: AGR_IPAD_REF, stableIds: [], signedBy: names.join('; '), signedOn: today, glass: true,
@@ -23037,17 +23054,105 @@ function agreementSignOnPadDone() {
       var blk = _agrIpadRecord(ctx.jobId, rec, sigs, witness);
       if (blk) { showFB('as-fb', 'warn', 'The signed copy is in Drive but the signature could not be recorded (' + esc(blk) + '). Record it from the Agreement signed row.'); return; }
       closeAgreementSignDialog();
-      var _co = agreementCoSignState(job), _coN = _andJoin(_co.gaps.map(function (c) { return c.name; }));
-      renderJobs();
-      dashNotice(_co.owed ? 'warn' : 'ok', 'Agreement signed on the iPad by ' + names.join(', ') + ' and filed to Signed Records.'
-        + (sigs.hav ? '' : ' Havellin’s countersignature is not on the copy.')
-        + (_co.owed ? ' ' + (_co.gaps.length > 1 ? 'The signatures of ' + _coN + ' are' : _coN + '’s signature is')
-           + ' not on record yet: have them sign the printed signature page, or on the iPad, then file it under the timeline.' : '')
-        + ' Record the deposit when it arrives.');
-      _dashRedraw(ctx.jobId);
+      showSyncBadge('Drafting the signed copy to the client…');
+      _agrIpadEmailCopy(ctx.jobId, b64 || '', rec, function (copy) {
+        var _co = agreementCoSignState(job), _coN = _andJoin(_co.gaps.map(function (c) { return c.name; }));
+        var cw = copy ? agreementCopyWords({ copy: copy }) : '';
+        renderJobs();
+        dashNotice(_co.owed || (copy && copy.provider === 'none') ? 'warn' : 'ok', 'Agreement signed on the iPad by ' + names.join(', ') + ' and filed to Signed Records.'
+          + (copy ? (copy.provider === 'none' ? ' No email on file for ' + esc(names[0] || 'the client') + ': send the signed copy from Drive.'
+             : ' The signed copy is ' + (copy.provider === 'gmail' ? 'drafted in ' + (_gmailUserEmail || 'your Havellin mailbox') + ' for ' : 'opened as a plain email for ') + esc(copy.to)
+               + (copy.cc ? ', copied to ' + esc(copy.cc) : '') + (copy.provider === 'gmail' ? ', with the PDF attached' : ', with the filed copy linked') + ': read it and send it.') : '')
+          + (sigs.hav ? '' : ' Havellin’s countersignature is not on the copy.')
+          + (_co.owed ? ' ' + (_co.gaps.length > 1 ? 'The signatures of ' + _coN + ' are' : _coN + '’s signature is')
+             + ' not on record yet: have them sign the printed signature page, or on the iPad, then file it under the timeline.' : '')
+          + ' Record the deposit when it arrives.');
+        _dashRedraw(ctx.jobId);
+      });
     });
   });
   return true;
+}
+// ⚠ THE SIGNED COPY GOES TO THE CLIENT BY EMAIL (2026-10-19; Anthony, the first Ellison run: "if we sign on ipad, a signed
+// copy should also be emailed to the client"). DocuSign mails every signer the completed envelope itself; on the glass
+// nobody does, so once the copy is in Drive and the signature recorded the app drafts the email: a Gmail draft to
+// clientRecipient (the owner, or on an estate the representative), every co-representative and agreements@ copied
+// (clientCopyEmails, P25 Q37), the signed PDF attached, under the agreement's own subject. Gmail cannot send from here
+// (drafts only, by design: a person presses Send), so the record is the draft (`sig.copy`: draftedAt, provider, to, cc,
+// by), the rail says "drafted", and nothing ever claims it was sent. The plain-email fallback links the filed copy
+// instead of attaching it, recorded as `mailto`; no email on file is recorded as `none` and flagged, never refused.
+function agreementCopyEmailSubject(job) { return agreementEmailSubject(job) + ' — signed copy'; }
+function _agrCopyLines(job, rec) {
+  var who = clientRecipient(job);
+  var street = String(job && job.addr || '').split(',')[0].trim();
+  return ['Dear ' + (who.fname || 'there') + ',', '',
+    'Thank you for signing the Service Agreement' + (street ? ' for ' + street : '') + ' today. Your signed copy'
+      + (rec && rec.link ? ' is at the link below' : ' is attached') + ', with the Estimate as Exhibit A.',
+    rec && rec.link ? rec.link : '', rec && rec.link ? '' : null,
+    'Keep it with your records. If anything in it does not match what we discussed, call us before any work begins.', '',
+    'We look forward to taking care of ' + (isDecedentJob(job) ? 'the property' : 'your home') + '.'].filter(function (x) { return x !== null; });
+}
+function buildAgreementCopyEmailText(job, rec) { return _agrCopyLines(job, rec).join('\n'); }
+function buildAgreementCopyEmailHtml(job, rec) {
+  var B = EMAIL_BRAND;
+  return '<div style="margin:0;padding:0;background:#f4f1ea;">'
+    + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f4f1ea;">'
+    + '<tr><td align="center" style="padding:24px 12px;">'
+    + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;max-width:600px;background:#ffffff;border:1px solid ' + B.line + ';">'
+    + '<tr><td style="background:' + B.ink + ';padding:26px 22px;">'
+    + '<div style="font-family:Georgia,\'Times New Roman\',serif;font-size:23px;letter-spacing:.16em;color:#ffffff;text-transform:uppercase;">Havellin</div>'
+    + '<div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:' + B.bronzeLt + ';margin-top:5px;">Palm Beach</div>'
+    + '</td></tr>'
+    + '<tr><td style="padding:26px 22px 26px;font-family:Helvetica,Arial,sans-serif;font-size:15px;color:' + B.ink + ';line-height:1.6;">'
+    + _agrCopyLines(job, rec).map(function (l) {
+        return /^https?:\/\//.test(l) ? '<a href="' + _emHtml(l) + '" style="color:' + B.bronzeDk + ';">' + _emHtml(l) + '</a>' : _emHtml(l);
+      }).join('<br>')
+    // No signature: Gmail appends the sender's own, as on every client email.
+    + '</td></tr></table></td></tr></table></div>';
+}
+function _agrCopyMailto(job, to, cc, link) {
+  var tc = assignedTCContact(job);
+  var body = buildAgreementCopyEmailText(job, { link: link }) + '\n\n' + tc.name + '\nHavellin Palm Beach\n' + conciergePhonesText(tc, '\n');
+  return 'mailto:' + encodeURIComponent(to) + '?' + (cc ? 'cc=' + encodeURIComponent(cc) + '&' : '') + 'subject=' + encodeURIComponent(agreementCopyEmailSubject(job))
+    + '&body=' + encodeURIComponent(body);
+}
+// Drafts the copy and records it on the signature; `done(copy)` with what was recorded. Never refuses the signing:
+// the copy is in Drive whatever happens here.
+function _agrIpadEmailCopy(jobId, b64, rec, done) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var st = job && job.docState && job.docState.agreement;
+  if (!job || !st || !st.sig) { done(null); return; }
+  var who = clientRecipient(job), to = who.email, link = (rec && rec.fileUrl) || '';
+  var record = function (provider, draftUrl) {
+    var s2 = docState(job, 'agreement');
+    s2.sig.copy = { draftedAt: new Date().toISOString(), provider: provider, to: to || '', cc: provider === 'none' ? '' : cc,
+                    draftUrl: draftUrl || '', by: _actor(job) || '' };
+    saveJobs(); syncJobToSheets(job);
+    done(s2.sig.copy);
+  };
+  if (!to) { record('none', ''); return; }
+  var cc = docCcLine(job, to, DEPT_EMAILS.agreements);
+  var viaMailto = function () {
+    try { window.location.href = _agrCopyMailto(job, to, cc, link); } catch (e) {}
+    record('mailto', '');
+  };
+  if (!gmailConfigured()) { viaMailto(); return; }
+  var mime = buildMimeMessage({ to: to, cc: cc, subject: agreementCopyEmailSubject(job),
+    text: buildAgreementCopyEmailText(job, b64 ? null : { link: link }), html: buildAgreementCopyEmailHtml(job, b64 ? null : { link: link }),
+    attachments: b64 ? [{ name: docNames(job, 'agreement').attachment.replace(/\.pdf$/i, '') + ' — signed.pdf', base64: b64 }] : [] });
+  gmailCreateDraft(mime, function (ok, d) {
+    if (!ok) { viaMailto(); return; }
+    var url = gmailDraftUrl(d.messageId || d.draftId);
+    try { window.open(url, '_blank'); } catch (e) {}
+    record('gmail', url);
+  });
+}
+// What the copy's record says, for the rail and the notice: one sentence, never "sent".
+function agreementCopyWords(sig) {
+  var c = sig && sig.copy;
+  if (!c) return '';
+  if (c.provider === 'none') return 'no email on file for the signed copy: send it from Drive';
+  return 'signed copy ' + (c.provider === 'gmail' ? 'drafted in Gmail' : 'opened as a plain email') + ' for ' + c.to + ' (send it)';
 }
 // The record: the send (the packet was put in front of the client on the glass) where none is on record, then the
 // signature, as recordAgreementSignature writes every route's. The co-signers who signed carry `how: 'ipad'`, which
@@ -31052,7 +31157,7 @@ function _signoutPdf(job, title, html, cb) {
     if (!ok || !d || !d.base64) { cb(null, ((d && d.error) ? String(d.error) + ': ' : '') + 'the PDF could not be made. Check the connection and try again, or photograph a printed sheet.'); return; }
     var bin = atob(d.base64), arr = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-    cb(new File([arr], title + '.pdf', { type: 'application/pdf' }));
+    cb(new File([arr], title + '.pdf', { type: 'application/pdf' }), null, d.base64);
   }, true);
 }
 function _signoutAfterFile(ctx, rec, ids, msg) {
@@ -51327,13 +51432,18 @@ function probateAgreementHtml(job, est) {
   content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;">';
   content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">' + _agrClientCapacity(job) + '</div>';
   content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
-  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">'+executorName+'</div></div>';
+  // ⚠ THE NAME AND ROLE LINES CARRY A FILL SLOT FOR THE iPAD ROUTE (2026-10-19; Anthony, the first Ellison run: the signed PDF
+  // came back with the printed name and title blank, the record's name only as the small caption under the line). On paper the
+  // signer prints their name by hand and DocuSign's signature carries it; on the glass nobody prints anything, so
+  // agreementSignedHtml fills the slot with the name and role the record holds, as it fills the date. The slot is an empty span:
+  // nothing on paper, nothing in DocuSign's text layer, never a DocuSign anchor.
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line">'+agrFillSlot('clientName')+'</div><div class="sig-label">'+executorName+'</div></div>';
   // ⚠ THE LABEL UNDER THIS LINE PRINTS THE RECORDED ROLE AND NOTHING ELSE. It used to fall back
   // to `Personal Representative · Executor · POA · Other` — a four-option menu, on the signature
   // page, beside the line the representative signs, which reads as a pick-one they are meant to
   // answer. Nothing asks it, no e-signature field is placed on it, and intake already recorded it.
   // The §1.2 row carried the same fact and the same menu; both were removed together.
-  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">'+(esc(job.executorRole)||'')+'</div></div>';
+  content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line">'+agrFillSlot('clientRole')+'</div><div class="sig-label">'+(esc(job.executorRole)||'')+'</div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientSig)+'</div></div>';
   content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">'+esignAnchor(ESIGN_ANCHORS.clientDate)+'</div></div>';
   content += '</div></div>';
@@ -51358,8 +51468,8 @@ function probateAgreementHtml(job, est) {
       content += '<div style="border:1px solid var(--border);border-radius:4px;padding:14px;margin-bottom:10px;break-inside:avoid;page-break-inside:avoid;">';
       content += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray-dk);margin-bottom:10px;">Co-Signer</div>';
       content += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;">';
-      content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line"></div><div class="sig-label">' + esc(f.name) + '</div></div>';
-      content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line"></div><div class="sig-label">' + esc(f.role) + '</div></div>';
+      content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Printed Name</div><div class="sig-line">' + agrFillSlot('coName' + (i + 1)) + '</div><div class="sig-label">' + esc(f.name) + '</div></div>';
+      content += '<div><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Title / Role</div><div class="sig-line">' + agrFillSlot('coRole' + (i + 1)) + '</div><div class="sig-label">' + esc(f.role) + '</div></div>';
       content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Signature</div><div class="sig-line">' + esignAnchor(_an.sig) + '</div></div>';
       content += '<div style="margin-top:10px;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Date</div><div class="sig-line">' + esignAnchor(_an.date) + '</div></div>';
       content += '</div></div>';

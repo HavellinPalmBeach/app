@@ -368,7 +368,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const AGR = sandbox({
     fns: ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate', 'fmt',
       'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob', 'estTolerancePctTxt', 'paymentSplit', 'materialsBasisNote', 'materialsPackageQuoted',
-      'estimateDocScope', 'svcHasDocStep', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrApprovedStamp',
+      'estimateDocScope', 'svcHasDocStep', '_pctWords', 'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'agrFillSlot', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrApprovedStamp',
       'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices', '_agrProbateCompliance', '_agrMidpointTrigger',
       'docStandardEffect', 'isFormalDoc', 'gateDispute', '_gateYes', '_gate706', 'docLevelFloor', 'resolveDocLevel',
       'docLevelFloorReason', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection',
