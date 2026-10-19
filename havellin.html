@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 5:23pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 5:24pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -42960,7 +42960,7 @@ function planSubsec(title) {
     'color:var(--gray);margin:12px 0 4px;">' + title + '</div>';
 }
 
-// The fold — used by the two TOOLS at the top of the plan (Vendors & partners, Hours & daily close)
+// The fold — used by the two TOOLS at the top of the plan (Vendors & partners; Job crew, hours & daily close)
 // and by nothing in the job body, which is open (planStageCard). 2026-09-20.
 function planPhaseWrap(id, title, body, meta) {
   // Re-open whatever the crew had open before this redraw. See _planOpenPhases.
@@ -43033,7 +43033,7 @@ function planStageState(id, cur) {
 //
 // The order now: the header (with the schedule strip — planScheduleHtml) → gates (a chip row,
 // nothing to tick) → the two TOOLS, folded: Vendors & partners (opens by itself while the job is
-// not yet active and a line is unconfirmed) and Hours & daily close (today's hours on the fold,
+// not yet active and a line is unconfirmed) and Job crew, hours & daily close (today's hours on the fold,
 // opened by the person logging them) → then the JOB, open, on one thread: Before Day 1 → In the
 // house (the room cards, the in-house boxes under them) → Midpoint & pickups → Move day
 // (Transition only) → Close-out. Each card carries a node — green behind you, bronze NOW, grey
@@ -43087,10 +43087,10 @@ function jobTeamGateLine(job) {
   var line = { key: 'team_confirmed', label: 'Job team confirmed', ok: !!(crew && crew.confirmed) && !dups.length };
   if (dups.length) {
     line.detail = dups.map(function(d) { return esc(d.name) + ' is in ' + d.slots.length + ' slots (' + d.slots.join(', ') + ')'; }).join('; ')
-      + ' &mdash; press Revise team under Hours &amp; daily close, below, and give one of them to somebody else.';
+      + ' &mdash; press Revise team under Job crew, hours &amp; daily close, below, and give one of them to somebody else.';
   } else if (!line.ok) {
     line.detail = 'not yet &mdash; name the concierge and each specialist, then press Save &amp; Confirm Job Team under '
-      + 'Hours &amp; daily close, below. Hours cannot be logged until it is.';
+      + 'Job crew, hours &amp; daily close, below. Hours cannot be logged until it is.';
   }
   return line;
 }
@@ -43259,7 +43259,7 @@ function _repaintPlanGates(jobId) {
 
 // ⚠ THE HOURS LOG IS STATIC MARKUP (#plan-log-section — the entry form, the summary, the
 // projection, the history) and it used to sit ABOVE the plan. Its place in the order is after the
-// rooms, inside the Hours & daily close fold, so the loader MOVES the node into the fold's slot
+// rooms, inside the Job crew, hours & daily close fold, so the loader MOVES the node into the fold's slot
 // after every render and parks it back outside #job-plan-content BEFORE anything rewrites that
 // container — an innerHTML write over a container holding the form would destroy the form, its
 // half-typed entry and every id the hours code writes to. Parked is where it always was, so a
@@ -49396,7 +49396,7 @@ function renderJobPlan(jobId, job, est) {
   var roomsBody = roomsCard + inHouse + (ctx.fid ? siteFindsCardHtml(jobId, job, est) : '') + (typeof incidentsCardHtml === 'function' ? incidentsCardHtml(jobId, job, est) : '');
   var roomsMeta = nLocked + ' of ' + rooms.length + ' locked &middot; ' + nCleared + ' cleared';
 
-  // ── Hours & daily close: the loader moves #plan-log-section into this slot ──────────
+  // ── Job crew, hours & daily close: the loader moves #plan-log-section into this slot ──
   // ⚠ On a fixed price "over the line" is a margin warning, not a stop — see projBandHtml.
   var hoursBody = '<div id="plan-hours-slot"></div>'
     + '<div style="font-size:11px;color:var(--gray);margin-top:8px;line-height:1.5;">' + planHoursRuleTxt(!!(est && est.fixedPrice)) + '</div>';
@@ -49458,7 +49458,11 @@ function renderJobPlan(jobId, job, est) {
 
   return _midBanner + _pendBanner + _collBanner + gates +
     planPhaseWrap('vendors', 'Vendors &amp; partners', vendorsBody, vendorsMeta) +
-    planPhaseWrap('hours', 'Hours &amp; daily close', hoursBody, planHoursMetaHtml(jobId, job, est)) +
+    // ⚠ "JOB CREW, HOURS & DAILY CLOSE", NOT "HOURS & DAILY CLOSE" (2026-10-19; Anthony, from the first scripted run: *"we
+    // couldn't find where to log the crew"*). The team roster and Save & Confirm Job Team live inside this fold, which is
+    // shut until somebody opens it, and a bar named for the hours alone said nothing about them. The gate chip's fix
+    // sentence (jobTeamGateLine) names the fold by this title; a test holds the two equal.
+    planPhaseWrap('hours', 'Job crew, hours &amp; daily close', hoursBody, planHoursMetaHtml(jobId, job, est)) +
     flow;
 }
 

@@ -165,7 +165,7 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
   lacks(j1.band, 'Midpoint invoice sent', '⚠⚠ #7 …and never the milestone name');
 
   console.log('\n=== #5 ONE PERSON, ONE SLOT — and #6 the chip follows the team ===');
-  // The team sits in the Hours & daily close fold — a tool, closed until somebody opens it.
+  // The team sits in the Job crew, hours & daily close fold — a tool, closed until somebody opens it.
   await p.evaluate(() => { const b = document.getElementById('phase-body-hours'); if (b && b.style.display === 'none') togglePhase('hours'); });
   await p.waitForTimeout(150);
   const s1 = await p.evaluate(() => {
