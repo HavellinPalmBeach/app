@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 6:49pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 6:51pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -45061,6 +45061,7 @@ var INCIDENT_ALERT_TO = { name: 'Anthony Graziano', phone: '(617) 650-6588', tel
 var INCIDENT_CARRIER_FLOOR = 500;        // the estate form's §6.3: "Engage insurance carrier if damage exceeds $500"
 var INCIDENT_HOTLINE = '1-800-962-2873'; // the Florida Abuse Hotline (1-800-96-ABUSE), §415.1034
 var INCIDENT_SUBFOLDER = 'Incident Reports';
+var INCIDENT_GUIDE_DOC = 'incident-guide.html';   // the field page, Reporting an Incident (2026-10-19): linked from the card through guideLinkHtml, opening over the app
 var INCIDENT_DOC_KEY = 'incidentRecord';   // docState key for the filed Incident Record: a stored key, never rename it
 var INCIDENT_RECORD_TITLE = 'Incident Record';
 var INCIDENT_INTERNAL_TITLE = 'Internal Incident Record';
@@ -45317,6 +45318,8 @@ function incidentsCardHtml(jobId, job, est) {
       + '<strong>An injury, a missing item or a vulnerable adult concern:</strong> call Anthony at once, ' + INCIDENT_ALERT_TO.phone + '. '
       + (typeof invFiduciaryMode === 'function' && invFiduciaryMode(job) ? '<strong>An original will or cash</strong> goes on Found on site, above, not here. ' : '')
       + 'A vulnerable adult concern stays internal: it is never on the record the client or counsel receives.</div>'
+    // The page that teaches the method, under the note (2026-10-19): a link a tap away, never a step; it opens over the plan like the stage guides.
+    + '<div class="plan-proc-doc" style="font-size:11px;margin:6px 0 0;font-weight:600;">' + guideLinkHtml(INCIDENT_GUIDE_DOC, 'Read Reporting an Incident') + '</div>'
     + '</div>';
 }
 // The header banner, over the Job Plan: red while a call to Anthony is owed (Q64) or an injury or a hazard is open (Q69),

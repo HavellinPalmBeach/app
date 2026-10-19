@@ -37,6 +37,8 @@ const DOCS = [
   { file: 'packing-guide.html', wrapper: 'wrap', minH2: 6, minBoxes: 0 },
   { file: 'move-day-guide.html', wrapper: 'wrap', minH2: 6, minBoxes: 0 },
   { file: 'first-night-guide.html', wrapper: 'wrap', minH2: 5, minBoxes: 0 },
+  // The incident guide (2026-10-19), linked from the Incidents card, in the same shape.
+  { file: 'incident-guide.html', wrapper: 'wrap', minH2: 8, minBoxes: 0 },
 ];
 
 // The boxes a reader sees as a callout. None of them may hold a section heading or another box.

@@ -260,7 +260,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // Every page the app links goes through the one opener: the firearms protocol too.
       const live = SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
       eq((live.match(/esc\((?:l|row)\.doc\) \+ '" target="_blank"/g) || []).length, 0, 'no protocol link opens a new tab');
-      eq((live.match(/guideLinkHtml\(/g) || []).length, 6, 'the one opener has its definition and five readers (the procedure, the brief, the banner, the room line, the transport panel)');
+      eq((live.match(/guideLinkHtml\(/g) || []).length, 7, 'the one opener has its definition and six readers (the procedure, the brief, the banner, the room line, the transport panel, the Incidents card since 2026-10-19)');
     }
     eq(count(html, 'type="checkbox"'), 0, '⚠⚠ no box in a procedure block');
     eq(c.planProcedureHtml('p1', ctxOf('prep')), '', 'a prep plan draws no sorting block');

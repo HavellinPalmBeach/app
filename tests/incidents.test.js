@@ -31,13 +31,13 @@ const INC_FNS = ['incidentReportsOf', 'incidentUpdatesOf', 'incidentNo', 'incide
   'openIncident', 'incPickKind', 'closeIncident', 'saveIncident', 'incidentRecordCall', 'voidIncident',
   'incidentPhotoControlHtml', 'incidentPhotosFromInput', '_incidentPhotoName', 'incidentUploadPhotos', '_incidentWritePhotos',
   'incidentRecordHtml', 'printIncidentRecord', 'fileIncidentRecord', '_fileCloseoutPaper', '_cpWhere', 'docState', '_invJob', '_invDocDriveName', '_invDocName',
-  'derivedLinesHtml', '_invDocHead', '_invDocPartyHead',
+  'derivedLinesHtml', '_invDocHead', '_invDocPartyHead', 'guideLinkHtml',
   'jobListEntries', 'jobListGet', 'jobListPut', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'samePerson', 'canonPersonName',
   'isCrewPlaceholder', '_andJoin', 'showFB', '_armFiling', '_jobRootFolderId', '_siteFindTeamNames', '_planRooms', 'invFiduciaryMode', 'isDecedentJob', 'jobFiduciaries',
   'jobCloseBlockers', 'moneyToNumber', 'escLines', 'esc', 'fmt', 'fmtDate2', '_ymdLocal', 'roundCents',
   'probatePackageDocs', 'probatePackagePage'];
 const INC_VARS = ['INCIDENT_KINDS', 'INCIDENT_KIND_ORDER', 'INCIDENT_ACTS', 'INCIDENT_ALERT_TO', 'INCIDENT_CARRIER_FLOOR', 'INCIDENT_HOTLINE', 'INCIDENT_SUBFOLDER',
-  'INCIDENT_DOC_KEY', 'INCIDENT_RECORD_TITLE', 'INCIDENT_INTERNAL_TITLE', 'INCIDENT_PHOTO_MAX_PX', 'INCIDENT_PHOTO_QUALITY', '_incidentPhotoFlight', '_incidentFiling',
+  'INCIDENT_DOC_KEY', 'INCIDENT_GUIDE_DOC', 'INCIDENT_RECORD_TITLE', 'INCIDENT_INTERNAL_TITLE', 'INCIDENT_PHOTO_MAX_PX', 'INCIDENT_PHOTO_QUALITY', '_incidentPhotoFlight', '_incidentFiling',
   '_incidentPhotoSpecs', '_incidentPhotoKeys', 'CLOSEOUT_PAPERS', 'PHOTO_SUBFOLDER', 'JOB_RECORD_LISTS', 'FILING_WATCHDOG_MS', 'PERSON_NAME_ALIASES', 'CONTRACTOR_TC_NAME',
   'LOG_PLACEHOLDER_NAMES', 'DECEDENT_SERVICES', 'PROBATE_PKG_TITLES', 'DEFAULT_CONTRACTORS', '_ledgerFiling', '_contentsFiling', 'LEDGER_DOC_KEY', 'CONTENTS_DOC_KEY'];
 
