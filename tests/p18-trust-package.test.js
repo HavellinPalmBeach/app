@@ -237,7 +237,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         jobs: [o.job], estimateStore: { 7: EST() }, jobPlanStore: {}, _photoRefs: { 7: JSON.parse(JSON.stringify(o.rows)) }, changeOrders: [],
         SHEETS_SYNC_URL: SYNC, fetch: N.fetch, document: domStub({}), setTimeout: () => 0, clearTimeout() {}, Date: FixedDate(NOW),
         window: { open: (u) => opened.push(u), location: loc },
-        gmailAuth: (cb) => cb('tok-p18'), loadPhotoRefs() {}, savePhotoRefs() {},
+        gmailAuth: (cb) => cb('tok-p18'), loadPhotoRefs() {}, savePhotoRefs() {}, confirm: () => true,
         saveJobs: () => saves.push('jobs'), syncJobToSheets: () => saves.push('sync'), _dashRedraw() {},
         _docNotice: (t, m) => notices.push({ t, m: String(m) }), dashNotice: (t, m) => notices.push({ t, m: String(m) }),
         _dashSendState() {}, showSyncBadge() {},
@@ -288,6 +288,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ROUTE_READERS = {
       renderClientDashboard: 'whether the card is drawn, and its heads',
       probatePackageBlocker: 'the refusal off both routes, and what each route needs',
+      probatePackageInventoryBlocker: 'the inventory-first refusal (2026-10-19), named for its route',
       probatePackageAddressee: 'whom it is addressed to',
       _pkgEstateLine: 'the estate line',
       probatePackageScopeLine: 'the scope lines',
@@ -706,5 +707,57 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           f + ': to the trustee’s attorney, else the trustee');
       has(d, 'If you need anything further for the administration of the trust, reply here and we will send it.', f + ': the trust package’s words');
     });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 2026-10-19 (Anthony, the first Ellison run): Ashley pressed Send trust package while the job still waited on the
+  // Certification of Trust, and every schedule went out as a blank floor. "I don't think we should allow anyone to create
+  // a trust package prior to the walkthrough and the photographs and the inventory being built." Asked how strict, he took
+  // the recommendation: the inventory first (the job active, a named line on the desk), then a confirm naming the gaps.
+  G('K · the inventory first: the gate, the card, the confirm', () => {
+    const g = lift(['probatePackageBlocker', 'probatePackageInventoryBlocker'], [], { SHEETS_SYNC_URL: SYNC });
+    eq(g.probatePackageBlocker(TRUST()), '', 'an active trust job with everything there: no refusal');
+    eq(g.probatePackageBlocker(TRUST({ status: 'won', activatedOn: '' })),
+       'The trust package cannot be sent yet: it needs the job activated (the package carries the inventory, which is built once the work starts).',
+       '⚠⚠ a job not yet activated: refused by name, the reason said');
+    eq(g.probatePackageBlocker(PROBATE({ status: 'won' })), 'The probate package cannot be sent yet: it needs the job activated (the package carries the inventory, which is built once the work starts).', 'the probate route the same');
+    eq(g.probatePackageBlocker(TRUST({ status: 'closed', activatedOn: '2026-10-01', deliveredOn: '2026-10-15' })), '', 'a closed job was active: the close-out package goes');
+    eq(g.probatePackageBlocker(TRUST({ status: 'won', probateAttyEmail: '', executorEmail: '' })),
+       'The trust package cannot be sent yet: it needs the trustee’s attorney’s email (Edit Client, under Estate Attorney) or the trustee’s own (Edit Client, under Authorized Representative) and the job activated (the package carries the inventory, which is built once the work starts).',
+       'named with the rest, at once');
+    eq(g.probatePackageInventoryBlocker(TRUST(), []), 'The trust package cannot be sent yet: the inventory holds no named line. Photograph the house (the Job Plan) and name the shots (Job Admin & Inv): the package carries that inventory.', '⚠⚠ an empty inventory: refused by name');
+    eq(g.probatePackageInventoryBlocker(TRUST(), [ROW('x', { objectName: '' }), ROW('y', { objectName: 'Sofa', deletedAt: T0 })]), g.probatePackageInventoryBlocker(TRUST(), []), 'an unnamed line, or a removed one, is no line');
+    eq(g.probatePackageInventoryBlocker(TRUST(), INVENTORY()), '', 'one named line: the package can go');
+    eq(g.probatePackageInventoryBlocker(TRUST(), null), '', 'the manifest unread on this device: nothing refused here (the send reads the sheet first)');
+    eq(g.probatePackageInventoryBlocker(TRUST({ matterType: 'neither' }), []), '', 'no route: nothing to say (the route refusal is the blocker\'s)');
+    // The gaps the confirm names: the plan's rooms not locked, lines with no disposition, and on a values tier lines with none.
+    const G2 = lift(['probatePackageGaps'], [], { jobs: [TRUST()], estimateStore: { 7: EST() }, jobPlanStore: {}, _photoRefs: { 7: INVENTORY() } });
+    eq(G2.probatePackageGaps(7), ['1 room not yet locked', '1 line with no disposition', '1 line with no value'], 'the Study unlocked, the chairs undecided and unvalued');
+    G2.jobPlanStore[7] = { rooms: { 1: { status: 'locked' } } };
+    G2._photoRefs[7] = INVENTORY().map((r) => Object.assign({}, r, r.label === 'inventory' ? { disposition: 'Auction', fmv: 100 } : {}));
+    eq(G2.probatePackageGaps(7), [], 'locked, decided, valued: nothing to ask');
+    G2.jobs[0].docTier = 'contents';
+    G2._photoRefs[7] = INVENTORY();
+    eq(G2.probatePackageGaps(7), ['1 line with no disposition'], 'a contents tier states no values, so a missing one is no gap');
+    // The card withholds the send while the gate holds, and says why.
+    const unact = renderDash(TRUST({ status: 'won', activatedOn: '' }));
+    lacks(unact, 'sendProbatePackage(', '⚠⚠ the send is withheld on a job not yet activated');
+    has(unact, 'it needs the job activated', 'and the row says why');
+    // The send itself: the sheet read first, then the inventory asked; a confirm that says no drafts nothing.
+    const empty = pkgRig({ rows: [] });
+    ok(empty.c.sendProbatePackage(7) === true, 'it starts');
+    has(empty.last().m, 'the inventory holds no named line', '⚠⚠ no named line on the sheet: refused by name after the read');
+    eq(empty.opened.length + empty.hrefs.length, 0, 'nothing drafted');
+    const no = pkgRig({ stubs: { confirm: () => false } });
+    ok(no.c.sendProbatePackage(7) === true, 'it starts');
+    has(no.last().m, 'Not sent. Finish the inventory, then press Send trust package again.', 'the confirm declined: not sent, said');
+    eq(no.opened.length + no.hrefs.length, 0, 'nothing drafted');
+    const asked = [];
+    const yes = pkgRig({ stubs: { confirm: (m) => { asked.push(m); return true; } } });
+    ok(yes.c.sendProbatePackage(7) === true, 'it starts');
+    eq(asked.length, 1, 'asked once');
+    has(asked[0], 'The inventory is still being built: 1 room not yet locked, 1 line with no disposition and 1 line with no value.', '⚠ the confirm names every gap');
+    has(asked[0], 'The trust package would go to ann@lowe.law now with those gaps marked on its pages. Send it anyway?', 'and to whom');
+    ok(yes.opened.length >= 1, 'accepted: the draft made');
   });
 };

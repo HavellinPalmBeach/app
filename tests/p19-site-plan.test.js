@@ -182,7 +182,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const auth = (job) => p0(job).filter((l) => l.key === 'letters' || l.key === 'certification')[0] || null;
     const L = auth({ svc: 'probate', executorAuth: 'pending' });
     eq([L && L.key, L && L.label, L && L.ok], ['letters', 'Letters of Administration on file', false], 'probate: the Letters line, its key kept');
-    eq(L && L.detail, 'pending — recorded under Edit Client when the certified copy arrives, and the job cannot activate without it', 'with its wording unchanged');
+    eq(L && L.detail, 'pending — press ✓ Letters received beside Activate job when the certified copy arrives (or record it under Edit Client), and the job cannot activate without it', 'naming the press (2026-10-19) and Edit Client');
     const T = auth({ svc: 'cleanout', matterType: 'trust', executorAuth: 'pending' });
     eq([T && T.key, T && T.label, T && T.ok], ['certification', 'Certification of Trust on file', false], '⚠ a trust-only matter: the Certification of Trust');
     has(T && T.detail, 'successor trustee’s proof of authority (§736.1017)', 'naming whose paper it is and the statute');
