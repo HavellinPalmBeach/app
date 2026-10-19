@@ -156,7 +156,7 @@ function mimeParts(mime) {
     } else if (/application\/pdf/.test(p)) {
       const name = (/filename="([^"]+)"/.exec(p) || [])[1];
       const b64 = p.slice(p.indexOf('\r\n\r\n') + 4).trim();
-      out.pdfs.push({ name, b64, lines: b64.split('\r\n') });
+      out.pdfs.push({ name, b64, lines: b64.split('\r\n'), head: p.slice(0, p.indexOf('\r\n\r\n')) });
     }
   });
   return out;
@@ -551,6 +551,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(p.pdfs.every((x) => x.lines.every((l) => l.length <= 76)), 'every base64 line is at most 76 characters');
     eq(bareLF(three), 0, '⚠⚠ and every line break is CRLF — a bare LF is what dropped the attachment once');
     eq(Buffer.from(p.pdfs[1].lines.join(''), 'base64').toString(), 'cc'.repeat(40), 'each part decodes to its own bytes');
+    // ⚠⚠ EACH PART HAS ITS OWN ID, IN GMAIL'S OWN SHAPE (2026-10-19). Gmail rewrote an API draft's attachment parts with an
+    // empty `X-Attachment-Id:` and `Content-ID: <>` on send; two parts with one empty id are one attachment to Gmail (the
+    // package's parts could download as each other's bytes), and Apple Mail showed a one-page PDF, every invoice, as a
+    // blue box with a question mark. The id is per part: the three-PDF message carries two distinct ids on its two parts.
+    const ids = p.pdfs.map((x) => (/^X-Attachment-Id: (f_[0-9a-z]{10})$/m.exec(x.head) || [])[1]);
+    ok(ids.every((x) => !!x), 'every PDF part carries an X-Attachment-Id, f_ and ten characters (' + ids.join(', ') + ')');
+    eq(new Set(ids).size, ids.length, '⚠ and no two parts share one');
+    p.pdfs.forEach((x, i) => has(x.head, 'Content-ID: <' + ids[i] + '>', 'part ' + (i + 1) + '\'s Content-ID is its own X-Attachment-Id'));
+    has(mimeParts(one).pdfs[0].head, 'Content-ID: <' + mimeParts(one).pdfs[0].head.match(/^X-Attachment-Id: (\S+)$/m)[1] + '>', 'the one-document form carries the pair too');
   });
 
   G('11 · each printer asked for its page answers with the page or its refusal, never an alert', () => {
@@ -634,6 +643,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         saveJobs: () => saves.push('jobs'), syncJobToSheets: () => saves.push('sync'), _dashRedraw() {},
         _docNotice: (t, m) => notices.push({ t, m: String(m) }), dashNotice: (t, m) => notices.push({ t, m: String(m) }),
         _dashSendState: (k, l) => steps.push(l), showSyncBadge: (m) => badges.push(String(m)),
+        confirm: () => true,   // the gaps confirm (2026-10-19): answered yes here; p18 holds the no
       }, o.stubs || {}));
     return { c, N, notices, steps, badges, opened, hrefs, saves, job: () => c.jobs[0] };
   }
@@ -832,15 +842,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has((pdfFail.notices[pdfFail.notices.length - 1] || {}).m, 'The Appraisal Worklist could not be made into a PDF, so it is linked from Drive instead of attached', 'and the notice says so');
     eq(JSON.parse(JSON.stringify(pdfFail.job().docState.probatePackage.pkg.docs)), ['court', 'schedule', 'ledger'], 'the record names what was attached');
 
-    // A document the inventory cannot yet produce is left out, and the notice (the sender's, not the attorney's) says why.
+    // An empty inventory no longer goes at all (2026-10-19; Anthony, the first Ellison run: a trust package went out by accident
+    // with every schedule blank): refused by name once the sheet has been read, nothing drafted. Until then the report and
+    // the ledger were left out by name and the rest went as working drafts; p18 group K holds the gate.
     const empty = pkgRig({ rows: [] });
     empty.c.sendProbatePackage(7);
     const em = empty.notices[empty.notices.length - 1] || {};
-    has(em.m, 'Not in the package: the Estate Inventory Report — There is nothing in the inventory to report yet.', '⚠ an empty inventory: the report is left out, by name, with its reason');
-    has(em.m, 'Not in the package: the Disposition Ledger — There is nothing in the inventory to record yet.', 'P19: and so is the ledger, which has nothing to record');
+    has(em.m, 'The probate package cannot be sent yet: the inventory holds no named line.', '⚠⚠ an empty inventory: refused by name after the read');
     eq(em.t, 'warn', 'and the notice warns');
-    eq(mimeParts(empty.N.log.drafts[0] || '').pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Appraisal Worklist'],
-       'the rest still goes, the Court Inventory as the working draft it is');
+    eq((empty.N.log.drafts || []).length, 0, 'nothing drafted');
+    // A document a named-but-thin inventory cannot yet produce is still left out by name: the worklist with nothing flagged.
+    const thin = pkgRig({ rows: [ROW('t', { objectName: 'Umbrella stand', fmv: 40, disposition: 'Donate' })] });
+    thin.c.sendProbatePackage(7);
+    const tm = thin.notices[thin.notices.length - 1] || {};
+    has(tm.m, 'Draft created', 'one named line: the package goes');
 
     // A filing that did not land is named in the notice; the draft still carries the document.
     const unfiled = pkgRig({ net: { failUpload: /Court Inventory/ } });

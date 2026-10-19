@@ -233,16 +233,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ja = t.filter((r) => r.key === 'job_active')[0] || {};
     eq(ja.state, 'blocked', '⚠⚠ a funded trust job with its Certification pending: Job active is held, not offered (the filter on "Executor" let it through)');
     eq(ja.blockedWhy, C_GATE, 'in the gate\'s own words');
-    eq(ja.blockedFix, 'Contact Rex Hale on (561) 555-0101 — the Certification of Trust must be received before work can start.', 'and the fix names the paper and who to chase');
+    eq(ja.blockedFix, 'Contact Rex Hale on (561) 555-0101 — the Certification of Trust must be received before work can start. Once it is in hand, press ✓ Certification of Trust received here.', 'and the fix names the paper, who to chase, and the press (2026-10-19)');
     eq((S.jobTimelineNext(t) || {}).key, 'job_active', 'and it is the lit row');
     eq(act(FUNDED({ executorAuth: 'received' })).state, 'current', 'received: Activate is the next step');
     eq(act(FUNDED({ executorAuth: 'notneeded' })).state, 'current', 'not required: the same');
     const p = act(FUNDED({ matterType: 'probate', svc: 'probate' }));
     eq([p.state, p.blockedWhy], ['blocked', L_GATE], 'a probate job is held on its Letters, as before');
-    eq(p.blockedFix, 'Contact Rex Hale on (561) 555-0101 — the Letters must be received before work can start.', '⚠ in the words it always used');
+    eq(p.blockedFix, 'Contact Rex Hale on (561) 555-0101 — the Letters must be received before work can start. Once it is in hand, press ✓ Letters received here.', '⚠ in the words it always used, and the press');
     eq(act(FUNDED({ matterType: 'neither' })).state, 'current', 'Neither: nothing waits on a paper');
     eq(act(FUNDED({ matterType: '' })).state, 'current', 'an unanswered Estate Settlement: nothing waits either');
-    eq(act(FUNDED({ executorPhone: '' })).blockedFix, 'Contact Rex Hale at rex@hale.example — the Certification of Trust must be received before work can start.', 'no phone: the email');
+    eq(act(FUNDED({ executorPhone: '' })).blockedFix, 'Contact Rex Hale at rex@hale.example — the Certification of Trust must be received before work can start. Once it is in hand, press ✓ Certification of Trust received here.', 'no phone: the email');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -767,5 +767,82 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(d, 'The successor trustee\'s Certification of Trust must be received', f + ': the symptom row names the gate\'s words');
       has(d, 'It is not ours to file', f + ': the 706 line is a reminder, and says whose it is');
     });
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 2026-10-19 (Anthony, the first Ellison run): the Certification was not in hand, Activate job never showed, and the only
+  // way to record it was Edit Client ("scroll down, find the box, tick the drop down … it should just be a button that
+  // says received"). One press on the blocked Activate row, or beside the card's chip, records the paper as received
+  // today, as a person's edit, through the one writer Edit Client's save uses (authorityRecord).
+  G('W · ✓ Received: one press records the paper where it blocks', () => {
+    const rig = (job, answer) => {
+      const notices = [], saves = [];
+      const c = lift(['dashMarkAuthorityReceived', 'authorityRecord', 'jobTimeline', 'jobTimelineNext', 'jobTimelineActions'], [], {
+        jobs: [job], estimateStore: { 7: EST() }, confirm: () => answer, dashNotice: (t, m) => notices.push(t + ': ' + m), _dashRedraw() {}, renderJobs() {},
+        saveJobs: () => saves.push('jobs'), syncJobToSheets: () => saves.push('sync'), _todayStr: () => '2026-10-19', deviceUser: () => 'Ashley Jerome',
+        Date: FixedDate(NOW), SHEETS_SYNC_URL: 'https://script.google.com/macros/s/P19W/exec' });
+      return { c, notices, saves, job: c.jobs[0] };
+    };
+    // The writer: a move into Received stamps the day and who; a move out clears them; staying put keeps them.
+    const W = rig(TRUST(), true);
+    const j = { executorAuth: 'pending' };
+    eq(W.c.authorityRecord(j, 'received'), 'received', 'received');
+    eq([j.executorAuth, j.executorAuthOn, j.executorAuthBy], ['received', '2026-10-19', 'Ashley Jerome'], '⚠ stamped: the day and who recorded it');
+    eq(W.c.authorityRecord(j, 'received'), 'received', 'again');
+    eq([j.executorAuthOn, j.executorAuthBy], ['2026-10-19', 'Ashley Jerome'], 'the stamps kept');
+    eq(W.c.authorityRecord(j, 'pending'), 'pending', 'back to pending');
+    eq([j.executorAuth, 'executorAuthOn' in j, 'executorAuthBy' in j], ['pending', false, false], '⚠ the stamps cleared: never a stale day on a pending paper');
+    eq(W.c.authorityRecord(j, 'garbage'), 'pending', 'an unknown value reads pending, as resolveExecutorAuth always read it');
+    // The press on a trust job waiting on the Certification.
+    const t = rig(TRUST(), true);
+    eq(t.c.dashMarkAuthorityReceived(7), true, 'recorded');
+    eq([t.job.executorAuth, t.job.executorAuthOn, t.job.executorAuthBy], ['received', '2026-10-19', 'Ashley Jerome'], '⚠⚠ received today, by the device\'s user');
+    eq(t.saves, ['jobs', 'sync'], 'saved and synced as a person\'s edit');
+    has(t.notices[0], 'ok: Certification of Trust recorded as received today by Ashley Jerome.', 'the notice');
+    has(t.notices[0], 'Activate job still waits on: service agreement must be signed and deposit (50%) must be received.', 'and what Activate job still waits on');
+    const ready = rig(TRUST({ agrSigned: true, depositReceived: true }), true);
+    ready.c.dashMarkAuthorityReceived(7);
+    has(ready.notices[0], 'Activate job is open.', 'nothing else owed: said');
+    // Declined, already recorded, nothing to record.
+    const d = rig(TRUST(), false);
+    eq(d.c.dashMarkAuthorityReceived(7), false, 'the confirm declined');
+    eq([d.job.executorAuth, d.saves.length, d.notices.length], ['pending', 0, 0], 'nothing written, nothing said');
+    const r = rig(TRUST({ executorAuth: 'received' }), true);
+    eq(r.c.dashMarkAuthorityReceived(7), false, 'already received');
+    has(r.notices[0], 'already recorded as received', 'said'); eq(r.saves.length, 0, 'not written again');
+    const n = rig(TRUST({ executorAuth: 'notneeded' }), true);
+    eq(n.c.dashMarkAuthorityReceived(7), false, 'not required');
+    has(n.notices[0], 'already recorded as not required', 'said');
+    const l = rig(TRUST({ svc: 'downsizing_move', matterType: '' }), true);
+    eq(l.c.dashMarkAuthorityReceived(7), false, 'a living client: refused');
+    has(l.notices[0], 'waits on no authority paper', 'by name');
+    const p = rig(PROBATE(), true);
+    p.c.dashMarkAuthorityReceived(7);
+    has(p.notices[0], 'Letters of Administration recorded as received today', 'the probate route names its paper');
+    // The row: a blocked Activate job offers the press as a secondary; the primary stays Activate job; nothing once recorded.
+    const rowFor = (c, job) => { c.jobs.length = 0; c.jobs.push(job); c.estimateStore = { 7: REC() }; const rows = c.jobTimeline(job, REC(), [], []); return c.jobTimelineNext(rows); };
+    const blocked = rig(FUNDED(), true);
+    const row = rowFor(blocked.c, blocked.job);
+    eq([row.key, row.state], ['job_active', 'blocked'], 'fixture: Activate job blocked on the paper');
+    has(row.blockedFix, 'Once it is in hand, press ✓ Certification of Trust received here.', 'the fix names the press');
+    const acts = blocked.c.jobTimelineActions(row, blocked.job, REC());
+    eq(acts.primary, null, 'no primary while blocked');
+    eq(acts.secondary, [{ label: '&#10003; Certification of Trust received', call: 'dashMarkAuthorityReceived(7)' }], '⚠⚠ the press, named for the paper');
+    blocked.c.dashMarkAuthorityReceived(7);
+    const row2 = rowFor(blocked.c, blocked.job);
+    eq([row2.key, row2.state], ['job_active', 'current'], 'pressed: the row opens');
+    const acts2 = blocked.c.jobTimelineActions(row2, blocked.job, REC());
+    eq([acts2.primary && acts2.primary.label, acts2.secondary.some((a) => /Received/i.test(a.label))], ['&#9654; Activate job', false], 'Activate job is the primary and the press is gone');
+    const pb = rig(FUNDED({ matterType: 'probate', svc: 'probate' }), true);
+    const prow = rowFor(pb.c, pb.job);
+    eq(pb.c.jobTimelineActions(prow, pb.job, REC()).secondary.map((a) => a.label), ['&#10003; Letters received'], 'on probate the Letters');
+    // The card's chip: the press beside it while pending, the day and who once received.
+    const pend = renderDash(TRUST());
+    has(pend, 'onclick="event.stopPropagation();dashMarkAuthorityReceived(7)">&#10003; Received</button>', '⚠ the press beside the Trust card\'s pending chip');
+    const rec = renderDash(TRUST({ executorAuth: 'received', executorAuthOn: '2026-10-19', executorAuthBy: 'Ashley Jerome' }));
+    lacks(rec, 'dashMarkAuthorityReceived(', 'received: the press is gone');
+    has(rec, 'Received · recorded Oct 19, 2026 by Ashley Jerome', 'and the chip says when and who');
+    const bare = renderDash(TRUST({ executorAuth: 'received' }));
+    has(bare, '>Received</span>', 'received with no stamp (Edit Client before 2026-10-19): Received, nothing invented');
   });
 };

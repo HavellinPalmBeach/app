@@ -39,7 +39,7 @@ const liveLines = (s) => String(s).split('\n')
   .join('\n');
 
 const EC_FNS = ['showEditClient', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
-                'executorAuthOptionsHtml', 'resolveExecutorAuth', 
+                'executorAuthOptionsHtml', 'resolveExecutorAuth', 'authorityRecord', 
                 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
                 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope',
                 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
@@ -388,8 +388,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Both saves resolve on the way in, so neither can write a value the gate waves through.
     has(fn('saveIntake'), 'resolveExecutorAuth(', 'Client Intake resolves it');
-    has(fn('saveClientEdit'), 'resolveExecutorAuth(document.getElementById(\'ec-exec-auth\').value)',
-        'and so does Edit Client');
+    has(fn('saveClientEdit'), 'authorityRecord(job, document.getElementById(\'ec-exec-auth\').value)',
+        'and so does Edit Client, through the one writer (authorityRecord, 2026-10-19), which resolves it');
+    has(fn('authorityRecord'), 'resolveExecutorAuth(value)', 'the writer resolves on the way in');
 
     // ⚠⚠ AND THE JOIN IS DRIVEN, BECAUSE A BUILD THAT READS THE CONTROL AND THEN THROWS THE
     // ANSWER AWAY CONTAINS EVERY STRING THE CHECKS ABOVE LOOK FOR. The whole point of adding the

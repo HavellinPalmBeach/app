@@ -412,15 +412,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(blocked.row.state, 'blocked', 'the estimate-approved row is blocked');
     eq(blocked.a.primary.call, 'dashGoEstimate(7)', 'and its button opens Build Estimate, where the scores are');
 
-    // ⚠ A blocked ACTIVATION has no button: the fix is a phone call to the executor, and
-    // a button that alerts the same blocker back at you is worse than none.
+    // ⚠ A blocked ACTIVATION has no primary: the fix is a phone call to the executor, and
+    // a button that alerts the same blocker back at you is worse than none. Since 2026-10-19 the
+    // paper itself is recorded here, as a secondary: ✓ Letters received (p19-authority holds the rest).
     const auth = actFor({ approved: true, estimateSentDate: 'x', won: true, agrApproved: true, agrSent: true,
       agrSigned: true, depositReceived: true, svc: 'contested_probate', executorAuth: 'pending',
       docState: { 'invoice:deposit': { draftedAt: 'x', sentAt: '2026-09-11T10:05:00Z' } },
       payments: [{ id: 1, stage: 'deposit', amount: 12050 }] }, { estimate: EST(), approved: true });
     eq(auth.row.key, 'job_active', 'the activation row is the live one');
     eq(auth.row.state, 'blocked', 'and it is blocked');
-    eq(auth.a.primary, null, 'with no button — the fix is off-app');
+    eq(auth.a.primary, null, 'with no primary — the fix is off-app');
+    eq(auth.a.secondary.map((x) => x.label), ['&#10003; Letters received'], 'and the one press that records the paper (2026-10-19)');
 
     // Out-of-sequence actions, and the one rule that keeps them safe.
     const railDone = railFor({ approved: true, estimateSentDate: 'x' }, { estimate: EST(), approved: true });

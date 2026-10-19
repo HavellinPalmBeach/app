@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 5:39pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 6:10pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10428,6 +10428,38 @@ function resolveExecutorAuth(v) {
   }
   return 'pending';
 }
+// ⚠ THE ONE WRITER OF THE ANSWER (2026-10-19): Edit Client's save and the dashboard's ✓ Received press both come here. A
+// move into Received stamps the day and who recorded it (executorAuthOn, executorAuthBy: the record a trust officer asks
+// for, shown on the card); a move out of it clears them, so a paper set back to Pending never carries a stale day. The
+// answer itself is unchanged: 'pending', 'received' or 'notneeded', through resolveExecutorAuth.
+function authorityRecord(job, value) {
+  var v = resolveExecutorAuth(value), was = resolveExecutorAuth(job.executorAuth);
+  job.executorAuth = v;
+  if (v === 'received' && was !== 'received') { job.executorAuthOn = _todayStr(); job.executorAuthBy = _actor(job) || ''; }
+  else if (v !== 'received') { delete job.executorAuthOn; delete job.executorAuthBy; }
+  return v;
+}
+// The press on the dashboard (the blocked Activate job row, and the Probate or Trust card's chip): the paper is in hand,
+// recorded as received today, as a person's edit, and the row opens. Refused by name where there is no paper to record or
+// it is already recorded; asks first, since Activate job turns on it. Edit Client stays the place to correct a slip.
+function dashMarkAuthorityReceived(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return false; }
+  var auth = estateAuthority(job);
+  if (!auth) { dashNotice('warn', 'This job waits on no authority paper: a living client, or an estate whose matter has no court and no trust.'); _dashRedraw(jobId); return false; }
+  var cur = resolveExecutorAuth(job.executorAuth);
+  if (cur !== 'pending') { dashNotice('ok', 'The ' + auth.doc + ' is already recorded as ' + (cur === 'received' ? 'received' : 'not required') + '.'); _dashRedraw(jobId); return false; }
+  if (!confirm('Record the ' + auth.doc + ' as received today?\n\nDo this once ' + (auth.key === 'letters' ? 'a certified copy of the Letters' : 'a copy of the successor trustee’s Certification of Trust (§736.1017)')
+      + ' is in hand. It is the paper Activate job waits for. Pressed by mistake, set it back to Pending under Edit Client.')) return false;
+  authorityRecord(job, 'received');
+  _saveJobEdit(job);
+  renderJobs();
+  var left = jobActivationBlockers(job);
+  dashNotice('ok', auth.doc + ' recorded as received today' + (job.executorAuthBy ? ' by ' + job.executorAuthBy : '') + '. '
+    + (left.length ? 'Activate job still waits on: ' + _andJoin(left.map(function (b) { return b.toLowerCase(); })) + '.' : 'Activate job is open.'));
+  _dashRedraw(jobId);
+  return true;
+}
 function buildExecutorAuthOptions() {
   var el = document.getElementById('i-executor-auth');
   if (el) el.innerHTML = executorAuthOptionsHtml('pending');
@@ -17461,7 +17493,42 @@ function probatePackageBlocker(job) {
     : 'the estate attorney’s email (Edit Client, under Estate Attorney)');
   if (!job.driveFolder) miss.push('the client’s Drive folder (Create Drive folder, on this dashboard)');
   if (!SHEETS_SYNC_URL) miss.push('the Apps Script URL in Settings');
+  // ⚠⚠ THE INVENTORY FIRST (2026-10-19; Anthony, the first Ellison run: Ashley pressed Send trust package while the job waited on
+  // the Certification of Trust, and the package went out with every schedule a blank floor: *"I don't think we should allow anyone
+  // to create a trust package prior to the walkthrough and the photographs and the inventory being built, because that's really
+  // what the trust package is for"*; asked how strict, he took the recommendation: the inventory first, then a confirm naming the
+  // gaps). The package carries the inventory, which exists once the work starts, so a job not yet activated has nothing to send
+  // (the activation is the one fact this DOM-free blocker can read; the lines themselves are probatePackageInventoryBlocker, read
+  // off the manifest the send fetches from the sheet first). Until 2026-10-19 it was sendable at any stage with the gaps marked.
+  if (!(job.activatedOn || job.status === 'active' || job.status === 'closed' || job.deliveredOn))
+    miss.push('the job activated (the package carries the inventory, which is built once the work starts)');
   return miss.length ? 'The ' + R.name + ' cannot be sent yet: it needs ' + _andJoin(miss) + '.' : '';
+}
+// The lines (2026-10-19): the package carries the inventory, so with no named line on it there is nothing to send. Pure:
+// takes the manifest rows (the card hands it this device's once the sheet has been read, the send the rows it just fetched);
+// `null` rows mean unread, which refuses nothing here (the send reads the sheet first).
+function probatePackageInventoryBlocker(job, refs) {
+  var R = estatePackageRoute(job);
+  if (!R || refs === null || refs === undefined) return '';
+  var named = (refs || []).some(function (r) { return r && r.label === 'inventory' && !r.deletedAt && !!String(r.objectName || '').trim(); });
+  return named ? '' : 'The ' + R.name + ' cannot be sent yet: the inventory holds no named line. Photograph the house (the Job Plan) and name the shots (Job Admin & Inv): the package carries that inventory.';
+}
+// What the inventory still lacks when a package goes early (2026-10-19): rooms not yet locked, lines with no disposition, and on
+// a tier that states values lines with none. The send names them and asks first; the pages mark the same gaps.
+function probatePackageGaps(jobId) {
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  if (!job) return [];
+  var out = [];
+  var rooms = _planRooms(jobId).rooms.filter(function (r) { var st = _planRoomStatus(jobId, r.idx); return st !== 'locked' && st !== 'cleared'; }).length;
+  if (rooms) out.push(rooms + ' room' + (rooms === 1 ? '' : 's') + ' not yet locked');
+  var live = ((typeof _photoRefs !== 'undefined' && _photoRefs[jobId]) || []).filter(function (r) { return r && r.label === 'inventory' && !r.deletedAt && !!String(r.objectName || '').trim(); });
+  var und = live.filter(function (r) { return !String(r.disposition || '').trim(); }).length;
+  if (und) out.push(und + ' line' + (und === 1 ? '' : 's') + ' with no disposition');
+  if (docTierProduces(job, 'values')) {
+    var nov = live.filter(function (r) { return r.fmv === undefined || r.fmv === null || r.fmv === ''; }).length;
+    if (nov) out.push(nov + ' line' + (nov === 1 ? '' : 's') + ' with no value');
+  }
+  return out;
 }
 // WHOM THE PACKAGE IS ADDRESSED TO — one answer, read by the recipients and the greeting, so the To: line and the
 // "Dear …" cannot name two different people. The probate route goes to the estate attorney and nobody else (P17); the
@@ -17808,6 +17875,13 @@ function sendProbatePackage(jobId) {
       _docNotice('warn', 'The inventory could not be read from the sheet, so the package would go out without it. Check the connection, then press ' + W.send + ' again.', jobId);
       return;
     }
+    // The inventory first (2026-10-19): no named line, nothing to send; still being built, say what and ask.
+    var ib = probatePackageInventoryBlocker(job, _photoRefs[jobId] || []);
+    if (ib) { finish(); _docNotice('warn', ib, jobId); return; }
+    var gaps = probatePackageGaps(jobId);
+    if (gaps.length && !confirm('The inventory is still being built: ' + _andJoin(gaps) + '.\n\nThe ' + W.name + ' would go to ' + rcpt.to + ' now with those gaps marked on its pages. Send it anyway?')) {
+      finish(); _docNotice('warn', 'Not sent. Finish the inventory, then press ' + W.send + ' again.', jobId); return;
+    }
     var owed = probatePackageDocs(job);
     var pages = [], left = [];
     owed.forEach(function (k) {
@@ -17955,8 +18029,11 @@ function probatePackageCardHtml(job) {
     if (stale) lines.push(esc(stale));
     var shares = photoSharesLine(job);
     if (shares) lines.push(esc(shares));
-    var blk = probatePackageBlocker(job);
-    if (blk) lines.push('<span style="color:#A32D2D;">' + esc(blk) + '</span>');
+    // A press the gate would refuse is withheld, never offered (2026-10-19): the job's own blockers, then the inventory's once
+    // this device has read the sheet (unread, the send reads it first and asks there).
+    var blk = probatePackageBlocker(job)
+      || probatePackageInventoryBlocker(job, (typeof _invCloudSeen !== 'undefined' && _invCloudSeen[id] && typeof _photoRefs !== 'undefined') ? (_photoRefs[id] || []) : null);
+    if (blk) { btns = ''; lines.push('<span style="color:#A32D2D;">' + esc(blk) + '</span>'); }
     // To whom it will go, asked of the send's own recipients; on the trust route the fallback is named for what it is.
     else lines.push(esc('Carries the ' + _andJoin(probatePackageDocs(job).map(function (k) { return PROBATE_PKG_TITLES[k]; }))
       + ', with links to the photographs and the release and custody record, to '
@@ -19179,7 +19256,7 @@ function jobTimeline(job, estRec, logs, cos, sched, settle) {
       blockedWhy: authBlocker, blockedFix: authBlocker
         ? ('Contact ' + (job.executor || 'the authorized representative')
           + (job.executorPhone ? ' on ' + job.executorPhone : (job.executorEmail ? ' at ' + job.executorEmail : ''))
-          + ' — the ' + _authJt.short + ' must be received before work can start.')   // the paper by route (P19)
+          + ' — the ' + _authJt.short + ' must be received before work can start. Once it is in hand, press ✓ ' + _authJt.short + ' received here.')   // the paper by route (P19); the press 2026-10-19
         : '' }, _sc && _sc.start, 'start')),
 
     // ⚠ THE PLANNED DATE HERE IS THE CALENDAR HALFWAY OF THE JOB, NOT A DUE DATE FOR THE
@@ -22447,6 +22524,13 @@ function jobTimelineActions(row, job, estRec) {
       // ⚠ Never on a CLOSED job. The one closed job this row can be lit on is a legacy one, closed before
       // the handover stamp shipped (2026-07-30) — it carries no `deliveredOn`, so this row reads undone.
       // Its press would be a re-open, and it is offered as one, below, rather than as "Activate".
+      // ⚠ EXCEPT THE PAPER ITSELF (2026-10-19; Anthony, the first Ellison run: *"there was no way to activate it to then get
+      // denied … you have to go back into edit client, scroll down, find the box, tick the drop down … it should just be a
+      // button that says received"*). The one blocker this row holds is the representative's authority paper, and it is a
+      // fact the concierge learns in the field; the press records it (dashMarkAuthorityReceived, the one writer with Edit
+      // Client's save, authorityRecord) and the row opens. A secondary, never the primary: the primary stays Activate job.
+      if (row.state === 'blocked' && estateAuthority(job) && resolveExecutorAuth(job.executorAuth) === 'pending')
+        out.secondary.push({ label: '&#10003; ' + estateAuthority(job).short + ' received', call: 'dashMarkAuthorityReceived(' + id + ')' });
       if (row.state === 'current' && job.status !== 'closed') out.primary = { label: '&#9654; Activate job', call: 'activateOrCycle(' + id + ')' };
       break;
 
@@ -23771,7 +23855,7 @@ function renderClientDashboard(jobId) {
     // ⚠ "Not required" says so, on the chip and beside the representative alike. Both read "received" for it, a
     // claim about a paper nobody was sent (P19, found in passing while the chip was rewritten for the trust card).
     var _authVal = job.executorAuth === 'notneeded' ? '<span style="color:#1D9E75;">Not required</span>'
-      : authOk ? '<span style="color:#1D9E75;">Received</span>'
+      : authOk ? '<span style="color:#1D9E75;">Received' + (job.executorAuthOn ? ' · recorded ' + esc(fmtDate2(job.executorAuthOn)) + (job.executorAuthBy ? ' by ' + esc(job.executorAuthBy) : '') : '') + '</span>'
       : '<span style="color:#A32D2D;font-weight:600;">' + dot('#A32D2D') + 'Pending</span>';
     h += '<div class="card" style="margin-bottom:12px;">';
     h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
@@ -23779,6 +23863,8 @@ function renderClientDashboard(jobId) {
     h += '<div style="display:flex;align-items:center;gap:12px;">';
     h += '<span style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:'+(authOk?'#1D9E75':'#A32D2D')+'">';
     h += dot(authOk?'#1D9E75':'#A32D2D') + _authWord + (job.executorAuth === 'notneeded' ? ' not required' : authOk ? ' received' : ' pending — blocker') + '</span>';
+    // The press, beside the chip, while the paper is pending (2026-10-19): the same writer as the Activate row's button.
+    if (!authOk) h += '<button class="btn-s" style="font-size:11px;padding:3px 9px;" onclick="event.stopPropagation();dashMarkAuthorityReceived(' + job.id + ')">&#10003; Received</button>';
     // (The 📧 Send Package toggle that sat here sent nothing; the real send is the package row at the foot of this card,
     // 2026-10-01, P17 — see probatePackageCardHtml.)
     h += '</div>';
@@ -24155,9 +24241,9 @@ var JOB_TRANSITIONS = {
 // line is the probate gate's own, byte for byte, as it read before P19. `hint` sits under intake's control.
 var ESTATE_AUTHORITY_WORDS = {
   letters:       { gate: 'Executor authorization must be received',
-                   hint: 'Leave Pending unless a certified copy is already in hand. On probate the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.' },
+                   hint: 'Leave Pending unless a certified copy is already in hand. On probate the job cannot be activated until this reads Received — when it arrives, press Received on the dashboard (beside Activate job, or on the card’s chip), or correct it under Edit Client.' },
   certification: { gate: 'The successor trustee’s Certification of Trust must be received',
-                   hint: 'The successor trustee’s proof of authority (Fla. Stat. §736.1017). Leave Pending unless a copy is already in hand. On a trust the job cannot be activated until this reads Received — correct it under Edit Client when it arrives.' }
+                   hint: 'The successor trustee’s proof of authority (Fla. Stat. §736.1017). Leave Pending unless a copy is already in hand. On a trust the job cannot be activated until this reads Received — when it arrives, press Received on the dashboard (beside Activate job, or on the card’s chip), or correct it under Edit Client.' }
 };
 function jobActivationBlockers(j) {
   var blockers = [];
@@ -26457,12 +26543,26 @@ function buildMimeMessage(o) {
   L.push(_b64Wrap(o.html || ''));
   L.push('--' + alt + '--');
   var parts = (o.pdfBase64 ? [{ name: o.pdfName, base64: o.pdfBase64 }] : []).concat(o.attachments || []);
-  parts.forEach(function (a) {
+  // ⚠⚠ EVERY ATTACHMENT PART CARRIES THE ID GMAIL'S OWN COMPOSER WRITES (2026-10-19; Anthony, the first Ellison run:
+  // *"look how the pdf renders as a '?'. it's really not obvious that anything is attached"*). Gmail's composer stamps
+  // each attachment with `X-Attachment-Id: f_…` and the same id as its `Content-ID`; a draft made through the API
+  // carried neither, and when the draft was saved or sent from the Gmail window Gmail rewrote the part with EMPTY ones
+  // (`X-Attachment-Id:` and `Content-ID: <>`, read off the sent deposit invoice and the sent estimate of 2026-10-19).
+  // Apple Mail shows a one-page PDF inline, by that id, so every invoice (one page) arrived on a Mac as a blue box with
+  // a question mark and no name, while the four-page estimate, shown as a card, looked fine. Two attachments with the
+  // same empty id are also one attachment to Gmail (the package's six parts can be downloaded as each other's bytes).
+  // The id is Gmail's own shape, `f_` + 10 characters, unique within the message by the part's index; the disposition
+  // stays `attachment` and the part stays in multipart/mixed, so no client reads it as an inline image.
+  var attId = 'f_' + Date.now().toString(36);
+  parts.forEach(function (a, i) {
     if (!a || !a.base64) return;
+    var id = attId + ('0' + i.toString(36)).slice(-2);
     L.push('--' + mix);
     L.push('Content-Type: application/pdf; name="' + a.name + '"');
     L.push('Content-Disposition: attachment; filename="' + a.name + '"');
     L.push('Content-Transfer-Encoding: base64');
+    L.push('X-Attachment-Id: ' + id);
+    L.push('Content-ID: <' + id + '>');
     L.push('');
     // Apps Script hands back unwrapped base64; MIME wants lines of at most 76 chars.
     L.push(String(a.base64).replace(/\s+/g, '').replace(/(.{76})/g, '$1\r\n'));
@@ -43590,9 +43690,9 @@ function planDerivedLines(jobId, job, est, phase, today) {
       var authOk = job.executorAuth === 'received' || job.executorAuth === 'notneeded';
       out.push({ key: auth.key, ok: authOk, label: auth.doc + ' on file',
                  detail: job.executorAuth === 'notneeded' ? 'not required on this matter' : (authOk ? 'received'
-                   : 'pending — ' + (auth.key === 'letters' ? 'recorded under Edit Client when the certified copy arrives'
-                       : 'the ' + auth.holder + '’s proof of authority (' + auth.cite + '); recorded under Edit Client when it arrives')
-                     + ', and the job cannot activate without it') });
+                   : 'pending — ' + (auth.key === 'letters' ? 'press ✓ Letters received beside Activate job when the certified copy arrives'
+                       : 'the ' + auth.holder + '’s proof of authority (' + auth.cite + '); press ✓ ' + auth.short + ' received beside Activate job when it arrives')
+                     + ' (or record it under Edit Client), and the job cannot activate without it') });
     }
     // ⚠ ASKED ON A PROBATE MATTER, SHOWN ANYWHERE ONE IS RECORDED (2026-09-29, audit P10). It sat red on
     // a trust administration with no attorney, where there is none to record — a successor trustee
@@ -53727,7 +53827,7 @@ function saveClientEdit(jobId) {
     job.executorRole     = _keep('exec-role', job.executorRole);   // the catalogue plus the recorded value (executorRoleOptionsHtml)
     job.executorPhone    = document.getElementById('ec-exec-phone').value;
     job.executorEmail    = document.getElementById('ec-exec-email').value;
-    job.executorAuth     = resolveExecutorAuth(document.getElementById('ec-exec-auth').value);
+    authorityRecord(job, document.getElementById('ec-exec-auth').value);   // the one writer (2026-10-19): stamps a move into Received
     // Every co-representative the modal changed, added or took off, each through the record list (P19): a person's
     // edit stamped on that entry alone. A row untouched is not written again.
     saveCoFiduciaryRows(job, _coFormEc);

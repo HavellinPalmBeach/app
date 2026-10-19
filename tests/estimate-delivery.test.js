@@ -420,6 +420,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(mime, 'Content-Type: text/html; charset="UTF-8"', 'an HTML part');
     has(mime, 'Content-Type: application/pdf', 'and the PDF');
     has(mime, 'Content-Disposition: attachment; filename="Havellin Service Estimate.pdf"', 'named for the client');
+    // ⚠⚠ THE PART CARRIES THE ID GMAIL'S OWN COMPOSER WRITES (2026-10-19). Without one, Gmail rewrote the part with an
+    // empty `X-Attachment-Id:` and `Content-ID: <>` when the draft was sent from its window, and Apple Mail, which shows
+    // a one-page PDF inline by that id, showed every invoice as a blue box with a question mark and no name. Anthony:
+    // "look how the pdf renders as a '?'. it's really not obvious that anything is attached".
+    const pdfPart = mime.slice(mime.indexOf('Content-Type: application/pdf'), mime.indexOf('\r\n\r\n', mime.indexOf('Content-Type: application/pdf')));
+    const attId = (/^X-Attachment-Id: (f_[0-9a-z]{10})$/m.exec(pdfPart) || [])[1];
+    ok(!!attId, 'the PDF part carries an X-Attachment-Id in Gmail\'s own shape, f_ and ten characters (' + pdfPart.split('\r\n').join(' | ') + ')');
+    has(pdfPart, 'Content-ID: <' + attId + '>', '⚠ and the same id as its Content-ID, never an empty one');
+    has(pdfPart, 'Content-Disposition: attachment;', 'the disposition stays attachment: the id does not make it an inline image');
     has(mime, '=?UTF-8?B?', 'the subject is RFC 2047 encoded, so the em dash survives');
     // ⚠ THE ASSERTION THAT MATTERS, AND THE ONE THE FIRST VERSION LACKED. Checking that CRLF
     // is *present* passes on a message that is mostly CRLF with a few bare LFs hidden inside
