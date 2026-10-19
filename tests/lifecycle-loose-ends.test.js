@@ -114,7 +114,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // M5 — THE MATTER DECIDES WHETHER THERE IS A COURT, NOT THE SERVICE THAT WAS SOLD
   // ═══════════════════════════════════════════════════════════════════════════
   const M5_FNS = ['jobOnProbateTrack', 'courtRecordShown', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
-    'jobActivationBlockers', 'resolveExecutorAuth', 'inventoryDeadlineFrom', '_ymdLocal', 'estateAuthority'];
+    'jobActivationBlockers', 'resolveExecutorAuth', 'authorityRecord', 'inventoryDeadlineFrom', '_ymdLocal', 'estateAuthority'];
   const M5_VARS = ['MATTER_TYPES', 'DECEDENT_SERVICES', 'EXECUTOR_AUTH_OPTIONS', 'ESTATE_AUTHORITY_WORDS', 'ESTATE_AUTHORITIES'];
   const M = sandbox({ fns: M5_FNS, vars: M5_VARS });
 
@@ -187,7 +187,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   const EC_FNS = ['showEditClient', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
-    'executorAuthOptionsHtml', 'resolveExecutorAuth', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
+    'executorAuthOptionsHtml', 'resolveExecutorAuth', 'authorityRecord', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
     'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
     'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
     'docLevelFloorReason', 'resolveDocLevel', 'docStandardEffect', 'isFormalDoc', 'invAppraisalThreshold', 'matterTypeOf', 'matterDef',
@@ -201,7 +201,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'ec-sqft': job.sqft || '', 'ec-premium': 'no', 'ec-date-of-death': job.deathDate || '' }, seed || {}));
     const c = sandbox({ fns: EC_FNS, vars: EC_VARS,
       stubs: { document: d, jobs: [JSON.parse(JSON.stringify(job))], estimateStore: {},
-               saveJobs() {}, syncJobToSheets() {}, renderClientDashboard() {}, renderJobs() {}, alert() {} } });
+               saveJobs() {}, syncJobToSheets() {}, renderClientDashboard() {}, renderJobs() {}, alert() {},
+               _todayStr: () => '2026-10-19', _actor: () => 'Ashley Jerome' } });   // the authority writer's stamp (2026-10-19)
     return { d, c };
   }
 

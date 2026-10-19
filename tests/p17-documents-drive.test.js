@@ -643,6 +643,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         saveJobs: () => saves.push('jobs'), syncJobToSheets: () => saves.push('sync'), _dashRedraw() {},
         _docNotice: (t, m) => notices.push({ t, m: String(m) }), dashNotice: (t, m) => notices.push({ t, m: String(m) }),
         _dashSendState: (k, l) => steps.push(l), showSyncBadge: (m) => badges.push(String(m)),
+        confirm: () => true,   // the gaps confirm (2026-10-19): answered yes here; p18 holds the no
       }, o.stubs || {}));
     return { c, N, notices, steps, badges, opened, hrefs, saves, job: () => c.jobs[0] };
   }
@@ -841,15 +842,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has((pdfFail.notices[pdfFail.notices.length - 1] || {}).m, 'The Appraisal Worklist could not be made into a PDF, so it is linked from Drive instead of attached', 'and the notice says so');
     eq(JSON.parse(JSON.stringify(pdfFail.job().docState.probatePackage.pkg.docs)), ['court', 'schedule', 'ledger'], 'the record names what was attached');
 
-    // A document the inventory cannot yet produce is left out, and the notice (the sender's, not the attorney's) says why.
+    // An empty inventory no longer goes at all (2026-10-19; Anthony, the first Ellison run: a trust package went out by accident
+    // with every schedule blank): refused by name once the sheet has been read, nothing drafted. Until then the report and
+    // the ledger were left out by name and the rest went as working drafts; p18 group K holds the gate.
     const empty = pkgRig({ rows: [] });
     empty.c.sendProbatePackage(7);
     const em = empty.notices[empty.notices.length - 1] || {};
-    has(em.m, 'Not in the package: the Estate Inventory Report — There is nothing in the inventory to report yet.', '⚠ an empty inventory: the report is left out, by name, with its reason');
-    has(em.m, 'Not in the package: the Disposition Ledger — There is nothing in the inventory to record yet.', 'P19: and so is the ledger, which has nothing to record');
+    has(em.m, 'The probate package cannot be sent yet: the inventory holds no named line.', '⚠⚠ an empty inventory: refused by name after the read');
     eq(em.t, 'warn', 'and the notice warns');
-    eq(mimeParts(empty.N.log.drafts[0] || '').pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Appraisal Worklist'],
-       'the rest still goes, the Court Inventory as the working draft it is');
+    eq((empty.N.log.drafts || []).length, 0, 'nothing drafted');
+    // A document a named-but-thin inventory cannot yet produce is still left out by name: the worklist with nothing flagged.
+    const thin = pkgRig({ rows: [ROW('t', { objectName: 'Umbrella stand', fmv: 40, disposition: 'Donate' })] });
+    thin.c.sendProbatePackage(7);
+    const tm = thin.notices[thin.notices.length - 1] || {};
+    has(tm.m, 'Draft created', 'one named line: the package goes');
 
     // A filing that did not land is named in the notice; the draft still carries the document.
     const unfiled = pkgRig({ net: { failUpload: /Court Inventory/ } });
