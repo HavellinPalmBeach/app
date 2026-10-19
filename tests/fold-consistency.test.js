@@ -47,10 +47,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ the caret is on the LEFT of the bar, which is the thing that was asked for');
   {
     const w = sandbox({ fns: ['planPhaseWrap', 'secCaret'], vars: ['_planOpenPhases'] });
-    const out = w.planPhaseWrap('hours', 'Hours &amp; daily close', 'BODY', 'today 3 hrs');
+    const out = w.planPhaseWrap('hours', 'Job crew, hours &amp; daily close', 'BODY', 'today 3 hrs');
 
     const caretAt = out.indexOf('sec-caret');
-    const titleAt = out.indexOf('Hours &amp; daily close');
+    const titleAt = out.indexOf('Job crew, hours &amp; daily close');
     const metaAt  = out.indexOf('stage-meta');
     ok(caretAt > -1, 'the fold draws a caret at all');
     ok(caretAt < titleAt, '⚠ the caret comes BEFORE the title — it sat at the far right until 2026-09-20');
