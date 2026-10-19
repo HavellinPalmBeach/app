@@ -23,7 +23,7 @@ const { sandbox } = require('./harness');
 
 const ROOT = path.join(__dirname, '..');
 const SHIPPED = ['havellin.html', 'manual.html', 'concierge-guide.html', 'firearms-protocol.html', 'photography-guide.html',
-  'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html', 'MANUAL.md', 'CONCIERGE_GUIDE.md']
+  'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html', 'incident-guide.html', 'MANUAL.md', 'CONCIERGE_GUIDE.md']
   .concat(fs.readdirSync(path.join(ROOT, 'apps-script')).filter((f) => f.endsWith('.gs')).map((f) => 'apps-script/' + f));
 
 module.exports = function ({ group, ok, eq }) {
