@@ -226,6 +226,8 @@ ul.plain li::before{
   background:var(--rule-strong);border:1px solid var(--rule-strong);margin-top:6px;
 }
 .side{background:var(--paper);padding:18px 20px 10px;}
+/* Three columns on a page two wide: the third runs full width rather than leaving a bare cell beside it. */
+.split .side:nth-child(3){grid-column:1 / -1;}
 .side h4{font-family:var(--ff-display);font-size:19px;font-weight:600;margin:0 0 12px;line-height:1.25;}
 .side.own h4{color:var(--bronze);}
 
@@ -321,7 +323,7 @@ footer p{max-width:66ch;}
       <span><b>For</b> Anyone photographing a house for an inventory</span>
       <span><b>Camera</b> The Havellin app: Job Plan, then the room</span>
       <span><b>Status</b> Draft for Anthony</span>
-      <span><b>Issued</b> 6 Oct 2026</span>
+      <span><b>Issued</b> 6 Oct 2026</span><span><b>Updated</b> 19 Oct 2026</span>
     </div>
   </header>
 
@@ -329,7 +331,7 @@ footer p{max-width:66ch;}
     <h2>How it works</h2>
     <p>Your photos become the inventory: the list of everything in the house that the family, the
       attorney and the appraiser will rely on. The app looks at each photo on its own and writes down
-      everything it can see in it. It cannot tell that two photos show the same thing, so if you photograph
+      everything it can see in it, apart from whatever the thing is sitting on. It cannot tell that two photos show the same thing, so if you photograph
       a vase twice, the list says there are two vases.</p>
   </section>
 
@@ -337,8 +339,8 @@ footer p{max-width:66ch;}
     <div class="rule-card">
       <span class="tag">Rule 1</span>
       <h4>Photograph each thing once</h4>
-      <p>One item photo for each thing, or for each group of everyday things. Never a second item photo of
-        the same thing.</p>
+      <p>One item photo for each thing, or for each group of everyday things of one kind. Never a second item
+        photo of the same thing.</p>
     </div>
     <div class="rule-card">
       <span class="tag">Rule 2</span>
@@ -366,8 +368,9 @@ footer p{max-width:66ch;}
             <td>The room exactly as you found it, before anything is moved.</td>
             <td class="how">No. A record of the room; it cannot be deleted.</td></tr>
           <tr><td>&#128247; Items</td>
-            <td>One photo of each thing, or of each group of everyday things.</td>
-            <td class="how">Yes. Each thing in it goes on the list.</td></tr>
+            <td>One photo of each thing, or of each group of everyday things of one kind. Never the inside of a
+              drawer, cabinet or closet.</td>
+            <td class="how">Yes. Everything the app can see in it goes on the list.</td></tr>
           <tr><td>Close-up</td>
             <td>Close-ups of the thing you just photographed: the back, a signature, a label, damage. One press each.</td>
             <td class="how">No. Filed with that thing.</td></tr>
@@ -441,10 +444,13 @@ footer p{max-width:66ch;}
       <div class="stage" data-n="3">
         <p class="stage-h">Sort</p>
         <ul>
-          <li>Pull out anything that needs its own photo (the list below).</li>
+          <li>Go through every drawer, cabinet, closet and box. This is a search, not a photo session.</li>
+          <li>Spread the plain cloth from the kit on the dining table or a made bed.</li>
+          <li>Pull out anything that needs its own photo (<em>What goes on the list</em>, below) and set it on the
+            cloth.</li>
           <li>Gather everyday things of one kind, going to the same place, onto one surface: the
-            paperbacks, the linens, the everyday glasses.</li>
-          <li>Keep pairs and sets together.</li>
+            paperbacks, the linens, the everyday glasses, the clothes on the rail.</li>
+          <li>Keep pairs and sets together. Leave what gets no photo where it is.</li>
         </ul>
       </div>
 
@@ -454,6 +460,8 @@ footer p{max-width:66ch;}
           <li>Work around the room in one direction. The things you pulled out first, one photo each, then
             each group.</li>
           <li>Furniture last: clear it, close the drawers, then photograph it.</li>
+          <li class="crit">Never an item photo of the inside of a drawer, cabinet or closet. The app lists everything
+            it can see, so one kitchen drawer comes back as twelve items.</li>
           <li class="crit">Before every photo, check the edges. Nothing you have photographed, or will
             photograph, should be in it.</li>
           <li>A full bookcase or china cabinet you cannot empty: take out anything special first, then
@@ -487,7 +495,9 @@ footer p{max-width:66ch;}
   </section>
 
   <section>
-    <h2>Its own photo, or a group photo?</h2>
+    <h2>What goes on the list</h2>
+    <p class="lede">Everything in the house is accounted for in one of three ways: its own photo, a group photo, or
+      the as-found photos alone. Nothing is skipped for being cheap; cheap things are counted in groups.</p>
     <div class="split">
       <div class="side own">
         <h4>Its own photo</h4>
@@ -498,21 +508,49 @@ footer p{max-width:66ch;}
           <li>Anything signed, stamped or hallmarked.</li>
           <li>Anything that may need an appraisal.</li>
           <li>Anything going to a particular person, or somewhere different from what is around it.</li>
-          <li>On an estate filing a federal estate tax return (Form 706): anything that might be worth more
-            than $100. Tax rules do not allow those inside a group.</li>
+          <li>Anything that might be worth more than $100 on its own: a lamp, a stand mixer, a set of golf
+            clubs, a designer handbag. On an estate filing a federal estate tax return (Form 706) this is the
+            tax rule: nothing worth more than $100 may sit inside a group.</li>
         </ul>
       </div>
       <div class="side">
-        <h4>A group photo</h4>
+        <h4>One group photo</h4>
         <ul class="plain">
           <li>Everyday things of one kind going to the same place: books, linens, kitchenware, everyday
-            glasses and dishes, tools, clothes on a rail, holiday decorations.</li>
-          <li>Spread them out so they can be counted. The app lists them as one item with a count, like
-            &ldquo;Flatware, 30 pieces&rdquo;.</li>
+            glasses and dishes, tools, clothes on a rail, shoes, toys, holiday decorations.</li>
+          <li>Gather them, spread them so they can be counted, one photo. The app lists them as one item with
+            a count, like &ldquo;Flatware, 30 pieces&rdquo; or &ldquo;Women&rsquo;s clothing, about 40
+            pieces&rdquo;. Say the count if you know it.</li>
+          <li>One kind per photo. Two kinds in one photo come back as two items.</li>
           <li>A pair or a set goes in one photo, together.</li>
         </ul>
       </div>
+      <div class="side">
+        <h4>No item photo at all</h4>
+        <ul class="plain">
+          <li>What is being thrown away or used up: food, opened toiletries and cosmetics, cleaning supplies,
+            medicines, worn underwear and socks, worn-out clothes and shoes, hangers, cables and chargers,
+            old magazines, paper, packaging, plastic storage boxes.</li>
+          <li>The as-found photos of the room are the record that they were there. They go out in bulk and
+            nobody signs for them.</li>
+          <li>Cash, papers, cars and firearms have their own rules, under <em>Special situations</em>.</li>
+        </ul>
+      </div>
     </div>
+
+    <h3>Drawers, cabinets and closets</h3>
+    <p>Open every one in the as-found pass and photograph it as it sits. In the item pass, never photograph the
+      inside of one: go through it instead. Anything from the first column comes out for its own photo; everyday
+      things of one kind become one group photo on the cloth or the bed; the rest gets no photo. A sock drawer is no
+      photo. A closet of clothes going to charity is one photo of the rail, with the count said aloud. A drawer of
+      mixed small things the family wants kept together is one photo of the open drawer, and the app lists it as
+      one item named for the drawer and what is in it.</p>
+
+    <h3>The surface does not count</h3>
+    <p>The app records what the photo is of, not what it sits on or in. Clothes laid on the bed come back as the
+      clothes; the bed, the table, the cloth, the floor and the open drawer around them are background. The one
+      exception is a photo where a piece of furniture is the only thing in it, which is how furniture is
+      photographed: cleared, drawers closed, last.</p>
   </section>
 
   <section>
@@ -586,14 +624,19 @@ footer p{max-width:66ch;}
       <li>Fill the photo with the thing: step back for big pieces, in for small ones.</li>
       <li>Hold still for a second so the picture sharpens.</li>
       <li>Glass, framed art and silver: step to one side to lose the glare.</li>
-      <li>Put small things on something plain, like a towel or the bed.</li>
+      <li>Small things go on the plain cloth from the kit, or a made bed: one thing or one group at a time. Keep
+        two cloths in the kit, a white or light grey sheet for most things and a dark one for jewelry and silver.</li>
       <li>Blurry? Tap the trash can on the <em>Last</em> panel straight away and take it again.</li>
     </ul>
   </section>
 
   <section>
     <h2>After the visit, on the computer</h2>
-    <p class="lede">On the <strong>Job Admin &amp; Inv</strong> tab, in this order.</p>
+    <p class="lede">On the <strong>Job Admin &amp; Inv</strong> tab, in this order. Work each row, not each
+      record: the row holds everything an ordinary item needs from you, its name, its destination and its value
+      (<span class="btn">Accept value</span>). The <span class="btn">&#9662;</span> opens the full record, which
+      you need only for an exception: a serial number, an appraiser, a dispute, a gift promised to someone, the
+      chain of custody. The rest fills itself, or is for the papers at the end of the job.</p>
     <ol class="desk">
       <li>Tap <span class="btn">Retry</span> on anything not saved, then <span class="btn">Name N shots</span>.
         The app names every photo, then compares all the photos of each room to find anything photographed
@@ -606,6 +649,10 @@ footer p{max-width:66ch;}
         <span class="btn">Use that line</span>.</li>
       <li>An item marked <strong>&#128279; 1 of N in this photo</strong> came out of a photo of several
         things. Give it its destination, and move the Appraise flag to the right item.</li>
+      <li>Photographed the inside of drawers by mistake? Tick the items (<span class="btn">Select all</span> on
+        the group, or filter to the room), press <span class="btn">Remove lines</span> on the bar and confirm:
+        they come off the list, the photos stay, and <em>Removed items</em> at the foot gives them back. Or tap
+        the trash can on the drawer photo in its room, which deletes the photo and takes its items with it.</li>
       <li>Compare each room&rsquo;s list with its as-found photos: anything missing, anything doubled?</li>
       <li>Then tap <span class="btn">Value N lines</span>.</li>
     </ol>
@@ -625,10 +672,12 @@ footer p{max-width:66ch;}
     <h2>Shooting a room</h2>
     <ol>
       <li><b>As found first.</b> Nothing moved.</li>
-      <li><b>One item photo per thing.</b> Check the edges.</li>
+      <li><b>One item photo per thing,</b> or per group of one kind. Check the edges.</li>
       <li><b>Extra angles:</b> press Close-up.</li>
       <li><b>Different destination, different photo.</b></li>
-      <li><b>Special things out first,</b> one photo each.</li>
+      <li><b>Special things out first,</b> one photo each, on the cloth.</li>
+      <li><b>Drawers: search them,</b> never photograph the inside.</li>
+      <li><b>Used up or worn out?</b> No photo. The as-found photos have it.</li>
       <li><b>Small things first, furniture last.</b></li>
       <li><b>Talk before the close-ups.</b></li>
       <li><b>Blurry?</b> Delete it and take it again.</li>
@@ -638,7 +687,9 @@ footer p{max-width:66ch;}
   </section>
 
   <footer>
-    <p><strong>Draft for Anthony, 6 October 2026,</strong> rewritten the same day in plain words. The
+    <p><strong>Draft for Anthony, 6 October 2026,</strong> rewritten the same day in plain words; <em>What goes on
+      the list</em>, the drawers and the cloth added 19 October 2026, after the first practice job filled the
+      inventory from the kitchen drawers. The
       <a href="concierge-guide.html">Concierge Guide</a> explains each screen and button (Step 10a in the
       house, Step 10e on the computer); this page is the method. The
       <a href="firearms-protocol.html">Firearms Protocol</a> covers everything to do with a firearm.</p>

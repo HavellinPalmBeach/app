@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 5:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 6:49pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -29366,12 +29366,45 @@ function invRemoveLine(jobId, stableId) {
 // The one writer of a desk removal: tombstoned, stamped with who, touched so it wins the merge.
 // Tombstone rather than splice: absence is indistinguishable from "the other device has not seen it
 // yet", so a splice is undone by the next merge.
-function _invTombstoneLine(jobId, ref) {
+function _invTombstoneLine(jobId, ref, opts) {
   ref.deletedAt = Date.now();
   ref.deletedBy = _invStampBy(_invJob(jobId));
   _invTouch(ref);
   _setPhotoRef(jobId, ref);
+  // A sweep (`invBulkRemove`) tombstones its lines one by one and saves the manifest once: `savePhotoRefs`
+  // rewrites the whole manifest, so three hundred saves of a three-hundred-line manifest is an iPad
+  // standing still. `defer` leaves the one save to the caller, which must make it.
+  if (!(opts && opts.defer)) savePhotoRefs(jobId);
+}
+
+// ⚠⚠ REMOVE EVERY SELECTED LINE AT ONCE (2026-10-19; Anthony, the dummy job in his own apartment: the Items pass
+// photographed the inside of every drawer, Agent One listed what it saw, and the inventory was *"hundreds and
+// hundreds of items, like golf balls and scotch tape dispensers"*, with one Remove line per item the only way
+// back). The bulk bar's **Remove lines** is `invRemoveLine`'s rule across the selection, through the desk's one
+// removal writer: each line a stamped tombstone (who, when) that wins the merge, its number spent for good,
+// Removed items giving it back. IT REMOVES THE LINES AND NEVER A PHOTOGRAPH: the room's bin is the only image
+// delete, and it takes a photograph's lines with it; here the file stays in Drive and in the room's strip, which
+// is what a re-shoot of the room wants left alone. Only a live inventory line can be picked (`_invPicked` reads
+// `_jobInvRefs`: inventory lines, no collection document, no tombstone), which is `invRemoveLine`'s own guard. The
+// confirm names the first eight lines rather than a bare count: "212 lines" invites a yes; "#3 Tesla key card ·
+// #15 Scotch tape dispensers …" is the work about to go.
+function invBulkRemove(jobId) {
+  var lines = _invPicked(jobId);
+  if (!lines.length) return false;
+  var shown = lines.slice(0, 8).map(function(r){ return '  \u00b7 #' + _invItemNo(r) + ' ' + (r.objectName || '(unnamed)'); });
+  var msg = 'Remove ' + lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' from the inventory?\n\n'
+    + shown.join('\n') + (lines.length > shown.length ? '\n  \u00b7 and ' + (lines.length - shown.length) + ' more' : '')
+    + '\n\nTheir numbers are never given to anything else. No photograph is deleted: each stays in Google Drive and in its room, '
+    + 'and a line that shares one keeps it.'
+    + '\n\nRemoved items, at the foot of this tab, gives them back.';
+  if (!window.confirm(msg)) return false;
+  lines.forEach(function(r){ _invTombstoneLine(jobId, r, { defer: true }); });
   savePhotoRefs(jobId);
+  _invPick = {};
+  showSyncBadge(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' removed \u2014 Removed items, at the foot of the tab, gives them back', false);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return lines.length;
 }
 
 // ── Appraisal worklist ────────────────────────────────────────────────────────
@@ -38080,6 +38113,8 @@ function _renderInvBulk(job) {
     + '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
     + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
     + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
+    // Remove lines (2026-10-19): the selection off the inventory at once, photographs kept, Removed items giving them back.
+    + '<button onclick="invBulkRemove(' + jid + ')" style="' + btnStyle + 'color:var(--err-tx);" title="Take every selected line off the inventory. No photograph is deleted, and Removed items gives them back.">Remove lines</button>'
     + '<button onclick="_invClearPicks()" style="' + btnStyle + 'background:none;color:var(--cream);">Clear</button>'
     + result
     + '</div>';

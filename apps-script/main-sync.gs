@@ -69,7 +69,11 @@
 // survive. No action or type changes; the app's BACKEND_MIN_VERSION names it.
 // ⚠ 2026-10-16 (P26): `incidents` (anything that goes wrong on a job: INCIDENT_REPORTING_SPEC.md) joins the record lists
 // merged entry by entry (JOB_KEYED_LISTS, JOB_LIST_KEY). No action or type changes; the app names an older deployment by version.
-var BACKEND_VERSION = '2026-10-16';
+// ⚠ 2026-10-19: Agent One's naming prompt (`_agSystem`) carries three rules *Photographing a House* promises: the surface
+// or container a thing sits on or in is background, never a line; a drawer or shelf of mixed small everyday things is
+// one line named for the container; opened consumables, worn underwear and household rubbish are not inventoriable.
+// No action or type changes; until it is live a photograph of socks in a drawer still comes back as the socks and the dresser.
+var BACKEND_VERSION = '2026-10-19';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -3039,7 +3043,21 @@ function _agSystem(ctx) {
     + 'Musical Instruments. Also to anything carrying a readable maker\'s mark, signature or '
     + 'hallmark, and to anything visibly individual or valuable.\n'
     + 'Aim for the count a person would actually work through. A large house should come out in '
-    + 'the hundreds of lines, not the thousands.\n\n'
+    + 'the hundreds of lines, not the thousands.\n'
+    // 2026-10-19 (Anthony, the first practice job: a photograph of socks in an open drawer came back as the socks AND
+    // "Wood dresser with white-lined drawer", and a kitchen drawer as twelve lines). Three rules the field guide,
+    // *Photographing a House*, promises: the surface is background, a mixed drawer is one line, rubbish is not inventory.
+    + 'The photograph is OF one thing or one group. What it sits on or in is background, not an object: '
+    + 'never record the table, bed, dresser, shelf, cloth or floor under the subject, or the drawer, '
+    + 'cabinet or closet it is shown in, unless that piece of furniture is itself the only thing in the frame.\n'
+    + 'A drawer, shelf, box, bin or bag of mixed small everyday things is ONE line for the whole of it, '
+    + 'named for the container and what it holds ("Kitchen drawer contents: tape, batteries, golf balls, '
+    + 'stationery"), qty 1, never a line per kind. Take something out of it onto a line of its own only '
+    + 'when it is in the categories above, carries a readable mark, or is visibly individual or valuable.\n'
+    + 'Opened or used-up consumables (food, toiletries and cosmetics, cleaning supplies, medicines), worn '
+    + 'underwear and socks, hangers, cables and chargers, packaging and ordinary household rubbish are not '
+    + 'inventoriable: leave them out. A frame holding nothing else is an empty list. Sealed, unused '
+    + 'supplies may be one group line.\n\n'
 
     + 'HOW TO NAME IT\n'
     + 'Be as specific as the photograph supports. Name the maker, model, period, material and '
