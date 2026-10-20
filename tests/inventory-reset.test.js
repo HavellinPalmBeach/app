@@ -383,8 +383,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const bv = /var BACKEND_VERSION = '([^']+)'/.exec(GS)[1];
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(bv, '2026-10-19', 'main-sync.gs is 2026-10-19');
-    eq(B.BACKEND_MIN_VERSION, '2026-10-19', 'the app relies on it: an older deployment merges the old lines back');
+    eq(bv, '2026-10-19b', 'main-sync.gs is 2026-10-19b (b: main\'s Agent One build took 2026-10-19 the same evening)');
+    eq(B.BACKEND_MIN_VERSION, '2026-10-19b', 'the app relies on it: an older deployment merges the old lines back');
     ok(B.BACKEND_FEATURE_COST.version.indexOf('a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it') === 0,
        'the banner names the newest gap first, by consequence');
     has(B.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-16, an incident reported', '…and the 2026-10-16 gap by its vintage after it');

@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 8:52pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 8:56pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6327,10 +6327,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // copy's signers, so a co-trustee's signature recorded on another device can drop.
 // 2026-10-16 (P26): `incidents` joins the record lists merged entry by entry. An older deployment rides it on the whole record,
 // so an incident reported on one device can be dropped by another device saving an older copy of the job.
-// 2026-10-19: saveMediaStore drops every line from before a client's inventory reset (`invResetAt` on the job's entry;
+// 2026-10-19b: saveMediaStore drops every line from before a client's inventory reset (main's Agent One build is 2026-10-19) (`invResetAt` on the job's entry;
 // `_invResetDrops`). An older deployment merges them back from the first device that saves one, and loses the stamp with
 // them, so the reset run in the editor is undone unless every device reloads first.
-var BACKEND_MIN_VERSION = '2026-10-19';
+var BACKEND_MIN_VERSION = '2026-10-19b';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -29428,12 +29428,45 @@ function invRemoveLine(jobId, stableId) {
 // The one writer of a desk removal: tombstoned, stamped with who, touched so it wins the merge.
 // Tombstone rather than splice: absence is indistinguishable from "the other device has not seen it
 // yet", so a splice is undone by the next merge.
-function _invTombstoneLine(jobId, ref) {
+function _invTombstoneLine(jobId, ref, opts) {
   ref.deletedAt = Date.now();
   ref.deletedBy = _invStampBy(_invJob(jobId));
   _invTouch(ref);
   _setPhotoRef(jobId, ref);
+  // A sweep (`invBulkRemove`) tombstones its lines one by one and saves the manifest once: `savePhotoRefs`
+  // rewrites the whole manifest, so three hundred saves of a three-hundred-line manifest is an iPad
+  // standing still. `defer` leaves the one save to the caller, which must make it.
+  if (!(opts && opts.defer)) savePhotoRefs(jobId);
+}
+
+// ⚠⚠ REMOVE EVERY SELECTED LINE AT ONCE (2026-10-19; Anthony, the dummy job in his own apartment: the Items pass
+// photographed the inside of every drawer, Agent One listed what it saw, and the inventory was *"hundreds and
+// hundreds of items, like golf balls and scotch tape dispensers"*, with one Remove line per item the only way
+// back). The bulk bar's **Remove lines** is `invRemoveLine`'s rule across the selection, through the desk's one
+// removal writer: each line a stamped tombstone (who, when) that wins the merge, its number spent for good,
+// Removed items giving it back. IT REMOVES THE LINES AND NEVER A PHOTOGRAPH: the room's bin is the only image
+// delete, and it takes a photograph's lines with it; here the file stays in Drive and in the room's strip, which
+// is what a re-shoot of the room wants left alone. Only a live inventory line can be picked (`_invPicked` reads
+// `_jobInvRefs`: inventory lines, no collection document, no tombstone), which is `invRemoveLine`'s own guard. The
+// confirm names the first eight lines rather than a bare count: "212 lines" invites a yes; "#3 Tesla key card ·
+// #15 Scotch tape dispensers …" is the work about to go.
+function invBulkRemove(jobId) {
+  var lines = _invPicked(jobId);
+  if (!lines.length) return false;
+  var shown = lines.slice(0, 8).map(function(r){ return '  \u00b7 #' + _invItemNo(r) + ' ' + (r.objectName || '(unnamed)'); });
+  var msg = 'Remove ' + lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' from the inventory?\n\n'
+    + shown.join('\n') + (lines.length > shown.length ? '\n  \u00b7 and ' + (lines.length - shown.length) + ' more' : '')
+    + '\n\nTheir numbers are never given to anything else. No photograph is deleted: each stays in Google Drive and in its room, '
+    + 'and a line that shares one keeps it.'
+    + '\n\nRemoved items, at the foot of this tab, gives them back.';
+  if (!window.confirm(msg)) return false;
+  lines.forEach(function(r){ _invTombstoneLine(jobId, r, { defer: true }); });
   savePhotoRefs(jobId);
+  _invPick = {};
+  showSyncBadge(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' removed \u2014 Removed items, at the foot of the tab, gives them back', false);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return lines.length;
 }
 
 // ── Appraisal worklist ────────────────────────────────────────────────────────
@@ -38142,6 +38175,8 @@ function _renderInvBulk(job) {
     + '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
     + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
     + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
+    // Remove lines (2026-10-19): the selection off the inventory at once, photographs kept, Removed items giving them back.
+    + '<button onclick="invBulkRemove(' + jid + ')" style="' + btnStyle + 'color:var(--err-tx);" title="Take every selected line off the inventory. No photograph is deleted, and Removed items gives them back.">Remove lines</button>'
     + '<button onclick="_invClearPicks()" style="' + btnStyle + 'background:none;color:var(--cream);">Clear</button>'
     + result
     + '</div>';
@@ -39329,6 +39364,7 @@ function _paintRoomWorkspace() {
     + (decedent ? '<strong>Mandatory on this job.</strong> ' : '')
     + '<strong>2. Sort, then Items</strong> \u2014 work the room, pick a chip, shoot the pile. '
     + '<strong>3. After</strong> \u2014 the room empty.</div>';
+  h += (typeof photoGuideLinkHtml === 'function' ? photoGuideLinkHtml() : '');
   h += '<div class="ws-cams">'
     + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'before\')">&#128247; As found<small>' + nB + ' shot' + (nB === 1 ? '' : 's') + '</small></button>'
     + '<button type="button" class="ws-cam" onclick="openFieldCamera(' + jobId + ',' + roomIdx + ',\'inventory\')">&#128247; Items<small>' + nI + ' shot' + (nI === 1 ? '' : 's') + '</small></button>'
@@ -43509,6 +43545,12 @@ var PLAN_PROCEDURE = [
 function guideLinkHtml(doc, label) {
   return '<a href="' + esc(doc) + '" rel="noopener" onclick="return openGuidePage(event, this.getAttribute(\'href\'), this.textContent)">' + esc(label) + ' &rarr;</a>';
 }
+// Photographing a House in the app (2026-10-19; Anthony, with the Job Plan open: *"i see the link to 'sorting a house' but where is
+// the one to 'photographing a house'?"*: until then the method was linked from the manual and the playbook only). One line, at the
+// top of the In the house stage and under the room workspace's three steps, opening over the app like the other guides.
+function photoGuideLinkHtml() {
+  return '<div class="plan-proc-doc" style="font-size:11px;margin:0 0 8px;font-weight:600;">' + guideLinkHtml(PHOTO_GUIDE_DOC, 'Read Photographing a House') + '</div>';
+}
 function openGuidePage(ev, doc, title) {
   var ov = document.getElementById('guide-modal'), fr = document.getElementById('guide-frame');
   if (!ov || !fr || !doc) return true;   // no panel on this page: let the link open as a link
@@ -45090,6 +45132,7 @@ var INCIDENT_ALERT_TO = { name: 'Anthony Graziano', phone: '(617) 650-6588', tel
 var INCIDENT_CARRIER_FLOOR = 500;        // the estate form's §6.3: "Engage insurance carrier if damage exceeds $500"
 var INCIDENT_HOTLINE = '1-800-962-2873'; // the Florida Abuse Hotline (1-800-96-ABUSE), §415.1034
 var INCIDENT_SUBFOLDER = 'Incident Reports';
+var PHOTO_GUIDE_DOC = 'photography-guide.html';   // the field method, Photographing a House: linked from the In the house stage and the room workspace (2026-10-19)
 var INCIDENT_GUIDE_DOC = 'incident-guide.html';   // the field page, Reporting an Incident (2026-10-19): linked from the card through guideLinkHtml, opening over the app
 var INCIDENT_DOC_KEY = 'incidentRecord';   // docState key for the filed Incident Record: a stored key, never rename it
 var INCIDENT_RECORD_TITLE = 'Incident Record';
@@ -49427,7 +49470,8 @@ function renderJobPlan(jobId, job, est) {
   if (_jpHeader) _jpHeader.innerHTML = hdr;
 
   // The room list: one row per room, in walkthrough order, tap to open the workspace.
-  var roomsCard = '<div id="plan-rooms-' + jobId + '">' + _planRoomListHtml(jobId) + '</div>';
+  var roomsCard = (typeof photoGuideLinkHtml === 'function' ? photoGuideLinkHtml() : '')
+    + '<div id="plan-rooms-' + jobId + '">' + _planRoomListHtml(jobId) + '</div>';
 
   // For service types without the core playbook: the rooms, the sourcing, and a note.
   if (!hasPlaybook) {

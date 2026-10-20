@@ -109,6 +109,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Every time the page names the protocol a beginner has to follow, it is a link to it (the sweep's one green).
     eq(count(guideHtml, 'Firearms Protocol</a>'), count(guide, 'Firearms Protocol'), 'every mention of the Firearms Protocol is a link to it');
     has(guide, 'Shooting a room', 'the pocket card is on it');
+    // And from the app since 2026-10-19 (Anthony, with the Job Plan open: "where is the one to 'photographing a house'?"): one
+    // line at the top of the In the house stage and under the room workspace's three steps, opening over the app.
+    const link = sandbox({ fns: ['photoGuideLinkHtml', 'guideLinkHtml'], vars: ['PHOTO_GUIDE_DOC'], stubs: { esc: (s) => String(s) } });
+    eq(link.PHOTO_GUIDE_DOC, GUIDE_FILE, 'the app names the guide\'s file');
+    const a = link.photoGuideLinkHtml();
+    has(a, 'href="' + GUIDE_FILE + '"', 'the link points at it');
+    has(a, 'Read Photographing a House', 'and reads Read Photographing a House');
+    has(a, 'openGuidePage(event', 'and opens over the app, like the stage guides');
+    has(live(fn('renderJobPlan')), 'photoGuideLinkHtml()', 'the In the house stage carries it');
+    has(live(fn('_paintRoomWorkspace')), 'photoGuideLinkHtml()', 'and so does every room\'s workspace');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -258,7 +268,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('plain words: the guide uses none of the build’s shorthand (Anthony, 2026-10-06: "write this in human speak")');
   {
     // The visible text, with the one button label that carries the word "line" taken out.
-    const words = guide.replace(/Use that line/g, ' ');
+    // Two button labels carry the word: *Use that line* (P24) and *Remove lines* (2026-10-19).
+    const words = guide.replace(/Use that line/g, ' ').replace(/Remove lines/g, ' ');
     [['the desk', /\bthe desk\b/i], ['an "Items shot"', /\bItems shots?\b/i], ['Agent One or Two', /\bAgent (?:One|Two)\b/i],
      ['"line" for an item on the list', /\bline\b/i], ['"lot" for a group', /\blots?\b/i], ['"chip" for a destination', /\bchips?\b(?! and cracks)/i],
      ['"frame" for a photo', /\bframes?\b/i], ['"unflagged"', /\bunflagged\b/i], ['"the agent"', /\bthe agents?\b/i]]
@@ -266,7 +277,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         const m = words.match(re);
         ok(!m, 'no ' + what + (m ? ' (found: "…' + words.slice(Math.max(0, m.index - 30), m.index + 30) + '…")' : ''));
       });
-    ok(guide.split(/\s+/).length < 2000, 'and it is short: ' + guide.split(/\s+/).length + ' words, from 2,770 before the rewrite');
+    // 2,000 until 2026-10-19; Anthony, after the first practice job: *"this photography guide needs to be way more detailed"*,
+    // so *What goes on the list*, the drawers rule and the cloth took it to about 2,550. Still none of the build's words.
+    ok(guide.split(/\s+/).length < 2700, 'and it is short: ' + guide.split(/\s+/).length + ' words, from 2,770 before the rewrite');
   }
 
   // P25 (Q40, Q41; Anthony, 2026-10-09): the camera's controls the guide names are the camera's.
@@ -281,5 +294,74 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(paint, 'Next: Items', 'and the camera offers it');
     has(guide, 'On an estate, then tick As-found pass complete', 'the tick is an estate\'s');
     has(fn('_roomFoundDoneHtml'), "if (!decedent) return '';", 'and the app offers it on an estate only');
+  }
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 2026-10-19 (Anthony, the first practice job in his own apartment: the Items pass photographed the inside of every
+  // drawer and the inventory came back as *"hundreds and hundreds of items, like golf balls and scotch tape dispensers"*;
+  // a photograph of socks in an open drawer came back as the socks AND "Wood dresser with white-lined drawer"). The
+  // guide gained *What goes on the list*, the drawers rule, the cloth and the desk's Remove lines; each sentence that
+  // promises something of the app is held here, to the prompt the backend sends and to the bulk bar.
+  group('what goes on the list (2026-10-19): drawers are searched, never photographed; one kind per group; the surface is background');
+  {
+    has(guide, 'What goes on the list', 'the section');
+    has(guide, 'No item photo at all', 'with the third column: what gets no item photo');
+    has(guide, 'Never the inside of a drawer, cabinet or closet', 'the camera table says it of Items');
+    has(guide, 'never photograph the inside of one', 'and the drawers paragraph says it again');
+    has(guide, 'One kind per photo. Two kinds in one photo come back as two items.', 'a group is one kind');
+    has(guide, 'The surface does not count', 'and what a thing sits on is background');
+    has(guide, 'one item named for the drawer', 'a mixed drawer kept together is one item named for the drawer');
+    // Each of those is a promise about Agent One's naming, held to the prompt the backend sends (one source line each).
+    const sys = gsFn('_agSystem');
+    has(sys, 'qty 30, not thirty entries', 'the prompt groups ordinary goods of one kind (the group photo)');
+    has(sys, 'What it sits on or in is background, not an object', 'the surface is background');
+    has(sys, 'unless that piece of furniture is itself the only thing in the frame', 'and furniture photographed alone is still a line');
+    has(sys, 'mixed small everyday things is ONE line for the whole of it', 'a mixed drawer is one line named for the drawer');
+    has(sys, 'Opened or used-up consumables (food, toiletries and cosmetics, cleaning supplies, medicines), worn', 'the used-up is not inventory');
+    has(sys, 'inventoriable: leave them out. A frame holding nothing else is an empty list.', 'and a frame of nothing else is an empty list');
+    lacks(live(sys), '$100', '⚠ the agent is still never told the $100-an-article threshold (AGENT_ONE_SPEC §2a)');
+    // 2026-10-19 or later: the inventory reset build of the same evening took 2026-10-19b, and the version only moves forward.
+    ok(((/var BACKEND_VERSION = '([^']+)'/.exec(GS) || [])[1] || '') >= '2026-10-19', 'the prompt change is a redeploy, and the backend says so (' + ((/var BACKEND_VERSION = '([^']+)'/.exec(GS) || [])[1]) + ')');
+  }
+
+  group('Remove lines on the bulk bar (2026-10-19): the selection off the inventory, photographs kept, one save, Removed items giving them back');
+  {
+    has(guide, 'Remove lines', 'the guide names the button for a room photographed drawer by drawer');
+    has(guide, 'Work each row, not each', 'and says the row is the work and the full record the exception');
+    const bar = fn('_renderInvBulk');
+    has(bar, "invBulkRemove(' + jid + ')", 'the bulk bar offers it');
+    has(bar, '>Remove lines</button>', 'under that name');
+    const body = live(fn('invBulkRemove'));
+    lacks(body, 'discardShot', 'it never routes through the shot binner');
+    lacks(body, 'driveTrashed', 'and never marks a photograph trashed');
+    has(body, '_invTombstoneLine(', 'it removes through the desk\'s one removal writer');
+    let saves = 0; const asked = [];
+    const mk = (id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 4, seq: 1, status: 'uploaded', ts: 1000, itemNo: +id.slice(1),
+      objectName: 'Line ' + id, filename: id + '.jpg', driveFileId: 'F' + id, category: 'General/Household', disposition: '' }, o || {});
+    const found = { stableId: 'af1', label: 'before', roomIdx: 4, seq: 1, status: 'uploaded', ts: 900, filename: 'af.jpg', driveFileId: 'FAF' };
+    const refs = [mk('l1'), mk('l2', { derivedFrom: 'l1', driveFileId: 'Fl1' }), mk('l3'), found];
+    const ctx = sandbox({
+      fns: ['invBulkRemove', '_invPicked', '_invTombstoneLine', '_jobInvRefs', '_getPhotoRef', '_setPhotoRef', '_invItemNo', '_invJob'],
+      vars: ['_invPick', '_invBulkLast'],
+      stubs: { jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }], _photoRefs: { 7: refs },
+        savePhotoRefs() { saves++; }, _invTouch(r) { r.updatedAt = 1; return r; }, _scheduleInventorySync() {}, renderInventoryTab() {},
+        showSyncBadge() {}, alert() {}, _invStampBy: () => 'Ashley Jerome',
+        window: { confirm: (m) => { asked.push(m); return asked.length !== 1; } } },
+    });
+    ctx._invPick = { l1: 1, l2: 1, af1: 1 };   // the as-found shot "ticked" too: _invPicked reads the live inventory lines alone
+    eq(ctx.invBulkRemove(7), false, 'the question refused: nothing removed');
+    eq(ctx._jobInvRefs(7).length, 3, 'three lines still live');
+    eq(saves, 0, 'and nothing saved');
+    eq(ctx.invBulkRemove(7), 2, 'the question accepted: two lines removed');
+    has(asked[1], 'Remove 2 lines from the inventory?', 'the question counts the lines');
+    has(asked[1], '#1 Line l1', 'and names them');
+    lacks(asked[1], 'af1', 'the as-found shot ticked with them is not among the lines: only live inventory lines can be picked');
+    has(asked[1], 'No photograph is deleted', 'and says the photographs stay');
+    eq(ctx._jobInvRefs(7).map((r) => r.stableId), ['l3'], 'the third line stays live');
+    const gone = refs.filter((r) => r.deletedAt);
+    eq(gone.map((r) => [r.stableId, r.deletedBy, r.driveFileId]), [['l1', 'Ashley Jerome', 'Fl1'], ['l2', 'Ashley Jerome', 'Fl1']],
+       'each removed line is a stamped tombstone that keeps its photograph');
+    eq(found.deletedAt, undefined, 'the as-found shot is untouched');
+    eq(saves, 1, '⚠ the manifest is saved once, not once per line');
+    eq(Object.keys(ctx._invPick).length, 0, 'and the selection is cleared');
   }
 };

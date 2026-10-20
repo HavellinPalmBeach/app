@@ -658,7 +658,7 @@ function saveMediaStore(payload) {
       var cur = entry.items ? entry.items : [];
       // ⚠ AFTER A RESET (resetInventoryConfirm, main-sync.gs) THE STAMP IS KEPT AND EVERY SAVE IS READ AGAINST IT: a device
       // that still holds the lines from before it sends them back with its first edit, and the union merge would keep
-      // every one. The incoming copy is filtered, and so is the stored one, because a deployment older than 2026-10-19
+      // every one. The incoming copy is filtered, and so is the stored one, because a deployment older than 2026-10-19b
       // merged the stale copy straight back in and the first save on this one sweeps it out.
       var resetAt = Number(entry.invResetAt) || 0;
       var incoming = payload.items || [];

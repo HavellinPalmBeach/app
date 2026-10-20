@@ -89,6 +89,8 @@ Target **300–600 lines** on a large estate rather than 3,000. That keeps the d
 the repaint near 350ms and the manifest well inside quota — the two critical-path items in §11 are
 survivable at this scale and are not at ten lines a frame.
 
+**Three rules added 2026-10-19**, after Anthony's first practice job (a photograph of socks in an open drawer came back as the socks *and* "Wood dresser with white-lined drawer"; a kitchen drawer came back as twelve lines; the inventory was unusable): the surface or container the subject sits on or in is **background, never a line**, unless that piece of furniture is the only thing in the frame; a drawer, shelf, box, bin or bag of **mixed small everyday things is one line** named for the container and what it holds, qty 1, with something taken out onto its own line only where §2a's itemize rule says so; **opened consumables, worn underwear and socks, hangers, cables, packaging and household rubbish are not inventoriable** and a frame of nothing else is an empty list. The field method that matches (drawers searched, never photographed as items; one kind per group photo; the used-up gets no photo) is *Photographing a House*, *What goes on the list*.
+
 ⚠ **The agent is still never told the $100-an-article threshold.** `invLotSplitState` stays the one
 authority and catches a lot that is over the cap once Agent Two values it. §9.
 
