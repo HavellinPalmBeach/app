@@ -104,7 +104,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const vcheck = SRC.match(/var BACKEND_MIN_VERSION = '([^']+)'/);
     ok(vcheck && vcheck[1] >= '2026-10-16', 'BACKEND_MIN_VERSION names the deployment that merges the two lists (' + (vcheck && vcheck[1]) + ')');
     const cost = SRC.slice(SRC.indexOf('var BACKEND_FEATURE_COST')).match(/\n  version:\s+'([^']*)'/);
-    has(cost ? cost[1].slice(0, 200) : '', 'Keys & access', 'and the stale-deployment banner names the consequence first');
+    // 2026-10-19's inventory reset leads the line now; this gap is named by its vintage after it.
+    has(cost ? cost[1] : '', 'on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there', 'and the stale-deployment banner names the consequence by its vintage');
+    has(cost ? cost[1] : '', 'Keys & access', '…naming the Keys & access card');
   }
 
   // ── 2 ─────────────────────────────────────────────────────────────────────

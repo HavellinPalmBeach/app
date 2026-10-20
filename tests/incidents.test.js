@@ -147,9 +147,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(/var JOB_LIST_KEY = \{([\s\S]*?)\};/.exec(GS)[1], "incidents: 'id'", '…keyed on id');
     const bv = /var BACKEND_VERSION = '([^']+)'/.exec(GS)[1];
     const mv = /var BACKEND_MIN_VERSION = '([^']+)'/.exec(SRC)[1];
-    eq(mv, '2026-10-16', 'the app relies on the 2026-10-16 deployment');
+    ok(mv >= '2026-10-16', 'the app relies on the 2026-10-16 deployment or a later one (' + mv + ')');
     ok(bv >= mv, 'and the backend in the repo is at least that (' + bv + ')');
-    has(/version:\s+'([^']+)'/.exec(SRC)[1].slice(0, 200), 'an incident reported on one device', 'the stale banner names the gap first (beside the same day\'s key custody gap)');
+    has(/version:\s+'([^']+)'/.exec(SRC)[1], 'on a deployment older than 2026-10-16, an incident reported on one device', 'the stale banner names the gap by its vintage (beside the same day\'s key custody gap; 2026-10-19\'s inventory reset leads now)');
   }
 
   // ── 2 ──────────────────────────────────────────────────────────────

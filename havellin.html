@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 6:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 8:52pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6327,7 +6327,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // copy's signers, so a co-trustee's signature recorded on another device can drop.
 // 2026-10-16 (P26): `incidents` joins the record lists merged entry by entry. An older deployment rides it on the whole record,
 // so an incident reported on one device can be dropped by another device saving an older copy of the job.
-var BACKEND_MIN_VERSION = '2026-10-16';
+// 2026-10-19: saveMediaStore drops every line from before a client's inventory reset (`invResetAt` on the job's entry;
+// `_invResetDrops`). An older deployment merges them back from the first device that saves one, and loses the stamp with
+// them, so the reset run in the editor is undone unless every device reloads first.
+var BACKEND_MIN_VERSION = '2026-10-19';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -6385,7 +6388,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -27030,8 +27033,19 @@ function refreshPhotoRefs(jobId, cb) {
       // different fact from whether the merge changed anything. The workbook write is
       // gated on it — see _scheduleInventorySync.
       if (d && d.ok) _invCloudSeen[jobId] = true;
-      var remote = d && d.ok && d.media && d.media[String(jobId)] && d.media[String(jobId)].items;
-      if (!remote || !remote.length) { if (cb) cb(false); return; }
+      var entry = d && d.ok && d.media && d.media[String(jobId)];
+      var remote = entry && entry.items;
+      // ⚠ THE RESET FIRST (2026-10-19): an entry stamped `invResetAt` takes every line this device holds from before it
+      // off, whether or not the sheet has anything left to merge (after a reset it usually holds the as-found pass alone),
+      // and that is a change the screen must see. So the stamp is read before the empty-remote return below, and the
+      // before/after compare under it counts what the reset dropped as well as what the merge moved.
+      var beforeJson = _stableJson(_photoRefs[jobId] || []);
+      var reset = entry ? _invApplyReset(jobId, entry) : false;
+      if (!remote || !remote.length) {
+        if (reset) savePhotoRefs(jobId);
+        if (cb) cb(reset);
+        return;
+      }
       // ⚠⚠ `changed` HAS TO MEAN THE MERGE MOVED SOMETHING. It used to be an unconditional
       // cb(true) the moment the server held ANY item — and loadJobPlanTab's callback is
       // `if (changed) loadJobPlanTab()`, so on any job with photos on file the tab re-entered
@@ -27044,7 +27058,7 @@ function refreshPhotoRefs(jobId, cb) {
       // localStorage in savePhotoRefs' order: the same item, two strings. So every refresh read as a change and the Job
       // Plan re-rendered itself forever on any job whose photographs were on the sheet (193 renders in 6 s against a fast
       // server, a pre-job call note lost mid-sentence against a slow one) — the defect above, back by another road.
-      var beforeJson = _stableJson(_photoRefs[jobId] || []);
+      // (`beforeJson` is taken above, before the reset is applied, so a reset counts as the change it is.)
       var merged = mergeMediaItems(_photoRefs[jobId] || [], remote);
       var didChange = _stableJson(merged) !== beforeJson;
       _photoRefs[jobId] = merged;
@@ -28761,6 +28775,54 @@ function mergeMediaItems(existing, incoming) {
   };
   take(existing); take(incoming);
   return order.map(function(id){ return byId[id]; });
+}
+
+// ── One client's inventory reset (2026-10-19) ───────────────────────────────────
+// Anthony, the first Ellison run: the drawers were photographed as hundreds of lines, and deleting the rows in the
+// client's Drive workbook and the Estate Inventory photographs reset nothing, because neither is the record. The record
+// is the job's MediaStore entry, cached on every device and merged as a union, so lines taken off the sheet by hand come
+// back from the first device that saves. `resetInventoryConfirm(jobId)`, editor-only in main-sync.gs, takes the Items
+// pass off the entry and stamps it `invResetAt`; this is the one rule for which copy of a line is from before the reset,
+// held equal to the server's `_invResetDrops` (saveInventory.gs) by a test, and read here when the entry comes back
+// (`_invApplyReset`, from refreshPhotoRefs and loadMediaStore) as the server reads it on every save. The Items pass and
+// its close-ups go: the lines (live, removed, manual, split) and the detail shots. The as-found pass, the after shots and
+// the collection and appraisal documents stay: the house's record, not the inventory. A walkthrough collection's own line
+// stays while it has no photograph: its `ts` is the collection's, from the walkthrough, and collectionLinesEnsure makes
+// the same line again on every device, so it would otherwise go on every read. `ts` is when the photograph was taken (a
+// split line inherits its source's), so a line edited after the reset on a device that never saw it is still from before.
+function invResetDrops(ref, resetAt) {
+  var at = Number(resetAt) || 0;
+  if (!ref || !at) return false;
+  if (ref.label !== 'inventory' && ref.label !== 'detail') return false;
+  if (ref.label === 'inventory' && ref.sourceCollId != null && !(ref.filename || ref.driveFileUrl || ref.driveFileId)) return false;
+  var born = Number(ref.ts || ref.updatedAt || 0);
+  return born < at;
+}
+// The entry the sheet hands back for a job carries `invResetAt` once the reset has run on it: every line this device still
+// holds from before it goes, with its cached thumbnail and any bytes held for a retry. Answers whether anything went, so
+// the caller saves and redraws on a reset the way it does on a merge that moved something.
+function _invApplyReset(jobId, entry) {
+  var at = entry && Number(entry.invResetAt) || 0;
+  if (!at) return false;
+  var all = _photoRefs[jobId] || [];
+  var gone = all.filter(function(r){ return invResetDrops(r, at); });
+  if (!gone.length) return false;
+  _photoRefs[jobId] = all.filter(function(r){ return !invResetDrops(r, at); });
+  _invDropShotCaches(jobId, gone);
+  return true;
+}
+// What a dropped line leaves behind on this device: its thumbnail (keyed on the Drive file id), the session's own small
+// copy of a shot it took, and the bytes held for a retry.
+function _invDropShotCaches(jobId, refs) {
+  var cache = _invThumbCache(jobId), hit = false;
+  refs.forEach(function(r) {
+    var id = _invFileId(r);
+    if (id && cache[id]) { delete cache[id]; hit = true; }
+    if (_localShotThumbs[r.stableId]) delete _localShotThumbs[r.stableId];
+    if (_photoRetryData[r.stableId]) delete _photoRetryData[r.stableId];
+  });
+  if (hit) _invSaveThumbCache(jobId);
+  _savePendingPhotoData(jobId);
 }
 
 // ── Item numbers are PERMANENT ────────────────────────────────────────────────
@@ -38380,8 +38442,10 @@ function loadMediaStore(cb) {
       if (!d || !d.ok || !d.media) { if (cb) cb(false); return; }
       var merged = 0;
       Object.keys(d.media).forEach(function(jobId) {
-        var remote = (d.media[jobId] && d.media[jobId].items) || [];
-        if (!remote.length) return;
+        var entry = d.media[jobId] || {};
+        var remote = entry.items || [];
+        var reset = _invApplyReset(jobId, entry);   // the reset first, as refreshPhotoRefs reads it (2026-10-19)
+        if (!remote.length && !reset) return;
         var local = _photoRefs[jobId] || [];
         var out = mergeMediaItems(local, remote);
         _photoRefs[jobId] = out;

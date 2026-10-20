@@ -69,7 +69,11 @@
 // survive. No action or type changes; the app's BACKEND_MIN_VERSION names it.
 // ⚠ 2026-10-16 (P26): `incidents` (anything that goes wrong on a job: INCIDENT_REPORTING_SPEC.md) joins the record lists
 // merged entry by entry (JOB_KEYED_LISTS, JOB_LIST_KEY). No action or type changes; the app names an older deployment by version.
-var BACKEND_VERSION = '2026-10-16';
+// ⚠ 2026-10-19: one client's inventory reset (`previewResetInventory` / `resetInventoryConfirm`, editor-only) stamps the
+// job's MediaStore entry `invResetAt`, and saveMediaStore drops every line from before it (`_invResetDrops`,
+// saveInventory.gs) on every save, so a device still holding the old lines cannot merge them back. No action or type
+// changes; an older deployment merges them back, and the app names it by version.
+var BACKEND_VERSION = '2026-10-19';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -484,6 +488,92 @@ function trashJobFoldersConfirm() {
   });
   Logger.log('');
   Logger.log(folders.length + ' folder(s) moved to Drive Trash — recoverable for about 30 days.');
+}
+
+// ══ RESET ONE CLIENT'S INVENTORY (2026-10-19) ══════════════════════════════════════════
+// Anthony, the first Ellison run: the drawers were photographed as hundreds of lines, and deleting the rows in the
+// client's Drive workbook and the Estate Inventory photographs reset nothing, because neither is the record: the
+// workbook is rebuilt from MediaStore on the next edit and the photographs are only linked. The record is this store's
+// entry for the job, cached on every device and merged as a union, so lines removed from the sheet by hand come back
+// from the first device that saves. This pair takes the Items pass off ONE job's entry (`_invResetDrops`,
+// saveInventory.gs: the lines and their close-ups; the as-found pass, the after shots, the collection and appraisal
+// documents and the walkthrough's unphotographed collection lines stay) and stamps the entry `invResetAt`, which
+// saveMediaStore and the app read from then on: a device still holding the old lines drops them when it next reads the
+// job, and on the 2026-10-19 deployment a save that still carries them is refused line by line. Everything else about
+// the client (the record, the estimate, the agreement, the plan, the hours, the signed papers) is untouched; the item
+// numbers start again from the highest number still on the entry. Editor-only, like previewReset: never reachable from
+// doGet/doPost. The Run menu passes no argument, so with none they list the jobs and change nothing.
+function previewResetInventory(jobId) {
+  var plan = _invResetPlan(jobId, 'previewResetInventory');
+  if (!plan) return;
+  Logger.log('This is a PREVIEW. Nothing has been changed.');
+  _invResetLog(plan);
+  Logger.log('');
+  Logger.log('To go ahead: run resetInventoryConfirm(' + plan.key + ').');
+}
+
+function resetInventoryConfirm(jobId) {
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var plan = _invResetPlan(jobId, 'resetInventoryConfirm');
+    if (!plan) return;
+    var store = plan.store;
+    store[plan.key] = { savedAt: plan.at, items: plan.kept, invResetAt: plan.at };
+    _writeStoreBlob('MediaStore', store);
+    _invResetLog(plan);
+    Logger.log('');
+    Logger.log('Done on the sheet: ' + plan.dropped.length + ' record(s) off the inventory of ' + plan.name + '; the entry is stamped invResetAt=' + plan.at + '.');
+    Logger.log('On every device: reload the app and reopen the client (Settings → This Device → Clear does the same and more). A device reads the stamp when it next opens the job and drops the lines it still holds. On the 2026-10-19 deployment a save that still carries them is refused line by line; on an older one it merges them back, so reload every device before anybody photographs or edits a line.');
+    Logger.log('The client\'s inventory workbook in Drive is rebuilt from the record on the next edit or photograph; the photographs already in Drive are not touched (trash the Estate Inventory folder\'s files by hand if they should go).');
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+// What a reset of this job does, read once for the preview and the confirm. Null, after saying why, when there is
+// nothing to do: no id (the jobs are listed instead), or a job the Jobs sheet does not hold.
+function _invResetPlan(jobId, fnName) {
+  var jobsNow = getJobsFromSheet();
+  var store = getMediaStore();
+  if (jobId == null || jobId === '') {
+    Logger.log(fnName + ' needs the job\'s id, the first column of the Jobs sheet: ' + fnName + '(1727390000000). The jobs on the sheet, with their inventory:');
+    jobsNow.forEach(function(j) {
+      if (!j || j.id == null) return;
+      var items = (store[String(j.id)] && store[String(j.id)].items) || [];
+      var live = 0;
+      items.forEach(function(r) { if (r && r.label === 'inventory' && !r.collId && !r.deletedAt) live++; });
+      Logger.log('  ' + j.id + '  ' + (j.hvlId || '') + '  ' + (j.name || '') + '  — ' + live + ' live line(s), ' + items.length + ' record(s) in all');
+    });
+    return null;
+  }
+  var key = String(jobId);
+  var job = null;
+  for (var i = 0; i < jobsNow.length; i++) if (jobsNow[i] && String(jobsNow[i].id) === key) { job = jobsNow[i]; break; }
+  if (!job) {
+    Logger.log('No job ' + key + ' on the Jobs sheet. Nothing done. Run ' + fnName + '() with no argument to list the jobs and their ids.');
+    return null;
+  }
+  var entry = store[key] || {};
+  var items = entry.items || [];
+  var at = new Date().getTime();
+  var dropped = [], kept = [];
+  items.forEach(function(r) { (_invResetDrops(r, at) ? dropped : kept).push(r); });
+  return { key: key, name: (job.name || '(unnamed)') + ' (' + (job.hvlId || key) + ')', at: at, items: items, dropped: dropped, kept: kept,
+           store: store, priorResetAt: Number(entry.invResetAt) || 0 };
+}
+
+function _invResetLog(plan) {
+  var count = function(list, f) { var n = 0; list.forEach(function(r) { if (f(r)) n++; }); return n; };
+  Logger.log('Inventory of ' + plan.name + ': ' + plan.items.length + ' record(s) on MediaStore'
+    + (plan.priorResetAt ? ', reset before on ' + new Date(plan.priorResetAt).toISOString() : ''));
+  Logger.log('  OFF: ' + count(plan.dropped, function(r) { return r.label === 'inventory' && !r.deletedAt; }) + ' live line(s), '
+    + count(plan.dropped, function(r) { return r.label === 'inventory' && r.deletedAt; }) + ' removed line(s), '
+    + count(plan.dropped, function(r) { return r.label === 'detail'; }) + ' close-up(s)');
+  Logger.log('  KEPT: ' + count(plan.kept, function(r) { return r.label === 'before'; }) + ' as-found shot(s), '
+    + count(plan.kept, function(r) { return r.label === 'after'; }) + ' after shot(s), '
+    + count(plan.kept, function(r) { return r.label === 'inventory'; }) + ' walkthrough collection line(s) not yet photographed, '
+    + count(plan.kept, function(r) { return r.label !== 'before' && r.label !== 'after' && r.label !== 'inventory'; }) + ' other record(s) (collection and appraisal documents)');
 }
 
 // ══ STORE HELPERS ════════════════════════════════════════════════════════════════

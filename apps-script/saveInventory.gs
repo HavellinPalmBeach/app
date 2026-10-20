@@ -569,6 +569,27 @@ function _invMergeApprovals(win, lose) {
   return fx;
 }
 
+// ⚠ ONE CLIENT'S INVENTORY RESET (2026-10-19; Anthony, the first Ellison run: the drawers were photographed as hundreds of
+// lines, and deleting the workbook's rows in Drive and the Estate Inventory photographs reset nothing, because neither
+// is the record). `resetInventoryConfirm(jobId)` in main-sync.gs takes the lines off this store and stamps the job's
+// entry `invResetAt`; from then on this is the one rule for which copy of a line is from before the reset, read by the
+// reset itself, by saveMediaStore on every later save (a device still holding the old lines cannot merge them back) and
+// by the app (`invResetDrops`, held equal to this by a test) when it reads the entry. The Items pass and its close-ups
+// go: the lines (live, removed, manual, split) and the detail shots. The as-found pass, the after shots, the collection
+// documents and the appraisal documents stay: they are the house's record, not the inventory. A walkthrough collection's
+// own line stays too while it has no photograph: its `ts` is the collection's, from the walkthrough, and
+// collectionLinesEnsure makes the same line again on every device, so it would otherwise go on every read. `ts` is when
+// the photograph was taken (a split line inherits its source's), so a line edited after the reset on a device that never
+// saw it is still from before it.
+function _invResetDrops(ref, resetAt) {
+  var at = Number(resetAt) || 0;
+  if (!ref || !at) return false;
+  if (ref.label !== 'inventory' && ref.label !== 'detail') return false;
+  if (ref.label === 'inventory' && ref.sourceCollId != null && !(ref.filename || ref.driveFileUrl || ref.driveFileId)) return false;
+  var born = Number(ref.ts || ref.updatedAt || 0);
+  return born < at;
+}
+
 function _mergeMediaItems(existing, incoming) {
   var byId = {}, order = [];
   // The winner is COPIED, never mutated — `existing` is the store blob this function was
@@ -633,17 +654,33 @@ function saveMediaStore(payload) {
         return { ok: true, success: true, jobId: key, count: 0, dropped: [key] };
       }
       var store = getMediaStore();
-      var cur = store[key] && store[key].items ? store[key].items : [];
+      var entry = store[key] || {};
+      var cur = entry.items ? entry.items : [];
+      // ⚠ AFTER A RESET (resetInventoryConfirm, main-sync.gs) THE STAMP IS KEPT AND EVERY SAVE IS READ AGAINST IT: a device
+      // that still holds the lines from before it sends them back with its first edit, and the union merge would keep
+      // every one. The incoming copy is filtered, and so is the stored one, because a deployment older than 2026-10-19
+      // merged the stale copy straight back in and the first save on this one sweeps it out.
+      var resetAt = Number(entry.invResetAt) || 0;
+      var incoming = payload.items || [];
+      var resetDropped = 0;
+      if (resetAt) {
+        var keep = function(r) { var d = _invResetDrops(r, resetAt); if (d) resetDropped++; return !d; };
+        cur = cur.filter(keep);
+        incoming = incoming.filter(keep);
+      }
       store[key] = {
         savedAt: Number(payload.savedAt) || new Date().getTime(),
-        items: _mergeMediaItems(cur, payload.items || [])
+        items: _mergeMediaItems(cur, incoming)
       };
+      if (resetAt) store[key].invResetAt = resetAt;
       // And the same standing sweep the other stores got on 2026-09-09: a manifest left
       // behind when its job row was deleted by hand had nothing to remove it. Carries the
       // whole photo list, so an orphan here is the largest of the five by a distance.
       _sweepDeletedJobKeys(store, ctx.present, ctx.ledger);
       _writeStoreBlob('MediaStore', store);
-      return { ok: true, success: true, jobId: key, count: store[key].items.length };
+      var out = { ok: true, success: true, jobId: key, count: store[key].items.length };
+      if (resetAt) { out.invResetAt = resetAt; out.resetDropped = resetDropped; }
+      return out;
     } finally {
       try { lock.releaseLock(); } catch (e) {}
     }
