@@ -1422,7 +1422,7 @@ not bound.
 
 ### G1. The Independent Contractor Agreement, Version 1.2 (the 1099 every Property Specialist and Transition Concierge signs) ⚠ PRIORITY 2
 
-**What changed from 1.1** (its own box lists it): §3.3 names the app as the record of hours, in half-hour increments; §3.4 is
+**What changed from 1.1** (`legal/Havellin_Independent_Contractor_Agreement_v1.2_changes.md` lists it; the sendable PDF carries no change list): §3.3 names the app as the record of hours, in half-hour increments; §3.4 is
 new (same-day incident reporting through the app, the call to Anthony, the Estate Firearms Protocol by reference, sign-out on
 the iPad, photographs only through the app); §5.2 keeps Client Property out of a personal vehicle unless Havellin directs it
 in writing and says what hired and non-owned auto does and does not cover; §6 is rewritten (6.1 not an employee, no benefits;
