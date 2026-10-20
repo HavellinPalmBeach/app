@@ -1369,7 +1369,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.19 · 8:56pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.20 · 12:46pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3458,13 +3458,12 @@ body.no-smf .smf-col{display:none;}
         <datalist id="v-cat-list"></datalist>
       </div>
       <div class="fld">
-        <label>COI on file</label>
-        <select id="v-coi">
-          <option value="">—</option>
-          <option>Yes</option>
-          <option>Pending</option>
-          <option>No</option>
-        </select>
+        <label>COI received <span class="lbl-hint">— the certificate of insurance, asked for with the booking</span></label>
+        <input type="date" id="v-coi-received">
+      </div>
+      <div class="fld">
+        <label>COI expires</label>
+        <input type="date" id="v-coi-expires">
       </div>
       <div class="fld">
         <label>Reciprocity</label>
@@ -43356,7 +43355,10 @@ function _repaintHoursReadouts(jobId) {
 // vendors until something else redrew the tab, and the Job team chip would have done the same.
 function planVendorsMeta(jobId, job, est) {
   var vp = vendorSourcingProgress(jobId, job, est);
-  return vp.total ? vp.done + ' of ' + vp.total + ' confirmed' : 'nothing on the estimate';
+  // The vendors on the job without a current certificate of insurance ride the fold's count (2026-10-20, Q87), so the
+  // gap shows while the fold is closed.
+  var coi = vendorsWithoutCoi(job, _todayStr()).length;
+  return (vp.total ? vp.done + ' of ' + vp.total + ' confirmed' : 'nothing on the estimate') + (coi ? ' &middot; ' + coi + ' without a COI' : '');
 }
 function _repaintPlanGates(jobId) {
   var sel = document.getElementById('plan-job');
@@ -45797,6 +45799,67 @@ function vendorStatusOptions(sel) {
     return '<option value="' + o + '"' + (sel === o ? ' selected' : '') + '>' + o + '</option>';
   }).join('');
 }
+// ═══════════════════════ THE VENDOR'S CERTIFICATE OF INSURANCE (2026-10-20; Q87) ═══════════════════════
+// Anthony, 2026-10-20, after the insurer asked whether Havellin's vendors carry their own coverage: *"we are planning
+// on asking for COI when we have jobs for vendors. they have not responded when we just reach out and ask before there
+// is any job to be done."* So the booking is the gate, not onboarding: a vendor's certificate is asked for with the
+// booking, recorded on the directory row as two dates (received, expires), and the Job Plan FLAGS a vendor on the job
+// whose certificate is not current. A flag, never a block: a vendor who cannot produce one by move day is something the
+// concierge needs to know, not a reason to stop the job. One reader of the dates, vendorCoiState; the card, the slot's
+// reference line, the fold's count and the sourcing list's summary all read it. `today` is an argument, never the clock.
+//   none     no date recorded at all: "COI not on file: ask for it with the booking"
+//   expired  an expiry before today:  "COI expired <day>: ask for a renewal certificate"
+//   current  received, or an expiry on or after today (a received date with no expiry is current: the renewal is asked
+//            for by hand; the card says "no expiry recorded")
+// The sheet's date cells come back as ISO datetimes, so every read slices the day (_vendorYmd), as fmtVendorDate does.
+var HAVELLIN_COI_HOLDER = 'Havellin Palm Beach, LLC, 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401';
+function _vendorYmd(s) {
+  var m = String(s == null ? '' : s).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
+}
+function vendorCoiState(v, today) {
+  var rec = _vendorYmd(v && v.coi_received), exp = _vendorYmd(v && v.coi_expires);
+  if (!rec && !exp) return { state: 'none', card: 'not on file', flag: 'COI not on file: ask for it with the booking', to: '' };
+  if (exp && today && exp < today) return { state: 'expired', card: 'expired ' + fmtDate2(exp), flag: 'COI expired ' + fmtDate2(exp) + ': ask for a renewal certificate', to: exp };
+  return { state: 'current', to: exp, flag: '',
+           card: (rec ? 'received ' + fmtDate2(rec) : 'on file') + (exp ? ', expires ' + fmtDate2(exp) : ', no expiry recorded') };
+}
+// The one-tap request: a mailto to the first named contact with an email, else the firm's inbox; nothing without one.
+// The app sends nothing itself (the concierge's own mail app opens, as the call and text buttons dial their own phone).
+function vendorCoiRequestMailto(v) {
+  if (!v) return '';
+  var people = vendorContacts(v), to = '', first = '';
+  people.forEach(function(c){ if (!to && c.email) { to = c.email; first = c.first || ''; } });
+  if (!to) to = String(v.email || '').trim();
+  if (!to) return '';
+  var subject = 'Certificate of insurance for Havellin Palm Beach';
+  var body = 'Hello' + (first ? ' ' + first : '') + ',\n\nBefore your first day on site for Havellin, please send a certificate of insurance naming '
+    + HAVELLIN_COI_HOLDER + ' as certificate holder and additional insured on your general liability and auto policies, showing your general liability, '
+    + 'auto and, where you carry them, cargo or bailee’s coverage and workers’ compensation or your exemption certificate.\n\nThank you,\nHavellin Palm Beach';
+  return 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+}
+// The flag under a sourcing slot's reference line. Nothing for a vendor the directory does not hold (the line's name is
+// what it was assigned with; the app claims nothing about a row it cannot read) and nothing while the certificate is current
+// (the reference line's own "COI to <day>" says so).
+function vendorCoiLineHtml(v, today) {
+  if (!v || !v.vendor_name) return '';
+  var st = vendorCoiState(v, today);
+  if (st.state === 'current') return '';
+  var mail = vendorCoiRequestMailto(v);
+  return '<div class="vendor-coi-flag" style="font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:3px 8px;margin-top:5px;">&#9888; ' + esc(st.flag)
+    + (mail ? ' &middot; <a href="' + esc(mail) + '" style="color:var(--warn-tx);font-weight:700;">Request COI</a>' : ' &middot; no email on file for the request') + '</div>';
+}
+// Every vendor on the job (the one list the close reads, _assignedVendorsForJob: confirmed on the plan, a collection
+// partner, named on a leaving line or a pickup list) whose certificate is not current. A vendor gone from the directory is
+// left out: there is no row to read.
+function vendorsWithoutCoi(job, today) {
+  return _assignedVendorsForJob(job).map(function(a){
+    var v = lookupVendorById(a.vendorId);
+    if (!v) return null;
+    var st = vendorCoiState(v, today);
+    return st.state === 'current' ? null : { vendorId: a.vendorId, name: v.vendor_name || a.name, state: st.state };
+  }).filter(Boolean);
+}
 function vendorIdOf(v) { return v && (v._row != null ? v._row : v.vendor_name); }
 // ⚠⚠ A VENDOR IS A FIRM, AND `phone` / `email` ARE THE FIRM'S. The office line and the
 // general inbox (southflorida@navismoving.com) belong to the company; a contact slot is a
@@ -46150,6 +46213,10 @@ function _vendorRefLine(rec) {
   if (v.estimate_cost) rest.push('~' + v.estimate_cost);
   if (v.minimum_job)   rest.push('Min ' + v.minimum_job);
   if (v.lead_time)     rest.push('Lead ' + v.lead_time);
+  // The certificate of insurance (2026-10-20, Q87): current reads here with the rest; not on file or expired is the flag
+  // under the line, with the one-tap request.
+  var _coiToday = _todayStr(), _coi = v.vendor_name ? vendorCoiState(v, _coiToday) : null;
+  if (_coi && _coi.state === 'current') rest.push(_coi.to ? 'COI to ' + fmtDate2(_coi.to) : 'COI on file');
   var head = ['<strong>' + esc(name) + '</strong>'];
   // Tappable from the job site — this is the number you reach for when an assigned
   // vendor hasn't shown up, so it has to dial rather than just display.
@@ -46176,6 +46243,7 @@ function _vendorRefLine(rec) {
     head.join(' · ') +
     (rest.length ? ' <span style="color:var(--gray);font-weight:400;">· ' + rest.map(esc).join(' · ') + '</span>' : '') +
     (v.notes ? '<br><span style="color:var(--gray);font-weight:400;font-style:italic;">' + esc(v.notes) + '</span>' : '') +
+    vendorCoiLineHtml(v, _coiToday) +
     '</div>';
 }
 // Standard end-of-job logistics vendor categories, keyed for stable storage — the ones a job can
@@ -46243,6 +46311,14 @@ function renderVendorSourcing(jobId, job, est) {
   // we are sourcing a live job off a snapshot, and until now nothing here said so —
   // the load-failure message only ever appeared on the Vendors tab.
   html += dirStaleNotice('vendor');
+  // The vendors on this job without a current certificate of insurance, named once at the top (2026-10-20, Q87); each
+  // slot's reference line carries its own flag and the one-tap request.
+  var _coiMissing = vendorsWithoutCoi(job, _todayStr());
+  if (_coiMissing.length) {
+    html += '<div class="vendor-coi-summary" style="font-size:11px;color:var(--warn-tx);background:var(--warn-bg);border-radius:4px;padding:6px 8px;margin-bottom:8px;">&#9888; '
+      + _coiMissing.length + ' vendor' + (_coiMissing.length === 1 ? '' : 's') + ' on the job without a current certificate of insurance: '
+      + _coiMissing.map(function(m){ return esc(m.name); }).join(', ') + '. Ask for it with the booking; the flag on the line offers the email.</div>';
+  }
   var src  = job.vendorSourcing || {};
   var psrc = job.prepSourcing   || {};
   var csrc = job.collSourcing   || {};
@@ -47659,7 +47735,7 @@ function vendorCardHtml(v) {
 
   var pricing = _vLine([['Pricing', v.pricing_structure], ['Ballpark', v.estimate_cost], ['Min', v.minimum_job], ['Detail', v.rate_detail]]);
   var timing = _vLine([['Lead time', v.lead_time], ['Quote turnaround', v.estimate_turnaround]]);
-  var meta = _vLine([['COI', v.coi_on_file], ['Reciprocity', v.reciprocity], ['License', v.license_cert], ['Referral fee', v.referral_fee]]);
+  var meta = _vLine([['COI', vendorCoiState(v, _todayStr()).card], ['Reciprocity', v.reciprocity], ['License', v.license_cert], ['Referral fee', v.referral_fee]]);
   var lcNote = String(v.last_contact_note || '').trim();
   // Highlighted last-contact bar — sits right under the log box so you see the prior
   // contact before you dial. Cream when there's a history, amber when never contacted.
@@ -47746,7 +47822,9 @@ var VENDOR_FORM_MAP = {
   'v-contact2-first':'contact2_first', 'v-contact2-last':'contact2_last',
   'v-contact2-title':'contact2_title', 'v-contact2-mobile':'contact2_mobile', 'v-contact2-email':'contact2_email',
   'v-website':'website', 'v-address':'physical_address', 'v-area':'service_area',
-  'v-status':'status', 'v-coi':'coi_on_file', 'v-recip':'reciprocity', 'v-reffee':'referral_fee',
+  // The certificate of insurance is two dates (2026-10-20, Q87): received and expires. `coi_on_file` (Yes / Pending / No) was a
+  // tick for a fact the dates record; nothing writes it now, and vendorCoiState reads the dates alone.
+  'v-status':'status', 'v-coi-received':'coi_received', 'v-coi-expires':'coi_expires', 'v-recip':'reciprocity', 'v-reffee':'referral_fee',
   'v-license':'license_cert',
   // reviews_rating_source (bulk-imported) and last_contacted are intentionally NOT in
   // this map: they're read-only in the form, so a vetting edit can never overwrite the
@@ -47936,6 +48014,8 @@ function editVendor(id) {
   var v = lookupVendorById(id);
   if (!v) return;
   Object.keys(VENDOR_FORM_MAP).forEach(function(fid){ _setV(fid, v[VENDOR_FORM_MAP[fid]]); });
+  // A date input rejects the ISO datetime a date cell comes back as, so the two COI dates are set as yyyy-mm-dd.
+  ['v-coi-received', 'v-coi-expires'].forEach(function(fid){ _setV(fid, _vendorYmd(v[VENDOR_FORM_MAP[fid]])); });
   // Legacy fallback: a vendor saved before the split may carry only primary_contact and
   // no first/last — surface it in the first-name box so the editor can fix it, not lose it.
   if (!v.contact_first && !v.contact_last && v.primary_contact) _setV('v-contact-first', v.primary_contact);
@@ -50756,6 +50836,66 @@ function _agrCoRepRepresentation(job) {
 // §5.4, after the disposition table, on the estate form only: the standard form is untouched (living clients are out of
 // scope). ⚠ IT IS LIMITED TO THE CONTENTS AND OTHER TANGIBLE PERSONAL PROPERTY because §2.1 leaves real property sales to
 // a separate agreement (Team Ashley & Anthony at Douglas Elliman), whose commission this must not be read to forbid.
+// ═══════════════ HAVELLIN'S OWN COVERAGE, AS THE AGREEMENTS PRINT IT (2026-10-20; A19, Q61, Q87) ═══════════════
+// Every figure a client agreement states about Havellin's insurance comes from this one catalogue. A `value` is a bound
+// limit and prints as money; null is a limit not yet bound and prints as a bracketed placeholder, "$[2,000,000]", the
+// figure Anthony applied for (his request to the insurers, 2026-10-20: GL $2M/$4M, inland marine / bailee's $1M to
+// $2.5M with a scheduled fine arts and collectibles endorsement on an agreed-value basis, E&O, auto $1M CSL with hired
+// and non-owned, umbrella $5M to $10M, crime and cyber) or, where none was, what the figure is. While any is unbound the
+// estate form carries insPlaceholderNote under §6.1, so a reader knows the brackets are applied-for limits; it goes by
+// itself once every value is set. Anthony: *"let's just have them as placeholders"* until the quotes land. §6.2's per-item
+// and per-occurrence limits are the bailee's policy's (A19): fill them from the quote, never by hand from a guess.
+// A function, not a var, so a lifted builder finds it by name like any other helper; a test hands insFigure its own
+// catalogue to prove the bound shape.
+function insCoverage() {
+  return {
+    glOccurrence:  { value: null, placeholder: '2,000,000' },
+    glAggregate:   { value: null, placeholder: '4,000,000' },
+    baileeLimit:   { value: null, placeholder: '1,000,000 to 2,500,000' },
+    autoCSL:       { value: null, placeholder: '1,000,000' },
+    umbrella:      { value: null, placeholder: '5,000,000 to 10,000,000' },
+    perItem:       { value: null, placeholder: 'per-item limit' },
+    perOccurrence: { value: null, placeholder: 'per-occurrence limit' }
+  };
+}
+function insFigure(key, cat) {
+  var c = (cat || insCoverage())[key];
+  if (!c) return '';
+  return c.value != null ? fmt(c.value) : '$[' + c.placeholder + ']';
+}
+function insUnbound(cat) {
+  cat = cat || insCoverage();
+  return Object.keys(cat).filter(function(k){ return cat[k].value == null; });
+}
+function insPlaceholderNote(cat) {
+  return insUnbound(cat).length
+    ? 'Figures in brackets are the limits Havellin has applied for; the limits bound replace them, and the certificate of insurance Havellin provides on request states them.'
+    : '';
+}
+// The seven coverages, one catalogue for both forms: the estate form prints them as a list with the figures, the
+// standard form as its §5.1 run-in list without (it never carried figures). `who` is the party's name on that form.
+function agrCoverageLines(opt, cat) {
+  opt = opt || {};
+  var who = opt.who || 'Havellin', figures = !!opt.figures;
+  var f = function(k){ return insFigure(k, cat); };
+  return [
+    { title: 'General Liability', text: figures ? f('glOccurrence') + ' per occurrence / ' + f('glAggregate') + ' aggregate' : 'covering bodily injury and property damage' },
+    { title: 'Inland Marine / Bailee’s Coverage', text: (figures ? f('baileeLimit') + ' for ' : 'for ') + 'the Client’s property in ' + who
+        + '’s care, custody or control, with a scheduled fine arts and collectibles endorsement on an agreed-value basis for items scheduled for the engagement' },
+    { title: 'Professional Liability (Errors &amp; Omissions)', text: 'covering the management, cataloguing and transition services ' + who + ' provides' },
+    { title: 'Commercial Auto', text: (figures ? f('autoCSL') + ' combined single limit, ' : '') + 'including hired and non-owned auto liability' },
+    { title: 'Umbrella', text: (figures ? f('umbrella') + ' ' : '') + 'excess liability over the coverages above' },
+    { title: 'Commercial Crime (fidelity) and Cyber', text: 'employee dishonesty and theft on client premises, covering every team member and contractor ' + who + ' places on site; data breach' },
+    { title: 'Workers’ Compensation', text: 'per Florida statutory requirements' }
+  ];
+}
+// What both forms say about the vendors' own insurance (2026-10-20, Q87; Anthony: the certificate is asked for with the
+// booking). One sentence, two readers (the estate form's §6.4, the standard form's §6); a test counts them.
+function agrVendorCoiTxt(who, client) {
+  return who + ' requires every vendor it books to carry its own commercial general liability insurance, automobile liability where it drives, coverage for '
+    + client + '’s property while in its custody where it takes property away, and professional liability where it appraises, and to provide a certificate of insurance before its first day on site; '
+    + who + ' provides those certificates to ' + client + ' on request.';
+}
 var AGR_NO_PURCHASE = 'Havellin, its owners, team members and contractors will not purchase or otherwise acquire any of the contents of the property, or any other tangible personal property of the estate or the trust, whether directly or through any other person, and will take no part of the proceeds of any sale of that property.';
 // ⚠⚠ THE REFERRAL-FEE DISCLOSURE (Anthony, 2026-10-16, Q62 and Q21): "we will never charge the client a percentage,
 // but we may have referral agreements with vendors like auction houses that will pay us a referral fee, which may itself
@@ -51391,19 +51531,22 @@ function probateAgreementHtml(job, est) {
   // SECTION 6: LIABILITY
   content += secHdr(6,'Liability, Insurance &amp; Damage Protocol');
   content += subHdr('6.1 Havellin Insurance Coverage');
-  var cov = [
-    bb('General Liability:')+'  $1,000,000 per occurrence / $2,000,000 aggregate',
-    bb('Commercial Auto:')+'  $1,000,000 CSL on all company vehicles',
-    bb('Workers\' Compensation:')+'  Per Florida statutory requirements',
-    bb('Bailee\'s Coverage:')+'  Protection for high-value items in Havellin\'s care, custody, or control during the engagement',
-    bb('Bonding:')+'  Fidelity bond covering all team members and contractors on-site'
-  ];
+  // ⚠⚠ THE FIGURES ARE THE CATALOGUE'S (insCoverage; 2026-10-20, A19, Q61): a bound limit prints as money, an unbound one
+  // as the bracketed figure applied for, and the note under the list says so while any is unbound. Nothing here is typed.
+  var cov = agrCoverageLines({ who: 'Havellin', figures: true }).map(function(c){ return bb(c.title + ':') + '  ' + c.text; });
   content += '<ul style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
   cov.forEach(function(c){ content += '<li style="margin-bottom:.2rem;">'+c+'</li>'; });
   content += '</ul>';
+  if (insPlaceholderNote()) content += pp(insPlaceholderNote());
   content += subHdr('6.2 Havellin Liability Limits');
-  content += pp('Havellin\'s liability for damage to or loss of any single item is limited to the lesser of: (a) the professionally appraised fair market value of the item at the time of loss or damage, or (b) $10,000 per item, unless the Client has separately declared a higher value in writing prior to the engagement.');
-  content += pp('For items of extraordinary value (fine art, jewelry, rare collectibles valued over $10,000 per item), the Client must provide a written declaration of value prior to project start. Havellin may require additional insurance coverage or specialized handling protocols for declared high-value items.');
+  // ⚠⚠ THE CAP FOLLOWS THE POLICY (A19; Anthony, 2026-10-16, Q61: "in high value homes, there will be many items >$10k so
+  // this is not likely to work for our high end clientele"; insurance-led). Until 2026-10-20 this capped every item at the
+  // lesser of its appraised value or $10,000 unless the client declared a higher value in writing first, a declaration no
+  // client produces. Now: documented value up to the policy's limits, the items above the per-item limit scheduled or
+  // handled by an insured specialist, named to the client before work begins (the desk prints that list once the figure
+  // is bound). The exclusions paragraph is unchanged.
+  content += pp('Havellin\u2019s responsibility for loss of or damage to an item of the property\u2019s contents caused by its negligence while the item is in its care, custody or control is measured by the item\u2019s documented value: the appraised value where an appraisal has been obtained, otherwise the value recorded for it on the Project Records (Section 7.1) or declared by the Client in writing; and in no case exceeds ' + insFigure('perItem') + ' for any one item or ' + insFigure('perOccurrence') + ' for any one occurrence, the limits of the coverage stated in Section 6.1.');
+  content += pp('An item whose documented value exceeds the per-item limit is, before it is moved, either scheduled with Havellin\u2019s insurer for this engagement on an agreed-value basis or handled and transported by a specialist vendor carrying its own coverage; Havellin names those items to the Client before work begins. Jewelry, cash, negotiable instruments and original legal documents are secured with the Client, counsel or a bank at the walkthrough and before any work begins.');
   content += pp('Havellin is not liable for: pre-existing damage to property or items; loss or damage resulting from Client instructions that Havellin advised against in writing; items removed from the property by family members or third parties without Havellin\'s knowledge; or digital assets, cryptocurrencies, or financial instruments not physically present and accessible at the property.');
   content += subHdr('6.3 Damage Incident Protocol');
   var proto = [
@@ -51417,6 +51560,14 @@ function probateAgreementHtml(job, est) {
   content += '<ol style="font-size:11px;line-height:1.75;margin:.3rem 0 .8rem 1.4rem;color:var(--gray-dk);">';
   proto.forEach(function(p2){ content += '<li style="margin-bottom:.2rem;">'+p2+'</li>'; });
   content += '</ol>';
+  // ⚠⚠ §6.4 THIRD-PARTY VENDORS (2026-10-20, Q87). The standard form said since the start that vendors are independent, that
+  // Havellin warrants nothing of theirs and that a claim goes against the vendor (§6), and released and indemnified Havellin
+  // for their acts (§11.5(b), §11.6(c)); the estate form, where the appraiser and the estate sale truck live, said none of it.
+  // Inside §6 so that §7 (documentation), §7.2 (the opt-out) and §8 (termination), which the app and the tests name, keep
+  // their numbers. The certificate sentence is the one both forms read (agrVendorCoiTxt). Drafted, not reviewed (A20).
+  content += subHdr('6.4 Third-Party Vendors');
+  content += pp('Havellin may recommend, coordinate and schedule third-party vendors for this engagement: movers, haulers, estate sale companies, auction houses, appraisers, cleaners and trades. Each is an independent business and not an employee, partner or agent of Havellin. ' + agrVendorCoiTxt('Havellin', 'the Client'));
+  content += pp('Havellin does not warrant or guarantee a vendor\u2019s work, its results, or any valuation, price or sale outcome, and is not responsible for a vendor\u2019s acts or omissions, including loss of or damage to property while in a vendor\u2019s custody; a claim arising from a vendor\u2019s conduct is made against that vendor and its insurer. To the fullest extent permitted by Florida law, the Client releases Havellin from, and will indemnify and hold Havellin harmless against, claims arising from the acts or omissions of a vendor identified in Exhibit A or otherwise selected or approved by the Client, except to the extent caused by Havellin\u2019s gross negligence or willful misconduct.');
   // SECTION 7: CONFIDENTIALITY
   content += secHdr(7,'Confidentiality &amp; Privacy');
   content += pp('All information encountered during this engagement — including but not limited to property contents, asset values, financial records, legal documents, family matters, and estate details — is strictly confidential. Havellin agrees to:');
@@ -52021,14 +52172,17 @@ function agreementHtml(job, est) {
 
   // ── SECTION 5 ─────────────────────────────────────────────────────────────
   content += agrSection('5. Insurance and Bonding',
-    p(b('5.1 Contractor Insurance.')+'  Contractor represents that it maintains: (a) Commercial General Liability Insurance covering bodily injury and property damage; (b) Commercial Auto Liability Insurance; (c) Professional Liability / Errors &amp; Omissions Insurance; (d) Fidelity Bond / Employee Dishonesty Coverage for all personnel; and (e) Workers\' Compensation as required by Florida law.')+
+    // The seven coverages are the one catalogue the estate form's §6.1 prints (agrCoverageLines; 2026-10-20): here as a
+    // run-in list without figures, as this form always carried it.
+    p(b('5.1 Contractor Insurance.')+'  Contractor represents that it maintains: ' + agrCoverageLines({ who: 'Contractor' }).map(function(c, i){
+        return '(' + String.fromCharCode(97 + i) + ') ' + c.title + ', ' + c.text; }).join('; ').replace(/; \(g\)/, '; and (g)') + '.')+
     p(b('5.2 Certificates of Insurance.')+'  Upon reasonable written request, Contractor will provide a certificate of insurance evidencing the coverages above.')+
     p(b('5.3 Client\'s Insurance.')+'  Client is strongly encouraged to maintain adequate homeowner\'s or property insurance, including valuable articles or collectibles coverage, for losses not caused by Contractor\'s proven negligence.')
   );
 
   // ── SECTION 6 ─────────────────────────────────────────────────────────────
   content += agrSection('6. Third-Party Vendors and No Warranty',
-    p('Contractor may recommend or coordinate third-party vendors. Such vendors are independent contractors and not employees, partners, or agents of Contractor. Contractor does not warrant, guarantee, or assume responsibility for the acts, omissions, services, or results of any third-party vendor. Claims arising from vendor conduct shall be made directly against that vendor.')
+    p('Contractor may recommend or coordinate third-party vendors. Such vendors are independent contractors and not employees, partners, or agents of Contractor. ' + agrVendorCoiTxt('Contractor', 'Client') + ' Contractor does not warrant, guarantee, or assume responsibility for the acts, omissions, services, or results of any third-party vendor. Claims arising from vendor conduct shall be made directly against that vendor.')
   );
 
   // ── SECTION 7 ─────────────────────────────────────────────────────────────

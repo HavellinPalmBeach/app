@@ -503,7 +503,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const DOC_FNS = ['marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'estimateIsFeeOnly', 'estDeclutterHrs', 'prepFeeRate',
       'fmt', 'esc', 'fmtDate2', 'svcLabelOf', 'docServiceTitle', 'probateSvcOffTrack', 'isDecedentJob', 'estTolerancePctTxt', 'conciergePhones', 'conciergePhonesText',
       'assignedTCContact', 'samePerson', 'canonPersonName', 'estWorkingDays', 'paymentSplit', 'fmtCEDate', '_pctWords',
-      'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'agrReferralFeeTxt', 'agrFinalDueTxt', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
+      'agreementHtml', 'agrPriceAdjustments', 'probateAgreementHtml', 'agrReferralFeeTxt', 'agrCoverageLines', 'insFigure', 'insCoverage', 'insUnbound', 'insPlaceholderNote', 'agrVendorCoiTxt', 'agrFinalDueTxt', '_agrApprovedStamp', 'agrBillingRates', '_agrHasPrepVendors', '_agrScopeServices',
       '_agrProbateCompliance', '_agrMidpointTrigger', '_fixedFeeBlurb', 'estimateDocScope', 'svcHasDocStep',
       'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'agrSection', 'approvedEstimateFor',
       'materialsBasisNote', 'materialsPackageQuoted', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces',

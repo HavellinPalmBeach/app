@@ -284,8 +284,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#2 — the sourcing list renders the lines on the job, and ADDS the rest one pick at a time');
   {
-    const R = sandbox({ fns: ['renderVendorSourcing', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'estimateAppraiserLines', 'roundCents', 'fmt'].concat(LOGI_FNS), vars: ['LOGISTICS_CATEGORIES', 'vendorDirectory', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
-      stubs: { vendorDirectory: [{}], dirStaleNotice: () => '', vendorPickerOptions: () => '<option>V</option>',
+    const R = sandbox({ fns: ['renderVendorSourcing', 'vendorLineHrs', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'estimateAppraiserLines', 'roundCents', 'fmt', 'vendorsWithoutCoi', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'jobListEntries', 'vendorCoiState', '_vendorYmd', 'fmtDate2'].concat(LOGI_FNS), vars: ['INV_RELEASE_DISPOSITIONS', 'LOGISTICS_CATEGORIES', 'vendorDirectory', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS'],
+      stubs: { vendorDirectory: [{}], _photoRefs: {}, _todayStr: () => '2026-09-23', dirStaleNotice: () => '', vendorPickerOptions: () => '<option>V</option>',
                vendorCategoriesForSlot: () => [], _selVendorId: () => '', _fldBg: () => '', vendorStatusOptions: () => '',
                _coordHrsField: () => '', coordHrsFor: () => 1, _vendorRefLine: () => '', _srcLineKey: (l, i) => 'L' + i,
                prepFeeRate: () => 0.3, prepLineTCHrs: () => 0, coordHrsRollup: () => '', getJobPlan: () => ({}),
@@ -559,9 +559,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('#6, driven through the real chip row — and repainted IN PLACE when the team or a vendor moves');
   {
     const P = sandbox({ fns: ['planGateChipsHtml', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName',
-                              'vendorSourcingProgress', 'prepVendorsConfirmed', '_srcLineKey', 'planVendorsMeta', '_repaintPlanGates', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(LOGI_FNS),
-      vars: CREW_VARS.concat(['LOGISTICS_CATEGORIES']),
-      stubs: { planDerivedLines: () => [{ key: 'agreement_signed', ok: true, label: 'Agreement signed' }] } });
+                              'vendorSourcingProgress', 'prepVendorsConfirmed', '_srcLineKey', 'planVendorsMeta', 'vendorsWithoutCoi', 'vendorCoiState', '_vendorYmd', 'jobListEntries', 'fmtDate2', '_assignedVendorsForJob', 'lookupVendorById', 'vendorIdOf', '_repaintPlanGates', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'].concat(LOGI_FNS),
+      vars: CREW_VARS.concat(['LOGISTICS_CATEGORIES', 'INV_RELEASE_DISPOSITIONS']),
+      stubs: { planDerivedLines: () => [{ key: 'agreement_signed', ok: true, label: 'Agreement signed' }], _todayStr: () => '2026-09-23', _photoRefs: {}, vendorDirectory: [] } });
     const est = { vendors: [{ lid: 'a', type: 'Mover' }], collections: [], prepItems: [] };
     const job = { id: 7, svc: 'downsizing_move', vendorSourcing: {}, crew: { tc: { name: 'Ashley Jerome' }, ps: [], confirmed: false } };
     const row = P.planGateChipsHtml(7, job, est);

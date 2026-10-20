@@ -101,7 +101,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 // ─── the agreement sandbox ───────────────────────────────────────────────────
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable',
   'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas',
-  '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrFillSlot', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', 'agrBillingRates',
+  '_mktClause', 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrFillSlot', 'agrReferralFeeTxt', 'agrCoverageLines', 'insFigure', 'insCoverage', 'insUnbound', 'insPlaceholderNote', 'agrVendorCoiTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', 'agrBillingRates',
   'materialsBasisNote', 'materialsPackageQuoted', 'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection',
   '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
   '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',

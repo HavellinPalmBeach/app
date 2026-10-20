@@ -500,6 +500,51 @@ representative's separate acknowledgement for the scheduled items? (3) Does the 
 shift the risk of unsecured jewelry and cash cleanly enough, or should those classes be excluded by name as the digital
 assets are? Not built into the form until the per-item and per-occurrence figures exist.
 
+**Built 2026-10-20, with placeholders (Anthony: *"let's just have them as placeholders"*).** §6.2 now carries the draft above, with
+`$[per-item limit]` and `$[per-occurrence limit]` where the figures go, and §6.1 lists the seven coverages Anthony applied for
+the same day (Higginbottom; GL $[2,000,000] / $[4,000,000]; inland marine / bailee's $[1,000,000 to 2,500,000] with a scheduled
+fine arts and collectibles endorsement on an agreed-value basis; E&O; auto $[1,000,000] CSL with hired and non-owned; umbrella
+$[5,000,000 to 10,000,000]; commercial crime (fidelity) and cyber; workers' compensation) with a sentence under the list that
+the brackets are applied-for limits. Every figure comes from one catalogue in the code (`insCoverage`); the bound limits
+replace the brackets there and the sentence goes by itself. The standard form's §5.1 lists the same seven without figures;
+its §11.2 and §11.4 are not yet aligned (the alignment waits on the figures). One more question: (4) the crime policy's
+"employee" definition has to reach the 1099 contractors both forms name as covered on site (the estate form's old *fidelity
+bond covering all team members and contractors on-site* said the same); if the carrier will not endorse them, that line
+changes in both forms and in the Contractor Agreement's §6.2 (G1).
+
+### A20. §6.4 — third-party vendors on the estate form, and the certificate sentence on both ⚠ NEW 2026-10-20 · PRIORITY 2
+
+**What it says now.** A new §6.4 *Third-Party Vendors*, inside §6 so that §7, §7.2 and §8 keep the numbers the app and the
+tests name: *"Havellin may recommend, coordinate and schedule third-party vendors for this engagement: movers, haulers, estate
+sale companies, auction houses, appraisers, cleaners and trades. Each is an independent business and not an employee, partner
+or agent of Havellin. Havellin requires every vendor it books to carry its own commercial general liability insurance,
+automobile liability where it drives, coverage for the Client's property while in its custody where it takes property away,
+and professional liability where it appraises, and to provide a certificate of insurance before its first day on site;
+Havellin provides those certificates to the Client on request."* Then: *"Havellin does not warrant or guarantee a vendor's
+work, its results, or any valuation, price or sale outcome, and is not responsible for a vendor's acts or omissions, including
+loss of or damage to property while in a vendor's custody; a claim arising from a vendor's conduct is made against that
+vendor and its insurer. To the fullest extent permitted by Florida law, the Client releases Havellin from, and will indemnify
+and hold Havellin harmless against, claims arising from the acts or omissions of a vendor identified in Exhibit A or
+otherwise selected or approved by the Client, except to the extent caused by Havellin's gross negligence or willful
+misconduct."* The standard form's §6 (*Third-Party Vendors and No Warranty*) gains the same certificate sentence, in that
+form's bare "Client"; its §11.5(b) and §11.6(c) stay as they were.
+
+**Why.** The standard form said from the start that vendors are independent, that Havellin warrants nothing of theirs and
+that a claim goes against the vendor, and released and indemnified Havellin for their acts; the estate form, where the
+appraiser and the estate sale company's truck live, said none of it. Anthony, 2026-10-20, after the insurer asked whether
+Havellin's vendors carry their own coverage: *"an appraiser maybe who misappraises something, thinks it's worth $1,000, it's
+really worth $10,000 … some estate sale company comes and picks up 4 rooms worth of furniture … and their truck catches on
+fire … we're sort of the last line of defense should the estate sue our vendors."* The certificate is asked for with the
+booking, not at onboarding (vendors do not answer a cold request), recorded on the vendor as two dates, and the Job Plan
+flags a vendor on the job without a current one; the app never blocks on it. The Vendor Terms (G2) are the vendor's side.
+
+**The question.** (1) Can a personal representative or a trustee release and indemnify Havellin for a vendor the estate
+approved through Exhibit A, or does a fiduciary need the narrower clause with Havellin's own negligent selection and
+supervision excepted by name? (2) Does *requires every vendor it books to carry … provides those certificates on request*
+create a duty to verify coverage that Havellin breaches when a vendor's policy lapses mid-job; should it read *asks*, or
+*requires, as a condition of the booking*? (3) Is *any valuation, price or sale outcome* enough to keep an appraiser's error
+with the appraiser on a court-reviewed matter, read with §7.1's *not an appraisal or a statement of value*?
+
 ## B. Standard (living-client) services agreement
 
 ### B1. Two confidentiality standards in one contract
@@ -1362,6 +1407,60 @@ So counsel does not spend time on settled ground:
 | Court Inventory / Trust Schedule / Appraisal Worklist | sample documents, for D1–D5 |
 | Release Approval Request with two fiduciaries (one line partly signed, one listed for ratification), a living client's request naming a line going to a team member, a Receipt for Property Released, the Disposition Ledger, a Donation Record | from the desk (Job Admin & Inv), for A13, D7, D8, D11, D12 |
 | Receipt for Original Will, Cash Count and Receipt | from the Job Plan's *Found on site* card, for D9 and D10 |
+| Independent Contractor Agreement, Version 1.2 | `legal/Havellin_Independent_Contractor_Agreement_v1.2.pdf` (the markdown beside it is the source), for A7 and G1 |
+| Vendor Terms and Insurance Requirements, Version 1.0 | `legal/Havellin_Vendor_Terms_v1.0.pdf`, for A20 and G2 |
 
 **⚠ Send the signing packet, not the agreement alone.** Both forms incorporate the estimate as
 Exhibit A and the estate form states it is not valid without it.
+
+## G. Vendor and contractor paper (2026-10-20)
+
+Two documents outside the app, in `legal/` (markdown as the source, DOCX and PDF beside it), drafted on 2026-10-20 for the
+insurer (Higginbottom) as much as for counsel: Anthony sent them the coverage package he is applying for and they asked to
+see how liability is mitigated for the vendors and the 1099 crew. Every bracketed figure in both is a limit applied for,
+not bound.
+
+### G1. The Independent Contractor Agreement, Version 1.2 (the 1099 every Property Specialist and Transition Concierge signs) ⚠ PRIORITY 2
+
+**What changed from 1.1** (its own box lists it): §3.3 names the app as the record of hours, in half-hour increments; §3.4 is
+new (same-day incident reporting through the app, the call to Anthony, the Estate Firearms Protocol by reference, sign-out on
+the iPad, photographs only through the app); §5.2 keeps Client Property out of a personal vehicle unless Havellin directs it
+in writing and says what hired and non-owned auto does and does not cover; §6 is rewritten (6.1 not an employee, no benefits;
+6.2 Havellin's policies, what they protect and what they do not, the requested limits in brackets; 6.3 workers' compensation,
+with a bracketed alternative for the broker and Chapter 440 deciding coverage; 6.4 the contractor's own insurance, an
+occupational accident policy recommended; 6.5 assumption of risk); §12 drops (e), the contractor's indemnity for the
+contractor's own injury; §14.3 adds the firearms protocol and an unreported incident; Schedule A records the W-9, the
+background check consent and the §6 initials by date. §8 answers A7: the 1099 does carry confidentiality, and §8.4 says it
+exists to satisfy the client agreements' §7.
+
+**The question.** (1) An hourly worker directed by the concierge with no business of their own: does §2 survive
+§440.02(15)(d)'s independent-contractor test, and should Havellin carry a workers' compensation policy regardless (the
+broker's question too)? (2) §2.6's waiver of benefits on reclassification: enforceable? (3) §6.2 says the crime coverage
+protects the Client against the contractor's dishonesty: the policy's "employee" definition has to include 1099
+contractors (A19's question 4). (4) §10's twelve-month non-solicit under §542.335 for a $30-an-hour specialist: reasonable,
+or narrow it to the clients they served? (5) §5.2's sentence on hired and non-owned auto: accurate for Florida, and does
+naming it in the contractor's agreement create any expectation the policy does not meet? (6) §12(c) makes the contractor
+answer for theft, loss or damage of Client Property they cause, to the Client directly: wanted, or should the Client's claim
+run only against Havellin (and its crime and bailee's coverage), with Havellin's recourse against the contractor?
+
+### G2. The Vendor Terms and Insurance Requirements, Version 1.0 (accepted with a vendor's first booking) ⚠ PRIORITY 2
+
+**What it says.** Six sections: relationship (independent; bills the client at cost; a referral fee disclosed; pays nobody at
+Havellin personally), insurance (a table of requested minimums: CGL $[1,000,000] / $[2,000,000] every vendor; auto
+$[1,000,000] CSL any vendor that drives; cargo, inland marine or bailee's for the full value of the load, minimum $[100,000],
+any vendor that takes property away, a mover offering full-value protection to the client in writing; E&O $[1,000,000] per
+claim with USPAP-compliant written reports, appraisers; workers' compensation per Chapter 440 or a current exemption;
+Havellin Palm Beach, LLC certificate holder and additional insured on CGL and auto; the certificate before the first day on
+site, renewal certificates, thirty days' notice of cancellation), conduct on site (the concierge's directions; the no-purchase
+and no-gift rule; confidentiality; no firearms on the property, a dealer only through the protocol; sign-out on the iPad;
+keys never copied), responsibility and indemnity (the vendor answers for its own work, employees and subcontractors;
+indemnifies Havellin and the client; property in its custody is its and its insurer's), records (invoice the client
+directly; the pickup sheet; receipts and proceeds statements within [14] days), acceptance (by reply "Accepted" or signature;
+applies to every later booking until replaced).
+
+**The question.** (1) Is acceptance by a reply of "Accepted" to a booking email enough to bind the indemnity and the
+insurance covenant, or does §4 need a signature? (2) *Additional insured* by certificate alone is a statement, not coverage:
+should the terms require the endorsement (CG 20 10 / CG 20 37 or the carrier's form) and the primary and non-contributory
+wording, and is that realistic for a one-truck hauler? (3) *The full value of the load* for cargo: enforceable as written, or
+state a per-shipment figure? (4) The USPAP line for appraisers, read with §5 of the estate form and §7.1's *not an
+appraisal*: enough to keep the valuation with the appraiser?

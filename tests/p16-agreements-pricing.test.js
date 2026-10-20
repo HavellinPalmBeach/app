@@ -154,7 +154,7 @@ const TIER_FNS = ['weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTie
 const TIER_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'];
 const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', '_agrTrustDeliverable', 'matterDef',
                  'matterTypeOf', 'invFiduciaryMode', 'marketingOptOutBlock', 'marketingUseParas', '_mktClause',
-                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrFillSlot', 'agrReferralFeeTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
+                 'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrFillSlot', 'agrReferralFeeTxt', 'agrCoverageLines', 'insFigure', 'insCoverage', 'insUnbound', 'insPlaceholderNote', 'agrVendorCoiTxt', 'jobProbateCourt', 'courtFromCaseNo', 'agrFinalDueTxt', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf',
                  '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
@@ -476,7 +476,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
   group('⚠⚠ A3 — once accepted the vendor joins the job\'s prep lines and is billed on the final, outside the variance');
   {
-    const L = (cos) => sandbox({ fns: ['jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'], stubs: { changeOrders: cos } });
+    const L = (cos) => sandbox({ fns: ['jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'], stubs: { _photoRefs: {}, _todayStr: () => '2026-10-20', changeOrders: cos } });
     eq(L([co({ vendorAdds: [LANDSCAPER] })]).jobPrepLines(BP_JOB, EST_BP).map((x) => x.type), ['Painting'], 'an unaccepted change order adds nothing');
     eq(L([accepted({ vendorAdds: [LANDSCAPER] })]).jobPrepLines(BP_JOB, EST_BP).map((x) => x.type), ['Painting', 'Landscaper'],
        '⚠⚠ an accepted one joins the labour job\'s prep lines, after the estimate\'s');
@@ -513,16 +513,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'logisticsLinesFor', 'logisticsCatsFor', 'logisticsLineOn', '_fldBg', 'vendorPickerOptions', '_selVendorId', 'resolveJobVendor',
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
-      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'estimateAppraiserLines', 'vendorLineTCHrs', 'roundCents', 'fmtHrs'];
-    const sourcing = (cos) => String(sandbox({ fns: SRC_FNS, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES'],
-      stubs: { changeOrders: cos, jobs: [BP_JOB], estimateStore: {}, document: domStub({}), contractors: [],
+      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'estimateAppraiserLines', 'vendorLineTCHrs', 'roundCents', 'fmtHrs', 'vendorsWithoutCoi', '_assignedVendorsForJob', 'jobListEntries', 'vendorCoiState', '_vendorYmd', 'vendorCoiLineHtml', 'vendorCoiRequestMailto', 'vendorContacts', 'fmtPhoneDisplay', 'fmtDate2'];
+    const sourcing = (cos) => String(sandbox({ fns: SRC_FNS, vars: ['INV_RELEASE_DISPOSITIONS', 'HAVELLIN_COI_HOLDER', 'VENDOR_CONTACT_SLOTS', 'AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES'],
+      stubs: { _photoRefs: {}, _todayStr: () => '2026-10-20', changeOrders: cos, jobs: [BP_JOB], estimateStore: {}, document: domStub({}), contractors: [],
                vendorDirectory: [{ vendor_name: 'Green Thumb Landscaping', category_group: 'Property Preparation', category: 'Landscaper', status: 'Active', _row: 3 }] } })
       .renderVendorSourcing(1, BP_JOB, EST_BP));
     ok(sourcing(COS).indexOf('Landscaper') >= 0, '⚠⚠ the labour job\'s sourcing list draws the vendor the change order added');
     ok(sourcing(COS).indexOf('Green Thumb Landscaping') >= 0, 'with the directory\'s landscaper offered to book');
     ok(sourcing([co({ vendorAdds: [LANDSCAPER] })]).indexOf('Landscaper') < 0, 'and an unaccepted change order draws nothing');
     const V = sandbox({ fns: ['vendorSourcingProgress', 'prepVendorsConfirmed', '_srcLineKey', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor',
-                              'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES'], stubs: { changeOrders: COS } });
+                              'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES'], stubs: { _photoRefs: {}, _todayStr: () => '2026-10-20', changeOrders: COS } });
     eq(V.vendorSourcingProgress(1, Object.assign({}, BP_JOB, { prepSourcing: { 'Lco-land': { status: 'Confirmed' } } }), EST_BP),
        { done: 1, total: 2 }, 'the "lined up" count includes it');
   }
@@ -668,9 +668,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'logisticsLinesFor', 'logisticsCatsFor', 'logisticsLineOn', '_fldBg', 'vendorPickerOptions', '_selVendorId', 'resolveJobVendor',
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
-      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'estimateAppraiserLines', 'vendorLineTCHrs', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'roundCents', 'fmtHrs'];
-    const srcCard = (prem) => text(sandbox({ fns: SRC, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES', 'COORD_TOUCHES_DEFAULT'],
-      stubs: { changeOrders: [], jobs: [{ id: 1, svc: 'cleanout' }], estimateStore: {}, document: domStub({}), contractors: [], vendorDirectory: [] } })
+      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorLineHrs', 'estimateAppraiserLines', 'vendorLineTCHrs', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'roundCents', 'fmtHrs', 'vendorsWithoutCoi', '_assignedVendorsForJob', 'jobListEntries', 'vendorCoiState', '_vendorYmd', 'vendorCoiLineHtml', 'vendorCoiRequestMailto', 'vendorContacts', 'fmtPhoneDisplay', 'fmtDate2'];
+    const srcCard = (prem) => text(sandbox({ fns: SRC, vars: ['INV_RELEASE_DISPOSITIONS', 'HAVELLIN_COI_HOLDER', 'VENDOR_CONTACT_SLOTS', 'AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale', 'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES', 'COORD_TOUCHES_DEFAULT'],
+      stubs: { _photoRefs: {}, _todayStr: () => '2026-10-20', changeOrders: [], jobs: [{ id: 1, svc: 'cleanout' }], estimateStore: {}, document: domStub({}), contractors: [], vendorDirectory: [] } })
       .renderVendorSourcing(1, { id: 1, svc: 'cleanout' }, { svc: 'cleanout', prem, vendors: [Object.assign({}, ART)], prepItems: [], collections: [] }));
     has(srcCard(true), 'Art Appraiser', 'fixture: the sourcing card draws the appraiser line');
     has(srcCard(true), 'est 2.0', '⚠ the sourcing card estimates its 2.0 hours on a Premium estate');

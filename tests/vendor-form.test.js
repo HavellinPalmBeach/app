@@ -79,8 +79,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // It sits under the row it explains, so it must name the field it belongs to.
     has(block, '<strong>Category:</strong>', 'the note names its field, since it no longer sits in the cell');
     has(SRC, '.vform .fld-note{grid-column:1/-1;', 'the class spans the whole grid');
-    // The COI / Reciprocity selects must still be ordinary cells in that row.
-    has(block, '<select id="v-coi">', 'COI on file is still on the row');
+    // The COI dates and the Reciprocity select must still be ordinary cells in that row (the COI became two dates on
+    // 2026-10-20, Q87: received and expires, read by vendorCoiState; the Yes / Pending / No select is gone).
+    has(block, '<input type="date" id="v-coi-received">', 'COI received is on the row');
+    has(block, '<input type="date" id="v-coi-expires">', 'and COI expires');
+    lacks(block, 'id="v-coi">', 'the old Yes / Pending / No select is gone');
     has(block, '<select id="v-recip">', 'and so is Reciprocity');
   }
 

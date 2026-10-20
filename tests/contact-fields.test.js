@@ -48,13 +48,13 @@ function mapKeys(name) {
 
 const VENDOR_CARD_STUBS = {
   vendorFitSelect: () => '<fit>', vendorStatusSelect: () => '<status>',
-  vendorRatingCompact: () => '<rating>', vendorFit: () => '', VENDOR_FIT: {},
+  vendorRatingCompact: () => '<rating>', vendorFit: () => '', VENDOR_FIT: {}, _todayStr: () => '2026-10-20',
 };
 function vendorCtx() {
   return sandbox({
     fns: ['vendorCardHtml', 'vendorContacts', '_vendorContact', 'vendorIdOf', 'fmtPhoneDisplay',
           '_vendorWebUrl', '_vLine', 'vendorCats', 'fmtVendorDate', 'isVendorPhoneKey',
-          'vendorSearchBlob', 'vendorMatchesQuery'],
+          'vendorSearchBlob', 'vendorMatchesQuery', 'vendorCoiState', '_vendorYmd', 'fmtDate2'],
     vars: ['VENDOR_CONTACT_SLOTS'],
     stubs: VENDOR_CARD_STUBS,
   });

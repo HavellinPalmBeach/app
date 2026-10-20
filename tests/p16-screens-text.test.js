@@ -319,7 +319,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'svcHasDocStep', 'fmtCEDate', '_pctWords', 'docTierOf', 'docTierDef', 'docTierScope', 'approvedEstimateFor', 'estFixedFee',
       'estPrepFeeOnTop', 'weArrangeAppraisals', 'docTierProduces', 'estFixedLines', 'fixedDiscountBasisWords', 'rushBaseWords',
       'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'matterDef', 'matterTypeOf',
-      'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'docScopeDef', 'addWorkingDays', '_ymdLocal', 'roundCents', 'fmtHrs'];
+      'marketingOptOutBlock', 'marketingUseParas', '_mktClause', 'docScopeDef', 'addWorkingDays', '_ymdLocal', 'roundCents', 'fmtHrs', 'vendorsWithoutCoi', '_assignedVendorsForJob', 'jobListEntries', 'vendorCoiState', '_vendorYmd', 'vendorCoiLineHtml', 'vendorCoiRequestMailto', 'vendorContacts', 'fmtPhoneDisplay', 'fmtDate2'];
     const DOC_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'PREP_FEE_RATE', 'SMF_PCT', 'RUSH_PCT', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'DEPT_EMAILS', 'HAVELLIN_OFFICE_PHONE',
       'NON_MOBILE_NUMBERS', 'DEFAULT_CONTRACTORS', 'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'DOC_SCOPES', 'DOC_CAPTURE_POOL_SHARE',
       'JOB_STEPS', 'PRODUCTIVE_HRS_PER_DAY', '_PCT_WORDS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'MATTER_TYPES'];
@@ -712,8 +712,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const V = { vendor_name: 'Acme Hauling', phone: '5615550100', contact_first: 'Andy', contact_last: 'Ramirez', contact_mobile: '5615550199',
                 contact2_first: 'Bea', contact2_last: 'Cole', contact2_email: 'bea@acme.test', _row: 5, category: 'Junk Removal' };
-    const mk = (dir) => sandbox({ fns: ['_vendorRefLine', 'resolveJobVendor', 'lookupVendorById', 'vendorIdOf', 'vendorContacts', 'fmtPhoneDisplay', 'esc'],
-      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'VENDOR_CONTACT_SLOTS'], stubs: { vendorDirectory: dir, saveJobs() {} } });
+    const mk = (dir) => sandbox({ fns: ['_vendorRefLine', 'resolveJobVendor', 'lookupVendorById', 'vendorIdOf', 'vendorContacts', 'fmtPhoneDisplay', 'esc', 'vendorCoiState', '_vendorYmd', 'vendorCoiLineHtml', 'vendorCoiRequestMailto', 'fmtDate2'],
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'VENDOR_CONTACT_SLOTS', 'HAVELLIN_COI_HOLDER'], stubs: { vendorDirectory: dir, saveJobs() {}, _todayStr: () => '2026-10-20' } });
     const line = (dir, rec) => { const a = attempt(() => mk(dir)._vendorRefLine(rec)); return a.ok ? a.val : 'THREW ' + a.err; };
     const h = line([V], { vendorId: 5, vendorName: 'Acme Hauling' });
     lacks(h, 'THREW', 'the line renders' + (h.indexOf('THREW') === 0 ? ' — ' + h : ''));
@@ -884,10 +884,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'logisticsLinesFor', 'logisticsCatsFor', 'logisticsLineOn', '_fldBg', 'vendorPickerOptions', '_selVendorId', 'resolveJobVendor',
       'lookupVendorById', 'vendorCategoriesForSlot', 'approvedVendorsInCats', 'isActiveVendor', '_catSet', 'vendorCats', 'vendorStatusOptions',
       '_coordHrsField', 'prepLineTCHrs', 'coordHrsFor', 'coordTouches', '_vendorRefLine', 'vendorPrimaryCat', 'vendorIdOf', 'vendorStars',
-      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorContacts', 'fmtPhoneDisplay', 'roundCents', 'fmtHrs'];
-    const s = attempt(() => sandbox({ fns: SRC_FNS, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale',
+      'vendorPerf', 'prepFeeRate', 'coordHrsRollup', 'vendorContacts', 'fmtPhoneDisplay', 'roundCents', 'fmtHrs', 'vendorsWithoutCoi', '_assignedVendorsForJob', 'jobListEntries', 'vendorCoiState', '_vendorYmd', 'vendorCoiLineHtml', 'vendorCoiRequestMailto', 'vendorContacts', 'fmtPhoneDisplay', 'fmtDate2'];
+    const s = attempt(() => sandbox({ fns: SRC_FNS, vars: ['INV_RELEASE_DISPOSITIONS', 'HAVELLIN_COI_HOLDER', 'VENDOR_CONTACT_SLOTS', 'AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LOGISTICS_CATEGORIES', 'GROUP_JOB_MENU', 'VENDOR_GROUP_CARDS', 'PREP_FEE_RATE', '_dirStale',
       'VENDOR_SLOT_CATEGORY_MAP', 'TOUCH_HRS', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES', 'VENDOR_CONTACT_SLOTS'],
-      stubs: { changeOrders: [], jobs: [PREP_JOB], estimateStore: {}, document: domStub({}), contractors: [], vendorDirectory: [] } })
+      stubs: { _photoRefs: {}, _todayStr: () => '2026-10-20', changeOrders: [], jobs: [PREP_JOB], estimateStore: {}, document: domStub({}), contractors: [], vendorDirectory: [] } })
       .renderVendorSourcing(1, PREP_JOB, { svc: 'prep', prepEnabled: true, prepItems: [{ type: 'Staging', cost: 3000, lid: 'st' }], vendors: [] }));
     ok(s.ok, 'the prep sourcing card renders' + (s.ok ? '' : ' — ' + s.err));
     // RESTATED 2026-10-01 (P17, Anthony's answer 5): the cards name the Home Sale Preparation Fee; they said "site management fee".
@@ -899,7 +899,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
       '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard',
       'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob',
-      'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'];
+      'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'vendorsWithoutCoi', '_assignedVendorsForJob', 'jobListEntries', 'vendorCoiState', '_vendorYmd', 'vendorCoiLineHtml', 'vendorCoiRequestMailto', 'vendorContacts', 'fmtPhoneDisplay', 'fmtDate2'];
     const EST = { jobId: 1, svc: 'prep', prepEnabled: true, prepCost: 3000, prepFee: 900, declutterTCHrs: 0, tcRate: 150,
       prepItems: [{ type: 'Staging', cost: 3000, lid: 'st' }], vendors: [] };
     const p = attempt(() => sandbox({ fns: planFns, vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'],
