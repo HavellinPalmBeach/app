@@ -717,7 +717,8 @@ body.field-cam-open #sync-pending{display:none !important;}
 .fc-tog{border-radius:6px;border:1px solid rgba(255,255,255,.35);background:transparent;color:#eee;font-family:inherit;font-size:12px;font-weight:600;padding:8px 10px;cursor:pointer;min-height:40px;}
 .fc-tog.on{background:var(--bronze);border-color:var(--bronze);color:#fff;}
 .fc-tog:disabled{opacity:.35;cursor:default;}
-.fc-talk{touch-action:none;user-select:none;-webkit-user-select:none;}
+.fc-talk{touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+.fc-talk-msg{font-size:11px;color:#ffb3a7;line-height:1.4;}
 .fc-talk.on{background:#c0392b;border-color:#c0392b;color:#fff;}
 .fc-last{display:flex;gap:8px;align-items:center;font-size:11px;color:#ccc;min-height:40px;}
 .fc-last-thumb{width:40px;height:40px;border-radius:4px;background:#333 center/cover no-repeat;flex:0 0 auto;}
@@ -1369,7 +1370,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.20 · 12:46pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.21 · 1:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -38764,7 +38765,8 @@ function openFieldCamera(jobId, roomIdx, mode, opts) {
                 coll: (mode === 'inventory' && opts && opts.coll) ? String(opts.coll) : null,
                 last: null, lastAny: null, lastThumb: '', count: 0,
                 stream: null, ready: false, native: false, nativeWhy: '',
-                talking: false, recog: null, heard: '', noteDraft: '', noteFor: null };
+                talking: false, talkWant: false, talkFor: null, talkMsg: '', talkUntil: 0, talkRuns: 0,
+                recog: null, heard: '', heardInterim: '', noteDraft: '', noteFor: null };
   el.innerHTML = _fieldCamShellHtml();
   el.style.display = 'flex';
   if (document.body && document.body.classList) document.body.classList.add('field-cam-open');   // the chip steps aside (CSS)
@@ -38840,7 +38842,7 @@ function _fieldCamPaint() {
           : lastRef.sourceCollId != null ? 'the collection from the walkthrough' : esc(FIELD_CAM_MODES[lastRef.label] || lastRef.label)) + ' \u00b7 shot ' + lastRef.seq
       + (lastRef.status === 'failed' ? ' \u00b7 <span style="color:#ff8a80;">not saved \u2014 held on this device</span>' : '') + '</div>'
       + (lastRef.fieldNote ? '<div style="font-style:italic;color:#ddd;">\u201c' + esc(lastRef.fieldNote) + '\u201d</div>' : '')
-      + (st.talking ? '<div id="fc-talk-status" style="color:#ffb3a7;">Listening\u2026 ' + esc(st.heard) + '</div>' : '')
+      + (st.talking ? '<div id="fc-talk-status" style="color:#ffb3a7;">' + esc(_fieldTalkStatus(st)) + '</div>' : '')
       + '</div></div>';
   }
   if (st.mode === 'inventory') {
@@ -38860,13 +38862,15 @@ function _fieldCamPaint() {
       }).join('') + '</div>';
     }
   }
-  // The note on the last shot: hold to talk where the browser can transcribe, typed where it cannot.
+  // The note on the last shot: tap to talk where the browser can transcribe, typed where it cannot.
+  // ⚠⚠ A TAP, NEVER A HOLD (2026-10-21): see fieldCamTalk. This strip is rewritten on every press, so a held button is
+  // gone from under the finger the moment it is pressed.
   var SR = (typeof window !== 'undefined') && (window.SpeechRecognition || window.webkitSpeechRecognition);
   h += '<div class="fc-row">';
   if (SR) {
-    h += '<button type="button" class="fc-tog fc-talk' + (st.talking ? ' on' : '') + '"' + (st.lastAny ? '' : ' disabled')
-      + ' onpointerdown="fieldCamTalkStart(event)" onpointerup="fieldCamTalkStop()" onpointercancel="fieldCamTalkStop()" onpointerleave="fieldCamTalkStop()">'
-      + '&#127908; ' + (st.talking ? 'Release to save' : 'Hold to talk') + '</button>';
+    h += '<button type="button" class="fc-tog fc-talk' + (st.talking ? ' on' : '') + '"' + (st.lastAny || st.talking ? '' : ' disabled')
+      + ' onclick="fieldCamTalk()">'
+      + (st.talking ? '&#9632; Stop &amp; save' : '&#127908; Talk') + '</button>';
   }
   // ⚠⚠ THE HALF-TYPED NOTE LIVES ON THE STATE, NEVER ONLY IN THE ELEMENT. This strip is
   // rewritten with innerHTML on every shot, every chip and every thumbnail that lands, which
@@ -38878,11 +38882,12 @@ function _fieldCamPaint() {
   // add, it's another step." THREE things already commit what is in this box — Enter, taking
   // the next photograph, and Done — so a button to do a fourth time what all three already do
   // is a step that only exists to be forgotten. A voice note never needed one either: it lands
-  // the instant hold-to-talk is released (see fieldCamTalkStart's onend).
+  // the moment Stop is tapped, the next photograph is taken or Done is pressed (fieldCamTalk).
   h += '<input type="text" id="fc-note-input" class="fc-note-in" placeholder="Note on the last shot — saved automatically"'
     + ' value="' + esc(st.noteDraft || '') + '" oninput="fieldCamNoteDraft(this.value)"'
     + ' onkeydown="if(event.key===\'Enter\')fieldCamTypedNote()"' + (st.lastAny ? '' : ' disabled') + '>'
     + '</div>';
+  if (st.talkMsg) h += '<div class="fc-talk-msg">' + esc(st.talkMsg) + '</div>';
   // ⚠⚠ THE CLOSE-UP IS ITS OWN SHUTTER, ONE TAP (P25, Q41; Anthony, 2026-10-09). A close-up cost two taps, *+ Detail of
   // last* and then the shutter, because the toggle reset after every shot. It shoots a close-up of the last item, filed with
   // it and never a new item, exactly as the toggle did (fieldCamToggleDetail arms it, _fieldCamCommit files it). Offered on
@@ -38949,6 +38954,9 @@ function _fieldCamCommit(dataUrl) {
       // ⚠ THE NEXT PHOTOGRAPH COMMITS THE LAST NOTE, and it happens HERE, above the line that
       // moves `lastAny` — below it the words would be filed against the object just shot.
       _fieldCamFlushNote();
+      // A note still being spoken is stopped and saved the same way, onto the shot it was started on (talkFor).
+      if (st.talking) fieldCamTalkStop();
+      st.talkMsg = '';
       st.count++;
       st.lastAny = ref.stableId;
       if (ref.label === 'inventory') st.last = ref.stableId;   // a detail never becomes the primary
@@ -39014,46 +39022,115 @@ function fieldCamNativeShot(input, closeUp) {
   input.value = '';
 }
 
-function fieldCamTalkStart(ev) {
-  if (ev && ev.preventDefault) ev.preventDefault();
+// ⚠⚠ TAP TO START, TAP TO STOP (2026-10-21; Anthony and Ashley, the first photography run: "when you hit the button, it
+// kind of times out ... it's not staying on and you can't record anything", while typing in the box worked). It was hold
+// to talk, and the press itself repainted the strip (fieldCamTalkStart → _fieldCamPaint rewrites #fc-ui with innerHTML),
+// which destroyed the very button under the finger: the phone cancelled the press (pointercancel / pointerleave both
+// called stop) and the microphone closed before a word was heard. A tap survives the repaint, as every other control on
+// the strip does, and it is how the walkthrough's microphones already work (startRoomTranscription).
+// The words are pinned to the shot that was last when the talking began (talkFor), as a typed note is pinned (noteFor),
+// so a note is saved by Stop, by the next photograph or by Done, and always onto the shot it was said about.
+function fieldCamTalk() {
+  var st = _fieldCam;
+  if (!st.open) return false;
+  if (st.talking) { fieldCamTalkStop(); return true; }
+  return fieldCamTalkStart();
+}
+var FIELD_TALK_MAX_MS = 90000;   // a note is a sentence or two; at this the microphone saves and closes by itself
+var FIELD_TALK_MAX_RUNS = 30;    // restarts in one note, so a browser that ends every session at once cannot spin
+var FIELD_TALK_STOP_WAIT_MS = 2500;   // Stop saves after this even if the browser never answers with its end event
+function fieldCamTalkStart() {
   var st = _fieldCam;
   if (!st.open || !st.lastAny || st.talking) return false;
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return false;
+  st.talking = true; st.talkWant = true; st.talkFor = st.lastAny;
+  st.heard = ''; st.heardInterim = ''; st.talkMsg = ''; st.talkRuns = 0;
+  st.talkUntil = Date.now() + FIELD_TALK_MAX_MS;
+  _fieldCamTalkRun(st, SR);
+  if (st.open && _fieldCam === st) _fieldCamPaint();
+  return st.talking;
+}
+// One recognition session. ⚠ Safari ends a session by itself after a pause, `continuous` notwithstanding, and Chrome after
+// a silence (no-speech): while the person has not tapped Stop a new session is started and the words carry on in `heard`,
+// so stopping to turn the chair over does not end the note.
+function _fieldCamTalkRun(st, SR) {
   var recog = new SR();
   recog.continuous = true; recog.interimResults = true; recog.lang = 'en-US';
-  st.heard = '';
-  var interim = '';
   recog.onresult = function(e) {
-    var fin = ''; interim = '';
+    if (st.recog !== recog) return;
+    var fin = '', interim = '';
     for (var i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) fin += e.results[i][0].transcript + ' ';
       else interim += e.results[i][0].transcript;
     }
     if (fin) st.heard += fin;
+    st.heardInterim = interim;
     var s = document.getElementById('fc-talk-status');
-    if (s) s.textContent = ('Listening\u2026 ' + st.heard + interim).trim();
-  };
-  recog.onend = function() {
-    var said = (st.heard + ' ' + interim).trim();
-    st.talking = false; st.recog = null; st.heard = '';
-    if (said && st.lastAny) _fieldNoteAppend(st.jobId, st.lastAny, said);
-    if (st.open && _fieldCam === st) _fieldCamPaint();
-    if (_roomWs.open && _roomWs.jobId === st.jobId) _paintRoomWorkspace();
+    if (s) s.textContent = _fieldTalkStatus(st);
   };
   recog.onerror = function(e) {
-    st.talking = false; st.recog = null;
-    if (st.open && _fieldCam === st) _fieldCamPaint();
-    if (e && e.error !== 'aborted' && e.error !== 'no-speech') showSyncBadge('Microphone: ' + e.error, true);
+    var err = e && e.error;
+    if (err === 'no-speech' || err === 'aborted') return;   // the end event follows; a silence is not a failure
+    st.talkWant = false;
+    st.talkMsg = fieldTalkErrorText(err);
   };
-  st.recog = recog; st.talking = true;
-  try { recog.start(); } catch (ex) { st.talking = false; st.recog = null; }
-  _fieldCamPaint();
-  return true;
+  recog.onend = function() {
+    if (st.recog !== recog) return;   // let go already (Stop's wait ran out, Done, or a later session)
+    st.recog = null;
+    if (st.heardInterim) { st.heard += st.heardInterim + ' '; st.heardInterim = ''; }
+    if (st.talkWant && st.open && _fieldCam === st && Date.now() < st.talkUntil && st.talkRuns < FIELD_TALK_MAX_RUNS) {
+      _fieldCamTalkRun(st, SR);
+      if (st.recog) return;
+    }
+    _fieldCamTalkSave(st);
+  };
+  st.recog = recog; st.talkRuns++;
+  try { recog.start(); }
+  catch (ex) {
+    st.recog = null; st.talkWant = false;
+    if (!st.talkMsg) st.talkMsg = fieldTalkErrorText('start');
+    _fieldCamTalkSave(st);
+  }
 }
+// The note as it is being heard, on the strip.
+function _fieldTalkStatus(st) {
+  var said = (String(st.heard || '') + ' ' + String(st.heardInterim || '')).replace(/\s+/g, ' ').trim();
+  return 'Listening… ' + (said || 'speak now, then tap Stop');
+}
+// What a refusal says, on the strip where the person is looking (it was a sync toast that vanished). Every answer ends on
+// the way that always works: the keyboard's own dictation in the note box.
+function fieldTalkErrorText(err) {
+  var why = (err === 'not-allowed' || err === 'service-not-allowed')
+      ? 'The microphone or dictation is not allowed for this page. Allow the microphone for this site in the browser’s settings, and on an iPhone or iPad turn on Dictation (Settings, General, Keyboard).'
+    : err === 'audio-capture' ? 'No microphone could be opened: another app may be using it.'
+    : err === 'network' ? 'Speech recognition could not reach its service.'
+    : err === 'start' ? 'The microphone could not be started.'
+    : 'The microphone stopped' + (err ? ' (' + err + ')' : '') + '.';
+  return why + ' Type the note instead, or tap the note box and use the keyboard’s microphone.';
+}
+// Files what was heard onto the shot it was said about, once. Every way a note ends comes here.
+function _fieldCamTalkSave(st) {
+  if (!st.talking) return false;
+  var said = (String(st.heard || '') + ' ' + String(st.heardInterim || '')).replace(/\s+/g, ' ').trim();
+  var target = st.talkFor;
+  st.talking = false; st.talkWant = false; st.recog = null; st.heard = ''; st.heardInterim = ''; st.talkFor = null;
+  var ok = !!(said && target) && !!_fieldNoteAppend(st.jobId, target, said);
+  if (!said && !st.talkMsg) st.talkMsg = 'Nothing was heard. Tap 🎤 Talk, speak, then tap Stop.';
+  if (st.open && _fieldCam === st) _fieldCamPaint();
+  if (_roomWs.open && _roomWs.jobId === st.jobId) _paintRoomWorkspace();
+  return ok;
+}
+// Stop: ask the browser for its last words and save on its end event, or after FIELD_TALK_STOP_WAIT_MS if none comes.
 function fieldCamTalkStop() {
   var st = _fieldCam;
-  if (st.recog) { try { st.recog.stop(); } catch (e) {} }
+  if (!st.talking) return false;
+  st.talkWant = false;
+  var r = st.recog;
+  if (!r) return _fieldCamTalkSave(st);
+  try { r.stop(); } catch (e) { st.recog = null; return _fieldCamTalkSave(st); }
+  setTimeout(function() { if (st.talking && st.recog === r) { st.recog = null; _fieldCamTalkSave(st); } }, FIELD_TALK_STOP_WAIT_MS);
+  return true;
 }
 // The draft, as typed. Called on every keystroke and does nothing else — see the note row.
 //
@@ -39112,7 +39189,8 @@ function fieldCamTypedNote() {
 
 function _fieldCamStop() {
   var st = _fieldCam;
-  if (st.recog) { try { st.recog.abort(); } catch (e) {} st.recog = null; st.talking = false; }
+  // Done (or another room's camera) while talking keeps what was heard: let the session go and save the words.
+  if (st.talking) { var r = st.recog; st.talkWant = false; st.recog = null; if (r) { try { r.abort(); } catch (e) {} } _fieldCamTalkSave(st); }
   if (st.stream) { try { st.stream.getTracks().forEach(function(t){ t.stop(); }); } catch (e) {} st.stream = null; }
   var v = document.getElementById('fc-video');
   if (v) { try { v.srcObject = null; } catch (e) {} }
