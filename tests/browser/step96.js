@@ -13,11 +13,17 @@
 //   and opened by a real press of its header, in place, without a redraw; the shut outliving a full redraw pressed
 //   through a real filter button; Job Admin's bar and the four bars alike; zero page errors.
 //
+//   Part 2 (G2, each bar's line and when it opens by itself): the four lines read off the page in their tones; each bar
+//   pressed open and shut; an open bar outliving a Reviewed press and a background sheet read; a cold desk saying
+//   "loading…" until its manifest is read, then its lines; Releases drawn and opening by itself the moment a line is set to
+//   Donate (Anthony's Q2: when a request is owed); Closing open on a closed job and opened behind a refused Close job; the
+//   dashboard's Open the desk landing on the Releases card with its bar opened, though the person had shut it.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 const SYNC = 'https://sync.example.test/exec';
-const EST = 9601, LIV = 9602;
+const EST = 9601, LIV = 9602, NEW = 9603, DONE = 9604;
 let pass = 0, fail = 0;
 let b = null;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
@@ -29,18 +35,21 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
     let sheet = {};
+    let hold = null;   // part 2: a promise the sheet's read waits on, to see the desk before its manifest is read
     await ctx.route(SYNC + '**', async (r) => {
       const req = r.request();
       const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
       if (req.method() === 'POST') return json({ ok: true });
-      if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
+      if (/action=loadMedia/.test(req.url())) { if (hold) await hold; return json({ ok: true, media: sheet }); }
       if (/action=getDriveThumbnails/.test(req.url())) return json({ ok: true, thumbs: {} });
       return json({ ok: true });
     });
     const p = await ctx.newPage();
     p.setDefaultTimeout(15000);
     const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
-    p.on('dialog', async (d) => { await d.accept(); });
+    const dialogs = [];
+    p.on('dialog', async (d) => { dialogs.push(d.type() + ': ' + d.message()); await d.accept(); });
+    const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < (ms || 6000)) { if (await f()) return true; await p.waitForTimeout(150); } return false; };
     await p.goto(APP); await p.waitForTimeout(1800);
     await p.evaluate((u) => {
       SHEETS_SYNC_URL = u;
@@ -182,7 +191,11 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       for (let i = 1; i < seq.length; i++) ok(seq[i - 1][1] < seq[i][1], who + ': ' + seq[i - 1][0] + ' (' + seq[i - 1][1] + ') above ' + seq[i][0] + ' (' + seq[i][1] + ')');
       ok(L.summary > L.closing.y && L.summaryParentIsTab, who + ': the summary is last, outside every bar');
       ['releases', 'values', 'closing', 'history'].forEach((f) => ok(L[f].body && L[f].parentIsTab, who + ': the ' + f + ' bar\'s body is in the page, the bar a child of the tab'));
-      ['releases', 'values', 'closing'].forEach((f) => ok(L[f].shown && L[f].open, who + ': ' + f + ' is shown, open (nothing is folded away until the bars carry their lines)'));
+      // ⚠ RESTATED BY G2 (2026-10-22): each bar opens by its own rule now. Both desks have lines waiting on written approval
+      // that no request carried, so Releases opens (Q2); the living job's ⚑ painting has no appraiser linked, so its Values
+      // opens; the estate's flagged clock has one linked, so its Values stays shut; neither job is at its close.
+      const want = id === EST ? { releases: true, values: false, closing: false } : { releases: true, values: true, closing: false };
+      ['releases', 'values', 'closing'].forEach((f) => ok(L[f].shown && L[f].open === want[f], who + ': ' + f + ' is shown, ' + (want[f] ? 'open' : 'shut') + ' by its rule'));
       ok(L.closeoutInClosing, who + ': the close-out card is in Closing the job');
       ok(L.recordsInBar && L.guardrailInBar, who + ': the close-out papers and the guardrail sit in their bars');
       ok(L.row < OLD[id][1440], who + ': ⚠ the first row is higher up the page at 1440 (' + L.row + ' px, was ' + OLD[id][1440] + ')');
@@ -191,7 +204,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         ok(L.releasesInBar, 'the estate: the Releases card is in its bar');
         eq(L.releases.title, 'Releases & signed papers · Beneficiaries & bequests', 'the estate: the Releases title names the bequests card');
         eq(L.closing.title, 'Closing the job: close-out call, vendor ratings, Disposition Ledger, proceeds, donations', 'the estate: Closing names the cards it draws');
-        ok(L.history.shown && L.history.open && L.history.y > L.closing.y, 'the estate: Removed items & snapshots is drawn last of the four');
+        ok(L.history.shown && !L.history.open && L.history.y > L.closing.y, 'the estate: Removed items & snapshots is drawn last of the four, shut');
       } else {
         eq(L.releases.title, 'Releases & signed papers', 'the living job: no bequests named');
         has(L.closing.title, 'Contents Record', 'the living job: Closing names the Contents Record');
@@ -215,26 +228,35 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     const HD = (f) => '#desk-hd-' + f + '-' + EST;
     const BODY = (f) => '#desk-body-' + f + '-' + EST;
     // A mark on the work bar's element: a redraw replaces the element and the mark goes with it.
+    // ⚠ RESTATED BY G2 (2026-10-22): Closing is shut mid-job now, so the first press opens it and the second shuts it, and
+    // each state outlives a full redraw.
+    ok(!(await p.locator(BODY('closing')).isVisible()), 'fixture: Closing is shut mid-job');
+    ok(await p.evaluate((id) => !!document.querySelector('#desk-body-closing-' + id + ' #inv-records'), EST), 'its cards are in the page, hidden');
     await p.evaluate(() => { document.getElementById('inv-workbar').__mark = 'still here'; });
     await press(HD('closing'), 'the Closing bar\'s header');
-    ok(!(await p.locator(BODY('closing')).isVisible()), 'pressed once: Closing is shut');
-    ok(await p.evaluate((id) => !!document.querySelector('#desk-body-closing-' + id + ' #inv-records'), EST), 'its cards are still in the page, hidden');
+    ok(await p.locator(BODY('closing')).isVisible(), 'pressed once: Closing is open');
     eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark), 'still here', '⚠⚠ in place: the tab was not redrawn under the person');
-    eq(await p.evaluate((id) => document.getElementById('desk-chev-closing-' + id).textContent, EST), '▸', 'the caret reads shut');
+    eq(await p.evaluate((id) => document.getElementById('desk-chev-closing-' + id).textContent, EST), '▾', 'the caret reads open');
     await press('#panel-inventory button[onclick="setInvWhen(\'today\')"]', 'Today (a full redraw)');
-    ok(!(await p.locator(BODY('closing')).isVisible()), '⚠ the redraw drew Closing SHUT, as it was left');
+    ok(await p.locator(BODY('closing')).isVisible(), '⚠ the redraw drew Closing OPEN, as it was left (mid-job its rule says shut)');
     ok(await p.locator(BODY('releases')).isVisible(), 'and Releases open, as it was');
     await press(HD('closing'), 'the Closing bar\'s header again');
-    ok(await p.locator(BODY('closing')).isVisible(), 'pressed again: open');
-    eq(await p.evaluate((id) => document.getElementById('desk-chev-closing-' + id).textContent, EST), '▾', 'caret open');
+    ok(!(await p.locator(BODY('closing')).isVisible()), 'pressed again: shut');
+    eq(await p.evaluate((id) => document.getElementById('desk-chev-closing-' + id).textContent, EST), '▸', 'caret shut');
+    await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All (another full redraw)');
+    ok(!(await p.locator(BODY('closing')).isVisible()), '⚠ and the redraw drew it SHUT, as it was left');
     // The keyboard: the header takes focus, and Enter presses it.
     await p.focus(HD('values')); await p.keyboard.press('Enter'); await p.waitForTimeout(300);
-    ok(!(await p.locator(BODY('values')).isVisible()), 'Enter on a focused bar header shuts it');
+    ok(await p.locator(BODY('values')).isVisible(), 'Enter on a focused bar header opens it');
     await p.keyboard.press(' '); await p.waitForTimeout(300);
-    ok(await p.locator(BODY('values')).isVisible(), 'and Space opens it again');
-    // Another client's desk on the same device keeps its own: the living job's Closing bar is still open.
+    ok(!(await p.locator(BODY('values')).isVisible()), 'and Space shuts it again');
+    // Another client's desk on the same device keeps its own: shut the estate's Releases by hand; the living job's is open.
+    await press(HD('releases'), 'the estate\'s Releases header, to shut it');
     await toDesk(LIV);
-    ok(await p.locator('#desk-body-closing-' + LIV).isVisible(), 'per job: the other client\'s bar was never shut');
+    ok(await p.locator('#desk-body-releases-' + LIV).isVisible(), 'per job: the other client\'s Releases is at its own rule, open');
+    await toDesk(EST);
+    ok(!(await p.locator(BODY('releases')).isVisible()), 'and the estate\'s stays shut as it was left');
+    await press(HD('releases'), 'the estate\'s Releases header, to open it again');
 
     console.log('\n## Part 1 · Job Admin\'s bar and the four bars are one control');
     await toDesk(EST);
@@ -252,6 +274,115 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await press('#inventory-content .ja-hd[onclick="toggleJobAdmin(' + EST + ')"]', 'Job Admin\'s header');
     ok(await p.locator('#inventory-content .ja-body').isVisible(), 'Job Admin opens on its own press, as before');
     await press('#inventory-content .ja-hd[onclick="toggleJobAdmin(' + EST + ')"]', 'Job Admin\'s header, to shut it');
+
+
+    // ══ PART 2 (G2): what each bar says shut, and when it opens by itself ═══════════════════════════
+    console.log('\n## Part 2 · each bar\'s line, read off the page');
+    await p.setViewportSize({ width: 1440, height: 1000 });
+    await toDesk(EST);
+    const stat = (f, id) => p.evaluate(([f, id]) => { const el = document.getElementById('desk-stat-' + f + '-' + id); return el ? el.textContent : null; }, [f, id || EST]);
+    const tones = (f, id) => p.evaluate(([f, id]) => { const el = document.getElementById('desk-stat-' + f + '-' + id); return el ? [...el.children].map((c) => c.className) : []; }, [f, id || EST]);
+    const isOpen = (f, id) => p.locator('#desk-body-' + f + '-' + (id || EST)).isVisible();
+    eq(await stat('releases'), '3 items need written approval: send a request · 2 ready to sign out',
+      '⚠⚠ Releases: the three lines waiting that no request carried, and the two approved for Kodner Galleries to sign out');
+    eq(await tones('releases'), ['desk-st-amber', 'desk-st-amber'], 'both in amber: nothing is signed out to Kodner today');
+    eq(await stat('values'), '1 needs an appraisal, each linked · 1 ready to hand to Carla Mendes (under Releases & signed papers) · 1 appraiser',
+      'Values: the clock linked to Carla Mendes, her hand-off pointed to the sign-out list');
+    eq((await tones('values'))[0], 'desk-st-red', 'in red, as the guardrail is on a Formal estate');
+    has(await stat('closing'), 'close-out 0 of 3 done', 'Closing: grey before the close');
+    ok((await tones('closing')).every((c) => c === 'desk-st-grey' || c === 'desk-st-amber'), 'never red mid-job');
+    eq(await stat('history'), '1 removed · 1 snapshot', 'History: what it holds');
+    eq((await tones('history')), ['desk-st-grey', 'desk-st-grey'], 'in grey');
+    eq([await isOpen('releases'), await isOpen('values'), await isOpen('closing'), await isOpen('history')], [true, false, false, false],
+      'open: Releases (a request is owed); shut: the rest');
+
+    console.log('\n## Part 2 · each bar opened and shut by its header');
+    for (const f of ['values', 'closing', 'history', 'releases']) {
+      const was = await isOpen(f);
+      await press('#desk-hd-' + f + '-' + EST, f + '\'s header');
+      eq(await isOpen(f), !was, f + ': flipped');
+      await press('#desk-hd-' + f + '-' + EST, f + '\'s header again');
+      eq(await isOpen(f), was, f + ': and back');
+    }
+
+    console.log('\n## Part 2 · an open bar stays open across a Reviewed press and a sheet refresh');
+    await press('#desk-hd-values-' + EST, 'Values\' header');
+    ok(await isOpen('values'), 'fixture: Values opened by hand');
+    await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All, so the dresser is drawn');
+    ok(await isOpen('values'), 'still open after the filter\'s redraw');
+    await press('#inv-row-e10 input[onchange*="_invSetReviewed"]', 'Reviewed on the dresser');
+    ok(await p.evaluate((id) => !!(_photoRefs[id].find((r) => r.stableId === 'e10') || {}).reviewed, EST), 'fixture: the line is reviewed');
+    ok(await isOpen('values'), '⚠ still open after the redraw the tick made');
+    // Another device names a line: the sheet's next read changes the manifest and the tab redraws by itself.
+    sheet[EST].items = sheet[EST].items.map((r) => r.stableId === 'e26' ? Object.assign({}, r, { objectName: 'Silver candlesticks', updatedAt: Date.now() + 60000 }) : r);
+    await p.evaluate(() => _invRefreshFromCloud());
+    ok(await until(async () => (await p.evaluate((id) => (_photoRefs[id].find((r) => r.stableId === 'e26') || {}).objectName, EST)) === 'Silver candlesticks'),
+      'fixture: the sheet\'s copy landed');
+    ok(await isOpen('values'), '⚠⚠ and a background redraw never shut a bar under the person');
+
+    console.log('\n## Part 2 · Releases opens by itself once a line is decided');
+    await p.evaluate(([NEW, DONE]) => {
+      const T = Date.now() - 86400000;
+      const base = (id, o) => Object.assign({ id, svc: 'downsizing', addr: '5 Oleander Way', city: 'Jupiter', zip: '33458', email: 'c' + id + '@example.com', docTier: '',
+        status: 'active', won: true, approved: true, tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05',
+        agrApproved: true, agrSent: true, agrSigned: true, driveFolder: 'https://drive.google.com/drive/folders/R' + id,
+        driveSubfolders: { 'Estate Inventory': 'I' + id, 'Signed Records': 'S' + id }, docState: {}, payments: [] }, o);
+      jobs.unshift(base(NEW, { hvlId: 'HVL-2610-N963', name: 'Dorothy Pratt' }));
+      jobs.unshift(base(DONE, { hvlId: 'HVL-2610-D964', name: 'Walter Crane', status: 'closed', deliveredOn: '2026-10-20' }));
+      [NEW, DONE].forEach((id) => {
+        estimateStore[id] = { approved: true, submitted: true, estimate: { jobId: id, svc: 'downsizing', havellinTotal: 9000, rooms: [{ idx: 0, name: 'Den', st: 'in', vol: 3, cplx: 3 }], vendors: [] } };
+        _photoRefs[id] = ['n1', 'n2'].map((s, i) => ({ stableId: s, label: 'inventory', roomIdx: 0, seq: i + 1, itemNo: i + 1, status: 'uploaded', category: 'Furniture',
+          objectName: i ? 'Bookcase' : 'Armchair', disposition: '', ts: T, updatedAt: T, filename: 'x' + s + '.jpg', driveFileId: 'f' + s }));
+        savePhotoRefs(id);
+      });
+      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+    }, [NEW, DONE]);
+    sheet[NEW] = { items: await p.evaluate((id) => _photoRefs[id], NEW) };
+    sheet[DONE] = { items: await p.evaluate((id) => _photoRefs[id], DONE) };
+    // The sheet holds its answer back, so the desk is seen as a cold device sees it first.
+    let release; hold = new Promise((res) => { release = res; });
+    await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(600);
+    await p.selectOption('#inv-job', String(NEW)); await p.waitForTimeout(700);
+    eq([await stat('values', NEW), await stat('closing', NEW)], ['loading…', 'loading…'], '⚠⚠ before the manifest is read: "loading…", never a ✓');
+    release(); hold = null;
+    ok(await until(async () => (await stat('values', NEW)) !== 'loading…'), 'the read lands, and the lines are drawn without a press');
+    eq(await stat('values', NEW), '✓ nothing needs an appraisal · no appraisers yet', 'Values, read');
+    eq(await p.evaluate((id) => { const w = document.getElementById('desk-fold-releases-' + id); return w && getComputedStyle(w).display; }, NEW), 'none',
+      'nothing leaving yet: the Releases bar is not drawn');
+    await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All');
+    await p.selectOption('#inv-row-n1 select[onchange*="\'disposition\'"]', 'Donate'); await p.waitForTimeout(700);
+    ok(await isOpen('releases', NEW), '⚠⚠ the armchair set to Donate: the Releases bar is drawn, open by itself (Q2)');
+    eq(await stat('releases', NEW), '1 item needs written approval: send a request', 'saying the request is owed');
+
+    console.log('\n## Part 2 · Closing opens at the close, and when Close job is refused');
+    await p.selectOption('#inv-job', String(DONE)); await p.waitForTimeout(1200);
+    ok(await isOpen('closing', DONE), '⚠ a closed job\'s desk: Closing open by itself');
+    await toDesk(EST);
+    ok(!(await isOpen('closing')), 'fixture: the estate\'s Closing is shut mid-job');
+    dialogs.length = 0;
+    await press('#inventory-content button[onclick="activateOrCycle(' + EST + ')"]', 'Close job, on the desk\'s band');
+    has(dialogs.join(' | '), 'Cannot close the job yet', 'fixture: refused (Kodner Galleries is not rated)');
+    has(dialogs.join(' | '), 'under Closing the job on Job Admin & Inv', 'and the refusal says where the scorecard is, by the bar\'s title');
+    ok(await isOpen('closing'), '⚠⚠ the Closing bar is open behind the refusal, with the scorecard in it');
+    ok(await p.locator('#closeout-admin-' + EST).isVisible(), 'the close-out card on screen');
+
+    console.log('\n## Part 2 · Open the desk lands on the Releases card, open, whatever the person left');
+    await p.evaluate((id) => {
+      const j = jobs.find((x) => x.id === id);
+      j.docState.approvalRequest = { draftedAt: '2026-10-20T14:00:00.000Z', sentAt: '2026-10-20T15:00:00.000Z', sentBy: 'Ashley Jerome', provider: 'gmail',
+        req: { to: ['t.ashworth@example.com'], cc: [], noEmail: [], stableIds: ['e04', 'e07', 'e10'], asked: 3, ratify: 0 } };
+      saveJobs(); renderInventoryTab();
+    }, EST);
+    await p.waitForTimeout(500);
+    eq(await stat('releases'), '3 on the request still unsigned · 2 ready to sign out', 'the request sent: what is out for signature, and the sign-out still owed');
+    if (await isOpen('releases')) await press('#desk-hd-releases-' + EST, 'the Releases header, to shut it');
+    ok(!(await isOpen('releases')), 'fixture: Releases shut by hand');
+    await p.evaluate((id) => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(id); }, EST);
+    await p.waitForTimeout(900);
+    await press('#dash-approval-' + EST + ' button[onclick="openJobDeskFor(' + EST + ')"]', 'Open the desk, on the dashboard\'s card');
+    await p.waitForTimeout(600);
+    eq(String(await p.evaluate(() => document.getElementById('inv-job').value)), String(EST), 'landed on the desk, on this client');
+    ok(await p.locator('#inv-releases').isVisible(), '⚠⚠ with the Releases card on screen, its bar opened');
 
     eq(errs, [], 'zero page errors');
   } catch (e) {

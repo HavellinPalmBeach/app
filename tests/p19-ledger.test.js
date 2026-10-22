@@ -275,7 +275,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     c.jobs = [job]; c._photoRefs = { 7: LINES({ undecided: false }) };
     const line = () => (c.ledgerDerivedLines(7, c.jobs[0], 'admin').filter((l) => l.key === 'ledger_signed')[0] || {});
     eq([line().ok, line().label], [false, 'Disposition Ledger signed by the Personal Representative'], 'before: open, naming who signs (_agrApprover)');
-    has(line().detail, 'print it from the Disposition Ledger card on Job Admin & Inv, have it signed, and file the signed copy there', 'and saying where');
+    // ⚠ restated 2026-10-22: the card sits in the desk's Closing the job bar, and the sentence names the bar (desk-layout D)
+    has(line().detail, 'print it from the Disposition Ledger card, under Closing the job on Job Admin & Inv, have it signed, and file the signed copy there', 'and saying where');
     const card = c._renderLedgerCard(job, c._photoRefs[7]);
     const idx = (/fileSignedCopyFromInput\(this,(\d+)\)/.exec(card) || [])[1];
     ok(idx !== undefined, 'the card carries the File signed copy control');
@@ -341,7 +342,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.c.applyJobTransition(r.job), false, 'Cancel keeps the job open');
     eq(r.log.asked.length, 1, '⚠⚠ an estate with its midpoint paid and no signed ledger is asked once');
     const q = r.log.asked[0] || '';
-    has(q, 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have the Personal Representative sign it, then file the signed copy on the Disposition Ledger card (Job Admin & Inv).',
+    has(q, 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have the Personal Representative sign it, then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.',
         'naming the ledger, who signs it and where its copy goes');
     lacks(q, 'payment is recorded', 'and not the midpoint, which is paid');
     r.answer(true);
@@ -394,7 +395,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let r = closeRig(ESTATE({ payments: PAID }), { url: '' });
     r.c.activateOrCycle(7);
     eq([r.job.status, r.log.uploads.length], ['closed', 0], 'no Apps Script URL: the job still closes, nothing is filed');
-    has((r.log.badges[0] || {}).m, 'no Apps Script URL in Settings. Press File to Drive on the Disposition Ledger card (Job Admin & Inv) once one is set.', 'the badge says why and where to go');
+    has((r.log.badges[0] || {}).m, 'no Apps Script URL in Settings. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) once one is set.', 'the badge says why and where to go');
     eq((r.log.badges[0] || {}).err, true, 'as an error');
     r = closeRig(ESTATE({ payments: PAID }), { media: 'fail' });
     r.c.activateOrCycle(7);
@@ -403,7 +404,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!(r.job.docState || {}).dispositionLedger, 'nothing recorded');
     r = closeRig(ESTATE({ payments: PAID }), { upload: 'fail' });
     r.c.activateOrCycle(7);
-    has((r.log.badges[0] || {}).m, 'The Disposition Ledger was not filed to Drive — Drive said no. Press File to Drive on the Disposition Ledger card (Job Admin & Inv) to try again.', 'a failed upload names the fix');
+    has((r.log.badges[0] || {}).m, 'The Disposition Ledger was not filed to Drive — Drive said no. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) to try again.', 'a failed upload names the fix');
     ok(!(r.job.docState || {}).dispositionLedger, 'and records nothing, so the card offers File to Drive');
     eq(Object.keys(r.c._ledgerFiling).length, 0, 'and the next press is not refused as in flight');
     r = closeRig(ESTATE({ payments: PAID, driveFolder: '' }));
@@ -524,7 +525,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const line = (job, rows) => c.donationReceiptLine(job, rows || c._photoRefs[7]);
     let l = line(ESTATE());
     eq([l.key, l.ok, l.label], ['donation_receipt', false, 'Donation receipts on file'], '⚠⚠ one receipted line of three does not pass (it did)');
-    eq(l.detail, '1 of 3 donated lines receipted — file each charity’s receipt on the Donations card, Job Admin & Inv (1 with no charity recorded: name it in Channel / Recipient first)', 'N of M, and the fix');
+    eq(l.detail, '1 of 3 donated lines receipted — file each charity’s receipt on the Donations card, under Closing the job on Job Admin & Inv (1 with no charity recorded: name it in Channel / Recipient first)', 'N of M, and the fix');
     const groups = c.donationGroups(ESTATE(), c._photoRefs[7]);
     eq(groups.map((g) => [g.charity, g.lines.map((r) => r.stableId), g.receipted]), [['Goodwill', ['d', 'e'], 1], ['', ['f'], 0]],
        'grouped by charity, case and spaces aside; the unnamed together, last');
@@ -800,15 +801,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pl = (stmts, recs) => c.proceedsLine(ESTATE({ proceedsStatements: stmts, signedRecords: recs || [] }), rows);
     let l = pl([]);
     eq([l.key, l.ok, l.label], ['proceeds_reconciled', false, 'Sale proceeds reconciled'], 'no statements yet: open');
-    eq(l.detail, '0 statements; 3 sold lines on no statement — the Proceeds statements card, below the inventory', 'N statements; M sold lines on no statement');
+    eq(l.detail, '0 statements; 3 sold lines on no statement — the Proceeds statements card, under Closing the job on Job Admin & Inv', 'N statements; M sold lines on no statement');
     const filed = [{ id: 'f1', kind: 'statement', ref: 'ps1', stableIds: ['a', 'b'], filedAt: T0 }];
     l = pl([STATEMENT({ gross: 1237.5, netPaid: 928.12 })], filed);
-    eq(l.detail, '1 statement, all agree; 1 sold line on no statement — the Proceeds statements card, below the inventory', 'one that agrees, and the consignment still on none');
+    eq(l.detail, '1 statement, all agree; 1 sold line on no statement — the Proceeds statements card, under Closing the job on Job Admin & Inv', 'one that agrees, and the consignment still on none');
     const all = rows.map((r) => r.stableId === 'c' ? Object.assign({}, r, { disposition: 'Keep' }) : r);
     l = c.proceedsLine(ESTATE({ proceedsStatements: [STATEMENT({ gross: 1237.5, netPaid: 928.12 })], signedRecords: filed }), all);
     eq([l.ok, l.detail], [true, '1 statement, all agree; 0 sold lines on no statement'], '⚠⚠ every sold line on a statement that agrees, and filed: green');
     l = c.proceedsLine(ESTATE({ proceedsStatements: [STATEMENT({ gross: 1237.5, netPaid: 928.12 })] }), all);
-    eq([l.ok, l.detail], [false, '1 statement, all agree; 0 sold lines on no statement; 1 statement not yet filed to Drive — the Proceeds statements card, below the inventory'], 'a statement not filed keeps it open');
+    eq([l.ok, l.detail], [false, '1 statement, all agree; 0 sold lines on no statement; 1 statement not yet filed to Drive — the Proceeds statements card, under Closing the job on Job Admin & Inv'], 'a statement not filed keeps it open');
     l = c.proceedsLine(ESTATE({ proceedsStatements: [STATEMENT()], signedRecords: filed }), all);
     eq(l.detail.slice(0, 51), '1 statement, 1 disagrees with the ledger; 0 sold li', 'one that disagrees');
     eq(c.proceedsLine(ESTATE(), rows.filter((r) => ['Auction', 'Consign', 'Sell'].indexOf(r.disposition) < 0)), null, 'nothing sold and no statements: no line');
@@ -962,7 +963,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callers('donationReceiptLine'), ['ledgerDerivedLines', 'planDerivedLines'], 'the donation line: built once, read by the Job Plan and the desk');
     eq(callers('ledgerCloseFlag'), ['applyJobTransition'], 'the close question reads the flag');
     eq(callers('fileDispositionLedger'), ['activateOrCycle'], 'the close files the ledger (the desk\'s button is the other caller)');
-    eq(callers('ledgerDerivedLines'), ['planDerivedLines'], 'the derived lines are asked for once, by planDerivedLines');
+    // ⚠ restated 2026-10-22: the desk's Closing bar reads the first line (signed or not) for its shut line, at the close.
+    eq(callers('ledgerDerivedLines'), ['deskFoldState', 'planDerivedLines'], 'the derived lines are drawn once, by planDerivedLines, and the Closing bar reads them');
     const saleReaders = Object.keys(BODY).filter((f) => /\bINV_SALE_DISPOSITIONS\b/.test(codeOnly(BODY[f]))).sort();
     // P25 (Q51): ledgerApplies reads it too, where the ledger is kept on living work (something sold).
     // P25 (Q43): proceedsReceivedLine reads it too, for the sold lines a paid statement must cover.

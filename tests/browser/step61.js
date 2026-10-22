@@ -90,6 +90,12 @@ const TRUST = 6101, LIVING = 6103;
     // The print path takes the panels away for about 650 ms (_printDocument); wait for it to close, as a person would.
     const printClosed = () => until(() => p.evaluate(() => { const pt = document.getElementById('print-target');
       return !!pt && pt.style.display === 'none' && !!document.querySelector('.panel.active'); }));
+    // ⚠ THE DESK'S FOUR BARS (2026-10-22): the cards this step works in sit in fold bars that open by their own rules, so
+    // each is opened first by a real press of its header, and only when its body is hidden.
+    const openBar = async (fold, id) => {
+      const body = p.locator('#desk-body-' + fold + '-' + id), hd = p.locator('#desk-hd-' + fold + '-' + id);
+      if ((await body.count()) === 1 && !(await body.isVisible()) && (await hd.isVisible())) { await p.click('#desk-hd-' + fold + '-' + id); await p.waitForTimeout(300); }
+    };
     const toDesk = async (id) => {
       await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, id);
       await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(700);
@@ -285,6 +291,7 @@ const TRUST = 6101, LIVING = 6103;
     await section('F. overflow at 1440 and 390, the request at Letter width in print, no page errors', async () => {
       await fresh();
       await toDesk(TRUST);
+      await openBar('releases', TRUST);   // the card sits in the Releases bar (2026-10-22)
       ok(await vis('#inv-releases'), 'fixture: the card is on screen');
       ok(await overflow() <= 0, 'the desk with the card fits at 1440 (' + await overflow() + ')');
       await pick('s4');

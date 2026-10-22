@@ -419,7 +419,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const box = { type: 'checkbox', checked: false };
     S._invEdit(7, 'c', 'flagBequest', box);
     ok(lines[2].flagBequest === true && box.checked === true, '⚠ a matched line keeps its Specific Bequest flag, and the box is put back');
-    has(S.__log.alerts.pop(), 'Unmatch it on the Beneficiaries & specific bequests card first', 'with the fix');
+    // ⚠ restated 2026-10-22: the card sits in the desk's Releases & signed papers bar, and the sentence names the bar
+    has(S.__log.alerts.pop(), 'Unmatch it first on the Beneficiaries & specific bequests card, under Releases & signed papers on Job Admin & Inv.', 'with the fix');
     // A beneficiary a bequest names is not removed.
     eq(S.invRemoveBeneficiary(7, mary.id), false, 'Mary is named on a bequest: not removed');
     has(S.__log.alerts.pop(), 'Mary Smith is named on a bequest (“the Sargent portrait of my mother”)', 'named, with the bequest');

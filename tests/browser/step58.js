@@ -137,12 +137,20 @@ const LINES = [
     const job = () => p.evaluate((id) => JSON.parse(JSON.stringify(jobs.find((j) => j.id === id) || null)), ID);
     const badge = () => p.evaluate(() => { const el = document.getElementById('sync-badge') || document.querySelector('.sync-badge'); return el ? el.textContent : ''; });
     const until = async (f, ms) => { for (let i = 0; i < (ms || 8000) / 150; i++) { if (await f()) return true; await p.waitForTimeout(150); } return false; };
+    // ⚠ THE DESK'S FOUR BARS (2026-10-22): the cards this step works in sit in fold bars that open by their own rules, so
+    // each is opened first by a real press of its header, and only when its body is hidden.
+    const openBar = async (fold, id) => {
+      const body = p.locator('#desk-body-' + fold + '-' + id), hd = p.locator('#desk-hd-' + fold + '-' + id);
+      if ((await body.count()) === 1 && !(await body.isVisible()) && (await hd.isVisible())) { await p.click('#desk-hd-' + fold + '-' + id); await p.waitForTimeout(300); }
+    };
     const toDesk = async () => {
       await settled();
       await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, ID);
       await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(700);
       const sel = await p.evaluate(() => (document.getElementById('inv-job') || {}).value);
       if (String(sel) !== String(ID)) { await p.selectOption('#inv-job', String(ID)); await p.waitForTimeout(700); }
+      await openBar('closing', ID);
+      await openBar('history', ID);
     };
     const pdf = (name) => ({ name, mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 step58 ' + name) });
 
@@ -303,7 +311,7 @@ const LINES = [
       await press('#inventory-content button[onclick="activateOrCycle(' + ID + ')"]', 'Close job, on the desk\'s band');
       const q = dialogs.filter((d) => /^confirm/.test(d));
       eq(q.length, 1, 'one question');
-      has(q[0] || '', 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have the Personal Representative sign it, then file the signed copy on the Disposition Ledger card (Job Admin & Inv).', '⚠⚠ naming the unsigned ledger');
+      has(q[0] || '', 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have the Personal Representative sign it, then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.', '⚠⚠ naming the unsigned ledger');
       lacks(q[0] || '', 'payment is recorded', 'and nothing about the midpoint, which is paid');
       eq((await job()).status, 'closed', 'OK closes it: flagged, never refused');
       ok(await until(async () => UPLOADS.some((u) => /Disposition Ledger\.html$/.test(u.filename))), 'the ledger is filed to Drive');

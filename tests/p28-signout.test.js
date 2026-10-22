@@ -306,7 +306,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('fileSignedCopy')), 'glass: !!meta.glass', 'the filer records a signature on the glass');
     has(noComments(fn('voidSignedRecord')), "rec.kind === 'pickup' || rec.kind === 'appraisal_out' || rec.kind === 'appraisal_back'", 'a void of any of the three takes its custody events');
     eq(readers('_signoutRecordCustody'), ['_signoutAfterFile', 'pickupRecordCustody'], 'the one custody writer: the dialog and P22\'s vendor call');
-    eq(readers('invOutForAppraisal'), ['_renderInvRow', 'closeOpenWorkFlag', 'printAppraisalWorklist', 'signoutCovered', 'signoutGroups'], 'who asks whether a line is out: the row, the close, the worklist, the groups');
+    eq(readers('invOutForAppraisal'), ['_renderInvRow', 'closeOpenWorkFlag', 'deskFoldState', 'printAppraisalWorklist', 'signoutCovered', 'signoutGroups'],
+      'who asks whether a line is out: the row, the close, the Values bar\'s line (2026-10-22), the worklist, the groups');
     lacks(noComments(fn('invRecordedGone')), 'appraisal', '⚠⚠ gone never reads the appraiser\'s papers');
     has(noComments(fn('signoutLineKind')), 'invIsFirearm(ref)) return \'\'', 'firearms are refused at the one gate');
     has(noComments(fn('signoutGroups')), "(fid && !invApprovalComplete(r, job)) ? 'waiting' : 'ready'", '⚠⚠ an estate\'s leaving line waits on the one approval predicate');

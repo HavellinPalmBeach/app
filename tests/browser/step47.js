@@ -101,6 +101,12 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       return v;
     };
     const txt = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
+    // ⚠ THE DESK'S FOUR BARS (2026-10-22): the cards this step works in sit in fold bars that open by their own rules, so
+    // each is opened first by a real press of its header, and only when its body is hidden.
+    const openBar = async (fold, id) => {
+      const body = p.locator('#desk-body-' + fold + '-' + id), hd = p.locator('#desk-hd-' + fold + '-' + id);
+      if ((await body.count()) === 1 && !(await body.isVisible()) && (await hd.isVisible())) { await p.click('#desk-hd-' + fold + '-' + id); await p.waitForTimeout(300); }
+    };
     const T = (h) => p.evaluate((h) => { const d = document.createElement('div');
       d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<br>/g, ' '); return d.textContent.replace(/\s+/g, ' '); }, h);
     const lastPrint = () => p.evaluate(() => (window.__prints || []).slice(-1)[0] || { html: '', over: 0 });
@@ -251,7 +257,8 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       ok((await deskRows()).indexOf('s1') < 0, '⚠⚠ after a reload and a stale copy from the sheet, the line stays removed');
       eq(await p.evaluate(() => { const r = _photoRefs[4701].find((x) => x.stableId === 's1'); return [!!r.deletedAt, r.deletedBy]; }),
          [true, 'Ashley Jerome'], 'with its tombstone and who removed it');
-      // Restore gives it back under its own number.
+      // Restore gives it back under its own number (in Removed items & snapshots, a bar that never opens by itself).
+      await openBar('history', 4701);
       await press('button[onclick="restoreInventoryItem(4701,\'s1\')"]', 'Restore on the sideboard');
       ok((await deskRows()).indexOf('s1') >= 0, 'Restore brings the line back');
       has(await rowText('s1'), '3', 'under its own number');

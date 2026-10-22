@@ -67,10 +67,17 @@ const EST = 7401;
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const lastPrint = () => p.evaluate(() => { const h = (window.__prints || []).slice(-1)[0] || ''; const d = document.createElement('div');
       d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<br>/g, ' '); return d.textContent.replace(/\s+/g, ' '); });
+    // ⚠ THE DESK'S FOUR BARS (2026-10-22): the cards this step works in sit in fold bars that open by their own rules, so
+    // each is opened first by a real press of its header, and only when its body is hidden.
+    const openBar = async (fold, id) => {
+      const body = p.locator('#desk-body-' + fold + '-' + id), hd = p.locator('#desk-hd-' + fold + '-' + id);
+      if ((await body.count()) === 1 && !(await body.isVisible()) && (await hd.isVisible())) { await p.click('#desk-hd-' + fold + '-' + id); await p.waitForTimeout(300); }
+    };
     const toDesk = async (id) => {
       await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, id);
       await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(900);
       if (String(await val('#inv-job')) !== String(id)) { await p.selectOption('#inv-job', String(id)); await p.waitForTimeout(900); }
+      await openBar('closing', id);
     };
     const line = (sid) => p.evaluate(([id, sid]) => Object.assign({}, (_photoRefs[id] || []).find((r) => r.stableId === sid) || {}), [EST, sid]);
 

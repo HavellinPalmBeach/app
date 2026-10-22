@@ -37,7 +37,7 @@ function gsVar(name) {
 const live = (name) => fn(name).split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n');
 
 const ACCESS_FNS = ['accessItemsOf', 'accessEventsOf', 'accessItemLabel', 'accessItemState', 'accessItemOpen', 'accessStateText', 'accessTeamNames',
-  'accessClientParties', 'accessDefaultHolder', 'accessDefaultReturnee', 'accessRefusal', 'accessEventFlags', 'accessLines', 'accessCloseBlocker',
+  'accessClientParties', 'accessDefaultHolder', 'accessDefaultReturnee', 'accessRefusal', 'accessEventFlags', 'accessLines', 'accessHeldItems', 'accessCloseBlocker',
   'accessTerminalFlag', 'accessClearCodes', '_accessEventLineHtml', '_accessItemRowHtml', 'accessCardHtml', '_repaintAccessCard', 'goToAccessCard',
   'accessDashHtml', '_accessRowHtml', 'accessAddRow', 'openAccessDialog', 'closeAccessDialog', 'saveAccessDialog', 'voidAccessEvent', 'voidAccessItem',
   'accessCustodyRecordHtml', 'printAccessRecord', 'fileAccessRecord'];

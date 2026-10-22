@@ -1384,7 +1384,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 3:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 6:06pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -24383,6 +24383,9 @@ function applyJobTransition(j) {
   if (next === 'closed') {
     var cb = jobCloseBlockers(j);
     if (cb.length) {
+      // ⚠ THE DESK'S CLOSING BAR IS OPENED FIRST (2026-10-22), wherever Close job was pressed: the vendor scorecard the
+      // refusal sends the person to sits in it on Job Admin & Inv, and on the desk the bar is open behind the alert.
+      if (typeof deskFoldOpen === 'function') deskFoldOpen(j.id, 'closing');
       alert('Cannot close the job yet:\n\n' + cb.map(function(b){ return '• ' + b; }).join('\n'));
       return false;
     }
@@ -29291,7 +29294,7 @@ function _invEdit(jobId, stableId, key, el) {
     if (_bq) {
       var _bn = invBequestBeneficiary(_bq, _bj);
       alert(_invNamed(ref) + ' is matched to the bequest to ' + (_bn ? _bn.name : 'a beneficiary')
-        + '. Unmatch it on the Beneficiaries & specific bequests card first. Nothing was changed.');
+        + '. Unmatch it first on the Beneficiaries & specific bequests card, under Releases & signed papers on Job Admin & Inv. Nothing was changed.');
       el.checked = true;
       return;
     }
@@ -29432,7 +29435,7 @@ function invRemoveLine(jobId, stableId) {
       + (others.length ? ', and the ' + others.length + ' other line' + (others.length > 1 ? 's' : '')
           + ' that share it keep it' : '') + '.';
   }
-  msg += '\n\nRemoved items, at the foot of this tab, gives the line back.';
+  msg += '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives the line back.';
   if (!window.confirm(msg)) return false;
   _invTombstoneLine(jobId, ref);
   renderInventoryTab();
@@ -29472,12 +29475,12 @@ function invBulkRemove(jobId) {
     + shown.join('\n') + (lines.length > shown.length ? '\n  \u00b7 and ' + (lines.length - shown.length) + ' more' : '')
     + '\n\nTheir numbers are never given to anything else. No photograph is deleted: each stays in Google Drive and in its room, '
     + 'and a line that shares one keeps it.'
-    + '\n\nRemoved items, at the foot of this tab, gives them back.';
+    + '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives them back.';
   if (!window.confirm(msg)) return false;
   lines.forEach(function(r){ _invTombstoneLine(jobId, r, { defer: true }); });
   savePhotoRefs(jobId);
   _invPick = {};
-  showSyncBadge(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' removed \u2014 Removed items, at the foot of the tab, gives them back', false);
+  showSyncBadge(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' removed \u2014 Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back', false);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
   return lines.length;
@@ -32220,12 +32223,17 @@ function sendApprovalRequest(jobId, selectedOnly) {
   if (_docBusy) { _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
   _docBusy = { jobId: jobId, docKey: APPROVAL_REQ_KEY };
   var over = false;
+  // ⚠ EVERY END OF A SEND OPENS THE RELEASES BAR (2026-10-22), from the card or the bulk bar, whatever came of it: the
+  // notice says to tap I've sent it on the Releases card, or to press Send request again there, and the card sits in a
+  // bar that may be shut.
+  var openBar = function () { if (typeof deskFoldOpen === 'function') deskFoldOpen(jobId, 'releases'); };
   var watchdog = setTimeout(function () {
     if (over) return;
     over = true; _docBusy = null;
+    openBar();
     _docNotice('warn', 'The approval request took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send request again.', jobId);
   }, APPROVAL_REQ_WATCHDOG_MS);
-  var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; };
+  var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; openBar(); };
   var step = function (label) { if (!over) _dashSendState(APPROVAL_REQ_KEY, label); };
   var rcpt = approvalRequestRecipients(job);
 
@@ -32408,11 +32416,13 @@ function openJobDeskFor(jobId) {
 // nothing in it (INV_RELEASES_HOST_EMPTY, hidden), so a card that empties is put back to that host rather than left
 // on screen saying what is no longer true, and one that starts to say something is drawn where the host stands.
 var INV_RELEASES_HOST_EMPTY = '<div id="inv-releases" style="display:none;"></div>';
+// ⚠ AND THE BARS' LINES FOLLOW IT, on both paths (2026-10-22): the card is inside a bar whose shut line says what it holds.
 function _invRefreshReleases(jobId) {
   var el = document.getElementById('inv-releases'), job = _invJob(jobId);
-  if (!el || !job) return false;
+  if (!el || !job) { if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId); return false; }
   var html = _renderInvReleasesCard(job, _jobInvRefs(jobId));
   el.outerHTML = html || INV_RELEASES_HOST_EMPTY;
+  if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
   return !!html;
 }
 // The other half of the same transaction: the signed request comes back, and the approval
@@ -32813,6 +32823,21 @@ function _renderInvReleasesCard(job, all) {
 // bequest covers, a bequest no line is matched to ("not yet found"), and a matched line proposed to go elsewhere
 // (the bequest caution, the same rule the release request prints). The roster also feeds the To a person recipient
 // box as suggestions (`inv-ben-list-<job>`), which stays free text.
+// ⚠ THE THREE CHECKS, ONE DEFINITION (2026-10-22): read by this card and by the Releases bar's line (deskFoldState), so the
+// bar shut over the card says what the card would. DOM-free. `unmatched`, the lines flagged Specific Bequest that no
+// bequest covers; `notFound`, the bequests no live line is matched to; `elsewhere`, the matched lines proposed to go
+// anywhere but to their beneficiary (the request's own caution, `caution`).
+function invBequestChecks(job, all) {
+  var jid = job.id, live = {};
+  (all || []).forEach(function(r){ live[String(r.stableId)] = r; });
+  var caution = INV_RELEASE_CAUTIONS.filter(function(c){ return c.key === 'bequestElsewhere'; })[0];
+  return {
+    caution: caution,
+    unmatched: (all || []).filter(function(r){ return r.flagBequest && !invBequestFor(r, job); }),
+    notFound: jobListEntries(job, 'bequests').filter(function(b){ return !(b.stableIds || []).some(function(id){ return live[String(id)]; }); }),
+    elsewhere: (all || []).filter(function(r){ return invReleaseCautions(r, jid).indexOf(caution) >= 0; })
+  };
+}
 function _renderInvBequestCard(job, all) {
   if (!invFiduciaryMode(job)) return '';
   var jid = job.id;
@@ -32824,10 +32849,8 @@ function _renderInvBequestCard(job, all) {
   var small = 'font-size:10px;padding:3px 9px;';
   var head = function(t){ return '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 2px;">' + t + '</div>'; };
   var benName = function(b){ var x = invBequestBeneficiary(b, job); return x ? x.name : 'a beneficiary no longer on the list'; };
-  var unmatched = all.filter(function(r){ return r.flagBequest && !invBequestFor(r, job); });
-  var notFound = beqs.filter(function(b){ return !(b.stableIds || []).some(function(id){ return live[String(id)]; }); });
-  var bqCaution = INV_RELEASE_CAUTIONS.filter(function(c){ return c.key === 'bequestElsewhere'; })[0];
-  var elsewhere = all.filter(function(r){ return invReleaseCautions(r, jid).indexOf(bqCaution) >= 0; });
+  var _chk = invBequestChecks(job, all);
+  var unmatched = _chk.unmatched, notFound = _chk.notFound, bqCaution = _chk.caution, elsewhere = _chk.elsewhere;
   var checks = ''
     + (unmatched.length ? '<div class="alert a-warn" style="font-size:11px;margin:6px 0;">&#9888; <strong>Flagged Specific Bequest, and no bequest on the list covers '
         + (unmatched.length > 1 ? 'them' : 'it') + ':</strong> ' + esc(unmatched.map(_invNamed).join(' · '))
@@ -33510,7 +33533,7 @@ function ledgerSigners(job) {
 function ledgerCloseFlag(job) {
   if (!job || !invFiduciaryMode(job) || ledgerSignedCopies(job).length) return '';
   return 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have the '
-    + _agrApprover(job) + ' sign it, then file the signed copy on the Disposition Ledger card (Job Admin & Inv).';
+    + _agrApprover(job) + ' sign it, then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.';
 }
 // A short list of lines for a gap sentence: "#3 Lamp, #7 Chair and 4 more".
 function _ledgerNames(list, max) {
@@ -33725,7 +33748,7 @@ function _fileCloseoutPaper(jobId, opt, P) {
   });
   return true;
 }
-function _cpWhere(P) { return ' (' + (P.where || 'Job Admin & Inv') + ')'; }
+function _cpWhere(P) { return ' (' + (P.where || 'under Closing the job on Job Admin & Inv') + ')'; }
 var _incidentFiling = {};   // never saved: one Incident Record filing per client at a time (P26)
 // ⚠⚠ THE THREE CLOSE-OUT PAPERS FILE THROUGH ONE PATH (P25, Q51; the Incident Record since P26): the Disposition Ledger on every estate, and on living work
 // where something was sold (ledgerApplies); the Contents Record on living work, the paper the family signs. Each is filed as
@@ -33831,7 +33854,7 @@ function donationReceiptLine(job, items) {
   if (!total) return null;
   return { key: 'donation_receipt', ok: done === total, label: 'Donation receipts on file',
            detail: done + ' of ' + total + ' donated line' + (total === 1 ? '' : 's') + ' receipted'
-             + (done === total ? '' : ' — file each charity’s receipt on the Donations card, Job Admin & Inv'
+             + (done === total ? '' : ' — file each charity’s receipt on the Donations card, under Closing the job on Job Admin & Inv'
                  + (unnamed ? ' (' + unnamed + ' with no charity recorded: name it in Channel / Recipient first)' : '')) };
 }
 // ⚠ A DONATION RECORD PER CHARITY (P19): what went to it, for the donor's own tax records and to hand the charity.
@@ -33986,7 +34009,7 @@ function proceedsLine(job, items) {
   if (R.twice.length) bits.push(R.twice.length + ' line' + (R.twice.length === 1 ? '' : 's') + ' on two statements');
   var ok = !R.disagree && !R.unlisted.length && !R.unfiled && !R.twice.length;
   return { key: 'proceeds_reconciled', ok: ok, label: 'Sale proceeds reconciled',
-           detail: bits.join('; ') + (ok ? '' : ' — the Proceeds statements card, below the inventory') };
+           detail: bits.join('; ') + (ok ? '' : ' — the Proceeds statements card, under Closing the job on Job Admin & Inv') };
 }
 function _renderProceedsCard(job, all) {
   if (!jobTakesProceedsStatements(job)) return '';
@@ -34177,7 +34200,7 @@ function ledgerDerivedLines(jobId, job, phase) {
     var sc = ledgerSignedCopies(job), last = sc[sc.length - 1];
     out.push({ key: 'ledger_signed', ok: sc.length > 0, label: 'Disposition Ledger signed by the ' + _agrApprover(job),
                detail: last ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(last.filedAt)))) + (last.filedBy ? ' by ' + esc(last.filedBy) : '')
-                            : 'not yet — print it from the Disposition Ledger card on Job Admin & Inv, have it signed, and file the signed copy there' });
+                            : 'not yet — print it from the Disposition Ledger card, under Closing the job on Job Admin & Inv, have it signed, and file the signed copy there' });
   } else if (_jobInvRefs(jobId).length) {
     // ⚠ ON LIVING WORK THE CLIENT SIGNS THE CONTENTS RECORD (P25, Q51; P22 asked for a signed ledger here, which since
     // Q51 nobody signs). Asked only where the job has an inventory, as its card is drawn only there; a reminder, never a
@@ -34185,7 +34208,7 @@ function ledgerDerivedLines(jobId, job, phase) {
     var lsc = signedRecordsOf(job, 'contents', CONTENTS_SIGNED_REF), llast = lsc[lsc.length - 1];
     out.push({ key: 'contents_signed', ok: lsc.length > 0, label: 'Contents Record signed by the client',
                detail: llast ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(llast.filedAt)))) + (llast.filedBy ? ' by ' + esc(llast.filedBy) : '')
-                             : 'not yet — print it from the work bar on Job Admin & Inv, have the client sign it, and file the signed copy on the Contents Record card' });
+                             : 'not yet — print it from the work bar on Job Admin & Inv, have the client sign it, and file the signed copy on the Contents Record card, under Closing the job on Job Admin & Inv' });
   }
   if (phase === 'admin') {
     var items = _jobInvRefs(jobId);
@@ -34229,7 +34252,7 @@ function proceedsReceivedLine(job, items) {
   if (unpaid) bits.push(unpaid + ' statement' + (unpaid === 1 ? '' : 's') + ' with no payment recorded');
   var ok = !bits.length;
   return { key: 'proceeds_received', ok: ok, label: 'Proceeds received for every sold line',
-           detail: ok ? 'every sold line is on a paid statement' : bits.join('; ') + ' — follow up with the selling partner, then record it on the Proceeds statements card' };
+           detail: ok ? 'every sold line is on a paid statement' : bits.join('; ') + ' — follow up with the selling partner, then record it on the Proceeds statements card, under Closing the job on Job Admin & Inv' };
 }
 // The desk's close-out records, together under the inventory: the ledger, the statements and the donations.
 function _renderLedgerCards(job, all) {
@@ -35118,7 +35141,7 @@ function collectionUseLine(jobId, collLineId, lineId) {
   }
   if (!window.confirm('Use #' + _invItemNo(line) + ' (' + _invNamed(line) + ') as ' + name + ' from the walkthrough?\n\n'
       + 'It keeps its photograph and its number, and takes the walkthrough’s instructions where it has none of its own. '
-      + 'Line #' + _invItemNo(coll) + ' comes off the inventory, so the collection is counted once. Removed items gives it back.')) return false;
+      + 'Line #' + _invItemNo(coll) + ' comes off the inventory, so the collection is counted once. Removed items, under Removed items & snapshots on Job Admin & Inv, gives it back.')) return false;
   line.sourceCollId = coll.sourceCollId;
   if (!line.disposition && coll.disposition) line.disposition = coll.disposition;
   if (coll.needsAppr) line.needsAppr = true;
@@ -35173,7 +35196,7 @@ function _collLineStatusHtml(jobId, collId) {
       + 'open the room it is in under In the house and tap it beside the cameras</span>';
   }
   return '<span class="coll-line-status" style="font-size:11px;color:var(--gray);align-self:center;">'
-    + (_collLinesOf(jobId, collId).length ? 'Taken off the inventory (Removed items on Job Admin &amp; Inv gives it back)' : 'Joins the inventory by itself') + '</span>';
+    + (_collLinesOf(jobId, collId).length ? 'Taken off the inventory (Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives it back)' : 'Joins the inventory by itself') + '</span>';
 }
 
 // The room's brief (P24): the walkthrough's collections still waiting for a photograph, in every room, because the
@@ -35518,16 +35541,19 @@ function _invRefreshFlagStrip(jobId) {
 }
 // The close-out records' host (P19): the Disposition Ledger, Proceeds statements and Donations cards. It holds no field a
 // person types into (a signed copy's picker is a button), so a repaint takes nothing from under anybody.
+// Both hosts sit inside a fold bar (2026-10-22), so each repaint ends with the bars' lines (_deskFoldHeadsRepaint).
 function _invRefreshRecords(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-records');
   if (job && el) el.innerHTML = _renderLedgerCards(job, _jobInvRefs(jobId));
+  if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
 }
 
 function _invRefreshGuardrail(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-guardrail');
   if (job && el) el.innerHTML = _renderAppraisalGuardrail(job);
+  if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
 }
 function _renderAppraisalGuardrail(job) {
   var items = _invGuardrailItems(job.id);
@@ -35752,7 +35778,9 @@ function _invRefreshFromCloud() {
     // ⚠ THE FIRST READ OF THE SHEET IS WHAT LETS THE WALKTHROUGH'S COLLECTIONS JOIN THE INVENTORY (P24), so a read that
     // changed nothing still redraws when it made them.
     var made = collectionLinesEnsure(jobId);
-    if (!changed && !made) return;
+    // ⚠ A READ THAT CHANGED NOTHING STILL ENDS THE BARS' "loading…" (2026-10-22): their lines and open rules wait on this
+    // read (deskFoldState), and the tab is not redrawn for it.
+    if (!changed && !made) { if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId); return; }
     var after = JSON.stringify((_photoRefs[jobId] || []).map(function(r){ return [r.stableId, r.updatedAt || r.ts, r.deletedAt || 0]; }));
     if (made || after !== before) renderInventoryTab();
   });
@@ -36609,7 +36637,7 @@ function agentDropDuplicate(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
   if (!window.confirm('Remove item #' + _invItemNo(ref) + ' — ' + (ref.objectName || '(unnamed)') + '?\n\n'
-    + 'The line comes off the inventory. The photograph stays in Google Drive, and Removed items below gives the line back.')) return;
+    + 'The line comes off the inventory. The photograph stays in Google Drive, and Removed items, under Removed items & snapshots on Job Admin & Inv, gives the line back.')) return;
   // Tombstone, never a splice: absence is indistinguishable from "the other device has not
   // seen it yet", so a splice is undone by the next merge.
   // ⚠ AND NEVER `discardShot`, which TRASHES the photograph in Drive. The frame is real
@@ -36661,7 +36689,7 @@ function _agDupHtml(jobId, all) {
             + (g.why ? '<span style="font-size:10px;color:var(--gray-dk);max-width:170px;">' + esc(r.objectName || '') + '</span>' : '')
             + '<button class="btn-s" style="font-size:10px;color:#c0392b;" '
             + 'onclick="agentDropDuplicate(' + jobId + ',\'' + r.stableId + '\')" '
-            + 'title="Take this line off the inventory. The photograph stays in Drive and Removed items gives the line back.">'
+            + 'title="Take this line off the inventory. The photograph stays in Drive and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives the line back.">'
             + 'Remove</button></span>';
         }).join('')
       + '<button class="btn-s" style="font-size:10px;" '
@@ -37810,7 +37838,7 @@ function _renderInvRow(job, ref) {
       + esc(_bqC.note(ref, jid).replace(/;.*$/, '')) + ' &middot; going elsewhere</span>');
   } else if (_bq) {
     var _bqb = invBequestBeneficiary(_bq, job);
-    warn.push('<span title="Matched to a specific bequest on the Beneficiaries &amp; specific bequests card" style="color:var(--gray-dk);">bequest to '
+    warn.push('<span title="Matched to a specific bequest on the Beneficiaries &amp; specific bequests card, under Releases &amp; signed papers on Job Admin &amp; Inv" style="color:var(--gray-dk);">bequest to '
       + esc(_bqb ? _bqb.name : 'a beneficiary') + '</span>');
   } else if (ref.flagBequest) {
     var _bqList = invFiduciaryMode(job) && jobListEntries(job, 'bequests').length > 0;
@@ -37846,7 +37874,7 @@ function _renderInvRow(job, ref) {
   // ⚠ OUT WITH AN APPRAISER (P28): the hand-off list is filed and no return covers the line yet. Bronze, not gone.
   var _out = invOutForAppraisal(ref, job);
   if (_out) warn.push('<span class="inv-out-chip" title="' + esc('On ' + (_out.ref || 'the appraiser') + '’s hand-off list, filed to Drive'
-    + (_out.signedOn ? ' ' + fmtDate2(_out.signedOn) : '') + '. Check it back in from the Releases card when it returns.')
+    + (_out.signedOn ? ' ' + fmtDate2(_out.signedOn) : '') + '. Check it back in under Releases & signed papers on Job Admin & Inv when it returns.')
     + '" style="color:var(--bronze);font-weight:700;">&#9878; with ' + esc(_out.ref || 'the appraiser') + (_out.signedOn ? ' since ' + esc(fmtDate2(_out.signedOn)) : '') + '</span>');
   // ⚠ A WALKTHROUGH COLLECTION STILL WAITING FOR ITS PHOTOGRAPH (P24). Bronze: red on this strip is a held firearm.
   if (collectionLineUnshot(ref)) {
@@ -37857,7 +37885,7 @@ function _renderInvRow(job, ref) {
   if (invReceiptOwed(ref, job)) {
     warn.push('<span title="' + esc('Released to ' + (invRecipientName(ref.channel) || 'a person') + ' and no signed receipt is filed for it.'
       + (String(ref.receiptDoc || '').trim() ? ' Receipt / Doc reads “' + String(ref.receiptDoc).trim() + '”: a typed reference, not a filed receipt.' : '')
-      + ' Print the receipt and file the signed copy on Releases & signed papers.') + '" style="color:var(--bronze);font-weight:700;">no signed receipt</span>');
+      + ' Print the receipt and file the signed copy under Releases & signed papers on Job Admin & Inv.') + '" style="color:var(--bronze);font-weight:700;">no signed receipt</span>');
   }
   // ⚠ AN UNCHECKED AGENT GUESS SAYS SO ON THE ROW. Bronze, never red: red on this strip means
   // "stop, do not touch" (a held firearm) and a second red would cost the first its meaning.
@@ -38011,7 +38039,7 @@ function _renderInvPanel(job, ref) {
         // ⚠ ONE REMOVE FOR EVERY LINE (P16): typed, photographed or split. It takes the LINE, never
         // the photograph — the room's 🗑 is the only thing that deletes an image.
         + '<button class="btn-s" onclick="invRemoveLine(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;" '
-          + 'title="Take this line off the inventory. No photograph is deleted, and Removed items gives the line back.">Remove line</button>'
+          + 'title="Take this line off the inventory. No photograph is deleted, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives the line back.">Remove line</button>'
         + (sibs.length > 1 ? '<span style="font-size:10.5px;color:var(--gray);">This photograph carries '
             + sibs.length + ' lines: ' + sibs.map(function(x){ return esc(_invNamed(x)); }).join(' &middot; ') + '</span>' : '')
       + '</div>'
@@ -38206,7 +38234,7 @@ function _renderInvBulk(job) {
     + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
     + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
     // Remove lines (2026-10-19): the selection off the inventory at once, photographs kept, Removed items giving them back.
-    + '<button onclick="invBulkRemove(' + jid + ')" style="' + btnStyle + 'color:var(--err-tx);" title="Take every selected line off the inventory. No photograph is deleted, and Removed items gives them back.">Remove lines</button>'
+    + '<button onclick="invBulkRemove(' + jid + ')" style="' + btnStyle + 'color:var(--err-tx);" title="Take every selected line off the inventory. No photograph is deleted, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives them back.">Remove lines</button>'
     + '<button onclick="_invClearPicks()" style="' + btnStyle + 'background:none;color:var(--cream);">Clear</button>'
     + result
     + '</div>';
@@ -38271,7 +38299,7 @@ function renderInventoryTab() {
   // dashboard's own band — so the midpoint invoice is reminded here, where the day ends, and not
   // only on a tab nobody opens mid-job.
   var top = jobInfoHeaderHtml(job) + '<div id="jband-slot-admin">' + jobProgressBlockHtml(jobId, 'admin') + '</div>';
-  var closeout = (isJobWon(job) && estimateStore[jobId] && estimateStore[jobId].estimate) ? renderCloseoutCard(jobId, job, 'admin') : '';
+  var closeout = _deskCloseoutShown(jobId, job) ? renderCloseoutCard(jobId, job, 'admin') : '';
 
   // ⚠⚠ A HOME PREP JOB HAS NO INVENTORY, SO THIS TAB SHOWS NONE OF IT. Anthony, off the tab on a
   // prep job: *"everything below job admin - desk paperwork is immaterial to a home prep job."*
@@ -38287,8 +38315,9 @@ function renderInventoryTab() {
   // ⚠⚠ THE ORDER OF AN EVENING AT THE DESK (2026-10-22; Anthony: *"Build all of it now."*). The job today and Job Admin
   // above; tonight's items open in the middle; then the four bars (DESK_FOLDS), each one line until it is opened. The
   // close-out card left the top of the tab for the Closing bar: it sat between Job Admin and the items from day one.
+  // What each bar says shut, and whether it opens by itself, is deskFoldState's one answer; its title names the cards drawn.
   var fold = function (key, html) {
-    return _deskFold(jobId, key, deskFoldTitle(key, html), deskFoldState(jobId, job, key, all, html), html);
+    return _deskFold(jobId, key, deskFoldTitle(key, html), deskFoldState(jobId, job, key, all), html);
   };
   // The two intake questions above Job Admin: the desk names that evening's shots against
   // the must-find list, and can record a Found the crew phoned in.
@@ -44079,7 +44108,7 @@ function planDerivedLines(jobId, job, est, phase, today) {
       if (_rel.length) {
         var _nRc = _rel.filter(function(r){ return !!invReceiptRecord(r, job); }).length;
         out.push({ key: 'beneficiary_receipts', ok: _nRc === _rel.length, label: 'Signed receipt for every item released to a person',
-                   detail: _nRc + ' of ' + _rel.length + (_nRc < _rel.length ? ' — print each receipt and file the signed copy under Releases &amp; signed papers on the Job Admin &amp; Inv tab' : '') });
+                   detail: _nRc + ' of ' + _rel.length + (_nRc < _rel.length ? ' — print each receipt and file the signed copy under Releases &amp; signed papers on Job Admin &amp; Inv' : '') });
       }
     }
     // ⚠ AND A FEE-ONLY ENGAGEMENT LOGS NO HOURS. Prep with no declutter hours bills the fee alone
@@ -44366,8 +44395,12 @@ function accessLines(job, today) {
 }
 // ⚠⚠ CLOSE JOB REFUSES WHILE AN ITEM IS HELD (the one must-have Anthony made a refusal). Asked by jobCloseBlockers, which
 // applyJobTransition asks in the handler, so the button and the handler agree. A lost item with its explanation does not block.
+// The items Havellin still holds (each {it, st}): the close's refusal, the terminal flag and the desk's Closing bar read it.
+function accessHeldItems(job) {
+  return accessItemsOf(job).map(function (it) { return { it: it, st: accessItemState(job, it) }; }).filter(function (x) { return accessItemOpen(x.st); });
+}
 function accessCloseBlocker(job) {
-  var open = accessItemsOf(job).map(function (it) { return { it: it, st: accessItemState(job, it) }; }).filter(function (x) { return accessItemOpen(x.st); });
+  var open = accessHeldItems(job);
   if (!open.length) return '';
   return 'Return every key and access item to the client — ' + open.length + ' still ' + (open.length === 1 ? 'is' : 'are') + ' not ('
     + open.map(function (x) { return accessItemLabel(x.it) + ': ' + accessStateText(x.st); }).join('; ')
@@ -44375,7 +44408,7 @@ function accessCloseBlocker(job) {
 }
 // Q73: Mark lost and Deposit Retained are flagged, never refused. The sentence the close-out dialog shows.
 function accessTerminalFlag(job) {
-  var open = accessItemsOf(job).map(function (it) { return { it: it, st: accessItemState(job, it) }; }).filter(function (x) { return accessItemOpen(x.st); });
+  var open = accessHeldItems(job);
   if (!open.length) return '';
   return 'Havellin still holds ' + open.length + ' access item' + (open.length === 1 ? '' : 's') + ' ('
     + open.map(function (x) { return accessItemLabel(x.it) + ', ' + accessStateText(x.st); }).join('; ')
@@ -45918,6 +45951,10 @@ var _deskOpen = {};   // jobId + ':' + fold -> true (open) / false (shut by hand
 // ONE CATALOGUE OF THE BARS, IN THEIR ORDER. A bar's title says what is inside it (Anthony's rule for the crew fold,
 // 2026-10-19: "we couldn't find where to log the crew"), so the parts a title names are the cards actually drawn in
 // its body, found by their ids: `join` sits between the title and what it names.
+// ⚠ THE POINTERS ELSEWHERE NAME A BAR BY THIS TITLE (2026-10-22): a sentence sending a person to a card inside a bar says
+// "<card>, under <bar title> on Job Admin & Inv" (the close's refusal, the ledger's close flag, the close-out papers' notices,
+// the derived lines, the row chips, the removals). They carry the title as a literal, because pinned sandboxes lift them
+// alone, and desk-layout group D holds each to this catalogue, as the crew fold's fix sentence is held to its title.
 var DESK_FOLDS = {
   releases: { title: 'Releases & signed papers', join: ' · ', parts: [['inv-bequests', 'Beneficiaries & bequests']] },
   values:   { title: 'Values & appraisals', join: ': ', parts: [] },
@@ -45935,11 +45972,199 @@ function deskFoldTitle(fold, body) {
   var named = f.parts.filter(function (p) { return s.indexOf('id="' + p[0]) >= 0; }).map(function (p) { return p[1]; });
   return f.title + (named.length ? f.join + named.join(', ') : '');
 }
-// ⚠ A PLACEHOLDER, WHILE THE BARS ARE BUILT ONE STEP AT A TIME: every bar is drawn, OPEN, with no status line, wherever
-// its body has anything in it, so the new order hides nothing yet. `body` (the bar's markup) is read only here. What a
-// bar says, and when it opens by itself, is this function's to answer: `{show, openByDefault, bits: [{text, tone}]}`.
-function deskFoldState(jobId, job, fold, all, body) {
-  return { show: !!String(body || ''), openByDefault: true, bits: [] };
+// ⚠⚠ THE ONE READER OF WHAT EACH BAR SAYS SHUT, AND OF WHEN IT OPENS BY ITSELF (2026-10-22). DOM-free, text only, built
+// from the cards' own functions and never from a second copy of one of their rules (desk-layout group D counts the
+// readers). `{show, openByDefault, bits: [{text, tone}]}`: `show`, whether the bar has anything in it at all; `openByDefault`,
+// whether it opens by itself (a person's open or shut still wins both ways, _deskFoldIsOpen); `bits`, the line, each part
+// in its tone (red, amber, ok, grey). Nothing a person needs is behind a shut bar without its line saying so.
+//   releases · opens while a request is owed (Anthony, 2026-10-22, Q2, *"When a request is owed"*): lines wait for written
+//     approval that no request has carried, a drafted request waits on I've sent it, or a signed approval is recorded with
+//     no copy filed. A line is counted once, under the first thing it waits on.
+//   values   · opens while an item waiting on an appraisal has no appraiser linked; red as the guardrail is (Formal).
+//   closing  · opens at the close only (the Close-out stage, the work handed over, a closed or lost job), or while a
+//     proceeds statement disagrees with its lines (red), or when Close job is refused (applyJobTransition, by hand). NOT on
+//     the band's lit row: Work complete is lit from the midpoint payment to the close, half of every job. Grey before the
+//     close, amber where a line has left with its paper owed; at the close it names everything Close job refuses on.
+//   history  · never by itself (a snapshot just taken opens it, takeInventorySnapshot).
+// ⚠ AN UNREAD MANIFEST CLAIMS NOTHING ("An empty store is unread until proven otherwise"): until this device has read the
+// job's manifest from the sheet (_invCloudSeen), every bar says "loading…" in grey, never a ✓ or a count of nothing, and
+// none opens by itself off the copy cached here (Closing's close, which reads the job and not the manifest, aside). The
+// heads are run again when the read lands (_invRefreshFromCloud). With no Apps Script URL there is nothing to read, and
+// this device's copy is the record (collectionLinesEnsure's rule). `today` (yyyy-mm-dd) is for the tests; the desk passes none.
+function deskFoldState(jobId, job, fold, all, today) {
+  var st = { show: false, openByDefault: false, bits: [] };
+  if (!job || !DESK_FOLDS[fold]) return st;
+  all = all || [];
+  var bits = st.bits, fid = invFiduciaryMode(job);
+  var bit = function (text, tone) { bits.push({ text: text, tone: tone }); };
+  var s = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
+  var unread = !!(typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL) && !(typeof _invCloudSeen !== 'undefined' && _invCloudSeen[jobId]);
+  var loading = function () { st.bits = [{ text: 'loading…', tone: 'grey' }]; return st; };
+  // A line is counted once in each paper's run, under the first bit that names it: the approval it waits on (ratification,
+  // a request owed, a request out), then the paper its leaving owes (a receipt, a sign-out). A line can owe one of each:
+  // on living work a line may be signed out before the client's approval comes back.
+  var runs = {};
+  var once = function (run, list) {
+    var seen = runs[run] || (runs[run] = {});
+    return list.filter(function (r) { var k = String(r.stableId); if (seen[k]) return false; seen[k] = 1; return true; }).length;
+  };
+
+  if (fold === 'releases') {
+    var S = approvalRequestState(job, all);
+    var draft = draftOutstanding(job, APPROVAL_REQ_KEY);
+    var batches = invApprovalBatches(job, all);
+    var unfiled = batches.filter(function (b) { return !b.filed.length; }).length;
+    var outs = signoutGroups(job, all);
+    // Drawn where either card draws: on an estate always (the bequests card); on living work where the request, a signing
+    // act or a sign-out row has something to say (_renderInvReleasesCard's sections; group D holds the two answers equal).
+    st.show = fid || !!S.st || !!(S.open.length + S.fresh.length) || !!batches.length || !!outs.length;
+    if (unread) return loading();
+    st.openByDefault = S.fresh.length > 0 || draft || unfiled > 0;
+    var rat = once('approval', fid ? all.filter(function (r) { return invRatificationOwed(r, job); }) : []);
+    var fresh = once('approval', S.fresh);
+    var unsigned = (S.st && S.st.sentAt && !draft) ? once('approval', S.open) : 0;
+    var owed = once('leaving', fid ? all.filter(function (r) { return invReceiptOwed(r, job); }) : []);
+    var day = '', readyN = 0, notToday = false;
+    outs.forEach(function (g) {
+      if (!g.ready.length || !(SIGNOUT_KINDS[g.kind] && SIGNOUT_KINDS[g.kind].leaving)) return;
+      var k = once('leaving', g.ready);
+      if (!k) return;   // its lines are already said (a receipt owed), so its paper does not colour this bit
+      readyN += k;
+      day = day || today || _todayStr();
+      if (!g.records.some(function (x) { return x.filedAt && _ymdLocal(new Date(Number(x.filedAt))) === day; })) notToday = true;
+    });
+    if (fresh) bit(s(fresh, 'item needs', 'items need') + ' written approval: send a request', 'amber');
+    if (draft) bit('Request drafted: tap I’ve sent it', 'amber');
+    if (unfiled) bit(s(unfiled, 'signed approval', 'signed approvals') + ' not filed to Drive', 'amber');
+    if (rat) bit(rat + ' for ratification', 'amber');
+    if (owed) bit(s(owed, 'signed receipt', 'signed receipts') + ' owed', 'amber');
+    var C = fid ? invBequestChecks(job, all) : null;
+    if (C && C.elsewhere.length) bit(s(C.elsewhere.length, 'designated item', 'designated items') + ' going elsewhere', 'amber');
+    if (C && C.unmatched.length) bit(C.unmatched.length === 1 ? '1 flagged bequest with no bequest behind it'
+      : C.unmatched.length + ' flagged bequests with no bequest behind them', 'amber');
+    if (unsigned) bit(unsigned + ' on the request still unsigned', 'grey');
+    if (readyN) bit(readyN + ' ready to sign out', notToday ? 'amber' : 'grey');
+    if (!bits.length) bit('✓ nothing waiting', 'ok');
+    if (C && C.notFound.length) bit(s(C.notFound.length, 'bequest', 'bequests') + ' not yet found', 'grey');
+    if (fid && !jobListEntries(job, 'beneficiaries').length) bit('no beneficiaries recorded', 'grey');
+    return st;
+  }
+
+  if (fold === 'values') {
+    st.show = true;   // the roster is always drawn: it is where an appraiser is added
+    if (unread) return loading();
+    var items = _invGuardrailItems(jobId);   // the guardrail's own list, so the bar's line and tone are the panel's
+    var unlinked = items.filter(function (r) { return !invAppraisalInProgress(r, jobId); }).length;
+    st.openByDefault = unlinked > 0;
+    if (items.length) bit(s(items.length, 'needs', 'need') + ' an appraisal'
+      + (unlinked ? ' (' + unlinked + ' with no appraiser linked)' : ', each linked'), isFormalDoc(job) ? 'red' : 'amber');
+    else bit('✓ nothing needs an appraisal', 'grey');
+    var outBy = {}, outOrder = [];
+    all.forEach(function (r) {
+      var o = invOutForAppraisal(r, job);
+      if (!o) return;
+      var k = String(o.id);
+      if (!outBy[k]) { outBy[k] = { rec: o, n: 0 }; outOrder.push(k); }
+      outBy[k].n++;
+    });
+    outOrder.forEach(function (k) {
+      var x = outBy[k], d = x.rec.signedOn || (x.rec.filedAt ? _ymdLocal(new Date(Number(x.rec.filedAt))) : '');
+      bit(x.n + ' out with ' + (x.rec.ref || 'the appraiser') + (d ? ' since ' + fmtDate2(d) : ''), 'grey');
+    });
+    // The hand-offs stay in the one sign-out list, under Releases, where every other sign-out is.
+    signoutGroups(job, all).forEach(function (g) {
+      if (g.kind === 'appraisal_out' && g.ready.length) bit(g.ready.length + ' ready to hand to ' + g.taker + ' (under ' + DESK_FOLDS.releases.title + ')', 'grey');
+    });
+    var ap = _jobAppraisers(jobId).length;
+    bit(ap ? s(ap, 'appraiser', 'appraisers') : 'no appraisers yet', 'grey');
+    return st;
+  }
+
+  if (fold === 'closing') {
+    var est = (typeof estimateStore !== 'undefined' && estimateStore[jobId]) ? estimateStore[jobId].estimate : null;
+    var co = _deskCloseoutShown(jobId, job);
+    st.show = co || all.length > 0;   // the close-out card, or the papers' cards, each drawn once there is a line
+    var atClose = !!job.deliveredOn || ['closed', 'closed_retained', 'lost'].indexOf(job.status) >= 0
+      || (typeof planCurrentStage === 'function' && planCurrentStage(jobId, job, est) === 'p4');
+    st.openByDefault = atClose;
+    if (unread) return loading();
+    var R = (jobTakesProceedsStatements(job) && all.length) ? proceedsReconciliation(job, all) : null;
+    if (R && R.disagree) { st.openByDefault = true; bit(R.disagree === 1 ? '1 proceeds statement disagrees with its lines' : R.disagree + ' proceeds statements disagree with their lines', 'red'); }
+    if (atClose) {
+      // Everything Close job refuses on (jobCloseBlockers), each by name: the vendors unrated, the keys held, the incidents open.
+      var unrated = unratedVendorsForJob(job).length;
+      var held = typeof accessHeldItems === 'function' ? accessHeldItems(job).length : 0;
+      var inc = typeof openIncidents === 'function' ? openIncidents(job).length : 0;
+      if (unrated) bit(s(unrated, 'vendor', 'vendors') + ' not yet rated', 'amber');
+      if (held) bit(held === 1 ? '1 key or access item still held' : held + ' keys or access items still held', 'amber');
+      if (inc) bit(s(inc, 'incident', 'incidents') + ' open', 'amber');
+      var sig = all.length ? ledgerDerivedLines(jobId, job)[0] : null;
+      if (sig && !sig.ok) bit((sig.key === 'ledger_signed' ? 'Disposition Ledger' : 'Contents Record') + ' not signed yet', 'amber');
+    }
+    var donGone = all.filter(function (r) { return r.disposition === 'Donate' && invRecordedGone(r, job) && !invDonationReceipted(job, r); }).length;
+    if (donGone) bit(s(donGone, 'donated line', 'donated lines') + ' gone with no receipt', 'amber');
+    var soldGone = R ? R.unlisted.filter(function (r) { return invRecordedGone(r, job); }).length : 0;
+    if (soldGone) bit(s(soldGone, 'sold line', 'sold lines') + ' gone on no statement', 'amber');
+    if (co) {
+      var c = closeoutState(jobId, job);
+      bit('close-out ' + [c.sat, c.reviewSent, c.referral].filter(Boolean).length + ' of 3 done', 'grey');
+    }
+    var don = 0, donRc = 0;
+    donationGroups(job, all).forEach(function (g) { don += g.lines.length; donRc += g.receipted; });
+    if (don) bit(donRc + ' of ' + s(don, 'donated line', 'donated lines') + ' receipted', 'grey');
+    if (R && R.statements.length) bit(s(R.statements.length, 'statement', 'statements') + ' recorded', 'grey');
+    if (R && R.unlisted.length - soldGone > 0) bit(s(R.unlisted.length - soldGone, 'sold line', 'sold lines') + ' on no statement yet', 'grey');
+    return st;
+  }
+
+  // history
+  var gone = _invRemovedRows(jobId).length;
+  var snaps = (job.invSnapshots || []).filter(Boolean);
+  var voided = snaps.filter(function (x) { return x.voidedAt; }).length;
+  st.show = gone > 0 || snaps.length > 0;
+  if (unread) return loading();
+  bit(gone + ' removed', 'grey');
+  bit(s(snaps.length, 'snapshot', 'snapshots') + (voided ? ' (' + voided + ' voided)' : ''), 'grey');
+  return st;
+}
+// Whether the close-out card is drawn on the desk: a won job with its estimate on this device. renderInventoryTab and the
+// Closing bar's line ask this one question.
+function _deskCloseoutShown(jobId, job) {
+  return !!(job && isJobWon(job) && typeof estimateStore !== 'undefined' && estimateStore[jobId] && estimateStore[jobId].estimate);
+}
+// ⚠ THE HEADS FOLLOW EVERY PARTIAL REPAINT (2026-10-22): a by-id repaint of a card inside a bar (the releases, the guardrail,
+// the close-out papers, the close-out card) changes what the bar's line says, and the line is the only part of a shut bar
+// anyone reads. So each of those repaints ends here: the line, its tones, the title (read off the body as drawn), the bar
+// shown or hidden, and a bar whose rule now opens it opened (written down, so it never shuts by itself again). Nothing else
+// on the tab is touched, and nothing at all unless the desk shows this client.
+function _deskFoldHeadsRepaint(jobId) {
+  if (typeof document === 'undefined' || !document || !document.getElementById) return false;
+  var sel = document.getElementById('inv-job');
+  if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
+  var job = _invJob(jobId);
+  if (!job || job.svc === 'prep') return false;
+  var all = null, any = false;
+  Object.keys(DESK_FOLDS).forEach(function (fold) {
+    var id = fold + '-' + jobId;
+    var wrap = document.getElementById('desk-fold-' + id);
+    if (!wrap) return;
+    if (!all) all = _jobInvRefs(jobId);
+    var st = deskFoldState(jobId, job, fold, all);
+    if (wrap.style) {
+      var hidden = wrap.style.display === 'none';
+      if (st.show && hidden) wrap.style.display = '';
+      else if (!st.show && !hidden) wrap.style.display = 'none';
+    }
+    var stat = document.getElementById('desk-stat-' + id), html = _deskStatHtml(st.bits);
+    if (stat && stat.innerHTML !== html) stat.innerHTML = html;
+    var body = document.getElementById('desk-body-' + id), ttl = document.getElementById('desk-ttl-' + id);
+    var t = (body && ttl) ? esc(deskFoldTitle(fold, body.innerHTML)) : null;
+    if (t !== null && ttl.innerHTML !== t) ttl.innerHTML = t;
+    var had = Object.prototype.hasOwnProperty.call(_deskOpen, _deskKey(jobId, fold));
+    if (_deskFoldIsOpen(jobId, fold, st) && !had) _deskFoldPaint(jobId, fold, true);
+    any = true;
+  });
+  return any;
 }
 // Open or shut. A person's choice either way; else the bar's default, and an OPEN default is written down as though it
 // had been pressed, so a bar never shuts by itself when the last thing that opened it resolves.
@@ -47025,7 +47250,7 @@ function jobCloseBlockers(j) {
   var un = unratedVendorsForJob(j);
   if (un.length) {
     out.push('Rate every vendor used on this job — ' + un.length + ' not yet rated (' +
-      un.map(function(v){ return v.name; }).join(', ') + '). The scorecard is in the Close-out card on the Job Plan and on Job Admin & Inv.');
+      un.map(function(v){ return v.name; }).join(', ') + '). The scorecard is in the Close-out card: on the Job Plan, and under Closing the job on Job Admin & Inv.');
   }
   // ⚠ EVERY KEY AND ACCESS ITEM BACK TO THE CLIENT, OR MARKED LOST WITH WHAT HAPPENED (2026-10-16, Anthony's one refusal).
   var ak = (typeof accessCloseBlocker === 'function') ? accessCloseBlocker(j) : '';
@@ -47225,6 +47450,8 @@ function _repaintCloseout(jobId) {
     var m = document.getElementById('closeout-meta-' + host + '-' + jobId);
     if (m) m.innerHTML = closeoutMeta(jobId, job);
   });
+  // The desk's copy sits in the Closing the job bar (2026-10-22): its shut line follows the card.
+  if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
 }
 
 // ── The review request email. Same Gmail-draft route as every other client email: it lands in
@@ -49926,6 +50153,8 @@ function togglePlanTask(jobId, key, checked, el) {
   var _job = _meta ? jobs.find(function(j){ return j.id === jobId; }) : null;
   var _rec = _job ? estimateStore[jobId] : null;
   if (_meta && _rec && _rec.estimate) _meta.innerHTML = planStageMeta(jobId, _job, _rec.estimate, _t.phase);
+  // A tick on the desk (Job Admin's boxes, the close-out card's) and the bars' shut lines (2026-10-22).
+  if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
 }
 
 // ⚠⚠ PRINT JOB PLAN IS RETIRED (2026-09-11). `printJobPlan` and `_jpExpandForPrint` are

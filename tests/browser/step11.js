@@ -207,6 +207,10 @@ const ANSWER = {
   eq(tray.by, undefined, 'and is not claimed by the agent');
 
   // ── What a person sees ──────────────────────────────────────────────────────
+  // ⚠ The rows carry the name in their boxes (innerText reads no box); it is PRINTED in the appraisal guardrail, which sits
+  // in the Values & appraisals bar since 2026-10-22: opened by a real press of its header when its body is hidden.
+  const valBody = p.locator('[id^="desk-body-values-"]');
+  if ((await valBody.count()) === 1 && !(await valBody.isVisible())) { await p.click('[id^="desk-hd-values-"]'); await p.waitForTimeout(300); }
   const seen = await p.evaluate(() => {
     const el = document.getElementById('panel-inventory');
     return { text: el.innerText, html: el.innerHTML };

@@ -104,7 +104,7 @@ const EST = 9101;
       has(q, 'confirm: Remove 3 lines from the inventory?', 'it asks, counting the lines');
       has(q, '#1 Scotch tape dispensers, red and clear plastic', 'and names them');
       has(q, 'No photograph is deleted', 'and says the photographs stay');
-      has(q, 'Removed items, at the foot of this tab, gives them back.', 'and names the way back');
+      has(q, 'Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back.', 'and names the way back (its bar, since 2026-10-22)');
       eq(await live(), ['a', 'b', 'c', 'd'], 'refused: the four lines stay');
       eq(await p.evaluate(() => window.__saves), saves, 'and nothing was saved');
       has(await txt('#panel-inventory'), '3 selected', 'the selection stands');

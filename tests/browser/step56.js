@@ -104,11 +104,18 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
     // step waits for the print to close, as they would, rather than for a fixed time that load can outrun.
     const printClosed = () => until(() => p.evaluate(() => { const pt = document.getElementById('print-target');
       return !!pt && pt.style.display === 'none' && !!document.querySelector('.panel.active'); }));
+    // ⚠ THE DESK'S FOUR BARS (2026-10-22): the cards this step works in sit in fold bars that open by their own rules, so
+    // each is opened first by a real press of its header, and only when its body is hidden.
+    const openBar = async (fold, id) => {
+      const body = p.locator('#desk-body-' + fold + '-' + id), hd = p.locator('#desk-hd-' + fold + '-' + id);
+      if ((await body.count()) === 1 && !(await body.isVisible()) && (await hd.isVisible())) { await p.click('#desk-hd-' + fold + '-' + id); await p.waitForTimeout(300); }
+    };
     const toDesk = async (id) => {
       await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, id);
       await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(700);
       const sel = await p.evaluate(() => (document.getElementById('inv-job') || {}).value);
       if (String(sel) !== String(id)) { await p.selectOption('#inv-job', String(id)); await p.waitForTimeout(700); }
+      await openBar('releases', id);
     };
     const rowText = (sid) => txt('#inv-row-' + sid);
     const pick = async (sid) => { await p.click('#inv-row-' + sid + ' input[type=checkbox][title="Select for a bulk change"]'); await p.waitForTimeout(300); };
