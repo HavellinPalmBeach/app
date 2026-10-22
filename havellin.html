@@ -734,6 +734,11 @@ body.field-cam-open #sync-pending{display:none !important;}
 .pl-ok .pl-dot,.pl-ok .pl-lbl{color:var(--ok-tx);}
 .pl-red .pl-dot,.pl-red .pl-lbl{color:var(--err-tx);}
 .pl-red{background:var(--err-bg);}
+.pl-amber .pl-dot,.pl-amber .pl-lbl{color:var(--warn-tx);}
+.pl-amber{background:var(--warn-bg);}
+/* The desk's Urgent strip (2026-10-22): nothing of its own to draw when nothing is urgent; its parts keep their own look. */
+.desk-alerts .pl-derived{margin:0 0 12px;}
+.desk-alerts .fa-line{border-radius:6px;margin:0 0 12px;}
 .pl-lbl{font-weight:600;}
 .pl-det{color:var(--gray);font-size:11px;}
 /* Found on site (P19): an original will or cash found in the house, on the Job Plan's In the house stage. Each
@@ -1384,7 +1389,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 6:06pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 7:36pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -38298,7 +38303,9 @@ function renderInventoryTab() {
   // deposit & start timeline below."* The same header line the Job Plan carries, then the
   // dashboard's own band — so the midpoint invoice is reminded here, where the day ends, and not
   // only on a tab nobody opens mid-job.
-  var top = jobInfoHeaderHtml(job) + '<div id="jband-slot-admin">' + jobProgressBlockHtml(jobId, 'admin') + '</div>';
+  // ⚠ AND BETWEEN THEM, THE URGENT STRIP (2026-10-22; deskAlertsHtml): what cannot wait for a fold to be opened, on every
+  // service, Home Prep included: an incident's banner, the firearms line, a will or cash Havellin holds, a lost key.
+  var top = jobInfoHeaderHtml(job) + deskAlertsHtml(jobId, job) + '<div id="jband-slot-admin">' + jobProgressBlockHtml(jobId, 'admin') + '</div>';
   var closeout = _deskCloseoutShown(jobId, job) ? renderCloseoutCard(jobId, job, 'admin') : '';
 
   // ⚠⚠ A HOME PREP JOB HAS NO INVENTORY, SO THIS TAB SHOWS NONE OF IT. Anthony, off the tab on a
@@ -44198,9 +44205,10 @@ function planDerivedHtml(jobId, job, est, phase) {
 function derivedLinesHtml(lines, id) {
   if (!lines || !lines.length) return '';
   return '<div class="pl-derived"' + (id ? ' id="' + id + '"' : '') + '>' + lines.map(function(l) {
-    // `red` (P19): open and past due, or Havellin holding what it must not (an original will, estate cash).
-    return '<div class="pl-line ' + (l.ok ? 'pl-ok' : (l.red ? 'pl-open pl-red' : 'pl-open')) + '">'
-      + '<span class="pl-dot">' + (l.ok ? '&#10003;' : (l.red ? '&#9679;' : '&#9675;')) + '</span>'
+    // `red` (P19): open and past due, or Havellin holding what it must not (an original will, estate cash). `amber`
+    // (2026-10-22): open and urgent, not yet late; only the desk's Urgent strip sets it (deskAlertsHtml).
+    return '<div class="pl-line ' + (l.ok ? 'pl-ok' : (l.red ? 'pl-open pl-red' : l.amber ? 'pl-open pl-amber' : 'pl-open')) + '">'
+      + '<span class="pl-dot">' + (l.ok ? '&#10003;' : (l.red || l.amber ? '&#9679;' : '&#9675;')) + '</span>'
       + '<span class="pl-lbl">' + l.label + '</span>'
       + (l.detail ? '<span class="pl-det">' + l.detail + '</span>' : '')
       + (l.action && !l.ok ? '<button type="button" class="btn-s" style="font-size:10px;margin-left:auto;" onclick="' + l.action.call + '">' + l.action.label + '</button>' : '')
@@ -45546,14 +45554,24 @@ function incidentsCardHtml(jobId, job, est) {
     + '<div class="plan-proc-doc" style="font-size:11px;margin:6px 0 0;font-weight:600;">' + guideLinkHtml(INCIDENT_GUIDE_DOC, 'Read Reporting an Incident') + '</div>'
     + '</div>';
 }
+// What the header banner draws, one answer for the banner and for the desk's Urgent strip (deskNowLine, deskAlertsHtml):
+// `kind` 'call' while a call to Anthony is owed, 'red' while an injury or a hazard is open, 'amber' while any other is
+// open, '' with nothing to say; `owed`, the incidents whose call the banner asks for (the first named, the rest counted).
+function incidentBannerState(job) {
+  var open = job ? openIncidents(job) : [];
+  var owed = job ? incidentReportsOf(job).filter(function (r) { return incidentAlertOwed(job, r); }) : [];
+  var redOpen = open.filter(function (r) { return r.kind === 'injury' || r.kind === 'hazard'; });
+  return { kind: owed.length ? 'call' : redOpen.length ? 'red' : open.length ? 'amber' : '', owed: owed, redOpen: redOpen, open: open };
+}
 // The header banner, over the Job Plan: red while a call to Anthony is owed (Q64) or an injury or a hazard is open (Q69),
 // amber with the count otherwise. Always drawn inside its own element so the card's repaint can repaint it in place.
-function incidentHeaderHtml(job) {
+// ⚠ THE DESK DRAWS A COPY (2026-10-22), at the top of its Urgent strip (deskAlertsHtml): `host` 'desk' gives it its own
+// id, inc-hdr-desk-<jobId>, because the Job Plan's panel and the desk's are in the page at once.
+function incidentHeaderHtml(job, host) {
   var inner = '';
   if (job) {
-    var open = openIncidents(job);
-    var owed = incidentReportsOf(job).filter(function (r) { return incidentAlertOwed(job, r); });
-    var redOpen = open.filter(function (r) { return r.kind === 'injury' || r.kind === 'hazard'; });
+    var B = incidentBannerState(job);
+    var open = B.open, owed = B.owed, redOpen = B.redOpen;
     if (owed.length) {
       var r0 = owed[0];
       inner = '<div class="inc-banner"><div class="fa-hd">&#9888; CALL ANTHONY IMMEDIATELY &mdash; <a href="' + INCIDENT_ALERT_TO.tel + '" style="color:#fff;">' + INCIDENT_ALERT_TO.phone + '</a></div>'
@@ -45571,7 +45589,7 @@ function incidentHeaderHtml(job) {
         + '<button type="button" class="btn-s" style="font-size:10px;" onclick="goToIncidents(' + job.id + ')">Open Incidents</button></div>';
     }
   }
-  return '<div id="inc-hdr-' + (job ? job.id : 0) + '">' + inner + '</div>';
+  return '<div id="inc-hdr-' + (host === 'desk' ? 'desk-' : '') + (job ? job.id : 0) + '">' + inner + '</div>';
 }
 // The desk's and the banner's way to the card: the Job Plan on this client, In the house open, the card in view.
 function goToIncidents(jobId) {
@@ -45587,6 +45605,9 @@ function _repaintIncidents(jobId) {
   if (!job) return false;
   var h = document.getElementById('inc-hdr-' + jobId);
   if (h) h.outerHTML = incidentHeaderHtml(job);
+  // ⚠ AND THE DESK'S COPY, BEFORE THE RETURN BELOW (2026-10-22): the Urgent strip at the top of Job Admin & Inv carries the
+  // banner and the incident lines, and its I called Anthony is pressed with the desk on screen, where the card is not drawn.
+  if (typeof _deskNowRepaint === 'function') _deskNowRepaint(jobId);
   var el = document.getElementById('plan-incidents-' + jobId);
   var rec = estimateStore[jobId];
   // The Move day stage's damage line reads the card (P27, Q80): repainted with it, by id, so a report lands on the stage at once.
@@ -45917,24 +45938,107 @@ function toggleJobAdmin(jobId) {
   _jobAdminOpen[jobId] = !_jobAdminIsOpen(jobId, job);
   renderInventoryTab();
 }
-function renderJobAdmin(jobId, job) {
+// ⚠⚠ THE DESK'S DERIVED LINES ARE ONE LIST, SPLIT IN THREE PLACES BY ONE RULE (2026-10-22). planDerivedLines(…, 'admin') is
+// everything the desk derives; `deskNowLine` says where each line is drawn, and exactly one place:
+//   'strip'  · the Urgent strip at the top of the tab, above the band (deskAlertsHtml), never folded: a red line (an original
+//              will or cash Havellin holds, a will deposit overdue, a lost key, an incident deadline past, the hotline not
+//              called); a Found on site, lost-key or incident line not yet done; and an estate's matter type unanswered, in
+//              amber (until it is, the court's and the trustee's lists are withheld, the estate package has no route and the
+//              agreement prints the probate wording: the line sat in the shut Job Admin card and its count never named it).
+//   'banner' · the call to Anthony an incident owes, while the incident banner at the top of the strip asks for it, with
+//              I called Anthony on it (incidentBannerState): the banner says it, so the line is not said twice.
+//   'admin'  · the rest, inside Job Admin, whose count covers only these.
+// Before, every one of them sat inside Job Admin, which is shut by default off Home Prep: an original will held by Havellin
+// was a line behind a fold, under the band. Anthony, 2026-10-22: *"Build all of it now."*
+// The keys it reads are set where each line is built: Found on site's (siteFindLines: will_, cash_), a lost access item's
+// (accessLines: access_lost_), the incidents' (incidentLines: inc_). A line done (`ok`) is never urgent: Job Admin, green.
+var DESK_NOW_KEY_RE = /^(will_|cash_|access_lost_|inc_)/;
+function deskNowLine(line, job) {
+  if (!line || line.ok) return 'admin';
+  var key = String(line.key || '');
+  if (key.indexOf('inc_call_') === 0 && job && typeof incidentBannerState === 'function') {
+    var id = key.slice('inc_call_'.length);
+    if (incidentBannerState(job).owed.some(function (r) { return String(r.id) === id; })) return 'banner';
+  }
+  if (line.red || DESK_NOW_KEY_RE.test(key) || key === 'matter_type') return 'strip';
+  return 'admin';
+}
+// Job Admin's parts, read once by its card, its count and the strip: the boxes the job is asked, how many are ticked, and the
+// derived lines split by deskNowLine. null where the card is not drawn (no estimate on this device, or a client not won).
+function _jobAdminParts(jobId, job) {
   var estRec = estimateStore[jobId];
   var est = estRec && estRec.estimate;
-  if (!job || !est || !isJobWon(job)) return '';
+  if (!job || !est || !isJobWon(job)) return null;
   var ctx = planTaskCtx(job, est);
   var tasks = planTasksFor(JOB_ADMIN_TASKS, null, ctx);
-  var done = tasks.filter(function(t){ return _planTaskDone(jobId, t.key); }).length;
-  var derived = planDerivedLines(jobId, job, est, 'admin');
-  var openLines = derived.filter(function(l){ return !l.ok; }).length;
+  var at = { strip: [], banner: [], admin: [] };
+  var lines = planDerivedLines(jobId, job, est, 'admin');
+  lines.forEach(function (l) { at[deskNowLine(l, job)].push(l); });
+  return { est: est, ctx: ctx, tasks: tasks, done: tasks.filter(function (t) { return _planTaskDone(jobId, t.key); }).length,
+           lines: lines, strip: at.strip, banner: at.banner, admin: at.admin };
+}
+// ⚠ THE COUNT ON JOB ADMIN'S HEADER, ONE DEFINITION (2026-10-22): drawn by the card and repainted by id (#ja-n-<jobId>, through
+// _deskNowRepaint) after a tick and after every by-id repaint of the desk's cards; it was drawn only by a full render, so a
+// tick, a ledger filed or a receipt filed left it stale. It counts the lines Job Admin draws, never the strip's.
+function jobAdminHeadText(jobId, job, parts) {
+  if (parts === undefined) parts = _jobAdminParts(jobId, job);
+  if (!parts) return '';
+  var openLines = parts.admin.filter(function (l) { return !l.ok; }).length;
+  return parts.done + ' of ' + parts.tasks.length + ' ticked' + (openLines ? ' · ' + openLines + ' derived item' + (openLines > 1 ? 's' : '') + ' still open' : '');
+}
+function renderJobAdmin(jobId, job) {
+  var parts = _jobAdminParts(jobId, job);
+  if (!parts) return '';
   var open = _jobAdminIsOpen(jobId, job);
   return '<div class="ja-card">'
     + '<div class="ja-hd" onclick="toggleJobAdmin(' + jobId + ')">'
       + '<span>' + (open ? '&#9662;' : '&#9656;') + '</span>'
       + '<span>Job Admin — desk paperwork</span>'
-      + '<span class="ja-n">' + done + ' of ' + tasks.length + ' ticked' + (openLines ? ' · ' + openLines + ' derived item' + (openLines > 1 ? 's' : '') + ' still open' : '') + '</span>'
+      + '<span class="ja-n" id="ja-n-' + jobId + '">' + jobAdminHeadText(jobId, job, parts) + '</span>'
     + '</div>'
-    + (open ? '<div class="ja-body">' + planDerivedHtml(jobId, job, est, 'admin') + planTaskSectionsHtml(jobId, tasks, ctx) + '</div>' : '')
+    + (open ? '<div class="ja-body">' + derivedLinesHtml(parts.admin, 'plan-derived-admin-' + jobId) + planTaskSectionsHtml(jobId, parts.tasks, parts.ctx) + '</div>' : '')
     + '</div>';
+}
+// ⚠⚠ THE URGENT STRIP (2026-10-22): between the client line and the band, never folded, on every service. A copy of the incident
+// banner (its own id), the firearms line where intake flagged firearms, and the lines deskNowLine places here, red first, the
+// rest amber. Empty, and taking no room, when nothing is urgent. Its host is always drawn, so _deskNowRepaint can repaint it by id.
+// An incident line does not offer Open Incidents while the banner above it already does.
+function deskAlertsHtml(jobId, job, parts) {
+  if (parts === undefined) parts = _jobAdminParts(jobId, job);
+  var banner = job && typeof incidentBannerState === 'function' ? incidentBannerState(job).kind : '';
+  var lines = (parts ? parts.strip : []).map(function (l, i) { return { l: l, i: i }; })
+    .sort(function (a, b) { return ((b.l.red ? 1 : 0) - (a.l.red ? 1 : 0)) || (a.i - b.i); })
+    .map(function (x) {
+      var c = {};
+      Object.keys(x.l).forEach(function (k) { c[k] = x.l[k]; });
+      if (!c.red) c.amber = true;
+      if (banner && String(c.key || '').indexOf('inc_') === 0 && c.action && String(c.action.call).indexOf('goToIncidents(') === 0) c.action = null;
+      return c;
+    });
+  return '<div id="desk-alerts-' + jobId + '" class="desk-alerts">'
+    + (job && typeof incidentHeaderHtml === 'function' ? incidentHeaderHtml(job, 'desk') : '')
+    + (job ? firearmsWorkspaceLine(job) : '')
+    + derivedLinesHtml(lines, 'desk-now-' + jobId)
+    + '</div>';
+}
+// Repaint the strip and Job Admin's count and lines in place, by id, never the tab: they share one list, so a line that moves
+// from one to the other (a deadline passing, an incident's act recorded) leaves the one and lands in the other at once. Only
+// while the desk shows this client. Called by _deskFoldHeadsRepaint (so after every by-id repaint of the desk's cards and every
+// tick) and by _repaintIncidents (I called Anthony, pressed on the strip's banner).
+function _deskNowRepaint(jobId) {
+  if (typeof document === 'undefined' || !document || !document.getElementById) return false;
+  var sel = document.getElementById('inv-job');
+  if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
+  var job = _invJob(jobId);
+  var a = document.getElementById('desk-alerts-' + jobId);
+  if (!job || !a) return false;
+  var parts = _jobAdminParts(jobId, job);
+  a.outerHTML = deskAlertsHtml(jobId, job, parts);
+  var n = document.getElementById('ja-n-' + jobId);
+  if (n) n.textContent = jobAdminHeadText(jobId, job, parts);
+  var d = document.getElementById('plan-derived-admin-' + jobId);
+  if (d && parts) d.outerHTML = derivedLinesHtml(parts.admin, 'plan-derived-admin-' + jobId);
+  return true;
 }
 
 // ═══════════════════════ THE DESK'S FOUR FOLD BARS (2026-10-22) ═══════════════════════
@@ -46141,6 +46245,8 @@ function _deskFoldHeadsRepaint(jobId) {
   if (typeof document === 'undefined' || !document || !document.getElementById) return false;
   var sel = document.getElementById('inv-job');
   if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
+  // The top of the tab first, Home Prep's too: the Urgent strip and Job Admin's count and lines (2026-10-22).
+  if (typeof _deskNowRepaint === 'function') _deskNowRepaint(jobId);
   var job = _invJob(jobId);
   if (!job || job.svc === 'prep') return false;
   var all = null, any = false;

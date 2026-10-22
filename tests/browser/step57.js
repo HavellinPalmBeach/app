@@ -10,8 +10,8 @@
 //      Certification of Trust chip is red with its fix; Before Day 1 carries the Trust gate box; the two in-house boxes
 //      point at Found on site. A second trust estate with the 706 unanswered shows the Form 706 chip, red, with its fix.
 //   B. Record an original will through the card and the dialog: refused without a description, then recorded; the
-//      card's line is red ("held by Havellin … today"); the desk's Job Admin card carries it first, red, beside the
-//      trustee's own list.
+//      card's line is red ("held by Havellin … today"); the desk carries it first, red, in its Urgent strip above the band
+//      (2026-10-22; it led the Job Admin card, shut by default), and Job Admin keeps the trustee's own list.
 //   C. Print Receipt for Original Will: the statement, the description escaped, the blank lines; it fits a Letter page
 //      under print media.
 //   D. Record the hand-over (the attorney and today by default); the deposit line falls due ten days later; File signed
@@ -213,14 +213,21 @@ const pretty = (ymd) => { const [y, m, d] = ymd.split('-').map(Number);
          'rgb(121, 31, 31)', 'drawn in the error colour (--err-tx), not the grey of an open line');
       has(await txt('#plan-finds-5701'), 'Sealed white envelope marked <Last Will> in ink, unopened', 'the description shown as typed, as text');
 
-      // The desk card: the reminder first, red; the trustee's own list beside it.
+      // The desk: the reminder first, red; the trustee's own list in Job Admin.
+      // ⚠ RESTATED (2026-10-22, the desk's Urgent strip), NOT WEAKENED: the line led the Job Admin card, which is shut by
+      // default off Home Prep, so an original will Havellin holds sat behind a fold under the band. It now leads the strip
+      // between the client line and the band, on screen with Job Admin shut, and Job Admin no longer draws it a second time.
       await p.click('.nb:has-text("Job Admin")'); await p.waitForTimeout(700);
       eq(await val('#inv-job'), '5701', 'the desk follows the client');
-      if (!(await vis('#plan-derived-admin-5701'))) await press('.ja-card .ja-hd', 'Job Admin — desk paperwork');
-      const desk = await p.evaluate(() => { const first = document.querySelector('#plan-derived-admin-5701 .pl-line');
-        return first ? { lbl: first.textContent.replace(/\s+/g, ' '), red: first.classList.contains('pl-red') } : null; });
-      eq(desk && desk.red, true, '⚠⚠ the desk card carries it FIRST, red');
+      const desk = await p.evaluate(() => { const first = document.querySelector('#desk-now-5701 .pl-line');
+        const band = document.getElementById('jband-slot-admin');
+        return first ? { lbl: first.textContent.replace(/\s+/g, ' '), red: first.classList.contains('pl-red'), shown: first.checkVisibility(),
+          aboveBand: !!band && first.getBoundingClientRect().top < band.getBoundingClientRect().top } : null; });
+      eq(desk && desk.red, true, '⚠⚠ the desk\'s Urgent strip carries it FIRST, red');
       has(desk && desk.lbl, 'Original will held by Havellin', 'the same line');
+      ok(!!desk && desk.shown && desk.aboveBand, '⚠ on screen, above the band, whatever Job Admin\'s fold');
+      if (!(await vis('#plan-derived-admin-5701'))) await press('.ja-card .ja-hd', 'Job Admin — desk paperwork');
+      lacks(await txt('#plan-derived-admin-5701'), 'Original will held by Havellin', 'and Job Admin does not draw it a second time');
       const card = await txt('.ja-card');
       has(card, 'Trust administration', 'D3: the trustee\'s list, under a heading with no court in it (textContent: the stylesheet uppercases it)');
       has(card, 'Trust Schedule verified — date-of-death FMV on every line', 'the schedule check');

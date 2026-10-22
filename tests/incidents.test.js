@@ -27,7 +27,7 @@ const live = (name) => fn(name).split('\n').filter((l) => !l.trim().startsWith('
 // What the incidents block reads, with the foundation's list writers under it.
 const INC_FNS = ['incidentReportsOf', 'incidentUpdatesOf', 'incidentNo', 'incidentStatus', 'openIncidents', 'incidentResolution', 'incidentHasAct',
   'incidentAlertOwed', 'incidentHotlineCalled', 'incidentDayPlus', '_incTime', '_incWhen', '_incStampTxt', 'incidentRefusal', 'incidentLines',
-  '_incidentPeople', '_incidentPlaces', '_incidentRowHtml', '_incHowWord', 'incidentsCardHtml', 'incidentHeaderHtml', 'goToIncidents', '_repaintIncidents',
+  '_incidentPeople', '_incidentPlaces', '_incidentRowHtml', '_incHowWord', 'incidentsCardHtml', 'incidentBannerState', 'incidentHeaderHtml', 'goToIncidents', '_repaintIncidents',
   'openIncident', 'incPickKind', 'closeIncident', 'saveIncident', 'incidentRecordCall', 'voidIncident',
   'incidentPhotoControlHtml', 'incidentPhotosFromInput', '_incidentPhotoName', 'incidentUploadPhotos', '_incidentWritePhotos',
   'incidentRecordHtml', 'printIncidentRecord', 'fileIncidentRecord', '_fileCloseoutPaper', '_cpWhere', 'docState', '_invJob', '_invDocDriveName', '_invDocName',

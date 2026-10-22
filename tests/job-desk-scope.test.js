@@ -263,12 +263,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const mk = () => {
       const a = sandbox({
-        fns: ['renderJobAdmin', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor',
+        fns: ['renderJobAdmin', '_jobAdminParts', 'jobAdminHeadText', 'deskNowLine', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor',
               '_planTaskDone', 'planDerivedLines', 'prepVendorsConfirmed', 'jobListEntries', 'planDerivedHtml', 'planTaskSectionsHtml', 'donationReceiptLine', 'ledgerDerivedLines', 'derivedLinesHtml', '_andJoin', 'invPrimaryDoc', 'invDocContractBlock', 'probatePackageDocs', 'estatePackageRoute', 'estateDeliveryLine', 'proceedsReceivedLine', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
               'planSubsec', 'chkGrid', 'planChk', '_planRooms', 'roomStatusNormalize',
               'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
               'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', '_jobAdminIsOpen', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-        vars: ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'PROBATE_PKG_TITLES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', '_jobAdminOpen', 'jobPlanStore', 'estimateStore',
+        vars: ['PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'PROBATE_PKG_TITLES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'JOB_ADMIN_TASKS', 'DESK_NOW_KEY_RE', '_jobAdminOpen', 'jobPlanStore', 'estimateStore',
                'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
                'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
                'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],

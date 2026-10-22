@@ -11,7 +11,8 @@
 //   C. The matter moved to Neither: no package card, and the draft still in Gmail named where the card was.
 //   D. The desk: Share w/ Counsel records who can see the photographs (on the desk, under the work bar); Revoke offers
 //      the address last shared with and records the revoke.
-//   E. The desk's Job Admin fold: the find's line carries "Open Found on site", which lands on the Job Plan's card.
+//   E. The desk's Urgent strip (2026-10-22; it was the Job Admin fold): the find's line carries "Open Found on site", which
+//      lands on the Job Plan's card.
 //   F. The Job Plan: the two shots the dead page left read "not saved", and the stuck detail shot has its own tile.
 //   G. Upload Offer on the collection files it as an offer, and the collection's list says so.
 //   H. Overflow at 1440 and 390 on the dashboard and the desk; no page errors.
@@ -246,10 +247,12 @@ const SHARES = [], UPLOADS = [];
     // ════════════════════════════════════════════════════════════════════════════════════════════════════
     await section('E. the desk\'s find line leads to the Job Plan\'s Found on site card', async () => {
       await toDesk(DESK);
-      const fold = '.ja-hd[onclick="toggleJobAdmin(' + DESK + ')"]';
-      if (!(await vis('#panel-inventory .ja-body'))) await press(fold, 'the Job Admin fold');
-      const btn = '#panel-inventory .ja-body button[onclick="goToSiteFinds(' + DESK + ')"]';
-      has(await p.evaluate(() => { const e = document.querySelector('#panel-inventory .ja-body'); return e ? e.textContent : ''; }), 'Original will held by Havellin', 'fixture: the will Havellin holds is on the desk');
+      // ⚠ RESTATED (2026-10-22, the desk's Urgent strip), NOT WEAKENED: the will's line left the Job Admin fold (shut by
+      // default) for the strip above the band, so it is pressed there, with no fold to open first, and only there.
+      const strip = '#panel-inventory #desk-alerts-' + DESK;
+      const btn = strip + ' button[onclick="goToSiteFinds(' + DESK + ')"]';
+      has(await p.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent : ''; }, strip), 'Original will held by Havellin', 'fixture: the will Havellin holds is on the desk, in its Urgent strip');
+      eq(await p.locator('#panel-inventory button[onclick="goToSiteFinds(' + DESK + ')"]').count(), 1, 'its one Open Found on site on the desk');
       await press(btn, '⚠⚠ Open Found on site, on the find\'s line');
       ok(await p.evaluate(() => document.getElementById('panel-job-plan').classList.contains('active')), 'it lands on the Job Plan');
       ok(await vis('#plan-finds-' + DESK), '⚠ with the Found on site card on screen');

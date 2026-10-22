@@ -19,6 +19,12 @@
 //   Donate (Anthony's Q2: when a request is owed); Closing open on a closed job and opened behind a refused Close job; the
 //   dashboard's Open the desk landing on the Releases card with its bar opened, though the person had shut it.
 //
+//   Part 3 (G3, the Urgent strip): a held will and an injury seeded on the estate; the strip between the client line and
+//   the band carries the call's banner and the will's line, red, with Job Admin shut and its count unmoved; I called Anthony
+//   pressed ON THE STRIP, with no Job Plan card in the page, repaints the banner by id (no redraw); Open Found on site,
+//   pressed on the strip, lands on the Job Plan's card; the injury resolved and the will handed over, receipted and
+//   deposited there through their own dialogs; back on the desk the strip is empty and takes no room.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -36,10 +42,16 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
     let sheet = {};
     let hold = null;   // part 2: a promise the sheet's read waits on, to see the desk before its manifest is read
+    const uploads = [];   // part 3: the files the routed Apps Script was handed
     await ctx.route(SYNC + '**', async (r) => {
       const req = r.request();
       const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
-      if (req.method() === 'POST') return json({ ok: true });
+      if (req.method() === 'POST') {
+        let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
+        // Part 3 files a signed receipt: the photo upload's action answers as the deployment does.
+        if (body.action === 'uploadFile') { uploads.push(body.filename); return json({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + uploads.length + '/view', fileId: 'up' + uploads.length }); }
+        return json({ ok: true });
+      }
       if (/action=loadMedia/.test(req.url())) { if (hold) await hold; return json({ ok: true, media: sheet }); }
       if (/action=getDriveThumbnails/.test(req.url())) return json({ ok: true, thumbs: {} });
       return json({ ok: true });
@@ -383,6 +395,96 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await p.waitForTimeout(600);
     eq(String(await p.evaluate(() => document.getElementById('inv-job').value)), String(EST), 'landed on the desk, on this client');
     ok(await p.locator('#inv-releases').isVisible(), '⚠⚠ with the Releases card on screen, its bar opened');
+
+
+    // ══ PART 3 (G3): the Urgent strip ═══════════════════════════════════════════════════════════════
+    console.log('\n## Part 3 · the strip carries what cannot wait, above the band, with Job Admin shut');
+    await p.setViewportSize({ width: 1440, height: 1000 });
+    await toDesk(EST);
+    if (await p.locator('#inventory-content .ja-body').isVisible()) await press('#inventory-content .ja-hd[onclick="toggleJobAdmin(' + EST + ')"]', 'Job Admin\'s header, to shut it');
+    const STRIP = '#desk-alerts-' + EST;
+    const strip = () => p.evaluate((id) => {
+      const el = document.getElementById('desk-alerts-' + id);
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      return { text: el.textContent.replace(/\s+/g, ' ').trim(), h: Math.round(r.height), banner: !!el.querySelector('.inc-banner'),
+        lines: [...el.querySelectorAll('#desk-now-' + id + ' .pl-line')].map((l) => [(l.querySelector('.pl-lbl') || {}).textContent, l.classList.contains('pl-red') ? 'red' : l.classList.contains('pl-amber') ? 'amber' : 'grey']) };
+    }, EST);
+    const jaCount = () => p.evaluate((id) => { const n = document.getElementById('ja-n-' + id); return n ? n.textContent : null; }, EST);
+    const s0 = await strip();
+    eq(s0 && [s0.text, s0.h, s0.lines.length], ['', 0, 0], 'fixture: nothing urgent on the estate yet: the strip is empty and takes no room');
+    const ja0 = await jaCount();
+    ok(!!ja0, 'fixture: Job Admin\'s count, by its id: ' + ja0);
+    // An original will found today, and an injury: the call to Anthony owed.
+    const TODAY = await p.evaluate(() => _todayStr());
+    await p.evaluate(([id, today]) => {
+      const j = jobs.find((x) => x.id === id);
+      j.siteFinds = [{ id: 'w96', kind: 'will', foundOn: today, where: 'study desk', foundBy: 'Ashley Jerome', description: 'Sealed white envelope', recordedBy: 'Ashley Jerome', recordedAt: Date.now() }];
+      j.incidents = [{ id: 'i96', entry: 'report', kind: 'injury', occurredOn: today, occurredTime: '10:15', where: 'Garage', what: 'A cut hand on a shelf bracket',
+        present: 'Ashley Jerome', reportedBy: 'Ashley Jerome', recordedBy: 'Ashley Jerome', f1: 'Anthony Graziano Jr', yn: 'no', recordedAt: Date.now() }];
+      saveJobs();
+    }, [EST, TODAY]);
+    await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All (a full redraw, as the next device to open the desk sees it)');
+    const s1 = await strip();
+    ok(s1 && s1.banner, '⚠⚠ the strip opens on the incident banner');
+    has(s1 && s1.text, 'CALL ANTHONY IMMEDIATELY', 'asking for the call');
+    eq(s1 && s1.lines[0], ['Original will held by Havellin', 'red'], '⚠⚠ and the will Havellin holds, first of its lines, red');
+    has(s1 && s1.text, 'Incident 1 (injury) open', 'the open injury, in the strip too');
+    const tone = await p.evaluate((id) => [...document.querySelectorAll('#desk-now-' + id + ' .pl-line')].map((l) => getComputedStyle(l).backgroundColor), EST);
+    eq(tone, ['rgb(252, 232, 232)', 'rgb(254, 243, 226)'], '⚠ drawn in their tones: the will on the error ground, the open injury on the warning ground');
+    eq(await p.locator(STRIP + ' button[onclick="goToIncidents(' + EST + ')"]').count(), 1, 'Open Incidents once, on the banner, not again on the line under it');
+    const L3 = await p.evaluate((id) => {
+      const y = (el) => (el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : null);
+      return { hdr: y(document.querySelector('#inventory-content .job-hdr')), strip: y(document.getElementById('desk-alerts-' + id)), band: y(document.getElementById('jband-slot-admin')),
+        shown: document.getElementById('desk-alerts-' + id).checkVisibility(), jaOpen: !!document.querySelector('#inventory-content .ja-body') };
+    }, EST);
+    ok(L3.hdr < L3.strip && L3.strip < L3.band, '⚠ between the client line (' + L3.hdr + ') and the band (' + L3.band + '): the strip at ' + L3.strip);
+    ok(L3.shown && !L3.jaOpen, 'on screen, with Job Admin shut');
+    eq(await jaCount(), ja0, '⚠ Job Admin\'s count is unmoved: what the strip says is not counted twice');
+    await press('#inventory-content .ja-hd[onclick="toggleJobAdmin(' + EST + ')"]', 'Job Admin\'s header');
+    const jaTxt = await p.evaluate((id) => (document.getElementById('plan-derived-admin-' + id) || {}).textContent || '', EST);
+    ok(jaTxt.length > 0 && jaTxt.indexOf('Original will held') < 0 && jaTxt.indexOf('Incident 1') < 0, 'and Job Admin, opened, does not draw them again');
+    await press('#inventory-content .ja-hd[onclick="toggleJobAdmin(' + EST + ')"]', 'Job Admin\'s header, to shut it');
+    // At 390 the strip fits.
+    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);
+    const wide = await p.evaluate((id) => { const W = document.documentElement.clientWidth; return [...document.querySelectorAll('#desk-alerts-' + id + ' *')].filter((e) => e.getBoundingClientRect().right > W + 1).map((e) => e.tagName + ':' + e.textContent.slice(0, 30)); }, EST);
+    eq(wide, [], 'at 390 nothing in the strip runs off the right edge');
+    await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
+
+    console.log('\n## Part 3 · I called Anthony, pressed on the strip, with no Job Plan card in the page');
+    eq(await p.evaluate((id) => !!document.getElementById('plan-incidents-' + id), EST), false, 'fixture: the Job Plan\'s Incidents card is not in the page');
+    await p.evaluate(() => { document.getElementById('inv-workbar').__mark = 'still here'; });
+    await press(STRIP + ' button.inc-call-btn', 'I called Anthony, on the strip\'s banner');
+    ok(await until(async () => (await p.evaluate((id) => ((jobs.find((x) => x.id === id).incidents || []).filter((e) => e.act === 'alerted')).length, EST)) === 1), 'the call is recorded on the incident');
+    const s2 = await strip();
+    ok(s2 && s2.text.indexOf('CALL ANTHONY IMMEDIATELY') < 0, '⚠⚠ the call\'s banner is gone from the strip at once');
+    has(s2 && s2.text, 'Incident 1: injury, Garage', 'the open injury reads red in its place, as on the Job Plan');
+    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark), 'still here', '⚠ by id: the tab was not redrawn under the person');
+
+    console.log('\n## Part 3 · Open Found on site, pressed on the strip; the injury resolved and the will handed over; the strip empties');
+    await press(STRIP + ' button[onclick="goToSiteFinds(' + EST + ')"]', 'Open Found on site, on the will\'s line in the strip');
+    ok(await p.evaluate(() => document.getElementById('panel-job-plan').classList.contains('active')), 'it lands on the Job Plan');
+    ok(await p.locator('#plan-finds-' + EST).isVisible(), '⚠ with the Found on site card on screen');
+    await press('#plan-incidents-' + EST + ' button:has-text("Resolve")', 'Resolve, on the injury');
+    await p.fill('#inc-note', 'Cleaned and bandaged on site; back at work the same day'); await p.waitForTimeout(100);
+    await press('#inc-save-btn', 'Record the resolution');
+    ok(await p.evaluate((id) => incidentStatus(jobs.find((x) => x.id === id), 'i96') === 'resolved', EST), 'the injury is resolved');
+    const row = '#plan-finds-' + EST + ' .fos-find[data-find="w96"]';
+    await press(row + ' button:has-text("Record the hand-over")', 'Record the hand-over');
+    await press('#fos-save-btn', 'Record the hand-over, the attorney and today by default');
+    const lbl = row + ' label:has-text("File signed receipt")';
+    ok(await p.locator(lbl).isVisible(), 'File signed receipt is offered');
+    const [fc] = await Promise.all([p.waitForEvent('filechooser'), p.click(lbl)]);
+    await fc.setFiles({ name: 'will-receipt.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 step96 will receipt ' + 'x'.repeat(200)) });
+    ok(await until(async () => (await p.evaluate((id) => (jobs.find((x) => x.id === id).signedRecords || []).filter((r) => r.kind === 'will').length, EST)) === 1), 'the signed receipt is filed');
+    await press(row + ' button:has-text("Confirm the deposit with the clerk")', 'Confirm the deposit with the clerk');
+    await p.fill('#fos-dep-on', TODAY); await p.waitForTimeout(100);
+    await press('#fos-save-btn', 'Record the deposit');
+    ok(await p.evaluate((id) => !!(jobs.find((x) => x.id === id).siteFinds[0] || {}).depositedOn, EST), 'the deposit is recorded');
+    await toDesk(EST);
+    const s3 = await strip();
+    eq(s3 && [s3.text, s3.h, s3.lines.length, s3.banner], ['', 0, 0, false], '⚠⚠ back on the desk: nothing is urgent, and the strip is empty and takes no room');
+    eq(await jaCount(), ja0, 'and Job Admin\'s count is where it was');
 
     eq(errs, [], 'zero page errors');
   } catch (e) {

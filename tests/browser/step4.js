@@ -165,17 +165,24 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
     const sel = document.getElementById('inv-job'); if (sel) { sel.value = String(id); if (sel.onchange) sel.onchange(); }
     renderInventoryTab();
     const card = document.querySelector('.ja-card');
-    const d = Array.from(card.querySelectorAll('.pl-line')).map(e => ({
-      ok: e.className.indexOf('pl-ok') >= 0,
+    const lines = (root) => Array.from(root ? root.querySelectorAll('.pl-line') : []).map(e => ({
+      ok: e.className.indexOf('pl-ok') >= 0, amber: e.className.indexOf('pl-amber') >= 0,
       lbl: (e.querySelector('.pl-lbl') || {}).textContent || '',
       det: (e.querySelector('.pl-det') || {}).textContent || '' }));
+    const d = lines(card);
     const boxes = Array.from(card.querySelectorAll('input[type=checkbox]'))
       .map(e => (e.getAttribute('onchange') || '').match(/'([a-z_]+)'/)).filter(Boolean).map(m => m[1]);
-    return { d, ct: boxes.filter(k => k.indexOf('ct_') === 0).length };
+    const strip = document.getElementById('desk-now-' + id);
+    return { d, strip: lines(strip), stripShown: !!strip && strip.checkVisibility(), ct: boxes.filter(k => k.indexOf('ct_') === 0).length };
   }, jobId);
-  const um = unanswered.d.find(x => x.lbl === 'Matter type recorded');
-  eq(um.ok, false, '⚠ an unanswered matter type reads OPEN on an Estate Settlement');
-  ok(/withheld until it is/.test(um.det), 'and says what is being withheld because of it: ' + JSON.stringify(um.det));
+  // ⚠ RESTATED (2026-10-22, the desk's Urgent strip), NOT WEAKENED: an estate's unanswered matter type left the Job Admin card
+  // (shut by default, where its count never named it) for the strip above the band, in amber. Read there, and nowhere else.
+  const um = unanswered.strip.find(x => x.lbl === 'Matter type recorded');
+  ok(!!um && unanswered.stripShown, '⚠ an unanswered matter type is in the desk\'s Urgent strip, on screen');
+  eq(um && um.ok, false, '⚠ an unanswered matter type reads OPEN on an Estate Settlement');
+  eq(um && um.amber, true, '⚠ in amber');
+  ok(!unanswered.d.find(x => x.lbl === 'Matter type recorded'), 'and Job Admin does not draw it a second time');
+  ok(/withheld until it is/.test(um && um.det), 'and says what is being withheld because of it: ' + JSON.stringify(um && um.det));
   eq(unanswered.ct, 0, 'which is exactly the empty court section it explains');
   const ut = unanswered.d.find(x => x.lbl === 'Contracted to produce');
   eq(ut.ok, false, 'and an unanswered tier reads open');

@@ -13,7 +13,12 @@
 //   B · the order, driven through the real renderInventoryTab with each card stubbed to a marker, and the literals
 //       other suites pin; the Releases host, Open the desk, a snapshot and the summary land where a person can see them.
 //
-// Each later group of the build adds its own groups here (the status lines, the Urgent strip, the trims, …).
+//   C, D, E · each bar's line and when it opens (G2).
+//   F · the Urgent strip (G3): the desk's derived lines split by one rule, deskNowLine, between the strip above the band, the
+//       incident banner and Job Admin, each line in exactly one; the strip's place on every service; I called Anthony pressed
+//       on the strip with no Job Plan card in the page; Job Admin's count repainted by id.
+//
+// Each later group of the build adds its own groups here (the trims, …).
 // ─────────────────────────────────────────────────────────────────────────────
 
 const { sandbox, source, fn, decl, domStub } = require('./harness');
@@ -194,7 +199,9 @@ function desk(jobO, cards, opt) {
     _invPaintThumbs: (jid, root) => { log.thumbs.push({ jid, root: root ? root.id : null }); },
     jobPlanStore: {}, vendorDirectory: [], SHEETS_SYNC_URL: '', _invCloudSeen: {},
   }, opt.stubs || {});
-  const C = lift(['renderInventoryTab', 'toggleDeskFold', 'deskFoldOpen'].concat(opt.roots || []), stubs);
+  // `opt.real`: the cards drawn by their real functions rather than a marker (the Urgent strip's group reads Job Admin's count).
+  (opt.real || []).forEach((k) => { delete stubs[k]; });
+  const C = lift(['renderInventoryTab', 'toggleDeskFold', 'deskFoldOpen'].concat(opt.real || [], opt.roots || []), stubs);
   const real = C.renderInventoryTab;
   C.renderInventoryTab = function () { log.renders++; return real.apply(this, arguments); };
   return { C, dom, log, S, job, render: () => { const r = attempt(() => real.call(C)); log.renderErr = r.err; return dom.html; } };
@@ -209,6 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupC({ group, ok, eq, has, lacks });
     groupD({ group, ok, eq, has, lacks });
     groupE({ group, ok, eq, has, lacks });
+    groupF({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -1058,5 +1066,260 @@ function groupE({ group, ok, eq, has, lacks }) {
     eq(heads(D.dom.html).filter((x) => x.f === 'closing')[0].open, false, 'fixture: Closing shut mid-job');
     attempt(() => D.C.applyJobTransition(D.C.jobs[0]));
     eq(heads(D.dom.html).filter((x) => x.f === 'closing')[0].open, true, '⚠ on the desk the bar opens in place');
+  }
+}
+
+// ═══ F · THE URGENT STRIP ═════════════════════════════════════════════════════
+// The desk's derived lines on the real readers: Found on site, the keys, the incidents, the matter type, and the rest.
+const NOW_ROOTS = ['renderJobAdmin', 'deskAlertsHtml', 'incidentHeaderHtml', '_jobAdminParts', 'jobAdminHeadText', 'deskNowLine', 'incidentLines'];
+const NOW_STATE = ['jobs', '_photoRefs', 'estimateStore', 'jobPlanStore', 'vendorDirectory', 'SHEETS_SYNC_URL', '_invCloudSeen', 'document', '_todayStr'];
+let _nowCl = null;
+function nowRig(job, rows) {
+  _nowCl = _nowCl || closure(NOW_ROOTS, NOW_STATE);
+  const C = sandbox({ fns: _nowCl.fns, vars: _nowCl.vars, stubs: {
+    jobs: [job], _photoRefs: { 7: rows || [] }, estimateStore: { 7: { estimate: { svc: job.svc, rooms: [] } } }, jobPlanStore: {},
+    vendorDirectory: [], SHEETS_SYNC_URL: '', _invCloudSeen: {}, document: domStub({}), _todayStr: () => TODAY,
+  } });
+  return C;
+}
+// Every derived line of the desk, with where it was placed and how it is drawn.
+const REPORT = (id, kind, on, o) => Object.assign({ id, entry: 'report', kind, occurredOn: on, occurredTime: '10:00', where: 'Study', what: 'What happened',
+  present: '', reportedBy: 'Ashley Jerome', recordedBy: 'Ashley Jerome', f1: 'x', recordedAt: Number(id.slice(1)) }, o || {});
+const UPDATE = (id, of, act, o) => Object.assign({ id, entry: 'update', of, act, by: 'Ashley Jerome', at: 100 + Number(id.slice(1)) }, o || {});
+const URGENT = (o) => PROBATE(Object.assign({
+  matterType: '',   // unanswered: the court's and the trustee's lists withheld
+  probateAttyName: 'Ann Lowe',
+  siteFinds: [
+    { id: 'w1', kind: 'will', foundOn: TODAY, where: 'study', foundBy: 'Ashley Jerome', description: 'Sealed envelope' },
+    { id: 'w2', kind: 'will', foundOn: '2026-10-14', handedOn: '2026-10-15', handedTo: 'Ann Lowe', description: 'Envelope' },              // deposit due in 3 days
+    { id: 'w3', kind: 'will', foundOn: '2026-09-30', handedOn: '2026-10-01', handedTo: 'Ann Lowe', description: 'Envelope' }],             // deposit overdue
+  signedRecords: [{ id: 's1', kind: 'will', ref: 'w3', signedBy: 'Ann Lowe', signedOn: '2026-10-01', url: 'https://drive.google.com/file/d/W3/view' }],
+  accessItems: [{ id: 'k1', kind: 'key', label: 'Front door', qty: 1, receivedFrom: 'Ruth Adler', receivedOn: '2026-10-01' },
+                { id: 'k2', kind: 'fob', label: 'Garage fob', qty: 1, receivedFrom: 'Ruth Adler', receivedOn: '2026-10-01' }],
+  accessEvents: [{ id: 'e1', itemId: 'k1', kind: 'received', on: '2026-10-01', from: 'Ruth Adler', to: 'Ashley Jerome', recordedAt: 1 },
+                 { id: 'e2', itemId: 'k1', kind: 'lost', on: '2026-10-20', from: 'Ashley Jerome', note: 'dropped at the beach', recordedAt: 2 },
+                 { id: 'e3', itemId: 'k2', kind: 'received', on: '2026-10-01', from: 'Ruth Adler', to: 'Ashley Jerome', recordedAt: 3 }],
+  incidents: [
+    REPORT('i1', 'damage', TODAY, { estValue: 300 }),                         // inside its 24 hours
+    REPORT('i2', 'damage', '2026-10-19', { estValue: 900 }),                  // past them, the client told
+    UPDATE('u1', 'i2', 'client_notified', { on: '2026-10-19' }),
+    REPORT('i3', 'vulnerable', '2026-10-21', { yn: 'no' }),                   // the call owed, the hotline not called
+    REPORT('i4', 'injury', '2026-10-10', { yn: 'yes' }),                      // resolved, the call made
+    UPDATE('u2', 'i4', 'alerted', { how: 'call' }), UPDATE('u3', 'i4', 'resolved', { note: 'Bandaged; back at work' })],
+}, o || {}));
+const WANT = { will_held_w1: 'strip', will_receipt_w2: 'strip', will_deposit_w2: 'strip', will_receipt_w3: 'admin', will_deposit_w3: 'strip',
+  access_lost_k1: 'strip', access_items: 'admin', matter_type: 'strip', doc_tier: 'admin',
+  inc_open_i1: 'strip', inc_client_i1: 'strip', inc_report_i1: 'strip', inc_open_i2: 'strip', inc_client_i2: 'admin', inc_report_i2: 'strip', inc_carrier_i2: 'strip',
+  inc_call_i3: 'banner', inc_open_i3: 'strip', inc_hotline_i3: 'strip' };
+// The lines drawn in a derived block: [label, class] each, in order.
+const drawnLines = (html, id) => {
+  const h = inner(html, id);
+  if (h == null) return null;
+  return [...h.matchAll(/<div class="pl-line ([^"]*)"><span class="pl-dot">[^<]*<\/span><span class="pl-lbl">([^<]*)<\/span>/g)].map((m) => [m[2], m[1]]);
+};
+
+function groupF({ group, ok, eq, has, lacks }) {
+  group('F1 · every derived line of the desk lands in exactly one place: the strip, the banner or Job Admin');
+  {
+    const job = URGENT();
+    const C = nowRig(job, [LINE('a')]);
+    const P = attempt(() => C._jobAdminParts(7, job));
+    ok(P.ok && !!P.val, 'the parts answer (' + (P.err || 'ok') + ')');
+    const parts = P.val || { lines: [], strip: [], banner: [], admin: [] };
+    const where = {};
+    parts.lines.forEach((l) => { where[l.key] = C.deskNowLine(l, job); });
+    eq(parts.strip.length + parts.banner.length + parts.admin.length, parts.lines.length, '⚠⚠ no line dropped and none drawn twice: the three places add up to the list');
+    ok(parts.lines.every((l) => ['strip', 'banner', 'admin'].indexOf(where[l.key]) >= 0), 'each line answers one of the three');
+    ['strip', 'banner', 'admin'].forEach((k) => ok(parts[k].every((l) => where[l.key] === k), 'the ' + k + ' list holds exactly the lines placed there'));
+    Object.keys(WANT).forEach((k) => eq(where[k], WANT[k], k + ' → ' + WANT[k]));
+    const rest = parts.lines.filter((l) => !(l.key in WANT));
+    ok(rest.length >= 3, 'fixture: the desk\'s other lines are there too (' + rest.map((l) => l.key).join(', ') + ')');
+    ok(rest.every((l) => where[l.key] === 'admin' && !l.red), 'every other line stays in Job Admin, and none of them is red');
+    lacks(parts.lines.map((l) => l.key).join(' '), '_i4', 'the resolved injury, its call made, has no line at all');
+
+    // Drawn: the strip and Job Admin, each read back off its markup.
+    C._jobAdminOpen[7] = true;
+    const strip = String(attempt(() => C.deskAlertsHtml(7, job)).val || '');
+    const ja = String(attempt(() => C.renderJobAdmin(7, job)).val || '');
+    const S = drawnLines(strip, 'desk-now-7') || [], A = drawnLines(ja, 'plan-derived-admin-7') || [];
+    eq(S.length, parts.strip.length, '⚠ the strip draws its ' + parts.strip.length + ' lines');
+    eq(A.length, parts.admin.length, '⚠ Job Admin draws its ' + parts.admin.length + ', and no more');
+    const labels = [...new Set(parts.lines.map((l) => l.label))];
+    labels.forEach((lb) => {
+      const n = (list) => list.filter((x) => x[0] === lb).length;
+      eq([n(S), n(A)], [parts.strip.filter((l) => l.label === lb).length, parts.admin.filter((l) => l.label === lb).length], 'drawn once, in its place: ' + textOf(lb));
+    });
+    // The banner: the desk's own copy, with the call.
+    has(inner(strip, 'inc-hdr-desk-7'), 'CALL ANTHONY IMMEDIATELY', '⚠ the banner at the top of the strip asks for the call');
+    has(inner(strip, 'inc-hdr-desk-7'), 'incidentRecordCall(7,\'i3\')', 'with I called Anthony on the vulnerable adult concern');
+    lacks(textOf(strip + ja), 'Call Anthony immediately: (617)', 'so the call\'s line is drawn nowhere else');
+    // The order and the tones.
+    eq(S[0], ['Original will held by Havellin', 'pl-open pl-red'], '⚠⚠ the will Havellin holds leads the strip, red');
+    const firstAmber = S.findIndex((x) => /pl-amber/.test(x[1])), lastRed = S.map((x) => /pl-red/.test(x[1])).lastIndexOf(true);
+    ok(firstAmber > lastRed, 'red first, then amber');
+    ok(S.every((x) => /pl-red|pl-amber/.test(x[1])), 'every line in the strip is red or amber, never the grey of an open line');
+    eq((S.filter((x) => x[0] === 'Matter type recorded')[0] || [])[1], 'pl-open pl-amber', '⚠ the unanswered matter type, amber, in the strip');
+    eq((S.filter((x) => x[0] === 'Original will deposited with the clerk').map((x) => x[1])), ['pl-open pl-red', 'pl-open pl-amber'], 'the overdue deposit red, the one due in 3 days amber');
+    eq((A.filter((x) => x[0] === 'Original will handed over against a signed receipt')[0] || [])[1], 'pl-ok', 'the receipt filed: green, in Job Admin');
+    // Open Incidents once: the banner offers it, so the incident lines under it do not.
+    eq((strip.match(/goToIncidents\(7\)/g) || []).length, 1, '⚠ Open Incidents once in the strip, on the banner');
+    eq((strip.match(/goToSiteFinds\(7\)/g) || []).length, 4, 'each open Found on site line keeps Open Found on site');
+    eq((strip.match(/goToAccessCard\(7\)/g) || []).length, 1, 'the lost key keeps Open Keys & access');
+    // The two banners never share an id: the Job Plan's and the desk's are in the page at once.
+    has(String(C.incidentHeaderHtml(job)), '<div id="inc-hdr-7">', 'the Job Plan\'s banner');
+    has(strip, '<div id="inc-hdr-desk-7">', 'the desk\'s, its own id');
+    lacks(strip, 'id="inc-hdr-7"', 'the strip never carries the Job Plan\'s id');
+    lacks(strip, 'gray-dk', 'no control above the work bar wears gray-dk (browser step 6 takes the first as the primary document)');
+    // The count covers Job Admin's lines only.
+    const open = (list) => list.filter((l) => !l.ok).length;
+    const n = open(parts.admin);
+    eq(textOf(inner(ja, 'ja-n-7')), parts.done + ' of ' + parts.tasks.length + ' ticked · ' + n + ' derived items still open', 'Job Admin\'s count, by its own id');
+    eq(n, open(parts.lines) - parts.strip.length - parts.banner.length, '⚠ and it no longer counts what the strip and the banner say');
+  }
+
+  group('F2 · deskNowLine, rule by rule');
+  {
+    const job = URGENT();
+    const C = nowRig(job, []);
+    const at = (l, j) => C.deskNowLine(l, j === undefined ? job : j);
+    eq(at({ key: 'will_held_w1', ok: true }), 'admin', 'a line done is never urgent');
+    eq(at({ key: 'rooms_cleared', ok: false, red: true }), 'strip', 'any red line, whatever its key');
+    eq(at({ key: 'will_receipt_w2', ok: false }), 'strip', 'a Found on site line not yet done');
+    eq(at({ key: 'cash_held_c1', ok: false }), 'strip', 'cash too');
+    eq(at({ key: 'access_lost_k9', ok: false }), 'strip', 'a lost key');
+    eq(at({ key: 'access_items', ok: false }), 'admin', 'keys still held: Job Admin (the Closing bar names them at the close)');
+    eq(at({ key: 'inc_client_i1', ok: false }), 'strip', 'an incident line not yet done');
+    eq(at({ key: 'matter_type', ok: false }), 'strip', 'an unanswered matter type');
+    eq(at({ key: 'matter_type', ok: true }), 'admin', 'an answered one: Job Admin, green');
+    eq(at({ key: 'doc_tier', ok: false }), 'admin', 'the tier unanswered stays in Job Admin');
+    eq(at({ key: 'inc_call_i3', ok: false, red: true }), 'banner', '⚠ the call owed: the banner says it');
+    eq(at({ key: 'inc_call_zz', ok: false, red: true }), 'strip', 'a call the banner does not ask for (no such incident): red, in the strip, never dropped');
+    eq(at({ key: 'inc_call_i3', ok: false, red: true }, null), 'strip', 'no job to ask: the strip');
+    eq(at(null), 'admin', 'nothing: Job Admin');
+    // The matter type's line exists only on an estate: planDerivedLines asks it there alone.
+    const L = nowRig(LIVING({ matterType: '' }), [])._jobAdminParts(7, LIVING({ matterType: '' }));
+    ok(L && L.lines.every((l) => l.key !== 'matter_type'), 'a living client has no matter type line, so nothing amber on its strip from it');
+  }
+
+  group('F3 · Open Incidents is dropped from a line only while the banner above offers it');
+  {
+    // A resolved damage incident whose client was never told: the banner says nothing, so the line keeps its way to the card.
+    const quiet = PROBATE({ incidents: [REPORT('i1', 'damage', '2026-10-15', { estValue: 100 }), UPDATE('u1', 'i1', 'resolved', { note: 'Glued' })] });
+    let C = nowRig(quiet, []);
+    let strip = String(C.deskAlertsHtml(7, quiet));
+    eq(textOf(inner(strip, 'inc-hdr-desk-7')), '', 'fixture: no banner (nothing open, no call owed)');
+    has(textOf(inner(strip, 'desk-now-7')), 'Incident 1 (property damage): client notified within 24 hours', 'the line, in the strip');
+    eq((strip.match(/goToIncidents\(7\)/g) || []).length, 2, '⚠ with Open Incidents on each of its two lines (the client notice and the report)');
+    // An open complaint: the amber chip offers Open Incidents, so the open line does not.
+    const chip = PROBATE({ incidents: [REPORT('i1', 'complaint', '2026-10-20')] });
+    C = nowRig(chip, []);
+    strip = String(C.deskAlertsHtml(7, chip));
+    has(inner(strip, 'inc-hdr-desk-7'), '1 open incident on this job', 'fixture: the amber chip');
+    has(textOf(inner(strip, 'desk-now-7')), 'Incident 1 (client complaint) open', 'the open line, in the strip, amber');
+    eq((strip.match(/goToIncidents\(7\)/g) || []).length, 1, '⚠ Open Incidents once, on the chip');
+  }
+
+  group('F4 · the strip sits between the client line and the band on every service, and takes no room when nothing is urgent');
+  {
+    [['an estate', {}], ['Home Prep', { svc: 'prep' }]].forEach(([what, o]) => {
+      const D = desk(o);
+      const h = D.render();
+      ok(!D.log.renderErr, what + ': the desk renders (' + (D.log.renderErr || 'ok') + ')');
+      const at = (n) => h.indexOf(n);
+      ok(at('id="m-hdr"') > -1 && at('id="m-hdr"') < at('id="desk-alerts-7"') && at('id="desk-alerts-7"') < at('id="jband-slot-admin"'),
+        '⚠ ' + what + ': the client line, the strip, the band');
+      ok(at('id="jband-slot-admin"') < at('id="sf-host-desk"'), what + ': the must-finds after the band, as before');
+      eq(depthAt(h, h.lastIndexOf('<', at('id="desk-alerts-7"'))), 0, what + ': the strip is a child of the tab, never inside a fold');
+    });
+    // The fixture estate's matter type is unanswered: said in the strip, amber.
+    const est = desk().render();
+    has(textOf(inner(est, 'desk-now-7')), 'Matter type recorded', 'the estate\'s unanswered matter type is in the strip');
+    // A living job with nothing urgent: the host is drawn and says nothing.
+    const liv = desk({ svc: 'downsizing' }).render();
+    eq(textOf(inner(liv, 'desk-alerts-7')), '', '⚠ nothing urgent: the strip is empty');
+    lacks(inner(liv, 'desk-alerts-7'), 'pl-derived', 'not even an empty list');
+    // Firearms flagged at intake: the one line the room's camera pins, with the protocol a tap away.
+    const fa = desk({ svc: 'downsizing', houseFlags: { firearms: { on: true, note: 'Gun safe in the closet' } } }).render();
+    has(inner(fa, 'desk-alerts-7'), '<div class="fa-line">&#9888; Firearms flagged on this job &mdash; photograph in place, nothing moves.', 'the firearms line, in the strip');
+    has(inner(fa, 'desk-alerts-7'), 'firearms-protocol.html', 'with the protocol a tap away');
+  }
+
+  group('F5 · I called Anthony on the strip, with no Job Plan card in the page: the banner and the strip repaint by id');
+  {
+    const job = PROBATE({ matterType: 'probate', incidents: [REPORT('i1', 'injury', '2026-10-21', { yn: 'yes' })] });
+    const badges = [];
+    const D = desk(job, {}, { roots: ['incidentRecordCall'], stubs: { saveJobs() {}, syncJobToSheets() {}, showSyncBadge: (m) => badges.push(String(m)),
+      _todayStr: () => TODAY, deviceUser: () => 'Anthony Graziano Jr' } });
+    D.render();
+    const s0 = inner(D.dom.html, 'desk-alerts-7');
+    has(s0, 'CALL ANTHONY IMMEDIATELY', 'fixture: the call is owed, in the strip\'s banner');
+    eq(D.dom.getElementById('plan-incidents-7'), null, 'fixture: the Job Plan\'s Incidents card is not in the page');
+    const r = attempt(() => D.C.incidentRecordCall(7, 'i1'));
+    ok(r.ok && r.val === true, 'the press records the call (' + (r.err || r.val) + ')');
+    has(badges.join(' | '), 'Call to Anthony recorded on Incident 1', 'and says so');
+    const s1 = inner(D.dom.html, 'desk-alerts-7');
+    lacks(s1, 'CALL ANTHONY IMMEDIATELY', '⚠⚠ the strip\'s banner no longer asks for the call');
+    has(s1, 'Incident 1: injury, Study', '⚠ it reads the open injury, red, as the Job Plan\'s does');
+    eq(D.log.renders, 0, 'by id: no full render');
+    D.render();
+    eq(inner(D.dom.html, 'desk-alerts-7'), s1, '⚠⚠ exactly what a full render draws');
+  }
+
+  group('F6 · Job Admin\'s count, and its lines when open, follow a tick and every by-id repaint of the desk\'s cards');
+  {
+    const est = { estimate: { svc: 'probate', rooms: [] } };
+    const count = (h) => textOf(inner(h, 'ja-n-7'));
+    const block = (h) => inner(h, 'plan-derived-admin-7');
+    const D = desk(PROBATE(), {}, { refs: [LINE('a')], real: ['renderJobAdmin'], roots: ['togglePlanTask', '_invRefreshRecords'],
+      stubs: { estimateStore: { 7: est }, saveJobPlan() {}, _todayStr: () => TODAY } });
+    D.C._jobAdminOpen[7] = true;
+    D.render();
+    const c0 = count(D.dom.html);
+    ok(/^0 of \d+ ticked · \d+ derived items still open$/.test(c0), 'fixture: ' + c0);
+    let r = attempt(() => D.C.togglePlanTask(7, 'fin_vendor_invoices', true, null));
+    ok(r.ok, 'the tick runs (' + (r.err || 'ok') + ')');
+    const c1 = count(D.dom.html);
+    ok(/^1 of /.test(c1), '⚠ the tick is counted at once: ' + c1);
+    eq(D.log.renders, 0, 'by id: no full render');
+    const b1 = block(D.dom.html);
+    D.render();
+    eq([count(D.dom.html), block(D.dom.html)], [c1, b1], '⚠⚠ the count and the lines are what a full render draws');
+    // A signed ledger filed: _invRefreshRecords repaints the records, and Job Admin's line turns green with them.
+    const n0 = Number((/· (\d+) derived/.exec(count(D.dom.html)) || [])[1]);
+    D.C.jobs[0].signedRecords = [{ id: 'L1', kind: 'ledger', ref: 'ledger', signedBy: 'Ruth Adler', signedOn: TODAY, url: 'https://drive.google.com/file/d/L1/view' }];
+    r = attempt(() => D.C._invRefreshRecords(7));
+    ok(r.ok, 'the repaint runs (' + (r.err || 'ok') + ')');
+    eq(Number((/· (\d+) derived/.exec(count(D.dom.html)) || [])[1]), n0 - 1, '⚠ the ledger signed: one fewer still open, at once');
+    has(block(D.dom.html), 'pl-line pl-ok"><span class="pl-dot">&#10003;</span><span class="pl-lbl">Disposition Ledger signed', 'and the line is green in the open card');
+    const c2 = count(D.dom.html), b2 = block(D.dom.html);
+    D.render();
+    eq([count(D.dom.html), block(D.dom.html)], [c2, b2], '⚠⚠ as a full render draws them');
+    // Home Prep: the bars' heads stand down there, the count does not.
+    const Pp = desk({ svc: 'prep' }, {}, { refs: [], real: ['renderJobAdmin'], roots: ['togglePlanTask'],
+      stubs: { estimateStore: { 7: { estimate: { svc: 'prep', rooms: [], vendors: [] } } }, saveJobPlan() {}, _todayStr: () => TODAY } });
+    Pp.render();
+    const p0 = count(Pp.dom.html);
+    attempt(() => Pp.C.togglePlanTask(7, 'fin_vendor_invoices', true, null));
+    ok(/^0 of /.test(p0) && /^1 of /.test(count(Pp.dom.html)), '⚠ on Home Prep\'s desk too: ' + p0 + ' → ' + count(Pp.dom.html));
+  }
+
+  group('F7 · one rule, its readers counted; the repaints reach it before they stand down');
+  {
+    eq(callersOf('deskNowLine'), ['_jobAdminParts'], '⚠ the one rule, asked in one place');
+    eq(callersOf('_jobAdminParts'), ['_deskNowRepaint', 'deskAlertsHtml', 'jobAdminHeadText', 'renderJobAdmin'], 'Job Admin\'s parts: the card, its count, the strip and the repaint');
+    eq(callersOf('jobAdminHeadText'), ['_deskNowRepaint', 'renderJobAdmin'], 'the count: drawn by the card, repainted by id');
+    eq(callersOf('incidentBannerState'), ['deskAlertsHtml', 'deskNowLine', 'incidentHeaderHtml'], 'what the banner draws: one answer, for the banner, the rule and the strip');
+    eq(callersOf('deskAlertsHtml'), ['_deskNowRepaint', 'renderInventoryTab'], 'the strip: the full render and the repaint');
+    eq(callersOf('_deskNowRepaint'), ['_deskFoldHeadsRepaint', '_repaintIncidents'], 'repainted after every by-id repaint of the desk, and after an incident\'s act');
+    const live = noComments(SRC);
+    eq((live.match(/planDerivedLines\(jobId, job, est, 'admin'\)/g) || []).length, 1, 'the desk\'s list is built once, in _jobAdminParts');
+    eq((live.match(/planDerivedHtml\(jobId, job, est, 'admin'\)/g) || []).length, 0, 'and never drawn whole');
+    const ri = codeOnly(fn('_repaintIncidents'));
+    ok(ri.indexOf('_deskNowRepaint(jobId)') > -1 && ri.indexOf('_deskNowRepaint(jobId)') < ri.indexOf('if (!el) return false'),
+      '⚠⚠ _repaintIncidents repaints the desk BEFORE it returns for want of the Job Plan\'s card');
+    const hr = codeOnly(fn('_deskFoldHeadsRepaint'));
+    ok(hr.indexOf('_deskNowRepaint(jobId)') > -1 && hr.indexOf('_deskNowRepaint(jobId)') < hr.indexOf("job.svc === ''"),
+      'and the heads repaint reaches it before it stands down on Home Prep');
+    has(noComments(fn('renderInventoryTab')), "var top = jobInfoHeaderHtml(job) + deskAlertsHtml(jobId, job) + '<div id=\"jband-slot-admin\">'", 'the strip is in the top both arms draw');
   }
 }
