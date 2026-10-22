@@ -193,10 +193,10 @@ textarea{height:70px;resize:vertical;}
 .slider:before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:var(--white);border-radius:50%;transition:.2s;}
 input:checked+.slider{background:var(--gray-dk);}
 input:checked+.slider:before{transform:translateX(18px);}
-.sec-hdr{background:var(--gray-dk);color:var(--cream);padding:7px 12px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border-radius:4px 4px 0 0;margin-top:12px;}
-.sec-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;gap:7px;}
-.sec-toggle:hover{background:#3a3a42;}
-.sec-caret{display:inline-block;width:9px;font-size:9px;color:var(--tan);}
+.sec-hdr,.ja-hd{background:var(--gray-dk);color:var(--cream);padding:7px 12px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;border-radius:4px 4px 0 0;margin-top:12px;}
+.sec-toggle,.ja-hd{cursor:pointer;user-select:none;display:flex;align-items:center;gap:7px;}
+.sec-toggle:hover,.ja-hd:hover{background:#3a3a42;}
+.sec-caret,.ja-hd > span:first-child{display:inline-block;width:9px;font-size:9px;color:var(--tan);}
 .sec-count{margin-left:auto;font-size:9px;font-weight:400;letter-spacing:.04em;text-transform:none;color:var(--tan);opacity:.85;}
 /* Horizontal scroller for tables whose columns have hard minimum widths. Without one,
    an unshrinkable table widens the whole document past the viewport on a phone; the
@@ -767,9 +767,23 @@ body.field-cam-open #sync-pending{display:none !important;}
 .inc-banner{background:#8b1e1e;color:#fff;border-radius:6px;padding:12px 16px;margin-bottom:12px;}
 .inc-banner .fos-acts .btn-s{background:#fff;color:#8b1e1e;border-color:#fff;}
 .inc-call-btn{border-color:#8b1e1e;color:#8b1e1e;font-weight:700;}
-.ja-card{border:1px solid var(--border-md);border-radius:6px;background:var(--white);margin-bottom:12px;}
-.ja-hd{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;font-size:12.5px;font-weight:700;}
-.ja-hd .ja-n{font-size:11px;color:var(--gray);font-weight:600;margin-left:auto;}
+/* ⚠ THE DESK'S FIVE FOLDS ARE ONE CONTROL (2026-10-22). Job Admin kept its own classes, its caret entity and its onclick
+   (browser steps 4, 15, 56, 57, 58, 65 and 73 press and read them) and takes `.sec-hdr .sec-toggle .sec-caret` through
+   the shared selectors at the top of the sheet, never a copy: caret left, the dark bar, the count at the right. The four
+   bars below the items wear the Job Plan's tool fold by classes of their own, since browser step 89 counts
+   `.plan-fold .sec-hdr`. A bar's line sits inside the bar, so it resets the uppercase (as .stage-meta does) and wraps
+   under the title on a phone instead of pushing the page wide; its tones are read on the dark bar. A body's foot is
+   2px, not 14: every card inside one carries its own 1rem margin below it. */
+.ja-card{margin:12px 0;}
+.ja-hd{margin-top:0;flex-wrap:wrap;row-gap:3px;}
+.ja-hd .ja-n,.desk-stat{margin-left:auto;font-size:10.5px;font-weight:600;letter-spacing:.02em;text-transform:none;color:var(--tan);white-space:normal;min-width:0;overflow-wrap:anywhere;}
+.desk-fold{margin-bottom:12px;min-width:0;}
+.desk-fold .sec-hdr{margin-top:0;flex-wrap:wrap;row-gap:3px;}
+.desk-fold-body{padding:12px 14px 2px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;min-width:0;}
+.desk-st-red{color:#ffb3b3;}
+.desk-st-amber{color:#f3c86b;}
+.desk-st-ok{color:#b8dc95;}
+.desk-st-grey{color:var(--tan);}
 /* P19 · the desk's releases card: the foundation's File signed copy control is a label styled .btn-s, and a bare label
    is a block with a top margin; inside .inv-rel-ctl it sits in the row beside the print button and the filed copies. */
 .inv-rel-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;}
@@ -790,7 +804,7 @@ body.field-cam-open #sync-pending{display:none !important;}
 .co-ttl{font-size:12.5px;font-weight:700;color:var(--gray-dk);margin-bottom:4px;}
 .co-meta{font-size:11px;font-weight:400;color:var(--gray);margin-left:6px;}
 .co-sub{font-size:11.5px;color:var(--gray);margin:0 0 6px;line-height:1.45;}
-.ja-body{padding:4px 12px 12px;border-top:1px solid var(--border);}
+.ja-body{background:var(--white);padding:12px 14px 14px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;}
 .divider{height:1px;background:var(--border);margin:1rem 0;}
 .empty-state{text-align:center;padding:2.5rem 1rem;color:var(--gray);font-size:12px;}
 /* The "nothing selected yet" panel, shared by Client Estimate, Inventory, Job Plan and
@@ -1370,7 +1384,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.21 · 1:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 3:18pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -29793,6 +29807,9 @@ function takeInventorySnapshot(jobId) {
   _jobTouch(job, 'invSnapshots', job.invSnapshots[job.invSnapshots.length - 1].ts);
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
+  // The snapshot list sits in the Removed items & snapshots bar, which never opens by itself (2026-10-22): the snapshot
+  // just taken opens it, so the new row is drawn where the person can see it landed.
+  deskFoldOpen(jobId, 'history');
   renderInventoryTab();
 }
 // A void needs a reason, and keeps the snapshot. Stamped on its own key (`invSnapshots:<ts>`, the key the sheet merges
@@ -32371,11 +32388,14 @@ function approvalRequestDashHtml(job) {
     + '</div>';
 }
 // Opens Job Admin & Inv on this client and scrolls to the Releases card: openJobPlanFor's twin for the desk.
+// ⚠ THE RELEASES BAR IS OPENED FIRST (2026-10-22): the card sits in a fold bar now, and a scroll to a shut bar's body
+// lands nowhere. Recorded before the tab draws, so the render draws it open.
 function openJobDeskFor(jobId) {
   var nb = document.querySelector('.nb[onclick*="showPanel(\'inventory\'"]');
   if (!nb || !jobs.some(function (x) { return x.id === jobId; })) return false;
   if (document.getElementById('clients-list-view') && document.getElementById('client-dashboard-view')) closeClientDashboard();
   setCurrentJob(jobId);
+  deskFoldOpen(jobId, 'releases');
   nb.click();
   var sel = document.getElementById('inv-job');
   if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
@@ -32383,13 +32403,16 @@ function openJobDeskFor(jobId) {
   if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
   return true;
 }
-// The Releases card repainted by id, whole (the rule _invEdit set, 2026-10-10): a card the render would not draw is
-// left for the next full render.
+// The Releases card repainted by id, whole (the rule _invEdit set, 2026-10-10).
+// ⚠ AN EMPTIED CARD CLEARS, AND AN EMPTY HOST FILLS (2026-10-22). The desk now draws the host even when the card has
+// nothing in it (INV_RELEASES_HOST_EMPTY, hidden), so a card that empties is put back to that host rather than left
+// on screen saying what is no longer true, and one that starts to say something is drawn where the host stands.
+var INV_RELEASES_HOST_EMPTY = '<div id="inv-releases" style="display:none;"></div>';
 function _invRefreshReleases(jobId) {
   var el = document.getElementById('inv-releases'), job = _invJob(jobId);
   if (!el || !job) return false;
   var html = _renderInvReleasesCard(job, _jobInvRefs(jobId));
-  if (html) el.outerHTML = html;
+  el.outerHTML = html || INV_RELEASES_HOST_EMPTY;
   return !!html;
 }
 // The other half of the same transaction: the signed request comes back, and the approval
@@ -36178,7 +36201,14 @@ function setInvFlag(v)  { _invFilter.flag = (_invFilter.flag === v) ? '' : v; re
 function invClearFilters() { _invFilter = { when:'all', room:'', q:'', flag:'' }; renderInventoryTab(); }
 function _invToggleFold(k) { if (_invFold[k]) delete _invFold[k]; else _invFold[k] = 1; renderInventoryTab(); }
 function _invToggleOpen(id) { if (_invOpen[id]) delete _invOpen[id]; else _invOpen[id] = 1; renderInventoryTab(); }
-function invToggleRollups() { _invShowRoll = !_invShowRoll; renderInventoryTab(); }
+// The summary is the last thing on the tab, under the four bars (2026-10-22), and More ▾ is at the top: opening it
+// scrolls it into view, or the press reads as doing nothing.
+function invToggleRollups() {
+  _invShowRoll = !_invShowRoll;
+  renderInventoryTab();
+  var el = _invShowRoll ? document.getElementById('inv-summary') : null;
+  if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+}
 
 function _invProgressBar(st, width) {
   var pct = st.total ? Math.round((st.done / st.total) * 100) : 0;
@@ -38254,30 +38284,39 @@ function renderInventoryTab() {
     return;
   }
 
+  // ⚠⚠ THE ORDER OF AN EVENING AT THE DESK (2026-10-22; Anthony: *"Build all of it now."*). The job today and Job Admin
+  // above; tonight's items open in the middle; then the four bars (DESK_FOLDS), each one line until it is opened. The
+  // close-out card left the top of the tab for the Closing bar: it sat between Job Admin and the items from day one.
+  var fold = function (key, html) {
+    return _deskFold(jobId, key, deskFoldTitle(key, html), deskFoldState(jobId, job, key, all, html), html);
+  };
   // The two intake questions above Job Admin: the desk names that evening's shots against
   // the must-find list, and can record a Found the crew phoned in.
   cont.innerHTML = top + _sfHost('sf-host-desk', job)
     + renderJobAdmin(jobId, job)
-    + closeout
+    // ── Tonight's items, never folded: the work bar, the walkthrough's vehicles still to bring in (a start-of-job task,
+    // gone once every vehicle is in), the chips, the filter, the rows, and the bulk bar, outside every wrapper so it
+    // still sticks to the foot of the tab.
     + _renderInvWorkbar(job, all)
-    // P19: the signed papers beside what they cover, and an estate's beneficiaries and bequests.
-    + _renderInvReleasesCard(job, all)
-    + _renderInvBequestCard(job, all)
+    + _renderInventoryImportPanel(jobId)
     + (all.length ? '<div id="inv-flagstrip">' + _renderInvFlagStrip(job, all) + '</div>' + _renderInvFilterRow(job, all) : '')
     + thumbNote
     + _renderDuplicateImportNotice(jobId)
     + _agDupHtml(jobId, all)
     + body
     + _renderInvBulk(job)
-    + _renderInventoryImportPanel(jobId)
-    + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>'
-    + _renderAppraiserRoster(job)
-    + _renderRemovedRows(jobId)
+    // ── The four bars. P19: the signed papers beside what they cover, and an estate's beneficiaries and bequests. The
+    // Releases host is drawn even when the card has nothing in it, hidden, so its by-id repaint (_invRefreshReleases)
+    // has an element to fill the moment it does.
+    + fold('releases', (_renderInvReleasesCard(job, all) || INV_RELEASES_HOST_EMPTY) + _renderInvBequestCard(job, all))
+    // The roster first: it is where an appraiser is added, and the guardrail's rows link the one they pick from it.
+    + fold('values', _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>')
     // The close-out records (P19): the Disposition Ledger, the proceeds statements and the donations, in one host that
-    // the desk's partial repaints refresh by id (_invRefreshRecords).
-    + '<div id="inv-records" data-job="' + esc(String(jobId)) + '">' + _renderLedgerCards(job, all) + '</div>'
-    + _renderInventorySnapshots(job)
-    // A read-out, not a workspace — so it sits at the bottom and starts closed. It was
+    // the desk's partial repaints refresh by id (_invRefreshRecords), under the close-out card.
+    + fold('closing', closeout
+      + '<div id="inv-records" data-job="' + esc(String(jobId)) + '">' + _renderLedgerCards(job, all) + '</div>')
+    + fold('history', _renderRemovedRows(jobId) + _renderInventorySnapshots(job))
+    // A read-out, not a workspace — so it sits at the bottom, outside every bar, and starts closed. It was
     // occupying the top of the tab, above the work.
     + '<div id="inv-summary">' + (_invShowRoll ? _renderInventorySummary(job, all) : '') + '</div>';
 
@@ -45862,6 +45901,104 @@ function renderJobAdmin(jobId, job) {
       + '<span class="ja-n">' + done + ' of ' + tasks.length + ' ticked' + (openLines ? ' · ' + openLines + ' derived item' + (openLines > 1 ? 's' : '') + ' still open' : '') + '</span>'
     + '</div>'
     + (open ? '<div class="ja-body">' + planDerivedHtml(jobId, job, est, 'admin') + planTaskSectionsHtml(jobId, tasks, ctx) + '</div>' : '')
+    + '</div>';
+}
+
+// ═══════════════════════ THE DESK'S FOUR FOLD BARS (2026-10-22) ═══════════════════════
+// The desk runs in the order of an evening at it: the job today (who, what is urgent, the money step, the must-finds),
+// Job Admin, then tonight's items (name, decide, value), open; then four bars below the items, each saying in one line
+// whether it needs you: Releases & signed papers, Values & appraisals, Closing the job, Removed items & snapshots.
+// Anthony, 2026-10-22, asked whether to build the new desk under the feature freeze: *"Build all of it now."*
+// ⚠⚠ A BAR'S BODY IS HIDDEN WHILE SHUT, NEVER DROPPED. The by-id hosts inside one (#inv-releases, #inv-guardrail,
+// #inv-records, the #inv-ben-list datalist every To a person box reads) are repainted by id open or shut, and a shut
+// bar's text is still in the page for whatever reads it. Its open state is VIEW state: per job and per device, held for
+// the session in `_deskOpen` (never saved, never in localStorage), so none of the ~55 full redraws, three of them with
+// nobody pressing anything, can shut a bar under the person reading it. A person's open or shut wins both ways.
+var _deskOpen = {};   // jobId + ':' + fold -> true (open) / false (shut by hand)
+// ONE CATALOGUE OF THE BARS, IN THEIR ORDER. A bar's title says what is inside it (Anthony's rule for the crew fold,
+// 2026-10-19: "we couldn't find where to log the crew"), so the parts a title names are the cards actually drawn in
+// its body, found by their ids: `join` sits between the title and what it names.
+var DESK_FOLDS = {
+  releases: { title: 'Releases & signed papers', join: ' · ', parts: [['inv-bequests', 'Beneficiaries & bequests']] },
+  values:   { title: 'Values & appraisals', join: ': ', parts: [] },
+  closing:  { title: 'Closing the job', join: ': ', parts: [['closeout-admin-', 'close-out call, vendor ratings'], ['inv-ledger-card', 'Disposition Ledger'],
+              ['inv-contents-card', 'Contents Record'], ['inv-proceeds-card', 'proceeds'], ['inv-donations-card', 'donations']] },
+  history:  { title: 'Removed items & snapshots', join: ': ', parts: [] }
+};
+var DESK_FOLD_TONES = { red: 1, amber: 1, ok: 1, grey: 1 };
+function _deskKey(jobId, fold) { return jobId + ':' + fold; }
+// The bar's title, plain text (the bar escapes it): the catalogue's, then what its body draws.
+function deskFoldTitle(fold, body) {
+  var f = DESK_FOLDS[fold];
+  if (!f) return '';
+  var s = String(body || '');
+  var named = f.parts.filter(function (p) { return s.indexOf('id="' + p[0]) >= 0; }).map(function (p) { return p[1]; });
+  return f.title + (named.length ? f.join + named.join(', ') : '');
+}
+// ⚠ A PLACEHOLDER, WHILE THE BARS ARE BUILT ONE STEP AT A TIME: every bar is drawn, OPEN, with no status line, wherever
+// its body has anything in it, so the new order hides nothing yet. `body` (the bar's markup) is read only here. What a
+// bar says, and when it opens by itself, is this function's to answer: `{show, openByDefault, bits: [{text, tone}]}`.
+function deskFoldState(jobId, job, fold, all, body) {
+  return { show: !!String(body || ''), openByDefault: true, bits: [] };
+}
+// Open or shut. A person's choice either way; else the bar's default, and an OPEN default is written down as though it
+// had been pressed, so a bar never shuts by itself when the last thing that opened it resolves.
+function _deskFoldIsOpen(jobId, fold, st) {
+  var k = _deskKey(jobId, fold);
+  if (Object.prototype.hasOwnProperty.call(_deskOpen, k)) return !!_deskOpen[k];
+  if (st && st.openByDefault) { _deskOpen[k] = true; return true; }
+  return false;
+}
+// Flip one bar on screen, in place: the body, the caret, and the photographs inside it. Never a render.
+function _deskFoldPaint(jobId, fold, open) {
+  var id = fold + '-' + jobId;
+  var body = document.getElementById('desk-body-' + id);
+  if (!body) return false;
+  body.style.display = open ? '' : 'none';
+  var chev = document.getElementById('desk-chev-' + id);
+  if (chev) chev.textContent = secCaret(open);   // the one caret definition, shared with every fold in the app
+  var hd = document.getElementById('desk-hd-' + id);
+  if (hd && hd.setAttribute) hd.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open && typeof _invPaintThumbs === 'function') _invPaintThumbs(jobId, body);
+  return true;
+}
+// The header's press: flips the bar where it stands and records the choice. ⚠ NEVER renderInventoryTab: a redraw would
+// take a half-typed note, a search or a recipient box with it (Job Admin's own toggle still redraws, on purpose, for now).
+function toggleDeskFold(jobId, fold) {
+  var k = _deskKey(jobId, fold);
+  var body = document.getElementById('desk-body-' + fold + '-' + jobId);
+  var open = body ? body.style.display === 'none' : !_deskOpen[k];
+  _deskOpen[k] = open;
+  _deskFoldPaint(jobId, fold, open);
+  return open;
+}
+// Code that sends a person to something inside a bar opens it first (Open the desk, a snapshot just taken): recorded
+// like a press, so the render that follows draws it open, and flipped in place if the bar is already on screen.
+function deskFoldOpen(jobId, fold) {
+  _deskOpen[_deskKey(jobId, fold)] = true;
+  _deskFoldPaint(jobId, fold, true);
+  return true;
+}
+function _deskStatHtml(bits) {
+  return (bits || []).map(function (b) {
+    return '<span class="desk-st-' + (DESK_FOLD_TONES[b && b.tone] ? b.tone : 'grey') + '">' + esc(b && b.text) + '</span>';
+  }).join(' &middot; ');
+}
+// One bar. The wrapper is hidden whole while the bar has nothing to show; the body is hidden, never dropped, while shut.
+// `desk-` ids and classes of its own, on purpose: the Job Plan's phase-* folds are in the page at the same time, and
+// browser step 89 counts `.plan-fold .sec-hdr`. The header is a button to the keyboard too (Enter or Space presses it).
+function _deskFold(jobId, fold, title, st, body) {
+  st = st || {};
+  var id = fold + '-' + jobId, open = _deskFoldIsOpen(jobId, fold, st);
+  return '<div class="desk-fold" id="desk-fold-' + id + '"' + (st.show ? '' : ' style="display:none;"') + '>'
+    + '<div class="sec-hdr sec-toggle" id="desk-hd-' + id + '" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '"'
+      + ' onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();this.click();}"'
+      + ' onclick="toggleDeskFold(' + jobId + ',\'' + fold + '\')">'
+      + '<span class="sec-caret" id="desk-chev-' + id + '">' + secCaret(open) + '</span>'
+      + '<span class="desk-ttl" id="desk-ttl-' + id + '">' + esc(title) + '</span>'
+      + '<span class="desk-stat" id="desk-stat-' + id + '">' + _deskStatHtml(st.bits) + '</span>'
+    + '</div>'
+    + '<div class="desk-fold-body" id="desk-body-' + id + '" style="display:' + (open ? '' : 'none') + ';">' + (body || '') + '</div>'
     + '</div>';
 }
 
