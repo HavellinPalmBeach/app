@@ -1428,7 +1428,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 1:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 4:15pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10320,7 +10320,7 @@ function mustFindItems(job) {
   return out;
 }
 // Every must-find intake recorded is recorded found: one answer, read by the desk's brief (which shrinks to one green line)
-// and by Agent One's Must find notices (which go quiet above the rows; Anthony, 2026-10-22, Q3). A job with no must-find
+// and by Agent One's Must find notices (which go quiet above the rows; Anthony, 2026-10-22, Q90). A job with no must-find
 // list has nothing found, so neither goes quiet on it.
 function mustFindAllFound(job) {
   var items = mustFindItems(job);
@@ -10894,7 +10894,7 @@ function toggleMustFound(jobId, handle) {
   _jobTouch(job, 'mustFound', key);
   saveJobs(); syncJobToSheets(job);
   _repaintStandingFlags(jobId);
-  // The last Found it quiets Agent One's Must find notices on the desk, and an Undo brings them back (Q3), by id.
+  // The last Found it quiets Agent One's Must find notices on the desk, and an Undo brings them back (Q90), by id.
   if (typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);
 }
 
@@ -23664,7 +23664,7 @@ function jobProgressBlockHtml(jobId, host) {
     + '</div></div>';
 }
 // ⚠⚠ ON THE DESK, ON A PHONE, THE TIMELINE UNDER THE BAND IS ONE LINE UNTIL IT IS ASKED FOR (2026-10-22). Anthony, asked
-// (Q4) about the 610 px the band and its rail took on Job Admin & Inv at 390 px, a screen of scrolling before anything
+// (Q91) about the 610 px the band and its rail took on Job Admin & Inv at 390 px, a screen of scrolling before anything
 // that belongs to the desk: *"Fold the timeline on a phone."* The NEXT step and its buttons stay; the rail under them folds
 // to one line, `▸ Timeline · N of M done`, which names every step the rail would show amber or red (a payment left open
 // behind the close, a flag such as an open incident on Work complete, a terminal row), so nothing a person needs is folded
@@ -29522,7 +29522,7 @@ function _invEdit(jobId, stableId, key, el) {
     var _noteEl = document.getElementById('inv-value-notices'), _noteJob = _invJob(jobId);
     if (_noteEl && _noteJob) _noteEl.innerHTML = _avNoticesHtml(_noteJob, _jobInvRefs(jobId));
   }
-  // And Agent One's (Q3): a name or a category typed on a decided line reviews it, and its Look at this goes quiet.
+  // And Agent One's (Q90): a name or a category typed on a decided line reviews it, and its Look at this goes quiet.
   if ((key === 'objectName' || key === 'category') && typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);
   // These feed the Summary rollups; refresh only the summary (table inputs keep focus).
   if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','flagMAIV','maivCat','disposition','category','qty'].indexOf(key) >= 0) {
@@ -32528,7 +32528,7 @@ function approvalRequestCardHtml(job, all) {
     if (stale) lines.push(esc(stale));
     if (S.fresh.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(n(S.fresh.length)
       + (st && st.sentAt ? ' now await approval and were not on it: send a fresh request.' : ' await written approval; nothing has been sent from the app.')) + '</span>');
-    // ⚠ RECORD THE SIGNED REQUEST (2026-10-22; Anthony, Q1: "Build all of it now"). The card knows which lines the request
+    // ⚠ RECORD THE SIGNED REQUEST (2026-10-22; Anthony, Q88: "Build all of it now"). The card knows which lines the request
     // carried and which of them still wait (S.open), so the signed copy coming back is recorded from here: the press opens
     // Record approval on exactly those lines (invRecordRequestApproval → invRecordApproval's opt.stableIds), never through the
     // bulk bar's selection, which stays as the person left it. Offered once the request has gone, whatever the blocker says
@@ -36058,7 +36058,7 @@ function _invRefreshFlagStrip(jobId) {
   var hint = document.getElementById('inv-earlier');
   if (job && hint && typeof _invEarlierHintHtml === 'function') hint.innerHTML = _invEarlierHintHtml(job, _jobInvRefs(jobId));
 }
-// Agent One's notices above the rows, repainted in place (2026-10-22, Q3): a name typed on a decided line reviews it, which
+// Agent One's notices above the rows, repainted in place (2026-10-22, Q90): a name typed on a decided line reviews it, which
 // quiets its Look at this, and the last Found it quiets the Must finds. Nothing else on the tab is touched.
 function _invRefreshAgentNotices(jobId) {
   var sel = document.getElementById('inv-job');
@@ -37077,7 +37077,7 @@ var AGENT_NOTICE_KINDS = [
   { kind:'firearm',  label:'Firearm',           cls:'a-err'  },
   { kind:'other',    label:'Look at this',      cls:'a-warn' }
 ];
-// ⚠⚠ QUIET ONCE IT HAS HAD ITS LOOK (Anthony, 2026-10-22, Q3: *"Quiet once reviewed"*). Nothing ever cleared a notice, so
+// ⚠⚠ QUIET ONCE IT HAS HAD ITS LOOK (Anthony, 2026-10-22, Q90: *"Quiet once reviewed"*). Nothing ever cleared a notice, so
 // after the first evening "Agent One raised N things to look at" stood above the rows for the life of the job. A Look at
 // this leaves that list once a person has reviewed its line (invLineReviewed, the one rule); a Must find once every intake
 // must-find is recorded found (mustFindAllFound: a notice carries no must-find key, so the job's list answers). A Firearm
@@ -38213,7 +38213,7 @@ function _renderInvWorkbar(job, all) {
       // ⚠ NO SEND REQUEST ON THIS BAR (2026-10-22). It stood here from 2026-10-17 as well as on the Releases card's Approval
       // request section, one control drawn twice under two rules: this one offered while blocked and refused in the band,
       // the card's withheld and the blocker said in red. The card carries the send for every line awaiting approval (its
-      // bar opens by itself while a request is owed, Anthony's Q2), the bulk bar the selection's. No control renders twice.
+      // bar opens by itself while a request is owed, Anthony's Q89), the bulk bar the selection's. No control renders twice.
       + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', fid
           ? 'Add an asset with no photo (cash, vehicle, account)'
           : 'Add something with no photo — a vehicle, a rug already rolled, anything in storage')
@@ -38636,7 +38636,7 @@ function _renderInvPanel(job, ref) {
         ? '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px;">Detail shots \u00b7 ' + det.length + '</div>'
           + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invThumbHTML(jid, d, 64); }).join('') + '</div>'
         : '')
-    // What Agent One noticed in this photograph, every notice: a Look at this off the list above the rows is read here (Q3).
+    // What Agent One noticed in this photograph, every notice: a Look at this off the list above the rows is read here (Q90).
     + _agRecordNoticesHtml(job, ref)
     + '</div>');
   return '<div style="padding:10px 4px 12px 52px;background:#fcfaf5;border-top:1px dashed var(--border-md);">'
@@ -46723,7 +46723,7 @@ function _invManifestUnread(jobId) {
 // readers). `{show, openByDefault, bits: [{text, tone}]}`: `show`, whether the bar has anything in it at all; `openByDefault`,
 // whether it opens by itself (a person's open or shut still wins both ways, _deskFoldIsOpen); `bits`, the line, each part
 // in its tone (red, amber, ok, grey). Nothing a person needs is behind a shut bar without its line saying so.
-//   releases · opens while a request is owed (Anthony, 2026-10-22, Q2, *"When a request is owed"*): lines wait for written
+//   releases · opens while a request is owed (Anthony, 2026-10-22, Q89, *"When a request is owed"*): lines wait for written
 //     approval that no request has carried, a drafted request waits on I've sent it, or a signed approval is recorded with
 //     no copy filed. A line is counted once, under the first thing it waits on.
 //   values   · opens while an item waiting on an appraisal has no appraiser linked; red as the guardrail is (Formal).

@@ -210,7 +210,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
       eq(ov, 0, tab + ' overflow at ' + w);
     }
   }
-  // ⚠ RESTATED 2026-10-22 (the desk on a phone, Anthony's Q4: "Fold the timeline on a phone"): on Job Admin & Inv at 390 the
+  // ⚠ RESTATED 2026-10-22 (the desk on a phone, Anthony's Q91: "Fold the timeline on a phone"): on Job Admin & Inv at 390 the
   // rail sits folded under the band's NEXT step, one tap away. The leg still renders as the vertical rail, reached by the
   // tap a person makes: the rail folded, its line on screen, the line pressed, the rail on screen.
   const railVis = () => p.evaluate(() => { const r = document.querySelector('#jband-slot-admin .jt-rail'); return !!(r && r.offsetParent !== null); });

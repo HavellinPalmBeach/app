@@ -20,7 +20,7 @@
 //   H · the trims (G4): the client line's Target Start only where no schedule strip is drawn; the work bar's line under its
 //       title the HVL id alone; one Send request on the desk for every waiting line (the Releases card's) and one for a
 //       selection (the bulk bar's), the work bar none; the tab's subtitle in the new order.
-//   I · the review aids and Anthony's Q3 (G5): Show the item on both agents' notices, lifting only the filter that hides the
+//   I · the review aids and Anthony's Q90 (G5): Show the item on both agents' notices, lifting only the filter that hides the
 //       line; a Needs you chip showing the whole job; the earlier-days hint (words, never a second All); the must-finds
 //       shrinking to one green line once all are found; the two stale sentences; and the agent's notes quiet once they have
 //       had their look, still read in the line's record.
@@ -41,7 +41,7 @@
 //   M · the phone (G9): nothing runs off the right edge at 390 (the guardrail's appraiser picker may shrink, a row's chip line
 //       wraps instead of cutting chips off); the bulk bar one line on a phone, its same controls behind Actions, in place;
 //       and on the desk only, on a phone only, the band's timeline folded to one line that names what the rail paints
-//       amber or red (Anthony's Q4), shown in place by a tap and kept shown across every repaint, per job.
+//       amber or red (Anthony's Q91), shown in place by a tap and kept shown across every repaint, per job.
 //   N · the documents (G10): the manual and the playbook, HTML and markdown, name the four bars by the catalogue's titles
 //       (the manual's table in the tab's order) and the desk's new controls in the desk's own words, each held to the source,
 //       and no document still places a moved card where it was (the photography guide included).
@@ -183,7 +183,7 @@ const textOf = (h) => String(h == null ? '' : h).replace(/<[^>]+>/g, ' ').replac
 
 // ── The desk, every card a marker, so the test reads the ASSEMBLY: what renderInventoryTab puts where. ──
 // ⚠ SINCE THE BARS' LINES (2026-10-22): a line on the estate waits on written approval, so Releases opens by its own rule
-// (Anthony's Q2), and the job has a snapshot, so the history bar is drawn (shut: it never opens by itself).
+// (Anthony's Q89), and the job has a snapshot, so the history bar is drawn (shut: it never opens by itself).
 const ESTATE = () => ({ id: 7, name: 'Ashworth', svc: 'probate', won: true, invSnapshots: [{ ts: 1, label: 'Filed', count: 2 }] });
 const REFS = () => [{ stableId: 'a', label: 'inventory', objectName: 'Clock' }, { stableId: 'b', label: 'inventory', objectName: 'Desk', disposition: 'Donate' }];
 function desk(jobO, cards, opt) {
@@ -291,7 +291,7 @@ function groupA({ group, ok, eq, has, lacks }) {
     const D = desk();
     D.render();
     ok(!D.log.renderErr, 'the desk renders (' + (D.log.renderErr || 'ok') + ')');
-    eq(D.dom.getElementById('desk-body-releases-7').style.display, '', 'fixture: the Releases bar is drawn open (a line waits on written approval, Q2)');
+    eq(D.dom.getElementById('desk-body-releases-7').style.display, '', 'fixture: the Releases bar is drawn open (a line waits on written approval, Q89)');
     D.log.renders = 0;
     const r = attempt(() => D.C.toggleDeskFold(7, 'releases'));
     ok(r.ok, 'the press runs (' + (r.err || 'ok') + ')');
@@ -447,7 +447,7 @@ function groupB({ group, ok, eq, has, lacks }) {
   group('B2 · each bar is drawn open or shut by its own rule, and a bar with nothing in it is hidden whole');
   {
     // ⚠ RESTATED 2026-10-22 (the placeholder drew every bar open; the lines and the open rules replaced it, as B2 said
-    // they would): on this fixture a line waits on written approval, so Releases opens (Q2); nothing waits on an
+    // they would): on this fixture a line waits on written approval, so Releases opens (Q89); nothing waits on an
     // appraisal, the job is not at its close, and history never opens by itself.
     const D = desk();
     const h = D.render();
@@ -603,7 +603,7 @@ function groupC({ group, ok, eq, has, lacks }) {
     eq(B.history.show, false, 'History: nothing removed and no snapshot, so not drawn');
   }
 
-  group('C2 · items decided: lines wait on written approval and no request carried them — Releases opens (Q2)');
+  group('C2 · items decided: lines wait on written approval and no request carried them — Releases opens (Q89)');
   {
     const rows = [LINE('a', { disposition: 'Sell', channel: 'Sotheby’s' }), LINE('b', { disposition: 'Donate', channel: 'Goodwill' }), LINE('c', { disposition: 'Keep' })];
     const B = bars(PROBATE(), rows);
@@ -638,7 +638,7 @@ function groupC({ group, ok, eq, has, lacks }) {
     const signed = (o) => Object.assign({ authBy: 'Ruth Adler', approvalDate: '2026-10-21' }, o);
     const rows = [LINE('a', signed({ disposition: 'Sell', channel: 'Sotheby’s' })), LINE('b', signed({ disposition: 'Donate', channel: 'Goodwill' }))];
     let B = bars(PROBATE(), rows);
-    eq(B.releases.openByDefault, true, '⚠⚠ a signed approval with no copy filed opens the bar (Q2)');
+    eq(B.releases.openByDefault, true, '⚠⚠ a signed approval with no copy filed opens the bar (Q89)');
     eq(B.line('releases'), '1 signed approval not filed to Drive · 2 ready to sign out · no beneficiaries recorded', 'and says what is owed');
     eq(B.tones('releases').slice(0, 2), ['amber', 'amber'], 'the sign-out amber: nothing is filed for either taker today');
     const filedApproval = { id: 's1', kind: 'approval', ref: '2026-10-21 Ruth Adler', signedOn: '2026-10-21', stableIds: ['a', 'b'], filedAt: ON('2026-10-21') };
@@ -785,7 +785,7 @@ function groupC({ group, ok, eq, has, lacks }) {
     let B = bars(LIVING(), [LINE('a'), LINE('b', { disposition: 'Keep' })]);
     eq(B.releases.show, false, 'a living job with nothing leaving: no Releases bar');
     B = bars(LIVING(), [LINE('a', { disposition: 'Donate', channel: 'Goodwill' })]);
-    eq([B.releases.show, B.releases.openByDefault], [true, true], 'a line leaving: drawn, and the client\'s approval is owed (Q2)');
+    eq([B.releases.show, B.releases.openByDefault], [true, true], 'a line leaving: drawn, and the client\'s approval is owed (Q89)');
     eq(B.line('releases'), '1 item needs written approval: send a request · 1 ready to sign out', '⚠ and on living work a line may be signed out meanwhile, so both are said');
     lacks(B.line('releases'), 'beneficiar', 'no estate words on living work');
   }
@@ -1008,7 +1008,7 @@ function groupE({ group, ok, eq, has, lacks }) {
       saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {}, window: { open() {} } } });
     D.render();
     const r0 = heads(D.dom.html).filter((x) => x.f === 'releases')[0];
-    eq([r0.open, r0.line], [true, '2 items need written approval: send a request · no beneficiaries recorded'], 'fixture: owed a request, so open (Q2)');
+    eq([r0.open, r0.line], [true, '2 items need written approval: send a request · no beneficiaries recorded'], 'fixture: owed a request, so open (Q89)');
     attempt(() => D.C.toggleDeskFold(7, 'releases'));
     eq(heads(D.dom.html)[0].open, false, 'fixture: the person shut it');
     let s = settle(D, () => D.C.sendApprovalRequest(7));
@@ -1462,7 +1462,7 @@ function groupH({ group, ok, eq, has, lacks }) {
     lacks(inner(A.html, 'inv-workbar') || '', 'sendApprovalRequest(', '⚠ the work bar carries none');
     lacks(textOf(inner(A.html, 'inv-workbar') || ''), 'Send request', 'and no button reads so');
     eq(A.D.C.deskFoldState(7, A.D.job, 'releases', A.D.C._jobInvRefs(7)).openByDefault, true,
-      'the card\'s bar opens by itself while the send is owed (Q2), so the one send is on screen when it is needed');
+      'the card\'s bar opens by itself while the send is owed (Q89), so the one send is on screen when it is needed');
 
     const S = run({}, ['a']);
     eq(sends(S.html).sort(), ['sendApprovalRequest(7)', 'sendApprovalRequest(7,true)'], 'a line selected: the bulk bar adds the selection\'s send, and only that');
@@ -1525,7 +1525,7 @@ function groupH({ group, ok, eq, has, lacks }) {
     has(inner(A.html, 'inv-releases') || '', 'onclick="invMarkRequestSent(7)"', 'fixture: the draft waits on its tap, on the card');
     const R = relHead(A.html);
     eq([R.open, R.line], [true, 'Request drafted: tap I’ve sent it · 1 more item needs written approval: send a fresh request once the draft has gone · no beneficiaries recorded'],
-      '⚠⚠ the bar opens (Q2), and its line names the draft first, then the line it never carried and when its request goes');
+      '⚠⚠ the bar opens (Q89), and its line names the draft first, then the line it never carried and when its request goes');
     eq(A.D.C.deskFoldState(7, A.D.job, 'releases', A.D.C._jobInvRefs(7)).bits.slice(0, 2).map((b) => b.tone), ['amber', 'amber'], 'both in amber');
     lacks(R.line, 'written approval: send a request', '⚠⚠ never "send a request" while the desk offers no send');
     eq(sends(A.html), [], 'fixture: no Send request anywhere while the draft waits (the card\'s rule; the work bar carries none)');
@@ -1563,8 +1563,8 @@ function groupH({ group, ok, eq, has, lacks }) {
 
 // The text a person reads, with the two entities group I's blocks draw (the dash and the tick) read as the characters they are.
 const readOf = (h) => textOf(String(h == null ? '' : h).replace(/&mdash;/g, '—').replace(/&#10003;/g, '✓'));
-// ═══ I · THE REVIEW AIDS AND ANTHONY'S Q3 (G5) ═════════════════════════════════
-// Anthony, 2026-10-22, Q3 ("Should Agent One's notes go quiet?"): *"Quiet once reviewed."* A Look at this leaves the list
+// ═══ I · THE REVIEW AIDS AND ANTHONY'S Q90 (G5) ═════════════════════════════════
+// Anthony, 2026-10-22, Q90 ("Should Agent One's notes go quiet?"): *"Quiet once reviewed."* A Look at this leaves the list
 // above the rows once its line is reviewed and is still read in the line's record; a Must find once every intake must-find
 // is recorded found; a Firearm and a Possible NFA item always stay. And the review aids the evening needs: Show the item on
 // each notice, a chip that shows the whole job, the leftovers Today hides named in words, the must-finds shrinking.
@@ -1750,7 +1750,7 @@ function groupI({ group, ok, eq, has, lacks }) {
     lacks(noComments(fn('standingFlagsBlock')), 'localStorage', 'nor read from storage');
   }
 
-  group('I5 · Q3: a Look at this goes quiet once its line is reviewed, a Must find once every must-find is found; Firearm and NFA never');
+  group('I5 · Q90: a Look at this goes quiet once its line is reviewed, a Must find once every must-find is found; Firearm and NFA never');
   {
     const N = (kind, text) => ({ kind, text });
     const rows = () => [
@@ -2212,7 +2212,7 @@ function groupK({ group, ok, eq, has, lacks }) {
     has(textOf(inner(after, 'inv-releases') || ''), '1 line still unsigned', 'the card: the lamp still waits');
     eq(recs(after), 1, 'and Record the signed request is still offered for it');
     const R1 = heads(after).filter((x) => x.f === 'releases')[0] || {};
-    has(R1.line, '1 signed approval not filed to Drive', 'the bar\'s line: the signed paper to file, which opens the bar (Q2)');
+    has(R1.line, '1 signed approval not filed to Drive', 'the bar\'s line: the signed paper to file, which opens the bar (Q89)');
     has(R1.line, '1 on the request still unsigned', 'and the lamp');
     eq(R1.open, true, 'open');
     has(badges.join(' | '), 'Approval recorded on 1 item', 'the badge counts what was recorded');
@@ -2599,7 +2599,7 @@ function groupM({ group, ok, eq, has, lacks }) {
     lacks(phone, '.jt-next{display:none', 'the NEXT step is never folded');
   }
 
-  group('M5 · Q4: on the desk the band\'s timeline is one line on a phone, naming what the rail paints amber or red; tapped, shown in place and kept');
+  group('M5 · Q91: on the desk the band\'s timeline is one line on a phone, naming what the rail paints amber or red; tapped, shown in place and kept');
   {
     const B = band(M_JOB());
     const adm = String(attempt(() => B.jobProgressBlockHtml(7, 'admin')).val || '');
@@ -2667,7 +2667,8 @@ function groupN({ group, ok, eq, has, lacks }) {
   const path = require('path');
   const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
   const DOCS = ['manual.html', 'MANUAL.md', 'concierge-guide.html', 'CONCIERGE_GUIDE.md'];
-  const asIn = (f, t) => (f.endsWith('.html') ? t.replace(/&/g, '&amp;') : t);
+  // The words as each copy writes them: the HTML copy escapes the ampersand and writes **X** as <strong>X</strong>.
+  const asIn = (f, t) => (f.endsWith('.html') ? t.replace(/&/g, '&amp;').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>') : t);
   const live = noComments(SRC);
 
   group('N1 · the four documents name the four bars by DESK_FOLDS\' titles; the manual\'s table lists them in the tab\'s order');
@@ -2704,7 +2705,9 @@ function groupN({ group, ok, eq, has, lacks }) {
      ['+ Add a beneficiary', "'+ Add a beneficiary'", '+ Add a beneficiary', BOTH],
      ['a bar not yet read', "{ text: 'loading…', tone: 'grey' }", 'loading…', BOTH],
      ['the agent\'s notes in the record', '>Agent One noted</div>', 'Agent One noted', MAN],
-     ['the bar the history opens', "deskFoldOpen(jobId, 'history')", 'which **Snapshot** opens', ['MANUAL.md']],
+     ['the bar the history opens', "deskFoldOpen(jobId, 'history')", 'which **Snapshot** opens', MAN],
+     ['the Values bar when every item waiting is linked', "' (' + unlinked + ' with no appraiser linked)' : ', each linked'", 'N need an appraisal, each linked', MAN],
+     ['the Closing bar\'s sold lines on no statement', "'sold line', 'sold lines') + ' on no statement yet', 'grey'", 'N sold lines on no statement yet', MAN],
     ].forEach(([what, code, words, docs]) => {
       if (code) has(live, code, what + ': the source says it');
       docs.forEach((f) => has(read(f), asIn(f, words), f + ' says ' + what));
@@ -2730,12 +2733,15 @@ function groupN({ group, ok, eq, has, lacks }) {
       'CONCIERGE_GUIDE.md': ['*Removed items* at the foot of the tab', 'the same line leads the Job Admin card at the desk', 'Press **Send request** beside it',
         'Under *Vendor pickups* each auction house', 'card under the review bar.', '**The close-out records, under the inventory (new 2026-10-03).** Below the manifest and above the snapshots',
         'on the Disposition Ledger card (Job Admin & Inv)', 'folded at the top of the Job Admin & Inv tab', 'The line leads the Job Admin card at the desk until you do',
-        'Get it back signed, then select those items and press **Record approval**'],
+        'Get it back signed, then select those items and press **Record approval**', 'on its own card under the inventory. |',
+        '| It has its own card under the inventory since 2026-10-03, on every job but Home Prep', 'bar, which is not drawn on these tiers)'],
       'concierge-guide.html': ['<em>Removed items</em> at the foot of the tab', 'the same line leads the Job Admin card at the desk', 'Press <strong>Send request</strong> beside it',
         'Under <em>Vendor pickups</em> each auction house', 'card under the review bar.', 'Below the manifest and above the snapshots',
         'on the Disposition Ledger card (Job Admin &amp; Inv)', 'folded at the top of the Job Admin &amp; Inv tab', 'The line leads the Job Admin card at the desk until you do',
-        'Get it back signed, then select those items and press <strong>Record approval</strong>'],
+        'Get it back signed, then select those items and press <strong>Record approval</strong>', 'on its own card under the inventory.</td>',
+        '<td>It has its own card under the inventory since 2026-10-03, on every job but Home Prep', 'bar, which is not drawn on these tiers)'],
       'photography-guide.html': ['<em>Removed items</em> at the foot gives them back', '<strong>Possible duplicates</strong> (at the top)'],
+      'incident-guide.html': ['turns the top of the Job Plan red, <em>CALL ANTHONY', 'turns the top of the Job Plan red, and the top of the Job Admin'],
     };
     Object.keys(stale).forEach((f) => { const t = read(f); stale[f].forEach((x) => lacks(t, x, f + ': ⚠ no longer says “' + x.slice(0, 60) + '”')); });
     // And where they are now, in the photography guide's plain words.
@@ -2744,6 +2750,73 @@ function groupN({ group, ok, eq, has, lacks }) {
     has(pg, '<strong>Possible duplicates</strong> (above the items)', '…and Possible duplicates above the items');
     // Reporting an Incident says where the call banner is: the desk carries its own copy since the Urgent strip.
     has(live, "incidentHeaderHtml(job, 'desk')", 'fixture: the desk draws the banner (deskAlertsHtml)');
-    has(read('incident-guide.html'), 'turns the top of the Job Plan red, and the top of the Job Admin &amp; Inv tab, <em>CALL ANTHONY', 'Reporting an Incident names both places the banner is');
+    has(read('incident-guide.html'), 'turns the top of the Job Plan, and of the Job Admin &amp; Inv tab, red: <em>CALL ANTHONY', 'Reporting an Incident names both places the banner is');
+  }
+
+  group('N4 · every note and row the build wrote says the same, whole, in the HTML and the markdown copy');
+  {
+    // Each copy reduced to its words: the HTML's tags dropped (a cell, a row, an item or a note break as a space) and its
+    // entities read; the markdown's emphasis, code ticks, quote marks, list dashes and table rules dropped; the quotes made
+    // straight and the spaces one. A note, a list item and a table row are one line in both copies, so the line that
+    // carries the anchor is the whole paragraph: deleting it from one copy, or rewording it in one, goes red here. (A
+    // needle somewhere in the file passed while the playbook's whole Urgent strip note was gone, its words said elsewhere.)
+    const ENT = { amp: '&', rsquo: "'", lsquo: "'", ldquo: '"', rdquo: '"', mdash: '—', ndash: '–', sect: '§', hellip: '…', middot: '·', nbsp: ' ', lt: '<', gt: '>', quot: '"', times: '×', rarr: '→', larr: '←' };
+    const tidy = (s) => s.replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, ' ').trim();
+    const plainHtml = (s) => tidy(s.replace(/<\/?(td|th|tr|li|p|div|br|h\d|ul|ol|table|thead|tbody|blockquote)\b[^>]*>/gi, ' ').replace(/<[^>]+>/g, '')
+      .replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(+n)).replace(/&#x([0-9a-f]+);/gi, (m, n) => String.fromCodePoint(parseInt(n, 16)))
+      .replace(/&([a-z]+);/gi, (m, n) => (n in ENT ? ENT[n] : m)));
+    const plainMd = (s) => tidy(s.replace(/^\s*\|?(\s*:?-{3,}:?\s*\|)+\s*$/gm, ' ').replace(/^\s*>\s?/gm, '').replace(/^\s*- /gm, ' ')
+      .replace(/(^|[\s(|*])_([^_`\n]+?)_(?=[\s).,;:*|?]|$)/gm, '$1$2').replace(/\*\*/g, '').replace(/\*/g, '').replace(/`/g, '').replace(/\|/g, ' '));
+    const linesWith = (f, x) => read(f).split('\n').map(f.endsWith('.html') ? plainHtml : plainMd).filter((l) => l.indexOf(x) >= 0);
+    const PAIRS = {
+      manual: ['MANUAL.md', 'manual.html', [
+        '⚠⚠ The order of the tab is the order of an evening at the desk (new 2026-10-22). Anthony, asked whether to build it under the feature freeze: "Build all of it now."',
+        'Releases & signed papers (· Beneficiaries & bequests on an estate) The Releases card:',
+        'Values & appraisals On an estate whose tier states values, the Valuation card',
+        'Closing the job The Close-out card, then the close-out papers',
+        'Removed items & snapshots Removed items, each with Restore',
+        'Each bar is one line until it is opened, and the line says whether it needs you. The bar carries its title and a status in grey, amber or red',
+        'Values & appraisals N need an appraisal (M with no appraiser linked), or N need an appraisal, each linked',
+        'Closing the job Red: N proceeds statements disagree with their lines.',
+        'Removed items & snapshots — N removed · N snapshots (N voided)',
+        '⚠ A bar opens by itself, and never shuts by itself. Releases & signed papers opens when a request is owed',
+        'A message that sends you to a card inside a bar names the bar, the Disposition Ledger card, under Closing the job on Job Admin & Inv',
+        'The Urgent strip, between the client line and the band (new 2026-10-22). What cannot wait for a fold to be opened, on every service, Home Prep included',
+        'On a phone (new 2026-10-22). Nothing on the tab runs off the right edge at 390 px with every bar open',
+        // The phone's timeline is Anthony's Q91 in the tracker (SPEC's own "Q4" is the tracker's Edit Client question).
+        'On Job Admin & Inv on a phone, the timeline under the band folds (new 2026-10-22; Anthony, Q91: "Fold the timeline on a phone"). At 820 px and narrower, on that tab alone',
+        'Record the signed request (new 2026-10-22). Once a request has gone from the app and a line it carried is still unsigned',
+        'Leaving the property, one row per taker (2026-10-22). The receipts and the sign-out were two lists',
+        'Signed schedules (new place 2026-10-22; an estate whose tier states values)',
+      ]],
+      playbook: ['CONCIERGE_GUIDE.md', 'concierge-guide.html', [
+        'The tab runs in the order of your evening (new 2026-10-22). Anthony: "Build all of it now." From the top:',
+        "The Urgent strip, above the brown band. It is empty, and takes no room, unless something can't wait",
+        "Read each bar's line: grey is fine, amber or red needs you. Releases & signed papers might read",
+        'On a phone. Nothing runs off the side of the screen.',
+        'What the Summary shows depends on what we were hired to produce (new 2026-09-22).',
+        "You can't find Releases, the Disposition Ledger, the appraisers, Removed items or the snapshots on Job Admin & Inv They are in a bar below the items (new 2026-10-22)",
+        'A bar on Job Admin & Inv opened by itself Its work is due',
+        'A bar you opened or shut is back the way it opens The page was reloaded.',
+        'Every bar on Job Admin & Inv says loading… The inventory has not loaded from the sheet yet on this device.',
+        'Send request is not on the work bar Correct since 2026-10-22',
+        "Agent One's Look at this note is gone from above the items You reviewed the item (2026-10-22).",
+        'The client line on Job Admin & Inv has no Target start The schedule strip beside it says it',
+        'The valuation basis and the §2032 tick are not in the summary They are at the top of the Values & appraisals bar since 2026-10-22',
+        'On a phone, the timeline under the brown band on Job Admin & Inv is one line Tap it to see the steps (2026-10-22).',
+        'You are on a Home Editing job and the estate documents are gone Correct as of 2026-09-21',
+        'The Disposition Ledger is not under More It has its own card since 2026-10-03, in the Closing the job bar below the items since 2026-10-22',
+      ]],
+    };
+    ok(plainHtml('<div class="note"><strong>A &amp; B&rsquo;s</strong> <em>c</em>.</div>') === "A & B's c." && plainMd("> **A & B's** *c*.") === "A & B's c.",
+      'fixture: the two reductions agree on a note written both ways');
+    Object.keys(PAIRS).forEach((k) => {
+      const [md, ht, anchors] = PAIRS[k];
+      anchors.forEach((x) => {
+        const a = linesWith(md, x), b = linesWith(ht, x);
+        eq([a.length, b.length], [1, 1], k + ': one paragraph in each copy carries “' + x.slice(0, 60) + '”');
+        ok(a.length === 1 && b.length === 1 && a[0] === b[0], k + ': ⚠ …and it reads the same, whole, in both (' + a.map((l) => l.length) + ' / ' + b.map((l) => l.length) + ' chars)');
+      });
+    });
   }
 }

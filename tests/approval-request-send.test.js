@@ -573,7 +573,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ═══════════════════════════════════════════════════════════════════════
-  // ⚠ RECORD THE SIGNED REQUEST (2026-10-22, the desk's re-architecture; Anthony, Q1: "Build all of it now"). The card knows
+  // ⚠ RECORD THE SIGNED REQUEST (2026-10-22, the desk's re-architecture; Anthony, Q88: "Build all of it now"). The card knows
   // which lines the request carried and which still wait (approvalRequestState().open), so the signed copy coming back is
   // recorded from the card: Record approval opened on exactly those lines (opt.stableIds), each ticked with an untick for a
   // line the signed copy struck out, and the person's selection on the bulk bar left exactly as it was. Driven through the

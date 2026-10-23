@@ -16,7 +16,7 @@
 //   Part 2 (G2, each bar's line and when it opens by itself): the four lines read off the page in their tones; each bar
 //   pressed open and shut; an open bar outliving a Reviewed press and a background sheet read; a cold desk saying
 //   "loading…" until its manifest is read, then its lines; Releases drawn and opening by itself the moment a line is set to
-//   Donate (Anthony's Q2: when a request is owed); Closing open on a closed job and opened behind a refused Close job; the
+//   Donate (Anthony's Q89: when a request is owed); Closing open on a closed job and opened behind a refused Close job; the
 //   dashboard's Open the desk landing on the Releases card with its bar opened, though the person had shut it.
 //
 //   Part 3 (G3, the Urgent strip): a held will and an injury seeded on the estate; the strip between the client line and
@@ -33,7 +33,7 @@
 //   never carried, the bar's line and the card naming the way round (the draft, I've sent it, then a fresh request), I've
 //   sent it pressed on the card, and the fresh request then offered there.
 //
-//   Part 5 (G5, the review aids and Anthony's Q3): on Today, the leftovers it hides named in words beside the one All; Show
+//   Part 5 (G5, the review aids and Anthony's Q90): on Today, the leftovers it hides named in words beside the one All; Show
 //   the item, pressed on Agent One's notice, landing on the nightstand Today hid, its record open at the top of the screen
 //   (its first line seen under the sticky header and tabs, at 1440 and 390), and on Agent Two's; a reviewed line's Look at this gone from above the rows and read in its record; the nightstand ticked
 //   Reviewed and its note following; both must-finds found, the brief shrinking to one green line with Show found and the
@@ -73,7 +73,7 @@
 //   through their own boxes, the second reachable (before, the 448 px bar over the rows took the press); one line, under
 //   60 px, its controls hidden; Actions pressed, the controls shown under the one line; Set condition chosen there, the bar
 //   still open after the render with the act's confirmation; Clear; a new tick, one line again. At 1440 the bar as it was:
-//   no Actions, every control on screen, its height unchanged. The band at 390 on the desk (Anthony's Q4): the NEXT step and
+//   no Actions, every control on screen, its height unchanged. The band at 390 on the desk (Anthony's Q91): the NEXT step and
 //   its buttons, the rail folded to its line (the band against 610 px before); the line pressed, the rail shown, kept across
 //   a full redraw and per job; folded again. At 1440 and at 860 the band as it was; the Job Plan's band never folded.
 //
@@ -265,7 +265,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       ok(L.summary > L.closing.y && L.summaryParentIsTab, who + ': the summary is last, outside every bar');
       ['releases', 'values', 'closing', 'history'].forEach((f) => ok(L[f].body && L[f].parentIsTab, who + ': the ' + f + ' bar\'s body is in the page, the bar a child of the tab'));
       // ⚠ RESTATED BY G2 (2026-10-22): each bar opens by its own rule now. Both desks have lines waiting on written approval
-      // that no request carried, so Releases opens (Q2); the living job's ⚑ painting has no appraiser linked, so its Values
+      // that no request carried, so Releases opens (Q89); the living job's ⚑ painting has no appraiser linked, so its Values
       // opens; the estate's flagged clock has one linked, so its Values stays shut; neither job is at its close.
       const want = id === EST ? { releases: true, values: false, closing: false } : { releases: true, values: true, closing: false };
       ['releases', 'values', 'closing'].forEach((f) => ok(L[f].shown && L[f].open === want[f], who + ': ' + f + ' is shown, ' + (want[f] ? 'open' : 'shut') + ' by its rule'));
@@ -424,7 +424,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       'nothing leaving yet: the Releases bar is not drawn');
     await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All');
     await p.selectOption('#inv-row-n1 select[onchange*="\'disposition\'"]', 'Donate'); await p.waitForTimeout(700);
-    ok(await isOpen('releases', NEW), '⚠⚠ the armchair set to Donate: the Releases bar is drawn, open by itself (Q2)');
+    ok(await isOpen('releases', NEW), '⚠⚠ the armchair set to Donate: the Releases bar is drawn, open by itself (Q89)');
     eq(await stat('releases', NEW), '1 item needs written approval: send a request', 'saying the request is owed');
 
     console.log('\n## Part 2 · Closing opens at the close, and when Close job is refused');
@@ -642,7 +642,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     has((await relText()).replace(/\s+/g, ' '), 'not on it: send a fresh request.', 'and the card says it is for the line the request never carried');
     ok(String(await stat('releases', LIV)).indexOf('1 item needs written approval: send a request') === 0, 'the bar\'s line now asks for the send it offers  [' + (await stat('releases', LIV)) + ']');
 
-    // ══ PART 5 (G5): the review aids and Anthony's Q3 ══════════════════════════════════════════════════
+    // ══ PART 5 (G5): the review aids and Anthony's Q90 ══════════════════════════════════════════════════
     console.log('\n## Part 5 · on Today: the leftovers named in words, and Show the item on a line Today hid');
     await p.setViewportSize({ width: 1440, height: 1000 });
     // Agent One's notes: a Look at this on the nightstand (shot yesterday, undecided, unreviewed), one on the stand mixer (reviewed,
@@ -676,7 +676,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     eq(await p.locator('#inv-earlier button, #inv-earlier a').count(), 0, 'the hint holds no control');
     has(T5.notes, 'a water ring on the top', 'the nightstand\'s Look at this is above the rows');
     has(T5.notes, 'a gold pocket watch in the top drawer', 'and the dresser\'s Must find');
-    ok(T5.notes.indexOf('the power cord is frayed') < 0, '⚠⚠ the stand mixer, reviewed: its Look at this is not above the rows (Q3)');
+    ok(T5.notes.indexOf('the power cord is frayed') < 0, '⚠⚠ the stand mixer, reviewed: its Look at this is not above the rows (Q90)');
     has(T5.notes, 'Agent One raised 2 things to look at', 'the heading counts what it lists');
     const showBtn = '#inv-agent-notices button[onclick="deskShowLine(' + EST + ',\'e20\')"]';
     const showLook = await p.evaluate((sel) => { const b = document.querySelector(sel); if (!b) return null; const cs = getComputedStyle(b);
@@ -1379,7 +1379,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       ok(S5 && Math.abs(S5.h - 76) <= 2, 'at 1440 the bar is the height it was (' + (S5 && S5.h) + ' px; 76 before)');
       await p.evaluate(() => _invClearPicks()); await p.waitForTimeout(300);
 
-      console.log('\n## Part 9 · the band at 390 on the desk: the NEXT step stays, the timeline one line (Q4)');
+      console.log('\n## Part 9 · the band at 390 on the desk: the NEXT step stays, the timeline one line (Q91)');
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);
       await toDesk(EST);
       const bandBox = (id) => p.evaluate((id) => { const s = document.getElementById('jband-slot-admin'); if (!s) return null;
