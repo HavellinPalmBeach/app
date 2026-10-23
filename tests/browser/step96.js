@@ -45,6 +45,9 @@
 //   still open; + Add an appraiser showing the form in place and Cancel shutting it; a living desk with an empty roster and an
 //   item waiting showing the form open by itself, an appraiser saved through it putting it back behind its button; the
 //   beneficiaries' form behind + Add a beneficiary, Edit opening it filled and Cancel clearing it; nothing off the edge at 390.
+//   On review: the appraisers' Cancel clearing what was typed; a value typed up to $9,000 on a row, with nobody on the
+//   roster, opening the Values bar and the appraisers' form together, by id; and on a cold device the form waiting for the
+//   sheet's read before it opens by itself.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -791,9 +794,16 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     ok(A6.form && A6.name && !A6.add, '⚠⚠ the form shown where it stands, its button aside');
     eq(A6.focus, 'appr-name', 'the name box ready to type in');
     eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark6), 'still here', 'in place: no redraw');
+    await p.fill('#appr-name', 'Half-typed Jones'); await p.uncheck('#appr-indep');
     await press('#appr-form-' + EST + ' button[onclick="invToggleApprForm(' + EST + ',false)"]', 'Cancel');
     const C6 = await appr6(EST);
     ok(!C6.form && C6.add, 'Cancel shuts it, the button back');
+    // The G6 review: Cancel takes what was typed with it, as the bequests' Cancel does, so the next + Add opens empty.
+    await press('#appr-add-' + EST, '+ Add an appraiser, again');
+    eq(await p.evaluate(() => [document.getElementById('appr-name').value, document.getElementById('appr-indep').checked]), ['', true],
+      '⚠ reopened after Cancel: the name box empty and Independent ticked, as the form is first drawn');
+    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark6), 'still here', 'still no redraw');
+    await press('#appr-form-' + EST + ' button[onclick="invToggleApprForm(' + EST + ',false)"]', 'Cancel, again');
 
     console.log('\n## Part 6 · an empty roster with an item waiting: the form open by itself; a save puts it back');
     await toDesk(LIV);
@@ -847,6 +857,64 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     ok(P6.form, 'the appraiser\'s form opens at 390 (its table scrolls inside its own box)');
     await press('#appr-form-' + EST + ' button[onclick="invToggleApprForm(' + EST + ',false)"]', 'Cancel, at 390');
     await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
+
+    // The G6 review (2026-10-23): on the desk's usual by-id path an item starts waiting with nobody on the roster. The bar
+    // opened by its rule; the form, asked only by a full render, stayed shut under the guardrail's "Add an appraiser to the
+    // roster above first". Two estates with nobody on the roster: a $600 portrait whose value is typed up to $9,000 on its
+    // row, and a $9,000 one opened on a cold device (the form waits for the sheet's read, as the bars do).
+    console.log('\n## Part 6 · a value typed on a row: the Values bar and the appraisers\' form open together, by id');
+    const APR = 9607, COLD = 9608;
+    await p.evaluate(([APR, COLD]) => {
+      const NOW = Date.now(), DAY0 = new Date(NOW); DAY0.setHours(0, 0, 0, 0);
+      const T = Math.min(NOW, Math.max(NOW - 3 * 3600000, DAY0.getTime() + 60000));   // today's, whatever the hour (Part 1's rule)
+      const base = (id, o) => Object.assign({ id, svc: 'probate', matterType: 'probate', addr: '8 Banyan Rd', city: 'Palm Beach', zip: '33480', executor: 'Clara Voss',
+        executorRole: 'Personal Representative', executorEmail: 'clara@example.com', executorAuth: 'received', deathDate: '2026-05-10', docTier: 'values',
+        status: 'active', won: true, approved: true, tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05',
+        agrApproved: true, agrSent: true, agrSigned: true, driveFolder: 'https://drive.google.com/drive/folders/R' + id,
+        driveSubfolders: { 'Estate Inventory': 'I' + id, 'Signed Records': 'S' + id }, docState: {}, payments: [] }, o);
+      jobs.unshift(base(APR, { hvlId: 'HVL-2610-P967', name: 'Henry Voss' }));
+      jobs.unshift(base(COLD, { hvlId: 'HVL-2610-C968', name: 'Irene Marsh' }));
+      [[APR, '600'], [COLD, '9000']].forEach(([id, fmv]) => {
+        estimateStore[id] = { approved: true, submitted: true, estimate: { jobId: id, svc: 'probate', havellinTotal: 20000, rooms: [{ idx: 0, name: 'Library', st: 'in', vol: 3, cplx: 3 }], vendors: [] } };
+        _photoRefs[id] = [{ stableId: 'p1', label: 'inventory', roomIdx: 0, seq: 1, itemNo: 1, status: 'uploaded', category: 'Art & Décor', objectName: 'Portrait in oils',
+          fmv, disposition: '', namedBy: 'desk', ts: T, updatedAt: T, filename: 'HVL_' + id + '_INV_p1.jpg', driveFileId: 'f' + id }];
+        savePhotoRefs(id);
+      });
+      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+    }, [APR, COLD]);
+    sheet[APR] = { items: await p.evaluate((id) => _photoRefs[id], APR) };
+    sheet[COLD] = { items: await p.evaluate((id) => _photoRefs[id], COLD) };
+    await toDesk(APR);
+    ok(await until(async () => (await stat('values', APR)) !== 'loading…'), 'fixture: the sheet read');
+    eq(await stat('values', APR), '✓ nothing needs an appraisal · no appraisers yet', 'fixture: a $600 portrait, nothing waiting, nobody on the roster');
+    const apF = (id) => p.evaluate((id) => {
+      const v = (s) => { const el = document.querySelector(s); return !!el && el.checkVisibility(); };
+      return { bar: v('#desk-body-values-' + id), form: v('#appr-form-' + id), add: v('#appr-add-' + id) };
+    }, id);
+    eq(await apF(APR), { bar: false, form: false, add: false }, 'fixture: the bar shut, so neither the form nor its button is on screen');
+    const fmvBox = '#inv-row-p1 input[onchange="_invEdit(' + APR + ',\'p1\',\'fmv\',this)"]';
+    if (!(await p.locator(fmvBox).isVisible())) await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All');
+    await p.evaluate(() => { document.getElementById('inv-workbar').__mark6b = 'still here'; });
+    ok(await p.locator(fmvBox).isVisible(), 'fixture: the portrait\'s value box on screen');
+    await p.fill(fmvBox, '9000'); await p.press(fmvBox, 'Tab'); await p.waitForTimeout(600);
+    eq(await p.evaluate((id) => (_photoRefs[id].find((r) => r.stableId === 'p1') || {}).fmv, APR), 9000, 'the value typed on the row is on the line');
+    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark6b), 'still here', 'fixture: by id, the tab not redrawn');
+    has(await p.evaluate(() => (document.getElementById('inv-guardrail') || {}).textContent || ''), 'Add an appraiser to the roster above first',
+      'the guardrail now sends the person to the roster');
+    eq(await apF(APR), { bar: true, form: true, add: false }, '⚠⚠ the bar opened by its rule, and the appraisers\' form under it with it, its button aside');
+    await p.fill('#appr-name', 'Lena Ortiz');
+    await press('button[onclick="addAppraiser(' + APR + ')"]', 'Save appraiser');
+    eq(await p.evaluate((id) => (jobs.find((j) => j.id === id).appraisers || []).map((a) => a.name), APR), ['Lena Ortiz'], 'the appraiser saved through the form that opened');
+
+    console.log('\n## Part 6 · a cold device: the form waits for the sheet\'s read, as the bars do');
+    let release6; hold = new Promise((res) => { release6 = res; });
+    await p.selectOption('#inv-job', String(COLD)); await p.waitForTimeout(800);
+    eq(await stat('values', COLD), 'loading…', 'fixture: before the manifest is read');
+    eq(await p.evaluate((id) => { const f = document.getElementById('appr-form-' + id); return f ? f.style.display : null; }, COLD), 'none',
+      '⚠ the cached $9,000 portrait waits, but the form stays shut until the sheet is read');
+    release6(); hold = null;
+    ok(await until(async () => (await stat('values', COLD)) !== 'loading…'), 'the read lands');
+    eq(await apF(COLD), { bar: true, form: true, add: false }, '⚠⚠ read, and the portrait still waits: the bar and the form open by themselves, without a press');
 
     eq(errs, [], 'zero page errors');
   } catch (e) {

@@ -111,6 +111,10 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
       //   and the summary is held to carrying no control at all and to naming the basis only where values are stated.
       basis: !!panel.querySelector('[id^="desk-body-values-"] select[onchange^="setValBasis"]'),
       avd: !!panel.querySelector('[id^="desk-body-values-"] input[onchange^="setEstateAVD"]'),
+      // …and counted across the WHOLE panel, as the absence checks searched it before the move (the G6 review, 2026-10-23):
+      //   one of each where values are stated, none anywhere at a capture tier, so a control drawn outside the bar is caught.
+      basisN: panel.querySelectorAll('select[onchange^="setValBasis"]').length,
+      avdN: panel.querySelectorAll('input[onchange^="setEstateAVD"]').length,
       sumCtl: !!panel.querySelector('#inv-summary select, #inv-summary input'),
       sumBasis: ((document.getElementById('inv-summary') || {}).textContent || '').indexOf('Valuation Basis') >= 0,
       fmvTotal: has('Total Estimated FMV'),
@@ -156,8 +160,8 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   ok(B.fmvTotal, '…and the screen keeps it too');
 
   [['contents', C], ['none', N]].forEach(([n, r]) => {
-    ok(!r.basis, '⚠ no Valuation Basis dropdown at ' + n + ' — an editable control for a valuation we are not producing');
-    ok(!r.avd, '⚠ no §2032 alternate-valuation tick at ' + n + ' — that is a tax election, not a checkbox');
+    ok(!r.basis && r.basisN === 0, '⚠ no Valuation Basis dropdown at ' + n + ', anywhere on the panel — an editable control for a valuation we are not producing  [' + r.basisN + ']');
+    ok(!r.avd && r.avdN === 0, '⚠ no §2032 alternate-valuation tick at ' + n + ', anywhere on the panel — that is a tax election, not a checkbox  [' + r.avdN + ']');
     ok(!r.fmvTotal, '⚠ no Total Estimated FMV at ' + n);
     ok(!r.awaiting, '⚠⚠ no Items Awaiting Valuation at ' + n + ' — the count that could never fall');
     ok(!r.fmvByCat && r.itemsByCat, '⚠ the category table COUNTS at ' + n + ' rather than pricing');
@@ -169,6 +173,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   [['values', V], ['appraisals', A]].forEach(([n, r]) => {
     ok(r.basis && r.avd && r.fmvTotal && r.awaiting && r.fmvByCat && !r.itemsByCat,
        'the whole valuation block is untouched at ' + n);
+    ok(r.basisN === 1 && r.avdN === 1, '⚠ one basis dropdown and one §2032 tick on the whole panel at ' + n + ', both in the bar  [' + r.basisN + ', ' + r.avdN + ']');
     ok(r.sumBasis, 'the summary names the basis at ' + n + ', as text');
   });
   [['values', V], ['appraisals', A], ['contents', C], ['none', N]].forEach(([n, r]) => {

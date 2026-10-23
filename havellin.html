@@ -1408,7 +1408,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 3:10am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 5:00am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -35483,17 +35483,39 @@ function addAppraiser(jobId) {
 // never shuts by itself under the person filling it. A person's open or Cancel wins either way, per job, for the session
 // (view state: never saved); a save puts it back to its default.
 var _apprFormOpen = {};   // jobId -> true (open) / false (shut by hand)
+// ⚠ THE OPEN DEFAULT FOLLOWS EVERY PARTIAL REPAINT TOO (2026-10-23, the G6 review): an item starts waiting on the desk's
+// usual by-id path (a value typed on its row, its category, its ⚑ tick: _invEdit → _invRefreshGuardrail), where the Values
+// bar opens by its own rule while this form, asked only by the full render, stayed shut under a guardrail saying "Add an
+// appraiser to the roster above first". So the bars' heads repaint asks this rule as well (_apprFormRepaint), and the bar
+// and its form open together. ⚠ And never off an unread manifest, as no bar does (_invManifestUnread): the read landing
+// runs the heads again, and the form opens then if an item still waits.
 function _apprFormIsOpen(job) {
   if (!job) return false;
   if (Object.prototype.hasOwnProperty.call(_apprFormOpen, job.id)) return !!_apprFormOpen[job.id];
-  if (!(job.appraisers || []).length && _invGuardrailItems(job.id).length > 0) { _apprFormOpen[job.id] = true; return true; }
+  if (!(job.appraisers || []).length && !_invManifestUnread(job.id) && _invGuardrailItems(job.id).length > 0) { _apprFormOpen[job.id] = true; return true; }
   return false;
 }
-function invToggleApprForm(jobId, open) {
-  _apprFormOpen[jobId] = !!open;
+// The form and its button, shown or hidden in place. Returns whether the form is in the page.
+function _apprFormPaint(jobId, open) {
   var f = document.getElementById('appr-form-' + jobId), b = document.getElementById('appr-add-' + jobId);
   if (f) f.style.display = open ? '' : 'none';
   if (b) b.style.display = open ? 'none' : '';
+  return !!f;
+}
+// The heads repaint's call: the form drawn as its rule now says, recording only what the rule itself records (an open
+// default). Nothing is drawn where the form is not in the page.
+function _apprFormRepaint(job) {
+  if (!job || typeof document === 'undefined' || !document || !document.getElementById('appr-form-' + job.id)) return false;
+  return _apprFormPaint(job.id, _apprFormIsOpen(job));
+}
+// + Add an appraiser and Cancel. ⚠ Cancel draws the form's boxes afresh, from the one markup the render draws them with
+// (_apprFormCellsHtml), so what was typed or picked from the directory is gone, as the bequests' Cancel clears theirs, and
+// the next + Add an appraiser opens on an empty form.
+function invToggleApprForm(jobId, open) {
+  _apprFormOpen[jobId] = !!open;
+  var f = document.getElementById('appr-form-' + jobId);
+  if (!open && f) f.innerHTML = _apprFormCellsHtml(jobId);
+  _apprFormPaint(jobId, open);
   var n = open ? document.getElementById('appr-name') : null;
   if (n && n.focus) n.focus();
   return !!open;
@@ -35654,9 +35676,21 @@ function _apprPickerHtml() {
   return '<select onchange="_apprPickVendor(this)" style="font-size:11px;width:100%;margin-bottom:3px;">' + opts + '</select>';
 }
 
+// The add form's boxes, empty, as one row's cells: drawn by the roster and again by Cancel, so both draw the same defaults
+// (the directory picker unpicked, the firm box shown, Independent ticked, no conflict note).
+function _apprFormCellsHtml(jobId) {
+  var credOpts = '<option value="">Credential…</option>' + INV_APPRAISER_CREDS.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
+  return '<td>' + _apprPickerHtml() + '<input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><div id="appr-firm-wrap"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></div></td>'
+    + '<td><select id="appr-cred" style="font-size:11px;width:100%;">' + credOpts + '</select></td>'
+    + '<td style="font-size:11px;"><div id="appr-conflict-note" style="font-size:10px;line-height:1.4;margin-bottom:3px;"></div><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
+    + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
+    + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
+    + '<td><input type="date" id="appr-duedate" title="Expected turnaround \u2014 when the report is due back" style="font-size:11px;width:100%;"></td>'
+    + '<td><button class="icon-btn" style="display:block;white-space:nowrap;" onclick="addAppraiser(' + jobId + ')">Save appraiser</button>'
+      + '<button class="icon-btn" style="display:block;margin-top:4px;" onclick="invToggleApprForm(' + jobId + ',false)">Cancel</button></td>';
+}
 function _renderAppraiserRoster(job) {
   var apprs = job.appraisers || [];
-  var credOpts = '<option value="">Credential…</option>' + INV_APPRAISER_CREDS.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
   var rows = apprs.length ? apprs.map(function(a){
     return '<tr>'
       + '<td style="font-size:11px;"><strong>' + esc(a.name) + '</strong>' + (a.firm ? ' <span style="color:var(--gray);">· ' + esc(a.firm) + '</span>' : '') + '</td>'
@@ -35681,15 +35715,7 @@ function _renderAppraiserRoster(job) {
     + '<div class="tbl-scroll">'
     + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th>Due back</th><th></th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
-    + '<tfoot><tr id="appr-form-' + job.id + '"' + (open ? '' : ' style="display:none;"') + '>'
-    + '<td>' + _apprPickerHtml() + '<input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><div id="appr-firm-wrap"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></div></td>'
-    + '<td><select id="appr-cred" style="font-size:11px;width:100%;">' + credOpts + '</select></td>'
-    + '<td style="font-size:11px;"><div id="appr-conflict-note" style="font-size:10px;line-height:1.4;margin-bottom:3px;"></div><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
-    + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
-    + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
-    + '<td><input type="date" id="appr-duedate" title="Expected turnaround \u2014 when the report is due back" style="font-size:11px;width:100%;"></td>'
-    + '<td><button class="icon-btn" style="display:block;white-space:nowrap;" onclick="addAppraiser(' + job.id + ')">Save appraiser</button>'
-      + '<button class="icon-btn" style="display:block;margin-top:4px;" onclick="invToggleApprForm(' + job.id + ',false)">Cancel</button></td>'
+    + '<tfoot><tr id="appr-form-' + job.id + '"' + (open ? '' : ' style="display:none;"') + '>' + _apprFormCellsHtml(job.id)
     + '</tr></tfoot></table></div>'
     + '<div class="inv-add-ctl"><button class="btn-s" id="appr-add-' + job.id + '"' + (open ? ' style="display:none;"' : '')
       + ' onclick="invToggleApprForm(' + job.id + ',true)">+ Add an appraiser</button></div></div>';
@@ -46347,6 +46373,11 @@ function deskFoldTitle(fold, body) {
   var named = f.parts.filter(function (p) { return s.indexOf('id="' + p[0]) >= 0; }).map(function (p) { return p[1]; });
   return f.title + (named.length ? f.join + named.join(', ') : '');
 }
+// Whether this device has yet to read the job's manifest from the sheet: an Apps Script URL set, and no read landed. One
+// answer for everything on the desk that would open by itself off the manifest (the bars' lines below, the appraisers' form).
+function _invManifestUnread(jobId) {
+  return !!(typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL) && !(typeof _invCloudSeen !== 'undefined' && _invCloudSeen[jobId]);
+}
 // ⚠⚠ THE ONE READER OF WHAT EACH BAR SAYS SHUT, AND OF WHEN IT OPENS BY ITSELF (2026-10-22). DOM-free, text only, built
 // from the cards' own functions and never from a second copy of one of their rules (desk-layout group D counts the
 // readers). `{show, openByDefault, bits: [{text, tone}]}`: `show`, whether the bar has anything in it at all; `openByDefault`,
@@ -46373,7 +46404,7 @@ function deskFoldState(jobId, job, fold, all, today) {
   var bits = st.bits, fid = invFiduciaryMode(job);
   var bit = function (text, tone) { bits.push({ text: text, tone: tone }); };
   var s = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
-  var unread = !!(typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL) && !(typeof _invCloudSeen !== 'undefined' && _invCloudSeen[jobId]);
+  var unread = _invManifestUnread(jobId);
   var loading = function () { st.bits = [{ text: 'loading…', tone: 'grey' }]; return st; };
   // A line is counted once in each paper's run, under the first bit that names it: the approval it waits on (ratification,
   // a request owed, a request out), then the paper its leaving owes (a receipt, a sign-out). A line can owe one of each:
@@ -46542,6 +46573,8 @@ function _deskFoldHeadsRepaint(jobId) {
     if (t !== null && ttl.innerHTML !== t) ttl.innerHTML = t;
     var had = Object.prototype.hasOwnProperty.call(_deskOpen, _deskKey(jobId, fold));
     if (_deskFoldIsOpen(jobId, fold, st) && !had) _deskFoldPaint(jobId, fold, true);
+    // The appraisers' form inside the Values bar opens by its own rule with the bar (2026-10-23): see _apprFormIsOpen.
+    if (fold === 'values' && typeof _apprFormRepaint === 'function') _apprFormRepaint(job);
     any = true;
   });
   return any;

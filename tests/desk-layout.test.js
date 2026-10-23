@@ -27,7 +27,9 @@
 //   J · values and the quieter forms (G6): the valuation basis and the §2032 date at the head of the Values & appraisals bar,
 //       the summary stating them as text; + Add an appraiser, + Add a beneficiary and + Add a specific bequest, each form
 //       shown in place, open by itself while its list is empty (the appraisers' while an item waits), a person's open or
-//       Cancel winning, Edit opening the form before filling it, a save putting it back to its default.
+//       Cancel winning, Edit opening the form before filling it, a save putting it back to its default; since the G6 review,
+//       the appraisers' form following the by-id repaints with the bar (never off an unread manifest), its Cancel clearing it,
+//       and the basis select showing the basis the job records.
 //
 // Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1871,6 +1873,8 @@ function groupJ({ group, ok, eq, has, lacks }) {
     saveJobs() {}, syncJobToSheets() {}, renderInventoryTab() {}, _scheduleInventorySync() {}, showSyncBadge() {}, savePhotoRefs() {} }, extra || {}));
   const tagOf = (h, id) => { const at = h.indexOf('id="' + id + '"'); return at < 0 ? '' : h.slice(h.lastIndexOf('<', at), h.indexOf('>', at) + 1); };
   const shown = (h, id) => { const t = tagOf(h, id); return !!t && !/display:\s*none/.test(t); };
+  // The catalogue as the app declares it, so a basis added there is checked here too.
+  const INV_BASES = new Function(decl('INV_VAL_BASES') + '; return INV_VAL_BASES;')();
 
   group('J1 · the Values bar opens on the valuation settings, then the roster, then the guardrail; an estate at a values tier only');
   {
@@ -1887,6 +1891,14 @@ function groupJ({ group, ok, eq, has, lacks }) {
     eq((h.match(/onchange="setValBasis\(/g) || []).length, 1, '⚠ one basis control on the whole tab: not in the summary as well');
     eq((h.match(/onchange="setEstateAVD\(/g) || []).length, 1, 'one §2032 tick');
     eq(textOf(inner(h, 'desk-ttl-values-7')), 'Values & appraisals', 'the bar keeps its catalogue title');
+    // ⚠ The one control that sets a basis with legal effect shows the basis the job records (the G6 review: no test held it).
+    eq((vals.match(/<option selected>[^<]*</g) || []), ['<option selected>Fair Market Value<'], 'nothing recorded: the default basis selected, and only it');
+    eq(INV_BASES.length, 4, 'fixture: the four bases');
+    INV_BASES.filter((b) => b !== 'Fair Market Value').forEach((b) => {
+      const R = desk({ deathDate: '2026-04-02', valBasis: b });
+      const rv = inner(R.render(), 'inv-val-settings') || '';
+      eq((rv.match(/<option selected>[^<]*</g) || []), ['<option selected>' + b + '<'], '⚠⚠ a job recording ' + b + ': the select shows it, and only it');
+    });
     // At the Contents list tier the agreement says counsel values: there is no valuation for the settings to govern.
     const C = desk({ docTier: 'contents' });
     lacks(C.render(), 'id="inv-val-settings"', '⚠ no settings at the Contents list tier');
@@ -1969,6 +1981,17 @@ function groupJ({ group, ok, eq, has, lacks }) {
     ok(shown(D.dom.html, 'appr-form-7'), 'opened by hand, it outlives the next full redraw');
     attempt(() => D.C.invToggleApprForm(7, false));
     ok(!shown(D.dom.html, 'appr-form-7') && shown(D.dom.html, 'appr-add-7'), 'Cancel shuts it in place');
+    // Cancel draws the boxes afresh, from the markup the render draws them with: whatever was typed or picked is gone, as the
+    // bequests' Cancel clears theirs (the G6 review: they reappeared filled on the next + Add an appraiser).
+    const cells = D.C._apprFormCellsHtml(7);
+    D.dom.getElementById('appr-form-7').innerHTML = cells.replace('id="appr-name" placeholder="Name"', 'id="appr-name" value="Half-typed Jones" placeholder="Name"');
+    has(D.dom.html, 'value="Half-typed Jones"', 'fixture: a name typed into the open form');
+    attempt(() => D.C.invToggleApprForm(7, true));
+    attempt(() => D.C.invToggleApprForm(7, false));
+    lacks(D.dom.html, 'Half-typed Jones', '⚠ Cancel takes what was typed with it');
+    eq(inner(D.dom.html, 'appr-form-7'), cells, '⚠ the form holds the render\'s own empty boxes again');
+    has(tagOf(D.dom.html, 'appr-indep'), ' checked', 'Independent ticked, as the render draws it');
+    eq(D.log.renders, n0, 'still never a render');
     const E = desk({}, {}, { real: ['_renderAppraiserRoster'], roots: ['invToggleApprForm'], refs: [ART()] });
     E.render();
     ok(shown(E.dom.html, 'appr-form-7'), 'fixture: open by itself (an empty roster, an item waiting)');
@@ -2051,12 +2074,66 @@ function groupJ({ group, ok, eq, has, lacks }) {
 
   group('J6 · one rule each, view state only, and the forms\' boxes cleared by one list');
   {
-    eq(callersOf('_apprFormIsOpen'), ['_renderAppraiserRoster'], 'whether the appraisers\' form is open: asked where it is drawn');
+    eq(callersOf('_apprFormIsOpen'), ['_apprFormRepaint', '_renderAppraiserRoster'], 'whether the appraisers\' form is open: asked where it is drawn, and by the heads\' repaint of it');
+    eq(callersOf('_apprFormRepaint'), ['_deskFoldHeadsRepaint'], '…which the heads repaint runs, so every by-id repaint of a card in a bar reaches it');
+    eq(callersOf('_apprFormCellsHtml'), ['_renderAppraiserRoster', 'invToggleApprForm'], 'the form\'s empty boxes: one markup, drawn by the render and by Cancel');
+    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', 'deskFoldState'], '⚠ an unread manifest: one answer, read by the bars and the form');
     eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
     eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');
-    ['_apprFormIsOpen', 'invToggleApprForm', '_bqFormIsOpen', 'invToggleBqForm', '_invBqFormPaint', '_renderValueSettings'].forEach((f) =>
+    ['_apprFormIsOpen', 'invToggleApprForm', '_apprFormPaint', '_apprFormRepaint', '_bqFormIsOpen', 'invToggleBqForm', '_invBqFormPaint', '_renderValueSettings'].forEach((f) =>
       lacks(codeOnly(fn(f)), 'localStorage', f + ': view state, never saved'));
-    lacks(codeOnly(fn('invToggleApprForm')) + codeOnly(fn('invToggleBqForm')), 'renderInventoryTab', '⚠ the presses flip in place, never a render');
+    lacks(codeOnly(fn('invToggleApprForm')) + codeOnly(fn('invToggleBqForm')) + codeOnly(fn('_apprFormRepaint')), 'renderInventoryTab', '⚠ the presses and the repaint flip in place, never a render');
     ok(/\.inv-val-set input\[type=checkbox\]\{width:auto;/.test(CSS), 'the §2032 tick is its own size, not the global input width');
+  }
+
+  // ⚠ THE G6 REVIEW (2026-10-23): the form's open-by-itself rule was asked only by the full render, so on the desk's usual
+  // by-id path (a value typed on a row: _invEdit → _invRefreshGuardrail → the heads repaint) the Values bar opened by its
+  // rule while the form stayed shut under a guardrail saying "Add an appraiser to the roster above first", until some
+  // unrelated redraw opened it. The heads repaint asks the form's rule now; held, as every by-id repaint is, to a full render.
+  group('J7 · a value typed on the row starts an item waiting: the bar and the appraisers\' form open together, as a full render draws them');
+  {
+    const form = (h) => ({ bar: shown(h, 'desk-body-values-7'), form: shown(h, 'appr-form-7'), add: shown(h, 'appr-add-7') });
+    const D = desk(PROBATE(), {}, { refs: [ART({ fmv: 500 })], real: ['_renderAppraiserRoster', '_renderAppraisalGuardrail'], roots: ['_invEdit', 'invToggleApprForm'],
+      stubs: { savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, alert() {}, _invRefreshSummary() {} } });
+    D.render();
+    ok(!D.log.renderErr, 'the desk renders (' + (D.log.renderErr || 'ok') + ')');
+    eq(form(D.dom.html), { bar: false, form: false, add: true }, 'fixture: a $500 painting, nothing waiting, nobody on the roster: the bar and the form shut');
+    eq(Object.keys(D.C._apprFormOpen), [], 'fixture: nothing written down for the form');
+    const r = attempt(() => D.C._invEdit(7, 'a', 'fmv', { value: '9000', type: 'text' }));
+    ok(r.ok, 'the value typed on the row runs (' + (r.err || 'ok') + ')');
+    eq(D.log.renders, 0, 'fixture: by id, no full render');
+    has(textOf(inner(D.dom.html, 'inv-guardrail')), 'Add an appraiser to the roster above first', 'fixture: the guardrail now sends the person to the roster');
+    const partial = form(D.dom.html);
+    eq(partial, { bar: true, form: true, add: false }, '⚠⚠ the bar opened by its rule, and the form under the guardrail\'s sentence opened with it');
+    eq(D.C._apprFormOpen[7], true, 'written down, as the render writes it, so it never shuts under the person filling it');
+    D.render();
+    eq(form(D.dom.html), partial, '⚠⚠ the by-id repaint draws what a full render draws');
+    // A person's shut still wins over the rule on the by-id path.
+    ok(attempt(() => D.C.invToggleApprForm(7, false)).ok, 'Cancel runs');
+    eq(form(D.dom.html).form, false, 'fixture: shut by hand');
+    attempt(() => D.C._invEdit(7, 'a', 'fmv', { value: '9500', type: 'text' }));
+    eq(form(D.dom.html).form, false, 'shut by hand: the next value typed leaves it shut');
+  }
+
+  group('J8 · never off an unread manifest: the form waits for the sheet\'s read, as the bars do, and opens when it lands');
+  {
+    const seen = {};
+    const D = desk(PROBATE(), {}, { refs: [ART()], real: ['_renderAppraiserRoster'], roots: ['_invRefreshFromCloud'], stubs: {
+      SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: seen,
+      refreshPhotoRefs: (id, cb) => { seen[id] = true; cb(false); } } });
+    D.render();
+    ok(!D.log.renderErr, 'the desk renders (' + (D.log.renderErr || 'ok') + ')');
+    ok(!shown(D.dom.html, 'appr-form-7') && shown(D.dom.html, 'appr-add-7'), '⚠ a cold device: the cached painting waits, but the form stays shut until the sheet is read');
+    eq(Object.keys(D.C._apprFormOpen), [], 'and nothing is written down off the cache');
+    const r = attempt(() => D.C._invRefreshFromCloud());
+    ok(r.ok, 'the read lands (' + (r.err || 'ok') + ')');
+    eq(D.log.renders, 0, 'fixture: it changed nothing, so the tab was not redrawn');
+    ok(shown(D.dom.html, 'appr-form-7') && !shown(D.dom.html, 'appr-add-7'), '⚠⚠ read, and the painting still waits: the form opens by its rule, by id');
+    eq(D.C._apprFormOpen[7], true, 'and the open is written down');
+    D.render();
+    ok(shown(D.dom.html, 'appr-form-7'), 'as a full render then draws it');
+    // With no Apps Script URL this device's copy is the record: open at once, as before.
+    const N = desk(PROBATE(), {}, { refs: [ART()], real: ['_renderAppraiserRoster'] });
+    ok(shown(N.render(), 'appr-form-7'), 'no URL set: the form open on the first render');
   }
 }
