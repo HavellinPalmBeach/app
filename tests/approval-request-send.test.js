@@ -16,6 +16,9 @@
 //   · The Releases card's first section and the dashboard's card: what went, to whom, what is still unsigned, the
 //     lines a fresh request is owed for, and the send. One Send request on the desk for every line awaiting approval, the
 //     card's, and one for a selection, the bulk bar's (2026-10-22: the work bar carried a second, offered while blocked).
+//   · G (2026-10-22): the signed copy coming back is recorded from the same card, Record the signed request, on exactly the
+//     lines the request carried that still wait, each ticked with its untick in the dialog; the bulk bar's selection is
+//     neither read nor cleared on that road, and the bulk bar's own Record approval works as it did.
 //
 // Driven through the real functions, each lifted as its own call graph derived from the source, with only the
 // boundaries stubbed by name — the network at `fetch`, Google's sign-in, the notices and the store saves — and the
@@ -52,6 +55,8 @@ function lift(roots, stop, stubs) {
   const c = closure(roots, (stop || []).concat(Object.keys(stubs || {})));
   return sandbox({ fns: c.fns, vars: c.vars, stubs: stubs || {} });
 }
+// A call that may throw on the unfixed code: a revert must fail its assertions, not end the group.
+function attempt(f) { try { return { ok: true, val: f() }; } catch (e) { return { ok: false, err: String(e && e.message || e) }; } }
 const inEastern = (body) => { const prev = process.env.TZ; process.env.TZ = 'America/New_York'; try { return body(); } finally { process.env.TZ = prev; } };
 
 // A synchronous, already-settled promise (the runner is synchronous).
@@ -188,7 +193,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const loc = { set href(v) { hrefs.push(v); }, get href() { return ''; } };
     const dom = domStub({});
     const c = lift(['sendApprovalRequest', 'invMarkRequestSent', '_renderInvReleasesCard', 'approvalRequestDashHtml', 'markDocSent',
-                    'draftOutstanding', 'draftIsStale', 'noDraftToConfirm', 'outstandingDrafts', 'staleDraftNote', 'printApprovalRequest', '_invAwaitingApproval'],
+                    'draftOutstanding', 'draftIsStale', 'noDraftToConfirm', 'outstandingDrafts', 'staleDraftNote', 'printApprovalRequest', '_invAwaitingApproval']
+                    .concat(o.roots || []),
       ['saveJobs', 'syncJobToSheets', '_docNotice', '_dashSendState', 'showSyncBadge', 'dashNotice', '_dashRedraw', 'gmailAuth',
        'savePhotoRefs', '_primeAgreementFor', '_primeEstimateFor', 'markAgreementSent', 'markEstimateSent', 'loadPhotoRefs', '_printDocument'], Object.assign({
         jobs: [o.job], estimateStore: { 7: EST() }, jobPlanStore: {}, _photoRefs: { 7: JSON.parse(JSON.stringify(o.rows)) }, changeOrders: [],
@@ -564,6 +570,201 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const desk = noComments(fn('openJobDeskFor'));
     has(desk, "showPanel(\\'inventory\\'", 'presses the desk’s nav button');
     has(desk, "getElementById('inv-job')", 'and checks the desk landed on the job');
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // ⚠ RECORD THE SIGNED REQUEST (2026-10-22, the desk's re-architecture; Anthony, Q1: "Build all of it now"). The card knows
+  // which lines the request carried and which still wait (approvalRequestState().open), so the signed copy coming back is
+  // recorded from the card: Record approval opened on exactly those lines (opt.stableIds), each ticked with an untick for a
+  // line the signed copy struck out, and the person's selection on the bulk bar left exactly as it was. Driven through the
+  // real card, the real press, the real dialog and the real save, the DOM a stub that a test ticks as a person would.
+  const RECORD = ['invRecordRequestApproval', 'invRecordApproval', 'invSaveApproval', 'invApprovalDialogNote', 'closeInvApproval'];
+  const recRig = (over) => {
+    const alerts = [], renders = [];
+    const R = rig(Object.assign({ roots: RECORD }, over || {}, { stubs: Object.assign({ renderInventoryTab: () => renders.push(1), _scheduleInventorySync() {},
+      alert: (m) => alerts.push(String(m)), _invPick: { a: 1 } }, (over || {}).stubs || {}) }));
+    R.alerts = alerts; R.renders = renders;
+    R.el = (id) => R.dom.getElementById(id);
+    R.row = (id) => R.c._photoRefs[7].find((x) => x.stableId === id) || {};
+    R.recBtns = () => (R.card().match(/onclick="invRecordRequestApproval\(7\)"/g) || []).length;
+    // What a browser holds once the dialog is drawn: each line's box ticked as the markup draws it, the date as drawn.
+    R.asDrawn = () => {
+      const body = R.el('ia-body').innerHTML;
+      for (const m of body.matchAll(/id="(ia-line-\d+)"( checked)?/g)) R.el(m[1]).checked = !!m[2];
+      const d = /id="ia-date" value="([^"]*)"/.exec(body);
+      R.el('ia-date').value = d ? d[1] : '';
+      return body;
+    };
+    return R;
+  };
+  const tickAll = (R, n) => { for (let i = 0; i < n; i++) R.el('ia-fid-' + i).checked = true; };
+
+  G('G · Record the signed request: offered once the request has gone and while a line it carried is unsigned, the lead press when nothing fresh waits', () => {
+    const R = recRig();
+    eq(R.recBtns(), 0, 'nothing sent yet: no Record the signed request (nothing has gone to come back)');
+    R.c.sendApprovalRequest(7);
+    has(R.card(), 'onclick="invMarkRequestSent(7)"', 'fixture: the draft waits on its tap');
+    eq(R.recBtns(), 0, '⚠ a draft not yet confirmed as sent: not offered (the request has not gone)');
+    eq(R.c.invRecordRequestApproval(7), false, '⚠ and the press asks the same question as the card: refused while the draft waits');
+    eq(R.c._invRecordCtx, null, 'no dialog opened');
+    R.c.invMarkRequestSent(7);
+    const card = R.card();
+    has(text(card), 'Sent Oct 17 by Ashley Jerome to rex@hale.example and dana@hale.example, 2 lines · 2 lines still unsigned', 'fixture: sent, two lines still unsigned');
+    eq(R.recBtns(), 1, '⚠⚠ sent, two lines still unsigned: Record the signed request, once');
+    has(card, '<button class="btn-bronze" onclick="invRecordRequestApproval(7)">Record the signed request</button>', 'labelled so, and the lead press: the paper back is the next thing');
+    has(card, '<button class="btn-s" onclick="sendApprovalRequest(7)">&#128231; Send request</button>', 'the send stays, second (a nudge for the same lines)');
+    ok(card.indexOf('invRecordRequestApproval(7)') < card.indexOf('sendApprovalRequest(7)'), 'the record first');
+    eq((card.match(/class="btn-bronze"/g) || []).length, 1, 'one lead press on the card');
+    // A line decided since, never on the request: the send leads again, the record beside it.
+    R.c._photoRefs[7].push(ROW('e', { itemNo: 5, objectName: 'Hall mirror', fmv: 300, disposition: 'Donate', channel: 'Habitat ReStore' }));
+    const fresh = R.card();
+    has(fresh, '<button class="btn-bronze" onclick="sendApprovalRequest(7)">&#128231; Send request</button>', 'a fresh line waits: the send leads');
+    has(fresh, '<button class="btn-s" onclick="invRecordRequestApproval(7)">Record the signed request</button>', 'and the record is offered beside it');
+    ok(fresh.indexOf('sendApprovalRequest(7)') < fresh.indexOf('invRecordRequestApproval(7)'), 'the send first');
+    R.c._photoRefs[7].pop();
+    // Recording a signature needs no email, folder or URL: blocked for a send, still offered.
+    R.job().driveFolder = '';
+    const blk = R.card();
+    has(text(blk), 'The approval request cannot be sent yet', 'fixture: the send is blocked');
+    lacks(blk, 'sendApprovalRequest(', 'no send that would refuse');
+    eq(R.recBtns(), 1, '⚠ blocked for a send: Record the signed request still offered');
+    R.job().driveFolder = 'https://drive.google.com/drive/folders/ROOT7';
+    // Every line on it approved: nothing to record, nothing offered.
+    R.c._photoRefs[7].forEach((x) => { if (x.stableId === 'a' || x.stableId === 'b') { x.authBy = ALL_SIGNED; x.approvalDate = '2026-10-17'; } });
+    has(text(R.card()), 'every line on it approved', 'fixture: every line on it approved');
+    eq(R.recBtns(), 0, 'every line on it approved: not offered');
+  });
+
+  G('G · the press opens Record approval on the request\'s lines, each ticked with its untick, and the selection on the bulk bar is not touched', () => {
+    const R = recRig();
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    eq(R.c._invPick, { a: 1 }, 'fixture: the person has the portrait ticked on the bulk bar');
+    const r = attempt(() => R.c.invRecordRequestApproval(7));
+    ok(r.ok && r.val === true, 'the press opens the dialog (' + (r.err || r.val) + ')');
+    eq(R.el('inv-approval-modal').style.display, 'flex', 'the dialog is shown');
+    eq(R.c._invRecordCtx && R.c._invRecordCtx.stableIds, ['a', 'b'], '⚠⚠ on every line the request carried that still waits, never the bulk bar\'s selection of one');
+    eq(R.c._invPick, { a: 1 }, '⚠⚠ the selection is untouched by the press');
+    eq(text(R.el('ia-sub').innerHTML), 'The request sent Oct 17: 2 lines still unsigned.', 'the dialog says which request and how many lines');
+    const body = R.asDrawn();
+    has(body, 'id="ia-line-0" checked', 'the first line drawn ticked');
+    has(body, 'id="ia-line-1" checked', 'and the second');
+    eq((body.match(/id="ia-line-\d+"/g) || []).length, 2, 'one box per line, no more');
+    eq((body.match(/onchange="invApprovalDialogNote\(\)"/g) || []).length, 5, 'each line\'s untick and each fiduciary\'s tick repaints the note (2 lines, 3 fiduciaries)');
+    has(text(body), 'Untick any line the signed copy struck out.', '⚠⚠ the sentence that says what the untick is for');
+    eq((text(body).match(/Untick any line/g) || []).length, 1, 'said once');
+    has(text(body), '#1 Sargent portrait · Auction · Christie’s', 'each line named as the request names it, with where it goes');
+    has(text(body), '#2 Dining chairs (8) · Donate · Habitat ReStore', 'the second');
+    ok(body.indexOf('ia-line-1') < body.indexOf('ia-fid-0'), 'the lines first, then who signed');
+    has(body, 'id="ia-fid-2"', 'every fiduciary still has their tick');
+  });
+
+  G('G · a line the signed copy struck out is unticked and not recorded; the selection survives the save', () => {
+    const R = recRig();
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    R.c.invRecordRequestApproval(7);
+    R.asDrawn();
+    tickAll(R, 3);
+    R.c.invApprovalDialogNote();
+    has(text(R.el('ia-note').innerHTML), 'the lines are approved.', 'fixture: both lines ticked, the note speaks of both');
+    R.el('ia-line-1').checked = false;   // the dining chairs struck through on the signed copy
+    R.c.invApprovalDialogNote();
+    const note = text(R.el('ia-note').innerHTML);
+    has(note, 'the line is approved.', '⚠ the note follows the untick: one line now');
+    lacks(note, 'the lines are approved', 'and no longer both');
+    const s = attempt(() => R.c.invSaveApproval());
+    ok(s.ok && s.val === true, 'recorded (' + (s.err || s.val) + ')');
+    eq(R.row('a').authBy, ALL_SIGNED, 'the portrait carries the three signatures');
+    eq(R.row('a').approvalDate, '2026-10-17', 'on the date given');
+    eq(R.row('b').authBy, undefined, '⚠⚠ the struck-out chairs carry none: the app records no approval the paper does not');
+    eq(R.row('b').approvalDate, undefined, 'and no date');
+    has(R.badges.join(' | '), 'Approval recorded on 1 item ✓', 'the badge counts what was recorded');
+    eq(R.c._invPick, { a: 1 }, '⚠⚠ the bulk bar\'s selection is as the person left it');
+    const acts = R.el('ia-actions').innerHTML;
+    has(acts, 'File the signed request', 'the signed copy is offered for filing at once');
+    const spec = [...acts.matchAll(/fileSignedCopyFromInput\(this,(\d+)\)/g)].map((m) => R.c._signedCopySpecs[Number(m[1])])[0] || {};
+    eq([spec.kind, (spec.meta || {}).stableIds], ['approval', ['a']], 'filed against the line it covers, never the struck-out one');
+    eq(R.renders.length >= 1, true, 'the desk is redrawn');
+    has(text(R.card()), '1 line still unsigned', 'the card: the chairs still wait');
+    eq(R.recBtns(), 1, 'and Record the signed request is still offered for them');
+    // Every line unticked: refused, nothing written.
+    R.c.invRecordRequestApproval(7);
+    eq(R.c._invRecordCtx.stableIds, ['b'], 'opened again: the chairs alone');
+    R.asDrawn(); tickAll(R, 3);
+    R.el('ia-line-0').checked = false;
+    eq(R.c.invSaveApproval(), false, '⚠ no line ticked: refused');
+    has(R.el('ia-fb').innerHTML, 'Not recorded: no line is ticked. Tick each line the signed copy carries.', 'by name');
+    eq(R.row('b').authBy, undefined, 'and nothing was written');
+    eq(R.c._invPick, { a: 1 }, 'the selection still untouched');
+    R.c.closeInvApproval();
+  });
+
+  G('G · the bulk bar\'s Record approval is unchanged: its selection, no line boxes, the selection cleared after', () => {
+    const R = recRig({ stubs: { _invPick: { b: 1 } } });
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    ok(R.c.invRecordApproval(7), 'the bulk bar\'s press opens the dialog');
+    eq(R.c._invRecordCtx.stableIds, ['b'], 'on the selection');
+    eq(R.c._invRecordCtx.fromRequest, false, 'not from the request');
+    eq(text(R.el('ia-sub').innerHTML), '1 item: #2 Dining chairs (8)', 'its line as before');
+    const body = R.asDrawn();
+    lacks(body, 'ia-line-', 'no line boxes: the selection is the list');
+    lacks(body, 'Untick any line', 'and no untick sentence');
+    tickAll(R, 3);
+    ok(R.c.invSaveApproval(), 'recorded');
+    eq(R.row('b').authBy, ALL_SIGNED, 'on the selected line');
+    eq(R.c._invPick, {}, 'the selection cleared after, as it always was');
+    eq(noComments(fn('_renderInvBulk')).split('onclick="invRecordApproval(\' + jid + \')"').length - 1, 1, 'the bulk bar\'s button calls it with no list, once');
+    // Nothing selected: refused as before.
+    R.c._invPick = {};
+    eq(R.c.invRecordApproval(7), false, 'nothing selected: refused');
+    eq(R.alerts[R.alerts.length - 1], 'Select the items the signed approval covers.', 'in its own words');
+  });
+
+  G('G · nothing left on the request to record: the press refuses by name and opens nothing; a list of gone lines likewise', () => {
+    const R = recRig();
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    // Another device recorded both while this card was on screen.
+    R.c._photoRefs[7].forEach((x) => { if (x.stableId === 'a' || x.stableId === 'b') { x.authBy = ALL_SIGNED; x.approvalDate = '2026-10-17'; } });
+    R.el('inv-approval-modal').style.display = 'none';
+    eq(R.c.invRecordRequestApproval(7), false, 'refused');
+    has(R.last().m, 'Nothing on the request is waiting for a signature any more: there is nothing to record.', 'by name');
+    eq(R.el('inv-approval-modal').style.display, 'none', 'no dialog');
+    eq(R.c._invRecordCtx, null, 'and no dialog state');
+    eq(R.c.invRecordApproval(7, { stableIds: ['zz'] }), false, 'a list of lines no longer on the inventory: refused');
+    has(R.alerts[R.alerts.length - 1], 'Every line on the request has been approved or removed since it was sent', 'and says so');
+    eq(R.c._invPick, { a: 1 }, 'the selection untouched');
+    // Never sent: nothing to come back.
+    const N = recRig();
+    eq(N.c.invRecordRequestApproval(7), false, 'nothing sent: refused');
+    eq(N.c._invRecordCtx, null, 'nothing opened');
+  });
+
+  G('G · on living work: the same press, the client\'s name asked, the request\'s lines with their unticks', () => {
+    const R = recRig({ job: LIVING() });
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    eq(R.recBtns(), 1, 'offered on living work');
+    ok(R.c.invRecordRequestApproval(7), 'pressed');
+    const body = R.asDrawn();
+    has(body, 'id="ia-signer"', 'nobody recorded to tick: the signer asked for, as before');
+    has(body, 'id="ia-line-0" checked', 'the request\'s lines, ticked');
+    has(text(body), 'Untick any line the signed copy struck out.', 'with the sentence');
+    R.el('ia-signer').value = 'Margaret Ellis';
+    R.el('ia-line-0').checked = false;
+    ok(R.c.invSaveApproval(), 'recorded');
+    eq(R.row('a').authBy, undefined, 'the unticked portrait: nothing');
+    eq(R.row('b').authBy, 'Margaret Ellis', 'the chairs: the client');
+    eq(R.c._invPick, { a: 1 }, 'the selection untouched');
+  });
+
+  G('G · the press reads no selection and clears none; the one sentence is a constant', () => {
+    const press = noComments(fn('invRecordRequestApproval'));
+    ok(press.length > 200, 'fixture: the press\'s source was read (' + press.length + ' characters)');
+    lacks(press, '_invPick', '⚠ the press neither reads nor writes the selection');
+    has(press, 'approvalRequestState(job, _jobInvRefs(jobId))', 'it asks the card\'s own state at the press');
+    has(press, 'invRecordApproval(jobId, { stableIds:', 'and hands the one dialog its list');
+    const save = noComments(fn('invSaveApproval'));
+    has(save, 'if (!c.fromRequest) _invPick = {};', 'the save clears the selection only when the selection was the dialog\'s');
+    const K = sandbox({ vars: ['INV_REQ_UNTICK_TXT'] });
+    eq(K.INV_REQ_UNTICK_TXT, 'Untick any line the signed copy struck out.', 'the sentence');
   });
 
   // ═══════════════════════════════════════════════════════════════════════

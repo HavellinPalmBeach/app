@@ -30,6 +30,9 @@
 //       Cancel winning, Edit opening the form before filling it, a save putting it back to its default; since the G6 review,
 //       the appraisers' form following the by-id repaints with the bar (never off an unread manifest), its Cancel clearing it,
 //       and the basis select showing the basis the job records.
+//   K · Record the signed request (G7): on the Releases card inside its bar, once on the desk; the press opens Record
+//       approval on the lines the request carried, recorded over the real save and drawn again by the real render, with the
+//       person's selection on the bulk bar still standing; the bulk bar's Record approval as it was.
 //
 // Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -233,6 +236,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupH({ group, ok, eq, has, lacks });
     groupI({ group, ok, eq, has, lacks });
     groupJ({ group, ok, eq, has, lacks });
+    groupK({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -2135,5 +2139,64 @@ function groupJ({ group, ok, eq, has, lacks }) {
     // With no Apps Script URL this device's copy is the record: open at once, as before.
     const N = desk(PROBATE(), {}, { refs: [ART()], real: ['_renderAppraiserRoster'] });
     ok(shown(N.render(), 'appr-form-7'), 'no URL set: the form open on the first render');
+  }
+}
+
+// ═══ K · RECORD THE SIGNED REQUEST (G7) ═════════════════════════════════════
+function groupK({ group, ok, eq, has, lacks }) {
+  group('K1 · Record the signed request: on the Releases card inside its bar, once on the desk; pressed, saved and drawn again over the real desk, the selection standing');
+  {
+    const rows = () => [LINE('a', { itemNo: 1, objectName: 'Harbor painting', disposition: 'Auction', channel: 'Kodner Galleries' }),
+      LINE('b', { itemNo: 2, objectName: 'Table lamp', disposition: 'Donate', channel: 'Goodwill' }),
+      LINE('c', { itemNo: 3, objectName: 'Clock', disposition: 'Keep' })];
+    const sent = () => ({ approvalRequest: { draftedAt: '2026-10-19T15:00:00.000Z', sentAt: '2026-10-19T16:00:00.000Z', sentBy: 'Ashley Jerome', provider: 'gmail',
+      req: { to: ['ruth@adler.example'], cc: [], noEmail: [], viaCounsel: false, stableIds: ['a', 'b'], asked: 2, ratify: 0 } } });
+    const r = rows();
+    const badges = [];
+    const D = desk(PROBATE({ docState: sent() }), {}, { refs: r, real: ['_renderInvWorkbar', '_renderInvReleasesCard', '_renderInvBulk'],
+      roots: ['invRecordRequestApproval', 'invSaveApproval', 'closeInvApproval'], stubs: {
+        SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true }, _invAssignItemNos: () => r, Date: TickDate(T0),
+        savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge: (m) => badges.push(String(m)), _docNotice() {}, alert() {} } });
+    // The dialog lives outside the tab: its parts are plain elements, ticked as a person would.
+    const dlg = {};
+    const tabEl = D.dom.getElementById;
+    D.dom.getElementById = (id) => (/^ia-|^inv-approval-modal$/.test(id)
+      ? (dlg[id] || (dlg[id] = { id, innerHTML: '', style: {}, checked: false, value: '' })) : tabEl(id));
+    D.C._invPick.b = 1;   // the person has the lamp ticked on the bulk bar
+    const html = D.render();
+    ok(!D.log.renderErr, 'the desk draws with the real work bar, Releases card and bulk bar (' + (D.log.renderErr || 'ok') + ')');
+    const recs = (h) => (h.match(/onclick="invRecordRequestApproval\(7\)"/g) || []).length;
+    eq(recs(html), 1, '⚠⚠ sent, two lines still unsigned: Record the signed request once on the whole desk');
+    eq(recs(inner(html, 'desk-body-releases-7') || ''), 1, 'and it is inside the Releases bar, on the card');
+    eq(recs(inner(html, 'inv-workbar') || ''), 0, 'never on the work bar');
+    eq((html.match(/onclick="invRecordApproval\(7\)"/g) || []).length, 1, 'the bulk bar\'s Record approval beside the selection, as it was');
+    const R0 = heads(html).filter((x) => x.f === 'releases')[0] || {};
+    has(R0.line, '2 on the request still unsigned', 'the bar\'s line says what the press is for');
+    // Pressed: the dialog on the request's lines, never the selection of one.
+    const p = attempt(() => D.C.invRecordRequestApproval(7));
+    ok(p.ok && p.val === true, 'the press opens the dialog (' + (p.err || p.val) + ')');
+    eq(D.C._invRecordCtx && D.C._invRecordCtx.stableIds, ['a', 'b'], '⚠⚠ the request\'s two lines, not the lamp the bulk bar holds alone');
+    has(dlg['ia-body'].innerHTML, 'Untick any line the signed copy struck out.', 'the sentence');
+    for (const m of dlg['ia-body'].innerHTML.matchAll(/id="(ia-line-\d+)"( checked)?/g)) D.dom.getElementById(m[1]).checked = !!m[2];
+    const el = (id) => D.dom.getElementById(id);
+    eq([el('ia-line-0').checked, el('ia-line-1').checked], [true, true], 'both drawn ticked');
+    el('ia-line-1').checked = false;   // the lamp struck out on the signed copy
+    el('ia-fid-0').checked = true;
+    el('ia-date').value = (/id="ia-date" value="([^"]*)"/.exec(dlg['ia-body'].innerHTML) || [])[1] || '';
+    D.log.renders = 0;
+    const s = attempt(() => D.C.invSaveApproval());
+    ok(s.ok && s.val === true, 'recorded (' + (s.err || s.val) + ')');
+    eq([r[0].authBy, r[1].authBy], ['Ruth Adler', undefined], '⚠⚠ the painting approved, the struck-out lamp not');
+    eq(D.log.renders, 1, 'the desk drawn again, once, by the real render');
+    eq(D.C._invPick, { b: 1 }, '⚠⚠ the lamp still ticked on the bulk bar');
+    const after = D.dom.html;
+    eq((after.match(/onclick="invRecordApproval\(7\)"/g) || []).length, 1, 'and the bulk bar is still drawn for it');
+    has(textOf(inner(after, 'inv-releases') || ''), '1 line still unsigned', 'the card: the lamp still waits');
+    eq(recs(after), 1, 'and Record the signed request is still offered for it');
+    const R1 = heads(after).filter((x) => x.f === 'releases')[0] || {};
+    has(R1.line, '1 signed approval not filed to Drive', 'the bar\'s line: the signed paper to file, which opens the bar (Q2)');
+    has(R1.line, '1 on the request still unsigned', 'and the lamp');
+    eq(R1.open, true, 'open');
+    has(badges.join(' | '), 'Approval recorded on 1 item', 'the badge counts what was recorded');
   }
 }

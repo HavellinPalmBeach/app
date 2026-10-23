@@ -1408,7 +1408,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 5:00am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 5:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -32454,6 +32454,15 @@ function approvalRequestCardHtml(job, all) {
     if (stale) lines.push(esc(stale));
     if (S.fresh.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(n(S.fresh.length)
       + (st && st.sentAt ? ' now await approval and were not on it: send a fresh request.' : ' await written approval; nothing has been sent from the app.')) + '</span>');
+    // ⚠ RECORD THE SIGNED REQUEST (2026-10-22; Anthony, Q1: "Build all of it now"). The card knows which lines the request
+    // carried and which of them still wait (S.open), so the signed copy coming back is recorded from here: the press opens
+    // Record approval on exactly those lines (invRecordRequestApproval → invRecordApproval's opt.stableIds), never through the
+    // bulk bar's selection, which stays as the person left it. Offered once the request has gone, whatever the blocker says
+    // (recording a signature needs no email, folder or URL); the lead press while no fresh line waits, since the paper back
+    // is then the next thing, and second to the send while one does. `st.sentAt` is belt-and-braces here (outside a waiting
+    // draft, a line still open on the request means the request went); the press asks it for real, since a press can arrive
+    // while a draft waits.
+    var recBtn = (st && st.sentAt && S.open.length) ? btn('invRecordRequestApproval(' + jid + ')', 'Record the signed request', !S.fresh.length) : '';
     if (waiting) {
       var blk = approvalRequestBlocker(job);
       if (blk) lines.push('<span style="color:#A32D2D;">' + esc(blk) + '</span>');
@@ -32461,9 +32470,10 @@ function approvalRequestCardHtml(job, all) {
         var rc = approvalRequestRecipients(job);
         lines.push(esc('Goes as a PDF to ' + _andJoin(rc.to) + (rc.cc.length ? ', copied to ' + _andJoin(rc.cc) : '')
           + (rc.noEmail.length ? '; ' + _andJoin(rc.noEmail) + (rc.noEmail.length > 1 ? ' have' : ' has') + ' no email and sign' + (rc.noEmail.length > 1 ? '' : 's') + ' the printed copy' : '') + '.'));
-        btns = btn('sendApprovalRequest(' + jid + ')', '&#128231; Send request', true);
+        btns = btn('sendApprovalRequest(' + jid + ')', '&#128231; Send request', !recBtn || S.fresh.length > 0);
       }
     }
+    btns = (recBtn && !S.fresh.length) ? recBtn + btns : btns + recBtn;
   }
   return '<div class="inv-rel-row inv-req-row" id="inv-req-row" style="padding:7px 0;border-bottom:0.5px solid var(--border);font-size:11.5px;line-height:1.5;">'
     + lines.map(function (l) { return '<div>' + l + '</div>'; }).join('')
@@ -32541,21 +32551,48 @@ function _invRefreshReleases(jobId) {
 // (invApprovalWithSigners: never dropping a name, a name recorded twice keeping its first date), and the line stays open
 // (invApprovalComplete) until every fiduciary has signed. The dialog says so before anything is saved, as the ticks
 // change (invApprovalDialogNote), and the save's confirmation says it again: one sentence, invApprovalOpenText.
+// ⚠ OR THE LINES THE SENT REQUEST CARRIED (2026-10-22): `opt.stableIds`, from the Releases card's Record the signed request
+// (invRecordRequestApproval). The dialog then lists those lines, each ticked, with an untick for any the signed copy struck
+// out (a line crossed through by the representative is not approved, and recording the request whole would say it was),
+// and the save records only the lines still ticked. The bulk bar's selection (_invPick) is neither read nor cleared on that
+// road: what the person had ticked on the desk is still ticked after. Without `opt.stableIds` the selection rule is as it was.
 var _invRecordCtx = null;   // never saved: the open dialog's selection and the names it offered
-function invRecordApproval(jobId) {
-  var picked = _invPicked(jobId);
-  if (!picked.length) { alert('Select the items the signed approval covers.'); return false; }
+var INV_REQ_UNTICK_TXT = 'Untick any line the signed copy struck out.';
+function invRecordApproval(jobId, opt) {
+  var fromReq = !!(opt && Array.isArray(opt.stableIds));
+  var want = fromReq ? opt.stableIds.map(String) : null;
+  var picked = fromReq
+    ? _jobInvRefs(jobId).filter(function(r){ return r && !r.deletedAt && want.indexOf(String(r.stableId)) >= 0; })
+    : _invPicked(jobId);
+  if (!picked.length) {
+    alert(fromReq ? 'Every line on the request has been approved or removed since it was sent: there is nothing to record.'
+      : 'Select the items the signed approval covers.');
+    return false;
+  }
   var job = _invJob(jobId);
   if (!job) return false;
   var fids = jobFiduciaries(job);
   _invRecordCtx = { jobId: jobId, stableIds: picked.map(function(r){ return r.stableId; }),
-                      names: fids.map(function(f){ return f.name; }) };
+                      names: fids.map(function(f){ return f.name; }), fromRequest: fromReq };
   var n = picked.length;
   var sub = document.getElementById('ia-sub');
-  if (sub) sub.innerHTML = n + ' item' + (n > 1 ? 's' : '') + ': ' + esc(picked.slice(0, 6).map(_invNamed).join(' \u00b7 '))
-    + (n > 6 ? ' and ' + (n - 6) + ' more' : '');
+  if (sub) sub.innerHTML = fromReq
+    ? esc('The request ' + (opt.sentAt ? 'sent ' + _draftDay(opt.sentAt) : 'sent from the app') + ': ' + n + ' line' + (n > 1 ? 's' : '') + ' still unsigned.')
+    : n + ' item' + (n > 1 ? 's' : '') + ': ' + esc(picked.slice(0, 6).map(_invNamed).join(' \u00b7 '))
+      + (n > 6 ? ' and ' + (n - 6) + ' more' : '');
+  // The request's lines, each ticked, each with its untick (the one sentence says why).
+  var lineTicks = fromReq
+    ? '<div id="ia-lines" style="margin-bottom:8px;">'
+      + '<div style="font-size:11.5px;margin-bottom:4px;">' + esc(INV_REQ_UNTICK_TXT) + '</div>'
+      + picked.map(function(r, i){
+          return '<label style="display:flex;align-items:center;gap:8px;margin:3px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;">'
+            + '<input type="checkbox" id="ia-line-' + i + '" checked onchange="invApprovalDialogNote()" style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
+            + '<span>' + esc(_invNamed(r)) + (r.disposition ? ' <span style="color:var(--gray);">&middot; ' + esc(invDispDocWord(r.disposition))
+              + (String(r.channel || '').trim() ? ' &middot; ' + esc(String(r.channel).trim()) : '') + '</span>' : '') + '</span></label>';
+        }).join('') + '</div>'
+    : '';
   var body = document.getElementById('ia-body');
-  if (body) body.innerHTML = (fids.length
+  if (body) body.innerHTML = lineTicks + (fids.length
       ? '<div style="font-size:11.5px;margin-bottom:6px;">' + (fids.length > 1
           ? 'Tick each signature on the returned request. <strong>Every ' + invCoFiduciaryNoun(job) + ' must sign</strong> before a line is approved: '
             + 'a signature recorded now is kept, and the lines stay on the next request until all ' + fids.length + ' have signed.'
@@ -32582,6 +32619,25 @@ function invRecordApproval(jobId) {
   var m = document.getElementById('inv-approval-modal');
   if (m) m.style.display = 'flex';
   return true;
+}
+// The Releases card's Record the signed request: the lines the last request carried that still wait, read at the press
+// (another device may have recorded some since the card was drawn), handed to the one dialog as its list.
+function invRecordRequestApproval(jobId) {
+  var job = _invJob(jobId);
+  if (!job) return false;
+  var S = approvalRequestState(job, _jobInvRefs(jobId));
+  if (!S.st || !S.st.sentAt || !S.open.length) {
+    _docNotice('warn', 'Nothing on the request is waiting for a signature any more: there is nothing to record.', jobId);
+    _invRefreshReleases(jobId);
+    return false;
+  }
+  return invRecordApproval(jobId, { stableIds: S.open.map(function(r){ return r.stableId; }), sentAt: S.st.sentAt });
+}
+// The lines the open dialog will record: every one it was opened on, or, opened from the request, the ones still ticked.
+function _invRecordLineIds(c) {
+  if (!c) return [];
+  if (!c.fromRequest) return c.stableIds.slice();
+  return c.stableIds.filter(function(id, i){ var el = document.getElementById('ia-line-' + i); return !!(el && el.checked); });
 }
 function closeInvApproval() {
   var m = document.getElementById('inv-approval-modal');
@@ -32617,7 +32673,9 @@ function invSaveApproval() {
   var dEl = document.getElementById('ia-date');
   var when = String((dEl && dEl.value) || '').trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(when)) return say('Enter the date the approval was signed.');
-  var refs = c.stableIds.map(function(id){ return _getPhotoRef(jobId, id); }).filter(function(r){ return r && !r.deletedAt; });
+  var ids = _invRecordLineIds(c);
+  if (c.fromRequest && !ids.length) return say('Not recorded: no line is ticked. Tick each line the signed copy carries.');
+  var refs = ids.map(function(id){ return _getPhotoRef(jobId, id); }).filter(function(r){ return r && !r.deletedAt; });
   if (!refs.length) return say('None of the selected lines is on the inventory any more. Nothing was recorded.');
   var still = invApprovalOpenText(job, refs, invApprovalLeftOpen(job, refs, names, when));
   refs.forEach(function(ref){
@@ -32637,7 +32695,7 @@ function invSaveApproval() {
   savePhotoRefs(jobId);
   _scheduleInventorySync(jobId);
   showSyncBadge('Approval recorded on ' + refs.length + ' item' + (refs.length > 1 ? 's' : '') + ' ✓');
-  _invPick = {};
+  if (!c.fromRequest) _invPick = {};   // the bulk bar's selection was the dialog's; opened from the request, it is the person's
   _invRecordCtx = null;
   // ⚠ THE SIGNED PAPER IS THE RECORD (P19): offered at once, while it is in hand. Filed under the batch's own ref, so
   // the desk's approvals list finds it beside the lines it covers.
@@ -32699,7 +32757,7 @@ function invApprovalDialogNote() {
   if (!c || !el) return '';
   var job = _invJob(c.jobId);
   var names = _invRecordTicked(c);
-  var refs = c.stableIds.map(function(id){ return _getPhotoRef(c.jobId, id); }).filter(function(r){ return r && !r.deletedAt; });
+  var refs = _invRecordLineIds(c).map(function(id){ return _getPhotoRef(c.jobId, id); }).filter(function(r){ return r && !r.deletedAt; });
   var t = '';
   if (job && names.length && refs.length) {
     var dEl = document.getElementById('ia-date');

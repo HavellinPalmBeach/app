@@ -49,6 +49,12 @@
 //   roster, opening the Values bar and the appraisers' form together, by id; and on a cold device the form waiting for the
 //   sheet's read before it opens by itself.
 //
+//   Part 7 (G7, Record the signed request): an estate whose request went out for three lines, a fourth line ticked on the
+//   bulk bar; the Releases bar's line naming the three, its header pressed open; Record the signed request pressed on the
+//   card, the dialog listing the three lines ticked with the sentence, the third unticked as the signed copy struck it out,
+//   both representatives ticked, Record approval pressed: two lines approved, the struck one not, the bulk bar's selection
+//   still standing; the card and the bar's line after; the dialog at 390.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -915,6 +921,110 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     release6(); hold = null;
     ok(await until(async () => (await stat('values', COLD)) !== 'loading…'), 'the read lands');
     eq(await apF(COLD), { bar: true, form: true, add: false }, '⚠⚠ read, and the portrait still waits: the bar and the form open by themselves, without a press');
+
+    // ══ PART 7 (G7): Record the signed request ══════════════════════════════════════════════════════════════════════
+    // An estate whose request went out on Oct 19 for three lines, all still unsigned; a fourth line, kept, is ticked on the
+    // bulk bar by the person before the signed copy comes back. The card records the paper on the request's own lines; the
+    // selection is the person's and stays.
+    console.log('\n## Part 7 · Record the signed request: the request\'s lines, one struck out, the selection untouched');
+    const RSQ = 9609;
+    await p.evaluate((RSQ) => {
+      const NOW = Date.now(), DAY0 = new Date(NOW); DAY0.setHours(0, 0, 0, 0);
+      const T = Math.min(NOW, Math.max(NOW - 3 * 3600000, DAY0.getTime() + 60000));
+      jobs.unshift({ id: RSQ, hvlId: 'HVL-2610-R969', name: 'Walter Reyes', svc: 'probate', matterType: 'probate', addr: '31 Ibis Way', city: 'Palm Beach', zip: '33480',
+        executor: 'Paul Reyes', executorRole: 'Personal Representative', executorEmail: 'paul@reyes.example', executorAuth: 'received', deathDate: '2026-05-10',
+        coFiduciaries: [{ id: 'cf1', name: 'Ana Reyes', role: 'Co-Personal Representative', email: 'ana@reyes.example', phone: '' }],
+        probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law', docTier: 'values', status: 'active', won: true, approved: true, tc: 'Ashley Jerome',
+        created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05', agrApproved: true, agrSent: true, agrSigned: true,
+        driveFolder: 'https://drive.google.com/drive/folders/R' + RSQ, driveSubfolders: { 'Estate Inventory': 'I' + RSQ, 'Signed Records': 'S' + RSQ },
+        docState: { approvalRequest: { draftedAt: '2026-10-19T15:00:00.000Z', draftedBy: 'Ashley Jerome', provider: 'gmail', sentAt: '2026-10-19T16:00:00.000Z', sentBy: 'Ashley Jerome',
+          req: { to: ['paul@reyes.example', 'ana@reyes.example'], cc: ['ann@lowe.law'], noEmail: [], viaCounsel: false, stableIds: ['q1', 'q2', 'q3'], asked: 3, ratify: 0 } } },
+        payments: [] });
+      estimateStore[RSQ] = { approved: true, submitted: true, estimate: { jobId: RSQ, svc: 'probate', havellinTotal: 20000, rooms: [{ idx: 0, name: 'Study', st: 'in', vol: 3, cplx: 3 }], vendors: [] } };
+      const q = (id, n, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: n, itemNo: n, status: 'uploaded', category: 'Furniture', namedBy: 'desk', reviewed: 1,
+        ts: T, updatedAt: T, filename: 'HVL_' + RSQ + '_INV_' + id + '.jpg', driveFileId: 'f' + id }, o);
+      _photoRefs[RSQ] = [
+        q('q1', 1, { objectName: 'Silver candelabra', category: 'Silver & Precious Metal', fmv: 900, disposition: 'Auction', channel: 'Kodner Galleries' }),
+        q('q2', 2, { objectName: 'Dining chairs (6)', fmv: 300, disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
+        q('q3', 3, { objectName: 'Walnut sideboard', fmv: 700, disposition: 'Sell', channel: 'Palm Beach Estate Buyers' }),
+        q('q4', 4, { objectName: 'Reading lamp', fmv: 40, disposition: 'Keep' })];
+      savePhotoRefs(RSQ);
+      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+    }, RSQ);
+    sheet[RSQ] = { items: await p.evaluate((id) => _photoRefs[id], RSQ) };
+    await p.setViewportSize({ width: 1440, height: 1000 });
+    await toDesk(RSQ);
+    ok(await until(async () => (await stat('releases', RSQ)) !== 'loading…'), 'fixture: the sheet read');
+    const L7 = String(await stat('releases', RSQ));
+    has(L7, '3 on the request still unsigned', 'the Releases bar\'s line names the three lines the request carried  [' + L7 + ']');
+    if (!(await p.locator('#inv-row-q4').isVisible())) await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All, so the lamp\'s row is drawn');
+    await press('#inv-row-q4 input[onchange^="_invTogglePick"]', 'the box on the reading lamp (the person\'s selection)');
+    const bulkRec = 'button[onclick="invRecordApproval(' + RSQ + ')"]';
+    ok(await p.locator(bulkRec).isVisible(), 'fixture: the bulk bar is up for the lamp, its own Record approval on it');
+    if (!(await isOpen('releases', RSQ))) await press('#desk-hd-releases-' + RSQ, 'the Releases header, to open it');
+    const REC = '#inv-releases button[onclick="invRecordRequestApproval(' + RSQ + ')"]';
+    eq(await p.locator('#inventory-content button[onclick^="invRecordRequestApproval("]').count(), 1, '⚠⚠ Record the signed request once on the whole desk');
+    eq((await p.locator(REC).count()) ? (await p.locator(REC).textContent()).trim() : null, 'Record the signed request', 'on the card, labelled so');
+    await press(REC, 'Record the signed request');
+    const dlg = () => p.evaluate(() => {
+      const m = document.getElementById('inv-approval-modal');
+      const boxes = [...document.querySelectorAll('#ia-body input[id^="ia-line-"]')].map((x) => ({ id: x.id, on: x.checked, shown: x.checkVisibility(),
+        label: x.closest('label').textContent.replace(/\s+/g, ' ').trim() }));
+      return { shown: !!m && m.checkVisibility(), sub: (document.getElementById('ia-sub') || {}).textContent, boxes,
+        body: ((document.getElementById('ia-body') || {}).textContent || '').replace(/\s+/g, ' '),
+        note: ((document.getElementById('ia-note') || {}).textContent || '').replace(/\s+/g, ' ').trim() };
+    });
+    const D7 = await dlg();
+    ok(D7.shown, 'the Record a signed approval dialog is on screen');
+    eq(D7.sub, 'The request sent Oct 19: 3 lines still unsigned.', 'it names the request and its lines');
+    eq(D7.boxes.map((x) => [x.label, x.on, x.shown]), [['#1 Silver candelabra · Auction · Kodner Galleries', true, true],
+      ['#2 Dining chairs (6) · Donate · Goodwill Palm Beach', true, true], ['#3 Walnut sideboard · Sell · Palm Beach Estate Buyers', true, true]],
+      '⚠⚠ the request\'s three lines, each ticked, on screen; never the lamp the bulk bar holds');
+    has(D7.body, 'Untick any line the signed copy struck out.', '⚠ the sentence that says what the untick is for');
+    await press('#ia-line-2', 'the sideboard\'s box (struck out on the signed copy)');
+    await press('#ia-fid-0', 'Paul Reyes\'s tick');
+    await press('#ia-fid-1', 'Ana Reyes\'s tick');
+    const D7b = await dlg();
+    eq(D7b.boxes.map((x) => x.on), [true, true, false], 'the sideboard unticked, the other two ticked');
+    eq(D7b.note, '✓ With these signatures every co-representative has signed: the lines are approved.', 'the note speaks of the two lines still ticked');
+    await press('#ia-save-btn', 'Record approval');
+    const saved = await p.evaluate((id) => {
+      const by = (sid) => (_photoRefs[id].find((r) => r.stableId === sid) || {});
+      return { a: [by('q1').authBy || null, by('q2').authBy || null, by('q3').authBy || null], pick: Object.keys(_invPick).sort(),
+        body: ((document.getElementById('ia-body') || {}).textContent || '').replace(/\s+/g, ' '),
+        file: [...document.querySelectorAll('#ia-actions label')].map((l) => l.textContent.trim()) };
+    }, RSQ);
+    eq(saved.a, ['Paul Reyes; Ana Reyes', 'Paul Reyes; Ana Reyes', null], '⚠⚠ the candelabra and the chairs approved by both; the struck-out sideboard not');
+    has(saved.body, 'Approval recorded on 2 items', 'the dialog says what it recorded');
+    eq(saved.file, ['File the signed request'], 'and offers the signed copy for filing at once');
+    eq(saved.pick, ['q4'], '⚠⚠ the bulk bar\'s selection is as the person left it');
+    await press('#ia-actions button[onclick="closeInvApproval()"]', 'Done');
+    ok(await p.locator(bulkRec).isVisible(), 'the bulk bar is still up for the lamp');
+    ok(await p.locator('#inv-row-q4 input[onchange^="_invTogglePick"]').isChecked(), 'and the lamp\'s box still ticked on its row');
+    const card7 = await p.evaluate(() => ((document.getElementById('inv-releases') || {}).textContent || '').replace(/\s+/g, ' '));
+    has(card7, '1 line still unsigned', 'the card: the sideboard still waits');
+    ok(await p.locator(REC).isVisible(), 'and Record the signed request is still offered for it');
+    const L7b = String(await stat('releases', RSQ));
+    has(L7b, '1 signed approval not filed to Drive', 'the bar\'s line: the signed paper to file  [' + L7b + ']');
+    has(L7b, '1 on the request still unsigned', 'and the sideboard');
+    ok(await isOpen('releases', RSQ), 'the bar open');
+
+    console.log('\n## Part 7 · at 390');
+    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+    await press(REC, 'Record the signed request, at 390');
+    const P7 = await p.evaluate(() => {
+      const W = document.documentElement.clientWidth;
+      const box = document.querySelector('#inv-approval-modal .modal-box');
+      const wide = [...document.querySelectorAll('#inv-approval-modal *')].filter((e) => e.checkVisibility() && e.getBoundingClientRect().right > W + 1)
+        .map((e) => e.tagName + ':' + e.textContent.slice(0, 30));
+      const lines = [...document.querySelectorAll('#ia-body input[id^="ia-line-"]')].map((x) => x.checked);
+      return { wide, lines, boxW: box ? Math.round(box.getBoundingClientRect().width) : null };
+    });
+    eq(P7.wide, [], 'nothing in the dialog runs off the right edge at 390  [' + P7.boxW + ' px box]');
+    eq(P7.lines, [true], 'opened again: the sideboard alone, ticked');
+    await press('#ia-actions button[onclick="closeInvApproval()"]', 'Cancel, at 390');
+    await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
+    await press('#inventory-content button[onclick="_invClearPicks()"]', 'Clear, on the bulk bar');
 
     eq(errs, [], 'zero page errors');
   } catch (e) {
