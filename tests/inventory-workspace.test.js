@@ -383,7 +383,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(iWrap > -1, 'the roster is inside a scroll container');
     ok(iWrap < iTbl, '⚠ which OPENS before the table — a container after it is not one');
     // It closes after the table, so the tfoot (where the three date pickers live) is inside.
-    has(body, "'</tr></tfoot></table></div></div>'", 'and closes after the whole table');
+    // ⚠ RESTATED 2026-10-22, NOT WEAKENED: + Add an appraiser now sits under the table (the add form waits behind it), so
+    // the scroller's close is followed by that button's block and then the card's close, where it was the card's close alone.
+    has(body, "'</tr></tfoot></table></div>'", 'and closes after the whole table');
+    const iClose = body.indexOf("'</tr></tfoot></table></div>'"), iBtn = body.indexOf('id="appr-add-');
+    ok(iClose > -1 && iBtn > iClose, '…and the + Add an appraiser button is outside the scroller, after it');
     // The rule itself is what the wrap depends on; losing it is the 368-line-CSS-deletion
     // shape, silent and invisible to every test that only reads the markup.
     has(src, '.tbl-scroll{overflow-x:auto', 'and the rule it depends on is still declared');

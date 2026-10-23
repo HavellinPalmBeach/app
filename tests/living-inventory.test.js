@@ -63,6 +63,8 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invInitialGroupWords'
   '_invProgressBar', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
   '_invCautionNotices', '_invPicked', '_invAwaitingApproval',
   '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
+  // 2026-10-22: the summary states the basis and the value date as text; their controls head the desk's Values bar.
+  'invStatesEstateValues', '_invValueAsOfHtml', '_renderValueSettings',
   'invProbateRows', 'matterDef', 'matterTypeOf',
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   '_maivSummaryNotice', 'maivFilingApplies', '_gate706', 'invIsMAIV', 'invMAIVCategory',
@@ -939,7 +941,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Havellin is not producing — the "control for a proceeding that does not exist" defect one
     // axis over. Nothing else reads either field at this tier: the four documents that state a
     // basis are already withheld here by the contract gate.
-    ['Valuation Basis', 'setValBasis', 'Value as of', 'setEstateAVD',
+    // ⚠ RESTATED 2026-10-22 (the desk's Values & appraisals bar), NOT WEAKENED: the two controls left the summary for the head
+    // of the Values bar (_renderValueSettings), and the summary states the basis and the date as text. The controls are held
+    // to the same tier gate where they are now drawn, and to being gone from the summary at every tier.
+    const vset = (tier) => { const j = Object.assign({}, ESTATE, { docTier: tier }); return rig(j, []).ctx._renderValueSettings(j); };
+    const Sc = vset('contents'), Sv = vset('values'), Sn = vset('none');
+    ['setValBasis', 'setEstateAVD'].forEach((r) => {
+      lacks(Sc, r, '⚠ "' + r + '" is off a capture engagement\'s desk');
+      lacks(Sn, r, '…and off a counsel-inventories one');
+      has(Sv, r, '…and in the Values bar of one we were paid to value');
+      [Hc, Hn, Hv].forEach((h) => lacks(h, r, '⚠ and in no summary, at any tier: the summary states, the bar sets'));
+    });
+    ['Valuation Basis', 'Value as of',
      'Total Estimated FMV', 'Items Awaiting Valuation', 'FMV by Category'].forEach((r) => {
       lacks(Hc, r, '⚠ "' + r + '" is off a capture engagement\'s summary');
       lacks(Hn, r, '…and off a counsel-inventories one');

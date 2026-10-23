@@ -39,6 +39,13 @@
 //   Reviewed and its note following; both must-finds found, the brief shrinking to one green line with Show found and the
 //   Must find notice going quiet by id; the Not yet decided chip showing the whole job; the notices at 390.
 //
+//   Part 6 (G6, values and the quieter forms): the valuation card at the head of the Values bar, opened by its header, above
+//   the roster and the guardrail; the basis changed with the bar's own select, the job recording it and the summary (opened
+//   from More ▾) stating it as text, repainted by id when it is changed back; the §2032 tick redrawing the date with the bar
+//   still open; + Add an appraiser showing the form in place and Cancel shutting it; a living desk with an empty roster and an
+//   item waiting showing the form open by itself, an appraiser saved through it putting it back behind its button; the
+//   beneficiaries' form behind + Add a beneficiary, Edit opening it filled and Cancel clearing it; nothing off the edge at 390.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -721,6 +728,124 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await press('#inv-value-notices button[onclick="deskShowLine(' + EST + ',\'e04\')"]', 'Show the item at 390');
     const top390 = await seeRow('e04');
     ok(top390.seen && top390.top >= top390.bar, '⚠ at 390 the lamps\' row lands under the sticky bar, its first line seen  [' + JSON.stringify(top390) + ']');
+    await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
+
+    // ══ PART 6 (G6): values and the quieter forms ═══════════════════════════════════════════════════════════════════
+    console.log('\n## Part 6 · the valuation settings head the Values bar; the basis changed there, stated in the summary');
+    await p.setViewportSize({ width: 1440, height: 1000 });
+    await toDesk(EST);
+    if (!(await isOpen('values'))) await press('#desk-hd-values-' + EST, 'the Values & appraisals header');
+    ok(await isOpen('values'), 'fixture: the Values bar open');
+    const vals6 = () => p.evaluate((id) => {
+      const body = document.getElementById('desk-body-values-' + id), set = document.getElementById('inv-val-settings');
+      const y = (el) => (el ? Math.round(el.getBoundingClientRect().top) : null);
+      const add = document.getElementById('appr-add-' + id), gr = document.getElementById('inv-guardrail');
+      return { inBar: !!set && !!body && body.contains(set), shown: !!set && set.checkVisibility(), set: y(set), roster: y(add && add.closest('.card')), guard: y(gr),
+        basis: (document.getElementById('inv-valbasis-' + id) || {}).value || null, text: set ? set.textContent.replace(/\s+/g, ' ').trim() : '',
+        n: document.querySelectorAll('#inventory-content select[onchange^="setValBasis"]').length };
+    }, EST);
+    const V6 = await vals6();
+    ok(V6.inBar && V6.shown, '⚠⚠ the Valuation card is in the Values bar, on screen');
+    ok(V6.set < V6.roster && V6.roster < V6.guard, 'the settings first, then the roster, then the guardrail  [' + [V6.set, V6.roster, V6.guard] + ']');
+    eq([V6.basis, V6.n], ['Fair Market Value', 1], 'one basis control on the tab, on the default');
+    has(V6.text, 'Value as of Apr 2, 2026 (date of death)', 'the date the values are stated as of');
+    has(V6.text, 'Use the §2032 alternate valuation date: six months after death, taxable estates only', 'the election in words on screen');
+    await p.selectOption('#inv-valbasis-' + EST, 'Replacement Value'); await p.waitForTimeout(500);
+    eq(await p.evaluate((id) => jobs.find((j) => j.id === id).valBasis, EST), 'Replacement Value', '⚠⚠ the basis chosen in the bar is on the job');
+    await press('#inv-workbar details > summary', 'More ▾');
+    await press('button[onclick="invToggleRollups()"]', 'Show summary & rollups');
+    // The summary's rows, each read as "label value" (its two spans), so a row is read as a person reads it.
+    const sum6 = () => p.evaluate(() => { const el = document.getElementById('inv-summary'); if (!el) return null;
+      const rows = [...el.querySelectorAll('div')].filter((d) => d.children.length === 2 && d.children[0].tagName === 'SPAN' && d.children[1].tagName === 'SPAN')
+        .map((d) => d.children[0].textContent.trim() + ' ' + d.children[1].textContent.replace(/\s+/g, ' ').trim());
+      return { t: rows.join(' | '), ctl: el.querySelectorAll('select, input').length }; });
+    let S6 = await sum6();
+    has(S6.t, 'Valuation Basis Replacement Value', '⚠ the summary states the basis, as text');
+    eq(S6.ctl, 0, '⚠ and carries no control: the bar sets, the summary states');
+    ok(await isOpen('values'), 'the Values bar still open behind the summary\'s redraw');
+    await p.evaluate(() => { document.getElementById('inv-workbar').__mark6 = 'still here'; });
+    await p.selectOption('#inv-valbasis-' + EST, 'Fair Market Value'); await p.waitForTimeout(500);
+    has((await sum6()).t, 'Valuation Basis Fair Market Value', '⚠ changed back from the bar, the open summary follows');
+    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark6), 'still here', 'by id: the tab was not redrawn under the person');
+    await p.check('#inv-avd-' + EST); await p.waitForTimeout(600);
+    eq(await p.evaluate((id) => jobs.find((j) => j.id === id).avd, EST), true, 'the §2032 tick records the election');
+    has((await vals6()).text, 'Value as of Oct 2, 2026 (alt. valuation date)', '⚠ the bar names the alternate date');
+    has((await sum6()).t, 'Value as of Oct 2, 2026 (alt. valuation date)', 'and the summary the same day');
+    ok(await isOpen('values'), 'the bar still open after the redraw the tick made');
+    await p.uncheck('#inv-avd-' + EST); await p.waitForTimeout(600);
+    has((await vals6()).text, 'Value as of Apr 2, 2026 (date of death)', 'untick: the date of death again');
+    // More ▾ keeps its open state across a redraw (2026-10-13), so it is pressed only if the menu is shut.
+    if (!(await p.locator('button[onclick="invToggleRollups()"]').isVisible())) await press('#inv-workbar details > summary', 'More ▾');
+    await press('button[onclick="invToggleRollups()"]', 'Hide summary & rollups');
+
+    console.log('\n## Part 6 · + Add an appraiser shows the form in place; Cancel shuts it');
+    const appr6 = (id) => p.evaluate((id) => {
+      const v = (s) => { const el = document.querySelector(s); return !!el && el.checkVisibility(); };
+      return { form: v('#appr-form-' + id), add: v('#appr-add-' + id), name: v('#appr-name'), focus: (document.activeElement || {}).id || '' };
+    }, id);
+    const A0 = await appr6(EST);
+    ok(!A0.form && A0.add && !A0.name, 'Carla Mendes on the roster: the form behind + Add an appraiser  [' + JSON.stringify(A0) + ']');
+    await p.evaluate(() => { document.getElementById('inv-workbar').__mark6 = 'still here'; });
+    await press('#appr-add-' + EST, '+ Add an appraiser');
+    const A6 = await appr6(EST);
+    ok(A6.form && A6.name && !A6.add, '⚠⚠ the form shown where it stands, its button aside');
+    eq(A6.focus, 'appr-name', 'the name box ready to type in');
+    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark6), 'still here', 'in place: no redraw');
+    await press('#appr-form-' + EST + ' button[onclick="invToggleApprForm(' + EST + ',false)"]', 'Cancel');
+    const C6 = await appr6(EST);
+    ok(!C6.form && C6.add, 'Cancel shuts it, the button back');
+
+    console.log('\n## Part 6 · an empty roster with an item waiting: the form open by itself; a save puts it back');
+    await toDesk(LIV);
+    ok(await isOpen('values', LIV), 'fixture: the living desk\'s Values bar open by itself (the painting waits, nobody linked)');
+    eq(await p.locator('#inv-val-settings').count(), 0, 'no valuation settings on living work');
+    const L6 = await appr6(LIV);
+    ok(L6.form && !L6.add, '⚠⚠ the roster empty and an item waiting: the form open by itself');
+    await p.fill('#appr-name', 'Jane Smith');
+    await press('button[onclick="addAppraiser(' + LIV + ')"]', 'Save appraiser');
+    eq(await p.evaluate((id) => (jobs.find((j) => j.id === id).appraisers || []).map((a) => a.name), LIV), ['Jane Smith'], 'the appraiser is on the job');
+    const L6b = await appr6(LIV);
+    ok(!L6b.form && L6b.add, '⚠ saved: the form back behind + Add an appraiser');
+    has(await p.evaluate((id) => (document.getElementById('appr-add-' + id).closest('.card') || {}).textContent, LIV), 'Jane Smith', 'her row where the form stood');
+    ok(await isOpen('values', LIV), 'and the bar still open');
+
+    console.log('\n## Part 6 · + Add a beneficiary: behind its button; Edit opens it filled; Cancel clears it');
+    await toDesk(EST);
+    if (!(await isOpen('releases'))) await press('#desk-hd-releases-' + EST, 'the Releases header');
+    const bq6 = () => p.evaluate((id) => {
+      const v = (s) => { const el = document.querySelector(s); return !!el && el.checkVisibility(); };
+      const val = (s) => (document.getElementById(s) || {}).value;
+      return { ben: v('#bq-ben-form-' + id), benAdd: v('#bq-ben-add-' + id), beq: v('#bq-beq-form-' + id), beqAdd: v('#bq-beq-add-' + id),
+        name: val('bq-ben-name-' + id), bid: val('bq-ben-id-' + id), list: [...document.querySelectorAll('#inv-ben-list-' + id + ' option')].map((o) => o.value) };
+    }, EST);
+    const B6 = await bq6();
+    ok(!B6.ben && B6.benAdd && !B6.beq && B6.beqAdd, '⚠ a beneficiary and a bequest on the lists: both forms behind their buttons');
+    eq(B6.list, ['Margaret Ashworth'], 'the roster still offered to every To a person box, the forms shut');
+    await press('#bq-ben-add-' + EST, '+ Add a beneficiary');
+    ok((await bq6()).ben && !(await bq6()).benAdd, 'the form shown where it stands');
+    await press('#bq-ben-form-' + EST + ' button[onclick="invToggleBqForm(' + EST + ',\'ben\',false)"]', 'Cancel');
+    ok(!(await bq6()).ben, 'Cancel shuts it');
+    await press('#inv-bequests button[onclick=\'invEditBeneficiary(' + EST + ',"bn1")\']', 'Edit, on Margaret');
+    const E6 = await bq6();
+    ok(E6.ben && E6.name === 'Margaret Ashworth' && E6.bid === 'bn1', '⚠⚠ Edit opens the form, filled  [' + JSON.stringify(E6) + ']');
+    await press('#bq-ben-form-' + EST + ' button[onclick="invToggleBqForm(' + EST + ',\'ben\',false)"]', 'Cancel the edit');
+    const X6 = await bq6();
+    ok(!X6.ben && X6.name === '' && X6.bid === '', '⚠ Cancel shuts it and clears it, the hidden id included');
+
+    console.log('\n## Part 6 · at 390');
+    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+    await press('#appr-add-' + EST, '+ Add an appraiser, at 390');
+    const P6 = await p.evaluate((id) => {
+      const W = document.documentElement.clientWidth;
+      const els = [...document.querySelectorAll('#inv-val-settings, #inv-val-settings *, #appr-add-' + id + ', #bq-ben-add-' + id + ', #bq-beq-add-' + id)];
+      const tick = document.getElementById('inv-avd-' + id), r = tick && tick.getBoundingClientRect();
+      return { wide: els.filter((e) => e.checkVisibility() && e.getBoundingClientRect().right > W + 1).map((e) => e.tagName + ':' + e.textContent.slice(0, 30)),
+        tickW: r ? Math.round(r.width) : null, form: !!document.getElementById('appr-form-' + id) && document.getElementById('appr-form-' + id).checkVisibility() };
+    }, EST);
+    eq(P6.wide, [], 'nothing in the Valuation card or the add buttons runs off the right edge');
+    ok(P6.tickW !== null && P6.tickW < 40, 'the §2032 tick is its own size, not stretched across its row  [' + P6.tickW + ' px]');
+    ok(P6.form, 'the appraiser\'s form opens at 390 (its table scrolls inside its own box)');
+    await press('#appr-form-' + EST + ' button[onclick="invToggleApprForm(' + EST + ',false)"]', 'Cancel, at 390');
     await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
 
     eq(errs, [], 'zero page errors');

@@ -106,8 +106,13 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
     const has = (s) => txt.indexOf(s) >= 0;
     return {
       statesValues: pay.statesValues,
-      basis: !!panel.querySelector('select[onchange^="setValBasis"]'),
-      avd: !!panel.querySelector('input[onchange^="setEstateAVD"]'),
+      // ⚠ RESTATED 2026-10-22, NOT WEAKENED: the basis select and the §2032 tick left the summary for the head of the desk's
+      //   Values & appraisals bar, and the summary states the basis as text. Each control is looked for where it now lives,
+      //   and the summary is held to carrying no control at all and to naming the basis only where values are stated.
+      basis: !!panel.querySelector('[id^="desk-body-values-"] select[onchange^="setValBasis"]'),
+      avd: !!panel.querySelector('[id^="desk-body-values-"] input[onchange^="setEstateAVD"]'),
+      sumCtl: !!panel.querySelector('#inv-summary select, #inv-summary input'),
+      sumBasis: ((document.getElementById('inv-summary') || {}).textContent || '').indexOf('Valuation Basis') >= 0,
       fmvTotal: has('Total Estimated FMV'),
       awaiting: has('Items Awaiting Valuation'),
       fmvByCat: has('FMV by Category'),
@@ -164,7 +169,12 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   [['values', V], ['appraisals', A]].forEach(([n, r]) => {
     ok(r.basis && r.avd && r.fmvTotal && r.awaiting && r.fmvByCat && !r.itemsByCat,
        'the whole valuation block is untouched at ' + n);
+    ok(r.sumBasis, 'the summary names the basis at ' + n + ', as text');
   });
+  [['values', V], ['appraisals', A], ['contents', C], ['none', N]].forEach(([n, r]) => {
+    ok(!r.sumCtl, '⚠ the summary carries no control at ' + n + ': the bar sets, the summary states');
+  });
+  ok(!C.sumBasis && !N.sumBasis, '⚠ and names no basis where no values are stated');
   ok(C.dollars < V.dollars, '⚠ fewer dollar figures on the page at contents (' + C.dollars + ' vs ' + V.dollars + ')');
 
   // ── THE WORKBOOK, from the REAL payload through the REAL Apps Script writer. This is the

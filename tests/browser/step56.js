@@ -162,10 +162,16 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       ok(await vis('#inv-bequests'), 'the Beneficiaries & specific bequests card is on the desk');
       has(await txt('#inv-bequests'), 'Havellin never reads or interprets the will or the trust', 'and says whose list it is');
       has(await txt('#inv-bequests'), 'Flagged Specific Bequest, and no bequest on the list covers it: #4 Tabriz rug', '⚠ the flagged line no bequest covers is named');
+      // ⚠ RESTATED 2026-10-22 (the quieter add forms): each form waits behind its + Add button and is open by itself while its
+      // list is empty, so the first beneficiary and the first bequest are typed straight in, and each save puts the form back
+      // behind its button; the second of each is typed after a real press of it.
+      ok(await vis('#bq-ben-form-5601') && !(await vis('#bq-ben-add-5601')), 'no beneficiary yet: the form open by itself, its button aside');
       await type('#bq-ben-name-5601', 'Mary Smith', 'the beneficiary\'s name');
       await type('#bq-ben-rel-5601', 'niece');
       await type('#bq-ben-email-5601', 'mary@smith.example');
       await press('button[onclick="invSaveBeneficiary(5601)"]', 'Save beneficiary');
+      ok(!(await vis('#bq-ben-form-5601')), '⚠ saved: the form back behind its button');
+      await press('#bq-ben-add-5601', '+ Add a beneficiary');
       await type('#bq-ben-name-5601', 'John Smith');
       await press('button[onclick="invSaveBeneficiary(5601)"]', 'Save beneficiary, again');
       const card = await txt('#inv-bequests');
@@ -177,6 +183,7 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       await p.selectOption('#bq-benid-5601', { label: 'Mary Smith' });
       await type('#bq-items-5601', '1');
       await press('button[onclick="invSaveBequest(5601)"]', 'Save bequest');
+      await press('#bq-beq-add-5601', '+ Add a specific bequest');
       await type('#bq-desc-5601', 'the gold watch');
       await p.selectOption('#bq-benid-5601', { label: 'John Smith' });
       await press('button[onclick="invSaveBequest(5601)"]', 'Save the second bequest');
@@ -372,7 +379,11 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       ok(await overflow() <= 0, 'the desk with both cards fits at 1440 (' + await overflow() + ')');
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(400);
       ok(await overflow() <= 0, 'and at 390 (' + await overflow() + ')');
+      // ⚠ RESTATED 2026-10-22: the roster holds two beneficiaries, so the form waits behind + Add a beneficiary; pressed at 390.
+      await press('#bq-ben-add-5601', '+ Add a beneficiary, at 390');
       ok(await vis('#inv-bequests button[onclick="invSaveBeneficiary(5601)"]'), 'Save beneficiary is on screen at 390');
+      ok(await overflow() <= 0, 'and the open form fits at 390 (' + await overflow() + ')');
+      await press('#bq-ben-form-5601 button[onclick="invToggleBqForm(5601,\'ben\',false)"]', 'Cancel, at 390');
       await pick('s5');
       await press('button[onclick="invRecordApproval(5601)"]', 'Record approval at 390');
       ok(await vis('#ia-save-btn'), 'the dialog\'s Record approval is on screen at 390');

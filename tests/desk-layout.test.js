@@ -24,6 +24,10 @@
 //       line; a Needs you chip showing the whole job; the earlier-days hint (words, never a second All); the must-finds
 //       shrinking to one green line once all are found; the two stale sentences; and the agent's notes quiet once they have
 //       had their look, still read in the line's record.
+//   J · values and the quieter forms (G6): the valuation basis and the §2032 date at the head of the Values & appraisals bar,
+//       the summary stating them as text; + Add an appraiser, + Add a beneficiary and + Add a specific bequest, each form
+//       shown in place, open by itself while its list is empty (the appraisers' while an item waits), a person's open or
+//       Cancel winning, Edit opening the form before filling it, a save putting it back to its default.
 //
 // Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -226,6 +230,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupF({ group, ok, eq, has, lacks });
     groupH({ group, ok, eq, has, lacks });
     groupI({ group, ok, eq, has, lacks });
+    groupJ({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -1848,5 +1853,210 @@ function groupI({ group, ok, eq, has, lacks }) {
     // them: a margin off the height setTopbarHeight publishes, read by the browser's own scrollIntoView.
     ok(/\[id\^="inv-row-"\]\{scroll-margin-top:calc\(var\(--topbar-h,0px\) \+ 8px\);\}/.test(CSS), '⚠ Show the item\'s row stops under the sticky bar, never behind it');
     has(fn('setTopbarHeight'), "setProperty('--topbar-h', t.offsetHeight + 'px')", 'off the height the app already publishes for its sticky parts');
+  }
+}
+
+// ═══ J · VALUES AND THE QUIETER FORMS (G6, 2026-10-22) ═══════════════════════════════════════════════════════════════
+// The valuation basis and the §2032 alternate valuation date leave the summary (More ▾, at the foot of the tab) for the head
+// of the Values & appraisals bar, where values are made; the summary states them as text. The three add forms on the bars
+// (appraisers, beneficiaries, bequests) wait behind a button each, shown in place, open by themselves while their list is
+// empty (the appraisers' while an item waits on an appraisal too), a person's open or Cancel winning, a save putting each
+// back to its default. Driven through the real renderers and handlers.
+function groupJ({ group, ok, eq, has, lacks }) {
+  const ART = (o) => LINE('a', Object.assign({ objectName: 'Oil on canvas', category: 'Art & Décor', fmv: 9000 }, o));
+  // The roster and the bequests card on the real code, every boundary a stub (the closure stops at what the test supplies).
+  const cards = (job, rows, extra) => lift(['_renderAppraiserRoster', '_renderInvBequestCard', 'invToggleApprForm', 'invToggleBqForm', 'addAppraiser',
+    'invSaveBeneficiary', 'invEditBeneficiary', 'invSaveBequest', 'invEditBequest', '_renderValueSettings', '_renderInventorySummary', '_renderAppraisalGuardrail'],
+  Object.assign({ jobs: [job], _photoRefs: { 7: rows || [] }, estimateStore: {}, jobPlanStore: {}, vendorDirectory: [], document: domStub({}),
+    saveJobs() {}, syncJobToSheets() {}, renderInventoryTab() {}, _scheduleInventorySync() {}, showSyncBadge() {}, savePhotoRefs() {} }, extra || {}));
+  const tagOf = (h, id) => { const at = h.indexOf('id="' + id + '"'); return at < 0 ? '' : h.slice(h.lastIndexOf('<', at), h.indexOf('>', at) + 1); };
+  const shown = (h, id) => { const t = tagOf(h, id); return !!t && !/display:\s*none/.test(t); };
+
+  group('J1 · the Values bar opens on the valuation settings, then the roster, then the guardrail; an estate at a values tier only');
+  {
+    const D = desk({ deathDate: '2026-04-02' });
+    const h = D.render();
+    ok(!D.log.renderErr, 'the desk renders (' + (D.log.renderErr || 'ok') + ')');
+    const vals = inner(h, 'desk-body-values-7') || '';
+    const iSet = vals.indexOf('id="inv-val-settings"'), iRos = vals.indexOf('id="m-roster"'), iGr = vals.indexOf('<div id="inv-guardrail">');
+    ok(iSet > -1 && iSet < iRos && iRos < iGr, '⚠⚠ the valuation card first, then the roster, then the guardrail  [' + [iSet, iRos, iGr] + ']');
+    has(vals, 'onchange="setValBasis(7,this.value)"', 'the basis select, on its own handler');
+    has(vals, 'onchange="setEstateAVD(7,this.checked)"', 'the §2032 tick, on its own handler');
+    has(textOf(vals), 'Use the §2032 alternate valuation date: six months after death, taxable estates only', '⚠ its words on screen, never a tooltip (unreachable on an iPad)');
+    has(textOf(vals), 'Value as of Apr 2, 2026 (date of death)', 'and the date the values are stated as of');
+    eq((h.match(/onchange="setValBasis\(/g) || []).length, 1, '⚠ one basis control on the whole tab: not in the summary as well');
+    eq((h.match(/onchange="setEstateAVD\(/g) || []).length, 1, 'one §2032 tick');
+    eq(textOf(inner(h, 'desk-ttl-values-7')), 'Values & appraisals', 'the bar keeps its catalogue title');
+    // At the Contents list tier the agreement says counsel values: there is no valuation for the settings to govern.
+    const C = desk({ docTier: 'contents' });
+    lacks(C.render(), 'id="inv-val-settings"', '⚠ no settings at the Contents list tier');
+    const L = desk({ svc: 'downsizing_move', name: 'Ellis' }, { bq: '' });
+    lacks(L.render(), 'id="inv-val-settings"', 'nor on living work');
+  }
+
+  group('J2 · the summary states the basis and the date as text, from the same predicate and the same sentence as the bar');
+  {
+    const est = PROBATE({ docTier: 'values', deathDate: '2026-04-02' });
+    const S = cards(est, [LINE('a')]);
+    const sum = (j) => S._renderInventorySummary(j, [LINE('a')]);
+    const t = textOf(sum(est));
+    has(t, 'Valuation Basis Fair Market Value', '⚠ the basis, as text');
+    has(t, 'Value as of Apr 2, 2026 (date of death)', 'and the date, as text');
+    ['<select', 'setValBasis', 'setEstateAVD', 'type="checkbox"'].forEach((n) => lacks(sum(est), n, '⚠ no control in the summary: ' + n));
+    has(textOf(sum(Object.assign({}, est, { valBasis: 'Replacement Value', avd: true }))), 'Valuation Basis Replacement Value Value as of Oct 2, 2026 (alt. valuation date)',
+      'a basis and an election made in the bar read back in the summary');
+    // The card and the summary name one day: the same sentence, under the same predicate.
+    has(S._renderValueSettings(Object.assign({}, est, { avd: true })), S._invValueAsOfHtml(Object.assign({}, est, { avd: true })), 'the bar\'s card prints the summary\'s sentence');
+    eq(callersOf('_invValueAsOfHtml'), ['_renderInventorySummary', '_renderValueSettings'], 'one sentence for the value date, two readers');
+    eq(callersOf('invStatesEstateValues'), ['_renderInventorySummary', '_renderValueSettings'], '⚠ one predicate for where the settings apply, two readers');
+    [['a living job', LIVING()], ['the Contents list tier', PROBATE({ docTier: 'contents' })], ['None', PROBATE({ docTier: 'none' })]].forEach(([w, j]) => {
+      eq(S._renderValueSettings(j), '', 'no settings card on ' + w);
+      lacks(sum(j), 'Valuation Basis', 'and no basis row in its summary');
+    });
+    eq(S._renderValueSettings(PROBATE({ docTier: 'appraisals' })) !== '', true, 'the appraisals tier states values too');
+  }
+
+  group('J3 · the basis changed from the bar writes the job and the open summary reads it; the §2032 tick redraws the date');
+  {
+    const D = desk({ deathDate: '2026-04-02' }, {}, { real: ['_renderInventorySummary'], roots: ['setValBasis', 'setEstateAVD'],
+      stubs: { saveJobs() {}, syncJobToSheets() {}, _scheduleInventorySync() {} } });
+    D.C._invShowRoll = true;
+    D.render();
+    has(textOf(inner(D.dom.html, 'inv-summary')), 'Valuation Basis Fair Market Value', 'fixture: the summary open, on the default basis');
+    attempt(() => D.C.toggleDeskFold(7, 'values'));
+    has(tagOf(D.dom.html, 'desk-body-values-7'), 'display:;', 'fixture: the Values bar opened by its header');
+    const before = D.log.renders, t0 = D.job.updatedAt || 0;
+    const r = attempt(() => D.C.setValBasis(7, 'Replacement Value'));
+    ok(r.ok, 'the select\'s handler runs (' + (r.err || 'ok') + ')');
+    eq(D.job.valBasis, 'Replacement Value', '⚠ the job records the basis chosen in the bar');
+    ok((D.job.updatedAt || 0) > t0, 'a person\'s edit: the job\'s clock moves');
+    has(textOf(inner(D.dom.html, 'inv-summary')), 'Valuation Basis Replacement Value', '⚠⚠ and the open summary says so at once, by id');
+    eq(D.log.renders, before, 'without a redraw of the tab (the select already shows it)');
+    attempt(() => D.C.setEstateAVD(7, true));
+    eq(D.job.avd, true, 'the §2032 election is recorded');
+    has(textOf(inner(D.dom.html, 'inv-val-settings')), 'Value as of Oct 2, 2026 (alt. valuation date)', '⚠ the bar\'s card names the alternate date');
+    has(tagOf(D.dom.html, 'inv-avd-7'), ' checked', 'its tick drawn ticked');
+    has(tagOf(D.dom.html, 'desk-body-values-7'), 'display:;', '…and the bar the person pressed it in still open');
+  }
+
+  group('J4 · + Add an appraiser: the form shown in place, open by itself while the roster is empty and an item waits');
+  {
+    const smith = { appraisers: [{ id: 501, name: 'Jane Smith', credential: 'ASA', independent: true }] };
+    let S = cards(PROBATE(smith), [ART({ apprId: 501 })]);
+    let h = S._renderAppraiserRoster(S.jobs[0]);
+    ok(!shown(h, 'appr-form-7') && shown(h, 'appr-add-7'), '⚠ a roster with someone on it: the form shut, + Add an appraiser shown');
+    has(tagOf(h, 'appr-form-7'), '<tr id="appr-form-7"', 'the form is the table\'s own row, hidden, never dropped');
+    has(h, 'id="appr-name"', 'its boxes still in the page');
+    eq(Object.keys(S._apprFormOpen), [], 'and nothing written down for it');
+    has(h, '</tr></tfoot></table></div><div class="inv-add-ctl"><button class="btn-s" id="appr-add-7"', 'the button under the table, outside its scroller');
+    S = cards(PROBATE(), [ART()]);
+    h = S._renderAppraiserRoster(S.jobs[0]);
+    ok(shown(h, 'appr-form-7') && !shown(h, 'appr-add-7'), '⚠⚠ an empty roster and an item waiting on an appraisal: the form open by itself, the button aside');
+    eq(S._apprFormOpen[7], true, 'written down, so it never shuts under the person filling it');
+    S._photoRefs[7][0].apprWaived = true; S._photoRefs[7][0].apprWaiveReason = 'counsel';
+    ok(shown(S._renderAppraiserRoster(S.jobs[0]), 'appr-form-7'), '⚠ the item waived meanwhile: the form the person was filling stays open');
+    S = cards(PROBATE(), [LINE('a')]);
+    ok(!shown(S._renderAppraiserRoster(S.jobs[0]), 'appr-form-7'), 'an empty roster with nothing waiting: shut');
+    // In place on the desk, and a person's choice outlives the full redraw.
+    const D = desk({}, {}, { real: ['_renderAppraiserRoster'], roots: ['invToggleApprForm'], refs: [LINE('a')] });
+    D.render();
+    ok(!shown(D.dom.html, 'appr-form-7'), 'fixture: shut on the desk');
+    const n0 = D.log.renders;
+    attempt(() => D.C.invToggleApprForm(7, true));
+    ok(shown(D.dom.html, 'appr-form-7') && !shown(D.dom.html, 'appr-add-7'), '⚠ + Add an appraiser shows the form where it stands');
+    eq(D.log.renders, n0, '⚠ never a render: nothing typed anywhere else is lost');
+    D.render();
+    ok(shown(D.dom.html, 'appr-form-7'), 'opened by hand, it outlives the next full redraw');
+    attempt(() => D.C.invToggleApprForm(7, false));
+    ok(!shown(D.dom.html, 'appr-form-7') && shown(D.dom.html, 'appr-add-7'), 'Cancel shuts it in place');
+    const E = desk({}, {}, { real: ['_renderAppraiserRoster'], roots: ['invToggleApprForm'], refs: [ART()] });
+    E.render();
+    ok(shown(E.dom.html, 'appr-form-7'), 'fixture: open by itself (an empty roster, an item waiting)');
+    attempt(() => E.C.invToggleApprForm(7, false));
+    E.render();
+    ok(!shown(E.dom.html, 'appr-form-7'), '⚠ shut by hand, it stays shut through a redraw although its rule would open it');
+    // A save puts the form back to its default: with someone on the roster now, shut.
+    const A = cards(PROBATE(), [ART()], { document: domStub({ 'appr-name': 'Carla Mendes', 'appr-cred': 'ASA', 'appr-indep': true }) });
+    A._renderAppraiserRoster(A.jobs[0]);
+    eq(A._apprFormOpen[7], true, 'fixture: the form open by itself');
+    attempt(() => A.addAppraiser(7));
+    eq((A.jobs[0].appraisers || []).map((x) => x.name), ['Carla Mendes'], 'the appraiser is saved');
+    ok(!Object.prototype.hasOwnProperty.call(A._apprFormOpen, 7), '⚠ and the form\'s state is back to its default');
+    ok(!shown(A._renderAppraiserRoster(A.jobs[0]), 'appr-form-7'), '…shut, the new row where the form stood');
+    // The guardrail's sentence for an empty roster names the press it now takes.
+    const G = cards(PROBATE(), [ART()]);
+    has(G._renderAppraisalGuardrail(G.jobs[0]), 'Add an appraiser to the roster above first', 'the guardrail still sends the person to the roster above it, its form open');
+  }
+
+  group('J5 · + Add a beneficiary, + Add a specific bequest: open while the list is empty, Edit opens before it fills, Cancel clears');
+  {
+    let S = cards(PROBATE(), []);
+    let h = S._renderInvBequestCard(S.jobs[0], []);
+    ok(shown(h, 'bq-ben-form-7') && shown(h, 'bq-beq-form-7'), 'nothing recorded: both forms open by themselves');
+    ok(!shown(h, 'bq-ben-add-7') && !shown(h, 'bq-beq-add-7'), 'their buttons aside');
+    eq([S._bqFormOpen['7:ben'], S._bqFormOpen['7:beq']], [true, true], 'written down, so neither shuts under the person filling it');
+    const mary = { id: 'b1', name: 'Mary Smith', relationship: 'niece' };
+    S = cards(PROBATE({ beneficiaries: [mary] }), []);
+    h = S._renderInvBequestCard(S.jobs[0], []);
+    ok(!shown(h, 'bq-ben-form-7') && shown(h, 'bq-ben-add-7'), '⚠ a beneficiary on the list: that form shut, + Add a beneficiary shown');
+    ok(shown(h, 'bq-beq-form-7'), 'the bequests\' form still open: no bequest yet');
+    const iBen = h.indexOf('id="bq-ben-add-7"'), iBeqHead = h.indexOf('Specific bequests'), iBeqAdd = h.indexOf('id="bq-beq-add-7"');
+    ok(h.indexOf('Mary Smith') < iBen && iBen < iBeqHead && iBeqHead < iBeqAdd, 'each button under its own list');
+    S = cards(PROBATE({ beneficiaries: [mary], bequests: [{ id: 'q1', description: 'the gold watch', beneficiaryId: 'b1', stableIds: [] }] }), []);
+    h = S._renderInvBequestCard(S.jobs[0], []);
+    ok(!shown(h, 'bq-ben-form-7') && !shown(h, 'bq-beq-form-7'), 'both lists started: both forms shut');
+    ['bq-ben-id-7', 'bq-ben-name-7', 'bq-ben-rel-7', 'bq-ben-phone-7', 'bq-ben-email-7'].forEach((id) => has(inner(h, 'bq-ben-form-7'), 'id="' + id + '"', id + ' kept in the hidden form'));
+    ['bq-id-7', 'bq-desc-7', 'bq-benid-7', 'bq-items-7'].forEach((id) => has(inner(h, 'bq-beq-form-7'), 'id="' + id + '"', id + ' too'));
+    ['bq-ben-form-7', 'bq-beq-form-7'].forEach((id) => lacks(inner(h, id), 'datalist', '⚠ the roster\'s datalist is outside ' + id));
+    has(h, '<datalist id="inv-ben-list-7"><option value="Mary Smith"></option></datalist>', '⚠ and in the card, open or shut, for every To a person box');
+    // Edit opens the form, recorded like a press, then fills it.
+    const doc = domStub({ 'bq-ben-form-7': { style: { display: 'none' } }, 'bq-ben-add-7': { style: { display: '' } },
+      'bq-beq-form-7': { style: { display: 'none' } }, 'bq-beq-add-7': { style: { display: '' } } });
+    S = cards(PROBATE({ beneficiaries: [mary], bequests: [{ id: 'q1', description: 'the gold watch', beneficiaryId: 'b1', stableIds: [] }] }), [], { document: doc });
+    ok(S.invEditBeneficiary(7, 'b1'), 'Edit runs');
+    eq([doc.getElementById('bq-ben-form-7').style.display, doc.getElementById('bq-ben-add-7').style.display], ['', 'none'], '⚠⚠ Edit opens the form');
+    eq([doc.getElementById('bq-ben-id-7').value, doc.getElementById('bq-ben-name-7').value], ['b1', 'Mary Smith'], '…and fills it');
+    eq(S._bqFormOpen['7:ben'], true, 'recorded open, so a redraw keeps it open');
+    // Cancel shuts it and clears it: the hidden id would otherwise turn the next "new" beneficiary into an edit of Mary.
+    S.invToggleBqForm(7, 'ben', false);
+    eq(doc.getElementById('bq-ben-form-7').style.display, 'none', 'Cancel shuts the form');
+    eq(['id', 'name', 'rel'].map((k) => doc.getElementById('bq-ben-' + k + '-7').value), ['', '', ''], '⚠ and clears it, the hidden id included');
+    eq(S._bqFormOpen['7:ben'], false, 'a person\'s shut, recorded');
+    ok(S.invEditBequest(7, 'q1'), 'the bequest\'s Edit runs');
+    eq([doc.getElementById('bq-beq-form-7').style.display, doc.getElementById('bq-desc-7').value], ['', 'the gold watch'], '⚠ and opens its form before filling it');
+    // A save puts the form back to its default.
+    S.invToggleBqForm(7, 'ben', true);
+    doc.getElementById('bq-ben-name-7').value = 'John Smith';
+    ok(S.invSaveBeneficiary(7), 'John is saved');
+    ok(!Object.prototype.hasOwnProperty.call(S._bqFormOpen, '7:ben'), '⚠ the form\'s state back to its default');
+    ok(!shown(S._renderInvBequestCard(S.jobs[0], []), 'bq-ben-form-7'), '…shut, the list holding an entry');
+    eq(doc.getElementById('bq-ben-name-7').value, '', 'the form cleared');
+    S.invToggleBqForm(7, 'beq', false);
+    S.invToggleBqForm(7, 'beq', true);
+    doc.getElementById('bq-desc-7').value = 'the Sargent portrait'; doc.getElementById('bq-benid-7').value = 'b1';
+    ok(S.invSaveBequest(7), 'a second bequest is saved through its form');
+    eq(S.jobs[0].bequests.map((q) => q.description), ['the gold watch', 'the Sargent portrait'], 'a new entry, not an edit of the first');
+    ok(!Object.prototype.hasOwnProperty.call(S._bqFormOpen, '7:beq'), '⚠ and the bequests\' form back to its default');
+    // In place on the desk: the press never redraws.
+    const D = desk({}, {}, { real: ['_renderInvBequestCard'], roots: ['invToggleBqForm'] });
+    D.job.beneficiaries = [mary];
+    D.render();
+    const n0 = D.log.renders;
+    ok(!shown(D.dom.html, 'bq-ben-form-7'), 'fixture: shut on the desk');
+    attempt(() => D.C.invToggleBqForm(7, 'ben', true));
+    ok(shown(D.dom.html, 'bq-ben-form-7') && !shown(D.dom.html, 'bq-ben-add-7'), '⚠ + Add a beneficiary shows the form where it stands');
+    eq(D.log.renders, n0, 'never a render');
+    eq(S.invToggleBqForm(7, 'nobody', true), false, 'a form the card does not have: nothing');
+  }
+
+  group('J6 · one rule each, view state only, and the forms\' boxes cleared by one list');
+  {
+    eq(callersOf('_apprFormIsOpen'), ['_renderAppraiserRoster'], 'whether the appraisers\' form is open: asked where it is drawn');
+    eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
+    eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');
+    ['_apprFormIsOpen', 'invToggleApprForm', '_bqFormIsOpen', 'invToggleBqForm', '_invBqFormPaint', '_renderValueSettings'].forEach((f) =>
+      lacks(codeOnly(fn(f)), 'localStorage', f + ': view state, never saved'));
+    lacks(codeOnly(fn('invToggleApprForm')) + codeOnly(fn('invToggleBqForm')), 'renderInventoryTab', '⚠ the presses flip in place, never a render');
+    ok(/\.inv-val-set input\[type=checkbox\]\{width:auto;/.test(CSS), 'the §2032 tick is its own size, not the global input width');
   }
 }

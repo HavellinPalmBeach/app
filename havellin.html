@@ -803,6 +803,16 @@ body.field-cam-open #sync-pending{display:none !important;}
 .inv-rel-ctl label.btn-s,.inv-rel-ctl button.btn-s{margin:0;display:inline-block;font-size:10px;padding:4px 10px;}
 .inv-rel-ctl .sc-rec{flex:1 1 100%;min-width:0;}
 .inv-bq-row{min-width:0;overflow-wrap:anywhere;}
+/* The Values & appraisals bar's Valuation card (2026-10-22): the basis, the value date and the §2032 tick on one line that
+   wraps on a phone. A bare label is an uppercase block with a top margin, and the global input,select{width:100%} would
+   stretch the select across the card and the tick across its row. The quiet add forms' buttons (+ Add an appraiser, a
+   beneficiary, a specific bequest) sit under their lists as .btn-s; each form carries a Cancel by its Save. */
+.inv-val-set{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;font-size:12px;color:var(--gray-dk);min-width:0;}
+.inv-val-set label{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:12px;font-weight:400;color:var(--gray-dk);text-transform:none;letter-spacing:0;cursor:pointer;min-width:0;}
+.inv-val-set select{width:auto;max-width:100%;min-width:0;font-size:12px;padding:3px 6px;}
+.inv-val-set input[type=checkbox]{width:auto;flex:0 0 auto;margin:0;accent-color:var(--bronze);}
+.inv-val-avd{font-size:11.5px;}
+.inv-add-ctl{margin-top:6px;}
 /* Close-out card (2026-09-22) — four numbered steps in the order they are done: the call, the
    review ask it unlocks, the referral ask, the required vendor scorecard. One renderer, drawn on
    the Job Plan's Close-out stage and on Job Admin & Inv. */
@@ -1398,7 +1408,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 1:18am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 3:10am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -28095,6 +28105,38 @@ function setEstateAVD(jobId, on) {
   renderInventoryTab();
   _scheduleInventorySync(jobId);
 }
+// ═══ THE VALUATION SETTINGS, WITH THE APPRAISALS (2026-10-22) ═══
+// ⚠⚠ THE TWO ESTATE-WIDE SETTINGS WITH LEGAL EFFECT SIT WHERE THE VALUES ARE MADE. The valuation basis and the §2032
+// alternate valuation date decide what every value on the estate's schedules is stated as, and as of when, and they could be
+// reached only through More ▾ → Show summary & rollups, at the very foot of the tab, as two controls among the summary's
+// read-outs: pressing the toggle changed nothing near where the person pressed it. They head the Values & appraisals bar now,
+// above the appraisers and the guardrail (Anthony, 2026-10-22: *"Build all of it now."*), and the summary states them as text.
+// ⚠ ONE PREDICATE FOR WHERE THEY APPLY, read by the summary's rows and by the bar's card: an estate whose tier states values.
+// On living work and at the Contents list or None tier there is no valuation for them to govern (the summary's "control for a
+// proceeding that does not exist" finding), so neither the card nor the rows draw.
+function invStatesEstateValues(job) { return !!job && invFiduciaryMode(job) && docTierProduces(job, 'values'); }
+// The value date as the desk says it, HTML: the date of death, or the alternate date where it is elected. The summary's row
+// and the bar's card read this one sentence, so the two cannot name different days.
+function _invValueAsOfHtml(job) {
+  if (job && job.avd && job.deathDate) return esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>';
+  return (job && job.deathDate ? esc(fmtDate2(job.deathDate)) : '—') + ' <span style="color:var(--gray);">(date of death)</span>';
+}
+// The card at the head of the Values & appraisals bar: the basis select (setValBasis) and the §2032 tick (setEstateAVD), each
+// with its words on screen (a tooltip is unreachable on an iPad). The controls' own handlers, unchanged.
+function _renderValueSettings(job) {
+  if (!invStatesEstateValues(job)) return '';
+  var jid = job.id, basis = resolveValBasis(job);
+  return '<div class="card" id="inv-val-settings" style="margin-bottom:1rem;">'
+    + '<div class="sec" style="margin-bottom:4px;">Valuation</div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">What every value on this estate&rsquo;s schedules is stated as, and as of when.</div>'
+    + '<div class="inv-val-set">'
+      + '<label class="inv-val-basis">Basis <select id="inv-valbasis-' + jid + '" onchange="setValBasis(' + jid + ',this.value)">'
+        + INV_VAL_BASES.map(function(b){ return '<option' + (b === basis ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select></label>'
+      + '<span class="inv-val-asof">Value as of ' + _invValueAsOfHtml(job) + '</span>'
+      + '<label class="inv-val-avd"><input type="checkbox" id="inv-avd-' + jid + '"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + jid + ',this.checked)">'
+        + ' Use the §2032 alternate valuation date: six months after death, taxable estates only</label>'
+    + '</div></div>';
+}
 // `pin` columns are always on screen — they are what identifies a row. Everything else
 // belongs to ONE view, because 29 columns side by side is not a table anybody can read and
 // the answer to "scrolling right is not ideal" is fewer columns, not a wider screen.
@@ -29080,7 +29122,10 @@ function _renderInventorySummary(job, items) {
   // the court claim, one axis over.
   // ⚠ IT READS THE PRODUCES FLAG, NEVER THE TIER KEY — `contents` and `none` both answer
   // false, and a reader testing the key would have to remember both.
-  var _sv = _fid && docTierProduces(job, 'values');
+  var _sv = invStatesEstateValues(job);
+  // ⚠ THE BASIS AND THE DATE ARE READ HERE, AND SET IN THE VALUES & APPRAISALS BAR (2026-10-22). This block carried the
+  // two controls, reachable only through More ▾ at the foot of the tab; they moved to the bar where values are made
+  // (_renderValueSettings, under the same predicate), and the summary states what they say, as text.
   var header = '<div>'
     + hdrRow(_fid ? 'Client / Estate' : 'Client', esc(job.name || '—'))
     + hdrRow('Job ID', esc(job.hvlId || '—'))
@@ -29088,8 +29133,8 @@ function _renderInventorySummary(job, items) {
     + (!_fid ? '' : ''
     + hdrRow('Date of Death', dt(job.deathDate))
     + (!_sv ? '' : ''
-    + hdrRow('Valuation Basis', '<select onchange="setValBasis(' + job.id + ',this.value)" style="font-size:11px;padding:2px 4px;">' + INV_VAL_BASES.map(function(b){ return '<option' + (b === resolveValBasis(job) ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('') + '</select>')
-    + hdrRow('Value as of', '<label style="font-weight:400;font-size:11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;justify-content:flex-end;white-space:nowrap;"><span>' + (job.avd && job.deathDate ? esc(fmtDate2(_avdDate(job))) + ' <span style="color:var(--gray);">(alt. valuation date)</span>' : dt(job.deathDate) + ' <span style="color:var(--gray);">(date of death)</span>') + '</span><input type="checkbox"' + (job.avd ? ' checked' : '') + ' onchange="setEstateAVD(' + job.id + ',this.checked)" title="Use the §2032 alternate valuation date — 6 months after death (taxable estates only)" style="accent-color:var(--bronze);"></label>'))
+    + hdrRow('Valuation Basis', esc(resolveValBasis(job)))
+    + hdrRow('Value as of', _invValueAsOfHtml(job)))
     + (!_pr ? '' : ''
     + hdrRow('Letters Issued', dt(job.lettersDate))
     + hdrRow('§733.604 Inventory Deadline', dt(job.probateDeadline))))
@@ -32933,7 +32978,14 @@ function _renderInvBequestCard(job, all) {
     + '<input type="text" id="bq-ben-rel-' + jid + '" placeholder="Relationship" style="' + inp + '">'
     + '<input type="tel" id="bq-ben-phone-' + jid + '" placeholder="Phone" style="' + inp + '">'
     + '<input type="email" id="bq-ben-email-' + jid + '" placeholder="Email" style="' + inp + '">'
-    + '<button class="btn-s" style="' + small + 'justify-self:start;" onclick="invSaveBeneficiary(' + jid + ')">Save beneficiary</button></div>';
+    + '<span style="display:flex;gap:6px;justify-self:start;"><button class="btn-s" style="' + small + '" onclick="invSaveBeneficiary(' + jid + ')">Save beneficiary</button>'
+      + '<button class="btn-s" style="' + small + '" onclick="invToggleBqForm(' + jid + ',\'ben\',false)">Cancel</button></span></div>';
+  // Each form waits behind its button, hidden (never dropped: Edit fills its boxes by id) while shut (_bqFormIsOpen).
+  var quiet = function (which, open, form, label) {
+    return '<div id="bq-' + which + '-form-' + jid + '"' + (open ? '' : ' style="display:none;"') + '>' + form + '</div>'
+      + '<div class="inv-add-ctl"><button class="btn-s" id="bq-' + which + '-add-' + jid + '" style="' + small + (open ? 'display:none;' : '') + '"'
+        + ' onclick="invToggleBqForm(' + jid + ',\'' + which + '\',true)">' + label + '</button></div>';
+  };
   var beqRows = beqs.length ? beqs.map(function(b){
     var ids = (b.stableIds || []).map(String);
     var matched = ids.filter(function(id){ return live[id]; }).map(function(id){ return live[id]; });
@@ -32960,14 +33012,16 @@ function _renderInvBequestCard(job, all) {
       + '<option value="">' + (bens.length ? 'Beneficiary…' : 'Add a beneficiary first') + '</option>'
       + bens.map(function(b){ return '<option value="' + esc(b.id) + '">' + esc(b.name) + '</option>'; }).join('') + '</select>'
     + '<input type="text" id="bq-items-' + jid + '" placeholder="Item #s (optional)" style="' + inp + '">'
-    + '<button class="btn-s" style="' + small + 'justify-self:start;" onclick="invSaveBequest(' + jid + ')">Save bequest</button></div>';
+    + '<span style="display:flex;gap:6px;justify-self:start;"><button class="btn-s" style="' + small + '" onclick="invSaveBequest(' + jid + ')">Save bequest</button>'
+      + '<button class="btn-s" style="' + small + '" onclick="invToggleBqForm(' + jid + ',\'beq\',false)">Cancel</button></span></div>';
   return '<div class="card" id="inv-bequests" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Beneficiaries &amp; specific bequests</div>'
     + '<div style="font-size:10.5px;color:var(--gray);">The beneficiaries, and the designated items as the representative or counsel gives them to us, in their words. '
       + 'Havellin never reads or interprets the will or the trust. Matching a line to a bequest marks it a specific bequest.</div>'
     + checks
-    + head('Beneficiaries') + benRows + benForm
-    + head('Specific bequests') + beqRows + beqForm
+    + head('Beneficiaries') + benRows + quiet('ben', _bqFormIsOpen(job, 'ben', bens.length), benForm, '+ Add a beneficiary')
+    + head('Specific bequests') + beqRows + quiet('beq', _bqFormIsOpen(job, 'beq', beqs.length), beqForm, '+ Add a specific bequest')
+    // ⚠ OUTSIDE BOTH FORMS: every To a person box on the rows and the bulk bar reads this list, whether a form is open or not.
     + '<datalist id="inv-ben-list-' + jid + '">' + bens.map(function(b){ return '<option value="' + esc(b.name) + '"></option>'; }).join('') + '</datalist>'
     + '</div>';
 }
@@ -32975,6 +33029,40 @@ function _renderInvBequestCard(job, all) {
 // ── The card's handlers. Every write goes through the job's record lists (a person's edit, stamped and synced) ──
 function _invBqVal(id) { var el = document.getElementById(id); return el ? String(el.value == null ? '' : el.value).trim() : ''; }
 function _invBqSet(id, v) { var el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); }
+// ⚠ THE TWO ADD FORMS WAIT BEHIND THEIR BUTTONS (2026-10-22), as the appraisers' does: + Add a beneficiary and + Add a specific
+// bequest show each form in place (never a render). Each is open by itself while its list is empty, and that open is written
+// down so it never shuts under the person filling it; a person's open or Cancel wins either way; Edit opens the form before
+// it fills it; a save puts it back to its default (shut, once the list has an entry, with the new entry where the form was).
+// Cancel clears the form as it shuts it: an Edit left half-done keeps the entry's id in the hidden box, and the next save
+// from a form that looked empty would have written over that entry. View state, per job, for the session; never saved.
+var _bqFormOpen = {};   // jobId + ':ben' / ':beq' -> true (open) / false (shut by hand)
+// The boxes of each form, by the suffix their ids carry (bq-ben-<k>-<job> and bq-<k>-<job>): cleared by a save and by Cancel.
+var INV_BQ_FORM_FIELDS = { ben: ['id', 'name', 'rel', 'phone', 'email'], beq: ['id', 'desc', 'benid', 'items'] };
+function _invBqFieldId(jobId, which, k) { return (which === 'ben' ? 'bq-ben-' : 'bq-') + k + '-' + jobId; }
+function _invBqClear(jobId, which) {
+  (INV_BQ_FORM_FIELDS[which] || []).forEach(function(k){ _invBqSet(_invBqFieldId(jobId, which, k), ''); });
+}
+function _bqFormIsOpen(job, which, n) {
+  var k = job.id + ':' + which;
+  if (Object.prototype.hasOwnProperty.call(_bqFormOpen, k)) return !!_bqFormOpen[k];
+  if (!n) { _bqFormOpen[k] = true; return true; }
+  return false;
+}
+function _invBqFormPaint(jobId, which, open) {
+  var f = document.getElementById('bq-' + which + '-form-' + jobId), b = document.getElementById('bq-' + which + '-add-' + jobId);
+  if (f) f.style.display = open ? '' : 'none';
+  if (b) b.style.display = open ? 'none' : '';
+  return !!f;
+}
+function invToggleBqForm(jobId, which, open) {
+  if (!INV_BQ_FORM_FIELDS[which]) return false;
+  _bqFormOpen[jobId + ':' + which] = !!open;
+  if (!open) _invBqClear(jobId, which);
+  _invBqFormPaint(jobId, which, open);
+  var el = open ? document.getElementById(_invBqFieldId(jobId, which, which === 'ben' ? 'name' : 'desc')) : null;
+  if (el && el.focus) el.focus();
+  return !!open;
+}
 function invSaveBeneficiary(jobId) {
   var job = _invJob(jobId);
   if (!job) return false;
@@ -32992,7 +33080,8 @@ function invSaveBeneficiary(jobId) {
     relationship: _invBqVal('bq-ben-rel-' + jobId), phone: _invBqVal('bq-ben-phone-' + jobId), email: _invBqVal('bq-ben-email-' + jobId),
     recordedBy: prior ? (prior.recordedBy || '') : _invStampBy(job), recordedAt: prior ? (prior.recordedAt || Date.now()) : Date.now()
   });
-  ['id', 'name', 'rel', 'phone', 'email'].forEach(function(k){ _invBqSet('bq-ben-' + k + '-' + jobId, ''); });
+  _invBqClear(jobId, 'ben');
+  delete _bqFormOpen[jobId + ':ben'];   // back to its default: shut, the new entry where the form stood
   showSyncBadge(name + (prior ? ' updated' : ' added to the beneficiaries') + ' ✓');
   renderInventoryTab();
   return true;
@@ -33000,6 +33089,9 @@ function invSaveBeneficiary(jobId) {
 function invEditBeneficiary(jobId, id) {
   var b = jobListGet(_invJob(jobId), 'beneficiaries', id);
   if (!b) return false;
+  // The form opens first, recorded like a press, so the person sees what is filled and the next render keeps it open.
+  _bqFormOpen[jobId + ':ben'] = true;
+  _invBqFormPaint(jobId, 'ben', true);
   _invBqSet('bq-ben-id-' + jobId, b.id);
   _invBqSet('bq-ben-name-' + jobId, b.name);
   _invBqSet('bq-ben-rel-' + jobId, b.relationship);
@@ -33083,7 +33175,8 @@ function invSaveBequest(jobId) {
   jobListPut(job, 'bequests', { id: prior ? prior.id : undefined, description: desc, beneficiaryId: benId, stableIds: ids,
     recordedBy: prior ? (prior.recordedBy || '') : _invStampBy(job), recordedAt: prior ? (prior.recordedAt || Date.now()) : Date.now() });
   _invMarkBequestLines(jobId, m.lines);
-  ['id', 'desc', 'benid', 'items'].forEach(function(k){ _invBqSet('bq-' + k + '-' + jobId, ''); });
+  _invBqClear(jobId, 'beq');
+  delete _bqFormOpen[jobId + ':beq'];   // back to its default: shut, the new entry where the form stood
   showSyncBadge('Bequest ' + (prior ? 'updated' : 'recorded') + ' ✓');
   renderInventoryTab();
   return true;
@@ -33091,6 +33184,8 @@ function invSaveBequest(jobId) {
 function invEditBequest(jobId, id) {
   var b = jobListGet(_invJob(jobId), 'bequests', id);
   if (!b) return false;
+  _bqFormOpen[jobId + ':beq'] = true;
+  _invBqFormPaint(jobId, 'beq', true);
   _invBqSet('bq-id-' + jobId, b.id);
   _invBqSet('bq-desc-' + jobId, b.description);
   _invBqSet('bq-benid-' + jobId, b.beneficiaryId);
@@ -35376,7 +35471,32 @@ function addAppraiser(jobId) {
   _jobTouch(job, 'appraisers', job.appraisers[job.appraisers.length - 1].id);
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
+  // Saved: the form goes back to its default (shut, with the roster no longer empty), so the new row is read where the
+  // form stood and + Add an appraiser sits under it for the next.
+  delete _apprFormOpen[jobId];
   renderInventoryTab();
+}
+// ⚠ THE ADD FORM WAITS BEHIND ITS BUTTON (2026-10-22). Six boxes and three date pickers sat under every roster, on every
+// estate, every evening, for a list added to once or twice a job. + Add an appraiser shows the form in place (never a render,
+// so nothing typed elsewhere is lost); it is open by itself while the roster is empty and an item waits on an appraisal (the
+// guardrail's own list, whose rows say to add one to the roster first), and that open is written down, as a bar's is, so it
+// never shuts by itself under the person filling it. A person's open or Cancel wins either way, per job, for the session
+// (view state: never saved); a save puts it back to its default.
+var _apprFormOpen = {};   // jobId -> true (open) / false (shut by hand)
+function _apprFormIsOpen(job) {
+  if (!job) return false;
+  if (Object.prototype.hasOwnProperty.call(_apprFormOpen, job.id)) return !!_apprFormOpen[job.id];
+  if (!(job.appraisers || []).length && _invGuardrailItems(job.id).length > 0) { _apprFormOpen[job.id] = true; return true; }
+  return false;
+}
+function invToggleApprForm(jobId, open) {
+  _apprFormOpen[jobId] = !!open;
+  var f = document.getElementById('appr-form-' + jobId), b = document.getElementById('appr-add-' + jobId);
+  if (f) f.style.display = open ? '' : 'none';
+  if (b) b.style.display = open ? 'none' : '';
+  var n = open ? document.getElementById('appr-name') : null;
+  if (n && n.focus) n.focus();
+  return !!open;
 }
 function removeAppraiser(jobId, apprId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -35548,6 +35668,8 @@ function _renderAppraiserRoster(job) {
       + '<td><button class="icon-btn del" onclick="removeAppraiser(' + job.id + ',' + a.id + ')">Remove</button></td>'
       + '</tr>';
   }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:8px;">No appraisers yet — add one to link Appraisal-sourced items to a named, credentialed record.</td></tr>';
+  // The add form is the table's last row, hidden (never dropped) while shut; + Add an appraiser, under the table, shows it.
+  var open = _apprFormIsOpen(job);
   return '<div class="card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Appraisers <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(named &amp; credentialed — link to Appraisal items)</span></div>'
     + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date (the value date — usually the date of death) and a report date.</div>'
@@ -35559,15 +35681,18 @@ function _renderAppraiserRoster(job) {
     + '<div class="tbl-scroll">'
     + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th>Due back</th><th></th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
-    + '<tfoot><tr>'
+    + '<tfoot><tr id="appr-form-' + job.id + '"' + (open ? '' : ' style="display:none;"') + '>'
     + '<td>' + _apprPickerHtml() + '<input type="text" id="appr-name" placeholder="Name" style="font-size:11px;width:100%;"><div id="appr-firm-wrap"><input type="text" id="appr-firm" placeholder="Firm" style="font-size:11px;width:100%;margin-top:3px;"></div></td>'
     + '<td><select id="appr-cred" style="font-size:11px;width:100%;">' + credOpts + '</select></td>'
     + '<td style="font-size:11px;"><div id="appr-conflict-note" style="font-size:10px;line-height:1.4;margin-bottom:3px;"></div><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
     + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-duedate" title="Expected turnaround \u2014 when the report is due back" style="font-size:11px;width:100%;"></td>'
-    + '<td><button class="icon-btn" onclick="addAppraiser(' + job.id + ')">+ Add</button></td>'
-    + '</tr></tfoot></table></div></div>';
+    + '<td><button class="icon-btn" style="display:block;white-space:nowrap;" onclick="addAppraiser(' + job.id + ')">Save appraiser</button>'
+      + '<button class="icon-btn" style="display:block;margin-top:4px;" onclick="invToggleApprForm(' + job.id + ',false)">Cancel</button></td>'
+    + '</tr></tfoot></table></div>'
+    + '<div class="inv-add-ctl"><button class="btn-s" id="appr-add-' + job.id + '"' + (open ? ' style="display:none;"' : '')
+      + ' onclick="invToggleApprForm(' + job.id + ',true)">+ Add an appraiser</button></div></div>';
 }
 
 // ── $3k appraisal guardrail ───────────────────────────────────────────────────
@@ -38490,8 +38615,9 @@ function renderInventoryTab() {
     // Releases host is drawn even when the card has nothing in it, hidden, so its by-id repaint (_invRefreshReleases)
     // has an element to fill the moment it does.
     + fold('releases', (_renderInvReleasesCard(job, all) || INV_RELEASES_HOST_EMPTY) + _renderInvBequestCard(job, all))
-    // The roster first: it is where an appraiser is added, and the guardrail's rows link the one they pick from it.
-    + fold('values', _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>')
+    // The valuation settings first, on an estate whose tier states values (what every value is stated as, and as of when);
+    // then the roster: it is where an appraiser is added, and the guardrail's rows link the one they pick from it.
+    + fold('values', _renderValueSettings(job) + _renderAppraiserRoster(job) + '<div id="inv-guardrail">' + _renderAppraisalGuardrail(job) + '</div>')
     // The close-out records (P19): the Disposition Ledger, the proceeds statements and the donations, in one host that
     // the desk's partial repaints refresh by id (_invRefreshRecords), under the close-out card.
     + fold('closing', closeout
