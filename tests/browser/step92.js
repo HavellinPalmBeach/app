@@ -138,6 +138,10 @@ const EST = 9101;
     await section('D. the pocket size: the bar up at 390 with no overflow', async () => {
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);
       await tick('d');
+      // ⚠ RESTATED 2026-10-22 (the desk on a phone): at 390 the bar is one line and its controls sit behind Actions, so Remove
+      // lines is one press away there: hidden until Actions is pressed, then on screen.
+      ok(!(await vis('button[onclick="invBulkRemove(' + EST + ')"]')), 'at 390 the bar is one line, Remove lines behind Actions');
+      await press('#inv-bulk-tog-' + EST, 'the bar\'s Actions, at 390');
       ok(await vis('button[onclick="invBulkRemove(' + EST + ')"]'), 'Remove lines is on the bar at 390');
       eq(await overflow(), 0, 'no horizontal overflow at 390 with the bar up');
       await p.evaluate(() => _invClearPicks());

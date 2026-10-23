@@ -398,6 +398,8 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       ok(await overflow() <= 0, 'and the open form fits at 390 (' + await overflow() + ')');
       await press('#bq-ben-form-5601 button[onclick="invToggleBqForm(5601,\'ben\',false)"]', 'Cancel, at 390');
       await pick('s5');
+      // ⚠ RESTATED 2026-10-22 (the desk on a phone): at 390 the bulk bar is one line, its controls behind Actions; pressed first.
+      await press('#inv-bulk-tog-5601', 'the bulk bar\'s Actions, at 390');
       await press('button[onclick="invRecordApproval(5601)"]', 'Record approval at 390');
       ok(await vis('#ia-save-btn'), 'the dialog\'s Record approval is on screen at 390');
       ok(await overflow() <= 0, 'and the dialog fits (' + await overflow() + ')');

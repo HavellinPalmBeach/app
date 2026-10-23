@@ -38,6 +38,10 @@
 //       per kind of paper, the receipts' notes and their orphan carried over, the sections in the order of the work; the
 //       adopted Court Inventory and the received Trust Schedule filed beside the ledger in Closing the job, whose title names
 //       them and whose line says them at the close.
+//   M · the phone (G9): nothing runs off the right edge at 390 (the guardrail's appraiser picker may shrink, a row's chip line
+//       wraps instead of cutting chips off); the bulk bar one line on a phone, its same controls behind Actions, in place;
+//       and on the desk only, on a phone only, the band's timeline folded to one line that names what the rail paints
+//       amber or red (Anthony's Q4), shown in place by a tap and kept shown across every repaint, per job.
 //
 // Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -243,6 +247,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupJ({ group, ok, eq, has, lacks });
     groupK({ group, ok, eq, has, lacks });
     groupL({ group, ok, eq, has, lacks });
+    groupM({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -2451,5 +2456,199 @@ function groupL({ group, ok, eq, has, lacks }) {
     eq([...carla.matchAll(/onclick="openSignoutDialog\(7,&quot;([a-z_]+)&quot;,&quot;Carla Mendes&quot;\)">([^<]*)</g)].map((m) => [m[1], m[2]]),
       [['appraisal_back', 'Check 1 back in from Carla Mendes'], ['appraisal_out', 'Sign out 1 to Carla Mendes (appraisal hand-off)']],
       '⚠ the one Sign out offered, under a sale and a hand-off, names the paper it opens; the return names itself');
+  }
+}
+
+// ═══ M · THE PHONE (G9, 2026-10-22) ════════════════════════════════════════════════════════════════════════════════════
+// Measured on browser step 96's estate before this group, at 390 px with every bar open: 124 px of sideways scroll (the
+// guardrail's appraiser picker and its Waive), the bulk bar 448 px tall with two rows ticked, the band and its rail 610 px.
+// The layout itself is measured on the real page by step 96's part 9; what is held here is the markup and the CSS that make
+// it, the in-place toggles, and the folded line's words off the real timeline.
+// The phone block: the one `@media (max-width:820px) {` block of the first stylesheet, to its closing brace.
+function phoneCss() {
+  const at = CSS.indexOf('@media (max-width:820px) {');
+  if (at < 0) return '';
+  let depth = 0;
+  for (let i = CSS.indexOf('{', at); i < CSS.length; i++) {
+    if (CSS[i] === '{') depth++;
+    else if (CSS[i] === '}' && !--depth) return CSS.slice(at, i + 1);
+  }
+  return '';
+}
+// The stylesheet outside every @media block (the rules a laptop reads as they are).
+function baseCss() {
+  let out = '', i = 0;
+  while (i < CSS.length) {
+    const m = CSS.indexOf('@media', i);
+    if (m < 0) { out += CSS.slice(i); break; }
+    out += CSS.slice(i, m);
+    let depth = 0, j = CSS.indexOf('{', m);
+    for (; j < CSS.length; j++) { if (CSS[j] === '{') depth++; else if (CSS[j] === '}' && !--depth) break; }
+    i = j + 1;
+  }
+  return out;
+}
+const DAY_M = '2026-10-22';
+// A Home Transition two days past its planned halfway, the deposit in, the midpoint not yet sent.
+const M_JOB = () => ({ id: 7, name: 'Hale', svc: 'downsizing_move', status: 'active', won: true, approved: true, activatedOn: '2026-10-05', start: '2026-10-06',
+  agrApproved: true, agrSent: true, agrSigned: true,
+  docState: { agreement: { sentAt: '2026-09-26T14:00:00Z', sig: { signedBy: 'Hale', signedAt: '2026-09-28' } }, 'invoice:deposit': { sentAt: '2026-09-29T14:00:00Z' } },
+  payments: [{ uid: 'l1', stage: 'deposit', amount: 9000, receivedOn: '2026-10-01', method: 'wire', clearedOn: '2026-10-01' }] });
+const M_EST = () => ({ 7: { approved: true, submitted: true, estimate: { jobId: 7, svc: 'downsizing_move', havellinTotal: 18000, totTC: 40, totPS: 80, tcRate: 150, psRate: 100,
+  days: 6, vendors: [], prepItems: [], pkgCost: 0, rooms: [] } } });
+function band(job, dom) {
+  return lift(['jobProgressBlockHtml', '_repaintJobBand', 'toggleDeskTimeline'], { jobs: [job], estimateStore: M_EST(), jobPlanStore: {}, jobLogs: [], changeOrders: [],
+    document: dom || domStub({}), _dashboardJobId: 0, _todayStr: () => DAY_M });
+}
+
+function groupM({ group, ok, eq, has, lacks }) {
+  group('M1 · the guardrail\'s appraiser picker may shrink to its row: the 124 px off the right edge at 390 was this span');
+  {
+    const job = PROBATE({ appraisers: [{ id: 1, name: 'Carla Mendes', firm: 'Mendes Fine Art Appraisals', credential: 'ASA' }] });
+    const B = bars(job, [LINE('a', { category: 'Art & Décor', fmv: 9000, apprId: 1 })]);
+    const g = String(attempt(() => B.C._renderAppraisalGuardrail(job)).val || '');
+    const span = (/<span class="inv-appr-pick" style="([^"]*)">\s*<select onchange="_invSetAppraiser\(/.exec(g) || [])[1] || '';
+    ok(span.length > 0, 'fixture: the guardrail draws the picker in its span, an appraiser on the roster');
+    has(span, 'flex:0 1 auto', '⚠⚠ the span may shrink (it was flex:0 0 auto: held at its longest appraiser\'s name)');
+    has(span, 'min-width:0', '⚠ released from the automatic minimum, so it can shrink below its content');
+    has(span, 'max-width:100%', 'and never wider than its row');
+    has(g.slice(g.indexOf('class="inv-appr-pick"')), '>Waive</button></span>', 'Waive stays in the span, beside the picker');
+    lacks(g, 'flex:0 0 auto;">', 'no span on the guardrail is held at its content width');
+  }
+
+  group('M2 · a row\'s chip line wraps at every width: no chip cut off behind an ellipsis');
+  {
+    const C = lift(['_renderInvRow'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
+      _photoRefs: { 7: [LINE('a', { itemNo: 3, objectName: 'Grandfather clock', category: 'Antiques', fmv: 3500, needsAppr: true, flagBequest: true, flagDisputed: true })] },
+      _agDupSet: { a: 2 }, document: domStub({}) });
+    const row = attempt(() => C._renderInvRow(C.jobs[0], C._photoRefs[7][0]));
+    ok(row.ok, 'the row draws (' + (row.err || 'ok') + ')');
+    const h = String(row.val || '');
+    const at = h.indexOf('class="inv-row-sub"');
+    ok(at > 0, 'the chip line is drawn, by its class');
+    const tag = h.slice(h.lastIndexOf('<div', at), h.indexOf('>', at) + 1);
+    lacks(tag, 'white-space:nowrap', '⚠⚠ the chip line is not held to one line');
+    lacks(tag, 'text-overflow:ellipsis', '⚠ and nothing on it is cut off behind an ellipsis');
+    lacks(tag, 'overflow:hidden', 'nor hidden past the row\'s edge');
+    has(tag, 'overflow-wrap:anywhere', 'a long unbroken name breaks rather than widening the row');
+    const line = h.slice(at, h.indexOf('</div>', at));   // the line's own spans, to its close (it holds no div)
+    ['appraise', 'disputed', 'possible duplicate', 'bequest'].forEach((c) => has(line, c, 'the ' + c + ' chip is on the line'));
+  }
+
+  group('M3 · the bulk bar on a phone: one line, "N selected", Actions and Clear; the same controls and handlers behind Actions');
+  {
+    const two = [LINE('a', { itemNo: 1 }), LINE('b', { itemNo: 2 })];
+    const dom = liveDom(7);
+    const C = lift(['_renderInvBulk', 'toggleInvBulk'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [{ idx: 0, name: 'Hall' }] } } },
+      _photoRefs: { 7: two }, document: dom });
+    C._invPick = { a: 1, b: 1 };
+    const r = attempt(() => C._renderInvBulk(C.jobs[0]));
+    ok(r.ok, 'the bar draws (' + (r.err || 'ok') + ')');
+    const h = String(r.val || '');
+    has(h, '<div class="inv-bulk" id="inv-bulk-7" style="position:sticky;bottom:0;', 'the bar, by its id, still sticky at the foot');
+    has(h, '<strong style="font-size:12px;">2 selected</strong><button type="button" class="inv-bulk-tog" id="inv-bulk-tog-7" onclick="toggleInvBulk(7)" aria-expanded="false" aria-controls="inv-bulk-ctl-7"',
+      '⚠ "2 selected", then Actions, shut');
+    has(h, '>Actions &#9662;</button><span class="inv-bulk-ctl" id="inv-bulk-ctl-7">', 'Actions ▾ opens the controls\' wrapper, which follows it');
+    const ctlAt = h.indexOf('<span class="inv-bulk-ctl"'), ctlEnd = h.indexOf('</span><button class="inv-bulk-clear"');
+    ok(ctlAt > 0 && ctlEnd > ctlAt, 'the wrapper closes before Clear');
+    const ctl = h.slice(ctlAt, ctlEnd);
+    // Every control the bar had, each once, inside the wrapper, with its own handler.
+    const HANDLERS = ['_invBulkApply(7,\'category\',this.value)', '_invBulkApply(7,\'disposition\',this.value)', '_invBulkApply(7,\'valSource\',this.value)',
+      '_invBulkApply(7,\'condition\',this.value)', '_invBulkApply(7,\'roomIdx\',this.value)', 'id="inv-bulk-recip"', '_invBulkApply(7,\'channel\',',
+      '_invBulkApply(7,\'reviewed\',1)', 'printApprovalRequest(7,true)', 'sendApprovalRequest(7,true)', 'invRecordApproval(7)', 'invBulkRemove(7)'];
+    HANDLERS.forEach((n) => eq([h.split(n).length - 1, ctl.split(n).length - 1], [1, 1], 'once on the bar, inside the wrapper: ' + n));
+    eq((h.match(/<select /g) || []).length, (ctl.match(/<select /g) || []).length, 'every select is in the wrapper');
+    has(h, '<button class="inv-bulk-clear" onclick="_invClearPicks()"', 'Clear outside it, on the one line');
+    eq(h.split('_invClearPicks()').length - 1, 1, 'Clear once');
+    // Pressed: in place, no render; then every render the acts make draws it open, until the selection empties.
+    dom.html = h;
+    const p = attempt(() => C.toggleInvBulk(7));
+    ok(p.ok, 'Actions pressed (' + (p.err || 'ok') + ')');
+    eq(dom.getElementById('inv-bulk-7').getAttribute('class'), 'inv-bulk inv-bulk-open', '⚠ the bar opens where it stands');
+    eq(dom.getElementById('inv-bulk-tog-7').getAttribute('aria-expanded'), 'true', 'and Actions says so');
+    has(String(C._renderInvBulk(C.jobs[0])), '<div class="inv-bulk inv-bulk-open" id="inv-bulk-7"', '⚠ the render an act makes draws it open, as it was left');
+    has(String(C._renderInvBulk(C.jobs[0])), 'aria-expanded="true"', 'its toggle saying so');
+    attempt(() => C.toggleInvBulk(7));
+    has(String(C._renderInvBulk(C.jobs[0])), '<div class="inv-bulk" id="inv-bulk-7"', 'pressed again: shut, and drawn shut');
+    attempt(() => C.toggleInvBulk(7));
+    C._invPick = {};
+    eq(String(C._renderInvBulk(C.jobs[0])), '', 'the selection emptied: no bar');
+    C._invPick = { a: 1 };
+    has(String(C._renderInvBulk(C.jobs[0])), '<div class="inv-bulk" id="inv-bulk-7"', '⚠ the next selection starts as one line again');
+  }
+
+  group('M4 · the CSS: a laptop reads the bar and the band as they were; the phone block hides the actions and folds the desk band\'s rail');
+  {
+    const base = baseCss(), phone = phoneCss();
+    ok(phone.length > 2000 && phone.indexOf('.card div,.modal-box div{min-width:0;}') > 0 && phone.indexOf('.card div[style*="flex-shrink:0"]') > 0, 'fixture: the phone block, read whole');
+    has(base, '.inv-bulk-tog{display:none;}', '⚠ a laptop draws no Actions toggle');
+    has(base, '.inv-bulk-ctl{display:contents;}', '⚠⚠ and the controls\' wrapper takes no box: the bar is the one flex row it was');
+    has(base, '.jt-dfold-tog{display:none;}', '⚠ a laptop draws no timeline line');
+    lacks(base, '.jt-dfold:not(.jt-dfold-open) .jt-rail', 'and folds no rail');
+    has(phone, '.inv-bulk-tog{display:inline-block;}', 'a phone draws Actions');
+    has(phone, '.inv-bulk-ctl{display:none;}', '⚠ and hides the controls until it is pressed');
+    has(phone, '.inv-bulk-open .inv-bulk-ctl{display:flex;flex-wrap:wrap;', 'pressed, they show, wrapping');
+    has(phone, 'flex:1 1 100%;order:1;', 'on their own lines under the one line');
+    has(phone, '.inv-bulk-res{order:2;}', 'the last act\'s confirmation last');
+    has(phone, '.jt-dfold-tog{display:flex;', 'a phone draws the timeline\'s line');
+    has(phone, '.jt-dfold:not(.jt-dfold-open) .jt-rail{display:none;}', '⚠⚠ and folds the rail under it until it is tapped');
+    lacks(phone, '.jt-next{display:none', 'the NEXT step is never folded');
+  }
+
+  group('M5 · Q4: on the desk the band\'s timeline is one line on a phone, naming what the rail paints amber or red; tapped, shown in place and kept');
+  {
+    const B = band(M_JOB());
+    const adm = String(attempt(() => B.jobProgressBlockHtml(7, 'admin')).val || '');
+    ok(adm.indexOf('jt-next') > 0, 'fixture: the desk band draws its NEXT step');
+    const foldAt = adm.indexOf('<div class="jt-dfold" id="jt-dfold-7">');
+    ok(foldAt > adm.indexOf('class="jt-next'), '⚠ the fold sits under the NEXT step and its buttons, which stay');
+    ok(adm.indexOf('class="jt-rail"') > foldAt && adm.indexOf('class="jt-track"') > foldAt, 'the rail and the track inside it');
+    has(adm, '<button type="button" class="jt-dfold-tog" id="jt-dfold-tog-7" onclick="toggleDeskTimeline(7)" aria-expanded="false">', 'its line is a button, shut');
+    has(adm, '<span class="jt-dfold-car" id="jt-dfold-car-7">' + B.secCaret(false) + '</span>', 'the caret is secCaret\'s');
+    const togAt = adm.indexOf('id="jt-dfold-tog-7"');
+    const line = textOf(adm.slice(adm.indexOf('>', togAt) + 1, adm.indexOf('</button>', togAt))).replace(/&#9888;/g, '⚠');
+    // Read off the real rail: the rows it draws done, and the two planned dates already past, which it paints red.
+    const rail = adm.slice(adm.indexOf('class="jt-rail"'));
+    const nDone = (rail.match(/class="jt-row jt-done"/g) || []).length, nRows = (rail.match(/class="jt-row /g) || []).length;
+    const late = [...rail.matchAll(/<div class="jt-lbl">([^<]*)<\/div>(?:(?!class="jt-row ).)*?<div class="jt-plan jt-plan-late">Planned ([^<]*)<\/div>/g)].map((m) => m[1] + ': planned ' + m[2]);
+    ok(nRows > 3 && late.length === 2, 'fixture: the rail draws ' + nRows + ' rows, ' + late.length + ' with a planned date past');
+    eq(line, B.secCaret(false) + ' Timeline · ' + nDone + ' of ' + nRows + ' done · ⚠ ' + late.join(' · ⚠ '), '⚠⚠ the line counts the rail\'s rows and names each one it paints red');
+    // The Job Plan's band is never folded.
+    const plan = String(attempt(() => B.jobProgressBlockHtml(7, 'plan')).val || '');
+    ok(plan.indexOf('class="jt-rail"') > 0, 'fixture: the Job Plan\'s band draws its rail');
+    lacks(plan, 'jt-dfold', '⚠ the Job Plan\'s band carries no fold and no line (host \'admin\' only)');
+    // Tapped: in place, no repaint; every repaint of the band after draws it shown, for this job only.
+    const dom = liveDom(7);
+    const T = band(M_JOB(), dom);
+    dom.html = '<div id="jband-slot-admin">' + String(attempt(() => T.jobProgressBlockHtml(7, 'admin')).val || '') + '</div>';
+    const t = attempt(() => T.toggleDeskTimeline(7));
+    ok(t.ok, 'the line tapped (' + (t.err || 'ok') + ')');
+    eq(dom.getElementById('jt-dfold-7').getAttribute('class'), 'jt-dfold jt-dfold-open', '⚠ shown where it stands');
+    eq([dom.getElementById('jt-dfold-tog-7').getAttribute('aria-expanded'), dom.getElementById('jt-dfold-car-7').textContent], ['true', T.secCaret(true)], 'the line says so');
+    attempt(() => T._repaintJobBand('admin', 7));
+    has(dom.html, '<div class="jt-dfold jt-dfold-open" id="jt-dfold-7">', '⚠⚠ a repaint of the band (a send, a payment, a sheet read) draws it shown, as it was left');
+    eq(T._deskTimelineOpen, { 7: true }, 'kept for this job only, in session memory');
+    attempt(() => T.toggleDeskTimeline(7));
+    attempt(() => T._repaintJobBand('admin', 7));
+    has(dom.html, '<div class="jt-dfold" id="jt-dfold-7">', 'tapped again: folded, and drawn folded');
+  }
+
+  group('M6 · the folded line names every row the rail paints amber or red, in the rail\'s own words; one rule, read by the fold alone');
+  {
+    const F = sandbox({ fns: ['jtFoldLine', 'fmtDate2'], vars: [] });
+    const r = (o) => Object.assign({ label: 'X', done: false, state: 'waiting', plan: '', planLbl: '', planLate: false, flag: '', sub: '' }, o);
+    const L1 = F.jtFoldLine([r({ label: 'Deposit received', done: true, state: 'done' }), r({ label: 'Midpoint payment', state: 'open' }),
+      r({ label: 'Work complete', state: 'current', flag: '1 open incident', plan: '2026-10-14', planLbl: 'end', planLate: true }), r({ label: 'Final payment' })]);
+    eq([L1.done, L1.total], [1, 4], 'done counts the rows done');
+    eq(L1.notes.map((n) => [n.text, n.tone]), [['Midpoint payment: outstanding', 'amber'], ['Work complete: planned end Oct 14, 2026', 'red'], ['Work complete: 1 open incident', 'amber']],
+      '⚠ an open payment amber, a planned date past red, a flag amber, in the rail\'s order');
+    const L2 = F.jtFoldLine([r({ label: 'Closed — deposit retained', done: true, state: 'terminal', sub: 'Client withdrew · $5,000 retained · $4,000 refund due' })]);
+    eq([L2.done, L2.total, L2.notes.map((n) => [n.text, n.tone, !!n.warn])], [1, 1, [['Closed — deposit retained · Client withdrew · $5,000 retained · $4,000 refund due', 'red', false]]],
+      '⚠⚠ a job that died: its one row, with what it says of the money, red (a closed_retained desk draws no band above it)');
+    eq(F.jtFoldLine([r({ label: 'Final payment', done: true, state: 'done', plan: '2026-10-01', planLate: true })]).notes, [], 'a planned date on a row done is history, never named');
+    const live = codeOnly(SRC);
+    eq((live.match(/\bjtFoldLine\(/g) || []).length, 2, 'jtFoldLine: its definition and one reader (the fold)');
+    eq((live.match(/\b_jtDeskFold\(/g) || []).length, 2, '_jtDeskFold: its definition and the band\'s one call');
+    has(noComments(fn('jobProgressBlockHtml')), '_jtDeskFold(jobId, host, work, jtTrackHtml(work, [work]) + jtRailHtml(work))', 'the band hands it the rail it always drew');
   }
 }

@@ -210,8 +210,15 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
       eq(ov, 0, tab + ' overflow at ' + w);
     }
   }
-  const railAt390 = await p.evaluate(() => { const r = document.querySelector('#jband-slot-admin .jt-rail'); return !!(r && r.offsetParent !== null); });
-  ok(railAt390, 'at 390 the leg renders as the vertical rail');
+  // ⚠ RESTATED 2026-10-22 (the desk on a phone, Anthony's Q4: "Fold the timeline on a phone"): on Job Admin & Inv at 390 the
+  // rail sits folded under the band's NEXT step, one tap away. The leg still renders as the vertical rail, reached by the
+  // tap a person makes: the rail folded, its line on screen, the line pressed, the rail on screen.
+  const railVis = () => p.evaluate(() => { const r = document.querySelector('#jband-slot-admin .jt-rail'); return !!(r && r.offsetParent !== null); });
+  ok(!(await railVis()), 'at 390 the desk folds the rail under the band');
+  const lineSel = '#jband-slot-admin .jt-dfold-tog';
+  ok((await p.locator(lineSel).count()) === 1 && await p.locator(lineSel).isVisible(), 'its one line on screen');
+  if ((await p.locator(lineSel).count()) === 1) { await p.click(lineSel); await p.waitForTimeout(250); }
+  ok(await railVis(), 'at 390 the leg renders as the vertical rail, a tap away');
 
   eq(errs.length, 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
   console.log('step15: ' + pass + ' passed, ' + fail + ' failed');

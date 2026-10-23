@@ -797,6 +797,15 @@ body.field-cam-open #sync-pending{display:none !important;}
 /* Show the item puts its row at the top of the screen UNDER the sticky header and tabs, never behind them: scrolled to
    y 0 the row sat under the 122 px bar, on screen by its box and seen by nobody. --topbar-h is setTopbarHeight's. */
 [id^="inv-row-"]{scroll-margin-top:calc(var(--topbar-h,0px) + 8px);}
+/* ⚠ THE DESK ON A PHONE (2026-10-22). On a laptop: the bulk bar's actions sit in a wrapper that is display:contents, so the
+   bar is the one flex row it always was, and its Actions toggle is not drawn; the desk band's timeline line is not drawn,
+   so the rail and the track show as they always did. The phone block hides the actions until Actions is pressed and folds
+   the desk band's rail to its line (toggleInvBulk, toggleDeskTimeline). */
+.inv-bulk-tog{display:none;}
+.inv-bulk-ctl{display:contents;}
+.jt-dfold-tog{display:none;}
+.jt-dfold-red{color:var(--err-tx);}
+.jt-dfold-amber{color:var(--warn-tx);}
 /* P19 · the desk's releases card: the foundation's File signed copy control is a label styled .btn-s, and a bare label
    is a block with a top margin; inside .inv-rel-ctl it sits in the row beside the print button and the filed copies. */
 .inv-rel-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;}
@@ -1108,6 +1117,17 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   /* Thumb-sized controls. */
   .btn-s,.btn-p,.btn-bronze,.icon-btn{min-height:38px;}
   .desk-show{min-height:32px;}
+  /* The desk on a phone (2026-10-22). The bulk bar is one line, "N selected", Actions and Clear, the controls under it once
+     Actions is pressed (the line stays first by `order`; the selects keep the phone's full width). The desk band's rail
+     folds to one line until it is tapped; the Job Plan's and the dashboard's never carry the line. */
+  .inv-bulk-tog{display:inline-block;}
+  .inv-bulk-ctl{display:none;}
+  .inv-bulk-open .inv-bulk-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 100%;order:1;min-width:0;}
+  .inv-bulk-res{order:2;}
+  .inv-bulk-clear{margin-left:auto;}
+  .jt-dfold-tog{display:flex;align-items:baseline;gap:6px;width:100%;min-height:38px;margin:0;padding:9px 2px 3px;border:none;border-top:0.5px solid var(--border);background:none;font:inherit;font-size:11.5px;font-weight:600;color:var(--gray-dk);text-align:left;cursor:pointer;}
+  .jt-dfold-open .jt-dfold-tog{margin-bottom:8px;}
+  .jt-dfold:not(.jt-dfold-open) .jt-rail{display:none;}
   .fb{min-height:34px;}
 
   /* Vendor + referral cards go single-column and surface their tap-to-contact row.
@@ -1408,7 +1428,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 11:39am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 1:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -23640,8 +23660,54 @@ function jobProgressBlockHtml(jobId, host) {
   return '<div class="card jband" style="margin-bottom:1rem;"><div class="jt">'
     + '<div class="jt-fb" id="jband-fb-' + host + '">' + note + '</div>'
     + band.html
-    + (work.length ? jtTrackHtml(work, [work]) + jtRailHtml(work) : '')
+    + (work.length ? _jtDeskFold(jobId, host, work, jtTrackHtml(work, [work]) + jtRailHtml(work)) : '')
     + '</div></div>';
+}
+// ⚠⚠ ON THE DESK, ON A PHONE, THE TIMELINE UNDER THE BAND IS ONE LINE UNTIL IT IS ASKED FOR (2026-10-22). Anthony, asked
+// (Q4) about the 610 px the band and its rail took on Job Admin & Inv at 390 px, a screen of scrolling before anything
+// that belongs to the desk: *"Fold the timeline on a phone."* The NEXT step and its buttons stay; the rail under them folds
+// to one line, `▸ Timeline · N of M done`, which names every step the rail would show amber or red (a payment left open
+// behind the close, a flag such as an open incident on Work complete, a terminal row), so nothing a person needs is folded
+// away unsaid. A tap shows it in place (toggleDeskTimeline, no redraw) and it stays shown across every repaint of the band
+// for that job, for the session. Above 820 px the line is not drawn and the rail and the track are as they were; the Job
+// Plan's band and the dashboard's are never folded (host 'admin' only).
+var _deskTimelineOpen = {};   // jobId -> true once the desk's timeline is shown on a phone (session only)
+// The folded line's words, from the rows the rail draws (DOM-free): how many are done, and each row the rail paints amber
+// or red, in its own words: a terminal row (a job that died: lost, or closed with the money kept) with what it says of the
+// money, an open row (a payment left behind the close), a planned date already past (red on the rail), and every flag.
+function jtFoldLine(work) {
+  var done = work.filter(function (r) { return r.done; }).length;
+  var notes = [];
+  work.forEach(function (r) {
+    if (r.state === 'terminal') notes.push({ text: r.label + (r.sub ? ' · ' + r.sub : ''), tone: 'red' });
+    else if (r.state === 'open') notes.push({ text: r.label + ': outstanding', tone: 'amber', warn: true });
+    if (!r.done && r.plan && r.planLate) notes.push({ text: r.label + ': planned ' + r.planLbl + ' ' + fmtDate2(r.plan), tone: 'red', warn: true });
+    if (r.flag) notes.push({ text: r.label + ': ' + r.flag, tone: 'amber', warn: true });
+  });
+  return { done: done, total: work.length, notes: notes };
+}
+function _jtDeskFold(jobId, host, work, inner) {
+  if (host !== 'admin') return inner;
+  var open = !!_deskTimelineOpen[jobId];
+  var ln = jtFoldLine(work);
+  return '<div class="jt-dfold' + (open ? ' jt-dfold-open' : '') + '" id="jt-dfold-' + jobId + '">'
+    + '<button type="button" class="jt-dfold-tog" id="jt-dfold-tog-' + jobId + '" onclick="toggleDeskTimeline(' + jobId + ')" '
+      + 'aria-expanded="' + (open ? 'true' : 'false') + '">'
+      + '<span class="jt-dfold-car" id="jt-dfold-car-' + jobId + '">' + secCaret(open) + '</span>'
+      + '<span>Timeline &middot; ' + ln.done + ' of ' + ln.total + ' done'
+      + ln.notes.map(function (n) { return ' &middot; <span class="jt-dfold-' + n.tone + '">' + (n.warn ? '&#9888; ' : '') + esc(n.text) + '</span>'; }).join('')
+      + '</span></button>'
+    + inner + '</div>';
+}
+function toggleDeskTimeline(jobId) {
+  _deskTimelineOpen[jobId] = !_deskTimelineOpen[jobId];
+  var open = !!_deskTimelineOpen[jobId];
+  var w = document.getElementById('jt-dfold-' + jobId);
+  if (w) w.setAttribute('class', 'jt-dfold' + (open ? ' jt-dfold-open' : ''));
+  var t = document.getElementById('jt-dfold-tog-' + jobId);
+  if (t) t.setAttribute('aria-expanded', open ? 'true' : 'false');
+  var c = document.getElementById('jt-dfold-car-' + jobId);
+  if (c) c.textContent = secCaret(open);
 }
 function _repaintJobBand(host, jobId) {
   var el = document.getElementById('jband-slot-' + host);
@@ -36045,7 +36111,12 @@ function _renderAppraisalGuardrail(job) {
         // Linked, no figure yet (P25, Q36): the appraisal is in progress, and what clears it is the report's figure.
         + (_inProg ? '<span class="inv-appr-prog" style="display:block;color:var(--bronze);">Appraisal in progress: type the report&rsquo;s figure on the line with source Appraisal when it lands.</span>' : '')
         + '</span>'
-      + '<span style="display:flex;align-items:center;gap:6px;flex:0 0 auto;">' + link
+      // ⚠ THE PICKER MAY SHRINK (2026-10-22, the desk on a phone). `flex:0 0 auto` held this span at the width of its
+      // longest appraiser's name, so on a 390 px phone the picker and Waive ran 124 px off the right edge and the whole
+      // desk scrolled sideways (measured on browser step 96's estate). Allowed to shrink, never wider than its row, the
+      // select (min-width:0, and 100% of the span on a phone) gives up the room and Waive stays beside it. A laptop has
+      // the room, so nothing there moves.
+      + '<span class="inv-appr-pick" style="display:flex;align-items:center;gap:6px;flex:0 1 auto;min-width:0;max-width:100%;">' + link
       + '<button class="btn-s" onclick="waiveAppraisal(' + job.id + ',\'' + r.stableId + '\')" title="Log a reason and waive the requirement for this item">Waive</button></span>'
       + '</div>';
   }).join('');
@@ -38490,7 +38561,11 @@ function _renderInvRow(job, ref) {
           + (ref.objectName ? 'border:1px solid transparent;background:transparent;font-weight:600;'
                             : 'border:1px solid var(--bronze);background:#fffdf9;') + '">'
         + (ref.manual ? ' <span style="font-size:8px;color:var(--bronze);" title="Manual line item (no photo)">M</span>' : '') + '</div>'
-        + '<div style="font-size:10px;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sub
+        // ⚠ THE CHIP LINE WRAPS, AT EVERY WIDTH (2026-10-22). It was one line cut off with an ellipsis, so on a phone,
+        // and on a laptop row carrying four or five chips, the chips that say what is owed (approval incomplete, no
+        // signed receipt, appraise, with an appraiser since…) were the ones past the cut, unread and with no way to
+        // read them on an iPad (a title shows on hover only). A second line costs less than a chip nobody sees.
+        + '<div class="inv-row-sub" style="font-size:10px;color:var(--gray);overflow-wrap:anywhere;">' + sub
         + (warn.length ? ' &middot; ' + warn.join(' ') : '') + '</div>'
         + (ref.fieldNote ? '<div style="font-size:10.5px;color:var(--gray-dk);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(ref.fieldNote) + '">&#127908; ' + esc(ref.fieldNote) + '</div>' : '')
       + '</div>'
@@ -38709,11 +38784,29 @@ function _invBulkRoomCommon(picked) {
   return (first == null) ? '__none' : String(first);
 }
 
+// ⚠⚠ ON A PHONE THE BULK BAR IS ONE LINE UNTIL ITS ACTIONS ARE ASKED FOR (2026-10-22). Anthony, 2026-10-22: *"Build all of
+// it now"*, the phone fixes included. At 390 px every select on the bar goes full width (the phone block's rule), so two
+// rows ticked drew a bar 448 px tall, 53% of the screen, stuck to its foot over the rows being ticked: the next row's box
+// sat under the bar, which took the press (browser step 96 measured both). On a phone (max-width:820px) the bar reads "N selected",
+// Actions ▾ and Clear; Actions shows the same controls with the same handlers beneath, in place (toggleInvBulk, no render),
+// and they stay shown across the render every act makes, per job, for the session, until the selection empties. On a
+// laptop the toggle is not drawn and the controls' wrapper is display:contents, so the bar is the one row it always was.
+var _invBulkOpen = {};   // jobId -> true while the bulk bar's actions are shown on a phone (session only)
+function toggleInvBulk(jobId) {
+  _invBulkOpen[jobId] = !_invBulkOpen[jobId];
+  var open = !!_invBulkOpen[jobId];
+  var bar = document.getElementById('inv-bulk-' + jobId);
+  if (bar) bar.setAttribute('class', 'inv-bulk' + (open ? ' inv-bulk-open' : ''));
+  var tog = document.getElementById('inv-bulk-tog-' + jobId);
+  if (tog) tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
 function _renderInvBulk(job) {
   var picked = _invPicked(job.id);
-  if (!picked.length) { _invBulkLast = null; return ''; }
+  // The selection emptied (Clear, or the last line unticked): the next one starts as one line on a phone.
+  if (!picked.length) { _invBulkLast = null; delete _invBulkOpen[job.id]; return ''; }
   var jid = job.id;
   var n = picked.length;
+  var open = !!_invBulkOpen[jid];
   // The global `input,select,textarea{width:100%}` rule makes an unstyled select take the
   // whole row, which is why these three stacked instead of sitting on one line. The phone
   // block re-asserts 100% with !important, so this stays desktop-only, which is right.
@@ -38746,16 +38839,20 @@ function _renderInvBulk(job) {
 
   var result = '';
   if (_invBulkLast) {
-    result = '<div style="width:100%;font-size:11px;font-weight:400;color:var(--cream);opacity:.9;">'
+    result = '<div class="inv-bulk-res" style="width:100%;font-size:11px;font-weight:400;color:var(--cream);opacity:.9;">'
       + '&#10003; ' + esc(_invBulkLast.msg)
       + (_invBulkLast.hidden ? ' <span style="opacity:.8;">They no longer match the filters on screen &mdash; press <strong>Clear filters</strong> to see them.</span>' : '')
       + '</div>';
   }
 
-  return '<div style="position:sticky;bottom:0;z-index:40;background:var(--gray-dk);color:var(--cream);'
+  return '<div class="inv-bulk' + (open ? ' inv-bulk-open' : '') + '" id="inv-bulk-' + jid + '" style="position:sticky;bottom:0;z-index:40;background:var(--gray-dk);color:var(--cream);'
     + 'border-radius:6px;padding:9px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;'
     + 'box-shadow:0 -2px 14px rgba(0,0,0,.15);">'
     + '<strong style="font-size:12px;">' + n + ' selected</strong>'
+    // A phone's one line (the class is display:none above 820 px). &#9662; as More ▾ draws it: a menu, not a fold.
+    + '<button type="button" class="inv-bulk-tog" id="inv-bulk-tog-' + jid + '" onclick="toggleInvBulk(' + jid + ')" aria-expanded="' + (open ? 'true' : 'false') + '" '
+      + 'aria-controls="inv-bulk-ctl-' + jid + '" style="' + btnStyle + '">Actions &#9662;</button>'
+    + '<span class="inv-bulk-ctl" id="inv-bulk-ctl-' + jid + '">'
     + menu('category',    'Set category…', INV_CATEGORIES, _invBulkCommon(picked, 'category'))
     + menu('disposition', 'Set disposition…', _invDispOptions(job, _invBulkCommon(picked, 'disposition')), _invBulkCommon(picked, 'disposition'))
     // Only where the field itself shows (an estate): `_invKeyOnJob` is the panel's own rule.
@@ -38777,7 +38874,8 @@ function _renderInvBulk(job) {
     + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
     // Remove lines (2026-10-19): the selection off the inventory at once, photographs kept, Removed items giving them back.
     + '<button onclick="invBulkRemove(' + jid + ')" style="' + btnStyle + 'color:var(--err-tx);" title="Take every selected line off the inventory. No photograph is deleted, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives them back.">Remove lines</button>'
-    + '<button onclick="_invClearPicks()" style="' + btnStyle + 'background:none;color:var(--cream);">Clear</button>'
+    + '</span>'
+    + '<button class="inv-bulk-clear" onclick="_invClearPicks()" style="' + btnStyle + 'background:none;color:var(--cream);">Clear</button>'
     + result
     + '</div>';
 }

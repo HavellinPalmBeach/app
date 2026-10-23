@@ -189,10 +189,12 @@ const EST = 6601, LIVING = 6603;
       await pick('k1'); await pick('k2');
       await p.selectOption('select[onchange^="_invBulkApply(' + EST + ',\'disposition\'"]', 'Keep');
       await p.waitForTimeout(500);
-      const bar = await p.evaluate(() => { const b = document.querySelector('button[onclick*="\'reviewed\',1"]'); return b ? b.parentElement.textContent.replace(/\s+/g, ' ') : ''; });
+      // ⚠ RESTATED 2026-10-22 (the desk on a phone): the bar's controls sit in a wrapper of their own now (display:contents on
+      // a laptop, behind Actions on a phone), so the bar is the button's `.inv-bulk` ancestor, not its parent. The same bar text.
+      const bar = await p.evaluate(() => { const b = document.querySelector('button[onclick*="\'reviewed\',1"]'); return b ? b.closest('.inv-bulk').textContent.replace(/\s+/g, ' ') : ''; });
       has(bar, 'Keep set on 2 items', '⚠⚠ the bar says Keep was set, never "2 items updated"');
       await press('button[onclick="_invBulkApply(' + EST + ',\'reviewed\',1)"]', 'Mark reviewed');
-      const bar2 = await p.evaluate(() => { const b = document.querySelector('button[onclick*="\'reviewed\',1"]'); return b ? b.parentElement.textContent.replace(/\s+/g, ' ') : ''; });
+      const bar2 = await p.evaluate(() => { const b = document.querySelector('button[onclick*="\'reviewed\',1"]'); return b ? b.closest('.inv-bulk').textContent.replace(/\s+/g, ' ') : ''; });
       has(bar2, '2 items marked reviewed.', '⚠⚠ and Mark reviewed says so');
       await p.evaluate(() => _invClearPicks()); await p.waitForTimeout(300);
       // The Authorized By box, on a line two co-representatives signed on different days (one name with a comma in it).

@@ -67,6 +67,16 @@
 //   with its link and its Void, the Void pressed and the reason typed, the row then without it; an appraiser who buys a
 //   vase awaiting approval and has it to appraise, the one Sign out offered naming its paper and opening the hand-off.
 //
+//   Part 9 (G9, the phone): every bar open and Job Admin open, at 1440 and 390, on both desks: no sideways scroll and nothing
+//   past the right edge (the estate ran 124 px off it at 390 before this group: the guardrail's appraiser picker); the
+//   picker and its Waive on screen at 390; a row's chips all read on its wrapped line. The bulk bar at 390: two rows ticked
+//   through their own boxes, the second reachable (before, the 448 px bar over the rows took the press); one line, under
+//   60 px, its controls hidden; Actions pressed, the controls shown under the one line; Set condition chosen there, the bar
+//   still open after the render with the act's confirmation; Clear; a new tick, one line again. At 1440 the bar as it was:
+//   no Actions, every control on screen, its height unchanged. The band at 390 on the desk (Anthony's Q4): the NEXT step and
+//   its buttons, the rail folded to its line (the band against 610 px before); the line pressed, the rail shown, kept across
+//   a full redraw and per job; folded again. At 1440 and at 860 the band as it was; the Job Plan's band never folded.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -273,11 +283,10 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       const M = await layout();
       ok(M.row != null && M.row < OLD[id][390], who + ': ⚠ the first row is higher up the page at 390 (' + M.row + ' px, was ' + OLD[id][390] + ')');
       // ⚠ The estate scrolled 109 px sideways at 390 before this build: the guardrail's appraiser picker and a row's chip
-      // line, neither of which wraps (the phone group of this build fixes both at the source). The guardrail now sits in a
-      // padded bar body, so the same two read further right; what is held here is that NOTHING ELSE overflows.
-      const known = /^(— link an appraiser —|bequest to )/;
-      const strays = M.culprits.filter((c) => !known.test(c.text));
-      eq(strays, [], who + ': no new sideways scroll at 390 (' + M.overflow + ' px, from ' + M.culprits.length + ' known element(s))');
+      // line, neither of which wrapped. RESTATED BY G9 (2026-10-22): the phone group fixed both at the source, so nothing
+      // runs off the edge at all now (G1 to G8 held only that nothing ELSE did, the two being known).
+      eq(M.overflow, 0, who + ': no sideways scroll at 390');
+      eq(M.culprits, [], who + ': nothing past the right edge at 390');
       console.log('    ' + who + ': first row at ' + L.row + ' px (1440) and ' + M.row + ' px (390); was ' + OLD[id][1440] + ' / ' + OLD[id][390]);
     }
 
@@ -1271,6 +1280,149 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
     eq(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'no sideways scroll at 390');
     await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
+
+    // ══ PART 9 (G9): the phone ══════════════════════════════════════════════════════════════════════════════════════
+    // A block of its own: its names never meet the earlier parts'.
+    {
+      console.log('\n## Part 9 · every bar open, both widths, both desks: nothing off the right edge');
+      // Every bar and Job Admin opened by a real press of its header, where it is shut.
+      const openEvery = async (id) => {
+        for (const f of ['releases', 'values', 'closing', 'history']) {
+          const hd = '#desk-hd-' + f + '-' + id;
+          if ((await p.locator(hd).count()) && (await p.locator(hd).isVisible()) && !(await p.locator('#desk-body-' + f + '-' + id).isVisible())) await press(hd, 'the ' + f + ' header, to open it');
+        }
+        if (!(await p.evaluate((id) => !!_jobAdminIsOpen(id, jobs.find((j) => j.id === id)), id))) await press('#inventory-content .ja-hd', 'Job Admin\'s header, to open it');
+      };
+      for (const [id, who] of [[EST, 'the estate'], [LIV, 'the living job']]) {
+        await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(300);
+        await toDesk(id);
+        await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', who + ': All');
+        await openEvery(id);
+        const open = await p.evaluate((id) => ['releases', 'values', 'closing', 'history'].filter((f) => { const b = document.getElementById('desk-body-' + f + '-' + id); return b && b.checkVisibility(); }), id);
+        ok(open.length >= 3, who + ': every bar drawn is open (' + open.join(', ') + ')');
+        const W = await layout();
+        eq([W.overflow, W.culprits], [0, []], who + ': at 1440, no sideways scroll and nothing past the edge');
+        await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(700);
+        const N = await layout();
+        eq([N.overflow, N.culprits], [0, []], who + ': ⚠⚠ at 390, every bar open, no sideways scroll and nothing past the edge');
+        console.log('    ' + who + ', every bar open: sideways scroll ' + W.overflow + ' px at 1440, ' + N.overflow + ' px at 390 (the estate 124 px at 390 before this group)');
+        if (id === EST) {
+          // The guardrail's picker and its Waive, on screen at 390, side by side.
+          const g = await p.evaluate(() => {
+            const W = document.documentElement.clientWidth, s = document.querySelector('#inv-guardrail .inv-appr-pick');
+            if (!s) return null;
+            const sel = s.querySelector('select').getBoundingClientRect(), wv = s.querySelector('button').getBoundingClientRect();
+            return { selR: Math.round(sel.right), waiveR: Math.round(wv.right), W, beside: Math.abs(sel.top - wv.top) < 30 && wv.left >= sel.right - 1 };
+          });
+          ok(g && g.selR <= g.W && g.waiveR <= g.W, '⚠⚠ the appraiser picker and Waive end inside the screen at 390  [' + JSON.stringify(g) + ']');
+          ok(g && g.beside, 'Waive sits beside the picker, the picker giving up the room');
+          // The clock's row: every chip read on its line, none past the line's edge or cut off.
+          const chips = await p.evaluate(() => {
+            const sub = document.querySelector('#inv-row-e07 .inv-row-sub');
+            if (!sub) return null;
+            const r = sub.getBoundingClientRect();
+            return { ws: getComputedStyle(sub).whiteSpace, clipped: sub.scrollWidth > sub.clientWidth + 1, text: sub.textContent.replace(/\s+/g, ' ').trim(),
+              spans: [...sub.querySelectorAll('span')].map((s) => { const b = s.getBoundingClientRect(); return b.right <= r.right + 1 && b.left >= r.left - 1; }) };
+          });
+          ok(chips && chips.ws !== 'nowrap' && !chips.clipped, '⚠ the clock\'s chip line wraps, nothing cut off  [' + JSON.stringify(chips && { ws: chips.ws, clipped: chips.clipped }) + ']');
+          ok(chips && chips.spans.length >= 2 && chips.spans.every(Boolean), 'every chip inside the line\'s box (' + (chips ? chips.spans.length : 0) + ')');
+          has(chips && chips.text, 'bequest to Margaret Ashworth', 'the bequest chip read whole (it was the one past the cut)');
+        }
+      }
+
+      console.log('\n## Part 9 · the bulk bar at 390: one line; Actions shows the same controls; an act keeps them shown');
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(400);
+      await toDesk(EST);
+      await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All, so the rows to tick are drawn');
+      await p.evaluate(() => _invClearPicks()); await p.waitForTimeout(300);   // fixture: nothing ticked
+      const BOX = (sid) => '#inv-row-' + sid + ' > div > input[type=checkbox]';
+      const bulkBox = () => p.evaluate((id) => { const b = document.getElementById('inv-bulk-' + id); if (!b) return null; const r = b.getBoundingClientRect();
+        const vis = (s) => { const e = b.querySelector(s); return !!(e && e.checkVisibility()); };
+        const top = (s) => { const e = b.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top) : null; };
+        return { h: Math.round(r.height), cls: b.className, tog: vis('.inv-bulk-tog'), cat: vis('select[onchange*="\'category\'"]'), send: vis('button[onclick^="sendApprovalRequest("]'),
+          remove: vis('button[onclick^="invBulkRemove("]'), clear: vis('.inv-bulk-clear'), text: (b.querySelector('strong') || {}).textContent,
+          line: [top('strong'), top('.inv-bulk-tog'), top('.inv-bulk-clear')], res: (b.querySelector('.inv-bulk-res') || {}).textContent || '' }; }, EST);
+      await p.locator(BOX('e01')).scrollIntoViewIfNeeded(); await p.click(BOX('e01')); await p.waitForTimeout(500);
+      await p.locator(BOX('e02')).scrollIntoViewIfNeeded(); await p.click(BOX('e02')); await p.waitForTimeout(500);
+      ok(await p.evaluate(() => !!(_invPick.e01 && _invPick.e02)), '⚠⚠ two rows ticked through their own boxes at 390 (the old bar, over the rows, took the second press)');
+      const S1 = await bulkBox();
+      ok(S1 && S1.h <= 60, '⚠⚠ the bar is one line with two rows ticked: ' + (S1 && S1.h) + ' px (448 px before this group)');
+      console.log('    the bulk bar at 390, two rows ticked: ' + (S1 && S1.h) + ' px (448 px before this group)');
+      eq(S1 && [S1.text, S1.tog, S1.clear, S1.cat, S1.send, S1.remove], ['2 selected', true, true, false, false, false], '"2 selected", Actions and Clear on screen; the controls not');
+      ok(S1 && Math.max(...S1.line) - Math.min(...S1.line) <= 6, 'the three on one line  [' + (S1 && S1.line) + ']');
+      await press('#inv-bulk-tog-' + EST, 'Actions');
+      const S2 = await bulkBox();
+      eq(S2 && [S2.cat, S2.send, S2.remove, S2.clear], [true, true, true, true], 'pressed: the controls on screen, Clear still');
+      ok(S2 && Math.max(...S2.line) - Math.min(...S2.line) <= 6, 'the one line stays first and whole  [' + (S2 && S2.line) + ']');
+      eq(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'the open bar fits the screen');
+      // An act from the open bar: the render it makes draws the bar open, with the act's confirmation.
+      await p.selectOption('#inv-bulk-' + EST + ' select[onchange*="\'condition\'"]', 'Good'); await p.waitForTimeout(700);
+      eq(await p.evaluate(() => ['e01', 'e02'].map((s) => _photoRefs[9601].find((r) => r.stableId === s).condition)), ['Good', 'Good'], 'Set condition… on the phone set both lines');
+      const S3 = await bulkBox();
+      ok(S3 && /inv-bulk-open/.test(S3.cls) && S3.cat, '⚠ after the act\'s render the controls are still shown, as they were left');
+      has(S3 && S3.res, 'Good', 'and the act\'s confirmation reads under them');
+      await press('#inv-bulk-' + EST + ' .inv-bulk-clear', 'Clear');
+      eq(await p.evaluate((id) => !!document.getElementById('inv-bulk-' + id), EST), false, 'Clear: no bar');
+      await p.locator(BOX('e04')).scrollIntoViewIfNeeded(); await p.click(BOX('e04')); await p.waitForTimeout(500);
+      const S4 = await bulkBox();
+      eq(S4 && [S4.text, S4.tog, S4.cat], ['1 selected', true, false], '⚠ a new selection starts as one line again');
+      // At 1440: the bar as it was. No Actions; every control on screen; the same height as before this group (76 px, two rows).
+      await p.click(BOX('e01')); await p.waitForTimeout(500);
+      await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(500);
+      const S5 = await bulkBox();
+      eq(S5 && [S5.text, S5.tog, S5.cat, S5.send, S5.remove, S5.clear], ['2 selected', false, true, true, true, true], 'at 1440: no Actions, every control on screen');
+      ok(S5 && Math.abs(S5.h - 76) <= 2, 'at 1440 the bar is the height it was (' + (S5 && S5.h) + ' px; 76 before)');
+      await p.evaluate(() => _invClearPicks()); await p.waitForTimeout(300);
+
+      console.log('\n## Part 9 · the band at 390 on the desk: the NEXT step stays, the timeline one line (Q4)');
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);
+      await toDesk(EST);
+      const bandBox = (id) => p.evaluate((id) => { const s = document.getElementById('jband-slot-admin'); if (!s) return null;
+        const vis = (q) => { const e = s.querySelector(q); return !!(e && e.checkVisibility()); };
+        const t = document.getElementById('jt-dfold-tog-' + id);
+        return { h: Math.round(s.getBoundingClientRect().height), next: vis('.jt-next'), prim: vis('.jt-next .jt-btn-p'), rail: vis('.jt-rail'), track: vis('.jt-track'),
+          line: !!(t && t.checkVisibility()), text: t ? t.textContent.replace(/\s+/g, ' ').trim() : '', exp: t ? t.getAttribute('aria-expanded') : null }; }, id);
+      const B1 = await bandBox(EST);
+      ok(B1 && B1.next && B1.prim, 'the NEXT step and its primary button on screen');
+      eq(B1 && [B1.rail, B1.line], [false, true], '⚠⚠ the rail folded, its line on screen');
+      ok(B1 && B1.h <= 360, '⚠⚠ the band at 390: ' + (B1 && B1.h) + ' px (610 px before this group)');
+      console.log('    the band at 390 on the desk: ' + (B1 && B1.h) + ' px (610 px before this group)');
+      await press('#jt-dfold-tog-' + EST, 'the timeline\'s line');
+      const B2 = await bandBox(EST);
+      eq(B2 && [B2.rail, B2.exp], [true, 'true'], '⚠ one tap: the rail shown');
+      // The folded line, read against the rail now on screen: its count, and every row the rail paints red or amber.
+      const rail = await p.evaluate(() => [...document.querySelectorAll('#jband-slot-admin .jt-rail .jt-row')].map((r) => ({
+        label: (r.querySelector('.jt-lbl') || {}).textContent, done: /jt-done|jt-term/.test(r.className), open: /jt-open/.test(r.className),
+        late: !!r.querySelector('.jt-plan-late'), flag: !!r.querySelector('.jt-warn') })));
+      has(B1 && B1.text, 'Timeline · ' + rail.filter((r) => r.done).length + ' of ' + rail.length + ' done', 'the line counts the rail\'s rows (' + rail.length + ')');
+      const marked = rail.filter((r) => r.open || r.late || r.flag);
+      ok(marked.length >= 1, 'fixture: the rail paints ' + marked.length + ' row(s) red or amber (a planned date past)');
+      marked.forEach((r) => has(B1 && B1.text, '⚠ ' + r.label + ':', 'the folded line named it: ' + r.label));
+      ok(B2 && B2.h > B1.h + 150, 'the band grows by the rail (' + (B2 && B2.h) + ' px)');
+      await press('#panel-inventory button[onclick="setInvWhen(\'today\')"]', 'Today (a full redraw)');
+      eq((await bandBox(EST) || {}).rail, true, '⚠ the redraw draws it shown, as it was left');
+      await toDesk(LIV);
+      eq([(await bandBox(LIV) || {}).rail, (await bandBox(LIV) || {}).line], [false, true], 'per job: the living job\'s rail is folded');
+      await toDesk(EST);
+      eq((await bandBox(EST) || {}).rail, true, 'and the estate\'s still shown');
+      await press('#jt-dfold-tog-' + EST, 'the line again');
+      eq((await bandBox(EST) || {}).rail, false, 'tapped again: folded');
+      // A laptop, and an iPad in portrait wider than the phone block: the band as it was.
+      await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
+      const B3 = await bandBox(EST);
+      eq(B3 && [B3.track, B3.rail, B3.line], [true, false, false], 'at 1440: the track, no line');
+      await p.setViewportSize({ width: 860, height: 1000 }); await p.waitForTimeout(400);
+      const B4 = await bandBox(EST);
+      eq(B4 && [B4.track, B4.rail, B4.line], [false, true, false], 'at 860: the rail, unfolded, no line');
+      // The Job Plan's band on a phone is never folded.
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(300);
+      await p.click('.nb[onclick*="job-plan"]'); await p.waitForTimeout(500);
+      await p.evaluate((id) => { const s = document.getElementById('plan-job'); s.value = String(id); loadJobPlanTab(); }, EST); await p.waitForTimeout(800);
+      const pl = await p.evaluate(() => { const s = document.getElementById('jband-slot-plan'); const r = s && s.querySelector('.jt-rail');
+        return { rail: !!(r && r.checkVisibility()), line: !!(s && s.querySelector('.jt-dfold-tog')) }; });
+      eq([pl.rail, pl.line], [true, false], 'the Job Plan\'s band at 390: its rail shown, no line');
+      await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(300);
+    }
 
     eq(errs, [], 'zero page errors');
   } catch (e) {
