@@ -284,7 +284,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     p.openChangeOrder(1);
     const box = p.__dom.getElementById('co-ps-hrs');
     ok(box.disabled === true, '⚠ the specialist box is off on Home Prep');
-    eq(box.placeholder, 'Not used on Home Prep', 'and says why');
+    // RESTATED 2026-10-23 (Anthony: blank boxes, nothing in them): the reason moved from inside the box to its label.
+    eq(p.__dom.getElementById('co-ps-hrs-hint').textContent, '\u2014 not used on Home Prep', 'and its label says why');
+    ok(!box.placeholder, 'with nothing written inside the box');
     const note = p.__dom.getElementById('co-basis-note').innerHTML;
     has(note, 'concierge hours for hands-on work', 'the note says what a prep change order is');
     has(note, 'at $150 an hour', 'names the rate');
@@ -294,10 +296,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(note, 'Coordinating the vendors is covered by the fee and is never billed as hours', '⚠ the old double-charge rule survives');
     lacks(note, 'carries no price and bills nothing', 'not the T&M sentence');
     // ⚠ ONE MODAL SERVES EVERY JOB: the box left disabled by a prep job must come back on for a labour job.
-    const l = coCtx(EST_TM, [], { 'co-jobid': '1', 'co-ps-hrs': { disabled: true, placeholder: 'Not used on Home Prep' } });
+    const l = coCtx(EST_TM, [], { 'co-jobid': '1', 'co-ps-hrs': { disabled: true }, 'co-ps-hrs-hint': { textContent: '\u2014 not used on Home Prep' } });
     l.openChangeOrder(1);
     ok(l.__dom.getElementById('co-ps-hrs').disabled === false, '⚠⚠ a labour job gets its specialist box back');
-    eq(l.__dom.getElementById('co-ps-hrs').placeholder, 'e.g. 16 (negative to reduce)', 'with its own hint');
+    eq(l.__dom.getElementById('co-ps-hrs-hint').textContent, '\u2014 negative to reduce', 'with its own hint back on the label');
     has(l.__dom.getElementById('co-basis-note').innerHTML, 'carries no price and bills nothing', 'and the T&M note');
 
     const read = (est, cos, tc, over) => {

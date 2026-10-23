@@ -156,7 +156,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(t, 'by phone, by text or in person', 'the three ways the call is recorded');
       eq(SRC.slice(SRC.indexOf('<select id="inc-how">'), SRC.indexOf('<select id="inc-how">') + 200).match(/<option[^>]*>([^<]+)</g).length, 3, '…which the dialog offers');
       has(t, 'Names are offered as you type; a semicolon between them.', 'the names offered');
-      has(SRC, 'id="inc-present" list="inc-people" autocomplete="off" placeholder="names, with ; between them"', '…by the dialog, with ; between them');
+      has(SRC, '<label>Who was present <span class="lbl-hint">&mdash; names, with ; between them</span></label>\n        <input type="text" id="inc-present" list="inc-people" autocomplete="off">', '…by the dialog, with ; between them (on its label since 2026-10-23)');
     }
     const cardFn = codeOnly(fn('incidentsCardHtml'));
     has(t, 'Close job names each one; Deposit Retained is refused the same way.', 'the close gate');

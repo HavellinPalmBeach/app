@@ -164,9 +164,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   // ── B. THE CHANGE ORDER ─────────────────────────────────────────────────
   console.log('\n## B. The change order — concierge hours only, and the readout states the rate');
   await newCO(idP);
-  const box = await p.evaluate(() => { const e = document.getElementById('co-ps-hrs'); return { dis: e.disabled, ph: e.placeholder }; });
+  const box = await p.evaluate(() => { const e = document.getElementById('co-ps-hrs'); return { dis: e.disabled, ph: e.placeholder, why: document.getElementById('co-ps-hrs-hint').textContent }; });
   ok(box.dis === true, '⚠ the specialist box is off on Home Prep');
-  ok(box.ph === 'Not used on Home Prep', 'and says why (' + box.ph + ')');
+  // RESTATED 2026-10-23 (Anthony: blank boxes): the reason is on the label, never inside the box.
+  ok(box.why === '\u2014 not used on Home Prep' && box.ph === '', 'and its label says why, the box blank (' + box.why + ')');
   const note = await text('#co-basis-note');
   has(note, 'concierge hours for hands-on work', 'the note says what a prep change order is');
   has(note, 'at $150 an hour', 'and names the rate');
@@ -327,9 +328,9 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   await newCO(idP);
   await cancelCO();
   await newCO(idH);
-  const hb = await p.evaluate(() => { const e = document.getElementById('co-ps-hrs'); return { dis: e.disabled, ph: e.placeholder }; });
+  const hb = await p.evaluate(() => { const e = document.getElementById('co-ps-hrs'); return { dis: e.disabled, ph: e.placeholder, why: document.getElementById('co-ps-hrs-hint').textContent }; });
   ok(hb.dis === false, '⚠⚠ the specialist box is back on for a labour job after a prep job had it off');
-  ok(hb.ph === 'e.g. 16 (negative to reduce)', 'with its own hint (' + hb.ph + ')');
+  ok(hb.why === '\u2014 negative to reduce' && hb.ph === '', 'with its own hint back on the label (' + hb.why + ')');
   has(await text('#co-basis-note'), 'A change order carries no price and bills nothing on its own', 'and the T&M note');
   await fill('#co-tc-hrs', '10'); await fill('#co-ps-hrs', '10');
   has(await text('#co-hrs-note'), 'hrs on the estimate becomes', 'the T&M readout, measured in hours');

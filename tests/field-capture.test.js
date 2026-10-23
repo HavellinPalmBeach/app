@@ -352,7 +352,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(ui, 'Save note', 'and nothing renamed to Save note either');
     has(ui, 'id="fc-note-input"', 'the box itself is still there');
     has(ui, 'fieldCamNoteDraft(this.value)', 'and every keystroke is kept');
-    has(ui, 'saved automatically', 'the placeholder says so, since nothing else can');
+    // RESTATED 2026-10-23 (Anthony: blank boxes, nothing in them): it said "saved automatically" inside the box; a word
+    // beside it names it now, and the manual says that it saves itself.
+    has(ui, '<label for="fc-note-input" class="fc-note-lbl">Note</label>', 'a label names the box');
+    lacks(ui, 'placeholder', 'and nothing is written inside it');
   }
 
   group('⚠ THE CAMERA DEGRADES TO THE NATIVE INPUT ON THE SAME SURFACE');

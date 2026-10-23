@@ -257,7 +257,7 @@ const TRUST = 6101, LIVING = 6103;
       await fresh();
       await toDesk(LIVING);
       dialogs.length = 0;
-      const box = '#inv-row-v1 input[placeholder="Who took it?"]';
+      const box = '#inv-row-v1 input.inv-recip';
       ok(await vis(box), 'the row\'s recipient box is on screen');
       await p.fill(box, 'Anthony Graziano Jr');
       await p.press(box, 'Tab'); await p.waitForTimeout(500);
@@ -273,7 +273,7 @@ const TRUST = 6101, LIVING = 6103;
       // An estate refuses the same write, as before.
       await toDesk(TRUST);
       dialogs.length = 0;
-      const ebox = '#inv-row-s2 input[placeholder="Who took it?"]';
+      const ebox = '#inv-row-s2 input.inv-recip';
       await p.fill(ebox, 'Anthony Graziano Jr');
       await p.press(ebox, 'Tab'); await p.waitForTimeout(500);
       has(dialogs.join(' | '), 'Havellin and its people never buy or receive trust property, and take no share of the proceeds. Anthony Graziano Jr is with Havellin, so #2 Dining table cannot be sold or released to them. Nothing was changed.',

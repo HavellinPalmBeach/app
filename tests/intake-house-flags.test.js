@@ -173,7 +173,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         has(html, `id="${p}-hfn-${f.key}"`, `${p}: ${f.key} note id`);
         has(html, `id="${p}-hfr-${f.key}"`, `${p}: ${f.key} row id`);
         has(html, `onHouseFlagToggle('${p}','${f.key}')`, `${p}: ${f.key} is wired to the toggle`);
+        // Anthony, 2026-10-23: blank boxes, nothing in them. The prompt is the line over the notes box, never inside it.
+        has(html, `<div class="hf-ask">${ctx.esc(f.ask)}</div><textarea id="${p}-hfn-${f.key}" rows="2">`,
+            `${p}: ${f.key}'s prompt sits over an empty box`);
       });
+      lacks(html, 'placeholder', `${p}: no notes box carries a placeholder`);
     });
 
     // readHouseFlagInputs and clearHouseFlagInputs build the same ids from the same
@@ -439,8 +443,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('both forms say one line per item, and the stylesheet has the tick');
   {
-    eq(src.split('placeholder="One line per item: what it is, and where they think it might be."').length - 1, 2,
+    // RESTATED 2026-10-23 (Anthony: blank boxes, nothing in them): it is said on each form's label, never inside the box.
+    eq((src.match(/one line per item: what it is, and where they think it might be/gi) || []).length, 2,
        'intake and Edit Client both say it — a paragraph cannot be ticked');
+    has(src, 'accidentally dispose of. One line per item: what it is, and where they think it might be.</span></label>\n      <textarea id="i-mustfind" rows="2"></textarea>',
+        'intake says it on the label, over an empty box');
+    has(src, '(one line per item: what it is, and where they think it might be)</span></div>\' +\n    \'<textarea id="ec-mustfind" rows="2" style=',
+        'and so does Edit Client');
     const css = src.slice(src.indexOf('<style>'), src.indexOf('</style>'));
     has(css, '.sf-row.sf-done{', 'a green row for a found line');
     has(css, '.sf-tick{', 'the tick is styled');
