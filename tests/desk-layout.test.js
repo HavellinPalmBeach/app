@@ -45,6 +45,10 @@
 //   N · the documents (G10): the manual and the playbook, HTML and markdown, name the four bars by the catalogue's titles
 //       (the manual's table in the tab's order) and the desk's new controls in the desk's own words, each held to the source,
 //       and no document still places a moved card where it was (the photography guide included).
+//   O · the build's review (2026-10-23): a read that moves only a kept field redraws and ends "loading…"; a read that fails
+//       says the sheet is unreachable, opens nothing off the cache and is asked again; the Releases card follows every edit
+//       and split, for the client on the desk only; Send request's early refusals open its bar; the appraiser's sign-outs on
+//       the Releases line; a statement not filed on the Closing line; the close's refusals read off their own list.
 //
 // Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -252,6 +256,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupL({ group, ok, eq, has, lacks });
     groupM({ group, ok, eq, has, lacks });
     groupN({ group, ok, eq, has, lacks });
+    groupO({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -737,7 +742,9 @@ function groupC({ group, ok, eq, has, lacks }) {
     const out = { id: 'h1', kind: 'appraisal_out', ref: 'Jane Smith', stableIds: ['a'], signedOn: '2026-10-12', filedAt: ON('2026-10-12') };
     // gate706 'no': no Form 706, no dispute, so the documentation level is Standard and the guardrail amber.
     B = bars(PROBATE(Object.assign({ signedRecords: [out], gate706: 'no' }, sm)), [art({ apprId: 1 })]);
-    eq(B.line('values'), '1 needs an appraisal, each linked · 1 out with Jane Smith since Oct 12, 2026 · 1 appraiser', 'out with the appraiser: since when');
+    // RESTATED ON THE BUILD'S REVIEW (2026-10-23): the out bit points at the check-in, as the hand-off bit points at the hand-off.
+    eq(B.line('values'), '1 needs an appraisal, each linked · 1 out with Jane Smith since Oct 12, 2026 (check back in under Releases & signed papers) · 1 appraiser',
+      'out with the appraiser: since when, and where it is checked back in');
     eq(B.tones('values')[0], 'amber', 'Standard: amber, as the guardrail');
     // A living job: the ⚑ tick is the flag.
     B = bars(LIVING(), [LINE('a', { needsAppr: true, objectName: 'Rolex' })]);
@@ -824,7 +831,9 @@ function groupD({ group, ok, eq, has, lacks }) {
     const body = codeOnly(fn('deskFoldState'));
     ['approvalRequestState', 'draftOutstanding', 'invApprovalBatches', 'signoutGroups', 'invRatificationOwed', 'invReceiptOwed', 'invBequestChecks',
      '_invGuardrailItems', 'invAppraisalInProgress', 'isFormalDoc', 'invOutForAppraisal', '_jobAppraisers', 'proceedsReconciliation', 'closeoutState',
-     'unratedVendorsForJob', 'accessHeldItems', 'openIncidents', 'ledgerDerivedLines', 'invRecordedGone', 'invDonationReceipted', 'donationGroups',
+     // RESTATED ON THE BUILD'S REVIEW (2026-10-23): the close's refusals are read off jobCloseBlockers' own list (its short
+     // words), where the line read unratedVendorsForJob, accessHeldItems and openIncidents itself, a second copy of the list.
+     'jobCloseBlockers', 'ledgerDerivedLines', 'invRecordedGone', 'invDonationReceipted', 'donationGroups',
      'planCurrentStage', '_invRemovedRows'].forEach((r) => ok(new RegExp('\\b' + r + '\\(').test(body), 'reads ' + r));
     // the fields and lists those readers own, never read here directly
     ['authBy', 'approvalDate', 'INV_RELEASE_DISPOSITIONS', 'INV_SALE_DISPOSITIONS', 'apprId', 'fmv', 'flagBequest', 'channel', 'accessItemOpen',
@@ -832,7 +841,8 @@ function groupD({ group, ok, eq, has, lacks }) {
       ok(!new RegExp('\\b' + t + '\\b').test(body), 'no ' + t + ' of its own'));
     eq(callersOf('invBequestChecks'), ['_renderInvBequestCard', 'deskFoldState'], 'the bequests\' three checks: one definition, the card and the line');
     lacks(codeOnly(fn('_renderInvBequestCard')), 'INV_RELEASE_CAUTIONS', 'the card no longer works the checks out itself');
-    eq(callersOf('accessHeldItems'), ['accessCloseBlocker', 'accessTerminalFlag', 'deskFoldState'], 'the keys held: one list, the refusal, the flag and the line');
+    eq(callersOf('accessHeldItems'), ['accessCloseBlocker', 'accessTerminalFlag', 'jobCloseBlockers'], 'the keys held: one list, the refusal (both its wordings), the flag; the line reads the refusal');
+    ok(callersOf('jobCloseBlockers').indexOf('deskFoldState') >= 0, '…which the Closing line reads');
     eq((SRC.match(/accessItemOpen\(x\.st\)/g) || []).length, 1, 'the held filter is written once');
   }
 
@@ -908,7 +918,8 @@ function groupD({ group, ok, eq, has, lacks }) {
     count('_renderInvRow', 'specific bequests card, under ' + amp(R) + ' on Job Admin &amp; Inv', 1, 'the bequest chip');
     count('_invEdit', 'Beneficiaries & specific bequests card, under ' + R + ' on Job Admin & Inv', 1, 'the bequest flag\'s refusal');
     count('planDerivedLines', 'under ' + amp(R) + ' on Job Admin &amp; Inv', 1, 'the Job Plan\'s receipts line');
-    [['invRemoveLine', 1, ''], ['invBulkRemove', 2, ''], ['agentDropDuplicate', 1, ''], ['collectionUseLine', 1, ''],
+    // discardShot (the room's bin, on the Job Plan) since the build's review, 2026-10-23: it still said "Restore on the Job Admin & Inv tab".
+    [['invRemoveLine', 1, ''], ['invBulkRemove', 2, ''], ['agentDropDuplicate', 1, ''], ['collectionUseLine', 1, ''], ['discardShot', 1, ''],
      ['_collLineStatusHtml', 1, 'amp'], ['_agDupHtml', 1, 'amp'], ['_renderInvPanel', 1, 'amp'], ['_renderInvBulk', 1, 'amp']].forEach(([f, n, a]) =>
       count(f, 'Removed items, under ' + (a ? amp(H) + ' on Job Admin &amp; Inv' : H + ' on Job Admin & Inv') + ', gives', n, 'the way back from a removal'));
     // and none of the old places is still named in live code
@@ -917,7 +928,7 @@ function groupD({ group, ok, eq, has, lacks }) {
     ok(live.length > SRC.length * 0.5, 'fixture: the stripped source is most of the file');
     ['Releases card when', 'below the inventory', 'at the foot of this tab', 'at the foot of the tab, gives', 'Disposition Ledger card (Job Admin & Inv)',
      'Donations card, Job Admin & Inv', 'Removed items gives', 'Removed items below', 'Removed items on Job Admin', 'signed papers on the Job Admin &amp; Inv tab',
-     'Close-out card on the Job Plan and on Job Admin'].forEach((old) => lacks(live, old, '⚠ no pointer still says "' + old + '"'));
+     'Close-out card on the Job Plan and on Job Admin', 'Restore on the Job Admin'].forEach((old) => lacks(live, old, '⚠ no pointer still says "' + old + '"'));
   }
 }
 
@@ -2099,7 +2110,9 @@ function groupJ({ group, ok, eq, has, lacks }) {
     eq(callersOf('_apprFormIsOpen'), ['_apprFormRepaint', '_renderAppraiserRoster'], 'whether the appraisers\' form is open: asked where it is drawn, and by the heads\' repaint of it');
     eq(callersOf('_apprFormRepaint'), ['_deskFoldHeadsRepaint'], '…which the heads repaint runs, so every by-id repaint of a card in a bar reaches it');
     eq(callersOf('_apprFormCellsHtml'), ['_renderAppraiserRoster', 'invToggleApprForm'], 'the form\'s empty boxes: one markup, drawn by the render and by Cancel');
-    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', 'deskFoldState'], '⚠ an unread manifest: one answer, read by the bars and the form');
+    // RESTATED ON THE BUILD'S REVIEW (2026-10-23): the read itself asks it too, to arm the retry after a failed read.
+    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'deskFoldState'],
+      '⚠ an unread manifest: one answer, read by the bars, the form, and the read that asks the sheet again');
     eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
     eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');
     ['_apprFormIsOpen', 'invToggleApprForm', '_apprFormPaint', '_apprFormRepaint', '_bqFormIsOpen', 'invToggleBqForm', '_invBqFormPaint', '_renderValueSettings'].forEach((f) =>
@@ -2708,6 +2721,16 @@ function groupN({ group, ok, eq, has, lacks }) {
      ['the bar the history opens', "deskFoldOpen(jobId, 'history')", 'which **Snapshot** opens', MAN],
      ['the Values bar when every item waiting is linked', "' (' + unlinked + ' with no appraiser linked)' : ', each linked'", 'N need an appraisal, each linked', MAN],
      ['the Closing bar\'s sold lines on no statement', "'sold line', 'sold lines') + ' on no statement yet', 'grey'", 'N sold lines on no statement yet', MAN],
+     // the build's review (2026-10-23)
+     ['a read that failed', "[{ text: 'sheet unreachable: this device’s copy', tone: 'amber' }]", 'sheet unreachable: this device’s copy', BOTH],
+     ['the appraiser\'s hand-off on the Releases line', "' to hand to ' + g.taker + ' for appraisal'", 'N to hand to [appraiser] for appraisal', MAN],
+     ['the appraiser\'s return on the Releases line', "' to check back in from ' + g.taker", 'N to check back in from [appraiser]', MAN],
+     ['the Values line\'s pointer at the check-in', "' (check back in under ' + DESK_FOLDS.releases.title + ')'", 'since [day] (check back in under Releases & signed papers)', MAN],
+     ['a statement not filed', "s(R.unfiled, 'statement', 'statements') + ' not filed to Drive'", 'N statements not filed to Drive', MAN],
+     ['a line on two statements', "s(R.twice.length, 'line', 'lines') + ' on two statements'", 'N lines on two statements', MAN],
+     // (its paragraph opens with a ⚠ the markdown writes and the HTML draws by class, so N4 cannot hold it whole)
+     ['Record the signed request, on the lines still unsigned', 'S.req.stableIds.map(String).filter(function(id){ return open.indexOf(id) >= 0; })',
+      'on the items that request carried that are still waiting for a signature, each ticked', ['concierge-guide.html', 'CONCIERGE_GUIDE.md']],
     ].forEach(([what, code, words, docs]) => {
       if (code) has(live, code, what + ': the source says it');
       docs.forEach((f) => has(read(f), asIn(f, words), f + ' says ' + what));
@@ -2743,6 +2766,17 @@ function groupN({ group, ok, eq, has, lacks }) {
       'photography-guide.html': ['<em>Removed items</em> at the foot gives them back', '<strong>Possible duplicates</strong> (at the top)'],
       'incident-guide.html': ['turns the top of the Job Plan red, <em>CALL ANTHONY', 'turns the top of the Job Plan red, and the top of the Job Admin'],
     };
+    // The build's review (2026-10-23): the Needs you counts and the thumbnail note are in tonight's items, not at the top of the tab;
+    // Record the signed request opens on the lines still unsigned; Job Admin's will-or-cash line is green there once done; a failed read.
+    [['MANUAL.md', ['lands in *Not yet decided* at the top of the Job Admin & Inv tab', "first, since 2026-10-03, any original will or cash recorded on the Job Plan's *Found on site* card (§11), in red while Havellin holds it",
+       "(Closing's close, which reads the job, aside). The lines arrive with the read.\n"]],
+     ['manual.html', ['lands in <em>Not yet decided</em> at the top of the Job Admin &amp; Inv tab', 'first, since 2026-10-03, any original will or cash recorded on the Job Plan&rsquo;s <em>Found on site</em> card',
+       'aside). The lines arrive with the read.</div>']],
+     ['CONCIERGE_GUIDE.md', ['lands at the top of the Job Admin & Inv tab that evening', 'the app will say why at the top of the tab', '*No value yet* at the top of the tab filters',
+       'and the top of the tab says so too', 'on exactly the items that request carried', 'first and in red while we hold it', 'Give it a moment; if it stays, check the connection.']],
+     ['concierge-guide.html', ['lands at the top of the Job Admin &amp; Inv tab that evening', 'the app will say why at the top of the tab', '<em>No value yet</em> at the top of the tab filters',
+       'and the top of the tab says so too', 'on exactly the items that request carried', 'first and in red while we hold it', 'Give it a moment; if it stays, check the connection.']],
+    ].forEach(([f, list]) => { const t = read(f); list.forEach((x) => lacks(t, x, f + ': ⚠ no longer says “' + x.slice(0, 60) + '”')); });
     Object.keys(stale).forEach((f) => { const t = read(f); stale[f].forEach((x) => lacks(t, x, f + ': ⚠ no longer says “' + x.slice(0, 60) + '”')); });
     // And where they are now, in the photography guide's plain words.
     const pg = read('photography-guide.html');
@@ -2788,6 +2822,11 @@ function groupN({ group, ok, eq, has, lacks }) {
         'Record the signed request (new 2026-10-22). Once a request has gone from the app and a line it carried is still unsigned',
         'Leaving the property, one row per taker (2026-10-22). The receipts and the sign-out were two lists',
         'Signed schedules (new place 2026-10-22; an estate whose tier states values)',
+        // the build's review (2026-10-23)
+        'Until this device has read the inventory from the sheet, every bar says loading….',
+        'Releases & signed papers N items need written approval: send a request',
+        'Job Admin — folded at the top of the tab (new 2026-09-19;',
+        'Undecided is the default, so an item nobody decided in the house lands in Not yet decided',
       ]],
       playbook: ['CONCIERGE_GUIDE.md', 'concierge-guide.html', [
         'The tab runs in the order of your evening (new 2026-10-22). Anthony: "Build all of it now." From the top:',
@@ -2799,6 +2838,10 @@ function groupN({ group, ok, eq, has, lacks }) {
         'A bar on Job Admin & Inv opened by itself Its work is due',
         'A bar you opened or shut is back the way it opens The page was reloaded.',
         'Every bar on Job Admin & Inv says loading… The inventory has not loaded from the sheet yet on this device.',
+        // the build's review (2026-10-23)
+        'Every bar on Job Admin & Inv starts sheet unreachable',
+        'Job Admin sits folded near the top of this tab (new 2026-09-19)',
+        'Undecided is the default: anything you do not decide in the house lands in Not yet decided',
         'Send request is not on the work bar Correct since 2026-10-22',
         "Agent One's Look at this note is gone from above the items You reviewed the item (2026-10-22).",
         'The client line on Job Admin & Inv has no Target start The schedule strip beside it says it',
@@ -2818,5 +2861,224 @@ function groupN({ group, ok, eq, has, lacks }) {
         ok(a.length === 1 && b.length === 1 && a[0] === b[0], k + ': ⚠ …and it reads the same, whole, in both (' + a.map((l) => l.length) + ' / ' + b.map((l) => l.length) + ' chars)');
       });
     });
+  }
+}
+
+// ═══ O · THE BUILD'S REVIEW (2026-10-23) ═════════════════════════════════════
+// Three reviewers drove the finished desk on the real page; each defect they found is held here on the real code.
+// A synchronous, already-settled promise (the runner is synchronous), unwrapping a returned thenable like a real one.
+function sp(v) {
+  if (v && v.__sync) return v;
+  return { __sync: true, then(f) { try { return sp(f ? f(v) : v); } catch (e) { return sr(e); } }, catch() { return this; } };
+}
+function sr(e) {
+  return { __sync: true, then(f, g) { if (!g) return this; try { return sp(g(e)); } catch (e2) { return sr(e2); } },
+    catch(h) { try { return sp(h(e)); } catch (e2) { return sr(e2); } } };
+}
+function groupO({ group, ok, eq, has, lacks }) {
+  const URL = 'https://sync.example.test/exec';
+  const settle = (D, act) => {
+    const r = attempt(act);
+    const partial = heads(D.dom.html);
+    D.render();
+    return { r, partial, full: heads(D.dom.html) };
+  };
+
+  group('O1 · a read that carries in what the merge keeps, the line\'s clock unmoved: the tab is redrawn, and the bars stop "loading…"');
+  {
+    // mergeMediaItems keeps INV_STICKY_FIELDS from the sheet's older copy (a receipt, a release approval's signers): the
+    // line's content moves, its id, clock and removal do not. The read redrew only on those three.
+    const rows = [LINE('a', { disposition: 'Donate', channel: 'Goodwill' })];
+    const seen = {};
+    const D = desk(PROBATE(), {}, { refs: rows, roots: ['_invRefreshFromCloud'], stubs: {
+      SHEETS_SYNC_URL: URL, _invCloudSeen: seen,
+      refreshPhotoRefs: (id, cb) => { seen[id] = true; rows[0].receiptDoc = 'GW-2210'; cb(true); } } });
+    D.render();
+    eq(heads(D.dom.html).map((x) => x.line), ['loading…', 'loading…', 'loading…', 'loading…'], 'fixture: a cold device');
+    const s = settle(D, () => D.C._invRefreshFromCloud());
+    ok(s.r.ok, 'the read runs (' + (s.r.err || 'ok') + ')');
+    eq(D.log.renders, 1, '⚠⚠ the merge moved the line (its clock did not): the tab is redrawn, its rows with it');
+    eq([s.partial[0].open, s.partial[0].line], [true, '1 item needs written approval: send a request · no beneficiaries recorded'],
+      '⚠⚠ and the bars read what was read: the line, and Releases open by its rule');
+    eq(s.partial, s.full, 'as a full render draws them');
+  }
+
+  group('O2 · refreshPhotoRefs records a read that failed, and the next one that lands clears it');
+  {
+    const seen = {}, failed = {};
+    let got = 'unset';
+    const mk = (fetch) => lift(['refreshPhotoRefs'], { SHEETS_SYNC_URL: URL, _invCloudSeen: seen, _invCloudFailed: failed, _photoRefs: { 7: [] },
+      savePhotoRefs() {}, fetch });
+    let r = attempt(() => mk(() => sr(new Error('offline'))).refreshPhotoRefs(7, (c) => { got = c; }));
+    eq([r.ok, got, failed[7], !!seen[7]], [true, false, true, false], '⚠ no answer: recorded as failed, never as seen');
+    got = 'unset'; delete failed[7];
+    r = attempt(() => mk(() => sp({ json: () => ({ ok: false, error: 'Unknown action' }) })).refreshPhotoRefs(7, (c) => { got = c; }));
+    eq([r.ok, got, failed[7], !!seen[7]], [true, false, true, false], 'an answer that is not ok: failed too');
+    got = 'unset';
+    r = attempt(() => mk(() => sp({ json: () => ({ ok: true, media: {} }) })).refreshPhotoRefs(7, (c) => { got = c; }));
+    eq([r.ok, got, failed[7] === undefined, seen[7]], [true, false, true, true], 'an answer: seen, and the failure cleared');
+  }
+
+  group('O3 · a read that failed: every bar says the sheet is unreachable before this device\'s copy, none opens off it, and the desk asks again');
+  {
+    const rows = [LINE('a', { disposition: 'Donate', channel: 'Goodwill' })];
+    const seen = {}, failed = {}, timers = [];
+    let reads = 0, answer = 'fail', active = true;
+    const D = desk(PROBATE({ invSnapshots: [{ ts: 1 }] }), {}, { refs: rows, roots: ['_invRefreshFromCloud'], stubs: {
+      SHEETS_SYNC_URL: URL, _invCloudSeen: seen, _invCloudFailed: failed,
+      setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; }, clearTimeout() {},
+      refreshPhotoRefs: (id, cb) => { reads++; if (answer === 'fail') failed[id] = true; else { seen[id] = true; delete failed[id]; } cb(false); } } });
+    const g = D.dom.getElementById;
+    D.dom.getElementById = (id) => (id === 'panel-inventory' ? { classList: { contains: (c) => c === 'active' && active } } : g(id));
+    D.render();
+    let s = settle(D, () => D.C._invRefreshFromCloud());
+    ok(s.r.ok, 'the read runs (' + (s.r.err || 'ok') + ')');
+    const UN = 'sheet unreachable: this device’s copy';
+    s.partial.forEach((x) => {
+      if (x.f === 'closing' && !x.drawn) return;
+      eq(x.line.split(' · ')[0], UN, '⚠⚠ ' + x.f + ': the sheet unreachable, never "loading…" for good');
+      lacks(x.line, '✓', x.f + ': and no ✓ off this device\'s copy');
+    });
+    eq(s.partial[0].line, UN + ' · 1 item needs written approval: send a request · no beneficiaries recorded', 'then what this device\'s copy holds');
+    eq(s.partial.map((x) => x.open), [false, false, false, false], '⚠ and no bar opens by itself off it (Releases would, read)');
+    eq(D.C.deskFoldState(7, D.job, 'releases', rows).bits[0].tone, 'amber', 'the unreachable sheet in amber');
+    eq(s.partial, s.full, 'as a full render draws them');
+    eq(timers.map((t) => t.ms), [15000], '⚠⚠ and the desk asks again in 15 seconds');
+    // Left the tab: the timer reads nothing, and arms nothing.
+    active = false;
+    attempt(() => timers[0].f());
+    eq([reads, timers.length], [1, 1], 'the tab left: no read, no new timer');
+    // Another client picked: nothing either.
+    active = true;
+    attempt(() => D.C._invRefreshFromCloud());
+    eq([reads, timers.length], [2, 2], 'fixture: read again, failed again, a timer armed');
+    D.dom.getElementById('inv-job').value = '8';
+    attempt(() => timers[1].f());
+    eq(reads, 2, 'another client on the desk: no read');
+    D.dom.getElementById('inv-job').value = '7';
+    attempt(() => D.C._invRefreshFromCloud());
+    eq(timers.length, 3, 'fixture: armed again');
+    // The connection back: the next tick reads, and the bars read what was read.
+    answer = 'ok';
+    const before = heads(D.dom.html);
+    attempt(() => timers[2].f());
+    const after = heads(D.dom.html);
+    eq(reads, 4, 'the tick read the sheet');
+    eq(before[0].line.split(' · ')[0], UN, 'fixture: unreachable until then');
+    eq([after[0].open, after[0].line], [true, '1 item needs written approval: send a request · no beneficiaries recorded'],
+      '⚠⚠ read: the line, and Releases open by its rule');
+    eq(timers.length, 3, 'and nothing more is armed once a read has landed');
+    has(fn('refreshPhotoRefs'), '_invCloudFailed[jobId] = true', 'the failure is recorded where the read is made');
+  }
+
+  group('O4 · Closing: a statement recorded and not filed, and a line on two statements, are named in amber');
+  {
+    const rows = [LINE('a', { disposition: 'Sell', channel: 'Sotheby’s', gross: 500, fees: 50, itemNo: 1 }), LINE('b', { disposition: 'Keep', itemNo: 2 })];
+    const st = (id) => ({ id, vendor: 'Sotheby’s', gross: 500, fees: 50, netPaid: 450, lines: [{ stableId: 'a', itemNo: 1 }] });
+    let B = bars(PROBATE({ proceedsStatements: [st('ps1')] }), rows);
+    eq(B.line('closing'), '1 statement not filed to Drive · close-out 0 of 3 done · 1 statement recorded',
+      '⚠⚠ a statement that agrees, recorded and not filed: named, amber (it said nothing, all grey)');
+    eq(B.tones('closing')[0], 'amber', 'amber');
+    eq(B.closing.openByDefault, false, 'mid-job: still shut, its line saying so');
+    const filed = { id: 'sr1', kind: 'statement', ref: 'ps1', stableIds: ['a'], filedAt: T0, fileUrl: 'https://drive.google.com/file/d/S/view' };
+    B = bars(PROBATE({ proceedsStatements: [st('ps1')], signedRecords: [filed] }), rows);
+    lacks(B.line('closing'), 'not filed', 'filed: not named');
+    B = bars(PROBATE({ proceedsStatements: [st('ps1'), st('ps2')], signedRecords: [filed] }), rows);
+    has(B.line('closing'), '1 line on two statements', '⚠ a line on two statements: named');
+    has(B.line('closing'), '1 statement not filed to Drive', 'and the second statement unfiled');
+  }
+
+  group('O5 · Releases counts the appraiser\'s two sign-outs, never "✓ nothing waiting" over one; Values points at the check-in');
+  {
+    const ap = { appraisers: [{ id: 1, name: 'Carla Mendes', credential: 'ASA' }] };
+    const line = LINE('a', { disposition: 'Keep', apprId: 1, objectName: 'Rolex', itemNo: 1 });
+    let B = bars(LIVING(ap), [line]);
+    eq([B.releases.show, B.releases.openByDefault], [true, false], 'a living job whose one paper is a hand-off: Releases drawn, shut');
+    eq(B.line('releases'), '1 to hand to Carla Mendes for appraisal', '⚠⚠ the hand-off named, never "✓ nothing waiting"');
+    eq(B.tones('releases'), ['grey'], 'in grey: not a release, and no approval waits on it');
+    const out = { id: 'h1', kind: 'appraisal_out', ref: 'Carla Mendes', stableIds: ['a'], signedOn: '2026-10-19', filedAt: ON('2026-10-19') };
+    B = bars(LIVING(Object.assign({ signedRecords: [out] }, ap)), [line]);
+    eq(B.line('releases'), '1 to check back in from Carla Mendes', '⚠ out with the appraiser: the check-in named');
+    has(B.line('values'), '1 out with Carla Mendes since Oct 19, 2026 (check back in under Releases & signed papers)', 'and Values points at it');
+  }
+
+  group('O6 · an edit or a split that changes what the Releases card offers repaints the card, not only the bar\'s line');
+  {
+    const real = ['_renderInvReleasesCard'];
+    const approved = () => [LINE('a', { itemNo: 1, objectName: 'Harbor painting', disposition: 'Auction', channel: 'Kodner Galleries',
+      authBy: 'Ruth Adler', approvalDate: '2026-10-19' })];
+    const r = approved();
+    const D = desk(PROBATE(), {}, { refs: r, real, roots: ['_invEdit'], stubs: { SHEETS_SYNC_URL: URL, _invCloudSeen: { 7: true }, _invAssignItemNos: () => r,
+      savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, alert() {}, _invRefreshSummary() {} } });
+    const h0 = D.render();
+    ok(!D.log.renderErr, 'the desk draws with the real Releases card (' + (D.log.renderErr || 'ok') + ')');
+    lacks(inner(h0, 'inv-releases') || '', 'sendApprovalRequest(7)', 'fixture: approved, so the card offers no send');
+    const e = attempt(() => D.C._invEdit(7, 'a', 'authBy', { value: '', type: 'text' }));
+    ok(e.ok, 'the edit runs (' + (e.err || 'ok') + ')');
+    const pCard = inner(D.dom.html, 'inv-releases') || '', pLine = heads(D.dom.html)[0].line;
+    has(pLine, '1 item needs written approval: send a request', 'fixture: the bar\'s line asks for a request');
+    has(pCard, 'onclick="sendApprovalRequest(7)"', '⚠⚠ and the card under it offers the send (it kept the approved card)');
+    D.render();
+    eq(pCard, inner(D.dom.html, 'inv-releases') || '', '⚠ the card as a full render draws it');
+    eq(callsIn('_invSplitRepaint', '_invRefreshReleases'), 1, 'a split repaints the card too, once');
+  }
+
+  group('O7 · the Releases card is repainted only for the client the desk shows');
+  {
+    const dom = liveDom(8);
+    dom.html = '<div id="wrap"><div class="card" id="inv-releases">CLIENT 8</div></div>';
+    const R = lift(['_invRefreshReleases'], { document: dom, _invJob: (id) => ({ id }), _jobInvRefs: () => [], _renderInvReleasesCard: (j) => '<div class="card" id="inv-releases">CLIENT ' + j.id + '</div>' });
+    const a = attempt(() => R._invRefreshReleases(7));
+    eq([a.ok, a.val, dom.html], [true, false, '<div id="wrap"><div class="card" id="inv-releases">CLIENT 8</div></div>'],
+      '⚠⚠ client 8 on the desk: client 7\'s card is not written into it');
+    attempt(() => R._invRefreshReleases(8));
+    eq(dom.html, '<div id="wrap"><div class="card" id="inv-releases">CLIENT 8</div></div>', 'its own client\'s repaint still lands');
+  }
+
+  group('O8 · Send request\'s refusals before anything starts open the Releases bar too');
+  {
+    const notices = [];
+    const rows = [LINE('a', { itemNo: 1, disposition: 'Auction', channel: 'Kodner Galleries' })];
+    const D = desk(PROBATE({ executorEmail: '' }), {}, { refs: rows, roots: ['sendApprovalRequest'], stubs: { SHEETS_SYNC_URL: URL, _invCloudSeen: { 7: true },
+      _docNotice: (t, m) => notices.push(String(m)) } });
+    D.render();
+    const shut = () => { D.C._deskOpen['7:releases'] = false; };
+    shut();
+    let r = attempt(() => D.C.sendApprovalRequest(7));
+    eq([r.val, D.C._deskOpen['7:releases']], [false, true], '⚠ refused (nobody to send to): the bar whose card says why in red is opened');
+    D.C.jobs[0].executorEmail = 'ruth@adler.example';
+    shut();
+    r = attempt(() => D.C.sendApprovalRequest(7, true));
+    eq([r.val, D.C._deskOpen['7:releases']], [false, true], 'nothing selected: opened');
+    shut();
+    D.C._docBusy = { jobId: 7, docKey: 'estimate' };
+    r = attempt(() => D.C.sendApprovalRequest(7));
+    eq([r.val, D.C._deskOpen['7:releases']], [false, true], 'another document being prepared: opened');
+    eq(notices.length, 3, 'fixture: each refused with its notice');
+  }
+
+  group('O9 · the Closing line at the close names exactly what Close job refuses on: one list, two wordings');
+  {
+    const est = { estimate: { svc: 'probate', rooms: [{ idx: 0, name: 'Study' }] } };
+    const plan = { 7: { rooms: { 0: { status: 'cleared' } } } };
+    const all3 = { vendorSourcing: { m: { vendorId: 'v1', vendorName: 'Ace Movers', status: 'Confirmed' }, n: { vendorId: 'v2', vendorName: 'Bee Haulers', status: 'Confirmed' } },
+      accessItems: [{ id: 'k1', kind: 'key', label: 'Front door', qty: 1 }, { id: 'k2', kind: 'fob', label: 'Garage fob', qty: 1 }],
+      incidents: [{ id: 'i1', entry: 'report', kind: 'injury', occurredOn: '2026-10-19', recordedAt: 1 }],
+      payments: [{ uid: 'p1', stage: 'midpoint', amount: 5000, method: 'wire', receivedOn: '2026-10-15' }] };
+    [['all three', all3], ['the vendors alone', { vendorSourcing: all3.vendorSourcing }], ['nothing', {}]].forEach(([what, o]) => {
+      const job = PROBATE(Object.assign({ deliveredOn: '2026-10-20', status: 'closed' }, o));
+      const B = bars(job, [LINE('a', { disposition: 'Keep' })], { est, plan });
+      const long = attempt(() => B.C.jobCloseBlockers(job)), short = attempt(() => B.C.jobCloseBlockers(job, 'short'));
+      ok(long.ok && short.ok, what + ': both wordings answer (' + (long.err || short.err || 'ok') + ')');
+      eq((short.val || []).length, (long.val || []).length, what + ': ⚠ one entry in the short list for each refusal');
+      eq(B.closing.bits.filter((b) => b.tone === 'amber').map((b) => b.text).slice(0, (short.val || []).length), short.val || [],
+        what + ': the line opens with exactly those, in amber, in the refusal\'s order');
+    });
+    const j = PROBATE(Object.assign({ deliveredOn: '2026-10-20', status: 'closed' }, all3));
+    eq(bars(j, [LINE('a', { disposition: 'Keep' })], { est, plan }).C.jobCloseBlockers(j, 'short'),
+      ['2 vendors not yet rated', '2 keys or access items still held', '1 incident open'], 'the short words, plural where they are');
+    const body = codeOnly(fn('deskFoldState'));
+    has(body, "jobCloseBlockers(job, ''", 'the bar reads the refusal\'s own list');
+    ['unratedVendorsForJob(', 'openIncidents(', 'accessHeldItems('].forEach((n) => lacks(body, n, '⚠ and keeps no copy of it: no ' + n + ' in the line'));
   }
 }

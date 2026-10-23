@@ -225,7 +225,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'the confirm says the lines go with it');
     has(msg, '#13 Banksy print', '⚠ and NAMES them — "2 lines" invites a yes');
     has(msg, '#14 Bang & Olufsen speaker', 'both of them');
-    has(msg, 'Restore', 'and says the removal is undoable');
+    // RESTATED ON THE DESK BUILD'S REVIEW (2026-10-23): the way back is named as every other removal names it, by its bar.
+    has(msg, 'Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back.', 'and says the removal is undoable, and where');
 
     ['s_bar', 'd1', 'd2'].forEach((id) => {
       ok(!!ctx._getPhotoRef(7, id).deletedAt, id + ' is tombstoned, never spliced');

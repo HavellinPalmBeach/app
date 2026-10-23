@@ -594,7 +594,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const m = sandbox({ fns: ['_invEdit', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
                               '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal'],
                         vars: ['INV_STICKY_FIELDS'],
-                        stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {},
+                        // _invRefreshReleases with its sibling repaints: _invEdit runs it on every edit since the desk build's review (2026-10-23).
+                        stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
                                  _scheduleInventorySync() {}, _invNetDisplay: () => '' } });
     m._photoRefs[2] = [{ stableId: 'a', label: 'inventory', collId: null, fmv: '500000' }];
 

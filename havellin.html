@@ -1428,7 +1428,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 4:15pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 6:44pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -27166,6 +27166,11 @@ function _cleanName(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g,''
 // sees the valuations somebody else entered.
 // Jobs whose server-side manifest this device has successfully read at least once.
 var _invCloudSeen = {};
+// Jobs whose last read of the manifest FAILED (no answer, or an answer that was not ok), cleared by the next read that lands.
+// ⚠ A FAILED READ IS NOT A READ STILL COMING (2026-10-23, the desk's review): the desk's bars said "loading…" for the rest of
+// the session after one, no bar opened by itself, and nothing asked again. They now say the sheet is unreachable and show this
+// device's copy, and the desk asks again while it shows the client (_invCloudRetryArm). Never saved.
+var _invCloudFailed = {};
 function refreshPhotoRefs(jobId, cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
   fetch(SHEETS_SYNC_URL + '?action=loadMedia&jobId=' + encodeURIComponent(jobId))
@@ -27175,6 +27180,8 @@ function refreshPhotoRefs(jobId, cb) {
       // different fact from whether the merge changed anything. The workbook write is
       // gated on it — see _scheduleInventorySync.
       if (d && d.ok) _invCloudSeen[jobId] = true;
+      // typeof: a pinned sandbox lifts this function without the second map.
+      if (typeof _invCloudFailed !== 'undefined') { if (d && d.ok) delete _invCloudFailed[jobId]; else _invCloudFailed[jobId] = true; }
       var entry = d && d.ok && d.media && d.media[String(jobId)];
       var remote = entry && entry.items;
       // ⚠ THE RESET FIRST (2026-10-19): an entry stamped `invResetAt` takes every line this device holds from before it
@@ -27209,7 +27216,11 @@ function refreshPhotoRefs(jobId, cb) {
       savePhotoRefs(jobId);
       if (cb) cb(didChange);
     })
-    .catch(function(){ if (cb) cb(false); });
+    .catch(function(){
+      // A read that never answered, or a merge that threw after it did: unread unless the answer itself landed above.
+      if (typeof _invCloudFailed !== 'undefined' && !_invCloudSeen[jobId]) _invCloudFailed[jobId] = true;
+      if (cb) cb(false);
+    });
 }
 
 // JSON with every object's keys in sorted order, so two copies of one record compare equal however each was built.
@@ -27587,7 +27598,7 @@ function discardShot(jobId, stableId) {
     + (derived.length > 1 ? 's were' : ' was') + ' split out of this photograph and '
     + (derived.length > 1 ? 'go' : 'goes') + ' with it:\n'
     + derived.map(function(r){ return '  · ' + _invNamed(r); }).join('\n')
-    + '\n\nRestore on the Job Admin & Inv tab brings them back.';
+    + '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives them back.';
   msg += inDrive.length
     ? '\n\nRemoved from this job and from the client\u2019s Google Drive folder. Google keeps it in '
       + 'the Drive bin for 30 days.'
@@ -28693,6 +28704,9 @@ function _invSplitRepaint(jobId, ref) {
   if (wb) wb.outerHTML = _renderInvWorkbar(job, all);
   _invRefreshFlagStrip(jobId);
   _invRefreshRecords(jobId);   // the ledger counts the lines too (P19)
+  // The Releases card too (2026-10-23, the desk's review): a piece split off an approved collection keeps its disposition and
+  // not the approval, so it waits on a request the card must offer, as the Releases bar's line (repainted above) says.
+  _invRefreshReleases(jobId);
   _invRefreshSummary(jobId);
   // Belt and braces, said so: a new line has no value and the default category, so it cannot enter the
   // appraisal guardrail today, and removing this changes nothing a test can see. It is repainted so a future
@@ -29537,9 +29551,12 @@ function _invEdit(jobId, stableId, key, el) {
   // The close-out records likewise (P19): the ledger's figures, a statement's reconciliation, a charity's lines.
   _invRefreshRecords(jobId);
   // ⚠ AND THE RELEASES CARD (2026-10-10, the core-jobs run): a buyer typed on a Sell line is a vendor pickup to file, and
-  // *File pickup list* appeared only after leaving and reopening the tab. Repainted by id, whole, on the two edits that
-  // move a line onto or off a list; a card the render would not draw is left for the next full render.
-  if (key === 'channel' || key === 'disposition') _invRefreshReleases(jobId);
+  // *File pickup list* appeared only after leaving and reopening the tab. Repainted by id, whole.
+  // ⚠ ON EVERY EDIT (2026-10-23, the desk's review), not only the two that move a line onto or off a list: an approval cleared,
+  // a disposition date, a receipt or a bequest flag changes what the card offers too, and the Releases bar's line (repainted
+  // with the records below) said "send a request" over a card still offering none. The card holds no field anybody types
+  // into (a signed copy's picker is a button), and this runs on a change, never a keystroke.
+  _invRefreshReleases(jobId);
   // Forcing MAIV on or off changes whether the class beside it is editable at all, so
   // that row has to be redrawn rather than left showing a control that no longer applies.
   // Changing the disposition moves the item into a different section, and changing the
@@ -32374,21 +32391,23 @@ function approvalRequestMailto(ctx) {
 // time, app-wide (_docBusy), with a watchdog, because a draft may exist when an answer never comes.
 function sendApprovalRequest(jobId, selectedOnly) {
   var job = _invJob(jobId);
+  // ⚠ EVERY END OF A SEND OPENS THE RELEASES BAR (2026-10-22), from the card or the bulk bar, whatever came of it: the
+  // notice says to tap I've sent it on the Releases card, or to press Send request again there, and the card sits in a
+  // bar that may be shut. The three refusals before anything starts included (2026-10-23, the desk's review): the card
+  // states the same blocker in red, and from the bulk bar it was behind a shut bar.
+  var openBar = function () { if (typeof deskFoldOpen === 'function') deskFoldOpen(jobId, 'releases'); };
   var why = approvalRequestBlocker(job);
-  if (why) { _docNotice('warn', why, jobId); return false; }
+  if (why) { openBar(); _docNotice('warn', why, jobId); return false; }
   var picked = selectedOnly ? _invPicked(jobId) : _invAwaitingApproval(jobId);
   if (!picked.length) {
+    openBar();
     _docNotice('warn', selectedOnly ? 'Select the lines you want approval for first.'
       : 'Nothing is waiting on approval: every line leaving the property has its written approval, or has no disposition yet.', jobId);
     return false;
   }
-  if (_docBusy) { _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
+  if (_docBusy) { openBar(); _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
   _docBusy = { jobId: jobId, docKey: APPROVAL_REQ_KEY };
   var over = false;
-  // ⚠ EVERY END OF A SEND OPENS THE RELEASES BAR (2026-10-22), from the card or the bulk bar, whatever came of it: the
-  // notice says to tap I've sent it on the Releases card, or to press Send request again there, and the card sits in a
-  // bar that may be shut.
-  var openBar = function () { if (typeof deskFoldOpen === 'function') deskFoldOpen(jobId, 'releases'); };
   var watchdog = setTimeout(function () {
     if (over) return;
     over = true; _docBusy = null;
@@ -32604,9 +32623,12 @@ function openJobDeskFor(jobId) {
 // on screen saying what is no longer true, and one that starts to say something is drawn where the host stands.
 var INV_RELEASES_HOST_EMPTY = '<div id="inv-releases" style="display:none;"></div>';
 // ⚠ AND THE BARS' LINES FOLLOW IT, on both paths (2026-10-22): the card is inside a bar whose shut line says what it holds.
+// ⚠ ONLY THE CLIENT THE DESK SHOWS (2026-10-23, the desk's review): the host has one id whoever's desk is drawn, and the
+// approval request's send ends here after its round trips, so a person who had picked another client meanwhile got the first
+// client's card, its presses acting on the first client, inside the second client's bar. The heads repaint guards itself.
 function _invRefreshReleases(jobId) {
-  var el = document.getElementById('inv-releases'), job = _invJob(jobId);
-  if (!el || !job) { if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId); return false; }
+  var el = document.getElementById('inv-releases'), job = _invJob(jobId), sel = document.getElementById('inv-job');
+  if (!el || !job || !sel || (parseInt(sel.value) || 0) !== jobId) { if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId); return false; }
   var html = _renderInvReleasesCard(job, _jobInvRefs(jobId));
   el.outerHTML = html || INV_RELEASES_HOST_EMPTY;
   if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
@@ -36308,17 +36330,40 @@ function _invRefreshFromCloud() {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
   if (!jobId) return;
-  var before = JSON.stringify((_photoRefs[jobId] || []).map(function(r){ return [r.stableId, r.updatedAt || r.ts, r.deletedAt || 0]; }));
+  if (typeof _invCloudRetry !== 'undefined' && _invCloudRetry.timer) { clearTimeout(_invCloudRetry.timer); _invCloudRetry.timer = null; }
   refreshPhotoRefs(jobId, function(changed) {
     // ⚠ THE FIRST READ OF THE SHEET IS WHAT LETS THE WALKTHROUGH'S COLLECTIONS JOIN THE INVENTORY (P24), so a read that
     // changed nothing still redraws when it made them.
     var made = collectionLinesEnsure(jobId);
-    // ⚠ A READ THAT CHANGED NOTHING STILL ENDS THE BARS' "loading…" (2026-10-22): their lines and open rules wait on this
-    // read (deskFoldState), and the tab is not redrawn for it.
-    if (!changed && !made) { if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId); return; }
-    var after = JSON.stringify((_photoRefs[jobId] || []).map(function(r){ return [r.stableId, r.updatedAt || r.ts, r.deletedAt || 0]; }));
-    if (made || after !== before) renderInventoryTab();
+    // ⚠⚠ A READ THAT MOVED ANYTHING REDRAWS (2026-10-23, the desk's review). It redrew only when a line's id, clock or
+    // removal moved, so a read that carried in what the merge keeps from an older copy (a release approval's signers, a
+    // receipt, a disposition date: INV_STICKY_FIELDS, invMergeApprovals) left the rows stale, and, since the bars' lines
+    // wait on this read, every bar saying "loading…" and Releases shut over a request owed. `changed` is the merge's own
+    // answer, keys sorted (refreshPhotoRefs), so it moves only when the content did, and this runs on a tab opened or a
+    // client picked, never on a timer that could redraw over somebody typing.
+    // ⚠ AND A READ THAT CHANGED NOTHING STILL ENDS THE BARS' "loading…" (2026-10-22): the heads alone, no redraw.
+    if (changed || made) renderInventoryTab();
+    else if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
+    if (typeof _invCloudRetryArm === 'function' && _invManifestUnread(jobId) && _invCloudFailed[jobId]) _invCloudRetryArm(jobId);
   });
+}
+// ⚠ A FAILED READ IS ASKED AGAIN (2026-10-23, the desk's review): every INV_CLOUD_RETRY_MS while the desk still shows this
+// client and nothing has landed, one timer at a time, and never once the person has left the tab or picked another client
+// (opening it again reads afresh). The bars say the sheet is unreachable meanwhile (deskFoldState), so nobody waits on a
+// "loading…" that is not coming; the lines arrive with the first read that lands.
+var INV_CLOUD_RETRY_MS = 15000;
+var _invCloudRetry = { timer: null };
+function _invCloudRetryArm(jobId) {
+  if (_invCloudRetry.timer) clearTimeout(_invCloudRetry.timer);
+  _invCloudRetry.timer = setTimeout(function () {
+    _invCloudRetry.timer = null;
+    var sel = document.getElementById('inv-job'), panel = document.getElementById('panel-inventory');
+    if (!sel || (parseInt(sel.value) || 0) !== jobId) return;
+    if (!panel || !panel.classList || !panel.classList.contains('active')) return;
+    if (!_invManifestUnread(jobId)) return;
+    _invRefreshFromCloud();
+  }, INV_CLOUD_RETRY_MS);
+  return true;
 }
 
 // Name the rows that came from one estimate line twice, rather than quietly merging or
@@ -44650,8 +44695,9 @@ function planDerivedLines(jobId, job, est, phase, today) {
     }));
   }
   // ⚠ KEYS AND ACCESS ITEMS (2026-10-16): on the Keys & access card itself ('access'), on Close-out ('p4', amber while one is
-  // held: the close waits on it) and on the desk's Job Admin card ('admin'), each open line with the way to the card. Red
-  // for a lost item (Q74). Guarded for a sandbox that lifts this function alone; the suite that proves the join lifts both.
+  // held: the close waits on it) and on the desk ('admin'), each open line with the way to the card. Red for a lost item
+  // (Q74). On the desk a lost key not yet done is drawn in the Urgent strip, and Job Admin keeps the rest (deskNowLine).
+  // Guarded for a sandbox that lifts this function alone; the suite that proves the join lifts both.
   if ((phase === 'access' || phase === 'p4' || phase === 'admin') && typeof accessLines === 'function' && accessItemsOf(job).length) {
     out = out.concat(accessLines(job, day()).map(function(l) {
       if (phase !== 'access' && !l.ok) l.action = { label: 'Open Keys &amp; access', call: 'goToAccessCard(' + jobId + ')' };
@@ -44824,8 +44870,10 @@ function planDerivedLines(jobId, job, est, phase, today) {
   // for a paper the app now files), and at the desk the donation receipts and the sale proceeds reconciled (they replace
   // fin_donation_receipts and fin_proceeds). Derived, never ticked; ledgerDerivedLines words them.
   if (phase === 'p4' || phase === 'admin') ledgerDerivedLines(jobId, job, phase).forEach(function(l){ out.push(l); });
-  // ⚠ INCIDENTS (P26): on the Incidents card ('incidents') and on the desk's Job Admin card ('admin'), where each open line
-  // carries Open Incidents. The clock is read only on a job that has one.
+  // ⚠ INCIDENTS (P26): on the Incidents card ('incidents') and on the desk ('admin'), where each open line carries Open
+  // Incidents. On the desk an open line is drawn in the Urgent strip, its Open Incidents dropped where the banner above
+  // offers one, and Job Admin draws a line once it is done (deskNowLine, deskAlertsHtml). The clock is read only on a job
+  // that has one.
   if ((phase === 'incidents' || phase === 'admin') && typeof incidentLines === 'function' && typeof incidentReportsOf === 'function' && incidentReportsOf(job).length) {
     incidentLines(job, day()).forEach(function(l) {
       if (phase === 'admin' && !l.ok) l.action = { label: 'Open Incidents', call: 'goToIncidents(' + jobId + ')' };
@@ -45013,8 +45061,9 @@ function accessEventFlags(job, item) {
   return flags;
 }
 // The derived lines (Q74: red on every device): one red line per lost item, then the count. On the card itself ('access'),
-// on Close-out ('p4') and first on the desk's Job Admin card ('admin') through planDerivedLines, and on the client
-// dashboard. DOM-free and clock-free (`today` is an argument). Person-typed values are escaped: the lines are drawn as markup.
+// on Close-out ('p4') and on the desk ('admin': a lost item in the Urgent strip, deskNowLine) through planDerivedLines,
+// and on the client dashboard. DOM-free and clock-free (`today` is an argument). Person-typed values are escaped: the
+// lines are drawn as markup.
 function accessLines(job, today) {
   var items = accessItemsOf(job);
   if (!items.length) return [];
@@ -46050,10 +46099,11 @@ function incidentRefusal(rec, mode, today, job) {
   return '';
 }
 
-// ⚠⚠ THE REMINDERS: the derived lines planDerivedLines returns on the Incidents card ('incidents') and on the desk's Job
-// Admin card ('admin'). DOM-free and clock-free (`today` is an argument). Every open incident is a line; the call to Anthony
-// still owed on an alert kind is RED; a damage incident carries §6.3's deadlines, red once past; a vulnerable adult concern
-// with the hotline not recorded as called is red. Every person-typed value is escaped: a line is drawn as markup.
+// ⚠⚠ THE REMINDERS: the derived lines planDerivedLines returns on the Incidents card ('incidents') and on the desk ('admin':
+// an open line in the Urgent strip, a done one in Job Admin; deskNowLine). DOM-free and clock-free (`today` is an
+// argument). Every open incident is a line; the call to Anthony still owed on an alert kind is RED; a damage incident
+// carries §6.3's deadlines, red once past; a vulnerable adult concern with the hotline not recorded as called is red.
+// Every person-typed value is escaped: a line is drawn as markup.
 function incidentLines(job, today) {
   var out = [];
   var day = String(today || '');
@@ -46737,7 +46787,8 @@ function _invManifestUnread(jobId) {
 // ⚠ AN UNREAD MANIFEST CLAIMS NOTHING ("An empty store is unread until proven otherwise"): until this device has read the
 // job's manifest from the sheet (_invCloudSeen), every bar says "loading…" in grey, never a ✓ or a count of nothing, and
 // none opens by itself off the copy cached here (Closing's close, which reads the job and not the manifest, aside). The
-// heads are run again when the read lands (_invRefreshFromCloud). With no Apps Script URL there is nothing to read, and
+// heads are run again when the read lands (_invRefreshFromCloud); a read that failed says "sheet unreachable" before this
+// device's copy, and is asked again (_invCloudRetryArm). With no Apps Script URL there is nothing to read, and
 // this device's copy is the record (collectionLinesEnsure's rule). `today` (yyyy-mm-dd) is for the tests; the desk passes none.
 function deskFoldState(jobId, job, fold, all, today) {
   var st = { show: false, openByDefault: false, bits: [] };
@@ -46748,6 +46799,17 @@ function deskFoldState(jobId, job, fold, all, today) {
   var s = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
   var unread = _invManifestUnread(jobId);
   var loading = function () { st.bits = [{ text: 'loading…', tone: 'grey' }]; return st; };
+  // ⚠ A READ THAT FAILED IS NOT "loading…" (2026-10-23, the desk's review): it said so for the rest of the session. The line
+  // says the sheet is unreachable, in amber, and then what this device's copy holds; still no ✓ and nothing opened by itself
+  // off that copy (Closing's close aside, as above). The desk asks the sheet again meanwhile (_invCloudRetryArm).
+  var cached = unread && typeof _invCloudFailed !== 'undefined' && !!_invCloudFailed[jobId];
+  var fin = function () {
+    if (!cached) return st;
+    st.openByDefault = fold === 'closing' && !!atClose;
+    st.bits = [{ text: 'sheet unreachable: this device’s copy', tone: 'amber' }]
+      .concat(st.bits.filter(function (b) { return String(b.text).charAt(0) !== '✓'; }));
+    return st;
+  };
   // A line is counted once in each paper's run, under the first bit that names it: the approval it waits on (ratification,
   // a request owed, a request out), then the paper its leaving owes (a receipt, a sign-out). A line can owe one of each:
   // on living work a line may be signed out before the client's approval comes back.
@@ -46766,7 +46828,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     // Drawn where either card draws: on an estate always (the bequests card); on living work where the request, a signing
     // act or a sign-out row has something to say (_renderInvReleasesCard's sections; group D holds the two answers equal).
     st.show = fid || !!S.st || !!(S.open.length + S.fresh.length) || !!batches.length || !!outs.length;
-    if (unread) return loading();
+    if (unread && !cached) return loading();
     st.openByDefault = S.fresh.length > 0 || draft || unfiled > 0;
     var rat = once('approval', fid ? all.filter(function (r) { return invRatificationOwed(r, job); }) : []);
     var fresh = once('approval', S.fresh);
@@ -46795,15 +46857,22 @@ function deskFoldState(jobId, job, fold, all, today) {
       : C.unmatched.length + ' flagged bequests with no bequest behind them', 'amber');
     if (unsigned) bit(unsigned + ' on the request still unsigned', 'grey');
     if (readyN) bit(readyN + ' ready to sign out', notToday ? 'amber' : 'grey');
+    // ⚠ AND THE APPRAISER'S TWO SIGN-OUTS (2026-10-23, the desk's review): a hand-off and a return are rows of this card too
+    // (leavingGroups), so a desk whose only release work was a hand-off read "✓ nothing waiting" over Sign out 1 to the
+    // appraiser, and nothing pointed at Check N back in. In grey: neither is a release, and neither waits on an approval.
+    outs.forEach(function (g) {
+      if (!g.ready.length || (g.kind !== 'appraisal_out' && g.kind !== 'appraisal_back')) return;
+      bit(g.ready.length + (g.kind === 'appraisal_out' ? ' to hand to ' + g.taker + ' for appraisal' : ' to check back in from ' + g.taker), 'grey');
+    });
     if (!bits.length) bit('✓ nothing waiting', 'ok');
     if (C && C.notFound.length) bit(s(C.notFound.length, 'bequest', 'bequests') + ' not yet found', 'grey');
     if (fid && !jobListEntries(job, 'beneficiaries').length) bit('no beneficiaries recorded', 'grey');
-    return st;
+    return fin();
   }
 
   if (fold === 'values') {
     st.show = true;   // the roster is always drawn: it is where an appraiser is added
-    if (unread) return loading();
+    if (unread && !cached) return loading();
     var items = _invGuardrailItems(jobId);   // the guardrail's own list, so the bar's line and tone are the panel's
     var unlinked = items.filter(function (r) { return !invAppraisalInProgress(r, jobId); }).length;
     st.openByDefault = unlinked > 0;
@@ -46820,7 +46889,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     });
     outOrder.forEach(function (k) {
       var x = outBy[k], d = x.rec.signedOn || (x.rec.filedAt ? _ymdLocal(new Date(Number(x.rec.filedAt))) : '');
-      bit(x.n + ' out with ' + (x.rec.ref || 'the appraiser') + (d ? ' since ' + fmtDate2(d) : ''), 'grey');
+      bit(x.n + ' out with ' + (x.rec.ref || 'the appraiser') + (d ? ' since ' + fmtDate2(d) : '') + ' (check back in under ' + DESK_FOLDS.releases.title + ')', 'grey');
     });
     // The hand-offs stay in the one sign-out list, under Releases, where every other sign-out is.
     signoutGroups(job, all).forEach(function (g) {
@@ -46828,7 +46897,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     });
     var ap = _jobAppraisers(jobId).length;
     bit(ap ? s(ap, 'appraiser', 'appraisers') : 'no appraisers yet', 'grey');
-    return st;
+    return fin();
   }
 
   if (fold === 'closing') {
@@ -46838,20 +46907,16 @@ function deskFoldState(jobId, job, fold, all, today) {
     var atClose = !!job.deliveredOn || ['closed', 'closed_retained', 'lost'].indexOf(job.status) >= 0
       || (typeof planCurrentStage === 'function' && planCurrentStage(jobId, job, est) === 'p4');
     st.openByDefault = atClose;
-    if (unread) return loading();
+    if (unread && !cached) return loading();
     var R = (jobTakesProceedsStatements(job) && all.length) ? proceedsReconciliation(job, all) : null;
     // typeof, as the bar's other late readers are: belt-and-braces for a pinned sandbox that lifts this line without the list.
     var SC = typeof signedScheduleRows === 'function' ? signedScheduleRows(job, all) : [];
     var scOpen = SC.filter(function (x) { return !x.filed.length; });
     if (R && R.disagree) { st.openByDefault = true; bit(R.disagree === 1 ? '1 proceeds statement disagrees with its lines' : R.disagree + ' proceeds statements disagree with their lines', 'red'); }
     if (atClose) {
-      // Everything Close job refuses on (jobCloseBlockers), each by name: the vendors unrated, the keys held, the incidents open.
-      var unrated = unratedVendorsForJob(job).length;
-      var held = typeof accessHeldItems === 'function' ? accessHeldItems(job).length : 0;
-      var inc = typeof openIncidents === 'function' ? openIncidents(job).length : 0;
-      if (unrated) bit(s(unrated, 'vendor', 'vendors') + ' not yet rated', 'amber');
-      if (held) bit(held === 1 ? '1 key or access item still held' : held + ' keys or access items still held', 'amber');
-      if (inc) bit(s(inc, 'incident', 'incidents') + ' open', 'amber');
+      // Everything Close job refuses on, each by name, off the refusal's own list in its short words (jobCloseBlockers(job,
+      // 'short'), 2026-10-23): a refusal added there is named here without a second copy of it.
+      jobCloseBlockers(job, 'short').forEach(function (t) { bit(t, 'amber'); });
       var sig = all.length ? ledgerDerivedLines(jobId, job)[0] : null;
       if (sig && !sig.ok) bit((sig.key === 'ledger_signed' ? 'Disposition Ledger' : 'Contents Record') + ' not signed yet', 'amber');
       scOpen.forEach(function (x) { bit(x.label + ' not filed yet', 'amber'); });
@@ -46860,6 +46925,11 @@ function deskFoldState(jobId, job, fold, all, today) {
     if (donGone) bit(s(donGone, 'donated line', 'donated lines') + ' gone with no receipt', 'amber');
     var soldGone = R ? R.unlisted.filter(function (r) { return invRecordedGone(r, job); }).length : 0;
     if (soldGone) bit(s(soldGone, 'sold line', 'sold lines') + ' gone on no statement', 'amber');
+    // ⚠ A STATEMENT RECORDED AND NOT FILED, AND A LINE ON TWO (2026-10-23, the desk's review): proceedsLine's own two gaps,
+    // read off the same reconciliation. Recording a statement cleared "gone on no statement", so the line went all grey just
+    // as File the statement became the next press, and until the scan is filed the sold line is not counted as gone.
+    if (R && R.unfiled) bit(s(R.unfiled, 'statement', 'statements') + ' not filed to Drive', 'amber');
+    if (R && R.twice.length) bit(s(R.twice.length, 'line', 'lines') + ' on two statements', 'amber');
     if (co) {
       var c = closeoutState(jobId, job);
       bit('close-out ' + [c.sat, c.reviewSent, c.referral].filter(Boolean).length + ' of 3 done', 'grey');
@@ -46870,7 +46940,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     if (don) bit(donRc + ' of ' + s(don, 'donated line', 'donated lines') + ' receipted', 'grey');
     if (R && R.statements.length) bit(s(R.statements.length, 'statement', 'statements') + ' recorded', 'grey');
     if (R && R.unlisted.length - soldGone > 0) bit(s(R.unlisted.length - soldGone, 'sold line', 'sold lines') + ' on no statement yet', 'grey');
-    return st;
+    return fin();
   }
 
   // history
@@ -46878,10 +46948,10 @@ function deskFoldState(jobId, job, fold, all, today) {
   var snaps = (job.invSnapshots || []).filter(Boolean);
   var voided = snaps.filter(function (x) { return x.voidedAt; }).length;
   st.show = gone > 0 || snaps.length > 0;
-  if (unread) return loading();
+  if (unread && !cached) return loading();
   bit(gone + ' removed', 'grey');
   bit(s(snaps.length, 'snapshot', 'snapshots') + (voided ? ' (' + voided + ' voided)' : ''), 'grey');
-  return st;
+  return fin();
 }
 // Whether the close-out card is drawn on the desk: a won job with its estimate on this device. renderInventoryTab and the
 // Closing bar's line ask this one question.
@@ -48005,23 +48075,31 @@ function unratedVendorsForJob(job) {
 // Enforced where the job CLOSES, not where it renders: a scorecard nagging mid-job would be asking
 // for a verdict on work still in progress. It names who is outstanding and where to fix it,
 // because a refusal that names neither is the dead end this file records over and over.
-function jobCloseBlockers(j) {
-  var out = [];
+function jobCloseBlockers(j, form) {
+  // ⚠ ONE LIST, TWO WORDINGS (2026-10-23, the desk's review): the refusal's sentences, and with `form` 'short' the same
+  // entries as the Closing bar's line names them ("2 vendors not yet rated"), so the line can never leave a refusal out.
+  var out = [], short = form === 'short';
+  var add = function (long, brief) { out.push(short ? brief : long); };
   var un = unratedVendorsForJob(j);
   if (un.length) {
-    out.push('Rate every vendor used on this job — ' + un.length + ' not yet rated (' +
-      un.map(function(v){ return v.name; }).join(', ') + '). The scorecard is in the Close-out card: on the Job Plan, and under Closing the job on Job Admin & Inv.');
+    add('Rate every vendor used on this job — ' + un.length + ' not yet rated (' +
+      un.map(function(v){ return v.name; }).join(', ') + '). The scorecard is in the Close-out card: on the Job Plan, and under Closing the job on Job Admin & Inv.',
+      un.length + (un.length === 1 ? ' vendor' : ' vendors') + ' not yet rated');
   }
   // ⚠ EVERY KEY AND ACCESS ITEM BACK TO THE CLIENT, OR MARKED LOST WITH WHAT HAPPENED (2026-10-16, Anthony's one refusal).
   var ak = (typeof accessCloseBlocker === 'function') ? accessCloseBlocker(j) : '';
-  if (ak) out.push(ak);
+  if (ak) {
+    var held = short ? accessHeldItems(j).length : 0;
+    add(ak, held === 1 ? '1 key or access item still held' : held + ' keys or access items still held');
+  }
   // ⚠ NO CLOSE WITH AN OPEN INCIDENT (P26, 2026-10-16; Anthony's rule). Each is resolved with a note on the Incidents card.
   if (typeof openIncidents === 'function') {
     var oi = openIncidents(j);
     if (oi.length) {
-      out.push('Resolve ' + (oi.length === 1 ? 'the open incident' : 'the ' + oi.length + ' open incidents') + ' with a resolution note (Incident '
+      add(short ? '' : 'Resolve ' + (oi.length === 1 ? 'the open incident' : 'the ' + oi.length + ' open incidents') + ' with a resolution note (Incident '
         + oi.map(function(r){ return incidentNo(j, r.id) + ', ' + INCIDENT_KINDS[r.kind].label.toLowerCase(); }).join('; ')
-        + '). The Incidents card is on the Job Plan, under In the house.');
+        + '). The Incidents card is on the Job Plan, under In the house.',
+        oi.length + (oi.length === 1 ? ' incident' : ' incidents') + ' open');
     }
   }
   return out;

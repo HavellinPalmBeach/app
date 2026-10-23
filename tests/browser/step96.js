@@ -82,6 +82,15 @@
 //   off the live app) runs them, every table inside the column, no sideways scroll, the playbook's new symptom rows, the
 //   photography guide's two moved sentences; zero page errors on each.
 //
+//   Part 11 (the build's review, 2026-10-23): a cold living desk whose sheet copy carries a receipt reference this device's
+//   newer copy lacks (the merge keeps it, the line's clock unmoved): the read lands and the bars leave "loading…", Releases
+//   opening by its rule. An estate whose sheet read is aborted: every bar says the sheet is unreachable before this device's
+//   copy, none opens off it; the connection back, the desk's own retry reads it within 20 s and Releases opens; its Closing
+//   line names the statement recorded and not filed, in amber. An estate with one approved line: its Authorized By cleared
+//   in the line's record (a real box), the Releases card under the line offering Send request at once. A living desk whose
+//   only papers are an appraiser's hand-off and return: the Releases line names both, never "✓ nothing waiting", and the
+//   card's rows carry the two presses; Values points at the check-in.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -99,6 +108,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
     let sheet = {};
     let hold = null;   // part 2: a promise the sheet's read waits on, to see the desk before its manifest is read
+    let failMedia = false;   // part 11: the sheet's read aborted, as an unreachable deployment answers
     const uploads = [];   // part 3: the files the routed Apps Script was handed
     await ctx.route(SYNC + '**', async (r) => {
       const req = r.request();
@@ -109,7 +119,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         if (body.action === 'uploadFile') { uploads.push(body.filename); return json({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + uploads.length + '/view', fileId: 'up' + uploads.length }); }
         return json({ ok: true });
       }
-      if (/action=loadMedia/.test(req.url())) { if (hold) await hold; return json({ ok: true, media: sheet }); }
+      if (/action=loadMedia/.test(req.url())) { if (failMedia) return r.abort(); if (hold) await hold; return json({ ok: true, media: sheet }); }
       if (/action=getDriveThumbnails/.test(req.url())) return json({ ok: true, thumbs: {} });
       return json({ ok: true });
     });
@@ -356,9 +366,11 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     const stat = (f, id) => p.evaluate(([f, id]) => { const el = document.getElementById('desk-stat-' + f + '-' + id); return el ? el.textContent : null; }, [f, id || EST]);
     const tones = (f, id) => p.evaluate(([f, id]) => { const el = document.getElementById('desk-stat-' + f + '-' + id); return el ? [...el.children].map((c) => c.className) : []; }, [f, id || EST]);
     const isOpen = (f, id) => p.locator('#desk-body-' + f + '-' + (id || EST)).isVisible();
-    eq(await stat('releases'), '3 items need written approval: send a request · 2 ready to sign out',
+    // RESTATED ON THE BUILD'S REVIEW (2026-10-23): the clock is linked to Carla Mendes and not yet handed over, and the line now
+    // counts the appraiser's hand-off, in grey, where it said nothing of it.
+    eq(await stat('releases'), '3 items need written approval: send a request · 2 ready to sign out · 1 to hand to Carla Mendes for appraisal',
       '⚠⚠ Releases: the three lines waiting that no request carried, and the two approved for Kodner Galleries to sign out');
-    eq(await tones('releases'), ['desk-st-amber', 'desk-st-amber'], 'both in amber: nothing is signed out to Kodner today');
+    eq(await tones('releases'), ['desk-st-amber', 'desk-st-amber', 'desk-st-grey'], 'both in amber (nothing is signed out to Kodner today), the hand-off grey');
     eq(await stat('values'), '1 needs an appraisal, each linked · 1 ready to hand to Carla Mendes (under Releases & signed papers) · 1 appraiser',
       'Values: the clock linked to Carla Mendes, her hand-off pointed to the sign-out list');
     eq((await tones('values'))[0], 'desk-st-red', 'in red, as the guardrail is on a Formal estate');
@@ -447,7 +459,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       saveJobs(); renderInventoryTab();
     }, EST);
     await p.waitForTimeout(500);
-    eq(await stat('releases'), '3 on the request still unsigned · 2 ready to sign out', 'the request sent: what is out for signature, and the sign-out still owed');
+    eq(await stat('releases'), '3 on the request still unsigned · 2 ready to sign out · 1 to hand to Carla Mendes for appraisal', 'the request sent: what is out for signature, and the sign-out and the hand-off still owed');
     if (await isOpen('releases')) await press('#desk-hd-releases-' + EST, 'the Releases header, to shut it');
     ok(!(await isOpen('releases')), 'fixture: Releases shut by hand');
     await p.evaluate((id) => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(id); }, EST);
@@ -1486,6 +1498,109 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       eq(G.overflow, 0, 'Photographing a House at 390: no sideways scroll');
       eq(derrs, [], 'the documents: zero page errors');
       await dp.close();
+    }
+
+    // ══ PART 11 (the build's review, 2026-10-23) ═══════════════════════════════════════════════════════════════════════
+    {
+      console.log('\n## Part 11 · the build\'s review: a read that moves only a kept field, a read that fails, the card under an edit, the appraiser\'s sign-outs');
+      const R1 = 9621, R2 = 9622, R3 = 9623, R4 = 9624;   // ids no earlier part uses
+      const stat = (f, id) => p.evaluate(([f, id]) => { const el = document.getElementById('desk-stat-' + f + '-' + id); return el ? el.textContent : null; }, [f, id]);
+      const tones = (f, id) => p.evaluate(([f, id]) => { const el = document.getElementById('desk-stat-' + f + '-' + id); return el ? [...el.children].map((c) => c.className) : []; }, [f, id]);
+      const isOpen = (f, id) => p.locator('#desk-body-' + f + '-' + id).isVisible();
+      const T0 = Date.now() - 2 * 86400000;
+      await p.evaluate(([R1, R2, R3, R4, T0]) => {
+        const base = (id, o) => Object.assign({ id, addr: '8 Lantana Ct', city: 'Jupiter', zip: '33458', status: 'active', won: true, approved: true, tc: 'Ashley Jerome',
+          created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05', agrApproved: true, agrSent: true, agrSigned: true,
+          driveFolder: 'https://drive.google.com/drive/folders/R' + id, driveSubfolders: { 'Estate Inventory': 'I' + id, 'Signed Records': 'S' + id }, docState: {}, payments: [] }, o);
+        const estate = (id, o) => base(id, Object.assign({ svc: 'probate', matterType: 'probate', executor: 'Grace Lin', executorRole: 'Personal Representative',
+          executorEmail: 'grace@example.com', deathDate: '2026-05-01', executorAuth: 'received', docTier: 'values', gate706: 'no' }, o));
+        const line = (id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: 1, status: 'uploaded', category: 'Furniture', ts: T0, updatedAt: T0,
+          filename: 'x' + id + '.jpg', driveFileId: 'f' + id, reviewed: 1, namedBy: 'desk' }, o);
+        jobs.unshift(base(R1, { hvlId: 'HVL-2610-V921', name: 'Iris Monroe', svc: 'downsizing', email: 'iris@example.com', docTier: '' }));
+        jobs.unshift(estate(R2, { hvlId: 'HVL-2610-V922', name: 'Estate of Paul Vance',
+          proceedsStatements: [{ id: 'ps1', vendor: 'Kodner Galleries', gross: 500, fees: 50, netPaid: 450, lines: [{ stableId: 's1', itemNo: 1 }], recordedBy: 'Ashley Jerome', recordedAt: T0 }] }));
+        jobs.unshift(estate(R3, { hvlId: 'HVL-2610-V923', name: 'Estate of June Park' }));
+        jobs.unshift(base(R4, { hvlId: 'HVL-2610-V924', name: 'Leo Grant', svc: 'downsizing', email: 'leo@example.com', docTier: '',
+          appraisers: [{ id: 701, name: 'Carla Mendes', firm: 'Mendes Fine Art Appraisals', credential: 'ASA' }],
+          signedRecords: [{ id: 'h1', kind: 'appraisal_out', ref: 'Carla Mendes', stableIds: ['m2'], signedBy: 'Carla Mendes', signedOn: '2026-10-19', filedAt: T0, filedBy: 'Ashley Jerome', url: 'https://drive.google.com/file/d/h1/view', glass: true }] }));
+        // The device's copy of R1's line is newer than the sheet's (a person edited it here), and has no receipt reference.
+        _photoRefs[R1] = [line('l1', { itemNo: 1, objectName: 'Coffee table', disposition: 'Donate', channel: 'Goodwill Palm Beach', updatedAt: T0 + 5000 })];
+        _photoRefs[R2] = [line('s1', { itemNo: 1, objectName: 'Gilt mirror', disposition: 'Sell', channel: 'Kodner Galleries', fmv: '600', gross: 500, fees: 50 })];
+        _photoRefs[R3] = [line('q1', { itemNo: 1, objectName: 'Harbor painting', category: 'Art & Décor', fmv: '900', disposition: 'Auction', channel: 'Kodner Galleries',
+          authBy: 'Grace Lin', approvalDate: '2026-10-20' })];
+        _photoRefs[R4] = [line('m1', { itemNo: 1, objectName: 'Pearl necklace', category: 'Jewelry', disposition: 'Keep', apprId: 701 }),
+          line('m2', { itemNo: 2, objectName: 'Gold watch', category: 'Jewelry', disposition: 'Keep', apprId: 701 })];
+        [R1, R2, R3, R4].forEach((id) => {
+          estimateStore[id] = { approved: true, submitted: true, estimate: { jobId: id, svc: jobs.find((j) => j.id === id).svc, havellinTotal: 9000, rooms: [{ idx: 0, name: 'Den', st: 'in', vol: 3, cplx: 3 }], vendors: [] } };
+          // Written straight to the device's store, not through savePhotoRefs: its inventory sync would read the sheet 2.5 s later
+          // in the background, and these desks are measured before their first read.
+          localStorage.setItem('hav_media_' + id, JSON.stringify(_photoRefs[id]));
+        });
+        saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+      }, [R1, R2, R3, R4, T0]);
+      const copy = (id) => p.evaluate((id) => JSON.parse(JSON.stringify(_photoRefs[id])), id);
+      // R1's sheet copy: the older line, carrying the receipt reference the merge keeps (INV_STICKY_FIELDS).
+      const older = (await copy(R1)).map((r) => Object.assign({}, r, { updatedAt: T0, receiptDoc: 'GW-2210' }));
+      sheet[R1] = { items: older };
+      sheet[R2] = { items: await copy(R2) }; sheet[R3] = { items: await copy(R3) }; sheet[R4] = { items: await copy(R4) };
+
+      // ── A read that moves only a kept field ──
+      let release; hold = new Promise((res) => { release = res; });
+      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(600);
+      await p.selectOption('#inv-job', String(R1)); await p.waitForTimeout(700);
+      eq(await stat('releases', R1), 'loading…', 'fixture: before the read, "loading…"');
+      release(); hold = null;
+      ok(await until(async () => (await stat('releases', R1)) !== 'loading…', 8000), '⚠⚠ the read lands: the bars leave "loading…" (they stayed on it when only a kept field moved)');
+      eq(await stat('releases', R1), '1 item needs written approval: send a request · 1 ready to sign out', 'the line read');
+      ok(await isOpen('releases', R1), '…and Releases opened by its rule (a request is owed)');
+      eq(await p.evaluate((id) => (_photoRefs[id][0] || {}).receiptDoc, R1), 'GW-2210', 'fixture: the merge kept the sheet\'s receipt reference');
+
+      // ── A read that fails, then the desk's own retry ──
+      failMedia = true;
+      await p.selectOption('#inv-job', String(R2)); await p.waitForTimeout(1200);
+      const UN = 'sheet unreachable: this device’s copy';
+      ok(await until(async () => String(await stat('releases', R2)).indexOf(UN) === 0, 6000), '⚠⚠ the read failed: Releases says the sheet is unreachable, not "loading…" for good');
+      for (const f of ['releases', 'values', 'closing']) {
+        const t = String(await stat(f, R2));
+        ok(t.indexOf(UN) === 0 && t.indexOf('✓') < 0, f + ': the sheet unreachable first, and no ✓ off this device\'s copy  [' + t + ']');
+        eq((await tones(f, R2))[0], 'desk-st-amber', f + ': in amber');
+      }
+      has(await stat('releases', R2), '1 item needs written approval: send a request', 'then what this device holds');
+      ok(!(await isOpen('releases', R2)), '⚠ and Releases does not open by itself off it');
+      failMedia = false;
+      ok(await until(async () => String(await stat('releases', R2)).indexOf(UN) < 0, 22000), '⚠⚠ the connection back: the desk\'s retry read the sheet within 20 s, with no press');
+      has(await stat('releases', R2), '1 item needs written approval: send a request', 'the line read');
+      ok(await isOpen('releases', R2), 'and Releases opened by its rule');
+      // The statement recorded and not filed, named in amber on the Closing line.
+      const cl = String(await stat('closing', R2)), ct = await tones('closing', R2);
+      eq(cl, '1 statement not filed to Drive · close-out 0 of 3 done · 1 statement recorded', '⚠ Closing names the statement not yet filed (it read all grey)');
+      eq(ct[0], 'desk-st-amber', 'in amber');
+
+      // ── The card under an edit ──
+      await p.selectOption('#inv-job', String(R3)); await p.waitForTimeout(1200);
+      ok(await until(async () => (await stat('releases', R3)) !== 'loading…', 8000), 'fixture: R3 read');
+      if (!(await isOpen('releases', R3))) await press('#desk-hd-releases-' + R3, 'the Releases bar\'s header');
+      eq(await p.locator('#inv-releases button[onclick="sendApprovalRequest(' + R3 + ')"]').count(), 0, 'fixture: the line approved, the card offers no send');
+      if ((await p.locator('#inv-row-q1').count()) === 0) await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All, so the painting\'s row is drawn');
+      await press('#inv-row-q1 button[onclick="_invToggleOpen(\'q1\')"]', 'the painting\'s ▾');
+      const box = 'input[onchange="_invEdit(' + R3 + ',\'q1\',\'authBy\',this)"]';
+      eq(await p.locator(box).count(), 1, 'fixture: the record\'s Authorized By box');
+      await p.fill(box, ''); await p.locator(box).blur(); await p.waitForTimeout(600);
+      has(await stat('releases', R3), '1 item needs written approval: send a request', 'the approval cleared: the bar\'s line asks for a request');
+      const send = p.locator('#inv-releases button[onclick="sendApprovalRequest(' + R3 + ')"]');
+      ok((await send.count()) === 1 && (await send.isVisible()), '⚠⚠ and the card under it offers Send request at once (it kept the approved card until a full redraw)');
+
+      // ── The appraiser's two sign-outs ──
+      await p.selectOption('#inv-job', String(R4)); await p.waitForTimeout(1200);
+      ok(await until(async () => (await stat('releases', R4)) !== 'loading…', 8000), 'fixture: R4 read');
+      eq(await stat('releases', R4), '1 to hand to Carla Mendes for appraisal · 1 to check back in from Carla Mendes',
+        '⚠⚠ the Releases line names the hand-off and the return, never "✓ nothing waiting"');
+      eq(await tones('releases', R4), ['desk-st-grey', 'desk-st-grey'], 'in grey');
+      if (!(await isOpen('releases', R4))) await press('#desk-hd-releases-' + R4, 'the Releases bar\'s header');
+      const card = await p.evaluate(() => (document.getElementById('inv-releases') || {}).textContent || '');
+      has(card, 'Sign out 1 to Carla Mendes', 'the card\'s hand-off press');
+      has(card, 'Check 1 back in from Carla Mendes', 'and its return press');
+      has(await stat('values', R4), '1 out with Carla Mendes since Oct 19, 2026 (check back in under Releases & signed papers)', 'Values points at the check-in');
     }
 
     eq(errs, [], 'zero page errors');

@@ -420,7 +420,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(stubs.__asked, '2 of 3 rooms are not marked cleared', '⚠⚠ the close question names the rooms');
     has(stubs.__asked, 'Closing does not change them; finish the rooms and name the recipients, or close now.', '…and says it is a flag, not a refusal');
     // the Releases card repaints when a recipient is typed
-    const doc = domStub({});
+    // (RESTATED ON THE DESK BUILD'S REVIEW, 2026-10-23: the desk shows this client, as it does when a person types on its row;
+    // _invRefreshReleases now repaints only the client #inv-job shows, so a minted, empty picker is another client.)
+    const doc = domStub({ 'inv-job': '7' });
     const estubs = Object.assign(BASE(), { document: doc, _photoRefs: { 7: [Object.assign({}, refs[1], { channel: '' })] }, jobs: [LIVING()],
       estimateStore: { 7: { approved: true, estimate: EST_HR } }, savePhotoRefs: () => {}, _scheduleInventorySync: () => {}, showSyncBadge: () => {},
       _invRefreshSummary: () => {}, _invRefreshGuardrail: () => {}, _invRefreshFlagStrip: () => {}, _invRefreshRecords: () => {}, renderInventoryTab: () => {},

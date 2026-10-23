@@ -244,7 +244,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invApprovalBoxToStored', 'invApprovalBoxText', 'invApprovalSigners', 'invApprovalSignedText', 'invRecipientName',
             '_invReadableDay', '_invJob'],
       vars: ['INV_STICKY_FIELDS'],
-      stubs: { jobs: [], fmtDate2: (d) => String(d || ''), _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _scheduleInventorySync() {},
+      // _invRefreshReleases: stubbed with its sibling repaints since _invEdit runs it on every edit (the desk build's review, 2026-10-23).
+      stubs: { jobs: [], fmtDate2: (d) => String(d || ''), _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {}, _scheduleInventorySync() {},
                _invNetDisplay: () => '', renderInventoryTab() {} },
     });
     m._photoRefs[3] = [{ stableId: 'a', label: 'inventory', collId: null }];
