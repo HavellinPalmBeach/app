@@ -17,8 +17,11 @@
 //   F · the Urgent strip (G3): the desk's derived lines split by one rule, deskNowLine, between the strip above the band, the
 //       incident banner and Job Admin, each line in exactly one; the strip's place on every service; I called Anthony pressed
 //       on the strip with no Job Plan card in the page; Job Admin's count repainted by id.
+//   H · the trims (G4): the client line's Target Start only where no schedule strip is drawn; the work bar's line under its
+//       title the HVL id alone; one Send request on the desk for every waiting line (the Releases card's) and one for a
+//       selection (the bulk bar's), the work bar none; the tab's subtitle in the new order.
 //
-// Each later group of the build adds its own groups here (the trims, …).
+// Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const { sandbox, source, fn, decl, domStub } = require('./harness');
@@ -217,6 +220,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupD({ group, ok, eq, has, lacks });
     groupE({ group, ok, eq, has, lacks });
     groupF({ group, ok, eq, has, lacks });
+    groupH({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -1321,5 +1325,132 @@ function groupF({ group, ok, eq, has, lacks }) {
     ok(hr.indexOf('_deskNowRepaint(jobId)') > -1 && hr.indexOf('_deskNowRepaint(jobId)') < hr.indexOf("job.svc === ''"),
       'and the heads repaint reaches it before it stands down on Home Prep');
     has(noComments(fn('renderInventoryTab')), "var top = jobInfoHeaderHtml(job) + deskAlertsHtml(jobId, job) + '<div id=\"jband-slot-admin\">'", 'the strip is in the top both arms draw');
+  }
+}
+
+// ═══ H · THE TRIMS (G4, 2026-10-22) ═══════════════════════════════════════════════════════════════════════════════════
+// What the top of the tab said twice is said once: the client line names the client and the address, so the work bar's
+// line under Inventory Review is the HVL id alone; the schedule strip says the start (the target before, the real day
+// after), so the client line's Target Start is drawn only where no strip is; and the release approval request has one
+// send for every waiting line, on the Releases card, and one for a selection, on the bulk bar.
+function groupH({ group, ok, eq, has, lacks }) {
+  // The client line, drawn by the real jobInfoHeaderHtml over the real strip (planScheduleHtml → jobSchedule), the clock
+  // stopped at TODAY. `o.est` false: no estimate on this device.
+  const header = (jobO, o) => {
+    o = o || {};
+    const job = Object.assign({ id: 7, hvlId: 'HVL-0007', name: 'Ashworth', addr: '14 Seaspray Ave', city: 'Palm Beach', svc: 'probate',
+      status: 'won', won: true, start: '2026-11-02', docState: {}, at: {}, payments: [] }, jobO || {});
+    const est = { svc: job.svc, days: 6, rooms: [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }] };
+    const C = lift(['jobInfoHeaderHtml'], { jobs: [job], estimateStore: o.est === false ? {} : { 7: { estimate: est } }, jobPlanStore: {},
+      changeOrders: [], _todayStr: () => TODAY });
+    const r = attempt(() => C.jobInfoHeaderHtml(job));
+    const h = r.ok ? String(r.val) : '';
+    const strip = (/<div class="plan-sched" id="admin-sched">/.test(h) && inner(h, 'admin-sched')) || '';
+    return { r, h, text: textOf(h), strip: textOf(strip), hasStrip: h.indexOf('id="admin-sched"') > -1 };
+  };
+
+  group('H1 · the client line\'s Target Start only where no schedule strip is drawn; where one is, the strip says the start');
+  {
+    const planned = header();
+    ok(planned.r.ok, 'the header draws (' + (planned.r.err || 'ok') + ')');
+    ok(planned.hasStrip, 'fixture: a won estate with an estimate draws the strip');
+    has(planned.strip, 'Target start Nov 2, 2026', 'the strip says the target start');
+    lacks(planned.text, 'Target Start:', '⚠ the client line does not say it again');
+    eq((planned.text.match(/Nov 2, 2026/g) || []).length, 1, 'the target start is printed once on the line and the strip together');
+    has(planned.text, 'Client: Ashworth', 'the client');
+    has(planned.text, 'Property: 14 Seaspray Ave, Palm Beach, FL', 'and the address stay');
+
+    const running = header({ status: 'active', activatedOn: '2026-10-19', start: '2026-10-12' });
+    ok(running.hasStrip, 'fixture: a running job draws the strip');
+    has(running.strip, 'Started Oct 19, 2026', 'the strip says the day it really started');
+    lacks(running.text, 'Target Start:', '⚠⚠ no Target Start beside it');
+    lacks(running.text, 'Oct 12, 2026', '⚠⚠ and the stale target start is printed nowhere on the line (it read Target Start: Oct 12 over Started Oct 19)');
+
+    const noEst = header({}, { est: false });
+    ok(!noEst.hasStrip, 'fixture: no estimate on this device, no strip');
+    has(noEst.text, 'Target Start: Nov 2, 2026', 'the client line keeps the target start where no strip says it');
+
+    const prep = header({ svc: 'prep' });
+    ok(!prep.hasStrip, 'fixture: Home Prep draws no strip');
+    has(prep.text, 'Target Start: Nov 2, 2026', 'Home Prep keeps it');
+    has(prep.text, 'Timeline: Vendor-driven', 'beside its vendor-driven line');
+
+    const dead = header({ status: 'lost' });
+    ok(!dead.hasStrip, 'fixture: a lost job draws no strip (the strip says nothing for it)');
+    has(dead.text, 'Target Start: Nov 2, 2026', 'and keeps it');
+
+    const nostart = header({ start: '' });
+    ok(nostart.hasStrip, 'fixture: an estimate with no target start draws the strip');
+    has(nostart.strip, 'No target start on this job', 'which says so, with its fix');
+    lacks(nostart.text, 'Target Start:', 'and the line does not print a blank one beside it');
+  }
+
+  group('H2 · the work bar\'s line under Inventory Review is the HVL id alone: the name and the address are the client line\'s');
+  {
+    const bar = (jobO) => {
+      const job = PROBATE(jobO);
+      const C = lift(['_renderInvWorkbar'], { jobs: [job], _photoRefs: { 7: [LINE('a')] }, estimateStore: { 7: { estimate: { svc: job.svc, rooms: [] } } },
+        jobPlanStore: {}, vendorDirectory: [], SHEETS_SYNC_URL: '', _invCloudSeen: {}, document: domStub({}) });
+      const r = attempt(() => C._renderInvWorkbar(job, C._jobInvRefs(7)));
+      return r.ok ? String(r.val) : '<!-- threw: ' + r.err + ' -->';
+    };
+    const b = bar();
+    has(b, 'Inventory Review</div>', 'fixture: the real work bar (' + b.slice(0, 40) + ')');
+    const sub = /Inventory Review<\/div>(<div[^>]*>([^<]*)<\/div>)?<\/div>/.exec(b);
+    eq(sub && sub[2], 'HVL-0007', '⚠ the line under the title is the HVL id alone');
+    lacks(b, 'Ashworth', '⚠ the client\'s name is not repeated on the bar');
+    lacks(b, '14 Seaspray Ave', '⚠ nor the address');
+    const none = bar({ hvlId: '' });
+    ok(/Inventory Review<\/div><\/div>/.test(none), 'with no HVL id the title stands alone (no empty line under it)');
+  }
+
+  group('H3 · one Send request on the desk: the Releases card\'s for every waiting line, the bulk bar\'s for a selection, the work bar none');
+  {
+    const rows = () => [LINE('a', { itemNo: 1, objectName: 'Harbor painting', disposition: 'Auction', channel: 'Kodner Galleries' }),
+      LINE('b', { itemNo: 2, objectName: 'Table lamp', disposition: 'Donate', channel: 'Goodwill' }),
+      LINE('c', { itemNo: 3, objectName: 'Clock', disposition: 'Keep' })];
+    const real = ['_renderInvWorkbar', '_renderInvReleasesCard', '_renderInvBulk'];
+    const run = (jobO, picks) => {
+      const r = rows();
+      const D = desk(PROBATE(jobO), {}, { refs: r, real, stubs: { SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true },
+        _invAssignItemNos: () => r } });
+      (picks || []).forEach((id) => { D.C._invPick[id] = 1; });
+      const html = D.render();
+      return { D, html, err: D.log.renderErr };
+    };
+    const sends = (h) => (h.match(/sendApprovalRequest\(7[^)]*\)/g) || []);
+
+    const A = run();
+    ok(!A.err, 'the desk draws with the real work bar, Releases card and bulk bar (' + (A.err || 'ok') + ')');
+    has(inner(A.html, 'inv-workbar') || '', 'printApprovalRequest(7)', 'fixture: the real work bar, its print of the request still on it');
+    eq(sends(A.html), ['sendApprovalRequest(7)'], '⚠⚠ two lines wait: ONE Send request on the whole desk');
+    has(inner(A.html, 'inv-releases') || '', 'onclick="sendApprovalRequest(7)"', 'and it is the Releases card\'s');
+    lacks(inner(A.html, 'inv-workbar') || '', 'sendApprovalRequest(', '⚠ the work bar carries none');
+    lacks(textOf(inner(A.html, 'inv-workbar') || ''), 'Send request', 'and no button reads so');
+    eq(A.D.C.deskFoldState(7, A.D.job, 'releases', A.D.C._jobInvRefs(7)).openByDefault, true,
+      'the card\'s bar opens by itself while the send is owed (Q2), so the one send is on screen when it is needed');
+
+    const S = run({}, ['a']);
+    eq(sends(S.html).sort(), ['sendApprovalRequest(7)', 'sendApprovalRequest(7,true)'], 'a line selected: the bulk bar adds the selection\'s send, and only that');
+    const iRecip = S.html.indexOf('id="inv-bulk-recip"'), iSel = S.html.indexOf('onclick="sendApprovalRequest(7,true)"');
+    ok(iRecip > -1 && iSel > iRecip, 'the selection\'s is on the bulk bar, beside its Who took them… box (' + iRecip + ', ' + iSel + ')');
+    lacks(inner(S.html, 'inv-workbar') || '', 'sendApprovalRequest(', 'and the work bar still carries none');
+
+    const B = run({ executorEmail: '' });
+    ok(!B.err, 'blocked: the desk draws (' + (B.err || 'ok') + ')');
+    eq(sends(B.html), [], '⚠⚠ blocked (nobody to send to): no Send request anywhere on the desk, never one that would refuse');
+    has(textOf(inner(B.html, 'inv-releases') || ''), 'The approval request cannot be sent yet', 'the card says why, on screen, where the send would be');
+  }
+
+  group('H4 · the tab\'s subtitle reads the desk in its new order');
+  {
+    const at = SRC.indexOf('<div class="panel" id="panel-inventory">');
+    const panel = SRC.slice(at, SRC.indexOf('<div id="inventory-content"></div>', at));
+    ok(at > 0 && panel.length > 200 && panel.length < 3000, 'the panel\'s static markup was found (' + panel.length + ' characters)');
+    const sub = textOf(inner(panel, 'inv-subtitle') || '').replace(/&rsquo;/g, '’');
+    eq(sub, 'Start at the top: anything flagged above the brown band, then its next step, then tonight’s items. Each bar below the items says in one line what it holds: amber or red means it needs you.',
+      'the subtitle names the order: what is flagged above the band, its step, tonight\'s items, then the bars');
+    lacks(panel, 'produce the client', 'the old subtitle is gone');
+    eq((panel.match(/id="inv-subtitle"/g) || []).length, 1, 'once');
   }
 }

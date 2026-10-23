@@ -1389,7 +1389,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 7:36pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 9:13pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2427,7 +2427,7 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:13px;font-weight:600;">Job Admin &amp; Inventory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;">The desk half of the job: work the day&rsquo;s walkthrough, tick off the admin, then produce the client&rsquo;s schedule.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;" id="inv-subtitle">Start at the top: anything flagged above the brown band, then its next step, then tonight&rsquo;s items. Each bar below the items says in one line what it holds: amber or red means it needs you.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
@@ -23603,15 +23603,20 @@ function _repaintJobBand(host, jobId) {
 // Anthony: *"add client info like on job plan image, to job admin tab."* The schedule strip
 // comes with it on a labour job; a prep job states its vendor-driven timeline instead, the same
 // sentence its Job Plan header carries.
+// ⚠ THE TARGET START ONLY WHERE NO SCHEDULE STRIP IS DRAWN (2026-10-22): on Home Prep, with no estimate on this device, and on
+// a job the strip says nothing for (lost, or closed with the deposit retained). Wherever the strip draws it says the start
+// itself: the target start before the job starts, the day it really did after (Anthony, 2026-09-23: *"do away with the old
+// ones like the target start date and target midpoint because it's very confusing."*), so the line beside it printed a
+// second start, the stale one, on every running job.
 function jobInfoHeaderHtml(job) {
   if (!job) return '';
   var estRec = estimateStore[job.id];
   var est = estRec && estRec.estimate;
   var addr = esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ') || '—');
-  var bits = [['Client', esc(job.name || '—')], ['Service', esc(svcLabelOf(job))], ['Property', addr],
-              ['Target Start', esc(fmtDate2(job.start))]];
   var sched = (job.svc === 'prep' || !est) ? ''
     : planScheduleHtml(job.id, job, approvedEstimateFor(job.id) || est).replace('id="plan-sched"', 'id="admin-sched"');
+  var bits = [['Client', esc(job.name || '—')], ['Service', esc(svcLabelOf(job))], ['Property', addr]];
+  if (!sched) bits.push(['Target Start', esc(fmtDate2(job.start))]);
   return '<div class="job-hdr" style="border:1px solid var(--border);border-radius:5px;padding:9px 14px;margin-bottom:12px;background:var(--white);">'
     + '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">'
     + bits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('')
@@ -32213,7 +32218,7 @@ function approvalRequestMailto(ctx) {
     + '&subject=' + encodeURIComponent(approvalRequestSubject(ctx.job)) + '&body=' + mailtoBody(body);
 }
 
-// The send: the work bar's Send request (every line awaiting approval) and the bulk bar's (the selection). One send at a
+// The send: the Releases card's Send request (every line awaiting approval) and the bulk bar's (the selection). One send at a
 // time, app-wide (_docBusy), with a watchdog, because a draft may exist when an answer never comes.
 function sendApprovalRequest(jobId, selectedOnly) {
   var job = _invJob(jobId);
@@ -37552,9 +37557,8 @@ function _renderInvWorkbar(job, all) {
     + '<div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px;">'
       + '<div style="min-width:0;">'
         + '<div class="sec" style="margin:0;border-bottom:none;padding-bottom:0;">Inventory Review</div>'
-        + '<div style="font-size:11px;color:var(--gray);">' + esc(job.name || '—')
-        + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '')
-        + (job.addr ? ' &middot; ' + esc(job.addr) : '') + '</div>'
+        // The HVL id alone (2026-10-22): the client's name and the address are the client line's, at the top of the tab.
+        + (job.hvlId ? '<div style="font-size:11px;color:var(--gray);">' + esc(job.hvlId) + '</div>' : '')
       + '</div>'
       + _invProgressBar(st, 150)
     + '</div>'
@@ -37606,10 +37610,10 @@ function _renderInvWorkbar(job, all) {
       + (_primary === 'approval' ? '' : btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
           ? 'Written, itemised release approval for the representative to sign. Nothing of value leaves the property without it.'
           : 'Written, itemised list of everything leaving the property, for the client to sign off.'))
-      // The same paper, sent (2026-10-17): a Gmail draft with the PDF attached, to every fiduciary with an email.
-      + btn('sendApprovalRequest(' + jid + ')', '&#128231; Send request', fid
-          ? 'Email the Release Approval Request as a PDF, through a Gmail draft, to every fiduciary with an email, the estate attorney copied. The Releases & signed papers card shows what went and what is still unsigned.'
-          : 'Email the Release Approval Request as a PDF, through a Gmail draft, to the client. The Releases & signed papers card shows what went and what is still unsigned.')
+      // ⚠ NO SEND REQUEST ON THIS BAR (2026-10-22). It stood here from 2026-10-17 as well as on the Releases card's Approval
+      // request section, one control drawn twice under two rules: this one offered while blocked and refused in the band,
+      // the card's withheld and the blocker said in red. The card carries the send for every line awaiting approval (its
+      // bar opens by itself while a request is owed, Anthony's Q2), the bulk bar the selection's. No control renders twice.
       + btn('addInventoryManualItem(' + jid + ')', '+ Add line item', fid
           ? 'Add an asset with no photo (cash, vehicle, account)'
           : 'Add something with no photo — a vehicle, a rug already rolled, anything in storage')

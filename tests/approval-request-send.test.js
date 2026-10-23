@@ -14,7 +14,8 @@
 //   · The draft rules know the record: overtaken when every line it carried is approved (approvalRequestOvertaken),
 //     never by a price (outstandingDrafts leaves it out); noDraftToConfirm and staleDraftNote name it.
 //   · The Releases card's first section and the dashboard's card: what went, to whom, what is still unsigned, the
-//     lines a fresh request is owed for, and the send; the work bar and the bulk bar carry Send request once each.
+//     lines a fresh request is owed for, and the send. One Send request on the desk for every line awaiting approval, the
+//     card's, and one for a selection, the bulk bar's (2026-10-22: the work bar carried a second, offered while blocked).
 //
 // Driven through the real functions, each lifted as its own call graph derived from the source, with only the
 // boundaries stubbed by name — the network at `fetch`, Google's sign-in, the notices and the store saves — and the
@@ -536,15 +537,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(d3, 'still unsigned', '⚠ and no claim about the lines this device cannot see');
   });
 
-  G('E · the dashboard draws the card under Keys & access; the desk’s bars carry Send request once each', () => {
+  // ⚠ RESTATED 2026-10-22 (the desk's re-architecture, one Send request): this group pinned the work bar's copy, once. It now
+  // pins where the one send for every waiting line lives, the Releases card, drawn by the real card over the real readers
+  // (exactly once, and labelled), the work bar's live source carrying no send at all, and the bulk bar's selection send once.
+  G('E · the dashboard draws the card under Keys & access; the desk carries Send request once for all lines (the card) and once for a selection (the bulk bar)', () => {
     const dash = noComments(fn('renderClientDashboard'));
     const a = dash.indexOf('accessDashHtml(job)'), b = dash.indexOf('approvalRequestDashHtml(job)');
     ok(a > 0 && b > a, 'renderClientDashboard draws approvalRequestDashHtml after accessDashHtml');
     const bar = noComments(fn('_renderInvWorkbar'));
-    eq((bar.match(/sendApprovalRequest\(' \+ jid \+ '\)/g) || []).length, 1, 'the work bar: Send request once');
-    has(bar, 'Send request', 'labelled Send request');
+    ok(bar.length > 2000 && bar.indexOf('Inventory Review') > 0 && bar.indexOf('exportInventoryCSV(') > 0 && bar.indexOf('printApprovalRequest(') > 0,
+      'the work bar\'s source was read, its print of the request still there (' + bar.length + ' characters)');
+    eq((bar.match(/sendApprovalRequest\(/g) || []).length, 0, '⚠ the work bar: no Send request (the card carries it)');
+    lacks(bar, 'Send request', 'and no button labelled so');
+    const card = rig().card();
+    eq((card.match(/onclick="sendApprovalRequest\(7\)"/g) || []).length, 1, 'the Releases card: Send request for every waiting line, once');
+    has(card, '&#128231; Send request</button>', 'labelled Send request');
     const bulk = noComments(fn('_renderInvBulk'));
     eq((bulk.match(/sendApprovalRequest\(' \+ jid \+ ',true\)/g) || []).length, 1, 'the bulk bar: Send request for the selection, once');
+    eq((bulk.match(/sendApprovalRequest\(/g) || []).length, 1, 'and no other send there');
     const edit = noComments(fn('_invEdit'));
     has(edit, '_invRefreshReleases(jobId)', '_invEdit repaints the Releases card through the one helper');
     const rel = noComments(fn('_renderInvReleasesCard'));

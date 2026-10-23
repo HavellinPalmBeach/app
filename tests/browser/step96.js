@@ -25,6 +25,12 @@
 //   pressed on the strip, lands on the Job Plan's card; the injury resolved and the will handed over, receipted and
 //   deposited there through their own dialogs; back on the desk the strip is empty and takes no room.
 //
+//   Part 4 (G4, the trims): the client line on a running estate and a running living job carries no Target Start, the
+//   strip beside it saying the day the job really started; a Home Prep desk, which draws no strip, keeps it; the work bar's
+//   line under Inventory Review is the HVL id alone; the tab's subtitle reads the new order; one Send request on the desk
+//   for every waiting line, the Releases card's, on screen once its bar is opened by a real press of its header, none on
+//   the work bar, and the bulk bar's for a selection only while a line is ticked.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -485,6 +491,72 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     const s3 = await strip();
     eq(s3 && [s3.text, s3.h, s3.lines.length, s3.banner], ['', 0, 0, false], '⚠⚠ back on the desk: nothing is urgent, and the strip is empty and takes no room');
     eq(await jaCount(), ja0, 'and Job Admin\'s count is where it was');
+
+    // ══ PART 4 (G4): the trims ════════════════════════════════════════════════════════════════════════
+    console.log('\n## Part 4 · the client line says the start once: the strip where it draws, Target Start only where it does not');
+    const PREP = 9605;
+    await p.evaluate((id) => {
+      jobs.unshift({ id, hvlId: 'HVL-2610-P965', name: 'Margaret Whitfield', svc: 'prep', addr: '9 Banyan Rd', city: 'Palm Beach', zip: '33480', email: 'mw@example.com',
+        status: 'active', won: true, approved: true, tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-11-02', activatedOn: '2026-10-20',
+        agrApproved: true, agrSent: true, agrSigned: true, driveFolder: 'https://drive.google.com/drive/folders/R' + id, docState: {}, payments: [] });
+      estimateStore[id] = { approved: true, submitted: true, estimate: { jobId: id, svc: 'prep', havellinTotal: 3000, rooms: [], vendors: [], prepItems: [] } };
+      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+    }, PREP);
+    const hdrOf = () => p.evaluate(() => {
+      const h = document.querySelector('#inventory-content .job-hdr');
+      const line = h && h.firstElementChild;
+      const sched = document.getElementById('admin-sched');
+      return { line: line ? line.textContent.replace(/\s+/g, ' ').trim() : null, sched: sched ? sched.textContent.replace(/\s+/g, ' ').trim() : null,
+        all: h ? h.textContent.replace(/\s+/g, ' ').trim() : '' };
+    });
+    for (const [id, who, started] of [[EST, 'the estate', 'Started Oct 5, 2026'], [LIV, 'the living job', 'Started Oct 5, 2026']]) {
+      await p.setViewportSize({ width: 1440, height: 1000 });
+      await toDesk(id);
+      const H = await hdrOf();
+      ok(H.line != null && H.sched != null, who + ': the client line and its strip are drawn');
+      has(H.sched, started, who + ': the strip says the day the job really started');
+      ok(H.line.indexOf('Target Start') < 0, '⚠⚠ ' + who + ': no Target Start on the client line beside it  [' + H.line + ']');
+      ok(H.all.indexOf('Oct 6, 2026') < 0, '⚠ ' + who + ': the stale target start (Oct 6) is printed nowhere in the header');
+      has(H.line, 'Client:', who + ': the client line still names the client');
+      has(H.line, 'Property:', who + ': and the property');
+    }
+    await toDesk(PREP);
+    const HP = await hdrOf();
+    eq(HP.sched, null, 'Home Prep: no strip');
+    has(HP.line, 'Target Start: Nov 2, 2026', '⚠ Home Prep keeps its Target Start on the client line');
+    has(HP.all, 'Timeline: Vendor-driven', 'beside its vendor-driven timeline');
+
+    console.log('\n## Part 4 · the work bar\'s line, and the tab\'s subtitle');
+    await toDesk(EST);
+    const wb = await p.evaluate(() => {
+      const w = document.getElementById('inv-workbar');
+      const t = w && Array.from(w.querySelectorAll('.sec')).find((x) => x.textContent.trim() === 'Inventory Review');
+      const sub = t && t.nextElementSibling;
+      return { sub: sub ? sub.textContent.trim() : null, text: w ? w.textContent : '' };
+    });
+    eq(wb.sub, 'HVL-2610-E960', '⚠ the line under Inventory Review is the HVL id alone');
+    ok(wb.text.indexOf('Eleanor Ashworth') < 0 && wb.text.indexOf('210 Via Bellaria') < 0, '⚠ the client\'s name and address are not repeated on the work bar');
+    const subtitle = await p.evaluate(() => { const el = document.getElementById('inv-subtitle'); return el && el.checkVisibility() ? el.textContent : null; });
+    eq(subtitle, 'Start at the top: anything flagged above the brown band, then its next step, then tonight’s items. Each bar below the items says in one line what it holds: amber or red means it needs you.',
+      'the tab\'s subtitle, on screen, in the new order');
+
+    console.log('\n## Part 4 · one Send request: the Releases card\'s; the bulk bar\'s only for a selection; the work bar none');
+    const sends = () => p.evaluate(() => Array.from(document.querySelectorAll('#inventory-content button[onclick^="sendApprovalRequest("]'))
+      .map((x) => ({ call: x.getAttribute('onclick'), where: x.closest('#inv-releases') ? 'releases' : x.closest('#inv-workbar') ? 'workbar' : 'other', shown: x.checkVisibility() })));
+    eq((await sends()).map((x) => [x.call, x.where]), [['sendApprovalRequest(' + EST + ')', 'releases']],
+      '⚠⚠ three lines still unsigned on the request: one Send request on the desk, the Releases card\'s');
+    eq(await p.locator('#inv-workbar button[onclick^="sendApprovalRequest("]').count(), 0, '⚠ none on the work bar');
+    if (!(await isOpen('releases'))) await press('#desk-hd-releases-' + EST, 'the Releases header, to open it');
+    ok((await sends())[0] && (await sends())[0].shown, 'with its bar open, the card\'s Send request is on screen');
+    if ((await p.locator('#inv-row-e04').count()) === 0) await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All, so the lamps\' row is drawn');
+    await press('#inv-row-e04 input[onchange^="_invTogglePick"]', 'the box on the brass lamps');
+    eq((await sends()).map((x) => [x.call, x.where, x.shown]).sort(), [['sendApprovalRequest(' + EST + ')', 'releases', true], ['sendApprovalRequest(' + EST + ',true)', 'other', true]].sort(),
+      'a line ticked: the bulk bar adds the selection\'s send, on screen, and nothing else');
+    await press('#inventory-content button[onclick="_invClearPicks()"]', 'Clear, on the bulk bar');
+    eq((await sends()).length, 1, 'the selection cleared: one again');
+    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+    ok(await p.locator('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]').isVisible(), 'at 390 the card\'s Send request is on screen too');
+    await p.setViewportSize({ width: 1440, height: 1000 });
 
     eq(errs, [], 'zero page errors');
   } catch (e) {

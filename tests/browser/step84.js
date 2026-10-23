@@ -2,9 +2,13 @@
 //
 // Drives the REAL page: a probate estate seeded with two lines awaiting approval, one kept, a representative with an
 // email, a co-representative without and the estate attorney; the desk's Releases & signed papers card before anything
-// is sent; the work bar's real Send request button over a routed Apps Script (loadMedia, uploadHtml, htmlToPdf) and a
+// is sent; the card's real Send request button over a routed Apps Script (loadMedia, uploadHtml, htmlToPdf) and a
 // stubbed Gmail draft; the card's I've sent it pressed; the counts as a line is approved and another put up for sale;
 // the dashboard's card and its Open the desk; the blocked case; overflow at 1440 and 390; zero page errors.
+// ⚠ RESTATED 2026-10-22 (the desk's re-architecture, one Send request): the work bar carried a second Send request,
+// offered while blocked. Section A now pins the one on the Releases card (on screen, its bar open by itself while the
+// request is owed), the bulk bar's for a selection, and none on the work bar; B presses the card's; E proves the
+// handler's refusal through the bulk bar's, with no send offered anywhere for every line.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step84.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -79,6 +83,13 @@ const EST = 8401;
       if (String(await val('#inv-job')) !== String(id)) { await p.selectOption('#inv-job', String(id)); await p.waitForTimeout(900); }
     };
     const record = () => p.evaluate((id) => { const j = jobs.find((x) => x.id === id); return JSON.parse(JSON.stringify((j.docState || {}).approvalRequest || null)); }, EST);
+    // ⚠ THE DESK'S FOUR BARS (2026-10-22): the Releases card sits in a fold bar, so it is opened by a real press of its
+    // header, and only when its body is hidden.
+    const openBar = async (fold, id) => {
+      const body = p.locator('#desk-body-' + fold + '-' + id), hd = p.locator('#desk-hd-' + fold + '-' + id);
+      if ((await body.count()) === 1 && !(await body.isVisible()) && (await hd.isVisible())) { await p.click('#desk-hd-' + fold + '-' + id); await p.waitForTimeout(300); }
+    };
+    const sendsOnDesk = () => p.evaluate(() => Array.from(document.querySelectorAll('#inventory-content button[onclick^="sendApprovalRequest("]')).map((x) => x.getAttribute('onclick')));
 
     // ── Seed: an active probate estate; two lines awaiting approval, one kept ──
     sheet = await p.evaluate(([EST, T0]) => {
@@ -106,22 +117,25 @@ const EST = 8401;
     }, [EST, T0]);
 
     // ── A ───────────────────────────────────────────────────────────────────
-    await section('A. the desk before anything is sent: the card says what waits and to whom it will go; the bars carry Send request', async () => {
+    await section('A. the desk before anything is sent: the card says what waits and to whom it will go; one Send request, the card\'s', async () => {
       await toDesk(EST);
       const card = await txt('#inv-releases');
       has(card, 'Approval request', 'the Releases card has the section');
       has(card, '2 lines await written approval; nothing has been sent from the app.', 'what waits, and that nothing went');
       has(card, 'Goes as a PDF to t@example.com, copied to ann@lowe.law and agreements@havellinpalmbeach.com; Nora Whitcombe has no email and signs the printed copy.', 'to whom, and who signs paper');
-      eq(await p.locator('#inv-workbar button[onclick="sendApprovalRequest(' + EST + ')"]').count(), 1, 'the work bar carries Send request once');
-      eq(await p.locator('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]').count(), 1, 'and the card once');
-      ok(await vis('#inv-workbar button[onclick="printApprovalRequest(' + EST + ')"]'), 'Approval Request (the print) still beside it');
+      eq(await p.locator('#inv-workbar button[onclick^="sendApprovalRequest("]').count(), 0, '⚠ the work bar carries no Send request');
+      eq(await p.locator('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]').count(), 1, 'the card carries it once');
+      eq(await sendsOnDesk(), ['sendApprovalRequest(' + EST + ')'], '⚠⚠ one Send request on the whole desk, nothing selected');
+      ok(await vis('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]'), '⚠ and it is on screen: the Releases bar opened by itself while the request is owed');
+      ok(await vis('#inv-workbar button[onclick="printApprovalRequest(' + EST + ')"]'), 'Approval Request (the print) still on the work bar');
       eq(await p.locator('#inv-releases button[onclick^="invMarkRequestSent("]').count(), 0, 'no confirming tap with nothing drafted');
     });
 
     // ── B ───────────────────────────────────────────────────────────────────
     await section('B. Send request, pressed: filed dated, the PDF, the draft, the record, the card waiting on its tap', async () => {
       const before = posts.length;
-      await press('#inv-workbar button[onclick="sendApprovalRequest(' + EST + ')"]', 'Send request');
+      await openBar('releases', EST);
+      await press('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]', 'Send request (the card\'s)');
       await p.waitForTimeout(1500);
       const mine = posts.slice(before);
       const up = mine.find((x) => x.action === 'uploadHtml');
@@ -201,10 +215,15 @@ const EST = 8401;
       const card = await txt('#inv-releases');
       has(card, 'The approval request cannot be sent yet: it needs an email for the Personal Representative, a co-representative or the estate attorney (Edit Client).', 'the blocker, in red, by name');
       eq(await p.locator('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]').count(), 0, 'and no send that would refuse');
-      // The work bar's button still exists and refuses in the band.
-      await press('#inv-workbar button[onclick="sendApprovalRequest(' + EST + ')"]', 'Send request (blocked)');
+      eq(await sendsOnDesk(), [], '⚠⚠ no Send request anywhere on the desk for every line: none that would refuse');
+      // The handler still refuses by name, pressed through the bulk bar's selection send.
+      await press('#inv-row-b input[onchange^="_invTogglePick"]', 'the box on the lamp');
+      eq(await sendsOnDesk(), ['sendApprovalRequest(' + EST + ',true)'], 'a line selected: the bulk bar\'s selection send, the only one');
+      await press('button[onclick="sendApprovalRequest(' + EST + ',true)"]', 'Send request (the selection, blocked)');
       has(await txt('#jband-fb-admin'), 'cannot be sent yet', 'the handler refuses with the same sentence');
       eq(await p.evaluate(() => window.__drafts.length), 1, 'and made no draft');
+      await press('button[onclick="_invClearPicks()"]', 'Clear');
+      eq(await sendsOnDesk(), [], 'the selection cleared: none again');
     });
 
     // ── F ───────────────────────────────────────────────────────────────────
