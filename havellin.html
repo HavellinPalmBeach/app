@@ -1373,7 +1373,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 2:22pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 7:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -28317,7 +28317,8 @@ function _invThumbHTML(jobId, ref, px) {
   var glyph = INV_CAT_GLYPH[ref.category] || '\u{1F4E6}';
   var style = 'width:' + px + 'px;height:' + px + 'px;flex:0 0 auto;border-radius:4px;'
     + 'border:1px solid var(--border);background:var(--cream);display:flex;align-items:center;'
-    + 'justify-content:center;font-size:' + Math.round(px * 0.42) + 'px;overflow:hidden;';
+    // The glyph stops at 40 px: the opened record's 240 px tile would otherwise wait under a 101 px emoji.
+    + 'justify-content:center;font-size:' + Math.min(Math.round(px * 0.42), 40) + 'px;overflow:hidden;';
   return '<div' + (id ? ' data-thumb-id="' + esc(id) + '"' : '') + ' style="' + style + '"'
     + ' title="' + esc(ref.objectName || '') + '">' + glyph + '</div>';
 }
@@ -36653,7 +36654,7 @@ function _agDupHtml(jobId, all) {
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px;">'
       + g.rows.map(function(r) {
           return '<span style="display:flex;align-items:center;gap:5px;">'
-            + _invThumbHTML(jobId, r, 34)
+            + _invThumbHTML(jobId, r, 72)
             + '<span style="font-size:10px;color:var(--gray);font-weight:700;">#' + esc(_invItemNo(r)) + '</span>'
             + (g.why ? '<span style="font-size:10px;color:var(--gray-dk);max-width:170px;">' + esc(r.objectName || '') + '</span>' : '')
             + '<button class="btn-s" style="font-size:10px;color:#c0392b;" '
@@ -37895,7 +37896,8 @@ function _renderInvRow(job, ref) {
     + '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;">'
       + '<input type="checkbox"' + (picked ? ' checked' : '') + ' onchange="_invTogglePick(\'' + sid + '\',this)" '
         + 'style="width:14px;height:14px;flex:0 0 auto;cursor:pointer;accent-color:var(--gray-dk);" title="Select for a bulk change">'
-      + _invThumbHTML(jid, ref, 40)
+      // 72 px, the record's 240 and its close-ups 120 (2026-10-23; Anthony: at 40 the desk could not tell what a photo was).
+      + _invThumbHTML(jid, ref, 72)
       + '<span style="font-size:10px;color:var(--gray);font-weight:700;width:26px;flex:0 0 auto;">' + esc(_invItemNo(ref)) + '</span>'
       + '<div style="flex:1;min-width:0;">'
         + '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
@@ -37988,12 +37990,12 @@ function _renderInvPanel(job, ref) {
       + 'onchange="_invEdit(' + jid + ',\'' + ref.stableId + '\',\'fieldNote\',this)">' + esc(ref.fieldNote || '') + '</textarea>'
     + (det.length
         ? '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px;">Detail shots \u00b7 ' + det.length + '</div>'
-          + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invThumbHTML(jid, d, 64); }).join('') + '</div>'
+          + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invThumbHTML(jid, d, 120); }).join('') + '</div>'
         : '')
     + '</div>');
   return '<div style="padding:10px 4px 12px 52px;background:#fcfaf5;border-top:1px dashed var(--border-md);">'
     + '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;">'
-      + _invThumbHTML(jid, ref, 96)
+      + _invThumbHTML(jid, ref, 240)
       + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
         + (ref.driveFileUrl ? '<a class="btn-s" href="' + esc(ref.driveFileUrl) + '" target="_blank" style="text-decoration:none;">Open photo in Drive</a>' : '')
         + '<button class="btn-s" onclick="openCustodyModal(' + jid + ',\'' + ref.stableId + '\')">Chain of custody' + (nC ? ' (' + nC + ')' : '') + '</button>'

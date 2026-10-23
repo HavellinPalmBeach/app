@@ -2402,7 +2402,7 @@ Anthony, 2026-10-03 (call 6): the firearms rule extended to all estate property,
 
 ### Photographs on the manifest
 
-Every row shows a thumbnail of its item photo, and the Estate Inventory Report and the Approval Request print them. They are fetched **through the Apps Script**, which runs as the Havellin Google account and already holds Drive access, and cached per job on the device.
+Every row shows a thumbnail of its item photo, 72 px, big enough to tell what it is from the desk; the line's record (▾) shows it at 240 px (the size the Apps Script hands back) with its close-ups at 120, and *Possible duplicates* draws each pair at 72 (2026-10-23, Anthony: they were 40, 96, 64 and 34, too small to read). The Estate Inventory Report and the Approval Request print them. They are fetched **through the Apps Script**, which runs as the Havellin Google account and already holds Drive access, and cached per job on the device.
 
 > **They are deliberately NOT loaded from `drive.google.com` directly, and must not be.** *Share w/ Counsel* grants access with named viewers only — never "anyone with the link" — so Drive demands an authenticated session, and the app is served from GitHub Pages, which makes that a cross-site request. Safari blocks third-party cookies by default. A direct image link would render on desktop Chrome and fail on the iPad, and failing on one device only is worse than failing on all of them: it reads as missing photos on exactly the machine the work is done on. There is a test asserting no such URL survives in code.
 

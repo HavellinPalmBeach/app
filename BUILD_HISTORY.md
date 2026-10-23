@@ -6,6 +6,14 @@ Not loaded into sessions. `CLAUDE.md` holds the current rules; this file is the 
 
 ## Entries
 
+### 2026-10-23 · Bigger photographs on the desk
+Anthony: *"can we make the thumbnails a bit bigger so that when we're at the desk … we can actually see what the images are. They're quite small."*
+- **Found.** Job Admin & Inv drew a row's photograph at 40 px, the opened record's at 96, its close-ups at 64 and *Possible duplicates* at 34. The Apps Script hands back 240 px thumbnails (`THUMB_PX`), so the screen was showing a sixth of what the device already held.
+- **The build.** The row's 72 px, the record's 240 (the server's size: larger would only blow it up, and a sharper one needs a redeploy and a bigger device cache), close-ups 120, *Possible duplicates* 72. `_invThumbHTML`'s waiting glyph stops at 40 px (at 240 it was 101). No backend change, no new data. The Job Plan's room strip is unchanged (Anthony: the desk, not the Job Plan).
+- **Tests** (the suite 24,661 passed, 0 failed). `field-capture` (the row at 72 and not 40, the record at 240, the close-up at 120), `room-check` (the pair at 72; its stub now prints the size), `inventory-workspace` (the glyph: 40 at 240 px, 30 at 72). Revert sweep on a copy, the three suites: five reverts, every one red (row 2 checks, close-up 1, record 1, pair 1, glyph 1); restored, green.
+- **Browser step 98** (20 checks, 1440 and 390 px): a seeded estate with its thumbnails on the device; every row's photograph measures 72 px and is painted, the *Possible duplicates* pair 72, the ▾ opens the record at 240 with its close-up at 120, no overflow with the record open, no page errors. Against the build before, 12 failed.
+- **Docs.** Manual (the thumbnails section) and playbook (*Photos on the inventory rows*), HTML and markdown.
+
 ### 2026-10-23 · The home value's wording: no refusal it does not make
 Found building blank boxes the same day; Anthony: *"yes, fix the home value wording too"*.
 - **Found.** Save stopped refusing a blank home value on 2026-10-10 (a flag in amber, the estimate saves), but Edit Client's *Approx. Home Value* label still read *(the estimate will not save without it)*; the playbook's Step 1 stop box said both it and the new home's sq ft *will stop you dead at the estimate*; the manual's intake note called both a *HARD REFUSAL later*; its fresh-estimate note and the playbook's symptom row said Save *asks* for it.
