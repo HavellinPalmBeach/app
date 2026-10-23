@@ -29,7 +29,9 @@
 //   strip beside it saying the day the job really started; a Home Prep desk, which draws no strip, keeps it; the work bar's
 //   line under Inventory Review is the HVL id alone; the tab's subtitle reads the new order; one Send request on the desk
 //   for every waiting line, the Releases card's, on screen once its bar is opened by a real press of its header, none on
-//   the work bar, and the bulk bar's for a selection only while a line is ticked.
+//   the work bar, and the bulk bar's for a selection only while a line is ticked. On review: a request drafted and a line it
+//   never carried, the bar's line and the card naming the way round (the draft, I've sent it, then a fresh request), I've
+//   sent it pressed on the card, and the fresh request then offered there.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -537,8 +539,9 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     eq(wb.sub, 'HVL-2610-E960', '⚠ the line under Inventory Review is the HVL id alone');
     ok(wb.text.indexOf('Eleanor Ashworth') < 0 && wb.text.indexOf('210 Via Bellaria') < 0, '⚠ the client\'s name and address are not repeated on the work bar');
     const subtitle = await p.evaluate(() => { const el = document.getElementById('inv-subtitle'); return el && el.checkVisibility() ? el.textContent : null; });
-    eq(subtitle, 'Start at the top: anything flagged above the brown band, then its next step, then tonight’s items. Each bar below the items says in one line what it holds: amber or red means it needs you.',
-      'the tab\'s subtitle, on screen, in the new order');
+    eq(subtitle, 'Start at the top: anything flagged above the brown band, then the band’s next step, the must-finds and Job Admin’s desk paperwork. '
+      + 'On every service but Home Prep, tonight’s items come next, then the bars below them, each saying in one line what it holds: amber or red means it needs you.',
+      'the tab\'s subtitle, on screen, in the new order, every block named (restated on review)');
 
     console.log('\n## Part 4 · one Send request: the Releases card\'s; the bulk bar\'s only for a selection; the work bar none');
     const sends = () => p.evaluate(() => Array.from(document.querySelectorAll('#inventory-content button[onclick^="sendApprovalRequest("]'))
@@ -557,6 +560,34 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
     ok(await p.locator('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]').isVisible(), 'at 390 the card\'s Send request is on screen too');
     await p.setViewportSize({ width: 1440, height: 1000 });
+
+    // Found on review: a request drafted and not yet confirmed, and a line it never carried. The card offers no send while a
+    // draft waits, and the work bar's (which covered this state) is gone; the bar's line said "send a request" over a desk that
+    // offered none. Now the line and the card name the way round, and the press it names is pressed.
+    console.log('\n## Part 4 · a draft waiting and a line it never carried: the way round named, then pressed');
+    await p.evaluate((id) => {
+      const j = jobs.find((x) => x.id === id);
+      j.docState.approvalRequest = { draftedAt: new Date(Date.now() - 3600000).toISOString(), draftedBy: 'Ashley Jerome', provider: 'gmail',
+        draftUrl: 'https://mail.google.com/mail/u/0/#drafts/x', req: { to: ['rhale@example.com'], cc: [], noEmail: [], viaCounsel: false,
+          stableIds: ['l02', 'l03'], asked: 2, ratify: 0 } };
+      saveJobs();
+    }, LIV);
+    await toDesk(LIV);
+    const L0 = await stat('releases', LIV);
+    ok(String(L0).indexOf('Request drafted: tap I’ve sent it · 1 more item needs written approval: send a fresh request once the draft has gone') === 0,
+      '⚠⚠ the bar\'s line: the draft first, then the golf clubs it never carried and when their request goes  [' + L0 + ']');
+    ok(String(L0).indexOf('written approval: send a request') < 0, '⚠ never "send a request" while the desk offers no send');
+    if (!(await isOpen('releases', LIV))) await press('#desk-hd-releases-' + LIV, 'the Releases header, to open it');
+    const relText = () => p.evaluate(() => (document.getElementById('inv-releases') || {}).textContent || '');
+    const reqSends = () => p.evaluate(() => Array.from(document.querySelectorAll('#inventory-content button[onclick^="sendApprovalRequest("]'))
+      .map((x) => [x.getAttribute('onclick'), x.closest('#inv-releases') ? 'releases' : 'other', x.checkVisibility()]));
+    has((await relText()).replace(/\s+/g, ' '), '⚠ 1 more line awaits written approval and is not on this draft: send the draft, tap I’ve sent it, then send a fresh request.',
+      '⚠⚠ the card, on screen, names the line and the way round');
+    eq(await reqSends(), [], 'fixture: no Send request on the desk while the draft waits');
+    await press('#inv-releases button[onclick="invMarkRequestSent(' + LIV + ')"]', 'I’ve sent it, on the card');
+    eq(await reqSends(), [['sendApprovalRequest(' + LIV + ')', 'releases', true]], '⚠⚠ the fresh request the card promised is offered, once, on screen, on the card');
+    has((await relText()).replace(/\s+/g, ' '), 'not on it: send a fresh request.', 'and the card says it is for the line the request never carried');
+    ok(String(await stat('releases', LIV)).indexOf('1 item needs written approval: send a request') === 0, 'the bar\'s line now asks for the send it offers  [' + (await stat('releases', LIV)) + ']');
 
     eq(errs, [], 'zero page errors');
   } catch (e) {

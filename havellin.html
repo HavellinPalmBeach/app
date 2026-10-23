@@ -1389,7 +1389,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 9:13pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 9:52pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2427,7 +2427,7 @@ body.no-smf .smf-col{display:none;}
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
       <div>
         <div style="font-size:13px;font-weight:600;">Job Admin &amp; Inventory</div>
-        <div style="font-size:11px;color:var(--gray);margin-top:2px;" id="inv-subtitle">Start at the top: anything flagged above the brown band, then its next step, then tonight&rsquo;s items. Each bar below the items says in one line what it holds: amber or red means it needs you.</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;" id="inv-subtitle">Start at the top: anything flagged above the brown band, then the band&rsquo;s next step, the must-finds and Job Admin&rsquo;s desk paperwork. On every service but Home Prep, tonight&rsquo;s items come next, then the bars below them, each saying in one line what it holds: amber or red means it needs you.</div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
@@ -32348,6 +32348,14 @@ function approvalRequestCardHtml(job, all) {
     lines.push(esc(['Drafted ' + _draftDay(st.draftedAt), st.draftedBy || '', st.mailbox || ''].filter(Boolean).join(' · ') + who + ', ' + n(S.carried)));
     lines.push(esc(jtDraftLine(job, K, true)));
     if (paper) lines.push(paper);
+    // ⚠ A LINE DECIDED AFTER THE DRAFT IS NAMED HERE, WITH THE WAY ROUND (2026-10-22). The card offers no send while a draft
+    // waits (a new one would replace this draft's record, and docRecordSent keeps only a draft already stale), and the work
+    // bar's send, which covered this state, is gone; so the Releases bar's line said "send a request" over a card that offered
+    // none and never mentioned the line. The order is the card's own: the draft sent, I've sent it, then the fresh request
+    // the next state offers.
+    if (S.fresh.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(S.fresh.length + ' more line'
+      + (S.fresh.length === 1 ? ' awaits written approval and is' : 's await written approval and are')
+      + ' not on this draft: send the draft, tap I’ve sent it, then send a fresh request.') + '</span>');
     btns = btn('invMarkRequestSent(' + jid + ')', '&#10003; I&rsquo;ve sent it', true)
       + (st.draftUrl ? btn('openDocDraft(' + jid + ",'" + K + "')", '&#8599; Open the draft') : '');
   } else {
@@ -46141,8 +46149,11 @@ function deskFoldState(jobId, job, fold, all, today) {
       day = day || today || _todayStr();
       if (!g.records.some(function (x) { return x.filedAt && _ymdLocal(new Date(Number(x.filedAt))) === day; })) notToday = true;
     });
-    if (fresh) bit(s(fresh, 'item needs', 'items need') + ' written approval: send a request', 'amber');
+    // While a draft waits, the card offers no send (approvalRequestCardHtml): the draft first, and a line it never carried
+    // is owed the fresh request that follows it, so the line says so in the card's order, never "send a request".
     if (draft) bit('Request drafted: tap I’ve sent it', 'amber');
+    if (fresh) bit(draft ? s(fresh, 'more item needs', 'more items need') + ' written approval: send a fresh request once the draft has gone'
+      : s(fresh, 'item needs', 'items need') + ' written approval: send a request', 'amber');
     if (unfiled) bit(s(unfiled, 'signed approval', 'signed approvals') + ' not filed to Drive', 'amber');
     if (rat) bit(rat + ' for ratification', 'amber');
     if (owed) bit(s(owed, 'signed receipt', 'signed receipts') + ' owed', 'amber');

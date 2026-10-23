@@ -1442,15 +1442,87 @@ function groupH({ group, ok, eq, has, lacks }) {
     has(textOf(inner(B.html, 'inv-releases') || ''), 'The approval request cannot be sent yet', 'the card says why, on screen, where the send would be');
   }
 
-  group('H4 · the tab\'s subtitle reads the desk in its new order');
+  group('H4 · the tab\'s subtitle reads the desk in its new order, every block named, and true on Home Prep too');
   {
     const at = SRC.indexOf('<div class="panel" id="panel-inventory">');
     const panel = SRC.slice(at, SRC.indexOf('<div id="inventory-content"></div>', at));
     ok(at > 0 && panel.length > 200 && panel.length < 3000, 'the panel\'s static markup was found (' + panel.length + ' characters)');
     const sub = textOf(inner(panel, 'inv-subtitle') || '').replace(/&rsquo;/g, '’');
-    eq(sub, 'Start at the top: anything flagged above the brown band, then its next step, then tonight’s items. Each bar below the items says in one line what it holds: amber or red means it needs you.',
-      'the subtitle names the order: what is flagged above the band, its step, tonight\'s items, then the bars');
+    // ⚠ RESTATED ON REVIEW (2026-10-22): it skipped the must-finds and Job Admin, its "its next step" could be read as the
+    // items', and on Home Prep (no items, no bars; renderInventoryTab's prep branch) it named both as though they were there.
+    eq(sub, 'Start at the top: anything flagged above the brown band, then the band’s next step, the must-finds and Job Admin’s desk paperwork. '
+      + 'On every service but Home Prep, tonight’s items come next, then the bars below them, each saying in one line what it holds: amber or red means it needs you.',
+      'the subtitle names the order: what is flagged above the band, the band\'s step, the must-finds, Job Admin, tonight\'s items, then the bars');
+    // The order it names is the order renderInventoryTab draws, read off the render's own source (each block once).
+    const body = noComments(fn('renderInventoryTab'));
+    const pos = ['deskAlertsHtml(jobId, job)', 'jobProgressBlockHtml(jobId, \'admin\')', '_sfHost(\'sf-host-desk\', job)\n    + renderJobAdmin(jobId, job)', '_renderInvWorkbar(job, all)', 'fold(\'releases\''].map((n) => body.indexOf(n));
+    ok(pos.every((p) => p > -1), 'fixture: the render\'s blocks were found (' + pos.join(', ') + ')');
+    ok(pos.every((p, i) => !i || pos[i - 1] < p), 'the strip, the band, the must-finds and Job Admin, the items, the bars: the subtitle\'s order is the render\'s');
+    has(body, 'if (job.svc === \'prep\') {\n    cont.innerHTML = top + _sfHost(\'sf-host-desk\', job) + renderJobAdmin(jobId, job) + closeout;', 'and Home Prep\'s desk stops at Job Admin and the close-out, as the subtitle says');
     lacks(panel, 'produce the client', 'the old subtitle is gone');
+    lacks(sub, 'then its next step', 'the ambiguous "its" is gone');
     eq((panel.match(/id="inv-subtitle"/g) || []).length, 1, 'once');
+  }
+
+  group('H5 · a draft waiting and a line it never carried: the card names the line and the way round, the bar line asks nothing the desk does not offer');
+  {
+    // Found on review: with the work bar's send gone, this state had the bar's line say "send a request" over a card that
+    // offered no send (a draft waits) and never mentioned the line. The way round is the card's own order, driven here
+    // through the real tap: the draft sent, I've sent it, then the fresh request the next state's card offers.
+    const rows = (more) => [LINE('a', { itemNo: 1, objectName: 'Harbor painting', disposition: 'Auction', channel: 'Kodner Galleries' }),
+      LINE('b', { itemNo: 2, objectName: 'Table lamp', disposition: 'Donate', channel: 'Goodwill' }),
+      LINE('c', { itemNo: 3, objectName: 'Clock', disposition: 'Keep' })].concat(more ? [LINE('d', { itemNo: 4, objectName: 'Rug', disposition: 'Junk' })] : []);
+    const real = ['_renderInvWorkbar', '_renderInvReleasesCard', '_renderInvBulk'];
+    const drafted = () => ({ approvalRequest: { draftedAt: '2026-10-19T15:00:00.000Z', provider: 'gmail', draftUrl: 'https://mail.google.com/mail/u/0/#drafts/x',
+      req: { to: ['ruth@adler.example'], cc: [], noEmail: [], viaCounsel: false, stableIds: ['a'], asked: 1, ratify: 0 } } });
+    const run = (more) => {
+      const r = rows(more);
+      const D = desk(PROBATE({ docState: drafted() }), {}, { refs: r, real, roots: ['invMarkRequestSent'], stubs: {
+        SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true }, _invAssignItemNos: () => r, Date: TickDate(T0),
+        saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {}, _docNotice() {}, showSyncBadge() {} } });
+      return { D, html: D.render() };
+    };
+    const sends = (h) => (h.match(/sendApprovalRequest\(7[^)]*\)/g) || []);
+    const card = (h) => textOf(inner(h, 'inv-releases') || '');
+    const relHead = (h) => heads(h).filter((x) => x.f === 'releases')[0] || {};
+
+    const A = run();
+    ok(!A.D.log.renderErr, 'the desk draws with the real work bar, Releases card and bulk bar (' + (A.D.log.renderErr || 'ok') + ')');
+    has(inner(A.html, 'inv-releases') || '', 'onclick="invMarkRequestSent(7)"', 'fixture: the draft waits on its tap, on the card');
+    const R = relHead(A.html);
+    eq([R.open, R.line], [true, 'Request drafted: tap I’ve sent it · 1 more item needs written approval: send a fresh request once the draft has gone · no beneficiaries recorded'],
+      '⚠⚠ the bar opens (Q2), and its line names the draft first, then the line it never carried and when its request goes');
+    eq(A.D.C.deskFoldState(7, A.D.job, 'releases', A.D.C._jobInvRefs(7)).bits.slice(0, 2).map((b) => b.tone), ['amber', 'amber'], 'both in amber');
+    lacks(R.line, 'written approval: send a request', '⚠⚠ never "send a request" while the desk offers no send');
+    eq(sends(A.html), [], 'fixture: no Send request anywhere while the draft waits (the card\'s rule; the work bar carries none)');
+    has(card(A.html), '&#9888; 1 more line awaits written approval and is not on this draft: send the draft, tap I’ve sent it, then send a fresh request.',
+      '⚠⚠ the card names the line the draft never carried, and the way round, in the card\'s order');
+    eq((card(A.html).match(/not on this draft/g) || []).length, 1, 'said once');
+
+    const two = run(true);
+    has(card(two.html), '2 more lines await written approval and are not on this draft', 'two lines: the card in the plural');
+    has(relHead(two.html).line, '2 more items need written approval: send a fresh request once the draft has gone', 'and the bar\'s line');
+
+    // The way round, through the real tap: I've sent it, and the card that follows offers the fresh request it promised.
+    const t = attempt(() => A.D.C.invMarkRequestSent(7));
+    ok(t.ok && t.val === true, 'I\'ve sent it runs (' + (t.err || t.val) + ')');
+    const partial = A.D.dom.html;
+    eq(sends(partial), ['sendApprovalRequest(7)'], '⚠⚠ the next state offers the send, once, on the card (repainted by id)');
+    has(inner(partial, 'inv-releases') || '', 'onclick="sendApprovalRequest(7)"', 'on the Releases card');
+    has(card(partial), 'not on it: send a fresh request.', 'with the card\'s fresh-request line');
+    lacks(card(partial), 'not on this draft', 'and the draft\'s sentence gone with the draft');
+    eq(relHead(partial).line, '1 item needs written approval: send a request · 1 on the request still unsigned · no beneficiaries recorded',
+      'the bar\'s line now says "send a request", over the send it offers');
+    const pHeads = heads(partial);
+    A.D.render();
+    eq(pHeads, heads(A.D.dom.html), '⚠ the bars after the tap read what a full render draws');
+
+    // A draft with no line outside it says nothing more (the C3 fixture's line, here on the card).
+    const none = desk(PROBATE({ docState: drafted() }), {}, { refs: rows().slice(0, 1).concat([rows()[2]]), real, stubs: {
+      SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true } } });
+    const nh = none.render();
+    has(inner(nh, 'inv-releases') || '', 'onclick="invMarkRequestSent(7)"', 'fixture: the draft alone, waiting on its tap');
+    lacks(card(nh), 'more line', 'nothing about a line the draft did not carry, where there is none');
+    eq(relHead(nh).line, 'Request drafted: tap I’ve sent it · no beneficiaries recorded', 'and the bar\'s line as C3 has it');
   }
 }
