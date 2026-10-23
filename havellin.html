@@ -1408,7 +1408,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 7:52am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 10:20am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -32895,11 +32895,157 @@ function printBeneficiaryReceipt(jobId, name) {
 // note explains: the HTML parser decodes the attribute before the script reads it).
 function _invJsArg(v) { return esc(JSON.stringify(String(v == null ? '' : v))); }
 
+// ═══ LEAVING THE PROPERTY: ONE ROW PER TAKER (2026-10-22) ═══
+// ⚠⚠ ONE ROW FOR EACH PERSON, VENDOR, CHARITY OR APPRAISER, HOWEVER MANY PAPERS THEY SIGN. Until 2026-10-22 the Releases card
+// drew a person twice, once under Receipts for property released to a person (print, the photograph filed back) and once
+// under the sign-out on the iPad (the same receipt signed on the glass), and a charity's receipt here and again on the
+// Donations card, each copy with its own Void: measured, one receipt filed for Mary Smith was on the card twice, and a line
+// still awaiting approval was said to wait three times. Anthony, 2026-10-22, on the new desk: *"Build all of it now."* The
+// section keeps P28's heading (sign out on the iPad, anything that leaves the house).
+// A row joins the receipts (invReceiptGroups, an estate's: the lines going To a person, a dealer-routed firearm under its
+// dealer, a receipt whose signer no longer has a line) and the sign-out groups (signoutGroups: a vendor's pickup, a
+// charity's donation, a person's receipt, an appraiser's hand-off and return) by the taker's name (samePerson, or
+// pickupKey's spacing). No rule of its own: every answer is the two groupers'. `records`: each paper filed for the taker,
+// listed once (an appraiser's hand-offs and returns together, so the hand-off stays listed while the line is out);
+// `donationFiled`: a charity's receipts, which the Donations card lists, so the row only counts them. Rows run in the
+// order their first line stands on the inventory; a receipt with no line left goes last.
+function _leavingSame(a, b) { return samePerson(a, b) || pickupKey(a) === pickupKey(b); }
+function leavingGroups(job, all) {
+  if (!job) return [];
+  all = all || [];
+  var pos = {};
+  all.forEach(function (r, i) { if (r && pos[String(r.stableId)] === undefined) pos[String(r.stableId)] = i; });
+  var firstAt = function (lines) {
+    return (lines || []).reduce(function (m, r) { var p = pos[String(r.stableId)]; return p !== undefined && p < m ? p : m; }, Infinity);
+  };
+  var rows = [];
+  var rowOf = function (name) {
+    var L = rows.filter(function (x) { return _leavingSame(x.taker, name); })[0];
+    if (!L) { L = { taker: name, receipts: [], outs: [], records: [], donationFiled: 0, at: Infinity }; rows.push(L); }
+    return L;
+  };
+  (invFiduciaryMode(job) ? invReceiptGroups(job, all) : []).forEach(function (g) {
+    var mine = {};
+    (g.released || []).concat(g.waiting || []).forEach(function (r) { mine[String(r.stableId)] = 1; });
+    g.lines = all.filter(function (r) { return r && mine[String(r.stableId)]; });   // in the inventory's order
+    var L = rowOf(g.name);
+    L.receipts.push(g);
+    L.at = Math.min(L.at, firstAt(g.lines));
+  });
+  signoutGroups(job, all).forEach(function (g) {
+    var L = rowOf(g.taker);
+    L.outs.push(g);
+    L.at = Math.min(L.at, firstAt(g.lines));
+  });
+  var dons = donationGroups(job, all);
+  rows.forEach(function (L) {
+    var seen = {};
+    var add = function (list) { (list || []).forEach(function (s) { var k = String(s.id); if (!seen[k]) { seen[k] = 1; L.records.push(s); } }); };
+    L.receipts.forEach(function (g) { add(g.filed); });
+    var appr = false, don = false;
+    L.outs.forEach(function (g) {
+      if (g.kind === 'donation') { don = true; return; }
+      if (g.kind === 'appraisal_out' || g.kind === 'appraisal_back') { appr = true; return; }
+      add(g.records);
+    });
+    if (appr) ['appraisal_out', 'appraisal_back'].forEach(function (k) {
+      add(signedRecordsOf(job, k).filter(function (x) { return pickupKey(x.ref) === pickupKey(L.taker); }));
+    });
+    if (don) {
+      var ids = {};
+      dons.forEach(function (d) { if (d.charity && _leavingSame(d.charity, L.taker)) (d.records || []).forEach(function (s) { ids[String(s.id)] = 1; }); });
+      L.donationFiled = Object.keys(ids).length;
+    }
+  });
+  return rows.sort(function (a, b) { return a.at === b.at ? 0 : (a.at < b.at ? -1 : 1); });
+}
+// One taker's row: their name; what each paper covers (the receipt's lines, signed for or owed; each sign-out's lines,
+// signed for or awaiting written approval); the notes the receipts carried (the receipt with no line now, a line not yet on
+// a receipt, a typed Receipt / Doc, the dealer's transfer); then one Print receipt, one Sign out per kind of paper they
+// sign (named for its paper where they sign two), the photograph route for a receipt, and every paper filed, once.
+// A person's sign-out on the glass is the receipt itself, so their receipt part says it all and the sign-out adds only its
+// button.
+function _leavingRowHtml(job, L) {
+  var jid = job.id;
+  var row = 'padding:7px 0;border-bottom:0.5px solid var(--border);font-size:11.5px;line-height:1.5;';
+  var nums = function (list) { return list.map(function (r) { return '#' + esc(_invItemNo(r)); }).join(', '); };
+  var sids = function (list) { return list.map(function (r) { return String(r.stableId); }); };
+  var count = function (list) { return list.length + ' line' + (list.length > 1 ? 's' : '') + ' (' + nums(list) + ')'; };
+  var signed = function (list) { return list.length ? ' &middot; <span style="color:var(--ok-tx);">&#10003; signed for: ' + nums(list) + '</span>' : ''; };
+  var warn = function (t) { return ' &middot; <span style="color:#8a5a1e;font-weight:600;">&#9888; ' + t + '</span>'; };
+  var gray = function (t) { return '<div style="color:var(--gray);">' + t + '</div>'; };
+  var person = L.receipts.filter(function (g) { return !g.dealer && !g.orphan; })[0] || null;
+  var dealer = L.receipts.filter(function (g) { return g.dealer; })[0] || null;
+  var parts = [], notes = [], ctl = [], waitNote = false;
+  L.receipts.forEach(function (g) {
+    if (g.orphan) {
+      notes.push('<div class="inv-rel-orphan" style="color:var(--gray);">No line on the inventory goes to them now; the receipt they signed stays here and in Drive.</div>');
+      return;
+    }
+    var done = g.released.filter(function (r) { return g.owed.indexOf(r) < 0; });
+    parts.push((g.dealer ? '' : esc(SIGNOUT_KINDS.receipt.what) + ' &middot; ') + count(g.lines) + signed(done)
+      + (g.owed.length ? warn('no signed receipt filed for ' + nums(g.owed)) : ''));
+    if (g.waiting.length) {
+      waitNote = true;
+      notes.push(gray(nums(g.waiting) + ' going to them ' + (g.waiting.length > 1 ? 'await' : 'awaits') + ' written approval, so '
+        + (g.waiting.length > 1 ? 'they are' : 'it is') + ' not on a receipt yet.'));
+    }
+    var typed = g.owed.filter(function (r) { return String(r.receiptDoc || '').trim(); });
+    if (typed.length) notes.push(gray(typed.map(function (r) {
+      return '#' + esc(_invItemNo(r)) + '’s Receipt / Doc reads “' + esc(String(r.receiptDoc).trim()) + '”';
+    }).join('; ') + ': a typed reference, not a signed receipt filed to Drive.'));
+    if (g.dealer) notes.push(gray('The dealer makes the transfer, so Havellin prints no receipt for '
+      + (g.released.length + g.waiting.length > 1 ? 'these' : 'it') + ': file the dealer&rsquo;s receipt once the transfer is done.'));
+  });
+  L.outs.forEach(function (g) {
+    if (g.kind === 'receipt' && person) return;   // the receipt part above is this paper
+    parts.push(esc(SIGNOUT_KINDS[g.kind].what) + ' &middot; ' + count(g.lines) + signed(g.done)
+      + (g.waiting.length ? warn('awaiting written approval: ' + nums(g.waiting)) : ''));
+  });
+  if (L.donationFiled) notes.push(gray('&#10003; ' + L.donationFiled + ' charity receipt' + (L.donationFiled > 1 ? 's' : '')
+    + ' on file: listed on the Donations card, under Closing the job.'));
+  // The controls. One Sign out per kind of paper; where a taker signs two (a firm that buys and takes donations, an
+  // appraiser who also buys), each names its paper, so two buttons never read alike.
+  if (person && person.released.length) ctl.push('<button class="btn-s" onclick="printBeneficiaryReceipt(' + jid + ',' + _invJsArg(person.name) + ')">'
+    + (person.owed.length ? 'Print receipt' : 'Reprint receipt') + '</button>');
+  var offered = L.outs.filter(function (g) { return g.ready.length; });
+  var twoSign = offered.filter(function (g) { return g.kind !== 'appraisal_back'; }).length > 1;
+  offered.forEach(function (g) {
+    var label = g.kind === 'appraisal_back' ? 'Check ' + g.ready.length + ' back in from ' + g.taker
+      : 'Sign out ' + g.ready.length + ' to ' + g.taker + (twoSign ? ' (' + SIGNOUT_KINDS[g.kind].what + ')' : '');
+    ctl.push('<button class="btn-s" onclick="openSignoutDialog(' + jid + ',' + _invJsArg(g.kind) + ',' + _invJsArg(g.taker) + ')">' + esc(label) + '</button>');
+  });
+  // Nothing offered while lines wait on the approval: said once, unless the receipt's note above already says why.
+  if (!offered.length && !waitNote && L.outs.some(function (g) { return g.waiting.length; })) {
+    ctl.push('<span style="color:var(--gray);">Nothing to sign out until the approval is on record.</span>');
+  }
+  L.receipts.forEach(function (g) {
+    if (g.orphan || !g.owed.length) return;
+    ctl.push(signedCopyControlHtml(jid, 'receipt', { ref: g.name, stableIds: sids(g.owed), signedBy: g.name,
+      label: (g.dealer ? 'Dealer receipt — ' : 'Signed receipt — ') + g.name },
+      (g.dealer ? 'File the dealer’s receipt (' : 'File signed receipt (') + g.owed.map(function (r) { return '#' + _invItemNo(r); }).join(', ') + ')'));
+  });
+  ctl.push(signedRecordLinksHtml(jid, L.records));
+  var kinds = L.outs.map(function (g) { return g.kind; });
+  return '<div class="inv-rel-row inv-leaving-row' + (L.outs.length ? ' inv-signout-row' : '') + (dealer ? ' inv-rel-dealer' : '') + '"'
+    + (kinds.length ? ' data-kinds="' + esc(kinds.join(' ')) + '"' : '') + ' style="' + row + '">'
+    + '<div><strong>' + esc(L.taker) + '</strong>'
+      + (dealer ? ' <span style="color:var(--gray);">(licensed dealer' + (dealer.persons.length ? ', transferring to ' + esc(_andJoin(dealer.persons)) : '') + ')</span>' : '')
+      + (parts.length ? ' &middot; ' + parts[0] : '') + '</div>'
+    + parts.slice(1).map(function (t) { return '<div class="inv-leaving-part">' + t + '</div>'; }).join('')
+    + notes.join('')
+    + '<div class="inv-rel-ctl">' + ctl.join('') + '</div>'
+    + '</div>';
+}
+
 // ═══ THE DESK'S RELEASES CARD (P19): every signed paper, filed to Drive beside what it covers ═══
-// The release approvals recorded on the job (each signing act, P20: its day, who signed that day, the lines, its filed
-// copies, and who is missing where the lines are still open), the receipts owed and filed for property released to a
-// person (an estate), and the adopted Court Inventory and the received Trust Schedule (an estate, where the instrument
-// is ours to issue and the matter takes it). File signed copy is the foundation's control; nothing here deletes a copy.
+// The approval request, what is leaving the property and who signs for it (one row per taker since 2026-10-22, above), and
+// the release approvals recorded on the job (each signing act, P20: its day, who signed that day, the lines, its filed copies,
+// and who is missing where the lines are still open). File signed copy is the foundation's control; nothing here deletes a
+// copy. ⚠ IN THE ORDER OF THE WORK (2026-10-22): the request, then the leaving, then the signed approvals, which are history
+// once filed. The adopted Court Inventory and the received Trust Schedule left this card for the close-out papers beside the
+// ledger (_renderSignedSchedulesCard, inside Closing the job): a close-out paper drawn from the first line shot, at the top
+// of the desk, every evening.
 function _renderInvReleasesCard(job, all) {
   var jid = job.id, fid = invFiduciaryMode(job);
   var parts = [];
@@ -32907,11 +33053,19 @@ function _renderInvReleasesCard(job, all) {
   var head = function(t){ return '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 2px;">' + t + '</div>'; };
   var nums = function(list){ return list.map(function(r){ return '#' + esc(_invItemNo(r)); }).join(', '); };
   var sids = function(list){ return list.map(function(r){ return String(r.stableId); }); };
-  // ⚠ EACH SIGNING ACT, AND EVERY COPY FILED FOR ONE, STAYS LISTED (P20, Q24): a day one co-trustee signed is its own row
-  // after the other signs a week later, with the copy filed for it, and its lines say whether they are still open.
   // The request itself, first (2026-10-17): what the last one asked and of whom, and the send.
   var _reqHtml = approvalRequestCardHtml(job, all);
   if (_reqHtml) parts.push(head('Approval request') + _reqHtml);
+  // ⚠ SIGN-OUT ON THE IPAD (P28, 2026-10-18) took the place of P22's Vendor pickups section: every taker on the inventory
+  // (a vendor, a charity, a person, an appraiser), what each may sign for now, what is already signed for, and on an estate
+  // what waits on the written approval; since 2026-10-22 one row per taker, the receipts' printed copy and photograph route
+  // in the same row as the glass (leavingGroups).
+  var leaving = leavingGroups(job, all);
+  if (leaving.length) {
+    parts.push(head('Leaving the property &middot; sign out on the iPad') + leaving.map(function (L) { return _leavingRowHtml(job, L); }).join(''));
+  }
+  // ⚠ EACH SIGNING ACT, AND EVERY COPY FILED FOR ONE, STAYS LISTED (P20, Q24): a day one co-trustee signed is its own row
+  // after the other signs a week later, with the copy filed for it, and its lines say whether they are still open.
   var batches = invApprovalBatches(job, all);
   if (batches.length) {
     parts.push(head('Signed release approvals') + batches.map(function(b){
@@ -32938,79 +33092,6 @@ function _renderInvReleasesCard(job, all) {
           + signedCopyControlHtml(jid, 'approval', { ref: b.ref, stableIds: sids(b.lines), signedBy: b.who, signedOn: b.date,
               label: 'Signed release approval' }, b.filed.length ? 'File another copy' : 'File signed copy')
           + signedRecordLinksHtml(jid, b.filed) + '</div>'
-        + '</div>';
-    }).join(''));
-  }
-  if (fid) {
-    var groups = invReceiptGroups(job, all);
-    if (groups.length) {
-      parts.push(head('Receipts for property released to a person') + groups.map(function(g){
-        var reprint = !g.owed.length;
-        var typed = g.owed.filter(function(r){ return String(r.receiptDoc || '').trim(); });
-        return '<div class="inv-rel-row' + (g.dealer ? ' inv-rel-dealer' : '') + '" style="' + row + '">'
-          + '<div><strong>' + esc(g.name) + '</strong>'
-            + (g.dealer ? ' <span style="color:var(--gray);">(licensed dealer' + (g.persons.length ? ', transferring to ' + esc(_andJoin(g.persons)) : '') + ')</span>' : '')
-            + (g.released.length ? ' &middot; released: ' + nums(g.released) : '')
-            + (g.owed.length ? ' &middot; <span style="color:#8a5a1e;font-weight:600;">&#9888; no signed receipt filed for ' + nums(g.owed) + '</span>'
-               : g.released.length ? ' &middot; <span style="color:var(--ok-tx);">&#10003; every one receipted</span>' : '')
-          + '</div>'
-          + (g.orphan ? '<div class="inv-rel-orphan" style="color:var(--gray);">No line on the inventory goes to them now; the receipt they signed stays here and in Drive.</div>' : '')
-          + (g.waiting.length ? '<div style="color:var(--gray);">' + nums(g.waiting) + ' going to them ' + (g.waiting.length > 1 ? 'await' : 'awaits')
-              + ' written approval, so ' + (g.waiting.length > 1 ? 'they are' : 'it is') + ' not on a receipt yet.</div>' : '')
-          + (typed.length ? '<div style="color:var(--gray);">' + typed.map(function(r){
-                return '#' + esc(_invItemNo(r)) + '’s Receipt / Doc reads “' + esc(String(r.receiptDoc).trim()) + '”';
-              }).join('; ') + ': a typed reference, not a signed receipt filed to Drive.</div>' : '')
-          + (g.dealer ? '<div style="color:var(--gray);">The dealer makes the transfer, so Havellin prints no receipt for '
-              + (g.released.length + g.waiting.length > 1 ? 'these' : 'it') + ': file the dealer&rsquo;s receipt once the transfer is done.</div>' : '')
-          + '<div class="inv-rel-ctl">'
-            + (g.released.length && !g.dealer ? '<button class="btn-s" onclick="printBeneficiaryReceipt(' + jid + ',' + _invJsArg(g.name) + ')">'
-                + (reprint ? 'Reprint receipt' : 'Print receipt') + '</button>' : '')
-            + (g.owed.length ? signedCopyControlHtml(jid, 'receipt', { ref: g.name, stableIds: sids(g.owed), signedBy: g.name,
-                label: (g.dealer ? 'Dealer receipt — ' : 'Signed receipt — ') + g.name },
-                (g.dealer ? 'File the dealer’s receipt (' : 'File signed receipt (') + g.owed.map(function(r){ return '#' + _invItemNo(r); }).join(', ') + ')') : '')
-            + signedRecordLinksHtml(jid, g.filed) + '</div>'
-          + '</div>';
-      }).join(''));
-    }
-    var d = matterDef(job);
-    var sched = [];
-    if (all.length && !invDocContractBlock(job, 'court') && invProbateRows(job)) {
-      sched.push({ ref: 'Court Inventory', when: 'once the representative has adopted it', btn: 'File the adopted copy', label: 'Adopted Court Inventory' });
-    }
-    if (all.length && !invDocContractBlock(job, 'trustee') && d && d.trust) {
-      sched.push({ ref: 'Trust Schedule', when: 'once the trustee has signed it as received', btn: 'File the received copy', label: 'Received Trust Schedule' });
-    }
-    if (sched.length) {
-      parts.push(head('Signed schedules') + sched.map(function(x){
-        var filed = signedRecordsOf(job, 'schedule', x.ref);
-        return '<div class="inv-rel-row" style="' + row + '"><div><strong>' + esc(x.ref) + '</strong>, ' + esc(x.when) + '</div>'
-          + '<div class="inv-rel-ctl">' + signedCopyControlHtml(jid, 'schedule', { ref: x.ref, label: x.label }, filed.length ? 'File another copy' : x.btn)
-          + signedRecordLinksHtml(jid, filed) + '</div></div>';
-      }).join(''));
-    }
-  }
-  // ⚠ VENDOR PICKUPS, ESTATE AND LIVING ALIKE (P22): each vendor taking lines away, what its filed lists cover, and the
-  // one press that files the next sheet. A line on no list is named, never refused.
-  // ⚠ SIGN-OUT ON THE IPAD (P28, 2026-10-18) took the place of P22's Vendor pickups section: every taker on the
-  // inventory (a vendor, a charity, a person, an appraiser), what each may sign for now, what is already signed for, and on
-  // an estate what waits on the written approval. The receipts section above keeps the printed receipt and the photograph
-  // route for a person; this row signs the same receipt on the glass.
-  var outs = signoutGroups(job, all);
-  if (outs.length) {
-    parts.push(head('Leaving the property &middot; sign out on the iPad') + outs.map(function(g){
-      var kd = SIGNOUT_KINDS[g.kind];
-      var btn = g.kind === 'appraisal_back'
-        ? 'Check ' + g.ready.length + ' back in from ' + g.taker
-        : 'Sign out ' + g.ready.length + ' to ' + g.taker;
-      return '<div class="inv-rel-row inv-signout-row" data-kind="' + esc(g.kind) + '" style="' + row + '">'
-        + '<div><strong>' + esc(g.taker) + '</strong> &middot; ' + esc(kd.what) + ' &middot; ' + g.lines.length + ' line' + (g.lines.length > 1 ? 's' : '') + ' (' + nums(g.lines) + ')'
-          + (g.done.length ? ' &middot; <span style="color:var(--ok-tx);">&#10003; signed for: ' + nums(g.done) + '</span>' : '')
-          + (g.waiting.length ? ' &middot; <span style="color:#8a5a1e;font-weight:600;">&#9888; awaiting written approval: ' + nums(g.waiting) + '</span>' : '')
-        + '</div>'
-        + '<div class="inv-rel-ctl">'
-          + (g.ready.length ? '<button class="btn-s" onclick="openSignoutDialog(' + jid + ',' + _invJsArg(g.kind) + ',' + _invJsArg(g.taker) + ')">' + esc(btn) + '</button>'
-             : g.waiting.length ? '<span style="color:var(--gray);">Nothing to sign out until the approval is on record.</span>' : '')
-          + signedRecordLinksHtml(jid, g.records) + '</div>'
         + '</div>';
     }).join(''));
   }
@@ -34509,11 +34590,48 @@ function proceedsReceivedLine(job, items) {
   return { key: 'proceeds_received', ok: ok, label: 'Proceeds received for every sold line',
            detail: ok ? 'every sold line is on a paid statement' : bits.join('; ') + ' — follow up with the selling partner, then record it on the Proceeds statements card, under Closing the job on Job Admin & Inv' };
 }
-// The desk's close-out records, together under the inventory: the ledger, the statements and the donations.
+// The desk's close-out records, together under the inventory: the ledger (or the Contents Record), the signed schedules
+// beside it (2026-10-22), the statements and the donations.
 function _renderLedgerCards(job, all) {
   if (!all || !all.length) return '';
   return (ledgerApplies(job, all) ? _renderLedgerCard(job, all) : '') + _renderContentsCard(job, all)
-    + _renderProceedsCard(job, all) + _renderDonationsCard(job, all);
+    + _renderSignedSchedulesCard(job, all) + _renderProceedsCard(job, all) + _renderDonationsCard(job, all);
+}
+// ═══ THE SIGNED SCHEDULES, BESIDE THE LEDGER (2026-10-22) ═══
+// ⚠ A CLOSE-OUT PAPER, FILED WITH THE OTHER CLOSE-OUT PAPERS. The Court Inventory as the representative adopted it and the
+// Trust Schedule as the trustee signed it received were filed from the Releases card, drawn from the first line shot at the
+// top of the desk every evening, while the ledger and the Contents Record, the other close-out papers with a signed copy,
+// sat in #inv-records. They are filed here now, beside the ledger, inside Closing the job (Anthony, 2026-10-22: *"Build all
+// of it now."*). The prints stay in More ▾, offered under invDocContractBlock alone, so each still refuses on its own face.
+// Which instrument is ours to issue and the matter takes, one list, read by this card and by the Closing bar's line: the
+// Court Inventory where invProbateRows holds (probate, both, or an unanswered matter) and the tier states values; the Trust
+// Schedule where the matter holds a trust and the tier states values; on an estate with a line on the inventory. `filed`:
+// the copies filed for each (kind `schedule`, ref the instrument).
+function signedScheduleRows(job, all) {
+  if (!job || !invFiduciaryMode(job) || !all || !all.length) return [];
+  var d = matterDef(job), out = [];
+  if (!invDocContractBlock(job, 'court') && invProbateRows(job)) {
+    out.push({ ref: 'Court Inventory', when: 'once the representative has adopted it', btn: 'File the adopted copy', label: 'Adopted Court Inventory' });
+  }
+  if (!invDocContractBlock(job, 'trustee') && d && d.trust) {
+    out.push({ ref: 'Trust Schedule', when: 'once the trustee has signed it as received', btn: 'File the received copy', label: 'Received Trust Schedule' });
+  }
+  out.forEach(function (x) { x.filed = signedRecordsOf(job, 'schedule', x.ref); });
+  return out;
+}
+function _renderSignedSchedulesCard(job, all) {
+  var rows = signedScheduleRows(job, all);
+  if (!rows.length) return '';
+  var jid = job.id;
+  var row = 'padding:7px 0;border-bottom:0.5px solid var(--border);font-size:11.5px;line-height:1.5;';
+  return '<div class="card" id="inv-schedules-card" style="margin-bottom:1rem;">'
+    + '<div class="sec" style="margin-bottom:4px;">Signed schedules <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the copy the representative or trustee signs at close-out)</span></div>'
+    + rows.map(function (x) {
+        return '<div class="inv-rel-row" style="' + row + '"><div><strong>' + esc(x.ref) + '</strong>, ' + esc(x.when) + '</div>'
+          + '<div class="inv-rel-ctl">' + signedCopyControlHtml(jid, 'schedule', { ref: x.ref, label: x.label }, x.filed.length ? 'File another copy' : x.btn)
+          + signedRecordLinksHtml(jid, x.filed) + '</div></div>';
+      }).join('')
+    + '</div>';
 }
 // ⚠ THE LIVING FAMILY'S SIGNED PAPER, ON ITS OWN DESK CARD (P25, Q51): whether it is in Drive, and its signed copy filed back
 // through the foundation's control. No Print here: the work bar's Contents Record button prints it (no control twice).
@@ -46461,7 +46579,8 @@ var DESK_FOLDS = {
   releases: { title: 'Releases & signed papers', join: ' · ', parts: [['inv-bequests', 'Beneficiaries & bequests']] },
   values:   { title: 'Values & appraisals', join: ': ', parts: [] },
   closing:  { title: 'Closing the job', join: ': ', parts: [['closeout-admin-', 'close-out call, vendor ratings'], ['inv-ledger-card', 'Disposition Ledger'],
-              ['inv-contents-card', 'Contents Record'], ['inv-proceeds-card', 'proceeds'], ['inv-donations-card', 'donations']] },
+              ['inv-contents-card', 'Contents Record'], ['inv-schedules-card', 'signed schedules'], ['inv-proceeds-card', 'proceeds'],
+              ['inv-donations-card', 'donations']] },
   history:  { title: 'Removed items & snapshots', join: ': ', parts: [] }
 };
 var DESK_FOLD_TONES = { red: 1, amber: 1, ok: 1, grey: 1 };
@@ -46491,7 +46610,9 @@ function _invManifestUnread(jobId) {
 //   closing  · opens at the close only (the Close-out stage, the work handed over, a closed or lost job), or while a
 //     proceeds statement disagrees with its lines (red), or when Close job is refused (applyJobTransition, by hand). NOT on
 //     the band's lit row: Work complete is lit from the midpoint payment to the close, half of every job. Grey before the
-//     close, amber where a line has left with its paper owed; at the close it names everything Close job refuses on.
+//     close, amber where a line has left with its paper owed; at the close it names everything Close job refuses on. The
+//     signed schedules beside the ledger (2026-10-22) are a close-out paper: named in amber at the close while one has no
+//     copy filed, as the ledger's signature is, and counted in grey once one is filed; mid-job, before any is, nothing.
 //   history  · never by itself (a snapshot just taken opens it, takeInventorySnapshot).
 // ⚠ AN UNREAD MANIFEST CLAIMS NOTHING ("An empty store is unread until proven otherwise"): until this device has read the
 // job's manifest from the sheet (_invCloudSeen), every bar says "loading…" in grey, never a ✓ or a count of nothing, and
@@ -46599,6 +46720,9 @@ function deskFoldState(jobId, job, fold, all, today) {
     st.openByDefault = atClose;
     if (unread) return loading();
     var R = (jobTakesProceedsStatements(job) && all.length) ? proceedsReconciliation(job, all) : null;
+    // typeof, as the bar's other late readers are: belt-and-braces for a pinned sandbox that lifts this line without the list.
+    var SC = typeof signedScheduleRows === 'function' ? signedScheduleRows(job, all) : [];
+    var scOpen = SC.filter(function (x) { return !x.filed.length; });
     if (R && R.disagree) { st.openByDefault = true; bit(R.disagree === 1 ? '1 proceeds statement disagrees with its lines' : R.disagree + ' proceeds statements disagree with their lines', 'red'); }
     if (atClose) {
       // Everything Close job refuses on (jobCloseBlockers), each by name: the vendors unrated, the keys held, the incidents open.
@@ -46610,6 +46734,7 @@ function deskFoldState(jobId, job, fold, all, today) {
       if (inc) bit(s(inc, 'incident', 'incidents') + ' open', 'amber');
       var sig = all.length ? ledgerDerivedLines(jobId, job)[0] : null;
       if (sig && !sig.ok) bit((sig.key === 'ledger_signed' ? 'Disposition Ledger' : 'Contents Record') + ' not signed yet', 'amber');
+      scOpen.forEach(function (x) { bit(x.label + ' not filed yet', 'amber'); });
     }
     var donGone = all.filter(function (r) { return r.disposition === 'Donate' && invRecordedGone(r, job) && !invDonationReceipted(job, r); }).length;
     if (donGone) bit(s(donGone, 'donated line', 'donated lines') + ' gone with no receipt', 'amber');
@@ -46619,6 +46744,7 @@ function deskFoldState(jobId, job, fold, all, today) {
       var c = closeoutState(jobId, job);
       bit('close-out ' + [c.sat, c.reviewSent, c.referral].filter(Boolean).length + ' of 3 done', 'grey');
     }
+    if (SC.length && (atClose ? !scOpen.length : scOpen.length < SC.length)) bit((SC.length - scOpen.length) + ' of ' + s(SC.length, 'signed schedule', 'signed schedules') + ' filed', 'grey');
     var don = 0, donRc = 0;
     donationGroups(job, all).forEach(function (g) { don += g.lines.length; donRc += g.receipted; });
     if (don) bit(donRc + ' of ' + s(don, 'donated line', 'donated lines') + ' receipted', 'grey');

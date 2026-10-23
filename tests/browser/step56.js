@@ -28,6 +28,8 @@
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step56.js [/abs/path/to/havellin.html]
 // RESTATED 2026-10-08 (the job-flow audit): two signers read "both", and the receipt names the trust by its title
 // (trustInstrumentTitle), as the agreement and the Trust Schedule do, and "the trustees" (a co-trustee is recorded here).
+// RESTATED 2026-10-22 (the desk's G8): a person's receipt is their row under Leaving the property · sign out on the iPad, and
+// File the received copy is on the signed schedules card beside the ledger, inside Closing the job.
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
@@ -273,8 +275,10 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
     await section('D. receipts: owed, printed, filed back, counted', async () => {
       await toDesk(5601);
       const card = await txt('#inv-releases');
-      has(card, 'Mary Smith · released: #2 · ⚠ no signed receipt filed for #2', '⚠ the card names the receipt owed to Mary');
-      has(card, 'John Smith · released: #3', 'and to John');
+      // RESTATED 2026-10-22 (the desk's one row per taker under Leaving the property · sign out on the iPad): the receipt is the
+      // row's part for a release to a person, its lines counted, those signed for and those owed named.
+      has(card, 'Mary Smith · release to a person · 1 line (#2) · ⚠ no signed receipt filed for #2', '⚠ the card names the receipt owed to Mary');
+      has(card, 'John Smith · release to a person · 1 line (#3) · ⚠ no signed receipt filed for #3', 'and to John');
       has(await rowText('s2'), 'no signed receipt', 'the row says so too');
       const strip = await txt('#inv-flagstrip');
       has(strip, 'No signed receipt 2', 'and the Needs-you strip counts them');
@@ -302,7 +306,8 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       eq((net.uploads[u0] || {}).folderId, 'SIGNED-56', 'filed to Signed Records');
       await p.waitForTimeout(400);
       const c2 = await txt('#inv-releases');
-      has(c2, 'Mary Smith · released: #2 · ✓ every one receipted', 'Mary\'s line is receipted');
+      has(c2, 'Mary Smith · release to a person · 1 line (#2) · ✓ signed for: #2', 'Mary\'s line is receipted');
+      lacks(c2, 'no signed receipt filed for #2', 'with nothing owed');
       lacks(await rowText('s2'), 'no signed receipt', 'and her row says nothing owed');
       has(await rowText('s3'), 'no signed receipt', 'John\'s still does');
       await press('.ja-hd[onclick="toggleJobAdmin(5601)"]', 'the Job Admin fold');
@@ -346,9 +351,14 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       has(t, 'all 3 of you have', 'for all three');
       ok(await printClosed(), 'the print closes before anything is filed');   // the print path takes the panels away for a moment
       // The Trust Schedule, filed as received; no Court Inventory on a trust.
-      has(await txt('#inv-releases'), 'Trust Schedule, once the trustee has signed it as received', 'the Trust Schedule is offered');
-      lacks(await txt('#inv-releases'), 'Court Inventory', 'and no Court Inventory on a trust');
-      const ts = await p.evaluate(() => { const rows = Array.from(document.querySelectorAll('#inv-releases .inv-rel-row'));
+      // RESTATED 2026-10-22 (the signed schedules beside the ledger): the schedules left the Releases card for the close-out
+      // papers, in #inv-records inside Closing the job, which is shut mid-job, so it is opened by a real press of its header.
+      lacks(await txt('#inv-releases'), 'Trust Schedule', 'the Releases card no longer carries the schedules');
+      await openBar('closing', 5601);
+      ok(await vis('#inv-records #inv-schedules-card'), 'the signed schedules card is on screen, with the close-out papers');
+      has(await txt('#inv-schedules-card'), 'Trust Schedule, once the trustee has signed it as received', 'the Trust Schedule is offered');
+      lacks(await txt('#inv-schedules-card'), 'Court Inventory', 'and no Court Inventory on a trust');
+      const ts = await p.evaluate(() => { const rows = Array.from(document.querySelectorAll('#inv-schedules-card .inv-rel-row'));
         const r = rows.find((x) => /^Trust Schedule/.test(x.textContent.trim())); const i = r && r.querySelector('input[type=file]');
         if (!i) return ''; i.id = 'step56-ts'; return '#step56-ts'; });
       if (ts) await p.setInputFiles(ts, PDF);
@@ -356,11 +366,14 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       const sr = ((await job(5601)).signedRecords || []).filter((s) => s.kind === 'schedule')[0] || {};
       eq([sr.ref, sr.label], ['Trust Schedule', 'Received Trust Schedule'], '⚠ the received Trust Schedule is filed and recorded');
       await p.waitForTimeout(300);
-      has(await txt('#inv-releases'), 'Received Trust Schedule', 'and listed');
+      has(await txt('#inv-schedules-card'), 'Received Trust Schedule', 'and listed');
+      ok(await vis('#inv-schedules-card'), 'the Closing bar stays open across the filing\'s redraw');
       // A probate estate: the Court Inventory, the Personal Representative, estate property.
       await toDesk(5602);
-      has(await txt('#inv-releases'), 'Court Inventory, once the representative has adopted it', 'a probate estate offers the adopted Court Inventory');
-      lacks(await txt('#inv-releases'), 'Trust Schedule', 'and not the Trust Schedule');
+      await openBar('closing', 5602);
+      has(await txt('#inv-schedules-card'), 'Court Inventory, once the representative has adopted it', 'a probate estate offers the adopted Court Inventory');
+      lacks(await txt('#inv-schedules-card'), 'Trust Schedule', 'and not the Trust Schedule');
+      lacks(await txt('#inv-releases'), 'Court Inventory', 'nor on the Releases card');
       await press('#inv-workbar button[onclick="printApprovalRequest(5602)"]', 'the probate Approval Request');
       const pt = await T((await lastPrint()).html);
       has(pt, 'To Ann Finch:', 'addressed to the representative');

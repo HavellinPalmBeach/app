@@ -529,7 +529,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        ['Mary Smith', ['a', 'b', 'c'], 3, ['d']], 'released, owed and still waiting');
     // The desk card.
     const card = text(S._renderInvReleasesCard(job, lines));
-    has(card, 'Mary Smith · released: #1, #2, #3 · ⚠ no signed receipt filed for #1, #2, #3', 'the card names what is owed');
+    // RESTATED 2026-10-22 (the desk's one row per taker under Leaving the property · sign out on the iPad): the receipt is the
+    // row's part for a release to a person, every line going to them counted, those signed for and those owed named.
+    has(card, 'Mary Smith · release to a person · 4 lines (#1, #2, #3, #4) · ⚠ no signed receipt filed for #1, #2, #3', 'the card names what is owed');
     has(card, '#4 going to them awaits written approval, so it is not on a receipt yet', 'and what is not yet released');
     has(card, '#2’s Receipt / Doc reads “signed”: a typed reference, not a signed receipt filed to Drive', '⚠ a typed receiptDoc is shown as what it is');
     has(card, 'File signed receipt (#1, #2, #3)', 'the filing names the lines it covers');
@@ -598,7 +600,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pd2 = (S.planDerivedLines(7, job, { svc: 'cleanout', rooms: [], vendors: [], totTC: 0, totPS: 0 }, 'admin') || [])
       .filter((l) => l.key === 'beneficiary_receipts')[0] || {};
     eq([pd2.ok, pd2.detail], [true, '3 of 3'], 'every one receipted: done');
-    has(text(S._renderInvReleasesCard(job, lines)), '✓ every one receipted', 'and the card says so');
+    // RESTATED 2026-10-22: the row names the lines signed for, as every sign-out row does, and nothing owed.
+    has(text(S._renderInvReleasesCard(job, lines)), 'Mary Smith · release to a person · 4 lines (#1, #2, #3, #4) · ✓ signed for: #1, #2, #3', 'and the card says so');
+    lacks(text(S._renderInvReleasesCard(job, lines)), 'no signed receipt filed', 'with nothing owed');
     // ⚠ A receipt one person signed never clears a line since re-routed to somebody else.
     lines[1].channel = 'John Ruiz';
     eq([S.invReceiptOwed(lines[1], job), S.invReceiptOwed(lines[0], job)], [true, false],
@@ -608,7 +612,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const mary = g2.filter((x) => x.name === 'Mary Smith')[0] || { owed: [], filed: [] };
     eq([john.owed.map((r) => r.stableId), john.filed.length, mary.filed.length], [['b'], 0, 1],
        'John is owed a receipt for #2 and lists none filed; Mary\'s signed receipt stays listed under her');
-    has(text(S._renderInvReleasesCard(job, lines)), 'John Ruiz · released: #2 · ⚠ no signed receipt filed for #2', 'and the card says so');
+    has(text(S._renderInvReleasesCard(job, lines)), 'John Ruiz · release to a person · 1 line (#2) · ⚠ no signed receipt filed for #2', 'and the card says so');
     lines[1].channel = 'mary smith';
     // A co-trustee recorded after the handover makes the approval incomplete, and does not unmake the receipt: the
     // recipient's signed word that it went is itself a record that it went.
@@ -704,18 +708,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const idx = [...h.matchAll(/fileSignedCopyFromInput\(this,(\d+)\)/g)].map((m) => S._signedCopySpecs[Number(m[1])]);
     const appr = idx.filter((s) => s.kind === 'approval').map((s) => s.meta.ref).sort();
     eq(appr, ['2026-10-01 Ruth Adler', '2026-10-02 ' + BOTH], 'one control per approval batch, under the batch\'s ref');
-    const sched = idx.filter((s) => s.kind === 'schedule').map((s) => s.meta.ref);
+    // RESTATED 2026-10-22 (the signed schedules beside the ledger): the adopted Court Inventory and the received Trust Schedule
+    // left this card for the close-out papers (_renderSignedSchedulesCard, in #inv-records), so the same matter-by-matter
+    // answers are read off that card, and this one files none.
+    eq(idx.filter((s) => s.kind === 'schedule').length, 0, '⚠ the Releases card files no schedule now');
+    lacks(t, 'Trust Schedule', 'and does not name one');
+    const SC = desk(['_renderSignedSchedulesCard'], job, lines);
+    const sh = SC._renderSignedSchedulesCard(job, lines);
+    const sched = [...sh.matchAll(/fileSignedCopyFromInput\(this,(\d+)\)/g)].map((m) => SC._signedCopySpecs[Number(m[1])])
+      .filter((s) => s && s.kind === 'schedule').map((s) => s.meta.ref);
     eq(sched, ['Trust Schedule'], '⚠ a trust matter files the received Trust Schedule, and no Court Inventory');
-    has(h, 'href="https://drive.google.com/file/d/TS/view"', 'its filed copy linked');
-    const schedOf = (mt) => { const j = Object.assign(TRUST(), { matterType: mt }); const R = desk(['_renderInvReleasesCard'], j, lines);
-      return [...R._renderInvReleasesCard(j, lines).matchAll(/fileSignedCopyFromInput\(this,(\d+)\)/g)].map((m) => R._signedCopySpecs[Number(m[1])])
-        .filter((s) => s.kind === 'schedule').map((s) => s.meta.ref); };
+    has(sh, 'href="https://drive.google.com/file/d/TS/view"', 'its filed copy linked');
+    has(text(sh), 'Received Trust Schedule', 'listed by its label');
+    const schedOf = (mt) => { const j = Object.assign(TRUST(), { matterType: mt }); const R = desk(['_renderSignedSchedulesCard'], j, lines);
+      return [...R._renderSignedSchedulesCard(j, lines).matchAll(/fileSignedCopyFromInput\(this,(\d+)\)/g)].map((m) => R._signedCopySpecs[Number(m[1])])
+        .filter((s) => s && s.kind === 'schedule').map((s) => s.meta.ref); };
     eq(schedOf('probate'), ['Court Inventory'], 'probate: the adopted Court Inventory');
     eq(schedOf('both'), ['Court Inventory', 'Trust Schedule'], 'a pour-over: both');
     eq(schedOf('neither'), [], 'neither a court nor a trust: neither instrument');
     eq(schedOf(''), ['Court Inventory'], 'unanswered: the Court Inventory, as the desk prints it');
-    const cj = Object.assign(TRUST(), { docTier: 'contents' }); const C = desk(['_renderInvReleasesCard'], cj, lines);
-    lacks(C._renderInvReleasesCard(cj, lines), 'Trust Schedule', 'not ours to issue at the contents tier: not offered');
+    const cj = Object.assign(TRUST(), { docTier: 'contents' }); const C = desk(['_renderSignedSchedulesCard'], cj, lines);
+    eq(C._renderSignedSchedulesCard(cj, lines), '', 'not ours to issue at the contents tier: not offered');
     // A living client with a recorded approval: the approval list, no receipts, no schedules.
     const V = desk(['_renderInvReleasesCard'], LIVING(), [LINE('v', 1, { disposition: 'Donate', authBy: 'Margaret Ellsworth', approvalDate: '2026-10-02' })]);
     const vt = text(V._renderInvReleasesCard(V.jobs[0], V._photoRefs[2]));

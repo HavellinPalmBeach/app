@@ -58,6 +58,12 @@
 //   with I've sent it and the way round; I've sent it pressed, the dialog listing the lines in the paper's order, and a
 //   fiduciary's "already signed" following each untick.
 //
+//   Part 8 (G8, the Releases rows and the signed schedules): an estate with every kind of taker; under Leaving the property ·
+//   sign out on the iPad one row each, the person's receipt and her sign-out one row, the charity that also buys offered two
+//   Sign outs, each pressed and opening its own sheet; every paper filed listed once, a charity's receipt only on the Donations
+//   card (Closing the job pressed open); the adopted Court Inventory beside the ledger, filed there through its own picker,
+//   listed, and counted on the Closing bar's line; nothing off the edge at 390.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -251,7 +257,8 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       if (id === EST) {
         ok(L.releasesInBar, 'the estate: the Releases card is in its bar');
         eq(L.releases.title, 'Releases & signed papers · Beneficiaries & bequests', 'the estate: the Releases title names the bequests card');
-        eq(L.closing.title, 'Closing the job: close-out call, vendor ratings, Disposition Ledger, proceeds, donations', 'the estate: Closing names the cards it draws');
+        // RESTATED BY G8 (2026-10-22): the adopted Court Inventory is filed beside the ledger now, so the title names it.
+        eq(L.closing.title, 'Closing the job: close-out call, vendor ratings, Disposition Ledger, signed schedules, proceeds, donations', 'the estate: Closing names the cards it draws');
         ok(L.history.shown && !L.history.open && L.history.y > L.closing.y, 'the estate: Removed items & snapshots is drawn last of the four, shut');
       } else {
         eq(L.releases.title, 'Releases & signed papers', 'the living job: no bequests named');
@@ -1109,6 +1116,94 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await press('#ia-line-0', 'the tea set\'s box');
     eq((await dlgR()).paul, '· already signed 1 of the 2 lines', '⚠ the tea set unticked: one of the two left');
     await press('#ia-actions button[onclick="closeInvApproval()"]', 'Cancel');
+
+
+    // ══ PART 8 (G8): one row per taker under Leaving the property · sign out on the iPad; the signed schedules beside the ledger ══
+    console.log('\n## Part 8 · one row per taker; every paper once; the signed schedules beside the ledger');
+    const RLV = 9611;
+    await p.evaluate((RLV) => {
+      const NOW = Date.now(), DAY0 = new Date(NOW); DAY0.setHours(0, 0, 0, 0);
+      const T = Math.min(NOW, Math.max(NOW - 3 * 3600000, DAY0.getTime() + 60000));
+      jobs.unshift({ id: RLV, hvlId: 'HVL-2610-G971', name: 'Harold Gale', svc: 'probate', matterType: 'probate', addr: '8 Seagate Rd', city: 'Palm Beach', zip: '33480',
+        executor: 'Ruth Gale', executorRole: 'Personal Representative', executorEmail: 'ruth@gale.example', executorAuth: 'received', deathDate: '2026-05-02',
+        probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law', docTier: 'values', status: 'active', won: true, approved: true, tc: 'Ashley Jerome',
+        created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05', agrApproved: true, agrSent: true, agrSigned: true,
+        driveFolder: 'https://drive.google.com/drive/folders/R' + RLV, driveSubfolders: { 'Estate Inventory': 'I' + RLV, 'Signed Records': 'S' + RLV },
+        signedRecords: [
+          { id: 'rx8', kind: 'receipt', ref: 'Mary Smith', stableIds: ['m1'], signedBy: 'Mary Smith', signedOn: '2026-10-20', glass: true, filedAt: T - 86400000,
+            fileUrl: 'https://drive.google.com/file/d/rx8/view', label: 'Signed receipt — Mary Smith' },
+          { id: 'dn8', kind: 'donation', ref: 'Goodwill Palm Beach', stableIds: ['g1'], signedBy: 'Goodwill Palm Beach', filedAt: T - 86400000,
+            fileUrl: 'https://drive.google.com/file/d/dn8/view', label: 'Charity receipt — Goodwill Palm Beach' }],
+        docState: {}, payments: [] });
+      estimateStore[RLV] = { approved: true, submitted: true, estimate: { jobId: RLV, svc: 'probate', havellinTotal: 20000, rooms: [{ idx: 0, name: 'Study', st: 'in', vol: 3, cplx: 3 }], vendors: [] } };
+      const OK = { authBy: 'Ruth Gale', approvalDate: '2026-10-18' };
+      const q = (id, n, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: n, itemNo: n, status: 'uploaded', category: 'Furniture', namedBy: 'desk', reviewed: 1,
+        ts: T, updatedAt: T, filename: 'HVL_' + RLV + '_INV_' + id + '.jpg', driveFileId: 'f' + id, fmv: 200 }, o);
+      _photoRefs[RLV] = [
+        q('m1', 1, Object.assign({ objectName: 'Tea service', disposition: 'Distribute', channel: 'Mary Smith' }, OK)),
+        q('m2', 2, { objectName: 'Mantel clock', disposition: 'Distribute', channel: 'Mary Smith' }),
+        q('g1', 3, Object.assign({ objectName: 'Box of books', disposition: 'Donate', channel: 'Goodwill Palm Beach' }, OK)),
+        q('g2', 4, Object.assign({ objectName: 'Linens', disposition: 'Donate', channel: 'Goodwill Palm Beach' }, OK)),
+        q('g3', 5, Object.assign({ objectName: 'Wicker sofa', disposition: 'Sell', channel: 'Goodwill Palm Beach' }, OK)),
+        q('k1', 6, Object.assign({ objectName: 'Gilt mirror', disposition: 'Auction', channel: 'Kodner Galleries' }, OK))];
+      savePhotoRefs(RLV);
+      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+    }, RLV);
+    sheet[RLV] = { items: await p.evaluate((id) => _photoRefs[id], RLV) };
+    await p.setViewportSize({ width: 1440, height: 1000 });
+    await toDesk(RLV);
+    ok(await until(async () => (await stat('releases', RLV)) !== 'loading…'), 'fixture: the sheet read');
+    if (!(await isOpen('releases', RLV))) await press('#desk-hd-releases-' + RLV, 'the Releases header, to open it');
+    const rows8 = () => p.evaluate(() => [...document.querySelectorAll('#inv-releases .inv-leaving-row')].map((r) => ({
+      name: (r.querySelector('strong') || {}).textContent, text: r.textContent.replace(/\s+/g, ' ').trim(),
+      outs: [...r.querySelectorAll('button[onclick^="openSignoutDialog("]')].map((b) => b.textContent.trim()) })));
+    const R8a = await rows8();
+    eq(R8a.map((x) => x.name), ['Mary Smith', 'Goodwill Palm Beach', 'Kodner Galleries'], '⚠⚠ one row per taker, each once');
+    const mary = R8a.find((x) => x.name === 'Mary Smith') || { text: '', outs: [] };
+    has(mary.text, 'Mary Smith · release to a person · 2 lines (#1, #2) · ✓ signed for: #1', 'Mary: her receipt and her sign-out, one row');
+    has(mary.text, '#2 going to them awaits written approval, so it is not on a receipt yet.', 'the line not yet on a receipt, said once');
+    eq((mary.text.match(/signed by Mary Smith on the iPad/g) || []).length, 1, '⚠⚠ the receipt she signed on the glass, listed once');
+    const gw = R8a.find((x) => x.name === 'Goodwill Palm Beach') || { text: '', outs: [] };
+    eq(gw.outs, ['Sign out 1 to Goodwill Palm Beach (donation)', 'Sign out 1 to Goodwill Palm Beach (vendor pickup)'], '⚠⚠ the charity that also buys: one Sign out per paper, each named');
+    has(gw.text, '1 charity receipt on file: listed on the Donations card, under Closing the job.', 'its filed receipt is said to be on the Donations card');
+    await press('#inv-releases button[onclick^=\'openSignoutDialog(' + RLV + ',"donation","Goodwill\']', 'Sign out to Goodwill, the donation');
+    has(await p.evaluate(() => (document.getElementById('ip-title') || {}).textContent), 'Donation Release — Goodwill Palm Beach', 'the donation\'s own sheet');
+    await press('#inv-pickup-modal button[onclick="closePickupDialog()"]', 'Cancel');
+    await press('#inv-releases button[onclick^=\'openSignoutDialog(' + RLV + ',"pickup","Goodwill\']', 'Sign out to Goodwill, the sale');
+    has(await p.evaluate(() => (document.getElementById('ip-title') || {}).textContent), 'Vendor Pickup List — Goodwill Palm Beach', 'and the sale\'s');
+    await press('#inv-pickup-modal button[onclick="closePickupDialog()"]', 'Cancel');
+    // Every paper once: the charity's receipt on the Donations card, inside Closing the job, which is pressed open.
+    if (!(await isOpen('closing', RLV))) await press('#desk-hd-closing-' + RLV, 'the Closing header, to open it');
+    const voids8 = (sel) => p.evaluate((sel) => [...document.querySelectorAll(sel + ' button[onclick^="voidSignedRecord("]')]
+      .map((b) => (/'([^']+)'/.exec(b.getAttribute('onclick')) || [])[1]), sel);
+    eq(await voids8('#inv-releases'), ['rx8'], '⚠⚠ the Releases card lists Mary\'s receipt once, and no charity receipt');
+    eq(await voids8('#inv-donations-card'), ['dn8'], '⚠⚠ the charity\'s receipt once, on the Donations card');
+    // The adopted Court Inventory: beside the ledger, filed through its own picker, counted on the bar's line.
+    ok(await p.locator('#inv-records #inv-schedules-card').isVisible(), 'the signed schedules card is on screen, in the close-out papers');
+    const ys = await p.evaluate(() => ['inv-ledger-card', 'inv-schedules-card', 'inv-donations-card'].map((id) => { const el = document.getElementById(id); return el ? Math.round(el.getBoundingClientRect().top) : null; }));
+    ok(ys.every((y) => y !== null) && ys[0] < ys[1] && ys[1] < ys[2], 'after the ledger, before the donations  [' + ys.join(', ') + ']');
+    has(await p.evaluate((id) => document.getElementById('desk-ttl-closing-' + id).textContent, RLV), 'Disposition Ledger, signed schedules', 'the Closing title names them');
+    eq(await p.locator('#inv-releases').evaluate((el) => el.textContent.indexOf('Court Inventory') >= 0), false, 'and the Releases card no longer carries them');
+    const up8 = uploads.length;
+    const lbl8 = '#inv-schedules-card label:has-text("File the adopted copy")';
+    const lblVis8 = await p.locator(lbl8).isVisible();
+    ok(lblVis8, 'File the adopted copy is on screen');
+    if (lblVis8) {
+      const [fc8] = await Promise.all([p.waitForEvent('filechooser'), p.click(lbl8)]);
+      await fc8.setFiles({ name: 'court-inventory-adopted.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 step96 adopted ' + 'x'.repeat(200)) });
+    }
+    ok(await until(async () => (await p.evaluate((id) => (jobs.find((x) => x.id === id).signedRecords || []).filter((r) => r.kind === 'schedule').length, RLV)) === 1), 'the adopted copy is filed');
+    eq(uploads.length - up8, 1, 'one upload');
+    await p.waitForTimeout(400);
+    ok(await isOpen('closing', RLV), 'the Closing bar stays open across the filing\'s redraw');
+    has(await p.locator('#inv-schedules-card').textContent(), 'Adopted Court Inventory', 'the filed copy is listed');
+    has(await p.locator('#inv-schedules-card').textContent(), 'File another copy', 'and another copy offered');
+    has(String(await stat('closing', RLV)), '1 of 1 signed schedule filed', 'the Closing bar\'s line counts it');
+    // At 390, both bars open: nothing off the edge.
+    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+    eq(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'no sideways scroll at 390 with Releases and Closing open');
+    await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
+    eq(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'nor at 1440');
 
     eq(errs, [], 'zero page errors');
   } catch (e) {

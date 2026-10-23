@@ -85,7 +85,9 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invInitialGroupWords'
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
   'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'photoSharesLine', 'photoSharesOf',
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
-  '_invHasPhoto', 'photoShareLive'];
+  '_invHasPhoto', 'photoShareLive',
+  // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
+  '_renderSignedSchedulesCard', 'signedScheduleRows'];
 const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',

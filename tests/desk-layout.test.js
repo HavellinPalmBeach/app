@@ -33,6 +33,11 @@
 //   K · Record the signed request (G7): on the Releases card inside its bar, once on the desk; the press opens Record
 //       approval on the lines the request carried, recorded over the real save and drawn again by the real render, with the
 //       person's selection on the bulk bar still standing; the bulk bar's Record approval as it was.
+//   L · the Releases rows and the schedules (G8): one row per taker under Leaving the property · sign out on the iPad, the
+//       receipts and the sign-out joined, every paper filed listed once (a charity's on the Donations card only), one Sign out
+//       per kind of paper, the receipts' notes and their orphan carried over, the sections in the order of the work; the
+//       adopted Court Inventory and the received Trust Schedule filed beside the ledger in Closing the job, whose title names
+//       them and whose line says them at the close.
 //
 // Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -237,6 +242,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupI({ group, ok, eq, has, lacks });
     groupJ({ group, ok, eq, has, lacks });
     groupK({ group, ok, eq, has, lacks });
+    groupL({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -671,9 +677,12 @@ function groupC({ group, ok, eq, has, lacks }) {
     // Every room cleared and the midpoint paid: the Close-out stage (planCurrentStage), the job still active.
     let B = bars(PROBATE(Object.assign({}, blockers, mid)), rows, { est, plan });
     eq(B.closing.openByDefault, true, '⚠⚠ the Close-out stage opens it');
-    eq(B.line('closing'), '1 vendor not yet rated · 1 key or access item still held · 1 incident open · Disposition Ledger not signed yet · close-out 0 of 3 done',
-      'naming the vendor, the key, the incident, and the ledger to be signed');
-    eq(B.tones('closing').slice(0, 4), ['amber', 'amber', 'amber', 'amber'], 'each amber');
+    // RESTATED BY G8 (2026-10-22): the adopted Court Inventory is filed beside the ledger now, a close-out paper, so at the
+    // close the line names it too while no copy is filed, as it names the ledger's signature.
+    eq(B.line('closing'), '1 vendor not yet rated · 1 key or access item still held · 1 incident open · Disposition Ledger not signed yet · '
+      + 'Adopted Court Inventory not filed yet · close-out 0 of 3 done',
+      'naming the vendor, the key, the incident, the ledger to be signed and the schedule to be filed');
+    eq(B.tones('closing').slice(0, 5), ['amber', 'amber', 'amber', 'amber', 'amber'], 'each amber');
     eq(B.C.jobCloseBlockers(PROBATE(Object.assign({}, blockers, mid))).length, 3, 'fixture: Close job refuses on exactly those three');
     // The midpoint paid but a room not cleared: mid-job, shut, grey, no blocker named (they are not owed yet).
     B = bars(PROBATE(Object.assign({}, blockers, mid)), rows, { est, plan: { 7: { rooms: { 0: { status: 'locked' } } } } });
@@ -2198,5 +2207,198 @@ function groupK({ group, ok, eq, has, lacks }) {
     has(R1.line, '1 on the request still unsigned', 'and the lamp');
     eq(R1.open, true, 'open');
     has(badges.join(' | '), 'Approval recorded on 1 item', 'the badge counts what was recorded');
+  }
+}
+
+// ═══ L · THE RELEASES ROWS AND THE SIGNED SCHEDULES (G8, 2026-10-22) ════════════════════════════════════════════════════
+// One estate, every kind of taker: Mary Smith (a release to a person: one line receipted on the glass, one gone with a typed
+// Receipt / Doc and no approval, one awaiting approval), Goodwill (a donation receipted, a donation and a sale ready: two
+// papers, two Sign outs), a dealer-routed firearm (the dealer's receipt), Carla Mendes (a painting out on a hand-off), Kodner
+// Galleries (a sale awaiting approval), Sam Jones (a receipt with no line now), and a signed approval of a day no line records.
+const SIGNED = { authBy: 'Ruth Adler', approvalDate: '2026-10-18' };
+const L_ROWS = () => [
+  LINE('a', Object.assign({ itemNo: 1, objectName: 'Tea service', disposition: 'Distribute', channel: 'Mary Smith' }, SIGNED)),
+  LINE('b', { itemNo: 2, objectName: 'Silver tray', disposition: 'Distribute', channel: 'mary smith', dispDate: '2026-10-19', receiptDoc: 'signed' }),
+  LINE('c', { itemNo: 3, objectName: 'Lamp', disposition: 'Distribute', channel: 'Mary Smith' }),
+  LINE('e', Object.assign({ itemNo: 4, objectName: 'Books', disposition: 'Donate', channel: 'Goodwill' }, SIGNED)),
+  LINE('e2', Object.assign({ itemNo: 5, objectName: 'Linens', disposition: 'Donate', channel: 'Goodwill' }, SIGNED)),
+  LINE('f', Object.assign({ itemNo: 6, objectName: 'Sofa', disposition: 'Sell', channel: 'Goodwill' }, SIGNED)),
+  LINE('h', Object.assign({ itemNo: 7, objectName: 'Shotgun', category: 'Firearms', serial: 'SN-7', disposition: 'Distribute', channel: 'John Ruiz', viaDealer: 'Gulf Guns (FFL)' }, SIGNED)),
+  LINE('i', { itemNo: 8, objectName: 'Harbor painting', category: 'Art & Décor', disposition: 'Keep', apprId: 'ap1' }),
+  LINE('k', { itemNo: 9, objectName: 'Mirror', disposition: 'Auction', channel: 'Kodner Galleries' })];
+const L_RECS = () => [
+  { id: 'rx', kind: 'receipt', ref: 'Mary Smith', stableIds: ['a'], signedBy: 'Mary Smith', glass: true, filedAt: ON('2026-10-20'), fileUrl: 'https://drive.google.com/file/d/rx/view', label: 'Signed receipt — Mary Smith' },
+  { id: 'dn', kind: 'donation', ref: 'Goodwill', stableIds: ['e'], signedBy: 'Goodwill', filedAt: ON('2026-10-20'), fileUrl: 'https://drive.google.com/file/d/dn/view', label: 'Charity receipt — Goodwill' },
+  { id: 'ho', kind: 'appraisal_out', ref: 'Carla Mendes', stableIds: ['i'], signedBy: 'Carla Mendes', glass: true, filedAt: ON('2026-10-19'), fileUrl: 'https://drive.google.com/file/d/ho/view', label: 'Appraisal hand-off list' },
+  { id: 'sj', kind: 'receipt', ref: 'Sam Jones', stableIds: ['zz'], signedBy: 'Sam Jones', filedAt: ON('2026-10-10'), fileUrl: 'https://drive.google.com/file/d/sj/view', label: 'Signed receipt — Sam Jones' },
+  { id: 'ap0', kind: 'approval', ref: '2026-09-20 Ruth Adler', signedBy: 'Ruth Adler', signedOn: '2026-09-20', stableIds: ['zz'], filedAt: ON('2026-09-20'), fileUrl: 'https://drive.google.com/file/d/ap0/view', label: 'Signed release approval' }];
+const L_JOB = (o) => PROBATE(Object.assign({ appraisers: [{ id: 'ap1', name: 'Carla Mendes', firm: 'Mendes Appraisals' }], signedRecords: L_RECS() }, o || {}));
+// The section of the Releases card under one bronze head, up to the next.
+function relSection(h, title) {
+  const at = h.indexOf(title);
+  if (at < 0) return '';
+  const next = h.indexOf('text-transform:uppercase', at + title.length);
+  return next < 0 ? h.slice(at) : h.slice(at, h.lastIndexOf('<div', next));
+}
+// The text a person reads: textOf, with the card's ticks, warnings and apostrophes, and no space before a comma or a stop.
+const readL = (h) => textOf(h).replace(/&#10003;/g, '✓').replace(/&#9888;/g, '⚠').replace(/&rsquo;/g, '’').replace(/ ([,.;:])/g, '$1');
+// The rows of the leaving section, each as [taker, text, html].
+function leavingRows(h) {
+  return relSection(h, 'Leaving the property &middot; sign out on the iPad').split('<div class="inv-rel-row inv-leaving-row').slice(1)
+    .map((x) => ['<div class="inv-rel-row' + x, readL('<div class="x' + x)]).map(([hh, t]) => [(/<strong>([^<]*)<\/strong>/.exec(hh) || [])[1] || '', t, hh]);
+}
+const voids = (h) => [...String(h || '').matchAll(/voidSignedRecord\(7,'([^']+)'\)/g)].map((m) => m[1]);
+
+function groupL({ group, ok, eq, has, lacks }) {
+  group('L1 · one row per taker under Leaving the property · sign out on the iPad: the receipts and the sign-out joined, every note carried');
+  {
+    const B = bars(L_JOB(), L_ROWS());
+    const r = attempt(() => B.C._renderInvReleasesCard(B.C.jobs[0], B.all));
+    ok(r.ok, 'the card draws (' + (r.err || 'ok') + ')');
+    const h = String(r.val || ''), t = readL(h);
+    const rows = leavingRows(h);
+    eq(rows.map((x) => x[0]), ['Mary Smith', 'Goodwill', 'Gulf Guns (FFL)', 'Carla Mendes', 'Kodner Galleries', 'Sam Jones'],
+      '⚠⚠ one row per taker, in the order their first line stands on the inventory; the receipt with no line left, last');
+    const row = (n) => (rows.filter((x) => x[0] === n)[0] || ['', '', ''])[1];
+    const rowH = (n) => (rows.filter((x) => x[0] === n)[0] || ['', '', ''])[2];
+    // Mary: the receipt is the row's part for a release to a person; her sign-out on the glass adds only its button.
+    has(row('Mary Smith'), 'Mary Smith · release to a person · 3 lines (#1, #2, #3) · ✓ signed for: #1 · ⚠ no signed receipt filed for #2',
+      'Mary: every line going to her, the one signed for on the glass, the one owed');
+    has(row('Mary Smith'), '#3 going to them awaits written approval, so it is not on a receipt yet.', '⚠ the receipts\' note carried over: not on a receipt yet');
+    has(row('Mary Smith'), '#2’s Receipt / Doc reads “signed”: a typed reference, not a signed receipt filed to Drive.', '⚠ and the typed reference');
+    has(row('Mary Smith'), 'Print receipt', 'Print receipt');
+    has(row('Mary Smith'), 'File signed receipt (#2)', 'the photograph route, for the line owed');
+    lacks(row('Mary Smith'), 'Nothing to sign out', 'the note already says why nothing is offered: not said again');
+    eq((row('Mary Smith').match(/release to a person/g) || []).length, 1, '⚠⚠ said once: the receipt and the glass are one paper');
+    // Goodwill: a charity that also buys signs two papers, so two Sign outs, each named for its paper.
+    has(row('Goodwill'), 'Goodwill · donation · 2 lines (#4, #5) · ✓ signed for: #4 vendor pickup · 1 line (#6)', 'Goodwill: the donation and the sale, each its own part');
+    const outs = [...rowH('Goodwill').matchAll(/onclick="openSignoutDialog\(7,&quot;([a-z_]+)&quot;,&quot;Goodwill&quot;\)">([^<]*)</g)].map((m) => [m[1], m[2]]);
+    eq(outs, [['donation', 'Sign out 1 to Goodwill (donation)'], ['pickup', 'Sign out 1 to Goodwill (vendor pickup)']],
+      '⚠⚠ one Sign out per kind of paper, each opening its own sheet and named for it');
+    has(row('Goodwill'), '✓ 1 charity receipt on file: listed on the Donations card, under Closing the job.', '⚠ the charity\'s receipt is said to be on the Donations card');
+    eq(voids(rowH('Goodwill')), [], '⚠⚠ and is not listed here, so it has one Void, there');
+    // The dealer's receipt, and its note.
+    has(row('Gulf Guns (FFL)'), 'Gulf Guns (FFL) (licensed dealer, transferring to John Ruiz) · 1 line (#7) · ⚠ no signed receipt filed for #7', 'the dealer-routed firearm, under its dealer');
+    has(row('Gulf Guns (FFL)'), 'The dealer makes the transfer, so Havellin prints no receipt for it: file the dealer’s receipt once the transfer is done.', '⚠ the dealer note carried over');
+    has(row('Gulf Guns (FFL)'), 'File the dealer’s receipt (#7)', 'its filing');
+    lacks(rowH('Gulf Guns (FFL)'), 'openSignoutDialog', '⚠⚠ a firearm is never on a sign-out sheet');
+    lacks(rowH('Gulf Guns (FFL)'), 'inv-signout-row', 'and its row is not a sign-out row');
+    // The appraiser: the hand-off listed while the painting is out, with the return offered.
+    has(row('Carla Mendes'), 'Carla Mendes · back from appraisal · 1 line (#8)', 'the appraiser\'s return');
+    has(row('Carla Mendes'), 'Check 1 back in from Carla Mendes', 'offered');
+    eq(voids(rowH('Carla Mendes')), ['ho'], '⚠ the hand-off she signed stays listed while the line is out, once');
+    // A taker with only lines awaiting approval.
+    has(row('Kodner Galleries'), 'Kodner Galleries · vendor pickup · 1 line (#9) · ⚠ awaiting written approval: #9 Nothing to sign out until the approval is on record.',
+      'nothing to sign out until the approval is on record');
+    // The receipt with no line now.
+    has(row('Sam Jones'), 'Sam Jones No line on the inventory goes to them now; the receipt they signed stays here and in Drive.', '⚠ the receipts\' orphan carried over');
+    has(rowH('Sam Jones'), 'inv-rel-orphan', 'labelled as it was');
+    eq(voids(rowH('Sam Jones')), ['sj'], 'with its link and Void');
+    // The sections, in the order of the work; the orphan signing act; no schedules here.
+    const at = (x) => h.indexOf(x);
+    ok(at('>Approval request<') > 0 && at('>Approval request<') < at('Leaving the property &middot; sign out on the iPad')
+      && at('Leaving the property &middot; sign out on the iPad') < at('>Signed release approvals<'), '⚠⚠ Approval request, then Leaving the property, then Signed release approvals');
+    has(t, 'Approved Sep 20, 2026 by Ruth Adler · no line on the inventory now No line records a signature of this day now; the copy filed for it stays here and in Drive.',
+      '⚠ the signing act no line records any more, listed with its copy');
+    eq(voids(relSection(h, '>Signed release approvals<')).filter((x) => x === 'ap0'), ['ap0'], 'its Void');
+    lacks(t, 'Receipts for property released to a person', 'no separate receipts section');
+    lacks(t, 'Signed schedules', 'no schedules on this card');
+    lacks(t, 'Court Inventory', 'nor the Court Inventory');
+    // Living work: no receipts; the sign-out rows as they were.
+    const V = bars(LIVING(), [LINE('v', { itemNo: 1, disposition: 'Donate', channel: 'Goodwill' }), LINE('w', { itemNo: 2, disposition: 'Distribute', channel: 'Sarah Ellis' })]);
+    const vh = String(attempt(() => V.C._renderInvReleasesCard(V.C.jobs[0], V.all)).val || '');
+    eq(leavingRows(vh).map((x) => [x[0], x[1]]), [['Goodwill', 'Goodwill · donation · 1 line (#1) Sign out 1 to Goodwill']],
+      'living work: the charity\'s row; a line To a person is owed no receipt and signs out nothing');
+  }
+
+  group('L2 · no filed paper drawn twice: once in #inv-releases, and a charity\'s receipt only on #inv-donations-card');
+  {
+    const r = L_ROWS();
+    const D = desk(L_JOB(), {}, { refs: r, real: ['_renderInvReleasesCard', '_renderInvBequestCard', '_renderLedgerCards'],
+      stubs: { SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true }, _invAssignItemNos: () => r } });
+    const html = D.render();
+    ok(!D.log.renderErr, 'the desk draws with the real Releases card and close-out papers (' + (D.log.renderErr || 'ok') + ')');
+    const rel = voids(inner(html, 'inv-releases') || ''), don = voids(inner(html, 'inv-donations-card') || '');
+    ok(rel.length > 0 && don.length > 0, 'fixture: papers on both cards (' + rel.length + ', ' + don.length + ')');
+    eq(rel.filter((x, i) => rel.indexOf(x) !== i), [], '⚠⚠ no paper twice on the Releases card (Mary\'s glass receipt was listed twice: its receipt row and its sign-out row)');
+    eq(rel.filter((x) => don.indexOf(x) >= 0), [], '⚠⚠ none on both cards (Goodwill\'s receipt was listed with a Void on each)');
+    eq(rel.slice().sort(), ['ap0', 'ho', 'rx', 'sj'], 'every paper the Releases card owns, each once');
+    eq(don, ['dn'], 'the charity\'s receipt, once, where the donations are');
+  }
+
+  group('L3 · the signed schedules beside the ledger, in Closing the job: named in its title, said on its line at the close');
+  {
+    const r = L_ROWS();
+    const job = L_JOB();
+    const D = desk(job, {}, { refs: r, real: ['_renderInvReleasesCard', '_renderInvBequestCard', '_renderLedgerCards'], roots: ['_invRefreshRecords'],
+      stubs: { SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true }, _invAssignItemNos: () => r } });
+    const html = D.render();
+    const rec = inner(html, 'inv-records') || '';
+    const at = (id) => rec.indexOf('id="' + id + '"');
+    ok(at('inv-schedules-card') > at('inv-ledger-card') && at('inv-ledger-card') >= 0, '⚠⚠ the schedules card is in #inv-records, after the ledger');
+    ok(at('inv-schedules-card') < at('inv-donations-card'), 'and before the donations');
+    has(readL(inner(html, 'inv-schedules-card')), 'Court Inventory, once the representative has adopted it File the adopted copy', 'the adopted Court Inventory, filed here');
+    lacks(textOf(inner(html, 'desk-body-releases-7') || ''), 'Court Inventory', '⚠ and no longer in the Releases bar');
+    const C0 = heads(html).filter((x) => x.f === 'closing')[0] || {};
+    has(C0.title, 'Disposition Ledger, signed schedules', '⚠ the Closing title names the schedules beside the ledger');
+    lacks(C0.line, 'signed schedule', 'mid-job, nothing filed: the line says nothing of them');
+    // A copy filed: the card lists it, and the Closing line counts it, on the by-id repaint as on a full render.
+    job.signedRecords.push({ id: 'sc1', kind: 'schedule', ref: 'Court Inventory', label: 'Adopted Court Inventory', signedBy: 'Ruth Adler',
+      filedAt: ON('2026-10-21'), fileUrl: 'https://drive.google.com/file/d/sc1/view' });
+    const pr = attempt(() => D.C._invRefreshRecords(7));
+    ok(pr.ok, 'the close-out papers repainted by id (' + (pr.err || 'ok') + ')');
+    const part = D.dom.html;
+    has(readL(inner(part, 'inv-schedules-card')), 'File another copy', 'the card offers another copy');
+    eq(voids(inner(part, 'inv-schedules-card')), ['sc1'], 'and lists the one filed, with its Void');
+    const C1 = heads(part).filter((x) => x.f === 'closing')[0] || {};
+    has(C1.line, '1 of 1 signed schedule filed', '⚠ the bar\'s line counts it on the repaint');
+    D.render();
+    eq((heads(D.dom.html).filter((x) => x.f === 'closing')[0] || {}).line, C1.line, 'as a full render draws it');
+    // The line at the close: each schedule with no copy named in amber, as the ledger's signature is; once filed, grey.
+    const close = { deliveredOn: '2026-10-21', status: 'closed' };
+    let B = bars(PROBATE(close), [LINE('a', { disposition: 'Keep' })]);
+    const amb = B.closing.bits.filter((x) => /not filed yet/.test(x.text));
+    eq(amb.map((x) => [x.text, x.tone]), [['Adopted Court Inventory not filed yet', 'amber']], '⚠ at the close: the adopted Court Inventory owed, in amber');
+    B = bars(PROBATE(Object.assign({ signedRecords: [{ id: 's', kind: 'schedule', ref: 'Court Inventory', filedAt: 1 }] }, close)), [LINE('a', { disposition: 'Keep' })]);
+    eq(B.closing.bits.filter((x) => /signed schedule/.test(x.text)).map((x) => [x.text, x.tone]), [['1 of 1 signed schedule filed', 'grey']], 'filed: counted in grey');
+    B = bars(PROBATE(Object.assign({ matterType: 'both' }, close)), [LINE('a', { disposition: 'Keep' })]);
+    eq(B.closing.bits.filter((x) => /not filed yet/.test(x.text)).map((x) => x.text), ['Adopted Court Inventory not filed yet', 'Received Trust Schedule not filed yet'],
+      'a pour-over: both instruments');
+    const sched = (b) => b.closing.bits.filter((x) => /Court Inventory|Trust Schedule|signed schedule/.test(x.text)).map((x) => x.text);
+    B = bars(PROBATE(Object.assign({ matterType: 'neither' }, close)), [LINE('a', { disposition: 'Keep' })]);
+    eq(sched(B), [], 'neither a court nor a trust: none');
+    B = bars(LIVING(close), [LINE('a', { disposition: 'Keep' })]);
+    eq(sched(B), [], 'living work: none on the line');
+    eq(attempt(() => B.C.signedScheduleRows(B.C.jobs[0], B.all)).val, [], '⚠ and no schedule at all: a living client adopts no court schedule');
+    // The catalogue's title, and the prints, which stay in More ▾ under the tier's rule alone.
+    const T = sandbox({ fns: ['deskFoldTitle'], vars: ['DESK_FOLDS'] });
+    eq(T.deskFoldTitle('closing', '<div id="closeout-admin-7"></div><div id="inv-records"><div id="inv-ledger-card"></div><div id="inv-schedules-card"></div>'
+      + '<div id="inv-proceeds-card"></div><div id="inv-donations-card"></div></div>'),
+      'Closing the job: close-out call, vendor ratings, Disposition Ledger, signed schedules, proceeds, donations', '⚠ the estate\'s Closing title names the schedules');
+    const wb = codeOnly(fn('_renderInvWorkbar'));
+    ok(/fid && !invDocContractBlock\(job, ''\) \? btn\(''/.test(wb) && (fn('_renderInvWorkbar').match(/btn\('printCourtInventory\(/g) || []).length === 1
+      && (fn('_renderInvWorkbar').match(/btn\('printTrustSchedule\(/g) || []).length === 1, 'the two prints stay in More ▾, once each');
+    has(fn('_renderInvWorkbar'), "(fid && !invDocContractBlock(job, 'court') ? btn('printCourtInventory(", 'the Court Inventory under the tier\'s rule alone');
+    has(fn('_renderInvWorkbar'), "(fid && !invDocContractBlock(job, 'trustee') ? btn('printTrustSchedule(", 'the Trust Schedule likewise');
+    lacks(codeOnly(fn('_renderSignedSchedulesCard')), 'print', 'and the card prints nothing (no control twice)');
+  }
+
+  group('L4 · one rule each: the rows joined by one function, read by the card alone; the schedules by one list, read by the card and the line');
+  {
+    eq(callersOf('leavingGroups'), ['_renderInvReleasesCard'], 'the rows: one grouper, the card its reader');
+    eq(callersOf('_leavingRowHtml'), ['_renderInvReleasesCard'], 'one row painter');
+    const card = codeOnly(fn('_renderInvReleasesCard'));
+    ['invReceiptGroups', 'signoutGroups', 'matterDef', 'invProbateRows', 'invDocContractBlock'].forEach((x) =>
+      ok(!new RegExp('\\b' + x + '\\(').test(card), 'the card reads no ' + x + ' of its own'));
+    const lg = codeOnly(fn('leavingGroups'));
+    ['invReceiptGroups', 'signoutGroups', 'donationGroups'].forEach((x) => ok(new RegExp('\\b' + x + '\\(').test(lg), 'the rows are the groupers\' own: ' + x));
+    ['authBy', 'approvalDate', 'disposition', 'channel', 'invApprovalComplete'].forEach((x) => ok(!new RegExp('\\b' + x + '\\b').test(lg), 'no rule of its own: no ' + x));
+    eq(callersOf('signedScheduleRows'), ['_renderSignedSchedulesCard', 'deskFoldState'], 'the schedules: one list, the card and the Closing line');
+    eq(callersOf('_renderSignedSchedulesCard'), ['_renderLedgerCards'], 'drawn with the close-out papers, nowhere else');
+    const live = SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+    eq((live.match(/Leaving the property &middot; sign out on the iPad/g) || []).length, 1, 'the section keeps P28\'s heading, drawn once');
+    lacks(live, 'Receipts for property released to a person', 'the receipts\' own section is gone');
+    const CL = sandbox({ fns: [], vars: ['DESK_FOLDS'] }).DESK_FOLDS.closing.title;
+    eq((fn('_leavingRowHtml').split('listed on the Donations card, under ' + CL + '.').length - 1), 1, 'the pointer to the Donations card names the bar by its title');
   }
 }
