@@ -23,7 +23,7 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invOwnInitial', 'invInitial
              '_invItemNo', '_invAwaitingApproval', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',
              'invIsFirearm', '_invDocHead', 'resolveValBasis', 'estateValueDate',
-             'esc', 'fmtDate2', '_invPicked', '_invMatchesFilter', '_invJob', '_setPhotoRef',
+             'esc', 'fmtDate2', '_invPicked', '_invMatchesFilter', '_invFilterHides', '_invJob', '_setPhotoRef',
              // The appraisal caution added 2026-09-11 is DERIVED rather than a flag on the row,
              // so the whole chain behind it has to be lifted for real. Stubbing
              // invAwaitingAppraisal would be testing the stub.

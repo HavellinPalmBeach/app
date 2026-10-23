@@ -30,7 +30,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'houseFlagsOf', 'activeHouseFlags', 'standingFlagLines', 'jobHasStandingFlags',
       'houseFlagInputsHtml', '_houseFlagRowClass', 'standingFlagsBlock',
       // The must-find items and the Found tick (2026-09-19), and the hosts the brief renders through.
-      '_sfRowHtml', 'guideLinkHtml', '_sfHost', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', '_mfUnhandle',
+      '_sfRowHtml', 'guideLinkHtml', '_sfHost', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle', '_mfUnhandle', 'mustFindAllFound',
     ],
   });
   const { HOUSE_FLAGS } = ctx;

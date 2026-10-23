@@ -438,7 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
-                            '_invMatchesFilter', '_setPhotoRef', 'savePhotoRefs',
+                            '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
                             '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt']),
       vars: APPR_VARS.concat(['INV_LINE_INITIAL_MIN', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
       stubs: { jobs: [Object.assign({}, JOB)], _photoRefs: { 1: rows },
@@ -486,7 +486,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
-                            '_invMatchesFilter', '_setPhotoRef', 'savePhotoRefs',
+                            '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
                             '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt']),
       vars: APPR_VARS.concat(['INV_LINE_INITIAL_MIN', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
       stubs: { jobs: [Object.assign({}, JOB, {
@@ -514,7 +514,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let badge = '';
     const s = sandbox({
       fns: APPR_FNS.concat(['_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseCautions', '_invNamed', '_invItemNo',
-                            '_invPicked', '_jobInvRefs', '_invTouch', '_invMatchesFilter',
+                            '_invPicked', '_jobInvRefs', '_invTouch', '_invMatchesFilter', '_invFilterHides',
                             '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invRoomName']),
       vars: APPR_VARS.concat(['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS']),
       stubs: { jobs: [Object.assign({}, JOB)], _photoRefs: { 1: rows },

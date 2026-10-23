@@ -789,6 +789,14 @@ body.field-cam-open #sync-pending{display:none !important;}
 .desk-st-amber{color:#f3c86b;}
 .desk-st-ok{color:#b8dc95;}
 .desk-st-grey{color:var(--tan);}
+/* Show the item, on each agent notice above the rows (2026-10-22): an outline in the bronze, never the dark fill the tab's
+   primary document wears; thumb-sized on a phone. The earlier-days hint in the filter row is words, not a control. */
+.desk-show{font:inherit;font-size:10px;font-weight:700;letter-spacing:.02em;margin-left:6px;padding:2px 9px;min-height:24px;border:1px solid var(--bronze);border-radius:3px;background:var(--white);color:var(--bronze);cursor:pointer;vertical-align:baseline;width:auto;}
+.desk-show:hover{background:var(--tan);}
+.inv-earlier{font-size:10.5px;font-weight:600;color:var(--warn-tx);}
+/* Show the item puts its row at the top of the screen UNDER the sticky header and tabs, never behind them: scrolled to
+   y 0 the row sat under the 122 px bar, on screen by its box and seen by nobody. --topbar-h is setTopbarHeight's. */
+[id^="inv-row-"]{scroll-margin-top:calc(var(--topbar-h,0px) + 8px);}
 /* P19 · the desk's releases card: the foundation's File signed copy control is a label styled .btn-s, and a bare label
    is a block with a top margin; inside .inv-rel-ctl it sits in the row beside the print button and the filed copies. */
 .inv-rel-ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:4px;}
@@ -1089,6 +1097,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   .row.row-tight>*{flex:1 1 0;min-width:0;}
   /* Thumb-sized controls. */
   .btn-s,.btn-p,.btn-bronze,.icon-btn{min-height:38px;}
+  .desk-show{min-height:32px;}
   .fb{min-height:34px;}
 
   /* Vendor + referral cards go single-column and surface their tap-to-contact row.
@@ -1389,7 +1398,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.22 · 9:52pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 1:18am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10280,6 +10289,13 @@ function mustFindItems(job) {
   });
   return out;
 }
+// Every must-find intake recorded is recorded found: one answer, read by the desk's brief (which shrinks to one green line)
+// and by Agent One's Must find notices (which go quiet above the rows; Anthony, 2026-10-22, Q3). A job with no must-find
+// list has nothing found, so neither goes quiet on it.
+function mustFindAllFound(job) {
+  var items = mustFindItems(job);
+  return items.length > 0 && items.every(function(i) { return !!i.found; });
+}
 
 function standingFlagLines(job) {
   var NO_DETAIL = 'Ticked at intake, no detail recorded — ask the client before Day 1.';
@@ -10772,10 +10788,24 @@ function standingFlagsBlock(job, opts) {
   if (opts.slim || opts.banner) lines = lines.filter(function(l) { return l.severity !== 'err'; });
   if (opts.desk) lines = lines.filter(function(l) { return l.kind === 'mustFind' || l.kind === 'safety'; });
   if (!lines.length) return '';
+  // ⚠ ON THE DESK, ONCE EVERYTHING IS FOUND, ONE GREEN LINE (2026-10-22). The found rows stood as a green block above the
+  // paperwork for the rest of the job, every evening. They fold to "All N found" with Show found (per job, this session
+  // only: the record is job.mustFound, and nothing here is saved); the safety row always shows, and Undo is a press away.
+  var allFound = '';
+  if (opts.desk && job && mustFindAllFound(job)) {
+    var nMf = mustFindItems(job).length;
+    var showFound = typeof _sfDeskShowFound === 'object' && !!(_sfDeskShowFound && _sfDeskShowFound[job.id]);
+    allFound = '<div class="sf-row sf-done sf-allfound"><span class="sf-lbl">Must find</span>'
+      + '<span class="sf-txt">&#10003; ' + (nMf === 1 ? 'The must-find is found' : 'All ' + nMf + ' must-finds found') + '</span>'
+      + (job.id !== undefined && job.id !== null && job.id !== ''
+          ? '<button type="button" class="sf-tick sf-undo" onclick="sfToggleFoundDesk(' + job.id + ')">' + (showFound ? 'Hide found' : 'Show found') + '</button>' : '')
+      + '</div>';
+    if (!showFound) lines = lines.filter(function(l) { return l.kind !== 'mustFind'; });
+  }
   var hd = opts.slim ? ''
     : '<div class="sf-hd">&#9888; ' + (opts.desk ? 'From intake &mdash; must find &middot; safety'
                                                  : 'Standing job flags &mdash; read to the crew before Day 1') + '</div>';
-  return '<div class="sf-brief' + (opts.slim ? ' sf-slim' : '') + '">' + hd +
+  return '<div class="sf-brief' + (opts.slim ? ' sf-slim' : '') + '">' + hd + allFound +
     lines.map(function(l) { return _sfRowHtml(job, l); }).join('') +
   '</div>';
 }
@@ -10791,6 +10821,13 @@ var SF_HOSTS = { 'sf-host-plan': { banner: true }, 'sf-host-dash': {}, 'sf-host-
 function _sfHost(id, job) {
   return '<div id="' + id + '" data-job="' + esc(String(job && job.id !== undefined && job.id !== null ? job.id : '')) + '">'
     + standingFlagsBlock(job, SF_HOSTS[id] || {}) + '</div>';
+}
+// Show found on the desk's brief, per job, for this session only (never saved): the found rows are one press away.
+var _sfDeskShowFound = {};
+function sfToggleFoundDesk(jobId) {
+  if (_sfDeskShowFound[jobId]) delete _sfDeskShowFound[jobId]; else _sfDeskShowFound[jobId] = 1;
+  _repaintStandingFlags(jobId);
+  return !!_sfDeskShowFound[jobId];
 }
 function _repaintStandingFlags(jobId) {
   var job = _invJob(jobId);
@@ -10827,6 +10864,8 @@ function toggleMustFound(jobId, handle) {
   _jobTouch(job, 'mustFound', key);
   saveJobs(); syncJobToSheets(job);
   _repaintStandingFlags(jobId);
+  // The last Found it quiets Agent One's Must find notices on the desk, and an Undo brings them back (Q3), by id.
+  if (typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);
 }
 
 // ⚠⚠ FIREARMS FLAGGED AT INTAKE IS A RED BANNER AT THE TOP OF THE JOB PLAN (2026-09-19), not
@@ -29372,6 +29411,8 @@ function _invEdit(jobId, stableId, key, el) {
     var _noteEl = document.getElementById('inv-value-notices'), _noteJob = _invJob(jobId);
     if (_noteEl && _noteJob) _noteEl.innerHTML = _avNoticesHtml(_noteJob, _jobInvRefs(jobId));
   }
+  // And Agent One's (Q3): a name or a category typed on a decided line reviews it, and its Look at this goes quiet.
+  if ((key === 'objectName' || key === 'category') && typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);
   // These feed the Summary rollups; refresh only the summary (table inputs keep focus).
   if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','flagMAIV','maivCat','disposition','category','qty'].indexOf(key) >= 0) {
     _invRefreshSummary(jobId);
@@ -35556,6 +35597,19 @@ function _invRefreshFlagStrip(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-flagstrip');
   if (job && el) el.innerHTML = _renderInvFlagStrip(job, _jobInvRefs(jobId));
+  // The filter row's earlier-days hint is a count over the same lines (2026-10-22): a split can add an undecided line.
+  var hint = document.getElementById('inv-earlier');
+  if (job && hint && typeof _invEarlierHintHtml === 'function') hint.innerHTML = _invEarlierHintHtml(job, _jobInvRefs(jobId));
+}
+// Agent One's notices above the rows, repainted in place (2026-10-22, Q3): a name typed on a decided line reviews it, which
+// quiets its Look at this, and the last Found it quiets the Must finds. Nothing else on the tab is touched.
+function _invRefreshAgentNotices(jobId) {
+  var sel = document.getElementById('inv-job');
+  if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
+  var el = document.getElementById('inv-agent-notices');
+  if (!el || !_invJob(jobId)) return false;
+  el.innerHTML = _agNoticesHtml(jobId, _jobInvRefs(jobId));
+  return true;
 }
 // The close-out records' host (P19): the Disposition Ledger, Proceeds statements and Donations cards. It holds no field a
 // person types into (a signed copy's picker is a button), so a repaint takes nothing from under anybody.
@@ -35918,7 +35972,7 @@ function _renderDuplicateImportNotice(jobId) {
   }).join('');
   return '<div class="alert a-warn" style="font-size:11px;line-height:1.5;margin-bottom:10px;">'
     + '&#9888; <strong>Duplicate imports.</strong> These lines came from the same estimate entry more than once. '
-    + 'Delete the extras with the &#10005; beside the item number &mdash; keep whichever copy already carries '
+    + 'Open each extra (&#9662;) and press <strong>Remove line</strong> in its record &mdash; keep whichever copy already carries '
     + 'valuations or a linked appraiser.'
     + '<ul style="margin:6px 0 0 16px;padding:0;">' + lines + '</ul></div>';
 }
@@ -36005,21 +36059,42 @@ function invWorkFlags(job) {
   });
 }
 
-function _invMatchesFilter(r, job) {
-  var f = _invFilter;
-  if (f.when === 'today' && (r.ts || 0) < _invDayStart(0)) return false;
-  if (f.when === 'week'  && (r.ts || 0) < _invDayStart(6)) return false;
-  if (f.room !== '' && String(r.roomIdx == null ? '' : r.roomIdx) !== String(f.room)) return false;
+// Which parts of the filter on screen hide this line ('when', 'room', 'flag', 'q'), in that order. ONE answer, read three
+// ways: a line shows when nothing hides it (_invMatchesFilter); Show the item lifts only the parts that hide its line
+// (deskShowLine); the filter row's earlier-days hint counts the undecided lines the day alone hides (_invEarlierUndecided).
+function _invFilterHides(r, job) {
+  var f = _invFilter, out = [];
+  if ((f.when === 'today' && (r.ts || 0) < _invDayStart(0)) || (f.when === 'week' && (r.ts || 0) < _invDayStart(6))) out.push('when');
+  if (f.room !== '' && String(r.roomIdx == null ? '' : r.roomIdx) !== String(f.room)) out.push('room');
   if (f.flag) {
     var fl = invWorkFlags(job).filter(function(x){ return x.key === f.flag; })[0];
-    if (fl && !fl.test(r, job)) return false;
+    if (fl && !fl.test(r, job)) out.push('flag');
   }
   if (f.q) {
     var blob = [r.objectName, r.category, r.disposition, r.channel, r.valNote, r.fieldNote,
                 _invRoomName(job.id, r.roomIdx), _invItemNo(r)].filter(Boolean).join(' ').toLowerCase();
-    if (blob.indexOf(f.q.toLowerCase()) < 0) return false;
+    if (blob.indexOf(f.q.toLowerCase()) < 0) out.push('q');
   }
-  return true;
+  return out;
+}
+function _invMatchesFilter(r, job) {
+  return _invFilterHides(r, job).length === 0;
+}
+// ⚠ TODAY HIDES YESTERDAY'S LEFTOVERS (2026-10-22). The desk opens on Today on a day with a capture, so a line shot
+// yesterday and still undecided fell off the evening's view unless somebody thought to press All. The filter row says how
+// many: the undecided lines (the Not yet decided chip's own test) that the day alone hides, so pressing All shows exactly
+// them. Text, never a second All: the one All is the filter's own button.
+function _invEarlierUndecided(job, all) {
+  if (_invFilter.when !== 'today') return 0;
+  var und = INV_WORK_FLAGS.filter(function(x){ return x.key === 'undecided'; })[0];
+  return (all || []).filter(function(r){
+    var h = _invFilterHides(r, job);
+    return h.length === 1 && h[0] === 'when' && und.test(r, job);
+  }).length;
+}
+function _invEarlierHintHtml(job, all) {
+  var n = _invEarlierUndecided(job, all);
+  return n ? n + ' from earlier days still undecided: press All' : '';
 }
 
 // Disposition → Room. Rooms run in WALKTHROUGH order (the estimate's own room index), the
@@ -36243,10 +36318,34 @@ function _invBulkApply(jobId, key, value) {
 function setInvWhen(v)  { _invFilter.when = v; renderInventoryTab(); }
 function setInvRoom(v)  { _invFilter.room = v; renderInventoryTab(); }
 function setInvQuery(v) { _invFilter.q = String(v || '').trim(); renderInventoryTab(); }
-function setInvFlag(v)  { _invFilter.flag = (_invFilter.flag === v) ? '' : v; renderInventoryTab(); }
+// ⚠ A Needs you chip counts the whole job, so pressing one shows the whole job (2026-10-22): When goes to All with it. Under
+// Today, "No value yet 32" filtered the rows to 24 with nothing saying why. Pressing it off leaves When as it is.
+function setInvFlag(v)  { _invFilter.flag = (_invFilter.flag === v) ? '' : v; if (_invFilter.flag) _invFilter.when = 'all'; renderInventoryTab(); }
 function invClearFilters() { _invFilter = { when:'all', room:'', q:'', flag:'' }; renderInventoryTab(); }
 function _invToggleFold(k) { if (_invFold[k]) delete _invFold[k]; else _invFold[k] = 1; renderInventoryTab(); }
 function _invToggleOpen(id) { if (_invOpen[id]) delete _invOpen[id]; else _invOpen[id] = 1; renderInventoryTab(); }
+// ⚠⚠ SHOW THE ITEM (2026-10-22). A notice above the rows names its line by number, and the reader had to find #31 by
+// scrolling or typing it into the search box, under a Today filter that may well have hidden it. This lifts only the
+// parts of the filter that hide that line (_invFilterHides: the day, the room, a Needs you chip, the search), unfolds its
+// group, opens its record, draws the desk once and puts the row at the top of the screen. Everything else the person set
+// stays as they set it. A line no longer on the inventory is refused quietly: the notice it came from is gone with it.
+function deskShowLine(jobId, stableId) {
+  var job = _invJob(jobId);
+  var ref = job ? _jobInvRefs(jobId).filter(function(r){ return r.stableId === stableId; })[0] : null;
+  if (!ref) return false;
+  _invFilterHides(ref, job).forEach(function(k){ _invFilter[k] = (k === 'when') ? 'all' : ''; });
+  delete _invFold[ref.disposition || ''];
+  _invOpen[stableId] = 1;
+  renderInventoryTab();
+  var row = document.getElementById(_invRowDomId(stableId));
+  if (row && row.scrollIntoView) row.scrollIntoView({ block: 'start' });
+  return !!row;
+}
+// The notice's press: an outline in the bronze, never the dark fill (the first dark button above the rows is the tab's
+// primary document, which browser step 6 and the doc-contract test take by that look).
+function _deskShowBtnHtml(jobId, stableId) {
+  return ' <button type="button" class="desk-show" onclick="deskShowLine(' + jobId + ',\'' + stableId + '\')">Show the item</button>';
+}
 // The summary is the last thing on the tab, under the four bars (2026-10-22), and More ▾ is at the top: opening it
 // scrolls it into view, or the press reads as doing nothing.
 function invToggleRollups() {
@@ -36507,7 +36606,7 @@ function _agStateHtml(jobId) {
   return '<span style="color:var(--gray);">' + esc(bits.join(' &middot; ').replace(/&middot;/g, '·')) + ' &middot; check them below</span>';
 }
 
-// Every notice the agent raised on this job, most important first. Persisted on the row, so a
+// Every notice the agent raised on this job that still wants a look, most important first. Persisted on the row, so a
 // must-find sighting survives a reload.
 var AGENT_NOTICE_KINDS = [
   { kind:'mustfind', label:'Must find',        cls:'a-err'  },
@@ -36515,16 +36614,46 @@ var AGENT_NOTICE_KINDS = [
   { kind:'firearm',  label:'Firearm',           cls:'a-err'  },
   { kind:'other',    label:'Look at this',      cls:'a-warn' }
 ];
+// ⚠⚠ QUIET ONCE IT HAS HAD ITS LOOK (Anthony, 2026-10-22, Q3: *"Quiet once reviewed"*). Nothing ever cleared a notice, so
+// after the first evening "Agent One raised N things to look at" stood above the rows for the life of the job. A Look at
+// this leaves that list once a person has reviewed its line (invLineReviewed, the one rule); a Must find once every intake
+// must-find is recorded found (mustFindAllFound: a notice carries no must-find key, so the job's list answers). A Firearm
+// and a Possible NFA item never go quiet: those are the two a person must not scroll past. Every notice stays readable in
+// its line's record, under From the field (_agRecordNoticesHtml), so nothing the agent said is lost.
+function agentNoticeQuiet(kind, ref, job) {
+  if (kind === 'other') return invLineReviewed(ref);
+  if (kind === 'mustfind') return mustFindAllFound(job);
+  return false;
+}
 function agentNotices(jobId, all) {
-  var out = [];
+  var out = [], job = _invJob(jobId);
   AGENT_NOTICE_KINDS.forEach(function(k) {
     (all || []).forEach(function(r) {
       (r.agentNotices || []).forEach(function(n) {
-        if (n.kind === k.kind) out.push({ kind:k.kind, label:k.label, cls:k.cls, text:n.text, ref:r });
+        if (n.kind === k.kind && !agentNoticeQuiet(k.kind, r, job)) out.push({ kind:k.kind, label:k.label, cls:k.cls, text:n.text, ref:r });
       });
     });
   });
   return out;
+}
+// What Agent One said about this one line, every notice, quiet or not, in the line's record: where a quiet one is still read.
+function _agRecordNoticesHtml(job, ref) {
+  var mine = (ref && ref.agentNotices) || [];
+  if (!mine.length) return '';
+  var rows = [];
+  AGENT_NOTICE_KINDS.forEach(function(k) {
+    mine.forEach(function(n) {
+      if (n.kind !== k.kind) return;
+      var quiet = agentNoticeQuiet(k.kind, ref, job);
+      rows.push('<div class="' + k.cls + ' inv-agent-rec-n" style="font-size:11px;margin-bottom:4px;"><strong>' + esc(k.label) + '</strong> &mdash; ' + esc(n.text)
+        + (quiet ? ' <span style="color:var(--gray);">&middot; off the list above the rows: '
+            + (k.kind === 'mustfind' ? 'every must-find is recorded found' : 'the line is reviewed') + '</span>' : '') + '</div>');
+    });
+  });
+  if (!rows.length) return '';
+  return '<div class="inv-agent-rec" style="margin-top:6px;">'
+    + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Agent One noted</div>'
+    + rows.join('') + '</div>';
 }
 // ══════════════ POSSIBLE DUPLICATES ══════════════════════════════════════════════
 // ⚠⚠ THE CASE THIS EXISTS FOR, IN ANTHONY'S WORDS: *"we take two pictures of that bar ...
@@ -37394,7 +37523,7 @@ function _avNoticesHtml(job, all) {
     + 'Agent Two raised ' + list.length + ' thing' + (list.length === 1 ? '' : 's') + ' to look at</div>'
     + shown.map(function(n) {
         return '<div class="a-warn" style="font-size:11px;margin-bottom:4px;"><strong>' + esc(n.label) + '</strong> &middot; '
-          + esc(_invNamed(n.ref)) + ' &mdash; ' + esc(n.text) + '</div>';
+          + esc(_invNamed(n.ref)) + ' &mdash; ' + esc(n.text) + _deskShowBtnHtml(job.id, n.ref.stableId) + '</div>';
       }).join('')
     + (list.length > shown.length ? '<div style="font-size:10.5px;color:var(--gray);">' + (list.length - shown.length) + ' more on the lines themselves.</div>' : '')
     + '</div>';
@@ -37667,7 +37796,7 @@ function _renderInvWorkbar(job, all) {
     + '<div id="inv-agent-state" style="font-size:10.5px;margin-top:7px;">' + _agStateHtml(jid) + '</div>'
     + '<div id="inv-room-state" style="font-size:10.5px;margin-top:4px;">' + _arStateHtml(jid) + '</div>'
     + '<div id="inv-value-state" style="font-size:10.5px;margin-top:4px;">' + _avStateHtml(jid) + '</div>'
-    + _agNoticesHtml(jid, all)
+    + '<div id="inv-agent-notices">' + _agNoticesHtml(jid, all) + '</div>'
     + '<div id="inv-value-notices">' + _avNoticesHtml(job, all) + '</div>'
     + '</div>';
 }
@@ -37686,7 +37815,7 @@ function _agNoticesHtml(jobId, all) {
         return '<div class="' + n.cls + '" style="font-size:11px;margin-bottom:4px;">'
           + '<strong>' + esc(n.label) + '</strong> &middot; ' + esc(where)
           + (n.ref.itemNo ? ' &middot; #' + n.ref.itemNo : '')
-          + ' &mdash; ' + esc(n.text) + '</div>';
+          + ' &mdash; ' + esc(n.text) + _deskShowBtnHtml(jobId, n.ref.stableId) + '</div>';
       }).join('')
     // ⚠ IT SAYS WHAT IT IS. A model reading a photograph is not a search of the house, and a
     // notice that reads as a clearance is worse than none.
@@ -37733,6 +37862,8 @@ function _renderInvFilterRow(job, all) {
       + 'oninput="clearTimeout(window._invQT);window._invQT=setTimeout(function(){setInvQuery(document.getElementById(\'inv-q\').value);},250)" '
       + 'id="inv-q" style="font-size:11px;padding:3px 6px;flex:1;min-width:140px;max-width:260px;">'
     + (active ? '<button class="btn-s" onclick="invClearFilters()" style="font-size:10.5px;">Clear filters</button>' : '')
+    // Text, never a second All (browser step 44 presses the one); its host is drawn empty so a split can repaint it by id.
+    + '<span id="inv-earlier" class="inv-earlier">' + _invEarlierHintHtml(job, all) + '</span>'
     + '</div>';
 }
 
@@ -37924,7 +38055,7 @@ function _renderInvRow(job, ref) {
     warn.push('<span title="' + esc((_arDupEligible(ref) && ref.dupWhy
           ? 'The room check: ' + ref.dupWhy + '.'
           : 'Agent One gave this name to ' + _agDupSet[sid] + ' lines in this room, off different photographs.')
-      + ' Check Possible duplicates at the top of the tab.')
+      + ' Check Possible duplicates, above the rows.')
       + '" style="color:var(--bronze);">possible duplicate</span>');
   }
   var det = _invDetailRefs(jid, ref.stableId);
@@ -38038,6 +38169,8 @@ function _renderInvPanel(job, ref) {
         ? '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px;">Detail shots \u00b7 ' + det.length + '</div>'
           + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invThumbHTML(jid, d, 64); }).join('') + '</div>'
         : '')
+    // What Agent One noticed in this photograph, every notice: a Look at this off the list above the rows is read here (Q3).
+    + _agRecordNoticesHtml(job, ref)
     + '</div>');
   return '<div style="padding:10px 4px 12px 52px;background:#fcfaf5;border-top:1px dashed var(--border-md);">'
     + '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;">'

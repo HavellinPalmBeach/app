@@ -278,7 +278,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ THE RENDERED ROW SAYS HOW MANY OBJECTS SHARE THE FRAME');
   {
     const rowCtx = sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', '_avPanelHtml', '_invDetailRefs', '_invPhotoSiblings',
+      fns: ['invLineReviewed', '_renderInvRow', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', '_agRecordNoticesHtml', '_avPanelHtml', '_invDetailRefs', '_invPhotoSiblings',
             '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',

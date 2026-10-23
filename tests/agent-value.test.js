@@ -110,7 +110,7 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAccept', 'agentValueUseSale',
-  'agentValueNotices', '_avNoticesHtml', '_avSummary', '_avRowBadges', '_avAcceptButtonHtml', '_avPanelHtml',
+  'agentValueNotices', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avAcceptButtonHtml', '_avPanelHtml',
   'invValBasisWord', '_avUnreviewedStamp',
   // the real rules they read, never stubs of them
   '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invHasValue', 'roundCents', 'invIsIntrinsic', 'invCatMeta',
@@ -712,7 +712,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rowRig = (row, job) => sandbox({
       fns: ['invLineReviewed', '_renderInvRow', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml',
             '_avHasFigure', '_invHasValue', '_avSummary', 'fmt', 'roundCents', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
-            'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_avPanelHtml', '_invMoney', '_invDetailRefs',
+            'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',

@@ -20,6 +20,10 @@
 //   H · the trims (G4): the client line's Target Start only where no schedule strip is drawn; the work bar's line under its
 //       title the HVL id alone; one Send request on the desk for every waiting line (the Releases card's) and one for a
 //       selection (the bulk bar's), the work bar none; the tab's subtitle in the new order.
+//   I · the review aids and Anthony's Q3 (G5): Show the item on both agents' notices, lifting only the filter that hides the
+//       line; a Needs you chip showing the whole job; the earlier-days hint (words, never a second All); the must-finds
+//       shrinking to one green line once all are found; the two stale sentences; and the agent's notes quiet once they have
+//       had their look, still read in the line's record.
 //
 // Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -221,6 +225,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupE({ group, ok, eq, has, lacks });
     groupF({ group, ok, eq, has, lacks });
     groupH({ group, ok, eq, has, lacks });
+    groupI({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -1524,5 +1529,324 @@ function groupH({ group, ok, eq, has, lacks }) {
     has(inner(nh, 'inv-releases') || '', 'onclick="invMarkRequestSent(7)"', 'fixture: the draft alone, waiting on its tap');
     lacks(card(nh), 'more line', 'nothing about a line the draft did not carry, where there is none');
     eq(relHead(nh).line, 'Request drafted: tap I’ve sent it · no beneficiaries recorded', 'and the bar\'s line as C3 has it');
+  }
+}
+
+// The text a person reads, with the two entities group I's blocks draw (the dash and the tick) read as the characters they are.
+const readOf = (h) => textOf(String(h == null ? '' : h).replace(/&mdash;/g, '—').replace(/&#10003;/g, '✓'));
+// ═══ I · THE REVIEW AIDS AND ANTHONY'S Q3 (G5) ═════════════════════════════════
+// Anthony, 2026-10-22, Q3 ("Should Agent One's notes go quiet?"): *"Quiet once reviewed."* A Look at this leaves the list
+// above the rows once its line is reviewed and is still read in the line's record; a Must find once every intake must-find
+// is recorded found; a Firearm and a Possible NFA item always stay. And the review aids the evening needs: Show the item on
+// each notice, a chip that shows the whole job, the leftovers Today hides named in words, the must-finds shrinking.
+function groupI({ group, ok, eq, has, lacks }) {
+  const EARLY = ON('2026-10-18'), Y = ON('2026-10-19');
+  // The real tonight's items: the work bar, the chips, the filter, the groups and the rows, on a clock that reads T0 (noon on
+  // Oct 20 in Palm Beach), so Today, Last 7 days and the earlier-days count are the real code's answers.
+  const REAL_ITEMS = ['_renderInvWorkbar', '_renderInvFlagStrip', '_renderInvFilterRow', '_invGroupItems', '_renderInvGroup', '_invMatchesFilter', '_renderInvBulk'];
+  const tonight = (jobO, rows, o) => {
+    o = o || {};
+    const D = desk(jobO || PROBATE(), {}, { refs: rows, real: REAL_ITEMS.concat(o.real || []), roots: ['deskShowLine', 'setInvFlag', 'setInvWhen', '_invRefreshFlagStrip',
+      '_invRefreshAgentNotices', 'sfToggleFoundDesk', 'toggleMustFound', '_invEdit', '_mfHandle', '_mustFindKey'].concat(o.roots || []), stubs: Object.assign({
+      SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true }, Date: TickDate(T0), _invAssignItemNos: () => rows.filter((r) => !r.deletedAt),
+      savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, alert() {}, _invRefreshSummary() {}, saveJobs() {}, syncJobToSheets() {},
+    }, o.stubs || {}) });
+    return D;
+  };
+  const rowIds = (h) => (h.match(/id="inv-row-([^"]+)"/g) || []).map((m) => m.slice(12, -1));
+  const shows = (h) => (h.match(/deskShowLine\(7,'[^']*'\)/g) || []);
+
+  group('I1 · Show the item: lifts only the part of the filter that hides the line, unfolds its group, opens its record, draws once, scrolls to it');
+  {
+    const rows = () => [
+      LINE('w', { itemNo: 31, roomIdx: 1, objectName: 'Ring box', namedBy: 'agent', ts: EARLY, agentNotices: [{ kind: 'mustfind', text: 'a small blue ring box on the dresser' }] }),
+      LINE('t', { itemNo: 40, roomIdx: 0, objectName: 'Table lamp', namedBy: 'agent', ts: T0 }),
+      LINE('k', { itemNo: 41, roomIdx: 0, objectName: 'Armchair', disposition: 'Keep', namedBy: 'desk', ts: T0 })];
+    const job = PROBATE({ mustFind: 'Grandmother’s ring' });
+    const D = tonight(job, rows());
+    D.C._invFilter.when = 'today';
+    const h0 = D.render();
+    ok(!D.log.renderErr, 'the real tonight\'s items draw (' + (D.log.renderErr || 'ok') + ')');
+    eq(rowIds(h0).sort(), ['k', 't'], 'fixture: Today hides the ring box, shot two days ago');
+    const notes = inner(h0, 'inv-agent-notices') || '';
+    has(readOf(notes), 'Must find', 'fixture: Agent One\'s Must find is above the rows, read over every line');
+    eq(shows(notes), ['deskShowLine(7,\'w\')'], '⚠ the notice carries one Show the item, for its own line');
+    ok(/<button type="button" class="desk-show" onclick="deskShowLine\(7,'w'\)">Show the item<\/button>/.test(notes), 'a button, in the bronze outline');
+    lacks(notes, 'gray-dk', '⚠ never the dark fill the tab\'s primary document wears (browser step 6 takes the first such button)');
+    const before = D.log.renders, scrolls = D.dom.log.scrolls.length;
+    const r = attempt(() => D.C.deskShowLine(7, 'w'));
+    ok(r.ok && r.val === true, 'Show the item runs and finds the row (' + (r.err || r.val) + ')');
+    eq(D.log.renders - before, 1, '⚠ the desk is drawn once');
+    eq(D.C._invFilter.when, 'all', '⚠⚠ the day was what hid it: When is All now');
+    const h1 = D.dom.html;
+    ok(rowIds(h1).indexOf('w') > -1, '⚠⚠ the ring box\'s row is on the desk');
+    const row = inner(h1, 'inv-row-w') || '';
+    has(row, 'From the field', '⚠⚠ with its record open');
+    has(row, 'Remove line', 'the whole record, its own controls');
+    eq(D.C._invOpen.w, 1, 'opened as the ▾ would open it');
+    const sc = D.dom.log.scrolls.slice(scrolls);
+    eq(sc.map((x) => [x.id, x.opt && x.opt.block]), [['inv-row-w', 'start']], '⚠ and the row is brought to the top of the screen');
+
+    // Every other part the person set stays, unless it is what hides the line.
+    const E = tonight(job, rows());
+    Object.assign(E.C._invFilter, { when: 'today', room: '1', q: '', flag: '' });
+    E.render();
+    attempt(() => E.C.deskShowLine(7, 'w'));
+    eq(E.C._invFilter, { when: 'all', room: '1', q: '', flag: '' }, '⚠ the room the person picked is the ring box\'s room: it stays picked');
+    const F = tonight(job, rows());
+    Object.assign(F.C._invFilter, { when: 'week', room: '0', q: 'lamp', flag: 'undecided' });
+    F.C._invFold[''] = 1;
+    F.render();
+    eq(rowIds(F.dom.html), [], 'fixture: the room, the search and a folded Not yet decided group hide it (the week does not)');
+    attempt(() => F.C.deskShowLine(7, 'w'));
+    eq(F.C._invFilter, { when: 'week', room: '', q: '', flag: 'undecided' }, '⚠⚠ only the room and the search are lifted: Last 7 days and the chip did not hide it');
+    eq(F.C._invFold[''], undefined, '⚠ its group is unfolded');
+    has(inner(F.dom.html, 'inv-row-w') || '', 'From the field', 'and its record is open on the desk');
+    // A line gone from the inventory: nothing to show, nothing drawn.
+    const g0 = F.log.renders;
+    eq(attempt(() => F.C.deskShowLine(7, 'nope')).val, false, 'a line no longer on the inventory is refused');
+    eq(F.log.renders, g0, 'and nothing is drawn for it');
+
+    // Agent Two's notices carry it too.
+    const v = LINE('v', { itemNo: 5, objectName: 'Oil painting', category: 'Art & Décor', valuedBy: 'agent', fmv: 900, valLow: 600, valHigh: 1200, valSource: 'Auction comps',
+      valNameAt: 'Oil painting', ts: EARLY, valNotices: [{ kind: 'worthpoint', text: 'a signed print may be worth more' }] });
+    const V = tonight(job, [v, LINE('t2', { ts: T0 })]);
+    V.C._invFilter.when = 'today';
+    const hv = V.render();
+    eq(shows(inner(hv, 'inv-value-notices') || ''), ['deskShowLine(7,\'v\')'], 'Agent Two\'s notice carries one Show the item, for its line');
+    attempt(() => V.C.deskShowLine(7, 'v'));
+    has(inner(V.dom.html, 'inv-row-v') || '', 'From the field', 'and it lands on the painting\'s open record');
+  }
+
+  group('I2 · a Needs you chip counts the whole job, so pressing it shows the whole job: When goes to All, and its count is the rows drawn');
+  {
+    const rows = [LINE('a', { ts: EARLY }), LINE('b', { ts: Y }), LINE('c', { ts: T0 }), LINE('d', { ts: T0, disposition: 'Keep', namedBy: 'desk' })];
+    const D = tonight(PROBATE(), rows);
+    D.C._invFilter.when = 'today';
+    const h0 = D.render();
+    const chip = /onclick="setInvFlag\('undecided'\)"[^>]*>Not yet decided <strong>(\d+)<\/strong>/.exec(inner(h0, 'inv-flagstrip') || '');
+    eq(chip && chip[1], '3', 'fixture: the chip counts three undecided lines over the whole job');
+    eq(rowIds(h0).sort(), ['c', 'd'], 'fixture: Today draws two of the four');
+    attempt(() => D.C.setInvFlag('undecided'));
+    eq([D.C._invFilter.flag, D.C._invFilter.when], ['undecided', 'all'], '⚠⚠ the chip pressed: its filter on, and When to All');
+    eq(rowIds(D.dom.html).sort(), ['a', 'b', 'c'], '⚠⚠ the rows drawn are the three the chip counted (under Today it drew one, with nothing saying why)');
+    attempt(() => D.C.setInvWhen('week'));
+    attempt(() => D.C.setInvFlag('undecided'));
+    eq([D.C._invFilter.flag, D.C._invFilter.when], ['', 'week'], 'pressed off: the chip\'s filter goes and When stays as the person last set it');
+    has(fn('setInvFlag'), "if (_invFilter.flag) _invFilter.when = 'all'", 'one line, in the chip\'s own handler');
+  }
+
+  group('I3 · Today names the leftovers it hides: words in the filter row, never a second All, counting only what All would show');
+  {
+    const rows = () => [LINE('a', { ts: EARLY, roomIdx: 0 }), LINE('b', { ts: Y, roomIdx: 1 }), LINE('c', { ts: Y, disposition: 'Donate' }),
+      LINE('d', { ts: T0 }), LINE('e', { ts: EARLY, disposition: 'Undecided' })];
+    const D = tonight(PROBATE(), rows());
+    D.C._invFilter.when = 'today';
+    const h = D.render();
+    const hint = inner(h, 'inv-earlier');
+    // The field's Undecided chip stores '' (FIELD_DISPOSITIONS). The hint reads the Not yet decided chip's own test, so it
+    // counts exactly what the chip counts: a line whose sheet reads "Undecided" (e) is on neither.
+    eq(readOf(hint), '2 from earlier days still undecided: press All', '⚠⚠ the two lines shot on earlier days and still undecided, named');
+    ok(inner(h, 'inv-earlier') !== null && !/<button|onclick/.test(hint), '⚠ words, not a control');
+    eq((h.match(/onclick="setInvWhen\('all'\)"/g) || []).length, 1, '⚠⚠ one All on the desk: the filter\'s own (browser step 44 presses exactly one)');
+    has(CSS, '.inv-earlier{', 'styled as a note in the warning colour');
+    // Only what All would show: a line the room also hides is not counted.
+    D.C._invFilter.room = '1';
+    eq(readOf(inner(D.render(), 'inv-earlier')), '1 from earlier days still undecided: press All', 'with a room picked, only the leftovers in that room');
+    D.C._invFilter.room = '';
+    attempt(() => D.C.setInvWhen('all'));
+    eq(readOf(inner(D.dom.html, 'inv-earlier')), '', 'on All, nothing to say');
+    ok(D.dom.html.indexOf('id="inv-earlier"') > -1, 'and its host stays drawn, empty, for the repaint');
+    ok(rowIds(D.dom.html).indexOf('a') > -1 && rowIds(D.dom.html).indexOf('b') > -1, 'All shows them');
+    eq(readOf(inner((() => { D.C._invFilter.when = 'week'; return D.render(); })(), 'inv-earlier')), '', 'Last 7 days says nothing (Today is the evening\'s default, and the hint is for it)');
+    // A split (or any row edit) repaints it by id, as a full render would draw it.
+    const S = tonight(PROBATE(), rows());
+    S.C._invFilter.when = 'today';
+    S.render();
+    S.C._photoRefs[7].push(LINE('f', { ts: Y }));
+    attempt(() => S.C._invRefreshFlagStrip(7));
+    const partial = inner(S.dom.html, 'inv-earlier');
+    eq(readOf(partial), '3 from earlier days still undecided: press All', '⚠ the count repainted in place after a line was added');
+    eq(partial, inner(S.render(), 'inv-earlier'), '⚠ equal to what a full render writes');
+  }
+
+  group('I4 · the desk\'s must-finds, once all are found: one green line, Show found per job for the session, the safety row always');
+  {
+    const C = lift(['standingFlagsBlock', '_sfHost', 'sfToggleFoundDesk', '_repaintStandingFlags', 'toggleMustFound', '_mustFindKey'], {
+      jobs: [], document: null, saveJobs() {}, syncJobToSheets() {}, _todayStr: () => TODAY, _invStampBy: () => 'Ashley Jerome' });
+    const J = (o) => Object.assign({ id: 7, name: 'Ashworth', mustFind: 'Grandmother’s ring\nDeed box', safetyNotes: 'Loose stair rail to the attic.',
+      mustFound: {}, at: {} }, o || {});
+    const both = { [C._mustFindKey('Grandmother’s ring')]: { at: '2026-10-20', by: 'Ashley Jerome' }, [C._mustFindKey('Deed box')]: { at: '2026-10-21', by: 'Ashley Jerome' } };
+    const open = C.standingFlagsBlock(J({ mustFound: { [C._mustFindKey('Deed box')]: both[C._mustFindKey('Deed box')] } }), { desk: true });
+    eq((open.match(/>Found it</g) || []).length, 1, 'fixture: one still missing, with its Found it');
+    lacks(open, 'sf-allfound', 'and no all-found line while one is missing');
+    const done = C.standingFlagsBlock(J({ mustFound: both }), { desk: true });
+    has(readOf(done), 'Must find ✓ All 2 must-finds found', '⚠⚠ every one found: one green line says so');
+    has(done, 'class="sf-row sf-done sf-allfound"', 'in the found rows\' green');
+    eq((done.match(/onclick="sfToggleFoundDesk\(7\)">Show found</g) || []).length, 1, 'with Show found');
+    lacks(done, 'Undo', '⚠ the found rows are folded under it');
+    lacks(readOf(done), 'Grandmother', 'their wording too');
+    has(readOf(done), 'Loose stair rail to the attic.', '⚠ the safety row always shows');
+    lacks(done, 'gray-dk', 'and nothing above the work bar wears the dark fill');
+    has(readOf(C.standingFlagsBlock(J({ mustFind: 'Deed box', mustFound: { [C._mustFindKey('Deed box')]: both[C._mustFindKey('Deed box')] } }), { desk: true })),
+      '✓ The must-find is found', 'one must-find, said in the singular');
+    // The other shapes are unchanged: the plan, the dashboard and the room still list each found row.
+    const dash = C.standingFlagsBlock(J({ mustFound: both }), {});
+    lacks(dash, 'sf-allfound', 'the dashboard\'s brief is unchanged');
+    eq((dash.match(/Undo/g) || []).length, 2, 'and still lists each found row with its Undo');
+    // No job id: the line, and no button to press.
+    lacks(C.standingFlagsBlock(J({ id: undefined, mustFound: both }), { desk: true }), 'sfToggleFoundDesk', 'a job with no id draws the line without the button');
+
+    // Show found, Undo and Found it, pressed through the desk's host and repainted by id.
+    const job = J({ mustFound: Object.assign({}, both) }), other = J({ id: 8, mustFound: Object.assign({}, both) });
+    C.jobs.push(job, other);
+    C.document = liveDom(7);
+    C.document.html = C._sfHost('sf-host-desk', job);
+    const host = () => C.document.html;
+    attempt(() => C.sfToggleFoundDesk(7));
+    eq((host().match(/>Undo</g) || []).length, 2, '⚠ Show found: the found rows, each with its Undo');
+    has(host(), '>Hide found<', 'and the line offers Hide found');
+    lacks(C.standingFlagsBlock(other, { desk: true }), 'Undo', 'per job: another client\'s desk still folds its own');
+    const undo = /onclick="toggleMustFound\(7,'([^']+)'\)">Undo</.exec(host());
+    attempt(() => C.toggleMustFound(7, undo[1]));
+    lacks(host(), 'sf-allfound', '⚠ Undo: one missing again, and the all-found line goes');
+    eq((host().match(/>Found it</g) || []).length, 1, 'its Found it back');
+    const found = /onclick="toggleMustFound\(7,'([^']+)'\)">Found it</.exec(host());
+    attempt(() => C.toggleMustFound(7, found[1]));
+    has(readOf(host()), '✓ All 2 must-finds found', 'Found it again: the line is back');
+    attempt(() => C.sfToggleFoundDesk(7));
+    lacks(host(), 'Undo', 'Hide found folds them again');
+    // Session only: nothing of it is saved.
+    lacks(noComments(fn('sfToggleFoundDesk')), 'localStorage', 'Show found is never saved');
+    lacks(noComments(fn('standingFlagsBlock')), 'localStorage', 'nor read from storage');
+  }
+
+  group('I5 · Q3: a Look at this goes quiet once its line is reviewed, a Must find once every must-find is found; Firearm and NFA never');
+  {
+    const N = (kind, text) => ({ kind, text });
+    const rows = () => [
+      LINE('o1', { itemNo: 1, namedBy: 'agent', reviewed: false, agentNotices: [N('other', 'a crack along the top rail')] }),
+      LINE('o2', { itemNo: 2, namedBy: 'agent', reviewed: true, agentNotices: [N('other', 'the drawer pulls do not match')] }),
+      LINE('o3', { itemNo: 3, namedBy: 'desk', objectName: 'Side table', disposition: 'Donate', agentNotices: [N('other', 'one leg reglued')] }),
+      LINE('m1', { itemNo: 4, namedBy: 'agent', reviewed: true, agentNotices: [N('mustfind', 'a ring box on the dresser')] }),
+      LINE('f1', { itemNo: 5, namedBy: 'agent', reviewed: true, agentNotices: [N('firearm', 'a long gun in the closet'), N('nfa', 'a tube that may be a suppressor')] })];
+    const notesOf = (C, job) => readOf(C._agNoticesHtml(7, C._photoRefs[7]));
+    // `_mustFindKey` lifted by name: the fixtures key their found records with it, whatever the code under test reaches.
+    const C = lift(['_agNoticesHtml', '_agRecordNoticesHtml', 'agentNotices', '_mustFindKey'], { jobs: [], _photoRefs: { 7: rows() }, estimateStore: { 7: { estimate: { rooms: [] } } } });
+    const missing = PROBATE({ mustFind: 'Grandmother’s ring' });
+    C.jobs.push(missing);
+    const t0 = notesOf(C, missing);
+    has(t0, 'a crack along the top rail', 'an unreviewed line\'s Look at this is listed');
+    lacks(t0, 'the drawer pulls do not match', '⚠⚠ a reviewed line\'s Look at this is not (ticked Reviewed)');
+    lacks(t0, 'one leg reglued', '⚠⚠ nor one reviewed by being named and decided on the desk (invLineReviewed, the one rule)');
+    has(t0, 'a ring box on the dresser', '⚠ a Must find stays while a must-find is missing, its line reviewed or not');
+    has(t0, 'a long gun in the closet', '⚠ a Firearm stays');
+    has(t0, 'a tube that may be a suppressor', '⚠ a Possible NFA item stays');
+    has(t0, 'Agent One raised 4 things to look at', 'the heading counts only what it lists');
+    eq(shows(C._agNoticesHtml(7, C._photoRefs[7])), ["deskShowLine(7,'m1')", "deskShowLine(7,'f1')", "deskShowLine(7,'f1')", "deskShowLine(7,'o1')"],
+      'each listed notice carries one Show the item for its own line, in the order that matters (Must find, NFA, Firearm, Look at this)');
+    // Every must-find found: the Must find goes quiet; the firearm and the NFA stay.
+    C.jobs[0] = PROBATE({ mustFind: 'Grandmother’s ring', mustFound: { [C._mustFindKey('Grandmother’s ring')]: { at: '2026-10-21', by: 'Ashley Jerome' } } });
+    const t1 = notesOf(C);
+    lacks(t1, 'a ring box on the dresser', '⚠⚠ every must-find recorded found: the Must find goes quiet');
+    has(t1, 'a long gun in the closet', '⚠ the Firearm still stands');
+    has(t1, 'a tube that may be a suppressor', '⚠ and the Possible NFA item');
+    // No must-find list at all: nothing is found, so a Must find stays.
+    C.jobs[0] = PROBATE({ mustFind: '' });
+    has(notesOf(C), 'a ring box on the dresser', 'a job with no must-find list keeps its Must find (nothing is recorded found)');
+    // Everything quiet: the block goes.
+    C._photoRefs[7] = rows().filter((r) => r.stableId === 'o2' || r.stableId === 'o3');
+    eq(C._agNoticesHtml(7, C._photoRefs[7]), '', 'nothing left to look at: no block above the rows');
+
+    // Still read in the line's record, quiet or not, and saying why it is off the list.
+    C._photoRefs[7] = rows();
+    C.jobs[0] = PROBATE({ mustFind: 'Grandmother’s ring', mustFound: { [C._mustFindKey('Grandmother’s ring')]: { at: '2026-10-21', by: 'Ashley Jerome' } } });
+    const rec = (id) => readOf(C._agRecordNoticesHtml(C.jobs[0], C._photoRefs[7].filter((r) => r.stableId === id)[0]));
+    eq(rec('o2'), 'Agent One noted Look at this — the drawer pulls do not match · off the list above the rows: the line is reviewed', '⚠⚠ the reviewed line\'s record keeps its note, and says why it is off the list');
+    eq(rec('m1'), 'Agent One noted Must find — a ring box on the dresser · off the list above the rows: every must-find is recorded found', 'the Must find\'s too');
+    eq(rec('o1'), 'Agent One noted Look at this — a crack along the top rail', 'a note still listed above reads plainly in the record');
+    eq(rec('f1'), 'Agent One noted Possible NFA item — a tube that may be a suppressor Firearm — a long gun in the closet', 'every notice on the line, in the order that matters');
+    eq(C._agRecordNoticesHtml(C.jobs[0], LINE('z')), '', 'a line the agent said nothing about draws nothing');
+  }
+
+  group('I6 · on the desk: the quiet note gone from above the rows and present in the open record; repainted by id as a full render draws it');
+  {
+    const rows = () => [
+      LINE('o1', { itemNo: 1, objectName: 'Chest of drawers', namedBy: 'agent', reviewed: false, disposition: 'Donate', agentNotices: [{ kind: 'other', text: 'the drawer pulls do not match' }] }),
+      LINE('m1', { itemNo: 2, objectName: 'Ring box', namedBy: 'agent', reviewed: true, disposition: 'Keep', agentNotices: [{ kind: 'mustfind', text: 'a ring box on the dresser' }] })];
+    const job = PROBATE({ mustFind: 'Grandmother’s ring', mustFound: {}, at: {} });
+    const D = tonight(job, rows());
+    D.C._invOpen.o1 = 1;
+    const h0 = D.render();
+    has(readOf(inner(h0, 'inv-agent-notices')), 'the drawer pulls do not match', 'fixture: the unreviewed line\'s note is above the rows');
+    has(readOf(inner(h0, 'inv-row-o1')), 'Agent One noted Look at this — the drawer pulls do not match', 'and in its open record, under From the field');
+    // A name typed on the decided line reviews it (namedBy desk, a disposition chosen): its note goes quiet, by id.
+    const n0 = D.log.renders;
+    const r = attempt(() => D.C._invEdit(7, 'o1', 'objectName', { value: 'Mahogany chest of drawers', type: 'text' }));
+    ok(r.ok, 'the name is typed (' + (r.err || 'ok') + ')');
+    const partial = inner(D.dom.html, 'inv-agent-notices');
+    lacks(readOf(partial), 'the drawer pulls do not match', '⚠⚠ reviewed: the Look at this is gone from above the rows at once');
+    eq(D.log.renders, n0, 'repainted by id: no full render under the person typing');
+    const full = D.render();
+    eq(partial, inner(full, 'inv-agent-notices'), '⚠ equal to what a full render writes');
+    has(readOf(inner(full, 'inv-row-o1')), 'the drawer pulls do not match · off the list above the rows: the line is reviewed', '⚠⚠ and present in its record, saying why');
+    // The last Found it quiets the Must find on the desk, by id; Undo brings it back.
+    D.dom.html = D.dom.html + '<div id="sf-host-desk" data-job="7"></div>';
+    has(readOf(inner(D.dom.html, 'inv-agent-notices')), 'a ring box on the dresser', 'fixture: the Must find is above the rows while the ring is missing');
+    const h = D.C._mfHandle(D.C._mustFindKey('Grandmother’s ring'));
+    attempt(() => D.C.toggleMustFound(7, h));
+    const p2 = inner(D.dom.html, 'inv-agent-notices');
+    eq(p2, '', '⚠⚠ Found it: the Must find goes quiet above the rows, by id');
+    eq(p2, inner(D.render(), 'inv-agent-notices'), 'as a full render draws it');
+    D.dom.html = D.dom.html + '<div id="sf-host-desk" data-job="7"></div>';
+    attempt(() => D.C.toggleMustFound(7, h));
+    has(readOf(inner(D.dom.html, 'inv-agent-notices')), 'a ring box on the dresser', 'Undo: it is back');
+    // The repaints stand down off this client's desk.
+    D.dom.getElementById('inv-job').value = '8';
+    eq(attempt(() => D.C._invRefreshAgentNotices(7)).val, false, 'another client on the desk: the repaint does nothing');
+    // The by-id calls: guarded where they are lifted alone.
+    has(fn('toggleMustFound'), "if (typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);", 'toggleMustFound repaints the notices, guarded (a pinned sandbox lifts it alone)');
+    has(fn('_invEdit'), "if ((key === 'objectName' || key === 'category') && typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);",
+      '_invEdit repaints them on the two edits that can review a line without a full render');
+  }
+
+  group('I7 · the two stale sentences: the duplicate imports name Remove line; the possible-duplicate chip points above the rows');
+  {
+    const C = lift(['_renderDuplicateImportNotice', '_renderInvRow'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
+      _photoRefs: { 7: [LINE('a', { itemNo: 3, sourceVehId: 1, objectName: '2019 Lexus RX' }), LINE('b', { itemNo: 4, sourceVehId: 1, objectName: '2019 Lexus RX' })] },
+      _agDupSet: { a: 2 }, document: domStub({}) });
+    const n = C._renderDuplicateImportNotice(7);
+    has(readOf(n), 'Duplicate imports.', 'fixture: two lines off one walkthrough vehicle');
+    has(n, 'press <strong>Remove line</strong> in its record', '⚠⚠ the extras come off through Remove line, in the record');
+    lacks(n, '&#10005;', '⚠ no ✕ beside the item number: rows have had none since P22');
+    lacks(n, 'Delete the extras', 'the old sentence is gone');
+    const row = attempt(() => C._renderInvRow(C.jobs[0], C._photoRefs[7][0]));
+    ok(row.ok, 'the row draws (' + (row.err || 'ok') + ')');
+    const title = /title="([^"]*)"[^>]*>possible duplicate</.exec(row.val || '');
+    has(title && title[1], 'Check Possible duplicates, above the rows.', '⚠ the chip points where the block is: above the rows');
+    lacks(title && title[1], 'at the top of the tab', 'never the top of the tab, which is the client line now');
+  }
+
+  group('I8 · one rule each, read where it is needed: the filter\'s parts, the quiet notice, every must-find found');
+  {
+    eq(callersOf('_invFilterHides'), ['_invEarlierUndecided', '_invMatchesFilter', 'deskShowLine'], 'what hides a line: the filter, Show the item and the earlier-days hint');
+    eq(noComments(fn('_invMatchesFilter')).replace(/\s+/g, ' ').trim(), 'function _invMatchesFilter(r, job) { return _invFilterHides(r, job).length === 0; }',
+      '⚠ a line shows when no part hides it: no second copy of any part');
+    eq(callersOf('agentNoticeQuiet'), ['_agRecordNoticesHtml', 'agentNotices'], 'whether a notice is quiet: the list above the rows and the record');
+    eq(callersOf('mustFindAllFound'), ['agentNoticeQuiet', 'standingFlagsBlock'], 'every must-find found: the desk\'s brief and the Must find notices');
+    has(noComments(fn('_invEarlierUndecided')), "INV_WORK_FLAGS.filter(function(x){ return x.key === 'undecided'; })[0]", 'the hint reads the Not yet decided chip\'s own test');
+    lacks(noComments(fn('_invEarlierUndecided')), '!r.disposition', 'never a copy of it');
+    eq(callersOf('deskShowLine'), [], 'Show the item is pressed, never called by code');
+    eq(callersOf('_deskShowBtnHtml'), ['_agNoticesHtml', '_avNoticesHtml'], 'and drawn on both agents\' notices, nowhere else');
+    ok(/\.desk-show\{[^}]*border:1px solid var\(--bronze\)[^}]*background:var\(--white\)[^}]*color:var\(--bronze\)/.test(CSS),
+      'the outline has its own class: a bronze border and bronze words on white');
+    ok(!/\.desk-show\{[^}]*gray-dk/.test(CSS), 'and never the dark fill');
+    // Thumb-sized on a phone: inside the one phone block, beside the rule that sizes every other control there.
+    const phone = CSS.indexOf('@media (max-width:820px) {');
+    ok(phone > 0 && CSS.indexOf('  .desk-show{min-height:32px;}', phone) > phone, 'and 32 px tall on a phone, in the phone block (browser step 96 measures it)');
+    // The row it scrolls to lands under the sticky header and tabs (122 px at 1440, measured by browser step 96), not behind
+    // them: a margin off the height setTopbarHeight publishes, read by the browser's own scrollIntoView.
+    ok(/\[id\^="inv-row-"\]\{scroll-margin-top:calc\(var\(--topbar-h,0px\) \+ 8px\);\}/.test(CSS), '⚠ Show the item\'s row stops under the sticky bar, never behind it');
+    has(fn('setTopbarHeight'), "setProperty('--topbar-h', t.offsetHeight + 'px')", 'off the height the app already publishes for its sticky parts');
   }
 }

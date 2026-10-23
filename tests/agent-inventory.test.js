@@ -121,7 +121,7 @@ function rig(refs, over) {
   const saved = [], synced = [];
   const ctx = sandbox({
     fns: ['agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext',
-          '_agWrite', 'agentApplyResult', '_agState', 'agentNotices', '_agStateHtml',
+          '_agWrite', 'agentApplyResult', '_agState', 'agentNotices', 'agentNoticeQuiet', 'mustFindAllFound', 'invLineReviewed', '_agStateHtml',
           'invSplitItemN', 'invSplitItem', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDerivedRefs',
           // The duplicate flag. ⚠ LIFTED, NEVER STUBBED — a stub of the grouping rule is

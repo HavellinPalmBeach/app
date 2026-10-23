@@ -33,6 +33,12 @@
 //   never carried, the bar's line and the card naming the way round (the draft, I've sent it, then a fresh request), I've
 //   sent it pressed on the card, and the fresh request then offered there.
 //
+//   Part 5 (G5, the review aids and Anthony's Q3): on Today, the leftovers it hides named in words beside the one All; Show
+//   the item, pressed on Agent One's notice, landing on the nightstand Today hid, its record open at the top of the screen
+//   (its first line seen under the sticky header and tabs, at 1440 and 390), and on Agent Two's; a reviewed line's Look at this gone from above the rows and read in its record; the nightstand ticked
+//   Reviewed and its note following; both must-finds found, the brief shrinking to one green line with Show found and the
+//   Must find notice going quiet by id; the Not yet decided chip showing the whole job; the notices at 390.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -80,7 +86,10 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     // ── Seed: the two desks the build was measured on ─────────────────────────────────────────────
     sheet = await p.evaluate(([EST, LIV]) => {
       const NOW = Date.now();
-      const T_OLD = NOW - 6 * 86400000, T_Y = NOW - 86400000, T_TODAY = NOW - 3 * 3600000;
+      // Today's lines three hours ago, or just after midnight when the step runs before 3 am Eastern (the page's clock):
+      // never yesterday's, or every Today read on the desk is read off an empty day.
+      const DAY0 = new Date(NOW); DAY0.setHours(0, 0, 0, 0);
+      const T_OLD = NOW - 6 * 86400000, T_Y = NOW - 86400000, T_TODAY = Math.min(NOW, Math.max(NOW - 3 * 3600000, DAY0.getTime() + 60000));
       vendorDirectory = [
         { _row: 41, vendor_name: 'Kodner Galleries', category: 'Auction House', coi_received: '2026-09-01', coi_expires: '2027-09-01' },
         { _row: 42, vendor_name: 'Goodwill Palm Beach', category: 'Donation Pickup' },
@@ -588,6 +597,131 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     eq(await reqSends(), [['sendApprovalRequest(' + LIV + ')', 'releases', true]], '⚠⚠ the fresh request the card promised is offered, once, on screen, on the card');
     has((await relText()).replace(/\s+/g, ' '), 'not on it: send a fresh request.', 'and the card says it is for the line the request never carried');
     ok(String(await stat('releases', LIV)).indexOf('1 item needs written approval: send a request') === 0, 'the bar\'s line now asks for the send it offers  [' + (await stat('releases', LIV)) + ']');
+
+    // ══ PART 5 (G5): the review aids and Anthony's Q3 ══════════════════════════════════════════════════
+    console.log('\n## Part 5 · on Today: the leftovers named in words, and Show the item on a line Today hid');
+    await p.setViewportSize({ width: 1440, height: 1000 });
+    // Agent One's notes: a Look at this on the nightstand (shot yesterday, undecided, unreviewed), one on the stand mixer (reviewed,
+    // so quiet) and a Must find on the dresser; Agent Two's on the lamps, shot six days ago. Stamped newer than the sheet's copy.
+    sheet[EST].items = await p.evaluate((id) => {
+      const T = Date.now() + 120000;
+      const set = (sid, o) => { const r = _photoRefs[id].find((x) => x.stableId === sid); Object.assign(r, o, { updatedAt: T }); };
+      set('e20', { agentNotices: [{ kind: 'other', text: 'a water ring on the top, worth a look before it is priced' }] });
+      set('e18', { agentNotices: [{ kind: 'other', text: 'the power cord is frayed near the plug' }] });
+      set('e10', { agentNotices: [{ kind: 'mustfind', text: 'a gold pocket watch in the top drawer' }] });
+      set('e04', { valuedBy: 'agent', valNameAt: 'Pair of brass table lamps', fmv: 80, valLow: 60, valHigh: 110, valSource: 'Auction comps', valConf: 'medium',
+        valReviewed: false, valNotices: [{ kind: 'worthpoint', text: 'check a sold pair on WorthPoint before accepting' }] });
+      savePhotoRefs(id);
+      return JSON.parse(localStorage.getItem('hav_media_' + id) || '[]');
+    }, EST);
+    await toDesk(EST);
+    await press('#panel-inventory button[onclick="setInvWhen(\'today\')"]', 'Today');
+    const desk5 = () => p.evaluate(() => {
+      const vis = (el) => !!el && el.checkVisibility();
+      const txt = (id) => { const el = document.getElementById(id); return el ? el.textContent.replace(/\s+/g, ' ').trim() : null; };
+      const all = document.querySelector('#panel-inventory button[onclick="setInvWhen(\'all\')"]');
+      return { rows: [...document.querySelectorAll('#inventory-content [id^="inv-row-"]')].filter(vis).map((r) => r.id.slice(8)),
+        notes: txt('inv-agent-notices'), vnotes: txt('inv-value-notices'), hint: txt('inv-earlier'),
+        alls: document.querySelectorAll('#panel-inventory button[onclick="setInvWhen(\'all\')"]').length,
+        allOn: !!all && (all.getAttribute('style') || '').indexOf('gray-dk') > -1 };
+    });
+    const T5 = await desk5();
+    ok(T5.rows.indexOf('e20') < 0 && T5.rows.length > 0, 'fixture: Today draws today\'s lines, and not the nightstand shot yesterday  [' + T5.rows.join(',') + ']');
+    eq(T5.hint, '1 from earlier days still undecided: press All', '⚠⚠ the filter row names the leftover Today hides');
+    eq(T5.alls, 1, '⚠ in words: the one All on the desk is the filter\'s own');
+    eq(await p.locator('#inv-earlier button, #inv-earlier a').count(), 0, 'the hint holds no control');
+    has(T5.notes, 'a water ring on the top', 'the nightstand\'s Look at this is above the rows');
+    has(T5.notes, 'a gold pocket watch in the top drawer', 'and the dresser\'s Must find');
+    ok(T5.notes.indexOf('the power cord is frayed') < 0, '⚠⚠ the stand mixer, reviewed: its Look at this is not above the rows (Q3)');
+    has(T5.notes, 'Agent One raised 2 things to look at', 'the heading counts what it lists');
+    const showBtn = '#inv-agent-notices button[onclick="deskShowLine(' + EST + ',\'e20\')"]';
+    const showLook = await p.evaluate((sel) => { const b = document.querySelector(sel); if (!b) return null; const cs = getComputedStyle(b);
+      const dark = getComputedStyle(document.documentElement).getPropertyValue('--gray-dk').trim();
+      return { text: b.textContent, cls: b.className, bg: cs.backgroundColor, color: cs.color, inline: b.getAttribute('style') || '', dark }; }, showBtn);
+    eq(showLook && showLook.text, 'Show the item', 'the notice carries Show the item');
+    ok(showLook && showLook.cls === 'desk-show' && showLook.inline === '' && showLook.bg === 'rgb(255, 255, 255)', 'in the bronze outline on white, never the dark fill  [' + JSON.stringify(showLook) + ']');
+    await press(showBtn, 'Show the item, on the nightstand\'s note');
+    const S5 = await desk5();
+    ok(S5.rows.indexOf('e20') > -1, '⚠⚠ the nightstand\'s row is on the desk');
+    ok(S5.allOn, '⚠ When is All: the day was what hid it');
+    ok(await p.locator('#inv-row-e20 button[onclick^="invRemoveLine("]').isVisible(), '⚠⚠ its record is open (Remove line on screen)');
+    // ⚠ At the top of the screen AND below the sticky bar (the header and the tabs stay pinned over the page): a row
+    // scrolled to y = 0 sits under them, read as on screen by its box and seen by nobody. What is at the row's own first
+    // line, as the eye finds it, is the row.
+    const seeRow = (sid) => p.evaluate((sid) => {
+      const row = document.getElementById('inv-row-' + sid), r = row.getBoundingClientRect();
+      const bar = document.querySelector('.topbar').getBoundingClientRect();
+      const at = document.elementFromPoint(Math.round(r.left + 60), Math.round(r.top + 12));
+      return { top: Math.round(r.top), bar: Math.round(bar.bottom), seen: !!at && row.contains(at), h: window.innerHeight };
+    }, sid);
+    const top20 = await seeRow('e20');
+    ok(top20.top >= top20.bar && top20.top < top20.bar + 120, '⚠ and the row is at the top of the screen, under the sticky bar  [top ' + top20.top + ', bar to ' + top20.bar + ', of ' + top20.h + ']');
+    ok(top20.seen, '⚠⚠ its first line is seen there, not covered by the bar  [' + JSON.stringify(top20) + ']');
+    // Agent Two's notice, under Today again: the lamps, six days old.
+    await press('#panel-inventory button[onclick="setInvWhen(\'today\')"]', 'Today again');
+    has((await desk5()).vnotes, 'check a sold pair on WorthPoint', 'fixture: Agent Two\'s note on the lamps, Today hiding them');
+    await press('#inv-value-notices button[onclick="deskShowLine(' + EST + ',\'e04\')"]', 'Show the item, on Agent Two\'s note');
+    ok((await desk5()).rows.indexOf('e04') > -1 && await p.locator('#inv-row-e04 button[onclick^="invRemoveLine("]').isVisible(), '⚠ it lands on the lamps, record open');
+    const top04 = await seeRow('e04');
+    ok(top04.seen && top04.top >= top04.bar, 'the lamps\' row at the top, its first line seen under the sticky bar  [' + JSON.stringify(top04) + ']');
+
+    console.log('\n## Part 5 · a reviewed line\'s note is read in its record; a line ticked Reviewed takes its note off the list');
+    await press('#inv-row-e18 button[onclick="_invToggleOpen(\'e18\')"]', 'the stand mixer\'s ▾');
+    const rec18 = await p.evaluate(() => { const el = document.querySelector('#inv-row-e18 .inv-agent-rec'); return el && el.checkVisibility() ? [...el.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : null; });
+    eq(rec18, 'Agent One noted | Look at this — the power cord is frayed near the plug · off the list above the rows: the line is reviewed',
+      '⚠⚠ the reviewed line\'s note is in its record, on screen, saying why it is off the list');
+    await press('#inv-row-e20 input[onchange*="_invSetReviewed"]', 'Reviewed, on the nightstand');
+    const R5 = await desk5();
+    ok(R5.notes.indexOf('a water ring on the top') < 0, '⚠⚠ ticked Reviewed: the nightstand\'s Look at this leaves the list above the rows');
+    const rec20 = await p.evaluate(() => { const el = document.querySelector('#inv-row-e20 .inv-agent-rec'); return el && el.checkVisibility() ? [...el.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : null; });
+    has(rec20, 'a water ring on the top, worth a look before it is priced · off the list above the rows: the line is reviewed', '⚠⚠ and is read in its record');
+    has(R5.notes, 'a gold pocket watch in the top drawer', 'the Must find stands: a must-find is still missing, reviewed line or not');
+
+    console.log('\n## Part 5 · both must-finds found: the brief shrinks to one green line, and the Must find goes quiet by id');
+    const brief = () => p.evaluate(() => { const el = document.getElementById('sf-host-desk'); return el ? el.textContent.replace(/\s+/g, ' ').trim() : null; });
+    await p.evaluate(() => { document.getElementById('inv-workbar').__mark = 'still here'; });
+    await press('#sf-host-desk .sf-row:nth-of-type(2) button.sf-tick', 'Found it, on the pocket watch');
+    has(await brief(), 'Found it', 'fixture: one still missing, with its Found it');
+    has((await desk5()).notes, 'a gold pocket watch in the top drawer', 'the Must find still stands');
+    await press('#sf-host-desk button.sf-tick:not(.sf-undo)', 'Found it, on the safe deposit box key');
+    const B1 = await brief();
+    has(B1, '✓ All 2 must-finds found', '⚠⚠ every must-find found: one green line');
+    ok(B1.indexOf('Undo') < 0 && B1.indexOf('Safe deposit box key') < 0, 'the found rows folded under it');
+    has(B1, 'Loose stair rail to the attic.', '⚠ the safety row still shows');
+    ok((await desk5()).notes.indexOf('a gold pocket watch') < 0, '⚠⚠ the Must find notice is quiet above the rows');
+    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark), 'still here', '⚠ by id: the tab was not redrawn under the person');
+    await press('#sf-host-desk button[onclick="sfToggleFoundDesk(' + EST + ')"]', 'Show found');
+    eq((await brief()).match(/Undo/g).length, 2, 'Show found: both found rows, each with its Undo');
+    await press('#sf-host-desk button[onclick="sfToggleFoundDesk(' + EST + ')"]', 'Hide found');
+    ok((await brief()).indexOf('Undo') < 0, 'Hide found folds them again');
+
+    console.log('\n## Part 5 · a Needs you chip shows the whole job');
+    await press('#panel-inventory button[onclick="setInvWhen(\'today\')"]', 'Today');
+    const chipN = await p.evaluate(() => { const b = document.querySelector('#inv-flagstrip button[onclick="setInvFlag(\'undecided\')"]'); return b ? parseInt(b.querySelector('strong').textContent, 10) : null; });
+    await press('#inv-flagstrip button[onclick="setInvFlag(\'undecided\')"]', 'the Not yet decided chip');
+    const C5 = await desk5();
+    ok(C5.allOn, '⚠⚠ When goes to All with it');
+    eq(C5.rows.length, chipN, '⚠⚠ the rows drawn are the ' + chipN + ' the chip counts');
+    await press('#inv-flagstrip button[onclick="setInvFlag(\'undecided\')"]', 'the chip again, to take it off');
+
+    console.log('\n## Part 5 · at 390');
+    await press('#panel-inventory button[onclick="setInvWhen(\'today\')"]', 'Today');
+    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+    const P5 = await p.evaluate(() => {
+      const W = document.documentElement.clientWidth;
+      const b = document.querySelector('#inv-value-notices button.desk-show');
+      const r = b && b.getBoundingClientRect();
+      return { h: r ? Math.round(r.height) : null, shown: !!b && b.checkVisibility(),
+        wide: [...document.querySelectorAll('#inv-agent-notices *, #inv-value-notices *, #inv-earlier, #sf-host-desk *')].filter((e) => e.getBoundingClientRect().right > W + 1).map((e) => e.tagName + ':' + e.textContent.slice(0, 30)),
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+    });
+    ok(P5.shown && P5.h >= 32, '⚠ Show the item is on screen and thumb-sized  [' + P5.h + ' px]');
+    eq(P5.wide, [], 'nothing in the notices, the hint or the brief runs off the right edge');
+    // On the phone the tabs wrap and the sticky bar is taller: the row still lands under it, seen.
+    await press('#inv-value-notices button[onclick="deskShowLine(' + EST + ',\'e04\')"]', 'Show the item at 390');
+    const top390 = await seeRow('e04');
+    ok(top390.seen && top390.top >= top390.bar, '⚠ at 390 the lamps\' row lands under the sticky bar, its first line seen  [' + JSON.stringify(top390) + ']');
+    await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
 
     eq(errs, [], 'zero page errors');
   } catch (e) {
