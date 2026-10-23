@@ -7,7 +7,7 @@
 //      name boxes labelled First name / Last name, the must-find rule on its label, a ticked house row's prompt over an
 //      empty box
 //   C. an estate service: the blocked phone and email boxes blank, the Court's hint on its label
-//   D. Edit Client on a seeded client: every box in the modal carries no placeholder
+//   D. Edit Client on a seeded client: every box in the modal carries no placeholder, and the home value claims no refusal
 //   E. at 390 px: the same boxes blank and no horizontal overflow; no page errors
 //
 //   NODE_PATH=<dir>/node_modules node tests/browser/step97.js [/abs/path/to/havellin.html]
@@ -114,6 +114,10 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         ['', '', '', ''], 'the destination\'s four are blank where nothing is recorded');
       const mf = await p.evaluate(() => { const d = document.getElementById('ec-house-find'); return d ? d.textContent.replace(/\s+/g, ' ') : ''; });
       has(mf, '(one line per item: what it is, and where they think it might be)', 'Edit Client says one line per item on its label');
+      // 2026-10-23 (Anthony: fix the wording): a blank home value has not stopped the estimate since 2026-10-10.
+      const hv = await p.evaluate(() => { const e = document.getElementById('ec-home-value'); const d = e && e.closest('.df'); return d ? d.textContent.replace(/\s+/g, ' ') : ''; });
+      has(hv, '(market / Zillow estimate)', 'the home value\'s label reads as intake\'s');
+      ok(hv.indexOf('will not save') < 0, 'and claims no refusal the estimate does not make (' + hv.slice(0, 80) + ')');
       await p.locator('#edit-client-modal button', { hasText: 'Cancel' }).first().click();
       await p.waitForTimeout(300);
     });

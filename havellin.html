@@ -1373,7 +1373,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 1:24pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 2:22pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -53682,10 +53682,12 @@ function showEditClient(jobId) {
   // walkthrough on a job that missed it could not be saved at all and there was no control
   // anywhere in the app to clear it.
   // ⚠ NOT MARKED REQUIRED, because this save accepts it blank. Five asterisks over fields a
-  // save does not enforce is the defect the attorney block already had; the hint says what it
-  // costs instead. And the approval lock below deliberately does NOT hold it — propVal books
+  // save does not enforce is the defect the attorney block already had. Since 2026-10-10 Build
+  // Estimate does not refuse it either (a blank is flagged in amber and the estimate saves), so the
+  // label reads as intake's does and claims no refusal (it said "the estimate will not save without
+  // it" until 2026-10-23; Anthony: fix the wording). And the approval lock below deliberately does NOT hold it — propVal books
   // no hours: it scales the reference BAND on Build Estimate and the RE-commission readout.
-  html += fld('Approx. Home Value <span style="font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the estimate will not save without it)</span>', '<input type="text" id="ec-home-value" value="'+(job.propVal ? fmt((parseInt(job.propVal, 10) || 0)) : '')+'" inputmode="numeric" oninput="formatMoneyInput(this)" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
+  html += fld('Approx. Home Value <span style="font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(market / Zillow estimate)</span>', '<input type="text" id="ec-home-value" value="'+(job.propVal ? fmt((parseInt(job.propVal, 10) || 0)) : '')+'" inputmode="numeric" oninput="formatMoneyInput(this)" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">', false);
   html += fld('Priority', '<select id="ec-priority" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'normal',l:'Normal'},{v:'high',l:'High — probate deadline'},{v:'urgent',l:'Urgent — health / emergency'}], job.priority)+'</select>', false);
   html += fld('RE Potential', '<select id="ec-re" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'unknown',l:'Unknown'},{v:'yes',l:'Yes — likely RE transaction'},{v:'no',l:'No RE component expected'}], job.re)+'</select>', false);
   html += fld('Premium Estate', '<select id="ec-premium" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'no',l:'No — standard rates'},{v:'yes',l:'Yes — art, antiques, wine'}], job.premium?'yes':'no')+'</select>', false);

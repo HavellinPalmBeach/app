@@ -6,6 +6,12 @@ Not loaded into sessions. `CLAUDE.md` holds the current rules; this file is the 
 
 ## Entries
 
+### 2026-10-23 · The home value's wording: no refusal it does not make
+Found building blank boxes the same day; Anthony: *"yes, fix the home value wording too"*.
+- **Found.** Save stopped refusing a blank home value on 2026-10-10 (a flag in amber, the estimate saves), but Edit Client's *Approx. Home Value* label still read *(the estimate will not save without it)*; the playbook's Step 1 stop box said both it and the new home's sq ft *will stop you dead at the estimate*; the manual's intake note called both a *HARD REFUSAL later*; its fresh-estimate note and the playbook's symptom row said Save *asks* for it.
+- **The build.** Edit Client's label reads as intake's, *(market / Zillow estimate)*. The playbook's stop box names the one that still stops the estimate (the new home's sq ft on a Home Transition) and says the value is flagged and saves; the manual's intake note says the same with the dates; *asks for it* reads *flags it*; the symptom row reads *Save flags a home value you never had to give before*. HTML and markdown alike.
+- **Tests** (the suite 24,653 passed, 0 failed). `client-edit-fields` restated (the label claims no refusal and reads as intake's; the sq ft's still does); browser step 97 reads the label off the real modal (30 checks). Reverting the label: unit 2 failed, browser 2 failed; restored, green.
+
 ### 2026-10-23 · Blank boxes: no example or prompt inside any field
 Anthony, with a screenshot of Client Intake's Move Destination (*123 New Address Blvd*, *e.g. Boca Raton*, *e.g. 1800*, *e.g. Maria Lopez, Director of Resident Services, 561-555-0142*): *"on any forms, remove the example stuff that is in the fields. we don't need prompts for these things and in the worst case, they look like they are already filled out. just need blank boxes to fill in, no suggestions. check teh whole app and correct."*
 - **Found.** 165 `placeholder` attributes in `havellin.html` (intake, Edit Client, every dialog, Settings, the directories, the desk, the Job Plan, the camera), four more set by scripts (`.placeholder =`: the estate's blocked phone and email, the change order's specialist box, the appraiser's name box twice), and Edit Client's `txt()` / `tel()` builders taking one as an argument. P9's net (doc-send) refused only the value-shaped ones and deliberately kept the rest as guidance; Anthony's answer is the whole attribute.
