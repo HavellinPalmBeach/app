@@ -32,7 +32,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 // exactly what would let the list this suite reads drift from the one a person sees.
 // ⚠ The house-flag helpers left this list on 2026-09-29 with the dead detail row that was their only
 // reader here (audit H2): renderJobs no longer reads a house flag at all.
-const RENDER_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments',
+const RENDER_FNS = ['renderJobs', 'jobIsTest', 'liveJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments',
   'svcLabelOf',
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',

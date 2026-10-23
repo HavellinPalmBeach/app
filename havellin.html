@@ -183,6 +183,7 @@ textarea{height:70px;resize:vertical;}
 .b-warn{background:var(--warn-bg);color:var(--warn-tx);}
 .b-info{background:var(--info-bg);color:var(--info-tx);}
 .b-bronze{background:#f4ead6;color:var(--bronze);}
+.b-test{background:var(--warn-bg);color:var(--warn-tx);margin-left:6px;font-size:10px;letter-spacing:.06em;vertical-align:middle;}
 .b-pending{background:#fff0d4;color:#7a4f00;}
 .b-approved{background:#e0f0d0;color:#2a6010;}
 .toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--white);border:1px solid var(--border);border-radius:6px;margin-bottom:8px;}
@@ -1370,7 +1371,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.21 · 1:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 11:58am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -1730,6 +1731,13 @@ body.no-smf .smf-col{display:none;}
             <option value="normal">Normal</option>
             <option value="high">High — probate deadline</option>
             <option value="urgent">Urgent — health / emergency</option>
+          </select>
+        </div>
+        <div>
+          <label>Client record <span class="lbl-hint">&mdash; a test client is left out of the dashboard figures</span></label>
+          <select id="i-test">
+            <option value="live">Live client</option>
+            <option value="test">Test client (dummy data)</option>
           </select>
         </div>
       </div>
@@ -10046,6 +10054,7 @@ function saveIntake() {
     completion:document.getElementById('i-completion') ? document.getElementById('i-completion').value : '',
     priority:document.getElementById('i-pri').value,
     re:document.getElementById('i-re').value,
+    test:(document.getElementById('i-test')||{}).value === 'test',   // jobIsTest
     premium:document.getElementById('i-prem').value==='yes',
     docLevel:(svc === 'prep') ? '' : ((document.getElementById('i-doclevel')||{}).value||''),
     gate706:            (document.getElementById('i-gate-706')||{}).value||'',
@@ -10855,7 +10864,7 @@ function firearmsWorkspaceLine(job) {
 // text. The Clear button's list was missing a different five.
 //
 // Add new intake fields HERE and both paths stay correct.
-var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-re': 'unknown', 'i-prem': 'no', 'i-executor-auth': 'pending' };
+var INTAKE_FIELD_DEFAULTS = { 'i-pri': 'normal', 'i-test': 'live', 'i-re': 'unknown', 'i-prem': 'no', 'i-executor-auth': 'pending' };
 var INTAKE_FIELDS = [
   'i-svc', 'i-fname', 'i-lname', 'i-phone', 'i-email', 'i-addr', 'i-city', 'i-zip',
   'i-src', 'i-referredby', 'i-refpartner',
@@ -10868,7 +10877,7 @@ var INTAKE_FIELDS = [
   'i-mustfind', 'i-safety', 'i-notes', 'i-ptype', 'i-tc',
   'i-sqft', 'i-years-in-home', 'i-beds', 'i-baths', 'i-half-baths', 'i-home-value',
   'i-walkthrough', 'i-site-visit-by', 'i-start', 'i-completion',
-  'i-pri', 'i-re', 'i-prem', 'i-doclevel',
+  'i-pri', 'i-test', 'i-re', 'i-prem', 'i-doclevel',
   'i-gate-706', 'i-gate-dispute', 'i-doc-tier', 'i-matter-type',
   'i-dest-addr', 'i-dest-city', 'i-dest-sqft', 'i-dest-contact'
 ];
@@ -14369,6 +14378,13 @@ function _jobStatusCell(j) {
   return '<span class="sdot ' + v.dot + '"></span>' + esc(v.label || '');
 }
 
+// ── Test clients (2026-10-23; Anthony: dummy clients to perfect the job, the estimate and the papers, beside
+// the first live ones). One rule: `job.test`, set at intake and in Edit Client either way. A test client stays
+// in the client list with a TEST badge (his pick) and on its dashboard, and is left out of every figure about
+// the business: the four tiles, Win / Loss and a referral partner's attribution. Its documents print as live.
+function jobIsTest(j) { return !!(j && j.test === true); }
+function liveJobs() { return jobs.filter(function(j){ return !jobIsTest(j); }); }
+
 function renderJobs() {
   var filtered = jobs.filter(function(j) {
     switch(currentFilter) {
@@ -14386,15 +14402,17 @@ function renderJobs() {
   });
   filtered = sortJobsForList(filtered, _jobSort.key, _jobSort.dir);
 
-  var active = jobs.filter(function(j){ return j.status==='active'; }).length;
-  var pending = jobs.filter(function(j){ return j.status==='pending'; }).length;
-  var pipe = jobs.filter(function(j){ return j.havellinEst && j.status!=='lost'; }).reduce(function(a,j){ return a+j.havellinEst; },0);
-  var reCount = jobs.filter(function(j){ return j.re==='yes' && j.status!=='lost'; }).length;
+  // The figures count live clients only (jobIsTest); the list below shows both.
+  var live = liveJobs();
+  var active = live.filter(function(j){ return j.status==='active'; }).length;
+  var pending = live.filter(function(j){ return j.status==='pending'; }).length;
+  var pipe = live.filter(function(j){ return j.havellinEst && j.status!=='lost'; }).reduce(function(a,j){ return a+j.havellinEst; },0);
+  var reCount = live.filter(function(j){ return j.re==='yes' && j.status!=='lost'; }).length;
   // ⚠ The Win / Loss row sits directly under these four now, and it reads an unread list as an em
   // dash. Four zeros above four dashes would be the two rows disagreeing about whether the list
   // has been read at all — so these follow the same rule.
   var unread = jobsUnread();
-  document.getElementById('m-tot').textContent = unread ? '—' : jobs.length;
+  document.getElementById('m-tot').textContent = unread ? '—' : live.length;
   document.getElementById('m-act').textContent = unread ? '—' : active + (pending > 0 ? ' (+'+pending+' pending)' : '');
   document.getElementById('m-pip').textContent = pipe > 0 ? fmt(pipe) : '—';
   document.getElementById('m-re').textContent = unread ? '—' : reCount;
@@ -14455,7 +14473,8 @@ function renderJobs() {
 
     html += '<tr style="cursor:pointer;" onclick="openClientDashboard(' + j.id + ')">';
     // Name, street and concierge are typed free text — escaped, or a "<" in one takes the row apart.
-    html += '<td><div style="font-weight:600;">' + esc(j.name) + prio + (j.premium?'<span class="badge b-bronze" style="margin-left:4px">Premium</span>':'') + '</div><div style="font-size:10px;color:var(--gray);margin-top:1px;">' + esc(j.addr?j.addr.split(',')[0]:(j.zip||'')) + '</div></td>';
+    var testBadge = jobIsTest(j) ? '<span class="badge b-test" title="Test client: left out of the figures">TEST</span>' : '';
+    html += '<td><div style="font-weight:600;">' + esc(j.name) + testBadge + prio + (j.premium?'<span class="badge b-bronze" style="margin-left:4px">Premium</span>':'') + '</div><div style="font-size:10px;color:var(--gray);margin-top:1px;">' + esc(j.addr?j.addr.split(',')[0]:(j.zip||'')) + '</div></td>';
     html += '<td>' + esc(svcLabelOf(j)) + '</td>';
     html += '<td><div style="display:flex;align-items:center;gap:6px;"><div class="avatar">' + esc(init.toUpperCase()) + '</div><div style="font-size:10px;color:var(--gray);">' + (j.tc?esc(j.tc.split(' ')[0]):'<span style="color:var(--warn-tx)">None</span>') + '</div></div></td>';
     html += '<td>' + havCell + '</td>';
@@ -23712,7 +23731,7 @@ function renderClientDashboard(jobId) {
   // "Unassigned") are built here, never typed.
   h += '<div class="dash-avatar">'+esc(initials)+'</div>';
   h += '<div style="min-width:0;">';
-  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);line-height:1.2;">'+esc(isEstateDash ? 'Estate of ' + job.name : job.name)+'</div>';
+  h += '<div style="font-size:19px;font-weight:600;color:var(--gray-dk);line-height:1.2;">'+esc(isEstateDash ? 'Estate of ' + job.name : job.name)+(jobIsTest(job) ? '<span class="badge b-test" title="Test client: left out of the figures">TEST</span>' : '')+'</div>';
   if (job.addr) h += '<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+esc(job.addr+(job.city?', '+job.city:'')+(job.zip?' '+job.zip:'')+(job.tc?' · '+job.tc:''))+'</div>';
   h += '</div>';
   h += '</div>';
@@ -24567,8 +24586,8 @@ function toggleWinLossList(kind) {
 // ⚠ CLOSED — REFUNDED COUNTS AS LOST (P22, jobClosedRefunded): it went back, so it is no win; it sits on the Lost list
 // with its own status and the net it kept.
 function winLossFigures() {
-  var won  = jobs.filter(function(j){ return isJobWon(j) && !jobClosedRefunded(j); });
-  var lost = jobs.filter(function(j){ return j.status === 'lost' || jobClosedRefunded(j); });
+  var won  = liveJobs().filter(function(j){ return isJobWon(j) && !jobClosedRefunded(j); });
+  var lost = liveJobs().filter(function(j){ return j.status === 'lost' || jobClosedRefunded(j); });
   var decided = won.length + lost.length;
   return {
     won: won, lost: lost, decided: decided,
@@ -48942,7 +48961,7 @@ function referralDormancy(p){
   var st = String(p.status||'');
   if (st === '' || st === 'Identified' || st === 'Do Not Use') return { dormant:false, days:null };
   var cDays = _daysSinceISODate(p.last_contacted);
-  var js = jobs.filter(function(j){ return jobRefersToPartner(j, p); });
+  var js = liveJobs().filter(function(j){ return jobRefersToPartner(j, p); });
   var lastJobId = js.reduce(function(a,j){ return Math.max(a, j.id||0); }, 0);
   var rDays = lastJobId ? Math.floor((Date.now() - lastJobId) / 86400000) : null;
   var days = null;
@@ -48955,7 +48974,7 @@ function referralDormancy(p){
 // ── Attribution: aggregate the jobs linked to a partner at intake (job.refPartnerId).
 function referralPartnerStats(p){
   if (!p || !referralIdOf(p)) return { count:0, won:0, pipeline:0, wonRev:0, last:'' };
-  var js = jobs.filter(function(j){ return jobRefersToPartner(j, p); });
+  var js = liveJobs().filter(function(j){ return jobRefersToPartner(j, p); });
   var won = js.filter(isJobWon);
   var pipeline = js.filter(function(j){ return j.status!=='lost'; }).reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
   var wonRev = won.reduce(function(a,j){ return a + (j.havellinEst||0); }, 0);
@@ -53660,6 +53679,7 @@ function showEditClient(jobId) {
   html += fld('Priority', '<select id="ec-priority" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'normal',l:'Normal'},{v:'high',l:'High — probate deadline'},{v:'urgent',l:'Urgent — health / emergency'}], job.priority)+'</select>', false);
   html += fld('RE Potential', '<select id="ec-re" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'unknown',l:'Unknown'},{v:'yes',l:'Yes — likely RE transaction'},{v:'no',l:'No RE component expected'}], job.re)+'</select>', false);
   html += fld('Premium Estate', '<select id="ec-premium" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'no',l:'No — standard rates'},{v:'yes',l:'Yes — art, antiques, wine'}], job.premium?'yes':'no')+'</select>', false);
+  html += fld('Client record', '<select id="ec-test" style="width:100%;padding:6px 9px;border:1px solid var(--border-md);border-radius:4px;font-family:Raleway,sans-serif;font-size:12px;background:var(--cream);">'+sel([{v:'live',l:'Live client'},{v:'test',l:'Test client (dummy data)'}], jobIsTest(job)?'test':'live')+'</select>', false);
   // ⚠ EDITABLE HERE BECAUSE THE SCHEDULE STRIP MADE THEM PROMINENT. Making a figure the first
   // thing on the card while leaving it uncorrectable is worse than not showing it: the target
   // start is set once at intake and the whole point of the strip is that the job is measured
@@ -54086,6 +54106,8 @@ function saveClientEdit(jobId) {
   job.ptype = document.getElementById('ec-ptype').value;
   job.priority = document.getElementById('ec-priority').value;
   job.re    = document.getElementById('ec-re').value;
+  var _ecTest = document.getElementById('ec-test');
+  if (_ecTest) job.test = _ecTest.value === 'test';   // jobIsTest; never held, either way
   if (!_locked) job.premium = document.getElementById('ec-premium').value === 'yes';
   // Digits only, the same normalisation Client Intake applies — the control is a money-formatted
   // text field ($3,200,000) and every reader downstream does parseInt on it.

@@ -58,7 +58,7 @@ const optionValues = (html, id) => {
   return m ? (m[1].match(/<option\b[^>]*>/g) || []).map((o) => unesc((/value="([^"]*)"/.exec(o) || [])[1] || '')) : null;
 };
 
-const EC_FNS = ['showEditClient', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack',
+const EC_FNS = ['showEditClient', 'jobIsTest', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag', 'probateSvcOffTrack',
   'executorAuthOptionsHtml', 'resolveExecutorAuth', 'authorityRecord', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
   'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
   'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -262,7 +262,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ M16 — a partner is keyed by uid; a re-sorted sheet re-points nothing');
   {
-    const R = sandbox({ fns: ['referralIdOf', 'lookupReferralById', 'jobRefersToPartner', 'referralPartnerStats', 'isJobWon'],
+    const R = sandbox({ fns: ['referralIdOf', 'lookupReferralById', 'jobRefersToPartner', 'referralPartnerStats', 'jobIsTest', 'liveJobs', 'isJobWon'],
       stubs: { referralDirectory: PARTNERS, jobs: [] } });
     eq(R.referralIdOf(PARTNERS[0]), 'u-ann', 'the id is the uid');
     eq(R.referralIdOf({ _row: 12 }), '12', 'a row with no uid yet falls back to its row');

@@ -1445,6 +1445,8 @@ On a fee-only Home Prep the **Hours Log** card says no hours are billed on the e
 
 The Client Dashboard opens on the list of clients. Top to bottom: **+ Add New Client**; the four pipeline figures (*Total Jobs · Active Jobs · Pipeline Value · RE Potential*); the **Win / Loss** row directly under them (*Won · Lost · Conversion Rate · Lost Revenue*); the six filters; and the table of clients, where pressing a row opens that client.
 
+> **Test clients (2026-10-23).** A client marked *Test client (dummy data)* under **Client record** (on Client Intake beside Priority, and in Edit Client) is left out of every figure here: Total Jobs, Active Jobs, Pipeline Value, RE Potential and the whole Win / Loss row, and out of a referral partner's count, pipeline and won revenue on the Referral Partners tab. It stays in the table, under the filters it would otherwise meet, with an amber **TEST** badge beside the name, and the same badge sits beside the name on its dashboard. Everything else works as on a live client, and its estimate, agreement and invoices print exactly as a live client's do (nothing on them says test). Intake opens on *Live client*; Edit Client changes it either way.
+
 > **⚠⚠ WIN / LOSS WAS ITS OWN TAB UNTIL 2026-09-23, AND NOTHING IT SHOWED WAS DROPPED.** The four figures moved here as a second row of tiles under Total Jobs, one tile gap below the first so the eight read as one block. **Won** and **Lost** carry a caret (▸): press either to open the list of clients behind the figure, under the row; press it again to shut it. Both can be open at once, Won above Lost.
 >
 > | Press | What opens |
