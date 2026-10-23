@@ -767,6 +767,124 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(K.INV_REQ_UNTICK_TXT, 'Untick any line the signed copy struck out.', 'the sentence');
   });
 
+  // ⚠⚠ THE PRESS ASKS THE CARD'S QUESTION ON EVERY ROUND (2026-10-23, G7's review). docRecordSent never clears `sentAt`, and
+  // it writes the new draft's lines over the sent request's, so from the second request on a press that asked only
+  // `sentAt` (from a card drawn before the new draft: another device's desk) opened the dialog on the draft's lines, a line
+  // that never went out among them, already ticked. One answer now, approvalRequestRecordRefusal, read by both.
+  G('G · a second request: while its draft waits, the card offers no record, names the way round, and the press refuses by name', () => {
+    const R = recRig();
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    eq(R.st().sentAt, '2026-10-17T15:00:00.000Z', 'fixture: the first request went on Oct 17');
+    R.c._photoRefs[7].push(ROW('e', { itemNo: 5, objectName: 'Hall mirror', fmv: 300, disposition: 'Donate', channel: 'Habitat ReStore' }));
+    R.c.Date = FixedDate(NOW + 86400000);
+    R.c.sendApprovalRequest(7);
+    eq([R.st().sentAt, R.st().draftedAt, R.st().req.stableIds], ['2026-10-17T15:00:00.000Z', '2026-10-18T15:00:00.000Z', ['a', 'b', 'e']],
+      'fixture: the second draft carries the fresh mirror, and the first send is still on the record');
+    const card = R.card();
+    has(card, 'onclick="invMarkRequestSent(7)"', 'fixture: the second draft waits on its tap');
+    eq(R.recBtns(), 0, 'the card offers no Record the signed request while the draft waits');
+    has(text(card), 'If the signed copy of the request sent Oct 17 comes back first, record it on its lines through the bulk bar’s Record approval.',
+      '⚠ and it names the way round for the first request\'s signed copy');
+    eq((text(card).match(/If the signed copy/g) || []).length, 1, 'said once');
+    R.el('inv-approval-modal').style.display = 'none';
+    const r = attempt(() => R.c.invRecordRequestApproval(7));
+    eq(r.ok && r.val, false, '⚠⚠ the press from a card drawn before the draft is refused, as the card would');
+    eq(R.c._invRecordCtx, null, '⚠⚠ no dialog state: the mirror, never on a request that went, is not offered ticked');
+    eq(R.el('inv-approval-modal').style.display, 'none', 'and no dialog shown');
+    eq(R.last().m, 'A newer request is drafted and not yet confirmed as sent: send it and tap I’ve sent it, then record its signed copy here. '
+      + 'If the signed copy of the request sent Oct 17 comes back first, record it on its lines through the bulk bar’s Record approval.', 'by name, with the way round');
+    eq(R.last().t, 'warn', 'as a warning');
+    eq(R.row('e').authBy, undefined, 'nothing written');
+    eq(R.c._invPick, { a: 1 }, 'the selection untouched');
+    // The draft sent and confirmed: offered again, on the second request's lines.
+    R.c.invMarkRequestSent(7);
+    eq(R.recBtns(), 1, 'the second request sent: Record the signed request offered again');
+    lacks(text(R.card()), 'If the signed copy', 'and the way round goes with the draft');
+    ok(R.c.invRecordRequestApproval(7), 'the press opens the dialog');
+    eq(R.c._invRecordCtx.stableIds, ['a', 'b', 'e'], 'on the lines the second request carried');
+    eq(text(R.el('ia-sub').innerHTML), 'The request sent Oct 18: 3 lines still unsigned.', 'and says which request');
+    R.c.closeInvApproval();
+  });
+
+  G('G · the refusals say what is true: a first draft not yet sent, nothing ever sent, nothing left; one rule for the card and the press', () => {
+    const R = recRig();
+    R.c.sendApprovalRequest(7);
+    eq(R.c.invRecordRequestApproval(7), false, 'a first draft waiting: refused');
+    eq(R.last().m, 'The request has not gone yet: send the draft and tap I’ve sent it first.', '⚠ by what is true: the request has not gone (it said nothing was waiting any more)');
+    lacks(text(R.card()), 'If the signed copy', 'no earlier request to name on the card');
+    const N = recRig();
+    eq(N.c.invRecordRequestApproval(7), false, 'nothing sent: refused');
+    eq(N.last().m, 'No request has gone from the app yet: there is nothing to record.', 'by name');
+    // The one rule, read by both.
+    const card = noComments(fn('approvalRequestCardHtml')), press = noComments(fn('invRecordRequestApproval'));
+    ok(card.length > 2000 && press.length > 200, 'fixture: both sources read (' + card.length + ', ' + press.length + ')');
+    eq(card.split('approvalRequestRecordRefusal(job, S)').length - 1, 1, 'the card asks it once, for its button');
+    eq(press.split('approvalRequestRecordRefusal(job, S)').length - 1, 1, 'the press asks it once');
+    lacks(press, 'sentAt ||', 'the press keeps no test of its own');
+    const Q = lift(['approvalRequestRecordRefusal'], [], { _photoRefs: {} });
+    const st1 = { sentAt: '2026-10-17T15:00:00.000Z', draftedAt: '2026-10-17T14:00:00.000Z', req: { stableIds: ['a'] } };
+    eq(Q.approvalRequestRecordRefusal({ id: 7, docState: { approvalRequest: st1 } }, { st: st1, open: [{ stableId: 'a' }] }), '', 'sent, a line open: offered');
+    eq(Q.approvalRequestRecordRefusal({ id: 7, docState: { approvalRequest: st1 } }, { st: st1, open: [] }),
+      'Nothing on the request is waiting for a signature any more: there is nothing to record.', 'sent, nothing open: refused');
+  });
+
+  G('G · the dialog lists the lines in the order the paper prints them: grouped by destination, as the signed copy reads', () => {
+    const rows = INVENTORY().concat([ROW('f', { itemNo: 5, objectName: 'Pair of Chinese vases', fmv: 900, disposition: 'Auction', channel: 'Christie’s' })]);
+    const R = recRig({ rows });
+    const page = R.c.printApprovalRequest(7, false, { asHtml: true });
+    const at = (n) => page.html.indexOf(n);
+    ok(at('Sargent portrait') > 0 && at('Sargent portrait') < at('Pair of Chinese vases') && at('Pair of Chinese vases') < at('Dining chairs (8)'),
+      'fixture: the paper prints the two Christie’s lines together, then the donation');
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    eq(R.st().req.stableIds, ['a', 'f', 'b'], '⚠ the record keeps the lines in the paper\'s order');
+    ok(R.c.invRecordRequestApproval(7), 'pressed');
+    eq(R.c._invRecordCtx.stableIds, ['a', 'f', 'b'], '⚠⚠ the dialog in the paper\'s order, never the manifest\'s');
+    const body = text(R.asDrawn());
+    ok(body.indexOf('#1 Sargent portrait') < body.indexOf('#5 Pair of Chinese vases') && body.indexOf('#5 Pair of Chinese vases') < body.indexOf('#2 Dining chairs (8)'),
+      'drawn so: a straight read across the signed copy');
+    // The untick still maps to its own line once the order differs from the manifest's.
+    tickAll(R, 3);
+    R.el('ia-line-1').checked = false;   // the vases struck out
+    ok(R.c.invSaveApproval(), 'recorded');
+    eq([R.row('a').authBy, R.row('f').authBy, R.row('b').authBy], [ALL_SIGNED, undefined, ALL_SIGNED], '⚠⚠ the struck-out vases alone carry nothing');
+  });
+
+  G('G · what each fiduciary has already signed follows an untick; the save\'s refusal names the press the dialog came from', () => {
+    const rows = INVENTORY().map((x) => x.stableId === 'a' ? Object.assign(x, { authBy: 'Rex Hale', approvalDate: '2026-10-15' }) : x);
+    const R = recRig({ rows });
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    R.c.invRecordRequestApproval(7);
+    const drawn = R.asDrawn();
+    has(text(drawn), 'Rex Hale · Personal Representative · already signed 1 of the 2 lines', 'fixture: drawn with Rex having signed the portrait of the two');
+    eq((drawn.match(/<span id="ia-fid-on-\d+">/g) || []).length, 3, 'each fiduciary\'s note in its own span, to be repainted');
+    R.c.invApprovalDialogNote();
+    eq(text(R.el('ia-fid-on-0').innerHTML), '· already signed 1 of the 2 lines', 'repainted with both lines ticked: the same');
+    eq(R.el('ia-fid-on-1').innerHTML, '', 'Dana has signed neither');
+    R.el('ia-line-1').checked = false;   // the chairs struck out
+    R.c.invApprovalDialogNote();
+    eq(text(R.el('ia-fid-on-0').innerHTML), '· already signed this line', '⚠ the chairs unticked: Rex has signed the one line left');
+    R.el('ia-line-1').checked = true; R.el('ia-line-0').checked = false;
+    R.c.invApprovalDialogNote();
+    eq(R.el('ia-fid-on-0').innerHTML, '', '⚠ the portrait unticked: Rex has signed none of what will be recorded');
+    R.c.closeInvApproval();
+    // Opened from the request with nobody recorded, a fiduciary recorded since: close and press the same button again.
+    const E = recRig({ job: ESTATE({ executor: '', executorEmail: '', coFiduciaries: [] }) });
+    E.c.sendApprovalRequest(7); E.c.invMarkRequestSent(7);
+    ok(E.c.invRecordRequestApproval(7), 'fixture: opened from the request');
+    has(E.asDrawn(), 'id="ia-signer"', 'fixture: nobody recorded, so the signer is asked');
+    E.job().executor = 'Rex Hale';
+    E.el('ia-signer').value = 'Rex Hale';
+    eq(E.c.invSaveApproval(), false, 'a fiduciary recorded since the dialog opened: refused, as before');
+    has(E.el('ia-fb').innerHTML, 'close it and press Record the signed request again.', '⚠ naming the press it came from, never the bulk bar\'s');
+    E.c.closeInvApproval();
+    const B = recRig({ job: ESTATE({ executor: '', executorEmail: '', coFiduciaries: [] }), stubs: { _invPick: { b: 1 } } });
+    ok(B.c.invRecordApproval(7), 'the bulk bar\'s press, nobody recorded');
+    B.asDrawn();
+    B.job().executor = 'Rex Hale';
+    eq(B.c.invSaveApproval(), false, 'refused the same way');
+    has(B.el('ia-fb').innerHTML, 'close it and press Record approval again.', 'naming the bulk bar\'s own press');
+  });
+
   // ═══════════════════════════════════════════════════════════════════════
   G('F · the documents say so', () => {
     const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');

@@ -53,7 +53,10 @@
 //   bulk bar; the Releases bar's line naming the three, its header pressed open; Record the signed request pressed on the
 //   card, the dialog listing the three lines ticked with the sentence, the third unticked as the signed copy struck it out,
 //   both representatives ticked, Record approval pressed: two lines approved, the struck one not, the bulk bar's selection
-//   still standing; the card and the bar's line after; the dialog at 390.
+//   still standing; the card and the bar's line after; the dialog at 390. On review: a second request drafted by another
+//   device under a card drawn before it, its stale Record the signed request pressed and refused by name, the card redrawn
+//   with I've sent it and the way round; I've sent it pressed, the dialog listing the lines in the paper's order, and a
+//   fiduciary's "already signed" following each untick.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -1025,6 +1028,87 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await press('#ia-actions button[onclick="closeInvApproval()"]', 'Cancel, at 390');
     await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
     await press('#inventory-content button[onclick="_invClearPicks()"]', 'Clear, on the bulk bar');
+    // ══ PART 7, ON REVIEW (G7): the press asks the card's question on every round ═══════════════════════════════════
+    // An estate whose first request went on Oct 19 for two lines; a third line waits, already signed by Paul alone. The card
+    // is drawn with Record the signed request on it; then another device drafts a second request (the record changes under
+    // the card, which is not redrawn), and the stale button is pressed: refused by name, the card redrawn without it and
+    // naming the way round. I've sent it pressed: offered again, the dialog in the paper's order (the two Kodner lines
+    // together, then the donation), and Paul's "already signed" following each untick.
+    console.log('\n## Part 7 (review) · a second request drafted under a card drawn before it: the press refuses; the paper\'s order; the notes follow');
+    const RSR = 9610;
+    await p.evaluate((RSR) => {
+      const NOW = Date.now(), DAY0 = new Date(NOW); DAY0.setHours(0, 0, 0, 0);
+      const T = Math.min(NOW, Math.max(NOW - 3 * 3600000, DAY0.getTime() + 60000));
+      jobs.unshift({ id: RSR, hvlId: 'HVL-2610-R970', name: 'Irene Vance', svc: 'probate', matterType: 'probate', addr: '8 Heron Ct', city: 'Palm Beach', zip: '33480',
+        executor: 'Paul Reyes', executorRole: 'Personal Representative', executorEmail: 'paul@reyes.example', executorAuth: 'received', deathDate: '2026-05-10',
+        coFiduciaries: [{ id: 'cf1', name: 'Ana Reyes', role: 'Co-Personal Representative', email: 'ana@reyes.example', phone: '' }],
+        probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law', docTier: 'values', status: 'active', won: true, approved: true, tc: 'Ashley Jerome',
+        created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05', agrApproved: true, agrSent: true, agrSigned: true,
+        driveFolder: 'https://drive.google.com/drive/folders/R' + RSR, driveSubfolders: { 'Estate Inventory': 'I' + RSR, 'Signed Records': 'S' + RSR },
+        docState: { approvalRequest: { draftedAt: '2026-10-19T15:00:00.000Z', draftedBy: 'Ashley Jerome', provider: 'gmail', sentAt: '2026-10-19T16:00:00.000Z', sentBy: 'Ashley Jerome',
+          req: { to: ['paul@reyes.example', 'ana@reyes.example'], cc: ['ann@lowe.law'], noEmail: [], viaCounsel: false, stableIds: ['r1', 'r2'], asked: 2, ratify: 0 } } },
+        payments: [] });
+      estimateStore[RSR] = { approved: true, submitted: true, estimate: { jobId: RSR, svc: 'probate', havellinTotal: 20000, rooms: [{ idx: 0, name: 'Study', st: 'in', vol: 3, cplx: 3 }], vendors: [] } };
+      const q = (id, n, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: n, itemNo: n, status: 'uploaded', category: 'Furniture', namedBy: 'desk', reviewed: 1,
+        ts: T, updatedAt: T, filename: 'HVL_' + RSR + '_INV_' + id + '.jpg', driveFileId: 'f' + id }, o);
+      _photoRefs[RSR] = [
+        q('r1', 1, { objectName: 'Silver tea set', category: 'Silver & Precious Metal', fmv: 900, disposition: 'Auction', channel: 'Kodner Galleries' }),
+        q('r2', 2, { objectName: 'Bookcase', fmv: 200, disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
+        q('r3', 3, { objectName: 'Pair of Chinese vases', category: 'Art & Décor', fmv: 800, disposition: 'Auction', channel: 'Kodner Galleries', authBy: 'Paul Reyes', approvalDate: '2026-10-18' }),
+        q('r4', 4, { objectName: 'Desk lamp', fmv: 30, disposition: 'Keep' })];
+      savePhotoRefs(RSR);
+      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+    }, RSR);
+    sheet[RSR] = { items: await p.evaluate((id) => _photoRefs[id], RSR) };
+    await toDesk(RSR);
+    ok(await until(async () => (await stat('releases', RSR)) !== 'loading…'), 'fixture: the sheet read');
+    if (!(await isOpen('releases', RSR))) await press('#desk-hd-releases-' + RSR, 'the Releases header, to open it');
+    const RECR = '#inv-releases button[onclick="invRecordRequestApproval(' + RSR + ')"]';
+    const SENTR = '#inv-releases button[onclick="invMarkRequestSent(' + RSR + ')"]';
+    ok(await p.locator(RECR).isVisible(), 'fixture: the first request sent, Record the signed request on the card');
+    // Another device drafts the second request (the vases with the first two, in the paper's order); this card is not redrawn.
+    await p.evaluate((RSR) => {
+      const j = jobs.find((x) => x.id === RSR);
+      j.docState.approvalRequest = Object.assign({}, j.docState.approvalRequest, { draftedAt: '2026-10-20T15:00:00.000Z', draftUrl: '',
+        req: { to: ['paul@reyes.example', 'ana@reyes.example'], cc: ['ann@lowe.law'], noEmail: [], viaCounsel: false, stableIds: ['r1', 'r3', 'r2'], asked: 3, ratify: 0 } });
+    }, RSR);
+    ok(await p.locator(RECR).isVisible(), 'fixture: the card drawn before the draft still shows the button');
+    await press(RECR, 'Record the signed request, on the card drawn before the second draft');
+    const R8 = await p.evaluate(() => {
+      const m = document.getElementById('inv-approval-modal');
+      const al = document.querySelector('#jband-slot-admin .alert');
+      return { shown: !!m && m.checkVisibility(), alert: al ? al.textContent.replace(/\s+/g, ' ').trim() : null,
+        card: ((document.getElementById('inv-req-row') || {}).textContent || '').replace(/\s+/g, ' ') };
+    });
+    ok(!R8.shown, '⚠⚠ no dialog: the vases, on no request that went, are not offered ticked');
+    eq(R8.alert, 'A newer request is drafted and not yet confirmed as sent: send it and tap I’ve sent it, then record its signed copy here. '
+      + 'If the signed copy of the request sent Oct 19 comes back first, record it on its lines through the bulk bar’s Record approval.', '⚠ the refusal, by name, on screen');
+    eq(await p.locator(RECR).count(), 0, 'the card redrawn: no Record the signed request while the draft waits');
+    ok(await p.locator(SENTR).isVisible(), 'and I\'ve sent it in its place');
+    has(R8.card, 'If the signed copy of the request sent Oct 19 comes back first, record it on its lines through the bulk bar’s Record approval.', 'the card names the way round');
+    eq(await p.evaluate((id) => _photoRefs[id].map((r) => r.authBy || null), RSR), [null, null, 'Paul Reyes', null], 'nothing written');
+    await press(SENTR, 'I\'ve sent it');
+    ok(await p.locator(RECR).isVisible(), 'the second request sent: Record the signed request offered again');
+    eq(await p.locator('#inv-req-row').evaluate((el) => el.textContent.indexOf('If the signed copy') >= 0), false, 'the way round goes with the draft');
+    await press(RECR, 'Record the signed request');
+    const dlgR = () => p.evaluate(() => ({
+      shown: (document.getElementById('inv-approval-modal') || { checkVisibility: () => false }).checkVisibility(),
+      sub: (document.getElementById('ia-sub') || {}).textContent,
+      lines: [...document.querySelectorAll('#ia-body input[id^="ia-line-"]')].map((x) => x.closest('label').textContent.replace(/\s+/g, ' ').trim()),
+      paul: ((document.getElementById('ia-fid-on-0') || {}).textContent || '').replace(/\s+/g, ' ').trim(),
+      ana: ((document.getElementById('ia-fid-on-1') || {}).textContent || '').replace(/\s+/g, ' ').trim() }));
+    const D8 = await dlgR();
+    ok(D8.shown, 'the dialog is on screen');
+    ok(/^The request sent [A-Z][a-z]{2} \d{1,2}: 3 lines still unsigned\.$/.test(D8.sub), 'it names the request just sent and its three lines  [' + D8.sub + ']');
+    eq(D8.lines, ['#1 Silver tea set · Auction · Kodner Galleries', '#3 Pair of Chinese vases · Auction · Kodner Galleries', '#2 Bookcase · Donate · Goodwill Palm Beach'],
+      '⚠⚠ in the paper\'s order: the two Kodner lines together, then the donation');
+    eq([D8.paul, D8.ana], ['· already signed 1 of the 3 lines', ''], 'Paul has signed the vases of the three; Ana none');
+    await press('#ia-line-1', 'the vases\' box (struck out on the signed copy)');
+    eq((await dlgR()).paul, '', '⚠ the vases unticked: Paul has signed none of what will be recorded');
+    await press('#ia-line-1', 'the vases\' box again');
+    await press('#ia-line-0', 'the tea set\'s box');
+    eq((await dlgR()).paul, '· already signed 1 of the 2 lines', '⚠ the tea set unticked: one of the two left');
+    await press('#ia-actions button[onclick="closeInvApproval()"]', 'Cancel');
 
     eq(errs, [], 'zero page errors');
   } catch (e) {
