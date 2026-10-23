@@ -42,6 +42,9 @@
 //       wraps instead of cutting chips off); the bulk bar one line on a phone, its same controls behind Actions, in place;
 //       and on the desk only, on a phone only, the band's timeline folded to one line that names what the rail paints
 //       amber or red (Anthony's Q4), shown in place by a tap and kept shown across every repaint, per job.
+//   N · the documents (G10): the manual and the playbook, HTML and markdown, name the four bars by the catalogue's titles
+//       (the manual's table in the tab's order) and the desk's new controls in the desk's own words, each held to the source,
+//       and no document still places a moved card where it was (the photography guide included).
 //
 // Each later group of the build adds its own groups here.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -248,6 +251,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     groupK({ group, ok, eq, has, lacks });
     groupL({ group, ok, eq, has, lacks });
     groupM({ group, ok, eq, has, lacks });
+    groupN({ group, ok, eq, has, lacks });
   } finally {
     process.env.TZ = prevTZ;
   }
@@ -2650,5 +2654,96 @@ function groupM({ group, ok, eq, has, lacks }) {
     eq((live.match(/\bjtFoldLine\(/g) || []).length, 2, 'jtFoldLine: its definition and one reader (the fold)');
     eq((live.match(/\b_jtDeskFold\(/g) || []).length, 2, '_jtDeskFold: its definition and the band\'s one call');
     has(noComments(fn('jobProgressBlockHtml')), '_jtDeskFold(jobId, host, work, jtTrackHtml(work, [work]) + jtRailHtml(work))', 'the band hands it the rail it always drew');
+  }
+}
+
+// ═══ N · THE DOCUMENTS (G10) ══════════════════════════════════════════════════
+// The four documents say where every card now is, in the catalogue's and the buttons' own words, held to the source: a bar
+// renamed in DESK_FOLDS, a control relabelled, or a card moved back goes red here until the manual and the playbook follow
+// in the same commit (the photography guide's rule, applied to the desk). The sentences that placed a card where it no
+// longer is are netted, exactly as they read before the build (a historical note saying "until 2026-10-22" is not one).
+function groupN({ group, ok, eq, has, lacks }) {
+  const fs = require('fs');
+  const path = require('path');
+  const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+  const DOCS = ['manual.html', 'MANUAL.md', 'concierge-guide.html', 'CONCIERGE_GUIDE.md'];
+  const asIn = (f, t) => (f.endsWith('.html') ? t.replace(/&/g, '&amp;') : t);
+  const live = noComments(SRC);
+
+  group('N1 · the four documents name the four bars by DESK_FOLDS\' titles; the manual\'s table lists them in the tab\'s order');
+  {
+    const F = sandbox({ fns: [], vars: ['DESK_FOLDS'] }).DESK_FOLDS;
+    const titles = Object.keys(F).map((k) => F[k].title);
+    eq(titles, ['Releases & signed papers', 'Values & appraisals', 'Closing the job', 'Removed items & snapshots'], 'fixture: the catalogue\'s four titles, in order');
+    DOCS.forEach((f) => { const t = read(f); titles.forEach((x) => has(t, asIn(f, x), f + ' names the bar ' + x)); });
+    ['manual.html', 'MANUAL.md'].forEach((f) => {
+      const t = read(f);
+      const at = t.indexOf('The order of the tab is the order of an evening at the desk');
+      ok(at > 0, f + ': the order note, first in §10a');
+      ok(at > t.indexOf('10a. Job Admin') && t.indexOf('10a. Job Admin') > 0, f + ': …inside §10a');
+      const slice = at > 0 ? t.slice(at, at + 7000) : '';
+      const pos = titles.map((x) => slice.indexOf(asIn(f, x)));
+      ok(pos.every((p, i) => p > 0 && (i === 0 || p > pos[i - 1])), f + ': ⚠ its table runs the bars in the catalogue\'s order ' + JSON.stringify(pos));
+    });
+    ['concierge-guide.html', 'CONCIERGE_GUIDE.md'].forEach((f) => has(read(f), 'The tab runs in the order of your evening', f + ': the playbook\'s order note'));
+  }
+
+  group('N2 · the desk\'s new words, the same in the source and in the documents');
+  {
+    // [what, the source's literal (null: no single literal), the documents' words, which documents]
+    const BOTH = DOCS, MAN = ['manual.html', 'MANUAL.md'];
+    [['the Urgent strip', null, 'Urgent strip', BOTH],
+     ['Record the signed request', "'Record the signed request'", 'Record the signed request', BOTH],
+     ['the dialog\'s untick sentence', "var INV_REQ_UNTICK_TXT = 'Untick any line the signed copy struck out.'", 'Untick any line the signed copy struck out.', MAN],
+     ['Show the item', '>Show the item</button>', 'Show the item', BOTH],
+     ['the must-finds all found', "'All ' + nMf + ' must-finds found'", 'must-finds found', BOTH],
+     ['the earlier-days hint', "' from earlier days still undecided: press All'", 'from earlier days still undecided: press All', BOTH],
+     ['the folded timeline\'s line', "'<span>Timeline &middot; ' + ln.done + ' of ' + ln.total + ' done'", 'Timeline · N of M done', BOTH],
+     ['the bulk bar\'s Actions', '>Actions &#9662;</button>', 'Actions ▾', BOTH],
+     ['+ Add an appraiser', '>+ Add an appraiser</button>', '+ Add an appraiser', BOTH],
+     ['+ Add a beneficiary', "'+ Add a beneficiary'", '+ Add a beneficiary', BOTH],
+     ['a bar not yet read', "{ text: 'loading…', tone: 'grey' }", 'loading…', BOTH],
+     ['the agent\'s notes in the record', '>Agent One noted</div>', 'Agent One noted', MAN],
+     ['the bar the history opens', "deskFoldOpen(jobId, 'history')", 'which **Snapshot** opens', ['MANUAL.md']],
+    ].forEach(([what, code, words, docs]) => {
+      if (code) has(live, code, what + ': the source says it');
+      docs.forEach((f) => has(read(f), asIn(f, words), f + ' says ' + what));
+    });
+    // The pointer a document quotes is the pointer the code prints.
+    has(live, "' sign it, then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.'", 'fixture: the close\'s ledger sentence');
+    has(read('MANUAL.md'), 'then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.”', 'the manual quotes it as the close asks it');
+    has(read('manual.html'), 'then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin &amp; Inv.&rdquo;', '…and its HTML copy');
+  }
+
+  group('N3 · no document still places a moved card where it was before the build');
+  {
+    const stale = {
+      'MANUAL.md': ['and *Removed items* at the foot of the tab gives it back whole', '*Removed items* at the foot of the tab lists it', 'card under the Inventory Review bar, with two lists',
+        '(the card under the Inventory Review bar) lists each recipient', 'Under the inventory, above the snapshots, the desk now carries up to three cards, on every job',
+        'Beside *Approval Request* on the working header, and on the bulk bar for the selection', 'on the Disposition Ledger card (Job Admin & Inv)',
+        'the same lines first on the desk\'s Job Admin card', 'The same lines show on the desk\'s Job Admin card', 'with the Close-out card beside Job Admin.',
+        'and **File pickup list**: it opens the vendor\'s lines'],
+      'manual.html': ['<em>Removed items</em> at the foot of the tab', 'card under the Inventory Review bar, with two lists', '(the card under the Inventory Review bar) lists each recipient',
+        'Under the inventory, above the snapshots, the desk now carries up to three cards, on every job', '</strong> Beside <em>Approval Request</em> on the working header',
+        'on the Disposition Ledger card (Job Admin &amp; Inv)', 'the same lines first on the desk&rsquo;s Job Admin card', 'The same lines show on the desk&rsquo;s Job Admin card',
+        'with the Close-out card beside Job Admin.</div>', 'and <strong>File pickup list</strong>: it opens the vendor'],
+      'CONCIERGE_GUIDE.md': ['*Removed items* at the foot of the tab', 'the same line leads the Job Admin card at the desk', 'Press **Send request** beside it',
+        'Under *Vendor pickups* each auction house', 'card under the review bar.', '**The close-out records, under the inventory (new 2026-10-03).** Below the manifest and above the snapshots',
+        'on the Disposition Ledger card (Job Admin & Inv)', 'folded at the top of the Job Admin & Inv tab', 'The line leads the Job Admin card at the desk until you do',
+        'Get it back signed, then select those items and press **Record approval**'],
+      'concierge-guide.html': ['<em>Removed items</em> at the foot of the tab', 'the same line leads the Job Admin card at the desk', 'Press <strong>Send request</strong> beside it',
+        'Under <em>Vendor pickups</em> each auction house', 'card under the review bar.', 'Below the manifest and above the snapshots',
+        'on the Disposition Ledger card (Job Admin &amp; Inv)', 'folded at the top of the Job Admin &amp; Inv tab', 'The line leads the Job Admin card at the desk until you do',
+        'Get it back signed, then select those items and press <strong>Record approval</strong>'],
+      'photography-guide.html': ['<em>Removed items</em> at the foot gives them back', '<strong>Possible duplicates</strong> (at the top)'],
+    };
+    Object.keys(stale).forEach((f) => { const t = read(f); stale[f].forEach((x) => lacks(t, x, f + ': ⚠ no longer says “' + x.slice(0, 60) + '”')); });
+    // And where they are now, in the photography guide's plain words.
+    const pg = read('photography-guide.html');
+    has(pg, '<em>Removed items</em>, in the last bar at the foot of the page, gives them back', 'the photography guide: Removed items in the last bar');
+    has(pg, '<strong>Possible duplicates</strong> (above the items)', '…and Possible duplicates above the items');
+    // Reporting an Incident says where the call banner is: the desk carries its own copy since the Urgent strip.
+    has(live, "incidentHeaderHtml(job, 'desk')", 'fixture: the desk draws the banner (deskAlertsHtml)');
+    has(read('incident-guide.html'), 'turns the top of the Job Plan red, and the top of the Job Admin &amp; Inv tab, <em>CALL ANTHONY', 'Reporting an Incident names both places the banner is');
   }
 }

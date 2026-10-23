@@ -77,6 +77,11 @@
 //   its buttons, the rail folded to its line (the band against 610 px before); the line pressed, the rail shown, kept across
 //   a full redraw and per job; folded again. At 1440 and at 860 the band as it was; the Job Plan's band never folded.
 //
+//   Part 10 (G10, the documents): the manual and the playbook as a reader opens them, at 1440 and 390 and in print: the new
+//   order note in the page column, the manual's table running the bars in the order the app's own catalogue (DESK_FOLDS, read
+//   off the live app) runs them, every table inside the column, no sideways scroll, the playbook's new symptom rows, the
+//   photography guide's two moved sentences; zero page errors on each.
+//
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -1422,6 +1427,65 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         return { rail: !!(r && r.checkVisibility()), line: !!(s && s.querySelector('.jt-dfold-tog')) }; });
       eq([pl.rail, pl.line], [true, false], 'the Job Plan\'s band at 390: its rail shown, no line');
       await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(300);
+    }
+
+    // ══ PART 10 (G10): the documents ═════════════════════════════════════════════════════════════════════════════
+    {
+      console.log('\n## Part 10 · the manual and the playbook say where each card is, in the app\'s order, and fit their column');
+      const titles = await p.evaluate(() => Object.keys(DESK_FOLDS).map((k) => DESK_FOLDS[k].title));
+      eq(titles, ['Releases & signed papers', 'Values & appraisals', 'Closing the job', 'Removed items & snapshots'], 'the live app\'s four bars, in its order');
+      const docBase = APP.replace(/[^/]*$/, '');
+      const dp = await ctx.newPage();
+      const derrs = []; dp.on('pageerror', (e) => derrs.push(String(e)));
+      const read = (lead) => dp.evaluate((lead) => {
+        const col = document.querySelector('.page');
+        const note = [...document.querySelectorAll('.note')].find((n) => n.textContent.replace(/\s+/g, ' ').trim().indexOf(lead) >= 0);
+        const cr = col ? col.getBoundingClientRect() : null;
+        // The table the note leads into (the manual's); none follows the playbook's.
+        const nx = note ? note.nextElementSibling : null;
+        const tbl = nx && nx.tagName === 'TABLE' ? nx : null;
+        const first = tbl ? [...tbl.querySelectorAll('tr')].slice(1).map((r) => (r.cells[0] || {}).textContent || '') : [];
+        const wide = [...document.querySelectorAll('.page table')].filter((t) => { const r = t.getBoundingClientRect(); return cr && r.width > 0 && r.right > cr.right + 1; }).length;
+        return { note: !!note, inCol: !!(note && col && col.contains(note)), first, wide,
+          tableRight: tbl ? Math.round(tbl.getBoundingClientRect().right) : null, colRight: cr ? Math.round(cr.right) : null,
+          overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, text: document.body.textContent.replace(/\s+/g, ' ') };
+      }, lead);
+      for (const [file, lead] of [['manual.html', 'The order of the tab is the order of an evening at the desk'], ['concierge-guide.html', 'The tab runs in the order of your evening']]) {
+        for (const w of [1440, 390]) {
+          await dp.setViewportSize({ width: w, height: w === 390 ? 844 : 1000 });
+          await dp.emulateMedia({ media: 'screen' });
+          await dp.goto(docBase + file); await dp.waitForTimeout(400);
+          const R = await read(lead);
+          ok(R.note && R.inCol, file + ' at ' + w + ': the order note, inside the page column');
+          eq(R.overflow, 0, file + ' at ' + w + ': no sideways scroll');
+          titles.forEach((t) => has(R.text, t, file + ' at ' + w + ': names the bar ' + t));
+          if (file === 'manual.html') {
+            const at = titles.map((t) => R.first.findIndex((c) => c.indexOf(t) === 0));
+            ok(at.every((x, i) => x >= 0 && (i === 0 || x > at[i - 1])), file + ' at ' + w + ': ⚠ the table runs the bars in the app\'s order ' + JSON.stringify(at));
+            ok(R.first[0] === 'The job today' && /^Summary/.test(R.first[R.first.length - 1] || ''), file + ': the table runs from the job today to the summary');
+            ok(R.tableRight != null && R.tableRight <= R.colRight + 1, file + ' at ' + w + ': the table inside the column (' + R.tableRight + ' / ' + R.colRight + ')');
+          } else {
+            ['You can’t find Releases, the Disposition Ledger, the appraisers, Removed items or the snapshots on Job Admin & Inv', 'A bar on Job Admin & Inv opened by itself',
+             'Every bar on Job Admin & Inv says loading…', 'Send request is not on the work bar'].forEach((x) => has(R.text, x, file + ' at ' + w + ': the symptom row “' + x.slice(0, 40) + '…”'));
+            has(R.text, 'the same line leads the Urgent strip at the top of the desk', file + ': the will’s line read in the Urgent strip');
+          }
+          eq(R.wide, 0, file + ' at ' + w + ': no table runs past the page column');
+        }
+        await dp.setViewportSize({ width: 1440, height: 1000 });
+        await dp.emulateMedia({ media: 'print' }); await dp.waitForTimeout(300);
+        const Pr = await read(lead);
+        ok(Pr.note && Pr.inCol, file + ' in print: the order note in the column');
+        eq(Pr.wide, 0, file + ' in print: no table past the column');
+        await dp.emulateMedia({ media: 'screen' });
+      }
+      await dp.setViewportSize({ width: 390, height: 844 });
+      await dp.goto(docBase + 'photography-guide.html'); await dp.waitForTimeout(400);
+      const G = await dp.evaluate(() => ({ t: document.body.textContent.replace(/\s+/g, ' '), overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth }));
+      has(G.t, 'Possible duplicates (above the items)', 'Photographing a House: Possible duplicates above the items');
+      has(G.t, 'Removed items, in the last bar at the foot of the page, gives them back', '…and Removed items in the last bar');
+      eq(G.overflow, 0, 'Photographing a House at 390: no sideways scroll');
+      eq(derrs, [], 'the documents: zero page errors');
+      await dp.close();
     }
 
     eq(errs, [], 'zero page errors');
