@@ -2283,6 +2283,7 @@ function groupL({ group, ok, eq, has, lacks }) {
     has(row('Gulf Guns (FFL)'), 'File the dealer’s receipt (#7)', 'its filing');
     lacks(rowH('Gulf Guns (FFL)'), 'openSignoutDialog', '⚠⚠ a firearm is never on a sign-out sheet');
     lacks(rowH('Gulf Guns (FFL)'), 'inv-signout-row', 'and its row is not a sign-out row');
+    lacks(rowH('Gulf Guns (FFL)'), 'printBeneficiaryReceipt', '⚠ and no Print receipt: the dealer makes the transfer, Havellin prints no receipt for it');
     // The appraiser: the hand-off listed while the painting is out, with the return offered.
     has(row('Carla Mendes'), 'Carla Mendes · back from appraisal · 1 line (#8)', 'the appraiser\'s return');
     has(row('Carla Mendes'), 'Check 1 back in from Carla Mendes', 'offered');
@@ -2400,5 +2401,55 @@ function groupL({ group, ok, eq, has, lacks }) {
     lacks(live, 'Receipts for property released to a person', 'the receipts\' own section is gone');
     const CL = sandbox({ fns: [], vars: ['DESK_FOLDS'] }).DESK_FOLDS.closing.title;
     eq((fn('_leavingRowHtml').split('listed on the Donations card, under ' + CL + '.').length - 1), 1, 'the pointer to the Donations card names the bar by its title');
+  }
+
+  group('L5 · on review: a charity receipt the Donations card does not list stays on its charity\'s row; a lone Sign out under two papers names its paper');
+  {
+    // Goodwill keeps one donated line (#1, receipted: on the Donations card). Two more receipts were filed under Goodwill: one
+    // covered the cot, since binned; one the stool, still donated but with its charity cleared (the card's No charity recorded
+    // row lists no receipt). Habitat ReStore now takes the dresser a receipt filed under Goodwill covered: the card lists that
+    // one under Habitat, by its line. A voided receipt is listed nowhere.
+    const r = [LINE('e', Object.assign({ itemNo: 1, objectName: 'Books', disposition: 'Donate', channel: 'Goodwill' }, SIGNED)),
+      LINE('x', Object.assign({ itemNo: 2, objectName: 'Cot', disposition: 'Junk' }, SIGNED)),
+      LINE('w', Object.assign({ itemNo: 3, objectName: 'Dresser', disposition: 'Donate', channel: 'Habitat ReStore' }, SIGNED)),
+      LINE('u', Object.assign({ itemNo: 4, objectName: 'Stool', disposition: 'Donate', channel: '' }, SIGNED))];
+    const don = (id, ref, sids, o) => Object.assign({ id, kind: 'donation', ref, stableIds: sids, signedBy: ref, filedAt: ON('2026-10-20'),
+      fileUrl: 'https://drive.google.com/file/d/' + id + '/view', label: 'Charity receipt — ' + ref }, o || {});
+    const job = PROBATE({ signedRecords: [don('dn', 'Goodwill', ['e']), don('dnX', 'Goodwill', ['x'], { glass: true }), don('hb', 'Goodwill', ['w']),
+      don('gu', 'goodwill', ['u']), don('dv', 'Goodwill', ['x'], { voidedAt: ON('2026-10-21'), voidReason: 'wrong paper' })] });
+    const D = desk(job, {}, { refs: r, real: ['_renderInvReleasesCard', '_renderInvBequestCard', '_renderLedgerCards'],
+      stubs: { SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true }, _invAssignItemNos: () => r } });
+    const html = D.render();
+    ok(!D.log.renderErr, 'the desk draws with the real Releases card and close-out papers (' + (D.log.renderErr || 'ok') + ')');
+    const relH = inner(html, 'inv-releases') || '', donH = inner(html, 'inv-donations-card') || '';
+    const rows = leavingRows(relH);
+    eq(rows.map((x) => x[0]), ['Goodwill', 'Habitat ReStore'], 'fixture: a row per charity named on a donated line');
+    const row = (n) => (rows.filter((x) => x[0] === n)[0] || ['', '', ''])[1];
+    const rowH = (n) => (rows.filter((x) => x[0] === n)[0] || ['', '', ''])[2];
+    eq(voids(rowH('Goodwill')), ['dnX', 'gu'], '⚠⚠ the receipts for the binned cot and the stool with no charity, on Goodwill\'s row with their Voids (they were on neither card)');
+    has(row('Goodwill'), '✓ 1 charity receipt on file: listed on the Donations card, under Closing the job. The 2 charity receipts filed for lines no longer donated to them stay here and in Drive.',
+      'the row says which receipt is on the card and why the others are here');
+    eq(voids(rowH('Habitat ReStore')), [], 'the receipt the card lists under Habitat, by its line, is not on a row');
+    has(row('Habitat ReStore'), '✓ 1 charity receipt on file', 'the row points at it');
+    lacks(row('Habitat ReStore'), 'no longer donated', 'and says nothing of a receipt it does not hold');
+    const rel = voids(relH), dn = voids(donH), all = rel.concat(dn);
+    eq(all.slice().sort(), ['dn', 'dnX', 'gu', 'hb'], '⚠⚠ every live charity receipt on the desk, each once; the voided one nowhere');
+    eq(dn.slice().sort(), ['dn', 'hb'], 'the card lists the receipts that cover its named charities\' lines, as it did');
+    // One receipt alone: the sentence in the singular (the reviewer's case, Goodwill's binned cot).
+    const B1 = bars(PROBATE({ signedRecords: [don('dnX', 'Goodwill', ['x'])] }), [r[0], r[1]]);
+    const g1 = (leavingRows(String(attempt(() => B1.C._renderInvReleasesCard(B1.C.jobs[0], B1.all)).val || '')).filter((x) => x[0] === 'Goodwill')[0] || ['', '', '']);
+    has(g1[1], 'Goodwill · donation · 1 line (#1) The charity receipt filed for lines no longer donated to them stays here and in Drive. Sign out 1 to Goodwill',
+      'one receipt: said in the singular, the Sign out after it');
+    eq(voids(g1[2]), ['dnX'], 'with its Void');
+    // The lone Sign out: Carla Mendes buys the vase (awaiting the approval) and has it to appraise; the painting is with her.
+    const B = bars(PROBATE({ appraisers: [{ id: 'ap1', name: 'Carla Mendes' }], signedRecords: [
+      { id: 'ho', kind: 'appraisal_out', ref: 'Carla Mendes', stableIds: ['i'], signedBy: 'Carla Mendes', filedAt: ON('2026-10-19'), fileUrl: 'u', label: 'Appraisal hand-off list' }] }),
+      [LINE('i', { itemNo: 1, objectName: 'Painting', category: 'Art & Décor', disposition: 'Keep', apprId: 'ap1' }),
+       LINE('j', { itemNo: 2, objectName: 'Vase', category: 'Art & Décor', disposition: 'Sell', channel: 'Carla Mendes', apprId: 'ap1' })]);
+    const ch = String(attempt(() => B.C._renderInvReleasesCard(B.C.jobs[0], B.all)).val || '');
+    const carla = (leavingRows(ch).filter((x) => x[0] === 'Carla Mendes')[0] || ['', '', ''])[2];
+    eq([...carla.matchAll(/onclick="openSignoutDialog\(7,&quot;([a-z_]+)&quot;,&quot;Carla Mendes&quot;\)">([^<]*)</g)].map((m) => [m[1], m[2]]),
+      [['appraisal_back', 'Check 1 back in from Carla Mendes'], ['appraisal_out', 'Sign out 1 to Carla Mendes (appraisal hand-off)']],
+      '⚠ the one Sign out offered, under a sale and a hand-off, names the paper it opens; the return names itself');
   }
 }

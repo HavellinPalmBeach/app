@@ -1408,7 +1408,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 10:20am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 11:39am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -32907,8 +32907,9 @@ function _invJsArg(v) { return esc(JSON.stringify(String(v == null ? '' : v))); 
 // charity's donation, a person's receipt, an appraiser's hand-off and return) by the taker's name (samePerson, or
 // pickupKey's spacing). No rule of its own: every answer is the two groupers'. `records`: each paper filed for the taker,
 // listed once (an appraiser's hand-offs and returns together, so the hand-off stays listed while the line is out);
-// `donationFiled`: a charity's receipts, which the Donations card lists, so the row only counts them. Rows run in the
-// order their first line stands on the inventory; a receipt with no line left goes last.
+// `donationFiled`: a charity's receipts, which the Donations card lists, so the row only counts them; `strayDonations`: a
+// charity's receipts the Donations card does not list (below), which the row lists. Rows run in the order their first line
+// stands on the inventory; a receipt with no line left goes last.
 function _leavingSame(a, b) { return samePerson(a, b) || pickupKey(a) === pickupKey(b); }
 function leavingGroups(job, all) {
   if (!job) return [];
@@ -32921,7 +32922,7 @@ function leavingGroups(job, all) {
   var rows = [];
   var rowOf = function (name) {
     var L = rows.filter(function (x) { return _leavingSame(x.taker, name); })[0];
-    if (!L) { L = { taker: name, receipts: [], outs: [], records: [], donationFiled: 0, at: Infinity }; rows.push(L); }
+    if (!L) { L = { taker: name, receipts: [], outs: [], records: [], donationFiled: 0, strayDonations: [], at: Infinity }; rows.push(L); }
     return L;
   };
   (invFiduciaryMode(job) ? invReceiptGroups(job, all) : []).forEach(function (g) {
@@ -32938,6 +32939,18 @@ function leavingGroups(job, all) {
     L.at = Math.min(L.at, firstAt(g.lines));
   });
   var dons = donationGroups(job, all);
+  // ⚠ A CHARITY RECEIPT THE DONATIONS CARD DOES NOT LIST STAYS ON ITS CHARITY'S ROW (G8 review, 2026-10-23): the card lists a
+  // receipt under a named charity by the lines it covers, so one filed for lines since moved off Donate (sent elsewhere,
+  // binned) or left with no charity named was listed on neither card, with no link and no Void, while the row only pointed
+  // at the card. Until 2026-10-22 the charity's sign-out row listed every receipt filed under its name. It is listed on the
+  // row of the taker it was filed under.
+  var onCard = {};
+  dons.forEach(function (d) { if (d.charity) (d.records || []).forEach(function (s) { onCard[String(s.id)] = 1; }); });
+  signedRecordsOf(job, 'donation').forEach(function (s) {
+    if (onCard[String(s.id)] || !String(s.ref || '').trim()) return;
+    var L = rows.filter(function (x) { return _leavingSame(x.taker, String(s.ref).trim()); })[0];
+    if (L) L.strayDonations.push(s);
+  });
   rows.forEach(function (L) {
     var seen = {};
     var add = function (list) { (list || []).forEach(function (s) { var k = String(s.id); if (!seen[k]) { seen[k] = 1; L.records.push(s); } }); };
@@ -32951,6 +32964,7 @@ function leavingGroups(job, all) {
     if (appr) ['appraisal_out', 'appraisal_back'].forEach(function (k) {
       add(signedRecordsOf(job, k).filter(function (x) { return pickupKey(x.ref) === pickupKey(L.taker); }));
     });
+    add(L.strayDonations);
     if (don) {
       var ids = {};
       dons.forEach(function (d) { if (d.charity && _leavingSame(d.charity, L.taker)) (d.records || []).forEach(function (s) { ids[String(s.id)] = 1; }); });
@@ -33004,12 +33018,19 @@ function _leavingRowHtml(job, L) {
   });
   if (L.donationFiled) notes.push(gray('&#10003; ' + L.donationFiled + ' charity receipt' + (L.donationFiled > 1 ? 's' : '')
     + ' on file: listed on the Donations card, under Closing the job.'));
+  var stray = L.strayDonations.length;
+  if (stray) notes.push('<div class="inv-don-stray" style="color:var(--gray);">' + (stray > 1 ? 'The ' + stray + ' charity receipts' : 'The charity receipt')
+    + ' filed for lines no longer donated to them ' + (stray > 1 ? 'stay' : 'stays') + ' here and in Drive.</div>');
   // The controls. One Sign out per kind of paper; where a taker signs two (a firm that buys and takes donations, an
-  // appraiser who also buys), each names its paper, so two buttons never read alike.
+  // appraiser who also buys), each names its paper, so two buttons never read alike, and a lone button offered while the
+  // other paper waits on the approval says which of the two it opens (G8 review, 2026-10-23: it sat unnamed under both).
+  // The return (Check N back in) names itself.
   if (person && person.released.length) ctl.push('<button class="btn-s" onclick="printBeneficiaryReceipt(' + jid + ',' + _invJsArg(person.name) + ')">'
     + (person.owed.length ? 'Print receipt' : 'Reprint receipt') + '</button>');
   var offered = L.outs.filter(function (g) { return g.ready.length; });
-  var twoSign = offered.filter(function (g) { return g.kind !== 'appraisal_back'; }).length > 1;
+  var signKinds = {};
+  L.outs.forEach(function (g) { if (g.kind !== 'appraisal_back') signKinds[g.kind] = 1; });
+  var twoSign = Object.keys(signKinds).length > 1;
   offered.forEach(function (g) {
     var label = g.kind === 'appraisal_back' ? 'Check ' + g.ready.length + ' back in from ' + g.taker
       : 'Sign out ' + g.ready.length + ' to ' + g.taker + (twoSign ? ' (' + SIGNOUT_KINDS[g.kind].what + ')' : '');
@@ -35981,7 +36002,8 @@ function _invRefreshAgentNotices(jobId) {
   el.innerHTML = _agNoticesHtml(jobId, _jobInvRefs(jobId));
   return true;
 }
-// The close-out records' host (P19): the Disposition Ledger, Proceeds statements and Donations cards. It holds no field a
+// The close-out records' host (P19): the Disposition Ledger (where it applies), the Contents Record (living work), the signed
+// schedules (2026-10-22), Proceeds statements and Donations cards, as _renderLedgerCards draws them. It holds no field a
 // person types into (a signed copy's picker is a button), so a repaint takes nothing from under anybody.
 // Both hosts sit inside a fold bar (2026-10-22), so each repaint ends with the bars' lines (_deskFoldHeadsRepaint).
 function _invRefreshRecords(jobId) {

@@ -62,7 +62,10 @@
 //   sign out on the iPad one row each, the person's receipt and her sign-out one row, the charity that also buys offered two
 //   Sign outs, each pressed and opening its own sheet; every paper filed listed once, a charity's receipt only on the Donations
 //   card (Closing the job pressed open); the adopted Court Inventory beside the ledger, filed there through its own picker,
-//   listed, and counted on the Closing bar's line; nothing off the edge at 390.
+//   listed, and counted on the Closing bar's line; nothing off the edge at 390. On review: a charity receipt filed for a line
+//   since binned, which the Donations card (listing receipts by the lines they cover) does not list, on its charity's row
+//   with its link and its Void, the Void pressed and the reason typed, the row then without it; an appraiser who buys a
+//   vase awaiting approval and has it to appraise, the one Sign out offered naming its paper and opening the hand-off.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step96.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -99,7 +102,8 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     p.setDefaultTimeout(15000);
     const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
     const dialogs = [];
-    p.on('dialog', async (d) => { dialogs.push(d.type() + ': ' + d.message()); await d.accept(); });
+    let promptAnswer = null;   // part 8 on review: what a person types into a prompt (a Void's reason); otherwise its default
+    p.on('dialog', async (d) => { dialogs.push(d.type() + ': ' + d.message()); await (d.type() === 'prompt' && promptAnswer !== null ? d.accept(promptAnswer) : d.accept()); });
     const until = async (f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < (ms || 6000)) { if (await f()) return true; await p.waitForTimeout(150); } return false; };
     await p.goto(APP); await p.waitForTimeout(1800);
     await p.evaluate((u) => {
@@ -1204,6 +1208,69 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     eq(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'no sideways scroll at 390 with Releases and Closing open');
     await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
     eq(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'nor at 1440');
+
+    // ══ PART 8, ON REVIEW (G8): a charity receipt the Donations card does not list; a lone Sign out names its paper ══
+    console.log('\n## Part 8 (review) · a charity receipt for a binned line stays on its row, Void pressed; the lone Sign out named');
+    const RSD = 9612;
+    await p.evaluate((RSD) => {
+      const NOW = Date.now(), DAY0 = new Date(NOW); DAY0.setHours(0, 0, 0, 0);
+      const T = Math.min(NOW, Math.max(NOW - 3 * 3600000, DAY0.getTime() + 60000));
+      jobs.unshift({ id: RSD, hvlId: 'HVL-2610-D972', name: 'Walter Dunn', svc: 'probate', matterType: 'probate', addr: '3 Ocean Blvd', city: 'Palm Beach', zip: '33480',
+        executor: 'June Dunn', executorRole: 'Personal Representative', executorEmail: 'june@dunn.example', executorAuth: 'received', deathDate: '2026-05-04',
+        probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law', docTier: 'values', status: 'active', won: true, approved: true, tc: 'Ashley Jerome',
+        created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05', agrApproved: true, agrSent: true, agrSigned: true,
+        driveFolder: 'https://drive.google.com/drive/folders/R' + RSD, driveSubfolders: { 'Estate Inventory': 'I' + RSD, 'Signed Records': 'S' + RSD },
+        appraisers: [{ id: 601, name: 'Carla Mendes', firm: 'Mendes Fine Art Appraisals', credential: 'ASA', independent: true }],
+        signedRecords: [{ id: 'dx9', kind: 'donation', ref: 'Goodwill Palm Beach', stableIds: ['d2'], signedBy: 'Goodwill Palm Beach', glass: true, filedAt: T - 86400000,
+          fileUrl: 'https://drive.google.com/file/d/dx9/view', label: 'Charity receipt — Goodwill Palm Beach' }],
+        docState: {}, payments: [] });
+      estimateStore[RSD] = { approved: true, submitted: true, estimate: { jobId: RSD, svc: 'probate', havellinTotal: 20000, rooms: [{ idx: 0, name: 'Study', st: 'in', vol: 3, cplx: 3 }], vendors: [] } };
+      const OK = { authBy: 'June Dunn', approvalDate: '2026-10-18' };
+      const q = (id, n, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: n, itemNo: n, status: 'uploaded', category: 'Furniture', namedBy: 'desk', reviewed: 1,
+        ts: T, updatedAt: T, filename: 'HVL_' + RSD + '_INV_' + id + '.jpg', driveFileId: 'f' + id, fmv: 200 }, o);
+      _photoRefs[RSD] = [
+        q('d1', 1, Object.assign({ objectName: 'Box of books', disposition: 'Donate', channel: 'Goodwill Palm Beach' }, OK)),
+        q('d2', 2, Object.assign({ objectName: 'Folding cot', disposition: 'Junk' }, OK)),
+        q('v1', 3, { objectName: 'Celadon vase', category: 'Art & Décor', fmv: 2400, disposition: 'Sell', channel: 'Carla Mendes', apprId: 601 })];
+      savePhotoRefs(RSD);
+      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+    }, RSD);
+    sheet[RSD] = { items: await p.evaluate((id) => _photoRefs[id], RSD) };
+    await toDesk(RSD);
+    ok(await until(async () => (await stat('releases', RSD)) !== 'loading…'), 'fixture: the sheet read');
+    if (!(await isOpen('releases', RSD))) await press('#desk-hd-releases-' + RSD, 'the Releases header, to open it');
+    const rowD = (n) => p.evaluate((n) => { const r = [...document.querySelectorAll('#inv-releases .inv-leaving-row')].find((x) => (x.querySelector('strong') || {}).textContent === n);
+      return r ? { text: r.textContent.replace(/\s+/g, ' ').trim(), outs: [...r.querySelectorAll('button[onclick^="openSignoutDialog("]')].map((b) => b.textContent.trim()),
+        voids: [...r.querySelectorAll('button[onclick^="voidSignedRecord("]')].map((b) => (/'([^']+)'/.exec(b.getAttribute('onclick')) || [])[1]),
+        link: !!r.querySelector('a[href="https://drive.google.com/file/d/dx9/view"]') } : null; }, n);
+    const gwD = (await rowD('Goodwill Palm Beach')) || { text: '', outs: [], voids: [], link: false };
+    has(gwD.text, 'The charity receipt filed for lines no longer donated to them stays here and in Drive.', '⚠ the receipt for the binned cot is said to stay on the row');
+    eq(gwD.voids, ['dx9'], '⚠⚠ listed on Goodwill\'s row with its Void (it was on neither card)');
+    ok(gwD.link, 'and its link to the copy in Drive');
+    if (!(await isOpen('closing', RSD))) await press('#desk-hd-closing-' + RSD, 'the Closing header, to open it');
+    has(await p.locator('#inv-donations-card').textContent(), '0 of 1 receipted', 'the Donations card: the books, unreceipted');
+    eq(await voids8('#inv-donations-card'), [], 'and the cot\'s receipt is not listed there: once on the desk');
+    // Void pressed on the row, the reason typed into the page's own prompt.
+    promptAnswer = 'filed against the wrong charity';
+    await press('#inv-releases button[onclick="voidSignedRecord(' + RSD + ',\'dx9\')"]', 'Void, on Goodwill\'s row');
+    promptAnswer = null;
+    ok(await until(async () => (await p.evaluate((id) => ((jobs.find((x) => x.id === id).signedRecords || []).find((r) => r.id === 'dx9') || {}).voidReason || '', RSD)) === 'filed against the wrong charity'),
+      'the receipt is voided with the reason typed');
+    await p.waitForTimeout(400);
+    const gwD2 = (await rowD('Goodwill Palm Beach')) || { text: '', voids: [] };
+    eq(gwD2.voids, [], 'the row redrawn without it');
+    eq(gwD2.text.indexOf('no longer donated') >= 0, false, 'and without its sentence');
+    ok(await isOpen('releases', RSD), 'the Releases bar stays open across the Void\'s redraw');
+    // Carla buys the vase (it waits on the approval) and has it to appraise: the one Sign out offered names its paper.
+    const cmD = (await rowD('Carla Mendes')) || { text: '', outs: [] };
+    has(cmD.text, 'vendor pickup · 1 line (#3) · ⚠ awaiting written approval: #3', 'the sale, waiting on the approval');
+    eq(cmD.outs, ['Sign out 1 to Carla Mendes (appraisal hand-off)'], '⚠ the one Sign out offered, named for the paper it opens');
+    await press('#inv-releases button[onclick^=\'openSignoutDialog(' + RSD + ',"appraisal_out","Carla Mendes"\']', 'Sign out to Carla Mendes, the hand-off');
+    has(await p.evaluate(() => (document.getElementById('ip-title') || {}).textContent), 'Appraisal Hand-off — Carla Mendes', 'it opens the hand-off\'s sheet');
+    await press('#inv-pickup-modal button[onclick="closePickupDialog()"]', 'Cancel');
+    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+    eq(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'no sideways scroll at 390');
+    await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
 
     eq(errs, [], 'zero page errors');
   } catch (e) {
