@@ -67,7 +67,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
 
   // ───────────────────────────────────────────────────────────────────────────
-  group('⚠⚠ THE SPLIT COPIES THE IMAGE AND NOTHING ELSE');
+  group('⚠⚠ THE SPLIT COPIES THE IMAGE AND THE PHOTOGRAPH\u2019S DESTINATION, AND NOTHING ELSE');
   {
     const { ctx, saved } = rig([SRC()]);
     const line = ctx.invSplitItem(7, 's_bar');
@@ -82,9 +82,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(line.status, 'uploaded', 'it is already in Drive by construction, so it never uploads');
 
     // ⚠ NOTHING ELSE IS COPIED, and that is the load-bearing half. A prefilled answer on a
-    // blank line is the silence-reads-as-Keep defect the Undecided default exists to stop.
+    // blank line is the silence-reads-as-Keep defect the Undecided default exists to stop. The one
+    // exception since 2026-10-24 is the destination pressed for the photograph, which is no silence.
     eq(line.objectName, '', 'no name — it is a different object');
-    eq(line.disposition, '', 'no disposition: it lands in Not yet decided, where it belongs');
+    // RESTATED 2026-10-24, NOT DELETED (Anthony: "Take the destination"): the photograph's destination is the one answer
+    // the split carries over, because it was pressed for the photograph. desk-row-columns.test.js group D holds the rest.
+    eq(line.disposition, 'Keep', 'the photograph’s destination: it lands beside the photograph’s own line');
     eq(line.category, ctx.INV_DEFAULT_CATEGORY, 'the default category, not the source\'s Furniture');
     ['fmv', 'condition', 'flagBequest', 'needsAppr', 'itemNo', 'custodyLog'].forEach((k) => {
       ok(line[k] === undefined || line[k] === '' || line[k] === 0,
@@ -279,7 +282,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ THE RENDERED ROW SAYS HOW MANY OBJECTS SHARE THE FRAME');
   {
     const rowCtx = sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', '_invPanelAppraisalHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invDetailRefs', '_invPhotoSiblings',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invDetailRefs', '_invPhotoSiblings', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
             '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
@@ -313,7 +316,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The converse, or the cue is noise on every ordinary row in the manifest.
     const loneCtx = sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue',
             '_invDerivedRefs', '_getPhotoRef', '_invItemNo', 'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
@@ -368,8 +371,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(rows.every((r) => r.derivedFrom === 's_bar'), 'every row points at the one photograph');
     ok(rows.every((r) => r.driveFileId === 'FID'), 'and shares its image');
     ok(rows.every((r) => r.ts === 1000), 'and inherits the shot\u2019s timestamp, so one frame stays together');
-    ok(rows.every((r) => r.objectName === '' && r.disposition === ''),
-       'and carries no prefilled answer \u2014 fifteen objects, fifteen blank lines to name');
+    // RESTATED 2026-10-24: the photograph's destination comes with each (Keep here); the name never does.
+    ok(rows.every((r) => r.objectName === '' && r.disposition === 'Keep'),
+       'and carries no name \u2014 fifteen objects, fifteen lines to name, each going where the photograph was going');
 
     // Driven through the real reader: the source first, then the batch in the order it was minted.
     const listed = many.ctx._jobInvRefs(7);

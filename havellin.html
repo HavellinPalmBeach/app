@@ -825,6 +825,36 @@ body.field-cam-open #sync-pending{display:none !important;}
 .inv-val-set input[type=checkbox]{width:auto;flex:0 0 auto;margin:0;accent-color:var(--bronze);}
 .inv-val-avd{font-size:11.5px;}
 .inv-add-ctl{margin-top:6px;}
+/* ⚠ THE DESK'S ROW IS COLUMNS UNDER HEADINGS (2026-10-24; Anthony, off the desk: the value and recipient boxes had no
+   heading, the count sat in the record, the full photo was in the record, and a long name was cut off). One set of column
+   classes, read by the row (_renderInvRow) and the headings over each group (_renderInvColHead), so the two line up by
+   construction: fixed widths right of the item, the item taking the rest. The name wraps: a textarea in a grid cell beside a
+   hidden copy of its own text (data-v, kept by oninput), which sets the height in every browser without a script. On a
+   phone the row wraps, so the headings are not drawn and each box names itself above it (data-cap). */
+.inv-row-main{display:flex;align-items:center;gap:8px;padding:6px 4px;}
+.inv-colhead{display:flex;align-items:flex-end;gap:8px;padding:4px 4px 3px;border-bottom:1px solid var(--border);font-size:9.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;line-height:1.2;}
+.inv-colhead .inv-c-item{padding-left:7px;}
+.inv-c-pick{flex:0 0 14px;}
+.inv-c-photo{flex:0 0 72px;}
+.inv-c-no{flex:0 0 26px;}
+.inv-c-item{flex:1 1 auto;min-width:0;}
+.inv-c-qty{flex:0 0 52px;min-width:0;}
+.inv-c-val{flex:0 0 104px;min-width:0;}
+.inv-c-disp{flex:0 0 110px;min-width:0;}
+.inv-c-who{flex:0 0 150px;min-width:0;}
+.inv-c-rev{flex:0 0 84px;margin:0;}
+.inv-c-open{flex:0 0 30px;}
+.inv-qty{width:100%;min-width:0;box-sizing:border-box;padding:3px 5px;font-size:11px;text-align:right;}
+.inv-photo-link{position:relative;display:block;text-decoration:none;}
+.inv-photo-link::after{content:'\2197';position:absolute;right:3px;bottom:3px;width:16px;height:16px;line-height:16px;text-align:center;font-size:10px;font-weight:700;border-radius:3px;background:rgba(255,255,255,.9);color:var(--gray-dk);}
+.inv-photo-link:hover>div{border-color:var(--bronze)!important;}
+.inv-name{display:grid;min-width:0;}
+.inv-name::after,.inv-name>textarea{grid-area:1/1/2/2;font-family:inherit;font-size:11.5px;font-weight:600;line-height:1.35;padding:3px 6px;margin:0;border:1px solid transparent;border-radius:3px;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;}
+.inv-name::after{content:attr(data-v) ' ';visibility:hidden;}
+.inv-name>textarea{width:100%;height:auto;min-height:0;resize:none;overflow:hidden;background:transparent;color:inherit;}
+.inv-name.inv-unnamed>textarea{border-color:var(--bronze);background:#fffdf9;font-weight:400;}
+.inv-name.inv-unnamed::after{font-weight:400;}
+.inv-note{font-size:10.5px;color:var(--gray-dk);font-style:italic;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 /* Close-out card (2026-09-22) — four numbered steps in the order they are done: the call, the
    review ask it unlocks, the referral ask, the required vendor scorecard. One renderer, drawn on
    the Job Plan's Close-out stage and on Job Admin & Inv. */
@@ -1128,6 +1158,17 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   .inv-bulk-open .inv-bulk-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;flex:1 1 100%;order:1;min-width:0;}
   .inv-bulk-res{order:2;}
   .inv-bulk-clear{margin-left:auto;}
+  /* The desk's row on a phone (2026-10-24): the photo, number and item on the first line, the item taking what is left; the
+     boxes below, each named above it; no headings, which could not line up with a row that wraps. */
+  .inv-colhead{display:none;}
+  .inv-row-main{align-items:flex-end;}
+  .inv-c-item{flex:1 1 calc(100% - 144px);}
+  .inv-c-qty{flex:0 0 64px;}
+  .inv-c-val{flex:1 1 104px;}
+  .inv-c-disp{flex:1 1 130px;}
+  .inv-c-who{flex:1 1 100%;}
+  .inv-c[data-cap]::before{content:attr(data-cap);display:block;font-size:9.5px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+  .inv-name::after{font-size:16px;}
   .jt-dfold-tog{display:flex;align-items:baseline;gap:6px;width:100%;min-height:38px;margin:0;padding:9px 2px 3px;border:none;border-top:0.5px solid var(--border);background:none;font:inherit;font-size:11.5px;font-weight:600;color:var(--gray-dk);text-align:left;cursor:pointer;}
   .jt-dfold-open .jt-dfold-tog{margin-bottom:8px;}
   .jt-dfold:not(.jt-dfold-open) .jt-rail{display:none;}
@@ -1431,7 +1472,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 11:04am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 11:53am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -27639,6 +27680,8 @@ function discardShot(jobId, stableId) {
   // counting them: "3 lines" invites a yes, "#12 Banksy · #13 hutch" is the work you are about
   // to lose and stops the tap. Every one of them is tombstoned, so Restore brings the lot back.
   var derived = ref.label === 'inventory' ? _invDerivedRefs(jobId, stableId) : [];
+  // ⚠ AND THE CLOSE-UPS ADDED TO THOSE LINES FROM THEIR RECORDS (2026-10-24), each filed under its own line (invAddCloseUp).
+  derived.forEach(function(d){ dets = dets.concat(_invDetailRefs(jobId, d.stableId)); });
   var inDrive = [ref].concat(dets).filter(function(r){ return !!_invFileId(r); });
   var msg = 'Delete ' + _shotDesc(ref) + '?';
   if (dets.length) msg += '\n\nIts ' + dets.length + ' detail shot'
@@ -27658,7 +27701,8 @@ function discardShot(jobId, stableId) {
     r.deletedAt = Date.now();
     // ⚠ A DETAIL SHOT TAKEN WITH ITS ITEM SAYS SO (P22), so Restore gives it back with the item and never brings back a
     // detail shot somebody binned on its own.
-    if (r !== ref && r.label === 'detail') r.deletedWith = ref.stableId;
+    // A close-up of a line split off this photograph is taken with THAT line, so restoring the line gives it back.
+    if (r !== ref && r.label === 'detail') r.deletedWith = r.groupId || ref.stableId;
     // ⚠ SO THE UNDO BUFFER CAN TELL THE TRUTH. Restore gives the ROW back — name, value,
     // disposition, custody — and it cannot give the photograph back, because that is in
     // Google's own bin. Stamped here rather than in the Drive callback: an async write back
@@ -28369,8 +28413,9 @@ function _invPanelCols(job) {
     if (c.hideInTab) return false;
     if (!_invColOnJob(job, c)) return false;
     // seq is the row's identity, fmv and disposition are edited on the row itself. Two
-    // inputs bound to one value is how a panel and a row silently disagree.
-    return c.key !== 'seq' && c.key !== 'fmv' && c.key !== 'disposition';
+    // inputs bound to one value is how a panel and a row silently disagree. And qty since
+    // 2026-10-24, when the count moved onto the row (Anthony: "viewable at the headline level").
+    return c.key !== 'seq' && c.key !== 'fmv' && c.key !== 'disposition' && c.key !== 'qty';
   });
 }
 function _invPanelSection(col) {
@@ -28661,9 +28706,9 @@ function invSplitItemN(jobId, stableId, count) {
       stableId: jobId + '_d' + _photoUid(),
       derivedFrom: src.stableId,
       roomIdx: src.roomIdx, label: 'inventory', collId: null, seq: src.seq,
-      // The image, and only the image. Name, category, value, disposition, flags and custody are
-      // deliberately NOT copied: this is a different object, and a prefilled answer on a blank
-      // line is the silence-reads-as-Keep defect the Undecided default exists to stop.
+      // The image, and (below, since 2026-10-24) the photograph's destination. Name, category, value,
+      // flags and custody are deliberately NOT copied: this is a different object, and a prefilled
+      // answer on a blank line is the silence-reads-as-Keep defect the Undecided default exists to stop.
       filename: src.filename, driveFileUrl: src.driveFileUrl, driveFileId: src.driveFileId,
       // ⚠⚠ `ts` IS THE SOURCE'S, NOT NOW, AND THE BROWSER IS WHAT FOUND IT. Everywhere else in
       // the manifest `ts` means WHEN THE PHOTOGRAPH WAS TAKEN — `_jobInvRefs` sorts on it, the
@@ -28676,6 +28721,20 @@ function invSplitItemN(jobId, stableId, count) {
       status: 'uploaded', ts: src.ts,
       objectName: '', category: INV_DEFAULT_CATEGORY, disposition: ''
     };
+    // ⚠⚠ EXCEPT WHERE IT GOES (2026-10-24; Anthony, off the desk: a photo of plates, bath towels and hand towels on a
+    // counter, Donate pressed in the house and "all going to Habitat for Humanity" said over it; Agent One split it into
+    // three, the plates kept Donate and the bath towels sat in Not yet decided. Asked, he took the recommendation: a line
+    // split off a photograph takes that photograph's destination). The chip pressed in the house answered for the photo,
+    // so this is no silence filed as Keep: an Undecided photograph gives nothing, and a thing going elsewhere is changed on
+    // the desk. Its recipient comes with it where one is named. Still never copied: the name, the value, ⚑, the note, an
+    // approval (each line is approved on its own), a date.
+    if (src.disposition && src.disposition !== 'Undecided') {
+      ref.disposition = src.disposition;
+      if (String(src.channel || '').trim()) {
+        ref.channel = src.channel;
+        if (src.channelFrom) ref.channelFrom = src.channelFrom;
+      }
+    }
     // ⚠ EXCEPT A COLLECTION'S PIECE (P24): the link, and what the walkthrough recorded for every piece of it.
     if (src.sourceCollId != null) collectionPieceOf(jobId, src, ref);
     _invTouch(ref);
@@ -37851,7 +37910,7 @@ function _avItemPayload(jobId, ref) {
     condition: ref.condition || '', fieldNote: ref.fieldNote || '', agentBasis: ref.agentBasis || '',
     fileId: mode === 'comps' ? _invFileId(ref) : '',
     details: mode === 'comps'
-      ? _agDetailRefs(jobId, ref.derivedFrom || ref.stableId).map(function(d) { return { fileId: _invFileId(d) }; })
+      ? invLineCloseUps(jobId, ref).map(function(d) { return { fileId: _invFileId(d) }; })
       : []
   };
 }
@@ -38744,14 +38803,16 @@ function _renderInvRow(job, ref) {
         + ' inventory lines" style="color:var(--bronze);">&#128279; 1 of ' + sibs.length
         + ' in this photo</span>' : '');
   return '<div id="' + esc(_invRowDomId(sid)) + '" style="border-bottom:1px solid var(--border);background:' + (picked ? 'var(--cream)' : 'transparent') + ';">'
-    + '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;">'
+    // ⚠ COLUMNS UNDER THE GROUP'S HEADINGS (2026-10-24): each box sits in the column class _renderInvColHead heads, and on
+    // a phone names itself (data-cap). Photo · # · Item · Qty · Value · Where it goes · Who takes it · Reviewed · ▾.
+    + '<div class="inv-row-main">'
       + '<input type="checkbox"' + (picked ? ' checked' : '') + ' onchange="_invTogglePick(\'' + sid + '\',this)" '
         + 'style="width:14px;height:14px;flex:0 0 auto;cursor:pointer;accent-color:var(--gray-dk);" title="Select for a bulk change">'
       // 72 px, the record's 240 and its close-ups 120 (2026-10-23; Anthony: at 40 the desk could not tell what a photo was).
-      + _invThumbHTML(jid, ref, 72)
-      + '<span style="font-size:10px;color:var(--gray);font-weight:700;width:26px;flex:0 0 auto;">' + esc(_invItemNo(ref)) + '</span>'
-      + '<div style="flex:1;min-width:0;">'
-        + '<div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+      // Pressed, it opens the photograph in Drive (2026-10-24; Anthony: "the link to the drive … at the headline level").
+      + _invRowPhotoHtml(jid, ref)
+      + '<span class="inv-c-no" style="font-size:10px;color:var(--gray);font-weight:700;">' + esc(_invItemNo(ref)) + '</span>'
+      + '<div class="inv-c-item">'
         // THE NAME IS EDITED IN THE ROW, NAMED OR NOT, and the "or not" is the correction.
         // The first cut of this put a box on a BLANK name only and left a filled one as
         // truncated text you had to open the panel to change — which is fine while the desk is
@@ -38763,23 +38824,32 @@ function _renderInvRow(job, ref) {
         // already; this is the third field, not a new idea.
         // AND `_invEdit` DELIBERATELY DOES NOT REDRAW ON `objectName`, so the row does not
         // reflow out from under the person typing. The chip strip repaints on its own instead.
-        + '<input type="text" value="' + esc(ref.objectName || '') + '"'
-          + ' title="' + esc(ref.objectName || '') + '"'
-          + ' onchange="_invEdit(' + jid + ',\'' + sid + '\',\'objectName\',this)"'
-          // Bronze while it is empty, so the Unnamed pile still reads as a pile at a glance;
-          // quiet once filled, so three hundred named lines are a list rather than a wall of boxes.
-          + ' style="width:100%;font-size:11.5px;padding:3px 6px;box-sizing:border-box;border-radius:3px;'
-          + (ref.objectName ? 'border:1px solid transparent;background:transparent;font-weight:600;'
-                            : 'border:1px solid var(--bronze);background:#fffdf9;') + '">'
-        + (ref.manual ? ' <span style="font-size:8px;color:var(--bronze);" title="Manual line item (no photo)">M</span>' : '') + '</div>'
+        // ⚠ AND IT WRAPS (2026-10-24; Anthony: "wrap the description text so that it frees up a little bit more room to
+        // the right"): a one-line box cut every long name off at the column's edge, the rest readable only on hover. The box
+        // is a textarea as tall as its text (.inv-name, CSS); Enter ends the edit as it did in the one-line box.
+        // Bronze while it is empty, so the Unnamed pile still reads as a pile at a glance;
+        // quiet once filled, so three hundred named lines are a list rather than a wall of boxes.
+        + '<div class="inv-name' + (ref.objectName ? '' : ' inv-unnamed') + '" data-v="' + esc(ref.objectName || '') + '">'
+          + '<textarea rows="1"'
+          + ' oninput="this.parentNode.setAttribute(\'data-v\',this.value)"'
+          + ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}"'
+          + ' onchange="_invEdit(' + jid + ',\'' + sid + '\',\'objectName\',this)">' + esc(ref.objectName || '') + '</textarea></div>'
         // ⚠ THE CHIP LINE WRAPS, AT EVERY WIDTH (2026-10-22). It was one line cut off with an ellipsis, so on a phone,
         // and on a laptop row carrying four or five chips, the chips that say what is owed (approval incomplete, no
         // signed receipt, appraise, with an appraiser since…) were the ones past the cut, unread and with no way to
         // read them on an iPad (a title shows on hover only). A second line costs less than a chip nobody sees.
-        + '<div class="inv-row-sub" style="font-size:10px;color:var(--gray);overflow-wrap:anywhere;">' + sub
+        + '<div class="inv-row-sub" style="font-size:10px;color:var(--gray);overflow-wrap:anywhere;">'
+        + (ref.manual ? '<span style="font-size:8px;color:var(--bronze);" title="Manual line item (no photo)">M</span> ' : '') + sub
         + (warn.length ? ' &middot; ' + warn.join(' ') : '') + '</div>'
-        + (ref.fieldNote ? '<div style="font-size:10.5px;color:var(--gray-dk);font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(ref.fieldNote) + '">&#127908; ' + esc(ref.fieldNote) + '</div>' : '')
+        // The spoken note runs to two lines before it is cut (it was one), the whole of it on hover and in the record.
+        + (ref.fieldNote ? '<div class="inv-note" title="' + esc(ref.fieldNote) + '">&#127908; ' + esc(ref.fieldNote) + '</div>' : '')
       + '</div>'
+      // ⚠ HOW MANY, ON THE ROW (2026-10-24; Anthony: "the number of items viewable at the headline level … so if it counts
+      // things wrong, we can quickly update it"). Agent One writes a count above one; a line with none is one, as every
+      // paper prints it, so the box reads 1 and writes nothing until a person changes it. It left the record with it:
+      // _invPanelCols, one box per value.
+      + '<div class="inv-c inv-c-qty" data-cap="Qty"><input type="number" min="1" step="1" class="inv-qty" value="'
+        + esc(ref.qty != null && ref.qty !== '' ? ref.qty : 1) + '" onchange="_invEdit(' + jid + ',\'' + sid + '\',\'qty\',this)"></div>'
       // ⚠ THE FMV BOX STAYS ON A LIVING JOB, DELIBERATELY. Anthony ruled out VALUING the contents
       // as work we do and charge for; he did not ask for the field to be taken away, and a client
       // asking "put a number on the dining set for my insurer" is ordinary. It is also the only
@@ -38787,8 +38857,8 @@ function _renderInvRow(job, ref) {
       // so hiding it here would make the value unreachable rather than merely unpromoted. What IS
       // gated is the three fields that exist to DEFEND a figure to a court: valDate, valSource,
       // valNote (see the `fid` columns), and the "No value yet" chip that would never clear.
-      + '<div style="width:104px;flex:0 0 auto;">' + _invInput(jid, ref, fmvCol, job) + _avAcceptButtonHtml(jid, ref) + '</div>'
-      + '<div style="width:110px;flex:0 0 auto;">' + _invInput(jid, ref, dispCol, job) + '</div>'
+      + '<div class="inv-c inv-c-val" data-cap="Value">' + _invInput(jid, ref, fmvCol, job) + _avAcceptButtonHtml(jid, ref) + '</div>'
+      + '<div class="inv-c inv-c-disp" data-cap="Where it goes">' + _invInput(jid, ref, dispCol, job) + '</div>'
       // ⚠⚠ "WITH WHOM" IS HALF OF WHAT ANTHONY ASKED THE RECORD TO CARRY, and it was buried as
       // free text in the Disposition section of a panel behind a chevron — so the one field that
       // answers it was the one nobody would ever open a row to fill. It renders on the row for a
@@ -38796,20 +38866,45 @@ function _renderInvRow(job, ref) {
       // box on every row is what makes a form look unfinished. A Move shows its destination as
       // placeholder text off the job record and stores nothing, because the address is already
       // recorded once and writing it per item would also satisfy the firearms `dealer` gate.
-      + (INV_RELEASE_DISPOSITIONS.indexOf(ref.disposition) >= 0 || ref.disposition === 'Move'
-          ? '<div style="width:150px;flex:0 0 auto;">' + _invRecipientInput(jid, ref, job) + '</div>'
+      + (_invRowHasWho(ref.disposition)
+          ? '<div class="inv-c inv-c-who" data-cap="Who takes it">' + _invRecipientInput(jid, ref, job) + '</div>'
           : '')
-      + '<label style="flex:0 0 auto;display:inline-flex;align-items:center;gap:4px;font-size:10px;color:' + (invLineReviewed(ref) ? 'var(--ok-tx)' : 'var(--gray)') + ';cursor:pointer;white-space:nowrap;" '
+      + '<label class="inv-c-rev" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:' + (invLineReviewed(ref) ? 'var(--ok-tx)' : 'var(--gray)') + ';cursor:pointer;white-space:nowrap;" '
         + 'title="' + (ref.reviewed && ref.reviewedBy ? 'Reviewed by ' + esc(ref.reviewedBy)
             : invLineReviewed(ref) ? 'Reviewed: named and decided on the desk' : 'Tick when this line has been checked') + '">'
         // A line reviewed by being named and decided (invLineReviewed) reads ticked and cannot be unticked: it is not a tick.
         + '<input type="checkbox"' + (invLineReviewed(ref) ? ' checked' : '') + (invLineReviewed(ref) && !ref.reviewed ? ' disabled' : '')
         + ' onchange="_invSetReviewed(' + jid + ',\'' + sid + '\',this.checked)" '
         + 'style="width:14px;height:14px;cursor:pointer;accent-color:var(--ok-tx);">Reviewed</label>'
-      + '<button class="icon-btn" onclick="_invToggleOpen(\'' + sid + '\')" title="Open the full record" style="flex:0 0 auto;">' + (open ? '&#9652;' : '&#9662;') + '</button>'
+      + '<button class="icon-btn inv-c-open" onclick="_invToggleOpen(\'' + sid + '\')" title="Open the full record">' + (open ? '&#9652;' : '&#9662;') + '</button>'
     + '</div>'
     + (open ? _renderInvPanel(job, ref) : '')
     + '</div>';
+}
+// Whether a row carries the Who takes it box: a disposition leaving the property, or Move (its box names the new home and
+// stores nothing). One answer, read by the row and by the group's headings, which share a disposition (_invGroupItems).
+function _invRowHasWho(disposition) {
+  return INV_RELEASE_DISPOSITIONS.indexOf(disposition) >= 0 || disposition === 'Move';
+}
+// The row's photograph, a link to the file in Drive where the line has one (a split line shares its photograph's), else
+// the photograph alone (a typed line, or a shot not yet uploaded). The record's Open photo in Drive opens the same file.
+function _invRowPhotoHtml(jid, ref) {
+  var t = _invThumbHTML(jid, ref, 72);
+  if (!ref.driveFileUrl) return '<div class="inv-c-photo">' + t + '</div>';
+  return '<a class="inv-c-photo inv-photo-link" href="' + esc(ref.driveFileUrl) + '" target="_blank" rel="noopener" '
+    + 'title="Open the full photo in Drive">' + t + '</a>';
+}
+// ⚠ THE HEADINGS OVER A GROUP'S ROWS (2026-10-24; Anthony: "is the empty field second to right … supposed to be the
+// value and there's no title for it … maybe we can just label those two columns"). Drawn once per open group, in the
+// row's column classes so each heading sits over its box; a group is one disposition, so Who takes it is headed exactly
+// where its rows carry the box. The guide's words for the boxes (The Evening Desk, The row). Not drawn on a phone (CSS).
+function _renderInvColHead(job, g) {
+  return '<div class="inv-colhead">'
+    + '<span class="inv-c-pick"></span><span class="inv-c-photo">Photo</span><span class="inv-c-no">#</span>'
+    + '<span class="inv-c-item">Item</span><span class="inv-c-qty">Qty</span><span class="inv-c-val">Value</span>'
+    + '<span class="inv-c-disp">Where it goes</span>'
+    + (_invRowHasWho(g.key) ? '<span class="inv-c-who">Who takes it</span>' : '')
+    + '<span class="inv-c-rev"></span><span class="inv-c-open"></span></div>';
 }
 
 // Every remaining field, sectioned by the `group` metadata that used to drive the deleted
@@ -38836,17 +38931,13 @@ function _renderInvPanel(job, ref) {
   // What the field recorded over this shot. The note is the concierge's own words ("signed on
   // the base", "Mom's from Italy", "promised to Karen") and the agent's first input; the
   // detail shots are the close-ups linked to this line at capture, never lines of their own.
-  var det = _invDetailRefs(jid, ref.stableId);
   var sibs = _invPhotoSiblings(jid, ref);
   var fieldHtml = (ref.manual ? '' : '<div style="margin-bottom:10px;">'
     + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">From the field</div>'
     + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Field note</div>'
     + '<textarea rows="2" style="width:100%;font-size:11px;padding:5px 7px;box-sizing:border-box;" '
       + 'onchange="_invEdit(' + jid + ',\'' + ref.stableId + '\',\'fieldNote\',this)">' + esc(ref.fieldNote || '') + '</textarea>'
-    + (det.length
-        ? '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px;">Detail shots \u00b7 ' + det.length + '</div>'
-          + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invThumbHTML(jid, d, 120); }).join('') + '</div>'
-        : '')
+    + _invCloseUpsHtml(jid, ref)
     // What Agent One noticed in this photograph, every notice: a Look at this off the list above the rows is read here (Q90).
     + _agRecordNoticesHtml(job, ref)
     + '</div>');
@@ -38864,6 +38955,12 @@ function _renderInvPanel(job, ref) {
                       : '<button class="btn-s" onclick="invSplitItemClick(' + jid + ',\'' + ref.stableId + '\')" '
                         + 'title="Another object is in this same photograph — add it as its own line, sharing the image">'
                         + '&#10133; Another item in this photo</button>')
+        // ⚠ A CLOSE-UP AFTER THE FACT (2026-10-24): one of THIS line, from the iPad's camera or a photograph already taken.
+        // Offered wherever the line has a photograph to be a close-up of (invCloseUpRefusal, asked again by the handler).
+        + (invCloseUpRefusal(ref) ? ''
+            : '<label class="btn-s inv-cu-add" title="A close-up of this item: the back, a mark, a label. It is filed with this line and never adds one">'
+              + '<input type="file" accept="image/*" style="display:none;" onchange="invAddCloseUp(' + jid + ',\'' + ref.stableId + '\',this)">'
+              + '&#10133; Close-up</label>')
         // ⚠ ONE REMOVE FOR EVERY LINE (P16): typed, photographed or split. It takes the LINE, never
         // the photograph — the room's 🗑 is the only thing that deletes an image.
         + '<button class="btn-s" onclick="invRemoveLine(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;" '
@@ -38981,6 +39078,7 @@ function _renderInvGroup(job, g) {
   return '<div class="card" id="' + esc(_invGroupDomId(g.key)) + '" style="margin-bottom:10px;' + (undecided ? 'border-left:3px solid var(--bronze);' : '') + '">'
     + _renderInvGroupHead(job, g)
     + (undecided ? '<div style="font-size:10.5px;color:var(--gray);margin:0 0 6px 4px;">No disposition chosen yet in the field. This is the list to work down.</div>' : '')
+    + (folded ? '' : _renderInvColHead(job, g))
     + body + '</div>';
 }
 
@@ -39662,6 +39760,96 @@ function _invDetailRefs(jobId, stableId) {
   return (_photoRefs[jobId] || []).filter(function(r){
     return r.label === 'detail' && r.groupId === stableId && !r.deletedAt;
   }).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+}
+
+// ⚠⚠ A CLOSE-UP AFTER THE FACT (2026-10-24; Anthony, off a line Agent One flagged *Look at this* for a blurred mark under a
+// stack of plates: *"is there a workflow for taking a detail photo after the fact and attaching it to [the] item … saying
+// this is the same item?"*; asked, he took **+ Close-up** on the line). The camera's Close-up files under the last item
+// shot in that session and nothing else, so a close-up missed in the house could be had only as a new line, with the old
+// one removed and its number spent. **+ Close-up** in a line's record takes one (the iPad's camera, or a photograph already
+// taken) and files it through the one writer, `_captureShot`, as a close-up of THAT LINE: `groupId` is the line itself, a
+// line split off a photograph included, so it shows on the line it was added to. It adds no line, names nothing and
+// touches nothing on the line; Agent Two reads it with the line (`invLineCloseUps`), and the room's bin takes it with the
+// photograph its line comes from (`discardShot`).
+function invCloseUpRefusal(ref) {
+  if (!ref || ref.label !== 'inventory') return 'That line is not on this job.';
+  if (ref.deletedAt) return 'That line has been removed. Give it back under Removed items first.';
+  if (ref.manual || !_invHasPhoto(ref)) return 'This line has no photograph yet. Photograph the item in its room first; a close-up goes with that photograph.';
+  return '';
+}
+function invAddCloseUp(jobId, stableId, input) {
+  var file = input && input.files && input.files[0];
+  if (!file) return false;
+  var why = invCloseUpRefusal(_getPhotoRef(jobId, stableId));
+  if (!why && file.type && !/^image\//.test(file.type)) why = 'That file is not a photograph. Choose a photo, or take one.';
+  if (why) { input.value = ''; alert(why); return false; }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    // Asked again once the bytes are in: the line can have gone while the photo was being chosen.
+    var ref = _getPhotoRef(jobId, stableId), again = invCloseUpRefusal(ref);
+    if (again) { alert(again); return; }
+    var src = _invPhotoSource(jobId, ref) || ref;
+    _captureShot(jobId, ref.roomIdx != null ? ref.roomIdx : src.roomIdx, 'detail', ev.target.result, {
+      groupId: ref.stableId,
+      // A press just made, so the whole desk is drawn (the row's count of close-ups too); the upload's answers come
+      // later, under whatever is being typed by then, and repaint the record's close-ups alone, by id.
+      onRef: function() { renderInventoryTab(); },
+      onThumb: function() { _invCloseUpsRepaint(jobId, stableId); },
+      onDone: function() { _invCloseUpsRepaint(jobId, stableId); }
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value = '';   // so the same photograph can be chosen again
+  return true;
+}
+// The close-ups that go to Agent Two with a line: the ones added to it from its record first, then its photograph's (the
+// Close-up shutter files under the photograph, so a line split off one reads those too). Capped as Agent One's are.
+function invLineCloseUps(jobId, ref) {
+  if (!ref) return [];
+  var own = ref.derivedFrom ? _agDetailRefs(jobId, ref.stableId) : [];
+  return own.concat(_agDetailRefs(jobId, ref.derivedFrom || ref.stableId)).slice(0, AGENT_MAX_DETAILS);
+}
+// The close-ups in a line's record, under From the field, each with its state. Its own host, so the upload's answers
+// repaint it alone (_invCloseUpsRepaint); a tile still on its way, or not saved, says so, with Retry.
+function _invCloseUpsHtml(jobId, ref) {
+  var det = _invDetailRefs(jobId, ref.stableId);
+  return '<div id="inv-cu-' + esc(ref.stableId) + '">' + (det.length
+    ? '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px;">Detail shots \u00b7 ' + det.length + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invCloseUpTileHtml(jobId, d); }).join('') + '</div>'
+    : '') + '</div>';
+}
+function _invCloseUpTileHtml(jobId, d) {
+  var state = d.status === 'failed'
+      ? '<div class="inv-cu-state" style="font-size:10px;color:#c0392b;margin-top:3px;">&#9888; Not saved '
+        + '<button class="btn-s" onclick="invRetryCloseUp(' + jobId + ',\'' + d.stableId + '\')" style="font-size:9px;padding:1px 5px;">Retry</button></div>'
+    : d.status === 'uploading' ? '<div class="inv-cu-state" style="font-size:10px;color:var(--gray);margin-top:3px;">Uploading&hellip;</div>'
+    : '';
+  return '<div data-cu-id="' + esc(d.stableId) + '">' + _invThumbHTML(jobId, d, 120) + state + '</div>';
+}
+function _invCloseUpsRepaint(jobId, stableId) {
+  var el = document.getElementById('inv-cu-' + stableId), ref = _getPhotoRef(jobId, stableId);
+  if (!el || !ref) return false;
+  el.outerHTML = _invCloseUpsHtml(jobId, ref);
+  var host = document.getElementById('inv-cu-' + stableId);
+  if (!host) return true;
+  // The photograph just taken draws at once, off this device's copy, until Drive's thumbnail is in the cache.
+  Array.prototype.forEach.call(host.querySelectorAll('[data-cu-id]'), function(t) {
+    var small = _localShotThumbs[t.getAttribute('data-cu-id')], tile = t.firstChild;
+    if (!small || !tile || !tile.style) return;
+    tile.style.backgroundImage = 'url("' + small + '")';
+    tile.style.backgroundSize = 'cover';
+    tile.style.backgroundPosition = 'center';
+    for (var i = tile.childNodes.length - 1; i >= 0; i--) { if (tile.childNodes[i].nodeType === 3) tile.removeChild(tile.childNodes[i]); }
+  });
+  _invPaintThumbs(jobId, host);
+  return true;
+}
+function invRetryCloseUp(jobId, detailId) {
+  var d = _getPhotoRef(jobId, detailId);
+  if (!d || d.label !== 'detail') return false;
+  retryPhotoUpload(jobId, detailId, function() { _invCloseUpsRepaint(jobId, d.groupId); });
+  _invCloseUpsRepaint(jobId, d.groupId);
+  return true;
 }
 
 // ═════════════════════════ THE IN-APP CAMERA (2026-09-19) ═════════════════════════
@@ -40576,7 +40764,7 @@ function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpd
   });
 }
 
-function retryPhotoUpload(jobId, stableId) {
+function retryPhotoUpload(jobId, stableId, after) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
   var dataUrl = _photoRetryData[stableId];
@@ -40609,6 +40797,7 @@ function retryPhotoUpload(jobId, stableId) {
       _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
       _invCacheLocalThumb(jobId, stableId, dataUrl);
       if (ref.label === 'inventory' || ref.label === 'detail') _scheduleInventorySync(jobId);
+      if (after) after();   // the desk's close-ups (invRetryCloseUp)
     });
   }
 }
