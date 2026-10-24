@@ -68,7 +68,8 @@ const SHEET_B1 = { stableId: 'b1', label: 'before', roomIdx: 1, seq: 1, status: 
     const html = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.innerHTML : ''; }, sel);
     // The number the desk prints beside a named line: the row's number span, found from the line's name box.
     const numberOf = (name) => p.evaluate((n) => {
-      const inp = [...document.querySelectorAll('#inventory-content input[type="text"]')].find((i) => i.value === n);
+      // The row's name box is a textarea that wraps since 2026-10-24.
+      const inp = [...document.querySelectorAll('#inventory-content input[type="text"], #inventory-content textarea')].find((i) => i.value === n);
       let el = inp; while (el && el !== document.body) { const sp = [...el.querySelectorAll('span')].find((s) => /^#?\d+$/.test(s.textContent.trim())); if (sp) return sp.textContent.trim(); el = el.parentElement; }
       return null;
     }, name);

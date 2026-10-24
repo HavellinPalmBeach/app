@@ -197,8 +197,9 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     eq(wp.fmv, 550, 'the figure stays the person\'s to change');
 
     // ── D · a name changed under an agent's figure ─────────────────────────────
-    await p.fill('#inv-row-b input[type="text"]', 'Sterling silver flatware, Gorham Chantilly, service for 12');
-    await p.press('#inv-row-b input[type="text"]', 'Tab');
+    // The row's name box is a textarea that wraps since 2026-10-24.
+    await p.fill('#inv-row-b .inv-name textarea', 'Sterling silver flatware, Gorham Chantilly, service for 12');
+    await p.press('#inv-row-b .inv-name textarea', 'Tab');
     await p.waitForTimeout(400);
     const staleTop = await p.evaluate(() => (document.getElementById('inv-value-notices') || {}).textContent || '');
     ok(/Value made for an earlier name/.test(staleTop), '⚠ a rename under an agent\'s figure is named at the top at once');

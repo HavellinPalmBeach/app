@@ -165,9 +165,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  group('rule 3: the destination and the Appraise flag stick to one thing per photo');
+  // RESTATED 2026-10-24 (Anthony, the towels: "Take the destination"): the destination goes with every thing in the photo,
+  // the Appraise flag with one.
+  group('rule 3: the destination goes with the photo, the Appraise flag with one thing');
   {
-    eq(count(guide, 'no destination and no Appraise flag'), 1, 'the guide says what the other things in the photo carry');
+    eq(count(guide, 'comes back with the same destination and no Appraise flag'), 1, 'the guide says what the other things in the photo carry');
+    lacks(guide, 'comes back with no destination', '⚠ and no longer that they come back with none');
     const ctx = rig([ROW({ disposition: 'Sell', needsAppr: true }), DETAIL()]);
     ctx.agentApplyResult(7, { srcId: 's1', rows: ['s1'] }, { notices: [], objects: [
       { name: 'Mahogany dresser', category: 'Furniture', qty: 1, confidence: 'high', basis: '', crop: [] },
@@ -178,9 +181,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(lines.length, 3, 'one item photo of a dressed dresser makes three items on the list');
     const first = lines.find((r) => r.stableId === 's1');
     const split = lines.filter((r) => r.derivedFrom === 's1');
-    eq(first && [first.disposition, first.needsAppr], ['Sell', true], 'one keeps the destination and the flag');
-    eq(split.map((r) => [r.disposition, !!r.needsAppr]), [['', false], ['', false]],
-       'the rest come back with no destination (Undecided) and no Appraise flag');
+    eq(first && [first.disposition, first.needsAppr], ['Sell', true], 'the photo\u2019s own item keeps the destination and the flag');
+    eq(split.map((r) => [r.disposition, !!r.needsAppr]), [['Sell', false], ['Sell', false]],
+       'the rest come back with the same destination and no Appraise flag');
+    has(guide, 'It has the photo\u2019s destination: change it if it is going somewhere else, and move the Appraise flag to the right item.', 'and the desk step says so');
     // "Your choice stays selected until you change it. Appraise marks the next photo only."
     has(guide, 'Your choice stays selected until you change it', 'the guide says the destination stays selected');
     has(guide, 'marks the next photo only', 'and that the flag does not');

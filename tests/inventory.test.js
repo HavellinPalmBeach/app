@@ -802,6 +802,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(panel.indexOf('seq') < 0, 'the item number is the row identity, not a panel field');
     ok(panel.indexOf('fmv') < 0, 'FMV is edited on the row');
     ok(panel.indexOf('disposition') < 0, 'and so is the disposition');
+    // 2026-10-24 (Anthony: the count "viewable at the headline level"): the count moved onto the row too.
+    ok(panel.indexOf('qty') < 0 && living.indexOf('qty') < 0, 'and so is the count, on both');
     ok(panel.indexOf('valNote') >= 0, 'the valuation basis / comps note is in the panel');
     ok(panel.indexOf('gross') >= 0, 'the proceeds are');
     ok(panel.indexOf('flagMAIV') >= 0, 'and the flags');
@@ -813,7 +815,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['assetTrack', 'flagExempt', 'flagMAIV', 'maivCat', 'valDate', 'valSource', 'valNote']
       .forEach((k) => ok(living.indexOf(k) < 0, k + ' is off a living job'));
     // The converse is the half that matters: the record itself is untouched on both.
-    ['objectName', 'category', 'room', 'qty', 'condition', 'serial', 'channel', 'needsAppr',
+    ['objectName', 'category', 'room', 'condition', 'serial', 'channel', 'needsAppr',
      'flagBequest', 'flagDisputed', 'flagNFA', 'dispDate', 'receiptDoc', 'gross', 'fees']
       .forEach((k) => {
         ok(living.indexOf(k) >= 0, k + ' is on a living job');

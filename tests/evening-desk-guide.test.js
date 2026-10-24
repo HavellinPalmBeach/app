@@ -617,6 +617,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('invTransportBlocked')), "'nfa'", 'an NFA item never travels');
   }
 
+  // 2026-10-24 (Anthony, off the desk): the row is columns under headings, the count and the photograph's link on it, and an
+  // item split off a photo starts with that photo's destination (his pick: "Take the destination").
+  group('the row’s photo and count, and a split item’s destination');
+  {
+    const row = code(fn('_renderInvRow')), photo = code(fn('_invRowPhotoHtml'));
+    has(row, '_invRowPhotoHtml(jid, ref)', 'the row draws its photograph through the link');
+    has(photo, '\'<a class="inv-c-photo inv-photo-link" href="\' + esc(ref.driveFileUrl) + \'" target="_blank"', '…a link to its file in Drive');
+    has(photo, '_invThumbHTML(jid, ref, 72)', '…round the photo box, whether or not its thumbnail came');
+    has(t, 'Photo Opens the photo in Drive.', 'as the page says');
+    has(t, 'No thumbnails Nothing is lost. Reload, or tap the box for Drive.', '…and its tricky spot');
+    has(row, "+ '\\',\\'qty\\',this)\">", 'the count is a box on the row, written through the one writer');
+    has(t, 'Correct the name and count, choose where it goes, type who takes it if it is leaving, accept or type the value.', 'as the page says');
+    const S = sandbox({ fns: ['invSplitItemN', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid'],
+      vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX'],
+      stubs: { _photoRefs: { 7: [{ stableId: 'p', label: 'inventory', roomIdx: 1, ts: 1, driveFileId: 'F', driveFileUrl: 'u', disposition: 'Donate', channel: 'Habitat for Humanity' }] },
+        savePhotoRefs() {}, _invTouch(r) { return r; }, _scheduleInventorySync() {} } });
+    const made = attempt(() => S.invSplitItemN(7, 'p', 1));
+    eq(made.ok && made.val[0] ? [made.val[0].disposition, made.val[0].channel] : made.err, ['Donate', 'Habitat for Humanity'], 'an item split off a photo starts with that photo’s destination');
+    has(t, 'Items split off one photo start with its destination.', 'as the page says');
+  }
+
   // ═══ THE SHORTHAND ═══
   group('the build’s shorthand stays off the page (the photography guide’s rule)');
   {

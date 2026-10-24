@@ -716,7 +716,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(!w.INV_WORK_FLAGS[0].test({ objectName: 'Sideboard' }), 'and drops off once named');
 
     const rowCtx = sandbox({
-      fns: ['invPlanChannel', 'invLineReviewed', '_renderInvRow', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_agRecordNoticesHtml', '_avPanelHtml', '_invDetailRefs',
+      fns: ['invPlanChannel', 'invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_agRecordNoticesHtml', '_avPanelHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
@@ -740,7 +740,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // an unnamed row carries the box itself, wired to the one writer, so the evening pile is
     // worked in the list rather than through forty panel opens.
     has(row, '_invEdit(1,\'p\',\'objectName\',this)', 'an unnamed line carries its own name box');
-    has(row, '<input type="text"', 'and it is a real control, not a prompt to go elsewhere');
+    // RESTATED 2026-10-24, NOT DELETED: the box is a textarea that wraps (Anthony: "wrap the description text"), still the
+    // one writer's control in the row.
+    has(row, '<textarea rows="1"', 'and it is a real control, not a prompt to go elsewhere');
     lacks(row, 'name it below', 'the sentence that pointed at a field that was not there is gone');
     // ⚠ AND A NAMED LINE CARRIES ONE TOO. Anthony's rule for the agent is "as much detail as
     // possible, and I can edit errors" — so every name is long, and a truncated name you have
@@ -748,7 +750,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const named = rowCtx._renderInvRow({ id: 1 }, Object.assign({}, ref, { objectName: 'Banksy "Ghetto 4 Life" canvas print, approx 48x36in' }));
     has(named, '_invEdit(1,\'p\',\'objectName\',this)', 'a NAMED line is editable in the row as well');
     has(named, 'Banksy', 'with the agent’s own words in the box');
-    has(named, 'title="Banksy', '⚠ and the full text on hover, since a long name is clipped in a narrow row');
+    // RESTATED 2026-10-24: a long name is no longer clipped and read on hover; it wraps, the box as tall as its whole text
+    // (the hidden copy in data-v sets the height).
+    has(named, 'data-v="Banksy &quot;Ghetto 4 Life&quot; canvas print, approx 48x36in"', '⚠ and the whole of a long name is on the row, wrapped');
     has(row, 'signed on the base', 'the field note is on the row');
     has(row, '+1 detail shot', 'and the detail count');
     // 2026-10-23 (Anthony: "make the thumbnails a bit bigger so that when we're at the desk we can actually see what the

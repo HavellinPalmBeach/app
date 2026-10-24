@@ -138,7 +138,8 @@ const LINES = () => [
 
     // ── B ───────────────────────────────────────────────────────────────────
     await section('B. A rename in the row saves the inventory; the workbook payload carries the heading', async () => {
-      const box = 'input[onchange="_invEdit(' + TRUST + ',\'a1\',\'objectName\',this)"]';
+      // The name box is a textarea that wraps since 2026-10-24: found by its handler, never its tag.
+      const box = '[onchange="_invEdit(' + TRUST + ',\'a1\',\'objectName\',this)"]';
       ok(await p.locator(box).count() === 1 && await vis(box), 'the row\'s name box — one control, on screen');
       const before = POSTS.length;
       await p.fill(box, 'Sargent portrait (oil on canvas)'); await p.press(box, 'Tab');
