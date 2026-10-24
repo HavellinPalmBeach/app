@@ -38,7 +38,7 @@ const liveLines = (s) => String(s).split('\n')
   .filter((l) => { const t = l.trim(); return !(t.startsWith('//') || t.startsWith('*') || t.startsWith('/*') || t.startsWith('<!--')); })
   .join('\n');
 
-const EC_FNS = ['showEditClient', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
+const EC_FNS = ['showEditClient', 'jobIsTest', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
                 'executorAuthOptionsHtml', 'resolveExecutorAuth', 'authorityRecord', 
                 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
                 'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope',
@@ -150,8 +150,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const lbl = (name) => t.html.slice(t.html.indexOf(name), t.html.indexOf('</div>', t.html.indexOf(name)));
     lacks(lbl('Approx. Home Value'), '#A32D2D', 'the home value carries no required mark the save does not enforce');
     lacks(lbl('New Home Sq Ft'), '#A32D2D', 'nor does the new home sq ft');
-    has(lbl('Approx. Home Value'), 'will not save without', 'it says what a blank costs instead');
-    has(lbl('New Home Sq Ft'), 'will not save without', 'and so does the sq ft');
+    // RESTATED 2026-10-23 (Anthony: fix the wording): since 2026-10-10 a blank home value is flagged and the estimate
+    // saves, so its label claims no refusal and reads as intake's does; the new home's sq ft still refuses, and says so.
+    lacks(lbl('Approx. Home Value'), 'will not save', 'the home value claims no refusal the estimate does not make');
+    has(lbl('Approx. Home Value'), '(market / Zillow estimate)', 'it reads as intake does');
+    has(lbl('New Home Sq Ft'), 'will not save without', 'the sq ft still says what a blank costs');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

@@ -16,7 +16,7 @@ const { sandbox, source, fn, domStub } = require('./harness');
 
 // ⚠ The house-flag helpers left this list on 2026-09-29 with the dead detail row that was their only
 // reader here (audit H2): renderJobs no longer reads a house flag at all.
-const LIST_FNS = ['renderJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments',
+const LIST_FNS = ['renderJobs', 'jobIsTest', 'liveJobs', 'fmt', 'jobIsSettled', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'jobPayments',
   'svcLabelOf',
   'maybeStartJobsWatch', 'stopJobsWatch',
   'sortJobsForList', 'jobsHeadHtml', '_jobStatusCell', 'esc', 'jobsUnread', 'jobsUnreadNotice',

@@ -403,9 +403,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(acc.ask.toLowerCase(), 'codes, contact', 'no longer asks for the codes');
     has(acc.ask, 'Keys & access card', 'and says where a code goes');
     lacks(acc.detail.toLowerCase(), 'codes', 'the detail line names no codes');
-    const ph = (SRC.match(/id="notes-modal-text"[^>]*placeholder="([^"]*)"/) || [])[1] || '';
-    ok(ph.length > 20, 'the walkthrough notes placeholder was read');
-    ok(!/code\s*\d/i.test(ph), '⚠ the placeholder no longer suggests typing a lockbox code');
+    // RESTATED 2026-10-23 (Anthony: blank boxes, nothing in them): the walkthrough note's box has no placeholder at all,
+    // so it suggests nothing, a lockbox code included.
+    const tag = (SRC.match(/<textarea id="notes-modal-text"[^>]*>/) || [''])[0];
+    ok(tag.length > 20, 'the walkthrough note box was read');
+    lacks(tag, 'placeholder', '⚠ the box suggests nothing, a lockbox code included');
     const plan = live('renderJobPlan');
     eq((plan.match(/accessCardHtml\(jobId, job, est\)/g) || []).length, 2, 'the card is drawn on the thread\'s Before Day 1 and on the Home Prep plan');
     has(live('planDerivedLines'), "phase === 'access' || phase === 'p4' || phase === 'admin'", 'the lines reach the card, Close-out and the desk');

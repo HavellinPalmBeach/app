@@ -352,7 +352,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(ui, 'Save note', 'and nothing renamed to Save note either');
     has(ui, 'id="fc-note-input"', 'the box itself is still there');
     has(ui, 'fieldCamNoteDraft(this.value)', 'and every keystroke is kept');
-    has(ui, 'saved automatically', 'the placeholder says so, since nothing else can');
+    // RESTATED 2026-10-23 (Anthony: blank boxes, nothing in them): it said "saved automatically" inside the box; a word
+    // beside it names it now, and the manual says that it saves itself.
+    has(ui, '<label for="fc-note-input" class="fc-note-lbl">Note</label>', 'a label names the box');
+    lacks(ui, 'placeholder', 'and nothing is written inside it');
   }
 
   group('⚠ THE CAMERA DEGRADES TO THE NATIVE INPUT ON THE SAME SURFACE');
@@ -748,11 +751,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(named, 'title="Banksy', '⚠ and the full text on hover, since a long name is clipped in a narrow row');
     has(row, 'signed on the base', 'the field note is on the row');
     has(row, '+1 detail shot', 'and the detail count');
+    // 2026-10-23 (Anthony: "make the thumbnails a bit bigger so that when we're at the desk we can actually see what the
+    // images are"): the row's photograph is 72 px (it was 40); the record's 240 (96), the size of the thumbnail the
+    // server hands back; its close-ups 120 (64).
+    has(row, 'style="w:72"', 'the row draws its photograph at 72 px');
+    lacks(row, 'style="w:40"', 'not the 40 px it was');
     rowCtx._invOpen.p = true;
     const open = rowCtx._renderInvRow({ id: 1 }, ref);
     has(open, "_invEdit(1,'p','fieldNote',this)", 'the panel lets the desk edit the note');
     has(open, 'Detail shots \u00b7 1', 'and shows the linked close-ups');
     has(open, 'data-thumb-id="DFILE"', 'as thumbnails the painter can fill');
+    has(open, 'data-thumb-id="DFILE" style="w:120"', 'each close-up at 120 px');
+    has(open, 'style="w:240"', 'and the opened record shows the line\u2019s photograph at 240 px');
   }
 
   // ⚠⚠ THE DESK CAN NAME AND FILE WHAT THE CAMERA TOOK. Until 2026-09-20 it could not: these

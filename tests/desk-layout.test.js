@@ -1883,8 +1883,8 @@ function groupI({ group, ok, eq, has, lacks }) {
     ok(!/\.desk-show\{[^}]*gray-dk/.test(CSS), 'and never the dark fill');
     // Thumb-sized on a phone: inside the one phone block, beside the rule that sizes every other control there.
     const phone = CSS.indexOf('@media (max-width:820px) {');
-    ok(phone > 0 && CSS.indexOf('  .desk-show{min-height:32px;}', phone) > phone, 'and 32 px tall on a phone, in the phone block (browser step 96 measures it)');
-    // The row it scrolls to lands under the sticky header and tabs (122 px at 1440, measured by browser step 96), not behind
+    ok(phone > 0 && CSS.indexOf('  .desk-show{min-height:32px;}', phone) > phone, 'and 32 px tall on a phone, in the phone block (browser step 99 measures it)');
+    // The row it scrolls to lands under the sticky header and tabs (122 px at 1440, measured by browser step 99), not behind
     // them: a margin off the height setTopbarHeight publishes, read by the browser's own scrollIntoView.
     ok(/\[id\^="inv-row-"\]\{scroll-margin-top:calc\(var\(--topbar-h,0px\) \+ 8px\);\}/.test(CSS), '⚠ Show the item\'s row stops under the sticky bar, never behind it');
     has(fn('setTopbarHeight'), "setProperty('--topbar-h', t.offsetHeight + 'px')", 'off the height the app already publishes for its sticky parts');
@@ -2017,7 +2017,7 @@ function groupJ({ group, ok, eq, has, lacks }) {
     // Cancel draws the boxes afresh, from the markup the render draws them with: whatever was typed or picked is gone, as the
     // bequests' Cancel clears theirs (the G6 review: they reappeared filled on the next + Add an appraiser).
     const cells = D.C._apprFormCellsHtml(7);
-    D.dom.getElementById('appr-form-7').innerHTML = cells.replace('id="appr-name" placeholder="Name"', 'id="appr-name" value="Half-typed Jones" placeholder="Name"');
+    D.dom.getElementById('appr-form-7').innerHTML = cells.replace('id="appr-name" style=', 'id="appr-name" value="Half-typed Jones" style=');
     has(D.dom.html, 'value="Half-typed Jones"', 'fixture: a name typed into the open form');
     attempt(() => D.C.invToggleApprForm(7, true));
     attempt(() => D.C.invToggleApprForm(7, false));
@@ -2477,9 +2477,9 @@ function groupL({ group, ok, eq, has, lacks }) {
 }
 
 // ═══ M · THE PHONE (G9, 2026-10-22) ════════════════════════════════════════════════════════════════════════════════════
-// Measured on browser step 96's estate before this group, at 390 px with every bar open: 124 px of sideways scroll (the
+// Measured on browser step 99's estate before this group, at 390 px with every bar open: 124 px of sideways scroll (the
 // guardrail's appraiser picker and its Waive), the bulk bar 448 px tall with two rows ticked, the band and its rail 610 px.
-// The layout itself is measured on the real page by step 96's part 9; what is held here is the markup and the CSS that make
+// The layout itself is measured on the real page by step 99's part 9; what is held here is the markup and the CSS that make
 // it, the in-place toggles, and the folded line's words off the real timeline.
 // The phone block: the one `@media (max-width:820px) {` block of the first stylesheet, to its closing brace.
 function phoneCss() {

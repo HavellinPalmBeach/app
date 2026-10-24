@@ -156,7 +156,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // And it has to SAY so, or nobody discovers it.
     const label = src.slice(Math.max(0, i - 400), i);
     has(label, 'separate several with ;', 'the label states the separator');
-    has(src.slice(i, i + 300), 'placeholder', 'and the placeholder shows a worked example');
+    // RESTATED 2026-10-23 (Anthony: blank boxes, no suggestions): the worked example in the box is gone; the label says it.
+    lacks(tag, 'placeholder', 'and the box itself is blank');
   }
 
   group('an appraiser who also BUYS is not recorded as independent');
@@ -209,7 +210,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // only place the honest default is set.
     const els = {
       'appr-firm-wrap': { style: {} },
-      'appr-name': { placeholder: '' },
+      'appr-name-lbl': { textContent: 'Name' },
       'appr-firm': { value: '' },
       'appr-indep': { checked: true },
       'appr-conflict-note': { innerHTML: '' },
@@ -218,6 +219,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ctx._apprPickVendor({ value: '0' });
     eq(els['appr-indep'].checked, false,
        'picking the firm that also buys unticks Independent');
+    // The name box's caption follows the pick (2026-10-23: a caption over the box, never words inside it).
+    has(els['appr-name-lbl'].textContent, 'Contact at ', 'the caption over the name box says whose contact it is');
     has(els['appr-conflict-note'].innerHTML, 'Jewelry &amp; Watch Buyer',
         'and the note names the trade rather than just objecting');
     has(els['appr-conflict-note'].innerHTML, 'unticked', 'and says what it did');

@@ -207,10 +207,10 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       has(await rowText('s2'), 'bequest to Mary Smith', 'its row names whose it is');
       lacks(await rowText('s2'), 'going elsewhere', 'and carries no caution: it is going to Mary');
       // The To a person box offers the roster, and stays free text.
-      eq(await p.getAttribute('#inv-row-s3 input[placeholder="Who took it?"]', 'list'), 'inv-ben-list-5601', '⚠ the To a person box offers the roster');
+      eq(await p.getAttribute('#inv-row-s3 input.inv-recip', 'list'), 'inv-ben-list-5601', '⚠ the To a person box offers the roster');
       eq(await p.evaluate(() => Array.from(document.querySelectorAll('#inv-ben-list-5601 option')).map((o) => o.value)), ['Mary Smith', 'John Smith'], 'as suggestions');
-      await p.fill('#inv-row-s3 input[placeholder="Who took it?"]', 'John Smith');
-      await p.press('#inv-row-s3 input[placeholder="Who took it?"]', 'Tab'); await p.waitForTimeout(300);
+      await p.fill('#inv-row-s3 input.inv-recip', 'John Smith');
+      await p.press('#inv-row-s3 input.inv-recip', 'Tab'); await p.waitForTimeout(300);
       eq((await line(5601, 's3')).channel, 'John Smith', 'the recipient is written');
     });
 
@@ -321,12 +321,12 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
     await section('E. staff never buy: refused in the row and on the bulk bar', async () => {
       await toDesk(5601);
       dialogs.length = 0;
-      await p.fill('#inv-row-s1 input[placeholder="Who took it?"]', 'Ashley Jerome');
-      await p.press('#inv-row-s1 input[placeholder="Who took it?"]', 'Tab'); await p.waitForTimeout(400);
+      await p.fill('#inv-row-s1 input.inv-recip', 'Ashley Jerome');
+      await p.press('#inv-row-s1 input.inv-recip', 'Tab'); await p.waitForTimeout(400);
       has(dialogs.join(' | '), 'Havellin and its people never buy or receive trust property, and take no share of the proceeds. Ashley Jerome is with Havellin, so #1 Sargent portrait cannot be sold or released to them. Nothing was changed.',
           '⚠⚠ a sale to the concierge is refused, naming the rule');
       eq((await line(5601, 's1')).channel, 'Christie’s', 'nothing is written');
-      eq(await p.inputValue('#inv-row-s1 input[placeholder="Who took it?"]'), 'Christie’s', 'and the box is put back');
+      eq(await p.inputValue('#inv-row-s1 input.inv-recip'), 'Christie’s', 'and the box is put back');
       await pick('s4'); await pick('s5');
       dialogs.length = 0;
       await type('#inv-bulk-recip', 'Anthony Graziano Jr', 'the bulk bar\'s recipient');

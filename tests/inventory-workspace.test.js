@@ -249,6 +249,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(thBody, 'data-thumb-id', 'it is painted in afterwards by id');
     has(thBody, 'INV_CAT_GLYPH', 'and an unresolved photo shows a category glyph');
     lacks(thBody, '<img', 'never an <img> that could render broken in front of a client');
+    // 2026-10-23: the opened record draws its photograph at 240 px, where px * 0.42 made the waiting glyph 101 px; it
+    // stops at 40, and a small thumbnail keeps its own proportion.
+    const tc = sandbox({ fns: ['_invThumbHTML', '_invFileId', 'esc'], vars: ['INV_CAT_GLYPH'] });
+    has(tc._invThumbHTML(1, { category: 'Furniture' }, 240), 'width:240px;height:240px;', 'a 240 px thumbnail is 240 px');
+    has(tc._invThumbHTML(1, { category: 'Furniture' }, 240), 'font-size:40px;', 'and its waiting glyph stops at 40 px');
+    has(tc._invThumbHTML(1, { category: 'Furniture' }, 72), 'font-size:30px;', 'a 72 px one keeps 42% of its size');
   }
 
   group('clearing a device: every stored key is accounted for');

@@ -913,7 +913,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body, "wrap.style.display = 'none'",
         'picking a directory vendor hides the Firm box — the dropdown already names it');
     has(body, "wrap.style.display = ''", 'and clearing the picker brings it back for free text');
-    has(body, "placeholder = 'Contact at ", 'the remaining field says what it wants');
+    // RESTATED 2026-10-23 (Anthony: blank boxes): it said so inside the box; the caption over it says it now.
+    has(body, "nameLbl.textContent = 'Contact at ", 'the remaining field says what it wants, on its caption');
     has(src, 'id="appr-firm-wrap"', 'the wrapper exists to hide');
   }
 };

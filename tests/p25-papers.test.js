@@ -186,7 +186,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pro = textOf(attempt(() => A.probateAgreementHtml(PROBATE({ probateCase: '50-2026-CP-001234' }), Object.assign({}, EST_HR, { svc: 'probate' }))).val);
     has(pro, 'Court Circuit Court for Palm Beach County, Florida, Probate Division', '⚠⚠ the estate agreement prints the court, not "Court ____"');
     has(SRC, 'id="i-probate-court"', 'intake has the Court field');
-    has(fn('showEditClient'), "fld('Court'", 'and Edit Client');
+    has(fn('showEditClient'), "fld('Court <span", 'and Edit Client (its hint on the label since 2026-10-23)');
   }
 
   // ═══ Q54 · CHANGE-ORDER REASONS PER SERVICE ══════════════════════════════════

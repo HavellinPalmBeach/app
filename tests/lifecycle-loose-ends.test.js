@@ -95,7 +95,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ M4 — Win / Loss counts what a retained job KEPT, and the list says so');
   {
-    const W = sandbox({ fns: ['winLossFigures', 'isJobWon', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobPayments', 'winLossListHtml', 'jobRefundedTotal', 'refundCounts', 'paymentLive', 'isRefundRecord',
+    const W = sandbox({ fns: ['winLossFigures', 'jobIsTest', 'liveJobs', 'isJobWon', 'closeoutRetainedTotal', 'jobPaidTotal', 'paymentCounts', 'jobPayments', 'winLossListHtml', 'jobRefundedTotal', 'refundCounts', 'paymentLive', 'isRefundRecord',
       '_wlClientCell', '_jobStatusCell', 'fmtDate2', 'jobStatusView', 'jobClosedRefunded', 'svcLabelOf', 'depositTargetFor', 'stagePaidTotal', 'roundCents', 'fmt', 'paymentSplit'],
       vars: ['WON_METHOD_LABELS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT', 'SVC_LABELS', 'LOSS_REASONS'] });
     W.jobs = [
@@ -186,7 +186,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(d.getElementById('ec-probate-deadline').value, '2026-11-30', '⚠ a deadline set by hand (an extension the court granted) is never recounted over');
   }
 
-  const EC_FNS = ['showEditClient', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
+  const EC_FNS = ['showEditClient', 'jobIsTest', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
     'executorAuthOptionsHtml', 'resolveExecutorAuth', 'authorityRecord', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
     'docTierOptionsHtml', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'esc', 'onDocGateChange',
     'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',

@@ -95,7 +95,7 @@ const TIER_FNS = ['docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 's
 const ROUTE_FNS = ['estimateRepriceRoute', 'estimateEditBlocker', 'priceChangeBlocker', 'estimateOutForApproval',
   'isAgreementSigned', 'isAgreementSent', 'agreementSignature', 'docSentAt', 'docKeyFor'];
 const TIER_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DOC_SCOPES', 'JOB_STEPS'];
-const EC_FNS = ['showEditClient', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'jobListEntries', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
+const EC_FNS = ['showEditClient', 'jobIsTest', 'courtFromCaseNo', 'courtRecordRequired', 'courtRecordShown', 'jobOnProbateTrack', 'saveClientEdit', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'followJobService', 'jobListEntries', 'ecToggleProbate', 'ecPaintSvcFlag', 'probateSvcFlag',
   'executorAuthOptionsHtml', 'resolveExecutorAuth', 'authorityRecord', 'ecIsProbateSvc', 'ecIsEstateSvc', 'ecIsMoveSvc', 'ecDocGateChange',
   'docTierOptionsHtml', 'docTierScopeMirror', 'esc', 'onDocGateChange',
   'houseFlagInputsHtml', 'houseFlagsOf', '_houseFlagRowClass', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706', 'isDecedentJob',
@@ -231,7 +231,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays',
       'jobProgress', 'roomStatusNormalize', 'workingDaysInclusive', 'approvedEstimateFor',
-      'maybeStartJobsWatch', 'paymentSplit', 'jobIsFeeOnly', 'renderClientDashboard', 'jobProbateCourt', 'courtFromCaseNo', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
+      'maybeStartJobsWatch', 'paymentSplit', 'jobIsFeeOnly', 'renderClientDashboard', 'jobIsTest', 'jobProbateCourt', 'courtFromCaseNo', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'coCardActions', 'sectionHdr', 'stagePaidTotal',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'guideLinkHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',
       'stopJobsWatch', 'unscoredRoomNames', 'isAgreementSent', 'jtBandHtml', 'jtTrackHtml', 'jtRailHtml', '_jtAtFmt', '_jtStateCls',
       'coWorkingDays', '_coPaceFix', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coInclTxt', 'estimateEditBlocker', 'priceChangeBlocker',
@@ -863,7 +863,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The referral leaderboard: attribution is set at intake and corrected on Edit Client (Q15).
     const dom = domStub({});
-    sandbox({ fns: ['renderReferralLeaderboard', 'referralPartnerStats', 'referralIdOf', 'jobRefersToPartner', 'isJobWon', 'esc', 'roundCents', 'fmt'],
+    sandbox({ fns: ['renderReferralLeaderboard', 'referralPartnerStats', 'jobIsTest', 'liveJobs', 'referralIdOf', 'jobRefersToPartner', 'isJobWon', 'esc', 'roundCents', 'fmt'],
       stubs: { document: dom, referralDirectory: [{ uid: 'u-ann', partner_name: 'Ann Lowe', partner_type: 'Estate attorney' }],
                jobs: [{ id: 1, refPartnerId: 'u-ann', status: 'won', won: true, havellinEst: 20000 }] } }).renderReferralLeaderboard();
     has(dom.getElementById('referrals-leaderboard').innerHTML, 'jobs attributed to each partner at intake or on Edit Client', 'the leaderboard says where attribution is set');

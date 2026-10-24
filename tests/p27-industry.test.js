@@ -109,7 +109,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(save, "var destContact = String((document.getElementById('i-dest-contact')||{}).value || '').trim();", 'intake reads it trimmed');
     has(save, 'destContact:destContact', 'and writes it on the job');
     const ec = codeOnly(fn('showEditClient'));
-    has(ec, "txt('dest-contact', job.destContact,", 'Edit Client renders it from the record');
+    has(ec, "txt('dest-contact', job.destContact)", 'Edit Client renders it from the record');
     const ecSave = codeOnly(fn('saveClientEdit'));
     has(ecSave, "var _ecDestContact = document.getElementById('ec-dest-contact');", 'the save looks for the control');
     has(ecSave, "if (_ecDestContact) job.destContact = String(_ecDestContact.value || '').trim();", 'and writes it only when rendered, with no lock');

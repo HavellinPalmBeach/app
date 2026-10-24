@@ -130,7 +130,7 @@ function app(refs, over) {
       _invTouch: (r) => { r.updatedAt = 99; return r; },
       _invStampBy: () => 'Ashley Jerome',
       esc: (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
-      _invThumbHTML: (j, r) => '<i data-thumb="' + r.stableId + '"></i>',
+      _invThumbHTML: (j, r, px) => '<i data-thumb="' + r.stableId + '" data-px="' + px + '"></i>',
       alert: (m) => log.alerts.push(m),
       confirm: (m) => { log.confirms.push(m); return over.confirm !== false; },
       window: { confirm: (m) => { log.confirms.push(m); return over.confirm !== false; } },
@@ -395,6 +395,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(html, 'room check: plainly one thing', 'and how sure it was');
     has(html, '>Blue vase<', 'naming each line under its photograph');
     has(html, 'Nightstand', 'a same-name group still leads with the name');
+    // 2026-10-23 (Anthony: "make the thumbnails a bit bigger so that when we're at the desk we can actually see what the
+    // images are"): the two photographs a person compares here are 72 px, not 34.
+    has(html, 'data-thumb="a" data-px="72"', 'each line\u2019s photograph is drawn at 72 px, big enough to compare');
     ctx.agentNotDuplicate(7, ctx._agDupHandle(g[0].key));
     eq(ctx.agentDuplicateGroups(7).length, 1, 'Not duplicates quiets the pair');
     eq(log.renders > 0, true, 'and the tab redraws');

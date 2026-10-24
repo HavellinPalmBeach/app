@@ -606,56 +606,38 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'nothing in the send path writes to a tab strip');
   }
 
-  group('⚠ NO INPUT OFFERS A VALUE-SHAPED EXAMPLE — the fourth markup tripwire');
+  group('⚠ NO BOX HOLDS WORDS OF ITS OWN — the fourth markup tripwire');
   {
-    // Anthony, on the vendor form: *"in the phone and email fields there are dummy
-    // grey'd out examples. they are confusing and it looks like the phone is
-    // (561)000-0000 and the email is andy@company.com."* He is right, and the defect is
-    // not the wording — it is the SHAPE. A greyed string that is itself a valid phone
-    // number or a valid email address is indistinguishable at a glance from a value
-    // already on file, in a box whose entire job is holding which number reaches which
-    // person. An empty box says "nothing recorded"; "(561) 000-0000" says "0000".
+    // Anthony, on the vendor form (P9): *"in the phone and email fields there are dummy grey'd out examples. they are
+    // confusing and it looks like the phone is (561)000-0000 and the email is andy@company.com."* That sweep netted the
+    // value-shaped examples and kept the rest as guidance. RESTATED 2026-10-23, Anthony on Client Intake's Move
+    // Destination: *"on any forms, remove the example stuff that is in the fields. we don't need prompts for these
+    // things and in the worst case, they look like they are already filled out. just need blank boxes to fill in, no
+    // suggestions. check the whole app and correct."* So the rule is now the whole attribute: no input or textarea
+    // carries a placeholder. Where the grey words were the box's only name, or carried a rule (one line per item, names
+    // with ; between them, negative to reduce, filled from the case number, a house row's prompt), they moved onto a
+    // label or a caption outside the box. The four search bars keep their hint: they are where you look things up, not
+    // a form you fill in.
     //
-    // ⚠ THIS IS A RULE ABOUT THE SHAPE, NOT A LIST OF TODAY'S IDS, deliberately. The
-    // sweep that closed this found seven MORE in Client Intake and Contractors than the
-    // ones he was looking at, and an id list would have caught none of them and nothing
-    // added next year either. Same reasoning as the prep-fee sweep: a net woven from the
-    // cases you can think of catches the cases you thought of.
-    //
-    // GUIDANCE IS STILL ALLOWED and two placeholders deliberately survive: 'e.g. 214'
-    // on the extension (the 'e.g.' prefix cannot read as a recorded value) and
-    // 'Direct · Main' on the phone type (a middot-separated pick-one, not a value).
-    const VALUE_SHAPED = /^(\(?\d{3}\)?[ .-]?\d{3}[ .-]?\d{4}|[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})$/;
-    const tags = src.match(/<input\b[^>]*>/g) || [];
-    ok(tags.length > 100, 'the markup really was scanned (' + tags.length + ' inputs)');
-    const bad = [];
-    tags.forEach((t) => {
-      const ph = /\bplaceholder="([^"]*)"/.exec(t);
-      if (!ph) return;
-      if (!VALUE_SHAPED.test(ph[1].trim())) return;
-      const id = /\bid="([^"]*)"/.exec(t);
-      bad.push((id ? id[1] : '(no id)') + ' -> ' + ph[1]);
-    });
-    eq(bad, [], '⚠⚠ no input offers a placeholder that is itself a valid phone number or email address');
+    // ⚠ A RULE ABOUT THE ATTRIBUTE, NOT A LIST OF IDS, for the reason P9 gave: a list catches only the cases you
+    // thought of, and the 2026-10-23 sweep found about 165 across intake, Edit Client, the desk, the dialogs and Settings.
+    const tags = src.match(/<(?:input|textarea)\b[^>]*>/g) || [];
+    ok(tags.length > 150, 'the markup really was scanned (' + tags.length + ' boxes)');
+    const bad = tags.filter((t) => /\bplaceholder\s*=/.test(t) && !/type="search"/.test(t))
+      .map((t) => { const id = /\bid="([^"]*)"/.exec(t); return id ? id[1] : t.slice(0, 80); });
+    eq(bad, [], '⚠⚠ no input or textarea carries a placeholder');
+    eq(tags.filter((t) => /type="search"/.test(t) && /\bplaceholder="/.test(t)).length, 4,
+       'the four search bars keep their hint, and they are the only boxes that do');
 
-    // The converse, or the rule above passes on a file with no placeholders left at all
-    // and stops meaning anything. Real guidance must survive.
-    const kept = tags.filter((t) => /\bplaceholder="/.test(t)).length;
-    ok(kept > 10, 'genuine hint placeholders are untouched (' + kept + ' remain)');
-    has(src, 'placeholder="e.g. 214"', "the extension keeps its 'e.g.' hint, which cannot read as a value");
-
-    // ⚠ AND THE SAME RULE AT RUNTIME (audit P9, intake lows). The markup scan above cannot see a
-    // placeholder a script sets: "(561) 555-0100" and "client@email.com" came back through
-    // toggleIntakeFields, and "(561) 000-0000" through Edit Client's tel() default, and every
-    // check above stayed green. Three runtime shapes: `.placeholder = '…'`, a `ph || '…'` default
-    // spliced into markup, and the placeholder argument of Edit Client's txt()/tel() builders.
-    const rt = [];
-    const grab = (re) => { let m; while ((m = re.exec(src))) rt.push(m[1]); };
-    grab(/\.placeholder\s*=\s*'([^']*)'/g);
-    grab(/placeholder="'\s*\+\s*\(\s*\w+\s*\|\|\s*'([^']*)'\s*\)/g);
-    grab(/\btxt\('[\w-]+',\s*[^,()]+(?:\([^()]*\))?[^,]*,\s*'([^']*)'/g);
-    ok(rt.length > 15, 'the runtime placeholders really were scanned (' + rt.length + ')');
-    eq(rt.filter((p) => VALUE_SHAPED.test(p.trim())), [],
-       '⚠⚠ no script sets a placeholder that is itself a valid phone number or email address');
+    // ⚠ AND AT RUNTIME, where the markup scan is blind (audit P9: "(561) 555-0100" came back through
+    // toggleIntakeFields, and "(561) 000-0000" through Edit Client's tel() default). Three shapes: a script setting
+    // `.placeholder`, setAttribute, and a placeholder spliced into a string a builder returns.
+    const code = src.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+    ok(code.length > src.length * 0.6, 'the source with comments stripped is still most of the file');
+    eq((code.match(/\.placeholder\s*=[^=]/g) || []).length, 0, '⚠ no script sets a placeholder');
+    lacks(code, "setAttribute('placeholder'", 'nor through setAttribute');
+    eq((code.match(/placeholder="'/g) || []).length, 0, '⚠ and no builder splices one into its markup');
+    has(fn('showEditClient'), "function txt(id, val, type) {", "Edit Client's text builder takes no placeholder");
+    has(fn('showEditClient'), "function tel(id, val) {", 'nor does its phone builder');
   }
 };
