@@ -896,7 +896,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const planFns = ['jobListEntries', 'prepVendorsConfirmed', 'derivedLinesHtml', 'renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2', 'chkGrid', 'planChk',
       '_planTaskDone', '_srcLineKey', 'jobLogEntries', 'estTolerancePctTxt', 'getJobPlan', '_planTouch', 'firearmsBannerHtml', 'guideLinkHtml',
-      'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
+      'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'jobAtClose', 'closeoutRatedTone', 'closeoutMeta',
       '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard',
       'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob',
       'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'vendorsWithoutCoi', '_assignedVendorsForJob', 'jobListEntries', 'vendorCoiState', '_vendorYmd', 'vendorCoiLineHtml', 'vendorCoiRequestMailto', 'vendorContacts', 'fmtPhoneDisplay', 'fmtDate2'];

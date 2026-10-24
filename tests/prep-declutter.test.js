@@ -365,7 +365,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_planTouch',
       // The prep plan opens with the firearms banner since 2026-09-20 (the brief under it no
       // longer repeats the firearms row, so the banner has to be on both plan headers).
-      'firearmsBannerHtml', 'guideLinkHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'];
+      'firearmsBannerHtml', 'guideLinkHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'jobAtClose', 'closeoutRatedTone', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'];
     const planVars = ['PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'DECEDENT_SERVICES', 'PREP_FEE_RATE', 'EST_TOLERANCE_PCT', '_planOpenPhases', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC'];
     const mkPlan = (dcHrs, loggedTC) => {
       const logs = loggedTC > 0

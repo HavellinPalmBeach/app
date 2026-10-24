@@ -1431,7 +1431,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 10:46pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 1:31am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -44152,6 +44152,19 @@ function planCurrentStage(jobId, job, est) {
   if (job && job.status === 'active') return 'rooms';
   return 'p0';
 }
+// ⚠⚠ WHETHER THE JOB HAS REACHED THE CLOSE: ONE ANSWER (Anthony, 2026-10-23, Q92). The Close-out stage (planCurrentStage:
+// every room cleared and the midpoint paid), the work handed over (`deliveredOn`), or a closed, deposit-retained or lost job.
+// Read by the desk's Closing bar (whether it opens by itself, and whether its line names what Close job refuses on) and by
+// the Close-out card (its vendor scorecard reads "Not rated yet" in grey before the close and turns red at it; Close job
+// refuses on an unrated vendor either way, jobCloseBlockers). Never the band's lit row: Work complete is lit from the
+// midpoint payment to the close, half of every job. A plan with no rooms (Home Prep) reaches it only when handed over.
+function jobAtClose(jobId, job) {
+  if (!job) return false;
+  if (job.deliveredOn || ['closed', 'closed_retained', 'lost'].indexOf(job.status) >= 0) return true;
+  var est = (typeof estimateStore !== 'undefined' && estimateStore[jobId]) ? estimateStore[jobId].estimate : null;
+  // typeof: belt-and-braces for a pinned sandbox that lifts this answer without the plan's stage.
+  return typeof planCurrentStage === 'function' && planCurrentStage(jobId, job, est) === 'p4';
+}
 // The ONE fold that opens by itself: Vendors & partners, while the job is not yet active and a
 // line on the estimate is still unconfirmed — the calls are what the days before Day 1 are for,
 // and Anthony's own description of the tool: *"expand … the vendors and partners as we're filling
@@ -46812,10 +46825,11 @@ function _invManifestUnread(jobId) {
 //     approval that no request has carried, a drafted request waits on I've sent it, or a signed approval is recorded with
 //     no copy filed. A line is counted once, under the first thing it waits on.
 //   values   · opens while an item waiting on an appraisal has no appraiser linked; red as the guardrail is (Formal).
-//   closing  · opens at the close only (the Close-out stage, the work handed over, a closed or lost job), or while a
+//   closing  · opens at the close only (jobAtClose: the Close-out stage, the work handed over, a closed or lost job), or while a
 //     proceeds statement disagrees with its lines (red), or when Close job is refused (applyJobTransition, by hand). NOT on
 //     the band's lit row: Work complete is lit from the midpoint payment to the close, half of every job. Grey before the
-//     close, amber where a line has left with its paper owed; at the close it names everything Close job refuses on. The
+//     close, amber where a line has left with its paper owed; at the close it names everything Close job refuses on (the
+//     vendors red, as the Close-out card's scorecard is then: Q92). The
 //     signed schedules beside the ledger (2026-10-22) are a close-out paper: named in amber at the close while one has no
 //     copy filed, as the ledger's signature is, and counted in grey once one is filed; mid-job, before any is, nothing.
 //   history  · never by itself (a snapshot just taken opens it, takeInventorySnapshot).
@@ -46936,11 +46950,9 @@ function deskFoldState(jobId, job, fold, all, today) {
   }
 
   if (fold === 'closing') {
-    var est = (typeof estimateStore !== 'undefined' && estimateStore[jobId]) ? estimateStore[jobId].estimate : null;
     var co = _deskCloseoutShown(jobId, job);
     st.show = co || all.length > 0;   // the close-out card, or the papers' cards, each drawn once there is a line
-    var atClose = !!job.deliveredOn || ['closed', 'closed_retained', 'lost'].indexOf(job.status) >= 0
-      || (typeof planCurrentStage === 'function' && planCurrentStage(jobId, job, est) === 'p4');
+    var atClose = jobAtClose(jobId, job);   // the one answer, shared with the Close-out card's scorecard (Q92)
     st.openByDefault = atClose;
     if (unread && !cached) return loading();
     var R = (jobTakesProceedsStatements(job) && all.length) ? proceedsReconciliation(job, all) : null;
@@ -46950,8 +46962,9 @@ function deskFoldState(jobId, job, fold, all, today) {
     if (R && R.disagree) { st.openByDefault = true; bit(R.disagree === 1 ? '1 proceeds statement disagrees with its lines' : R.disagree + ' proceeds statements disagree with their lines', 'red'); }
     if (atClose) {
       // Everything Close job refuses on, each by name, off the refusal's own list in its short words (jobCloseBlockers(job,
-      // 'short'), 2026-10-23): a refusal added there is named here without a second copy of it.
-      jobCloseBlockers(job, 'short').forEach(function (t) { bit(t, 'amber'); });
+      // 'short'), 2026-10-23): a refusal added there is named here without a second copy of it. Each in the list's own tone
+      // ('bits'): the vendors red, as the Close-out card's scorecard is at the close (Q92), the rest amber.
+      jobCloseBlockers(job, 'bits').forEach(function (b) { bit(b.text, b.tone); });
       var sig = all.length ? ledgerDerivedLines(jobId, job)[0] : null;
       if (sig && !sig.ok) bit((sig.key === 'ledger_signed' ? 'Disposition Ledger' : 'Contents Record') + ' not signed yet', 'amber');
       scOpen.forEach(function (x) { bit(x.label + ' not filed yet', 'amber'); });
@@ -48113,13 +48126,16 @@ function unratedVendorsForJob(job) {
 function jobCloseBlockers(j, form) {
   // ⚠ ONE LIST, TWO WORDINGS (2026-10-23, the desk's review): the refusal's sentences, and with `form` 'short' the same
   // entries as the Closing bar's line names them ("2 vendors not yet rated"), so the line can never leave a refusal out.
-  var out = [], short = form === 'short';
-  var add = function (long, brief) { out.push(short ? brief : long); };
+  // With `form` 'bits', those short words each in the tone the line paints it (Q92, 2026-10-23): the line names them only
+  // at the close (jobAtClose), where the scorecard paints an unrated vendor red, so the vendors are red there too; the keys
+  // and the incidents keep their amber.
+  var out = [], bits = form === 'bits', short = form === 'short' || bits;
+  var add = function (long, brief, tone) { out.push(bits ? { text: brief, tone: tone || 'amber' } : short ? brief : long); };
   var un = unratedVendorsForJob(j);
   if (un.length) {
     add('Rate every vendor used on this job — ' + un.length + ' not yet rated (' +
       un.map(function(v){ return v.name; }).join(', ') + '). The scorecard is in the Close-out card: on the Job Plan, and under Closing the job on Job Admin & Inv.',
-      un.length + (un.length === 1 ? ' vendor' : ' vendors') + ' not yet rated');
+      un.length + (un.length === 1 ? ' vendor' : ' vendors') + ' not yet rated', 'red');
   }
   // ⚠ EVERY KEY AND ACCESS ITEM BACK TO THE CLIENT, OR MARKED LOST WITH WHAT HAPPENED (2026-10-16, Anthony's one refusal).
   var ak = (typeof accessCloseBlocker === 'function') ? accessCloseBlocker(j) : '';
@@ -48151,12 +48167,18 @@ function computeVendorAvg(vendorId) {
   var sum = recent.reduce(function(a,e){ return a + e.rating; }, 0);
   return { avg: Math.round((sum/recent.length)*10)/10, count: recent.length };
 }
+// ⚠ GREY UNTIL THE CLOSE, RED AT IT (Anthony, 2026-10-23, Q92: *"Grey until the close (Recommended): Mid-job they read 'Not
+// rated yet' in grey; they turn red ('required to close the job') once the job reaches the close. Close job still refuses until
+// every vendor is rated."*). It painted every unrated vendor red from the day the vendor was confirmed, on the Job Plan and
+// inside the desk's shut Closing bar whose line is grey before the close: a verdict asked for on work still in progress. When
+// the job has reached the close is jobAtClose, the one answer the Closing bar reads too; the refusal is jobCloseBlockers'.
 function renderVendorScorecard(jobId, job) {
   var vlist = _assignedVendorsForJob(job);
   if (!vlist.length) {
     return '<div style="font-size:12px;color:var(--gray);font-style:italic;padding:4px 0;">No vendor was confirmed on the Job Plan or named on a line, so there is nobody to rate.</div>';
   }
   var ratings = job.vendorRatings || {};
+  var atClose = jobAtClose(jobId, job);
   return vlist.map(function(v){
     var rec = ratings[v.vendorId] || {};
     var cur = rec.rating || 0;
@@ -48167,11 +48189,12 @@ function renderVendorScorecard(jobId, job) {
     }).join('');
     var agg = computeVendorAvg(v.vendorId);
     var aggTxt = agg.count ? ('Rolling avg ' + agg.avg + ' (' + agg.count + ' job' + (agg.count!==1?'s':'') + ')') : 'No ratings yet';
-    var saved = !cur ? '<span style="color:var(--err-tx);font-weight:600;">Not rated — required to close the job</span>'
+    var saved = !cur ? (atClose ? '<span style="color:var(--err-tx);font-weight:600;">Not rated — required to close the job</span>'
+        : '<span style="color:var(--gray);">Not rated yet</span>')
       : rec.writtenAt ? '<span style="color:var(--ok-tx);">&#10003; Saved to the Vendor Directory</span>'
       : rec.writeErr ? '<span style="color:var(--err-tx);">Rated here — not yet saved to the directory (' + esc(rec.writeErr) + ')</span>'
       : '<span style="color:var(--gray);">Saving to the Vendor Directory…</span>';
-    return '<div class="co-vendor" style="border:1px solid ' + (cur ? 'var(--border)' : 'var(--err-tx)') + ';border-radius:5px;padding:10px 12px;margin-bottom:6px;">' +
+    return '<div class="co-vendor" style="border:1px solid ' + (cur || !atClose ? 'var(--border)' : 'var(--err-tx)') + ';border-radius:5px;padding:10px 12px;margin-bottom:6px;">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
         '<strong style="font-size:12px;">' + esc(v.name) + '</strong>' +
         '<span style="font-size:11px;color:var(--gray);">' + aggTxt + '</span>' +
@@ -48264,13 +48287,22 @@ function closeoutState(jobId, job) {
     reviewDrafted: !!ra.draftedAt, reviewSent: !!ra.sentAt,
     reviewPosted: _planTaskDone(jobId, 'review_posted'),
     referral: _planTaskDone(jobId, 'referral_ask'),
-    vendors: vendors.length, rated: vendors.length - unrated.length
+    vendors: vendors.length, rated: vendors.length - unrated.length,
+    atClose: jobAtClose(jobId, job)   // the scorecard's tone (Q92): grey before the close, red at it while a vendor is unrated
   };
+}
+// The count a vendor still unrated is painted in: red at the close, grey before it, green once every vendor is rated. The
+// scorecard's heading and the card's header count read it, so neither can be red while the rows are grey (Q92).
+function closeoutRatedTone(c) {
+  return c.rated === c.vendors ? 'var(--ok-tx)' : c.atClose ? 'var(--err-tx)' : 'var(--gray)';
 }
 function closeoutMeta(jobId, job) {
   var c = closeoutState(jobId, job);
   var steps = [c.sat, c.reviewSent, c.referral].filter(Boolean).length;
-  return steps + ' of 3 done' + (c.vendors ? ' &middot; ' + c.rated + ' of ' + c.vendors + ' vendors rated' : '');
+  // Red at the close while a vendor is unrated, as the rows are; else the header's own grey (Q92).
+  var rated = c.rated + ' of ' + c.vendors + ' vendors rated';
+  return steps + ' of 3 done' + (c.vendors ? ' &middot; ' + (c.atClose && c.rated < c.vendors
+    ? '<span style="color:' + closeoutRatedTone(c) + ';font-weight:600;">' + rated + '</span>' : rated) : '');
 }
 
 function _coFmt(iso) { return iso ? fmtDate2(_localDateOf(iso)) : ''; }
@@ -48296,8 +48328,10 @@ function renderCloseoutBody(jobId, job) {
     review = '<div class="co-sub">Requested ' + esc(_coFmt(ra.sentAt)) + '. Tick it once the review appears on Google.</div>'
       + chkGrid(planChk(jobId, 'review_posted', 'Review posted on Google'));
   }
+  // The count in the scorecard's tone (closeoutRatedTone: grey before the close, red at it, green when done); the sentence after
+  // it is plain information in every state (Q92).
   var scoreHd = c.vendors
-    ? '<span style="color:' + (c.rated === c.vendors ? 'var(--ok-tx)' : 'var(--err-tx)') + ';font-weight:600;">' + c.rated + ' of ' + c.vendors + ' rated</span> &middot; required before the job can close'
+    ? '<span style="color:' + closeoutRatedTone(c) + ';font-weight:600;">' + c.rated + ' of ' + c.vendors + ' rated</span> &middot; required before the job can close'
     : 'nobody to rate';
   return '<div class="co-step">' + num(1, c.sat) + '<div class="co-main"><div class="co-ttl">Satisfaction call</div>'
       + chkGrid(planChk(jobId, 'satisfaction_call', 'Client satisfaction confirmed by phone — a call, not a text')) + '</div></div>'

@@ -696,7 +696,9 @@ function groupC({ group, ok, eq, has, lacks }) {
     eq(B.line('closing'), '1 vendor not yet rated · 1 key or access item still held · 1 incident open · Disposition Ledger not signed yet · '
       + 'Adopted Court Inventory not filed yet · close-out 0 of 3 done',
       'naming the vendor, the key, the incident, the ledger to be signed and the schedule to be filed');
-    eq(B.tones('closing').slice(0, 5), ['amber', 'amber', 'amber', 'amber', 'amber'], 'each amber');
+    // RESTATED BY Q92 (2026-10-23): the vendor in red, as the Close-out card's scorecard paints an unrated vendor at the close
+    // (jobCloseBlockers' 'bits'); the key, the incident, the ledger and the schedule amber, as before.
+    eq(B.tones('closing').slice(0, 5), ['red', 'amber', 'amber', 'amber', 'amber'], 'the vendor red, as the scorecard is at the close; the rest amber');
     eq(B.C.jobCloseBlockers(PROBATE(Object.assign({}, blockers, mid))).length, 3, 'fixture: Close job refuses on exactly those three');
     // The midpoint paid but a room not cleared: mid-job, shut, grey, no blocker named (they are not owed yet).
     B = bars(PROBATE(Object.assign({}, blockers, mid)), rows, { est, plan: { 7: { rooms: { 0: { status: 'locked' } } } } });
@@ -834,7 +836,10 @@ function groupD({ group, ok, eq, has, lacks }) {
      // RESTATED ON THE BUILD'S REVIEW (2026-10-23): the close's refusals are read off jobCloseBlockers' own list (its short
      // words), where the line read unratedVendorsForJob, accessHeldItems and openIncidents itself, a second copy of the list.
      'jobCloseBlockers', 'ledgerDerivedLines', 'invRecordedGone', 'invDonationReceipted', 'donationGroups',
-     'planCurrentStage', '_invRemovedRows'].forEach((r) => ok(new RegExp('\\b' + r + '\\(').test(body), 'reads ' + r));
+     // RESTATED BY Q92 (2026-10-23): the close is jobAtClose, the one answer the Close-out card's scorecard reads too; the plan's
+     // stage is read there (tests/q92-closeout-tone.test.js), never here.
+     'jobAtClose', '_invRemovedRows'].forEach((r) => ok(new RegExp('\\b' + r + '\\(').test(body), 'reads ' + r));
+    ok(!/\bplanCurrentStage\(/.test(body), 'and the plan\'s stage only through jobAtClose');
     // the fields and lists those readers own, never read here directly
     ['authBy', 'approvalDate', 'INV_RELEASE_DISPOSITIONS', 'INV_SALE_DISPOSITIONS', 'apprId', 'fmv', 'flagBequest', 'channel', 'accessItemOpen',
      'accessItemsOf', 'incidentStatus', 'docLevel', 'stagePaidTotal', 'rooms'].forEach((t) =>
@@ -3071,14 +3076,19 @@ function groupO({ group, ok, eq, has, lacks }) {
       const long = attempt(() => B.C.jobCloseBlockers(job)), short = attempt(() => B.C.jobCloseBlockers(job, 'short'));
       ok(long.ok && short.ok, what + ': both wordings answer (' + (long.err || short.err || 'ok') + ')');
       eq((short.val || []).length, (long.val || []).length, what + ': ⚠ one entry in the short list for each refusal');
-      eq(B.closing.bits.filter((b) => b.tone === 'amber').map((b) => b.text).slice(0, (short.val || []).length), short.val || [],
-        what + ': the line opens with exactly those, in amber, in the refusal\'s order');
+      // RESTATED BY Q92 (2026-10-23): each in the list's own tone, the vendors red (the scorecard's at the close), the rest amber.
+      const n = (short.val || []).length, bitsF = attempt(() => B.C.jobCloseBlockers(job, 'bits'));
+      eq(B.closing.bits.slice(0, n).map((b) => b.text), short.val || [], what + ': the line opens with exactly those, in the refusal\'s order');
+      eq(B.closing.bits.slice(0, n).map((b) => b.tone), (short.val || []).map((x) => /not yet rated/.test(x) ? 'red' : 'amber'),
+        what + ': the vendors red, the keys and the incident amber');
+      eq((bitsF.val || []).map((b) => b.text), short.val || [], what + ': the \'bits\' form carries the short words, one for one');
     });
     const j = PROBATE(Object.assign({ deliveredOn: '2026-10-20', status: 'closed' }, all3));
     eq(bars(j, [LINE('a', { disposition: 'Keep' })], { est, plan }).C.jobCloseBlockers(j, 'short'),
       ['2 vendors not yet rated', '2 keys or access items still held', '1 incident open'], 'the short words, plural where they are');
     const body = codeOnly(fn('deskFoldState'));
     has(body, "jobCloseBlockers(job, ''", 'the bar reads the refusal\'s own list');
+    has(fn('deskFoldState'), "jobCloseBlockers(job, 'bits')", '…in its tones form (Q92)');
     ['unratedVendorsForJob(', 'openIncidents(', 'accessHeldItems('].forEach((n) => lacks(body, n, '⚠ and keeps no copy of it: no ' + n + ' in the line'));
   }
 }

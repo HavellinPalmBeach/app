@@ -260,7 +260,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([B.closing.openByDefault, B.tones('closing')[0]], [true, 'red'], 'a statement that disagrees with its items: open, red');
     [['the work handed over', ESTATE({ deliveredOn: '2026-10-20', status: 'closed' })], ['closed, the deposit retained', ESTATE({ status: 'closed_retained' })],
      ['lost', ESTATE({ status: 'lost', won: false })]].forEach(([what, j]) => eq(bars(j, [LINE('a')]).closing.openByDefault, true, what + ': open'));
-    has(code(fn('deskFoldState')), "planCurrentStage(jobId, job, est) === 'p4'", 'the Job Plan at Close-out opens it');
+    // RESTATED BY Q92 (2026-10-23): the close is one answer, jobAtClose, shared with the Close-out card's scorecard.
+    has(code(fn('deskFoldState')), 'var atClose = jobAtClose(jobId, job);', 'the close opens it (jobAtClose)…');
+    has(code(fn('jobAtClose')), "planCurrentStage(jobId, job, est) === 'p4'", '…and the Job Plan at Close-out is the close');
     has(code(fn('applyJobTransition')), "deskFoldOpen(", 'and a refused Close job opens it');
   }
 

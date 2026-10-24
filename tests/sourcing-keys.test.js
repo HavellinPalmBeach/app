@@ -134,7 +134,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['jobListEntries', 'renderPrepJobPlan', 'derivedLinesHtml', 'prepVendorsConfirmed', 'planPhaseWrap', 'secCaret', '_srcLineKey', 'prepFeeRate', 'fmtDate2', 'chkGrid',
             'estDeclutterHrs', 'jobLogEntries', 'estTolerancePctTxt',
             // The prep plan carries the firearms banner since 2026-09-20.
-            'firearmsBannerHtml', 'guideLinkHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'planChk', '_planTaskDone', 'esc',
+            'firearmsBannerHtml', 'guideLinkHtml', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'jobAtClose', 'closeoutRatedTone', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'planChk', '_planTaskDone', 'esc',
             // The Budget & Fee card reads the accepted change orders' concierge hours since 2026-09-25.
             'coAcceptedHours', 'coHoursTotal', 'coHours', 'coHoursLabel', '_coMoney', 'fmt', 'clientRecipient', 'isDecedentJob', 'firstName', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs'],
       vars: ['EST_TOLERANCE_PCT', '_planOpenPhases', 'PREP_FEE_RATE', 'HOUSE_FLAGS', 'FIREARMS_PROTOCOL_DOC', 'jobPlanStore', 'VENDOR_RATING_WINDOW', 'DECEDENT_SERVICES'],

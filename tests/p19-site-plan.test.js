@@ -256,7 +256,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'vendorsWithoutCoi', 'vendorCoiState', '_vendorYmd', 'jobListEntries', 'fmtDate2',
       'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', 'planStageCard', 'planStageState', 'planCurrentStage',
       'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs',
-      'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob',
+      'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'jobAtClose', 'closeoutRatedTone', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob',
       'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal',
       'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope',
       'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt'];

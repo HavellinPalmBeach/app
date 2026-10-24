@@ -21,7 +21,7 @@
 const { sandbox, fn } = require('./harness');
 const noComments = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
 
-const CARD_FNS = ['jobListEntries', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'closeoutMeta',
+const CARD_FNS = ['jobListEntries', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'jobAtClose', 'closeoutRatedTone', 'closeoutMeta',
   '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf',
   'bestClientEmail', 'jobFiduciaries', 'invFiduciaryMode', '_coFmt', '_localDateOf', '_ymdLocal', 'renderVendorScorecard', 'computeVendorAvg', 'planChk',
   '_planTaskDone', 'chkGrid', 'jobCloseBlockers', 'clientRecipient', 'isDecedentJob', 'firstName'];
@@ -139,7 +139,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(h, 'draftReviewRequest(7)', 'so there is nothing to press yet');
     has(h, '0 of 3 rated', 'the scorecard heads with the count');
     has(h, 'required before the job can close', 'and says it is required');
-    has(h, 'Not rated — required to close the job', 'each unrated row says so');
+    // RESTATED BY Q92 (Anthony, 2026-10-23: grey until the close): this job is mid-job (active, nothing handed over), so each
+    // unrated row reads "Not rated yet" in grey; "required to close the job", in red, is for the close (q92-closeout-tone).
+    has(h, 'Not rated yet', 'each unrated row says so, mid-job');
+    lacks(h, 'Not rated — required to close the job', '⚠ and not in red before the close');
+    has(t.renderCloseoutBody(7, Object.assign(JOB(), { deliveredOn: '2026-10-20', status: 'closed' })), 'Not rated — required to close the job',
+      'once the job reaches the close, each unrated row says it is required');
 
     t.jobPlanStore[7] = { tasks: { satisfaction_call: true } };
     h = t.renderCloseoutBody(7, j);
