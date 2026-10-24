@@ -110,6 +110,10 @@ job."*
   it is the form. *"Banksy print, likely a reproduction."* **Both of Anthony's own examples were
   hedged, and the hedge is what made them useful rather than reckless.** A flat assertion is reserved
   for what is readable in the photograph.
+- **⚠ NO COUNT IN THE NAME (Anthony, 2026-10-24):** *"I don't think we should put the number of items in a
+  name … I took the picture of the top of a stack of plates, and it only registered as 1, but there were 7 more
+  underneath it."* How many is `qty` alone, taken from the crew's note when it gives one (*"set of 8"*), else what
+  the frame shows; a name like *"… approx. 7 in stack"* contradicts the Qty box the moment a person corrects it.
 - The confirming is Havellin's job and the app already carries the state for it: `namedBy:'agent'`
   plus `reviewed:false` plus the *IN PROGRESS — N of M items reviewed* stamp on every client
   document. An attribution nobody has confirmed is visibly unconfirmed.
@@ -183,7 +187,11 @@ Properties, identical in shape to `esignSend` / `stripeLink` / `htmlToPdf`.
       // signature, the hallmark — the one photograph that turns a guess into a reading. Sent
       // as extra images in the SAME request, never as shots of their own: _jobInvRefs excludes
       // label:'detail' by design and a detail frame must never mint a line.
-      "details": [ { "fileId": "1XyZ..." } ] }
+      "details": [ { "fileId": "1XyZ..." } ],
+      // ⚠ 2026-10-24: THE LINES ALREADY NAMED OFF THIS PHOTOGRAPH (agentListedOff), on a blank line added to a
+      // photograph already on the list. The request asks only for what is not among them (_agListedText), so the
+      // photograph is never read into the list twice; empty on a first naming, which reads as before.
+      "listed": [ { "name": "Hand-painted majolica dinner plates, yellow bird and blue flower", "qty": 8 } ] }
   ] }
 ```
 
@@ -198,7 +206,7 @@ client's workbook. Same rule here.
   "results": {
     "7_r3_inventory_...": {
       "objects": [
-        { "name": "Bang & Olufsen Beolab 8000 speakers, pair",
+        { "name": "Bang & Olufsen Beolab 8000 speakers",   // never a count in the name (2026-10-24): qty carries it
           "category": "Electronics & Appliances",
           "qty": 2,
           "confidence": "high",           // high | medium | low

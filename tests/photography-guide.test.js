@@ -62,7 +62,7 @@ const DETAIL = (over) => Object.assign({
 
 function rig(refs, stubs) {
   return sandbox({
-    fns: ['agentShotGroups', 'agentNameableRefs', '_agDetailRefs', '_agShotPayload', '_agWrite',
+    fns: ['agentShotGroups', 'agentNameableRefs', '_agDetailRefs', '_agShotPayload', 'agentListedOff', '_agWrite',
           'agentApplyResult', '_agState', 'invSplitItemN', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDetailRefs',
           '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_arDupEligible', '_arWrite',
@@ -72,7 +72,7 @@ function rig(refs, stubs) {
           'collectionLinesEnsure', '_collLinesOf', 'collectionLineId', 'collectionLineUnshot', '_invHasPhoto',
           'collectionsAwaitingPhoto', 'collectionLineWithPhoto', 'collectionUseLine', '_invJob', 'fieldDispToInv',
           '_invTombstoneLine', '_invItemNo', '_invNamed', '_avHasFigure', '_invHasValue'],
-    vars: ['_agRun', 'AGENT_MAX_DETAILS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
+    vars: ['_agRun', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
            'INV_SPLIT_MAX', '_photoUidSeq', 'AGENT_ROOM_CONF_RANK', 'COLL_LINE_WEAK_STAMP',
            'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT'],
     stubs: Object.assign({
@@ -135,7 +135,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The backend reads no more than four whatever it is sent.
     const box = { _agImageBlock: (id) => ({ type: 'image', id }), String, Math };
     vm.createContext(box);
-    vm.runInContext(gsFn('_agUserContent'), box);
+    vm.runInContext(gsFn('_agUserContent') + '\n' + gsFn('_agListedText') + '\nvar AGENT_LISTED_MAX = 30;', box);
     const content = box._agUserContent({ fileId: 'FID', room: 'Bedroom',
       details: details.map((d) => ({ fileId: d.driveFileId })) });
     eq(content.filter((b) => b.type === 'image').length, 5, 'the item and four close-ups reach the model');

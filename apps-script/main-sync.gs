@@ -77,7 +77,12 @@
 // job's MediaStore entry `invResetAt`, and saveMediaStore drops every line from before it (`_invResetDrops`,
 // saveInventory.gs) on every save, so a device still holding the old lines cannot merge them back. No action or type
 // changes; an older deployment merges them back, and the app names it by version.
-var BACKEND_VERSION = '2026-10-19b';
+// ⚠ 2026-10-24: Agent One is told what is already listed off a photograph (`_agListedText`, off the app's `listed`), so a
+// blank line added to a photograph already named is answered with what is not on the list, never a second reading of
+// the whole photograph; and its names carry no count (the count is qty's, taken from the crew's note where it gives one).
+// No action or type changes; until it is live a blank line on a named photograph puts every object in it on the list
+// twice, and a stack photographed from the top is named "approx. 7 in stack". The app names it by version.
+var BACKEND_VERSION = '2026-10-24';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -3082,9 +3087,9 @@ function _agTool(categories) {
             additionalProperties: false,
             required: ['name', 'category', 'qty', 'confidence', 'basis', 'crop'],
             properties: {
-              name:       { type: 'string',  description: 'Describe it as fully as the photograph supports.' },
+              name:       { type: 'string',  description: 'Describe it as fully as the photograph supports, never with a count: how many goes in qty.' },
               category:   { type: 'string',  enum: categories },
-              qty:        { type: 'integer', description: 'Articles on this line. 1 for a single object; the count for a lot.' },
+              qty:        { type: 'integer', description: 'Articles on this line. 1 for a single object; the count for a lot, from the crew\'s note where it gives one.' },
               confidence: { type: 'string',  enum: ['high', 'medium', 'low'] },
               basis:      { type: 'string',  description: 'Why you named it what you did, in a few words. Read by the desk, never printed for a client.' },
               crop:       { type: 'array',   description: 'x0,y0,x1,y1 normalised 0-1. Use 0,0,1,1 when the object fills the frame or you cannot place it.',
@@ -3126,7 +3131,7 @@ function _agSystem(ctx) {
 
     + 'HOW MANY LINES\n'
     + 'Group ordinary household goods into one line with a quantity: books, flatware, glassware, '
-    + 'linens, kitchenware, tools, garage consumables. "Flatware service, 30 pieces" is one entry '
+    + 'linens, kitchenware, tools, garage consumables. "Sterling flatware service" is one entry '
     + 'with qty 30, not thirty entries.\n'
     + 'Give a line of its own to anything in these categories: Art & Decor, Antiques, Jewelry & '
     + 'Watches, Silver & Precious Metal, Rugs & Carpets, Collectibles, Firearms, Wine & Spirits, '
@@ -3156,12 +3161,19 @@ function _agSystem(ctx) {
     + 'State flatly only what is READABLE in the frame. When you are inferring from form, style '
     + 'or proportion, hedge in the words themselves: "appears to be", "likely", "in the style '
     + 'of". Both are useful; only one of them is a claim.\n'
-    + '  Good: "Bang & Olufsen Beolab 8000 speakers, pair" when the badge is legible.\n'
-    + '  Good: "appears to be Bang & Olufsen, floor-standing column speakers, pair" when it is the shape.\n'
+    + '  Good: "Bang & Olufsen Beolab 8000 speakers" (qty 2) when the badge is legible.\n'
+    + '  Good: "appears to be Bang & Olufsen, floor-standing column speakers" (qty 2) when it is the shape.\n'
     + '  Good: "Banksy print, likely a reproduction" when the image is recognisable but the edition is not.\n'
     + '  Bad:  "Speakers." Bad: "Banksy original." Bad: "Tiffany lamp" on an unmarked leaded shade.\n'
     + 'Some photographs are close-ups of a maker\'s mark, signature or hallmark belonging to an '
-    + 'object in the main frame. Read them and use them. They are why they were taken.\n\n'
+    + 'object in the main frame. Read them and use them. They are why they were taken.\n'
+    // 2026-10-24 (Anthony, off a stack of plates named "approx. 7 in stack" that was eight: *"I don't think we should put
+    // the number of items in a name … I took the picture of the top of a stack of plates, and it only registered as 1, but
+    // there were 7 more underneath it"*). The count is qty's alone, where a person corrects it in one box.
+    + 'Never put how many there are in the name: no "set of 8", "pair", "30 pieces", "approx. 7 in '
+    + 'stack" or "stack of 6". The count goes in qty and nowhere else, because a stack or a box hides '
+    + 'what is under the top one and a person corrects the count in one place. When the crew\'s note '
+    + 'gives a count ("set of 8", "twelve of them"), use it for qty; otherwise qty is what you can see.\n\n'
 
     + 'CATEGORY — pick exactly one from this list for every object:\n  - ' + cats + '\n'
     + 'Use General/Household when nothing else fits. Do not invent a category.\n\n'
@@ -3225,8 +3237,30 @@ function _agUserContent(shot) {
   }
   if (shot.fieldNote) txt += '\nThe crew said: "' + String(shot.fieldNote).slice(0, 400) + '"';
   if (shot.roomNote)  txt += '\nWalkthrough note for this room: "' + String(shot.roomNote).slice(0, 400) + '"';
+  txt += _agListedText(shot.listed);
   content.push({ type: 'text', text: txt });
   return content;
+}
+
+// ⚠⚠ THE LINES ALREADY LISTED OFF THIS PHOTOGRAPH (2026-10-24; the Ellison plates: a blank line added to a photograph
+// already named was answered with a fresh reading of the whole photograph, and every object in it went on the list
+// twice, in other words). The app sends them (`agentListedOff`), and the request asks only for what is not among them;
+// an empty list is the answer when nothing else is there. No list, no sentence: a photograph named for the first time
+// reads exactly as before.
+var AGENT_LISTED_MAX = 30;
+// What a count in a name looks like, for testAgentIdentify's warning only: nothing is rewritten by it.
+var AGENT_COUNT_IN_NAME_RE = /\b(?:set|pair|stack|box|lot|group) of\b|\b\d+\s*(?:pieces|pcs|in (?:a )?stack|total)\b|\bapprox(?:\.|imately)?\s*\d+|,\s*pair\b/i;
+function _agListedText(listed) {
+  var rows = (listed || []).filter(function(l) { return l && String(l.name || '').trim(); }).slice(0, AGENT_LISTED_MAX);
+  if (!rows.length) return '';
+  return '\nThis photograph is already on the inventory. These objects in it are listed already:\n'
+    + rows.map(function(l) {
+        var q = parseInt(l.qty, 10);
+        return '  - ' + String(l.name).trim().slice(0, 300) + (q > 1 ? ' (qty ' + q + ')' : '');
+      }).join('\n')
+    + '\nRecord ONLY the objects in it that are NOT already listed above, under the same rules. Never record '
+    + 'a listed object again, however you would word it. If everything inventoriable in it is already '
+    + 'listed, record an empty list.';
 }
 
 function _agRequestFor(shot, ctx, key) {
@@ -3391,6 +3425,8 @@ function testAgentIdentify() {
   for (var i = 0; i < r.objects.length; i++) {
     var o = r.objects[i];
     Logger.log('   - [' + o.confidence + '] ' + o.name + '  (' + o.category + ', qty ' + o.qty + ') — ' + o.basis);
+    // 2026-10-24: a name carries no count. Said here, so the first run after a redeploy shows whether the prompt holds.
+    if (AGENT_COUNT_IN_NAME_RE.test(String(o.name || ''))) Logger.log('     WARNING: a count in the name; the count belongs in qty alone.');
   }
   for (var n = 0; n < (r.notices || []).length; n++) {
     Logger.log('  NOTICE [' + r.notices[n].kind + '] ' + r.notices[n].text);

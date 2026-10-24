@@ -1472,7 +1472,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 11:53am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 12:14pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6443,7 +6443,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // 2026-10-19b: saveMediaStore drops every line from before a client's inventory reset (main's Agent One build is 2026-10-19) (`invResetAt` on the job's entry;
 // `_invResetDrops`). An older deployment merges them back from the first device that saves one, and loses the stamp with
 // them, so the reset run in the editor is undone unless every device reloads first.
-var BACKEND_MIN_VERSION = '2026-10-19b';
+// 2026-10-24: Agent One reads the lines already listed off a photograph (`listed`, from `agentListedOff`) and names only
+// what is not among them, and its names carry no count. An older deployment ignores `listed` and reads the whole
+// photograph again into a blank line added to it, so every object in it goes on the list twice.
+var BACKEND_MIN_VERSION = '2026-10-24';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -6501,7 +6504,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -37094,6 +37097,7 @@ function _invProgressBar(st, width) {
 
 var AGENT_BATCH = 20;            // photographs per backend call; the server caps and resumes
 var AGENT_MAX_DETAILS = 4;       // close-ups sent with one item
+var AGENT_LISTED_MAX = 30;       // lines already named off one photograph, sent with it (agentListedOff)
 var _agRun = {};                 // jobId -> live run state, session-only
 
 function _agState(jobId) {
@@ -37143,8 +37147,31 @@ function _agShotPayload(jobId, group) {
     room: _invRoomName(jobId, src.roomIdx),
     roomNote: (room && room.note) || '',
     fieldNote: src.fieldNote || '',
-    details: _agDetailRefs(jobId, group.srcId).map(function(d) { return { fileId: _invFileId(d) }; })
+    details: _agDetailRefs(jobId, group.srcId).map(function(d) { return { fileId: _invFileId(d) }; }),
+    listed: agentListedOff(jobId, group.srcId, group.rows)
   };
+}
+
+// ⚠⚠ WHAT IS ALREADY ON THE LIST FROM THIS PHOTOGRAPH RIDES WITH IT (2026-10-24; Anthony, off the Ellison plates: one
+// kitchen photograph carried four lines, #73 and #87 both the dinner plates and #81 and #88 both the salad plates, in two
+// wordings, and *"you should definitely fix whatever you say is wrong with agent one"*). A blank line on a photograph
+// already named (**➕ Another item in this photo**, or a split whose answer came back short) is sent as the photograph,
+// and the model, which keeps no memory between requests, read the whole of it again into the blank rows. Possible
+// duplicates never shows lines off one photograph (a matching pair is two things), so nothing caught it. The named lines
+// off the photograph go with it now, and the request asks only for what is not among them (`_agUserContent`). Live,
+// named, never one of the rows being asked about; the photograph's own line first, as `_invPhotoSiblings` orders them.
+function agentListedOff(jobId, srcId, rows) {
+  var asked = {};
+  (rows || []).forEach(function(id) { asked[id] = 1; });
+  return (_photoRefs[jobId] || []).filter(function(r) {
+    return r && r.label === 'inventory' && !r.deletedAt && !asked[r.stableId]
+        && (r.stableId === srcId || r.derivedFrom === srcId) && !!String(r.objectName || '').trim();
+  }).sort(function(a, b) {
+    return (a.stableId === srcId ? 0 : 1) - (b.stableId === srcId ? 0 : 1) || (a.ts || 0) - (b.ts || 0);
+  }).slice(0, AGENT_LISTED_MAX).map(function(r) {
+    var q = parseInt(r.qty, 10);
+    return { name: String(r.objectName).trim().slice(0, 300), qty: q > 1 ? q : 1 };
+  });
 }
 
 // ⚠ THE CATEGORY LIST AND THE MUST-FIND LIST ARE SENT, NEVER HELD SERVER-SIDE. saveInventory.gs
@@ -37198,8 +37225,13 @@ function agentApplyResult(jobId, group, result) {
     // ⚠ "NOTHING INVENTORIABLE HERE" IS A REAL ANSWER AND IS NOT THE SAME AS "NOT PROCESSED".
     // The row stays blank, because naming it would be inventing an object — but it is stamped,
     // so the desk can tell a wall from a photograph the agent never reached.
-    var only = _getPhotoRef(jobId, group.srcId);
-    if (only) { only.agentAt = Date.now(); only.agentConf = 'none'; _setPhotoRef(jobId, _invTouch(only)); }
+    // ⚠ THE ROWS IT WAS ASKED ABOUT (2026-10-24), never the photograph's own line as such: with lines already listed off
+    // the photograph (agentListedOff) an empty answer means *nothing else in it*, and the photograph's line may be one of
+    // those, named, which an empty stamp must not touch.
+    group.rows.forEach(function(id) {
+      var only = _getPhotoRef(jobId, id);
+      if (only && !String(only.objectName || '').trim()) { only.agentAt = Date.now(); only.agentConf = 'none'; _setPhotoRef(jobId, _invTouch(only)); }
+    });
     st.empty++;
     return;
   }

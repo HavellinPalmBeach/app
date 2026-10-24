@@ -383,10 +383,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const bv = /var BACKEND_VERSION = '([^']+)'/.exec(GS)[1];
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(bv, '2026-10-19b', 'main-sync.gs is 2026-10-19b (b: main\'s Agent One build took 2026-10-19 the same evening)');
-    eq(B.BACKEND_MIN_VERSION, '2026-10-19b', 'the app relies on it: an older deployment merges the old lines back');
-    ok(B.BACKEND_FEATURE_COST.version.indexOf('a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it') === 0,
-       'the banner names the newest gap first, by consequence');
+    // RESTATED 2026-10-24 (Agent One told what is already listed off a photograph): this pinned 2026-10-19b as the newest
+    // build and its gap as the banner's first. The rule is that the app relies on it: at least that build, its gap named
+    // by its vintage once a newer one leads.
+    ok(bv >= '2026-10-19b', 'main-sync.gs is 2026-10-19b or later (' + bv + ')');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-19b', 'the app relies on it: an older deployment merges the old lines back (' + B.BACKEND_MIN_VERSION + ')');
+    has(B.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it',
+       'the banner names the reset\u2019s gap, by consequence and by its vintage');
     has(B.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-16, an incident reported', '…and the 2026-10-16 gap by its vintage after it');
   }
 

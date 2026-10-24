@@ -86,7 +86,7 @@ function gsCtx({ props = { ANTHROPIC_API_KEY: 'sk-ant-test' }, reply = null, fil
     gsVar('AGENT_MAX_TOKENS'), gsVar('AGENT_PARALLEL'), gsVar('AGENT_MAX_SHOTS'),
     gsVar('AGENT_TIME_BUDGET'), gsVar('AGENT_MAX_IMG'),
     gsFn('_agProp'), gsFn('_agMissingProps'), gsFn('_agImageBlock'), gsFn('_agTool'),
-    gsFn('_agSystem'), gsFn('_agUserContent'), gsFn('_agRequestFor'), gsFn('_agReadResult'),
+    gsFn('_agSystem'), gsFn('_agUserContent'), gsFn('_agListedText'), gsVar('AGENT_LISTED_MAX'), gsFn('_agRequestFor'), gsFn('_agReadResult'),
     gsFn('agentIdentifyShots'),
   ].join('\n'), ctx);
   ctx.sent = sent;
@@ -120,7 +120,7 @@ function rig(refs, over) {
   over = over || {};
   const saved = [], synced = [];
   const ctx = sandbox({
-    fns: ['agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext',
+    fns: ['agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', 'agentListedOff', '_agContext',
           '_agWrite', 'agentApplyResult', '_agState', 'agentNotices', 'agentNoticeQuiet', 'mustFindAllFound', 'invLineReviewed', '_agStateHtml',
           'invSplitItemN', 'invSplitItem', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDerivedRefs',
@@ -133,7 +133,7 @@ function rig(refs, over) {
           '_invTombstoneLine', '_invStampBy', 'deviceUser', '_invJob',
           // P24: the room check's links join the same-name rule in one grouping.
           '_arDupEligible'],
-    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
+    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
