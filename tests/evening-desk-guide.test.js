@@ -296,11 +296,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     has(t, 'The schedule says where the job stands: Working day 6 of 14 · 40% of the work done.', 'the schedule');
     has(SRC, "'% of the work done'", 'which the strip prints');
-    has(t, 'Under it, only when something cannot wait, a strip of warnings, each with its button. Each goes once it is dealt with.', 'the strip');
+    // "each saying what to do", never "each with its button" (guide review, 2026-10-24): the matter type line has no button and
+    // points at Edit Client in its words, and an incident line drops its Open Incidents while the banner above offers one.
+    has(t, 'Under it, only when something cannot wait, a strip of warnings, each saying what to do. Each goes once it is dealt with.', 'the strip');
+    lacks(t, 'each with its button', '⚠ and never that each carries a button');
     // deskNowLine, rule by rule: what the page lists goes to the strip; a line done never does.
     const N = sandbox({ fns: ['deskNowLine'], vars: ['DESK_NOW_KEY_RE'], stubs: { incidentBannerState: () => ({ owed: [] }) } });
     const at = (l) => N.deskNowLine(l, { id: 7 });
-    eq([at({ key: 'will_w1', red: true }), at({ key: 'cash_c1', red: true })], ['strip', 'strip'], 'an original will or cash Havellin holds');
+    eq([at({ key: 'will_held_w1', red: true }), at({ key: 'cash_held_c1', red: true })], ['strip', 'strip'], 'an original will or cash Havellin holds');
+    eq([at({ key: 'will_receipt_w1', ok: false }), at({ key: 'cash_receipt_c1', ok: false })], ['strip', 'strip'], 'handed over, its signed receipt not yet filed: amber, still in the strip');
+    eq(at({ key: 'will_deposit_w1', ok: false }), 'strip', '⚠⚠ a will handed over and receipted but not yet deposited with the clerk: in the strip, amber, before its day');
+    eq([at({ key: 'will_receipt_w1', ok: true }), at({ key: 'will_deposit_w1', ok: true }), at({ key: 'cash_receipt_c1', ok: true })], ['admin', 'admin', 'admin'], '…and each goes once it is done');
+    // The join: the real siteFindLines for a will handed to counsel with its signed receipt filed and no deposit recorded, each
+    // line placed by the real deskNowLine. The strip keeps the deposit line until the deposit is recorded (§732.901).
+    {
+      const SF = lift(['siteFindLines', 'deskNowLine'], { incidentBannerState: () => ({ owed: [] }) });
+      const find = (o) => Object.assign({ id: 'w1', kind: 'will', foundOn: '2026-10-19', where: 'the study desk', foundBy: 'Ashley Jerome',
+        handedOn: '2026-10-20', handedTo: 'Ann Lowe' }, o || {});
+      const job = (f) => ESTATE({ siteFinds: [f], signedRecords: [{ id: 's1', kind: 'will', ref: 'w1', url: 'https://drive.google.com/file/d/S1' }] });
+      const place = (j, today) => { const r = attempt(() => SF.siteFindLines(j, today).map((l) => [l.key, !!l.ok, !!l.red, SF.deskNowLine(l, j)])); return r.ok ? r.val : r.err; };
+      eq(place(job(find()), '2026-10-23'), [['will_receipt_w1', true, false, 'admin'], ['will_deposit_w1', false, false, 'strip']],
+        '⚠⚠ receipted and not deposited, before the tenth day: the receipt line in Job Admin, the deposit line in the strip (amber)');
+      eq(place(job(find()), '2026-11-02'), [['will_receipt_w1', true, false, 'admin'], ['will_deposit_w1', false, true, 'strip']], '…red once its day has passed');
+      eq(place(job(find({ depositedOn: '2026-10-24', depositConfirmedBy: 'Ann Lowe' })), '2026-11-02'), [['will_receipt_w1', true, false, 'admin'], ['will_deposit_w1', true, false, 'admin']],
+        '…and gone from the strip once the deposit is recorded');
+    }
+    has(t, 'An original will or cash found on site, until it is handed over and receipted, and a will until it is deposited with the clerk: Open Found on site.', 'as the page says');
     eq(at({ key: 'access_lost_k1', red: true }), 'strip', 'a key marked lost');
     eq(at({ key: 'inc_client_i1' }), 'strip', 'an incident still owing a promise');
     eq(at({ key: 'matter_type', ok: false }), 'strip', 'an estate with no matter type');
@@ -312,6 +333,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       .forEach(([c, w]) => { has(pdl, c, 'the strip line’s button: ' + w); has(t, w, '…which the page names'); });
     has(pdl, "key: 'matter_type', ok: !!mdf, label: 'Matter type recorded'", 'the matter type line');
     has(pdl, 'are withheld until it is. Edit Client', '…pointing at Edit Client');
+    const mtLine = pdl.slice(pdl.indexOf("key: 'matter_type'"), pdl.indexOf('});', pdl.indexOf("key: 'matter_type'")));
+    ok(mtLine.length > 40 && mtLine.length < 600, 'fixture: the matter type line’s push was found (' + mtLine.length + ' characters)');
+    lacks(mtLine, 'action', '…which carries no button: its words say what to do');
+    // An incident line drops its Open Incidents while the banner is up; every banner and chip carries one.
+    has(code(fn('deskAlertsHtml')), "if (banner && String(c.key || '').indexOf('inc_') === 0 && c.action && String(c.action.call).indexOf('goToIncidents(') === 0) c.action = null;",
+      'an incident line gives up its button while the banner is up…');
+    eq(count(code(fn('incidentHeaderHtml')), 'onclick="goToIncidents(\' + job.id + \')">Open Incidents</button>'), 3, '…and the banner, red or amber, carries Open Incidents in each of its three forms');
     has(t, 'In amber, an estate with no matter type recorded: set it in Edit Client.', 'as the page says');
     has(t, 'An incident still owing one of its promises, red once its day has passed: Open Incidents.', 'the incident promises');
     // The call to Anthony and the incident banner, the desk's own copy at the top of the strip.
@@ -394,7 +422,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dup = code(fn('_agDupHtml'));
     ['Possible duplicates', "'Remove</button>", '>Not duplicates</button>'].forEach((w) => has(dup, w, 'the duplicates block: ' + w));
     has(t, 'Possible duplicates. Compare the photos, then Remove the extra, or Not duplicates if they really are two things.', 'as the page says');
-    has(SRC, ">Accept value</button>", 'Accept value');
+    // The row's Accept value, the one the page means: anchored on its builder and the row that draws it, never the whole source
+    // (the item's record carries a second, so a needle on the source passed with the row's renamed; guide review, 2026-10-24).
+    has(code(fn('_avAcceptButtonHtml')), '>Accept value</button>', 'Accept value, the row’s button…');
+    has(code(fn('_renderInvRow')), '_avAcceptButtonHtml(jid, ref)', '…drawn under the row’s value box');
     has(t, 'Each figure stays unreviewed until you press Accept value.', 'as the page says');
     // Reviewed, read off the line.
     const R = sandbox({ fns: ['invLineReviewed'] });
@@ -423,7 +454,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const FD = sandbox({ vars: ['FIELD_DISPOSITIONS'] }).FIELD_DISPOSITIONS;
     const map = {}; FD.forEach((d) => { map[d.label] = d.disposition; });
     eq([map['New home'], map['To a person'], map.Remove], ['Move', 'Distribute', 'Junk'], 'the camera’s three renamed words');
-    has(t, 'New home is Move, To a person is Distribute, Remove is Junk.', 'as the page says');
+    has(t, 'The camera’s words, three renamed (New home is Move, To a person is Distribute, Remove is Junk), plus Auction and Consign, other ways to sell, and Hold, kept back for now.', 'as the page says');
+    // The row's select offers the camera's words and three more the camera does not (guide review, 2026-10-24: the page named
+    // only the camera's, and Auction, Consign and Hold sat on every row unexplained).
+    has(code(fn('_invInput')), "_invDispOptions(job, v).map(", 'the row’s Where it goes is _invDispOptions');
+    const DO = sandbox({ fns: ['_invDispOptions', '_jobHasDestination'], vars: ['INV_DISPOSITIONS'] });
+    const offered = attempt(() => DO._invDispOptions({ id: 7, svc: 'downsizing_move', destAddr: '1 Ocean Blvd' }, ''));
+    ok(offered.ok, 'the options answer (' + (offered.err || 'ok') + ')');
+    const cam = FD.map((d) => d.disposition).filter(Boolean);
+    eq(offered.ok ? offered.val.filter((d) => cam.indexOf(d) < 0) : null, ['Auction', 'Consign', 'Hold'], '⚠⚠ beyond the camera’s words the row offers exactly Auction, Consign and Hold…');
+    eq(offered.ok ? cam.filter((d) => offered.val.indexOf(d) < 0) : null, [], '…and every camera word');
+    eq(sandbox({ vars: ['INV_SALE_DISPOSITIONS'] }).INV_SALE_DISPOSITIONS.slice().sort(), ['Auction', 'Consign', 'Sell'], 'Auction and Consign sell, as Sell does');
     eq(Object.keys(sandbox({ vars: ['INV_PLAN_CHANNEL_KINDS'] }).INV_PLAN_CHANNEL_KINDS), ['Donate', 'Junk', 'Auction', 'Sell'], 'the kinds that fill themselves in from the one confirmed vendor');
     has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in.', 'as the page says');
     ['&#10133; Another item in this photo</button>', 'Remove line</button>', '>Open photo in Drive</a>'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
@@ -484,6 +525,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(SRC, 'onclick="signoutFileFromPad()">Sign and file</button>', 'the sheet’s Sign and file');
     has(SRC, '>Photograph a signed sheet instead', 'and Photograph a signed sheet instead');
     has(t, 'Sign out N to … opens the sheet; they sign with a finger and Sign and file puts it in Drive. Back from an appraiser: Check N back in from …. On an estate, Print receipt prints a paper receipt for a person instead.', 'as the page says');
+    // Who has a row (guide review, 2026-10-24: the page said every person and vendor): a vendor selling the item, a named charity,
+    // an appraiser; a person only on an estate; never a hauler taking the junk. On the real signoutLineKind.
+    {
+      const SK = lift(['signoutLineKind'], {});
+      const kind = (j, o) => { const r = attempt(() => SK.signoutLineKind(LINE('a', o), j)); return r.ok ? r.val : r.err; };
+      eq(['Sell', 'Auction', 'Consign'].map((d) => kind(ESTATE(), { disposition: d, channel: 'Sotheby’s' })), ['pickup', 'pickup', 'pickup'], 'a selling vendor has a row');
+      eq([kind(ESTATE(), { disposition: 'Donate', channel: 'Goodwill' }), kind(LIVING(), { disposition: 'Donate', channel: 'Goodwill' })], ['donation', 'donation'], 'a named charity has a row, on either');
+      eq([kind(ESTATE(), { disposition: 'Distribute', channel: 'Susan Hale' }), kind(LIVING(), { disposition: 'Distribute', channel: 'Susan Hale' })], ['receipt', ''],
+        '⚠⚠ a person: a row on an estate, none on living work');
+      eq(kind(ESTATE(), { disposition: 'Junk', channel: 'Haul-It' }), '', 'a hauler taking the junk: none');
+      has(code(fn('signoutGroups')), "put(invOutForAppraisal(r, job) ? 'appraisal_back' : 'appraisal_out', String(a.name).trim(), r, 'ready')", 'an appraiser: a row for the hand-off and the return');
+    }
+    has(t, 'One row for each selling vendor, charity or appraiser taking things away, and on an estate each person, with the item numbers.', 'as the page says');
+    has(t, 'No receipts from a person, no bequests.', 'living work: no receipt from a person (a charity’s receipt is still filed)');
+    lacks(t, 'No receipts, no bequests.', '⚠ never that living work has no receipts at all');
     has(code(fn('signoutLineKind')), 'if (!ref || ref.deletedAt || invIsFirearm(ref)) return \'\';', 'a firearm never goes on a sheet');
     has(t, 'On an estate only items with everyone’s written approval are offered. A firearm never goes on a sheet.', 'as the page says');
     has(code(fn('signedCopyControlHtml')), "esc(label || 'File signed copy')", 'File signed copy');
@@ -549,6 +605,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(decl('INV_RELEASE_CAUTIONS'), "{ key: 'staffRecipient', living: true,", 'and flagged on living work');
     has(code(fn('invRemoveLine')), '_invTombstoneLine(', 'Remove line keeps the photo');
     has(code(fn('voidSignedRecord')), 'prompt(', 'a paper filed in error is voided with a reason');
+    // Items and papers, never "nothing" (guide review, 2026-10-24): the room's bin sends a photograph other than an as-found one to
+    // the Drive bin, and the desk's Removed items says so.
+    has(code(fn('discardShot')), "if (ref.label === 'before') {", 'an as-found photograph stays…');
+    has(code(fn('discardShot')), "'the Drive bin for 30 days.'", '…any other can go to the Drive bin from the room…');
+    has(code(fn('discardShot')), '_trashShotFiles(', '…and does');
+    has(t, 'No item or paper is deleted. Remove line keeps the photo; a paper filed in error is voided with a reason.', '…so the page says items and papers');
+    lacks(t, 'Nothing is deleted', '⚠ never that nothing is deleted');
     has(code(fn('invTransportBlocked')), "'nfa'", 'an NFA item never travels');
   }
 
@@ -582,7 +645,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(text(g), 'The Evening Desk', f + ' names the page');
       has(text(g), 'Read The Evening Desk', '…and the link at the top of the tab');
       has(g, 'evening-desk-guide.html', '…and links it');
+      // The playbook's list of the pages says which carry a pocket card, and the pages bear it out (guide review, 2026-10-24: it
+      // said every one did, the Firearms Protocol included).
+      has(text(g), 'Every one but the Firearms Protocol ends with a pocket card.', f + ': every page but the protocol has a pocket card');
+      lacks(text(g), 'Each is one routine in plain words, with a pocket card', '⚠ ' + f + ': never that every page has one');
     });
+    ['photography-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html', 'incident-guide.html', PAGE]
+      .forEach((f) => ok(/pocket card/i.test(read(f)), f + ' has its pocket card'));
+    ok(!/pocket card/i.test(read('firearms-protocol.html')), 'the Firearms Protocol has none');
     [['manual.html', read('manual.html')], ['MANUAL.md', read('MANUAL.md')]].forEach(([f, m]) => {
       has(text(m), 'The Evening Desk', f + ' names the page');
       has(m, 'evening-desk-guide.html', '…the file');

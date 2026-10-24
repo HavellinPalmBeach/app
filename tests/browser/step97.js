@@ -3,12 +3,14 @@
 // the photography field guide").
 //
 // Drives the REAL page: Job Admin & Inv opened through its own nav button with no client chosen, then on an active probate
-// estate and on a Home Prep job, each picked through the tab's own client picker; on each, *Read The Evening Desk* at the top
+// estate, on a Home Prep job and on living work (a Home Transition), each picked through the tab's own client picker; on each, *Read The Evening Desk* at the top
 // of the tab, pressed with the mouse: the page opens over the app (no new tab), headed by its name, rendered in the frame,
 // Open in its own tab pointing at it, Close hiding the panel and emptying the frame; the same on a 390 px phone, the tab with no
 // sideways scroll. Then the page itself at 1440 and 390, in light and in dark: no horizontal overflow, nothing past the right
 // edge, its own background in each theme, its sections, the pocket card and its neighbours, and in print media; zero page
-// errors throughout.
+// errors throughout. On the living job (guide review, 2026-10-24) two of the page's corrected sentences are read off the real
+// desk: the row's Where it goes offers the camera's words plus Auction, Consign and Hold, and Leaving the property has a row for
+// the charity and none for the person a line goes to (a person has a row on an estate only).
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step97.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -20,7 +22,7 @@ const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + 
 const eq = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [got ' + JSON.stringify(a) + ', want ' + JSON.stringify(e) + ']');
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const SYNC = 'https://sync.example.test/exec';
-const EST = 9701, PREP = 9702;
+const EST = 9701, PREP = 9702, LIV = 9703;
 
 (async () => {
   try {
@@ -49,7 +51,7 @@ const EST = 9701, PREP = 9702;
     const panelOpen = () => p.evaluate(() => document.getElementById('guide-modal').checkVisibility());
 
     // ── Seed: an active probate estate with a few items, and a Home Prep job ──
-    await p.evaluate(([EST, PREP]) => {
+    await p.evaluate(([EST, PREP, LIV]) => {
       const T = Date.now() - 6 * 86400000;
       jobs.unshift({ id: EST, hvlId: 'HVL-2610-E970', name: 'Eleanor Ashworth', svc: 'probate', matterType: 'probate', addr: '210 Via Bellaria', city: 'Palm Beach', zip: '33480',
         executor: 'Thomas Ashworth', executorRole: 'Personal Representative', executorEmail: 't.ashworth@example.com', deathDate: '2026-04-02', executorAuth: 'received',
@@ -71,8 +73,22 @@ const EST = 9701, PREP = 9702;
         status: 'active', won: true, approved: true, tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-11-02', activatedOn: '2026-10-20',
         agrApproved: true, agrSent: true, agrSigned: true, driveFolder: 'https://drive.google.com/drive/folders/R' + PREP, docState: {}, payments: [], at: {} });
       estimateStore[PREP] = { approved: true, submitted: true, estimate: { jobId: PREP, svc: 'prep', havellinTotal: 3000, rooms: [], vendors: [], prepItems: [] } };
+      // Living work: a Home Transition with a destination, one line to a charity and one to a person, both decided.
+      jobs.unshift({ id: LIV, hvlId: 'HVL-2610-L970', name: 'Margaret Ellis', svc: 'downsizing_move', addr: '9 Dunbar Rd', city: 'Palm Beach', zip: '33480', email: 'meg@ellis.example',
+        destAddr: '1 Ocean Blvd', destCity: 'Boca Raton', destSqft: 1800, docTier: 'contents', status: 'active', won: true, approved: true, tc: 'Ashley Jerome', created: '2026-09-20',
+        start: '2026-10-12', activatedOn: '2026-10-11', agrApproved: true, agrSent: true, agrSigned: true, sqft: 2600, driveFolder: 'https://drive.google.com/drive/folders/R' + LIV,
+        docState: { agreement: { sentAt: '2026-10-01T14:00:00Z', sig: { signedBy: 'Margaret Ellis', signedAt: '2026-10-02' } } },
+        payments: [{ uid: 'l1', stage: 'deposit', amount: 6000, receivedOn: '2026-10-03', method: 'wire', clearedOn: '2026-10-03' }], at: {} });
+      estimateStore[LIV] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: T,
+        estimate: { jobId: LIV, svc: 'downsizing_move', havellinTotal: 12000, totTC: 30, totPS: 60, tcRate: 150, psRate: 100, days: 4, vendors: [], prepItems: [], pkgCost: 0,
+          rooms: [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }] } };
+      const litem = (id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, status: 'uploaded', category: 'General/Household', ts: T, updatedAt: T, namedBy: 'desk',
+        filename: 'HVL_' + LIV + '_INV_' + id + '.jpg', driveFileId: 'f-' + id, driveFileUrl: 'https://drive.google.com/file/d/f-' + id + '/view' }, o);
+      _photoRefs[LIV] = [litem('l1', { itemNo: 1, objectName: 'Wool winter coats', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
+        litem('l2', { itemNo: 2, objectName: 'Sewing table', category: 'Furniture', disposition: 'Distribute', channel: 'Susan Hale' })];
+      savePhotoRefs(LIV);
       saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
-    }, [EST, PREP]);
+    }, [EST, PREP, LIV]);
 
     // The desk through its own nav button; a client through its own picker ('' leaves none chosen).
     const toDesk = async (id) => {
@@ -128,6 +144,27 @@ const EST = 9701, PREP = 9702;
       ok(await p.locator('#inventory-content .ja-card').isVisible(), 'fixture: the Home Prep desk (Job Admin) is drawn');
       eq(await p.locator('#inventory-content [id^="desk-fold-"]').count(), 0, 'fixture: no bars on Home Prep');
       await openAndCheck('Home Prep');
+    });
+
+    // ── C2 ────────────────────────────────────────────────────────────────────────────────────
+    await section('C2. on living work: the link is there too, and the page’s corrected sentences hold on the real desk', async () => {
+      await toDesk(LIV);
+      ok(await p.locator('#inventory-content .job-hdr').isVisible(), 'fixture: the living job’s desk is drawn');
+      ok(await p.locator('#desk-fold-releases-' + LIV).count() === 1, 'fixture: with its bars');
+      await openAndCheck('living work');
+      // Where it goes: the camera's words (New home as Move: the job has a destination) plus Auction, Consign and Hold.
+      const opts = await p.evaluate(() => Array.from(document.querySelectorAll('#inventory-content select'))
+        .map((s) => Array.from(s.options).map((o) => o.textContent.trim())).filter((o) => o.indexOf('Junk') >= 0 && o.indexOf('Distribute') >= 0)[0] || null);
+      eq(opts, ['—', 'Auction', 'Consign', 'Distribute', 'Donate', 'Hold', 'Junk', 'Keep', 'Move', 'Sell'], '⚠ a row’s Where it goes offers the camera’s words plus Auction, Consign and Hold');
+      // Leaving the property: Releases opened by its own header if it is shut, then the rows read by their taker.
+      if (await p.evaluate((id) => document.getElementById('desk-body-releases-' + id).style.display === 'none', LIV)) {
+        await p.click('#desk-hd-releases-' + LIV); await p.waitForTimeout(500);
+      }
+      ok(await p.locator('#desk-body-releases-' + LIV).isVisible(), 'fixture: Releases & signed papers open');
+      const takers = await p.evaluate(() => Array.from(document.querySelectorAll('#inv-releases .inv-leaving-row > div:first-child strong')).map((s) => s.textContent.trim()));
+      ok(takers.indexOf('Goodwill Palm Beach') >= 0, '⚠ the charity has a row (' + takers.join(', ') + ')');
+      ok(takers.every((t) => t.indexOf('Susan Hale') < 0), '⚠⚠ and the person a line goes to has none on living work');
+      eq(await overflow(), 0, 'the living desk: no sideways scroll at 1440');
     });
 
     // ── D ─────────────────────────────────────────────────────────────────────────────────────
